@@ -41,7 +41,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ ubuntu-latest, macOS-latest ]
+        os: [ ubuntu-latest, macOS-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -55,7 +55,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version-file: "pyproject.toml"
 
       - name: Install Dependencies
         run: uv sync --all-extras --dev
@@ -64,10 +64,9 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           choco install -y tesseract pandoc
-          RefreshEnv.cmd
+          Write-Output "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          Write-Output "C:\Program Files\Pandoc" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           $env:PATH = "C:\Program Files\Tesseract-OCR;C:\Program Files\Pandoc;" + $env:PATH
-          echo "PATH after updates:"
-          Write-Output $env:PATH
           tesseract --version
           pandoc --version
 
