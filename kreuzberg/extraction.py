@@ -9,6 +9,7 @@ It includes vendored code:
 
 from __future__ import annotations
 
+import os
 from mimetypes import guess_type
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -77,11 +78,15 @@ async def extract_bytes(content: bytes, mime_type: str, force_ocr: bool = False)
         return ExtractionResult(content=await extract_xlsx_file(content), mime_type=MARKDOWN_MIME_TYPE)
 
     if mime_type in IMAGE_MIME_TYPES or any(mime_type.startswith(value) for value in IMAGE_MIME_TYPES):
-        with NamedTemporaryFile(suffix=IMAGE_MIME_TYPE_EXT_MAP[mime_type]) as temp_file:
-            temp_file.write(content)
-            return ExtractionResult(
-                content=await process_image_with_tesseract(temp_file.name), mime_type=PLAIN_TEXT_MIME_TYPE
-            )
+        with NamedTemporaryFile(suffix=IMAGE_MIME_TYPE_EXT_MAP[mime_type], delete=False) as temp_file:
+            try:
+                temp_file.write(content)
+                return ExtractionResult(
+                    content=await process_image_with_tesseract(temp_file.name), mime_type=PLAIN_TEXT_MIME_TYPE
+                )
+            finally:
+                temp_file.close()
+                os.unlink(temp_file.name)
 
     if mime_type in PANDOC_SUPPORTED_MIME_TYPES or any(
         mime_type.startswith(value) for value in PANDOC_SUPPORTED_MIME_TYPES

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from asyncio import gather
 from dataclasses import dataclass
@@ -320,7 +321,7 @@ async def _validate_pandoc_version() -> None:
 async def _handle_extract_metadata(input_file: str | PathLike[str], *, mime_type: str) -> Metadata:
     pandoc_type = _get_pandoc_type_from_mime_type(mime_type)
 
-    with NamedTemporaryFile(suffix=".json") as metadata_file:
+    with NamedTemporaryFile(suffix=".json", delete=False) as metadata_file:
         try:
             command = [
                 "pandoc",
@@ -350,42 +351,51 @@ async def _handle_extract_metadata(input_file: str | PathLike[str], *, mime_type
         except (RuntimeError, OSError, json.JSONDecodeError) as e:
             raise ParsingError("Failed to extract file data", context={"file": str(input_file)}) from e
 
+        finally:
+            metadata_file.close()
+            os.unlink(metadata_file.name)
+
 
 async def _handle_extract_file(
     input_file: str | PathLike[str], *, mime_type: str, extra_args: list[str] | None = None
 ) -> str:
     pandoc_type = _get_pandoc_type_from_mime_type(mime_type)
 
-    with NamedTemporaryFile(suffix=".md") as output_file:
-        command = [
-            "pandoc",
-            str(input_file),
-            f"--from={pandoc_type}",
-            "--to=markdown",
-            "--standalone",
-            "--wrap=preserve",
-            "--quiet",
-            "--output",
-            output_file.name,
-        ]
+    with NamedTemporaryFile(suffix=".md", delete=False) as output_file:
+        try:
+            command = [
+                "pandoc",
+                str(input_file),
+                f"--from={pandoc_type}",
+                "--to=markdown",
+                "--standalone",
+                "--wrap=preserve",
+                "--quiet",
+                "--output",
+                output_file.name,
+            ]
 
-        if extra_args:
-            command.extend(extra_args)
+            if extra_args:
+                command.extend(extra_args)
 
-        result = await run_sync(
-            subprocess.run,
-            command,
-            capture_output=True,
-        )
-
-        if result.returncode != 0:
-            raise ParsingError(
-                "Failed to extract file data", context={"file": str(input_file), "error": result.stderr.decode()}
+            result = await run_sync(
+                subprocess.run,
+                command,
+                capture_output=True,
             )
 
-        text = await AsyncPath(output_file.name).read_text()
+            if result.returncode != 0:
+                raise ParsingError(
+                    "Failed to extract file data", context={"file": str(input_file), "error": result.stderr.decode()}
+                )
 
-        return normalize_spaces(text)
+            text = await AsyncPath(output_file.name).read_text()
+
+            return normalize_spaces(text)
+
+        finally:
+            output_file.close()
+            os.unlink(output_file.name)
 
 
 async def process_file(
@@ -428,6 +438,11 @@ async def process_content(content: bytes, *, mime_type: str, extra_args: list[st
     """
     extension = MIMETYPE_TO_FILE_EXTENSION_MAPPING.get(mime_type) or "md"
 
-    with NamedTemporaryFile(suffix=f".{extension}") as input_file:
-        await AsyncPath(input_file.name).write_bytes(content)
-        return await process_file(input_file.name, mime_type=mime_type, extra_args=extra_args)
+    with NamedTemporaryFile(suffix=f".{extension}", delete=False) as input_file:
+        try:
+            await AsyncPath(input_file.name).write_bytes(content)
+            return await process_file(input_file.name, mime_type=mime_type, extra_args=extra_args)
+
+        finally:
+            input_file.close()
+            os.unlink(input_file.name)

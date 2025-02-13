@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from asyncio import gather
@@ -214,10 +215,10 @@ async def process_file(
     Returns:
         str: Extracted text from the image.
     """
-    with NamedTemporaryFile(suffix=".txt") as output_file:
+    with NamedTemporaryFile(suffix=".txt", delete=False) as output_file:
         # this is needed because tesseract adds .txt to the output file
-        output_file_name = output_file.name.replace(".txt", "")
         try:
+            output_file_name = output_file.name.replace(".txt", "")
             command = [
                 "tesseract",
                 str(input_file),
@@ -245,6 +246,10 @@ async def process_file(
         except (RuntimeError, OSError) as e:
             raise OCRError("Failed to OCR using tesseract") from e
 
+        finally:
+            output_file.close()
+            os.unlink(output_file.name)
+
 
 async def process_image(image: Image, *, language: SupportedLanguages, psm: PSMMode, **kwargs: Any) -> str:
     """Process a single Pillow Image using Tesseract OCR.
@@ -258,9 +263,14 @@ async def process_image(image: Image, *, language: SupportedLanguages, psm: PSMM
     Returns:
         str: Extracted text from the image.
     """
-    with NamedTemporaryFile(suffix=".png") as image_file:
-        await run_sync(image.save, image_file.name, format="PNG")
-        return await process_file(image_file.name, language=language, psm=psm, **kwargs)
+    with NamedTemporaryFile(suffix=".png", delete=False) as image_file:
+        try:
+            await run_sync(image.save, image_file.name, format="PNG")
+            return await process_file(image_file.name, language=language, psm=psm, **kwargs)
+
+        finally:
+            image_file.close()
+            os.unlink(image_file.name)
 
 
 async def process_image_with_tesseract(

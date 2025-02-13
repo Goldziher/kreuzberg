@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from contextlib import suppress
 from html import escape
@@ -95,14 +96,18 @@ async def extract_pdf(file_path_or_contents: Path | bytes, force_ocr: bool = Fal
         The extracted text.
     """
     if isinstance(file_path_or_contents, bytes):
-        with NamedTemporaryFile(suffix=".pdf") as pdf_file:
-            pdf_file.write(file_path_or_contents)
-            file_path = Path(pdf_file.name)
+        with NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_file:
+            try:
+                pdf_file.write(file_path_or_contents)
+                file_path = Path(pdf_file.name)
 
-            if not force_ocr and (content := await extract_pdf_with_pdfium2(file_path)):
-                return normalize_spaces(content)
+                if not force_ocr and (content := await extract_pdf_with_pdfium2(file_path)):
+                    return normalize_spaces(content)
 
-            return await extract_pdf_with_tesseract(file_path)
+                return await extract_pdf_with_tesseract(file_path)
+            finally:
+                pdf_file.close()
+                os.unlink(pdf_file.name)
 
     if not force_ocr and (content := await extract_pdf_with_pdfium2(file_path_or_contents)):
         return normalize_spaces(content)
@@ -221,8 +226,11 @@ async def extract_xlsx_file(file_path_or_contents: Path | bytes) -> str:
     Raises:
         ParsingError: If the XLSX file could not be parsed.
     """
-    try:
-        with NamedTemporaryFile(suffix=".xlsx") as xlsx_file, NamedTemporaryFile(suffix=".csv") as csv_file:
+    with (
+        NamedTemporaryFile(suffix=".xlsx", delete=False) as xlsx_file,
+        NamedTemporaryFile(suffix=".csv", delete=False) as csv_file,
+    ):
+        try:
             if isinstance(file_path_or_contents, bytes):
                 xlsx_file.write(file_path_or_contents)
                 xlsx_file.flush()
@@ -233,14 +241,19 @@ async def extract_xlsx_file(file_path_or_contents: Path | bytes) -> str:
             await run_sync(Xlsx2csv(xlsx_path).convert, csv_file.name)
             result = await process_file(csv_file.name, mime_type="text/csv")
             return normalize_spaces(result.content)
-    except Exception as e:
-        raise ParsingError(
-            "Could not extract text from XLSX file",
-            context={
-                "error": str(e),
-                "file_path": str(file_path_or_contents) if isinstance(file_path_or_contents, Path) else None,
-            },
-        ) from e
+        except Exception as e:
+            raise ParsingError(
+                "Could not extract text from XLSX file",
+                context={
+                    "error": str(e),
+                    "file_path": str(file_path_or_contents) if isinstance(file_path_or_contents, Path) else None,
+                },
+            ) from e
+        finally:
+            xlsx_file.close()
+            csv_file.close()
+            os.unlink(xlsx_file.name)
+            os.unlink(csv_file.name)
 
 
 async def extract_html_string(file_path_or_contents: Path | bytes) -> str:
