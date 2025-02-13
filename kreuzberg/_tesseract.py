@@ -188,7 +188,7 @@ async def validate_tesseract_version() -> None:
 
         command = ["tesseract", "--version"]
         result = await run_sync(subprocess.run, command, capture_output=True)
-        version_match = re.search(r"tesseract\s+(\d+)", result.stdout.decode())
+        version_match = re.search(r"tesseract\s+v?(\d+)", result.stdout.decode())
         if not version_match or int(version_match.group(1)) < 5:
             raise MissingDependencyError("Tesseract version 5 or above is required.")
 
