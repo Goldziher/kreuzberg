@@ -7,7 +7,7 @@ from html import escape
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import html_to_markdown
 import pptx
@@ -38,14 +38,18 @@ async def convert_pdf_to_images(file_path: Path) -> list[Image]:
     Returns:
         A list of Pillow Images.
     """
+    pdf: Optional[pypdfium2.PdfDocument] = None
+    resolved_path = str(await AsyncPath(file_path).resolve())
     try:
-        resolved_path = str(await AsyncPath(file_path).resolve())
         pdf = await run_sync(pypdfium2.PdfDocument, resolved_path)
         return [page.render(scale=2.0).to_pil() for page in pdf]
     except pypdfium2.PdfiumError as e:
         raise ParsingError(
             "Could not convert PDF to images", context={"file_path": str(file_path), "error": str(e)}
         ) from e
+    finally:
+        if pdf is not None:
+            pdf.close()
 
 
 async def extract_pdf_with_tesseract(file_path: Path) -> str:
@@ -74,8 +78,9 @@ async def extract_pdf_with_pdfium2(file_path: Path) -> str:
     Returns:
         The extracted text.
     """
+    document: Optional[pypdfium2.PdfDocument] = None
+    resolved_path = str(await AsyncPath(file_path).resolve())
     try:
-        resolved_path = str(await AsyncPath(file_path).resolve())
         document = await run_sync(pypdfium2.PdfDocument, resolved_path)
         text = "\n".join(page.get_textpage().get_text_bounded() for page in document)
         return normalize_spaces(text)
@@ -83,6 +88,9 @@ async def extract_pdf_with_pdfium2(file_path: Path) -> str:
         raise ParsingError(
             "Could not extract text from PDF file", context={"file_path": str(file_path), "error": str(e)}
         ) from e
+    finally:
+        if document is not None:
+            document.close()
 
 
 async def extract_pdf(file_path_or_contents: Path | bytes, force_ocr: bool = False) -> str:
