@@ -241,7 +241,7 @@ async def process_file(
             if not result.returncode == 0:
                 raise OCRError("OCR failed with a non-0 return code.")
 
-            output = await AsyncPath(output_file.name).read_text()
+            output = await AsyncPath(output_file.name).read_text("utf-8")
             return output.strip()
         except (RuntimeError, OSError) as e:
             raise OCRError("Failed to OCR using tesseract") from e

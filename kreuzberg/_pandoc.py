@@ -345,7 +345,7 @@ async def _handle_extract_metadata(input_file: str | PathLike[str], *, mime_type
                     "Failed to extract file data", context={"file": str(input_file), "error": result.stderr.decode()}
                 )
 
-            json_data = json.loads(await AsyncPath(metadata_file.name).read_text())
+            json_data = json.loads(await AsyncPath(metadata_file.name).read_text("utf-8"))
             return _extract_metadata(json_data)
 
         except (RuntimeError, OSError, json.JSONDecodeError) as e:
@@ -389,7 +389,7 @@ async def _handle_extract_file(
                     "Failed to extract file data", context={"file": str(input_file), "error": result.stderr.decode()}
                 )
 
-            text = await AsyncPath(output_file.name).read_text()
+            text = await AsyncPath(output_file.name).read_text("utf-8")
 
             return normalize_spaces(text)
 
