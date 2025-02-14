@@ -393,6 +393,9 @@ async def _handle_extract_file(
 
             return normalize_spaces(text)
 
+        except (RuntimeError, OSError) as e:
+            raise ParsingError("Failed to extract file data", context={"file": str(input_file)}) from e
+
         finally:
             output_file.close()
             os.unlink(output_file.name)
