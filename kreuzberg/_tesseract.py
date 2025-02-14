@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import re
 import subprocess
 from asyncio import gather
@@ -248,7 +247,7 @@ async def process_file(
 
         finally:
             output_file.close()
-            os.unlink(output_file.name)
+            await AsyncPath(output_file.name).unlink()
 
 
 async def process_image(image: Image, *, language: SupportedLanguages, psm: PSMMode, **kwargs: Any) -> str:
@@ -270,7 +269,7 @@ async def process_image(image: Image, *, language: SupportedLanguages, psm: PSMM
 
         finally:
             image_file.close()
-            os.unlink(image_file.name)
+            await AsyncPath(image_file.name).unlink()
 
 
 async def process_image_with_tesseract(

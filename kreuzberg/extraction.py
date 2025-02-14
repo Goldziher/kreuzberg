@@ -9,7 +9,6 @@ It includes vendored code:
 
 from __future__ import annotations
 
-import os
 from mimetypes import guess_type
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -86,7 +85,7 @@ async def extract_bytes(content: bytes, mime_type: str, force_ocr: bool = False)
                 )
             finally:
                 temp_file.close()
-                os.unlink(temp_file.name)
+                await AsyncPath(temp_file.name).unlink()
 
     if mime_type in PANDOC_SUPPORTED_MIME_TYPES or any(
         mime_type.startswith(value) for value in PANDOC_SUPPORTED_MIME_TYPES

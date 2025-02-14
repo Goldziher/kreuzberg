@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 from asyncio import gather
 from dataclasses import dataclass
@@ -353,7 +352,7 @@ async def _handle_extract_metadata(input_file: str | PathLike[str], *, mime_type
 
         finally:
             metadata_file.close()
-            os.unlink(metadata_file.name)
+            await AsyncPath(metadata_file.name).unlink()
 
 
 async def _handle_extract_file(
@@ -398,7 +397,7 @@ async def _handle_extract_file(
 
         finally:
             output_file.close()
-            os.unlink(output_file.name)
+            await AsyncPath(output_file.name).unlink()
 
 
 async def process_file(
@@ -448,4 +447,4 @@ async def process_content(content: bytes, *, mime_type: str, extra_args: list[st
 
         finally:
             input_file.close()
-            os.unlink(input_file.name)
+            await AsyncPath(input_file.name).unlink()

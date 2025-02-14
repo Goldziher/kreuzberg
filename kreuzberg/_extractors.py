@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import os
 import re
+from asyncio import gather
 from contextlib import suppress
 from html import escape
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import html_to_markdown
 import pptx
@@ -38,7 +38,7 @@ async def convert_pdf_to_images(file_path: Path) -> list[Image]:
     Returns:
         A list of Pillow Images.
     """
-    pdf: Optional[pypdfium2.PdfDocument] = None
+    pdf = None
     resolved_path = str(await AsyncPath(file_path).resolve())
     try:
         pdf = await run_sync(pypdfium2.PdfDocument, resolved_path)
@@ -78,7 +78,7 @@ async def extract_pdf_with_pdfium2(file_path: Path) -> str:
     Returns:
         The extracted text.
     """
-    document: Optional[pypdfium2.PdfDocument] = None
+    document = None
     resolved_path = str(await AsyncPath(file_path).resolve())
     try:
         document = await run_sync(pypdfium2.PdfDocument, resolved_path)
@@ -115,7 +115,7 @@ async def extract_pdf(file_path_or_contents: Path | bytes, force_ocr: bool = Fal
                 return await extract_pdf_with_tesseract(file_path)
             finally:
                 pdf_file.close()
-                os.unlink(pdf_file.name)
+                await AsyncPath(pdf_file.name).unlink()
 
     if not force_ocr and (content := await extract_pdf_with_pdfium2(file_path_or_contents)):
         return normalize_spaces(content)
@@ -260,8 +260,7 @@ async def extract_xlsx_file(file_path_or_contents: Path | bytes) -> str:
         finally:
             xlsx_file.close()
             csv_file.close()
-            os.unlink(xlsx_file.name)
-            os.unlink(csv_file.name)
+            await gather(AsyncPath(xlsx_file.name).unlink(), AsyncPath(csv_file.name).unlink())
 
 
 async def extract_html_string(file_path_or_contents: Path | bytes) -> str:
