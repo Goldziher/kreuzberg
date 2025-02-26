@@ -25,3 +25,4 @@ prompt_template.egg-info/
 requirements.txt
 Dockerfile
 docker-compose.yaml
+models/
