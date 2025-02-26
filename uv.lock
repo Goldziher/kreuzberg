@@ -314,6 +314,7 @@ dependencies = [
     { name = "charset-normalizer" },
     { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "html-to-markdown" },
+    { name = "playa-pdf" },
     { name = "pypdfium2" },
     { name = "python-calamine" },
     { name = "python-pptx" },
@@ -339,6 +340,7 @@ requires-dist = [
     { name = "charset-normalizer", specifier = ">=3.4.1" },
     { name = "exceptiongroup", marker = "python_full_version < '3.11'", specifier = ">=1.2.2" },
     { name = "html-to-markdown", specifier = ">=1.2.0" },
+    { name = "playa-pdf", git = "https://github.com/dhdaines/playa?rev=main" },
     { name = "pypdfium2", specifier = ">=4.30.1" },
     { name = "python-calamine", specifier = ">=0.3.1" },
     { name = "python-pptx", specifier = ">=1.0.2" },
@@ -632,6 +634,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/13/fc/128cc9cb8f03208bd
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3c/a6/bc1012356d8ece4d66dd75c4b9fc6c1f6650ddd5991e421177d9f8f671be/platformdirs-4.3.6-py3-none-any.whl", hash = "sha256:73e575e1408ab8103900836b97580d5307456908a03e92031bab39e4554cc3fb", size = 18439 },
 ]
+
+[[package]]
+name = "playa-pdf"
+version = "0.3.1.dev2+gee37020"
+source = { git = "https://github.com/dhdaines/playa?rev=main#ee37020ca4d1a37bb1f94db82b531474a5096dd1" }
 
 [[package]]
 name = "pluggy"
