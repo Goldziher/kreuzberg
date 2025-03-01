@@ -40,6 +40,7 @@ dependencies = [
   "charset-normalizer>=3.4.1",
   "exceptiongroup>=1.2.2",
   "html-to-markdown>=1.2.0",
+  "playa-pdf",
   "pypdfium2>=4.30.1",
   "python-calamine>=0.3.1",
   "python-pptx>=1.0.2",
