@@ -60,11 +60,12 @@ dev = [
   "trio>=0.29.0",
 ]
 vision = [
-    "huggingface-hub>=0.29.1",
-    "numpy>=2.0.2",
-    "onnxruntime-genai>=0.6.0",
-    "torch>=2.6.0",
-    "transformers[torch]>=4.49.0",
+  "huggingface-hub>=0.29.1",
+  "numpy>=2.0.2",
+  "onnxruntime-genai>=0.6.0",
+  "torch>=2.6.0",
+  "torchvision>=0.21.0",
+  "transformers[torch]>=4.49.0",
 ]
 
 [tool.setuptools.packages.find]

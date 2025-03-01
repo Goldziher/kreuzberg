@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
-from anyio import Path as AsyncPath
+import torch
 from huggingface_hub import snapshot_download
-from onnxruntime_genai import Config, Generator, GeneratorParams, Images, Model, MultiModalProcessor, TokenizerStream
+from PIL import Image
+from transformers import AutoModelForCausalLM, AutoProcessor
 
 from kreuzberg._sync import run_sync
 
@@ -34,100 +35,194 @@ def normalize_model_name(model_id: str) -> str:
     return "_".join(value.split(" "))
 
 
-async def get_genai_config_folder(path: AsyncPath) -> str:
-    """Find the first directory containing genai_config.json configuration file.
+async def download_hf_model(*, model_id: str, models_dir: Path | str = DEFAULT_DIR) -> Path:
+    """Download model files from Hugging Face.
 
     Args:
-        path: Directory path to search in
+        model_id: The Hugging Face model ID.
+        models_dir: The directory to store the downloaded model.
 
     Returns:
-        String path to first directory containing genai_config.json
-
-    Raises:
-        FileNotFoundError: If no genai_config.json file is found in the directory tree
+        Path to the downloaded model directory.
     """
-    async for p in path.iterdir():
-        if await p.is_file() and p.name == "genai_config.json":
-            return str(p.parent)
-        if await p.is_dir() and (value := await get_genai_config_folder(p)):
-            return value
+    target_dir = Path(models_dir) / normalize_model_name(model_id)
+    target_dir.mkdir(parents=True, exist_ok=True)
 
-    raise FileNotFoundError(f"No genai_config.json found in directory tree starting at {path}")
-
-
-async def get_hf_model(*, model_id: str, models_dir: Path | str = DEFAULT_DIR) -> str:
-    target_dir = AsyncPath(models_dir) / normalize_model_name(model_id)
-    await target_dir.mkdir(parents=True, exist_ok=True)
-
-    # Download model files first
+    # Download model files
     await run_sync(
         snapshot_download,
         model_id,
-        local_dir=str(target_dir),  # Download directly to target_dir
-        allow_patterns="cpu_and_mobile/*",
+        local_dir=str(target_dir),
     )
 
-    # Now search for genai.json in the downloaded files
-    return await get_genai_config_folder(target_dir)
+    return target_dir
 
 
-async def get_model_config(*, model_id: str, provider: str, models_dir: Path | str = DEFAULT_DIR) -> Model:
-    model_path = await get_hf_model(model_id=model_id, models_dir=models_dir)
+async def load_vision_model(model_dir: Path, device: str, num_crops: int) -> tuple[AutoModelForCausalLM, AutoProcessor]:
+    """Load the vision model and processor.
 
-    config = Config(model_path)
-    config.clear_providers()
+    Args:
+        model_dir: Path to the model directory
+        device: Device to load the model on ("cpu", "cuda", "mps")
+        num_crops: Number of crops to use in the processor
 
-    if provider != "cpu":
-        config.append_provider(provider)
+    Returns:
+        Tuple of (model, processor)
+    """
+    # Only try flash attention when using GPU
+    if device == "cuda" and torch.cuda.is_available():
+        try:
+            model: AutoModelForCausalLM = await run_sync(
+                AutoModelForCausalLM.from_pretrained,
+                model_dir,
+                device_map=device,
+                trust_remote_code=True,
+                torch_dtype="auto",
+                _attn_implementation="flash_attention_2",
+            )
+        except ImportError:
+            # Fall back to eager implementation if flash attention is not available
+            model: AutoModelForCausalLM = await run_sync(
+                AutoModelForCausalLM.from_pretrained,
+                model_dir,
+                device_map=device,
+                trust_remote_code=True,
+                torch_dtype="auto",
+                _attn_implementation="eager",
+            )
+    else:
+        # For CPU or other devices, use eager implementation directly
+        model: AutoModelForCausalLM = await run_sync(
+            AutoModelForCausalLM.from_pretrained,
+            model_dir,
+            device_map=device,
+            trust_remote_code=True,
+            torch_dtype="auto",
+            _attn_implementation="eager",
+        )
 
-    return Model(config)
+    # Load processor with optimal num_crops setting
+    processor: AutoProcessor = await run_sync(
+        AutoProcessor.from_pretrained,
+        model_dir,
+        trust_remote_code=True,
+        num_crops=num_crops,
+    )
+
+    return model, processor
+
+
+async def process_images(image_path: Path, prompt: str, processor: AutoProcessor) -> dict[str, Any]:
+    """Process a single image and create input tensors.
+
+    Args:
+        image_path: Path to image file
+        prompt: Text prompt
+        processor: Model processor
+
+    Returns:
+        Processed inputs for the model
+    """
+    # Load single image
+    image = await run_sync(Image.open, str(image_path))  # type: ignore[return-value]
+    image = await run_sync(lambda img: img.convert("RGB"), image)  # type: ignore[return-value]
+
+    # Prepare prompt with image placeholder
+    messages = [{"role": "user", "content": f"<|image_1|>\n{prompt}"}]
+
+    # Apply chat template
+    prompt_text = await run_sync(
+        processor.tokenizer.apply_chat_template,
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
+
+    # Process inputs
+    return await run_sync(
+        processor,
+        prompt_text,
+        image,
+        return_tensors="pt",
+    )
+
+
+async def generate_text(
+    model: AutoModelForCausalLM,
+    processor: AutoProcessor,
+    inputs: dict[str, torch.Tensor],
+    device: str,
+    max_new_tokens: int = 1024,
+) -> str:
+    """Generate text based on processed inputs.
+
+    Args:
+        model: The model
+        processor: The processor
+        inputs: Processed inputs
+        device: Device to run generation on
+        max_new_tokens: Maximum new tokens to generate
+
+    Returns:
+        Generated text
+    """
+    # Move inputs to device if needed
+    if device != "cpu":
+        inputs = await run_sync(
+            lambda x: {k: v.to(device) for k, v in x.items()},
+            inputs,
+        )
+
+    # Generate text
+    with torch.no_grad():
+        output_ids = model.generate(
+            **inputs,
+            eos_token_id=processor.tokenizer.eos_token_id,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            temperature=0.0,
+        )
+
+    # Get only the newly generated tokens (skip the input tokens)
+    output_ids = output_ids[:, inputs["input_ids"].shape[1] :]
+
+    # Decode the output
+    generated_text = processor.batch_decode(
+        output_ids,
+        skip_special_tokens=True,
+        clean_up_tokenization_spaces=False,
+    )
+
+    return generated_text[0] if generated_text else ""
 
 
 async def extract_image_text(
     *,
-    image_path: str,
+    image_path: Path,
+    model: AutoModelForCausalLM,
+    processor: AutoProcessor,
     prompt: str,
-    model: Model,
-    processor: MultiModalProcessor,
-    tokenizer_stream: TokenizerStream,
-    max_length: int = 1024,
+    device: str,
+    max_new_tokens: int = 1024,
 ) -> str:
-    """Extract text from an image using an ONNX Runtime model.
+    """Extract text from images using a vision model.
 
     Args:
-        image_path: The path to the image file.
-        prompt: The prompt to use for text generation.
-        model: The ONNX Runtime model.
-        processor: The multimodal processor.
-        tokenizer_stream: The tokenizer stream.
-        max_length: The maximum length of the generated text.
+        image_path: Path to image file(s)
+        model: The vision model
+        processor: The vision processor
+        prompt: Text prompt to guide extraction
+        device: Device to run inference on
+        max_new_tokens: Maximum tokens to generate
 
     Returns:
-        The extracted text content.
+        Extracted text
     """
-    prompt_text = f"<|user|>\n<|image_1|>\n{prompt}<|end|>\n<|assistant|>\n"
+    # Process the images
+    inputs = await process_images(image_path, prompt, processor)
 
-    onnx_image = await run_sync(Images.open, image_path)
-
-    inputs = processor(prompt_text, images=onnx_image)
-
-    params = GeneratorParams(model)
-    params.set_inputs(inputs)
-    params.set_search_options(max_length=max_length)
-
-    generator = Generator(model, params)
-    generated_text = ""
-
-    while not generator.is_done():
-        generator.compute_logits()
-        generator.generate_next_token()
-        if tokens := generator.get_next_tokens():
-            for token in tokens:
-                generated_text += tokenizer_stream.decode(token)
-        else:
-            break
-
-    return generated_text
+    # Generate text from the processed inputs
+    return await generate_text(model, processor, inputs, device, max_new_tokens)
 
 
 async def extract_text_and_layout(
@@ -139,29 +234,59 @@ async def extract_text_and_layout(
     prompt: str = DEFAULT_PROMPT,
     max_length: int = 1024,
 ) -> str:
-    """Extract text and layout information from images using an ONNX Runtime model.
+    """Extract text and layout information from images using transformers.
 
     Args:
-        execution_provider: The execution provider to use for the model.
-        image_path: The path to the image file.
-        model_id: The Hugging Face model ID.
-        models_dir: The directory to store the downloaded model.
-        prompt: The prompt to use for text generation.
-        max_length: The maximum length of the generated text.
+        execution_provider: The device to use ("cpu", "cuda", "mps")
+        image_path: Path to the image file or list of paths for multiple images
+        model_id: The Hugging Face model ID
+        models_dir: The directory to store the downloaded model
+        prompt: The prompt to guide text extraction
+        max_length: Maximum tokens to generate
 
     Returns:
-        A list of extracted text content from each image
+        Extracted text content from the image(s)
     """
-    model = await get_model_config(model_id=model_id, provider=execution_provider, models_dir=models_dir)
+    # Map execution_provider to torch device
+    device = "cpu"
+    if execution_provider.lower() != "cpu":
+        if execution_provider.lower() == "cudaexecutionprovider" and torch.cuda.is_available():
+            device = "cuda"
+        elif (
+            execution_provider.lower() == "mpsexecutionprovider"
+            and hasattr(torch.backends, "mps")
+            and torch.backends.mps.is_available()
+        ):
+            device = "mps"
 
-    processor: MultiModalProcessor = model.create_multimodal_processor()
-    tokenizer_stream: TokenizerStream = processor.create_stream()
+    # Clear memory
+    import gc
 
-    return await extract_image_text(
-        image_path=str(image_path),
-        prompt=prompt,
-        model=model,
-        processor=processor,
-        tokenizer_stream=tokenizer_stream,
-        max_length=max_length,
-    )
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    try:
+        # Download model (if needed)
+        model_dir = await download_hf_model(model_id=model_id, models_dir=models_dir)
+
+        # Use optimal num_crops for single image
+        num_crops = 16  # As recommended in the docs
+
+        # Load model and processor
+        model, processor = await load_vision_model(model_dir, device, num_crops)
+
+        # Extract text
+        return await extract_image_text(
+            image_path=image_path,
+            model=model,
+            processor=processor,
+            prompt=prompt,
+            device=device,
+            max_new_tokens=max_length,
+        )
+    finally:
+        # Clean up
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
