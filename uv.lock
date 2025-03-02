@@ -314,6 +314,7 @@ dependencies = [
     { name = "charset-normalizer" },
     { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "html-to-markdown" },
+    { name = "playa-pdf" },
     { name = "pypdfium2" },
     { name = "python-calamine" },
     { name = "python-pptx" },
@@ -339,6 +340,7 @@ requires-dist = [
     { name = "charset-normalizer", specifier = ">=3.4.1" },
     { name = "exceptiongroup", marker = "python_full_version < '3.11'", specifier = ">=1.2.2" },
     { name = "html-to-markdown", specifier = ">=1.2.0" },
+    { name = "playa-pdf", specifier = ">=0.3.1" },
     { name = "pypdfium2", specifier = "==4.30.0" },
     { name = "python-calamine", specifier = ">=0.3.1" },
     { name = "python-pptx", specifier = ">=1.0.2" },
@@ -631,6 +633,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/13/fc/128cc9cb8f03208bdbf93d3aa862e16d376844a14f9a0ce5cf4507372de4/platformdirs-4.3.6.tar.gz", hash = "sha256:357fb2acbc885b0419afd3ce3ed34564c13c9b95c89360cd9563f73aa5e2b907", size = 21302 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3c/a6/bc1012356d8ece4d66dd75c4b9fc6c1f6650ddd5991e421177d9f8f671be/platformdirs-4.3.6-py3-none-any.whl", hash = "sha256:73e575e1408ab8103900836b97580d5307456908a03e92031bab39e4554cc3fb", size = 18439 },
+]
+
+[[package]]
+name = "playa-pdf"
+version = "0.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/19/a9feadf740493eb020aa1a9a2a3bf0cb3cb91d0044fd84ad7005312f7907/playa_pdf-0.3.1.tar.gz", hash = "sha256:39a9f6d5738afc185eb463cda982ffc61c10dc5ea592427833d052880d2e76f6", size = 7895900 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/45/6a/58a1d3f2237adc67780ac898773801d5426e52ae0ee4889c23a920ed39e3/playa_pdf-0.3.1-py3-none-any.whl", hash = "sha256:8d960bfdd4b6618f046887bee246d29f60b31281be8240ff5ae64817882e26be", size = 5623309 },
 ]
 
 [[package]]

@@ -397,14 +397,16 @@ submitting PRs to avoid disappointment.
 
 1. Clone the repo
 2. Install the system dependencies
-3. Install the full dependencies with `uv sync`
-4. Install the pre-commit hooks with:
+3. Install Python 3.12 with `uv python install 3.12`
+4. Create a virtual environment with `uv venv --python 3.12`
+5. Install the full dependencies with `uv sync`
+6. Install the pre-commit hooks with:
 
    ```shell
    pre-commit install && pre-commit install --hook-type commit-msg
    ```
 
-5. Make your changes and submit a PR
+7. Make your changes and submit a PR
 
 ## License
 
