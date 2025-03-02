@@ -26,6 +26,14 @@ async def test_extract_pdf_searchable_text(searchable_pdf: Path) -> None:
 
 
 @pytest.mark.anyio
+async def test_extract_pdf_searchable_not_fallback_to_ocr(test_contract: Path) -> None:
+    result = await extract_pdf_file(test_contract, force_ocr=False, max_processes=1)
+    assert result.content.startswith(
+        "Page 1 Sample Contract Contract No.___________ PROFESSIONAL SERVICES AGREEMENT THIS AGREEMENT made and entered into this"
+    )
+
+
+@pytest.mark.anyio
 async def test_extract_pdf_text_with_ocr(scanned_pdf: Path) -> None:
     """Test extracting text from a scanned PDF using OCR."""
     result = await _extract_pdf_text_with_ocr(scanned_pdf, max_processes=1)
@@ -91,21 +99,6 @@ def test_validate_empty_text() -> None:
     assert not _validate_extracted_text("\n\n")
 
 
-def test_validate_control_chars() -> None:
-    """Test that text with control characters is invalid."""
-    assert not _validate_extracted_text("Hello\x00World")
-    assert not _validate_extracted_text("Test\x1fText")
-    assert not _validate_extracted_text("Sample\x7fText")
-    assert not _validate_extracted_text("Test\x9fData")
-
-
-def test_validate_unicode_chars() -> None:
-    """Test that text with replacement characters is invalid."""
-    assert not _validate_extracted_text("Bad\ufffdText")
-    assert not _validate_extracted_text("Text\u200bHidden")
-    assert not _validate_extracted_text("Line\u2028Break")
-
-
 def test_validate_normal_text() -> None:
     """Test that normal text passes validation."""
     assert _validate_extracted_text("Hello World!")
@@ -117,3 +110,42 @@ def test_validate_normal_text() -> None:
         It contains normal punctuation, numbers (123), and symbols (!@#$%).
         Even with multiple paragraphs and line breaks, it should be fine.
     """)
+
+
+def test_validate_short_corrupted_text() -> None:
+    """Test validation of short text with corruption matches."""
+    # Test text shorter than SHORT_TEXT_THRESHOLD with corruption matches
+    assert not _validate_extracted_text("\x00\x00\x00")  # Three null bytes (> MINIMUM_CORRUPTED_RESULTS)
+    assert _validate_extracted_text("Hi\x00\x00")  # Two null bytes (= MINIMUM_CORRUPTED_RESULTS)
+    assert _validate_extracted_text("Hi\x00")  # One null byte (< MINIMUM_CORRUPTED_RESULTS)
+    assert _validate_extracted_text("Short \ufffd")  # One replacement char (< MINIMUM_CORRUPTED_RESULTS)
+
+
+def test_validate_long_corrupted_text() -> None:
+    """Test validation of long text with corruption threshold."""
+    # Create a long text with varying levels of corruption
+    base_text = "A" * 1000  # Long text to exceed SHORT_TEXT_THRESHOLD
+
+    # Test with corruption below threshold (5%)
+    text_low_corruption = base_text + ("\x00" * 40)  # 4% corruption
+    assert _validate_extracted_text(text_low_corruption)
+
+    # Test with corruption above threshold (5%)
+    text_high_corruption = base_text + ("\x00" * 60)  # 6% corruption
+    assert not _validate_extracted_text(text_high_corruption)
+
+
+def test_validate_custom_corruption_threshold() -> None:
+    """Test validation with custom corruption threshold."""
+    base_text = "A" * 1000
+    corrupted_chars = "\x00" * 100  # 10% corruption
+    text = base_text + corrupted_chars
+
+    # Should fail with default threshold (5%)
+    assert not _validate_extracted_text(text)
+
+    # Should pass with higher threshold (15%)
+    assert _validate_extracted_text(text, corruption_threshold=0.15)
+
+    # Should fail with lower threshold (3%)
+    assert not _validate_extracted_text(text, corruption_threshold=0.03)

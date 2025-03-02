@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from kreuzberg._mime_types import (
+    DOCX_MIME_TYPE,
     EXCEL_MIME_TYPE,
     MARKDOWN_MIME_TYPE,
     PDF_MIME_TYPE,
@@ -62,7 +63,7 @@ async def test_extract_bytes_image(ocr_image: Path) -> None:
 @pytest.mark.anyio
 async def test_extract_bytes_pandoc(docx_document: Path) -> None:
     content = docx_document.read_bytes()
-    mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    mime_type = DOCX_MIME_TYPE
     result = await extract_bytes(content, mime_type)
     assert_extraction_result(result, mime_type=MARKDOWN_MIME_TYPE)
 
@@ -125,7 +126,7 @@ async def test_extract_file_image(ocr_image: Path) -> None:
 
 @pytest.mark.anyio
 async def test_extract_file_pandoc(docx_document: Path) -> None:
-    mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    mime_type = DOCX_MIME_TYPE
     result = await extract_file(docx_document, mime_type)
     assert_extraction_result(result, mime_type=MARKDOWN_MIME_TYPE)
 
@@ -286,16 +287,16 @@ async def test_batch_extract_file_invalid() -> None:
 
 
 @pytest.mark.anyio
-async def test_batch_extract_bytes_mixed() -> None:
+async def test_batch_extract_bytes_mixed(searchable_pdf: Path, docx_document: Path) -> None:
     """Test batch extraction of multiple byte contents of different types."""
     # Create test content pairs
     contents = [
         (b"This is plain text", PLAIN_TEXT_MIME_TYPE),
         (
-            (Path(__file__).parent / "source" / "document.docx").read_bytes(),
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            docx_document.read_bytes(),
+            DOCX_MIME_TYPE,
         ),
-        ((Path(__file__).parent / "source" / "searchable.pdf").read_bytes(), PDF_MIME_TYPE),
+        (searchable_pdf.read_bytes(), PDF_MIME_TYPE),
     ]
 
     results = await batch_extract_bytes(contents)
@@ -340,16 +341,16 @@ def test_batch_extract_file_sync_mixed(test_article: Path) -> None:
             assert_extraction_result(result, mime_type=PLAIN_TEXT_MIME_TYPE)
 
 
-def test_batch_extract_bytes_sync_mixed() -> None:
+def test_batch_extract_bytes_sync_mixed(searchable_pdf: Path, docx_document: Path) -> None:
     """Test synchronous batch extraction of multiple byte contents of different types."""
     # Create test content pairs
     contents = [
         (b"This is plain text", PLAIN_TEXT_MIME_TYPE),
         (
-            (Path(__file__).parent / "source" / "document.docx").read_bytes(),
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            docx_document.read_bytes(),
+            DOCX_MIME_TYPE,
         ),
-        ((Path(__file__).parent / "source" / "searchable.pdf").read_bytes(), PDF_MIME_TYPE),
+        (searchable_pdf.read_bytes(), PDF_MIME_TYPE),
     ]
 
     results = batch_extract_bytes_sync(contents)

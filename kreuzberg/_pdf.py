@@ -24,32 +24,36 @@ if TYPE_CHECKING:  # pragma: no cover
 # - Control and non-printable characters
 # - Unicode replacement and invalid characters
 # - Zero-width spaces and other invisible characters
-CORRUPTED_PATTERN: Final[Pattern[str]] = compile_regex(
-    r"[\x00-\x08\x0B-\x1F\x7F-\x9F]|\uFFFD|[\u200B-\u200F\u2028-\u202F]"
-)
+CORRUPTED_PATTERN: Final[Pattern[str]] = compile_regex(r"[\x00-\x08\x0B-\x0C\x0E-\x1F]|\uFFFD")
+SHORT_TEXT_THRESHOLD: Final[int] = 50
+MINIMUM_CORRUPTED_RESULTS: Final[int] = 2
 
 
-def _validate_extracted_text(text: str) -> bool:
+def _validate_extracted_text(text: str, corruption_threshold: float = 0.05) -> bool:
     """Check if text extracted from PDF is valid or corrupted.
 
-    This checks for common indicators of corrupted PDF text extraction:
+    This checks for indicators of corrupted PDF text extraction:
     1. Empty or whitespace-only text
-    2. Control characters and other non-printable characters
-    3. Unicode replacement characters
-    4. Zero-width spaces and other invisible characters
+    2. High concentration of control characters and null bytes
+    3. High concentration of Unicode replacement characters
 
     Args:
         text: The extracted text to validate
+        corruption_threshold: Maximum allowed percentage (0.0-1.0) of corrupted
+            characters (default: 0.05 or 5%)
 
     Returns:
         True if the text appears valid, False if it seems corrupted
     """
-    # Check for empty or whitespace-only text
     if not text or not text.strip():
         return False
 
-    # Check for corruption indicators
-    return not bool(CORRUPTED_PATTERN.search(text))
+    corruption_matches = CORRUPTED_PATTERN.findall(text)
+
+    if len(text) < SHORT_TEXT_THRESHOLD:
+        return len(corruption_matches) <= MINIMUM_CORRUPTED_RESULTS
+
+    return (len(corruption_matches) / len(text)) < corruption_threshold
 
 
 async def _convert_pdf_to_images(input_file: Path) -> list[Image]:
@@ -148,12 +152,10 @@ async def extract_pdf_file(
     Returns:
         The extracted text.
     """
-    if (
-        not force_ocr
-        and (content := await _extract_pdf_searchable_text(input_file))
-        and _validate_extracted_text(content)
-    ):
-        return ExtractionResult(content=content, mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
+    if not force_ocr:
+        content = await _extract_pdf_searchable_text(input_file)
+        if _validate_extracted_text(content):
+            return ExtractionResult(content=content, mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
     return await _extract_pdf_text_with_ocr(input_file, max_processes=max_processes, language=language, psm=psm)
 
 

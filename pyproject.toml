@@ -1,6 +1,6 @@
 [project]
 name = "kreuzberg"
-version = "2.1.0"
+version = "2.1.2"
 description = "A text extraction library supporting PDFs, images, office documents and more"
 readme = "README.md"
 keywords = [
@@ -40,11 +40,11 @@ dependencies = [
   "charset-normalizer>=3.4.1",
   "exceptiongroup>=1.2.2; python_version<'3.11'",
   "html-to-markdown>=1.2.0",
-  "playa-pdf",
-  "pypdfium2>=4.30.1",
+  "playa-pdf>=0.3.1",
+  "pypdfium2==4.30.0",                                # pinned due to bug in 4.30.1, until v5 is stable
   "python-calamine>=0.3.1",
   "python-pptx>=1.0.2",
-  "typing-extensions>=4.12.2; python_version<'3.11'",
+  "typing-extensions>=4.12.2; python_version<'3.10'",
 ]
 urls.homepage = "https://github.com/Goldziher/kreuzberg"
 
@@ -57,7 +57,7 @@ dev = [
   "pytest-cov>=6.0.0",
   "pytest-mock>=3.14.0",
   "pytest-timeout>=2.3.1",
-  "ruff>=0.9.6",
+  "ruff>=0.9.9",
   "trio>=0.29.0",
 ]
 
@@ -136,6 +136,3 @@ disable_error_code = 'import-untyped'
 implicit_reexport = false
 show_error_codes = true
 strict = true
-
-[tool.uv.sources]
-playa-pdf = { git = "https://github.com/dhdaines/playa", rev = "main" }

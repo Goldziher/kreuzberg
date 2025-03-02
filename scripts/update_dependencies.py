@@ -7,7 +7,7 @@ from typing import Any
 
 import tomllib  # type: ignore[import-not-found]
 
-SKIP_DEPENDENCY_NAMES = {"en-core-web-sm"}
+SKIP_DEPENDENCY_NAMES = {"pypdfium2"}  # pinned version for now
 
 
 def uv(subcommand: str, packages: list[str], group: str | None) -> None:

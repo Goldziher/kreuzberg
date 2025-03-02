@@ -21,7 +21,7 @@ repos:
       - id: check-case-conflict
       - id: detect-private-key
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: "v3.5.1"
+    rev: "v3.5.2"
     hooks:
       - id: prettier
         exclude: ^tests|^.idea|^migrations|^.git
@@ -30,7 +30,7 @@ repos:
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.7
+    rev: v0.9.9
     hooks:
       - id: ruff
         args: [--fix]

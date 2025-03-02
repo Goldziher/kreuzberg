@@ -15,6 +15,7 @@ MARKDOWN_MIME_TYPE: Final = "text/markdown"
 PDF_MIME_TYPE: Final = "application/pdf"
 PLAIN_TEXT_MIME_TYPE: Final = "text/plain"
 POWER_POINT_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+DOCX_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 # Excel formats
 EXCEL_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 EXCEL_BINARY_MIME_TYPE: Final = "application/vnd.ms-excel"
@@ -73,7 +74,7 @@ PANDOC_SUPPORTED_MIME_TYPES: Final[set[str]] = {
     "application/epub+zip",
     "application/rtf",
     "application/vnd.oasis.opendocument.text",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    DOCX_MIME_TYPE,
     "application/x-biblatex",
     "application/x-bibtex",
     "application/x-endnote+xml",
@@ -146,7 +147,7 @@ EXT_TO_MIME_TYPE: Final[Mapping[str, str]] = {
     ".epub": "application/epub+zip",
     ".rtf": "application/rtf",
     ".odt": "application/vnd.oasis.opendocument.text",
-    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".docx": DOCX_MIME_TYPE,
     ".bib": "application/x-bibtex",
     ".ipynb": "application/x-ipynb+json",
     ".tex": "application/x-latex",
