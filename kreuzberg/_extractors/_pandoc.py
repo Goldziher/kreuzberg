@@ -228,7 +228,7 @@ class PandocExtractor(Extractor):
             command = ["pandoc", "--version"]
             result = await run_process(command)
 
-            version_match = re.search(r"pandoc\s+v?(\d+)\.\d+(\.\d+)?", result.stdout.decode())
+            version_match = re.search(r"pandoc(?:\.exe)?\s+v?(\d+)\.\d+(\.\d+)?", result.stdout.decode())
             if not version_match or int(version_match.group(1)) < MINIMAL_SUPPORTED_PANDOC_VERSION:
                 raise MissingDependencyError(
                     "Pandoc version 2 or above is a required system dependency. Please install it on your system and make sure its available in $PATH."
