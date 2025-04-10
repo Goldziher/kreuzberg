@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
 
 from PIL import Image
-import numpy as np
 
 from kreuzberg._mime_types import PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
@@ -171,6 +170,8 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
         Raises:
             OCRError: If OCR processing fails.
         """
+        import numpy as np
+
         await self._init_easyocr(**kwargs)
 
         beam_width = kwargs.pop("beam_width")
