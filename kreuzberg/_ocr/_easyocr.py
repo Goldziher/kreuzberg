@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
 
 from PIL import Image
+import numpy as np
 
 from kreuzberg._mime_types import PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
@@ -180,7 +181,7 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
         try:
             result = await run_sync(
                 self._reader.readtext,
-                image.tobytes(),
+                np.array(image),
                 beamWidth=beam_width,
                 **kwargs,
             )
