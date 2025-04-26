@@ -1,5 +1,3 @@
-"""Tests for PDF extraction functionality."""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,7 +21,6 @@ def extractor() -> PDFExtractor:
 
 @pytest.mark.anyio
 async def test_extract_pdf_searchable_text(extractor: PDFExtractor, searchable_pdf: Path) -> None:
-    """Test extracting text from a searchable PDF."""
     result = await extractor._extract_pdf_searchable_text(searchable_pdf)
     assert isinstance(result, str)
     assert result.strip()
@@ -40,7 +37,6 @@ async def test_extract_pdf_searchable_not_fallback_to_ocr(test_contract: Path) -
 
 @pytest.mark.anyio
 async def test_extract_pdf_text_with_ocr(extractor: PDFExtractor, scanned_pdf: Path) -> None:
-    """Test extracting text from a scanned PDF using OCR."""
     result = await extractor._extract_pdf_text_with_ocr(scanned_pdf, ocr_backend="tesseract")
     assert isinstance(result, ExtractionResult)
     assert result.content.strip()
@@ -48,7 +44,6 @@ async def test_extract_pdf_text_with_ocr(extractor: PDFExtractor, scanned_pdf: P
 
 @pytest.mark.anyio
 async def test_extract_pdf_file(extractor: PDFExtractor, searchable_pdf: Path) -> None:
-    """Test extracting text from a PDF file."""
     result = await extractor.extract_path_async(searchable_pdf)
     assert isinstance(result.content, str)
     assert result.content.strip()
@@ -61,7 +56,6 @@ async def test_extract_pdf_file(extractor: PDFExtractor, searchable_pdf: Path) -
 
 @pytest.mark.anyio
 async def test_extract_pdf_file_non_searchable(extractor: PDFExtractor, non_searchable_pdf: Path) -> None:
-    """Test extracting text from a non-searchable PDF file."""
     result = await extractor.extract_path_async(non_searchable_pdf)
     assert isinstance(result.content, str)
     assert result.content.strip()
@@ -73,14 +67,12 @@ async def test_extract_pdf_file_non_searchable(extractor: PDFExtractor, non_sear
 
 @pytest.mark.anyio
 async def test_extract_pdf_file_invalid(extractor: PDFExtractor) -> None:
-    """Test that attempting to extract from an invalid PDF raises an error."""
     with pytest.raises(FileNotFoundError):
         await extractor.extract_path_async(Path("/invalid/path.pdf"))
 
 
 @pytest.mark.anyio
 async def test_convert_pdf_to_images_raises_parsing_error(extractor: PDFExtractor, tmp_path: Path) -> None:
-    """Test that attempting to convert an invalid PDF to images raises a ParsingError."""
     pdf_path = tmp_path / "invalid.pdf"
     pdf_path.write_text("invalid pdf content")
 
@@ -93,7 +85,6 @@ async def test_convert_pdf_to_images_raises_parsing_error(extractor: PDFExtracto
 
 @pytest.mark.anyio
 async def test_extract_pdf_searchable_text_raises_parsing_error(extractor: PDFExtractor, tmp_path: Path) -> None:
-    """Test that attempting to extract text from an invalid PDF raises a ParsingError."""
     pdf_path = tmp_path / "invalid.pdf"
     pdf_path.write_text("invalid pdf content")
 
@@ -105,14 +96,12 @@ async def test_extract_pdf_searchable_text_raises_parsing_error(extractor: PDFEx
 
 
 def test_validate_empty_text(extractor: PDFExtractor) -> None:
-    """Test that empty text is considered invalid."""
     assert not extractor._validate_extracted_text("")
     assert not extractor._validate_extracted_text("   ")
     assert not extractor._validate_extracted_text("\n\n")
 
 
 def test_validate_normal_text(extractor: PDFExtractor) -> None:
-    """Test that normal text passes validation."""
     assert extractor._validate_extracted_text("Hello World!")
     assert extractor._validate_extracted_text("Line 1\nLine 2")
     assert extractor._validate_extracted_text(" 2024 Company")
@@ -125,8 +114,6 @@ def test_validate_normal_text(extractor: PDFExtractor) -> None:
 
 
 def test_validate_short_corrupted_text(extractor: PDFExtractor) -> None:
-    """Test validation of short text with corruption matches."""
-
     assert not extractor._validate_extracted_text("\x00\x00\x00")
     assert extractor._validate_extracted_text("Hi\x00\x00")
     assert extractor._validate_extracted_text("Hi\x00")
@@ -134,8 +121,6 @@ def test_validate_short_corrupted_text(extractor: PDFExtractor) -> None:
 
 
 def test_validate_long_corrupted_text(extractor: PDFExtractor) -> None:
-    """Test validation of long text with corruption threshold."""
-
     base_text = "A" * 1000
 
     text_low_corruption = base_text + ("\x00" * 40)
@@ -146,7 +131,6 @@ def test_validate_long_corrupted_text(extractor: PDFExtractor) -> None:
 
 
 def test_validate_custom_corruption_threshold(extractor: PDFExtractor) -> None:
-    """Test validation with custom corruption threshold."""
     base_text = "A" * 1000
     corrupted_chars = "\x00" * 100
     text = base_text + corrupted_chars
@@ -160,8 +144,6 @@ def test_validate_custom_corruption_threshold(extractor: PDFExtractor) -> None:
 
 @pytest.mark.anyio
 async def test_extract_pdf_with_rich_metadata(extractor: PDFExtractor, test_article: Path) -> None:
-    """Test extracting metadata from a PDF with rich metadata fields."""
-
     result = await extractor.extract_path_async(test_article)
 
     assert result.content.strip()
@@ -188,8 +170,6 @@ async def test_extract_pdf_with_rich_metadata(extractor: PDFExtractor, test_arti
 
 @pytest.mark.anyio
 async def test_extract_pdf_bytes_with_metadata(extractor: PDFExtractor, test_article: Path) -> None:
-    """Test extracting metadata from PDF bytes."""
-
     pdf_bytes = test_article.read_bytes()
 
     result = await extractor.extract_bytes_async(pdf_bytes)

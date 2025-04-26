@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 
 
 def raise_import_error(name: str, *args: Any, **kwargs: Any) -> Any:
-    """Helper function to raise ImportError for specific modules."""
     if name == "easyocr":
         raise ImportError("No module named 'easyocr'")
     if name == "torch":
@@ -42,7 +41,6 @@ def config_dict() -> dict[str, Any]:
 
 @pytest.fixture
 def mock_easyocr_reader() -> Mock:
-    """Mock the EasyOCR Reader object."""
     mock_reader = Mock()
     mock_reader.readtext.return_value = [
         (
@@ -56,7 +54,6 @@ def mock_easyocr_reader() -> Mock:
 
 @pytest.fixture(autouse=True)
 def reset_reader(mocker: MockerFixture) -> None:
-    """Reset EasyOCR reader between tests."""
     EasyOCRBackend._reader = None
 
 
@@ -71,11 +68,29 @@ def reset_reader(mocker: MockerFixture) -> None:
         ("ch_sim", ["ch_sim"]),
         ("ch_tra", ["ch_tra"]),
         ("ko", ["ko"]),
+        ("en,fr", ["en", "fr"]),
+        ("en,ch_sim", ["en", "ch_sim"]),
+        ("en,fr,ja", ["en", "fr", "ja"]),
+        ("en, fr", ["en", "fr"]),
+        (" en , fr ", ["en", "fr"]),
     ],
 )
 def test_validate_language_code_valid(language_code: str, expected_result: list[str]) -> None:
-    """Test that valid language codes are correctly validated and normalized."""
     result = EasyOCRBackend._validate_language_code(language_code)
+    assert result == expected_result
+
+
+@pytest.mark.parametrize(
+    "language_list,expected_result",
+    [
+        (["en"], ["en"]),
+        (["en", "fr"], ["en", "fr"]),
+        (["en", "ch_sim"], ["en", "ch_sim"]),
+        (["EN", "FR", "JA"], ["en", "fr", "ja"]),
+    ],
+)
+def test_validate_language_code_list_valid(language_list: list[str], expected_result: list[str]) -> None:
+    result = EasyOCRBackend._validate_language_code(language_list)
     assert result == expected_result
 
 
@@ -95,7 +110,6 @@ def test_validate_language_code_valid(language_code: str, expected_result: list[
     ],
 )
 def test_validate_language_code_invalid(invalid_language_code: str) -> None:
-    """Test that invalid language codes raise ValidationError with appropriate context."""
     with pytest.raises(ValidationError) as excinfo:
         EasyOCRBackend._validate_language_code(invalid_language_code)
 
@@ -105,16 +119,49 @@ def test_validate_language_code_invalid(invalid_language_code: str) -> None:
     assert "not supported by EasyOCR" in str(excinfo.value)
 
 
+@pytest.mark.parametrize(
+    "mixed_language_codes",
+    [
+        "en,invalid",
+        "invalid,en",
+        "en,invalid,fr",
+        ["en", "invalid"],
+        ["invalid", "en"],
+        ["en", "invalid", "fr"],
+        "en,eng",
+    ],
+)
+def test_validate_language_code_mixed_invalid(mixed_language_codes: str | list[str]) -> None:
+    from kreuzberg._ocr._easyocr import EASYOCR_SUPPORTED_LANGUAGE_CODES
+
+    with pytest.raises(ValidationError) as excinfo:
+        EasyOCRBackend._validate_language_code(mixed_language_codes)
+
+    assert "language_code" in excinfo.value.context
+    assert "not supported by EasyOCR" in str(excinfo.value)
+
+    if isinstance(mixed_language_codes, str):
+        invalid_codes = [
+            lang.strip()
+            for lang in mixed_language_codes.split(",")
+            if lang.strip().lower() not in EASYOCR_SUPPORTED_LANGUAGE_CODES
+        ]
+    else:
+        invalid_codes = [lang for lang in mixed_language_codes if lang.lower() not in EASYOCR_SUPPORTED_LANGUAGE_CODES]
+
+    reported_invalid = excinfo.value.context["language_code"].split(",")
+    assert len(reported_invalid) == len(invalid_codes)
+    for invalid in invalid_codes:
+        assert invalid.lower() in [r.lower() for r in reported_invalid]
+
+
 @pytest.mark.anyio
 async def test_init_easyocr_with_invalid_language(backend: EasyOCRBackend) -> None:
-    """Test initializing EasyOCR with an invalid language raises ValidationError."""
     with pytest.raises(ValidationError, match="not supported by EasyOCR"):
         await backend._init_easyocr(language="invalid")
 
 
 def test_is_gpu_available() -> None:
-    """Test GPU availability check."""
-
     mock_torch = Mock()
     mock_torch.cuda.is_available.return_value = True
 
@@ -127,8 +174,6 @@ def test_is_gpu_available() -> None:
 
 @pytest.mark.anyio
 async def test_init_easyocr_missing_dependency() -> None:
-    """Test that MissingDependencyError is raised when easyocr is not installed."""
-
     with patch(
         "builtins.__import__", side_effect=lambda name, *args, **kwargs: raise_import_error(name, *args, **kwargs)
     ):
@@ -144,8 +189,6 @@ async def test_init_easyocr_missing_dependency() -> None:
 
 @pytest.mark.anyio
 async def test_init_easyocr(mock_easyocr_reader: Mock) -> None:
-    """Test successful initialization of EasyOCR."""
-
     mock_easyocr = Mock()
     mock_reader_class = Mock(return_value=mock_easyocr_reader)
     mock_easyocr.Reader = mock_reader_class
@@ -165,8 +208,41 @@ async def test_init_easyocr(mock_easyocr_reader: Mock) -> None:
 
 
 @pytest.mark.anyio
+async def test_init_easyocr_comma_separated_languages(mock_easyocr_reader: Mock) -> None:
+    mock_easyocr = Mock()
+    mock_reader_class = Mock(return_value=mock_easyocr_reader)
+    mock_easyocr.Reader = mock_reader_class
+
+    with (
+        patch.dict("sys.modules", {"easyocr": mock_easyocr}),
+        patch("kreuzberg._ocr._easyocr.run_sync", return_value=mock_easyocr_reader) as run_sync_mock,
+    ):
+        EasyOCRBackend._reader = None
+        backend = EasyOCRBackend()
+
+        await backend._init_easyocr(language="en,ch_sim")
+        assert run_sync_mock.call_args[0][1] == ["en", "ch_sim"]
+
+
+@pytest.mark.anyio
+async def test_init_easyocr_language_list(mock_easyocr_reader: Mock) -> None:
+    mock_easyocr = Mock()
+    mock_reader_class = Mock(return_value=mock_easyocr_reader)
+    mock_easyocr.Reader = mock_reader_class
+
+    with (
+        patch.dict("sys.modules", {"easyocr": mock_easyocr}),
+        patch("kreuzberg._ocr._easyocr.run_sync", return_value=mock_easyocr_reader) as run_sync_mock,
+    ):
+        EasyOCRBackend._reader = None
+        backend = EasyOCRBackend()
+
+        await backend._init_easyocr(language=["en", "ch_sim"])
+        assert run_sync_mock.call_args[0][1] == ["en", "ch_sim"]
+
+
+@pytest.mark.anyio
 async def test_init_easyocr_error(mocker: MockerFixture) -> None:
-    """Test error handling during EasyOCR initialization."""
     error_message = "Failed to initialize"
     mocker.patch("kreuzberg._ocr._easyocr.run_sync", side_effect=Exception(error_message))
 
@@ -177,8 +253,6 @@ async def test_init_easyocr_error(mocker: MockerFixture) -> None:
 
 @pytest.mark.anyio
 async def test_process_image(backend: EasyOCRBackend, mock_easyocr_reader: Mock, config_dict: dict[str, Any]) -> None:
-    """Test processing an image with EasyOCR."""
-
     image = Image.new("RGB", (100, 100))
 
     with patch.object(backend, "_init_easyocr", return_value=None):
@@ -197,8 +271,6 @@ async def test_process_image(backend: EasyOCRBackend, mock_easyocr_reader: Mock,
 
 @pytest.mark.anyio
 async def test_process_image_error(backend: EasyOCRBackend, config_dict: dict[str, Any]) -> None:
-    """Test error handling when processing an image."""
-
     image = Image.new("RGB", (100, 100))
 
     with patch.object(backend, "_init_easyocr", return_value=None):
@@ -214,8 +286,6 @@ async def test_process_image_error(backend: EasyOCRBackend, config_dict: dict[st
 
 @pytest.mark.anyio
 async def test_process_file(backend: EasyOCRBackend, tmp_path: Path) -> None:
-    """Test processing a file with EasyOCR."""
-
     test_image = Image.new("RGB", (100, 100))
     image_path = tmp_path / "test_image.png"
     test_image.save(image_path)
@@ -236,8 +306,6 @@ async def test_process_file(backend: EasyOCRBackend, tmp_path: Path) -> None:
 
 @pytest.mark.anyio
 async def test_process_file_error(backend: EasyOCRBackend, tmp_path: Path) -> None:
-    """Test error handling when processing a file."""
-
     test_image = Image.new("RGB", (100, 100))
     image_path = tmp_path / "test_image.png"
     test_image.save(image_path)
@@ -253,7 +321,6 @@ async def test_process_file_error(backend: EasyOCRBackend, tmp_path: Path) -> No
 
 @pytest.mark.anyio
 async def test_process_easyocr_result_empty(backend: EasyOCRBackend) -> None:
-    """Test processing empty EasyOCR results."""
     image = Image.new("RGB", (100, 100))
     result = backend._process_easyocr_result([], image)
 
@@ -265,7 +332,6 @@ async def test_process_easyocr_result_empty(backend: EasyOCRBackend) -> None:
 
 @pytest.mark.anyio
 async def test_process_easyocr_result_simple_format(backend: EasyOCRBackend) -> None:
-    """Test processing EasyOCR results in simple format (text, confidence)."""
     image = Image.new("RGB", (100, 100))
     easyocr_result = [
         ("Line 1", 0.95),
@@ -283,7 +349,6 @@ async def test_process_easyocr_result_simple_format(backend: EasyOCRBackend) -> 
 
 @pytest.mark.anyio
 async def test_process_easyocr_result_full_format(backend: EasyOCRBackend) -> None:
-    """Test processing EasyOCR results in full format (box, text, confidence)."""
     image = Image.new("RGB", (100, 100))
     easyocr_result = [
         (

@@ -1,5 +1,3 @@
-"""Tests for chunker functionality."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -18,14 +16,12 @@ if TYPE_CHECKING:
 
 @pytest.fixture(autouse=True)
 def clear_chunkers() -> Generator[None, None, None]:
-    """Clear the chunkers cache before and after each test."""
     _chunkers.clear()
     yield
     _chunkers.clear()
 
 
 def test_get_chunker_markdown() -> None:
-    """Test getting a markdown chunker."""
     with patch("semantic_text_splitter.MarkdownSplitter") as mock_splitter:
         mock_instance = MagicMock()
         mock_splitter.return_value = mock_instance
@@ -38,7 +34,6 @@ def test_get_chunker_markdown() -> None:
 
 
 def test_get_chunker_text() -> None:
-    """Test getting a text chunker."""
     with patch("semantic_text_splitter.TextSplitter") as mock_splitter:
         mock_instance = MagicMock()
         mock_splitter.return_value = mock_instance
@@ -51,7 +46,6 @@ def test_get_chunker_text() -> None:
 
 
 def test_get_chunker_custom_parameters() -> None:
-    """Test getting a chunker with custom parameters."""
     with patch("semantic_text_splitter.TextSplitter") as mock_splitter:
         mock_instance = MagicMock()
         mock_splitter.return_value = mock_instance
@@ -67,7 +61,6 @@ def test_get_chunker_custom_parameters() -> None:
 
 
 def test_get_chunker_caching() -> None:
-    """Test that chunkers are cached."""
     with patch("semantic_text_splitter.TextSplitter") as mock_splitter:
         mock_instance = MagicMock()
         mock_splitter.return_value = mock_instance
@@ -81,7 +74,6 @@ def test_get_chunker_caching() -> None:
 
 
 def test_get_chunker_missing_dependency() -> None:
-    """Test that MissingDependencyError is raised when the dependency is missing."""
     with patch(
         "semantic_text_splitter.TextSplitter", side_effect=ImportError("No module named 'semantic_text_splitter'")
     ):
@@ -93,7 +85,6 @@ def test_get_chunker_missing_dependency() -> None:
 
 
 def test_get_chunker_different_mime_types() -> None:
-    """Test that different mime types create different chunkers."""
     with (
         patch("semantic_text_splitter.MarkdownSplitter") as mock_markdown_splitter,
         patch("semantic_text_splitter.TextSplitter") as mock_text_splitter,

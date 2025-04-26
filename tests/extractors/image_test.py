@@ -1,5 +1,3 @@
-"""Tests for image extraction functionality."""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -34,7 +32,6 @@ def mock_ocr_backend() -> Generator[MagicMock, None, None]:
 
 @pytest.mark.anyio
 async def test_extract_path_async_no_ocr_backend() -> None:
-    """Test that ValidationError is raised when ocr_backend is None."""
     config = ExtractionConfig(ocr_backend=None)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
@@ -46,7 +43,6 @@ async def test_extract_path_async_no_ocr_backend() -> None:
 
 @pytest.mark.anyio
 async def test_extract_path_async(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    """Test extracting text from an image file."""
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
@@ -63,7 +59,6 @@ async def test_extract_path_async(mock_ocr_backend: MagicMock, tmp_path: Path) -
 
 
 def test_extract_path_sync(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    """Test synchronous extraction from an image file."""
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
@@ -82,7 +77,6 @@ def test_extract_path_sync(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
 
 
 def test_extract_bytes_sync(mock_ocr_backend: MagicMock) -> None:
-    """Test synchronous extraction from image bytes."""
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
@@ -108,7 +102,6 @@ def test_extract_bytes_sync(mock_ocr_backend: MagicMock) -> None:
     ],
 )
 def test_get_extension_from_mime_type(mime_type: str, expected_extension: str) -> None:
-    """Test getting file extension from mime type."""
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type=mime_type, config=config)
 
@@ -117,7 +110,6 @@ def test_get_extension_from_mime_type(mime_type: str, expected_extension: str) -
 
 
 def test_get_extension_from_partial_mime_type() -> None:
-    """Test getting file extension from a partial mime type match."""
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type="image/jpeg", config=config)
 
@@ -126,7 +118,6 @@ def test_get_extension_from_partial_mime_type() -> None:
 
 
 def test_get_extension_from_unsupported_mime_type() -> None:
-    """Test that ValidationError is raised for unsupported mime types."""
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
@@ -139,7 +130,6 @@ def test_get_extension_from_unsupported_mime_type() -> None:
 
 @pytest.mark.anyio
 async def test_extract_bytes_async(mock_ocr_backend: MagicMock) -> None:
-    """Test extracting text from image bytes."""
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type="image/png", config=config)
 

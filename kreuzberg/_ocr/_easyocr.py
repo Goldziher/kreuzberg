@@ -127,7 +127,8 @@ class EasyOCRConfig:
     height_ths: float = 0.5
     """Maximum difference in box height for merging."""
     language: str | list[str] = "en"
-    """Language or languages to use for OCR."""
+    """Language or languages to use for OCR. Can be a single language code (e.g., 'en'),
+    a comma-separated string of language codes (e.g., 'en,ch_sim'), or a list of language codes."""
     link_threshold: float = 0.4
     """Link confidence threshold."""
     low_text: float = 0.4
@@ -354,29 +355,32 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
 
     @staticmethod
     def _validate_language_code(language_codes: str | list[str]) -> list[str]:
-        """Validate and normalize a provided language code.
+        """Validate and normalize provided language codes.
 
         Args:
-            language_codes: The language code string.
+            language_codes: The language code(s), either as a string (single or comma-separated) or a list.
 
         Raises:
-            ValidationError: If the language is not supported by EasyOCR
+            ValidationError: If any of the languages are not supported by EasyOCR
 
         Returns:
-            A list with the normalized language code.
+            A list with the normalized language codes.
         """
-        if not isinstance(language_codes, list):
-            languages = [language_codes.lower()]
+        if isinstance(language_codes, str):
+            # Handle comma-separated language codes
+            languages = [lang.strip().lower() for lang in language_codes.split(",")]
         else:
+            # Handle list of language codes
             languages = [lang.lower() for lang in language_codes]
 
-        if all(lang in EASYOCR_SUPPORTED_LANGUAGE_CODES for lang in languages):
-            return languages
+        unsupported_langs = [lang for lang in languages if lang not in EASYOCR_SUPPORTED_LANGUAGE_CODES]
+        if unsupported_langs:
+            raise ValidationError(
+                "The provided language codes are not supported by EasyOCR",
+                context={
+                    "language_code": ",".join(unsupported_langs),
+                    "supported_languages": ",".join(sorted(EASYOCR_SUPPORTED_LANGUAGE_CODES)),
+                },
+            )
 
-        raise ValidationError(
-            "The provided language codes are not supported by EasyOCR",
-            context={
-                "language_code": ",".join([lang for lang in languages if lang not in EASYOCR_SUPPORTED_LANGUAGE_CODES]),
-                "supported_languages": ",".join(sorted(EASYOCR_SUPPORTED_LANGUAGE_CODES)),
-            },
-        )
+        return languages

@@ -1,5 +1,3 @@
-"""Tests for HTML extraction functionality."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -20,7 +18,6 @@ def extractor() -> HTMLExtractor:
 
 @pytest.mark.anyio
 async def test_extract_html_string(html_document: Path, extractor: HTMLExtractor) -> None:
-    """Test extracting text from an HTML string."""
     result = await extractor.extract_path_async(html_document)
     assert isinstance(result.content, str)
     assert result.content.strip()
@@ -29,7 +26,6 @@ async def test_extract_html_string(html_document: Path, extractor: HTMLExtractor
 
 @pytest.mark.anyio
 async def test_extract_html_string_bytes(extractor: HTMLExtractor) -> None:
-    """Test extracting text from HTML bytes."""
     html_content = b"<html><body><h1>Test</h1><p>This is a test.</p></body></html>"
     result = await extractor.extract_bytes_async(html_content)
     assert isinstance(result.content, str)

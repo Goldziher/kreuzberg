@@ -211,7 +211,6 @@ async def test_integration_process_file(backend: TesseractBackend, ocr_image: Pa
 async def test_process_file_with_invalid_language(
     backend: TesseractBackend, mock_run_process: Mock, ocr_image: Path
 ) -> None:
-    """Test that providing an invalid language code raises ValidationError."""
     with pytest.raises(ValidationError, match="not supported by Tesseract"):
         await backend.process_file(ocr_image, language="invalid", psm=PSMMode.AUTO)
 
@@ -230,7 +229,6 @@ async def test_process_file_with_invalid_language(
     ],
 )
 def test_validate_language_code_valid(language_code: str, expected_result: str) -> None:
-    """Test that valid language codes are correctly validated and normalized."""
     result = TesseractBackend._validate_language_code(language_code)
     assert result == expected_result
 
@@ -251,7 +249,6 @@ def test_validate_language_code_valid(language_code: str, expected_result: str) 
     ],
 )
 def test_validate_language_code_invalid(invalid_language_code: str) -> None:
-    """Test that invalid language codes raise ValidationError with appropriate context."""
     with pytest.raises(ValidationError) as excinfo:
         TesseractBackend._validate_language_code(invalid_language_code)
 

@@ -1,5 +1,3 @@
-"""Tests for Excel extraction functionality."""
-
 from __future__ import annotations
 
 import sys
@@ -33,7 +31,6 @@ def extractor() -> SpreadSheetExtractor:
 
 @pytest.mark.anyio
 async def test_extract_xlsx_file(excel_document: Path, extractor: SpreadSheetExtractor) -> None:
-    """Test extracting text from an Excel file."""
     result = await extractor.extract_path_async(excel_document)
     assert isinstance(result.content, str)
     assert result.content.strip()
@@ -42,7 +39,6 @@ async def test_extract_xlsx_file(excel_document: Path, extractor: SpreadSheetExt
 
 @pytest.mark.anyio
 async def test_extract_xlsx_multi_sheet_file(excel_multi_sheet_document: Path, extractor: SpreadSheetExtractor) -> None:
-    """Test extracting text from an Excel file with multiple sheets."""
     result = await extractor.extract_path_async(excel_multi_sheet_document)
     assert isinstance(result, ExtractionResult)
     assert result.mime_type == MARKDOWN_MIME_TYPE
@@ -93,7 +89,6 @@ async def test_extract_xlsx_file_exception_group(
 async def test_extract_xlsx_file_general_exception(
     mocker: MockerFixture, excel_document: Path, extractor: SpreadSheetExtractor
 ) -> None:
-    """Test handling of general exceptions during extraction."""
     mock_error = ValueError("Test error")
     mocker.patch.object(CalamineWorkbook, "from_path", side_effect=mock_error)
 
@@ -108,7 +103,6 @@ async def test_extract_xlsx_file_general_exception(
 async def test_extract_xlsx_file_parsing_error_passthrough(
     mocker: MockerFixture, excel_document: Path, extractor: SpreadSheetExtractor
 ) -> None:
-    """Test that ParsingError exceptions are passed through without wrapping."""
     original_error = ParsingError("Original parsing error")
     mocker.patch.object(CalamineWorkbook, "from_path", side_effect=original_error)
 
@@ -119,7 +113,6 @@ async def test_extract_xlsx_file_parsing_error_passthrough(
 
 
 def test_extract_bytes_sync(excel_document: Path, extractor: SpreadSheetExtractor) -> None:
-    """Test the synchronous bytes extraction method."""
     content = SyncPath(excel_document).read_bytes()
     result = extractor.extract_bytes_sync(content)
 
@@ -129,7 +122,6 @@ def test_extract_bytes_sync(excel_document: Path, extractor: SpreadSheetExtracto
 
 
 def test_extract_path_sync(excel_document: Path, extractor: SpreadSheetExtractor) -> None:
-    """Test the synchronous path extraction method."""
     result = extractor.extract_path_sync(excel_document)
 
     assert isinstance(result, ExtractionResult)
@@ -152,14 +144,12 @@ def test_extract_path_sync(excel_document: Path, extractor: SpreadSheetExtractor
     ],
 )
 def test_convert_cell_to_str(extractor: SpreadSheetExtractor, value: Any, expected: str) -> None:
-    """Test conversion of different cell value types to strings."""
     result = extractor._convert_cell_to_str(value)
     assert result == expected
 
 
 @pytest.mark.anyio
 async def test_convert_sheet_to_text_with_missing_cells(mocker: MockerFixture, extractor: SpreadSheetExtractor) -> None:
-    """Test handling of rows with missing cells compared to header."""
     mock_workbook = mocker.Mock(spec=CalamineWorkbook)
     mock_sheet = mocker.Mock()
     mock_sheet.to_python.return_value = [
@@ -177,7 +167,6 @@ async def test_convert_sheet_to_text_with_missing_cells(mocker: MockerFixture, e
 
 @pytest.mark.anyio
 async def test_convert_sheet_to_text_empty_sheet(mocker: MockerFixture, extractor: SpreadSheetExtractor) -> None:
-    """Test handling of empty sheets."""
     mock_workbook = mocker.Mock(spec=CalamineWorkbook)
     mock_sheet = mocker.Mock()
     mock_sheet.to_python.return_value = []
@@ -193,8 +182,6 @@ async def test_convert_sheet_to_text_empty_sheet(mocker: MockerFixture, extracto
 async def test_exception_group_handling(
     mocker: MockerFixture, excel_document: Path, extractor: SpreadSheetExtractor
 ) -> None:
-    """Test handling of ExceptionGroup in extract_path_async."""
-
     exceptions = [ValueError("Error 1"), RuntimeError("Error 2")]
     eg = ExceptionGroup("test errors", exceptions)
 
@@ -223,8 +210,6 @@ async def test_exception_group_handling(
 async def test_extract_path_async_with_regular_exception(
     mocker: MockerFixture, excel_document: Path, extractor: SpreadSheetExtractor
 ) -> None:
-    """Test handling of regular exceptions in extract_path_async."""
-
     mock_error = ValueError("Test error")
 
     mocker.patch.object(CalamineWorkbook, "from_path", side_effect=mock_error)
@@ -241,8 +226,6 @@ async def test_extract_path_async_with_regular_exception(
 async def test_extract_path_async_parsing_error_passthrough(
     mocker: MockerFixture, excel_document: Path, extractor: SpreadSheetExtractor
 ) -> None:
-    """Test that ParsingError exceptions are passed through without wrapping."""
-
     original_error = ParsingError("Original parsing error")
 
     mocker.patch.object(CalamineWorkbook, "from_path", side_effect=original_error)

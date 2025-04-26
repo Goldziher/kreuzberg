@@ -1,5 +1,3 @@
-"""Tests for GMFT table extraction functionality."""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,7 +15,6 @@ from kreuzberg.extraction import extract_file
 
 @pytest.fixture
 def mock_cropped_table() -> MagicMock:
-    """Mock for GMFT CroppedTable."""
     mock = MagicMock()
     mock.page.page_number = 1
     mock.image.return_value = Image.new("RGB", (100, 100))
@@ -26,7 +23,6 @@ def mock_cropped_table() -> MagicMock:
 
 @pytest.fixture
 def mock_formatted_table() -> MagicMock:
-    """Mock for GMFT FormattedTable."""
     mock = MagicMock()
     df = pd.DataFrame({"Column1": [1, 2, 3], "Column2": ["A", "B", "C"]})
     mock.df = AsyncMock(return_value=df)
@@ -35,7 +31,6 @@ def mock_formatted_table() -> MagicMock:
 
 @pytest.mark.anyio
 async def test_extract_tables_with_default_config(tiny_pdf_with_tables: Path) -> None:
-    """Test extracting tables with default configuration."""
     try:
         tables = await extract_tables(tiny_pdf_with_tables)
 
@@ -58,8 +53,6 @@ async def test_extract_tables_with_default_config(tiny_pdf_with_tables: Path) ->
 
 @pytest.mark.anyio
 async def test_gmft_integration_with_extraction_api(tiny_pdf_with_tables: Path) -> None:
-    """Test integration of GMFT with the main extraction API."""
-
     try:
         config = ExtractionConfig(
             extract_tables=True, gmft_config=GMFTConfig(detector_base_threshold=0.8, enable_multi_header=True)
@@ -87,8 +80,6 @@ async def test_gmft_integration_with_extraction_api(tiny_pdf_with_tables: Path) 
 
 @pytest.mark.anyio
 async def test_extract_tables_with_custom_config(tiny_pdf_with_tables: Path) -> None:
-    """Test extracting tables with custom configuration."""
-
     config = GMFTConfig(detector_base_threshold=0.85, remove_null_rows=True, enable_multi_header=True, verbosity=1)
 
     try:
@@ -102,7 +93,6 @@ async def test_extract_tables_with_custom_config(tiny_pdf_with_tables: Path) -> 
 
 @pytest.mark.anyio
 async def test_extract_tables_missing_dependency() -> None:
-    """Test MissingDependencyError when GMFT is not installed."""
     with patch("kreuzberg._gmft.run_sync", side_effect=ImportError("No module named 'gmft'")):
         with pytest.raises(MissingDependencyError) as exc_info:
             await extract_tables("dummy_path.pdf")
@@ -113,8 +103,6 @@ async def test_extract_tables_missing_dependency() -> None:
 
 @pytest.mark.anyio
 async def test_extract_tables_with_mocks() -> None:
-    """Test extract_tables with mocked GMFT components."""
-
     mock_path = MagicMock(spec=Path)
 
     mock_doc = MagicMock()
@@ -186,7 +174,6 @@ async def test_extract_tables_with_mocks() -> None:
 
 @pytest.mark.anyio
 async def test_gmft_config_default_values() -> None:
-    """Test GMFTConfig default values."""
     config = GMFTConfig()
 
     assert config.verbosity == 0
@@ -202,7 +189,6 @@ async def test_gmft_config_default_values() -> None:
 
 @pytest.mark.anyio
 async def test_gmft_config_custom_values() -> None:
-    """Test GMFTConfig with custom values."""
     custom_confidence = {
         0: 0.4,
         1: 0.4,

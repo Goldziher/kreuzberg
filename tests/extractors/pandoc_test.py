@@ -119,18 +119,18 @@ async def test_validate_pandoc_version_short(
 @pytest.mark.parametrize(
     "version_output, should_raise",
     [
-        ("pandoc.exe 2.11.4\nCompiled with pandoc-types 1.22", False),  # Windows format
-        ("pandoc-2.14.1 @ /usr/bin/pandoc", False),  # Alternative format
-        ("pandoc version 2.5 (revision abc123d)", False),  # Version with "version" keyword
-        ("2.9.2.1\npandoc-types 1.20", False),  # Version number first
-        ("pandoc v2.11.4\nCompiled with pandoc-types 1.22", False),  # With 'v' prefix
-        ("This is the pandoc 2.14 package", False),  # Within prose
+        ("pandoc.exe 2.11.4\nCompiled with pandoc-types 1.22", False),
+        ("pandoc-2.14.1 @ /usr/bin/pandoc", False),
+        ("pandoc version 2.5 (revision abc123d)", False),
+        ("2.9.2.1\npandoc-types 1.20", False),
+        ("pandoc v2.11.4\nCompiled with pandoc-types 1.22", False),
+        ("This is the pandoc 2.14 package", False),
         (
             "pandoc 2.11.4\nCompiled with pandoc-types 1.22\nUser data directory: /Users/user/.pandoc",
             False,
-        ),  # Multi-line
-        ("pandoc (version 2.8.1)", False),  # With parentheses
-        ("2.11.4 [pandoc-dependencies]", False),  # Version before name
+        ),
+        ("pandoc (version 2.8.1)", False),
+        ("2.11.4 [pandoc-dependencies]", False),
     ],
 )
 async def test_validate_pandoc_version_flexible_formats(
@@ -140,7 +140,6 @@ async def test_validate_pandoc_version_flexible_formats(
     should_raise: bool,
     test_config: ExtractionConfig,
 ) -> None:
-    """Test various version output formats that pandoc might produce across different platforms."""
     extractor = MarkdownExtractor(mime_type="text/x-markdown", config=test_config)
     extractor._checked_version = False
 

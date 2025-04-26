@@ -1,5 +1,3 @@
-"""Tests for MIME type validation and detection."""
-
 from pathlib import Path
 
 import pytest
@@ -19,8 +17,6 @@ from kreuzberg.exceptions import ValidationError
 
 
 def test_validate_mime_type_with_explicit_mime_type() -> None:
-    """Test that explicit MIME type validation works correctly."""
-
     assert (
         validate_mime_type(file_path="test.txt", mime_type=PLAIN_TEXT_MIME_TYPE, check_file_exists=False)
         == PLAIN_TEXT_MIME_TYPE
@@ -49,8 +45,6 @@ def test_validate_mime_type_with_explicit_mime_type() -> None:
 
 
 def test_validate_mime_type_extension_detection() -> None:
-    """Test MIME type detection from file extensions."""
-
     assert validate_mime_type(file_path="document.txt", check_file_exists=False) == PLAIN_TEXT_MIME_TYPE
     assert validate_mime_type(file_path="document.md", check_file_exists=False) == MARKDOWN_MIME_TYPE
     assert validate_mime_type(file_path="presentation.pptx", check_file_exists=False) == POWER_POINT_MIME_TYPE
@@ -73,7 +67,6 @@ def test_validate_mime_type_extension_detection() -> None:
 
 
 def test_validate_mime_type_image_extensions() -> None:
-    """Test MIME type detection for various image formats."""
     image_files = {
         "photo.jpg": "image/jpeg",
         "photo.jpeg": "image/jpeg",
@@ -96,8 +89,6 @@ def test_validate_mime_type_image_extensions() -> None:
 
 
 def test_validate_mime_type_unknown_extension() -> None:
-    """Test behavior with unknown file extensions."""
-
     with pytest.raises(ValidationError) as exc_info:
         validate_mime_type(file_path="file.unknown", check_file_exists=False)
     assert "Could not determine the mime type" in str(exc_info.value)
@@ -106,7 +97,6 @@ def test_validate_mime_type_unknown_extension() -> None:
 
 
 def test_ext_to_mime_type_mapping_consistency() -> None:
-    """Test that all mapped MIME types are in SUPPORTED_MIME_TYPES."""
     for mime_type in EXT_TO_MIME_TYPE.values():
         result = validate_mime_type(file_path="test.txt", mime_type=mime_type, check_file_exists=False)
         assert result in SUPPORTED_MIME_TYPES
@@ -117,8 +107,6 @@ def test_ext_to_mime_type_mapping_consistency() -> None:
 
 
 def test_validate_mime_type_with_path_variants() -> None:
-    """Test MIME type validation with different path formats."""
-
     assert validate_mime_type(file_path="./document.txt", check_file_exists=False) == PLAIN_TEXT_MIME_TYPE
     assert validate_mime_type(file_path="/path/to/document.pdf", check_file_exists=False) == PDF_MIME_TYPE
     assert validate_mime_type(file_path="relative/path/page.html", check_file_exists=False) == HTML_MIME_TYPE
@@ -159,8 +147,6 @@ def test_validate_mime_type_with_path_variants() -> None:
 
 
 def test_validate_mime_type_with_dots_in_name() -> None:
-    """Test MIME type validation with filenames containing multiple dots."""
-
     assert validate_mime_type(file_path="my.backup.txt", check_file_exists=False) == PLAIN_TEXT_MIME_TYPE
     assert validate_mime_type(file_path="version.1.2.pdf", check_file_exists=False) == PDF_MIME_TYPE
     assert validate_mime_type(file_path="index.min.html", check_file_exists=False) == HTML_MIME_TYPE

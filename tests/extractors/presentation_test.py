@@ -1,5 +1,3 @@
-"""Tests for PowerPoint extraction functionality."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -22,7 +20,6 @@ def extractor() -> PresentationExtractor:
 
 @pytest.mark.anyio
 async def test_extract_pptx_with_notes(mocker: MockerFixture, extractor: PresentationExtractor) -> None:
-    """Test extracting text from a PowerPoint file with notes."""
     mock_presentation = mocker.MagicMock()
     mock_slide = mocker.MagicMock()
     mock_notes_slide = mocker.MagicMock()

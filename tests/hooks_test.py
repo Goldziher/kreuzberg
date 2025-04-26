@@ -1,5 +1,3 @@
-"""Tests for the hooks functionality in extraction process."""
-
 from __future__ import annotations
 
 from unittest.mock import Mock, patch
@@ -12,26 +10,22 @@ from kreuzberg.extraction import extract_file_sync
 
 
 def sync_validation_hook(result: ExtractionResult) -> None:
-    """A synchronous validation hook that doesn't modify the result."""
     if not result.content:
         raise ValueError("Content cannot be empty")
 
 
 async def async_validation_hook(result: ExtractionResult) -> None:
-    """An asynchronous validation hook that doesn't modify the result."""
     if not result.content:
         raise ValueError("Content cannot be empty")
 
 
 def sync_post_processing_hook(result: ExtractionResult) -> ExtractionResult:
-    """A synchronous post-processing hook that modifies the result."""
     return ExtractionResult(
         content=result.content.upper(), mime_type=result.mime_type, metadata=result.metadata, chunks=[]
     )
 
 
 async def async_post_processing_hook(result: ExtractionResult) -> ExtractionResult:
-    """An asynchronous post-processing hook that modifies the result."""
     return ExtractionResult(
         content=result.content.upper(), mime_type=result.mime_type, metadata=result.metadata, chunks=[]
     )
@@ -39,8 +33,6 @@ async def async_post_processing_hook(result: ExtractionResult) -> ExtractionResu
 
 @pytest.mark.anyio
 async def test_async_validation_hook() -> None:
-    """Test that async validation hooks are called during extraction."""
-
     mock_validation = Mock(side_effect=async_validation_hook)
 
     config = ExtractionConfig(validators=[mock_validation])
@@ -58,8 +50,6 @@ async def test_async_validation_hook() -> None:
 
 @pytest.mark.anyio
 async def test_async_validation_hook_error() -> None:
-    """Test that async validation hooks can raise errors."""
-
     async def failing_validation_hook(_: ExtractionResult) -> None:
         raise ValueError("Validation failed")
 
@@ -76,8 +66,6 @@ async def test_async_validation_hook_error() -> None:
 
 @pytest.mark.anyio
 async def test_async_post_processing_hook() -> None:
-    """Test that async post-processing hooks modify the result."""
-
     mock_post_processor = Mock(side_effect=async_post_processing_hook)
 
     config = ExtractionConfig(post_processing_hooks=[mock_post_processor])
@@ -95,8 +83,6 @@ async def test_async_post_processing_hook() -> None:
 
 @pytest.mark.anyio
 async def test_multiple_async_post_processing_hooks() -> None:
-    """Test that multiple async post-processing hooks are applied in sequence."""
-
     async def second_post_processor(result: ExtractionResult) -> ExtractionResult:
         return ExtractionResult(
             content=f"Processed: {result.content}", mime_type=result.mime_type, metadata=result.metadata, chunks=[]
@@ -115,8 +101,6 @@ async def test_multiple_async_post_processing_hooks() -> None:
 
 
 def test_sync_validation_hook() -> None:
-    """Test that sync validation hooks are called during extraction."""
-
     mock_validation = Mock(side_effect=sync_validation_hook)
 
     config = ExtractionConfig(validators=[mock_validation])
@@ -133,8 +117,6 @@ def test_sync_validation_hook() -> None:
 
 
 def test_sync_validation_hook_error() -> None:
-    """Test that sync validation hooks can raise errors."""
-
     def failing_validation_hook(_: ExtractionResult) -> None:
         raise ValueError("Validation failed")
 
@@ -150,8 +132,6 @@ def test_sync_validation_hook_error() -> None:
 
 
 def test_sync_post_processing_hook() -> None:
-    """Test that sync post-processing hooks modify the result."""
-
     mock_post_processor = Mock(side_effect=sync_post_processing_hook)
 
     config = ExtractionConfig(post_processing_hooks=[mock_post_processor])
@@ -168,8 +148,6 @@ def test_sync_post_processing_hook() -> None:
 
 
 def test_multiple_sync_post_processing_hooks() -> None:
-    """Test that multiple sync post-processing hooks are applied in sequence."""
-
     def second_post_processor(result: ExtractionResult) -> ExtractionResult:
         return ExtractionResult(
             content=f"Processed: {result.content}", mime_type=result.mime_type, metadata=result.metadata, chunks=[]
@@ -188,8 +166,6 @@ def test_multiple_sync_post_processing_hooks() -> None:
 
 
 def test_mixing_sync_and_async_hooks_in_sync_context() -> None:
-    """Test that async hooks can be used in a sync context."""
-
     config = ExtractionConfig(validators=[sync_validation_hook], post_processing_hooks=[sync_post_processing_hook])
 
     with (
@@ -204,8 +180,6 @@ def test_mixing_sync_and_async_hooks_in_sync_context() -> None:
 
 @pytest.mark.anyio
 async def test_mixing_sync_and_async_hooks_in_async_context() -> None:
-    """Test that sync hooks can be used in an async context."""
-
     config = ExtractionConfig(
         validators=[sync_validation_hook, async_validation_hook],
         post_processing_hooks=[sync_post_processing_hook, async_post_processing_hook],

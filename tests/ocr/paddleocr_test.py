@@ -24,8 +24,6 @@ def backend() -> PaddleBackend:
 
 @pytest.fixture
 def mock_paddleocr(mocker: MockerFixture) -> Mock:
-    """Mock the PaddleOCR class."""
-
     mock = mocker.patch("paddleocr.PaddleOCR")
     instance = mock.return_value
 
@@ -46,8 +44,6 @@ def mock_paddleocr(mocker: MockerFixture) -> Mock:
 
 @pytest.fixture
 def mock_run_sync(mocker: MockerFixture) -> Mock:
-    """Mock the run_sync function."""
-
     async def mock_async_run_sync(func: Any, *args: Any, **kwargs: Any) -> Any:
         if isinstance(func, Mock) and kwargs.get("image_np") is not None:
             return [
@@ -100,7 +96,6 @@ def mock_run_sync(mocker: MockerFixture) -> Mock:
 
 @pytest.fixture
 def mock_find_spec(mocker: MockerFixture) -> Mock:
-    """Mock the find_spec function to simulate PaddleOCR installation."""
     mock = mocker.patch("kreuzberg._ocr._paddleocr.find_spec")
     mock.return_value = True
     return mock
@@ -108,7 +103,6 @@ def mock_find_spec(mocker: MockerFixture) -> Mock:
 
 @pytest.fixture
 def mock_find_spec_missing(mocker: MockerFixture) -> Mock:
-    """Mock the find_spec function to simulate missing PaddleOCR installation."""
     mock = mocker.patch("kreuzberg._ocr._paddleocr.find_spec")
     mock.return_value = None
     return mock
@@ -116,7 +110,6 @@ def mock_find_spec_missing(mocker: MockerFixture) -> Mock:
 
 @pytest.fixture
 def mock_image() -> Mock:
-    """Create a mock PIL Image with numpy array interface."""
     img = Mock(spec=Image.Image)
     img.size = (100, 100)
 
@@ -133,8 +126,6 @@ def mock_image() -> Mock:
 
 @pytest.mark.anyio
 async def test_is_mkldnn_supported(mocker: MockerFixture) -> None:
-    """Test the MKL-DNN support detection function."""
-
     mocker.patch("platform.system", return_value="Linux")
     mocker.patch("platform.processor", return_value="x86_64")
     mocker.patch("platform.machine", return_value="x86_64")
@@ -170,8 +161,6 @@ async def test_is_mkldnn_supported(mocker: MockerFixture) -> None:
 async def test_init_paddle_ocr(
     backend: PaddleBackend, mock_paddleocr: Mock, mock_run_sync: Mock, mock_find_spec: Mock
 ) -> None:
-    """Test initializing PaddleOCR."""
-
     PaddleBackend._paddle_ocr = None
 
     await backend._init_paddle_ocr()
@@ -193,8 +182,6 @@ async def test_init_paddle_ocr(
 async def test_init_paddle_ocr_with_gpu_package(
     backend: PaddleBackend, mock_paddleocr: Mock, mock_run_sync: Mock, mock_find_spec: Mock, mocker: MockerFixture
 ) -> None:
-    """Test initializing PaddleOCR with GPU package available."""
-
     PaddleBackend._paddle_ocr = None
 
     mocker.patch("kreuzberg._ocr._paddleocr.find_spec", side_effect=lambda x: True if x == "paddlepaddle_gpu" else None)
@@ -216,8 +203,6 @@ async def test_init_paddle_ocr_with_gpu_package(
 async def test_init_paddle_ocr_with_language(
     backend: PaddleBackend, mock_paddleocr: Mock, mock_run_sync: Mock, mock_find_spec: Mock
 ) -> None:
-    """Test initializing PaddleOCR with a specific language."""
-
     PaddleBackend._paddle_ocr = None
 
     with patch.object(PaddleBackend, "_validate_language_code", return_value="french"):
@@ -232,8 +217,6 @@ async def test_init_paddle_ocr_with_language(
 async def test_init_paddle_ocr_with_custom_options(
     backend: PaddleBackend, mock_paddleocr: Mock, mock_run_sync: Mock, mock_find_spec: Mock
 ) -> None:
-    """Test initializing PaddleOCR with custom options."""
-
     PaddleBackend._paddle_ocr = None
 
     custom_options = {
@@ -260,8 +243,6 @@ async def test_init_paddle_ocr_with_custom_options(
 
 @pytest.mark.anyio
 async def test_init_paddle_ocr_missing_dependency(backend: PaddleBackend, mock_find_spec_missing: Mock) -> None:
-    """Test initializing PaddleOCR when the dependency is missing."""
-
     PaddleBackend._paddle_ocr = None
 
     def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
@@ -280,8 +261,6 @@ async def test_init_paddle_ocr_missing_dependency(backend: PaddleBackend, mock_f
 
 @pytest.mark.anyio
 async def test_init_paddle_ocr_initialization_error(backend: PaddleBackend, mock_find_spec: Mock) -> None:
-    """Test handling initialization errors."""
-
     PaddleBackend._paddle_ocr = None
 
     async def mock_run_sync_error(*args: Any, **_: Any) -> None:
@@ -299,8 +278,6 @@ async def test_init_paddle_ocr_initialization_error(backend: PaddleBackend, mock
 async def test_process_image(
     backend: PaddleBackend, mock_image: Mock, mock_run_sync: Mock, mock_paddleocr: Mock
 ) -> None:
-    """Test processing an image."""
-
     paddle_mock = Mock()
 
     paddle_mock.ocr.return_value = [
@@ -328,8 +305,6 @@ async def test_process_image(
 
 @pytest.mark.anyio
 async def test_process_image_with_options(backend: PaddleBackend, mock_image: Mock, mock_run_sync: Mock) -> None:
-    """Test processing an image with custom options."""
-
     paddle_mock = Mock()
 
     paddle_mock.ocr.return_value = [
@@ -360,8 +335,6 @@ async def test_process_image_with_options(backend: PaddleBackend, mock_image: Mo
 
 @pytest.mark.anyio
 async def test_process_image_error(backend: PaddleBackend, mock_image: Mock) -> None:
-    """Test handling errors during image processing."""
-
     paddle_mock = Mock()
 
     paddle_mock.ocr.return_value = [
@@ -387,8 +360,6 @@ async def test_process_image_error(backend: PaddleBackend, mock_image: Mock) -> 
 
 @pytest.mark.anyio
 async def test_process_file(backend: PaddleBackend, mock_run_sync: Mock, ocr_image: Path) -> None:
-    """Test processing a file."""
-
     paddle_mock = Mock()
 
     paddle_mock.ocr.return_value = [
@@ -413,8 +384,6 @@ async def test_process_file(backend: PaddleBackend, mock_run_sync: Mock, ocr_ima
 
 @pytest.mark.anyio
 async def test_process_file_with_options(backend: PaddleBackend, mock_run_sync: Mock, ocr_image: Path) -> None:
-    """Test processing a file with custom options."""
-
     paddle_mock = Mock()
 
     paddle_mock.ocr.return_value = [
@@ -444,8 +413,6 @@ async def test_process_file_with_options(backend: PaddleBackend, mock_run_sync: 
 
 @pytest.mark.anyio
 async def test_process_file_error(backend: PaddleBackend, ocr_image: Path) -> None:
-    """Test handling errors during file processing."""
-
     paddle_mock = Mock()
 
     paddle_mock.ocr.return_value = [
@@ -471,8 +438,6 @@ async def test_process_file_error(backend: PaddleBackend, ocr_image: Path) -> No
 
 @pytest.mark.anyio
 async def test_process_paddle_result_empty() -> None:
-    """Test processing an empty PaddleOCR result."""
-
     image = Mock(spec=Image.Image)
     image.size = (100, 100)
 
@@ -488,8 +453,6 @@ async def test_process_paddle_result_empty() -> None:
 
 @pytest.mark.anyio
 async def test_process_paddle_result_empty_page() -> None:
-    """Test processing a PaddleOCR result with an empty page."""
-
     image = Mock(spec=Image.Image)
     image.size = (100, 100)
 
@@ -503,8 +466,6 @@ async def test_process_paddle_result_empty_page() -> None:
 
 @pytest.mark.anyio
 async def test_process_paddle_result_complex() -> None:
-    """Test processing a complex PaddleOCR result with multiple lines."""
-
     image = Mock(spec=Image.Image)
     image.size = (200, 200)
 
@@ -547,8 +508,6 @@ async def test_process_paddle_result_complex() -> None:
 
 @pytest.mark.anyio
 async def test_process_paddle_result_with_empty_text() -> None:
-    """Test processing a PaddleOCR result with empty text entries."""
-
     image = Mock(spec=Image.Image)
     image.size = (100, 100)
 
@@ -577,8 +536,6 @@ async def test_process_paddle_result_with_empty_text() -> None:
 
 @pytest.mark.anyio
 async def test_process_paddle_result_with_close_lines() -> None:
-    """Test processing a PaddleOCR result with text boxes that are close together vertically."""
-
     image = Mock(spec=Image.Image)
     image.size = (200, 100)
 
@@ -608,8 +565,6 @@ async def test_process_paddle_result_with_close_lines() -> None:
 
 @pytest.mark.anyio
 async def test_integration_process_file(backend: PaddleBackend, ocr_image: Path) -> None:
-    """Integration test for processing a file with actual PaddleOCR."""
-
     try:
         from paddleocr import PaddleOCR  # noqa: F401
     except ImportError:
@@ -630,8 +585,6 @@ async def test_integration_process_file(backend: PaddleBackend, ocr_image: Path)
 
 @pytest.mark.anyio
 async def test_integration_process_image(backend: PaddleBackend, ocr_image: Path) -> None:
-    """Integration test for processing an image with actual PaddleOCR."""
-
     try:
         from paddleocr import PaddleOCR  # noqa: F401
     except ImportError:
@@ -665,7 +618,6 @@ async def test_integration_process_image(backend: PaddleBackend, ocr_image: Path
     ],
 )
 def test_validate_language_code_valid(language_code: str, expected_result: str) -> None:
-    """Test that valid language codes are correctly validated and normalized."""
     result = PaddleBackend._validate_language_code(language_code)
     assert result == expected_result
 
@@ -686,7 +638,6 @@ def test_validate_language_code_valid(language_code: str, expected_result: str) 
     ],
 )
 def test_validate_language_code_invalid(invalid_language_code: str) -> None:
-    """Test that invalid language codes raise ValidationError with appropriate context."""
     with pytest.raises(ValidationError) as excinfo:
         PaddleBackend._validate_language_code(invalid_language_code)
 
@@ -701,7 +652,6 @@ def test_validate_language_code_invalid(invalid_language_code: str) -> None:
 async def test_init_paddle_ocr_with_invalid_language(
     backend: PaddleBackend, mock_find_spec: Mock, mocker: MockerFixture
 ) -> None:
-    """Test initializing PaddleOCR with an invalid language raises ValidationError."""
     PaddleBackend._paddle_ocr = None
 
     validation_error = ValidationError(
