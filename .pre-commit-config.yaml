@@ -21,11 +21,6 @@ repos:
     rev: v0.24.1
     hooks:
       - id: validate-pyproject
-  - repo: https://github.com/Goldziher/uncomment
-    rev: v1.0.4
-    hooks:
-      - id: uncomment
-        args: ["-i", "# codespell:ignore"]
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.22
     hooks:
@@ -53,7 +48,7 @@ repos:
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.4
+    rev: v0.11.7
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
@@ -66,7 +61,7 @@ repos:
         additional_dependencies:
           - tomli
   - repo: https://github.com/jsh9/pydoclint
-    rev: 0.6.5
+    rev: 0.6.6
     hooks:
       - id: pydoclint
         args:
