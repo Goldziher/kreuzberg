@@ -52,6 +52,8 @@ class PaddleOCRConfig:
     """Binarization threshold for EAST output map."""
     det_max_side_len: int = 960
     """Maximum size of image long side. Images exceeding this will be proportionally resized."""
+    det_model_dir: str | None = None
+    """Directory for detection model. If None, uses default model location."""
     drop_score: float = 0.5
     """Filter recognition results by confidence score. Results below this are discarded."""
     enable_mkldnn: bool = False
@@ -82,6 +84,8 @@ class PaddleOCRConfig:
     """Recognition algorithm."""
     rec_image_shape: str = "3,32,320"
     """Image shape for recognition algorithm in format 'channels,height,width'."""
+    rec_model_dir: str | None = None
+    """Directory for recognition model. If None, uses default model location."""
     table: bool = True
     """Whether to enable table recognition."""
     use_angle_cls: bool = True

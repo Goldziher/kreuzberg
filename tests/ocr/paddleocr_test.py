@@ -242,6 +242,26 @@ async def test_init_paddle_ocr_with_custom_options(
 
 
 @pytest.mark.anyio
+async def test_init_paddle_ocr_with_model_dirs(
+    backend: PaddleBackend, mock_paddleocr: Mock, mock_run_sync: Mock, mock_find_spec: Mock
+) -> None:
+    PaddleBackend._paddle_ocr = None
+
+    custom_options = {
+        "det_model_dir": "/path/to/det/model",
+        "rec_model_dir": "/path/to/rec/model",
+    }
+
+    await backend._init_paddle_ocr(**custom_options)
+
+    mock_paddleocr.assert_called_once()
+    call_args, call_kwargs = mock_paddleocr.call_args
+
+    assert call_kwargs.get("det_model_dir") == "/path/to/det/model"
+    assert call_kwargs.get("rec_model_dir") == "/path/to/rec/model"
+
+
+@pytest.mark.anyio
 async def test_init_paddle_ocr_missing_dependency(backend: PaddleBackend, mock_find_spec_missing: Mock) -> None:
     PaddleBackend._paddle_ocr = None
 
