@@ -115,6 +115,48 @@ async def test_validate_pandoc_version_short(
     mock_run_process.assert_called_with(["pandoc", "--version"])
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "version_output, should_raise",
+    [
+        ("pandoc.exe 2.11.4\nCompiled with pandoc-types 1.22", False),  # Windows format
+        ("pandoc-2.14.1 @ /usr/bin/pandoc", False),  # Alternative format
+        ("pandoc version 2.5 (revision abc123d)", False),  # Version with "version" keyword
+        ("2.9.2.1\npandoc-types 1.20", False),  # Version number first
+        ("pandoc v2.11.4\nCompiled with pandoc-types 1.22", False),  # With 'v' prefix
+        ("This is the pandoc 2.14 package", False),  # Within prose
+        (
+            "pandoc 2.11.4\nCompiled with pandoc-types 1.22\nUser data directory: /Users/user/.pandoc",
+            False,
+        ),  # Multi-line
+        ("pandoc (version 2.8.1)", False),  # With parentheses
+        ("2.11.4 [pandoc-dependencies]", False),  # Version before name
+    ],
+)
+async def test_validate_pandoc_version_flexible_formats(
+    mocker: MockerFixture,
+    mock_run_process: Mock,
+    version_output: str,
+    should_raise: bool,
+    test_config: ExtractionConfig,
+) -> None:
+    """Test various version output formats that pandoc might produce across different platforms."""
+    extractor = MarkdownExtractor(mime_type="text/x-markdown", config=test_config)
+    extractor._checked_version = False
+
+    mock_run_process.return_value.returncode = 0
+    mock_run_process.return_value.stderr = b""
+    mock_run_process.return_value.stdout = version_output.encode()
+
+    if should_raise:
+        with pytest.raises(MissingDependencyError):
+            await extractor._validate_pandoc_version()
+    else:
+        await extractor._validate_pandoc_version()
+
+    mock_run_process.assert_called_with(["pandoc", "--version"])
+
+
 @pytest.mark.parametrize(
     "node, expected_output",
     [

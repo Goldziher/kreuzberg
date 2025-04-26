@@ -227,14 +227,54 @@ class PandocExtractor(Extractor):
 
             command = ["pandoc", "--version"]
             result = await run_process(command)
+            stdout = result.stdout.decode()
 
-            version_match = re.search(r"pandoc\s+v?(\d+)\.\d+(\.\d+)?", result.stdout.decode())
-            if not version_match or int(version_match.group(1)) < MINIMAL_SUPPORTED_PANDOC_VERSION:
-                raise MissingDependencyError(
-                    "Pandoc version 2 or above is a required system dependency. Please install it on your system and make sure its available in $PATH."
-                )
+            # Try more inclusive patterns to detect the pandoc version
+            # Try common formats first
+            version_match = re.search(
+                r"pandoc(?:\.exe)?(?:\s+|\s+v|\s+version\s+)(\d+)\.(\d+)(?:\.(\d+))?", stdout, re.IGNORECASE
+            )
 
-            self._checked_version = True
+            # Try version in parentheses format
+            if not version_match:
+                version_match = re.search(r"pandoc\s+\(version\s+(\d+)\.(\d+)(?:\.(\d+))?\)", stdout, re.IGNORECASE)
+
+            # Try hyphenated format
+            if not version_match:
+                version_match = re.search(r"pandoc-(\d+)\.(\d+)(?:\.(\d+))?", stdout)
+
+            # If still no match, check for version at the beginning of the output or any line
+            if not version_match:
+                # Match version at the start of a line (like in the test case "2.9.2.1\npandoc-types 1.20")
+                version_match = re.search(r"^(\d+)\.(\d+)(?:\.(\d+)(?:\.(\d+))?)?", stdout, re.MULTILINE)
+
+            # Try finding version-like patterns elsewhere in the text
+            if not version_match:
+                # Search for version-like patterns at the beginning of lines or after spaces
+                version_match = re.search(r"(?:^|\s)(\d+)\.(\d+)(?:\.(\d+))?(?:\s|$)", stdout)
+
+            # As a last resort, check any sequence of digits that might be a version
+            if not version_match:
+                out_lines = stdout.splitlines()
+                for line in out_lines:
+                    for token in line.split():
+                        # Match standalone version patterns like 2.11 or 2.11.4
+                        version_pattern = re.match(r"^(\d+)\.(\d+)(?:\.(\d+))?$", token)
+                        if version_pattern:
+                            version_match = version_pattern
+                            break
+                    if version_match:
+                        break
+
+            # If we found a version, check that the major version is at least the minimum required
+            if version_match and int(version_match.group(1)) >= MINIMAL_SUPPORTED_PANDOC_VERSION:
+                self._checked_version = True
+                return
+
+            # If we get here, we either didn't find a version or it's too low
+            raise MissingDependencyError(
+                "Pandoc version 2 or above is a required system dependency. Please install it on your system and make sure its available in $PATH."
+            )
 
         except FileNotFoundError as e:
             raise MissingDependencyError(
