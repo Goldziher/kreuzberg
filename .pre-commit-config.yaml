@@ -48,7 +48,7 @@ repos:
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.7
+    rev: v0.11.9
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
