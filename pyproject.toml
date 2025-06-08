@@ -176,3 +176,9 @@ strict = true
 
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
+
+[project.optional-dependencies]
+cli = ["click>=8.0.0", "tomli>=2.0.0"]
+
+[project.scripts]
+kreuzberg = "kreuzberg.cli:cli"
