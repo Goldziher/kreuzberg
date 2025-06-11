@@ -187,29 +187,6 @@ class PaddleOCRBackend(OCRBackend[PaddleOCRConfig]):
         except Exception as e:
             raise OCRError(f"PaddleOCR processing failed: {str(e)}") from e
 
-    async def process_image(self, image: Image.Image, **kwargs: Unpack[PaddleOCRConfig]) -> ExtractionResult:
-        """Asynchronously process an image and extract its text and metadata using PaddleOCR.
-
-        Args:
-            image: An instance of PIL.Image representing the input image.
-            **kwargs: Configuration parameters for PaddleOCR including language, detection thresholds, etc.
-
-        Returns:
-            ExtractionResult: The extraction result containing text content, mime type, and metadata.
-
-        Raises:
-            OCRError: If OCR processing fails.
-        """
-        import numpy as np
-
-        await self._init_paddle_ocr(**kwargs)
-        image_np = np.array(image)
-        try:
-            result = await run_sync(self._paddle_ocr.ocr, image_np, cls=kwargs.get("use_angle_cls", True))
-            return self._process_paddle_result(result, image)
-        except Exception as e:
-            raise OCRError(f"Failed to OCR using PaddleOCR: {e}") from e
-
     async def process_file(self, path: Path, **kwargs: Unpack[PaddleOCRConfig]) -> ExtractionResult:
         """Asynchronously process a file and extract its text and metadata using PaddleOCR.
 

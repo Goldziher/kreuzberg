@@ -185,48 +185,6 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
                 device=self._device
             )
             
-    def _process_image(self, image: Image.Image) -> str:
-        """Process an image using EasyOCR."""
-        self._initialize()
-        
-        if self._reader is None:
-            raise OCRError("EasyOCR reader not initialized")
-            
-        try:
-            results = self._reader.readtext(
-                image,
-                detail=0,
-                paragraph=True,
-                contrast_ths=self.config.contrast_ths,
-                adjust_contrast=self.config.adjust_contrast,
-                text_threshold=self.config.text_threshold,
-                link_threshold=self.config.link_threshold,
-                low_text=self.config.low_text,
-                canvas_size=self.config.canvas_size,
-                mag_ratio=self.config.mag_ratio,
-                slope_ths=self.config.slope_ths,
-                ycenter_ths=self.config.ycenter_ths,
-                height_ths=self.config.height_ths,
-                width_ths=self.config.width_ths,
-                add_margin=self.config.add_margin,
-                x_ths=self.config.x_ths,
-                y_ths=self.config.y_ths,
-            )
-            
-            if self.config.use_gpu:
-                memory_info = get_device_memory_info(self._device)
-                if memory_info:
-                    logger.debug(
-                        "GPU memory usage: %.2f GB allocated, %.2f GB free",
-                        memory_info["allocated"] / 1024**3,
-                        memory_info["free"] / 1024**3
-                    )
-                    
-            return "\n".join(results)
-            
-        except Exception as e:
-            raise OCRError(f"EasyOCR processing failed: {str(e)}") from e
-
     async def process_image(self, image: Image.Image, **kwargs: Unpack[EasyOCRConfig]) -> ExtractionResult:
         """Asynchronously process an image and extract its text and metadata using EasyOCR.
 
