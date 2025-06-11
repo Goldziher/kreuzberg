@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
 
 from PIL import Image
@@ -11,6 +11,7 @@ from kreuzberg._types import ExtractionResult, Metadata
 from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
+from .._utils._device import DeviceType, validate_device, set_memory_limit, get_device_memory_info
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -126,7 +127,7 @@ class EasyOCRConfig:
     """Decoder method. Options: 'greedy', 'beamsearch', 'wordbeamsearch'."""
     height_ths: float = 0.5
     """Maximum difference in box height for merging."""
-    language: str | list[str] = "en"
+    language: list[str] = field(default_factory=lambda: ["en"])
     """Language or languages to use for OCR. Can be a single language code (e.g., 'en'),
     a comma-separated string of language codes (e.g., 'en,ch_sim'), or a list of language codes."""
     link_threshold: float = 0.4
@@ -144,7 +145,7 @@ class EasyOCRConfig:
     text_threshold: float = 0.7
     """Text confidence threshold."""
     use_gpu: bool = False
-    """Whether to use GPU for inference."""
+    """Whether to use GPU acceleration."""
     width_ths: float = 0.5
     """Maximum horizontal distance for merging boxes."""
     x_ths: float = 1.0
@@ -153,10 +154,78 @@ class EasyOCRConfig:
     """Maximum vertical distance for paragraph merging."""
     ycenter_ths: float = 0.5
     """Maximum shift in y direction for merging."""
+    gpu_memory_limit: float | None = None
+    """GPU memory limit in GB. None means no limit."""
+    device: DeviceType = "auto"
+    """Device to use for computation. Can be 'cpu', 'cuda', 'mps', or 'auto'."""
 
 
 class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
-    _reader: ClassVar[Any] = None
+    """EasyOCR backend implementation."""
+    
+    def __init__(self, config: EasyOCRConfig) -> None:
+        self.config = config
+        self._reader = None
+        self._device = validate_device(config.device, "easyocr")
+        
+        if config.use_gpu and config.gpu_memory_limit is not None:
+            set_memory_limit(self._device, config.gpu_memory_limit)
+            
+    def _initialize(self) -> None:
+        """Initialize the EasyOCR reader."""
+        if self._reader is None:
+            try:
+                import easyocr
+            except ImportError as e:
+                raise MissingDependencyError("easyocr", e) from e
+                
+            self._reader = easyocr.Reader(
+                self.config.language,
+                gpu=self.config.use_gpu,
+                device=self._device
+            )
+            
+    def _process_image(self, image: Image.Image) -> str:
+        """Process an image using EasyOCR."""
+        self._initialize()
+        
+        if self._reader is None:
+            raise OCRError("EasyOCR reader not initialized")
+            
+        try:
+            results = self._reader.readtext(
+                image,
+                detail=0,
+                paragraph=True,
+                contrast_ths=self.config.contrast_ths,
+                adjust_contrast=self.config.adjust_contrast,
+                text_threshold=self.config.text_threshold,
+                link_threshold=self.config.link_threshold,
+                low_text=self.config.low_text,
+                canvas_size=self.config.canvas_size,
+                mag_ratio=self.config.mag_ratio,
+                slope_ths=self.config.slope_ths,
+                ycenter_ths=self.config.ycenter_ths,
+                height_ths=self.config.height_ths,
+                width_ths=self.config.width_ths,
+                add_margin=self.config.add_margin,
+                x_ths=self.config.x_ths,
+                y_ths=self.config.y_ths,
+            )
+            
+            if self.config.use_gpu:
+                memory_info = get_device_memory_info(self._device)
+                if memory_info:
+                    logger.debug(
+                        "GPU memory usage: %.2f GB allocated, %.2f GB free",
+                        memory_info["allocated"] / 1024**3,
+                        memory_info["free"] / 1024**3
+                    )
+                    
+            return "\n".join(results)
+            
+        except Exception as e:
+            raise OCRError(f"EasyOCR processing failed: {str(e)}") from e
 
     async def process_image(self, image: Image.Image, **kwargs: Unpack[EasyOCRConfig]) -> ExtractionResult:
         """Asynchronously process an image and extract its text and metadata using EasyOCR.

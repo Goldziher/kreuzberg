@@ -79,3 +79,8 @@ class MissingDependencyError(KreuzbergError):
 
 class OCRError(KreuzbergError):
     """Raised when an OCR error occurs."""
+
+
+class DeviceNotAvailableError(Exception):
+    """Raised when a requested compute device is not available."""
+    pass
