@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import platform
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
 
@@ -13,6 +13,7 @@ from kreuzberg._types import ExtractionResult, Metadata
 from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
+from .._utils._device import DeviceType, validate_device, set_memory_limit, get_device_memory_info
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -60,8 +61,8 @@ class PaddleOCRConfig:
     """Whether to enable MKL-DNN acceleration (Intel CPU only)."""
     gpu_mem: int = 8000
     """GPU memory size (in MB) to use for initialization."""
-    language: str = "en"
-    """Language to use for OCR."""
+    language: list[str] = field(default_factory=lambda: ["en"])
+    """List of languages to use for OCR."""
     max_text_length: int = 25
     """Maximum text length that the recognition algorithm can recognize."""
     rec: bool = True
@@ -96,10 +97,95 @@ class PaddleOCRConfig:
     """Whether to recognize spaces."""
     use_zero_copy_run: bool = False
     """Whether to enable zero_copy_run for inference optimization."""
+    gpu_memory_limit: float | None = None
+    """GPU memory limit in GB. None means no limit."""
+    device: DeviceType = "auto"
+    """Device to use for computation. Can be 'cpu', 'cuda', 'mps', or 'auto'."""
 
 
-class PaddleBackend(OCRBackend[PaddleOCRConfig]):
-    _paddle_ocr: ClassVar[Any] = None
+class PaddleOCRBackend(OCRBackend[PaddleOCRConfig]):
+    """PaddleOCR backend implementation."""
+    
+    def __init__(self, config: PaddleOCRConfig) -> None:
+        self.config = config
+        self._ocr = None
+        self._device = validate_device(config.device, "paddleocr")
+        
+        if config.use_gpu and config.gpu_memory_limit is not None:
+            set_memory_limit(self._device, config.gpu_memory_limit)
+            
+    def _initialize(self) -> None:
+        """Initialize the PaddleOCR reader."""
+        if self._ocr is None:
+            try:
+                from paddleocr import PaddleOCR
+            except ImportError as e:
+                raise MissingDependencyError("paddleocr", e) from e
+                
+            self._ocr = PaddleOCR(
+                use_angle_cls=self.config.use_angle_cls,
+                lang=self.config.language[0],  # PaddleOCR only supports one language at a time
+                use_gpu=self.config.use_gpu,
+                gpu_mem=self.config.gpu_mem,
+                image_dir=self.config.image_dir,
+                det_algorithm=self.config.det_algorithm,
+                det_model_dir=self.config.det_model_dir,
+                det_limit_side_len=self.config.det_limit_side_len,
+                det_limit_type=self.config.det_limit_type,
+                det_db_thresh=self.config.det_db_thresh,
+                det_db_box_thresh=self.config.det_db_box_thresh,
+                det_db_unclip_ratio=self.config.det_db_unclip_ratio,
+                max_batch_size=self.config.max_batch_size,
+                use_dilation=self.config.use_dilation,
+                det_db_score_mode=self.config.det_db_score_mode,
+                rec_algorithm=self.config.rec_algorithm,
+                rec_model_dir=self.config.rec_model_dir,
+                rec_image_shape=self.config.rec_image_shape,
+                rec_batch_size=self.config.rec_batch_size,
+                rec_char_dict_path=self.config.rec_char_dict_path,
+                use_space_char=self.config.use_space_char,
+                drop_score=self.config.drop_score,
+                use_mp=self.config.use_mp,
+                total_process_num=self.config.total_process_num,
+                enable_mkldnn=self.config.enable_mkldnn,
+                use_zero_copy_run=self.config.use_zero_copy_run,
+                device=self._device
+            )
+            
+    def _process_image(self, image: Image.Image) -> str:
+        """Process an image using PaddleOCR."""
+        self._initialize()
+        
+        if self._ocr is None:
+            raise OCRError("PaddleOCR not initialized")
+            
+        try:
+            results = self._ocr.ocr(
+                image,
+                cls=self.config.use_angle_cls,
+                det=True,
+                rec=True
+            )
+            
+            if self.config.use_gpu:
+                memory_info = get_device_memory_info(self._device)
+                if memory_info:
+                    logger.debug(
+                        "GPU memory usage: %.2f GB allocated, %.2f GB free",
+                        memory_info["allocated"] / 1024**3,
+                        memory_info["free"] / 1024**3
+                    )
+                    
+            # Extract text from results
+            text = []
+            for line in results:
+                for word_info in line:
+                    text.append(word_info[1][0])  # Get the recognized text
+                    
+            return "\n".join(text)
+            
+        except Exception as e:
+            raise OCRError(f"PaddleOCR processing failed: {str(e)}") from e
 
     async def process_image(self, image: Image.Image, **kwargs: Unpack[PaddleOCRConfig]) -> ExtractionResult:
         """Asynchronously process an image and extract its text and metadata using PaddleOCR.
