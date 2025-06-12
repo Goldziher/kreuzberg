@@ -1,22 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Protocol
 
 from kreuzberg import MissingDependencyError
 from kreuzberg._constants import DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OVERLAP
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE
 
-if TYPE_CHECKING:
-    from semantic_text_splitter import MarkdownSplitter, TextSplitter
 
-_chunkers: dict[tuple[int, int, str], MarkdownSplitter | TextSplitter] = {}
+class Chunker(Protocol):
+    def chunks(self, text: str) -> list[str]: ...
+
+
+_chunkers: dict[tuple[int, int, str], Chunker] = {}
 
 
 def get_chunker(
     mime_type: str,
     max_characters: int = DEFAULT_MAX_CHARACTERS,
     overlap_characters: int = DEFAULT_MAX_OVERLAP,
-) -> MarkdownSplitter | TextSplitter:
+) -> Chunker:
     """Creates and returns a Chunker object configured with the given maximum
     characters per chunk and overlap between chunks.
 
@@ -36,7 +38,7 @@ def get_chunker(
     if key not in _chunkers:
         try:
             if mime_type == MARKDOWN_MIME_TYPE:
-                from semantic_text_splitter import MarkdownSplitter
+                from semantic_text_splitter import MarkdownSplitter  # type: ignore[import-not-found]
 
                 _chunkers[key] = MarkdownSplitter(max_characters, overlap_characters)
             else:

@@ -83,4 +83,3 @@ class OCRError(KreuzbergError):
 
 class DeviceNotAvailableError(Exception):
     """Raised when a requested compute device is not available."""
-    pass

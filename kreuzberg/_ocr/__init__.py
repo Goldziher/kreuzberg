@@ -8,19 +8,20 @@ from kreuzberg._ocr._tesseract import TesseractBackend, TesseractConfig
 from kreuzberg._types import OcrBackendType
 
 __all__ = [
-    "OCRBackend",
     "EasyOCRBackend",
     "EasyOCRConfig",
+    "OCRBackend",
     "PaddleOCRBackend",
     "PaddleOCRConfig",
     "TesseractBackend",
     "TesseractConfig",
 ]
 
+
 @lru_cache
 def get_ocr_backend(backend: OcrBackendType) -> OCRBackend[Any]:
     if backend == "easyocr":
-        return EasyOCRBackend()
+        return EasyOCRBackend(config=EasyOCRConfig())
     if backend == "paddleocr":
-        return PaddleOCRBackend()
+        return PaddleOCRBackend(config=PaddleOCRConfig())
     return TesseractBackend()

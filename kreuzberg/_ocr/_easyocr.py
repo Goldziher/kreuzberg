@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
+import numpy as np
 from PIL import Image
 
 from kreuzberg._mime_types import PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
 from kreuzberg._types import ExtractionResult, Metadata
+from kreuzberg._utils._device import DeviceType, set_memory_limit, validate_device
 from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
-from .._utils._device import DeviceType, validate_device, set_memory_limit, get_device_memory_info
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -162,29 +163,29 @@ class EasyOCRConfig:
 
 class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
     """EasyOCR backend implementation."""
-    
+
+    _reader: Any | None = None
+
     def __init__(self, config: EasyOCRConfig) -> None:
         self.config = config
         self._reader = None
         self._device = validate_device(config.device, "easyocr")
-        
+
         if config.use_gpu and config.gpu_memory_limit is not None:
             set_memory_limit(self._device, config.gpu_memory_limit)
-            
+
     def _initialize(self) -> None:
         """Initialize the EasyOCR reader."""
         if self._reader is None:
             try:
                 import easyocr
             except ImportError as e:
-                raise MissingDependencyError("easyocr", e) from e
-                
-            self._reader = easyocr.Reader(
-                self.config.language,
-                gpu=self.config.use_gpu,
-                device=self._device
-            )
-            
+                raise MissingDependencyError.create_for_package(
+                    dependency_group="easyocr", functionality="EasyOCR as an OCR backend", package_name="easyocr"
+                ) from e
+
+            self._reader = easyocr.Reader(self.config.language, gpu=self.config.use_gpu, device=self._device)
+
     async def process_image(self, image: Image.Image, **kwargs: Unpack[EasyOCRConfig]) -> ExtractionResult:
         """Asynchronously process an image and extract its text and metadata using EasyOCR.
 
@@ -198,9 +199,10 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
         Raises:
             OCRError: If OCR processing fails.
         """
-        import numpy as np
-
         await self._init_easyocr(**kwargs)
+
+        if self._reader is None:
+            raise OCRError("EasyOCR reader not initialized")
 
         beam_width = kwargs.pop("beam_width")
 

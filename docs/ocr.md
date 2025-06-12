@@ -30,20 +30,12 @@ from kreuzberg._ocr._easyocr import EasyOCRConfig
 
 # Auto-detect best device
 config = ExtractionConfig(
-    ocr_backend="easyocr",
-    ocr_config=EasyOCRConfig(
-        device="auto"  # Will use CUDA if available, then MPS, then CPU
-    )
+    ocr_backend="easyocr", ocr_config=EasyOCRConfig(device="auto")  # Will use CUDA if available, then MPS, then CPU
 )
 
 # Explicitly request GPU with memory limit
 config = ExtractionConfig(
-    ocr_backend="easyocr",
-    ocr_config=EasyOCRConfig(
-        use_gpu=True,
-        device="cuda",
-        gpu_memory_limit=4.0  # Limit GPU memory to 4GB
-    )
+    ocr_backend="easyocr", ocr_config=EasyOCRConfig(use_gpu=True, device="cuda", gpu_memory_limit=4.0)  # Limit GPU memory to 4GB
 )
 ```
 
@@ -52,10 +44,7 @@ config = ExtractionConfig(
 To prevent out-of-memory errors, you can set a memory limit for GPU operations:
 
 ```python
-config = EasyOCRConfig(
-    use_gpu=True,
-    gpu_memory_limit=4.0  # Limit to 4GB
-)
+config = EasyOCRConfig(use_gpu=True, gpu_memory_limit=4.0)  # Limit to 4GB
 ```
 
 The memory limit is enforced per process and will automatically fall back to CPU if the limit is exceeded.
@@ -97,28 +86,36 @@ config = PaddleOCRConfig(
 ## Performance Considerations
 
 - GPU acceleration is most beneficial for:
-  - Large documents
-  - High-resolution images
-  - Batch processing
-  - Real-time applications
+
+    - Large documents
+    - High-resolution images
+    - Batch processing
+    - Real-time applications
+
 - CPU processing may be more efficient for:
-  - Small documents
-  - Low-resolution images
-  - Single-page processing
+
+    - Small documents
+    - Low-resolution images
+    - Single-page processing
+
 - Memory usage can be monitored through logging:
-  ```python
-  import logging
-  logging.basicConfig(level=logging.DEBUG)
-  ```
+
+    ```python
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG)
+    ```
 
 ## Error Handling
 
 The system provides clear error messages when:
+
 - Requested GPU is not available
 - Memory limit is exceeded
 - Device initialization fails
 
 Example error handling:
+
 ```python
 from kreuzberg.exceptions import DeviceNotAvailableError
 
@@ -129,4 +126,4 @@ except DeviceNotAvailableError as e:
     # Fall back to CPU processing
     config.use_gpu = False
     result = extractor.process_image(image)
-``` 
+```
