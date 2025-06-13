@@ -28,7 +28,7 @@ Thank you for considering contributing to Kreuzberg! This document provides guid
     Then install dependencies:
 
     ```bash
-    uv pip install -e ".[all,dev,docs,extras]"
+    uv pip install -e ".[all]"
     ```
 
 ## Code Style

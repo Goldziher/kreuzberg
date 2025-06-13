@@ -59,47 +59,6 @@ optional-dependencies.all = [
 optional-dependencies.chunking = [
   "semantic-text-splitter>=0.27.0",
 ]
-optional-dependencies.dev = [
-  "covdefaults>=2.3.0",
-  "mypy>=1.16.0",
-  "pre-commit>=4.2.0",
-  "pytest>=8.4.0",
-  "pytest-cov>=6.1.1",
-  "pytest-mock>=3.14.0",
-  "pytest-timeout>=2.4.0",
-  "ruff>=0.11.13",
-  "trio>=0.30.0",
-  "uv-bump",
-]
-optional-dependencies.docs = [
-  "mkdocs>=1.6.1",
-  "mkdocs-git-revision-date-localized-plugin>=1.4.5",
-  "mkdocs-material[imaging]>=9.6.9",
-  "mkdocs-minify-plugin>=0.8.0",
-  "mkdocstrings[python]>=0.29.0",
-]
-optional-dependencies.easyocr = [
-  "easyocr>=1.7.2",
-]
-optional-dependencies.extras = [
-  "easyocr>=1.7.2",                 # from easyocr
-  "gmft>=0.4.1",                    # from gmft
-  "paddleocr>=3.0.1",               # from paddleocr
-  "paddlepaddle>=3.0.0",            # from paddleocr
-  "semantic-text-splitter>=0.27.0", # from chunking
-  "setuptools>=80.9.0",             # from paddleocr
-]
-
-optional-dependencies.gmft = [
-  "gmft>=0.4.1",
-]
-optional-dependencies.paddleocr = [
-  "paddleocr>=3.0.1",
-  "paddlepaddle>=3.0.0",
-  "setuptools>=80.9.0",
-]
-
-urls.homepage = "https://github.com/Goldziher/kreuzberg"
 
 [tool.setuptools.package-data]
 kreuzberg = [ "py.typed" ]
@@ -177,6 +136,49 @@ disable_error_code = 'import-untyped'
 implicit_reexport = false
 show_error_codes = true
 strict = true
+
+[tool.dev-dependencies]
+dev = [
+  "covdefaults>=2.3.0",
+  "mypy>=1.16.0",
+  "pre-commit>=4.2.0",
+  "pytest>=8.4.0",
+  "pytest-cov>=6.1.1",
+  "pytest-mock>=3.14.0",
+  "pytest-timeout>=2.4.0",
+  "ruff>=0.11.13",
+  "trio>=0.30.0",
+  "uv-bump",
+]
+optional-dependencies.docs = [
+  "mkdocs>=1.6.1",
+  "mkdocs-git-revision-date-localized-plugin>=1.4.5",
+  "mkdocs-material[imaging]>=9.6.9",
+  "mkdocs-minify-plugin>=0.8.0",
+  "mkdocstrings[python]>=0.29.0",
+]
+optional-dependencies.easyocr = [
+  "easyocr>=1.7.2",
+]
+optional-dependencies.extras = [
+  "easyocr>=1.7.2",                 # from easyocr
+  "gmft>=0.4.1",                    # from gmft
+  "paddleocr>=3.0.1",               # from paddleocr
+  "paddlepaddle>=3.0.0",            # from paddleocr
+  "semantic-text-splitter>=0.27.0", # from chunking
+  "setuptools>=80.9.0",             # from paddleocr
+]
+
+optional-dependencies.gmft = [
+  "gmft>=0.4.1",
+]
+optional-dependencies.paddleocr = [
+  "paddleocr>=3.0.1",
+  "paddlepaddle>=3.0.0",
+  "setuptools>=80.9.0",
+]
+
+urls.homepage = "https://github.com/Goldziher/kreuzberg"
 
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
