@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -39,7 +39,7 @@ def mock_paddleocr(mocker: MockerFixture) -> Mock:
             ],
         ]
     ]
-    return mock
+    return cast("Mock", mock)
 
 
 @pytest.fixture
@@ -91,21 +91,21 @@ def mock_run_sync(mocker: MockerFixture) -> Mock:
             return paddle_ocr
         return func(*args, **kwargs)
 
-    return mocker.patch("kreuzberg._ocr._paddleocr.run_sync", side_effect=mock_async_run_sync)
+    return cast("Mock", mocker.patch("kreuzberg._ocr._paddleocr.run_sync", side_effect=mock_async_run_sync))
 
 
 @pytest.fixture
 def mock_find_spec(mocker: MockerFixture) -> Mock:
     mock = mocker.patch("kreuzberg._ocr._paddleocr.find_spec")
     mock.return_value = True
-    return mock
+    return cast("Mock", mock)
 
 
 @pytest.fixture
 def mock_find_spec_missing(mocker: MockerFixture) -> Mock:
     mock = mocker.patch("kreuzberg._ocr._paddleocr.find_spec")
     mock.return_value = None
-    return mock
+    return cast("Mock", mock)
 
 
 @pytest.fixture

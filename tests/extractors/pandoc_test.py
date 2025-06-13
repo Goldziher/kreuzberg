@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, Mock
 
 from kreuzberg.extraction import DEFAULT_CONFIG
@@ -41,7 +41,7 @@ SAMPLE_PANDOC_JSON = {
 
 @pytest.fixture
 def mock_run_process(mocker: MockerFixture) -> AsyncMock:
-    return mocker.patch("kreuzberg._extractors._pandoc.run_process", new_callable=AsyncMock)
+    return cast("Mock", mocker.patch("kreuzberg._extractors._pandoc.run_process", new_callable=AsyncMock))
 
 
 @pytest.fixture
@@ -51,7 +51,7 @@ def mock_version_check(mocker: MockerFixture) -> None:
 
 @pytest.fixture
 def mock_run_taskgroup(mocker: MockerFixture) -> AsyncMock:
-    return mocker.patch("kreuzberg._extractors._pandoc.run_taskgroup", new_callable=AsyncMock)
+    return cast("Mock", mocker.patch("kreuzberg._extractors._pandoc.run_taskgroup", new_callable=AsyncMock))
 
 
 @pytest.fixture
