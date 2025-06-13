@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock
 
 import pytest
@@ -53,7 +53,7 @@ def mock_run_process(mocker: MockerFixture) -> Mock:
     mock.return_value.returncode = 0
     mock.return_value.stderr = b""
     mock.side_effect = async_run_sync
-    return mock
+    return cast("Mock", mock)
 
 
 @pytest.fixture
@@ -70,7 +70,7 @@ def mock_run_process_invalid(mocker: MockerFixture) -> Mock:
     mock.return_value.stdout = b"tesseract 4.0.0"
     mock.return_value.returncode = 0
     mock.side_effect = run_sync
-    return mock
+    return cast("Mock", mock)
 
 
 @pytest.fixture
@@ -80,7 +80,7 @@ def mock_run_process_error(mocker: MockerFixture) -> Mock:
 
     mock = mocker.patch("kreuzberg._ocr._tesseract.run_process")
     mock.side_effect = run_sync
-    return mock
+    return cast("Mock", mock)
 
 
 @pytest.mark.anyio
