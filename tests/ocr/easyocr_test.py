@@ -30,8 +30,7 @@ def raise_import_error(name: str, *args: Any, **kwargs: Any) -> Any:
 
 @pytest.fixture
 def backend() -> EasyOCRBackend:
-    EasyOCRBackend._reader = None
-    return EasyOCRBackend()
+    return EasyOCRBackend(config=EasyOCRConfig())
 
 
 @pytest.fixture
@@ -54,7 +53,7 @@ def mock_easyocr_reader() -> Mock:
 
 @pytest.fixture(autouse=True)
 def reset_reader(mocker: MockerFixture) -> None:
-    EasyOCRBackend._reader = None
+    pass
 
 
 @pytest.mark.parametrize(
@@ -177,7 +176,7 @@ async def test_init_easyocr_missing_dependency() -> None:
     with patch(
         "builtins.__import__", side_effect=lambda name, *args, **kwargs: raise_import_error(name, *args, **kwargs)
     ):
-        backend = EasyOCRBackend()
+        backend = EasyOCRBackend(config=EasyOCRConfig())
         with pytest.raises(MissingDependencyError) as excinfo:
             await backend._init_easyocr(language="en")
 
@@ -197,7 +196,7 @@ async def test_init_easyocr(mock_easyocr_reader: Mock) -> None:
         patch.dict("sys.modules", {"easyocr": mock_easyocr}),
         patch("kreuzberg._ocr._easyocr.run_sync", return_value=mock_easyocr_reader) as run_sync_mock,
     ):
-        backend = EasyOCRBackend()
+        backend = EasyOCRBackend(config=EasyOCRConfig())
         await backend._init_easyocr(language="en")
 
         run_sync_mock.assert_called_once()
@@ -217,8 +216,7 @@ async def test_init_easyocr_comma_separated_languages(mock_easyocr_reader: Mock)
         patch.dict("sys.modules", {"easyocr": mock_easyocr}),
         patch("kreuzberg._ocr._easyocr.run_sync", return_value=mock_easyocr_reader) as run_sync_mock,
     ):
-        EasyOCRBackend._reader = None
-        backend = EasyOCRBackend()
+        backend = EasyOCRBackend(config=EasyOCRConfig())
 
         await backend._init_easyocr(language="en,ch_sim")
         assert run_sync_mock.call_args[0][1] == ["en", "ch_sim"]
@@ -234,8 +232,7 @@ async def test_init_easyocr_language_list(mock_easyocr_reader: Mock) -> None:
         patch.dict("sys.modules", {"easyocr": mock_easyocr}),
         patch("kreuzberg._ocr._easyocr.run_sync", return_value=mock_easyocr_reader) as run_sync_mock,
     ):
-        EasyOCRBackend._reader = None
-        backend = EasyOCRBackend()
+        backend = EasyOCRBackend(config=EasyOCRConfig())
 
         await backend._init_easyocr(language=["en", "ch_sim"])
         assert run_sync_mock.call_args[0][1] == ["en", "ch_sim"]
@@ -246,7 +243,7 @@ async def test_init_easyocr_error(mocker: MockerFixture) -> None:
     error_message = "Failed to initialize"
     mocker.patch("kreuzberg._ocr._easyocr.run_sync", side_effect=Exception(error_message))
 
-    backend = EasyOCRBackend()
+    backend = EasyOCRBackend(config=EasyOCRConfig())
     with pytest.raises(OCRError, match=f"Failed to initialize EasyOCR: {error_message}"):
         await backend._init_easyocr()
 
@@ -256,7 +253,7 @@ async def test_process_image(backend: EasyOCRBackend, mock_easyocr_reader: Mock,
     image = Image.new("RGB", (100, 100))
 
     with patch.object(backend, "_init_easyocr", return_value=None):
-        backend._reader = mock_easyocr_reader  # type: ignore[misc]
+        backend._reader = mock_easyocr_reader  # type: ignore[assignment]
 
         with patch("kreuzberg._ocr._easyocr.run_sync", return_value=mock_easyocr_reader.readtext.return_value):
             result = await backend.process_image(image, **config_dict)
@@ -274,7 +271,7 @@ async def test_process_image_error(backend: EasyOCRBackend, config_dict: dict[st
     image = Image.new("RGB", (100, 100))
 
     with patch.object(backend, "_init_easyocr", return_value=None):
-        backend._reader = Mock()  # type: ignore[misc]
+        backend._reader = Mock()  # type: ignore[assignment]
 
         error_message = "OCR processing failed"
         with patch("kreuzberg._ocr._easyocr.run_sync", side_effect=Exception(error_message)):

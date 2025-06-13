@@ -23,6 +23,8 @@ class OCRBackend(ABC, Generic[T]):
     and files for text extraction.
     """
 
+    __slots__ = ()
+
     @abstractmethod
     async def process_image(self, image: Image, **kwargs: Unpack[T]) -> ExtractionResult:
         """Asynchronously process an image and extract its text and metadata.

@@ -10,7 +10,7 @@ from kreuzberg.exceptions import MissingDependencyError
 if TYPE_CHECKING:
     from os import PathLike
 
-    from gmft.detectors.base import CroppedTable
+    from gmft.detectors.base import CroppedTable  # type: ignore[import-not-found]
     from pandas import DataFrame
 
 
@@ -122,10 +122,10 @@ async def extract_tables(file_path: str | PathLike[str], config: GMFTConfig | No
         A list of table data dictionaries.
     """
     try:
-        from gmft.auto import AutoTableDetector, AutoTableFormatter
-        from gmft.detectors.tatr import TATRDetectorConfig
-        from gmft.formatters.tatr import TATRFormatConfig
-        from gmft.pdf_bindings.pdfium import PyPDFium2Document
+        from gmft.auto import AutoTableDetector, AutoTableFormatter  # type: ignore[import-not-found]
+        from gmft.detectors.tatr import TATRDetectorConfig  # type: ignore[import-not-found]
+        from gmft.formatters.tatr import TATRFormatConfig  # type: ignore[import-not-found]
+        from gmft.pdf_bindings.pdfium import PyPDFium2Document  # type: ignore[import-not-found]
 
         config = config or GMFTConfig()
         formatter = AutoTableFormatter(

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Final, Literal
 
+import numpy as np
 from PIL import Image
 
 from kreuzberg._mime_types import PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
 from kreuzberg._types import ExtractionResult, Metadata
+from kreuzberg._utils._device import DeviceType, set_memory_limit, validate_device
 from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
@@ -126,7 +128,7 @@ class EasyOCRConfig:
     """Decoder method. Options: 'greedy', 'beamsearch', 'wordbeamsearch'."""
     height_ths: float = 0.5
     """Maximum difference in box height for merging."""
-    language: str | list[str] = "en"
+    language: list[str] = field(default_factory=lambda: ["en"])
     """Language or languages to use for OCR. Can be a single language code (e.g., 'en'),
     a comma-separated string of language codes (e.g., 'en,ch_sim'), or a list of language codes."""
     link_threshold: float = 0.4
@@ -144,7 +146,7 @@ class EasyOCRConfig:
     text_threshold: float = 0.7
     """Text confidence threshold."""
     use_gpu: bool = False
-    """Whether to use GPU for inference."""
+    """Whether to use GPU acceleration."""
     width_ths: float = 0.5
     """Maximum horizontal distance for merging boxes."""
     x_ths: float = 1.0
@@ -153,10 +155,40 @@ class EasyOCRConfig:
     """Maximum vertical distance for paragraph merging."""
     ycenter_ths: float = 0.5
     """Maximum shift in y direction for merging."""
+    gpu_memory_limit: float | None = None
+    """GPU memory limit in GB. None means no limit."""
+    device: DeviceType = "auto"
+    """Device to use for computation. Can be 'cpu', 'cuda', 'mps', or 'auto'."""
 
 
 class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
-    _reader: ClassVar[Any] = None
+    """EasyOCR backend implementation."""
+
+    __slots__ = ("_device", "_reader", "config")
+
+    def __init__(self, config: EasyOCRConfig) -> None:
+        self.config = config
+        self._reader = None
+        self._device = validate_device(config.device, "easyocr")
+
+        if config.use_gpu and config.gpu_memory_limit is not None:
+            set_memory_limit(self._device, config.gpu_memory_limit)
+
+    def _initialize(self) -> None:
+        """Initialize the EasyOCR reader."""
+        if self._reader is None:
+            try:
+                import importlib.util
+
+                if importlib.util.find_spec("easyocr") is None:
+                    raise ImportError("easyocr not found")
+                import easyocr
+            except ImportError as e:
+                raise MissingDependencyError.create_for_package(
+                    dependency_group="easyocr", functionality="EasyOCR as an OCR backend", package_name="easyocr"
+                ) from e
+
+            self._reader = easyocr.Reader(self.config.language, gpu=self.config.use_gpu)
 
     async def process_image(self, image: Image.Image, **kwargs: Unpack[EasyOCRConfig]) -> ExtractionResult:
         """Asynchronously process an image and extract its text and metadata using EasyOCR.
@@ -171,9 +203,10 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
         Raises:
             OCRError: If OCR processing fails.
         """
-        import numpy as np
-
         await self._init_easyocr(**kwargs)
+
+        if self._reader is None:
+            raise OCRError("EasyOCR reader not initialized")
 
         beam_width = kwargs.pop("beam_width")
 
@@ -322,34 +355,32 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
             **kwargs: Configuration parameters for EasyOCR including language, etc.
 
         Raises:
-            MissingDependencyError: If EasyOCR is not installed.
-            OCRError: If initialization fails.
+            MissingDependencyError: If EasyOCR is not installed or if there's an error importing it.
+            OCRError: If initialization fails after EasyOCR is successfully imported.
+            Exception: For any other unexpected errors during initialization.
         """
-        if cls._reader is not None:
-            return
+        if not cls._is_gpu_available() and kwargs.get("use_gpu", False):
+            kwargs["use_gpu"] = False
+            kwargs["device"] = "cpu"
 
         try:
-            import easyocr
-        except ImportError as e:
+            import importlib.util
+
+            easyocr_spec = importlib.util.find_spec("easyocr")
+            if easyocr_spec is None:
+                raise MissingDependencyError.create_for_package(
+                    dependency_group="easyocr", functionality="EasyOCR as an OCR backend", package_name="easyocr"
+                )
+        except Exception as e:
+            if isinstance(e, MissingDependencyError):
+                raise
             raise MissingDependencyError.create_for_package(
                 dependency_group="easyocr", functionality="EasyOCR as an OCR backend", package_name="easyocr"
             ) from e
 
-        languages = cls._validate_language_code(kwargs.pop("language", "en"))
-        has_gpu = cls._is_gpu_available()
-        kwargs.setdefault("gpu", has_gpu)
-        kwargs.setdefault("detector", True)
-        kwargs.setdefault("recognizer", True)
-        kwargs.setdefault("download_enabled", True)
-        kwargs.setdefault("recog_network", "standard")
-
         try:
-            cls._reader = await run_sync(
-                easyocr.Reader,
-                languages,
-                gpu=kwargs.get("use_gpu"),
-                verbose=False,
-            )
+            instance = cls(EasyOCRConfig(**kwargs))
+            instance._initialize()
         except Exception as e:
             raise OCRError(f"Failed to initialize EasyOCR: {e}") from e
 
@@ -367,10 +398,8 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
             A list with the normalized language codes.
         """
         if isinstance(language_codes, str):
-            # Handle comma-separated language codes
             languages = [lang.strip().lower() for lang in language_codes.split(",")]
         else:
-            # Handle list of language codes
             languages = [lang.lower() for lang in language_codes]
 
         unsupported_langs = [lang for lang in languages if lang not in EASYOCR_SUPPORTED_LANGUAGE_CODES]
