@@ -49,35 +49,17 @@ dependencies = [
 ]
 
 optional-dependencies.all = [
-  # easyocr
   "easyocr>=1.7.2",
-  # gmft
   "gmft>=0.4.1",
-  # paddle
   "paddleocr>=3.0.1",
   "paddlepaddle>=3.0.0",
-  # chunking
   "semantic-text-splitter>=0.27.0",
   "setuptools>=80.9.0",
 ]
 optional-dependencies.chunking = [
   "semantic-text-splitter>=0.27.0",
 ]
-optional-dependencies.easyocr = [
-  "easyocr>=1.7.2",
-]
-optional-dependencies.gmft = [
-  "gmft>=0.4.1",
-]
-optional-dependencies.paddleocr = [
-  "paddleocr>=3.0.1",
-  "paddlepaddle>=3.0.0",
-  "setuptools>=80.9.0",
-]
-urls.homepage = "https://github.com/Goldziher/kreuzberg"
-
-[dependency-groups]
-dev = [
+optional-dependencies.dev = [
   "covdefaults>=2.3.0",
   "mypy>=1.16.0",
   "pre-commit>=4.2.0",
@@ -89,13 +71,35 @@ dev = [
   "trio>=0.30.0",
   "uv-bump",
 ]
-doc = [
+optional-dependencies.docs = [
   "mkdocs>=1.6.1",
   "mkdocs-git-revision-date-localized-plugin>=1.4.5",
   "mkdocs-material[imaging]>=9.6.9",
   "mkdocs-minify-plugin>=0.8.0",
   "mkdocstrings[python]>=0.29.0",
 ]
+optional-dependencies.easyocr = [
+  "easyocr>=1.7.2",
+]
+optional-dependencies.extras = [
+  "easyocr>=1.7.2",                 # from easyocr
+  "gmft>=0.4.1",                    # from gmft
+  "paddleocr>=3.0.1",               # from paddleocr
+  "paddlepaddle>=3.0.0",            # from paddleocr
+  "semantic-text-splitter>=0.27.0", # from chunking
+  "setuptools>=80.9.0",             # from paddleocr
+]
+
+optional-dependencies.gmft = [
+  "gmft>=0.4.1",
+]
+optional-dependencies.paddleocr = [
+  "paddleocr>=3.0.1",
+  "paddlepaddle>=3.0.0",
+  "setuptools>=80.9.0",
+]
+
+urls.homepage = "https://github.com/Goldziher/kreuzberg"
 
 [tool.setuptools.package-data]
 kreuzberg = [ "py.typed" ]
