@@ -31,7 +31,6 @@ async def test_easyocr_gpu(sample_image: Image.Image) -> None:
         result = await backend.process_image(sample_image)
         assert result.content == "text"
 
-        # Verify GPU settings were passed correctly
         mock_reader.readtext.assert_called_once()
         assert config.use_gpu
         assert config.device == "cuda"
@@ -81,7 +80,6 @@ async def test_gpu_fallback(sample_image: Image.Image) -> None:
 
 def test_invalid_gpu_device() -> None:
     with pytest.raises(DeviceNotAvailableError):
-        # Test validation of invalid device directly
         validate_device("invalid", "easyocr")
 
 

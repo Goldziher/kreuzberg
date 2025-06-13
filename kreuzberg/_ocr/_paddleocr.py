@@ -221,7 +221,7 @@ class PaddleOCRBackend(OCRBackend[PaddleOCRConfig]):
 
             text: list[str] = []
             for line in results:
-                text.extend(word_info[1][0] for word_info in line)  # Get the recognized text
+                text.extend(word_info[1][0] for word_info in line)
 
             return "\n".join(text)
 

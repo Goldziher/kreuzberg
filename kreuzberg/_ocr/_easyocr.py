@@ -398,7 +398,6 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
             A list with the normalized language codes.
         """
         if isinstance(language_codes, str):
-            # Handle comma-separated language codes
             languages = [lang.strip().lower() for lang in language_codes.split(",")]
         else:
             languages = [lang.lower() for lang in language_codes]
