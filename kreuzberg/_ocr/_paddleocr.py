@@ -128,6 +128,8 @@ class PaddleOCRConfig:
 class PaddleOCRBackend(OCRBackend[PaddleOCRConfig]):
     """PaddleOCR backend implementation."""
 
+    __slots__ = ("_device", "_ocr", "config")
+
     _paddle_ocr: Any | None = None
     """Class-level PaddleOCR instance."""
 

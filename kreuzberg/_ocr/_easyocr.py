@@ -164,7 +164,7 @@ class EasyOCRConfig:
 class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
     """EasyOCR backend implementation."""
 
-    _reader: Any | None = None
+    __slots__ = ("_device", "_reader", "config")
 
     def __init__(self, config: EasyOCRConfig) -> None:
         self.config = config
@@ -178,13 +178,17 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
         """Initialize the EasyOCR reader."""
         if self._reader is None:
             try:
+                import importlib.util
+
+                if importlib.util.find_spec("easyocr") is None:
+                    raise ImportError("easyocr not found")
                 import easyocr
             except ImportError as e:
                 raise MissingDependencyError.create_for_package(
                     dependency_group="easyocr", functionality="EasyOCR as an OCR backend", package_name="easyocr"
                 ) from e
 
-            self._reader = easyocr.Reader(self.config.language, gpu=self.config.use_gpu, device=self._device)
+            self._reader = easyocr.Reader(self.config.language, gpu=self.config.use_gpu)
 
     async def process_image(self, image: Image.Image, **kwargs: Unpack[EasyOCRConfig]) -> ExtractionResult:
         """Asynchronously process an image and extract its text and metadata using EasyOCR.
@@ -351,34 +355,32 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
             **kwargs: Configuration parameters for EasyOCR including language, etc.
 
         Raises:
-            MissingDependencyError: If EasyOCR is not installed.
-            OCRError: If initialization fails.
+            MissingDependencyError: If EasyOCR is not installed or if there's an error importing it.
+            OCRError: If initialization fails after EasyOCR is successfully imported.
+            Exception: For any other unexpected errors during initialization.
         """
-        if cls._reader is not None:
-            return
+        if not cls._is_gpu_available() and kwargs.get("use_gpu", False):
+            kwargs["use_gpu"] = False
+            kwargs["device"] = "cpu"
 
         try:
-            import easyocr
-        except ImportError as e:
+            import importlib.util
+
+            easyocr_spec = importlib.util.find_spec("easyocr")
+            if easyocr_spec is None:
+                raise MissingDependencyError.create_for_package(
+                    dependency_group="easyocr", functionality="EasyOCR as an OCR backend", package_name="easyocr"
+                )
+        except Exception as e:
+            if isinstance(e, MissingDependencyError):
+                raise
             raise MissingDependencyError.create_for_package(
                 dependency_group="easyocr", functionality="EasyOCR as an OCR backend", package_name="easyocr"
             ) from e
 
-        languages = cls._validate_language_code(kwargs.pop("language", "en"))
-        has_gpu = cls._is_gpu_available()
-        kwargs.setdefault("gpu", has_gpu)
-        kwargs.setdefault("detector", True)
-        kwargs.setdefault("recognizer", True)
-        kwargs.setdefault("download_enabled", True)
-        kwargs.setdefault("recog_network", "standard")
-
         try:
-            cls._reader = await run_sync(
-                easyocr.Reader,
-                languages,
-                gpu=kwargs.get("use_gpu"),
-                verbose=False,
-            )
+            instance = cls(EasyOCRConfig(**kwargs))
+            instance._initialize()
         except Exception as e:
             raise OCRError(f"Failed to initialize EasyOCR: {e}") from e
 
@@ -399,7 +401,6 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
             # Handle comma-separated language codes
             languages = [lang.strip().lower() for lang in language_codes.split(",")]
         else:
-            # Handle list of language codes
             languages = [lang.lower() for lang in language_codes]
 
         unsupported_langs = [lang for lang in languages if lang not in EASYOCR_SUPPORTED_LANGUAGE_CODES]

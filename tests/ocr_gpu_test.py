@@ -70,13 +70,13 @@ async def test_gpu_fallback(sample_image: Image.Image) -> None:
         mock_reader = MagicMock()
         mock_reader.readtext.return_value = [("text", 0.9)]
 
-        with patch.object(backend, "_init_easyocr", return_value=None):
-            backend._reader = mock_reader
-            result = await backend.process_image(sample_image, beam_width=5)
-            assert result.content == "text"
+        await backend._init_easyocr()
+        backend._reader = mock_reader  # type: ignore[assignment]
+        result = await backend.process_image(sample_image, beam_width=5)
+        assert result.content == "text"
 
-            mock_reader.readtext.assert_called_once()
-            assert backend._device == "cpu"  # Verify device fallback
+        mock_reader.readtext.assert_called_once()
+        assert backend._device == "cpu"
 
 
 def test_invalid_gpu_device() -> None:
