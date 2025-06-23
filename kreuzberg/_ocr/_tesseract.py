@@ -264,7 +264,7 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
 
             env: dict[str, Any] | None = None
             if sys.platform.startswith("linux"):
-                # we have to prevent multithreading this way otherwise we will get deadlocks ~keep
+                # we have to prevent multithreading this way otherwise we will get deadlocks
                 env = {"OMP_THREAD_LIMIT": "1"}
 
             result = await run_process(command, env=env)

@@ -202,7 +202,7 @@ class PresentationExtractor(Extractor):
             ("keywords", "keywords"),
             ("modified_by", "last_modified_by"),
             ("modified_at", "modified"),
-            ("version", "revision"),  # if version and revision are given, version overwrites ~keep
+            ("version", "revision"),  # if version and revision are given, version overwrites
             ("subject", "subject"),
             ("title", "title"),
             ("version", "version"),
