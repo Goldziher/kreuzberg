@@ -39,7 +39,7 @@ repos:
         additional_dependencies:
           - black==25.1.0
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: "v3.5.3"
+    rev: "v3.6.0"
     hooks:
       - id: prettier
         exclude: ^tests|^.idea|^migrations|^.git|README.md|^docs
@@ -48,7 +48,7 @@ repos:
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.13
+    rev: v0.12.0
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
