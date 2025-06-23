@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: PLC0415
+import warnings
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
 
@@ -8,6 +10,7 @@ from PIL import Image
 from kreuzberg._mime_types import PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
 from kreuzberg._types import ExtractionResult, Metadata
+from kreuzberg._utils._device import DeviceInfo, DeviceType, validate_device_request
 from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
@@ -144,7 +147,13 @@ class EasyOCRConfig:
     text_threshold: float = 0.7
     """Text confidence threshold."""
     use_gpu: bool = False
-    """Whether to use GPU for inference."""
+    """Whether to use GPU for inference. DEPRECATED: Use 'device' parameter instead."""
+    device: DeviceType = "auto"
+    """Device to use for inference. Options: 'cpu', 'cuda', 'mps', 'auto'."""
+    gpu_memory_limit: float | None = None
+    """Maximum GPU memory to use in GB. None for no limit."""
+    fallback_to_cpu: bool = True
+    """Whether to fallback to CPU if requested device is unavailable."""
     width_ths: float = 0.5
     """Maximum horizontal distance for merging boxes."""
     x_ths: float = 1.0
@@ -336,8 +345,11 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
             ) from e
 
         languages = cls._validate_language_code(kwargs.pop("language", "en"))
-        has_gpu = cls._is_gpu_available()
-        kwargs.setdefault("gpu", has_gpu)
+
+        # Handle device selection with backward compatibility
+        device_info = cls._resolve_device_config(**kwargs)
+        use_gpu = device_info.device_type in ("cuda", "mps")
+
         kwargs.setdefault("detector", True)
         kwargs.setdefault("recognizer", True)
         kwargs.setdefault("download_enabled", True)
@@ -347,11 +359,62 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
             cls._reader = await run_sync(
                 easyocr.Reader,
                 languages,
-                gpu=kwargs.get("use_gpu"),
+                gpu=use_gpu,
                 verbose=False,
             )
         except Exception as e:
             raise OCRError(f"Failed to initialize EasyOCR: {e}") from e
+
+    @classmethod
+    def _resolve_device_config(cls, **kwargs: Unpack[EasyOCRConfig]) -> DeviceInfo:
+        """Resolve device configuration with backward compatibility.
+
+        Args:
+            **kwargs: Configuration parameters including device settings.
+
+        Returns:
+            DeviceInfo object for the selected device.
+
+        Raises:
+            ValidationError: If requested device is not available and fallback is disabled.
+        """
+        # Handle deprecated use_gpu parameter
+        use_gpu = kwargs.get("use_gpu", False)
+        device = kwargs.get("device", "auto")
+        memory_limit = kwargs.get("gpu_memory_limit")
+        fallback_to_cpu = kwargs.get("fallback_to_cpu", True)
+
+        # Check for deprecated parameter usage
+        if use_gpu and device == "auto":
+            warnings.warn(
+                "The 'use_gpu' parameter is deprecated and will be removed in a future version. "
+                "Use 'device=\"cuda\"' or 'device=\"auto\"' instead.",
+                DeprecationWarning,
+                stacklevel=4,
+            )
+            # Convert deprecated use_gpu=True to device="auto"
+            device = "auto" if use_gpu else "cpu"
+        elif use_gpu and device != "auto":
+            warnings.warn(
+                "Both 'use_gpu' and 'device' parameters specified. The 'use_gpu' parameter is deprecated. "
+                "Using 'device' parameter value.",
+                DeprecationWarning,
+                stacklevel=4,
+            )
+
+        # Validate and get device info
+        try:
+            return validate_device_request(
+                device,
+                "EasyOCR",
+                memory_limit=memory_limit,
+                fallback_to_cpu=fallback_to_cpu,
+            )
+        except ValidationError:
+            # If device validation fails and we're using deprecated use_gpu=False, fallback to CPU
+            if not use_gpu and device == "cpu":
+                return DeviceInfo(device_type="cpu", name="CPU")
+            raise
 
     @staticmethod
     def _validate_language_code(language_codes: str | list[str]) -> list[str]:

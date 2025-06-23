@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+# ruff: noqa: PLC0415
 import platform
+import warnings
 from dataclasses import dataclass
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
@@ -10,6 +12,7 @@ from PIL import Image
 from kreuzberg._mime_types import PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
 from kreuzberg._types import ExtractionResult, Metadata
+from kreuzberg._utils._device import DeviceInfo, DeviceType, validate_device_request
 from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
@@ -91,7 +94,13 @@ class PaddleOCRConfig:
     use_angle_cls: bool = True
     """Whether to use text orientation classification model."""
     use_gpu: bool = False
-    """Whether to use GPU for inference. Requires installing the paddlepaddle-gpu package"""
+    """Whether to use GPU for inference. DEPRECATED: Use 'device' parameter instead."""
+    device: DeviceType = "auto"
+    """Device to use for inference. Options: 'cpu', 'cuda', 'auto'. Note: MPS not supported by PaddlePaddle."""
+    gpu_memory_limit: float | None = None
+    """Maximum GPU memory to use in GB. None for no limit."""
+    fallback_to_cpu: bool = True
+    """Whether to fallback to CPU if requested device is unavailable."""
     use_space_char: bool = True
     """Whether to recognize spaces."""
     use_zero_copy_run: bool = False
@@ -248,18 +257,87 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
             ) from e
 
         language = cls._validate_language_code(kwargs.pop("language", "en"))
+
+        # Handle device selection with backward compatibility
+        device_info = cls._resolve_device_config(**kwargs)
+        use_gpu = device_info.device_type == "cuda"
+
         has_gpu_package = bool(find_spec("paddlepaddle_gpu"))
         kwargs.setdefault("use_angle_cls", True)
-        kwargs.setdefault("use_gpu", has_gpu_package)
-        kwargs.setdefault("enable_mkldnn", cls._is_mkldnn_supported() and not has_gpu_package)
+        kwargs["use_gpu"] = use_gpu and has_gpu_package
+        kwargs.setdefault("enable_mkldnn", cls._is_mkldnn_supported() and not (use_gpu and has_gpu_package))
         kwargs.setdefault("det_db_thresh", 0.3)
         kwargs.setdefault("det_db_box_thresh", 0.5)
         kwargs.setdefault("det_db_unclip_ratio", 1.6)
+
+        # Set GPU memory limit if specified
+        if device_info.device_type == "cuda" and kwargs.get("gpu_memory_limit"):
+            kwargs["gpu_mem"] = int(kwargs["gpu_memory_limit"] * 1024)  # Convert GB to MB
 
         try:
             cls._paddle_ocr = await run_sync(PaddleOCR, lang=language, show_log=False, **kwargs)
         except Exception as e:
             raise OCRError(f"Failed to initialize PaddleOCR: {e}") from e
+
+    @classmethod
+    def _resolve_device_config(cls, **kwargs: Unpack[PaddleOCRConfig]) -> DeviceInfo:
+        """Resolve device configuration with backward compatibility.
+
+        Args:
+            **kwargs: Configuration parameters including device settings.
+
+        Returns:
+            DeviceInfo object for the selected device.
+
+        Raises:
+            ValidationError: If requested device is not available and fallback is disabled.
+        """
+        # Handle deprecated use_gpu parameter
+        use_gpu = kwargs.get("use_gpu", False)
+        device = kwargs.get("device", "auto")
+        memory_limit = kwargs.get("gpu_memory_limit")
+        fallback_to_cpu = kwargs.get("fallback_to_cpu", True)
+
+        # Check for deprecated parameter usage
+        if use_gpu and device == "auto":
+            warnings.warn(
+                "The 'use_gpu' parameter is deprecated and will be removed in a future version. "
+                "Use 'device=\"cuda\"' or 'device=\"auto\"' instead.",
+                DeprecationWarning,
+                stacklevel=4,
+            )
+            # Convert deprecated use_gpu=True to device="auto"
+            device = "auto" if use_gpu else "cpu"
+        elif use_gpu and device != "auto":
+            warnings.warn(
+                "Both 'use_gpu' and 'device' parameters specified. The 'use_gpu' parameter is deprecated. "
+                "Using 'device' parameter value.",
+                DeprecationWarning,
+                stacklevel=4,
+            )
+
+        # PaddlePaddle doesn't support MPS, so warn if requested
+        if device == "mps":
+            warnings.warn(
+                "PaddlePaddle does not support MPS (Apple Silicon) acceleration. Falling back to CPU.",
+                UserWarning,
+                stacklevel=4,
+            )
+            device = "cpu"
+
+        # Validate and get device info
+        try:
+            return validate_device_request(
+                device,
+                "PaddleOCR",
+                memory_limit=memory_limit,
+                fallback_to_cpu=fallback_to_cpu,
+            )
+        except ValidationError:
+            # If device validation fails and we're using deprecated use_gpu=False, fallback to CPU
+            if not use_gpu and device == "cpu":
+                return DeviceInfo(device_type="cpu", name="CPU")
+            raise
 
     @staticmethod
     def _validate_language_code(lang_code: str) -> str:
