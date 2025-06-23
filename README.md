@@ -103,17 +103,9 @@ Kreuzberg supports multiple OCR engines:
 
 For comparison and selection guidance, see the [OCR Backends](https://goldziher.github.io/kreuzberg/user-guide/ocr-backends/) documentation.
 
-## Contribution
+## Contributing
 
-This library is open to contribution. Feel free to open issues or submit PRs. It's better to discuss issues before submitting PRs to avoid disappointment.
-
-### Local Development
-
-- Clone the repo
-- Install the system dependencies
-- Install the full dependencies with `uv sync`
-- Install the pre-commit hooks with: `pre-commit install && pre-commit install --hook-type commit-msg`
-- Make your changes and submit a PR
+We welcome contributions! Please see our [Contributing Guide](docs/contributing.md) for details on setting up your development environment and submitting pull requests.
 
 ## License
 

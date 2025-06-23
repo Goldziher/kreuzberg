@@ -1,71 +1,78 @@
 # Contributing to Kreuzberg
 
-Thank you for considering contributing to Kreuzberg! This document provides guidelines and instructions for contributing to the project.
+Thank you for contributing to Kreuzberg!
 
-## Development Setup
+## Setup
 
-1. Clone the repository:
+1. **Install uv** (fast Python package manager):
+
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+
+1. **Clone and install**:
 
     ```bash
     git clone https://github.com/Goldziher/kreuzberg.git
     cd kreuzberg
+    uv sync --all-extras --dev
     ```
 
-1. Create and activate a virtual environment:
+1. **Install pre-commit hooks**:
 
     ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+    pre-commit install && pre-commit install --hook-type commit-msg
     ```
 
-1. Install development dependencies:
+## Development
 
-    ```bash
-    pip install -e ".[dev,docs]"
-    ```
+### Commands
 
-## Running Tests
+All commands run through `uv run`:
 
 ```bash
-pytest
+# Testing
+uv run pytest                      # Run all tests
+uv run pytest tests/foo_test.py    # Run specific test
+uv run pytest --cov                # With coverage (must be ≥95%)
+
+# Code quality
+uv run ruff format                 # Format code
+uv run ruff check                  # Lint
+uv run ruff check --fix            # Auto-fix issues
+uv run mypy                        # Type check
+
+# Pre-commit
+uv run pre-commit run --all-files  # Run all checks manually
+
+# Documentation
+uv run mkdocs serve                # Serve docs locally
 ```
 
-## Code Style
+### Commit Messages
 
-This project uses:
+Use [Conventional Commits](https://www.conventionalcommits.org/):
 
-- [Black](https://github.com/psf/black) for code formatting
-- [isort](https://pycqa.github.io/isort/) for import sorting
-- [mypy](http://mypy-lang.org/) for static type checking
-- [ruff](https://github.com/charliermarsh/ruff) for linting
+- `feat: add new feature`
+- `fix: resolve issue with X`
+- `docs: update README`
+- `test: add tests for Y`
 
-You can run all style checks with:
+## Pull Requests
 
-```bash
-black .
-isort .
-mypy .
-ruff check .
-```
+1. Fork the repo
+1. Create a feature branch
+1. Make changes (tests, code, docs)
+1. Ensure all checks pass
+1. Submit PR with clear description
 
-## Documentation
+## Notes
 
-Documentation is built with [MkDocs](https://www.mkdocs.org/) using the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme.
-
-To build and serve the documentation locally:
-
-```bash
-mkdocs serve
-```
-
-## Pull Request Process
-
-1. Fork the repository
-1. Create a feature branch (`git checkout -b feature/amazing-feature`)
-1. Commit your changes (`git commit -m 'Add some amazing feature'`)
-1. Push to the branch (`git push origin feature/amazing-feature`)
-1. Open a Pull Request
+- Python 3.9-3.13 supported
+- System dependencies (optional): Tesseract, Pandoc
+- Pre-commit runs automatically on commit
+- Join our [Discord](https://discord.gg/pXxagNK2zN) for help
 
 ## License
 
-By contributing to Kreuzberg, you agree that your contributions will be licensed under the project's MIT License.
+Contributions are licensed under MIT.
