@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# ruff: noqa: PLC0415
 import platform
 import warnings
 from dataclasses import dataclass

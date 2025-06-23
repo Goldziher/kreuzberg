@@ -186,6 +186,12 @@ async def test_init_paddle_ocr_with_gpu_package(
 
     mocker.patch("kreuzberg._ocr._paddleocr.find_spec", side_effect=lambda x: True if x == "paddlepaddle_gpu" else None)
 
+    # Mock validate_device_request to return CUDA device when GPU package is available
+    from kreuzberg._utils._device import DeviceInfo
+
+    mock_device_info = DeviceInfo(device_type="cuda", device_id=0, name="NVIDIA GPU")
+    mocker.patch("kreuzberg._ocr._paddleocr.validate_device_request", return_value=mock_device_info)
+
     await backend._init_paddle_ocr()
 
     mock_paddleocr.assert_called_once()

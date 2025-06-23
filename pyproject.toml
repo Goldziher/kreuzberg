@@ -108,19 +108,20 @@ format.docstring-code-line-length = 120
 format.docstring-code-format = true
 lint.select = [ "ALL" ]
 lint.ignore = [
-  "ANN401", # Dynamically typed ANY for kwargs
-  "COM812", # Conflicts with formatter
-  "D100",   # Missing docstring in public module
-  "D104",   # Missing docstring in public package
-  "D107",   # Missing docstring in __init__
-  "D205",   # 1 blank line required between summary line and description
-  "E501",   # Line too long, handled by ruff format
-  "EM",     # Exception messages,
-  "FBT",    # Boolean-typed positional argument in function definition
-  "FIX",    # We allow todo and fixme comments
-  "ISC001", # Conflicts with formatter
-  "TD",     # We allow todo and fixme comments
-  "TRY",    # Try except block, rules are too strict
+  "ANN401",  # Dynamically typed ANY for kwargs
+  "COM812",  # Conflicts with formatter
+  "D100",    # Missing docstring in public module
+  "D104",    # Missing docstring in public package
+  "D107",    # Missing docstring in __init__
+  "D205",    # 1 blank line required between summary line and description
+  "E501",    # Line too long, handled by ruff format
+  "EM",      # Exception messages,
+  "FBT",     # Boolean-typed positional argument in function definition
+  "FIX",     # We allow todo and fixme comments
+  "ISC001",  # Conflicts with formatter
+  "PLC0415", # Import should be at top-level (we use conditional imports)
+  "TD",      # We allow todo and fixme comments
+  "TRY",     # Try except block, rules are too strict
 ]
 lint.per-file-ignores."tests/**/*.*" = [
   "ARG001",

@@ -1,5 +1,5 @@
 """Device detection and management utilities for GPU acceleration."""
-# ruff: noqa: PLC0415 BLE001
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

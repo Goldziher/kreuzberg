@@ -1761,7 +1761,7 @@ wheels = [
 
 [[package]]
 name = "kreuzberg"
-version = "3.1.7"
+version = "3.2.0"
 source = { virtual = "." }
 dependencies = [
     { name = "anyio" },
