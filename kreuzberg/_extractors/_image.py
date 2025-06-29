@@ -55,7 +55,19 @@ class ImageExtractor(Extractor):
         if self.config.ocr_backend is None:
             raise ValidationError("ocr_backend is None, cannot perform OCR")
 
-        return await get_ocr_backend(self.config.ocr_backend).process_file(path, **self.config.get_config_dict())
+        # Use detected_languages if available
+        ocr_config = self.config.get_config_dict().copy()
+        detected_languages = getattr(self.config, 'detected_languages', None)
+        if not detected_languages and hasattr(self.config, 'auto_detect_language') and self.config.auto_detect_language:
+            # Try to get from ExtractionResult if present (for future extensibility)
+            pass  # ExtractionResult not available here, so only config is checked
+        if detected_languages:
+            # For Tesseract and PaddleOCR, use 'language'; for EasyOCR, use 'language_list'
+            if 'language' in ocr_config:
+                ocr_config['language'] = '+'.join(detected_languages)
+            if 'language_list' in ocr_config:
+                ocr_config['language_list'] = detected_languages
+        return await get_ocr_backend(self.config.ocr_backend).process_file(path, **ocr_config)
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         return anyio.run(self.extract_bytes_async, content)

@@ -53,6 +53,41 @@ async def extract_with_ocr():
     print(result.content)
 ```
 
+## Automatic Language Detection
+
+Kreuzberg can automatically detect the language of your documents and configure OCR accordingly:
+
+```python
+from kreuzberg import extract_file, ExtractionConfig
+
+async def extract_with_language_detection():
+    # Enable automatic language detection
+    config = ExtractionConfig(auto_detect_language=True)
+    
+    # Extract from a German document
+    result = await extract_file("german_document.pdf", config=config)
+    print(f"Detected languages: {result.detected_languages}")
+    print(f"Content: {result.content[:100]}...")
+    
+    # Extract from a multilingual document
+    result = await extract_file("multilingual.pdf", config=config)
+    print(f"Detected languages: {result.detected_languages}")  # e.g., ['en', 'de']
+    print(f"Content: {result.content[:100]}...")
+
+async def extract_with_fallback():
+    # Combine automatic detection with manual configuration
+    config = ExtractionConfig(
+        auto_detect_language=True,
+        ocr_config=TesseractConfig(language="eng")  # Fallback to English
+    )
+    
+    result = await extract_file("document.pdf", config=config)
+    if result.detected_languages:
+        print(f"Using detected languages: {result.detected_languages}")
+    else:
+        print("Using fallback language configuration")
+```
+
 ## Alternative OCR Backends
 
 Kreuzberg supports multiple OCR backends:

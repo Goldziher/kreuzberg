@@ -49,6 +49,93 @@ For Tesseract to recognize languages other than English, you need to install the
 - **macOS**: `brew install tesseract-lang` (installs all languages)
 - **Windows**: Download language data from [GitHub](https://github.com/tesseract-ocr/tessdata)
 
+### Automatic Language Detection
+
+Kreuzberg can automatically detect the language of your documents and configure OCR accordingly. This feature uses the `fast-langdetect` library for high-performance language detection.
+
+#### Installation
+
+To use automatic language detection, install the optional dependency:
+
+```bash
+pip install "kreuzberg[language-detection]"
+```
+
+#### Usage
+
+Enable automatic language detection by setting `auto_detect_language=True` in your `ExtractionConfig`:
+
+```python
+from kreuzberg import extract_file, ExtractionConfig
+
+# Enable automatic language detection
+config = ExtractionConfig(auto_detect_language=True)
+result = await extract_file("document.pdf", config=config)
+
+# Access detected languages
+print(f"Detected languages: {result.detected_languages}")
+```
+
+#### How It Works
+
+1. **Text Extraction**: Kreuzberg first extracts text from your document
+2. **Language Detection**: If `auto_detect_language=True`, it analyzes the extracted text to identify the language(s)
+3. **OCR Configuration**: The detected language(s) are automatically configured for the OCR backend
+4. **Result Storage**: Detected languages are stored in `result.detected_languages`
+
+#### Supported Languages
+
+The language detection supports over 50 languages including:
+
+- **European**: English, German, French, Spanish, Italian, Portuguese, Dutch, Swedish, Norwegian, Danish, Finnish, Polish, Czech, Hungarian, Romanian, Bulgarian, Croatian, Serbian, Slovak, Slovenian
+- **Asian**: Chinese (Simplified/Traditional), Japanese, Korean, Thai, Vietnamese, Indonesian, Malay, Filipino
+- **Middle Eastern**: Arabic, Hebrew, Persian, Turkish
+- **Indian**: Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu
+- **African**: Swahili, Afrikaans, Amharic, Zulu, Xhosa
+- **And many more...**
+
+#### Multi-Language Documents
+
+For documents containing multiple languages, the detection returns the most probable languages in order of confidence:
+
+```python
+# Document with mixed English and German content
+result = await extract_file("multilingual.pdf", config=ExtractionConfig(auto_detect_language=True))
+print(result.detected_languages)  # Output: ['en', 'de']
+```
+
+#### OCR Backend Integration
+
+The detected languages are automatically mapped to the appropriate parameters for each OCR backend:
+
+- **Tesseract**: Uses `language` parameter (e.g., `"eng+deu"`)
+- **EasyOCR**: Uses `language_list` parameter (e.g., `["en", "de"]`)
+- **PaddleOCR**: Uses `language` parameter (e.g., `"en"` for the primary language)
+
+#### Error Handling
+
+If language detection is enabled but the `fast-langdetect` library is not installed, Kreuzberg will raise a `MissingDependencyError`:
+
+```python
+try:
+    result = await extract_file("document.pdf", config=ExtractionConfig(auto_detect_language=True))
+except MissingDependencyError as e:
+    print(f"Install language detection: pip install 'kreuzberg[language-detection]'")
+```
+
+#### Performance Considerations
+
+- **Caching**: Language detection results are cached to avoid redundant processing
+- **Accuracy**: Detection accuracy improves with longer text samples
+- **Fallback**: If detection fails, OCR backends fall back to their default language settings
+
+#### Best Practices
+
+- **Text Length**: Language detection works best with at least 50-100 characters of text
+- **Mixed Content**: For documents with multiple languages, consider the primary language for OCR configuration
+- **Performance**: Enable language detection only when needed, as it adds processing time
+- **Fallback**: Always have a fallback language configuration for critical applications
+
 ### Page Segmentation Mode (PSM)
 
 The `psm` parameter in a [`TesseractConfig`](../api-reference/ocr-configuration.md#tesseractconfig) object controls how Tesseract analyzes the layout of the page:

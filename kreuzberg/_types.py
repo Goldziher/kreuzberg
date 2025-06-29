@@ -113,6 +113,8 @@ class ExtractionResult:
     """Extracted tables. Is an empty list if 'extract_tables' is not set to True in the ExtractionConfig."""
     chunks: list[str] = field(default_factory=list)
     """The extracted content chunks. This is an empty list if 'chunk_content' is not set to True in the ExtractionConfig."""
+    detected_languages: list[str] | None = None
+    """Languages detected in the extracted content, if language detection is enabled."""
 
 
 PostProcessingHook = Callable[[ExtractionResult], Union[ExtractionResult, Awaitable[ExtractionResult]]]
@@ -153,6 +155,8 @@ class ExtractionConfig:
     """Post processing hooks to call after processing is done and before the final result is returned."""
     validators: list[ValidationHook] | None = None
     """Validation hooks to call after processing is done and before post-processing and result return."""
+    auto_detect_language: bool = False
+    """Whether to automatically detect language and configure OCR accordingly."""
 
     def __post_init__(self) -> None:
         from kreuzberg._ocr._easyocr import EasyOCRConfig

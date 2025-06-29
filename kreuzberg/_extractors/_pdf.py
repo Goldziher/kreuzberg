@@ -136,8 +136,19 @@ class PDFExtractor(Extractor):
         """
         images = await self._convert_pdf_to_images(input_file)
         backend = get_ocr_backend(ocr_backend)
+        
+        # Use detected_languages if available
+        ocr_config = self.config.get_config_dict().copy()
+        detected_languages = getattr(self.config, 'detected_languages', None)
+        if detected_languages:
+            # For Tesseract and PaddleOCR, use 'language'; for EasyOCR, use 'language_list'
+            if 'language' in ocr_config:
+                ocr_config['language'] = '+'.join(detected_languages)
+            if 'language_list' in ocr_config:
+                ocr_config['language_list'] = detected_languages
+        
         ocr_results = await run_taskgroup_batched(
-            *[backend.process_image(image, **self.config.get_config_dict()) for image in images],
+            *[backend.process_image(image, **ocr_config) for image in images],
             batch_size=cpu_count(),
         )
         return ExtractionResult(

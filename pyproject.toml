@@ -74,6 +74,9 @@ optional-dependencies.paddleocr = [
   "paddlepaddle>=3.0.0",
   "setuptools>=80.9.0",
 ]
+optional-dependencies.language-detection = [
+  "fast-langdetect>=0.2.0",
+]
 urls.homepage = "https://github.com/Goldziher/kreuzberg"
 
 [dependency-groups]
