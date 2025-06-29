@@ -91,6 +91,8 @@ dev = [
   "ruff>=0.12.0",
   "trio>=0.30.0",
   "uv-bump",
+  "pandas>=2.0.0",
+  "numpy>=1.24.0",
 ]
 doc = [
   "mkdocs>=1.6.1",
