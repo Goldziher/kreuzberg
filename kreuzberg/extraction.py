@@ -14,6 +14,7 @@ from kreuzberg._registry import ExtractorRegistry
 from kreuzberg._types import ExtractionConfig
 from kreuzberg._utils._string import safe_decode
 from kreuzberg._utils._sync import run_maybe_async, run_maybe_sync
+from kreuzberg._language_detection import detect_languages, is_language_detection_available
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -89,6 +90,16 @@ async def extract_bytes(content: bytes, mime_type: str, config: ExtractionConfig
             metadata={},
         )
 
+    # Language detection integration
+    if getattr(config, "auto_detect_language", False):
+        if is_language_detection_available():
+            result.detected_languages = detect_languages(result.content)
+        else:
+            from kreuzberg.exceptions import MissingDependencyError
+            raise MissingDependencyError(
+                "Language detection requested but fast-langdetect is not installed. Install with: pip install 'kreuzberg[language-detection]'"
+            )
+
     return await _validate_and_post_process_async(result=result, config=config)
 
 
@@ -112,6 +123,16 @@ async def extract_file(
         result = ExtractionResult(
             content=safe_decode(await anyio.Path(file_path).read_bytes()), chunks=[], mime_type=mime_type, metadata={}
         )
+
+    # Language detection integration
+    if getattr(config, "auto_detect_language", False):
+        if is_language_detection_available():
+            result.detected_languages = detect_languages(result.content)
+        else:
+            from kreuzberg.exceptions import MissingDependencyError
+            raise MissingDependencyError(
+                "Language detection requested but fast-langdetect is not installed. Install with: pip install 'kreuzberg[language-detection]'"
+            )
 
     return await _validate_and_post_process_async(result=result, config=config)
 
