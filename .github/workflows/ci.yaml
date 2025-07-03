@@ -7,12 +7,11 @@ on:
   push:
     branches:
       - main
-      - feat/smart-multiprocessing
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,13 +27,8 @@ jobs:
           python-version-file: "pyproject.toml"
 
       - name: Install Dependencies
-        shell: bash
-        run: |
-          if [[ "${{ runner.os }}" == "Windows" ]] && [[ -d ".venv" ]]; then
-            echo "Removing existing .venv directory on Windows"
-            rm -rf .venv
-          fi
-          uv sync --all-packages --all-extras --dev
+        if: steps.python-cache.outputs.cache-hit != 'true'
+        run: uv sync --all-extras --dev
 
       - name: Load Cached Pre-Commit Dependencies
         id: cached-pre-commit-dependencies
@@ -50,9 +44,9 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macOS-latest, windows-latest ]
-        python: ${{ github.event_name == 'pull_request' && fromJSON('["3.13"]') || fromJSON('["3.9", "3.10", "3.11", "3.12", "3.13"]') }}
+        python: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,7 +58,6 @@ jobs:
 
       - name: Install Python
         uses: actions/setup-python@v5
-        id: setup-python
         with:
           python-version: ${{ matrix.python }}
 
@@ -75,18 +68,13 @@ jobs:
           path: |
             ~/.cache/uv
             .venv
-          key: python-dependencies-${{ matrix.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('uv.lock') }}
+          key: python-dependencies-${{ matrix.os }}-${{ matrix.python }}-${{ hashFiles('uv.lock') }}
           restore-keys: |
             python-dependencies-${{ matrix.os }}-${{ matrix.python }}-
 
       - name: Install Dependencies
-        shell: bash
-        run: |
-          if [[ "${{ runner.os }}" == "Windows" ]] && [[ -d ".venv" ]]; then
-            echo "Removing existing .venv directory on Windows"
-            rm -rf .venv
-          fi
-          uv sync --all-packages --all-extras --dev
+        if: steps.python-cache.outputs.cache-hit != 'true'
+        run: uv sync --all-extras --dev
 
       - name: Cache Test Artifacts
         uses: actions/cache@v4

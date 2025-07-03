@@ -135,7 +135,6 @@ nav:
       - OCR Configuration: user-guide/ocr-configuration.md
       - OCR Backends: user-guide/ocr-backends.md
       - Supported Formats: user-guide/supported-formats.md
-  - CLI Guide: cli.md
   - Examples:
       - examples/index.md
       - Extraction Examples: examples/extraction-examples.md

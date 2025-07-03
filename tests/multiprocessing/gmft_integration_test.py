@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from pytest import MonkeyPatch
 
-from kreuzberg._gmft import GMFTConfig, extract_tables, extract_tables_sync
+from kreuzberg._gmft import GMFTConfig, extract_tables
 from kreuzberg.exceptions import ParsingError
 
 
@@ -48,7 +48,7 @@ def test_gmft_isolated_enabled_by_default(sample_pdf: Path, monkeypatch: MonkeyP
 
     # This should use isolated process by default  # ~keep
     try:
-        result = extract_tables_sync(sample_pdf, GMFTConfig())
+        result = extract_tables(sample_pdf, GMFTConfig())
 
         assert isinstance(result, list)
     except ParsingError as e:
@@ -66,7 +66,7 @@ def test_gmft_isolated_can_be_disabled(sample_pdf: Path, monkeypatch: MonkeyPatc
 
     # This should NOT use isolated process  # ~keep
     try:
-        result = extract_tables_sync(sample_pdf, GMFTConfig())
+        result = extract_tables(sample_pdf, GMFTConfig())
         assert isinstance(result, list)
     except ImportError:
         pass

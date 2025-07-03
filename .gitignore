@@ -22,12 +22,9 @@
 .windsurfrules
 .cursorrules
 CLAUDE.md
-GEMINI.md
 __pycache__/
 coverage.xml
 prompt_template.egg-info/
 requirements.txt
 Dockerfile
 docker-compose.yaml
-benchmark_results.json
-.kreuzberg/

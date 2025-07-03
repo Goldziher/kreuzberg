@@ -17,8 +17,12 @@ from .extraction import (
     extract_file,
     extract_file_sync,
 )
+from importlib.metadata import version, PackageNotFoundError
 
-__version__ = "3.2.0"
+try:
+    __version__ = version("kreuzberg")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 __all__ = [
     "EasyOCRConfig",
@@ -36,7 +40,6 @@ __all__ = [
     "TableData",
     "TesseractConfig",
     "ValidationError",
-    "__version__",
     "batch_extract_bytes",
     "batch_extract_bytes_sync",
     "batch_extract_file",

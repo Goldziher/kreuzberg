@@ -1,17 +1,17 @@
 default: true
-
+# MD007/unordered-list-indent
 MD007:
   indent: 4
-
+# MD033/no-inline-html
 MD033: false
-
+# MD041/first-line-h1
 MD041: false
-
+# MD013/line-length
 MD013: false
-
+# MD014/commands-show-output
 MD014: false
-
+# MD024/no-duplicate-heading
 MD024:
   siblings_only: true
-
+# MD046/code-block-style
 MD046: false

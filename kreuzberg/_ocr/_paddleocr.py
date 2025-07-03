@@ -62,8 +62,8 @@ class PaddleOCRConfig:
     """Whether to enable MKL-DNN acceleration (Intel CPU only)."""
     gpu_mem: int = 8000
     """GPU memory size (in MB) to use for initialization."""
-    language: str = "en"
-    """Language to use for OCR."""
+    language: str | list[str] = "en"
+    """Language to use for OCR. Can be a single code or a list. If a list is provided, the first language is used."""
     max_text_length: int = 25
     """Maximum text length that the recognition algorithm can recognize."""
     rec: bool = True
@@ -125,12 +125,12 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
         import numpy as np
 
         await self._init_paddle_ocr(**kwargs)
-
-        if image.mode != "RGB":
-            image = image.convert("RGB")
-
         image_np = np.array(image)
         try:
+            language = kwargs.get("language", "en")
+            if isinstance(language, list):
+                language = language[0]
+            kwargs["language"] = language
             result = await run_sync(self._paddle_ocr.ocr, image_np, cls=kwargs.get("use_angle_cls", True))
             return self._process_paddle_result(result, image)
         except Exception as e:
@@ -157,7 +157,7 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
             raise OCRError(f"Failed to load or process image using PaddleOCR: {e}") from e
 
     @staticmethod
-    def _process_paddle_result(result: list[Any] | Any, image: Image.Image) -> ExtractionResult:
+    def _process_paddle_result(result: list[Any], image: Image.Image) -> ExtractionResult:
         """Process PaddleOCR result into an ExtractionResult with metadata.
 
         Args:
@@ -175,7 +175,6 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
             if not page_result:
                 continue
 
-            # Group text boxes by lines based on Y coordinate  # ~keep
             sorted_boxes = sorted(page_result, key=lambda x: x[0][0][1])
             line_groups: list[list[Any]] = []
             current_line: list[Any] = []
@@ -184,7 +183,7 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
             for box in sorted_boxes:
                 box_points, (_, _) = box
                 current_y = sum(point[1] for point in box_points) / 4
-                min_box_distance = 20  # Minimum distance to consider as new line  # ~keep
+                min_box_distance = 20
 
                 if prev_y is None or abs(current_y - prev_y) > min_box_distance:
                     if current_line:
@@ -199,7 +198,7 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
                 line_groups.append(current_line)
 
             for line in line_groups:
-                line_sorted = sorted(line, key=lambda x: x[0][0][0])  # Sort boxes by X coordinate within line  # ~keep
+                line_sorted = sorted(line, key=lambda x: x[0][0][0])
 
                 for box in line_sorted:
                     _, (text, confidence) = box
@@ -210,11 +209,7 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
 
                 text_content += "\n"
 
-        if hasattr(image, "width") and hasattr(image, "height"):
-            width = image.width
-            height = image.height
-        else:
-            width, height = image.size
+        width, height = image.size
         metadata = Metadata(
             width=width,
             height=height,
@@ -266,6 +261,7 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
 
         language = cls._validate_language_code(kwargs.pop("language", "en"))
 
+        # Handle device selection with backward compatibility
         device_info = cls._resolve_device_config(**kwargs)
         use_gpu = device_info.device_type == "cuda"
 
@@ -277,8 +273,9 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
         kwargs.setdefault("det_db_box_thresh", 0.5)
         kwargs.setdefault("det_db_unclip_ratio", 1.6)
 
+        # Set GPU memory limit if specified
         if device_info.device_type == "cuda" and kwargs.get("gpu_memory_limit"):
-            kwargs["gpu_mem"] = int(kwargs["gpu_memory_limit"] * 1024)
+            kwargs["gpu_mem"] = int(kwargs["gpu_memory_limit"] * 1024)  # Convert GB to MB
 
         try:
             cls._paddle_ocr = await run_sync(PaddleOCR, lang=language, show_log=False, **kwargs)
@@ -298,11 +295,13 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
         Raises:
             ValidationError: If requested device is not available and fallback is disabled.
         """
+        # Handle deprecated use_gpu parameter
         use_gpu = kwargs.get("use_gpu", False)
         device = kwargs.get("device", "auto")
         memory_limit = kwargs.get("gpu_memory_limit")
         fallback_to_cpu = kwargs.get("fallback_to_cpu", True)
 
+        # Check for deprecated parameter usage
         if use_gpu and device == "auto":
             warnings.warn(
                 "The 'use_gpu' parameter is deprecated and will be removed in a future version. "
@@ -310,7 +309,7 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
                 DeprecationWarning,
                 stacklevel=4,
             )
-
+            # Convert deprecated use_gpu=True to device="auto"
             device = "auto" if use_gpu else "cpu"
         elif use_gpu and device != "auto":
             warnings.warn(
@@ -320,6 +319,7 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
                 stacklevel=4,
             )
 
+        # PaddlePaddle doesn't support MPS, so warn if requested
         if device == "mps":
             warnings.warn(
                 "PaddlePaddle does not support MPS (Apple Silicon) acceleration. Falling back to CPU.",
@@ -328,6 +328,7 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
             )
             device = "cpu"
 
+        # Validate and get device info
         try:
             return validate_device_request(
                 device,
@@ -336,12 +337,13 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
                 fallback_to_cpu=fallback_to_cpu,
             )
         except ValidationError:
+            # If device validation fails and we're using deprecated use_gpu=False, fallback to CPU
             if not use_gpu and device == "cpu":
                 return DeviceInfo(device_type="cpu", name="CPU")
             raise
 
     @staticmethod
-    def _validate_language_code(lang_code: str) -> str:
+    def _validate_language_code(lang_code: str | list[str]) -> str:
         """Convert a language code to PaddleOCR format.
 
         Args:
@@ -353,6 +355,8 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
         Returns:
             Language code compatible with PaddleOCR
         """
+        if isinstance(lang_code, list):
+            lang_code = lang_code[0]
         normalized = lang_code.lower()
         if normalized in PADDLEOCR_SUPPORTED_LANGUAGE_CODES:
             return normalized

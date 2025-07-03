@@ -1,0 +1,2 @@
+Dies ist ein deutscher Text für Tests der Spracherkennung.
+Er enthält deutsche Wörter und Sätze, um die Funktionalität zu überprüfen.

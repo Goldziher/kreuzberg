@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
 
 test_source_files_folder = Path(__file__).parent / "test_source_files"
 
@@ -82,36 +78,3 @@ def tiny_pdf_with_tables() -> Path:
 
 
 pdfs_with_tables = sorted((test_source_files_folder / "pdfs_with_tables").glob("*.pdf"))
-
-
-@pytest.fixture
-def clear_cache() -> Generator[None, None, None]:
-    """Fixture to clear all caches before each test that requests it."""
-    from kreuzberg._utils._cache import clear_all_caches
-
-    clear_all_caches()
-    yield
-
-    clear_all_caches()
-
-
-@pytest.fixture(autouse=False)
-def fresh_cache() -> None:
-    """Fixture to ensure fresh cache state for each test function.
-
-    Use this fixture for tests that need to test caching behavior
-    or ensure they start with a clean cache state.
-    """
-    from kreuzberg._utils._cache import clear_all_caches
-
-    clear_all_caches()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def clean_cache_session() -> Generator[None, None, None]:
-    """Automatically clear caches at the start and end of test session."""
-    from kreuzberg._utils._cache import clear_all_caches
-
-    clear_all_caches()
-    yield
-    clear_all_caches()

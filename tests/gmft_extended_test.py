@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
+import anyio
 
 from kreuzberg._gmft import (
     GMFTConfig,
-    extract_tables_sync,
+    extract_tables,
 )
 from kreuzberg.exceptions import MissingDependencyError
 
@@ -32,13 +33,6 @@ def test_gmft_config_defaults() -> None:
     assert config.cell_required_confidence[0] == 0.3
     assert config.cell_required_confidence[4] == 0.5
     assert config.cell_required_confidence[6] == 99
-
-    # Test new config options
-    assert config.total_overlap_reject_threshold == 0.9
-    assert config.total_overlap_warn_threshold == 0.1
-    assert config.nms_warn_threshold == 5
-    assert config.iob_reject_threshold == 0.05
-    assert config.iob_warn_threshold == 0.5
 
 
 def test_gmft_config_custom() -> None:
@@ -102,12 +96,9 @@ def test_extract_tables_sync_missing_dependency(tiny_pdf_with_tables: Path) -> N
 
 def test_extract_tables_sync_success(tiny_pdf_with_tables: Path) -> None:
     """Test successful table extraction."""
-    # This test needs to be rewritten since we can't mock internals with isolated process
-    # Just test that the function works with a real PDF
     try:
-        results = extract_tables_sync(tiny_pdf_with_tables)
+        results = anyio.run(extract_tables, tiny_pdf_with_tables)
         assert isinstance(results, list)
-        # If GMFT is installed, we should get results
         if results:
             assert all(isinstance(table, dict) for table in results)
             assert all("page_number" in table for table in results)
@@ -122,11 +113,9 @@ def test_extract_tables_sync_custom_config(tiny_pdf_with_tables: Path) -> None:
         detector_base_threshold=0.8,
         remove_null_rows=False,
     )
-
     try:
-        results = extract_tables_sync(tiny_pdf_with_tables, config=config)
+        results = anyio.run(extract_tables, tiny_pdf_with_tables, config)
         assert isinstance(results, list)
-        # Config should be respected in the extraction process
     except MissingDependencyError:
         pytest.skip("GMFT dependency not installed")
 
@@ -134,8 +123,7 @@ def test_extract_tables_sync_custom_config(tiny_pdf_with_tables: Path) -> None:
 def test_extract_tables_sync_multiple_tables(tiny_pdf_with_tables: Path) -> None:
     """Test extraction of multiple tables."""
     try:
-        results = extract_tables_sync(tiny_pdf_with_tables)
-        # Just test that we can extract tables from a real PDF
+        results = anyio.run(extract_tables, tiny_pdf_with_tables)
         assert isinstance(results, list)
     except MissingDependencyError:
         pytest.skip("GMFT dependency not installed")
@@ -143,21 +131,14 @@ def test_extract_tables_sync_multiple_tables(tiny_pdf_with_tables: Path) -> None
 
 def test_extract_tables_sync_no_tables(tmp_path: Path) -> None:
     """Test extraction when no tables are found."""
-    # Create a simple PDF with no tables
     no_tables_pdf = tmp_path / "no_tables.pdf"
-
-    # Create a minimal PDF using pypdfium2
     import pypdfium2 as pdfium
-
-    # Create a new PDF document
     pdf = pdfium.PdfDocument.new()
     pdf.new_page(200, 200)
     pdf.save(no_tables_pdf)
     pdf.close()
-
     try:
-        results = extract_tables_sync(no_tables_pdf)
-        # Should return empty list for PDF with no tables
+        results = anyio.run(extract_tables, no_tables_pdf)
         assert results == []
     except MissingDependencyError:
         pytest.skip("GMFT dependency not installed")

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import contextlib
 from multiprocessing import cpu_count
-from pathlib import Path
 from re import Pattern
 from re import compile as compile_regex
 from typing import TYPE_CHECKING, ClassVar, cast
@@ -15,14 +13,16 @@ from kreuzberg._extractors._base import Extractor
 from kreuzberg._mime_types import PDF_MIME_TYPE, PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr import get_ocr_backend
 from kreuzberg._playa import extract_pdf_metadata
-from kreuzberg._types import ExtractionResult, OcrBackendType
-from kreuzberg._utils._pdf_lock import pypdfium_file_lock
+from kreuzberg._types import ExtractionResult, OcrBackendType, ExtractionConfig
 from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync, run_taskgroup_batched
 from kreuzberg._utils._tmp import create_temp_file
 from kreuzberg.exceptions import ParsingError
+from kreuzberg._language_detection import detect_languages
 
 if TYPE_CHECKING:  # pragma: no cover
+    from pathlib import Path
+
     from PIL.Image import Image
 
 
@@ -48,74 +48,50 @@ class PDFExtractor(Extractor):
         content_bytes = await AsyncPath(path).read_bytes()
 
         result: ExtractionResult | None = None
-
-        if not self.config.force_ocr:
+        detected_langs = None
+        config = self.config
+        if getattr(config, "auto_detect_language", False):
+            # Try to extract searchable text and detect language
+            content = await self._extract_pdf_searchable_text(path)
+            if self._validate_extracted_text(content):
+                detected_langs = detect_languages(content)
+            else:
+                # Fallback: convert first page to image, run quick OCR, detect language
+                images = await self._convert_pdf_to_images(path)
+                if images:
+                    from kreuzberg._ocr import get_ocr_backend
+                    ocr_result = await get_ocr_backend(config.ocr_backend).process_image(images[0], **config.get_config_dict())
+                    detected_langs = detect_languages(ocr_result.content)
+            if detected_langs:
+                from dataclasses import replace
+                # Always pass the full list for multi-language support
+                config = replace(config, ocr_config=replace(config.ocr_config, language=detected_langs) if config.ocr_config else None)
+        if not config.force_ocr:
             content = await self._extract_pdf_searchable_text(path)
             if self._validate_extracted_text(content):
                 result = ExtractionResult(content=content, mime_type=PLAIN_TEXT_MIME_TYPE, metadata={}, chunks=[])
 
-        if not result and self.config.ocr_backend is not None:
-            result = await self._extract_pdf_text_with_ocr(path, self.config.ocr_backend)
+        if not result and config.ocr_backend is not None:
+            result = await self._extract_pdf_text_with_ocr(path, config.ocr_backend, config)
 
         if not result:
             result = ExtractionResult(content="", mime_type=PLAIN_TEXT_MIME_TYPE, metadata={}, chunks=[])
 
         result.metadata = await extract_pdf_metadata(content_bytes)
+        result.detected_languages = detected_langs if detected_langs else None
 
-        if self.config.extract_tables:
+        if config.extract_tables:
             from kreuzberg._gmft import extract_tables
 
-            result.tables = await extract_tables(path, self.config.gmft_config)
+            result.tables = await extract_tables(path, config.gmft_config)
 
         return result
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
-        """Pure sync implementation of PDF extraction from bytes."""
-        import os
-        import tempfile
-
-        fd, temp_path = tempfile.mkstemp(suffix=".pdf")
-        try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(content)
-
-            result = self.extract_path_sync(Path(temp_path))
-
-            from kreuzberg._playa import extract_pdf_metadata_sync
-
-            metadata = extract_pdf_metadata_sync(content)
-            result.metadata = metadata
-
-            return result
-        finally:
-            with contextlib.suppress(OSError):
-                Path(temp_path).unlink()
+        return anyio.run(self.extract_bytes_async, content)
 
     def extract_path_sync(self, path: Path) -> ExtractionResult:
-        """Pure sync implementation of PDF extraction from path."""
-        text = self._extract_pdf_searchable_text_sync(path)
-
-        if self.config.force_ocr or not self._validate_extracted_text(text):
-            text = self._extract_pdf_with_ocr_sync(path)
-
-        tables = []
-        if self.config.extract_tables:
-            try:
-                from kreuzberg._gmft import extract_tables_sync
-
-                tables = extract_tables_sync(path)
-            except ImportError:
-                pass
-
-        text = normalize_spaces(text)
-
-        return ExtractionResult(
-            content=text,
-            mime_type=PLAIN_TEXT_MIME_TYPE,
-            metadata={},
-            tables=tables,
-            chunks=[],
-        )
+        return anyio.run(self.extract_path_async, path)
 
     def _validate_extracted_text(self, text: str, corruption_threshold: float = 0.05) -> bool:
         """Check if text extracted from PDF is valid or corrupted.
@@ -155,60 +131,23 @@ class PDFExtractor(Extractor):
         Returns:
             A list of Pillow Images.
         """
-        from kreuzberg._utils._errors import create_error_context, should_retry
-
         document: pypdfium2.PdfDocument | None = None
-        last_error = None
+        try:
+            document = await run_sync(pypdfium2.PdfDocument, str(input_file))
+            return [page.render(scale=4.25).to_pil() for page in cast("pypdfium2.PdfDocument", document)]
+        except pypdfium2.PdfiumError as e:
+            raise ParsingError(
+                "Could not convert PDF to images", context={"file_path": str(input_file), "error": str(e)}
+            ) from e
+        finally:
+            if document:
+                await run_sync(document.close)
 
-        for attempt in range(3):  # Try up to 3 times  # ~keep
-            try:
-                with pypdfium_file_lock(input_file):
-                    document = await run_sync(pypdfium2.PdfDocument, str(input_file))
-                    return [page.render(scale=4.25).to_pil() for page in cast("pypdfium2.PdfDocument", document)]
-            except pypdfium2.PdfiumError as e:  # noqa: PERF203
-                last_error = e
-                if not should_retry(e, attempt + 1):
-                    raise ParsingError(
-                        "Could not convert PDF to images",
-                        context=create_error_context(
-                            operation="convert_pdf_to_images",
-                            file_path=input_file,
-                            error=e,
-                            attempt=attempt + 1,
-                        ),
-                    ) from e
-                # Wait before retry with exponential backoff  # ~keep
-                await anyio.sleep(0.5 * (attempt + 1))
-            finally:
-                if document:
-                    with pypdfium_file_lock(input_file), contextlib.suppress(Exception):
-                        await run_sync(document.close)
-
-        # All retries failed  # ~keep
-        raise ParsingError(
-            "Could not convert PDF to images after retries",
-            context=create_error_context(
-                operation="convert_pdf_to_images",
-                file_path=input_file,
-                error=last_error,
-                attempts=3,
-            ),
-        ) from last_error
-
-    async def _extract_pdf_text_with_ocr(self, input_file: Path, ocr_backend: OcrBackendType) -> ExtractionResult:
-        """Extract text from a scanned PDF file using OCR.
-
-        Args:
-            input_file: The path to the PDF file.
-            ocr_backend: The OCR backend to use.
-
-        Returns:
-            The extraction result with text content and metadata.
-        """
+    async def _extract_pdf_text_with_ocr(self, input_file: Path, ocr_backend: OcrBackendType, config: ExtractionConfig) -> ExtractionResult:
         images = await self._convert_pdf_to_images(input_file)
         backend = get_ocr_backend(ocr_backend)
         ocr_results = await run_taskgroup_batched(
-            *[backend.process_image(image, **self.config.get_config_dict()) for image in images],
+            *[backend.process_image(image, **config.get_config_dict()) for image in images],
             batch_size=cpu_count(),
         )
         return ExtractionResult(
@@ -228,124 +167,15 @@ class PDFExtractor(Extractor):
         Returns:
             The extracted text.
         """
-        from kreuzberg._utils._errors import create_error_context
-
         document: pypdfium2.PdfDocument | None = None
         try:
-            with pypdfium_file_lock(input_file):
-                document = await run_sync(pypdfium2.PdfDocument, str(input_file))
-                text_parts = []
-                page_errors = []
-
-                for i, page in enumerate(cast("pypdfium2.PdfDocument", document)):
-                    try:
-                        text_page = page.get_textpage()
-                        text_parts.append(text_page.get_text_bounded())
-                    except Exception as e:  # noqa: PERF203, BLE001
-                        page_errors.append({"page": i + 1, "error": str(e)})
-                        text_parts.append(f"[Error extracting page {i + 1}]")
-
-                text = "\n".join(text_parts)
-
-                if page_errors and text_parts:
-                    return normalize_spaces(text)
-                if not text_parts:
-                    raise ParsingError(
-                        "Could not extract any text from PDF",
-                        context=create_error_context(
-                            operation="extract_pdf_searchable_text",
-                            file_path=input_file,
-                            page_errors=page_errors,
-                        ),
-                    )
-
-                return normalize_spaces(text)
+            document = await run_sync(pypdfium2.PdfDocument, str(input_file))
+            text = "\n".join(page.get_textpage().get_text_bounded() for page in cast("pypdfium2.PdfDocument", document))
+            return normalize_spaces(text)
         except pypdfium2.PdfiumError as e:
             raise ParsingError(
-                "Could not extract text from PDF file",
-                context=create_error_context(
-                    operation="extract_pdf_searchable_text",
-                    file_path=input_file,
-                    error=e,
-                ),
+                "Could not extract text from PDF file", context={"file_path": str(input_file), "error": str(e)}
             ) from e
         finally:
             if document:
-                with pypdfium_file_lock(input_file), contextlib.suppress(Exception):
-                    await run_sync(document.close)
-
-    def _extract_pdf_searchable_text_sync(self, path: Path) -> str:
-        """Extract searchable text from PDF using pypdfium2 (sync version)."""
-        pdf = None
-        try:
-            with pypdfium_file_lock(path):
-                pdf = pypdfium2.PdfDocument(str(path))
-                text_parts = []
-                for page in pdf:
-                    text_page = page.get_textpage()
-                    text = text_page.get_text_range()
-                    text_parts.append(text)
-                    text_page.close()
-                    page.close()
-                return "".join(text_parts)
-        except Exception as e:
-            raise ParsingError(f"Failed to extract PDF text: {e}") from e
-        finally:
-            if pdf:
-                with pypdfium_file_lock(path), contextlib.suppress(Exception):
-                    pdf.close()
-
-    def _extract_pdf_with_ocr_sync(self, path: Path) -> str:
-        """Extract text from PDF using OCR (sync version)."""
-        pdf = None
-        try:
-            from kreuzberg._multiprocessing.sync_tesseract import process_batch_images_sync_pure
-
-            images = []
-            with pypdfium_file_lock(path):
-                pdf = pypdfium2.PdfDocument(str(path))
-                for page in pdf:
-                    bitmap = page.render(scale=200 / 72)
-                    pil_image = bitmap.to_pil()
-                    images.append(pil_image)
-                    bitmap.close()
-                    page.close()
-
-            import os
-            import tempfile
-
-            image_paths = []
-            temp_files = []
-
-            try:
-                for i, img in enumerate(images):
-                    fd, temp_path = tempfile.mkstemp(suffix=f"_page_{i}.png")
-                    temp_files.append((fd, temp_path))
-                    img.save(temp_path, format="PNG")
-                    os.close(fd)
-                    image_paths.append(temp_path)
-
-                if self.config.ocr_backend == "tesseract":
-                    from kreuzberg._ocr._tesseract import TesseractConfig
-
-                    if isinstance(self.config.ocr_config, TesseractConfig):
-                        config = self.config.ocr_config
-                    else:
-                        config = TesseractConfig()
-                    results = process_batch_images_sync_pure([str(p) for p in image_paths], config)
-                    text_parts = [r.content for r in results]
-                    return "\n\n".join(text_parts)
-
-                raise NotImplementedError(f"Sync OCR not implemented for {self.config.ocr_backend}")
-
-            finally:
-                for _, temp_path in temp_files:
-                    with contextlib.suppress(OSError):
-                        Path(temp_path).unlink()
-
-        except Exception as e:
-            raise ParsingError(f"Failed to OCR PDF: {e}") from e
-        finally:
-            if pdf:
-                with pypdfium_file_lock(path), contextlib.suppress(Exception):
-                    pdf.close()
+                await run_sync(document.close)

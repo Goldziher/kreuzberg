@@ -33,22 +33,3 @@ async def test_extract_html_string_bytes(extractor: HTMLExtractor) -> None:
     assert result.mime_type == "text/markdown"
     assert "Test" in result.content
     assert "This is a test." in result.content
-
-
-def test_extract_html_path_sync(html_document: Path, extractor: HTMLExtractor) -> None:
-    """Test sync path extraction for HTML files."""
-    result = extractor.extract_path_sync(html_document)
-    assert isinstance(result.content, str)
-    assert result.content.strip()
-    assert result.mime_type == "text/markdown"
-
-
-def test_extract_html_bytes_sync(extractor: HTMLExtractor) -> None:
-    """Test sync bytes extraction for HTML content."""
-    html_content = b"<html><body><h2>Sync Test</h2><p>Testing sync extraction.</p></body></html>"
-    result = extractor.extract_bytes_sync(html_content)
-    assert isinstance(result.content, str)
-    assert result.content.strip()
-    assert result.mime_type == "text/markdown"
-    assert "Sync Test" in result.content
-    assert "Testing sync extraction." in result.content

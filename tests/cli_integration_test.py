@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+import tempfile
 
 import pytest
 
@@ -186,7 +187,11 @@ psm = 3
     def test_cli_config_command_no_file(self) -> None:
         """Test config command when no config file exists."""
         result = subprocess.run(
-            [sys.executable, "-m", "kreuzberg", "config"], check=False, capture_output=True, text=True, cwd=Path("/tmp")
+            [sys.executable, "-m", "kreuzberg", "config"],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=Path(tempfile.gettempdir()),
         )
 
         assert result.returncode == 0
@@ -391,7 +396,7 @@ max_chars = 1500
         assert result.returncode == 0
         assert output_file.exists()
 
-        content = output_file.read_text()
+        content = output_file.read_text(encoding="utf-8", errors="replace")
         assert len(content.strip()) > 0
 
     def test_cli_extract_tables_option(self, tmp_path: Path) -> None:

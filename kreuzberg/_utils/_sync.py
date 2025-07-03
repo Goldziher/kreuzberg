@@ -119,24 +119,3 @@ def run_maybe_async(fn: Callable[P, T | Awaitable[T]], *args: P.args, **kwargs: 
         T: The return value of the executed function, resolved if asynchronous.
     """
     return cast("T", fn(*args, **kwargs) if not iscoroutinefunction(fn) else anyio.run(partial(fn, **kwargs), *args))
-
-
-def run_sync_only(fn: Callable[P, T | Awaitable[T]], *args: P.args, **kwargs: P.kwargs) -> T:
-    """Runs a function, but only if it's synchronous. Raises error if async.
-
-    This is used for pure sync code paths where we cannot handle async functions.
-
-    Args:
-        fn: The function to be executed, must be synchronous.
-        *args: Positional arguments to be passed to the function.
-        **kwargs: Keyword arguments to be passed to the function.
-
-    Returns:
-        T: The return value of the executed function.
-
-    Raises:
-        RuntimeError: If the function is asynchronous.
-    """
-    if iscoroutinefunction(fn):
-        raise RuntimeError(f"Cannot run async function {fn.__name__} in sync-only context")
-    return cast("T", fn(*args, **kwargs))

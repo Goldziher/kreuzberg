@@ -162,38 +162,3 @@ def test_validate_mime_type_with_dots_in_name() -> None:
         validate_mime_type(file_path="index.min.html", mime_type="text/html; charset=utf-8", check_file_exists=False)
         == HTML_MIME_TYPE
     )
-
-
-def test_validate_mime_type_file_not_exists() -> None:
-    """Test validation when file doesn't exist - covers lines 229-231."""
-    with pytest.raises(ValidationError, match="The file does not exist"):
-        validate_mime_type(file_path="nonexistent_file.txt", check_file_exists=True)
-
-
-def test_validate_mime_type_no_file_path() -> None:
-    """Test validation when no file_path provided - covers line 234."""
-    with pytest.raises(ValidationError, match="Could not determine mime type"):
-        validate_mime_type(file_path=None)
-
-
-def test_validate_mime_type_file_stat_error(tmp_path: Path) -> None:
-    """Test validation when file stat fails - covers lines 183-184."""
-    from unittest.mock import patch
-
-    test_file = tmp_path / "test.txt"
-    test_file.write_text("test content")
-
-    with patch("pathlib.Path.stat", side_effect=OSError("Permission denied")):
-        result = validate_mime_type(file_path=str(test_file), check_file_exists=False)
-        assert result == PLAIN_TEXT_MIME_TYPE
-
-
-def test_validate_mime_type_uncached_fallback(tmp_path: Path) -> None:
-    """Test fallback to uncached detection - covers line 208."""
-    from kreuzberg._mime_types import _detect_mime_type_uncached
-
-    test_file = tmp_path / "test.txt"
-    test_file.write_text("test content")
-
-    result = _detect_mime_type_uncached(str(test_file), check_file_exists=True)
-    assert result == PLAIN_TEXT_MIME_TYPE

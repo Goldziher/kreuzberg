@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import contextlib
 import csv
 import sys
 from datetime import date, datetime, time, timedelta
 from io import StringIO
-from pathlib import Path
-from typing import Any, Union
+from typing import TYPE_CHECKING, Any, Union
 
+import anyio
 from anyio import Path as AsyncPath
 from python_calamine import CalamineWorkbook
 
@@ -18,6 +17,9 @@ from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync, run_taskgroup
 from kreuzberg._utils._tmp import create_temp_file
 from kreuzberg.exceptions import ParsingError
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pathlib import Path
 
 if sys.version_info < (3, 11):  # pragma: no cover
     from exceptiongroup import ExceptionGroup  # type: ignore[import-not-found]
@@ -62,37 +64,10 @@ class SpreadSheetExtractor(Extractor):
             ) from e
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
-        """Pure sync implementation of extract_bytes."""
-        import os
-        import tempfile
-
-        fd, temp_path = tempfile.mkstemp(suffix=".xlsx")
-
-        try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(content)
-
-            return self.extract_path_sync(Path(temp_path))
-        finally:
-            with contextlib.suppress(OSError):
-                Path(temp_path).unlink()
+        return anyio.run(self.extract_bytes_async, content)
 
     def extract_path_sync(self, path: Path) -> ExtractionResult:
-        """Pure sync implementation of extract_path."""
-        try:
-            workbook = CalamineWorkbook.from_path(str(path))
-            results = []
-
-            for sheet_name in workbook.sheet_names:
-                sheet_text = self._convert_sheet_to_text_sync(workbook, sheet_name)
-                results.append(sheet_text)
-
-            return ExtractionResult(content="\n\n".join(results), mime_type=MARKDOWN_MIME_TYPE, metadata={}, chunks=[])
-        except Exception as e:
-            raise ParsingError(
-                "Failed to extract file data",
-                context={"file": str(path), "error": str(e)},
-            ) from e
+        return anyio.run(self.extract_path_async, path)
 
     @staticmethod
     def _convert_cell_to_str(value: Any) -> str:
@@ -147,37 +122,4 @@ class SpreadSheetExtractor(Extractor):
             result = "\n".join(markdown_lines)
 
         await unlink()
-        return f"## {sheet_name}\n\n{normalize_spaces(result)}"
-
-    def _convert_sheet_to_text_sync(self, workbook: CalamineWorkbook, sheet_name: str) -> str:
-        """Synchronous version of _convert_sheet_to_text."""
-        values = workbook.get_sheet_by_name(sheet_name).to_python()
-
-        csv_buffer = StringIO()
-        writer = csv.writer(csv_buffer)
-
-        for row in values:
-            writer.writerow([self._convert_cell_to_str(cell) for cell in row])
-
-        csv_data = csv_buffer.getvalue()
-        csv_buffer.close()
-
-        csv_reader = csv.reader(StringIO(csv_data))
-        rows = list(csv_reader)
-        result = ""
-
-        if rows:
-            header = rows[0]
-            markdown_lines: list[str] = [
-                "| " + " | ".join(header) + " |",
-                "| " + " | ".join(["---" for _ in header]) + " |",
-            ]
-
-            for row in rows[1:]:  # type: ignore[assignment]
-                while len(row) < len(header):
-                    row.append("")
-                markdown_lines.append("| " + " | ".join(row) + " |")  # type: ignore[arg-type]
-
-            result = "\n".join(markdown_lines)
-
         return f"## {sheet_name}\n\n{normalize_spaces(result)}"

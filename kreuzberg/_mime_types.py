@@ -161,48 +161,27 @@ def validate_mime_type(
     Returns:
         The validated MIME type.
     """
-    if mime_type:
-        return _validate_explicit_mime_type(mime_type)
+    if file_path and check_file_exists:
+        path = Path(file_path)
+        if not path.exists():
+            raise ValidationError("The file does not exist", context={"file_path": str(path)})
 
-    if file_path:
-        from kreuzberg._utils._cache import get_mime_cache
-
+    if not mime_type:
+        if not file_path:
+            raise ValidationError(
+                "Could not determine mime type.",
+            )
         path = Path(file_path)
 
-        try:
-            stat = path.stat() if check_file_exists else None
-            file_info = {
-                "path": str(path.resolve()),
-                "size": stat.st_size if stat else 0,
-                "mtime": stat.st_mtime if stat else 0,
-                "check_file_exists": check_file_exists,
-            }
-        except OSError:
-            file_info = {
-                "path": str(path),
-                "size": 0,
-                "mtime": 0,
-                "check_file_exists": check_file_exists,
-            }
+        ext = path.suffix.lower()
+        mime_type = EXT_TO_MIME_TYPE.get(ext) or guess_type(path.name)[0]
 
-        cache_kwargs = {"file_info": str(sorted(file_info.items())), "detector": "mime_type"}
+        if not mime_type:  # pragma: no cover
+            raise ValidationError(
+                "Could not determine the mime type of the file. Please specify the mime_type parameter explicitly.",
+                context={"input_file": str(path), "extension": ext},
+            )
 
-        mime_cache = get_mime_cache()
-        cached_result = mime_cache.get(**cache_kwargs)
-        if cached_result is not None:
-            return cached_result
-
-        detected_mime_type = _detect_mime_type_uncached(file_path, check_file_exists)
-
-        mime_cache.set(detected_mime_type, **cache_kwargs)
-
-        return detected_mime_type
-
-    return _detect_mime_type_uncached(file_path, check_file_exists)
-
-
-def _validate_explicit_mime_type(mime_type: str) -> str:
-    """Validate an explicitly provided MIME type."""
     if mime_type in SUPPORTED_MIME_TYPES:
         return mime_type
 
@@ -214,28 +193,3 @@ def _validate_explicit_mime_type(mime_type: str) -> str:
         f"Unsupported mime type: {mime_type}",
         context={"mime_type": mime_type, "supported_mimetypes": ",".join(sorted(SUPPORTED_MIME_TYPES))},
     )
-
-
-def _detect_mime_type_uncached(file_path: PathLike[str] | str | None = None, check_file_exists: bool = True) -> str:
-    """Detect MIME type without caching (internal function)."""
-    if file_path and check_file_exists:
-        path = Path(file_path)
-        if not path.exists():
-            raise ValidationError("The file does not exist", context={"file_path": str(path)})
-
-    if not file_path:
-        raise ValidationError(
-            "Could not determine mime type.",
-        )
-
-    path = Path(file_path)
-    ext = path.suffix.lower()
-    mime_type = EXT_TO_MIME_TYPE.get(ext) or guess_type(path.name)[0]
-
-    if not mime_type:  # pragma: no cover
-        raise ValidationError(
-            "Could not determine the mime type of the file. Please specify the mime_type parameter explicitly.",
-            context={"input_file": str(path), "extension": ext},
-        )
-
-    return _validate_explicit_mime_type(mime_type)
