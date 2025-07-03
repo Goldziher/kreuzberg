@@ -1,6 +1,6 @@
 [project]
 name = "kreuzberg"
-version = "3.2.0"
+version = "3.4.2"
 description = "A text extraction library supporting PDFs, images, office documents and more"
 readme = "README.md"
 keywords = [
@@ -17,14 +17,13 @@ keywords = [
 ]
 license = { text = "MIT" }
 authors = [ { name = "Na'aman Hirschfeld", email = "nhirschfed@gmail.com" } ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -49,25 +48,15 @@ dependencies = [
 ]
 
 optional-dependencies.all = [
-  # easyocr
-  "easyocr>=1.7.2",
-  # gmft
-  "gmft>=0.4.1",
-  # paddle
-  "paddleocr>=3.0.2",
-  "paddlepaddle>=3.0.0",
-  # chunking
-  "semantic-text-splitter>=0.27.0",
-  "setuptools>=80.9.0",
+  "kreuzberg[api,chunking,cli,easyocr,gmft,paddleocr]",
 ]
-optional-dependencies.chunking = [
-  "semantic-text-splitter>=0.27.0",
-]
-optional-dependencies.easyocr = [
-  "easyocr>=1.7.2",
-]
-optional-dependencies.gmft = [
-  "gmft>=0.4.1",
+optional-dependencies.api = [ "litestar[standard,structlog,opentelemetry]>=2.1.6" ]
+
+optional-dependencies.chunking = [ "semantic-text-splitter>=0.27.0" ]
+optional-dependencies.cli = [
+  "click>=8.2.1",
+  "rich>=14.0.0",
+  "tomli>=2.0.0; python_version<'3.11'",
 ]
 optional-dependencies.paddleocr = [
   "paddleocr>=3.0.2",
@@ -104,7 +93,7 @@ doc = [
 kreuzberg = [ "py.typed" ]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 120
 src = [ "kreuzberg", "tests" ]
 format.docstring-code-line-length = 120
@@ -172,12 +161,33 @@ exclude_lines = [ 'if TYPE_CHECKING:', "except ImportError:" ]
 fail_under = 95
 
 [tool.mypy]
-packages = [ "kreuzberg", "tests" ]
-python_version = "3.9"
+packages = [ "kreuzberg", "tests", "benchmarks.src.kreuzberg_benchmarks" ]
+python_version = "3.10"
 disable_error_code = 'import-untyped'
 implicit_reexport = false
 show_error_codes = true
 strict = true
+
+[[tool.mypy.overrides]]
+module = [
+  "rich.*",
+  "typer.*",
+  "matplotlib.*",
+  "memory_profiler.*",
+  "py_spy.*",
+  "litestar.*",
+  "structlog.*",
+  "opentelemetry.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "benchmarks.src.kreuzberg_benchmarks.*"
+disable_error_code = [ "misc" ]
+
+[[tool.mypy.overrides]]
+module = "kreuzberg.docker.main"
+disable_error_code = [ "misc" ]
 
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }

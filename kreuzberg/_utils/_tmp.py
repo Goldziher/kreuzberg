@@ -3,14 +3,14 @@ from __future__ import annotations
 from contextlib import suppress
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from anyio import Path as AsyncPath
 
 from kreuzberg._utils._sync import run_sync
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Coroutine
+    from collections.abc import Callable, Coroutine
 
 
 async def create_temp_file(

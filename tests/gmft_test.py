@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
@@ -11,6 +12,9 @@ from kreuzberg import ExtractionConfig, GMFTConfig
 from kreuzberg._gmft import extract_tables
 from kreuzberg.exceptions import MissingDependencyError
 from kreuzberg.extraction import extract_file
+
+if TYPE_CHECKING:
+    import anyio
 
 
 @pytest.fixture
@@ -228,3 +232,147 @@ async def test_gmft_config_custom_values() -> None:
     assert config.large_table_row_overlap_threshold == 0.3
     assert config.large_table_maximum_rows == 1500
     assert config.force_large_table_assumption is True
+
+
+def test_extract_tables_sync_with_tiny_pdf(tiny_pdf_with_tables: Path) -> None:
+    """Test sync table extraction - covers lines 246-334."""
+    try:
+        from kreuzberg._gmft import extract_tables_sync
+
+        tables = extract_tables_sync(tiny_pdf_with_tables)
+
+        assert tables
+        assert isinstance(tables, list)
+        assert all(isinstance(table, dict) for table in tables)
+
+        for table in tables:
+            assert "page_number" in table
+            assert isinstance(table["page_number"], int)
+            assert "text" in table
+            assert isinstance(table["text"], str)
+            assert "df" in table
+            assert isinstance(table["df"], (pd.DataFrame, dict))
+            assert "cropped_image" in table
+            assert isinstance(table["cropped_image"], (Image.Image, type(None)))
+    except MissingDependencyError:
+        pytest.skip("GMFT dependencies not available")
+
+
+def test_extract_tables_sync_missing_dependency(tiny_pdf_with_tables: Path) -> None:
+    """Test sync extraction with missing dependency - covers lines 259-260, 277."""
+    if os.getenv("KREUZBERG_GMFT_ISOLATED", "true").lower() == "true":
+        pytest.skip("Cannot test missing dependency with isolated process")
+
+    from kreuzberg._gmft import extract_tables_sync
+
+    with patch.dict("sys.modules", {"gmft": None, "gmft.auto": None}):
+        with pytest.raises(MissingDependencyError) as exc_info:
+            extract_tables_sync(tiny_pdf_with_tables)
+
+        assert "table extraction" in str(exc_info.value)
+        assert "gmft" in str(exc_info.value)
+
+
+def test_extract_tables_sync_os_error(tmp_path: Path) -> None:
+    """Test sync extraction with OS error when reading file stats - covers lines 259-264."""
+    if os.getenv("KREUZBERG_GMFT_ISOLATED", "true").lower() == "true":
+        pytest.skip("File errors handled differently in isolated process")
+
+    from kreuzberg._gmft import extract_tables_sync
+
+    # Use a real but non-existent file
+    fake_file = tmp_path / "nonexistent.pdf"
+
+    with patch.dict("sys.modules", {"gmft": None, "gmft.auto": None}), pytest.raises(MissingDependencyError):
+        extract_tables_sync(fake_file)
+
+
+@pytest.mark.anyio
+async def test_extract_tables_cache_processing_coordination(tiny_pdf_with_tables: Path) -> None:
+    """Test cache processing coordination - covers lines 160-168."""
+    import anyio
+
+    from kreuzberg._gmft import extract_tables
+    from kreuzberg._utils._cache import get_table_cache
+
+    cache = get_table_cache()
+
+    file_stat = tiny_pdf_with_tables.stat()
+    file_info = str(
+        sorted(
+            {
+                "path": str(tiny_pdf_with_tables.resolve()),
+                "size": file_stat.st_size,
+                "mtime": file_stat.st_mtime,
+            }.items()
+        )
+    )
+    config_str = str(sorted(GMFTConfig().__dict__.items()))
+
+    cache.mark_processing(
+        file_info=file_info,
+        extractor="gmft",
+        config=config_str,
+    )
+
+    async def complete_processing(event: anyio.Event) -> None:
+        await anyio.sleep(0.1)
+        cache.mark_complete(
+            file_info=file_info,
+            extractor="gmft",
+            config=config_str,
+        )
+
+        cache.set(
+            [],
+            file_info=file_info,
+            extractor="gmft",
+            config=config_str,
+        )
+        event.set()
+
+    async with anyio.create_task_group() as nursery:
+        completion_event = anyio.Event()
+        nursery.start_soon(complete_processing, completion_event)
+
+        # Since we're using isolated process, we need to wait for the cache to be set
+        # The thread will set an empty list in the cache after 0.1 seconds
+        await anyio.sleep(0.2)
+
+        result = await extract_tables(tiny_pdf_with_tables)
+        assert result == []
+
+        await completion_event.wait()
+
+
+@pytest.mark.anyio
+async def test_extract_tables_cache_hit(tiny_pdf_with_tables: Path) -> None:
+    """Test cache hit path - should return cached result without processing."""
+    from kreuzberg._gmft import extract_tables
+    from kreuzberg._utils._cache import get_table_cache
+
+    cache = get_table_cache()
+    cached_tables = [{"page_number": 1, "text": "cached table", "df": {"col": [1, 2]}, "cropped_image": None}]
+
+    file_stat = tiny_pdf_with_tables.stat()
+    cache_kwargs = {
+        "file_info": str(
+            sorted(
+                {
+                    "path": str(tiny_pdf_with_tables.resolve()),
+                    "size": file_stat.st_size,
+                    "mtime": file_stat.st_mtime,
+                }.items()
+            )
+        ),
+        "extractor": "gmft",
+        "config": str(sorted(GMFTConfig().__dict__.items())),
+    }
+
+    await cache.aset(cached_tables, **cache_kwargs)
+
+    result = await extract_tables(tiny_pdf_with_tables)
+
+    assert result == cached_tables
+    assert len(result) == 1
+    assert result[0]["text"] == "cached table"

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from kreuzberg._constants import DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OVERLAP
 from kreuzberg.exceptions import ValidationError
@@ -116,9 +116,13 @@ class ExtractionResult:
     detected_languages: list[str] | None = None
     """Languages detected in the extracted content, if language detection is enabled."""
 
+    def to_dict(self) -> dict[str, Any]:
+        """Converts the ExtractionResult to a dictionary."""
+        return asdict(self)
 
-PostProcessingHook = Callable[[ExtractionResult], Union[ExtractionResult, Awaitable[ExtractionResult]]]
-ValidationHook = Callable[[ExtractionResult], Union[None, Awaitable[None]]]
+
+PostProcessingHook = Callable[[ExtractionResult], ExtractionResult | Awaitable[ExtractionResult]]
+ValidationHook = Callable[[ExtractionResult], None | Awaitable[None]]
 
 
 @dataclass(unsafe_hash=True)

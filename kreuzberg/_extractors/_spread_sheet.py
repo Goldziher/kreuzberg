@@ -4,7 +4,8 @@ import csv
 import sys
 from datetime import date, datetime, time, timedelta
 from io import StringIO
-from typing import TYPE_CHECKING, Any, Union
+from pathlib import Path
+from typing import Any
 
 import anyio
 from anyio import Path as AsyncPath
@@ -18,14 +19,11 @@ from kreuzberg._utils._sync import run_sync, run_taskgroup
 from kreuzberg._utils._tmp import create_temp_file
 from kreuzberg.exceptions import ParsingError
 
-if TYPE_CHECKING:  # pragma: no cover
-    from pathlib import Path
-
 if sys.version_info < (3, 11):  # pragma: no cover
     from exceptiongroup import ExceptionGroup  # type: ignore[import-not-found]
 
 
-CellValue = Union[int, float, str, bool, time, date, datetime, timedelta]
+CellValue = int | float | str | bool | time | date | datetime | timedelta
 
 
 class SpreadSheetExtractor(Extractor):

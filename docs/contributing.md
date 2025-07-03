@@ -68,7 +68,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Notes
 
-- Python 3.9-3.13 supported
+- Python 3.10-3.13 supported
 - System dependencies (optional): Tesseract, Pandoc
 - Pre-commit runs automatically on commit
 - Join our [Discord](https://discord.gg/pXxagNK2zN) for help

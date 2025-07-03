@@ -11,6 +11,8 @@ This guide covers the main concepts and usage patterns of Kreuzberg.
 - [OCR Configuration](ocr-configuration.md) - Configure OCR settings ([API](../api-reference/ocr-configuration.md))
 - [OCR Backends](ocr-backends.md) - Choose and configure different OCR engines
 - [Supported Formats](supported-formats.md) - All supported document formats
+- [API Server](api-server.md) - REST API for document extraction
+- [Docker](docker.md) - Using Kreuzberg with Docker
 
 ## Best Practices
 

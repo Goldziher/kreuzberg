@@ -5,10 +5,10 @@ from __future__ import annotations
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
 T = TypeVar("T")
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import anyio
 import psutil
@@ -12,6 +12,7 @@ from typing_extensions import Self
 
 if TYPE_CHECKING:
     import types
+    from collections.abc import Callable
 
 T = TypeVar("T")
 

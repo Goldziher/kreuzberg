@@ -184,14 +184,10 @@ psm = 3
         assert "eng+deu" in output_text
         assert "config.toml" in output_text
 
-    def test_cli_config_command_no_file(self) -> None:
+    def test_cli_config_command_no_file(self, tmp_path: Path) -> None:
         """Test config command when no config file exists."""
         result = subprocess.run(
-            [sys.executable, "-m", "kreuzberg", "config"],
-            check=False,
-            capture_output=True,
-            text=True,
-            cwd=Path(tempfile.gettempdir()),
+            [sys.executable, "-m", "kreuzberg", "config"], check=False, capture_output=True, text=True, cwd=tmp_path
         )
 
         assert result.returncode == 0

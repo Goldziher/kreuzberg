@@ -44,7 +44,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macOS-latest, windows-latest ]
-        python: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
+        python: ${{ github.event_name == 'pull_request' && fromJSON('["3.13"]') || fromJSON('["3.10", "3.11", "3.12", "3.13"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:

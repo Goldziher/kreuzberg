@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from functools import partial
 from inspect import isawaitable, iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeVar, cast
@@ -12,10 +11,7 @@ from anyio.to_thread import run_sync as any_io_run_sync
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Awaitable, Callable
 
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
-else:  # pragma: no cover
-    from typing_extensions import ParamSpec
+from typing import ParamSpec
 
 T = TypeVar("T")
 P = ParamSpec("P")

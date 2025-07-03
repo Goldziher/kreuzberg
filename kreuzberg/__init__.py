@@ -1,3 +1,5 @@
+from importlib.metadata import version
+
 from kreuzberg._gmft import GMFTConfig
 from kreuzberg._ocr._easyocr import EasyOCRConfig
 from kreuzberg._ocr._paddleocr import PaddleOCRConfig
@@ -19,10 +21,7 @@ from .extraction import (
 )
 from importlib.metadata import version, PackageNotFoundError
 
-try:
-    __version__ = version("kreuzberg")
-except PackageNotFoundError:
-    __version__ = "0.0.0"
+__version__ = version("kreuzberg")
 
 __all__ = [
     "EasyOCRConfig",

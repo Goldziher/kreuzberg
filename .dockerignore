@@ -1,0 +1,15 @@
+*.pyc
+*.pyd
+*.pyo
+.git
+.github/
+.gitignore
+.idea
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.vscode
+__pycache__
+benchmarks/
+docs/
+tests/

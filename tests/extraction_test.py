@@ -261,7 +261,7 @@ async def test_batch_extract_file_mixed(test_article: Path) -> None:
 
     results = await batch_extract_file(test_files)
     assert len(results) == len(test_files)
-    for path, result in zip(test_files, results):
+    for path, result in zip(test_files, results, strict=False):
         if path.suffix in [".docx", ".xlsx"]:
             assert_extraction_result(result, mime_type=MARKDOWN_MIME_TYPE)
         else:
@@ -339,7 +339,7 @@ def test_batch_extract_file_sync_mixed(test_article: Path) -> None:
 
     results = batch_extract_file_sync(test_files)
     assert len(results) == len(test_files)
-    for path, result in zip(test_files, results):
+    for path, result in zip(test_files, results, strict=False):
         if path.suffix in [".docx", ".xlsx"]:
             assert_extraction_result(result, mime_type=MARKDOWN_MIME_TYPE)
         else:

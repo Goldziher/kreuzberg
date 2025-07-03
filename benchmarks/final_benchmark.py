@@ -15,7 +15,7 @@ from kreuzberg._utils._cache import (
 )
 
 
-async def run_final_benchmark() -> dict[str, object] | None:  # type: ignore[syntax]
+async def run_final_benchmark() -> dict[str, object] | None:
     """Run comprehensive benchmark of all caching improvements."""
     test_files_dir = Path("tests/test_source_files")
     pdf_files = list(test_files_dir.glob("*.pdf"))

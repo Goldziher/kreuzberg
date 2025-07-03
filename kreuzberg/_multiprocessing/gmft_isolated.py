@@ -73,7 +73,7 @@ def _extract_tables_in_process(
                 dataframes.append(formatted_table.df())
 
             results = []
-            for data_frame, cropped_table in zip(dataframes, cropped_tables):
+            for data_frame, cropped_table in zip(dataframes, cropped_tables, strict=False):
                 import io
 
                 img_bytes = io.BytesIO()

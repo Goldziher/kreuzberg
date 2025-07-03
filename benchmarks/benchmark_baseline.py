@@ -8,7 +8,7 @@ from kreuzberg import ExtractionConfig, batch_extract_file, extract_file_sync
 from kreuzberg._utils._document_cache import clear_document_cache, get_document_cache
 
 
-async def run_baseline_benchmark() -> dict[str, object] | None:  # type: ignore[syntax]
+async def run_baseline_benchmark() -> dict[str, object] | None:
     """Run comprehensive baseline benchmark."""
     test_files_dir = Path("tests/test_source_files")
     test_files = list(test_files_dir.glob("*.pdf"))
