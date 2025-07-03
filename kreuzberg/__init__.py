@@ -1,3 +1,5 @@
+from importlib.metadata import version
+
 from kreuzberg._gmft import GMFTConfig
 from kreuzberg._ocr._easyocr import EasyOCRConfig
 from kreuzberg._ocr._paddleocr import PaddleOCRConfig
@@ -18,7 +20,7 @@ from .extraction import (
     extract_file_sync,
 )
 
-__version__ = "3.2.0"
+__version__ = version("kreuzberg")
 
 __all__ = [
     "EasyOCRConfig",

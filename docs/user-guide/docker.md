@@ -7,11 +7,12 @@ Kreuzberg provides official Docker images for easy deployment and containerized 
 Docker images are available on [Docker Hub](https://hub.docker.com/r/goldziher/kreuzberg):
 
 - `goldziher/kreuzberg:latest` - Core image with API server and Tesseract OCR
-- `goldziher/kreuzberg:VERSION` - Specific version (e.g., `3.0.0`)
-- `goldziher/kreuzberg:VERSION-easyocr` - With EasyOCR support
-- `goldziher/kreuzberg:VERSION-paddle` - With PaddleOCR support
-- `goldziher/kreuzberg:VERSION-gmft` - With GMFT table extraction
-- `goldziher/kreuzberg:VERSION-all` - With all optional dependencies
+- `goldziher/kreuzberg:latest-easyocr` - With EasyOCR support
+- `goldziher/kreuzberg:latest-paddle` - With PaddleOCR support
+- `goldziher/kreuzberg:latest-gmft` - With GMFT table extraction
+- `goldziher/kreuzberg:latest-all` - With all optional dependencies
+
+> **Note**: Specific version tags are also available (e.g., `v3.4.0`, `v3.4.0-easyocr`)
 
 ## Quick Start
 
@@ -45,8 +46,6 @@ curl -X POST http://localhost:8000/extract \
 Create a `docker-compose.yml`:
 
 ```yaml
-version: '3.8'
-
 services:
   kreuzberg:
     image: goldziher/kreuzberg:latest
@@ -54,9 +53,6 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-    volumes:
-      # Optional: Mount local directory for file access
-      - ./documents:/app/documents
     restart: unless-stopped
 ```
 

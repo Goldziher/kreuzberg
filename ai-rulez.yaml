@@ -1,6 +1,6 @@
 metadata:
   name: "Kreuzberg"
-  version: "3.2.0"
+  version: "3.4.0"
   description: "A text extraction library supporting PDFs, images, office documents and more"
 
 outputs:
@@ -96,8 +96,9 @@ rules:
       - Run manually: `pre-commit run --all-files`
 
       ### Documentation
-      - Build docs: `mkdocs build`
-      - Serve docs locally: `mkdocs serve`
+      - Build docs: `uv run mkdocs build --clean --strict`
+      - Serve docs locally: `uv run mkdocs serve`
+      - Install doc dependencies: `uv sync --group doc`
 
   - name: "Architecture"
     priority: 9
@@ -115,6 +116,8 @@ rules:
       - **GMFT Integration**: Table extraction using GMFT library for PDFs
       - **Chunking**: Text splitting functionality in `_chunker.py`
       - **Async/Sync**: Primary async implementation with sync wrappers in `_utils/_sync.py`
+      - **API Server**: REST API using Litestar framework in `_api/main.py`
+      - **CLI**: Command-line interface for batch processing and automation
 
       ### Adding New Features
       - New extractors: Inherit from `BaseExtractor` and register with `ExtractorRegistry`
@@ -152,6 +155,56 @@ rules:
       - Only create documentation files if explicitly requested by the User
       - All builtin imports should be at the top level (except for cyclical or optional dependencies)
       - When committing, always use the format specified in the CLAUDE.md
+
+  - name: "CI/CD and Deployment"
+    priority: 6
+    content: |
+      ### GitHub Actions Workflows
+      - **Release**: Automated PyPI publishing via GitHub releases
+      - **Docker**: Multi-platform Docker builds (linux/amd64, linux/arm64)
+      - **Documentation**: Auto-deploy to GitHub Pages on docs changes
+
+      ### Docker Variants
+      - **Core** (`goldziher/kreuzberg:v3.4.0`): API + Tesseract OCR
+      - **EasyOCR** (`goldziher/kreuzberg:v3.4.0-easyocr`): Core + EasyOCR
+      - **PaddleOCR** (`goldziher/kreuzberg:v3.4.0-paddle`): Core + PaddleOCR
+      - **GMFT** (`goldziher/kreuzberg:v3.4.0-gmft`): Core + table extraction
+      - **All** (`goldziher/kreuzberg:v3.4.0-all`): All features included
+
+      ### Manual Triggers
+      - Docker builds: `gh workflow run "Publish Docker Images"`
+      - Documentation: Auto-deploys on docs/ changes
+
+      ### Common Issues
+      - **Docker version detection**: Use `git tag --sort=-version:refname | head -n1` not `git describe`
+      - **Docs dependencies**: Use `uv sync --group doc` for proper mkdocs-material[imaging] support
+      - **Docker Hub README**: May fail due to permissions, use `continue-on-error: true`
+
+  - name: "Package Management"
+    priority: 6
+    content: |
+      ### Optional Dependencies Structure
+      ```toml
+      [project.optional-dependencies]
+      api = ["litestar[standard,structlog,opentelemetry]>=2.1.6"]
+      cli = ["click>=8.2.1", "rich>=14.0.0", "tomli>=2.0.0; python_version<'3.11'"]
+      chunking = ["semantic-text-splitter>=0.27.0"]
+      easyocr = ["easyocr>=1.7.2"]
+      gmft = ["gmft>=0.4.2"]
+      paddleocr = ["paddleocr>=3.1.0", "paddlepaddle>=3.1.0", "setuptools>=80.9.0"]
+      all = ["kreuzberg[api,chunking,cli,easyocr,gmft,paddleocr]"]
+      ```
+
+      ### Installation Patterns
+      - Basic: `pip install kreuzberg`
+      - With features: `pip install "kreuzberg[api,cli]"`
+      - All features: `pip install "kreuzberg[all]"`
+      - Development: `uv sync --all-extras`
+
+      ### Dependencies
+      - **Core**: pypdfium2, playa-pdf, python-pptx, etc.
+      - **System**: tesseract-ocr, pandoc (via package manager)
+      - **Development**: Uses dependency groups in pyproject.toml
 
 sections:
   - title: "Planned Features"

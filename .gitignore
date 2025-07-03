@@ -32,3 +32,4 @@ docker-compose.yaml
 GEMINI.md
 prompt_template.egg-info/
 requirements.txt
+site/
