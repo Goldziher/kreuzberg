@@ -136,6 +136,7 @@ nav:
       - OCR Backends: user-guide/ocr-backends.md
       - Supported Formats: user-guide/supported-formats.md
       - API Server: user-guide/api-server.md
+      - MCP Server: user-guide/mcp-server.md
       - Docker: user-guide/docker.md
   - CLI Guide: cli.md
   - Examples:
