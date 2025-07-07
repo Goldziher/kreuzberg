@@ -94,6 +94,7 @@ dev = [
   "mypy>=1.16.1",
   "pre-commit>=4.2.0",
   "pytest>=8.4.1",
+  "pytest-asyncio",
   "pytest-cov>=6.2.1",
   "pytest-mock>=3.14.0",
   "pytest-timeout>=2.4.0",
