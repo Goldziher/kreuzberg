@@ -76,6 +76,9 @@ optional-dependencies.easyocr = [ "easyocr>=1.7.2" ]
 optional-dependencies.entity-extraction = [ "keybert>=0.9.0", "spacy>=3.8.7" ]
 optional-dependencies.gmft = [ "gmft>=0.4.2" ]
 optional-dependencies.langdetect = [ "fast-langdetect>=0.3.2" ]
+optional-dependencies.mcp = [
+  "mcp @ git+https://github.com/modelcontextprotocol/python-sdk.git",
+]
 optional-dependencies.paddleocr = [
   "paddleocr>=3.1.0",
   "paddlepaddle>=3.1.0",
@@ -111,6 +114,9 @@ packages = [ "kreuzberg" ]
 
 [tool.setuptools.package-data]
 kreuzberg = [ "py.typed" ]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.ruff]
 target-version = "py310"
@@ -220,6 +226,7 @@ module = [
   "paddleocr.*",
   "gmft.*",
   "semantic_text_splitter.*",
+  "mcp.*",
 ]
 ignore_missing_imports = true
 
