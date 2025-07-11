@@ -8,6 +8,7 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.table import Table
 
 from .benchmarks import KreuzbergBenchmarks
 from .models import FlameGraphConfig
@@ -15,6 +16,132 @@ from .runner import BenchmarkRunner
 
 app = typer.Typer(help="Kreuzberg Performance Benchmarking Suite")
 console = Console()
+
+
+def _generate_quality_report(data: dict, console: Console) -> None:
+    """Generate metadata quality report from benchmark results."""
+    console.print("\n[bold]METADATA QUALITY REPORT[/bold]")
+    console.print("=" * 80)
+
+    # Collect results with extraction quality
+    quality_results = [
+        r
+        for r in data["results"]
+        if r.get("extraction_quality")
+        and r.get("extraction_quality", {}).get("metadata_quality")
+    ]
+
+    if not quality_results:
+        console.print("[yellow]No extraction quality data available[/yellow]")
+        return
+
+    # Group by backend
+    backend_stats = {}
+    for result in quality_results:
+        metadata = result.get("metadata", {})
+        backend = metadata.get("backend", "unknown")
+
+        if backend not in backend_stats:
+            backend_stats[backend] = {
+                "results": [],
+                "file_types": set(),
+                "total_metadata_fields": 0,
+                "unique_fields": set(),
+                "avg_completeness": 0,
+                "avg_richness": 0,
+            }
+
+        quality = result["extraction_quality"]["metadata_quality"]
+        backend_stats[backend]["results"].append(quality)
+        backend_stats[backend]["file_types"].add(metadata.get("file_type", "unknown"))
+        backend_stats[backend]["total_metadata_fields"] += quality["metadata_count"]
+        backend_stats[backend]["unique_fields"].update(quality["metadata_fields"])
+
+    # Calculate averages
+    for backend, stats in backend_stats.items():
+        results = stats["results"]
+        if results:
+            stats["avg_completeness"] = sum(
+                r["metadata_completeness"] for r in results
+            ) / len(results)
+            stats["avg_richness"] = sum(r["metadata_richness"] for r in results) / len(
+                results
+            )
+            stats["avg_metadata_count"] = stats["total_metadata_fields"] / len(results)
+
+    # Create summary table
+    table = Table(title="Backend Metadata Quality Comparison")
+    table.add_column("Backend", style="bold")
+    table.add_column("Files Tested", justify="right")
+    table.add_column("Avg Fields", justify="right")
+    table.add_column("Unique Fields", justify="right")
+    table.add_column("Completeness %", justify="right")
+    table.add_column("Richness Score", justify="right")
+
+    for backend in sorted(backend_stats.keys()):
+        stats = backend_stats[backend]
+        table.add_row(
+            backend,
+            str(len(stats["results"])),
+            f"{stats['avg_metadata_count']:.1f}",
+            str(len(stats["unique_fields"])),
+            f"{stats['avg_completeness']:.1f}%",
+            f"{stats['avg_richness']:.2f}",
+        )
+
+    console.print(table)
+
+    # File type breakdown
+    console.print("\n[bold]Metadata Quality by File Type and Backend:[/bold]")
+
+    file_type_stats = {}
+    for result in quality_results:
+        metadata = result.get("metadata", {})
+        file_type = metadata.get("file_type", "unknown")
+        backend = metadata.get("backend", "unknown")
+        quality = result["extraction_quality"]["metadata_quality"]
+
+        if file_type not in file_type_stats:
+            file_type_stats[file_type] = {}
+
+        if backend not in file_type_stats[file_type]:
+            file_type_stats[file_type][backend] = []
+
+        file_type_stats[file_type][backend].append(quality)
+
+    for file_type in sorted(file_type_stats.keys()):
+        console.print(f"\n{file_type.upper()}:")
+        for backend in sorted(file_type_stats[file_type].keys()):
+            qualities = file_type_stats[file_type][backend]
+            avg_count = sum(q["metadata_count"] for q in qualities) / len(qualities)
+            has_title = (
+                sum(1 for q in qualities if q["has_title"]) / len(qualities) * 100
+            )
+            has_author = (
+                sum(1 for q in qualities if q["has_author"]) / len(qualities) * 100
+            )
+
+            console.print(
+                f"  {backend}: {avg_count:.1f} fields, "
+                f"{has_title:.0f}% with title, {has_author:.0f}% with author"
+            )
+
+    # Top metadata fields
+    console.print("\n[bold]Most Common Metadata Fields:[/bold]")
+    all_fields = {}
+    for backend, stats in backend_stats.items():
+        for field in stats["unique_fields"]:
+            if field not in all_fields:
+                all_fields[field] = set()
+            all_fields[field].add(backend)
+
+    # Sort by number of backends that have the field
+    sorted_fields = sorted(all_fields.items(), key=lambda x: len(x[1]), reverse=True)[
+        :20
+    ]
+
+    for field, backends in sorted_fields:
+        console.print(f"  {field}: {', '.join(sorted(backends))}")
 
 
 @app.command()
@@ -54,6 +181,9 @@ def run(
     include_stress: bool = typer.Option(
         False, "--stress", help="Include stress test benchmarks"
     ),
+    backend_comparison: bool = typer.Option(
+        False, "--backend-comparison", help="Run backend comparison benchmarks"
+    ),
 ) -> None:
     """Run Kreuzberg performance benchmarks."""
     console.print("[bold blue]Kreuzberg Performance Benchmarks[/bold blue]")
@@ -76,7 +206,12 @@ def run(
     sync_benchmarks = []
     async_benchmarks = []
 
-    if comparison_only:
+    if backend_comparison:
+        # Backend comparison mode
+        backend_benchmarks = benchmarks.get_backend_benchmarks()
+        sync_benchmarks = backend_benchmarks
+        async_benchmarks = []
+    elif comparison_only:
         comparison_benchmarks = benchmarks.get_comparison_benchmarks()
 
         sync_benchmarks = [
@@ -191,6 +326,9 @@ def compare(
 @app.command()
 def analyze(
     result_file: Path = typer.Argument(..., help="Benchmark result file to analyze"),
+    quality_report: bool = typer.Option(
+        False, "--quality", "-q", help="Generate metadata quality report"
+    ),
 ) -> None:
     """Analyze benchmark results and generate insights."""
     console.print("[bold blue]Benchmark Analysis[/bold blue]")
@@ -241,6 +379,9 @@ def analyze(
             f"  Async average: {async_avg:.3f}s ({len(async_results)} benchmarks)"
         )
         console.print(f"  Performance difference: {async_avg - sync_avg:+.3f}s")
+
+    if quality_report:
+        _generate_quality_report(data, console)
 
 
 if __name__ == "__main__":

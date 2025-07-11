@@ -22,6 +22,14 @@ from .extraction import (
     extract_file_sync,
 )
 
+# Check if hybrid extraction is available
+try:
+    from . import _backends  # noqa: F401
+
+    _has_hybrid = True
+except ImportError:
+    _has_hybrid = False
+
 __version__ = version("kreuzberg")
 
 __all__ = [
@@ -53,3 +61,12 @@ __all__ = [
     "extract_file",
     "extract_file_sync",
 ]
+
+# Add hybrid API to exports if available
+if _has_hybrid:
+    from ._backends import ExtractionStrategy, HybridBackend
+
+    __all__ += [
+        "ExtractionStrategy",
+        "HybridBackend",
+    ]

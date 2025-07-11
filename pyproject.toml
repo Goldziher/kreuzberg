@@ -5,7 +5,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "kreuzberg"
-version = "3.7.0"
+version = "4.0.0rc1"
 description = "A text extraction library supporting PDFs, images, office documents and more"
 readme = "README.md"
 keywords = [
@@ -48,6 +48,7 @@ classifiers = [
 dependencies = [
   "anyio>=4.9.0",
   "charset-normalizer>=3.4.2",
+  "click>=8.2.1",
   "exceptiongroup>=1.2.2; python_version<'3.11'",
   "html-to-markdown[lxml]>=1.6.0",
   "mcp>=1.11.0",
@@ -60,12 +61,12 @@ dependencies = [
   "typing-extensions>=4.14.0; python_version<'3.12'",
 ]
 
-optional-dependencies.additional-extensions = [ 
-  "mailparse>=1.0.15", 
-  "tomli>=2.0.0; python_version<'3.11'" 
+optional-dependencies.additional-extensions = [
+  "mailparse>=1.0.15",
+  "tomli>=2.0.0; python_version<'3.11'",
 ]
 optional-dependencies.all = [
-  "kreuzberg[additional-extensions,api,chunking,cli,easyocr,entity-extraction,gmft,langdetect,paddleocr]",
+  "kreuzberg[additional-extensions,api,chunking,cli,easyocr,entity-extraction,extractous,gmft,langdetect,paddleocr]",
 ]
 optional-dependencies.api = [
   "litestar[standard,structlog,opentelemetry]>=2.16.0",
@@ -79,6 +80,7 @@ optional-dependencies.cli = [
 ]
 optional-dependencies.easyocr = [ "easyocr>=1.7.2" ]
 optional-dependencies.entity-extraction = [ "keybert>=0.9.0", "spacy>=3.8.7" ]
+optional-dependencies.extractous = [ "extractous>=0.1.0" ]
 optional-dependencies.gmft = [ "gmft>=0.4.2" ]
 optional-dependencies.langdetect = [ "fast-langdetect>=0.3.2" ]
 optional-dependencies.paddleocr = [

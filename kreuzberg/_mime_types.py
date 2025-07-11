@@ -151,7 +151,21 @@ SUPPORTED_MIME_TYPES: Final[set[str]] = (
     | IMAGE_MIME_TYPES
     | PANDOC_SUPPORTED_MIME_TYPES
     | SPREADSHEET_MIME_TYPES
-    | {PDF_MIME_TYPE, POWER_POINT_MIME_TYPE, HTML_MIME_TYPE, EML_MIME_TYPE, MSG_MIME_TYPE, JSON_MIME_TYPE, YAML_MIME_TYPE, TOML_MIME_TYPE, "text/json", "text/yaml", "text/x-yaml", "application/yaml", "text/toml"}
+    | {
+        PDF_MIME_TYPE,
+        POWER_POINT_MIME_TYPE,
+        HTML_MIME_TYPE,
+        EML_MIME_TYPE,
+        MSG_MIME_TYPE,
+        JSON_MIME_TYPE,
+        YAML_MIME_TYPE,
+        TOML_MIME_TYPE,
+        "text/json",
+        "text/yaml",
+        "text/x-yaml",
+        "application/yaml",
+        "text/toml",
+    }
 )
 
 

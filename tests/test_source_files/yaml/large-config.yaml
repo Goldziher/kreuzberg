@@ -1,0 +1,439 @@
+# Large YAML configuration for performance testing
+system:
+  name: "Enterprise Application Stack"
+  description: "Large-scale enterprise application configuration for performance testing"
+  version: "2.5.0"
+  environment: production
+
+# Database cluster configuration
+databases:
+  primary:
+    host: "db-primary.company.com"
+    port: 5432
+    name: "enterprise_prod"
+    pool_size: 100
+    max_connections: 1000
+    ssl_enabled: true
+    backup_schedule: "0 2 * * *"
+    replicas:
+      - host: "db-replica-1.company.com"
+        port: 5432
+        lag_threshold: "100ms"
+      - host: "db-replica-2.company.com"
+        port: 5432
+        lag_threshold: "100ms"
+      - host: "db-replica-3.company.com"
+        port: 5432
+        lag_threshold: "100ms"
+
+  analytics:
+    host: "analytics-db.company.com"
+    port: 5432
+    name: "analytics_warehouse"
+    pool_size: 50
+    partitioning: "monthly"
+    retention_days: 2555
+
+  cache:
+    redis_primary:
+      host: "redis-primary.company.com"
+      port: 6379
+      max_memory: "8GB"
+      eviction_policy: "allkeys-lru"
+    redis_sessions:
+      host: "redis-sessions.company.com"
+      port: 6379
+      max_memory: "4GB"
+      ttl_default: 3600
+
+# Microservices configuration
+services:
+  user_service:
+    name: "User Management Service"
+    description: "Handles user authentication, authorization, and profile management"
+    version: "3.2.1"
+    instances: 8
+    cpu_limit: "2000m"
+    memory_limit: "4Gi"
+    health_check_interval: 30
+    endpoints:
+      - path: "/api/v1/users"
+        method: "GET"
+        rate_limit: 1000
+      - path: "/api/v1/users/{id}"
+        method: "GET"
+        rate_limit: 2000
+      - path: "/api/v1/auth/login"
+        method: "POST"
+        rate_limit: 100
+    dependencies:
+      - database: primary
+        timeout: 5000
+      - cache: redis_sessions
+        timeout: 1000
+
+  order_service:
+    name: "Order Processing Service"
+    description: "Handles order creation, processing, and fulfillment workflows"
+    version: "2.8.4"
+    instances: 12
+    cpu_limit: "3000m"
+    memory_limit: "6Gi"
+    health_check_interval: 15
+    endpoints:
+      - path: "/api/v1/orders"
+        method: "POST"
+        rate_limit: 500
+      - path: "/api/v1/orders/{id}"
+        method: "GET"
+        rate_limit: 2000
+      - path: "/api/v1/orders/{id}/status"
+        method: "PUT"
+        rate_limit: 1000
+    dependencies:
+      - database: primary
+        timeout: 3000
+      - service: user_service
+        timeout: 2000
+      - service: inventory_service
+        timeout: 5000
+
+  inventory_service:
+    name: "Inventory Management Service"
+    description: "Manages product inventory, stock levels, and warehouse operations"
+    version: "1.9.2"
+    instances: 6
+    cpu_limit: "1500m"
+    memory_limit: "3Gi"
+    health_check_interval: 45
+    endpoints:
+      - path: "/api/v1/inventory"
+        method: "GET"
+        rate_limit: 1500
+      - path: "/api/v1/inventory/{sku}"
+        method: "GET"
+        rate_limit: 3000
+      - path: "/api/v1/inventory/{sku}/reserve"
+        method: "POST"
+        rate_limit: 800
+    dependencies:
+      - database: primary
+        timeout: 4000
+      - cache: redis_primary
+        timeout: 500
+
+  payment_service:
+    name: "Payment Processing Service"
+    description: "Handles payment processing, refunds, and financial transactions"
+    version: "4.1.0"
+    instances: 10
+    cpu_limit: "2500m"
+    memory_limit: "5Gi"
+    health_check_interval: 20
+    pci_compliant: true
+    encryption: "AES-256"
+    endpoints:
+      - path: "/api/v1/payments"
+        method: "POST"
+        rate_limit: 200
+        encryption_required: true
+      - path: "/api/v1/payments/{id}"
+        method: "GET"
+        rate_limit: 1000
+      - path: "/api/v1/refunds"
+        method: "POST"
+        rate_limit: 100
+    dependencies:
+      - database: primary
+        timeout: 2000
+      - external_api: stripe
+        timeout: 10000
+        retries: 3
+
+# Load balancer and networking
+networking:
+  load_balancers:
+    external:
+      type: "Application Load Balancer"
+      protocol: "HTTPS"
+      ssl_certificate: "arn:aws:acm:us-east-1:123456789012:certificate/abcd-1234"
+      health_check_path: "/health"
+      sticky_sessions: false
+      targets:
+        - service: user_service
+          weight: 100
+        - service: order_service
+          weight: 100
+        - service: inventory_service
+          weight: 100
+        - service: payment_service
+          weight: 100
+    internal:
+      type: "Network Load Balancer"
+      protocol: "TCP"
+      cross_zone: true
+      preserve_client_ip: true
+
+  security_groups:
+    web_tier:
+      name: "web-tier-sg"
+      description: "Security group for web tier"
+      rules:
+        - protocol: "HTTPS"
+          port: 443
+          source: "0.0.0.0/0"
+        - protocol: "HTTP"
+          port: 80
+          source: "0.0.0.0/0"
+          redirect_to_https: true
+    app_tier:
+      name: "app-tier-sg"
+      description: "Security group for application tier"
+      rules:
+        - protocol: "TCP"
+          port: 8080
+          source: "web_tier"
+        - protocol: "TCP"
+          port: 8081
+          source: "web_tier"
+    data_tier:
+      name: "data-tier-sg"
+      description: "Security group for data tier"
+      rules:
+        - protocol: "TCP"
+          port: 5432
+          source: "app_tier"
+        - protocol: "TCP"
+          port: 6379
+          source: "app_tier"
+
+# Monitoring and observability
+monitoring:
+  metrics:
+    prometheus:
+      host: "prometheus.monitoring.company.com"
+      port: 9090
+      scrape_interval: "15s"
+      retention: "15d"
+      targets:
+        - job_name: "user-service"
+          metrics_path: "/metrics"
+          scrape_interval: "30s"
+        - job_name: "order-service"
+          metrics_path: "/metrics"
+          scrape_interval: "15s"
+        - job_name: "inventory-service"
+          metrics_path: "/metrics"
+          scrape_interval: "30s"
+        - job_name: "payment-service"
+          metrics_path: "/metrics"
+          scrape_interval: "10s"
+
+  logging:
+    elasticsearch:
+      cluster_name: "enterprise-logs"
+      nodes:
+        - host: "es-node-1.logging.company.com"
+          port: 9200
+          role: "master"
+        - host: "es-node-2.logging.company.com"
+          port: 9200
+          role: "data"
+        - host: "es-node-3.logging.company.com"
+          port: 9200
+          role: "data"
+      index_template: "enterprise-logs-*"
+      retention_policy: "30d"
+
+  alerting:
+    alert_manager:
+      host: "alertmanager.monitoring.company.com"
+      port: 9093
+      routes:
+        - name: "critical-alerts"
+          severity: "critical"
+          channels: ["pagerduty", "slack-critical"]
+          group_wait: "10s"
+          group_interval: "5m"
+          repeat_interval: "12h"
+        - name: "warning-alerts"
+          severity: "warning"
+          channels: ["slack-warnings"]
+          group_wait: "30s"
+          group_interval: "10m"
+          repeat_interval: "4h"
+
+# Deployment configuration
+deployment:
+  strategy: "rolling_update"
+  max_surge: "25%"
+  max_unavailable: "25%"
+  health_check_grace_period: 300
+  rollback_on_failure: true
+
+  environments:
+    production:
+      region: "us-east-1"
+      availability_zones: ["us-east-1a", "us-east-1b", "us-east-1c"]
+      auto_scaling:
+        min_instances: 20
+        max_instances: 100
+        target_cpu_utilization: 70
+        scale_out_cooldown: 300
+        scale_in_cooldown: 600
+
+    staging:
+      region: "us-west-2"
+      availability_zones: ["us-west-2a", "us-west-2b"]
+      auto_scaling:
+        min_instances: 4
+        max_instances: 20
+        target_cpu_utilization: 80
+        scale_out_cooldown: 180
+        scale_in_cooldown: 300
+
+    development:
+      region: "us-west-2"
+      availability_zones: ["us-west-2a"]
+      auto_scaling:
+        min_instances: 2
+        max_instances: 8
+        target_cpu_utilization: 85
+        scale_out_cooldown: 120
+        scale_in_cooldown: 240
+
+# Backup and disaster recovery
+backup:
+  database_backups:
+    frequency: "daily"
+    retention: "30d"
+    encryption: true
+    compression: true
+    storage_class: "GLACIER"
+    cross_region_replication: true
+
+  application_backups:
+    frequency: "weekly"
+    retention: "12w"
+    include_configs: true
+    include_secrets: false
+
+  disaster_recovery:
+    rpo_target: "1h"
+    rto_target: "4h"
+    backup_regions: ["us-west-1", "eu-west-1"]
+    failover_strategy: "automated"
+    runbook_url: "https://docs.company.com/dr-runbook"
+
+# Feature flags and configuration
+feature_flags:
+  new_checkout_flow:
+    enabled: true
+    rollout_percentage: 100
+    description: "New streamlined checkout process"
+
+  enhanced_search:
+    enabled: true
+    rollout_percentage: 75
+    description: "AI-powered product search"
+
+  premium_features:
+    enabled: true
+    rollout_percentage: 100
+    user_segments: ["premium", "enterprise"]
+    description: "Premium tier functionality"
+
+  beta_api_v2:
+    enabled: false
+    rollout_percentage: 5
+    user_segments: ["beta_testers"]
+    description: "Next generation API endpoints"
+
+# External integrations
+integrations:
+  payment_processors:
+    stripe:
+      api_version: "2023-10-16"
+      webhook_endpoints:
+        - "https://api.company.com/webhooks/stripe/payment"
+        - "https://api.company.com/webhooks/stripe/customer"
+      supported_methods: ["card", "bank_transfer", "digital_wallet"]
+
+    paypal:
+      environment: "production"
+      webhook_endpoints:
+        - "https://api.company.com/webhooks/paypal/payment"
+      supported_methods: ["paypal", "credit_card"]
+
+  shipping_providers:
+    fedex:
+      account_number: "123456789"
+      service_types: ["PRIORITY_OVERNIGHT", "STANDARD_OVERNIGHT", "FEDEX_2_DAY"]
+      label_format: "PDF"
+
+    ups:
+      account_number: "987654321"
+      service_types: ["UPS_NEXT_DAY_AIR", "UPS_2ND_DAY_AIR", "UPS_GROUND"]
+      label_format: "PDF"
+
+    usps:
+      user_id: "ABCD123456"
+      service_types: ["PRIORITY_MAIL", "FIRST_CLASS_MAIL", "MEDIA_MAIL"]
+      label_format: "PDF"
+
+  analytics:
+    google_analytics:
+      tracking_id: "GA-123456789"
+      enhanced_ecommerce: true
+
+    mixpanel:
+      project_token: "abc123def456"
+      data_retention: "5_years"
+
+    segment:
+      write_key: "xyz789uvw012"
+      destinations: ["google_analytics", "mixpanel", "amplitude"]
+
+# Compliance and security
+compliance:
+  gdpr:
+    enabled: true
+    data_retention_period: "7_years"
+    right_to_be_forgotten: true
+    consent_management: true
+
+  pci_dss:
+    enabled: true
+    level: "Level_1"
+    qsa_certified: true
+    penetration_testing: "quarterly"
+
+  sox:
+    enabled: true
+    audit_trail: true
+    change_management: true
+    financial_reporting: true
+
+security:
+  encryption:
+    at_rest: "AES-256"
+    in_transit: "TLS-1.3"
+    key_management: "AWS_KMS"
+
+  access_control:
+    identity_provider: "Active_Directory"
+    mfa_required: true
+    session_timeout: 3600
+    password_policy:
+      min_length: 12
+      require_uppercase: true
+      require_lowercase: true
+      require_numbers: true
+      require_symbols: true
+
+  vulnerability_management:
+    scanning_frequency: "weekly"
+    auto_patching: false
+    patch_window: "Sunday_2AM_6AM"
+    exclusions: ["production_databases"]
+EOF < /dev/null

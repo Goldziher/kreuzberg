@@ -1,0 +1,145 @@
+Return-Path: <2587-84-162546-580-REMOVED=PERSONALDATA.org@mail.theultimatesurvival.bid>
+Delivered-To: REMOVED@PERSONALDATA.org
+Received: from localhost (HELO queue) (127.0.0.1)
+	by localhost with SMTP; 31 Aug 2017 20:13:59 +0200
+Received: from output21.mail.ovh.net (164.132.34.21)
+  by mail.ovh.net with AES256-GCM-SHA384 encrypted SMTP; 31 Aug 2017 20:13:59 +0200
+Received: from vr8.mail.ovh.net (unknown [10.101.8.8])
+	by out21.mail.ovh.net (Postfix) with ESMTP id 037728E969
+	for <REMOVED@PERSONALDATA.org>; Thu, 31 Aug 2017 20:13:59 +0200 (CEST)
+Received: from in8.mail.ovh.net (unknown [10.101.4.8])
+	by vr8.mail.ovh.net (Postfix) with ESMTP id EC1B43100064
+	for <REMOVED@PERSONALDATA.org>; Thu, 31 Aug 2017 20:13:58 +0200 (CEST)
+Received-SPF: None (no SPF record) identity=mailfrom; client-ip=67.212.164.109; helo=papa.theultimatesurvival.bid; envelope-from=2587-84-162546-580-REMOVED=PERSONALDATA.org@mail.theultimatesurvival.bid; receiver=REMOVED@PERSONALDATA.org
+Authentication-Results: in8.mail.ovh.net; dkim=fail
+	reason="verification failed; unprotected key"
+	header.d=theultimatesurvival.bid header.i=contact@theultimatesurvival.bid
+	header.b=ptUe0FaL; dkim-adsp=none (unprotected policy);
+	dkim-atps=neutral
+Received: from papa.theultimatesurvival.bid (unknown [67.212.164.109])
+	by in8.mail.ovh.net (Postfix) with ESMTP id 90002103C
+	for <REMOVED@PERSONALDATA.org>; Thu, 31 Aug 2017 20:13:56 +0200 (CEST)
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; s=k1; d=theultimatesurvival.bid;
+ h=Mime-Version:Content-Type:Date:From:Reply-To:Subject:To:Message-ID; i=contact@theultimatesurvival.bid;
+ bh=+YrbUJPNVh0a6ifdSznLKudl/QM=;
+ b=ptUe0FaLqrLaHlvcHx3nIO4t22Htjg7Wvv8ePt+3oc+u83sMEHAwNijsw1BUtGN6qzhCWqZd6uud
+   DCD6GoS/IbgL248Dm2RYZt5qo6AqWryvVVEU6UNlwhf0OC10RgB/+M1JPP+tMj7yUvTESyiduzNn
+   AdR/HEY1dRczR2SilPk=
+DomainKey-Signature: a=rsa-sha1; c=nofws; q=dns; s=k1; d=theultimatesurvival.bid;
+ b=uEyeIDTw4WgOJfevfusx1a69gu2fgUYGH1fXVgkJTHeAVKSYWgAV2re+Mq0+p40PnOYw9DLtsmv3
+   Ok8JvOcBjfSFjM+ZfOUEPxhwn2W8tuaEa2isptYxy3JWTcHrpfskfaDlZZoBLV8B0+GOiagTcqPr
+   DDDbtZxQ1H7HmGNhvp4=;
+Mime-Version: 1.0
+Content-Type: multipart/alternative; boundary="4b2c0d8c2be93cf60574bb430a69dcea"
+Date: Thu, 31 Aug 2017 14:12:00 -0400
+From: "The Coolest Multi Tool" <contact@theultimatesurvival.bid>
+Reply-To: "The EDT Mini-Tool is a powerful tool" <contact@theultimatesurvival.bid>
+Subject: [SPAM] Did You Get Your Free EDT Yet?
+To: <REMOVED@PERSONALDATA.org>
+Message-ID: <369a6y74798tq0lu-doo34v1hbhns3e03-27af2@theultimatesurvival.bid>
+X-Ovh-Remote: 67.212.164.109 ([67.212.164.109])
+X-Ovh-Tracer-Id: 5901404362377205760
+X-VR-SPAMSTATE: SPAM
+X-VR-SPAMSCORE: 300
+X-VR-SPAMCAUSE: gggruggvucftvghtrhhoucdtuddrfeelledrudekgdduudehucetufdoteggodetrfdotffvucfrrhhofhhilhgvmecuqfggjfdpvefjgfevmfevgfenuceurghilhhouhhtmecufedttdenucfjughrucefledtheculdeftddtmd
+X-Ovh-Spam-Status: SPAM
+X-Ovh-Spam-Reason: vr: SPAM; dkim: disabled; spf: disabled
+X-Ovh-Message-Type: SPAM
+X-Spam-Tag: YES
+
+--4b2c0d8c2be93cf60574bb430a69dcea
+Content-Type: text/plain;
+Content-Transfer-Encoding: 8bit
+
+Did You Get Your Free EDT Yet?
+
+=> http://theultimatesurvival.bid/zfcG0umfLpjPd4H1F-Fq4wNjClvjTJ1xNkCJ8CsxA2yB
+
+--4b2c0d8c2be93cf60574bb430a69dcea
+Content-Type: text/html;
+Content-Transfer-Encoding: 8bit
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Untitled Document</title>
+</head>
+<body><a href="http://theultimatesurvival.bid/ejmKN0YuGMTFZo4q-I3YI3jUStGZ4x1grgDsSw4E7rGe"><img border="0" src="http://theultimatesurvival.bid/i625tIhUojZlhy5A7pK2WMyiQghBfdVQ9Fq0G2UeLMFl" /> </a>
+<table align="center" style="border:1px solid #C0C0C0" width="680">
+	<tbody>
+		<tr>
+			<td style="padding-left:15px; font-family:Georgia, 'Times New Roman', Times, serif;"><br />
+			<b style="font-size:28px;">It&#39;s The Coolest Multi Tool You&#39;ve Ever Seen!</b><br />
+			<br />
+			Dear Survivalist,<br />
+			<br />
+			Yesterday I let you in on our newest piece of survival gear, <b>The EDT Mini-Tool...</b><br />
+			<br />
+			<a href="http://theultimatesurvival.bid/zfcG0umfLpjPd4H1F-Fq4wNjClvjTJ1xNkCJ8CsxA2yB" style="color:#0000CC;" target="_blank"><b>Click here to see it in action now... </b></a><br />
+			<br />
+			We&rsquo;ve got a special limited first run of these amazing tools and I want you to have one.<br />
+			<br />
+			But you have to claim it now, I only have a few of these left and I can&rsquo;t hold yours for very long.<br />
+			<br />
+			<a href="http://theultimatesurvival.bid/zfcG0umfLpjPd4H1F-Fq4wNjClvjTJ1xNkCJ8CsxA2yB" target="_blank"><img alt="See This Ultimate Tool" src="http://theultimatesurvival.bid/b96eab8bc00c097174.png" width="500" /></a><br />
+			<br />
+			<a href="http://theultimatesurvival.bid/zfcG0umfLpjPd4H1F-Fq4wNjClvjTJ1xNkCJ8CsxA2yB" style="color:#FF0000; text-decoration:none; background-color:#FFFF99; padding:4px; font-family:'Times New Roman', Times, serif; font-size:24px; padding-left:10px; padding-right:10px;" target="_blank"><b>Remember this tool is 100% free.</b></a><br />
+			<br />
+			All I ask is that you give your honest feedback and let me know what you think about it!<br />
+			<br />
+			<a href="http://theultimatesurvival.bid/zfcG0umfLpjPd4H1F-Fq4wNjClvjTJ1xNkCJ8CsxA2yB" style="color:#E80000; text-decoration:none;" target="_blank"><b>Grab yours today before they&rsquo;re all gone...</b></a><br />
+			<br />
+			P.S. If for any reason you don&rsquo;t want this amazing and<b> free EDT mini multi tool</b>, please forward this message on to someone you think could really use it.<br />
+			<br />
+			I&rsquo;d hate for it to go to waste&hellip;<br />
+			<br />
+			<a href="http://theultimatesurvival.bid/zfcG0umfLpjPd4H1F-Fq4wNjClvjTJ1xNkCJ8CsxA2yB" style="color:#FFFFFF; background-color:#FF9433; font-family:rockwell; padding-left:10px; padding-bottom:10px; padding-right:10px; padding-top:10px; border-radius: 18px; text-decoration:none; font-size:26px;" target="_blank"><b>&larr; Send Me My Free EDT Mini Tool Now &rarr;</b></a><br />
+			&nbsp;</td>
+		</tr>
+	</tbody>
+</table>
+&nbsp;
+
+<center><a href="http://theultimatesurvival.bid/KoIvQtW0N1eoOY9kGPddje_SnkeC-aB87TYe0R6ePXGi" target="_blank"><img alt="For Unsub" src="http://theultimatesurvival.bid/16884025599d0b9eb3.jpg" /></a> <!--obstetrician, questioned whether the patient h eaten before the operation. the anaesthetist, dr tak, reportedly tried to have a junior doctor carry out tests, which dr nainwal didn't agree with. "you stay within
+
+your aukat (limits)," dr nainwal, in green scrubs and surgery gear, is seen shouting at the anaesthetist. it quickly degenerated into shouting and name-ing, except the setting was not the street but an
+
+operation theatre, around a patient. a nurse and another doctor are seen trying to stop them and remind them that a surgery was on. dr nainwal and dr tak have both been suspended. 106 comments after a
+
+brief diplomatic tango necessitated to settle the question of who withdrew its ground troops first - india or china - it is public kledge that both sides agreed to simultaneously withdraw from the doklam
+
+region. india withdrew first, but only after it was convinced that china has fully aborted its ro-building program in the disputed region. while chinese media will continue to sell the narrative to its dark web
+
+that india unilaterally withdrew from the doklam plateau, most neutral observers commend the way india and bhutan jointly stood their ground in the face of chinese provocations. the peaceful re of the
+
+dispute has been prime minister narendra modi's biggest geo-strategic to date. it further demonstrated the of a quiet leership - cold and calculative moves beat chest-thumping rhetoric and results speak for
+
+themselves. the past 70 days of the public stand-off and private back-channel discussions makes for a classic case study of multi-party negotiations. in such complex negotiations, a factor ed batna - best
+
+alternative to a negotiated agreement - plays a crucial role. a well-calculated batna is the most important leverage a negotiating party has. for the first time, india went to the negotiating table with a clearly
+
+articulated and demonstrable "best alternative" - that it would not shy away from a limited border skirmish if negotiations failed. the demonstrability of this option confused china, which seemed to expect --><br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<a href="http://theultimatesurvival.bid/Q7mQpQ-vpDVqw84B53M_Fw4Rasnl8yzMlgBv9wlwUM4f" target="_blank"><img src="http://theultimatesurvival.bid/979347004fd931256c.jpg" /></a></center>
+</body>
+</html>
+
+--4b2c0d8c2be93cf60574bb430a69dcea--

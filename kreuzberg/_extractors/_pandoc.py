@@ -383,7 +383,7 @@ class PandocExtractor(Extractor):
                 )
 
             json_data = loads(await AsyncPath(metadata_file).read_text("utf-8"))
-            return self._extract_metadata(json_data)
+            return self._extract_metadata(json_data.get("meta", {}))
         except (RuntimeError, OSError, JSONDecodeError) as e:
             raise ParsingError("Failed to extract file data", context={"file": str(input_file)}) from e
         finally:
@@ -653,7 +653,7 @@ class PandocExtractor(Extractor):
             with Path(metadata_file).open(encoding="utf-8") as f:
                 json_data = loads(f.read())
 
-            return self._extract_metadata(json_data)
+            return self._extract_metadata(json_data.get("meta", {}))
 
         except (OSError, JSONDecodeError) as e:
             raise ParsingError("Failed to extract file data", context={"file": str(path)}) from e

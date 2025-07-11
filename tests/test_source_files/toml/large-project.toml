@@ -1,0 +1,464 @@
+# Large TOML project configuration for performance testing
+
+[project]
+name = "enterprise-platform"
+description = "Large-scale enterprise platform with comprehensive configuration"
+version = "3.2.1"
+authors = ["Enterprise Team <team@company.com>"]
+license = "Proprietary"
+readme = "README.md"
+homepage = "https://platform.company.com"
+repository = "https://github.com/company/enterprise-platform"
+keywords = ["enterprise", "platform", "microservices", "api"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Enterprise",
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries :: Application Frameworks"
+]
+
+[project.dependencies]
+fastapi = ">=0.104.0"
+uvicorn = ">=0.24.0"
+sqlalchemy = ">=2.0.0"
+alembic = ">=1.13.0"
+redis = ">=5.0.0"
+celery = ">=5.3.0"
+pydantic = ">=2.5.0"
+httpx = ">=0.25.0"
+structlog = ">=23.2.0"
+prometheus-client = ">=0.19.0"
+psycopg2-binary = ">=2.9.0"
+boto3 = ">=1.34.0"
+cryptography = ">=41.0.0"
+pillow = ">=10.1.0"
+pandas = ">=2.1.0"
+numpy = ">=1.25.0"
+scikit-learn = ">=1.3.0"
+elasticsearch = ">=8.11.0"
+kafka-python = ">=2.0.0"
+grpcio = ">=1.59.0"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.11.0",
+    "ruff>=0.1.6",
+    "mypy>=1.7.0",
+    "pre-commit>=3.6.0"
+]
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.12.0",
+    "httpx>=0.25.0",
+    "factory-boy>=3.3.0",
+    "freezegun>=1.2.0"
+]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.4.0",
+    "mkdocstrings[python]>=0.24.0"
+]
+monitoring = [
+    "prometheus-client>=0.19.0",
+    "opentelemetry-api>=1.21.0",
+    "opentelemetry-sdk>=1.21.0",
+    "sentry-sdk>=1.38.0"
+]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel>=0.41.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["src/platform"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+platform = ["py.typed", "templates/*", "static/*"]
+
+# Database configuration
+[database]
+host = "db-cluster.company.internal"
+port = 5432
+name = "enterprise_platform"
+user = "platform_user"
+pool_size = 20
+max_overflow = 40
+pool_timeout = 30
+pool_recycle = 3600
+echo = false
+echo_pool = false
+
+[database.read_replicas]
+replica1 = { host = "db-replica-1.company.internal", port = 5432, weight = 50 }
+replica2 = { host = "db-replica-2.company.internal", port = 5432, weight = 50 }
+
+# Redis configuration
+[redis]
+host = "redis-cluster.company.internal"
+port = 6379
+db = 0
+password = "redis_password_placeholder"
+socket_timeout = 5
+socket_connect_timeout = 5
+socket_keepalive = true
+socket_keepalive_options = {}
+health_check_interval = 30
+
+[redis.sentinel]
+service_name = "redis-master"
+sentinels = [
+    { host = "sentinel1.company.internal", port = 26379 },
+    { host = "sentinel2.company.internal", port = 26379 },
+    { host = "sentinel3.company.internal", port = 26379 }
+]
+
+# API Server configuration
+[server]
+host = "0.0.0.0"
+port = 8000
+workers = 8
+worker_class = "uvicorn.workers.UvicornWorker"
+worker_connections = 1000
+max_requests = 1000
+max_requests_jitter = 100
+timeout = 30
+keepalive = 5
+preload_app = true
+reload = false
+access_log = true
+error_log = true
+
+[server.ssl]
+enabled = true
+cert_file = "/etc/ssl/certs/platform.crt"
+key_file = "/etc/ssl/private/platform.key"
+ca_certs = "/etc/ssl/certs/ca-bundle.crt"
+verify_mode = "required"
+
+# Logging configuration
+[logging]
+level = "INFO"
+format = "json"
+timestamp_format = "iso"
+include_logger_name = true
+include_level_name = true
+include_thread_name = false
+include_process_name = true
+
+[logging.handlers]
+console = { class = "logging.StreamHandler", level = "INFO" }
+file = { class = "logging.handlers.RotatingFileHandler", filename = "/var/log/platform/app.log", maxBytes = 104857600, backupCount = 10 }
+syslog = { class = "logging.handlers.SysLogHandler", address = ["syslog.company.internal", 514] }
+
+[logging.loggers]
+"platform" = { level = "INFO", handlers = ["console", "file"] }
+"sqlalchemy.engine" = { level = "WARNING", handlers = ["file"] }
+"uvicorn.access" = { level = "INFO", handlers = ["file"] }
+"celery" = { level = "INFO", handlers = ["file", "syslog"] }
+
+# Celery task queue configuration
+[celery]
+broker_url = "redis://redis-cluster.company.internal:6379/1"
+result_backend = "redis://redis-cluster.company.internal:6379/2"
+task_serializer = "json"
+accept_content = ["json"]
+result_serializer = "json"
+timezone = "UTC"
+enable_utc = true
+worker_prefetch_multiplier = 4
+task_acks_late = true
+worker_disable_rate_limits = false
+task_compression = "gzip"
+result_compression = "gzip"
+
+[celery.task_routes]
+"platform.tasks.email.*" = { queue = "email" }
+"platform.tasks.processing.*" = { queue = "processing" }
+"platform.tasks.reports.*" = { queue = "reports" }
+"platform.tasks.notifications.*" = { queue = "notifications" }
+
+[celery.beat_schedule]
+cleanup_sessions = { task = "platform.tasks.cleanup.cleanup_expired_sessions", schedule = 3600.0 }
+generate_daily_reports = { task = "platform.tasks.reports.generate_daily_reports", schedule = "crontab(hour=2, minute=0)" }
+send_weekly_digest = { task = "platform.tasks.email.send_weekly_digest", schedule = "crontab(day_of_week=1, hour=9, minute=0)" }
+health_check_services = { task = "platform.tasks.monitoring.health_check_services", schedule = 300.0 }
+
+# Authentication and authorization
+[auth]
+secret_key = "super_secret_key_change_in_production"
+algorithm = "HS256"
+access_token_expire_minutes = 30
+refresh_token_expire_days = 30
+password_reset_expire_minutes = 15
+email_verification_expire_hours = 24
+
+[auth.oauth]
+google_client_id = "google_client_id_placeholder"
+google_client_secret = "google_client_secret_placeholder"
+github_client_id = "github_client_id_placeholder"
+github_client_secret = "github_client_secret_placeholder"
+microsoft_client_id = "microsoft_client_id_placeholder"
+microsoft_client_secret = "microsoft_client_secret_placeholder"
+
+[auth.ldap]
+server = "ldap://ldap.company.internal:389"
+bind_dn = "cn=platform,ou=services,dc=company,dc=internal"
+bind_password = "ldap_bind_password_placeholder"
+user_base_dn = "ou=users,dc=company,dc=internal"
+group_base_dn = "ou=groups,dc=company,dc=internal"
+user_filter = "(uid={username})"
+group_filter = "(cn={group})"
+
+# Email configuration
+[email]
+smtp_server = "smtp.company.internal"
+smtp_port = 587
+smtp_username = "platform@company.com"
+smtp_password = "smtp_password_placeholder"
+use_tls = true
+use_ssl = false
+timeout = 30
+default_from_email = "platform@company.com"
+default_from_name = "Enterprise Platform"
+
+[email.templates]
+base_template = "emails/base.html"
+welcome_template = "emails/welcome.html"
+password_reset_template = "emails/password_reset.html"
+email_verification_template = "emails/email_verification.html"
+weekly_digest_template = "emails/weekly_digest.html"
+
+# File storage configuration
+[storage]
+default_backend = "s3"
+max_file_size = 104857600  # 100MB
+allowed_extensions = [".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv"]
+upload_path = "/tmp/uploads"
+
+[storage.s3]
+bucket_name = "enterprise-platform-storage"
+region = "us-east-1"
+access_key_id = "aws_access_key_placeholder"
+secret_access_key = "aws_secret_key_placeholder"
+endpoint_url = ""
+use_ssl = true
+signature_version = "s3v4"
+
+[storage.local]
+upload_path = "/var/uploads/platform"
+serve_static = true
+static_url_prefix = "/static"
+
+# Cache configuration
+[cache]
+default_timeout = 3600
+key_prefix = "platform:"
+version = 1
+max_entries = 10000
+
+[cache.backends]
+redis = { backend = "redis", location = "redis://redis-cluster.company.internal:6379/3" }
+memory = { backend = "locmem", location = "memory_cache" }
+dummy = { backend = "dummy", location = "" }
+
+# API rate limiting
+[ratelimit]
+enabled = true
+storage_backend = "redis"
+storage_url = "redis://redis-cluster.company.internal:6379/4"
+default_limits = ["1000/hour", "100/minute"]
+exempt_paths = ["/health", "/metrics", "/docs"]
+
+[ratelimit.limits]
+"/api/auth/login" = ["10/minute", "100/hour"]
+"/api/auth/register" = ["5/minute", "50/hour"]
+"/api/users" = ["500/hour"]
+"/api/orders" = ["200/hour"]
+"/api/reports" = ["100/hour"]
+
+# Monitoring and metrics
+[monitoring]
+enabled = true
+metrics_port = 9090
+health_check_port = 8080
+collect_default_metrics = true
+collect_request_metrics = true
+collect_database_metrics = true
+collect_cache_metrics = true
+
+[monitoring.prometheus]
+job_name = "enterprise-platform"
+scrape_interval = "15s"
+metrics_path = "/metrics"
+honor_labels = false
+
+[monitoring.health_checks]
+database = { enabled = true, timeout = 5, critical = true }
+redis = { enabled = true, timeout = 3, critical = true }
+external_api = { enabled = true, timeout = 10, critical = false }
+disk_space = { enabled = true, threshold = 85, critical = true }
+memory_usage = { enabled = true, threshold = 90, critical = true }
+
+# Security configuration
+[security]
+allowed_hosts = ["platform.company.com", "api.company.com", "*.company.internal"]
+cors_allowed_origins = ["https://platform.company.com", "https://admin.company.com"]
+cors_allow_credentials = true
+cors_allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+cors_allow_headers = ["*"]
+trusted_proxies = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+
+[security.csrf]
+enabled = true
+cookie_secure = true
+cookie_httponly = true
+cookie_samesite = "strict"
+header_name = "X-CSRFToken"
+field_name = "csrfmiddlewaretoken"
+
+[security.session]
+cookie_secure = true
+cookie_httponly = true
+cookie_samesite = "strict"
+session_timeout = 3600
+max_age = 86400
+
+# Feature flags
+[features]
+new_dashboard = { enabled = true, rollout_percentage = 100 }
+enhanced_search = { enabled = true, rollout_percentage = 75 }
+advanced_analytics = { enabled = false, rollout_percentage = 0 }
+beta_api = { enabled = true, rollout_percentage = 10 }
+mobile_app_integration = { enabled = true, rollout_percentage = 50 }
+
+# External API integrations
+[integrations]
+
+[integrations.stripe]
+publishable_key = "pk_live_stripe_key_placeholder"
+secret_key = "sk_live_stripe_key_placeholder"
+webhook_secret = "whsec_stripe_webhook_placeholder"
+api_version = "2023-10-16"
+
+[integrations.sendgrid]
+api_key = "sendgrid_api_key_placeholder"
+from_email = "noreply@company.com"
+template_ids = { welcome = "d-welcome123", password_reset = "d-reset456" }
+
+[integrations.slack]
+webhook_url = "https://hooks.slack.com/services/placeholder"
+channel = "#platform-alerts"
+username = "Platform Bot"
+
+[integrations.datadog]
+api_key = "datadog_api_key_placeholder"
+app_key = "datadog_app_key_placeholder"
+site = "datadoghq.com"
+
+# Testing configuration
+[testing]
+database_url = "postgresql://test:test@localhost/platform_test"
+redis_url = "redis://localhost:6379/15"
+disable_auth = true
+mock_external_apis = true
+test_data_dir = "tests/fixtures"
+
+[testing.coverage]
+branch = true
+source = ["src/platform"]
+omit = ["*/tests/*", "*/migrations/*", "*/__pycache__/*"]
+fail_under = 85
+
+# Development configuration
+[development]
+debug = true
+auto_reload = true
+hot_reload = true
+debug_toolbar = true
+profiling = true
+sql_echo = false
+
+[development.fixtures]
+load_sample_data = true
+sample_users = 100
+sample_orders = 1000
+sample_products = 500
+
+# Deployment configuration
+[deployment]
+environment = "production"
+deploy_strategy = "blue_green"
+health_check_path = "/health"
+health_check_timeout = 30
+rollback_on_failure = true
+
+[deployment.kubernetes]
+namespace = "enterprise-platform"
+replicas = 3
+cpu_request = "500m"
+cpu_limit = "2000m"
+memory_request = "1Gi"
+memory_limit = "4Gi"
+image_pull_policy = "Always"
+
+[deployment.docker]
+image = "enterprise-platform"
+tag = "3.2.1"
+registry = "registry.company.internal"
+build_args = { ENVIRONMENT = "production", VERSION = "3.2.1" }
+
+# Backup configuration
+[backup]
+enabled = true
+schedule = "0 2 * * *"  # Daily at 2 AM
+retention_days = 30
+compression = true
+encryption = true
+
+[backup.database]
+pg_dump_options = ["--verbose", "--clean", "--if-exists"]
+backup_path = "/backups/database"
+remote_storage = "s3://enterprise-backups/database/"
+
+[backup.files]
+backup_paths = ["/var/uploads", "/var/logs"]
+exclude_patterns = ["*.tmp", "*.log"]
+remote_storage = "s3://enterprise-backups/files/"
+
+# Maintenance configuration
+[maintenance]
+enabled = false
+message = "The platform is currently undergoing scheduled maintenance."
+allowed_ips = ["192.168.1.100", "10.0.0.50"]
+bypass_key = "maintenance_bypass_key_placeholder"
+start_time = "2024-01-15T02:00:00Z"
+end_time = "2024-01-15T06:00:00Z"
+
+# Custom business logic configuration
+[business]
+default_currency = "USD"
+supported_currencies = ["USD", "EUR", "GBP", "CAD", "AUD"]
+tax_calculation = "inclusive"
+default_tax_rate = 0.08
+shipping_calculation = "weight_based"
+order_processing_delay = 300  # 5 minutes
+
+[business.pricing]
+free_tier_limits = { api_calls = 1000, storage_mb = 100, users = 10 }
+pro_tier_limits = { api_calls = 10000, storage_mb = 1000, users = 100 }
+enterprise_tier_limits = { api_calls = 100000, storage_mb = 10000, users = 1000 }
+
+[business.notifications]
+email_notifications = true
+sms_notifications = false
+push_notifications = true
+in_app_notifications = true
+notification_preferences = ["order_updates", "system_alerts", "marketing"]

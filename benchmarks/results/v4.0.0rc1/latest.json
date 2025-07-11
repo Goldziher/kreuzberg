@@ -1,0 +1,2020 @@
+{
+  "name": "backend_comparison_with_xlsx_20250711",
+  "version": "4.0.0rc1",
+  "timestamp": "2025-07-11T23:02:07.733212",
+  "system_info": {
+    "platform": "macOS-15.5-arm64-arm-64bit-Mach-O",
+    "python_version": "3.13.3 (main, Jun  9 2025, 21:26:22) [Clang 17.0.0 (clang-1700.0.13.5)]",
+    "cpu_count": 14,
+    "cpu_freq_max": 4,
+    "memory_total_gb": 48.0,
+    "architecture": "64bit",
+    "machine": "arm64",
+    "processor": "arm"
+  },
+  "summary": {
+    "total_duration_seconds": 62.77718666699366,
+    "total_benchmarks": 40,
+    "successful_benchmarks": 39,
+    "success_rate_percent": 97.5
+  },
+  "results": [
+    {
+      "name": "backend_kreuzberg_docx_document",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.048516",
+      "performance": {
+        "duration_seconds": 0.0839562500041211,
+        "memory_peak_mb": 80.0,
+        "memory_average_mb": 79.904296875,
+        "cpu_percent_average": 10.325,
+        "cpu_percent_peak": 46.9,
+        "gc_collections": {
+          "0": -844,
+          "1": 1,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "docx",
+        "file_name": "document.docx",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 11,
+        "word_count": 2,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_extractous_docx_document",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.130370",
+      "performance": {
+        "duration_seconds": 0.070434249995742,
+        "memory_peak_mb": 169.9375,
+        "memory_average_mb": 125.0234375,
+        "cpu_percent_average": 32.45,
+        "cpu_percent_peak": 64.9,
+        "gc_collections": {
+          "0": 25,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "docx",
+        "file_name": "document.docx",
+        "backend": "extractous",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 12,
+        "word_count": 2,
+        "line_count": 2,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 6,
+          "metadata_fields": [
+            "extended-properties:DocSecurityString",
+            "Content-Length",
+            "Content-Type",
+            "X-TIKA:Parsed-By",
+            "X-TIKA:Parsed-By-Full-Set",
+            "resourceName"
+          ],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.6,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 6,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_hybrid_docx_document",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.143451",
+      "performance": {
+        "duration_seconds": 0.0003480000013951212,
+        "memory_peak_mb": 169.9375,
+        "memory_average_mb": 169.9375,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 31,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "docx",
+        "file_name": "document.docx",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 11,
+        "word_count": 2,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_auto_docx_document",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.156232",
+      "performance": {
+        "duration_seconds": 6.18330086581409e-5,
+        "memory_peak_mb": 169.953125,
+        "memory_average_mb": 169.953125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "docx",
+        "file_name": "document.docx",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 11,
+        "word_count": 2,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_kreuzberg_xlsx_excel-multi-sheet",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.169122",
+      "performance": {
+        "duration_seconds": 0.0028831670060753822,
+        "memory_peak_mb": 169.953125,
+        "memory_average_mb": 169.953125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 622,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel-multi-sheet.xlsx",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 194,
+        "word_count": 56,
+        "line_count": 7,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 1,
+          "metadata_fields": ["sheet_count"],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.1,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 1,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_extractous_xlsx_excel-multi-sheet",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.214363",
+      "performance": {
+        "duration_seconds": 0.032235040998784825,
+        "memory_peak_mb": 188.96875,
+        "memory_average_mb": 179.9609375,
+        "cpu_percent_average": 31.2,
+        "cpu_percent_peak": 62.4,
+        "gc_collections": {
+          "0": 17,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel-multi-sheet.xlsx",
+        "backend": "extractous",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 110,
+        "word_count": 20,
+        "line_count": 15,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 7,
+          "metadata_fields": [
+            "Content-Length",
+            "Content-Type",
+            "protected",
+            "X-TIKA:Parsed-By-Full-Set",
+            "X-TIKA:Parsed-By",
+            "resourceName",
+            "extended-properties:DocSecurityString"
+          ],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.7,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_hybrid_xlsx_excel-multi-sheet",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.227509",
+      "performance": {
+        "duration_seconds": 0.000155083995196037,
+        "memory_peak_mb": 188.96875,
+        "memory_average_mb": 188.96875,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 25,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel-multi-sheet.xlsx",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 194,
+        "word_count": 56,
+        "line_count": 7,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 1,
+          "metadata_fields": ["sheet_count"],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.1,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 1,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_auto_xlsx_excel-multi-sheet",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.237898",
+      "performance": {
+        "duration_seconds": 5.408399738371372e-5,
+        "memory_peak_mb": 188.96875,
+        "memory_average_mb": 188.96875,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel-multi-sheet.xlsx",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 194,
+        "word_count": 56,
+        "line_count": 7,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 1,
+          "metadata_fields": ["sheet_count"],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.1,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 1,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_kreuzberg_xlsx_excel",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.250861",
+      "performance": {
+        "duration_seconds": 0.007274957999470644,
+        "memory_peak_mb": 188.984375,
+        "memory_average_mb": 188.984375,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 144,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel.xlsx",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 54360,
+        "word_count": 13361,
+        "line_count": 15,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 7,
+          "metadata_fields": [
+            "creator",
+            "created",
+            "modified",
+            "lastModifiedBy",
+            "application",
+            "appVersion",
+            "sheet_count"
+          ],
+          "metadata_completeness": 50.0,
+          "metadata_richness": 0.7,
+          "has_title": false,
+          "has_author": true,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 4,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_extractous_xlsx_excel",
+      "success": false,
+      "timestamp": "2025-07-11T23:01:05.285897",
+      "performance": {
+        "duration_seconds": 0.03405041599762626,
+        "memory_peak_mb": 190.515625,
+        "memory_average_mb": 190.3359375,
+        "cpu_percent_average": 24.1,
+        "cpu_percent_peak": 48.2,
+        "gc_collections": {
+          "0": 25,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": "ParseError(\"Parse error occurred : Unexpected RuntimeException from org.apache.tika.parser.microsoft.ooxml.OOXMLParser@201a0616\")"
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel.xlsx",
+        "backend": "extractous",
+        "operation": "extract_with_backend",
+        "error_traceback": "Traceback (most recent call last):\n  File \"/Users/naamanhirschfeld/workspace/kreuzberg/benchmarks/src/kreuzberg_benchmarks/runner.py\", line 138, in run_sync_benchmark\n    result = func()\n  File \"/Users/naamanhirschfeld/workspace/kreuzberg/benchmarks/src/kreuzberg_benchmarks/benchmarks.py\", line 300, in <lambda>\n    (lambda f=test_file, b=backend: extract_file_with_backend(\n                                    ~~~~~~~~~~~~~~~~~~~~~~~~~^\n        f, config=ExtractionConfig(extraction_backend=b)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )),\n    ^\n  File \"/Users/naamanhirschfeld/workspace/kreuzberg/.venv/lib/python3.13/site-packages/kreuzberg/_backend_router.py\", line 46, in extract_file_with_backend\n    result = extractor.extract_file_to_string(str(file_path))\nTypeError: ParseError(\"Parse error occurred : Unexpected RuntimeException from org.apache.tika.parser.microsoft.ooxml.OOXMLParser@201a0616\")\n"
+      },
+      "extraction_quality": null
+    },
+    {
+      "name": "backend_hybrid_xlsx_excel",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.299185",
+      "performance": {
+        "duration_seconds": 0.00011225001071579754,
+        "memory_peak_mb": 190.578125,
+        "memory_average_mb": 190.578125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 17,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel.xlsx",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 54360,
+        "word_count": 13361,
+        "line_count": 15,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 7,
+          "metadata_fields": [
+            "creator",
+            "created",
+            "modified",
+            "lastModifiedBy",
+            "application",
+            "appVersion",
+            "sheet_count"
+          ],
+          "metadata_completeness": 50.0,
+          "metadata_richness": 0.7,
+          "has_title": false,
+          "has_author": true,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 4,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_auto_xlsx_excel",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.312204",
+      "performance": {
+        "duration_seconds": 5.4374992032535374e-5,
+        "memory_peak_mb": 190.6875,
+        "memory_average_mb": 190.6875,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel.xlsx",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 54360,
+        "word_count": 13361,
+        "line_count": 15,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 7,
+          "metadata_fields": [
+            "creator",
+            "created",
+            "modified",
+            "lastModifiedBy",
+            "application",
+            "appVersion",
+            "sheet_count"
+          ],
+          "metadata_completeness": 50.0,
+          "metadata_richness": 0.7,
+          "has_title": false,
+          "has_author": true,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 4,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_kreuzberg_html_html",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.325131",
+      "performance": {
+        "duration_seconds": 0.002665625012014061,
+        "memory_peak_mb": 190.734375,
+        "memory_average_mb": 190.734375,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": -1365,
+          "1": 1,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "html",
+        "file_name": "html.html",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 138,
+        "word_count": 23,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_extractous_html_html",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.341901",
+      "performance": {
+        "duration_seconds": 0.01638312499562744,
+        "memory_peak_mb": 191.25,
+        "memory_average_mb": 191.25,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 17,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "html",
+        "file_name": "html.html",
+        "backend": "extractous",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 143,
+        "word_count": 23,
+        "line_count": 9,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 6,
+          "metadata_fields": [
+            "Content-Encoding",
+            "X-TIKA:Parsed-By-Full-Set",
+            "resourceName",
+            "Content-Length",
+            "Content-Type",
+            "X-TIKA:Parsed-By"
+          ],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.6,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 6,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_hybrid_html_html",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.354969",
+      "performance": {
+        "duration_seconds": 0.00013258299441076815,
+        "memory_peak_mb": 192.03125,
+        "memory_average_mb": 192.03125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "html",
+        "file_name": "html.html",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 138,
+        "word_count": 23,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_auto_html_html",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.367735",
+      "performance": {
+        "duration_seconds": 4.770899249706417e-5,
+        "memory_peak_mb": 192.03125,
+        "memory_average_mb": 192.03125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "html",
+        "file_name": "html.html",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 138,
+        "word_count": 23,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_kreuzberg_md_markdown",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.380547",
+      "performance": {
+        "duration_seconds": 0.00040708400774747133,
+        "memory_peak_mb": 192.03125,
+        "memory_average_mb": 192.03125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 19,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "md",
+        "file_name": "markdown.md",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 12,
+        "word_count": 2,
+        "line_count": 2,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_extractous_md_markdown",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.396696",
+      "performance": {
+        "duration_seconds": 0.015786415999173187,
+        "memory_peak_mb": 192.03125,
+        "memory_average_mb": 192.03125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 17,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "md",
+        "file_name": "markdown.md",
+        "backend": "extractous",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 13,
+        "word_count": 2,
+        "line_count": 3,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 6,
+          "metadata_fields": [
+            "resourceName",
+            "X-TIKA:Parsed-By-Full-Set",
+            "Content-Type",
+            "Content-Encoding",
+            "Content-Length",
+            "X-TIKA:Parsed-By"
+          ],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.6,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 6,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_hybrid_md_markdown",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.409831",
+      "performance": {
+        "duration_seconds": 0.00011283400817774236,
+        "memory_peak_mb": 192.03125,
+        "memory_average_mb": 192.03125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "md",
+        "file_name": "markdown.md",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 12,
+        "word_count": 2,
+        "line_count": 2,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_auto_md_markdown",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:05.421114",
+      "performance": {
+        "duration_seconds": 5.008300649933517e-5,
+        "memory_peak_mb": 192.03125,
+        "memory_average_mb": 192.03125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "md",
+        "file_name": "markdown.md",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 12,
+        "word_count": 2,
+        "line_count": 2,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_kreuzberg_pdf_non-ascii-text",
+      "success": true,
+      "timestamp": "2025-07-11T23:01:14.731498",
+      "performance": {
+        "duration_seconds": 9.303509874996962,
+        "memory_peak_mb": 516.625,
+        "memory_average_mb": 508.79367197766095,
+        "cpu_percent_average": 51.07766097240473,
+        "cpu_percent_peak": 171.5,
+        "gc_collections": {
+          "0": 5,
+          "1": -10,
+          "2": 1
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-ascii-text.pdf",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 8,
+          "metadata_fields": [
+            "title",
+            "authors",
+            "created_at",
+            "modified_at",
+            "created_by",
+            "width",
+            "height",
+            "summary"
+          ],
+          "metadata_completeness": 100.0,
+          "metadata_richness": 0.8,
+          "has_title": true,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_extractous_pdf_non-ascii-text",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:02.149248",
+      "performance": {
+        "duration_seconds": 47.40475529199466,
+        "memory_peak_mb": 576.796875,
+        "memory_average_mb": 546.8671875,
+        "cpu_percent_average": 15.05,
+        "cpu_percent_peak": 30.1,
+        "gc_collections": {
+          "0": 25,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-ascii-text.pdf",
+        "backend": "extractous",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 83281,
+        "word_count": 11377,
+        "line_count": 2664,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": true,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 44,
+          "metadata_fields": [
+            "pdf:totalUnmappedUnicodeChars",
+            "access_permission:extract_content",
+            "pdf:overallPercentageUnmappedUnicodeChars",
+            "access_permission:extract_for_accessibility",
+            "pdf:containsNonEmbeddedFont",
+            "pdf:unmappedUnicodeCharsPerPage",
+            "pdf:docinfo:producer",
+            "pdf:PDFVersion",
+            "dcterms:created",
+            "dc:creator",
+            "X-TIKA:Parsed-By-Full-Set",
+            "access_permission:can_modify",
+            "pdf:encrypted",
+            "dc:title",
+            "pdf:docinfo:creator",
+            "access_permission:assemble_document",
+            "pdf:charsPerPage",
+            "resourceName",
+            "access_permission:can_print",
+            "xmp:ModifyDate",
+            "access_permission:fill_in_form",
+            "pdf:hasMarkedContent",
+            "Content-Length",
+            "pdf:docinfo:created",
+            "Content-Type",
+            "xmp:MetadataDate",
+            "dc:format",
+            "pdf:docinfo:title",
+            "xmpMM:DocumentID",
+            "pdf:docinfo:creator_tool",
+            "xmp:CreatorTool",
+            "pdf:docinfo:modified",
+            "access_permission:can_print_degraded",
+            "pdf:hasCollection",
+            "pdf:num3DAnnotations",
+            "X-TIKA:Parsed-By",
+            "pdf:hasXFA",
+            "pdf:containsDamagedFont",
+            "pdf:producer",
+            "xmp:CreateDate",
+            "access_permission:modify_annotations",
+            "xmpTPg:NPages",
+            "pdf:hasXMP",
+            "dcterms:modified"
+          ],
+          "metadata_completeness": 75.0,
+          "metadata_richness": 1.0,
+          "has_title": true,
+          "has_author": true,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 44,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_hybrid_pdf_non-ascii-text",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:02.162386",
+      "performance": {
+        "duration_seconds": 0.00018720900698099285,
+        "memory_peak_mb": 577.34375,
+        "memory_average_mb": 577.34375,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-ascii-text.pdf",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 8,
+          "metadata_fields": [
+            "title",
+            "authors",
+            "created_at",
+            "modified_at",
+            "created_by",
+            "width",
+            "height",
+            "summary"
+          ],
+          "metadata_completeness": 100.0,
+          "metadata_richness": 0.8,
+          "has_title": true,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_auto_pdf_non-ascii-text",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:02.175316",
+      "performance": {
+        "duration_seconds": 8.45829927129671e-5,
+        "memory_peak_mb": 577.34375,
+        "memory_average_mb": 577.34375,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-ascii-text.pdf",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 8,
+          "metadata_fields": [
+            "title",
+            "authors",
+            "created_at",
+            "modified_at",
+            "created_by",
+            "width",
+            "height",
+            "summary"
+          ],
+          "metadata_completeness": 100.0,
+          "metadata_richness": 0.8,
+          "has_title": true,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_kreuzberg_pdf_non-searchable",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:02.459553",
+      "performance": {
+        "duration_seconds": 0.27129312499891967,
+        "memory_peak_mb": 601.4375,
+        "memory_average_mb": 599.69921875,
+        "cpu_percent_average": 56.1625,
+        "cpu_percent_peak": 159.8,
+        "gc_collections": {
+          "0": 70,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-searchable.pdf",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 8,
+          "metadata_fields": [
+            "title",
+            "authors",
+            "created_at",
+            "modified_at",
+            "created_by",
+            "width",
+            "height",
+            "summary"
+          ],
+          "metadata_completeness": 100.0,
+          "metadata_richness": 0.8,
+          "has_title": true,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_extractous_pdf_non-searchable",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:03.140460",
+      "performance": {
+        "duration_seconds": 0.6802411249955185,
+        "memory_peak_mb": 601.4375,
+        "memory_average_mb": 601.4375,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 25,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-searchable.pdf",
+        "backend": "extractous",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 354,
+        "word_count": 62,
+        "line_count": 12,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": true,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 39,
+          "metadata_fields": [
+            "pdf:PDFVersion",
+            "pdf:unmappedUnicodeCharsPerPage",
+            "pdf:docinfo:producer",
+            "access_permission:can_print_degraded",
+            "resourceName",
+            "pdf:hasXMP",
+            "pdf:hasCollection",
+            "access_permission:assemble_document",
+            "pdf:docinfo:created",
+            "pdf:containsDamagedFont",
+            "access_permission:fill_in_form",
+            "xmpTPg:NPages",
+            "pdf:totalUnmappedUnicodeChars",
+            "pdf:docinfo:creator_tool",
+            "pdf:num3DAnnotations",
+            "pdf:containsNonEmbeddedFont",
+            "dc:creator",
+            "pdf:hasXFA",
+            "dcterms:modified",
+            "dc:title",
+            "pdf:docinfo:creator",
+            "X-TIKA:Parsed-By-Full-Set",
+            "dcterms:created",
+            "Content-Type",
+            "pdf:producer",
+            "access_permission:extract_for_accessibility",
+            "access_permission:extract_content",
+            "pdf:charsPerPage",
+            "access_permission:can_print",
+            "X-TIKA:Parsed-By",
+            "xmp:CreatorTool",
+            "pdf:hasMarkedContent",
+            "pdf:encrypted",
+            "pdf:docinfo:title",
+            "access_permission:can_modify",
+            "access_permission:modify_annotations",
+            "dc:format",
+            "pdf:docinfo:modified",
+            "Content-Length"
+          ],
+          "metadata_completeness": 75.0,
+          "metadata_richness": 1.0,
+          "has_title": true,
+          "has_author": true,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 39,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_hybrid_pdf_non-searchable",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:03.153556",
+      "performance": {
+        "duration_seconds": 0.00015987500955816358,
+        "memory_peak_mb": 617.046875,
+        "memory_average_mb": 617.046875,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-searchable.pdf",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 8,
+          "metadata_fields": [
+            "title",
+            "authors",
+            "created_at",
+            "modified_at",
+            "created_by",
+            "width",
+            "height",
+            "summary"
+          ],
+          "metadata_completeness": 100.0,
+          "metadata_richness": 0.8,
+          "has_title": true,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_auto_pdf_non-searchable",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:03.166442",
+      "performance": {
+        "duration_seconds": 6.149998807813972e-5,
+        "memory_peak_mb": 617.046875,
+        "memory_average_mb": 617.046875,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-searchable.pdf",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 8,
+          "metadata_fields": [
+            "title",
+            "authors",
+            "created_at",
+            "modified_at",
+            "created_by",
+            "width",
+            "height",
+            "summary"
+          ],
+          "metadata_completeness": 100.0,
+          "metadata_richness": 0.8,
+          "has_title": true,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_kreuzberg_jpg_ocr-image",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:03.286308",
+      "performance": {
+        "duration_seconds": 0.10901491699041799,
+        "memory_peak_mb": 617.046875,
+        "memory_average_mb": 617.046875,
+        "cpu_percent_average": 3.2299999999999995,
+        "cpu_percent_peak": 24.5,
+        "gc_collections": {
+          "0": 27,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "jpg",
+        "file_name": "ocr-image.jpg",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_extractous_jpg_ocr-image",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:03.780482",
+      "performance": {
+        "duration_seconds": 0.48089158300717827,
+        "memory_peak_mb": 617.5625,
+        "memory_average_mb": 617.3046875,
+        "cpu_percent_average": 1.35,
+        "cpu_percent_peak": 2.7,
+        "gc_collections": {
+          "0": 25,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "jpg",
+        "file_name": "ocr-image.jpg",
+        "backend": "extractous",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 1088,
+        "word_count": 186,
+        "line_count": 90,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": true,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 26,
+          "metadata_fields": [
+            "Thumbnail Width Pixels",
+            "Component 1",
+            "resourceName",
+            "Compression Type",
+            "Extension Code",
+            "Version",
+            "X-TIKA:Parsed-By",
+            "Content-Type-Parser-Override",
+            "Content-Length",
+            "Thumbnail Height Pixels",
+            "File Size",
+            "File Name",
+            "Resolution Units",
+            "Image Width",
+            "File Modified Date",
+            "Number of Tables",
+            "tiff:ImageLength",
+            "Number of Components",
+            "tiff:BitsPerSample",
+            "Data Precision",
+            "Content-Type",
+            "X-TIKA:Parsed-By-Full-Set",
+            "Image Height",
+            "X Resolution",
+            "tiff:ImageWidth",
+            "Y Resolution"
+          ],
+          "metadata_completeness": 25.0,
+          "metadata_richness": 1.0,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 26,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_hybrid_jpg_ocr-image",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:03.793783",
+      "performance": {
+        "duration_seconds": 0.00021945900516584516,
+        "memory_peak_mb": 617.5625,
+        "memory_average_mb": 617.5625,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "jpg",
+        "file_name": "ocr-image.jpg",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_auto_jpg_ocr-image",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:03.806783",
+      "performance": {
+        "duration_seconds": 0.00012187499669380486,
+        "memory_peak_mb": 617.578125,
+        "memory_average_mb": 617.578125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "jpg",
+        "file_name": "ocr-image.jpg",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "backend_kreuzberg_pptx_pitch-deck-presentation",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:03.994340",
+      "performance": {
+        "duration_seconds": 0.1797693749977043,
+        "memory_peak_mb": 961.234375,
+        "memory_average_mb": 795.0885416666666,
+        "cpu_percent_average": 93.33999999999999,
+        "cpu_percent_peak": 107.6,
+        "gc_collections": {
+          "0": 179,
+          "1": 1,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pptx",
+        "file_name": "pitch-deck-presentation.pptx",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 7675,
+        "word_count": 898,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 3,
+          "metadata_fields": ["created_by", "modified_at", "version"],
+          "metadata_completeness": 50.0,
+          "metadata_richness": 0.3,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 3,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_extractous_pptx_pitch-deck-presentation",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:07.572637",
+      "performance": {
+        "duration_seconds": 3.565606000003754,
+        "memory_peak_mb": 1264.53125,
+        "memory_average_mb": 1112.890625,
+        "cpu_percent_average": 15.75,
+        "cpu_percent_peak": 31.5,
+        "gc_collections": {
+          "0": 25,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pptx",
+        "file_name": "pitch-deck-presentation.pptx",
+        "backend": "extractous",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 5997,
+        "word_count": 705,
+        "line_count": 848,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": true,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 18,
+          "metadata_fields": [
+            "xmpTPg:NPages",
+            "Content-Type",
+            "extended-properties:Application",
+            "resourceName",
+            "dcterms:modified",
+            "X-TIKA:Parsed-By",
+            "dcterms:created",
+            "meta:paragraph-count",
+            "X-TIKA:Parsed-By-Full-Set",
+            "Content-Length",
+            "custom:ContentTypeId",
+            "extended-properties:DocSecurityString",
+            "meta:slide-count",
+            "extended-properties:Template",
+            "meta:word-count",
+            "extended-properties:PresentationFormat",
+            "cp:revision",
+            "extended-properties:AppVersion"
+          ],
+          "metadata_completeness": 50.0,
+          "metadata_richness": 1.0,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 18,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_hybrid_pptx_pitch-deck-presentation",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:07.585864",
+      "performance": {
+        "duration_seconds": 0.00018345800344832242,
+        "memory_peak_mb": 1264.53125,
+        "memory_average_mb": 1264.53125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pptx",
+        "file_name": "pitch-deck-presentation.pptx",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 7675,
+        "word_count": 898,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 3,
+          "metadata_fields": ["created_by", "modified_at", "version"],
+          "metadata_completeness": 50.0,
+          "metadata_richness": 0.3,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 3,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_auto_pptx_pitch-deck-presentation",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:07.598797",
+      "performance": {
+        "duration_seconds": 0.00010154199844691902,
+        "memory_peak_mb": 1264.546875,
+        "memory_average_mb": 1264.546875,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pptx",
+        "file_name": "pitch-deck-presentation.pptx",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 7675,
+        "word_count": 898,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 3,
+          "metadata_fields": ["created_by", "modified_at", "version"],
+          "metadata_completeness": 50.0,
+          "metadata_richness": 0.3,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 3,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_kreuzberg_pdf_sample-contract",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:07.624308",
+      "performance": {
+        "duration_seconds": 0.017144917001132853,
+        "memory_peak_mb": 1269.734375,
+        "memory_average_mb": 1267.140625,
+        "cpu_percent_average": 50.05,
+        "cpu_percent_peak": 100.1,
+        "gc_collections": {
+          "0": 341,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "sample-contract.pdf",
+        "backend": "kreuzberg",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 31745,
+        "word_count": 4791,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 8,
+          "metadata_fields": [
+            "title",
+            "authors",
+            "created_at",
+            "modified_at",
+            "created_by",
+            "width",
+            "height",
+            "summary"
+          ],
+          "metadata_completeness": 100.0,
+          "metadata_richness": 0.8,
+          "has_title": true,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_extractous_pdf_sample-contract",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:07.705862",
+      "performance": {
+        "duration_seconds": 0.06861579100950621,
+        "memory_peak_mb": 1274.09375,
+        "memory_average_mb": 1273.5390625,
+        "cpu_percent_average": 41.2,
+        "cpu_percent_peak": 82.4,
+        "gc_collections": {
+          "0": 25,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "sample-contract.pdf",
+        "backend": "extractous",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 32995,
+        "word_count": 4792,
+        "line_count": 680,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 43,
+          "metadata_fields": [
+            "access_permission:modify_annotations",
+            "xmpTPg:NPages",
+            "pdf:hasXMP",
+            "X-TIKA:Parsed-By",
+            "access_permission:can_modify",
+            "access_permission:can_print",
+            "pdf:docinfo:modified",
+            "dc:creator",
+            "pdf:docinfo:creator_tool",
+            "pdf:docinfo:created",
+            "access_permission:extract_content",
+            "access_permission:extract_for_accessibility",
+            "access_permission:assemble_document",
+            "xmp:CreateDate",
+            "pdf:encrypted",
+            "resourceName",
+            "dcterms:created",
+            "access_permission:can_print_degraded",
+            "access_permission:fill_in_form",
+            "dc:title",
+            "Content-Type",
+            "dcterms:modified",
+            "pdf:charsPerPage",
+            "pdf:unmappedUnicodeCharsPerPage",
+            "dc:format",
+            "pdf:hasMarkedContent",
+            "pdf:hasCollection",
+            "pdf:totalUnmappedUnicodeChars",
+            "pdf:num3DAnnotations",
+            "pdf:producer",
+            "pdf:PDFVersion",
+            "xmp:CreatorTool",
+            "pdf:docinfo:title",
+            "xmpMM:DocumentID",
+            "xmp:ModifyDate",
+            "pdf:docinfo:producer",
+            "X-TIKA:Parsed-By-Full-Set",
+            "Content-Length",
+            "pdf:docinfo:creator",
+            "pdf:containsDamagedFont",
+            "pdf:containsNonEmbeddedFont",
+            "pdf:hasXFA",
+            "pdf:overallPercentageUnmappedUnicodeChars"
+          ],
+          "metadata_completeness": 75.0,
+          "metadata_richness": 1.0,
+          "has_title": true,
+          "has_author": true,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 43,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_hybrid_pdf_sample-contract",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:07.719179",
+      "performance": {
+        "duration_seconds": 0.00019066700770054013,
+        "memory_peak_mb": 1274.09375,
+        "memory_average_mb": 1274.09375,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "sample-contract.pdf",
+        "backend": "hybrid",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 31745,
+        "word_count": 4791,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 8,
+          "metadata_fields": [
+            "title",
+            "authors",
+            "created_at",
+            "modified_at",
+            "created_by",
+            "width",
+            "height",
+            "summary"
+          ],
+          "metadata_completeness": 100.0,
+          "metadata_richness": 0.8,
+          "has_title": true,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "backend_auto_pdf_sample-contract",
+      "success": true,
+      "timestamp": "2025-07-11T23:02:07.732404",
+      "performance": {
+        "duration_seconds": 6.133399438112974e-5,
+        "memory_peak_mb": 1274.09375,
+        "memory_average_mb": 1274.09375,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "sample-contract.pdf",
+        "backend": "auto",
+        "operation": "extract_with_backend"
+      },
+      "extraction_quality": {
+        "text_length": 31745,
+        "word_count": 4791,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 8,
+          "metadata_fields": [
+            "title",
+            "authors",
+            "created_at",
+            "modified_at",
+            "created_by",
+            "width",
+            "height",
+            "summary"
+          ],
+          "metadata_completeness": 100.0,
+          "metadata_richness": 0.8,
+          "has_title": true,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 7,
+          "extraction_backend": null
+        }
+      }
+    }
+  ]
+}

@@ -12,6 +12,7 @@ from kreuzberg import (
     extract_file,
     extract_file_sync,
 )
+from kreuzberg._backend_router import extract_file_with_backend
 
 
 class KreuzbergBenchmarks:
@@ -28,7 +29,7 @@ class KreuzbergBenchmarks:
 
         extensions = [
             ".pdf",
-            ".docx", 
+            ".docx",
             ".xlsx",
             ".pptx",
             ".html",
@@ -39,7 +40,7 @@ class KreuzbergBenchmarks:
             ".eml",
             ".json",
             ".yaml",
-            ".yml", 
+            ".yml",
             ".toml",
         ]
         test_files: list[Path] = []
@@ -277,3 +278,37 @@ class KreuzbergBenchmarks:
                 },
             ),
         ]
+
+    def get_backend_benchmarks(
+        self,
+    ) -> list[tuple[str, Callable[[], Any], dict[str, Any]]]:
+        """Get benchmarks for comparing different extraction backends."""
+        benchmarks: list[tuple[str, Callable[[], Any], dict[str, Any]]] = []
+        backends = ["kreuzberg", "extractous", "hybrid", "auto"]
+
+        for test_file in self.test_files:
+            if not test_file.exists():
+                continue
+
+            file_type = test_file.suffix[1:]
+            base_name = test_file.stem
+
+            for backend in backends:
+                benchmarks.append(
+                    (
+                        f"backend_{backend}_{file_type}_{base_name}",
+                        (
+                            lambda f=test_file, b=backend: extract_file_with_backend(
+                                f, config=ExtractionConfig(extraction_backend=b)
+                            )
+                        ),
+                        {
+                            "file_type": file_type,
+                            "file_name": str(test_file.name),
+                            "backend": backend,
+                            "operation": "extract_with_backend",
+                        },
+                    )
+                )
+
+        return benchmarks

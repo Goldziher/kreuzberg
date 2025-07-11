@@ -93,6 +93,10 @@ class PDFExtractor(Extractor):
 
     def extract_path_sync(self, path: Path) -> ExtractionResult:
         """Pure sync implementation of PDF extraction from path."""
+        # Read PDF bytes for metadata extraction
+        with path.open("rb") as f:
+            content_bytes = f.read()
+
         text = self._extract_pdf_searchable_text_sync(path)
 
         if self.config.force_ocr or not self._validate_extracted_text(text):
@@ -109,10 +113,15 @@ class PDFExtractor(Extractor):
 
         text = normalize_spaces(text)
 
+        # Extract metadata
+        from kreuzberg._playa import extract_pdf_metadata_sync
+
+        metadata = extract_pdf_metadata_sync(content_bytes)
+
         return ExtractionResult(
             content=text,
             mime_type=PLAIN_TEXT_MIME_TYPE,
-            metadata={},
+            metadata=metadata,
             tables=tables,
             chunks=[],
         )

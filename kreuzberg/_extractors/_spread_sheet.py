@@ -3,6 +3,8 @@ from __future__ import annotations
 import contextlib
 import csv
 import sys
+import xml.etree.ElementTree as ET
+import zipfile
 from datetime import date, datetime, time, timedelta
 from io import StringIO
 from pathlib import Path
@@ -45,8 +47,16 @@ class SpreadSheetExtractor(Extractor):
             try:
                 results: list[str] = await run_taskgroup(*tasks)
 
+                # Extract metadata
+                metadata = await run_sync(self._extract_xlsx_metadata, path)
+
+                from kreuzberg._types import normalize_metadata
+
                 return ExtractionResult(
-                    content="\n\n".join(results), mime_type=MARKDOWN_MIME_TYPE, metadata={}, chunks=[]
+                    content="\n\n".join(results),
+                    mime_type=MARKDOWN_MIME_TYPE,
+                    metadata=normalize_metadata(metadata),
+                    chunks=[],
                 )
             except ExceptionGroup as eg:
                 raise ParsingError(
@@ -87,7 +97,17 @@ class SpreadSheetExtractor(Extractor):
                 sheet_text = self._convert_sheet_to_text_sync(workbook, sheet_name)
                 results.append(sheet_text)
 
-            return ExtractionResult(content="\n\n".join(results), mime_type=MARKDOWN_MIME_TYPE, metadata={}, chunks=[])
+            # Extract metadata
+            metadata = self._extract_xlsx_metadata(path)
+
+            from kreuzberg._types import normalize_metadata
+
+            return ExtractionResult(
+                content="\n\n".join(results),
+                mime_type=MARKDOWN_MIME_TYPE,
+                metadata=normalize_metadata(metadata),
+                chunks=[],
+            )
         except Exception as e:
             raise ParsingError(
                 "Failed to extract file data",
@@ -181,3 +201,81 @@ class SpreadSheetExtractor(Extractor):
             result = "\n".join(markdown_lines)
 
         return f"## {sheet_name}\n\n{normalize_spaces(result)}"
+
+    @staticmethod
+    def _extract_xlsx_metadata(path: Path) -> dict[str, Any]:
+        """Extract metadata from XLSX file."""
+        metadata: dict[str, Any] = {}
+
+        try:
+            with zipfile.ZipFile(path, "r") as z:
+                # Extract core properties
+                if "docProps/core.xml" in z.namelist():
+                    core_xml = z.read("docProps/core.xml")
+                    root = ET.fromstring(core_xml)
+
+                    # Define namespaces
+                    namespaces = {
+                        "cp": "http://schemas.openxmlformats.org/package/2006/metadata/core-properties",
+                        "dc": "http://purl.org/dc/elements/1.1/",
+                        "dcterms": "http://purl.org/dc/terms/",
+                    }
+
+                    # Extract fields
+                    field_mappings = [
+                        ("dc:title", "title"),
+                        ("dc:subject", "subject"),
+                        ("dc:creator", "creator"),
+                        ("cp:keywords", "keywords"),
+                        ("dc:description", "description"),
+                        ("cp:category", "category"),
+                        ("dcterms:created", "created"),
+                        ("dcterms:modified", "modified"),
+                        ("cp:lastModifiedBy", "lastModifiedBy"),
+                        ("cp:revision", "revision"),
+                        ("dc:language", "language"),
+                    ]
+
+                    for xml_field, name in field_mappings:
+                        elem = root.find(xml_field, namespaces)
+                        if elem is not None and elem.text:
+                            metadata[name] = elem.text
+
+                # Extract app properties
+                if "docProps/app.xml" in z.namelist():
+                    app_xml = z.read("docProps/app.xml")
+                    root = ET.fromstring(app_xml)
+
+                    # Extract useful app properties
+                    app_fields = [
+                        ("Application", "application"),
+                        ("Company", "company"),
+                        ("AppVersion", "appVersion"),
+                        ("TotalTime", "totalEditingTime"),
+                        ("Pages", "pages"),
+                        ("Words", "words"),
+                        ("Characters", "characters"),
+                        ("CharactersWithSpaces", "charactersWithSpaces"),
+                        ("Lines", "lines"),
+                        ("Paragraphs", "paragraphs"),
+                    ]
+
+                    for child in root:
+                        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
+                        for xml_tag, field_name in app_fields:
+                            if tag == xml_tag and child.text and child.text.strip():
+                                metadata[field_name] = child.text.strip()
+
+                # Count sheets
+                workbook_xml_path = "xl/workbook.xml"
+                if workbook_xml_path in z.namelist():
+                    workbook_xml = z.read(workbook_xml_path)
+                    root = ET.fromstring(workbook_xml)
+                    sheets = root.findall(".//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}sheet")
+                    metadata["sheet_count"] = len(sheets)
+
+        except (zipfile.BadZipFile, ET.ParseError, KeyError):
+            # If metadata extraction fails, continue with empty metadata
+            pass
+
+        return metadata

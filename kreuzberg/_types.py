@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from kreuzberg._ocr._tesseract import TesseractConfig
 
 OcrBackendType = Literal["tesseract", "easyocr", "paddleocr"]
+ExtractionBackendType = Literal["auto", "kreuzberg", "extractous", "hybrid"]
 
 
 class TableData(TypedDict):
@@ -100,6 +101,66 @@ class Metadata(TypedDict, total=False):
     width: NotRequired[int]
     """Width of the document page/slide/image, if applicable."""
 
+    # Email-specific fields
+    email_from: NotRequired[str]
+    """Email sender (from field)."""
+    email_to: NotRequired[list[str]]
+    """Email recipients (to field)."""
+    email_cc: NotRequired[list[str]]
+    """Email carbon copy recipients."""
+    email_bcc: NotRequired[list[str]]
+    """Email blind carbon copy recipients."""
+
+    # Backend tracking fields
+    hybrid_backend: NotRequired[bool]
+    """Whether this extraction used the hybrid backend."""
+    primary_backend: NotRequired[str]
+    """Name of the primary backend used for extraction."""
+    fallback_backend: NotRequired[str]
+    """Name of the fallback backend used if primary failed."""
+    extraction_strategy: NotRequired[str]
+    """Extraction strategy used by hybrid backend."""
+    file_type: NotRequired[str]
+    """Detected file type for backend routing."""
+    mime_type: NotRequired[str]
+    """MIME type used for backend selection."""
+    primary_error: NotRequired[str]
+    """Error message from primary backend if fallback was used."""
+    backend: NotRequired[str]
+    """Name of the backend used for extraction."""
+    extraction_time: NotRequired[float]
+    """Time taken for extraction in seconds."""
+    word_count: NotRequired[int]
+    """Number of words in extracted content."""
+    char_count: NotRequired[int]
+    """Number of characters in extracted content."""
+    provided_mime_type: NotRequired[str]
+    """MIME type provided as input to extraction."""
+    sheet_count: NotRequired[int]
+    """Number of sheets in spreadsheet documents."""
+
+
+def normalize_metadata(data: dict[str, Any] | None) -> Metadata:
+    """Normalize any dict to proper Metadata TypedDict.
+
+    Filters out invalid keys and ensures type safety.
+    """
+    if not data:
+        return {}
+
+    # Get all valid Metadata keys from TypedDict annotations
+    from typing import get_type_hints
+
+    valid_keys = set(get_type_hints(Metadata).keys())
+
+    # Filter and return only valid metadata
+    normalized: Metadata = {}
+    for key, value in data.items():
+        if key in valid_keys and value is not None:
+            normalized[key] = value  # type: ignore[literal-required]
+
+    return normalized
+
 
 @dataclass(frozen=True)
 class Entity:
@@ -155,6 +216,15 @@ class ExtractionConfig:
     engine, and configure engine-specific parameters.
     """
 
+    extraction_backend: ExtractionBackendType = "auto"
+    """The extraction backend to use.
+
+    Options:
+        - 'auto': Automatically select the best backend based on file type and availability
+        - 'kreuzberg': Use only the vanilla Kreuzberg extractors
+        - 'extractous': Use only Extractous (if available)
+        - 'hybrid': Use intelligent hybrid routing between backends
+    """
     force_ocr: bool = False
     """Whether to force OCR."""
     chunk_content: bool = False
