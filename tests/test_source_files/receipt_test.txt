@@ -1,0 +1,5 @@
+This is a test receipt.
+Cash Receipt
+Payment for services.
+Subtotal: $50.00
+Total Due: $50.00

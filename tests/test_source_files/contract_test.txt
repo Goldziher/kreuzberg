@@ -1,0 +1,4 @@
+This is a test contract.
+This agreement is between Party A and Party B.
+Terms and conditions apply.
+Signature: _________________

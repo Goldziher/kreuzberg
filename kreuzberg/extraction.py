@@ -26,7 +26,9 @@ if TYPE_CHECKING:
 DEFAULT_CONFIG: Final[ExtractionConfig] = ExtractionConfig()
 
 
-def _validate_and_post_process_helper(result: ExtractionResult, config: ExtractionConfig) -> ExtractionResult:
+def _validate_and_post_process_helper(
+    result: ExtractionResult, config: ExtractionConfig, file_path: Path | None = None
+) -> ExtractionResult:
     if config.chunk_content:
         result.chunks = _handle_chunk_content(
             mime_type=result.mime_type,
@@ -58,14 +60,33 @@ def _validate_and_post_process_helper(result: ExtractionResult, config: Extracti
             config=config.language_detection_config,
         )
 
+    if config.auto_detect_document_type:
+        if config.document_classification_mode == "vision" and file_path:
+            import anyio
+
+            from kreuzberg._document_classification import classify_document_from_layout
+            from kreuzberg._ocr import get_ocr_backend
+
+            async def _get_layout() -> ExtractionResult:
+                return await get_ocr_backend("tesseract").process_file(file_path, **config.get_config_dict())
+
+            layout_result = anyio.run(_get_layout)
+            result.document_type, result.type_confidence = classify_document_from_layout(layout_result, config)
+        else:
+            from kreuzberg._document_classification import classify_document
+
+            result.document_type, result.type_confidence = classify_document(result, config)
+
     return result
 
 
-async def _validate_and_post_process_async(result: ExtractionResult, config: ExtractionConfig) -> ExtractionResult:
+async def _validate_and_post_process_async(
+    result: ExtractionResult, config: ExtractionConfig, file_path: Path | None = None
+) -> ExtractionResult:
     for validator in config.validators or []:
         await run_maybe_sync(validator, result)
 
-    result = _validate_and_post_process_helper(result, config)
+    result = _validate_and_post_process_helper(result, config, file_path)
 
     for post_processor in config.post_processing_hooks or []:
         result = await run_maybe_sync(post_processor, result)
@@ -73,14 +94,19 @@ async def _validate_and_post_process_async(result: ExtractionResult, config: Ext
     return result
 
 
-def _validate_and_post_process_sync(result: ExtractionResult, config: ExtractionConfig) -> ExtractionResult:
+def _validate_and_post_process_sync(
+    result: ExtractionResult, config: ExtractionConfig, file_path: Path | None = None
+) -> ExtractionResult:
     for validator in config.validators or []:
         run_sync_only(validator, result)
 
-    result = _validate_and_post_process_helper(result, config)
+    result = _validate_and_post_process_helper(result, config, file_path)
 
     for post_processor in config.post_processing_hooks or []:
         result = run_sync_only(post_processor, result)
+
+    if hasattr(result, "layout"):
+        result.layout = None
 
     return result
 
@@ -170,7 +196,7 @@ async def extract_file(
                 metadata={},
             )
 
-        result = await _validate_and_post_process_async(result=result, config=config)
+        result = await _validate_and_post_process_async(result=result, config=config, file_path=path)
 
         cache.set(path, config, result)
 
@@ -365,7 +391,7 @@ def extract_file_sync(
                 metadata={},
             )
 
-        result = _validate_and_post_process_sync(result=result, config=config)
+        result = _validate_and_post_process_sync(result=result, config=config, file_path=path)
 
         cache.set(path, config, result)
 

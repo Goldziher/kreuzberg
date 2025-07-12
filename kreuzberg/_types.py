@@ -135,10 +135,18 @@ class ExtractionResult:
     """Extracted keywords and their scores, if keyword extraction is enabled."""
     detected_languages: list[str] | None = None
     """Languages detected in the extracted content, if language detection is enabled."""
+    document_type: str | None = None
+    """Detected document type, if document type detection is enabled."""
+    type_confidence: float | None = None
+    """Confidence of the detected document type."""
+    layout: DataFrame | None = field(default=None, repr=False, hash=False)
+    """Internal layout data from OCR, not for public use."""
 
     def to_dict(self) -> dict[str, Any]:
         """Converts the ExtractionResult to a dictionary."""
-        return asdict(self)
+        data = asdict(self)
+        data.pop("layout", None)  # Exclude layout from the dictionary representation
+        return data
 
 
 PostProcessingHook = Callable[[ExtractionResult], ExtractionResult | Awaitable[ExtractionResult]]
@@ -193,6 +201,12 @@ class ExtractionConfig:
     """Configuration for language detection. If None, uses default settings."""
     spacy_entity_extraction_config: SpacyEntityExtractionConfig | None = None
     """Configuration for spaCy entity extraction. If None, uses default settings."""
+    auto_detect_document_type: bool = False
+    """Whether to automatically detect the document type."""
+    type_confidence_threshold: float = 0.7
+    """Confidence threshold for document type detection."""
+    document_classification_mode: Literal["text", "vision"] = "text"
+    """The mode to use for document classification."""
 
     def __post_init__(self) -> None:
         if self.custom_entity_patterns is not None and isinstance(self.custom_entity_patterns, dict):

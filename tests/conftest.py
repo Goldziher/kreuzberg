@@ -77,6 +77,11 @@ def excel_multi_sheet_document() -> Path:
 
 
 @pytest.fixture(scope="session")
+def test_files_path() -> Path:
+    return test_source_files_folder
+
+
+@pytest.fixture(scope="session")
 def tiny_pdf_with_tables() -> Path:
     return test_source_files_folder / "pdfs_with_tables" / "tiny.pdf"
 

@@ -134,6 +134,7 @@ nav:
       - Content Chunking: user-guide/chunking.md
       - OCR Configuration: user-guide/ocr-configuration.md
       - OCR Backends: user-guide/ocr-backends.md
+      - Document Classification: user-guide/document-classification.md
       - Supported Formats: user-guide/supported-formats.md
       - MCP Server: user-guide/mcp-server.md
       - API Server: user-guide/api-server.md
