@@ -13,6 +13,7 @@ from kreuzberg._backends.routing import (
     get_fallback_backend,
     select_optimal_backend,
 )
+from kreuzberg._types import Metadata
 from kreuzberg.exceptions import ParsingError
 
 if TYPE_CHECKING:
@@ -403,9 +404,11 @@ class HybridBackend(ExtractionBackend):
             if extractous_result.metadata and result.metadata:
                 # Add extractous metadata with prefix to distinguish source
                 for key, value in extractous_result.metadata.items():
-                    if key not in result.metadata:  # Don't overwrite existing metadata
-                        # Store as string to ensure compatibility with Metadata TypedDict
-                        result.metadata[f"extractous_{key}"] = str(value) if not isinstance(value, str) else value
+                    if (
+                        key not in result.metadata and key in Metadata.__annotations__
+                    ):  # Don't overwrite existing metadata
+                        # Only add if it's a valid Metadata field
+                        result.metadata[key] = str(value) if not isinstance(value, str) else value  # type: ignore[literal-required]
                 logger.debug("Successfully enhanced metadata for %s", file_path)
 
         except Exception as e:  # noqa: BLE001

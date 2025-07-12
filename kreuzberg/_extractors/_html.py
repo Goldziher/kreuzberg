@@ -44,7 +44,7 @@ class HTMLExtractor(Extractor):
         if len(content) > STREAMING_THRESHOLD_BYTES:
             result = self._extract_with_streaming(decoded_content)
         else:
-            # Convert with metadata extraction enabled (default in 1.6.0+)
+            # Convert with metadata extraction and preprocessing enabled
             # Use lxml parser if available for ~30% better performance
             result = html_to_markdown.convert_to_markdown(
                 decoded_content,
@@ -52,6 +52,11 @@ class HTMLExtractor(Extractor):
                 extract_metadata=True,
                 wrap=False,  # Disable wrapping for better performance
                 strip_newlines=True,  # Clean up excessive newlines
+                # Enable preprocessing to remove navigation and form artifacts
+                preprocess_html=True,
+                preprocessing_preset="standard",
+                remove_navigation=True,
+                remove_forms=True,
             )
 
         # Extract metadata from the HTML comment block
@@ -60,8 +65,11 @@ class HTMLExtractor(Extractor):
         # Remove the metadata comment block from the content
         content_without_metadata = self._remove_metadata_comment(result)
 
+        # Apply additional post-processing cleanup for better quality
+        cleaned_content = self._post_process_content(content_without_metadata)
+
         return ExtractionResult(
-            content=normalize_spaces(content_without_metadata),
+            content=normalize_spaces(cleaned_content),
             mime_type=MARKDOWN_MIME_TYPE,
             metadata=metadata,
             chunks=[],
@@ -93,6 +101,11 @@ class HTMLExtractor(Extractor):
             extract_metadata=True,
             wrap=False,  # Disable wrapping for better performance
             strip_newlines=True,  # Clean up excessive newlines
+            # Enable preprocessing for large files too
+            preprocess_html=True,
+            preprocessing_preset="standard",
+            remove_navigation=True,
+            remove_forms=True,
         )
 
         # For streaming mode, the result is the final output, but we've also collected chunks
@@ -158,3 +171,81 @@ class HTMLExtractor(Extractor):
         # Remove metadata comment block at the beginning
         metadata_pattern = r"^<!--\s*\n.*?\n-->\s*\n"
         return re.sub(metadata_pattern, "", markdown, count=1, flags=re.DOTALL)
+
+    @staticmethod
+    def _post_process_content(content: str) -> str:
+        """Apply additional post-processing cleanup for better content quality."""
+        if not content:
+            return content
+
+        # Split into lines for line-by-line processing
+        lines = content.split("\n")
+        cleaned_lines = []
+        skip_navigation_section = False
+
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Detect start of navigation section
+            if line == "Main menu" and i + 1 < len(lines) and not lines[i + 1].strip():
+                # Look ahead to see if this is followed by multiple navigation links
+                nav_links = 0
+                for j in range(i + 2, min(i + 15, len(lines))):
+                    if lines[j].strip().startswith("- [") and "/wiki/" in lines[j]:
+                        nav_links += 1
+                    elif lines[j].strip() and not lines[j].strip().startswith("- ["):
+                        break
+
+                # If we found multiple navigation links, skip this section
+                min_nav_links = 5
+                if nav_links >= min_nav_links:
+                    skip_navigation_section = True
+                    # Skip to after the navigation section
+                    j = i + 2
+                    while j < len(lines):
+                        if (lines[j].strip().startswith("- [") and "/wiki/" in lines[j]) or not lines[j].strip():
+                            j += 1
+                        else:
+                            break
+                    i = j
+                    skip_navigation_section = False
+                    continue
+
+            # Skip navigation-related standalone headers
+            if line in {"Main menu", "Search", "History", "ProgrammingTranslatorReferencesExternal links"}:
+                i += 1
+                continue
+
+            # Skip lines that are clearly navigation artifacts
+            if line.startswith("- [") and any(
+                nav_term in line.lower()
+                for nav_term in [
+                    "contents",
+                    "current events",
+                    "random article",
+                    "about wikipedia",
+                    "contact us",
+                    "learn to edit",
+                    "community portal",
+                    "recent changes",
+                    "upload file",
+                    "special pages",
+                ]
+            ):
+                i += 1
+                continue
+
+            # Add the line if we're not skipping
+            if not skip_navigation_section:
+                cleaned_lines.append(lines[i])
+
+            i += 1
+
+        # Join back and apply final cleanup
+        cleaned_content = "\n".join(cleaned_lines)
+
+        # Remove excessive whitespace
+        cleaned_content = re.sub(r"\n{3,}", "\n\n", cleaned_content)
+
+        return cleaned_content.strip()

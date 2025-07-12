@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from anyio import Path as AsyncPath
 
@@ -25,6 +25,72 @@ class EmailExtractor(Extractor):
         content = await AsyncPath(path).read_bytes()
         return await self.extract_bytes_async(content)
 
+    def _extract_email_headers(self, parsed_email: dict[str, Any], text_parts: list[str], metadata: dict[str, Any]) -> None:
+        """Extract and process email headers."""
+        if "subject" in parsed_email:
+            metadata["subject"] = parsed_email["subject"]
+            text_parts.append(f"Subject: {parsed_email['subject']}")
+
+        if parsed_email.get("from"):
+            from_info = parsed_email["from"]
+            from_email = from_info.get("email", "") if isinstance(from_info, dict) else str(from_info)
+            metadata["email_from"] = from_email
+            text_parts.append(f"From: {from_email}")
+
+        if parsed_email.get("to"):
+            to_info = parsed_email["to"]
+            if isinstance(to_info, list) and to_info:
+                to_email = to_info[0].get("email", "") if isinstance(to_info[0], dict) else str(to_info[0])
+            elif isinstance(to_info, dict):
+                to_email = to_info.get("email", "")
+            else:
+                to_email = str(to_info)
+            metadata["email_to"] = to_email
+            text_parts.append(f"To: {to_email}")
+
+        if "date" in parsed_email:
+            metadata["date"] = parsed_email["date"]
+            text_parts.append(f"Date: {parsed_email['date']}")
+
+        if "cc" in parsed_email:
+            metadata["email_cc"] = parsed_email["cc"]
+            text_parts.append(f"CC: {parsed_email['cc']}")
+
+        if "bcc" in parsed_email:
+            metadata["email_bcc"] = parsed_email["bcc"]
+            text_parts.append(f"BCC: {parsed_email['bcc']}")
+
+    def _extract_email_body(self, parsed_email: dict[str, Any], text_parts: list[str]) -> None:
+        """Extract and process email body content."""
+        if parsed_email.get("text"):
+            text_parts.append(f"\n{parsed_email['text']}")
+
+        if "html" in parsed_email and parsed_email["html"] and not parsed_email.get("text"):
+            html_content = parsed_email["html"]
+            try:
+                import html2text  # type: ignore[import-not-found]
+
+                h = html2text.HTML2Text()
+                h.ignore_links = True
+                h.ignore_images = True
+                text_content = h.handle(html_content)
+                text_parts.append(f"\n{text_content}")
+            except ImportError:
+                import re
+                from html import unescape
+
+                html_content = re.sub(r"<[^>]+>", "", html_content)
+                html_content = unescape(html_content)
+                text_parts.append(f"\n{html_content}")
+
+    def _extract_email_attachments(self, parsed_email: dict[str, Any], text_parts: list[str], metadata: dict[str, Any]) -> None:
+        """Extract and process email attachments info."""
+        if parsed_email.get("attachments"):
+            attachment_names = [att.get("name", "unknown") for att in parsed_email["attachments"]]
+            metadata["attachments"] = attachment_names
+            if attachment_names:
+                text_parts.append(f"\nAttachments: {', '.join(attachment_names)}")
+
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         try:
             import mailparse
@@ -34,69 +100,17 @@ class EmailExtractor(Extractor):
 
         try:
             parsed_email = mailparse.EmailDecode.load(content)
+            text_parts: list[str] = []
+            metadata: dict[str, Any] = {}
 
-            text_parts = []
-            metadata = {}
+            # Extract headers
+            self._extract_email_headers(parsed_email, text_parts, metadata)
 
-            if "subject" in parsed_email:
-                metadata["subject"] = parsed_email["subject"]
-                text_parts.append(f"Subject: {parsed_email['subject']}")
+            # Extract body
+            self._extract_email_body(parsed_email, text_parts)
 
-            if parsed_email.get("from"):
-                from_info = parsed_email["from"]
-                from_email = from_info.get("email", "") if isinstance(from_info, dict) else str(from_info)
-                metadata["email_from"] = from_email
-                text_parts.append(f"From: {from_email}")
-
-            if parsed_email.get("to"):
-                to_info = parsed_email["to"]
-                if isinstance(to_info, list) and to_info:
-                    to_email = to_info[0].get("email", "") if isinstance(to_info[0], dict) else str(to_info[0])
-                elif isinstance(to_info, dict):
-                    to_email = to_info.get("email", "")
-                else:
-                    to_email = str(to_info)
-                metadata["email_to"] = to_email
-                text_parts.append(f"To: {to_email}")
-
-            if "date" in parsed_email:
-                metadata["date"] = parsed_email["date"]
-                text_parts.append(f"Date: {parsed_email['date']}")
-
-            if "cc" in parsed_email:
-                metadata["email_cc"] = parsed_email["cc"]
-                text_parts.append(f"CC: {parsed_email['cc']}")
-
-            if "bcc" in parsed_email:
-                metadata["email_bcc"] = parsed_email["bcc"]
-                text_parts.append(f"BCC: {parsed_email['bcc']}")
-
-            if parsed_email.get("text"):
-                text_parts.append(f"\n{parsed_email['text']}")
-
-            if "html" in parsed_email and parsed_email["html"] and not parsed_email.get("text"):
-                html_content = parsed_email["html"]
-                try:
-                    import html2text  # type: ignore[import-not-found]
-
-                    h = html2text.HTML2Text()
-                    h.ignore_links = True
-                    h.ignore_images = True
-                    text_content = h.handle(html_content)
-                    text_parts.append(f"\n{text_content}")
-                except ImportError:
-                    import re
-                    from html import unescape
-
-                    html_content = re.sub(r"<[^>]+>", "", html_content)
-                    html_content = unescape(html_content)
-                    text_parts.append(f"\n{html_content}")
-
-            if parsed_email.get("attachments"):
-                attachment_names = [att.get("name", "unknown") for att in parsed_email["attachments"]]
-                metadata["attachments"] = attachment_names
-                if attachment_names:
-                    text_parts.append(f"\nAttachments: {', '.join(attachment_names)}")
+            # Extract attachments
+            self._extract_email_attachments(parsed_email, text_parts, metadata)
 
             combined_text = "\n".join(text_parts)
 

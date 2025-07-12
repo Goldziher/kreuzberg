@@ -10,14 +10,12 @@ It includes vendored code:
 from __future__ import annotations
 
 import gc
-import re
 
 try:
     import defusedxml.ElementTree as ET  # noqa: N817
 except ImportError:
     import xml.etree.ElementTree as ET
 from contextlib import suppress
-from html import escape
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
@@ -137,7 +135,8 @@ class PresentationExtractor(Extractor):
         total_slides = len(presentation.slides)
 
         for index, slide in enumerate(presentation.slides):
-            slide_content = [f"\n\n<!-- Slide number: {index + 1} -->\n"]
+            # Use cleaner slide separators that work better for text analysis
+            slide_content = [f"\n\n# Slide {index + 1}\n\n"]
 
             title = None
             if hasattr(slide.shapes, "title"):
@@ -154,28 +153,23 @@ class PresentationExtractor(Extractor):
                     with suppress(AttributeError):
                         alt_text = shape._element._nvXxPr.cNvPr.attrib.get("descr", "")  # noqa: SLF001
 
-                    filename = re.sub(r"\W", "", shape.name) + ".jpg"
-                    slide_content.append(f"\n![{alt_text if alt_text else shape.name}]({filename})\n")
+                    # Only include images with meaningful alt text, skip placeholders
+                    if alt_text and not any(
+                        placeholder in alt_text.lower() for placeholder in ["placeholder", "picture", "image"]
+                    ):
+                        slide_content.append(f"\n*Image: {alt_text}*\n")
 
                 elif shape.shape_type == MSO_SHAPE_TYPE.TABLE:
-                    html_table = "<table>"
-                    first_row = True
+                    markdown_table = self._convert_table_to_markdown(shape.table)
+                    if markdown_table.strip():  # Only add non-empty tables
+                        slide_content.append("\n" + markdown_table + "\n")
 
-                    for row in shape.table.rows:
-                        html_table += "<tr>"
-
-                        for cell in row.cells:
-                            tag = "th" if first_row else "td"
-                            html_table += f"<{tag}>{escape(cell.text)}</{tag}>"
-
-                        html_table += "</tr>"
-                        first_row = False
-
-                    html_table += "</table>"
-                    slide_content.append("\n" + html_table + "\n")
-
-                elif shape.has_text_frame:
-                    slide_content.append("# " + shape.text.lstrip() + "\n" if shape == title else shape.text + "\n")
+                elif shape.has_text_frame and shape.text.strip():
+                    text_content = shape.text.strip()
+                    if shape == title:
+                        slide_content.append(f"## {text_content}\n\n")
+                    else:
+                        slide_content.append(f"{text_content}\n\n")
 
             # Join slide content and handle notes
             if slide.has_notes_slide:
@@ -203,6 +197,68 @@ class PresentationExtractor(Extractor):
             metadata=metadata,
             chunks=[],
         )
+
+    @staticmethod
+    def _convert_table_to_markdown(table: pptx.table.Table) -> str:
+        """Convert a PowerPoint table to markdown format with improved handling.
+
+        Args:
+            table: pptx Table object
+
+        Returns:
+            Properly formatted markdown table string
+        """
+        if not table.rows:
+            return ""
+
+        # First pass: collect all cell data and check if table has meaningful content
+        table_data = []
+        has_meaningful_content = False
+
+        for row in table.rows:
+            row_data = []
+            for cell in row.cells:
+                cell_text = cell.text.strip().replace("\n", " ").replace("|", "\\|")
+                if cell_text:
+                    has_meaningful_content = True
+                row_data.append(cell_text if cell_text else "")
+            table_data.append(row_data)
+
+        # Skip empty or meaningless tables
+        if not has_meaningful_content:
+            return ""
+
+        # Check if we need to add a header row for tables without clear headers
+        if len(table_data) > 1:
+            first_row = table_data[0]
+
+            # If first row is mostly empty, use generic column headers
+            first_row_empty = sum(1 for cell in first_row if not cell.strip()) > len(first_row) / 2
+            if first_row_empty:
+                table_data[0] = [cell if cell else f"Col{i + 1}" for i, cell in enumerate(first_row)]
+
+        markdown_lines = []
+
+        # Create header row (first row)
+        header_cells = [cell if cell else " " for cell in table_data[0]]
+        separator_cells = ["---" for _ in header_cells]
+
+        markdown_lines.append("| " + " | ".join(header_cells) + " |")
+        markdown_lines.append("| " + " | ".join(separator_cells) + " |")
+
+        # Add data rows
+        for row_data in table_data[1:]:
+            # Pad row to match header length
+            while len(row_data) < len(header_cells):
+                row_data.append("")
+
+            # Truncate if row is longer than header
+            processed_row = row_data[: len(header_cells)]
+
+            row_cells = [cell if cell else " " for cell in processed_row]
+            markdown_lines.append("| " + " | ".join(row_cells) + " |")
+
+        return "\n".join(markdown_lines)
 
     @staticmethod
     def _extract_presentation_metadata(presentation: Presentation) -> Metadata:

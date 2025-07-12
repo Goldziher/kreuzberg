@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -18,7 +19,7 @@ app = typer.Typer(help="Kreuzberg Performance Benchmarking Suite")
 console = Console()
 
 
-def _generate_quality_report(data: dict, console: Console) -> None:
+def _generate_quality_report(data: dict[str, Any], console: Console) -> None:
     """Generate metadata quality report from benchmark results."""
     console.print("\n[bold]METADATA QUALITY REPORT[/bold]")
     console.print("=" * 80)

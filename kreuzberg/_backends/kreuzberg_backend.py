@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from kreuzberg._backends.base import ExtractionBackend
 from kreuzberg._mime_types import SUPPORTED_MIME_TYPES, validate_mime_type
+from kreuzberg.exceptions import ValidationError
 from kreuzberg.extraction import extract_bytes_sync, extract_file_sync
 
 if TYPE_CHECKING:
@@ -97,7 +98,7 @@ class KreuzbergBackend(ExtractionBackend):
                 # Assume it's already a MIME type
                 validate_mime_type(mime_type=file_type, check_file_exists=False)
                 return True
-        except Exception:
+        except (ValueError, ValidationError):
             return False
 
         return False

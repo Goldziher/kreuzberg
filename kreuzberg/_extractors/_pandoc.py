@@ -409,10 +409,36 @@ class PandocExtractor(Extractor):
                 str(input_file),
                 f"--from={pandoc_type}",
                 "--to=markdown",
-                "--standalone",
                 "--wrap=preserve",
                 "--quiet",
             ]
+
+            # Add format-specific optimizations
+            if pandoc_type == "epub":
+                # For EPUB: use plain text for cleaner output
+                command[command.index("--to=markdown")] = "--to=plain"
+                command.extend(
+                    [
+                        "--strip-comments",
+                    ]
+                )
+            elif pandoc_type in ["docx", "odt"]:
+                # For Office documents: preserve more structure but remove metadata
+                command.extend(
+                    [
+                        "--strip-comments",
+                    ]
+                )
+            elif pandoc_type in ["rst", "org", "markdown"]:
+                # For markup formats: keep structure but remove metadata blocks
+                command.extend(
+                    [
+                        "--strip-comments",
+                    ]
+                )
+            else:
+                # For other formats: use standalone for full document structure
+                command.append("--standalone")
 
             command.extend(["--output", str(output_path)])
 
@@ -677,12 +703,43 @@ class PandocExtractor(Extractor):
                 str(path),
                 f"--from={pandoc_type}",
                 "--to=markdown",
-                "--standalone",
                 "--wrap=preserve",
                 "--quiet",
-                "--output",
-                str(output_path),
             ]
+
+            # Add format-specific optimizations (sync version)
+            if pandoc_type == "epub":
+                # For EPUB: use plain text for cleaner output
+                command[command.index("--to=markdown")] = "--to=plain"
+                command.extend(
+                    [
+                        "--strip-comments",
+                    ]
+                )
+            elif pandoc_type in ["docx", "odt"]:
+                # For Office documents: preserve more structure but remove metadata
+                command.extend(
+                    [
+                        "--strip-comments",
+                    ]
+                )
+            elif pandoc_type in ["rst", "org", "markdown"]:
+                # For markup formats: keep structure but remove metadata blocks
+                command.extend(
+                    [
+                        "--strip-comments",
+                    ]
+                )
+            else:
+                # For other formats: use standalone for full document structure
+                command.append("--standalone")
+
+            command.extend(
+                [
+                    "--output",
+                    str(output_path),
+                ]
+            )
 
             result = subprocess.run(command, capture_output=True, text=True, check=False)
 

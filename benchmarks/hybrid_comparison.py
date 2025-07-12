@@ -1,5 +1,4 @@
 """Performance comparison between Kreuzberg, Extractous, and Hybrid backends."""
-# type: ignore
 
 from __future__ import annotations
 
@@ -42,7 +41,7 @@ def benchmark_backend(
     Returns:
         Dictionary containing benchmark results
     """
-    results = {
+    results: dict[str, Any] = {
         "backend": backend_name,
         "iterations": iterations,
         "files": {},

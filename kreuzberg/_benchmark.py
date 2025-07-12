@@ -131,7 +131,7 @@ class BenchmarkRunner:
                 raw_result=result,
             )
 
-        except Exception as e:
+        except (ValueError, OSError, RuntimeError) as e:
             extraction_time = time.perf_counter() - start_time
             return BenchmarkResult(
                 backend=backend,
@@ -325,7 +325,7 @@ class BenchmarkRunner:
                 pass
 
 
-def create_benchmark_test_set(output_dir: Path) -> dict[str, list[Path]]:
+def create_benchmark_test_set(output_dir: Path) -> dict[str, list[Path]]:  # noqa: ARG001
     """Create a standard test set for benchmarking.
 
     Returns dict mapping file types to lists of test files.

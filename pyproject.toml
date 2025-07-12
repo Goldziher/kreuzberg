@@ -53,6 +53,7 @@ dependencies = [
   "html-to-markdown[lxml]>=1.6.0",
   "mcp>=1.11.0",
   "msgspec>=0.18.0",
+  "nh3>=0.2.21",
   "playa-pdf>=0.6.1",                                 # pinned due to breaking changes in 0.5.0
   "psutil>=7.0.0",
   "pypdfium2==4.30.0",                                # pinned due to bug in 4.30.1, until v5 is stable
@@ -250,6 +251,7 @@ disable_error_code = [ "misc" ]
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
 kreuzberg-benchmarks = { workspace = true }
+html-to-markdown = { git = "https://github.com/Goldziher/html-to-markdown", rev = "main" }
 
 [tool.uv.workspace]
 members = [ ".", "benchmarks" ]
