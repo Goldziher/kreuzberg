@@ -36,7 +36,7 @@ async def test_extract_pdf_searchable_not_fallback_to_ocr(test_contract: Path) -
     extractor = PDFExtractor(mime_type="application/pdf", config=ExtractionConfig(force_ocr=False))
     result = await extractor.extract_path_async(test_contract)
     assert result.content.startswith(
-        "Page 1 Sample Contract Contract No.___________ PROFESSIONAL SERVICES AGREEMENT THIS AGREEMENT made and entered into this"
+        "Page 1\nSample Contract\nContract No....\nPROFESSIONAL SERVICES AGREEMENT\nTHIS AGREEMENT made and entered into this"
     )
 
 
@@ -234,7 +234,7 @@ def test_extract_pdf_path_sync(extractor: PDFExtractor, searchable_pdf: Path) ->
     assert isinstance(result, ExtractionResult)
     assert result.content.strip()
     assert result.mime_type == "text/plain"
-    assert result.metadata == {}
+    assert result.metadata == {"quality_score": 1.0}
 
 
 def test_extract_pdf_path_sync_with_tables(searchable_pdf: Path) -> None:

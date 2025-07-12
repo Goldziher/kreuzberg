@@ -10,15 +10,17 @@ from typing import TYPE_CHECKING, ClassVar, cast
 import anyio
 import pypdfium2
 from anyio import Path as AsyncPath
+from playa import parse
 
 from kreuzberg._extractors._base import Extractor
 from kreuzberg._mime_types import PDF_MIME_TYPE, PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr import get_ocr_backend
-from kreuzberg._playa import extract_pdf_metadata
+from kreuzberg._playa import extract_pdf_metadata, extract_pdf_metadata_sync
 from kreuzberg._types import ExtractionResult, OcrBackendType
 from kreuzberg._utils._pdf_lock import pypdfium_file_lock
 from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync, run_taskgroup_batched
+from kreuzberg._utils._table import generate_table_summary
 from kreuzberg._utils._tmp import create_temp_file
 from kreuzberg.exceptions import ParsingError
 
@@ -63,11 +65,27 @@ class PDFExtractor(Extractor):
         result.metadata = await extract_pdf_metadata(content_bytes)
 
         if self.config.extract_tables:
-            from kreuzberg._gmft import extract_tables
+            # GMFT is optional dependency
+            try:
+                from kreuzberg._gmft import extract_tables
 
-            result.tables = await extract_tables(path, self.config.gmft_config)
+                result.tables = await extract_tables(path, self.config.gmft_config)
+            except ImportError:
+                result.tables = []
 
-        return result
+            # Enhance metadata with table information
+            if result.tables:
+                table_summary = generate_table_summary(result.tables)
+                result.metadata.update(
+                    {
+                        "table_count": table_summary["table_count"],
+                        "tables_summary": f"Document contains {table_summary['table_count']} tables "
+                        f"across {table_summary['pages_with_tables']} pages with "
+                        f"{table_summary['total_rows']} total rows",
+                    }
+                )
+
+        return self._apply_quality_processing(result)
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         """Pure sync implementation of PDF extraction from bytes."""
@@ -80,8 +98,6 @@ class PDFExtractor(Extractor):
                 f.write(content)
 
             result = self.extract_path_sync(Path(temp_path))
-
-            from kreuzberg._playa import extract_pdf_metadata_sync
 
             metadata = extract_pdf_metadata_sync(content)
             result.metadata = metadata
@@ -100,22 +116,42 @@ class PDFExtractor(Extractor):
 
         tables = []
         if self.config.extract_tables:
+            # GMFT is optional dependency
             try:
                 from kreuzberg._gmft import extract_tables_sync
 
                 tables = extract_tables_sync(path)
             except ImportError:
-                pass
+                tables = []
+
+        # Use playa for better text structure preservation when not using OCR
+        if not self.config.force_ocr and self._validate_extracted_text(text):
+            text = self._extract_with_playa_sync(path, fallback_text=text)
 
         text = normalize_spaces(text)
 
-        return ExtractionResult(
+        result = ExtractionResult(
             content=text,
             mime_type=PLAIN_TEXT_MIME_TYPE,
             metadata={},
             tables=tables,
             chunks=[],
         )
+
+        # Enhance metadata with table information
+        if tables:
+            table_summary = generate_table_summary(tables)
+            result.metadata.update(
+                {
+                    "table_count": table_summary["table_count"],
+                    "tables_summary": f"Document contains {table_summary['table_count']} tables "
+                    f"across {table_summary['pages_with_tables']} pages with "
+                    f"{table_summary['total_rows']} total rows",
+                }
+            )
+
+        # Apply quality processing
+        return self._apply_quality_processing(result)
 
     def _validate_extracted_text(self, text: str, corruption_threshold: float = 0.05) -> bool:
         """Check if text extracted from PDF is valid or corrupted.
@@ -379,3 +415,21 @@ class PDFExtractor(Extractor):
             return "\n\n".join(text_parts)
 
         raise NotImplementedError(f"Sync OCR not implemented for {self.config.ocr_backend}")
+
+    def _extract_with_playa_sync(self, path: Path, fallback_text: str) -> str:
+        """Extract text using playa for better structure preservation."""
+        with contextlib.suppress(Exception):
+            content = path.read_bytes()
+            document = parse(content, max_workers=1)
+
+            text_parts = []
+            for page in document.pages:
+                # Extract text while preserving structure
+                page_text = page.extract_text()
+                if page_text and page_text.strip():
+                    text_parts.append(page_text)
+
+            if text_parts:
+                return "\n\n".join(text_parts)
+
+        return fallback_text

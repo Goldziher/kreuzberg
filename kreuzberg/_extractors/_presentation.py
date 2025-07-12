@@ -30,6 +30,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from kreuzberg._types import Metadata
 
+# Pre-compiled regex patterns for performance
+_NON_WORD_PATTERN = re.compile(r"\W")
+
 
 class PresentationExtractor(Extractor):
     """Extractor for PowerPoint (.pptx) files.
@@ -141,7 +144,7 @@ class PresentationExtractor(Extractor):
                     with suppress(AttributeError):
                         alt_text = shape._element._nvXxPr.cNvPr.attrib.get("descr", "")  # noqa: SLF001
 
-                    filename = re.sub(r"\W", "", shape.name) + ".jpg"
+                    filename = _NON_WORD_PATTERN.sub("", shape.name) + ".jpg"
                     md_content += f"\n![{alt_text if alt_text else shape.name}]({filename})\n"
 
                 elif shape.shape_type == MSO_SHAPE_TYPE.TABLE:
@@ -162,7 +165,10 @@ class PresentationExtractor(Extractor):
                     md_content += "\n" + html_table + "\n"
 
                 elif shape.has_text_frame:
-                    md_content += "# " + shape.text.lstrip() + "\n" if shape == title else shape.text + "\n"
+                    if shape == title:
+                        md_content += "# " + shape.text.lstrip() + "\n"
+                    else:
+                        md_content += shape.text + "\n"
 
             md_content = md_content.strip()
             if slide.has_notes_slide:
@@ -174,12 +180,14 @@ class PresentationExtractor(Extractor):
 
                 md_content = md_content.strip()
 
-        return ExtractionResult(
+        result = ExtractionResult(
             content=normalize_spaces(md_content),
             mime_type=MARKDOWN_MIME_TYPE,
             metadata=self._extract_presentation_metadata(presentation),
             chunks=[],
         )
+
+        return self._apply_quality_processing(result)
 
     @staticmethod
     def _extract_presentation_metadata(presentation: Presentation) -> Metadata:
@@ -193,7 +201,24 @@ class PresentationExtractor(Extractor):
         """
         metadata: Metadata = {}
 
-        for metadata_key, core_property_key in [
+        # Extract core properties
+        PresentationExtractor._extract_core_properties(presentation, metadata)
+
+        # Extract fonts used in presentation
+        fonts = PresentationExtractor._extract_fonts(presentation)
+        if fonts:
+            metadata["fonts"] = list(fonts)
+
+        # Add structural information
+        PresentationExtractor._add_presentation_structure_info(presentation, metadata, fonts)
+
+        return metadata
+
+    @staticmethod
+    def _extract_core_properties(presentation: Presentation, metadata: Metadata) -> None:
+        """Extract core document properties from presentation."""
+        # Property mapping for core metadata
+        property_mapping = [
             ("authors", "author"),
             ("comments", "comments"),
             ("status", "content_status"),
@@ -205,17 +230,22 @@ class PresentationExtractor(Extractor):
             ("version", "revision"),
             ("subject", "subject"),
             ("title", "title"),
-            ("version", "version"),
-        ]:
+        ]
+
+        for metadata_key, core_property_key in property_mapping:
             if core_property := getattr(presentation.core_properties, core_property_key, None):
                 metadata[metadata_key] = core_property  # type: ignore[literal-required]
 
+        # Handle special list properties
         if presentation.core_properties.language:
             metadata["languages"] = [presentation.core_properties.language]
 
         if presentation.core_properties.category:
             metadata["categories"] = [presentation.core_properties.category]
 
+    @staticmethod
+    def _extract_fonts(presentation: Presentation) -> set[str]:
+        """Extract all fonts used in the presentation."""
         fonts = set()
         for slide in presentation.slides:
             for shape in slide.shapes:
@@ -226,8 +256,30 @@ class PresentationExtractor(Extractor):
                     for run in paragraph.runs:
                         if hasattr(run, "font") and run.font.name:
                             fonts.add(run.font.name)
+        return fonts
 
-        if fonts:
-            metadata["fonts"] = list(fonts)
+    @staticmethod
+    def _add_presentation_structure_info(presentation: Presentation, metadata: Metadata, fonts: set[str]) -> None:
+        """Add structural information about the presentation."""
+        slide_count = len(presentation.slides)
+        if slide_count == 0:
+            return
 
-        return metadata
+        # Build description
+        structure_info = f"Presentation with {slide_count} slide{'s' if slide_count != 1 else ''}"
+
+        slides_with_notes = sum(1 for slide in presentation.slides if slide.has_notes_slide)
+        if slides_with_notes > 0:
+            structure_info += f", {slides_with_notes} with notes"
+
+        metadata["description"] = structure_info
+
+        # Build summary if not already present
+        if "summary" not in metadata:
+            summary_parts = [f"PowerPoint presentation with {slide_count} slides"]
+            if slides_with_notes > 0:
+                summary_parts.append(f"{slides_with_notes} slides have notes")
+            if fonts:
+                summary_parts.append(f"uses {len(fonts)} font{'s' if len(fonts) != 1 else ''}")
+
+            metadata["summary"] = f"{'. '.join(summary_parts)}."

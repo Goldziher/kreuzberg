@@ -36,6 +36,11 @@ class KreuzbergBenchmarks:
             ".png",
             ".jpg",
             ".jpeg",
+            ".eml",
+            ".json",
+            ".yaml",
+            ".yml",
+            ".toml",
         ]
         test_files: list[Path] = []
 
@@ -272,3 +277,34 @@ class KreuzbergBenchmarks:
                 },
             ),
         ]
+
+    def get_backend_benchmarks(
+        self,
+    ) -> list[tuple[str, Callable[[], Any], dict[str, Any]]]:
+        """Get benchmarks for Kreuzberg extraction (single backend now)."""
+        benchmarks: list[tuple[str, Callable[[], Any], dict[str, Any]]] = []
+
+        for test_file in self.test_files:
+            if not test_file.exists():
+                continue
+
+            file_type = test_file.suffix[1:]
+            base_name = test_file.stem
+
+            def make_extractor(file_path: Path) -> Callable[[], Any]:
+                return lambda: extract_file_sync(file_path)
+
+            benchmarks.append(
+                (
+                    f"kreuzberg_{file_type}_{base_name}",
+                    make_extractor(test_file),
+                    {
+                        "file_type": file_type,
+                        "file_name": str(test_file.name),
+                        "backend": "kreuzberg",
+                        "operation": "extract_file_sync",
+                    },
+                )
+            )
+
+        return benchmarks

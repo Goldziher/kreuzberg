@@ -1,0 +1,607 @@
+{
+  "name": "kreuzberg_sync_vs_async",
+  "version": "4.0.0rc1",
+  "timestamp": "2025-07-12T14:29:28.216893",
+  "system_info": {
+    "platform": "macOS-15.5-arm64-arm-64bit-Mach-O",
+    "python_version": "3.13.3 (main, Jun  9 2025, 21:26:22) [Clang 17.0.0 (clang-1700.0.13.5)]",
+    "cpu_count": 14,
+    "cpu_freq_max": 4,
+    "memory_total_gb": 48.0,
+    "architecture": "64bit",
+    "machine": "arm64",
+    "processor": "arm"
+  },
+  "summary": {
+    "total_duration_seconds": 23.996335000003455,
+    "total_benchmarks": 16,
+    "successful_benchmarks": 16,
+    "success_rate_percent": 100.0
+  },
+  "results": [
+    {
+      "name": "sync_docx_document_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:04.307274",
+      "performance": {
+        "duration_seconds": 0.07973695900000166,
+        "memory_peak_mb": 74.109375,
+        "memory_average_mb": 74.03125,
+        "cpu_percent_average": 9.371428571428572,
+        "cpu_percent_peak": 33.2,
+        "gc_collections": {
+          "0": 1144,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "docx",
+        "file_name": "document.docx",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 11,
+        "word_count": 2,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "sync_xlsx_excel-multi-sheet_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:04.320542",
+      "performance": {
+        "duration_seconds": 0.002010084004723467,
+        "memory_peak_mb": 74.125,
+        "memory_average_mb": 74.125,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": -1861,
+          "1": 1,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel-multi-sheet.xlsx",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 175,
+        "word_count": 54,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 3,
+          "metadata_fields": ["description", "summary", "quality_score"],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.3,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 2,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "sync_xlsx_excel_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:04.352694",
+      "performance": {
+        "duration_seconds": 0.025303665999672376,
+        "memory_peak_mb": 75.390625,
+        "memory_average_mb": 75.03125,
+        "cpu_percent_average": 50.3,
+        "cpu_percent_peak": 100.6,
+        "gc_collections": {
+          "0": 27,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "xlsx",
+        "file_name": "excel.xlsx",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 41281,
+        "word_count": 14211,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 3,
+          "metadata_fields": ["description", "summary", "quality_score"],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.3,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 2,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "sync_html_html_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:04.365540",
+      "performance": {
+        "duration_seconds": 0.003707416995894164,
+        "memory_peak_mb": 75.40625,
+        "memory_average_mb": 75.40625,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 420,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "html",
+        "file_name": "html.html",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 138,
+        "word_count": 23,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 1,
+          "metadata_fields": ["quality_score"],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.1,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 1,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "sync_md_markdown_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:04.378344",
+      "performance": {
+        "duration_seconds": 0.00024604199279565364,
+        "memory_peak_mb": 76.0,
+        "memory_average_mb": 76.0,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 18,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "md",
+        "file_name": "markdown.md",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 12,
+        "word_count": 2,
+        "line_count": 2,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "sync_pdf_non-ascii-text_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:13.986283",
+      "performance": {
+        "duration_seconds": 9.601853999993182,
+        "memory_peak_mb": 401.34375,
+        "memory_average_mb": 395.21219502534854,
+        "cpu_percent_average": 51.28910012674271,
+        "cpu_percent_peak": 161.1,
+        "gc_collections": {
+          "0": 638,
+          "1": -11,
+          "2": 1
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-ascii-text.pdf",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "sync_pdf_non-ascii-text_force_ocr",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:23.605913",
+      "performance": {
+        "duration_seconds": 9.617184040995198,
+        "memory_peak_mb": 424.0625,
+        "memory_average_mb": 423.62049050632913,
+        "cpu_percent_average": 51.300379746835446,
+        "cpu_percent_peak": 172.3,
+        "gc_collections": {
+          "0": -1093,
+          "1": 1,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-ascii-text.pdf",
+        "config": "force_ocr"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "sync_pdf_non-searchable_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:23.887869",
+      "performance": {
+        "duration_seconds": 0.27528108400292695,
+        "memory_peak_mb": 448.265625,
+        "memory_average_mb": 446.6365489130435,
+        "cpu_percent_average": 54.17391304347826,
+        "cpu_percent_peak": 155.0,
+        "gc_collections": {
+          "0": 67,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-searchable.pdf",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "sync_pdf_non-searchable_force_ocr",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:24.157778",
+      "performance": {
+        "duration_seconds": 0.2672438329900615,
+        "memory_peak_mb": 448.390625,
+        "memory_average_mb": 448.38423295454544,
+        "cpu_percent_average": 58.445454545454545,
+        "cpu_percent_peak": 162.8,
+        "gc_collections": {
+          "0": 54,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "non-searchable.pdf",
+        "config": "force_ocr"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "sync_jpg_ocr-image_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:24.258706",
+      "performance": {
+        "duration_seconds": 0.09580562500923406,
+        "memory_peak_mb": 448.390625,
+        "memory_average_mb": 448.390625,
+        "cpu_percent_average": 3.275,
+        "cpu_percent_peak": 22.7,
+        "gc_collections": {
+          "0": 26,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "jpg",
+        "file_name": "ocr-image.jpg",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "sync_jpg_ocr-image_force_ocr",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:24.356678",
+      "performance": {
+        "duration_seconds": 0.09664358299050946,
+        "memory_peak_mb": 448.453125,
+        "memory_average_mb": 448.451171875,
+        "cpu_percent_average": 3.3875,
+        "cpu_percent_peak": 23.3,
+        "gc_collections": {
+          "0": 28,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "jpg",
+        "file_name": "ocr-image.jpg",
+        "config": "force_ocr"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "sync_pptx_pitch-deck-presentation_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:24.533272",
+      "performance": {
+        "duration_seconds": 0.1738666250021197,
+        "memory_peak_mb": 796.640625,
+        "memory_average_mb": 632.3381696428571,
+        "cpu_percent_average": 93.42142857142858,
+        "cpu_percent_peak": 101.8,
+        "gc_collections": {
+          "0": 725,
+          "1": 1,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pptx",
+        "file_name": "pitch-deck-presentation.pptx",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 2081,
+        "word_count": 304,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/markdown",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 6,
+          "metadata_fields": [
+            "created_by",
+            "modified_at",
+            "version",
+            "description",
+            "summary",
+            "quality_score"
+          ],
+          "metadata_completeness": 50.0,
+          "metadata_richness": 0.6,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": true,
+          "has_modified_date": true,
+          "custom_fields_count": 5,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "sync_pdf_sample-contract_default",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:24.574711",
+      "performance": {
+        "duration_seconds": 0.0309367919981014,
+        "memory_peak_mb": 802.34375,
+        "memory_average_mb": 800.390625,
+        "cpu_percent_average": 66.73333333333333,
+        "cpu_percent_peak": 100.4,
+        "gc_collections": {
+          "0": -873,
+          "1": 1,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "sample-contract.pdf",
+        "config": "default"
+      },
+      "extraction_quality": {
+        "text_length": 21689,
+        "word_count": 3333,
+        "line_count": 1,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": {
+          "metadata_count": 1,
+          "metadata_fields": ["quality_score"],
+          "metadata_completeness": 0.0,
+          "metadata_richness": 0.1,
+          "has_title": false,
+          "has_author": false,
+          "has_created_date": false,
+          "has_modified_date": false,
+          "custom_fields_count": 1,
+          "extraction_backend": null
+        }
+      }
+    },
+    {
+      "name": "sync_pdf_sample-contract_force_ocr",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:28.192063",
+      "performance": {
+        "duration_seconds": 3.614875540995854,
+        "memory_peak_mb": 802.921875,
+        "memory_average_mb": 802.8978528911565,
+        "cpu_percent_average": 46.72959183673469,
+        "cpu_percent_peak": 143.2,
+        "gc_collections": {
+          "0": 391,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "file_type": "pdf",
+        "file_name": "sample-contract.pdf",
+        "config": "force_ocr"
+      },
+      "extraction_quality": {
+        "text_length": 0,
+        "word_count": 0,
+        "line_count": 0,
+        "has_tables": false,
+        "table_count": 0,
+        "has_ocr": false,
+        "mime_type": "text/plain",
+        "detected_languages": [],
+        "metadata_quality": null
+      }
+    },
+    {
+      "name": "sync_batch_small",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:28.203362",
+      "performance": {
+        "duration_seconds": 0.00015337500371970236,
+        "memory_peak_mb": 802.921875,
+        "memory_average_mb": 802.921875,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "batch_size": "3",
+        "config": "sequential"
+      },
+      "extraction_quality": null
+    },
+    {
+      "name": "sync_batch_medium",
+      "success": true,
+      "timestamp": "2025-07-12T14:29:28.216179",
+      "performance": {
+        "duration_seconds": 0.00020612499793060124,
+        "memory_peak_mb": 802.921875,
+        "memory_average_mb": 802.921875,
+        "cpu_percent_average": 0.0,
+        "cpu_percent_peak": 0.0,
+        "gc_collections": {
+          "0": 16,
+          "1": 0,
+          "2": 0
+        },
+        "exception_info": null
+      },
+      "metadata": {
+        "batch_size": "5",
+        "config": "sequential"
+      },
+      "extraction_quality": null
+    }
+  ]
+}

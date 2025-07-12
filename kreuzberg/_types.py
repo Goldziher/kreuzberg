@@ -100,6 +100,96 @@ class Metadata(TypedDict, total=False):
     width: NotRequired[int]
     """Width of the document page/slide/image, if applicable."""
 
+    # Email-specific fields
+    email_from: NotRequired[str]
+    """Email sender (from field)."""
+    email_to: NotRequired[str]
+    """Email recipient (to field)."""
+    email_cc: NotRequired[str]
+    """Email carbon copy recipients."""
+    email_bcc: NotRequired[str]
+    """Email blind carbon copy recipients."""
+    date: NotRequired[str]
+    """Email date or document date."""
+    attachments: NotRequired[list[str]]
+    """List of attachment names."""
+
+    # Additional metadata fields for various extractors
+    content: NotRequired[str]
+    """Content metadata field."""
+    parse_error: NotRequired[str]
+    """Parse error information."""
+    warning: NotRequired[str]
+    """Warning messages."""
+
+    # Table extraction metadata
+    table_count: NotRequired[int]
+    """Number of tables extracted from the document."""
+    tables_summary: NotRequired[str]
+    """Summary of table extraction results."""
+    quality_score: NotRequired[float]
+    """Quality score for extracted content (0.0-1.0)."""
+
+
+# Cache valid metadata keys at module level for performance
+_VALID_METADATA_KEYS = {
+    "authors",
+    "categories",
+    "citations",
+    "comments",
+    "content",
+    "copyright",
+    "created_at",
+    "created_by",
+    "description",
+    "fonts",
+    "height",
+    "identifier",
+    "keywords",
+    "languages",
+    "license",
+    "modified_at",
+    "modified_by",
+    "organization",
+    "parse_error",
+    "publisher",
+    "references",
+    "status",
+    "subject",
+    "subtitle",
+    "summary",
+    "title",
+    "version",
+    "warning",
+    "width",
+    "email_from",
+    "email_to",
+    "email_cc",
+    "email_bcc",
+    "date",
+    "attachments",
+    "table_count",
+    "tables_summary",
+    "quality_score",
+}
+
+
+def normalize_metadata(data: dict[str, Any] | None) -> Metadata:
+    """Normalize any dict to proper Metadata TypedDict.
+
+    Filters out invalid keys and ensures type safety.
+    """
+    if not data:
+        return {}
+
+    # Filter and return only valid metadata
+    normalized: Metadata = {}
+    for key, value in data.items():
+        if key in _VALID_METADATA_KEYS and value is not None:
+            normalized[key] = value  # type: ignore[literal-required]
+
+    return normalized
+
 
 @dataclass(frozen=True)
 class Entity:
@@ -139,6 +229,45 @@ class ExtractionResult:
     def to_dict(self) -> dict[str, Any]:
         """Converts the ExtractionResult to a dictionary."""
         return asdict(self)
+
+    def export_tables_to_csv(self) -> list[str]:
+        """Export all tables to CSV format.
+
+        Returns:
+            List of CSV strings, one per table
+        """
+        if not self.tables:
+            return []
+
+        from kreuzberg._utils._table import export_table_to_csv
+
+        return [export_table_to_csv(table) for table in self.tables]
+
+    def export_tables_to_tsv(self) -> list[str]:
+        """Export all tables to TSV format.
+
+        Returns:
+            List of TSV strings, one per table
+        """
+        if not self.tables:
+            return []
+
+        from kreuzberg._utils._table import export_table_to_tsv
+
+        return [export_table_to_tsv(table) for table in self.tables]
+
+    def get_table_summaries(self) -> list[dict[str, Any]]:
+        """Get structural information for all tables.
+
+        Returns:
+            List of table structure dictionaries
+        """
+        if not self.tables:
+            return []
+
+        from kreuzberg._utils._table import extract_table_structure_info
+
+        return [extract_table_structure_info(table) for table in self.tables]
 
 
 PostProcessingHook = Callable[[ExtractionResult], ExtractionResult | Awaitable[ExtractionResult]]
@@ -193,6 +322,8 @@ class ExtractionConfig:
     """Configuration for language detection. If None, uses default settings."""
     spacy_entity_extraction_config: SpacyEntityExtractionConfig | None = None
     """Configuration for spaCy entity extraction. If None, uses default settings."""
+    enable_quality_processing: bool = True
+    """Whether to apply quality post-processing to improve extraction results."""
 
     def __post_init__(self) -> None:
         if self.custom_entity_patterns is not None and isinstance(self.custom_entity_patterns, dict):

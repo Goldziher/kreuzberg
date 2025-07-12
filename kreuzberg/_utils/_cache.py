@@ -64,8 +64,23 @@ class KreuzbergCache(Generic[T]):
         Returns:
             Unique cache key string
         """
-        # Sort for consistent hashing  # ~keep
-        cache_str = str(sorted(kwargs.items()))
+        # Use more efficient string building for cache key
+        if not kwargs:
+            return "empty"
+
+        # Build key string efficiently
+        parts = []
+        for key in sorted(kwargs):
+            value = kwargs[key]
+            # Convert common types efficiently
+            if isinstance(value, (str, int, float, bool)):
+                parts.append(f"{key}={value}")
+            elif isinstance(value, bytes):
+                parts.append(f"{key}=bytes:{len(value)}")
+            else:
+                parts.append(f"{key}={type(value).__name__}:{value!s}")
+
+        cache_str = "&".join(parts)
         return hashlib.sha256(cache_str.encode()).hexdigest()[:16]
 
     def _get_cache_path(self, cache_key: str) -> Path:

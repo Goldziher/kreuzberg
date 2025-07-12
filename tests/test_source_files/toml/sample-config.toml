@@ -1,0 +1,33 @@
+# Sample TOML configuration file
+title = "Sample Project Configuration"
+description = "This is a sample TOML file for testing"
+
+[database]
+host = "localhost"
+port = 5432
+name = "testdb"
+ssl_enabled = true
+
+[database.credentials]
+username = "admin"
+password = "secret123"
+
+[server]
+host = "0.0.0.0"
+port = 8080
+workers = 4
+
+[[features]]
+name = "authentication"
+enabled = true
+description = "User authentication system"
+
+[[features]]
+name = "logging"
+enabled = true
+description = "Application logging"
+
+[build]
+target = "production"
+optimization = "release"
+version = "1.0.0"

@@ -33,3 +33,5 @@ GEMINI.md
 prompt_template.egg-info/
 requirements.txt
 site/
+.cache/
+dist/

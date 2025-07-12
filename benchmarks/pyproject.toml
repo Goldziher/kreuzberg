@@ -3,9 +3,12 @@ name = "kreuzberg-benchmarks"
 version = "0.1.0"
 description = "Performance benchmarking suite for Kreuzberg text extraction library"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
 dependencies = [

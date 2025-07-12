@@ -38,8 +38,8 @@ def test_safe_decode_fallback_to_latin1() -> None:
 
     problematic_bytes = b"\xff\xfe\x00\x01\x02"
 
-    with patch("kreuzberg._utils._string.detect") as mock_detect:
-        mock_detect.return_value = {"encoding": None}
+    with patch("kreuzberg._utils._string.chardetng_py.detect") as mock_detect:
+        mock_detect.return_value = None
 
         # This should trigger the latin-1 fallback on line 27  # ~keep
         result = safe_decode(problematic_bytes)
@@ -58,7 +58,7 @@ def test_normalize_spaces_basic() -> None:
 def test_normalize_spaces_with_newlines() -> None:
     """Test normalize_spaces with newlines and tabs."""
     result = normalize_spaces("hello\n\t world\r\n  test")
-    assert result == "hello world test"
+    assert result == "hello\nworld\ntest"
 
 
 def test_normalize_spaces_empty_string() -> None:

@@ -28,8 +28,11 @@ async def run_sync(sync_fn: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -
     Returns:
         The result of the synchronous function.
     """
-    handler = partial(sync_fn, **kwargs)
-    return cast("T", await any_io_run_sync(handler, *args, abandon_on_cancel=True))  # pyright: ignore [reportCallIssue]
+    # Optimize: only create partial if we have kwargs
+    if kwargs:
+        handler = partial(sync_fn, **kwargs)
+        return cast("T", await any_io_run_sync(handler, *args, abandon_on_cancel=True))  # pyright: ignore [reportCallIssue]
+    return cast("T", await any_io_run_sync(sync_fn, *args, abandon_on_cancel=True))  # pyright: ignore [reportCallIssue]
 
 
 async def run_taskgroup(*async_tasks: Awaitable[Any]) -> list[Any]:

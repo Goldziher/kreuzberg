@@ -14,7 +14,9 @@ from rich.table import Table
 from .models import (
     BenchmarkResult,
     BenchmarkSuite,
+    ExtractionQualityMetrics,
     FlameGraphConfig,
+    MetadataQualityMetrics,
     PerformanceMetrics,
     SystemInfo,
 )
@@ -36,6 +38,120 @@ class BenchmarkRunner:
         self.flame_config = flame_config or FlameGraphConfig()
         self.system_info = SystemInfo.collect()
 
+    def _analyze_extraction_result(
+        self, result: Any
+    ) -> ExtractionQualityMetrics | None:
+        """Analyze extraction result to compute quality metrics."""
+        try:
+            # Check if it's an ExtractionResult
+            if not hasattr(result, "content") or not hasattr(result, "metadata"):
+                return None
+
+            # Compute text metrics
+            text_length = len(result.content) if result.content else 0
+            word_count = len(result.content.split()) if result.content else 0
+            line_count = result.content.count("\n") + 1 if result.content else 0
+
+            # Check for tables
+            has_tables = bool(result.tables) if hasattr(result, "tables") else False
+            table_count = len(result.tables) if has_tables else 0
+
+            # Check for OCR (heuristic based on metadata or image files)
+            has_ocr = False
+            if result.metadata:
+                ocr_keywords = ["ocr", "tesseract", "easyocr", "paddleocr"]
+                has_ocr = any(
+                    key in str(result.metadata).lower() for key in ocr_keywords
+                )
+
+            # Get detected languages
+            detected_languages = []
+            if hasattr(result, "detected_languages") and result.detected_languages:
+                detected_languages = list(result.detected_languages)
+
+            # Analyze metadata quality
+            metadata_quality = None
+            if result.metadata:
+                metadata_fields = list(result.metadata.keys())
+                metadata_count = len(metadata_fields)
+
+                # Check for common metadata fields
+                has_title = any(
+                    k.lower() in ["title", "dc:title"] for k in metadata_fields
+                )
+                has_author = any(
+                    k.lower() in ["author", "creator", "dc:creator"]
+                    for k in metadata_fields
+                )
+                has_created_date = any(
+                    "creat" in k.lower() or "date" in k.lower() for k in metadata_fields
+                )
+                has_modified_date = any("modif" in k.lower() for k in metadata_fields)
+
+                # Count custom fields (non-standard)
+                standard_fields = {
+                    "title",
+                    "author",
+                    "creator",
+                    "created",
+                    "modified",
+                    "date",
+                    "subject",
+                    "keywords",
+                    "description",
+                    "producer",
+                    "creationdate",
+                    "moddate",
+                    "pages",
+                    "page_count",
+                }
+                custom_fields_count = sum(
+                    1 for f in metadata_fields if f.lower() not in standard_fields
+                )
+
+                # Calculate completeness (out of expected fields)
+                expected_fields = {"title", "author", "created", "modified"}
+                present_expected = sum(
+                    1
+                    for ef in expected_fields
+                    if any(ef in f.lower() for f in metadata_fields)
+                )
+                metadata_completeness = (present_expected / len(expected_fields)) * 100
+
+                # Calculate richness (diversity score)
+                metadata_richness = min(metadata_count / 10.0, 1.0)  # Normalize to 0-1
+
+                # Get backend if available
+                extraction_backend = result.metadata.get("extraction_backend")
+
+                metadata_quality = MetadataQualityMetrics(
+                    metadata_count=metadata_count,
+                    metadata_fields=metadata_fields[:50],  # Limit to 50 fields
+                    metadata_completeness=metadata_completeness,
+                    metadata_richness=metadata_richness,
+                    has_title=has_title,
+                    has_author=has_author,
+                    has_created_date=has_created_date,
+                    has_modified_date=has_modified_date,
+                    custom_fields_count=custom_fields_count,
+                    extraction_backend=extraction_backend,
+                )
+
+            return ExtractionQualityMetrics(
+                text_length=text_length,
+                word_count=word_count,
+                line_count=line_count,
+                has_tables=has_tables,
+                table_count=table_count,
+                has_ocr=has_ocr,
+                mime_type=result.mime_type if hasattr(result, "mime_type") else None,
+                detected_languages=detected_languages,
+                metadata_quality=metadata_quality,
+            )
+
+        except Exception:
+            return None
+
     def run_sync_benchmark(
         self,
         name: str,
@@ -49,18 +165,22 @@ class BenchmarkRunner:
             profiler.start_monitoring()
             start_time = time.perf_counter()
 
-            func()
+            result = func()
 
             end_time = time.perf_counter()
             performance_metrics = profiler.stop_monitoring()
 
             performance_metrics.duration_seconds = end_time - start_time
 
+            # Analyze extraction quality if this is an extraction benchmark
+            extraction_quality = self._analyze_extraction_result(result)
+
             return BenchmarkResult(
                 name=name,
                 success=True,
                 performance=performance_metrics,
                 metadata=metadata or {},
+                extraction_quality=extraction_quality,
             )
 
         except Exception as e:
@@ -102,20 +222,24 @@ class BenchmarkRunner:
             start_time = time.perf_counter()
 
             if asyncio.iscoroutinefunction(func):
-                await func()
+                result = await func()
             else:
-                func()
+                result = func()
 
             end_time = time.perf_counter()
             performance_metrics = profiler.stop_monitoring()
 
             performance_metrics.duration_seconds = end_time - start_time
 
+            # Analyze extraction quality if this is an extraction benchmark
+            extraction_quality = self._analyze_extraction_result(result)
+
             return BenchmarkResult(
                 name=name,
                 success=True,
                 performance=performance_metrics,
                 metadata=metadata or {},
+                extraction_quality=extraction_quality,
             )
 
         except Exception as e:

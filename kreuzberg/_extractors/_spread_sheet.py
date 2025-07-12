@@ -13,7 +13,7 @@ from python_calamine import CalamineWorkbook
 
 from kreuzberg._extractors._base import Extractor
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE, SPREADSHEET_MIME_TYPES
-from kreuzberg._types import ExtractionResult
+from kreuzberg._types import ExtractionResult, Metadata
 from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync, run_taskgroup
 from kreuzberg._utils._tmp import create_temp_file
@@ -45,9 +45,14 @@ class SpreadSheetExtractor(Extractor):
             try:
                 results: list[str] = await run_taskgroup(*tasks)
 
-                return ExtractionResult(
-                    content="\n\n".join(results), mime_type=MARKDOWN_MIME_TYPE, metadata={}, chunks=[]
+                result = ExtractionResult(
+                    content="\n\n".join(results),
+                    mime_type=MARKDOWN_MIME_TYPE,
+                    metadata=self._extract_spreadsheet_metadata(workbook),
+                    chunks=[],
                 )
+
+                return self._apply_quality_processing(result)
             except ExceptionGroup as eg:
                 raise ParsingError(
                     "Failed to extract file data",
@@ -87,7 +92,14 @@ class SpreadSheetExtractor(Extractor):
                 sheet_text = self._convert_sheet_to_text_sync(workbook, sheet_name)
                 results.append(sheet_text)
 
-            return ExtractionResult(content="\n\n".join(results), mime_type=MARKDOWN_MIME_TYPE, metadata={}, chunks=[])
+            result = ExtractionResult(
+                content="\n\n".join(results),
+                mime_type=MARKDOWN_MIME_TYPE,
+                metadata=self._extract_spreadsheet_metadata(workbook),
+                chunks=[],
+            )
+
+            return self._apply_quality_processing(result)
         except Exception as e:
             raise ParsingError(
                 "Failed to extract file data",
@@ -181,3 +193,166 @@ class SpreadSheetExtractor(Extractor):
             result = "\n".join(markdown_lines)
 
         return f"## {sheet_name}\n\n{normalize_spaces(result)}"
+
+    def _enhance_sheet_with_table_data(self, workbook: CalamineWorkbook, sheet_name: str) -> str:
+        """Enhanced sheet processing with better table structure preservation."""
+        try:
+            # pandas is optional dependency
+            import pandas as pd
+
+            from kreuzberg._utils._table import enhance_table_markdown
+
+            sheet = workbook.get_sheet_by_name(sheet_name)
+            data = sheet.to_python()
+
+            if not data or not any(row for row in data):
+                return f"## {sheet_name}\n\n*Empty sheet*"
+
+            # Convert to DataFrame
+            df = pd.DataFrame(data)
+
+            # Clean up empty rows and columns
+            df = df.dropna(how="all").dropna(axis=1, how="all")
+
+            if df.empty:
+                return f"## {sheet_name}\n\n*No data*"
+
+            # Create a mock TableData for enhanced formatting
+            from PIL import Image
+
+            from kreuzberg._types import TableData
+
+            # Create a 1x1 transparent image as placeholder
+            placeholder_image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+            mock_table: TableData = {"df": df, "text": "", "page_number": 0, "cropped_image": placeholder_image}
+
+            enhanced_markdown = enhance_table_markdown(mock_table)
+            return f"## {sheet_name}\n\n{enhanced_markdown}"
+
+        except (ImportError, AttributeError, ValueError):
+            # Fallback to original method if pandas/table enhancement fails
+            return self._convert_sheet_to_text_sync(workbook, sheet_name)
+
+    @staticmethod
+    def _extract_spreadsheet_metadata(workbook: CalamineWorkbook) -> Metadata:
+        """Extract metadata from spreadsheet using python-calamine.
+
+        Args:
+            workbook: CalamineWorkbook instance
+
+        Returns:
+            Metadata dict using existing metadata keys where possible
+        """
+        metadata: Metadata = {}
+
+        # Extract basic document properties
+        SpreadSheetExtractor._extract_document_properties(workbook, metadata)
+
+        # Add structural information
+        SpreadSheetExtractor._add_structure_info(workbook, metadata)
+
+        # Analyze content complexity
+        SpreadSheetExtractor._analyze_content_complexity(workbook, metadata)
+
+        return metadata
+
+    @staticmethod
+    def _extract_document_properties(workbook: CalamineWorkbook, metadata: Metadata) -> None:
+        """Extract basic document properties from workbook."""
+        with contextlib.suppress(AttributeError, Exception):
+            if not (hasattr(workbook, "metadata") and workbook.metadata):
+                return
+
+            props = workbook.metadata
+
+            # Basic properties mapping
+            property_mapping = {
+                "title": "title",
+                "author": "authors",  # Convert to list
+                "subject": "subject",
+                "comments": "comments",
+                "keywords": "keywords",  # Process separately
+                "category": "categories",  # Convert to list
+                "company": "organization",
+                "manager": "modified_by",
+            }
+
+            for prop_name, meta_key in property_mapping.items():
+                if hasattr(props, prop_name) and (value := getattr(props, prop_name)):
+                    if meta_key in ("authors", "categories"):
+                        metadata[meta_key] = [value]  # type: ignore[literal-required]
+                    elif meta_key == "keywords":
+                        keywords = [k.strip() for k in value.replace(";", ",").split(",") if k.strip()]
+                        if keywords:
+                            metadata[meta_key] = keywords  # type: ignore[literal-required]
+                    else:
+                        metadata[meta_key] = value  # type: ignore[literal-required]
+
+            # Handle dates separately
+            SpreadSheetExtractor._extract_date_properties(props, metadata)
+
+    @staticmethod
+    def _extract_date_properties(props: Any, metadata: Metadata) -> None:
+        """Extract and format date properties."""
+        date_mapping = {"created": "created_at", "modified": "modified_at"}
+
+        for prop_name, meta_key in date_mapping.items():
+            if hasattr(props, prop_name) and (date_value := getattr(props, prop_name)):
+                with contextlib.suppress(Exception):
+                    if hasattr(date_value, "isoformat"):
+                        metadata[meta_key] = date_value.isoformat()  # type: ignore[literal-required]
+                    else:
+                        metadata[meta_key] = str(date_value)  # type: ignore[literal-required]
+
+    @staticmethod
+    def _add_structure_info(workbook: CalamineWorkbook, metadata: Metadata) -> None:
+        """Add structural information about the spreadsheet."""
+        if not (hasattr(workbook, "sheet_names") and workbook.sheet_names):
+            return
+
+        sheet_count = len(workbook.sheet_names)
+        structure_info = f"Spreadsheet with {sheet_count} sheet{'s' if sheet_count != 1 else ''}"
+
+        # Don't list too many sheet names (magic number made constant)
+        max_sheet_names_to_list = 5
+        if sheet_count <= max_sheet_names_to_list:
+            structure_info += f": {', '.join(workbook.sheet_names)}"
+
+        metadata["description"] = structure_info
+
+    @staticmethod
+    def _analyze_content_complexity(workbook: CalamineWorkbook, metadata: Metadata) -> None:
+        """Analyze spreadsheet content for complexity indicators."""
+        with contextlib.suppress(Exception):
+            has_formulas = False
+            total_cells = 0
+
+            # Check only first few sheets for performance
+            max_sheets_to_check = 3
+            max_rows_to_check = 50
+
+            for sheet_name in workbook.sheet_names[:max_sheets_to_check]:
+                with contextlib.suppress(Exception):
+                    sheet = workbook.get_sheet_by_name(sheet_name)
+                    data = sheet.to_python()
+
+                    for row in data[:max_rows_to_check]:
+                        if not row:  # Skip empty rows
+                            continue
+
+                        total_cells += sum(1 for cell in row if cell is not None and str(cell).strip())
+
+                        # Check for formulas (simple heuristic)
+                        if any(isinstance(cell, str) and cell.startswith("=") for cell in row):
+                            has_formulas = True
+                            break
+
+            # Build summary
+            summary_parts = []
+            if total_cells > 0:
+                summary_parts.append(f"Contains {total_cells}+ data cells")
+            if has_formulas:
+                summary_parts.append("includes formulas")
+
+            if summary_parts and "summary" not in metadata:
+                metadata["summary"] = f"Spreadsheet that {', '.join(summary_parts)}."

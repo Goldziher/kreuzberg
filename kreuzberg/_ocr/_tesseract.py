@@ -206,7 +206,7 @@ class TesseractConfig:
     """Enable or disable the use of n-gram-based language models for improved text recognition.
 
     Default is False for optimal performance on modern documents. Enable for degraded or historical text."""
-    psm: PSMMode = PSMMode.AUTO_ONLY
+    psm: PSMMode = PSMMode.AUTO
     """Page segmentation mode (PSM) to guide Tesseract on how to segment the image (e.g., single block, single line)."""
     tessedit_dont_blkrej_good_wds: bool = True
     """If True, prevents block rejection of words identified as good, improving text output quality."""
@@ -345,7 +345,11 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
                     "OFF",
                 ]
                 for kwarg, value in kwargs.items():
-                    command.extend(["-c", f"{kwarg}={1 if value else 0}"])
+                    if isinstance(value, bool):
+                        command.extend(["-c", f"{kwarg}={1 if value else 0}"])
+                    else:
+                        # Handle string parameters (like tessedit_char_whitelist)
+                        command.extend(["-c", f"{kwarg}={value}"])
 
                 env: dict[str, Any] | None = None
                 if sys.platform.startswith("linux"):

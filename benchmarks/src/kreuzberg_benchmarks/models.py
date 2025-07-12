@@ -56,6 +56,37 @@ class PerformanceMetrics:
 
 
 @dataclass
+class MetadataQualityMetrics:
+    """Metadata quality metrics for extraction result."""
+
+    metadata_count: int
+    metadata_fields: list[str]
+    metadata_completeness: float  # Percentage of expected fields present
+    metadata_richness: float  # Diversity score (0-1)
+    has_title: bool
+    has_author: bool
+    has_created_date: bool
+    has_modified_date: bool
+    custom_fields_count: int
+    extraction_backend: str | None = None
+
+
+@dataclass
+class ExtractionQualityMetrics:
+    """Quality metrics for extraction result."""
+
+    text_length: int
+    word_count: int
+    line_count: int
+    has_tables: bool
+    table_count: int
+    has_ocr: bool
+    mime_type: str | None
+    detected_languages: list[str] = field(default_factory=list)
+    metadata_quality: MetadataQualityMetrics | None = None
+
+
+@dataclass
 class BenchmarkResult:
     """Complete result of a single benchmark."""
 
@@ -64,6 +95,7 @@ class BenchmarkResult:
     performance: PerformanceMetrics | None
     metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
+    extraction_quality: ExtractionQualityMetrics | None = None
 
 
 @dataclass
@@ -75,6 +107,7 @@ class BenchmarkSuite:
     results: list[BenchmarkResult]
     total_duration_seconds: float
     timestamp: datetime = field(default_factory=datetime.now)
+    version: str = "4.0.0rc1"
 
     @property
     def success_rate(self) -> float:
@@ -93,6 +126,7 @@ class BenchmarkSuite:
         """Convert to dictionary for JSON serialization."""
         return {
             "name": self.name,
+            "version": self.version,
             "timestamp": self.timestamp.isoformat(),
             "system_info": {
                 "platform": self.system_info.platform,
@@ -127,6 +161,32 @@ class BenchmarkSuite:
                     if r.performance
                     else None,
                     "metadata": r.metadata,
+                    "extraction_quality": {
+                        "text_length": r.extraction_quality.text_length,
+                        "word_count": r.extraction_quality.word_count,
+                        "line_count": r.extraction_quality.line_count,
+                        "has_tables": r.extraction_quality.has_tables,
+                        "table_count": r.extraction_quality.table_count,
+                        "has_ocr": r.extraction_quality.has_ocr,
+                        "mime_type": r.extraction_quality.mime_type,
+                        "detected_languages": r.extraction_quality.detected_languages,
+                        "metadata_quality": {
+                            "metadata_count": r.extraction_quality.metadata_quality.metadata_count,
+                            "metadata_fields": r.extraction_quality.metadata_quality.metadata_fields,
+                            "metadata_completeness": r.extraction_quality.metadata_quality.metadata_completeness,
+                            "metadata_richness": r.extraction_quality.metadata_quality.metadata_richness,
+                            "has_title": r.extraction_quality.metadata_quality.has_title,
+                            "has_author": r.extraction_quality.metadata_quality.has_author,
+                            "has_created_date": r.extraction_quality.metadata_quality.has_created_date,
+                            "has_modified_date": r.extraction_quality.metadata_quality.has_modified_date,
+                            "custom_fields_count": r.extraction_quality.metadata_quality.custom_fields_count,
+                            "extraction_backend": r.extraction_quality.metadata_quality.extraction_backend,
+                        }
+                        if r.extraction_quality.metadata_quality
+                        else None,
+                    }
+                    if r.extraction_quality
+                    else None,
                 }
                 for r in self.results
             ],

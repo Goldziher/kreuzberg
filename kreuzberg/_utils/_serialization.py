@@ -29,8 +29,10 @@ def encode_hook(obj: Any) -> Any:
         "to_list",
         "tolist",
     ):
-        if hasattr(obj, key) and callable(getattr(obj, key)):
-            return getattr(obj, key)()
+        if hasattr(obj, key):
+            method = getattr(obj, key)  # Cache the attribute lookup
+            if callable(method):
+                return method()
 
     if is_dataclass(obj) and not isinstance(obj, type):
         return {k: v if not isinstance(v, Enum) else v.value for (k, v) in asdict(obj).items()}

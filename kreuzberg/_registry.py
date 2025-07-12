@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING, ClassVar
 
+from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg._extractors._image import ImageExtractor
 from kreuzberg._extractors._pandoc import (
@@ -19,6 +20,7 @@ from kreuzberg._extractors._pandoc import (
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._extractors._presentation import PresentationExtractor
 from kreuzberg._extractors._spread_sheet import SpreadSheetExtractor
+from kreuzberg._extractors._structured import StructuredDataExtractor
 
 if TYPE_CHECKING:
     from kreuzberg._extractors._base import Extractor
@@ -40,6 +42,8 @@ class ExtractorRegistry:
         PresentationExtractor,
         SpreadSheetExtractor,
         HTMLExtractor,
+        EmailExtractor,
+        StructuredDataExtractor,
         MarkdownExtractor,
         ImageExtractor,
         BibliographyExtractor,

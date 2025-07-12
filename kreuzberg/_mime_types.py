@@ -17,6 +17,12 @@ PLAIN_TEXT_MIME_TYPE: Final = "text/plain"
 POWER_POINT_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 DOCX_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
+EML_MIME_TYPE: Final = "message/rfc822"
+MSG_MIME_TYPE: Final = "application/vnd.ms-outlook"
+JSON_MIME_TYPE: Final = "application/json"
+YAML_MIME_TYPE: Final = "application/x-yaml"
+TOML_MIME_TYPE: Final = "application/toml"
+
 EXCEL_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 EXCEL_BINARY_MIME_TYPE: Final = "application/vnd.ms-excel"
 EXCEL_MACRO_MIME_TYPE: Final = "application/vnd.ms-excel.sheet.macroEnabled.12"
@@ -127,6 +133,12 @@ EXT_TO_MIME_TYPE: Final[Mapping[str, str]] = {
     ".org": "text/x-org",
     ".epub": "application/epub+zip",
     ".rtf": "application/rtf",
+    ".eml": EML_MIME_TYPE,
+    ".msg": MSG_MIME_TYPE,
+    ".json": JSON_MIME_TYPE,
+    ".yaml": YAML_MIME_TYPE,
+    ".yml": YAML_MIME_TYPE,
+    ".toml": TOML_MIME_TYPE,
     ".odt": "application/vnd.oasis.opendocument.text",
     ".docx": DOCX_MIME_TYPE,
     ".bib": "application/x-bibtex",
@@ -139,7 +151,21 @@ SUPPORTED_MIME_TYPES: Final[set[str]] = (
     | IMAGE_MIME_TYPES
     | PANDOC_SUPPORTED_MIME_TYPES
     | SPREADSHEET_MIME_TYPES
-    | {PDF_MIME_TYPE, POWER_POINT_MIME_TYPE, HTML_MIME_TYPE}
+    | {
+        PDF_MIME_TYPE,
+        POWER_POINT_MIME_TYPE,
+        HTML_MIME_TYPE,
+        EML_MIME_TYPE,
+        MSG_MIME_TYPE,
+        JSON_MIME_TYPE,
+        YAML_MIME_TYPE,
+        TOML_MIME_TYPE,
+        "text/json",
+        "text/yaml",
+        "text/x-yaml",
+        "application/yaml",
+        "text/toml",
+    }
 )
 
 

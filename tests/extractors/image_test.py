@@ -49,7 +49,9 @@ async def test_extract_path_async(mock_ocr_backend: MagicMock, tmp_path: Path) -
     image_path = tmp_path / "test.png"
     image_path.write_bytes(b"dummy image content")
 
-    expected_result = ExtractionResult(content="extracted text", chunks=[], mime_type="text/plain", metadata={})
+    expected_result = ExtractionResult(
+        content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
+    )
     mock_ocr_backend.process_file.return_value = expected_result
 
     result = await extractor.extract_path_async(image_path)
@@ -65,7 +67,9 @@ def test_extract_path_sync(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
     image_path = tmp_path / "test.png"
     image_path.write_bytes(b"dummy image content")
 
-    expected_result = ExtractionResult(content="extracted text", chunks=[], mime_type="text/plain", metadata={})
+    expected_result = ExtractionResult(
+        content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
+    )
     mock_ocr_backend.process_file.return_value = expected_result
 
     with patch("kreuzberg._multiprocessing.sync_tesseract.process_batch_images_sync_pure") as mock_process:
@@ -80,7 +84,9 @@ def test_extract_bytes_sync(mock_ocr_backend: MagicMock) -> None:
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
-    expected_result = ExtractionResult(content="extracted text", chunks=[], mime_type="text/plain", metadata={})
+    expected_result = ExtractionResult(
+        content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
+    )
 
     with patch.object(extractor, "extract_path_sync") as mock_extract_path:
         mock_extract_path.return_value = expected_result
@@ -133,7 +139,9 @@ async def test_extract_bytes_async(mock_ocr_backend: MagicMock) -> None:
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
-    expected_result = ExtractionResult(content="extracted text", chunks=[], mime_type="text/plain", metadata={})
+    expected_result = ExtractionResult(
+        content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
+    )
     mock_ocr_backend.process_file.return_value = expected_result
 
     mock_path = MagicMock()
@@ -182,7 +190,9 @@ def test_extract_path_sync_with_tesseract_config() -> None:
     image_path = Path("test.png")
 
     with patch("kreuzberg._multiprocessing.sync_tesseract.process_batch_images_sync_pure") as mock_process:
-        expected_result = ExtractionResult(content="extracted text", chunks=[], mime_type="text/plain", metadata={})
+        expected_result = ExtractionResult(
+            content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
+        )
         mock_process.return_value = [expected_result]
 
         result = extractor.extract_path_sync(image_path)
@@ -199,7 +209,9 @@ def test_extract_path_sync_no_ocr_config() -> None:
     image_path = Path("test.png")
 
     with patch("kreuzberg._multiprocessing.sync_tesseract.process_batch_images_sync_pure") as mock_process:
-        expected_result = ExtractionResult(content="extracted text", chunks=[], mime_type="text/plain", metadata={})
+        expected_result = ExtractionResult(
+            content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
+        )
         mock_process.return_value = [expected_result]
 
         result = extractor.extract_path_sync(image_path)

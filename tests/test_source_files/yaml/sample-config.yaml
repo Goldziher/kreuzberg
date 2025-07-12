@@ -1,0 +1,15 @@
+title: Sample Configuration
+description: This is a sample YAML configuration file
+server:
+  host: localhost
+  port: 8080
+  ssl: true
+database:
+  name: testdb
+  credentials:
+    username: admin
+    password: secret
+features:
+  - authentication
+  - logging
+  - monitoring

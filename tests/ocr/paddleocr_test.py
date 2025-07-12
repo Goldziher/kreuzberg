@@ -325,7 +325,7 @@ async def test_process_image(
     result = await backend.process_image(mock_image)
 
     assert isinstance(result, ExtractionResult)
-    assert "Sample text 1 Sample text 2" in result.content
+    assert result.content == "Sample text 1\nSample text 2"
     assert result.mime_type == "text/plain"
     assert result.metadata.get("width") == 100
     assert result.metadata.get("height") == 100
@@ -358,7 +358,7 @@ async def test_process_image_with_options(backend: PaddleBackend, mock_image: Mo
     )
 
     assert isinstance(result, ExtractionResult)
-    assert "Sample text 1 Sample text 2" in result.content
+    assert result.content == "Sample text 1\nSample text 2"
 
 
 @pytest.mark.anyio
@@ -407,7 +407,7 @@ async def test_process_file(backend: PaddleBackend, mock_run_sync: Mock, ocr_ima
     result = await backend.process_file(ocr_image)
 
     assert isinstance(result, ExtractionResult)
-    assert "Sample text 1 Sample text 2" in result.content
+    assert result.content == "Sample text 1\nSample text 2"
 
 
 @pytest.mark.anyio
@@ -436,7 +436,7 @@ async def test_process_file_with_options(backend: PaddleBackend, mock_run_sync: 
     )
 
     assert isinstance(result, ExtractionResult)
-    assert "Sample text 1 Sample text 2" in result.content
+    assert result.content == "Sample text 1\nSample text 2"
 
 
 @pytest.mark.anyio

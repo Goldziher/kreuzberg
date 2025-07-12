@@ -90,3 +90,43 @@ class Extractor(ABC):
         return mime_type in cls.SUPPORTED_MIME_TYPES or any(
             mime_type.startswith(supported_type) for supported_type in cls.SUPPORTED_MIME_TYPES
         )
+
+    def _apply_quality_processing(self, result: ExtractionResult) -> ExtractionResult:
+        """Apply quality post-processing to extraction result if enabled.
+
+        Args:
+            result: The raw extraction result
+
+        Returns:
+            Enhanced extraction result with quality improvements (if enabled)
+        """
+        # Only apply quality processing if enabled in config
+        if not self.config.enable_quality_processing:
+            return result
+
+        from kreuzberg._utils._quality import calculate_quality_score, clean_extracted_text
+
+        if not result.content:
+            return result
+
+        # Clean the content
+        cleaned_content = clean_extracted_text(result.content)
+
+        # Calculate quality score
+        quality_score = calculate_quality_score(cleaned_content, dict(result.metadata) if result.metadata else None)
+
+        # Add quality metadata
+        enhanced_metadata = dict(result.metadata) if result.metadata else {}
+        enhanced_metadata["quality_score"] = quality_score
+
+        # Return enhanced result
+        from kreuzberg._types import ExtractionResult, normalize_metadata
+
+        return ExtractionResult(
+            content=cleaned_content,
+            mime_type=result.mime_type,
+            metadata=normalize_metadata(enhanced_metadata),
+            chunks=result.chunks,
+            detected_languages=result.detected_languages,
+            tables=result.tables,
+        )
