@@ -47,7 +47,7 @@ classifiers = [
 
 dependencies = [
   "anyio>=4.9.0",
-  "charset-normalizer>=3.4.2",
+  "chardetng-py>=0.3.4",
   "click>=8.2.1",
   "exceptiongroup>=1.2.2; python_version<'3.11'",
   "html-to-markdown[lxml]>=1.6.0",

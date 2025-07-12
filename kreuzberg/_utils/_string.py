@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 
-from charset_normalizer import detect
+import chardetng_py
 
 
 def safe_decode(byte_data: bytes, encoding: str | None = None) -> str:
@@ -18,7 +18,10 @@ def safe_decode(byte_data: bytes, encoding: str | None = None) -> str:
     if not byte_data:
         return ""
 
-    encodings = [encoding, detect(byte_data).get("encoding", ""), "utf-8"]
+    # Use chardetng for detection - it's more accurate for web content
+    detected_encoding = chardetng_py.detect(byte_data)
+
+    encodings = [encoding, detected_encoding, "utf-8"]
 
     for enc in [e for e in encodings if e]:
         with suppress(UnicodeDecodeError, LookupError):
