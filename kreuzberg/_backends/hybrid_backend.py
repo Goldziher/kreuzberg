@@ -95,6 +95,14 @@ class HybridBackend(ExtractionBackend):
         try:
             result = backend.extract(file_path, **kwargs)
 
+            # Enhance metadata if using RICH_METADATA strategy and different backend available
+            if (
+                self.strategy == ExtractionStrategy.RICH_METADATA
+                and optimal_backend_name == "kreuzberg"
+                and self.extractous is not None
+            ):
+                result = self._enhance_metadata_if_beneficial(result, file_path, file_type)
+
             # Add hybrid backend metadata
             if result.metadata is None:
                 result.metadata = {}
@@ -346,6 +354,68 @@ class HybridBackend(ExtractionBackend):
         if backend_name == "extractous":
             return self.extractous
         return None
+
+    def _enhance_metadata_if_beneficial(
+        self, result: ExtractionResult, file_path: str | Path, file_type: str
+    ) -> ExtractionResult:
+        """Enhance metadata using alternative backend if beneficial and safe.
+
+        Args:
+            result: Original extraction result
+            file_path: Path to the file
+            file_type: Detected file type
+
+        Returns:
+            Enhanced extraction result with additional metadata
+        """
+        # Only enhance metadata for specific formats where extractous provides value
+        # and is known to be stable (avoid XLSX due to parsing issues)
+        metadata_enhancement_formats = {
+            "xlsx",
+            "xls",  # Office spreadsheets - but only if extractous is stable
+            "pptx",
+            "ppt",  # Presentations
+            "docx",
+            "doc",  # Documents
+        }
+
+        # Skip enhancement for formats with known issues
+        skip_formats = {
+            "xlsx",
+            "xls",  # Skip XLSX due to extractous parsing errors
+        }
+
+        if not any(ext in file_type.lower() for ext in metadata_enhancement_formats):
+            return result
+
+        if any(ext in file_type.lower() for ext in skip_formats):
+            logger.debug("Skipping metadata enhancement for %s due to known compatibility issues", file_type)
+            return result
+
+        try:
+            # Try to get additional metadata from extractous
+            logger.debug("Attempting metadata enhancement for %s using extractous", file_path)
+            extractous_result = self.extractous.extract(file_path)
+
+            # Merge metadata (prefer original result's text, enhance with extractous metadata)
+            if extractous_result.metadata and result.metadata:
+                # Add extractous metadata with prefix to distinguish source
+                for key, value in extractous_result.metadata.items():
+                    if key not in result.metadata:  # Don't overwrite existing metadata
+                        result.metadata[f"extractous_{key}"] = value
+
+                result.metadata["metadata_enhanced"] = True
+                result.metadata["enhancement_backend"] = "extractous"
+                logger.debug("Successfully enhanced metadata for %s", file_path)
+
+        except Exception as e:  # noqa: BLE001
+            # Metadata enhancement failure should not break the main extraction
+            logger.warning("Metadata enhancement failed for %s: %s", file_path, e)
+            if result.metadata is None:
+                result.metadata = {}
+            result.metadata["metadata_enhancement_failed"] = str(e)
+
+        return result
 
     @property
     def name(self) -> str:

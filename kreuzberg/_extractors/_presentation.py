@@ -9,12 +9,19 @@ It includes vendored code:
 
 from __future__ import annotations
 
+import gc
 import re
+
+try:
+    import defusedxml.ElementTree as ET  # noqa: N817
+except ImportError:
+    import xml.etree.ElementTree as ET
 from contextlib import suppress
 from html import escape
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
+from zipfile import ZipFile
 
 import pptx
 from anyio import Path as AsyncPath
@@ -120,11 +127,17 @@ class PresentationExtractor(Extractor):
             - Text content (with titles properly formatted)
             - Slide notes (under a dedicated section for each slide)
         """
-        md_content = ""
+        md_content = []  # Use list for better memory efficiency
         presentation = pptx.Presentation(BytesIO(file_contents))
 
+        # Process metadata first before slides to reduce peak memory
+        metadata = self._extract_presentation_metadata(presentation)
+
+        # Get total slide count for memory management
+        total_slides = len(presentation.slides)
+
         for index, slide in enumerate(presentation.slides):
-            md_content += f"\n\n<!-- Slide number: {index + 1} -->\n"
+            slide_content = [f"\n\n<!-- Slide number: {index + 1} -->\n"]
 
             title = None
             if hasattr(slide.shapes, "title"):
@@ -142,7 +155,7 @@ class PresentationExtractor(Extractor):
                         alt_text = shape._element._nvXxPr.cNvPr.attrib.get("descr", "")  # noqa: SLF001
 
                     filename = re.sub(r"\W", "", shape.name) + ".jpg"
-                    md_content += f"\n![{alt_text if alt_text else shape.name}]({filename})\n"
+                    slide_content.append(f"\n![{alt_text if alt_text else shape.name}]({filename})\n")
 
                 elif shape.shape_type == MSO_SHAPE_TYPE.TABLE:
                     html_table = "<table>"
@@ -159,25 +172,35 @@ class PresentationExtractor(Extractor):
                         first_row = False
 
                     html_table += "</table>"
-                    md_content += "\n" + html_table + "\n"
+                    slide_content.append("\n" + html_table + "\n")
 
                 elif shape.has_text_frame:
-                    md_content += "# " + shape.text.lstrip() + "\n" if shape == title else shape.text + "\n"
+                    slide_content.append("# " + shape.text.lstrip() + "\n" if shape == title else shape.text + "\n")
 
-            md_content = md_content.strip()
+            # Join slide content and handle notes
             if slide.has_notes_slide:
-                md_content += "\n\n### Notes:\n"
+                slide_content.append("\n\n### Notes:\n")
                 notes_frame = slide.notes_slide.notes_text_frame
 
                 if notes_frame is not None:  # pragma: no branch
-                    md_content += notes_frame.text
+                    slide_content.append(notes_frame.text)
 
-                md_content = md_content.strip()
+            # Add slide content to main content
+            md_content.append("".join(slide_content).strip())
+
+            # Force garbage collection every 10 slides for large presentations
+            large_presentation_threshold = 50
+            if total_slides > large_presentation_threshold and (index + 1) % 10 == 0:
+                gc.collect(0)
+
+        # Clear presentation object to free memory
+        presentation = None
+        gc.collect()
 
         return ExtractionResult(
-            content=normalize_spaces(md_content),
+            content=normalize_spaces("".join(md_content)),
             mime_type=MARKDOWN_MIME_TYPE,
-            metadata=self._extract_presentation_metadata(presentation),
+            metadata=metadata,
             chunks=[],
         )
 
@@ -231,3 +254,125 @@ class PresentationExtractor(Extractor):
             metadata["fonts"] = list(fonts)
 
         return metadata
+
+    def _extract_pptx_memory_efficient(self, content: bytes) -> ExtractionResult:
+        """Memory-efficient PPTX extraction that avoids loading images.
+
+        This method processes PPTX files as ZIP archives and only loads
+        the XML content we need, avoiding expensive image loading.
+
+        Args:
+            content: Raw bytes of the PPTX file
+
+        Returns:
+            ExtractionResult with extracted text content
+        """
+        md_content = ""
+        metadata: Metadata = {}
+
+        try:
+            with ZipFile(BytesIO(content), "r") as zip_file:
+                # Get list of slide XML files
+                slide_files = [
+                    f for f in zip_file.namelist() if f.startswith("ppt/slides/slide") and f.endswith(".xml")
+                ]
+                slide_files.sort()  # Ensure proper order
+
+                # Extract metadata from core properties
+                if "docProps/core.xml" in zip_file.namelist():
+                    with zip_file.open("docProps/core.xml") as core_file:
+                        metadata.update(self._extract_core_properties(core_file.read()))
+
+                # Process each slide
+                for i, slide_file in enumerate(slide_files, 1):
+                    md_content += f"\n\n<!-- Slide number: {i} -->\n"
+
+                    with zip_file.open(slide_file) as slide_xml:
+                        slide_content = self._extract_slide_text_from_xml(slide_xml.read())
+                        md_content += slide_content
+
+                    # Also check for notes
+                    notes_file = slide_file.replace("/slide", "/notesSlide").replace(".xml", "Notes.xml")
+                    if notes_file in zip_file.namelist():
+                        with zip_file.open(notes_file) as notes_xml:
+                            notes_content = self._extract_notes_from_xml(notes_xml.read())
+                            if notes_content.strip():
+                                md_content += f"\n\n### Notes:\n{notes_content}"
+
+        except Exception:  # noqa: BLE001
+            # Fallback to regular extraction if ZIP parsing fails
+            return self._extract_pptx(content)
+
+        return ExtractionResult(
+            content=normalize_spaces(md_content),
+            mime_type=MARKDOWN_MIME_TYPE,
+            metadata=metadata,
+            chunks=[],
+        )
+
+    def _extract_core_properties(self, xml_content: bytes) -> Metadata:
+        """Extract metadata from core.xml."""
+        metadata: Metadata = {}
+        try:
+            root = ET.fromstring(xml_content)  # noqa: S314
+
+            # Define namespace mappings
+            namespaces = {
+                "cp": "http://schemas.openxmlformats.org/package/2006/metadata/core-properties",
+                "dc": "http://purl.org/dc/elements/1.1/",
+                "dcterms": "http://purl.org/dc/terms/",
+            }
+
+            # Extract common properties
+            title_elem = root.find(".//dc:title", namespaces)
+            if title_elem is not None and title_elem.text:
+                metadata["title"] = title_elem.text
+
+            creator_elem = root.find(".//dc:creator", namespaces)
+            if creator_elem is not None and creator_elem.text:
+                metadata["authors"] = [creator_elem.text]
+
+            description_elem = root.find(".//dc:description", namespaces)
+            if description_elem is not None and description_elem.text:
+                metadata["description"] = description_elem.text
+
+        except ET.ParseError:
+            pass  # Ignore XML parsing errors
+
+        return metadata
+
+    def _extract_slide_text_from_xml(self, xml_content: bytes) -> str:
+        """Extract text content from slide XML."""
+        try:
+            root = ET.fromstring(xml_content)  # noqa: S314
+
+            # Find all text elements (t tags in the XML)
+            text_elements = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}t")
+
+            slide_text = ""
+            for elem in text_elements:
+                if elem.text:
+                    slide_text += elem.text + " "
+
+            return slide_text.strip()
+
+        except ET.ParseError:
+            return ""
+
+    def _extract_notes_from_xml(self, xml_content: bytes) -> str:
+        """Extract notes content from notes slide XML."""
+        try:
+            root = ET.fromstring(xml_content)  # noqa: S314
+
+            # Find all text elements in notes
+            text_elements = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}t")
+
+            notes_text = ""
+            for elem in text_elements:
+                if elem.text:
+                    notes_text += elem.text + " "
+
+            return notes_text.strip()
+
+        except ET.ParseError:
+            return ""

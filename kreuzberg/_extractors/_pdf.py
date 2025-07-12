@@ -292,7 +292,7 @@ class PDFExtractor(Extractor):
                 text_parts = []
                 for page in pdf:
                     text_page = page.get_textpage()
-                    text = text_page.get_text_range()
+                    text = text_page.get_text_bounded()
                     text_parts.append(text)
                     text_page.close()
                     page.close()

@@ -15,17 +15,17 @@ try:
 except ImportError:
     HAS_KREUZBERG = False
 
-# Test files for different scenarios
+# Test files for different scenarios (using relative paths from current directory)
 TEST_FILES = {
-    "xlsx_small": "tests/test_source_files/excel.xlsx",
-    "xlsx_large": "tests/test_source_files/excel-multi-sheet.xlsx",
-    "json_small": "tests/test_source_files/json/books.json",
-    "json_large": "tests/test_source_files/json/large-dataset.json",
-    "eml_simple": "tests/test_source_files/email/sample-email.eml",
-    "eml_complex": "tests/test_source_files/email/large-newsletter.eml",
-    "yaml_config": "tests/test_source_files/yaml/sample-config.yaml",
-    "pdf_contract": "tests/test_source_files/sample-contract.pdf",
-    "docx_document": "tests/test_source_files/document.docx",
+    "xlsx_small": "../tests/test_source_files/excel.xlsx",
+    "xlsx_large": "../tests/test_source_files/excel-multi-sheet.xlsx",
+    "json_small": "../tests/test_source_files/json/books.json",
+    "json_large": "../tests/test_source_files/json/large-dataset.json",
+    "eml_simple": "../tests/test_source_files/email/sample-email.eml",
+    "eml_complex": "../tests/test_source_files/email/large-newsletter.eml",
+    "yaml_config": "../tests/test_source_files/yaml/sample-config.yaml",
+    "pdf_contract": "../tests/test_source_files/sample-contract.pdf",
+    "docx_document": "../tests/test_source_files/document.docx",
 }
 
 
@@ -79,10 +79,10 @@ def benchmark_backend(
                 if backend_name == "kreuzberg":
                     result = extract_file_sync(file_path)
                 elif backend_name == "hybrid_speed":
-                    backend = HybridBackend(strategy=ExtractionStrategy.SPEED_FIRST)
+                    backend = HybridBackend(strategy=ExtractionStrategy.SPEED)
                     result = backend.extract(file_path)
-                elif backend_name == "hybrid_quality":
-                    backend = HybridBackend(strategy=ExtractionStrategy.QUALITY_FIRST)
+                elif backend_name == "hybrid_rich_metadata":
+                    backend = HybridBackend(strategy=ExtractionStrategy.RICH_METADATA)
                     result = backend.extract(file_path)
                 elif backend_name == "hybrid_balanced":
                     backend = HybridBackend(strategy=ExtractionStrategy.BALANCED)
@@ -152,7 +152,7 @@ def run_comprehensive_benchmark() -> dict[str, Any]:
     backends_to_test = [
         "kreuzberg",
         "hybrid_speed",
-        "hybrid_quality",
+        "hybrid_rich_metadata",
         "hybrid_balanced",
     ]
 
@@ -245,7 +245,7 @@ def print_comparison_report(results: dict[str, Any]) -> None:
                 key = f"{backend}::{file_type}"
                 routing_stats[key] = backend_used
 
-    for strategy in ["hybrid_speed", "hybrid_quality", "hybrid_balanced"]:
+    for strategy in ["hybrid_speed", "hybrid_rich_metadata", "hybrid_balanced"]:
         print(f"\n{strategy.replace('hybrid_', '').upper()} Strategy:")
         for key, backend_used in routing_stats.items():
             if key.startswith(strategy):

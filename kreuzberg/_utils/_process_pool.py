@@ -62,7 +62,7 @@ def _extract_pdf_text_worker(pdf_path: str) -> tuple[str, str]:
         text_parts = []
         for page in pdf:
             text_page = page.get_textpage()
-            text = text_page.get_text_range()
+            text = text_page.get_text_bounded()
             text_parts.append(text)
             text_page.close()
             page.close()

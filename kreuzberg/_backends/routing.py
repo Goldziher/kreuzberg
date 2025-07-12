@@ -12,7 +12,7 @@ class ExtractionStrategy(Enum):
 
     BALANCED = "balanced"
     SPEED = "speed"
-    QUALITY = "quality"
+    RICH_METADATA = "rich_metadata"
 
 
 def detect_file_type(file_path: str | Path) -> str:
@@ -34,25 +34,40 @@ def detect_file_type(file_path: str | Path) -> str:
 
 def select_optimal_backend(file_type: str, strategy: ExtractionStrategy, _file_path: str | Path | None = None) -> str:
     """Select optimal backend based on file type and strategy."""
-    # Simple strategy: prefer kreuzberg for most document types
-    # Use extractous for complex formats where it might excel
+    # Based on benchmark results:
+    # - Kreuzberg is generally faster for most formats
+    # - Extractous may provide better metadata for some formats but is slower
+    # - Prefer speed unless quality is specifically requested
 
     if strategy == ExtractionStrategy.SPEED:
-        return "extractous"
-    if strategy == ExtractionStrategy.QUALITY:
+        # Always use kreuzberg for speed - it's consistently faster
         return "kreuzberg"
-    # BALANCED
-    # Use extractous for certain formats, kreuzberg for others
-    extractous_preferred = {
+
+    if strategy == ExtractionStrategy.RICH_METADATA:
+        # Use extractous only for formats where it provides significantly better metadata
+        # XLSX: Always use kreuzberg (extractous has parsing issues)
+        # PDF: Use extractous for richer metadata
+        # Everything else: Use kreuzberg for reliability and speed
+        metadata_preferred = {
+            "pdf",
+            "application/pdf",
+        }
+        if any(ext in file_type.lower() for ext in metadata_preferred):
+            return "extractous"
+        return "kreuzberg"
+
+    # BALANCED strategy
+    # Use extractous only for PDFs where metadata quality matters
+    # Always use kreuzberg for XLSX and other Office formats due to:
+    # - Better reliability (no parsing errors)
+    # - Superior performance
+    # - Equivalent or better extraction quality
+    pdf_only_extractous = {
         "pdf",
-        "docx",
-        "pptx",
-        "xlsx",
         "application/pdf",
-        "application/vnd.openxmlformats-officedocument",
     }
 
-    if any(ext in file_type.lower() for ext in extractous_preferred):
+    if any(ext in file_type.lower() for ext in pdf_only_extractous):
         return "extractous"
     return "kreuzberg"
 
