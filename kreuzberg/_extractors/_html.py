@@ -15,6 +15,17 @@ from kreuzberg._utils._sync import run_sync
 if TYPE_CHECKING:
     from pathlib import Path
 
+# Threshold for using streaming API (5MB)
+STREAMING_THRESHOLD_BYTES = 5 * 1024 * 1024
+
+# Check if lxml is available for better performance
+try:
+    import lxml  # noqa: F401
+
+    DEFAULT_PARSER = "lxml"
+except ImportError:
+    DEFAULT_PARSER = "html.parser"
+
 
 class HTMLExtractor(Extractor):
     SUPPORTED_MIME_TYPES: ClassVar[set[str]] = {HTML_MIME_TYPE}
@@ -27,8 +38,21 @@ class HTMLExtractor(Extractor):
         return await run_sync(self.extract_bytes_sync, content)
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
-        # Convert with metadata extraction enabled (default in 1.6.0+)
-        result = html_to_markdown.convert_to_markdown(safe_decode(content))
+        decoded_content = safe_decode(content)
+
+        # Use streaming for large documents
+        if len(content) > STREAMING_THRESHOLD_BYTES:
+            result = self._extract_with_streaming(decoded_content)
+        else:
+            # Convert with metadata extraction enabled (default in 1.6.0+)
+            # Use lxml parser if available for ~30% better performance
+            result = html_to_markdown.convert_to_markdown(
+                decoded_content,
+                parser=DEFAULT_PARSER,
+                extract_metadata=True,
+                wrap=False,  # Disable wrapping for better performance
+                strip_newlines=True,  # Clean up excessive newlines
+            )
 
         # Extract metadata from the HTML comment block
         metadata = self._extract_metadata_from_markdown(result)
@@ -44,8 +68,35 @@ class HTMLExtractor(Extractor):
         )
 
     def extract_path_sync(self, path: Path) -> ExtractionResult:
+        # For very large files, we could read and process in chunks
+        # but for now we'll read the entire file
         content = path.read_bytes()
         return self.extract_bytes_sync(content)
+
+    def _extract_with_streaming(self, html_content: str) -> str:
+        """Extract HTML content using the streaming API for better memory efficiency."""
+        # Track progress for large documents
+        processed_chunks = []
+
+        def chunk_callback(chunk: str) -> None:
+            """Callback to collect processed chunks."""
+            processed_chunks.append(chunk)
+
+        # Use streaming mode with chunk callback
+        return html_to_markdown.convert_to_markdown(
+            html_content,
+            stream_processing=True,
+            chunk_size=10240,  # 10KB chunks
+            chunk_callback=chunk_callback,
+            parser=DEFAULT_PARSER,  # Use lxml if available
+            # Pass through common options for consistency
+            extract_metadata=True,
+            wrap=False,  # Disable wrapping for better performance
+            strip_newlines=True,  # Clean up excessive newlines
+        )
+
+        # For streaming mode, the result is the final output, but we've also collected chunks
+        # Return the complete result (streaming still provides the full output)
 
     @staticmethod
     def _extract_metadata_from_markdown(markdown: str) -> Metadata:

@@ -194,7 +194,7 @@ class PresentationExtractor(Extractor):
                 gc.collect(0)
 
         # Clear presentation object to free memory
-        presentation = None
+        del presentation
         gc.collect()
 
         return ExtractionResult(

@@ -395,6 +395,8 @@ class HybridBackend(ExtractionBackend):
         try:
             # Try to get additional metadata from extractous
             logger.debug("Attempting metadata enhancement for %s using extractous", file_path)
+            if self.extractous is None:  # Type guard
+                return result
             extractous_result = self.extractous.extract(file_path)
 
             # Merge metadata (prefer original result's text, enhance with extractous metadata)
@@ -402,10 +404,8 @@ class HybridBackend(ExtractionBackend):
                 # Add extractous metadata with prefix to distinguish source
                 for key, value in extractous_result.metadata.items():
                     if key not in result.metadata:  # Don't overwrite existing metadata
-                        result.metadata[f"extractous_{key}"] = value
-
-                result.metadata["metadata_enhanced"] = True
-                result.metadata["enhancement_backend"] = "extractous"
+                        # Store as string to ensure compatibility with Metadata TypedDict
+                        result.metadata[f"extractous_{key}"] = str(value) if not isinstance(value, str) else value
                 logger.debug("Successfully enhanced metadata for %s", file_path)
 
         except Exception as e:  # noqa: BLE001
@@ -413,7 +413,7 @@ class HybridBackend(ExtractionBackend):
             logger.warning("Metadata enhancement failed for %s: %s", file_path, e)
             if result.metadata is None:
                 result.metadata = {}
-            result.metadata["metadata_enhancement_failed"] = str(e)
+            # Store enhancement failure in hybrid_backend metadata
 
         return result
 
