@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/goldziher-kreuzberg-badge.png)](https://mseep.ai/app/goldziher-kreuzberg)
+
 # Kreuzberg
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20our%20community-7289da)](https://discord.gg/pXxagNK2zN)
