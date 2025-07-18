@@ -46,14 +46,14 @@ Kreuzberg leverages established open source technologies:
 ### Extract Text with CLI
 
 ```bash
-# Extract text from any file to markdown
-uvx kreuzberg extract document.pdf > output.md
+# Extract text from any file to text format
+uvx kreuzberg extract document.pdf > output.txt
 
 # With all features (OCR, table extraction, etc.)
-uvx --from "kreuzberg[all]" kreuzberg extract invoice.pdf --ocr --format markdown
+uvx --from "kreuzberg[all]" kreuzberg extract invoice.pdf --ocr-backend tesseract --output-format text
 
 # Extract with rich metadata
-uvx kreuzberg extract report.pdf --show-metadata --format json
+uvx kreuzberg extract report.pdf --show-metadata --output-format json
 ```
 
 ### Python Usage
