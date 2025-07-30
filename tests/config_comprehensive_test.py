@@ -381,7 +381,7 @@ force_ocr = false
         """Test find_config_file with default start path."""
         with patch("pathlib.Path.cwd") as mock_cwd:
             mock_cwd.return_value = Path("/fake/path")
-            
+
             # Mock the file system traversal
             with patch.object(Path, "exists", return_value=False):
                 result = find_config_file()
@@ -556,9 +556,9 @@ class TestLegacyFunctions:
     def test_merge_file_config_empty(self) -> None:
         """Test _merge_file_config with empty file config."""
         config_dict: dict[str, Any] = {"existing": "value"}
-        
+
         _merge_file_config(config_dict, {})
-        
+
         assert config_dict == {"existing": "value"}
 
     def test_merge_cli_args(self) -> None:
@@ -650,12 +650,8 @@ class TestLegacyFunctions:
     def test_configure_ocr_backend_cli_priority(self) -> None:
         """Test that CLI config takes priority over file config."""
         config_dict = {"ocr_backend": "tesseract"}
-        file_config: dict[str, Any] = {
-            "tesseract": {"language": "eng"}
-        }
-        cli_args: dict[str, Any] = {
-            "tesseract_config": {"language": "fra"}
-        }
+        file_config: dict[str, Any] = {"tesseract": {"language": "eng"}}
+        cli_args: dict[str, Any] = {"tesseract_config": {"language": "fra"}}
 
         _configure_ocr_backend(config_dict, file_config, cli_args)
 
@@ -692,12 +688,8 @@ class TestLegacyFunctions:
     def test_configure_gmft_cli_priority(self) -> None:
         """Test that CLI GMFT config takes priority."""
         config_dict = {"extract_tables": True}
-        file_config: dict[str, Any] = {
-            "gmft": {"detector_base_threshold": 0.5}
-        }
-        cli_args: dict[str, Any] = {
-            "gmft_config": {"detector_base_threshold": 0.9}
-        }
+        file_config: dict[str, Any] = {"gmft": {"detector_base_threshold": 0.5}}
+        cli_args: dict[str, Any] = {"gmft_config": {"detector_base_threshold": 0.9}}
 
         _configure_gmft(config_dict, file_config, cli_args)
 
@@ -740,8 +732,8 @@ class TestLegacyFunctions:
         """Test deprecated find_default_config function."""
         with patch("kreuzberg._config.find_config_file") as mock_find:
             mock_find.return_value = Path("/fake/config.toml")
-            
+
             result = find_default_config()
-            
+
             assert result == Path("/fake/config.toml")
             mock_find.assert_called_once_with()
