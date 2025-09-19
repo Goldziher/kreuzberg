@@ -47,9 +47,7 @@ def detect_languages(text: str, config: LanguageDetectionConfig | None = None) -
 
     try:
         result = detect(
-            text,
-            model='lite' if config.low_memory else 'full',
-            k=config.top_k  if config.multilingual else 1
+            text, model="lite" if config.low_memory else "full", k=config.top_k if config.multilingual else 1
         )
         if result:
             return [result["lang"].lower() for result in results if result.get("lang")]
