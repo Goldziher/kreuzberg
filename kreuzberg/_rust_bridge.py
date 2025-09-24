@@ -2,16 +2,46 @@
 
 from __future__ import annotations
 
-try:
-    from kreuzberg.kreuzberg_rust import example_function  # type: ignore[import-not-found]
+from typing import Any
 
-    RUST_AVAILABLE = True
-except ImportError:
-    RUST_AVAILABLE = False
+from kreuzberg.kreuzberg_rust import (  # type: ignore[import-not-found]
+    batch_process_texts_rust,
+    calculate_quality_score_rust,
+    clean_extracted_text_rust,
+    normalize_spaces_rust,
+    safe_decode_rust,
+)
 
-    def example_function(text: str) -> str:
-        """Fallback Python implementation."""
-        return f"Processed (Python): {text}"
+# Export the functions with consistent names
+__all__ = [
+    "batch_process_texts",
+    "calculate_quality_score",
+    "clean_extracted_text",
+    "normalize_spaces",
+    "safe_decode",
+]
 
 
-__all__ = ["RUST_AVAILABLE", "example_function"]
+def calculate_quality_score(text: str, metadata: dict[str, Any] | None = None) -> float:
+    """Calculate quality score for extracted text."""
+    return calculate_quality_score_rust(text, metadata)  # type: ignore[no-any-return]
+
+
+def clean_extracted_text(text: str) -> str:
+    """Clean extracted text by removing artifacts and unwanted content."""
+    return clean_extracted_text_rust(text)  # type: ignore[no-any-return]
+
+
+def normalize_spaces(text: str) -> str:
+    """Normalize spaces in text."""
+    return normalize_spaces_rust(text)  # type: ignore[no-any-return]
+
+
+def safe_decode(byte_data: bytes, encoding: str | None = None) -> str:
+    """Safe decode bytes to string with encoding detection."""
+    return safe_decode_rust(byte_data, encoding)  # type: ignore[no-any-return]
+
+
+def batch_process_texts(texts: list[str]) -> list[str]:
+    """Process multiple texts in parallel."""
+    return batch_process_texts_rust(texts)  # type: ignore[no-any-return]

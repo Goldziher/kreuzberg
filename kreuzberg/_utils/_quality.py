@@ -86,6 +86,28 @@ def clean_extracted_text(text: str) -> str:
     return text.strip()
 
 
+def normalize_spaces(text: str) -> str:
+    if not text or not text.strip():
+        return ""
+
+    # Split into paragraphs
+    paragraphs = text.split("\n\n")
+    result_paragraphs = []
+
+    for paragraph in paragraphs:
+        # Clean whitespace within paragraph
+        cleaned = _WHITESPACE_NORMALIZE.sub(" ", paragraph)
+        cleaned = re.sub(r"\n+", "\n", cleaned)
+
+        # Process lines
+        lines = [line.strip() for line in cleaned.split("\n") if line.strip()]
+
+        if lines:
+            result_paragraphs.append("\n".join(lines))
+
+    return "\n\n".join(result_paragraphs)
+
+
 def _calculate_ocr_penalty(text: str, total_chars: int) -> float:
     if total_chars == 0:
         return 0.0
