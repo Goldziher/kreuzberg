@@ -1,11 +1,11 @@
 [build-system]
-build-backend = "hatchling.build"
+build-backend = "maturin"
 
-requires = [ "hatchling" ]
+requires = [ "maturin>=1.9,<2.0" ]
 
 [project]
 name = "kreuzberg"
-version = "3.17.3"
+version = "4.0.0"
 description = "Document intelligence framework for Python - Extract text, metadata, and structured data from diverse file formats"
 readme = "README.md"
 keywords = [
@@ -46,6 +46,8 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Rust",
   "Topic :: Database",
   "Topic :: Multimedia :: Graphics :: Capture :: Scanners",
   "Topic :: Office/Business :: Office Suites",
@@ -110,6 +112,7 @@ scripts.kreuzberg-mcp = "kreuzberg._mcp.server:main"
 [dependency-groups]
 dev = [
   "covdefaults>=2.3.0",
+  "maturin>=1.9.4",
   "mypy>=1.18.2",
   "pytest>=8.4.2",
   "pytest-cov>=7.0.0",
@@ -130,11 +133,11 @@ doc = [
   "mkdocstrings[python]>=0.29.0",
 ]
 
-[tool.setuptools]
-packages = [ "kreuzberg" ]
-
-[tool.setuptools.package-data]
-kreuzberg = [ "py.typed" ]
+[tool.maturin]
+python-source = "."
+module-name = "kreuzberg.kreuzberg_rust"
+features = [ "pyo3/extension-module" ]
+compatibility = "manylinux2014"
 
 [tool.ruff]
 target-version = "py310"

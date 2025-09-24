@@ -30,6 +30,9 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
+      - name: Setup Rust Toolchain for Build
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install Dependencies
         uses: nick-fields/retry@v3
         with:
@@ -42,6 +45,7 @@ jobs:
               rm -rf .venv
             fi
             uv sync --all-extras --dev
+            uv run maturin develop --release
           shell: bash
 
       - name: Install prek
@@ -59,6 +63,25 @@ jobs:
 
       - name: Execute Prek
         run: prek run --show-diff-on-failure --color=always --all-files
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+
+      - name: Check Rust Formatting
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Build Rust Extension
+        run: cargo build --release
 
   coverage:
     needs: validate
@@ -91,6 +114,9 @@ jobs:
           restore-keys: |
             python-dependencies-ubuntu-latest-3.13-
 
+      - name: Setup Rust Toolchain for Build
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install Dependencies
         uses: nick-fields/retry@v3
         with:
@@ -99,6 +125,7 @@ jobs:
           retry_wait_seconds: 30
           command: |
             uv sync --all-extras --dev
+            uv run maturin develop --release
           shell: bash
 
       - name: Install System Dependencies
@@ -175,6 +202,9 @@ jobs:
           restore-keys: |
             python-dependencies-ubuntu-latest-3.13-
 
+      - name: Setup Rust Toolchain for Build
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install Dependencies
         uses: nick-fields/retry@v3
         with:
@@ -183,6 +213,7 @@ jobs:
           retry_wait_seconds: 30
           command: |
             uv sync --all-extras --dev
+            uv run maturin develop --release
           shell: bash
 
       - name: Install System Dependencies
@@ -308,6 +339,9 @@ jobs:
           restore-keys: |
             python-dependencies-${{ matrix.os }}-${{ matrix.python }}-
 
+      - name: Setup Rust Toolchain for Build
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install Dependencies
         uses: nick-fields/retry@v3
         with:
@@ -320,6 +354,7 @@ jobs:
               rm -rf .venv
             fi
             uv sync --all-extras --dev
+            uv run maturin develop --release
           shell: bash
 
       - name: Cache Test Artifacts

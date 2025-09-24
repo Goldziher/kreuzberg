@@ -72,3 +72,9 @@ TODO.md
 # AI Rules generated files
 .claude/agents/
 AGENTS.md
+
+# Rust / Cargo files
+target/
+Cargo.lock
+*.rs.bk
+*.pdb
