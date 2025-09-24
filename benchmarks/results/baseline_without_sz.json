@@ -1,0 +1,222 @@
+{
+  "timestamp": 1758642524.557097,
+  "has_stringzilla": false,
+  "results": [
+    {
+      "name": "encoding_detection_utf8",
+      "baseline_time": 0.00021387499873526394,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 45000,
+      "output_size": null,
+      "notes": {}
+    },
+    {
+      "name": "encoding_detection_utf16",
+      "baseline_time": 0.004338958999142051,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 90002,
+      "output_size": null,
+      "notes": {}
+    },
+    {
+      "name": "encoding_detection_latin1",
+      "baseline_time": 2.125001628883183e-06,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 11,
+      "output_size": null,
+      "notes": {}
+    },
+    {
+      "name": "encoding_detection_with_bom",
+      "baseline_time": 0.002680458012036979,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 45003,
+      "output_size": null,
+      "notes": {}
+    },
+    {
+      "name": "normalize_spaces_small",
+      "baseline_time": 3.791699418798089e-05,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 1400,
+      "output_size": 1399,
+      "notes": {}
+    },
+    {
+      "name": "normalize_spaces_medium",
+      "baseline_time": 0.0011889169982168823,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 45000,
+      "output_size": 44999,
+      "notes": {}
+    },
+    {
+      "name": "normalize_spaces_large",
+      "baseline_time": 0.03463129200099502,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 1370000,
+      "output_size": 1239999,
+      "notes": {}
+    },
+    {
+      "name": "normalize_spaces_messy",
+      "baseline_time": 0.0003885409969370812,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 14900,
+      "output_size": 9499,
+      "notes": {}
+    },
+    {
+      "name": "normalize_spaces_unicode",
+      "baseline_time": 0.0005574999959208071,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 21000,
+      "output_size": 20999,
+      "notes": {}
+    },
+    {
+      "name": "pattern_match_simple",
+      "baseline_time": 3.0625000363215804e-05,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 45000,
+      "output_size": null,
+      "notes": {
+        "pattern": "fox",
+        "matches": 1000
+      }
+    },
+    {
+      "name": "pattern_match_regex",
+      "baseline_time": 0.022169709001900628,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 1370000,
+      "output_size": null,
+      "notes": {
+        "pattern": "\\b\\w+ing\\b",
+        "matches": 10000
+      }
+    },
+    {
+      "name": "pattern_match_multiline",
+      "baseline_time": 1.0208997991867363e-05,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 14900,
+      "output_size": null,
+      "notes": {
+        "pattern": "\n\n",
+        "matches": 100
+      }
+    },
+    {
+      "name": "token_reduction_small",
+      "baseline_time": 2.0419975044205785e-06,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 1400,
+      "output_size": 1400,
+      "notes": {}
+    },
+    {
+      "name": "token_reduction_medium",
+      "baseline_time": 9.159994078800082e-07,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 45000,
+      "output_size": 45000,
+      "notes": {}
+    },
+    {
+      "name": "token_reduction_large",
+      "baseline_time": 3.749883035197854e-07,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 1370000,
+      "output_size": 1370000,
+      "notes": {}
+    },
+    {
+      "name": "token_reduction_messy",
+      "baseline_time": 2.0800507627427578e-07,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 14900,
+      "output_size": 14900,
+      "notes": {}
+    },
+    {
+      "name": "token_reduction_unicode",
+      "baseline_time": 2.090091584250331e-07,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 21000,
+      "output_size": 21000,
+      "notes": {}
+    },
+    {
+      "name": "hash_generation_short",
+      "baseline_time": 1.5375000657513738e-05,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 16,
+      "output_size": null,
+      "notes": {}
+    },
+    {
+      "name": "hash_generation_medium",
+      "baseline_time": 1.5830009942874312e-06,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 114,
+      "output_size": null,
+      "notes": {}
+    },
+    {
+      "name": "hash_generation_long",
+      "baseline_time": 1.167005393654108e-06,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 1027,
+      "output_size": null,
+      "notes": {}
+    },
+    {
+      "name": "mmap_french-text.txt",
+      "baseline_time": 0.0011632090026978403,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 148,
+      "output_size": null,
+      "notes": {}
+    },
+    {
+      "name": "mmap_receipt_test.txt",
+      "baseline_time": 0.0001418330066371709,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 94,
+      "output_size": null,
+      "notes": {}
+    },
+    {
+      "name": "mmap_report_test.txt",
+      "baseline_time": 0.00015058300050441176,
+      "stringzilla_time": null,
+      "speedup": null,
+      "input_size": 147,
+      "output_size": null,
+      "notes": {}
+    }
+  ]
+}

@@ -1,0 +1,284 @@
+{
+  "compression_benchmark": {
+    "summary": {
+      "total_tests": 18,
+      "total_time_ms": 2.325874869711697,
+      "avg_time_per_test_ms": 0.12921527053953874
+    },
+    "by_mode": {
+      "light": {
+        "tests": 9,
+        "character_compression": {
+          "mean": 10.073208814336578,
+          "median": 10.050251256281408,
+          "stdev": 0.7354257382387145,
+          "min": 8.771929824561402,
+          "max": 10.901162790697674
+        },
+        "token_compression": {
+          "mean": 0.0,
+          "median": 0.0,
+          "stdev": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "performance": {
+          "avg_time_ms": 0.0326248894756039,
+          "total_time_ms": 0.2936240052804351
+        }
+      },
+      "moderate": {
+        "tests": 9,
+        "character_compression": {
+          "mean": 35.29825338334045,
+          "median": 30.869565217391305,
+          "stdev": 16.439678257337224,
+          "min": 11.442786069651742,
+          "max": 62.34567901234568
+        },
+        "token_compression": {
+          "mean": 33.65283480637891,
+          "median": 32.5,
+          "stdev": 16.758505755377342,
+          "min": 1.9230769230769231,
+          "max": 57.647058823529406
+        },
+        "performance": {
+          "avg_time_ms": 0.22580565160347355,
+          "total_time_ms": 2.032250864431262
+        }
+      }
+    },
+    "detailed_results": [
+      {
+        "text_type": "formal_document",
+        "mode": "light",
+        "original_length": 766,
+        "reduced_length": 691,
+        "original_tokens": 86,
+        "reduced_tokens": 86,
+        "character_compression_percent": 9.7911227154047,
+        "token_compression_percent": 0.0,
+        "processing_time_ms": 0.07624994032084942
+      },
+      {
+        "text_type": "formal_document",
+        "mode": "moderate",
+        "original_length": 766,
+        "reduced_length": 546,
+        "original_tokens": 86,
+        "reduced_tokens": 61,
+        "character_compression_percent": 28.720626631853786,
+        "token_compression_percent": 29.069767441860467,
+        "processing_time_ms": 1.656707958318293
+      },
+      {
+        "text_type": "casual_conversation",
+        "mode": "light",
+        "original_length": 513,
+        "reduced_length": 468,
+        "original_tokens": 85,
+        "reduced_tokens": 85,
+        "character_compression_percent": 8.771929824561402,
+        "token_compression_percent": 0.0,
+        "processing_time_ms": 0.026582973077893257
+      },
+      {
+        "text_type": "casual_conversation",
+        "mode": "moderate",
+        "original_length": 513,
+        "reduced_length": 205,
+        "original_tokens": 85,
+        "reduced_tokens": 36,
+        "character_compression_percent": 60.03898635477582,
+        "token_compression_percent": 57.647058823529406,
+        "processing_time_ms": 0.05183403845876455
+      },
+      {
+        "text_type": "technical_manual",
+        "mode": "light",
+        "original_length": 690,
+        "reduced_length": 615,
+        "original_tokens": 80,
+        "reduced_tokens": 80,
+        "character_compression_percent": 10.869565217391305,
+        "token_compression_percent": 0.0,
+        "processing_time_ms": 0.030875089578330517
+      },
+      {
+        "text_type": "technical_manual",
+        "mode": "moderate",
+        "original_length": 690,
+        "reduced_length": 477,
+        "original_tokens": 80,
+        "reduced_tokens": 54,
+        "character_compression_percent": 30.869565217391305,
+        "token_compression_percent": 32.5,
+        "processing_time_ms": 0.052165938541293144
+      },
+      {
+        "text_type": "news_article",
+        "mode": "light",
+        "original_length": 688,
+        "reduced_length": 613,
+        "original_tokens": 81,
+        "reduced_tokens": 81,
+        "character_compression_percent": 10.901162790697674,
+        "token_compression_percent": 0.0,
+        "processing_time_ms": 0.02962502185255289
+      },
+      {
+        "text_type": "news_article",
+        "mode": "moderate",
+        "original_length": 688,
+        "reduced_length": 427,
+        "original_tokens": 81,
+        "reduced_tokens": 49,
+        "character_compression_percent": 37.93604651162791,
+        "token_compression_percent": 39.50617283950617,
+        "processing_time_ms": 0.05150004290044308
+      },
+      {
+        "text_type": "literature_excerpt",
+        "mode": "light",
+        "original_length": 597,
+        "reduced_length": 537,
+        "original_tokens": 84,
+        "reduced_tokens": 84,
+        "character_compression_percent": 10.050251256281408,
+        "token_compression_percent": 0.0,
+        "processing_time_ms": 0.027249916456639767
+      },
+      {
+        "text_type": "literature_excerpt",
+        "mode": "moderate",
+        "original_length": 597,
+        "reduced_length": 400,
+        "original_tokens": 84,
+        "reduced_tokens": 56,
+        "character_compression_percent": 32.99832495812395,
+        "token_compression_percent": 33.33333333333333,
+        "processing_time_ms": 0.046208035200834274
+      },
+      {
+        "text_type": "scientific_abstract",
+        "mode": "light",
+        "original_length": 695,
+        "reduced_length": 620,
+        "original_tokens": 70,
+        "reduced_tokens": 70,
+        "character_compression_percent": 10.79136690647482,
+        "token_compression_percent": 0.0,
+        "processing_time_ms": 0.03020802978426218
+      },
+      {
+        "text_type": "scientific_abstract",
+        "mode": "moderate",
+        "original_length": 695,
+        "reduced_length": 485,
+        "original_tokens": 70,
+        "reduced_tokens": 49,
+        "character_compression_percent": 30.215827338129497,
+        "token_compression_percent": 30.0,
+        "processing_time_ms": 0.049541937187314034
+      },
+      {
+        "text_type": "stopword_heavy",
+        "mode": "light",
+        "original_length": 486,
+        "reduced_length": 441,
+        "original_tokens": 88,
+        "reduced_tokens": 88,
+        "character_compression_percent": 9.25925925925926,
+        "token_compression_percent": 0.0,
+        "processing_time_ms": 0.02291705459356308
+      },
+      {
+        "text_type": "stopword_heavy",
+        "mode": "moderate",
+        "original_length": 486,
+        "reduced_length": 183,
+        "original_tokens": 88,
+        "reduced_tokens": 39,
+        "character_compression_percent": 62.34567901234568,
+        "token_compression_percent": 55.68181818181818,
+        "processing_time_ms": 0.04783400800079107
+      },
+      {
+        "text_type": "technical_jargon",
+        "mode": "light",
+        "original_length": 584,
+        "reduced_length": 524,
+        "original_tokens": 56,
+        "reduced_tokens": 56,
+        "character_compression_percent": 10.273972602739725,
+        "token_compression_percent": 0.0,
+        "processing_time_ms": 0.024458044208586216
+      },
+      {
+        "text_type": "technical_jargon",
+        "mode": "moderate",
+        "original_length": 584,
+        "reduced_length": 449,
+        "original_tokens": 56,
+        "reduced_tokens": 43,
+        "character_compression_percent": 23.116438356164384,
+        "token_compression_percent": 23.214285714285715,
+        "processing_time_ms": 0.03983394708484411
+      },
+      {
+        "text_type": "minimal_stopwords",
+        "mode": "light",
+        "original_length": 603,
+        "reduced_length": 543,
+        "original_tokens": 52,
+        "reduced_tokens": 52,
+        "character_compression_percent": 9.950248756218906,
+        "token_compression_percent": 0.0,
+        "processing_time_ms": 0.02545793540775776
+      },
+      {
+        "text_type": "minimal_stopwords",
+        "mode": "moderate",
+        "original_length": 603,
+        "reduced_length": 534,
+        "original_tokens": 52,
+        "reduced_tokens": 51,
+        "character_compression_percent": 11.442786069651742,
+        "token_compression_percent": 1.9230769230769231,
+        "processing_time_ms": 0.036624958738684654
+      }
+    ]
+  },
+  "pipeline_integration": {
+    "light": {
+      "original_length": 766,
+      "reduced_length": 686,
+      "processing_time_ms": 0.24550000671297312,
+      "reduction_stats": {
+        "character_reduction_ratio": 0.10443864229765012,
+        "token_reduction_ratio": 0.0,
+        "original_characters": 766,
+        "reduced_characters": 686,
+        "original_tokens": 86,
+        "reduced_tokens": 86
+      },
+      "metadata_present": true
+    },
+    "moderate": {
+      "original_length": 766,
+      "reduced_length": 546,
+      "processing_time_ms": 0.11387502308934927,
+      "reduction_stats": {
+        "character_reduction_ratio": 0.28720626631853785,
+        "token_reduction_ratio": 0.29069767441860467,
+        "original_characters": 766,
+        "reduced_characters": 546,
+        "original_tokens": 86,
+        "reduced_tokens": 61
+      },
+      "metadata_present": true
+    }
+  },
+  "timestamp": 1758107010.07442
+}
