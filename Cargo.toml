@@ -20,6 +20,13 @@ rayon = "1.11.0"
 chardetng = "0.1.17"
 encoding_rs = "0.8.35"
 
+# Image processing dependencies
+numpy = "0.26"
+ndarray = "0.16"
+fast_image_resize = "5.0"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+num-traits = "0.2"
+
 # Optional performance optimizations
 [profile.release]
 lto = "thin"
