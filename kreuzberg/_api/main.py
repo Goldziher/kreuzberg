@@ -240,7 +240,7 @@ def merge_configs(
     return ExtractionConfig(**config_dict)
 
 
-@post("/extract", operation_id="ExtractFiles")
+@post("/extract", operation_id="ExtractFiles")  # type: ignore[misc]
 async def handle_files_upload(  # noqa: PLR0913
     request: Request[Any, Any, Any],
     data: Annotated[list[UploadFile], Body(media_type=RequestEncodingType.MULTI_PART)],
@@ -348,7 +348,7 @@ async def handle_files_upload(  # noqa: PLR0913
     )
 
 
-@get("/health", operation_id="HealthCheck")
+@get("/health", operation_id="HealthCheck")  # type: ignore[misc]
 async def health_check() -> HealthResponse:
     """Check the health status of the API.
 
@@ -358,7 +358,7 @@ async def health_check() -> HealthResponse:
     return {"status": "ok"}
 
 
-@get("/config", operation_id="GetConfiguration")
+@get("/config", operation_id="GetConfiguration")  # type: ignore[misc]
 async def get_configuration() -> ConfigurationResponse:
     """Get the current extraction configuration.
 

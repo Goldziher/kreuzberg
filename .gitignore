@@ -38,6 +38,7 @@ __pycache__/
 AGENTS.md
 benchmark_results.json
 benchmarks/results/
+!benchmarks/baselines/
 build/
 CLAUDE.md
 coverage.lcov
@@ -78,3 +79,6 @@ target/
 Cargo.lock
 *.rs.bk
 *.pdb
+*.so
+*.dylib
+*.dll
