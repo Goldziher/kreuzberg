@@ -1,0 +1,134 @@
+{
+  "moderate_comparison": {
+    "python": {
+      "implementation": "Python_moderate",
+      "timing": {
+        "avg_ms": 1.3544734693520393,
+        "min_ms": 1.2934580154251307,
+        "max_ms": 1.5581250190734863,
+        "memory_mb": 0.140625
+      },
+      "original": {
+        "chars": 55242,
+        "tokens": 7815
+      },
+      "reduced": {
+        "chars": 101,
+        "tokens": 11
+      },
+      "reduction": {
+        "char_reduction_pct": 99.81716809673799,
+        "token_reduction_pct": 99.8592450415867,
+        "tokens_removed": 7804,
+        "chars_removed": 55141
+      },
+      "performance": {
+        "tokens_per_sec": 173093091.37827373,
+        "mb_per_sec": 1166.86397583225,
+        "ms_per_kb": 0.025107360932198113
+      }
+    },
+    "rust": {
+      "implementation": "Rust_moderate",
+      "timing": {
+        "avg_ms": 1.3281931353655334,
+        "min_ms": 1.2882910086773336,
+        "max_ms": 1.4535410155076534,
+        "memory_mb": 0.0
+      },
+      "original": {
+        "chars": 55242,
+        "tokens": 7815
+      },
+      "reduced": {
+        "chars": 101,
+        "tokens": 11
+      },
+      "reduction": {
+        "char_reduction_pct": 99.81716809673799,
+        "token_reduction_pct": 99.8592450415867,
+        "tokens_removed": 7804,
+        "chars_removed": 55141
+      },
+      "performance": {
+        "tokens_per_sec": 176518003.11065212,
+        "mb_per_sec": 1189.9521654826613,
+        "ms_per_kb": 0.02462021234955842
+      }
+    },
+    "performance_improvement": {
+      "speedup": 1.0197865305027896,
+      "throughput_improvement": 1.0197865305027898,
+      "memory_difference_mb": -0.140625
+    }
+  },
+  "light_comparison": {
+    "python": {
+      "implementation": "Python_light",
+      "timing": {
+        "avg_ms": 1.3083541358355433,
+        "min_ms": 1.2578330060932785,
+        "max_ms": 1.4440410013776273,
+        "memory_mb": 0.015625
+      },
+      "original": {
+        "chars": 55242,
+        "tokens": 7815
+      },
+      "reduced": {
+        "chars": 208,
+        "tokens": 33
+      },
+      "reduction": {
+        "char_reduction_pct": 99.6234748922921,
+        "token_reduction_pct": 99.57773512476008,
+        "tokens_removed": 7782,
+        "chars_removed": 55034
+      },
+      "performance": {
+        "tokens_per_sec": 179194603.03480843,
+        "mb_per_sec": 1207.9957974054855,
+        "ms_per_kb": 0.02425246434045828
+      }
+    },
+    "rust": {
+      "implementation": "Rust_light",
+      "timing": {
+        "avg_ms": 1.2834874641460676,
+        "min_ms": 1.2413750228006393,
+        "max_ms": 1.3875000004190952,
+        "memory_mb": 0.0
+      },
+      "original": {
+        "chars": 55242,
+        "tokens": 7815
+      },
+      "reduced": {
+        "chars": 208,
+        "tokens": 33
+      },
+      "reduction": {
+        "char_reduction_pct": 99.6234748922921,
+        "token_reduction_pct": 99.57773512476008,
+        "tokens_removed": 7782,
+        "chars_removed": 55034
+      },
+      "performance": {
+        "tokens_per_sec": 182666373.10399035,
+        "mb_per_sec": 1231.3998708658632,
+        "ms_per_kb": 0.023791520279598372
+      }
+    },
+    "performance_improvement": {
+      "speedup": 1.0193743003995914,
+      "throughput_improvement": 1.0193743003995914,
+      "memory_difference_mb": -0.015625
+    }
+  },
+  "batch_processing": {
+    "python_time_ms": 3.662583010736853,
+    "rust_time_ms": 0.7754580001346767,
+    "speedup": 4.723122348471172,
+    "text_count": 40
+  }
+}

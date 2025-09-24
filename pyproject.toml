@@ -207,7 +207,7 @@ lint.pylint.max-branches = 15
 lint.pylint.max-returns = 10
 
 [tool.codespell]
-ignore-words-list = "addin,inh,te,tha,vie"
+ignore-words-list = "addin,inh,te,tha,vie,mis,ment"
 skip = "kreuzberg/_token_reduction/stopwords/*"
 
 [tool.pyproject-fmt]
