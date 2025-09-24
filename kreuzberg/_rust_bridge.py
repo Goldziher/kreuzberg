@@ -12,7 +12,6 @@ from kreuzberg.kreuzberg_rust import (  # type: ignore[import-not-found]
     safe_decode_rust,
 )
 
-# Export the functions with consistent names
 __all__ = [
     "batch_process_texts",
     "calculate_quality_score",

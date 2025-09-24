@@ -33,26 +33,22 @@ if TYPE_CHECKING:
 console = Console()
 
 
-# Load real test data from existing files
 def load_test_data() -> dict[str, Any]:
     """Load test data from actual test files."""
     test_data = {}
 
-    # Small clean text
     test_data["small_clean"] = {
         "size": "1KB",
         "text": "This is a simple test document with clear structure. " * 30,
         "description": "Small clean text",
     }
 
-    # Small text with OCR artifacts
     test_data["small_ocr_artifacts"] = {
         "size": "2KB",
         "text": "T h i s   i s   s c a t t e r e d   t e x t... " * 50 + "test123abc456def789" * 10,
         "description": "Small text with OCR artifacts",
     }
 
-    # Extract text from small PDF
     try:
         small_pdf = extract_file_sync("tests/test_source_files/searchable.pdf")
         test_data["pdf_searchable"] = {
@@ -63,7 +59,6 @@ def load_test_data() -> dict[str, Any]:
     except Exception as e:
         console.print(f"[yellow]Warning: Could not extract searchable.pdf: {e}[/yellow]")
 
-    # Extract text from test article PDF
     try:
         article = extract_file_sync("tests/test_source_files/test-article.pdf")
         test_data["pdf_article"] = {
@@ -74,18 +69,16 @@ def load_test_data() -> dict[str, Any]:
     except Exception as e:
         console.print(f"[yellow]Warning: Could not extract test-article.pdf: {e}[/yellow]")
 
-    # Extract text from large PDF
     try:
         large_pdf = extract_file_sync("tests/test_source_files/sharable-web-guide.pdf")
         test_data["pdf_large"] = {
             "size": "3.8MB",
-            "text": large_pdf.content[:500000],  # Limit to 500KB of text
+            "text": large_pdf.content[:500000],
             "description": "Extracted text from large PDF (truncated)",
         }
     except Exception as e:
         console.print(f"[yellow]Warning: Could not extract sharable-web-guide.pdf: {e}[/yellow]")
 
-    # Medium mixed content with various issues
     test_data["medium_mixed"] = {
         "size": "50KB",
         "text": (
@@ -98,17 +91,16 @@ def load_test_data() -> dict[str, Any]:
         "description": "Medium mixed content (normal + code + navigation + OCR)",
     }
 
-    # Large messy text
     test_data["large_messy"] = {
         "size": "500KB",
         "text": (
             "Normal text here. " * 2000
-            + "   \t\t\t   " * 5000  # Excessive whitespace
-            + "..." * 2000  # Repeated punctuation
-            + "test123abc456" * 1000  # Malformed words
-            + "\n\n\n\n\n" * 1000  # Multiple newlines
+            + "   \t\t\t   " * 5000
+            + "..." * 2000
+            + "test123abc456" * 1000
+            + "\n\n\n\n\n" * 1000
             + "א ב ג ד ה ו ז ח" * 500  # Hebrew characters  # noqa: RUF001
-            + "\u0400\u0401\u0402" * 500  # Cyrillic that might be mojibake
+            + "\u0400\u0401\u0402" * 500
         ),
         "description": "Large messy text with various issues",
     }
@@ -116,10 +108,8 @@ def load_test_data() -> dict[str, Any]:
     return test_data
 
 
-# Load test data
 TEST_DATA = load_test_data()
 
-# Add some binary data for encoding tests
 ENCODING_TEST_DATA = {
     "utf8": b"Hello World",
     "hebrew": "שלום עולם".encode("windows-1255"),
@@ -133,7 +123,6 @@ def benchmark_function(func: Callable[..., Any], *args: Any, iterations: int = 1
     """Benchmark a single function with multiple iterations."""
     times = []
 
-    # Warmup
     for _ in range(min(10, iterations // 10)):
         func(*args, **kwargs)
 
@@ -147,7 +136,6 @@ def benchmark_function(func: Callable[..., Any], *args: Any, iterations: int = 1
 
     times_ms = [t * 1000 for t in times]
 
-    # Calculate throughput based on text size if available
     text_size_bytes = len(args[0]) if args else 0
     text_size_mb = text_size_bytes / (1024 * 1024)
 
@@ -171,7 +159,6 @@ def run_quality_benchmarks(progress: Progress) -> dict[str, Any]:
     """Run benchmarks for quality utils functions."""
     results: dict[str, Any] = {}
 
-    # Benchmark calculate_quality_score
     task = progress.add_task("[cyan]Benchmarking calculate_quality_score...", total=len(TEST_DATA))
     results["calculate_quality_score"] = {}
 
@@ -187,7 +174,6 @@ def run_quality_benchmarks(progress: Progress) -> dict[str, Any]:
         }
         progress.update(task, advance=1)
 
-    # Benchmark clean_extracted_text
     task = progress.add_task("[cyan]Benchmarking clean_extracted_text...", total=len(TEST_DATA))
     results["clean_extracted_text"] = {}
 
@@ -196,7 +182,6 @@ def run_quality_benchmarks(progress: Progress) -> dict[str, Any]:
         results["clean_extracted_text"][name] = {**stats, "data_size": data["size"], "description": data["description"]}
         progress.update(task, advance=1)
 
-    # Benchmark normalize_spaces
     task = progress.add_task("[cyan]Benchmarking normalize_spaces...", total=len(TEST_DATA))
     results["normalize_spaces"] = {}
 
@@ -205,7 +190,6 @@ def run_quality_benchmarks(progress: Progress) -> dict[str, Any]:
         results["normalize_spaces"][name] = {**stats, "data_size": data["size"], "description": data["description"]}
         progress.update(task, advance=1)
 
-    # Benchmark safe_decode
     task = progress.add_task("[cyan]Benchmarking safe_decode...", total=len(ENCODING_TEST_DATA))
     results["safe_decode"] = {}
 

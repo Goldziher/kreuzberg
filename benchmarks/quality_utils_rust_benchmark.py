@@ -7,14 +7,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Import Rust implementations directly
 from kreuzberg._rust_bridge import (
     calculate_quality_score,
     clean_extracted_text,
     normalize_spaces,
 )
 
-# Test data paths
 TEST_FILES_DIR = Path(__file__).parent.parent / "tests" / "test_source_files"
 BENCHMARK_DIR = Path(__file__).parent
 BASELINE_FILE = BENCHMARK_DIR / "baselines" / "quality_utils_baseline.json"
@@ -26,7 +24,6 @@ def load_test_data() -> dict[str, str]:
     """Load test data from real files."""
     test_data = {}
 
-    # Load PDF text (extracted content)
     pdf_files = [
         TEST_FILES_DIR / "sample.pdf",
         TEST_FILES_DIR / "multipage_sample.pdf",
@@ -34,18 +31,14 @@ def load_test_data() -> dict[str, str]:
 
     for pdf_path in pdf_files:
         if pdf_path.exists():
-            # For benchmarking, we'll simulate extracted text
             with pdf_path.open("rb") as f:
-                # Read first 10KB as sample text
                 test_data[pdf_path.name] = f.read(10240).decode("utf-8", errors="ignore")
 
-    # Load actual text files if available
     text_files = TEST_FILES_DIR.glob("*.txt")
     for txt_path in text_files:
         with txt_path.open(encoding="utf-8", errors="ignore") as f:
             test_data[txt_path.name] = f.read()
 
-    # Add synthetic test cases
     test_data["small_text"] = "This is a small test text with some words."
     test_data["medium_text"] = " ".join(["This is a medium length text."] * 100)
     test_data["large_text"] = " ".join(["This is a large text document with many words."] * 1000)
@@ -62,7 +55,7 @@ def benchmark_function(func: Any, data: str, iterations: int = 100) -> dict[str,
         start = time.perf_counter()
         func(data)
         end = time.perf_counter()
-        times.append((end - start) * 1000)  # Convert to milliseconds
+        times.append((end - start) * 1000)
 
     times.sort()
     return {
@@ -90,7 +83,6 @@ def run_benchmarks() -> dict[str, Any]:
         results[func_name] = {}
 
         for data_name, data in test_data.items():
-            # Adjust iterations based on data size
             iterations = 1000 if len(data) < 1000 else 100
 
             stats = benchmark_function(func, data, iterations)
@@ -115,7 +107,6 @@ def compare_with_baseline(rust_results: dict[str, Any]) -> None:
             if data_name not in baseline[func_name]:
                 continue
 
-            # Compare metrics (these would be used in a fuller implementation)
             _py_median = baseline[func_name][data_name]["median_ms"]
             _rs_median = func_data[data_name]["median_ms"]
             _speedup = _py_median / _rs_median if _rs_median > 0 else float("inf")
@@ -127,15 +118,12 @@ def compare_with_baseline(rust_results: dict[str, Any]) -> None:
 def main() -> None:
     """Main benchmark execution."""
 
-    # Run benchmarks
     results = run_benchmarks()
 
-    # Save results
     output_file = RESULTS_DIR / f"rust_benchmark_{int(time.time())}.json"
     with output_file.open("w") as f:
         json.dump(results, f, indent=2)
 
-    # Compare with baseline
     compare_with_baseline(results)
 
 
