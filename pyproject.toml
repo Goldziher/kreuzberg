@@ -135,7 +135,7 @@ doc = [
 
 [tool.maturin]
 python-source = "."
-module-name = "kreuzberg.kreuzberg_rust"
+module-name = "kreuzberg._internal_bindings"
 features = [ "pyo3/extension-module" ]
 compatibility = "manylinux2014"
 

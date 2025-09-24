@@ -9,7 +9,7 @@ repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://goldziher.github.io/kreuzberg/"
 
 [lib]
-name = "kreuzberg_rust"
+name = "_internal_bindings"
 crate-type = ["cdylib"]
 
 [dependencies]
