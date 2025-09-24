@@ -1,0 +1,23 @@
+[package]
+name = "kreuzberg"
+version = "4.0.0"
+edition = "2021"
+authors = ["Na'aman Hirschfeld <nhirschfed@gmail.com>"]
+description = "Document intelligence framework - Rust acceleration module"
+license = "MIT"
+repository = "https://github.com/Goldziher/kreuzberg"
+homepage = "https://goldziher.github.io/kreuzberg/"
+
+[lib]
+name = "kreuzberg_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.26.0", features = ["extension-module", "abi3-py310"] }
+
+# Optional performance optimizations
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3
+strip = true
