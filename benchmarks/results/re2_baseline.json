@@ -1,0 +1,26 @@
+{
+  "timestamp": 1758651314.195454,
+  "version": "baseline",
+  "results": [
+    {
+      "function": "calculate_quality_score",
+      "input_size": 65600,
+      "throughput_mbps": 8.020324103078506,
+      "mean_ms": 7.80031259986572,
+      "std_ms": 0.19324873964964293,
+      "min_ms": 7.476915998267941,
+      "max_ms": 8.23179200233426,
+      "iterations": 50
+    },
+    {
+      "function": "_clean_ocr_artifacts",
+      "input_size": 65600,
+      "throughput_mbps": 16.38383380024205,
+      "mean_ms": 3.818461290502455,
+      "std_ms": 0.1422028717591482,
+      "min_ms": 3.5678749991348013,
+      "max_ms": 4.540541995083913,
+      "iterations": 100
+    }
+  ]
+}

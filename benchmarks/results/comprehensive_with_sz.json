@@ -1,0 +1,138 @@
+{
+  "timestamp": 1758650075.185086,
+  "with_stringzilla": true,
+  "results": [
+    {
+      "name": "normalize_spaces",
+      "function": "kreuzberg._utils._string.normalize_spaces",
+      "input_size": 22000,
+      "iterations": 100,
+      "mean_time_ms": 0.5742370593361557,
+      "std_time_ms": 0.008687319222551797,
+      "min_time_ms": 0.5606660124612972,
+      "max_time_ms": 0.6041669985279441,
+      "throughput_mbps": 36.53688771879737
+    },
+    {
+      "name": "safe_decode_utf8",
+      "function": "kreuzberg._utils._string.safe_decode",
+      "input_size": 14400,
+      "iterations": 100,
+      "mean_time_ms": 2.2943845398549456,
+      "std_time_ms": 0.0422249179972862,
+      "min_time_ms": 2.15162499807775,
+      "max_time_ms": 2.4354170018341392,
+      "throughput_mbps": 5.985443990621649
+    },
+    {
+      "name": "safe_decode_utf16",
+      "function": "kreuzberg._utils._string.safe_decode",
+      "input_size": 16802,
+      "iterations": 100,
+      "mean_time_ms": 0.4275662799773272,
+      "std_time_ms": 0.019071992883583484,
+      "min_time_ms": 0.3897090064128861,
+      "max_time_ms": 0.5415420018834993,
+      "throughput_mbps": 37.47637878531372
+    },
+    {
+      "name": "safe_decode_with_bom",
+      "function": "kreuzberg._utils._string.safe_decode",
+      "input_size": 14403,
+      "iterations": 100,
+      "mean_time_ms": 2.2908004294731654,
+      "std_time_ms": 0.047050881408360376,
+      "min_time_ms": 2.128709005773999,
+      "max_time_ms": 2.440917000058107,
+      "throughput_mbps": 5.996057536255199
+    },
+    {
+      "name": "tesseract_tsv_parsing",
+      "function": "__main__.parse_tsv_baseline",
+      "input_size": 322259,
+      "iterations": 50,
+      "mean_time_ms": 1.149836679105647,
+      "std_time_ms": 0.033534375774756174,
+      "min_time_ms": 1.0880420013563707,
+      "max_time_ms": 1.29795799148269,
+      "throughput_mbps": 267.2815514719932
+    },
+    {
+      "name": "token_reduction_small_light",
+      "function": "kreuzberg._token_reduction._reducer.reduce_tokens",
+      "input_size": 4500,
+      "iterations": 50,
+      "mean_time_ms": 0.2936776209389791,
+      "std_time_ms": 0.009207723625243972,
+      "min_time_ms": 0.2742079959716648,
+      "max_time_ms": 0.3122909984085709,
+      "throughput_mbps": 14.613079505706796
+    },
+    {
+      "name": "token_reduction_small_moderate",
+      "function": "kreuzberg._token_reduction._reducer.reduce_tokens",
+      "input_size": 4500,
+      "iterations": 50,
+      "mean_time_ms": 0.7392533615347929,
+      "std_time_ms": 0.04783150274037984,
+      "min_time_ms": 0.7000420009717345,
+      "max_time_ms": 0.9217500046361238,
+      "throughput_mbps": 5.805228149275239
+    },
+    {
+      "name": "token_reduction_medium_light",
+      "function": "kreuzberg._token_reduction._reducer.reduce_tokens",
+      "input_size": 28500,
+      "iterations": 50,
+      "mean_time_ms": 1.6843790988787077,
+      "std_time_ms": 0.07785251333293905,
+      "min_time_ms": 1.5425410092575476,
+      "max_time_ms": 1.9421659962972626,
+      "throughput_mbps": 16.136342487075314
+    },
+    {
+      "name": "token_reduction_medium_moderate",
+      "function": "kreuzberg._token_reduction._reducer.reduce_tokens",
+      "input_size": 28500,
+      "iterations": 50,
+      "mean_time_ms": 4.189143318799324,
+      "std_time_ms": 0.20375574824983292,
+      "min_time_ms": 3.799584010266699,
+      "max_time_ms": 4.683749997639097,
+      "throughput_mbps": 6.488132763471141
+    },
+    {
+      "name": "token_reduction_large_light",
+      "function": "kreuzberg._token_reduction._reducer.reduce_tokens",
+      "input_size": 15300,
+      "iterations": 30,
+      "mean_time_ms": 0.9237221010456171,
+      "std_time_ms": 0.02952335027402133,
+      "min_time_ms": 0.8780829957686365,
+      "max_time_ms": 1.022209005896002,
+      "throughput_mbps": 15.796111216240188
+    },
+    {
+      "name": "token_reduction_large_moderate",
+      "function": "kreuzberg._token_reduction._reducer.reduce_tokens",
+      "input_size": 15300,
+      "iterations": 30,
+      "mean_time_ms": 2.265925100558282,
+      "std_time_ms": 0.07720279479110992,
+      "min_time_ms": 2.0756660087499768,
+      "max_time_ms": 2.522417009458877,
+      "throughput_mbps": 6.439408362359647
+    },
+    {
+      "name": "playa_metadata_extraction",
+      "function": "extract_pdf_metadata_sync",
+      "input_size": 112,
+      "iterations": 50,
+      "mean_time_ms": 0.0012131998664699495,
+      "std_time_ms": 8.724080531223339e-05,
+      "min_time_ms": 0.001124994014389813,
+      "max_time_ms": 0.0014999968698248267,
+      "throughput_mbps": 0
+    }
+  ]
+}
