@@ -88,3 +88,9 @@ class OCRError(KreuzbergError):
     """Raised when an OCR error occurs."""
 
     __slots__ = ()
+
+
+class MemoryLimitError(KreuzbergError):
+    """Raised when memory or disk limits prevent image processing."""
+
+    __slots__ = ()
