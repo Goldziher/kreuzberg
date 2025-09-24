@@ -13,6 +13,12 @@ from kreuzberg.exceptions import ValidationError
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+VALID_PNG_BYTES = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
+    b"\x00\x00\x03\x01\x01\x00\xc9\xfe\x92\xef\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
 
 @pytest.fixture(scope="session")
 def extractor() -> ImageExtractor:
@@ -50,11 +56,7 @@ async def test_extract_path_async(mock_ocr_backend: MagicMock, tmp_path: Path) -
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -72,11 +74,7 @@ def test_extract_path_sync(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -152,11 +150,7 @@ async def test_extract_bytes_async(mock_ocr_backend: MagicMock) -> None:
     config = ExtractionConfig(ocr_backend="tesseract")
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
-    png_bytes = (
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    png_bytes = VALID_PNG_BYTES
 
     expected_result = ExtractionResult(
         content="extracted text from bytes", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -320,11 +314,7 @@ async def test_extract_path_async_delegation(mock_ocr_backend: MagicMock, tmp_pa
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     test_path = tmp_path / "test_image.png"
-    test_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    test_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="async path extracted text",
@@ -347,11 +337,7 @@ def test_extract_path_sync_with_tesseract_config(mock_ocr_backend: MagicMock, tm
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -372,11 +358,7 @@ def test_extract_path_sync_with_paddleocr_config(mock_ocr_backend: MagicMock, tm
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -397,11 +379,7 @@ def test_extract_path_sync_with_easyocr_config(mock_ocr_backend: MagicMock, tmp_
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -510,11 +488,7 @@ def test_image_sync_path_extraction_unknown_backend(mock_ocr_backend: MagicMock,
     )
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     with pytest.raises(NotImplementedError, match="Sync OCR not implemented for unknown_backend"):
         extractor.extract_path_sync(image_path)
 
@@ -527,11 +501,7 @@ def test_image_sync_path_extraction_default_tesseract(mock_ocr_backend: MagicMoc
     mock_ocr_backend.process_image_sync.return_value = expected_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
 
     mock_ocr_backend.process_image_sync.assert_called_once()
@@ -547,11 +517,7 @@ def test_image_sync_path_extraction_default_paddleocr(mock_ocr_backend: MagicMoc
     mock_ocr_backend.process_image_sync.return_value = expected_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
 
     mock_ocr_backend.process_image_sync.assert_called_once()
@@ -567,11 +533,7 @@ def test_image_sync_path_extraction_default_easyocr(mock_ocr_backend: MagicMock,
     mock_ocr_backend.process_image_sync.return_value = expected_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
 
     mock_ocr_backend.process_image_sync.assert_called_once()
@@ -596,11 +558,7 @@ def test_image_sync_path_extraction_custom_configs(mock_ocr_backend: MagicMock, 
     mock_ocr_backend.process_image_sync.return_value = expected_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
     assert result.content == "German text"
 
@@ -724,11 +682,7 @@ def test_image_edge_cases_quality_processing_applied(mock_ocr_backend: MagicMock
     mock_ocr_backend.process_image_sync.return_value = raw_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
 
     assert result != raw_result
@@ -745,11 +699,7 @@ async def test_image_edge_cases_async_path_delegation_preserves_config(
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "japanese.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(content="日本語", mime_type="text/plain", metadata={})
     mock_ocr_backend.process_image.return_value = expected_result

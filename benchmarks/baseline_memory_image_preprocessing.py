@@ -31,12 +31,10 @@ def get_process_memory_mb() -> float:
 
 def create_test_image(width: int, height: int, mode: str = "RGB") -> Image.Image:
     """Create a test image of specified dimensions."""
-    # Create a simple gradient pattern
     img = Image.new(mode, (width, height), color="white")
 
-    # Add some pattern to make it more realistic
     for y in range(height):
-        for x in range(0, width, 50):  # Every 50 pixels
+        for x in range(0, width, 50):
             color = (x % 255, y % 255, (x + y) % 255) if mode == "RGB" else x % 255
             img.putpixel((x, y), color)
 
@@ -45,21 +43,17 @@ def create_test_image(width: int, height: int, mode: str = "RGB") -> Image.Image
 
 def measure_memory_usage(func, *args, **kwargs) -> tuple[Any, float, float]:
     """Measure memory usage of a function call."""
-    # Force garbage collection before measurement
     gc.collect()
 
-    # Start memory tracing
     tracemalloc.start()
     initial_memory = get_process_memory_mb()
 
     try:
         result = func(*args, **kwargs)
 
-        # Get peak memory usage
         _current, peak = tracemalloc.get_traced_memory()
         peak_mb = peak / (1024 * 1024)
 
-        # Get final memory
         final_memory = get_process_memory_mb()
         memory_increase = final_memory - initial_memory
 
@@ -73,26 +67,23 @@ def measure_memory_usage(func, *args, **kwargs) -> tuple[Any, float, float]:
 def benchmark_normalize_image_dpi() -> None:
     """Benchmark memory usage of normalize_image_dpi with different image sizes."""
 
-    # Test configurations
     configs = {
         "default": ExtractionConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=False),
         "auto_adjust": ExtractionConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=True),
         "high_dpi": ExtractionConfig(target_dpi=600, max_image_dimension=8192, auto_adjust_dpi=True),
     }
 
-    # Test image sizes (width, height)
     test_sizes = [
-        (800, 600, "small"),  # ~0.5 MP
-        (1920, 1080, "medium"),  # ~2.1 MP
-        (3000, 2000, "large"),  # ~6 MP
-        (5000, 4000, "xlarge"),  # ~20 MP
-        (8000, 6000, "xxlarge"),  # ~48 MP
+        (800, 600, "small"),
+        (1920, 1080, "medium"),
+        (3000, 2000, "large"),
+        (5000, 4000, "xlarge"),
+        (8000, 6000, "xxlarge"),
     ]
 
     for width, height, _size_name in test_sizes:
         (width * height * 3) / (1024 * 1024)
 
-        # Test with original image
         test_image = create_test_image(width, height)
         len(test_image.tobytes()) / (1024 * 1024)
 
@@ -103,7 +94,6 @@ def benchmark_normalize_image_dpi() -> None:
                 normalized_image, _metadata = result
                 len(normalized_image.tobytes()) / (1024 * 1024)
 
-                # Clean up
                 del normalized_image
 
             except Exception:
@@ -117,7 +107,6 @@ def benchmark_normalize_image_dpi() -> None:
 def benchmark_image_operations() -> None:
     """Benchmark memory usage of individual image operations."""
 
-    # Create a large test image
     width, height = 4000, 3000
     test_image = create_test_image(width, height)
     len(test_image.tobytes()) / (1024 * 1024)
@@ -134,7 +123,6 @@ def benchmark_image_operations() -> None:
         try:
             result, _peak_mb, _memory_increase = measure_memory_usage(operation, test_image)
 
-            # Clean up result
             del result
             gc.collect()
 
@@ -152,13 +140,11 @@ def benchmark_heuristics_functions() -> None:
     ]
 
     for width, height, _size_name in test_cases:
-        # Test get_dpi_adjustment_heuristics
         with contextlib.suppress(Exception):
             result, peak_mb, memory_increase = measure_memory_usage(
                 get_dpi_adjustment_heuristics, width, height, 150, 300, 4096
             )
 
-        # Test estimate_processing_time
         with contextlib.suppress(Exception):
             _result, _peak_mb, _memory_increase = measure_memory_usage(
                 estimate_processing_time, width, height, "tesseract"
@@ -168,7 +154,6 @@ def benchmark_heuristics_functions() -> None:
 def analyze_memory_patterns() -> None:
     """Analyze memory usage patterns and identify optimization opportunities."""
 
-    # Test progressive image size impact
     sizes = [(1000, 1000), (2000, 2000), (3000, 3000), (4000, 4000)]
     config = ExtractionConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=True)
 

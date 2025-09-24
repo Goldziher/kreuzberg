@@ -96,18 +96,22 @@ class TestImageExtractionErrorHandling:
         mock_shape_good.shape_type = 13
         mock_shape_good.image.blob = b"good_image"
         mock_shape_good.image.ext = "png"
+        mock_shape_good.has_text_frame = False
 
         mock_shape_bad = MagicMock()
         mock_shape_bad.shape_type = 13
         mock_shape_bad.image.blob = None
         mock_shape_bad.image.ext = "jpg"
+        mock_shape_bad.has_text_frame = False
 
         mock_shape_error = MagicMock()
         mock_shape_error.shape_type = 13
         type(mock_shape_error).image = PropertyMock(side_effect=AttributeError("No image"))
+        mock_shape_error.has_text_frame = False
 
         mock_slide = MagicMock()
         mock_slide.shapes = [mock_shape_good, mock_shape_bad, mock_shape_error]
+        mock_slide.has_notes_slide = False
 
         mock_presentation = MagicMock()
         mock_presentation.slides = [mock_slide]

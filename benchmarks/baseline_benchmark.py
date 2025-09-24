@@ -20,10 +20,8 @@ def get_memory_mb() -> float:
 
 def benchmark_implementation(width: int, height: int, config: ExtractionConfig) -> dict[str, Any]:
     """Benchmark the image preprocessing implementation."""
-    # Create test image
     image = Image.new("RGB", (width, height), color="white")
 
-    # Measure memory and time
     gc.collect()
     initial_memory = get_memory_mb()
     start_time = time.perf_counter()
@@ -34,7 +32,6 @@ def benchmark_implementation(width: int, height: int, config: ExtractionConfig) 
         end_time = time.perf_counter()
         peak_memory = get_memory_mb()
 
-        # Clean up
         result_image.close()
         image.close()
 
@@ -61,14 +58,12 @@ def benchmark_implementation(width: int, height: int, config: ExtractionConfig) 
 def main() -> None:
     """Run baseline benchmarks."""
 
-    # Test configurations
     configs = [
         ExtractionConfig(target_dpi=150, max_image_dimension=2048, auto_adjust_dpi=False),
         ExtractionConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=False),
         ExtractionConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=True),
     ]
 
-    # Test image sizes
     sizes = [
         (1000, 1000, "1MP"),
         (2000, 1500, "3MP"),

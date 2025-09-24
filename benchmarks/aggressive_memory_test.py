@@ -45,7 +45,6 @@ def test_memory_usage(func, image, config) -> dict[str, Any]:
         after_memory = get_process_memory_mb()
         memory_increase = after_memory - initial_memory
 
-        # Clean up result
         if hasattr(result[0], "close"):
             result[0].close()
 
@@ -72,7 +71,6 @@ def main() -> None:
 
     config = ExtractionConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=False)
 
-    # Test cases with expected memory issues
     test_cases = [
         (1000, 1000, "small"),
         (2000, 1500, "medium"),
@@ -84,7 +82,6 @@ def main() -> None:
     for width, height, _size_name in test_cases:
         (width * height * 3) / (1024 * 1024)
 
-        # Test original version
         image_orig = create_test_image(width, height)
         result_orig = test_memory_usage(normalize_original, image_orig, config)
 
@@ -98,7 +95,6 @@ def main() -> None:
         del image_orig
         gc.collect()
 
-        # Test aggressive version
         image_agg = create_test_image(width, height)
         result_agg = test_memory_usage(normalize_aggressive, image_agg, config)
 
@@ -109,7 +105,6 @@ def main() -> None:
         getattr(result_agg["metadata"], "resample_method", "N/A")
         getattr(result_agg["metadata"], "final_dpi", "N/A")
 
-        # Calculate improvement
         if result_orig["success"] and result_agg["success"]:
             improvement = result_orig["memory_increase"] - result_agg["memory_increase"]
             (improvement / result_orig["memory_increase"]) * 100 if result_orig["memory_increase"] != 0 else 0
@@ -118,11 +113,9 @@ def main() -> None:
         cleanup_aggressive_memory()
         gc.collect()
 
-    # Test with auto-adjust DPI to see smart DPI calculation
-
     auto_config = ExtractionConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=True)
 
-    for width, height, _size_name in test_cases[:3]:  # Test first 3 sizes
+    for width, height, _size_name in test_cases[:3]:
         image = create_test_image(width, height)
         result = test_memory_usage(normalize_aggressive, image, auto_config)
 
