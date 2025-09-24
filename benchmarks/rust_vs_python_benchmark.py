@@ -62,7 +62,6 @@ def benchmark_python_implementation(image: Image.Image, config: PythonConfig) ->
 
 def benchmark_rust_implementation(image: Image.Image, config: RustConfig) -> dict[str, Any]:
     """Benchmark the Rust implementation."""
-    # Convert PIL to numpy for Rust
     image_array = pil_to_numpy(image)
 
     gc.collect()
@@ -95,11 +94,9 @@ def benchmark_rust_implementation(image: Image.Image, config: RustConfig) -> dic
 def run_comparison(runs: int = 5) -> None:
     """Run comprehensive comparison between implementations."""
 
-    # Test configurations
     python_config = PythonConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=True)
     rust_config = RustConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=True)
 
-    # Test image sizes
     sizes = [
         (1000, 1000, "1MP"),
         (2000, 1500, "3MP"),
@@ -111,10 +108,8 @@ def run_comparison(runs: int = 5) -> None:
     results = []
 
     for width, height, size_name in sizes:
-        # Create test image
         test_image = Image.new("RGB", (width, height), color="white")
 
-        # Benchmark Python
         python_times = []
         python_memories = []
         for _ in range(runs):
@@ -124,7 +119,6 @@ def run_comparison(runs: int = 5) -> None:
                 python_memories.append(result["memory_increase_mb"])
             gc.collect()
 
-        # Benchmark Rust
         rust_times = []
         rust_memories = []
         for _ in range(runs):
@@ -155,7 +149,6 @@ def run_comparison(runs: int = 5) -> None:
                 }
             )
 
-    # Calculate overall statistics
     if results:
         sum(r["speedup"] for r in results) / len(results)
         sum(r["memory_reduction"] for r in results) / len(results)

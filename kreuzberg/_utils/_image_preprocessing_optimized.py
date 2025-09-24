@@ -19,10 +19,9 @@ if TYPE_CHECKING:
 
     from PIL.Image import Image as PILImage
 
-# Memory management constants
-MAX_IMAGE_MEMORY_MB = 500  # Maximum memory for a single image operation
-LARGE_IMAGE_THRESHOLD_MP = 20  # Megapixels threshold for special handling
-TEMP_FILE_THRESHOLD_MB = 100  # Use temp files above this size
+MAX_IMAGE_MEMORY_MB = 500
+LARGE_IMAGE_THRESHOLD_MP = 20
+TEMP_FILE_THRESHOLD_MB = 100
 
 
 class ImageMemoryManager:
@@ -62,7 +61,6 @@ class ImageMemoryManager:
             temp_path = Path(temp_file.name)
             temp_file.close()
 
-            # Save image to temp file
             image.save(temp_path, format=format)
             self._temp_files.append(temp_path)
 
@@ -78,7 +76,6 @@ class ImageMemoryManager:
 
     def cleanup(self) -> None:
         """Clean up all tracked resources."""
-        # Force garbage collection of tracked images
         for ref in self._tracked_images[:]:
             img = ref()
             if img:
@@ -87,17 +84,14 @@ class ImageMemoryManager:
 
         self._tracked_images.clear()
 
-        # Clean up temp files
         for temp_file in self._temp_files[:]:
             with suppress(OSError):
                 temp_file.unlink(missing_ok=True)
         self._temp_files.clear()
 
-        # Force garbage collection
         gc.collect()
 
 
-# Global memory manager instance
 _memory_manager = ImageMemoryManager()
 
 
@@ -122,7 +116,6 @@ def calculate_optimal_dpi_memory_aware(
     max_dpi: int = 600,
 ) -> int:
     """Calculate optimal DPI with memory constraints."""
-    # Start with original calculation
     width_inches = page_width / PDF_POINTS_PER_INCH
     height_inches = page_height / PDF_POINTS_PER_INCH
 
@@ -131,15 +124,12 @@ def calculate_optimal_dpi_memory_aware(
 
     max_pixel_dimension = max(target_width_pixels, target_height_pixels)
 
-    # Check memory constraint
     estimated_memory = _memory_manager.estimate_image_memory_mb(target_width_pixels, target_height_pixels, "RGB")
 
     if estimated_memory > max_memory_mb:
-        # Reduce DPI to fit memory constraint
         memory_scale = (max_memory_mb / estimated_memory) ** 0.5
         target_dpi = int(target_dpi * memory_scale)
 
-    # Apply dimension constraint
     if max_pixel_dimension <= max_dimension:
         return max(min_dpi, min(target_dpi, max_dpi))
 
@@ -159,11 +149,9 @@ def normalize_image_dpi_memory_optimized(
     original_mode = image.mode
     megapixels = (original_width * original_height) / 1_000_000
 
-    # Check memory limits upfront
     try:
         _memory_manager.check_memory_limit(original_width, original_height, original_mode)
     except MemoryError as e:
-        # Return original image with error metadata
         return image, ImagePreprocessingMetadata(
             original_dimensions=(original_width, original_height),
             original_dpi=(72, 72),
@@ -175,7 +163,6 @@ def normalize_image_dpi_memory_optimized(
             skipped_resize=True,
         )
 
-    # Extract DPI info
     current_dpi_info = image.info.get("dpi", (PDF_POINTS_PER_INCH, PDF_POINTS_PER_INCH))
     if isinstance(current_dpi_info, (list, tuple)):
         original_dpi = (float(current_dpi_info[0]), float(current_dpi_info[1]))
@@ -184,7 +171,6 @@ def normalize_image_dpi_memory_optimized(
         current_dpi = float(current_dpi_info)
         original_dpi = (current_dpi, current_dpi)
 
-    # Early exit conditions
     max_current_dimension = max(original_width, original_height)
     current_matches_target = abs(current_dpi - config.target_dpi) < 1.0
 
@@ -199,7 +185,6 @@ def normalize_image_dpi_memory_optimized(
             skipped_resize=True,
         )
 
-    # Calculate target DPI with memory awareness
     calculated_dpi = None
     if config.auto_adjust_dpi:
         approx_width_points = original_width * PDF_POINTS_PER_INCH / current_dpi
@@ -223,7 +208,6 @@ def normalize_image_dpi_memory_optimized(
 
     scale_factor = target_dpi / current_dpi
 
-    # Skip if scale factor is minimal
     if abs(scale_factor - 1.0) < 0.05:
         return image, ImagePreprocessingMetadata(
             original_dimensions=(original_width, original_height),
@@ -236,11 +220,9 @@ def normalize_image_dpi_memory_optimized(
             skipped_resize=True,
         )
 
-    # Calculate new dimensions
     new_width = int(original_width * scale_factor)
     new_height = int(original_height * scale_factor)
 
-    # Apply dimension clamping
     dimension_clamped = False
     max_new_dimension = max(new_width, new_height)
     if max_new_dimension > config.max_image_dimension:
@@ -250,7 +232,6 @@ def normalize_image_dpi_memory_optimized(
         scale_factor *= dimension_scale
         dimension_clamped = True
 
-    # Memory-aware processing for large images
     use_temp_file = (
         megapixels > LARGE_IMAGE_THRESHOLD_MP
         or _memory_manager.estimate_image_memory_mb(new_width, new_height, original_mode) > TEMP_FILE_THRESHOLD_MB
@@ -258,14 +239,11 @@ def normalize_image_dpi_memory_optimized(
 
     try:
         if use_temp_file:
-            # Use temporary file for very large operations
             with _memory_manager.temp_image_file(image) as temp_path, Image.open(temp_path) as temp_image:
                 normalized_image = _resize_image_progressive(temp_image, new_width, new_height, scale_factor)
         else:
-            # Direct memory operation for smaller images
             normalized_image = _resize_image_progressive(image, new_width, new_height, scale_factor)
 
-        # Set DPI info
         normalized_image.info["dpi"] = (target_dpi, target_dpi)
 
         return normalized_image, ImagePreprocessingMetadata(
@@ -298,9 +276,7 @@ def _resize_image_progressive(image: PILImage, target_width: int, target_height:
     """Resize image progressively to reduce memory usage."""
     current_image = image
 
-    # For large scaling operations, do it in steps
     if scale_factor > 2.0 or scale_factor < 0.5:
-        # Progressive scaling for extreme scale factors
         steps = max(2, int(abs(scale_factor - 1.0) * 2))
         step_factor = scale_factor ** (1.0 / steps)
 
@@ -308,20 +284,16 @@ def _resize_image_progressive(image: PILImage, target_width: int, target_height:
 
         for i in range(steps):
             if i == steps - 1:
-                # Final step: exact target dimensions
                 new_width, new_height = target_width, target_height
             else:
-                # Intermediate step
                 new_width = int(current_width * step_factor)
                 new_height = int(current_height * step_factor)
 
-            # Choose appropriate resampling method
             resample_method = Image.Resampling.LANCZOS if step_factor < 1.0 else Image.Resampling.BICUBIC
 
             try:
                 new_image = current_image.resize((new_width, new_height), resample_method)
 
-                # Clean up intermediate image (except original)
                 if current_image != image:
                     current_image.close()
 
@@ -329,7 +301,6 @@ def _resize_image_progressive(image: PILImage, target_width: int, target_height:
                 current_width, current_height = new_width, new_height
 
             except AttributeError:
-                # Fallback for older PIL versions
                 resample_method = getattr(Image, "LANCZOS", 1) if step_factor < 1.0 else getattr(Image, "BICUBIC", 3)
                 new_image = current_image.resize((new_width, new_height), resample_method)
 
@@ -339,19 +310,16 @@ def _resize_image_progressive(image: PILImage, target_width: int, target_height:
                 current_image = new_image
                 current_width, current_height = new_width, new_height
 
-            # Force garbage collection between steps for large images
-            if current_width * current_height > 10_000_000:  # > 10MP
+            if current_width * current_height > 10_000_000:
                 gc.collect()
 
         return current_image
 
-    # Single-step resize for moderate scaling
     resample_method = Image.Resampling.LANCZOS if scale_factor < 1.0 else Image.Resampling.BICUBIC
 
     try:
         return image.resize((target_width, target_height), resample_method)
     except AttributeError:
-        # Fallback for older PIL versions
         resample_method = getattr(Image, "LANCZOS", 1) if scale_factor < 1.0 else getattr(Image, "BICUBIC", 3)
         return image.resize((target_width, target_height), resample_method)
 

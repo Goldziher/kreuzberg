@@ -50,7 +50,6 @@ def test_single_case(width: int, height: int, implementation: str, config: Extra
         final_memory = get_process_memory_mb()
         memory_increase = final_memory - initial_memory
 
-        # Cleanup
         if hasattr(result[0], "close"):
             result[0].close()
         del test_image, result
@@ -69,10 +68,8 @@ def test_single_case(width: int, height: int, implementation: str, config: Extra
 def main() -> None:
     """Run simple memory comparison."""
 
-    # Simple config
     config = ExtractionConfig(target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=False)
 
-    # Test sizes
     test_cases = [
         (2000, 1500, "medium"),
         (4000, 3000, "large"),
@@ -82,21 +79,18 @@ def main() -> None:
     for width, height, _size_name in test_cases:
         (width * height * 3) / (1024 * 1024)
 
-        # Test original
         result_orig = test_single_case(width, height, "original", config)
         "✓" if result_orig["success"] else "✗"
         result_orig["error"][:25] + "..." if result_orig["error"] and len(result_orig["error"]) > 25 else (
             result_orig["error"] or ""
         )
 
-        # Test optimized
         result_opt = test_single_case(width, height, "optimized", config)
         "✓" if result_opt["success"] else "✗"
         result_opt["error"][:25] + "..." if result_opt["error"] and len(result_opt["error"]) > 25 else (
             result_opt["error"] or ""
         )
 
-        # Calculate improvement
         if result_orig["success"] and result_opt["success"]:
             result_orig["memory_increase"] - result_opt["memory_increase"]
 
