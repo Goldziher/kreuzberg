@@ -56,7 +56,7 @@ def _import_easyocr() -> tuple[Any, Any]:
         try:
             import torch as _torch  # noqa: PLC0415
         except ImportError:  # pragma: no cover
-            _torch = None  # type: ignore[assignment]
+            _torch = None
 
         easyocr = _easyocr
         torch = _torch
