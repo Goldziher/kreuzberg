@@ -1,0 +1,24 @@
+[package]
+name = "kreuzberg_rust"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "kreuzberg_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
+numpy = "0.22"
+ndarray = "0.16"
+fast_image_resize = "5.0"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+rayon = "1.10"
+anyhow = "1.0"
+num-traits = "0.2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = true
