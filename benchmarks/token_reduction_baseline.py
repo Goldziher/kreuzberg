@@ -15,7 +15,7 @@ from typing import Any
 
 import psutil
 
-from kreuzberg._token_reduction._reducer import reduce_tokens
+from kreuzberg._token_reduction import reduce_tokens
 from kreuzberg._types import TokenReductionConfig
 
 

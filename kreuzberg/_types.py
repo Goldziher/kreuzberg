@@ -1218,7 +1218,7 @@ class HTMLToMarkdownConfig:
 
 @dataclass(unsafe_hash=True, frozen=True, slots=True)
 class TokenReductionConfig:
-    mode: Literal["off", "light", "moderate"] = "off"
+    mode: Literal["off", "light", "moderate", "aggressive"] = "off"
     preserve_markdown: bool = True
     custom_stopwords: dict[str, list[str]] | None = field(default=None, compare=False, hash=False)
     language_hint: str | None = None
