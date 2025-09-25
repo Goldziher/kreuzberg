@@ -12,7 +12,6 @@ The system features:
 - **Language Agnostic**: Universal patterns work across 64+ languages without hardcoded assumptions
 - **Advanced Markdown Awareness**: Sophisticated preservation of headers, lists, tables, and code blocks
 - **Complex Pattern Handling**: Intelligent normalization of punctuation including mixed sequences
-- **Enhanced Security**: Comprehensive input validation and DoS protection
 
 ## Configuration
 
@@ -25,9 +24,7 @@ Token reduction is controlled through the `ExtractionConfig` class with the `tok
 
 ⚠️ **Important Limitations:**
 
-- Maximum text size: 2MB (2,097,152 characters) for DoS protection
 - Language codes must match format: alphanumeric, hyphens, and underscores only (e.g., "en", "en-US", "zh_CN")
-- Security validation prevents potentially dangerous inputs
 
 ## Reduction Modes
 
@@ -311,10 +308,8 @@ The Rust-powered token reduction system uses advanced optimization techniques:
 - **Semantic clustering**: Advanced token importance scoring in aggressive mode
 - **Statistical frequency analysis**: TF-based scoring for content optimization
 
-### Security & Validation
+### Memory Safety & Unicode Support
 
-- **Input validation**: Comprehensive text size limits (2MB) and language code validation
-- **DoS protection**: Built-in safeguards against malicious input
 - **Unicode safety**: Proper handling of international characters and emojis
 - **Memory bounds checking**: Rust's safety guarantees prevent buffer overflows
 
