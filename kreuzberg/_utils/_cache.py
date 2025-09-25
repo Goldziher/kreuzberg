@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import io
 import os
 import threading
@@ -13,6 +12,21 @@ from typing import Any, Generic, TypeVar, cast
 import polars as pl
 from anyio import Path as AsyncPath
 
+from kreuzberg._internal_bindings import (
+    clear_cache_directory as _rust_clear_directory,
+)
+from kreuzberg._internal_bindings import (
+    generate_cache_key as _rust_generate_key,
+)
+from kreuzberg._internal_bindings import (
+    get_cache_metadata as _rust_get_metadata,
+)
+from kreuzberg._internal_bindings import (
+    is_cache_valid as _rust_is_valid,
+)
+from kreuzberg._internal_bindings import (
+    smart_cleanup_cache as _rust_smart_cleanup,
+)
 from kreuzberg._types import ExtractionResult
 from kreuzberg._utils._ref import Ref
 from kreuzberg._utils._serialization import deserialize, serialize
@@ -21,6 +35,7 @@ from kreuzberg._utils._sync import run_sync
 T = TypeVar("T")
 
 CACHE_CLEANUP_FREQUENCY = 100
+MIN_FREE_SPACE_MB = 1000.0  # Minimum 1GB free space
 
 
 class KreuzbergCache(Generic[T]):
@@ -46,36 +61,13 @@ class KreuzbergCache(Generic[T]):
         self._lock = threading.Lock()
 
     def _get_cache_key(self, **kwargs: Any) -> str:
-        if not kwargs:
-            return "empty"
-
-        parts = []
-        for key in sorted(kwargs):
-            value = kwargs[key]
-            if isinstance(value, (str, int, float, bool)):
-                parts.append(f"{key}={value}")
-            elif isinstance(value, bytes):
-                parts.append(f"{key}=bytes:{len(value)}")
-            else:
-                parts.append(f"{key}={type(value).__name__}:{value!s}")
-
-        cache_str = "&".join(parts)
-        return hashlib.sha256(cache_str.encode()).hexdigest()[:16]
+        return _rust_generate_key(**kwargs)
 
     def _get_cache_path(self, cache_key: str) -> Path:
         return self.cache_dir / f"{cache_key}.msgpack"
 
     def _is_cache_valid(self, cache_path: Path) -> bool:
-        try:
-            if not cache_path.exists():
-                return False
-
-            mtime = cache_path.stat().st_mtime
-            age_days = (time.time() - mtime) / (24 * 3600)
-
-            return age_days <= self.max_age_days
-        except OSError:
-            return False
+        return _rust_is_valid(str(cache_path), float(self.max_age_days))
 
     def _serialize_result(self, result: T) -> dict[str, Any]:
         if isinstance(result, list) and result and isinstance(result[0], dict) and "df" in result[0]:
@@ -136,41 +128,13 @@ class KreuzbergCache(Generic[T]):
         return cast("T", data)
 
     def _cleanup_cache(self) -> None:
-        try:
-            cache_files = list(self.cache_dir.glob("*.msgpack"))
-            cutoff_time = time.time() - (self.max_age_days * 24 * 3600)
-
-            remaining_files = []
-            for cache_file in cache_files:
-                try:
-                    if cache_file.stat().st_mtime < cutoff_time:
-                        cache_file.unlink(missing_ok=True)
-                    else:
-                        remaining_files.append(cache_file)
-                except OSError:  # noqa: PERF203
-                    continue
-
-            cache_files = remaining_files
-
-            total_size = sum(cache_file.stat().st_size for cache_file in cache_files if cache_file.exists()) / (
-                1024 * 1024
+        with suppress(OSError, ValueError, TypeError):
+            _rust_smart_cleanup(
+                str(self.cache_dir),
+                float(self.max_age_days),
+                float(self.max_cache_size_mb),
+                MIN_FREE_SPACE_MB,
             )
-
-            if total_size > self.max_cache_size_mb:
-                cache_files.sort(key=lambda f: f.stat().st_mtime if f.exists() else 0)
-
-                for cache_file in cache_files:
-                    try:
-                        size_mb = cache_file.stat().st_size / (1024 * 1024)
-                        cache_file.unlink(missing_ok=True)
-                        total_size -= size_mb
-
-                        if total_size <= self.max_cache_size_mb * 0.8:
-                            break
-                    except OSError:
-                        continue
-        except (OSError, ValueError, TypeError):
-            pass
 
     def get(self, **kwargs: Any) -> T | None:
         cache_key = self._get_cache_key(**kwargs)
@@ -254,29 +218,29 @@ class KreuzbergCache(Generic[T]):
                 event.set()
 
     def clear(self) -> None:
-        try:
-            for cache_file in self.cache_dir.glob("*.msgpack"):
-                cache_file.unlink(missing_ok=True)
-        except OSError:
-            pass
+        with suppress(OSError):
+            _rust_clear_directory(str(self.cache_dir))
 
         with self._lock:
             pass
 
     def get_stats(self) -> dict[str, Any]:
         try:
-            cache_files = list(self.cache_dir.glob("*.msgpack"))
-            total_size = sum(cache_file.stat().st_size for cache_file in cache_files if cache_file.exists())
+            stats = _rust_get_metadata(str(self.cache_dir))
+            avg_size_kb = (stats.total_size_mb * 1024 / stats.total_files) if stats.total_files else 0
 
             return {
                 "cache_type": self.cache_type,
-                "cached_results": len(cache_files),
+                "cached_results": stats.total_files,
                 "processing_results": len(self._processing),
-                "total_cache_size_mb": total_size / 1024 / 1024,
-                "avg_result_size_kb": (total_size / len(cache_files) / 1024) if cache_files else 0,
+                "total_cache_size_mb": stats.total_size_mb,
+                "avg_result_size_kb": avg_size_kb,
                 "cache_dir": str(self.cache_dir),
                 "max_cache_size_mb": self.max_cache_size_mb,
                 "max_age_days": self.max_age_days,
+                "available_space_mb": stats.available_space_mb,
+                "oldest_file_age_days": stats.oldest_file_age_days,
+                "newest_file_age_days": stats.newest_file_age_days,
             }
         except OSError:
             return {
