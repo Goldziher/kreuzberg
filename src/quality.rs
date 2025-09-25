@@ -10,7 +10,8 @@ use crate::common::{chain_replacements, replace_with_if_matches, sum_match_lengt
 
 static SCATTERED_CHARS_PATTERN: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\b[a-zA-Z]\s{2,}[a-zA-Z]\s{2,}[a-zA-Z]\b").unwrap());
-static REPEATED_PUNCT_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[.]{3,}|[-]{3,}|[_]{3,}").unwrap());
+static REPEATED_PUNCT_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[.]{3,}|[_]{3,}").unwrap());
+static DASH_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[-]{3,}").unwrap());
 static ISOLATED_PUNCT_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s[.,;:!?]\s").unwrap());
 static MALFORMED_WORDS_PATTERN: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\b[a-zA-Z]+[0-9]+[a-zA-Z]+[a-zA-Z0-9]*\b").unwrap());
@@ -87,11 +88,36 @@ fn calculate_ocr_penalty(text: &str, total_chars: f64) -> f64 {
 
     let artifact_chars = sum_match_lengths(text, &SCATTERED_CHARS_PATTERN)
         + sum_match_lengths(text, &REPEATED_PUNCT_PATTERN)
+        + count_non_table_dash_artifacts(text)
         + sum_match_lengths(text, &ISOLATED_PUNCT_PATTERN)
         + sum_match_lengths(text, &MALFORMED_WORDS_PATTERN)
         + sum_match_lengths(text, &EXCESSIVE_WHITESPACE_PATTERN);
 
     (artifact_chars as f64 / total_chars).min(1.0)
+}
+
+/// Count dash artifacts excluding markdown table separators
+#[inline]
+fn count_non_table_dash_artifacts(text: &str) -> usize {
+    let mut artifact_count = 0;
+
+    for line in text.lines() {
+        let trimmed = line.trim();
+        let is_table_separator = trimmed.starts_with('|')
+            && trimmed.ends_with('|')
+            && trimmed
+                .chars()
+                .all(|c| c == '|' || c == '-' || c.is_whitespace() || c == ':');
+
+        if !is_table_separator {
+            // Count dash artifacts only in non-table lines
+            for m in DASH_PATTERN.find_iter(line) {
+                artifact_count += m.len();
+            }
+        }
+    }
+
+    artifact_count
 }
 
 #[inline]
@@ -243,6 +269,9 @@ fn clean_ocr_artifacts_cow<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
         text
     };
 
+    // Handle dashes separately to preserve table separators
+    let result = clean_dashes_preserve_tables(result);
+
     let ocr_replacements = [
         (&*REPEATED_PUNCT_PATTERN, "..."),
         (&*ISOLATED_PUNCT_PATTERN, " "),
@@ -251,6 +280,43 @@ fn clean_ocr_artifacts_cow<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
     ];
 
     chain_replacements(result, &ocr_replacements)
+}
+
+/// Clean repeated dashes while preserving markdown table separators
+#[inline]
+fn clean_dashes_preserve_tables<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
+    if !DASH_PATTERN.is_match(&text) {
+        return text;
+    }
+
+    let mut result = String::with_capacity(text.len());
+    let lines: Vec<&str> = text.lines().collect();
+
+    for (i, line) in lines.iter().enumerate() {
+        if i > 0 {
+            result.push('\n');
+        }
+
+        // Check if this line looks like a markdown table separator
+        // Pattern: | --- | --- | (with possible whitespace variations)
+        let trimmed = line.trim();
+        let is_table_separator = trimmed.starts_with('|')
+            && trimmed.ends_with('|')
+            && trimmed
+                .chars()
+                .all(|c| c == '|' || c == '-' || c.is_whitespace() || c == ':');
+
+        if is_table_separator {
+            // Preserve table separator line as-is
+            result.push_str(line);
+        } else {
+            // Apply dash cleaning to non-table lines
+            let cleaned_line = DASH_PATTERN.replace_all(line, "...");
+            result.push_str(&cleaned_line);
+        }
+    }
+
+    Cow::Owned(result)
 }
 
 /// Clean navigation elements using Cow pattern

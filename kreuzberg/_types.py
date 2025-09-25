@@ -643,8 +643,14 @@ class Metadata(TypedDict, total=False):
     """Document subtitle."""
     summary: NotRequired[str]
     """Document Summary"""
+    sheet_count: NotRequired[str]
+    """Number of sheets in spreadsheet."""
+    sheet_names: NotRequired[str]
+    """Names of sheets in spreadsheet."""
     title: NotRequired[str]
     """Document title."""
+    total_cells: NotRequired[str]
+    """Total number of cells in spreadsheet."""
     version: NotRequired[str]
     """Version identifier or revision number."""
     width: NotRequired[int]
@@ -726,11 +732,14 @@ _VALID_METADATA_KEYS = {
     "parse_error",
     "publisher",
     "references",
+    "sheet_count",
+    "sheet_names",
     "status",
     "subject",
     "subtitle",
     "summary",
     "title",
+    "total_cells",
     "version",
     "warning",
     "width",

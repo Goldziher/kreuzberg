@@ -45,6 +45,11 @@ serde_json = "1.0.145"
 # This avoids pyo3-polars compatibility issues while providing 10-15x speedup
 polars = { version = "0.51.0", default-features = false, features = ["ipc"] }
 
+# Direct Excel processing using Calamine
+# Replaces python-calamine bridge for 5-10x performance improvement
+calamine = { version = "0.30.1", features = ["dates"] }
+chrono = "0.4"
+
 [dev-dependencies]
 tempfile = "3.15.0"
 
