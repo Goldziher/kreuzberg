@@ -4,6 +4,7 @@
 //! stopword removal, utilizing SIMD optimization, parallel processing, and modern NLP
 //! approaches for maximum performance and semantic preservation.
 
+mod cjk_utils;
 mod config;
 mod core;
 mod filters;

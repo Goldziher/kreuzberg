@@ -1,3 +1,4 @@
+use crate::error_utils::{errors, IntoKreuzbergError};
 use ahash::AHasher;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
@@ -23,11 +24,36 @@ pub struct CacheStats {
 }
 
 /// Cache entry metadata
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct CacheEntry {
     path: PathBuf,
     size: u64,
     modified: SystemTime,
+}
+
+/// Cache scan result combining stats and entries
+struct CacheScanResult {
+    stats: CacheStats,
+    entries: Vec<CacheEntry>,
+}
+
+/// Helper to format key-value pairs efficiently
+#[inline]
+fn format_cache_part(key: &str, val: &Bound<'_, PyAny>) -> String {
+    if let Ok(s) = val.extract::<String>() {
+        format!("{}={}", key, s)
+    } else if let Ok(i) = val.extract::<i64>() {
+        format!("{}={}", key, i)
+    } else if let Ok(f) = val.extract::<f64>() {
+        format!("{}={}", key, f)
+    } else if let Ok(b) = val.extract::<bool>() {
+        format!("{}={}", key, b)
+    } else if let Ok(bytes) = val.downcast::<PyBytes>() {
+        format!("{}=bytes:{}", key, bytes.len().unwrap_or(0))
+    } else {
+        let type_name = val.get_type().name().map_or("unknown".to_string(), |n| n.to_string());
+        format!("{}={}:{}", key, type_name, val)
+    }
 }
 
 /// Generate cache key from kwargs dictionary
@@ -52,25 +78,19 @@ pub fn generate_cache_key(kwargs: Option<&Bound<'_, PyDict>>) -> String {
 
     for key in keys {
         if let Ok(Some(val)) = dict.get_item(&key) {
-            let part = if let Ok(s) = val.extract::<String>() {
-                format!("{}={}", key, s)
-            } else if let Ok(i) = val.extract::<i64>() {
-                format!("{}={}", key, i)
-            } else if let Ok(f) = val.extract::<f64>() {
-                format!("{}={}", key, f)
-            } else if let Ok(b) = val.extract::<bool>() {
-                format!("{}={}", key, b)
-            } else if let Ok(bytes) = val.downcast::<PyBytes>() {
-                format!("{}=bytes:{}", key, bytes.len().unwrap_or(0))
-            } else {
-                let type_name = val.get_type().name().map_or("unknown".to_string(), |n| n.to_string());
-                format!("{}={}:{}", key, type_name, val)
-            };
-            parts.push(part);
+            parts.push(format_cache_part(&key, &val));
         }
     }
 
-    let cache_str = parts.join("&");
+    // Pre-allocate string with estimated capacity for better performance
+    let estimated_size = parts.iter().map(|p| p.len()).sum::<usize>() + parts.len();
+    let mut cache_str = String::with_capacity(estimated_size);
+    for (i, part) in parts.iter().enumerate() {
+        if i > 0 {
+            cache_str.push('&');
+        }
+        cache_str.push_str(part);
+    }
 
     // Use fast hashing
     let mut hasher = AHasher::default();
@@ -119,7 +139,7 @@ pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
         // Handle non-UTF8 paths safely
         let path_str = check_path
             .to_str()
-            .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("Path contains invalid UTF-8"))?;
+            .ok_or_else(|| errors::value_error("Path error", "contains invalid UTF-8"))?;
         let c_path = CString::new(path_str)?;
         let mut stat: statvfs_struct = unsafe { std::mem::zeroed() };
 
@@ -129,7 +149,8 @@ pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
             let available_bytes = stat.f_bavail as u64 * stat.f_frsize;
             Ok(available_bytes as f64 / (1024.0 * 1024.0))
         } else {
-            // Fallback: estimate based on temp dir
+            // Log error and return fallback
+            eprintln!("Failed to get disk stats for {}: errno {}", path_str, result);
             Ok(10000.0) // 10GB default
         }
     }
@@ -141,79 +162,100 @@ pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
     }
 }
 
-/// Calculate total cache size and get file metadata
-#[pyfunction]
-pub fn get_cache_metadata(cache_dir: &str) -> PyResult<CacheStats> {
+/// Scan cache directory and collect metadata efficiently
+/// This combines the functionality of get_cache_metadata and entry collection
+fn scan_cache_directory(cache_dir: &str) -> PyResult<CacheScanResult> {
     let dir_path = Path::new(cache_dir);
 
     if !dir_path.exists() {
-        return Ok(CacheStats {
-            total_files: 0,
-            total_size_mb: 0.0,
-            available_space_mb: get_available_disk_space(cache_dir)?,
-            oldest_file_age_days: 0.0,
-            newest_file_age_days: 0.0,
+        return Ok(CacheScanResult {
+            stats: CacheStats {
+                total_files: 0,
+                total_size_mb: 0.0,
+                available_space_mb: get_available_disk_space(cache_dir)?,
+                oldest_file_age_days: 0.0,
+                newest_file_age_days: 0.0,
+            },
+            entries: Vec::new(),
         });
     }
 
-    let mut entries = Vec::new();
     let current_time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs() as f64;
 
-    // Collect all msgpack files
-    if let Ok(read_dir) = fs::read_dir(dir_path) {
-        for entry in read_dir.flatten() {
-            if let Ok(metadata) = entry.metadata() {
-                if metadata.is_file() {
-                    let path = entry.path();
-                    if path.extension().and_then(|s| s.to_str()) == Some("msgpack") {
-                        if let Ok(modified) = metadata.modified() {
-                            entries.push(CacheEntry {
-                                path,
-                                size: metadata.len(),
-                                modified,
-                            });
-                        }
-                    }
-                }
+    // Use iterator to avoid loading everything into memory at once
+    let read_dir = fs::read_dir(dir_path).into_io_error("Failed to read cache directory")?;
+
+    let mut total_size = 0u64;
+    let mut oldest_age = 0.0f64; // Start at 0, will track maximum age
+    let mut newest_age = f64::INFINITY; // Start at infinity, will track minimum age
+    let mut entries = Vec::new();
+
+    for entry in read_dir {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                eprintln!("Error reading cache entry: {}", e);
+                continue;
             }
+        };
+
+        let metadata = match entry.metadata() {
+            Ok(m) if m.is_file() => m,
+            _ => continue,
+        };
+
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("msgpack") {
+            continue;
         }
+
+        let modified = match metadata.modified() {
+            Ok(m) => m,
+            Err(e) => {
+                eprintln!("Error getting modification time for {:?}: {}", path, e);
+                continue;
+            }
+        };
+
+        let size = metadata.len();
+        total_size += size;
+
+        // Calculate age - oldest file has the maximum age value
+        if let Ok(duration) = modified.duration_since(UNIX_EPOCH) {
+            let age_days = (current_time - duration.as_secs() as f64) / (24.0 * 3600.0);
+            oldest_age = oldest_age.max(age_days); // Track the maximum age (oldest file)
+            newest_age = newest_age.min(age_days); // Track the minimum age (newest file)
+        }
+
+        entries.push(CacheEntry { path, size, modified });
     }
 
-    let total_size = entries.iter().map(|e| e.size).sum::<u64>() as f64 / (1024.0 * 1024.0);
-    let total_files = entries.len();
+    // Adjust age values if no files were found
+    if entries.is_empty() {
+        oldest_age = 0.0;
+        newest_age = 0.0;
+    }
 
-    let (oldest_age, newest_age) = if !entries.is_empty() {
-        let ages: Vec<f64> = entries
-            .iter()
-            .filter_map(|e| {
-                e.modified
-                    .duration_since(UNIX_EPOCH)
-                    .ok()
-                    .map(|d| (current_time - d.as_secs() as f64) / (24.0 * 3600.0))
-            })
-            .collect();
-
-        if !ages.is_empty() {
-            let oldest = ages.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-            let newest = ages.iter().cloned().fold(f64::INFINITY, f64::min);
-            (oldest, newest)
-        } else {
-            (0.0, 0.0)
-        }
-    } else {
-        (0.0, 0.0)
-    };
-
-    Ok(CacheStats {
-        total_files,
-        total_size_mb: total_size,
-        available_space_mb: get_available_disk_space(cache_dir)?,
-        oldest_file_age_days: oldest_age,
-        newest_file_age_days: newest_age,
+    Ok(CacheScanResult {
+        stats: CacheStats {
+            total_files: entries.len(),
+            total_size_mb: total_size as f64 / (1024.0 * 1024.0),
+            available_space_mb: get_available_disk_space(cache_dir)?,
+            oldest_file_age_days: oldest_age,
+            newest_file_age_days: newest_age,
+        },
+        entries,
     })
+}
+
+/// Calculate total cache size and get file metadata
+#[pyfunction]
+pub fn get_cache_metadata(cache_dir: &str) -> PyResult<CacheStats> {
+    let scan_result = scan_cache_directory(cache_dir)?;
+    Ok(scan_result.stats)
 }
 
 /// Clean up old cache entries based on age and size limits
@@ -224,9 +266,9 @@ pub fn cleanup_cache(
     max_size_mb: f64,
     target_size_ratio: f64,
 ) -> PyResult<(usize, f64)> {
-    let dir_path = Path::new(cache_dir);
+    let scan_result = scan_cache_directory(cache_dir)?;
 
-    if !dir_path.exists() {
+    if scan_result.entries.is_empty() {
         return Ok((0, 0.0));
     }
 
@@ -236,69 +278,58 @@ pub fn cleanup_cache(
         .as_secs() as f64;
     let max_age_seconds = max_age_days * 24.0 * 3600.0;
 
-    let mut entries = Vec::new();
-
-    // Collect all cache files with metadata
-    if let Ok(read_dir) = fs::read_dir(dir_path) {
-        for entry in read_dir.flatten() {
-            if let Ok(metadata) = entry.metadata() {
-                if metadata.is_file() {
-                    let path = entry.path();
-                    if path.extension().and_then(|s| s.to_str()) == Some("msgpack") {
-                        if let Ok(modified) = metadata.modified() {
-                            entries.push(CacheEntry {
-                                path,
-                                size: metadata.len(),
-                                modified,
-                            });
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     let mut removed_count = 0;
     let mut removed_size = 0.0;
+    let mut remaining_entries = Vec::new();
+    let mut total_remaining_size = 0u64;
 
     // First pass: Remove files older than max_age_days
-    let mut remaining = Vec::new();
-    for entry in entries {
+    for entry in scan_result.entries {
         if let Ok(age) = entry.modified.duration_since(UNIX_EPOCH) {
             let age_seconds = current_time - age.as_secs() as f64;
             if age_seconds > max_age_seconds {
                 // Delete old file
-                if fs::remove_file(&entry.path).is_ok() {
-                    removed_count += 1;
-                    removed_size += entry.size as f64 / (1024.0 * 1024.0);
+                match fs::remove_file(&entry.path) {
+                    Ok(_) => {
+                        removed_count += 1;
+                        removed_size += entry.size as f64 / (1024.0 * 1024.0);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to remove {:?}: {}", entry.path, e);
+                    }
                 }
             } else {
-                remaining.push(entry);
+                total_remaining_size += entry.size;
+                remaining_entries.push(entry);
             }
         }
     }
 
-    // Calculate remaining size
-    let mut total_size = remaining.iter().map(|e| e.size).sum::<u64>() as f64 / (1024.0 * 1024.0);
+    let mut total_size_mb = total_remaining_size as f64 / (1024.0 * 1024.0);
 
     // Second pass: Remove oldest files if still over size limit
-    if total_size > max_size_mb {
+    if total_size_mb > max_size_mb {
         // Sort by modification time (oldest first)
-        remaining.sort_by_key(|e| e.modified);
+        remaining_entries.sort_by_key(|e| e.modified);
 
         let target_size = max_size_mb * target_size_ratio;
 
-        for entry in remaining {
-            if total_size <= target_size {
+        for entry in remaining_entries {
+            if total_size_mb <= target_size {
                 break;
             }
 
             // Delete file
-            if fs::remove_file(&entry.path).is_ok() {
-                let size_mb = entry.size as f64 / (1024.0 * 1024.0);
-                removed_count += 1;
-                removed_size += size_mb;
-                total_size -= size_mb;
+            match fs::remove_file(&entry.path) {
+                Ok(_) => {
+                    let size_mb = entry.size as f64 / (1024.0 * 1024.0);
+                    removed_count += 1;
+                    removed_size += size_mb;
+                    total_size_mb -= size_mb;
+                }
+                Err(e) => {
+                    eprintln!("Failed to remove {:?}: {}", entry.path, e);
+                }
             }
         }
     }
@@ -314,9 +345,7 @@ pub fn smart_cleanup_cache(
     max_size_mb: f64,
     min_free_space_mb: f64,
 ) -> PyResult<(usize, f64)> {
-    let _dir_path = Path::new(cache_dir);
-
-    // Get current cache stats
+    // Get current cache stats (efficient single scan)
     let stats = get_cache_metadata(cache_dir)?;
 
     // Check if we need cleanup based on disk space or age
@@ -386,16 +415,19 @@ pub fn is_cache_valid(cache_path: &str, max_age_days: f64) -> bool {
         return false;
     }
 
-    if let Ok(metadata) = fs::metadata(path) {
-        if let Ok(modified) = metadata.modified() {
-            if let Ok(elapsed) = SystemTime::now().duration_since(modified) {
-                let age_days = elapsed.as_secs() as f64 / (24.0 * 3600.0);
-                return age_days <= max_age_days;
-            }
-        }
+    match fs::metadata(path) {
+        Ok(metadata) => match metadata.modified() {
+            Ok(modified) => match SystemTime::now().duration_since(modified) {
+                Ok(elapsed) => {
+                    let age_days = elapsed.as_secs() as f64 / (24.0 * 3600.0);
+                    age_days <= max_age_days
+                }
+                Err(_) => false,
+            },
+            Err(_) => false,
+        },
+        Err(_) => false,
     }
-
-    false
 }
 
 /// Clear entire cache directory
@@ -410,24 +442,55 @@ pub fn clear_cache_directory(cache_dir: &str) -> PyResult<(usize, f64)> {
     let mut removed_count = 0;
     let mut removed_size = 0.0;
 
-    if let Ok(read_dir) = fs::read_dir(dir_path) {
-        for entry in read_dir.flatten() {
-            if let Ok(metadata) = entry.metadata() {
-                if metadata.is_file() {
-                    let path = entry.path();
-                    if path.extension().and_then(|s| s.to_str()) == Some("msgpack") {
-                        let size_mb = metadata.len() as f64 / (1024.0 * 1024.0);
-                        if fs::remove_file(&path).is_ok() {
-                            removed_count += 1;
-                            removed_size += size_mb;
-                        }
-                    }
-                }
+    let read_dir = fs::read_dir(dir_path)
+        .map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("Failed to read cache directory: {}", e)))?;
+
+    for entry in read_dir {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                eprintln!("Error reading entry: {}", e);
+                continue;
+            }
+        };
+
+        let metadata = match entry.metadata() {
+            Ok(m) if m.is_file() => m,
+            _ => continue,
+        };
+
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("msgpack") {
+            continue;
+        }
+
+        let size_mb = metadata.len() as f64 / (1024.0 * 1024.0);
+        match fs::remove_file(&path) {
+            Ok(_) => {
+                removed_count += 1;
+                removed_size += size_mb;
+            }
+            Err(e) => {
+                eprintln!("Failed to remove {:?}: {}", path, e);
             }
         }
     }
 
     Ok((removed_count, removed_size))
+}
+
+/// Batch cleanup for multiple cache directories
+#[pyfunction]
+pub fn batch_cleanup_caches(
+    cache_dirs: Vec<String>,
+    max_age_days: f64,
+    max_size_mb: f64,
+    min_free_space_mb: f64,
+) -> PyResult<Vec<(usize, f64)>> {
+    cache_dirs
+        .into_iter()
+        .map(|dir| smart_cleanup_cache(&dir, max_age_days, max_size_mb, min_free_space_mb))
+        .collect()
 }
 
 #[cfg(test)]
@@ -499,6 +562,19 @@ mod tests {
     }
 
     #[test]
+    fn test_sort_cache_with_nan() {
+        let entries = vec![
+            ("key1".to_string(), 100.0),
+            ("key2".to_string(), f64::NAN),
+            ("key3".to_string(), 200.0),
+        ];
+
+        // Should not panic
+        let sorted = sort_cache_by_access_time(entries);
+        assert_eq!(sorted.len(), 3);
+    }
+
+    #[test]
     fn test_cache_metadata() {
         let temp_dir = tempdir().unwrap();
         let cache_dir = temp_dir.path().to_str().unwrap();
@@ -531,5 +607,20 @@ mod tests {
         let (removed_count, _) = cleanup_cache(cache_dir, 1000.0, 0.000001, 0.8).unwrap();
         assert_eq!(removed_count, 1);
         assert!(!file1.exists());
+    }
+
+    #[test]
+    fn test_is_cache_valid() {
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("test.msgpack");
+        File::create(&file_path).unwrap();
+
+        let path_str = file_path.to_str().unwrap();
+
+        // Should be valid for a just-created file
+        assert!(is_cache_valid(path_str, 1.0));
+
+        // Should be invalid for non-existent file
+        assert!(!is_cache_valid("/nonexistent/path", 1.0));
     }
 }

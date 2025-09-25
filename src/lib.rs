@@ -2,15 +2,16 @@ use pyo3::prelude::*;
 
 mod cache;
 mod common;
+mod error_utils;
 mod image_preprocessing;
 mod quality;
 mod string_utils;
 mod token_reduction;
 
 use cache::{
-    batch_generate_cache_keys, cleanup_cache, clear_cache_directory, fast_hash, filter_old_cache_entries,
-    generate_cache_key, get_available_disk_space, get_cache_metadata, is_cache_valid, smart_cleanup_cache,
-    sort_cache_by_access_time, validate_cache_key, CacheStats,
+    batch_cleanup_caches, batch_generate_cache_keys, cleanup_cache, clear_cache_directory, fast_hash,
+    filter_old_cache_entries, generate_cache_key, get_available_disk_space, get_cache_metadata, is_cache_valid,
+    smart_cleanup_cache, sort_cache_by_access_time, validate_cache_key, CacheStats,
 };
 use image_preprocessing::{batch_normalize_images, normalize_image_dpi, ExtractionConfig, ImagePreprocessingMetadata};
 use quality::{calculate_quality_score, clean_extracted_text, normalize_spaces};
@@ -56,6 +57,7 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(smart_cleanup_cache, m)?)?;
     m.add_function(wrap_pyfunction!(is_cache_valid, m)?)?;
     m.add_function(wrap_pyfunction!(clear_cache_directory, m)?)?;
+    m.add_function(wrap_pyfunction!(batch_cleanup_caches, m)?)?;
     m.add_class::<CacheStats>()?;
 
     Ok(())

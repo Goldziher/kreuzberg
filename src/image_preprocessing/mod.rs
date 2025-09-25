@@ -6,6 +6,7 @@ mod resize;
 pub use config::ExtractionConfig;
 pub use metadata::ImagePreprocessingMetadata;
 
+use crate::error_utils::errors;
 use ndarray::ArrayView3;
 use numpy::{PyArray3, PyArrayMethods};
 use pyo3::prelude::*;
@@ -13,6 +14,39 @@ use pyo3::types::PyDict;
 
 use self::dpi::calculate_smart_dpi;
 use self::resize::{image_to_numpy, numpy_to_image, resize_image_fast};
+
+/// Image dimensions with validation utilities
+#[derive(Debug, Clone, Copy)]
+struct ImageDimensions {
+    width: u32,
+    height: u32,
+}
+
+impl ImageDimensions {
+    /// Create dimensions from array dimensions with validation
+    fn from_array_dims(width: usize, height: usize) -> PyResult<Self> {
+        let width =
+            u32::try_from(width).map_err(|_| errors::out_of_range("Width", &width, &0, &(u32::MAX as usize)))?;
+        let height =
+            u32::try_from(height).map_err(|_| errors::out_of_range("Height", &height, &0, &(u32::MAX as usize)))?;
+
+        Ok(Self { width, height })
+    }
+
+    /// Check if dimensions are within reasonable bounds
+    #[inline]
+    fn validate_bounds(&self, max_dimension: u32) -> PyResult<()> {
+        if self.width > max_dimension || self.height > max_dimension {
+            return Err(errors::out_of_range(
+                "Image dimensions",
+                &format!("{}x{}", self.width, self.height),
+                &"1x1",
+                &format!("{}x{}", max_dimension, max_dimension),
+            ));
+        }
+        Ok(())
+    }
+}
 
 const PDF_POINTS_PER_INCH: f64 = 72.0;
 
@@ -29,10 +63,10 @@ pub fn normalize_image_dpi<'py>(
     let array_view = unsafe { image_array.as_array() };
     let (height, width, _channels) = array_view.dim();
 
-    let original_width = u32::try_from(width)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Width too large: {e}")))?;
-    let original_height = u32::try_from(height)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Height too large: {e}")))?;
+    let dims = ImageDimensions::from_array_dims(width, height)?;
+    dims.validate_bounds(65536)?; // Reasonable max dimension
+
+    let (original_width, original_height) = (dims.width, dims.height);
 
     let current_dpi = extract_dpi_from_dict(dpi_info);
     let original_dpi = (current_dpi, current_dpi);

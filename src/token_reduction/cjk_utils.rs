@@ -1,0 +1,156 @@
+/// CJK text processing utilities to eliminate code duplication
+use std::ops::RangeInclusive;
+
+/// CJK tokenizer for handling Chinese, Japanese, Korean text
+pub struct CjkTokenizer {
+    cjk_range: RangeInclusive<u32>,
+}
+
+impl CjkTokenizer {
+    /// Create a new CJK tokenizer with the standard CJK Unified Ideographs range
+    pub fn new() -> Self {
+        Self {
+            cjk_range: 0x4E00..=0x9FFF,
+        }
+    }
+
+    /// Check if a character is in the CJK range
+    #[inline]
+    pub fn is_cjk_char(&self, c: char) -> bool {
+        self.cjk_range.contains(&(c as u32))
+    }
+
+    /// Check if text contains any CJK characters
+    #[inline]
+    pub fn has_cjk(&self, text: &str) -> bool {
+        text.chars().any(|c| self.is_cjk_char(c))
+    }
+
+    /// Tokenize CJK text into 2-character chunks
+    pub fn tokenize_cjk_string(&self, text: &str) -> Vec<String> {
+        let chars: Vec<char> = text.chars().collect();
+        self.tokenize_cjk_chars(&chars)
+    }
+
+    /// Tokenize a slice of characters into 2-character chunks
+    pub fn tokenize_cjk_chars(&self, chars: &[char]) -> Vec<String> {
+        chars
+            .chunks(2)
+            .map(|chunk| {
+                if chunk.len() == 2 {
+                    format!("{}{}", chunk[0], chunk[1])
+                } else {
+                    chunk[0].to_string()
+                }
+            })
+            .collect()
+    }
+
+    /// Process mixed text that may contain both CJK and non-CJK content
+    pub fn tokenize_mixed_text(&self, text: &str) -> Vec<String> {
+        let whitespace_tokens: Vec<&str> = text.split_whitespace().collect();
+
+        // Handle empty text
+        if whitespace_tokens.is_empty() {
+            return if text.is_empty() {
+                vec![]
+            } else {
+                vec![text.to_string()]
+            };
+        }
+
+        // Single token case
+        if whitespace_tokens.len() == 1 {
+            let token = whitespace_tokens[0];
+            if self.has_cjk(token) {
+                return self.tokenize_cjk_string(token);
+            } else {
+                return vec![token.to_string()];
+            }
+        }
+
+        // Multiple tokens - process each based on content
+        let mut all_tokens = Vec::new();
+        for token in whitespace_tokens {
+            if self.has_cjk(token) {
+                // This token contains CJK - split into 2-character tokens
+                all_tokens.extend(self.tokenize_cjk_string(token));
+            } else {
+                // Regular non-CJK token
+                all_tokens.push(token.to_string());
+            }
+        }
+        all_tokens
+    }
+}
+
+impl Default for CjkTokenizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_cjk_char() {
+        let tokenizer = CjkTokenizer::new();
+
+        assert!(tokenizer.is_cjk_char('中'));
+        assert!(tokenizer.is_cjk_char('国'));
+        assert!(tokenizer.is_cjk_char('日'));
+        assert!(tokenizer.is_cjk_char('本'));
+
+        assert!(!tokenizer.is_cjk_char('a'));
+        assert!(!tokenizer.is_cjk_char('Z'));
+        assert!(!tokenizer.is_cjk_char('1'));
+        assert!(!tokenizer.is_cjk_char(' '));
+    }
+
+    #[test]
+    fn test_has_cjk() {
+        let tokenizer = CjkTokenizer::new();
+
+        assert!(tokenizer.has_cjk("这是中文"));
+        assert!(tokenizer.has_cjk("mixed 中文 text"));
+        assert!(tokenizer.has_cjk("日本語"));
+
+        assert!(!tokenizer.has_cjk("English text"));
+        assert!(!tokenizer.has_cjk("12345"));
+        assert!(!tokenizer.has_cjk(""));
+    }
+
+    #[test]
+    fn test_tokenize_cjk_string() {
+        let tokenizer = CjkTokenizer::new();
+
+        let tokens = tokenizer.tokenize_cjk_string("中国人");
+        assert_eq!(tokens, vec!["中国", "人"]);
+
+        let tokens = tokenizer.tokenize_cjk_string("四个字");
+        assert_eq!(tokens, vec!["四个", "字"]);
+    }
+
+    #[test]
+    fn test_tokenize_mixed_text() {
+        let tokenizer = CjkTokenizer::new();
+
+        // Pure English
+        let tokens = tokenizer.tokenize_mixed_text("hello world");
+        assert_eq!(tokens, vec!["hello", "world"]);
+
+        // Pure CJK
+        let tokens = tokenizer.tokenize_mixed_text("中国");
+        assert_eq!(tokens, vec!["中国"]);
+
+        // Mixed content
+        let tokens = tokenizer.tokenize_mixed_text("hello 中国 world");
+        assert_eq!(tokens, vec!["hello", "中国", "world"]);
+
+        // Complex mixed
+        let tokens = tokenizer.tokenize_mixed_text("学习 machine learning 技术");
+        assert_eq!(tokens, vec!["学习", "machine", "learning", "技术"]);
+    }
+}
