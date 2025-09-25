@@ -11,7 +11,7 @@ from kreuzberg._internal_bindings import (
     ExtractionConfig as RustExtractionConfig,
 )
 from kreuzberg._internal_bindings import (
-    normalize_image_dpi_rust,
+    normalize_image_dpi as normalize_image_dpi_rust,
 )
 from kreuzberg._types import ImagePreprocessingMetadata
 

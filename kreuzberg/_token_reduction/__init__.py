@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from kreuzberg._token_reduction._rust_reducer import (
-    batch_reduce_tokens_with_rust,
+from kreuzberg._token_reduction._reducer import (
+    batch_reduce_tokens as batch_reduce_tokens_impl,
+)
+from kreuzberg._token_reduction._reducer import (
     get_reduction_statistics,
-    reduce_tokens_with_rust,
+)
+from kreuzberg._token_reduction._reducer import (
+    reduce_tokens as reduce_tokens_impl,
 )
 from kreuzberg.exceptions import ValidationError
 
@@ -43,7 +47,7 @@ def reduce_tokens(
     if language is not None and not language.replace("-", "").replace("_", "").isalnum():
         raise ValidationError("Invalid language code format")
 
-    return reduce_tokens_with_rust(text, config=config, language=language)
+    return reduce_tokens_impl(text, config=config, language=language)
 
 
 def batch_reduce_tokens(
@@ -62,7 +66,7 @@ def batch_reduce_tokens(
     Returns:
         List of reduced texts.
     """
-    return batch_reduce_tokens_with_rust(texts, config=config, language=language)
+    return batch_reduce_tokens_impl(texts, config=config, language=language)
 
 
 def get_reduction_stats(original: str, reduced: str) -> dict[str, float | int]:
