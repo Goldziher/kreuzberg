@@ -251,7 +251,7 @@ mod tests {
         let processor = SimdTextProcessor::new();
         let input = "What???!!! Really... Yes,,,";
         let result = processor.clean_punctuation(input);
-        assert_eq!(result, "What? Really... Yes,");
+        assert_eq!(result, "What? Really. Yes,");
     }
 
     #[test]

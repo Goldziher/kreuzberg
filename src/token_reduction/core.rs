@@ -647,4 +647,276 @@ mod tests {
             assert!(!result.contains("  ")); // No double spaces
         }
     }
+
+    #[test]
+    fn test_aggressive_reduction() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Aggressive,
+            use_simd: false,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, Some("en")).unwrap();
+        let input = "The quick brown fox is jumping over the lazy dog and running through the forest";
+        let result = reducer.reduce(input);
+
+        // Should reduce significantly
+        assert!(result.len() < input.len());
+        // Should keep some content
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_maximum_reduction() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Maximum,
+            use_simd: false,
+            enable_semantic_clustering: true,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, Some("en")).unwrap();
+        let input = "The quick brown fox is jumping over the lazy dog and running through the forest";
+        let result = reducer.reduce(input);
+
+        // Should apply significant reduction
+        assert!(result.len() < input.len());
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_empty_text_handling() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Moderate,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        assert_eq!(reducer.reduce(""), "");
+        // Whitespace-only text might be trimmed in some modes
+        let result = reducer.reduce("   ");
+        assert!(result == "   " || result == "");
+    }
+
+    #[test]
+    fn test_off_mode_preserves_text() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Off,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let input = "Text   with    multiple   spaces!!!";
+        assert_eq!(reducer.reduce(input), input);
+    }
+
+    #[test]
+    fn test_parallel_batch_processing() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Light,
+            enable_parallel: true,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let inputs = vec![
+            "First text  with spaces",
+            "Second  text with  spaces",
+            "Third   text  with spaces",
+        ];
+        let results = reducer.batch_reduce(&inputs);
+
+        assert_eq!(results.len(), inputs.len());
+        for result in &results {
+            assert!(!result.contains("  "));
+        }
+    }
+
+    #[test]
+    fn test_cjk_text_handling() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Moderate,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, Some("zh")).unwrap();
+        let input = "这是中文文本测试";
+        let result = reducer.reduce(input);
+
+        // Should handle CJK text properly
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_mixed_language_text() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Moderate,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let input = "This is English text 这是中文 and some more English";
+        let result = reducer.reduce(input);
+
+        assert!(!result.is_empty());
+        // Should preserve some content from both languages
+        assert!(result.contains("English") || result.contains("中"));
+    }
+
+    #[test]
+    fn test_punctuation_normalization() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Light,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let input = "Text!!!!!! with????? excessive,,,,,, punctuation";
+        let result = reducer.reduce(input);
+
+        assert!(!result.contains("!!!!!!"));
+        assert!(!result.contains("?????"));
+        assert!(!result.contains(",,,,,,"));
+    }
+
+    #[test]
+    fn test_sentence_selection() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Aggressive,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let input = "First sentence here. Second sentence with more words. Third one. Fourth sentence is even longer than the others.";
+        let result = reducer.reduce(input);
+
+        // Should keep some but not all sentences
+        assert!(result.len() < input.len());
+        assert!(result.split(". ").count() < 4);
+    }
+
+    #[test]
+    fn test_unicode_normalization_ascii() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Light,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let input = "Pure ASCII text without special characters";
+        let result = reducer.reduce(input);
+
+        // ASCII text should skip normalization for performance
+        assert!(result.contains("ASCII"));
+    }
+
+    #[test]
+    fn test_unicode_normalization_non_ascii() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Light,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let input = "Café naïve résumé"; // Contains non-ASCII characters
+        let result = reducer.reduce(input);
+
+        assert!(result.contains("Café") || result.contains("Cafe"));
+    }
+
+    #[test]
+    fn test_single_text_vs_batch() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Moderate,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let text = "The quick brown fox jumps over the lazy dog";
+
+        let single_result = reducer.reduce(text);
+        let batch_results = reducer.batch_reduce(&vec![text]);
+
+        assert_eq!(single_result, batch_results[0]);
+    }
+
+    #[test]
+    fn test_important_word_preservation() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Aggressive,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let input = "The IMPORTANT word COVID-19 and 12345 numbers should be preserved";
+        let result = reducer.reduce(input);
+
+        // Should keep all-caps words, words with numbers
+        assert!(result.contains("IMPORTANT") || result.contains("COVID") || result.contains("12345"));
+    }
+
+    #[test]
+    fn test_technical_terms_preservation() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Aggressive,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+        let input = "The implementation uses PyTorch and TensorFlow frameworks";
+        let result = reducer.reduce(input);
+
+        // Should keep technical terms (mixed case)
+        assert!(result.contains("PyTorch") || result.contains("TensorFlow"));
+    }
+
+    #[test]
+    fn test_calculate_char_entropy() {
+        let config = TokenReductionConfig::default();
+        let reducer = TokenReducer::new(&config, None).unwrap();
+
+        // Repetitive text should have low entropy
+        let low_entropy = reducer.calculate_char_entropy("aaaaaaa");
+        assert!(low_entropy < 1.0);
+
+        // Diverse text should have higher entropy
+        let high_entropy = reducer.calculate_char_entropy("abcdefg123");
+        assert!(high_entropy > low_entropy);
+    }
+
+    #[test]
+    fn test_universal_tokenize_english() {
+        let config = TokenReductionConfig::default();
+        let reducer = TokenReducer::new(&config, None).unwrap();
+
+        let tokens = reducer.universal_tokenize("hello world test");
+        assert_eq!(tokens, vec!["hello", "world", "test"]);
+    }
+
+    #[test]
+    fn test_universal_tokenize_cjk() {
+        let config = TokenReductionConfig::default();
+        let reducer = TokenReducer::new(&config, None).unwrap();
+
+        let tokens = reducer.universal_tokenize("中文");
+        // Should split into character pairs for CJK
+        assert!(!tokens.is_empty());
+    }
+
+    #[test]
+    fn test_fallback_threshold() {
+        let config = TokenReductionConfig {
+            level: ReductionLevel::Aggressive,
+            ..Default::default()
+        };
+
+        let reducer = TokenReducer::new(&config, None).unwrap();
+
+        // Text with mostly short common words
+        let input = "a the is of to in for on at by";
+        let result = reducer.reduce(input);
+
+        // Should not reduce to empty even with aggressive filtering
+        assert!(!result.is_empty());
+    }
 }
