@@ -4,6 +4,10 @@ use pyo3::types::PyDict;
 use regex::Regex;
 use std::borrow::Cow;
 
+use crate::common::quality_weights::*;
+use crate::common::text_thresholds::*;
+use crate::common::{chain_replacements, replace_with_if_matches, sum_match_lengths};
+
 static SCATTERED_CHARS_PATTERN: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\b[a-zA-Z]\s{2,}[a-zA-Z]\s{2,}[a-zA-Z]\b").unwrap());
 static REPEATED_PUNCT_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[.]{3,}|[-]{3,}|[_]{3,}").unwrap());
@@ -43,29 +47,29 @@ pub fn calculate_quality_score(text: &str, metadata: Option<Bound<PyDict>>) -> f
 
     let total_chars = text.len() as f64;
 
-    if total_chars < 10.0 {
+    if (text.len()) < MIN_TEXT_LENGTH {
         return 0.1;
     }
 
     let mut score = 1.0;
 
-    if total_chars > 1000.0 {
+    if text.len() > LARGE_TEXT_LENGTH {
         let ocr_penalty = calculate_ocr_penalty(text, total_chars);
         let script_penalty = calculate_script_penalty(text, total_chars);
         let nav_penalty = calculate_navigation_penalty(text, total_chars);
         let structure_bonus = calculate_structure_bonus(text);
 
-        score -= ocr_penalty * 0.3;
-        score -= script_penalty * 0.2;
-        score -= nav_penalty * 0.1;
-        score += structure_bonus * 0.2;
+        score -= ocr_penalty * OCR_PENALTY_WEIGHT;
+        score -= script_penalty * SCRIPT_PENALTY_WEIGHT;
+        score -= nav_penalty * NAV_PENALTY_WEIGHT;
+        score += structure_bonus * STRUCTURE_BONUS_WEIGHT;
     } else {
-        score -= calculate_ocr_penalty(text, total_chars) * 0.3;
-        score += calculate_structure_bonus(text) * 0.2;
+        score -= calculate_ocr_penalty(text, total_chars) * OCR_PENALTY_WEIGHT;
+        score += calculate_structure_bonus(text) * STRUCTURE_BONUS_WEIGHT;
     }
 
     if let Some(metadata) = metadata {
-        score += calculate_metadata_bonus(&metadata) * 0.1;
+        score += calculate_metadata_bonus(&metadata) * METADATA_BONUS_WEIGHT;
     }
 
     score.clamp(0.0, 1.0)
@@ -81,14 +85,11 @@ fn calculate_ocr_penalty(text: &str, total_chars: f64) -> f64 {
         return 0.0;
     }
 
-    let artifact_chars = SCATTERED_CHARS_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>()
-        + REPEATED_PUNCT_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>()
-        + ISOLATED_PUNCT_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>()
-        + MALFORMED_WORDS_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>()
-        + EXCESSIVE_WHITESPACE_PATTERN
-            .find_iter(text)
-            .map(|m| m.len())
-            .sum::<usize>();
+    let artifact_chars = sum_match_lengths(text, &SCATTERED_CHARS_PATTERN)
+        + sum_match_lengths(text, &REPEATED_PUNCT_PATTERN)
+        + sum_match_lengths(text, &ISOLATED_PUNCT_PATTERN)
+        + sum_match_lengths(text, &MALFORMED_WORDS_PATTERN)
+        + sum_match_lengths(text, &EXCESSIVE_WHITESPACE_PATTERN);
 
     (artifact_chars as f64 / total_chars).min(1.0)
 }
@@ -103,10 +104,10 @@ fn calculate_script_penalty(text: &str, total_chars: f64) -> f64 {
         return 0.0;
     }
 
-    let script_chars = JS_FUNCTION_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>()
-        + CSS_RULES_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>()
-        + SCRIPT_TAG_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>()
-        + STYLE_TAG_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>();
+    let script_chars = sum_match_lengths(text, &JS_FUNCTION_PATTERN)
+        + sum_match_lengths(text, &CSS_RULES_PATTERN)
+        + sum_match_lengths(text, &SCRIPT_TAG_PATTERN)
+        + sum_match_lengths(text, &STYLE_TAG_PATTERN);
 
     (script_chars as f64 / total_chars).min(1.0)
 }
@@ -117,9 +118,9 @@ fn calculate_navigation_penalty(text: &str, total_chars: f64) -> f64 {
         return 0.0;
     }
 
-    let nav_chars = NAV_WORDS_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>()
-        + BREADCRUMB_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>()
-        + PAGINATION_PATTERN.find_iter(text).map(|m| m.len()).sum::<usize>();
+    let nav_chars = sum_match_lengths(text, &NAV_WORDS_PATTERN)
+        + sum_match_lengths(text, &BREADCRUMB_PATTERN)
+        + sum_match_lengths(text, &PAGINATION_PATTERN);
 
     (nav_chars as f64 / total_chars).min(1.0)
 }
@@ -143,11 +144,11 @@ fn calculate_structure_bonus(text: &str) -> f64 {
 
     let mut structure_score: f64 = 0.0;
 
-    if (10.0..=30.0).contains(&avg_words_per_sentence) {
+    if (MIN_SENTENCE_WORDS..=MAX_SENTENCE_WORDS).contains(&avg_words_per_sentence) {
         structure_score += 0.3;
     }
 
-    if (50.0..=300.0).contains(&avg_words_per_paragraph) {
+    if (MIN_PARAGRAPH_WORDS..=MAX_PARAGRAPH_WORDS).contains(&avg_words_per_paragraph) {
         structure_score += 0.3;
     }
 
@@ -181,20 +182,14 @@ pub fn clean_extracted_text(text: &str) -> String {
         return String::new();
     }
 
-    let mut result = Cow::Borrowed(text);
+    let script_replacements = [
+        (&*SCRIPT_TAG_PATTERN, " "),
+        (&*STYLE_TAG_PATTERN, " "),
+        (&*JS_FUNCTION_PATTERN, " "),
+        (&*CSS_RULES_PATTERN, " "),
+    ];
 
-    if SCRIPT_TAG_PATTERN.is_match(&result) {
-        result = Cow::Owned(SCRIPT_TAG_PATTERN.replace_all(&result, " ").into_owned());
-    }
-    if STYLE_TAG_PATTERN.is_match(&result) {
-        result = Cow::Owned(STYLE_TAG_PATTERN.replace_all(&result, " ").into_owned());
-    }
-    if JS_FUNCTION_PATTERN.is_match(&result) {
-        result = Cow::Owned(JS_FUNCTION_PATTERN.replace_all(&result, " ").into_owned());
-    }
-    if CSS_RULES_PATTERN.is_match(&result) {
-        result = Cow::Owned(CSS_RULES_PATTERN.replace_all(&result, " ").into_owned());
-    }
+    let result = chain_replacements(Cow::Borrowed(text), &script_replacements);
 
     let mut owned = result.into_owned();
     owned = clean_ocr_artifacts(&owned);
@@ -209,54 +204,29 @@ pub fn clean_extracted_text(text: &str) -> String {
 
 #[inline]
 fn clean_ocr_artifacts(text: &str) -> String {
-    let mut result = Cow::Borrowed(text);
+    let result = replace_with_if_matches(text, &SCATTERED_CHARS_PATTERN, |caps: &regex::Captures| {
+        caps[0].chars().filter(|c| !c.is_whitespace()).collect::<String>()
+    });
 
-    if SCATTERED_CHARS_PATTERN.is_match(&result) {
-        result = Cow::Owned(
-            SCATTERED_CHARS_PATTERN
-                .replace_all(&result, |caps: &regex::Captures| {
-                    caps[0].chars().filter(|c| !c.is_whitespace()).collect::<String>()
-                })
-                .into_owned(),
-        );
-    }
+    let ocr_replacements = [
+        (&*REPEATED_PUNCT_PATTERN, "..."),
+        (&*ISOLATED_PUNCT_PATTERN, " "),
+        (&*MALFORMED_WORDS_PATTERN, " "),
+        (&*EXCESSIVE_WHITESPACE_PATTERN, " "),
+    ];
 
-    if REPEATED_PUNCT_PATTERN.is_match(&result) {
-        result = Cow::Owned(REPEATED_PUNCT_PATTERN.replace_all(&result, "...").into_owned());
-    }
-
-    if ISOLATED_PUNCT_PATTERN.is_match(&result) {
-        result = Cow::Owned(ISOLATED_PUNCT_PATTERN.replace_all(&result, " ").into_owned());
-    }
-
-    if MALFORMED_WORDS_PATTERN.is_match(&result) {
-        result = Cow::Owned(MALFORMED_WORDS_PATTERN.replace_all(&result, " ").into_owned());
-    }
-
-    if EXCESSIVE_WHITESPACE_PATTERN.is_match(&result) {
-        result = Cow::Owned(EXCESSIVE_WHITESPACE_PATTERN.replace_all(&result, " ").into_owned());
-    }
-
-    result.into_owned()
+    chain_replacements(result, &ocr_replacements).into_owned()
 }
 
 #[inline]
 fn clean_navigation_elements(text: &str) -> String {
-    let mut result = Cow::Borrowed(text);
+    let nav_replacements = [
+        (&*NAV_WORDS_PATTERN, " "),
+        (&*BREADCRUMB_PATTERN, " "),
+        (&*PAGINATION_PATTERN, " "),
+    ];
 
-    if NAV_WORDS_PATTERN.is_match(&result) {
-        result = Cow::Owned(NAV_WORDS_PATTERN.replace_all(&result, " ").into_owned());
-    }
-
-    if BREADCRUMB_PATTERN.is_match(&result) {
-        result = Cow::Owned(BREADCRUMB_PATTERN.replace_all(&result, " ").into_owned());
-    }
-
-    if PAGINATION_PATTERN.is_match(&result) {
-        result = Cow::Owned(PAGINATION_PATTERN.replace_all(&result, " ").into_owned());
-    }
-
-    result.into_owned()
+    chain_replacements(Cow::Borrowed(text), &nav_replacements).into_owned()
 }
 
 /// Normalize spaces in text

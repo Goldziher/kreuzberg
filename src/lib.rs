@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+mod common;
 mod image_preprocessing;
 mod quality;
 mod string_utils;
