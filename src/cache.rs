@@ -77,8 +77,8 @@ pub fn generate_cache_key(kwargs: Option<&Bound<'_, PyDict>>) -> String {
     cache_str.hash(&mut hasher);
     let hash = hasher.finish();
 
-    // Return first 16 chars of hex representation
-    format!("{:016x}", hash)
+    // Return 32 chars of hex representation for 128-bit entropy
+    format!("{:032x}", hash)
 }
 
 /// Batch cache key generation for multiple items
@@ -116,7 +116,11 @@ pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
         use libc::{statvfs, statvfs as statvfs_struct};
         use std::ffi::CString;
 
-        let c_path = CString::new(check_path.to_str().unwrap_or("/"))?;
+        // Handle non-UTF8 paths safely
+        let path_str = check_path
+            .to_str()
+            .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("Path contains invalid UTF-8"))?;
+        let c_path = CString::new(path_str)?;
         let mut stat: statvfs_struct = unsafe { std::mem::zeroed() };
 
         let result = unsafe { statvfs(c_path.as_ptr(), &mut stat) };
@@ -153,7 +157,10 @@ pub fn get_cache_metadata(cache_dir: &str) -> PyResult<CacheStats> {
     }
 
     let mut entries = Vec::new();
-    let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as f64;
+    let current_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as f64;
 
     // Collect all msgpack files
     if let Ok(read_dir) = fs::read_dir(dir_path) {
@@ -223,7 +230,10 @@ pub fn cleanup_cache(
         return Ok((0, 0.0));
     }
 
-    let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as f64;
+    let current_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as f64;
     let max_age_seconds = max_age_days * 24.0 * 3600.0;
 
     let mut entries = Vec::new();
@@ -347,7 +357,8 @@ pub fn filter_old_cache_entries(cache_times: Vec<f64>, current_time: f64, max_ag
 /// Sort cache entries by access time for LRU eviction
 #[pyfunction]
 pub fn sort_cache_by_access_time(mut entries: Vec<(String, f64)>) -> Vec<String> {
-    entries.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    // Handle NaN values safely
+    entries.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
     entries.into_iter().map(|(key, _)| key).collect()
 }
 
@@ -362,8 +373,8 @@ pub fn fast_hash(data: &[u8]) -> u64 {
 /// Concurrent safe cache key validation
 #[pyfunction]
 pub fn validate_cache_key(key: &str) -> bool {
-    // Validate that key is a valid hex string of length 16
-    key.len() == 16 && key.chars().all(|c| c.is_ascii_hexdigit())
+    // Validate that key is a valid hex string of length 32 (128-bit)
+    key.len() == 32 && key.chars().all(|c| c.is_ascii_hexdigit())
 }
 
 /// Check if cache path exists and is valid
@@ -443,16 +454,16 @@ mod tests {
             let key1 = generate_cache_key(Some(&dict));
             let key2 = generate_cache_key(Some(&dict));
             assert_eq!(key1, key2);
-            assert_eq!(key1.len(), 16);
+            assert_eq!(key1.len(), 32);
         });
     }
 
     #[test]
     fn test_validate_cache_key() {
-        assert!(validate_cache_key("0123456789abcdef"));
+        assert!(validate_cache_key("0123456789abcdef0123456789abcdef"));
         assert!(!validate_cache_key("invalid_key"));
-        assert!(!validate_cache_key("0123456789abcde")); // Too short
-        assert!(!validate_cache_key("0123456789abcdefg")); // Too long
+        assert!(!validate_cache_key("0123456789abcdef")); // Too short (16 chars)
+        assert!(!validate_cache_key("0123456789abcdef0123456789abcdef0")); // Too long
     }
 
     #[test]
