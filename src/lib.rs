@@ -16,7 +16,11 @@ use cache::{
     smart_cleanup_cache, sort_cache_by_access_time, validate_cache_key, CacheStats,
 };
 use excel::{benchmark_excel_reading, excel_to_markdown, read_excel_bytes, read_excel_file, ExcelSheet, ExcelWorkbook};
-use image_preprocessing::{batch_normalize_images, normalize_image_dpi, ExtractionConfig, ImagePreprocessingMetadata};
+use image_preprocessing::{
+    batch_normalize_images, calculate_optimal_dpi, compress_image_auto, compress_image_jpeg, compress_image_png,
+    convert_format, detect_image_format, load_image, load_image_as_numpy, normalize_image_dpi, rgb_to_grayscale,
+    rgb_to_rgba, rgba_to_rgb, save_image, save_numpy_as_image, ExtractionConfig, ImagePreprocessingMetadata,
+};
 use quality::{calculate_quality_score, clean_extracted_text, normalize_spaces};
 use string_utils::{batch_process_texts, calculate_text_confidence, fix_mojibake, get_encoding_cache_key, safe_decode};
 use table_processing::table_from_arrow_to_markdown;
@@ -39,8 +43,27 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(normalize_image_dpi, m)?)?;
     m.add_function(wrap_pyfunction!(batch_normalize_images, m)?)?;
+    m.add_function(wrap_pyfunction!(calculate_optimal_dpi, m)?)?;
     m.add_class::<ImagePreprocessingMetadata>()?;
     m.add_class::<ExtractionConfig>()?;
+
+    // Image I/O functions
+    m.add_function(wrap_pyfunction!(load_image, m)?)?;
+    m.add_function(wrap_pyfunction!(save_image, m)?)?;
+    m.add_function(wrap_pyfunction!(detect_image_format, m)?)?;
+    m.add_function(wrap_pyfunction!(load_image_as_numpy, m)?)?;
+    m.add_function(wrap_pyfunction!(save_numpy_as_image, m)?)?;
+
+    // Compression functions
+    m.add_function(wrap_pyfunction!(compress_image_jpeg, m)?)?;
+    m.add_function(wrap_pyfunction!(compress_image_png, m)?)?;
+    m.add_function(wrap_pyfunction!(compress_image_auto, m)?)?;
+
+    // Format conversion functions
+    m.add_function(wrap_pyfunction!(rgb_to_grayscale, m)?)?;
+    m.add_function(wrap_pyfunction!(rgb_to_rgba, m)?)?;
+    m.add_function(wrap_pyfunction!(rgba_to_rgb, m)?)?;
+    m.add_function(wrap_pyfunction!(convert_format, m)?)?;
 
     m.add_function(wrap_pyfunction!(reduce_tokens, m)?)?;
     m.add_function(wrap_pyfunction!(batch_reduce_tokens, m)?)?;

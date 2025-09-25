@@ -1,9 +1,18 @@
+mod compression;
 mod config;
+mod conversions;
 mod dpi;
+mod image_io;
 mod metadata;
 mod resize;
 
+pub use compression::{compress_image_auto, compress_image_jpeg, compress_image_png};
 pub use config::ExtractionConfig;
+pub use conversions::{
+    convert_format, load_image_as_numpy, rgb_to_grayscale, rgb_to_rgba, rgba_to_rgb, save_numpy_as_image,
+};
+pub use dpi::calculate_optimal_dpi;
+pub use image_io::{detect_image_format, load_image, save_image};
 pub use metadata::ImagePreprocessingMetadata;
 
 use crate::error_utils::errors;
@@ -13,7 +22,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use self::dpi::calculate_smart_dpi;
-use self::resize::{image_to_numpy, numpy_to_image, resize_image_fast};
+use self::resize::{image_to_numpy, numpy_to_image, resize_image};
 
 /// Image dimensions with validation utilities
 #[derive(Debug, Clone, Copy)]
@@ -230,7 +239,7 @@ fn perform_resize<'py>(
 ) -> PyResult<(Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadata)> {
     let image = numpy_to_image(array_view)?;
 
-    let resized = resize_image_fast(&image, new_width, new_height, final_scale)?;
+    let resized = resize_image(&image, new_width, new_height, final_scale)?;
 
     let result_array = image_to_numpy(py, &resized);
 

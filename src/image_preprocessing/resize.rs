@@ -57,8 +57,8 @@ pub fn image_to_numpy<'py>(py: Python<'py>, image: &DynamicImage) -> Bound<'py, 
     array.to_pyarray(py)
 }
 
-/// High-performance image resize using `fast_image_resize`
-pub fn resize_image_fast(
+/// High-performance image resize using fast_image_resize crate
+pub fn resize_image(
     image: &DynamicImage,
     new_width: u32,
     new_height: u32,
