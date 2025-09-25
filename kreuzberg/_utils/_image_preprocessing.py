@@ -9,8 +9,7 @@ from PIL import Image
 
 from kreuzberg._internal_bindings import (
     ExtractionConfig as RustExtractionConfig,
-)
-from kreuzberg._internal_bindings import (
+    calculate_optimal_dpi,
     normalize_image_dpi as normalize_image_dpi_rust,
 )
 from kreuzberg._types import ImagePreprocessingMetadata
