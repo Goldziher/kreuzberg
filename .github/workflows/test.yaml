@@ -1,0 +1,13 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - v4-dev
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo
+        run: echo "Test successful"
