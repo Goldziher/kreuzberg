@@ -27,7 +27,7 @@ pub fn table_from_arrow_to_markdown(arrow_bytes: &Bound<'_, PyBytes>) -> PyResul
     let cursor = std::io::Cursor::new(bytes);
     let df = IpcReader::new(cursor)
         .finish()
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to read Arrow IPC: {}", e)))?;
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
 
     if df.is_empty() {
         return Ok(String::new());
@@ -80,9 +80,9 @@ fn write_separator_row<T: AsRef<str>>(result: &mut String, df: &DataFrame, colum
             result.push_str(" | ");
         }
 
-        let col = df.column(col_name.as_ref()).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyKeyError, _>(format!("Column '{}' not found: {}", col_name.as_ref(), e))
-        })?;
+        let col = df
+            .column(col_name.as_ref())
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyKeyError, _>(e.to_string()))?;
 
         // Check if column is numeric for right-alignment
         let is_numeric = matches!(
@@ -116,9 +116,9 @@ fn write_data_rows(result: &mut String, df: &DataFrame, height: usize) -> PyResu
                 result.push_str(" | ");
             }
 
-            let value = col.get(row_idx).map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyIndexError, _>(format!("Row {} out of bounds: {}", row_idx, e))
-            })?;
+            let value = col
+                .get(row_idx)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyIndexError, _>(e.to_string()))?;
 
             let formatted = format_cell_value(&value);
             result.push_str(&formatted);
@@ -164,15 +164,11 @@ fn format_float(f: f64) -> String {
         // Use 2 decimal places for consistency
         format!("{:.2}", f)
     } else if f.is_nan() {
-        "NaN".to_string()
-    } else if f.is_infinite() {
-        if f.is_sign_positive() {
-            "∞".to_string()
-        } else {
-            "-∞".to_string()
-        }
+        "NaN".into()
+    } else if f.is_sign_positive() {
+        "∞".into()
     } else {
-        format!("{}", f)
+        "-∞".into()
     }
 }
 

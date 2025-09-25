@@ -35,7 +35,7 @@ def enhance_table_markdown(table: TableData) -> str:
     if "df" not in table or table["df"] is None:
         return table.get("text", "")
 
-    df = table["df"]
+    df: pl.DataFrame = table["df"]
 
     if df.is_empty():
         return table.get("text", "")
@@ -55,7 +55,7 @@ def export_table_to_csv(table: TableData, separator: str = ",") -> str:
         return ""
 
     buffer = io.StringIO()
-    df = table["df"]
+    df: pl.DataFrame = table["df"]
     df.write_csv(buffer, separator=separator, include_header=True)
     return buffer.getvalue().strip()
 
@@ -84,7 +84,7 @@ def extract_table_structure_info(table: TableData) -> dict[str, Any]:
     if "df" not in table or table["df"] is None:
         return info
 
-    df = table["df"]
+    df: pl.DataFrame = table["df"]
 
     if df.is_empty():
         return info
@@ -144,7 +144,7 @@ def generate_table_summary(tables: list[TableData]) -> dict[str, Any]:
 
     for table in tables:
         if "df" in table and table["df"] is not None:
-            df = table["df"]
+            df: pl.DataFrame = table["df"]
             total_rows += df.height
             total_columns += df.width
 
