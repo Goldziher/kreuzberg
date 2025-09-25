@@ -13,11 +13,6 @@ use regex::Regex;
 use std::sync::Arc;
 use unicode_normalization::UnicodeNormalization;
 
-/// Maximum text size to prevent DoS attacks (2MB)
-const MAX_TEXT_SIZE: usize = 2_097_152;
-/// Maximum number of texts in batch processing
-const MAX_BATCH_SIZE: usize = 1000;
-
 /// Pre-compiled regex patterns for performance
 #[allow(dead_code)]
 static WHITESPACE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
@@ -68,11 +63,6 @@ impl TokenReducer {
             return text.to_string();
         }
 
-        // Resource limit protection against DoS attacks
-        if text.len() > MAX_TEXT_SIZE {
-            return format!("Error: Text too large ({}MB max)", MAX_TEXT_SIZE / 1_048_576);
-        }
-
         // Skip Unicode normalization if text appears to be ASCII
         let working_text = if text.is_ascii() {
             text
@@ -93,11 +83,6 @@ impl TokenReducer {
 
     /// Reduce tokens in multiple texts using optimized parallel processing
     pub fn batch_reduce(&self, texts: &[&str]) -> Vec<String> {
-        // Resource limit protection against DoS attacks
-        if texts.len() > MAX_BATCH_SIZE {
-            return vec![format!("Error: Batch too large ({} texts max)", MAX_BATCH_SIZE)];
-        }
-
         // Lower threshold for parallel processing - benefit starts with 2+ texts
         if !self.config.enable_parallel || texts.len() < 2 {
             return texts.iter().map(|text| self.reduce(text)).collect();
