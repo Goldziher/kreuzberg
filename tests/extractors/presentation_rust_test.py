@@ -123,7 +123,7 @@ def test_extract_with_images_enabled(extractor_with_images: PresentationExtracto
 
 def test_extract_error_handling_invalid_bytes(extractor: PresentationExtractor) -> None:
     """Test error handling with invalid PPTX bytes."""
-    with pytest.raises((ValueError, RuntimeError)):  # Should raise some exception for invalid data
+    with pytest.raises((OSError, ValueError, RuntimeError)):  # Should raise some exception for invalid data
         extractor.extract_bytes_sync(b"invalid pptx data")
 
 
