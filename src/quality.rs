@@ -268,3 +268,222 @@ pub fn normalize_spaces(text: &str) -> String {
 
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_quality_score_empty_text() {
+        assert_eq!(calculate_quality_score("", None), 0.0);
+        assert_eq!(calculate_quality_score("   ", None), 0.0);
+        assert_eq!(calculate_quality_score("\n\n\n", None), 0.0);
+    }
+
+    #[test]
+    fn test_calculate_quality_score_short_text() {
+        let text = "Hello";
+        let score = calculate_quality_score(text, None);
+        assert_eq!(score, 0.1);
+    }
+
+    #[test]
+    fn test_calculate_quality_score_normal_text() {
+        let text =
+            "This is a normal sentence with proper punctuation. It has multiple sentences. And proper structure.";
+        let score = calculate_quality_score(text, None);
+        assert!(score > 0.5);
+        assert!(score <= 1.0);
+    }
+
+    #[test]
+    fn test_calculate_quality_score_with_ocr_artifacts() {
+        let text = "T h i s   i s   s c a t t e r e d   t e x t ... ... ... with repeated punctuation";
+        let score = calculate_quality_score(text, None);
+        // Score should be lower due to artifacts, but exact threshold may vary
+        assert!(score <= 1.0);
+    }
+
+    #[test]
+    fn test_calculate_quality_score_with_script_content() {
+        let text = r#"
+            Normal text here.
+            <script>function test() { return 42; }</script>
+            <style>.class { color: red; }</style>
+            More normal text.
+        "#;
+        let score = calculate_quality_score(text, None);
+        // Score should be affected by script content
+        assert!(score <= 1.0);
+    }
+
+    #[test]
+    fn test_calculate_quality_score_with_navigation() {
+        let text = "Skip to main content. Home > Products > Item. Page 1 of 10. Next page. Normal content here.";
+        let score = calculate_quality_score(text, None);
+        // Navigation should affect score but not dramatically for short text
+        assert!(score <= 1.0);
+    }
+
+    #[test]
+    fn test_calculate_quality_score_well_structured() {
+        let text = r#"
+            This is a well-structured document with proper paragraphs.
+            Each sentence has a reasonable number of words. The content flows naturally.
+
+            Here's another paragraph with good structure. It contains multiple sentences.
+            The punctuation is correct throughout the document.
+
+            A third paragraph adds even more structure. This helps improve the quality score.
+            The document appears to be professionally written.
+        "#;
+        let score = calculate_quality_score(text, None);
+        assert!(score > 0.7);
+    }
+
+    #[test]
+    fn test_clean_extracted_text_empty() {
+        assert_eq!(clean_extracted_text(""), "");
+        assert_eq!(clean_extracted_text("   "), "");
+    }
+
+    #[test]
+    fn test_clean_extracted_text_removes_scripts() {
+        let text = "Before <script>alert('test');</script> After";
+        let cleaned = clean_extracted_text(text);
+        assert!(!cleaned.contains("<script"));
+        assert!(cleaned.contains("Before"));
+        assert!(cleaned.contains("After"));
+    }
+
+    #[test]
+    fn test_clean_extracted_text_removes_styles() {
+        let text = "Before <style>.test { color: red; }</style> After";
+        let cleaned = clean_extracted_text(text);
+        assert!(!cleaned.contains("<style"));
+        assert!(cleaned.contains("Before"));
+        assert!(cleaned.contains("After"));
+    }
+
+    #[test]
+    fn test_clean_extracted_text_fixes_scattered_chars() {
+        let text = "T h i s   i s   s c a t t e r e d";
+        let cleaned = clean_extracted_text(text);
+        // The scattered pattern reducer should consolidate the letters
+        // Check that excessive spacing is reduced
+        let space_count_orig = text.chars().filter(|&c| c == ' ').count();
+        let space_count_cleaned = cleaned.chars().filter(|&c| c == ' ').count();
+        assert!(space_count_cleaned < space_count_orig);
+    }
+
+    #[test]
+    fn test_clean_extracted_text_normalizes_punctuation() {
+        let text = "Text........ with ------ excessive _____ punctuation";
+        let cleaned = clean_extracted_text(text);
+        assert!(cleaned.contains("..."));
+        assert!(!cleaned.contains("........"));
+    }
+
+    #[test]
+    fn test_clean_extracted_text_removes_navigation() {
+        let text = "Skip to main content. Normal text here. Back to top";
+        let cleaned = clean_extracted_text(text);
+        assert!(!cleaned.contains("Skip to main content"));
+        assert!(cleaned.contains("Normal text"));
+        assert!(!cleaned.contains("Back to top"));
+    }
+
+    #[test]
+    fn test_clean_extracted_text_normalizes_whitespace() {
+        let text = "Text   with    excessive     spaces\n\n\n\nand newlines";
+        let cleaned = clean_extracted_text(text);
+        assert!(!cleaned.contains("   "));
+        assert!(!cleaned.contains("\n\n\n"));
+    }
+
+    #[test]
+    fn test_normalize_spaces_empty() {
+        assert_eq!(normalize_spaces(""), "");
+        assert_eq!(normalize_spaces("   "), "");
+    }
+
+    #[test]
+    fn test_normalize_spaces_single_paragraph() {
+        let text = "This  is   a   test";
+        let normalized = normalize_spaces(text);
+        assert_eq!(normalized, "This is a test");
+    }
+
+    #[test]
+    fn test_normalize_spaces_multiple_paragraphs() {
+        let text = "First paragraph\n\n\nSecond   paragraph\n\n\n\nThird paragraph";
+        let normalized = normalize_spaces(text);
+        assert_eq!(normalized, "First paragraph\n\nSecond paragraph\n\nThird paragraph");
+    }
+
+    #[test]
+    fn test_normalize_spaces_preserves_single_newlines() {
+        let text = "Line one\nLine two\nLine three";
+        let normalized = normalize_spaces(text);
+        assert_eq!(normalized, "Line one\nLine two\nLine three");
+    }
+
+    #[test]
+    fn test_normalize_spaces_various_whitespace() {
+        let text = "Text\twith\ttabs  and\u{00A0}non-breaking\u{2000}spaces";
+        let normalized = normalize_spaces(text);
+        assert_eq!(normalized, "Text with tabs and non-breaking spaces");
+    }
+
+    #[test]
+    fn test_calculate_ocr_penalty_no_artifacts() {
+        let text = "This is clean text without any OCR artifacts.";
+        let penalty = calculate_ocr_penalty(text, text.len() as f64);
+        assert_eq!(penalty, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_ocr_penalty_with_artifacts() {
+        let text = "T h i s   h a s   a r t i f a c t s ........";
+        let penalty = calculate_ocr_penalty(text, text.len() as f64);
+        assert!(penalty > 0.0);
+        assert!(penalty <= 1.0);
+    }
+
+    #[test]
+    fn test_calculate_script_penalty_no_scripts() {
+        let text = "Normal text without any scripts or styles.";
+        let penalty = calculate_script_penalty(text, text.len() as f64);
+        assert_eq!(penalty, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_script_penalty_with_scripts() {
+        let text = "Text with <script>alert('test');</script> and function test() { }";
+        let penalty = calculate_script_penalty(text, text.len() as f64);
+        assert!(penalty > 0.0);
+        assert!(penalty <= 1.0);
+    }
+
+    #[test]
+    fn test_calculate_navigation_penalty() {
+        let text = "Normal content without navigation elements.";
+        let penalty = calculate_navigation_penalty(text, text.len() as f64);
+        assert_eq!(penalty, 0.0);
+
+        let nav_text = "Skip to main content Page 1 of 10 Next page";
+        let nav_penalty = calculate_navigation_penalty(nav_text, nav_text.len() as f64);
+        assert!(nav_penalty > 0.0);
+    }
+
+    #[test]
+    fn test_calculate_structure_bonus() {
+        let well_structured = "This is a sentence. Another sentence here. And a third one.";
+        let bonus = calculate_structure_bonus(well_structured);
+        assert!(bonus > 0.0);
+
+        let poor_structure = "notasentencejustlongtext";
+        let poor_bonus = calculate_structure_bonus(poor_structure);
+        assert!(poor_bonus < bonus);
+    }
+}

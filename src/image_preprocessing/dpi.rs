@@ -80,3 +80,102 @@ pub fn calculate_optimal_dpi(
 
     min_dpi.max(smart_dpi.min(max_dpi))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_smart_dpi_basic() {
+        // Standard US Letter: 8.5" x 11"
+        let dpi = calculate_smart_dpi(612.0, 792.0, 300, 4096, 2048.0);
+        assert!(dpi >= 72);
+        assert!(dpi <= 300);
+    }
+
+    #[test]
+    fn test_calculate_smart_dpi_memory_constrained() {
+        // Large page with small memory limit
+        let dpi = calculate_smart_dpi(1224.0, 1584.0, 300, 8192, 10.0); // 10MB limit
+        assert!(dpi < 300); // Should be constrained by memory
+        assert!(dpi >= 72); // But not below minimum
+    }
+
+    #[test]
+    fn test_calculate_smart_dpi_dimension_constrained() {
+        // Large page with small max dimension
+        let dpi = calculate_smart_dpi(612.0, 792.0, 300, 1000, 2048.0);
+        assert!(dpi < 300); // Should be constrained by dimension
+    }
+
+    #[test]
+    fn test_calculate_smart_dpi_minimum_dpi() {
+        // Even with extreme constraints, should not go below 72 DPI
+        let dpi = calculate_smart_dpi(10000.0, 10000.0, 300, 100, 1.0);
+        assert_eq!(dpi, 72);
+    }
+
+    #[test]
+    fn test_calculate_smart_dpi_zero_dimensions() {
+        // Handle edge case of zero dimensions
+        let dpi = calculate_smart_dpi(0.0, 792.0, 300, 4096, 2048.0);
+        assert!(dpi >= 72);
+
+        let dpi = calculate_smart_dpi(612.0, 0.0, 300, 4096, 2048.0);
+        assert!(dpi >= 72);
+
+        let dpi = calculate_smart_dpi(0.0, 0.0, 300, 4096, 2048.0);
+        assert_eq!(dpi, 300); // Should return target when both dimensions are zero
+    }
+
+    #[test]
+    fn test_calculate_dimension_constrained_dpi() {
+        // Test internal function
+        let dpi = calculate_dimension_constrained_dpi(8.5, 11.0, 300, 4096);
+        assert!(dpi <= 300);
+
+        // Should constrain when dimensions exceed max
+        let dpi = calculate_dimension_constrained_dpi(8.5, 11.0, 600, 2000);
+        assert!(dpi < 600);
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi() {
+        // Test with normal parameters
+        let dpi = calculate_optimal_dpi(612.0, 792.0, 300, 4096, 72, 600);
+        assert!(dpi >= 72);
+        assert!(dpi <= 600);
+
+        // Test clamping to min
+        let dpi = calculate_optimal_dpi(10000.0, 10000.0, 300, 100, 100, 600);
+        assert_eq!(dpi, 100); // Should be clamped to min_dpi
+
+        // Test clamping to max
+        let dpi = calculate_optimal_dpi(72.0, 72.0, 1000, 10000, 72, 600);
+        assert_eq!(dpi, 600); // Should be clamped to max_dpi
+    }
+
+    #[test]
+    fn test_memory_calculation() {
+        // Verify memory calculation logic
+        // For 2048MB, max pixels should be around 26843545 (sqrt(2048*1024*1024/3))
+        let dpi = calculate_smart_dpi(612.0, 792.0, 10000, 100000, 2048.0);
+
+        // With 8.5" x 11" page, this should limit DPI significantly
+        assert!(dpi < 10000);
+        assert!(dpi >= 72);
+    }
+
+    #[test]
+    fn test_aspect_ratio_preservation() {
+        // Wide page
+        let wide_dpi = calculate_smart_dpi(1224.0, 396.0, 300, 4096, 2048.0);
+
+        // Tall page
+        let tall_dpi = calculate_smart_dpi(396.0, 1224.0, 300, 4096, 2048.0);
+
+        // Should handle both orientations appropriately
+        assert!(wide_dpi >= 72);
+        assert!(tall_dpi >= 72);
+    }
+}

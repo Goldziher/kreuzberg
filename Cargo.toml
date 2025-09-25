@@ -10,10 +10,10 @@ homepage = "https://goldziher.github.io/kreuzberg/"
 
 [lib]
 name = "_internal_bindings"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.26.0", features = ["extension-module", "abi3-py310"] }
+pyo3 = { version = "0.26.0", features = ["abi3-py310"] }
 regex = "1.11.2"
 once_cell = "1.21.3"
 rayon = "1.11.0"
@@ -36,6 +36,10 @@ memchr = "2.7.5"
 bstr = "1.12.0"
 serde = { version = "1.0.226", features = ["derive"] }
 serde_json = "1.0.145"
+
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
 
 # Optional performance optimizations
 [profile.release]
