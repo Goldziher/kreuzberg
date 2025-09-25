@@ -33,6 +33,12 @@ libc = "0.2"
 # Modern token reduction dependencies
 tokenizers = "0.22.1"
 unicode-normalization = "0.1.24"
+
+# PPTX extraction dependencies (vendored pptx-to-md)
+zip = "2.2.2"
+roxmltree = "0.20.0"
+thiserror = "2.0.8"
+base64 = "0.22.1"
 ahash = "0.8.12"
 smallvec = "1.13.2"
 memchr = "2.7.5"

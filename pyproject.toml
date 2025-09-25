@@ -71,7 +71,6 @@ dependencies = [
   "polars>=1.33.1",
   "psutil>=7.1.0",
   "pypdfium2==4.30.0",                                # pinned due to bug in 4.30.1, until v5 is stable
-  "python-pptx>=1.0.2",
   "typing-extensions>=4.15.0; python_version<'3.12'",
 ]
 
@@ -123,7 +122,6 @@ dev = [
   "tabulate>=0.9.0",
   "trio>=0.31.0",
   "uv-bump",
-  "xlsxwriter>=3.2.9",
 ]
 doc = [
   "mkdocs>=1.6.1",
@@ -207,7 +205,7 @@ lint.pylint.max-branches = 15
 lint.pylint.max-returns = 10
 
 [tool.codespell]
-ignore-words-list = "addin,inh,te,tha,vie,mis,ment"
+ignore-words-list = "addin,inh,te,tha,vie,mis,ment,bu"
 skip = "kreuzberg/_token_reduction/stopwords/*"
 
 [tool.pyproject-fmt]

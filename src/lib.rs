@@ -5,6 +5,7 @@ mod common;
 mod error_utils;
 mod excel;
 mod image_preprocessing;
+mod pptx;
 mod quality;
 mod string_utils;
 mod table_processing;
@@ -21,6 +22,9 @@ use image_preprocessing::{
     convert_format, detect_image_format, load_image, load_image_as_numpy, normalize_image_dpi, rgb_to_grayscale,
     rgb_to_rgba, rgba_to_rgb, save_image, save_numpy_as_image, ExtractionConfig, ImagePreprocessingMetadata,
 };
+use pptx::extractor::PptxExtractor;
+use pptx::streaming::extractor::StreamingPptxExtractor;
+use pptx::types::{PptxExtractionResult, PptxMetadata};
 use quality::{calculate_quality_score, clean_extracted_text, normalize_spaces};
 use string_utils::{batch_process_texts, calculate_text_confidence, fix_mojibake, get_encoding_cache_key, safe_decode};
 use table_processing::table_from_arrow_to_markdown;
@@ -97,6 +101,12 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(benchmark_excel_reading, m)?)?;
     m.add_class::<ExcelWorkbook>()?;
     m.add_class::<ExcelSheet>()?;
+
+    // PPTX processing
+    m.add_class::<PptxExtractor>()?;
+    m.add_class::<StreamingPptxExtractor>()?;
+    m.add_class::<PptxExtractionResult>()?;
+    m.add_class::<PptxMetadata>()?;
 
     Ok(())
 }

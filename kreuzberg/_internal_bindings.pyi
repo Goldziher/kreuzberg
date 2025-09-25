@@ -117,3 +117,27 @@ class ExcelSheet:
     row_count: int
     col_count: int
     cell_count: int
+
+# PPTX processing classes
+class PptxMetadata:
+    title: str | None
+    author: str | None
+    description: str | None
+    summary: str | None
+    fonts: list[str]
+
+class PptxExtractionResult:
+    content: str
+    metadata: PptxMetadata
+    slide_count: int
+    image_count: int
+    table_count: int
+
+class PptxExtractor:
+    def __init__(self, extract_images: bool) -> None: ...
+    def extract_from_path(self, path: str) -> PptxExtractionResult: ...
+    def extract_from_bytes(self, data: bytes) -> PptxExtractionResult: ...
+
+class StreamingPptxExtractor:
+    def __init__(self, extract_images: bool | None = None, max_cache_mb: int | None = None) -> None: ...
+    def extract_from_path(self, path: str) -> PptxExtractionResult: ...
