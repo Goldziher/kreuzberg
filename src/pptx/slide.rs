@@ -43,9 +43,12 @@ impl Slide {
                 SlideElement::Text(text, _) => {
                     let text_content: String = text.runs.iter().map(|run| run.render_as_md()).collect();
 
-                    // Simple heuristic: if it's short and doesn't contain newlines, make it a title
-                    if text_content.len() < 100 && !text_content.contains('\n') && !text_content.trim().is_empty() {
-                        builder.add_title(&text_content);
+                    // Normalize text for title detection - remove newlines and check clean text
+                    let normalized = text_content.replace('\n', " ");
+                    let is_title = normalized.len() < 100 && !normalized.trim().is_empty();
+
+                    if is_title {
+                        builder.add_title(normalized.trim());
                     } else {
                         builder.add_text(&text_content);
                     }
