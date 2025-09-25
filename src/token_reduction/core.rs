@@ -1,6 +1,7 @@
 //! Core token reduction engine with parallel processing and semantic awareness.
 
 use crate::token_reduction::{
+    cjk_utils::CjkTokenizer,
     config::{ReductionLevel, TokenReductionConfig},
     filters::FilterPipeline,
     semantic::SemanticAnalyzer,
@@ -26,6 +27,7 @@ pub struct TokenReducer {
     text_processor: SimdTextProcessor,
     filter_pipeline: FilterPipeline,
     semantic_analyzer: Option<SemanticAnalyzer>,
+    cjk_tokenizer: CjkTokenizer,
     #[allow(dead_code)]
     language: String,
 }
@@ -53,6 +55,7 @@ impl TokenReducer {
             text_processor,
             filter_pipeline,
             semantic_analyzer,
+            cjk_tokenizer: CjkTokenizer::new(),
             language,
         })
     }
@@ -500,67 +503,8 @@ impl TokenReducer {
 
     /// Universal tokenization that works for languages with and without whitespace
     fn universal_tokenize(&self, text: &str) -> Vec<String> {
-        // First, check if this text has significant CJK content
-        let has_cjk = text.chars().any(|c| c as u32 >= 0x4E00 && (c as u32) <= 0x9FFF); // CJK range
-
-        if has_cjk {
-            // For CJK text, we need special handling
-            let whitespace_tokens: Vec<&str> = text.split_whitespace().collect();
-
-            if whitespace_tokens.len() > 1 {
-                // Mixed language text with whitespace - process each token
-                let mut all_tokens = Vec::new();
-                for token in whitespace_tokens {
-                    if token.chars().any(|c| c as u32 >= 0x4E00 && (c as u32) <= 0x9FFF) {
-                        // This token contains CJK - split into 2-character tokens
-                        let chars: Vec<char> = token.chars().collect();
-                        for chunk in chars.chunks(2) {
-                            if chunk.len() == 2 {
-                                all_tokens.push(format!("{}{}", chunk[0], chunk[1]));
-                            } else {
-                                all_tokens.push(chunk[0].to_string());
-                            }
-                        }
-                    } else {
-                        // Regular non-CJK token
-                        all_tokens.push(token.to_string());
-                    }
-                }
-                return all_tokens;
-            } else {
-                // Single token or pure CJK text - check if it's actually CJK content
-                if whitespace_tokens.len() == 1
-                    && whitespace_tokens[0]
-                        .chars()
-                        .any(|c| c as u32 >= 0x4E00 && (c as u32) <= 0x9FFF)
-                {
-                    // Single CJK token with no whitespace - split into 2-character tokens
-                    let chars: Vec<char> = whitespace_tokens[0].chars().collect();
-                    let mut tokens = Vec::new();
-
-                    for chunk in chars.chunks(2) {
-                        if chunk.len() == 2 {
-                            tokens.push(format!("{}{}", chunk[0], chunk[1]));
-                        } else {
-                            tokens.push(chunk[0].to_string());
-                        }
-                    }
-                    return tokens;
-                } else {
-                    // Empty or non-CJK single token - use whitespace tokenization fallback
-                    return whitespace_tokens.iter().map(|s| s.to_string()).collect();
-                }
-            }
-        }
-
-        // For non-CJK languages, use whitespace tokenization
-        let whitespace_tokens: Vec<&str> = text.split_whitespace().collect();
-        if !whitespace_tokens.is_empty() {
-            return whitespace_tokens.iter().map(|s| s.to_string()).collect();
-        }
-
-        // Fallback: single token
-        vec![text.to_string()]
+        // Use CJK tokenizer for automatic detection and handling
+        self.cjk_tokenizer.tokenize_mixed_text(text)
     }
 
     /// Calculate character-level entropy for information density (language-agnostic)

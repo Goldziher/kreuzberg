@@ -182,31 +182,66 @@ pub fn clean_extracted_text(text: &str) -> String {
         return String::new();
     }
 
+    // Build the complete pipeline using Cow throughout
+    let mut working_text = Cow::Borrowed(text);
+
+    // Step 1: Clean scripts
+    working_text = clean_scripts(working_text);
+
+    // Step 2: Clean OCR artifacts
+    working_text = clean_ocr_artifacts_cow(working_text);
+
+    // Step 3: Clean navigation elements
+    working_text = clean_navigation_elements_cow(working_text);
+
+    // Step 4: Normalize whitespace and newlines
+    working_text = normalize_whitespace_cow(working_text);
+
+    working_text.trim().to_string()
+}
+
+/// Clean script tags and related content from text (Cow version)
+#[inline]
+fn clean_scripts<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
     let script_replacements = [
         (&*SCRIPT_TAG_PATTERN, " "),
         (&*STYLE_TAG_PATTERN, " "),
         (&*JS_FUNCTION_PATTERN, " "),
         (&*CSS_RULES_PATTERN, " "),
     ];
-
-    let result = chain_replacements(Cow::Borrowed(text), &script_replacements);
-
-    let mut owned = result.into_owned();
-    owned = clean_ocr_artifacts(&owned);
-
-    owned = clean_navigation_elements(&owned);
-
-    owned = WHITESPACE_NORMALIZE.replace_all(&owned, " ").into_owned();
-    owned = NEWLINE_NORMALIZE.replace_all(&owned, "\n\n").into_owned();
-
-    owned.trim().to_string()
+    chain_replacements(text, &script_replacements)
 }
 
+/// Normalize whitespace using Cow pattern
 #[inline]
-fn clean_ocr_artifacts(text: &str) -> String {
-    let result = replace_with_if_matches(text, &SCATTERED_CHARS_PATTERN, |caps: &regex::Captures| {
-        caps[0].chars().filter(|c| !c.is_whitespace()).collect::<String>()
-    });
+fn normalize_whitespace_cow<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
+    let mut result = text;
+
+    if WHITESPACE_NORMALIZE.is_match(&result) {
+        result = Cow::Owned(WHITESPACE_NORMALIZE.replace_all(&result, " ").into_owned());
+    }
+
+    if NEWLINE_NORMALIZE.is_match(&result) {
+        result = Cow::Owned(NEWLINE_NORMALIZE.replace_all(&result, "\n\n").into_owned());
+    }
+
+    result
+}
+
+/// Clean OCR artifacts using Cow pattern for better memory efficiency
+#[inline]
+fn clean_ocr_artifacts_cow<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
+    // Handle scattered characters first
+    let result = if SCATTERED_CHARS_PATTERN.is_match(&text) {
+        Cow::Owned(
+            replace_with_if_matches(&text, &SCATTERED_CHARS_PATTERN, |caps: &regex::Captures| {
+                caps[0].chars().filter(|c| !c.is_whitespace()).collect::<String>()
+            })
+            .into_owned(),
+        )
+    } else {
+        text
+    };
 
     let ocr_replacements = [
         (&*REPEATED_PUNCT_PATTERN, "..."),
@@ -215,18 +250,19 @@ fn clean_ocr_artifacts(text: &str) -> String {
         (&*EXCESSIVE_WHITESPACE_PATTERN, " "),
     ];
 
-    chain_replacements(result, &ocr_replacements).into_owned()
+    chain_replacements(result, &ocr_replacements)
 }
 
+/// Clean navigation elements using Cow pattern
 #[inline]
-fn clean_navigation_elements(text: &str) -> String {
+fn clean_navigation_elements_cow<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
     let nav_replacements = [
         (&*NAV_WORDS_PATTERN, " "),
         (&*BREADCRUMB_PATTERN, " "),
         (&*PAGINATION_PATTERN, " "),
     ];
 
-    chain_replacements(Cow::Borrowed(text), &nav_replacements).into_owned()
+    chain_replacements(text, &nav_replacements)
 }
 
 /// Normalize spaces in text
