@@ -1,4 +1,5 @@
 use super::PDF_POINTS_PER_INCH;
+use pyo3::prelude::*;
 
 /// Calculate smart DPI that respects memory constraints
 #[allow(clippy::cast_possible_truncation)]
@@ -67,7 +68,8 @@ fn calculate_dimension_constrained_dpi(
 }
 
 /// Calculate optimal DPI based on page dimensions and constraints
-#[allow(dead_code)]
+#[pyfunction]
+#[pyo3(signature = (page_width, page_height, target_dpi, max_dimension, min_dpi=72, max_dpi=600))]
 pub fn calculate_optimal_dpi(
     page_width: f64,
     page_height: f64,

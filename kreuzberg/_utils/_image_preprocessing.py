@@ -18,8 +18,6 @@ from kreuzberg._types import ImagePreprocessingMetadata
 if TYPE_CHECKING:
     from kreuzberg._types import ExtractionConfig
 
-calculate_optimal_dpi = None
-
 
 def normalize_image_dpi(
     image: Image.Image,

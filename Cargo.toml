@@ -24,7 +24,7 @@ encoding_rs = "0.8.35"
 numpy = "0.25.0"
 ndarray = "0.16.1"
 fast_image_resize = "5.3.0"
-image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp"] }
+image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"] }
 num-traits = "0.2.19"
 
 # System dependencies for cache
