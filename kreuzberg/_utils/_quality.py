@@ -8,10 +8,10 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 from kreuzberg._internal_bindings import (
-    calculate_quality_score as _calculate_quality_score,
+    calculate_quality_score as calculate_quality_score_rust,
 )
 from kreuzberg._internal_bindings import (
-    clean_extracted_text as _clean_extracted_text,
+    clean_extracted_text as clean_extracted_text_rust,
 )
 
 __all__ = ["calculate_quality_score", "clean_extracted_text"]
@@ -27,7 +27,7 @@ def calculate_quality_score(text: str, metadata: Mapping[str, Any] | None = None
     Returns:
         Quality score between 0.0 and 1.0
     """
-    return _calculate_quality_score(text, metadata)
+    return calculate_quality_score_rust(text, metadata)
 
 
 def clean_extracted_text(text: str) -> str:
@@ -39,4 +39,4 @@ def clean_extracted_text(text: str) -> str:
     Returns:
         Cleaned text
     """
-    return _clean_extracted_text(text)
+    return clean_extracted_text_rust(text)

@@ -8,10 +8,10 @@ from kreuzberg._internal_bindings import (
     get_encoding_cache_key,
 )
 from kreuzberg._internal_bindings import (
-    normalize_spaces as _normalize_spaces,
+    normalize_spaces as normalize_spaces_rust,
 )
 from kreuzberg._internal_bindings import (
-    safe_decode as _safe_decode_internal,
+    safe_decode as safe_decode_rust,
 )
 
 __all__ = ["normalize_spaces", "safe_decode"]
@@ -26,7 +26,7 @@ def normalize_spaces(text: str) -> str:
     Returns:
         Normalized text
     """
-    return _normalize_spaces(text)
+    return normalize_spaces_rust(text)
 
 
 def _calculate_text_confidence(text: str) -> float:
@@ -99,6 +99,6 @@ def safe_decode(byte_data: bytes, encoding: str | None = None) -> str:
     Returns:
         Decoded string
     """
-    result = _safe_decode_internal(byte_data, encoding)
+    result = safe_decode_rust(byte_data, encoding)
     _track_cache_call()
     return result

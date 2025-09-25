@@ -1,6 +1,6 @@
-"""Modern Rust-based token reduction implementation.
+"""Token reduction implementation.
 
-This module provides a high-performance token reduction system implemented in Rust
+This module provides a high-performance token reduction system
 with semantic awareness, SIMD optimization, and parallel processing capabilities.
 """
 
@@ -8,27 +8,33 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from kreuzberg._internal_bindings import (  # type: ignore[attr-defined]
+from kreuzberg._internal_bindings import (
     ReductionLevel,
-    batch_reduce_tokens_rust,
-    get_reduction_statistics_rust,
-    reduce_tokens_rust,
 )
-from kreuzberg._internal_bindings import (  # type: ignore[attr-defined]
+from kreuzberg._internal_bindings import (
     TokenReductionConfig as RustTokenReductionConfig,
+)
+from kreuzberg._internal_bindings import (
+    batch_reduce_tokens as batch_reduce_tokens_rust,
+)
+from kreuzberg._internal_bindings import (
+    get_reduction_statistics as get_reduction_statistics_rust,
+)
+from kreuzberg._internal_bindings import (
+    reduce_tokens as reduce_tokens_rust,
 )
 
 if TYPE_CHECKING:
     from kreuzberg._types import TokenReductionConfig
 
 
-def reduce_tokens_with_rust(
+def reduce_tokens(
     text: str,
     *,
     config: TokenReductionConfig,
     language: str | None = None,
 ) -> str:
-    """Reduce tokens using the modern Rust implementation.
+    """Reduce tokens using the optimized implementation.
 
     Args:
         text: The text to reduce.
@@ -39,10 +45,10 @@ def reduce_tokens_with_rust(
         The reduced text.
     """
     rust_config = _convert_config_to_rust(config)
-    return reduce_tokens_rust(text, rust_config, language)  # type: ignore[no-any-return]
+    return reduce_tokens_rust(text, rust_config, language)
 
 
-def batch_reduce_tokens_with_rust(
+def batch_reduce_tokens(
     texts: list[str],
     *,
     config: TokenReductionConfig,
@@ -59,7 +65,7 @@ def batch_reduce_tokens_with_rust(
         List of reduced texts.
     """
     rust_config = _convert_config_to_rust(config)
-    return batch_reduce_tokens_rust(texts, rust_config, language)  # type: ignore[no-any-return]
+    return batch_reduce_tokens_rust(texts, rust_config, language)
 
 
 def get_reduction_statistics(original: str, reduced: str) -> dict[str, float | int]:

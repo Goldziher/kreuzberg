@@ -20,7 +20,7 @@ const PDF_POINTS_PER_INCH: f64 = 72.0;
 #[pyfunction]
 #[pyo3(signature = (image_array, config, dpi_info=None))]
 #[allow(clippy::too_many_lines)]
-pub fn normalize_image_dpi_rust<'py>(
+pub fn normalize_image_dpi<'py>(
     py: Python<'py>,
     image_array: &Bound<'py, PyArray3<u8>>,
     config: &ExtractionConfig,
@@ -220,13 +220,13 @@ fn perform_resize<'py>(
 
 /// Batch processing function for multiple images
 #[pyfunction]
-pub fn batch_normalize_images_rust<'py>(
+pub fn batch_normalize_images<'py>(
     py: Python<'py>,
     images: Vec<Bound<'py, PyArray3<u8>>>,
     config: &ExtractionConfig,
 ) -> PyResult<Vec<(Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadata)>> {
     images
         .into_iter()
-        .map(|img| normalize_image_dpi_rust(py, &img, config, None))
+        .map(|img| normalize_image_dpi(py, &img, config, None))
         .collect()
 }

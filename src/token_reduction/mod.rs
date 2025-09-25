@@ -18,7 +18,7 @@ use pyo3::prelude::*;
 /// Python bindings for the modern token reduction system
 #[pyfunction]
 #[pyo3(signature = (text, config, language_hint=None))]
-pub fn reduce_tokens_rust(text: &str, config: &TokenReductionConfig, language_hint: Option<&str>) -> PyResult<String> {
+pub fn reduce_tokens(text: &str, config: &TokenReductionConfig, language_hint: Option<&str>) -> PyResult<String> {
     let reducer = TokenReducer::new(config, language_hint)?;
     Ok(reducer.reduce(text))
 }
@@ -26,7 +26,7 @@ pub fn reduce_tokens_rust(text: &str, config: &TokenReductionConfig, language_hi
 /// Batch processing for multiple texts
 #[pyfunction]
 #[pyo3(signature = (texts, config, language_hint=None))]
-pub fn batch_reduce_tokens_rust(
+pub fn batch_reduce_tokens(
     texts: Vec<String>,
     config: &TokenReductionConfig,
     language_hint: Option<&str>,
@@ -38,10 +38,7 @@ pub fn batch_reduce_tokens_rust(
 
 /// Get detailed reduction statistics
 #[pyfunction]
-pub fn get_reduction_statistics_rust(
-    original: &str,
-    reduced: &str,
-) -> PyResult<(f64, f64, usize, usize, usize, usize)> {
+pub fn get_reduction_statistics(original: &str, reduced: &str) -> PyResult<(f64, f64, usize, usize, usize, usize)> {
     let original_chars = original.chars().count();
     let reduced_chars = reduced.chars().count();
     let original_tokens = original.split_whitespace().count();
