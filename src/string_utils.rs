@@ -3,8 +3,11 @@ use encoding_rs::Encoding;
 use once_cell::sync::Lazy;
 use pyo3::prelude::*;
 use regex::Regex;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::RwLock;
+
+use crate::common::chain_replacements;
 
 static CONTROL_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]").unwrap());
 static REPLACEMENT_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new(r"\u{FFFD}+").unwrap());
@@ -130,15 +133,13 @@ fn fix_mojibake_internal(text: &str) -> String {
         return text.to_string();
     }
 
-    let mut result = text.to_string();
+    let replacements = [
+        (&*CONTROL_CHARS, ""),
+        (&*REPLACEMENT_CHARS, ""),
+        (&*ISOLATED_COMBINING, ""),
+    ];
 
-    result = CONTROL_CHARS.replace_all(&result, "").to_string();
-
-    result = REPLACEMENT_CHARS.replace_all(&result, "").to_string();
-
-    result = ISOLATED_COMBINING.replace_all(&result, "").to_string();
-
-    result
+    chain_replacements(Cow::Borrowed(text), &replacements).into_owned()
 }
 
 /// Fix mojibake and encoding artifacts in text
