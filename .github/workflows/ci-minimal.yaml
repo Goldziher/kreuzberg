@@ -33,5 +33,20 @@ jobs:
       - name: Setup Rust Toolchain for Build
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install Dependencies
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            if [[ "${{ runner.os }}" == "Windows" ]] && [[ -d ".venv" ]]; then
+              echo "Removing existing .venv directory on Windows"
+              rm -rf .venv
+            fi
+            uv sync --all-extras --dev
+            uv run maturin develop --release
+          shell: bash
+
       - name: Echo
         run: echo "CI Minimal successful"
