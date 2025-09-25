@@ -154,7 +154,7 @@ jobs:
           shell: bash
 
       - name: Upload Coverage to DeepSource
-        if: always() && secrets.DEEPSOURCE_DSN != '' && needs.test-pr.result == 'success'
+        if: always() && secrets.DEEPSOURCE_DSN != '' && needs.validate.result == 'success'
         env:
           DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
         run: |
