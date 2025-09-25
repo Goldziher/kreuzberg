@@ -1,11 +1,17 @@
 use pyo3::prelude::*;
 
+mod cache;
 mod common;
 mod image_preprocessing;
 mod quality;
 mod string_utils;
 mod token_reduction;
 
+use cache::{
+    batch_generate_cache_keys, cleanup_cache, clear_cache_directory, fast_hash, filter_old_cache_entries,
+    generate_cache_key, get_available_disk_space, get_cache_metadata, is_cache_valid, smart_cleanup_cache,
+    sort_cache_by_access_time, validate_cache_key, CacheStats,
+};
 use image_preprocessing::{batch_normalize_images, normalize_image_dpi, ExtractionConfig, ImagePreprocessingMetadata};
 use quality::{calculate_quality_score, clean_extracted_text, normalize_spaces};
 use string_utils::{batch_process_texts, calculate_text_confidence, fix_mojibake, get_encoding_cache_key, safe_decode};
@@ -36,6 +42,21 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_reduction_statistics, m)?)?;
     m.add_class::<TokenReductionConfig>()?;
     m.add_class::<ReductionLevel>()?;
+
+    // Cache functions
+    m.add_function(wrap_pyfunction!(generate_cache_key, m)?)?;
+    m.add_function(wrap_pyfunction!(batch_generate_cache_keys, m)?)?;
+    m.add_function(wrap_pyfunction!(fast_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_cache_key, m)?)?;
+    m.add_function(wrap_pyfunction!(filter_old_cache_entries, m)?)?;
+    m.add_function(wrap_pyfunction!(sort_cache_by_access_time, m)?)?;
+    m.add_function(wrap_pyfunction!(get_available_disk_space, m)?)?;
+    m.add_function(wrap_pyfunction!(get_cache_metadata, m)?)?;
+    m.add_function(wrap_pyfunction!(cleanup_cache, m)?)?;
+    m.add_function(wrap_pyfunction!(smart_cleanup_cache, m)?)?;
+    m.add_function(wrap_pyfunction!(is_cache_valid, m)?)?;
+    m.add_function(wrap_pyfunction!(clear_cache_directory, m)?)?;
+    m.add_class::<CacheStats>()?;
 
     Ok(())
 }

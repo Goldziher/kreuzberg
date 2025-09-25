@@ -1,104 +1,43 @@
-from collections.abc import Mapping
-from enum import Enum
 from typing import Any
 
-# Quality and text utilities
-def calculate_quality_score(text: str, metadata: Mapping[str, Any] | None = None) -> float: ...
+class CacheStats:
+    total_files: int
+    total_size_mb: float
+    available_space_mb: float
+    oldest_file_age_days: float
+    newest_file_age_days: float
+
+def generate_cache_key(**kwargs: Any) -> str: ...
+def batch_generate_cache_keys(items: list[Any]) -> list[str]: ...
+def fast_hash(data: bytes) -> int: ...
+def validate_cache_key(key: str) -> bool: ...
+def filter_old_cache_entries(cache_times: list[float], current_time: float, max_age_seconds: float) -> list[int]: ...
+def sort_cache_by_access_time(entries: list[tuple[str, float]]) -> list[str]: ...
+def get_available_disk_space(path: str) -> float: ...
+def get_cache_metadata(cache_dir: str) -> CacheStats: ...
+def cleanup_cache(
+    cache_dir: str, max_age_days: float, max_size_mb: float, target_size_ratio: float
+) -> tuple[int, float]: ...
+def smart_cleanup_cache(
+    cache_dir: str, max_age_days: float, max_size_mb: float, min_free_space_mb: float
+) -> tuple[int, float]: ...
+def is_cache_valid(cache_path: str, max_age_days: float) -> bool: ...
+def clear_cache_directory(cache_dir: str) -> tuple[int, float]: ...
+def calculate_quality_score(text: str, ocr_confidence: float | None, has_tables: bool, has_images: bool) -> float: ...
 def clean_extracted_text(text: str) -> str: ...
 def normalize_spaces(text: str) -> str: ...
-def safe_decode(byte_data: bytes, encoding: str | None = None) -> str: ...
+def safe_decode(data: bytes) -> str: ...
+def batch_process_texts(texts: list[bytes]) -> list[str]: ...
 def calculate_text_confidence(text: str) -> float: ...
 def fix_mojibake(text: str) -> str: ...
-def get_encoding_cache_key(data_hash: str, size: int) -> str: ...
-def batch_process_texts(texts: list[str]) -> list[str]: ...
+def get_encoding_cache_key(data: bytes) -> str: ...
+def normalize_image_dpi(image_data: bytes, target_dpi: int, current_dpi: int | None) -> bytes: ...
+def batch_normalize_images(images: list[bytes], target_dpi: int) -> list[bytes]: ...
+def reduce_tokens(text: str, reduction_level: str) -> str: ...
+def batch_reduce_tokens(texts: list[str], reduction_level: str) -> list[str]: ...
+def get_reduction_statistics(original: str, reduced: str) -> dict[str, Any]: ...
 
-# Image preprocessing
-def normalize_image_dpi(
-    image_array: Any,  # numpy array
-    config: ExtractionConfig,
-    dpi_info: dict[str, Any] | None = None,
-) -> tuple[Any, ImagePreprocessingMetadata]: ...  # returns numpy array
-def batch_normalize_images(
-    images: list[Any],  # list of numpy arrays
-    config: ExtractionConfig,
-) -> list[tuple[Any, ImagePreprocessingMetadata]]: ...  # returns list of numpy arrays
-
-class ImagePreprocessingMetadata:
-    original_dimensions: tuple[int, int]
-    original_dpi: tuple[float, float]
-    target_dpi: int
-    final_dpi: int
-    new_dimensions: tuple[int, int]
-    scale_factor: float
-    auto_adjusted: bool
-    calculated_dpi: float | None
-    dimension_clamped: bool
-    resample_method: str
-    resize_error: str | None
-    skipped_resize: bool
-
-class ExtractionConfig:
-    target_dpi: int
-    max_image_dimension: int
-    auto_adjust_dpi: bool
-    min_dpi: int
-    max_dpi: int
-    def __init__(
-        self,
-        target_dpi: int = 300,
-        max_image_dimension: int = 4096,
-        auto_adjust_dpi: bool = False,
-        min_dpi: int = 72,
-        max_dpi: int = 600,
-    ) -> None: ...
-
-# Token reduction
-class ReductionLevel(Enum):
-    Off = 0
-    Light = 1
-    Moderate = 2
-    Aggressive = 3
-    Maximum = 4
-
-class TokenReductionConfig:
-    level: ReductionLevel
-    language_hint: str | None
-    preserve_markdown: bool
-    preserve_code: bool
-    semantic_threshold: float
-    enable_parallel: bool
-    use_simd: bool
-    custom_stopwords: dict[str, list[str]] | None
-    preserve_patterns: list[str] | None
-    target_reduction: float | None
-    enable_semantic_clustering: bool
-
-    def __init__(
-        self,
-        level: ReductionLevel = ...,
-        language_hint: str | None = None,
-        preserve_markdown: bool = False,
-        preserve_code: bool = True,
-        semantic_threshold: float = 0.3,
-        enable_parallel: bool = True,
-        use_simd: bool = True,
-        custom_stopwords: dict[str, list[str]] | None = None,
-        preserve_patterns: list[str] | None = None,
-        target_reduction: float | None = None,
-        enable_semantic_clustering: bool = False,
-    ) -> None: ...
-
-def reduce_tokens(
-    text: str,
-    config: TokenReductionConfig,
-    language: str | None = None,
-) -> str: ...
-def batch_reduce_tokens(
-    texts: list[str],
-    config: TokenReductionConfig,
-    language: str | None = None,
-) -> list[str]: ...
-def get_reduction_statistics(
-    original: str,
-    reduced: str,
-) -> tuple[float, float, int, int, int, int]: ...
+class ImagePreprocessingMetadata: ...
+class ExtractionConfig: ...
+class TokenReductionConfig: ...
+class ReductionLevel: ...
