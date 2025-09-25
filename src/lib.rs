@@ -6,6 +6,7 @@ mod error_utils;
 mod image_preprocessing;
 mod quality;
 mod string_utils;
+mod table_processing;
 mod token_reduction;
 
 use cache::{
@@ -16,6 +17,7 @@ use cache::{
 use image_preprocessing::{batch_normalize_images, normalize_image_dpi, ExtractionConfig, ImagePreprocessingMetadata};
 use quality::{calculate_quality_score, clean_extracted_text, normalize_spaces};
 use string_utils::{batch_process_texts, calculate_text_confidence, fix_mojibake, get_encoding_cache_key, safe_decode};
+use table_processing::table_from_arrow_to_markdown;
 use token_reduction::{
     batch_reduce_tokens, get_reduction_statistics, reduce_tokens, ReductionLevel, TokenReductionConfig,
 };
@@ -59,6 +61,9 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(clear_cache_directory, m)?)?;
     m.add_function(wrap_pyfunction!(batch_cleanup_caches, m)?)?;
     m.add_class::<CacheStats>()?;
+
+    // Table processing via Arrow IPC bridge
+    m.add_function(wrap_pyfunction!(table_from_arrow_to_markdown, m)?)?;
 
     Ok(())
 }
