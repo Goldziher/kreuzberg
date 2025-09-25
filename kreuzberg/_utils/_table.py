@@ -6,11 +6,13 @@ import io
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    import polars as pl
+
     from kreuzberg._types import TableData
 
 # Import Rust functions
 from kreuzberg._internal_bindings import (
-    table_from_arrow_to_markdown,  # type: ignore[attr-defined]
+    table_from_arrow_to_markdown,
     # TODO: Add these once implemented in Rust
     # table_from_arrow_to_csv,
     # table_from_arrow_to_structure_info,
@@ -18,7 +20,7 @@ from kreuzberg._internal_bindings import (
 )
 
 
-def _dataframe_to_arrow_bytes(df: Any) -> bytes:
+def _dataframe_to_arrow_bytes(df: pl.DataFrame) -> bytes:
     """Convert Polars DataFrame to Arrow IPC bytes for Rust interop."""
     buffer = io.BytesIO()
     df.write_ipc(buffer)
@@ -38,13 +40,9 @@ def enhance_table_markdown(table: TableData) -> str:
     if df.is_empty():
         return table.get("text", "")
 
-    try:
-        # Convert to Arrow IPC and process in Rust
-        arrow_bytes = _dataframe_to_arrow_bytes(df)
-        return table_from_arrow_to_markdown(arrow_bytes)  # type: ignore[no-any-return]
-    except Exception:  # noqa: BLE001
-        # Fallback to text on any error
-        return table.get("text", "")
+    # Convert to Arrow IPC and process in Rust
+    arrow_bytes = _dataframe_to_arrow_bytes(df)
+    return table_from_arrow_to_markdown(arrow_bytes)
 
 
 def export_table_to_csv(table: TableData, separator: str = ",") -> str:
