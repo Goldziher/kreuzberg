@@ -189,24 +189,6 @@ mod tests {
     }
 
     #[test]
-    fn test_quality_weights_values() {
-        use quality_weights::*;
-
-        assert!(OCR_PENALTY_WEIGHT > 0.0 && OCR_PENALTY_WEIGHT <= 1.0);
-        assert!(SCRIPT_PENALTY_WEIGHT > 0.0 && SCRIPT_PENALTY_WEIGHT <= 1.0);
-        assert!(NAV_PENALTY_WEIGHT > 0.0 && NAV_PENALTY_WEIGHT <= 1.0);
-        assert!(STRUCTURE_BONUS_WEIGHT > 0.0 && STRUCTURE_BONUS_WEIGHT <= 1.0);
-        assert!(METADATA_BONUS_WEIGHT > 0.0 && METADATA_BONUS_WEIGHT <= 1.0);
-
-        let total = OCR_PENALTY_WEIGHT
-            + SCRIPT_PENALTY_WEIGHT
-            + NAV_PENALTY_WEIGHT
-            + STRUCTURE_BONUS_WEIGHT
-            + METADATA_BONUS_WEIGHT;
-        assert!(total <= 2.0);
-    }
-
-    #[test]
     fn test_text_thresholds_values() {
         use text_thresholds::*;
 

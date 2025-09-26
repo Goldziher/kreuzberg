@@ -1,4 +1,6 @@
-use crate::error_utils::{IntoKreuzbergError, errors};
+use crate::error_utils::IntoKreuzbergError;
+#[cfg(unix)]
+use crate::error_utils::errors;
 use ahash::AHasher;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};

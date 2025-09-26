@@ -20,6 +20,7 @@ pub mod errors {
 
     /// Create value error with formatted context
     #[inline]
+    #[cfg(unix)]
     pub fn value_error(context: &str, details: &str) -> PyErr {
         PyValueError::new_err(format!("{}: {}", context, details))
     }
