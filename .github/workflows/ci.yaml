@@ -32,12 +32,7 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Run Rust Tests
         env:
@@ -72,14 +67,10 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt, clippy
 
-      - name: Cache Rust Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
 
       - name: Install Dependencies
         uses: nick-fields/retry@v3
@@ -139,12 +130,7 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Cache Python Dependencies
         id: python-cache
@@ -233,12 +219,7 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Cache Python Dependencies
         id: python-cache
@@ -376,12 +357,7 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Cache Python Dependencies
         id: python-cache
