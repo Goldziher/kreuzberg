@@ -9,7 +9,7 @@ else:  # pragma: no cover
     try:
         import tomli as tomllib  # type: ignore[import-not-found]
     except ImportError:  # pragma: no cover
-        tomllib = None  # type: ignore[assignment]
+        tomllib = None
 
 try:
     import yaml
