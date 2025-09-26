@@ -165,19 +165,14 @@ fn format_cell_value(value: &AnyValue) -> String {
         AnyValue::String(s) => escape_markdown_pipes(s),
         AnyValue::StringOwned(s) => escape_markdown_pipes(s),
 
-        // Handle other variants that might contain strings
         AnyValue::Binary(_) | AnyValue::BinaryOwned(_) => {
-            // For binary data, use the default format
             format!("{}", value)
         }
 
-        // Handle other types but remove quotes from strings
         _ => {
             let formatted = format!("{}", value);
-            // Remove surrounding quotes if it looks like a quoted string
             if formatted.starts_with('"') && formatted.ends_with('"') && formatted.len() > 1 {
                 let unquoted = &formatted[1..formatted.len() - 1];
-                // Only remove quotes if it doesn't contain control characters that would require quoting
                 if !unquoted.contains('\n') && !unquoted.contains('\r') && !unquoted.contains('\t') {
                     unquoted.to_string()
                 } else {

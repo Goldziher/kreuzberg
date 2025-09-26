@@ -115,6 +115,5 @@ class TestQualityEdgeCases:
 
     def test_quality_score_malformed_metadata(self) -> None:
         text = "Test text"
-        # Test with None confidence since malformed metadata shouldn't be passed
         score = calculate_quality_score(text, None)
         assert 0.0 <= score <= 1.0

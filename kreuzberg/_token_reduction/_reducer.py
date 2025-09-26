@@ -97,7 +97,6 @@ def get_reduction_statistics(original: str, reduced: str) -> dict[str, float | i
 
 def _convert_config_to_rust(config: TokenReductionConfig) -> TokenReductionConfigDTO:
     """Convert Python config to Rust config DTO."""
-    # Map the mode string to ReductionLevelDTO
     level_mapping = {
         "off": ReductionLevelDTO.Off,
         "light": ReductionLevelDTO.Light,
@@ -110,8 +109,8 @@ def _convert_config_to_rust(config: TokenReductionConfig) -> TokenReductionConfi
     dto.level = level_mapping.get(config.mode, ReductionLevelDTO.Moderate)
     dto.language_hint = config.language_hint
     dto.preserve_markdown = config.preserve_markdown
-    dto.preserve_code = True  # Default to preserving code
-    dto.semantic_threshold = 0.3  # Default semantic threshold
+    dto.preserve_code = True
+    dto.semantic_threshold = 0.3
     dto.enable_parallel = True
     dto.use_simd = True
     dto.custom_stopwords = list(config.custom_stopwords) if config.custom_stopwords else []

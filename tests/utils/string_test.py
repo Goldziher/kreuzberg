@@ -226,11 +226,9 @@ def test_safe_decode_caching_behavior() -> None:
     text = "Test caching functionality"
     utf8_bytes = text.encode("utf-8")
 
-    # Multiple calls with same input should produce same result
     results = [safe_decode(utf8_bytes) for _ in range(5)]
     assert all(r == text for r in results)
 
-    # Different inputs should produce different results
     text2 = "Different text"
     utf8_bytes2 = text2.encode("utf-8")
     result2 = safe_decode(utf8_bytes2)
@@ -240,7 +238,6 @@ def test_safe_decode_caching_behavior() -> None:
 
 def test_safe_decode_handles_many_unique_inputs() -> None:
     """Test that safe_decode can handle many unique inputs without issues."""
-    # This tests that internal caching doesn't break with many inputs
     for i in range(100):
         unique_text = f"Unique text {i}"
         unique_bytes = unique_text.encode("utf-8")

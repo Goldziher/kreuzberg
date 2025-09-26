@@ -23,7 +23,7 @@ tasks:
       - maturin develop --release
       - prek autoupdate
 
-  test:
+  test:python:
     desc: "Run Python tests with pytest"
     cmds:
       - uv run pytest
@@ -38,17 +38,15 @@ tasks:
     cmds:
       - cargo test --release
 
-  test:all:
+  test:
     desc: "Run both Rust and Python tests"
     cmds:
-      - cargo test --release
-      - uv run pytest
+      - task test:rust
+      - task test:python
 
   lint:
     desc: "Lint Python code with ruff/prek and Rust code with clippy/fmt"
     cmds:
-      - cargo fmt --check
-      - cargo clippy -- -D warnings
       - prek run --all-files
 
   fmt:
@@ -76,13 +74,6 @@ tasks:
     desc: "Serve documentation locally"
     cmds:
       - uv run mkdocs serve
-
-  check:
-    desc: "Run all checks (format, lint, test)"
-    cmds:
-      - task fmt
-      - task lint
-      - task test:all
 
   default:
     desc: "Show available tasks"

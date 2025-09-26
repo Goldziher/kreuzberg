@@ -73,7 +73,6 @@ class Extractor(ABC):
 
         cleaned_content = clean_extracted_text(result.content)
 
-        # Pass metadata dict to calculate_quality_score
         metadata_dict = dict(result.metadata) if result.metadata else None
         quality_score = calculate_quality_score(cleaned_content, metadata_dict)
 
