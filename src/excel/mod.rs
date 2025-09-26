@@ -185,7 +185,11 @@ fn format_cell_value_into(buffer: &mut String, data: &Data) {
             }
         }
         Data::Float(f) => {
-            write!(buffer, "{}", f).unwrap();
+            if f.fract() == 0.0 {
+                write!(buffer, "{:.1}", f).unwrap();
+            } else {
+                write!(buffer, "{}", f).unwrap();
+            }
         }
         Data::Int(i) => {
             write!(buffer, "{}", i).unwrap();
