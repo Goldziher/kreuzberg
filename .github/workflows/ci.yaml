@@ -4,9 +4,11 @@ on:
   pull_request:
     branches:
       - main
+      - v4-dev
   push:
     branches:
       - main
+      - v4-dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -345,17 +347,17 @@ jobs:
             system-deps: true
             timeout: 25
         exclude:
-          - test-category: {name: "extractors"}
+          - test-category: { name: "extractors" }
             python: "3.11"
-          - test-category: {name: "extractors"}
+          - test-category: { name: "extractors" }
             python: "3.12"
-          - test-category: {name: "integration"}
+          - test-category: { name: "integration" }
             python: "3.11"
-          - test-category: {name: "integration"}
+          - test-category: { name: "integration" }
             python: "3.12"
-          - test-category: {name: "features"}
+          - test-category: { name: "features" }
             python: "3.11"
-          - test-category: {name: "features"}
+          - test-category: { name: "features" }
             python: "3.12"
     timeout-minutes: ${{ matrix.test-category.timeout }}
     steps:
