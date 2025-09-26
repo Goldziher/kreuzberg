@@ -115,25 +115,6 @@ impl SimdTextProcessor {
         String::from_utf8(result).unwrap_or_else(|_| text.to_string())
     }
 
-    /// SIMD-optimized pattern matching for token boundaries
-    #[allow(dead_code)]
-    pub fn find_token_boundaries(&self, text: &str) -> Vec<usize> {
-        let bytes = text.as_bytes();
-        let mut boundaries = Vec::new();
-        let mut i = 0;
-
-        while i < bytes.len() {
-            if let Some(pos) = memchr3(b' ', b'\t', b'\n', &bytes[i..]) {
-                boundaries.push(i + pos);
-                i += pos + 1;
-            } else {
-                break;
-            }
-        }
-
-        boundaries
-    }
-
     /// High-performance character classification using memchr
     #[allow(dead_code)]
     #[inline]
@@ -168,16 +149,6 @@ impl SimdTextProcessor {
             i += 1;
         }
 
-        i
-    }
-
-    #[allow(dead_code)]
-    fn find_punctuation_sequence_end(&self, bytes: &[u8], start: usize) -> usize {
-        let target = bytes[start];
-        let mut i = start + 1;
-        while i < bytes.len() && bytes[i] == target {
-            i += 1;
-        }
         i
     }
 }

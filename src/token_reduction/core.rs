@@ -15,8 +15,6 @@ use std::sync::Arc;
 use unicode_normalization::UnicodeNormalization;
 
 /// Pre-compiled regex patterns for performance
-#[allow(dead_code)]
-static WHITESPACE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
 static REPEATED_EXCLAMATION: Lazy<Regex> = Lazy::new(|| Regex::new(r"[!]{2,}").unwrap());
 static REPEATED_QUESTION: Lazy<Regex> = Lazy::new(|| Regex::new(r"[?]{2,}").unwrap());
 static REPEATED_COMMA: Lazy<Regex> = Lazy::new(|| Regex::new(r"[,]{2,}").unwrap());
@@ -153,12 +151,6 @@ impl TokenReducer {
             .collect();
 
         processed_chunks.join(" ")
-    }
-
-    /// Optimized whitespace normalization using pre-compiled regex
-    #[allow(dead_code)]
-    fn normalize_whitespace_optimized(&self, text: &str) -> String {
-        WHITESPACE_REGEX.replace_all(text, " ").to_string()
     }
 
     /// Optimized punctuation cleanup using pre-compiled regex patterns

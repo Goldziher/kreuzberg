@@ -38,7 +38,7 @@ jobs:
           RUST_BACKTRACE: full
         run: |
           echo "Running Rust tests with full debugging..."
-          cargo test --release -vv -- --nocapture --test-threads=1
+          cargo test --release --no-default-features -vv -- --nocapture --test-threads=1
 
       - name: Check Rust Formatting
         if: matrix.os == 'ubuntu-latest'

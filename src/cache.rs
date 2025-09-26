@@ -116,18 +116,17 @@ pub fn batch_generate_cache_keys(items: &Bound<'_, PyList>) -> PyResult<Vec<Stri
 /// Get available disk space for a given path
 #[pyfunction]
 pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
-    let path = Path::new(path);
-
-    let check_path = if path.exists() {
-        path
-    } else if let Some(parent) = path.parent() {
-        parent
-    } else {
-        Path::new("/")
-    };
-
     #[cfg(unix)]
     {
+        let path = Path::new(path);
+        let check_path = if path.exists() {
+            path
+        } else if let Some(parent) = path.parent() {
+            parent
+        } else {
+            Path::new("/")
+        };
+
         use libc::{statvfs, statvfs as statvfs_struct};
         use std::ffi::CString;
 
@@ -150,6 +149,7 @@ pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
 
     #[cfg(not(unix))]
     {
+        let _ = path; // Suppress unused variable warning
         Ok(10000.0)
     }
 }
