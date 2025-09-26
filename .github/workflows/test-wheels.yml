@@ -56,7 +56,6 @@ jobs:
 
           # Install maturin and build the Rust extension
           CIBW_BEFORE_BUILD: pip install maturin
-          CIBW_BUILD_FRONTEND: "build[uv]"
 
           # Configure maturin to use abi3 for better compatibility
           CIBW_ENVIRONMENT: MATURIN_BUILD_ARGS="--compatibility linux"
@@ -68,7 +67,7 @@ jobs:
           CIBW_TEST_COMMAND: 'python -c "import kreuzberg; print(\"Import successful\")"'
 
           # Skip some builds for speed during testing
-          CIBW_SKIP: pp* *-musllinux* *-win32 *-manylinux_i686
+          CIBW_SKIP: "*-musllinux* *-win32 *-manylinux_i686"
 
           # Use manylinux2014 for broader compatibility
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
