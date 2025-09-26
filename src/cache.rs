@@ -141,7 +141,8 @@ pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
         let result = unsafe { statvfs(c_path.as_ptr(), &mut stat) };
 
         if result == 0 {
-            let available_bytes = stat.f_bavail as u64 * stat.f_frsize;
+            #[allow(clippy::unnecessary_cast)]
+            let available_bytes = stat.f_bavail as u64 * stat.f_frsize as u64;
             Ok(available_bytes as f64 / (1024.0 * 1024.0))
         } else {
             eprintln!("Failed to get disk stats for {}: errno {}", path_str, result);
