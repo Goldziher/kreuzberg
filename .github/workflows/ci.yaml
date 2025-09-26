@@ -203,7 +203,7 @@ jobs:
 
   test-pr:
     needs: [validate]
-    if: github.event_name == 'pull_request' && needs.validate.result == 'success' && needs.rust-tests.result == 'success'
+    if: github.event_name == 'pull_request' && needs.validate.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -308,7 +308,7 @@ jobs:
 
   test-full:
     needs: [validate]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.validate.result == 'success' && needs.rust-tests.result == 'success'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.validate.result == 'success'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
