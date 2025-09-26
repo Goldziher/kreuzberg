@@ -6,33 +6,66 @@ env:
 
 tasks:
   setup:
-    desc: "Install dependencies with uv"
+    desc: "Install dependencies with uv and build Rust components"
     cmds:
       - uv sync --all-extras --all-packages
+      - uv pip install maturin
+      - maturin develop --release
       - prek install && prek install --hook-type commit-msg
 
   update:
-    desc: "Update the dependencies"
+    desc: "Update Python and Rust dependencies"
     cmds:
       - uv run uv-bump
       - cd benchmarks && uv run uv-bump && cd -
+      - cargo upgrade --incompatible
       - uv sync --all-extras --all-packages --upgrade
+      - maturin develop --release
       - prek autoupdate
 
   test:
-    desc: "Run tests with pytest"
+    desc: "Run Python tests with pytest"
     cmds:
       - uv run pytest
 
   test:cov:
-    desc: "Run tests with coverage"
+    desc: "Run Python tests with coverage"
     cmds:
       - uv run pytest --cov
 
-  lint:
-    desc: "Lint code with ruff and docs with markdownlint"
+  test:rust:
+    desc: "Run Rust tests"
     cmds:
+      - cargo test --release
+
+  test:all:
+    desc: "Run both Rust and Python tests"
+    cmds:
+      - cargo test --release
+      - uv run pytest
+
+  lint:
+    desc: "Lint Python code with ruff/prek and Rust code with clippy/fmt"
+    cmds:
+      - cargo fmt --check
+      - cargo clippy -- -D warnings
       - prek run --all-files
+
+  fmt:
+    desc: "Format Python and Rust code"
+    cmds:
+      - cargo fmt
+      - prek run ruff-format --all-files
+
+  build:
+    desc: "Build Rust components for development"
+    cmds:
+      - maturin develop --release
+
+  build:debug:
+    desc: "Build Rust components in debug mode"
+    cmds:
+      - maturin develop
 
   docs:build:
     desc: "Build documentation"
@@ -43,6 +76,13 @@ tasks:
     desc: "Serve documentation locally"
     cmds:
       - uv run mkdocs serve
+
+  check:
+    desc: "Run all checks (format, lint, test)"
+    cmds:
+      - task fmt
+      - task lint
+      - task test:all
 
   default:
     desc: "Show available tasks"
