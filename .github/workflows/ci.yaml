@@ -111,7 +111,7 @@ jobs:
         run: prek run --show-diff-on-failure --color=always --all-files
 
   coverage:
-    needs: [validate, rust-tests]
+    needs: [validate]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -202,7 +202,7 @@ jobs:
           retention-days: 7
 
   test-pr:
-    needs: [validate, rust-tests]
+    needs: [validate]
     if: github.event_name == 'pull_request' && needs.validate.result == 'success' && needs.rust-tests.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -307,7 +307,7 @@ jobs:
           ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
 
   test-full:
-    needs: [validate, rust-tests]
+    needs: [validate]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.validate.result == 'success' && needs.rust-tests.result == 'success'
     runs-on: ${{ matrix.os }}
     strategy:
