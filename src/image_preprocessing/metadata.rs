@@ -1,9 +1,9 @@
 use pyo3::prelude::*;
 
-/// Image preprocessing metadata matching Python's `ImagePreprocessingMetadata`
+/// Image preprocessing metadata DTO (Data Transfer Object)
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct ImagePreprocessingMetadata {
+pub struct ImagePreprocessingMetadataDTO {
     #[pyo3(get)]
     pub original_dimensions: (u32, u32),
     #[pyo3(get)]

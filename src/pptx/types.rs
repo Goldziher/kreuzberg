@@ -119,10 +119,10 @@ pub struct Slide {
     pub image_data: HashMap<String, Vec<u8>>,
 }
 
-/// PPTX metadata extracted from docProps
+/// PPTX metadata DTO (Data Transfer Object) extracted from docProps
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct PptxMetadata {
+pub struct PptxMetadataDTO {
     #[pyo3(get)]
     pub title: Option<String>,
     #[pyo3(get)]
@@ -135,14 +135,14 @@ pub struct PptxMetadata {
     pub fonts: Vec<String>,
 }
 
-/// Final extraction result
+/// Final extraction result DTO (Data Transfer Object)
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct PptxExtractionResult {
+pub struct PptxExtractionResultDTO {
     #[pyo3(get)]
     pub content: String,
     #[pyo3(get)]
-    pub metadata: PptxMetadata,
+    pub metadata: PptxMetadataDTO,
     #[pyo3(get)]
     pub slide_count: usize,
     #[pyo3(get)]

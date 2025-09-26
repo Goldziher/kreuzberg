@@ -11,7 +11,7 @@ mod filters;
 mod semantic;
 mod simd_text;
 
-pub use config::{ReductionLevel, TokenReductionConfig};
+pub use config::{ReductionLevelDTO, TokenReductionConfigDTO};
 pub use core::TokenReducer;
 
 use pyo3::prelude::*;
@@ -19,7 +19,7 @@ use pyo3::prelude::*;
 /// Python bindings for the modern token reduction system
 #[pyfunction]
 #[pyo3(signature = (text, config, language_hint=None))]
-pub fn reduce_tokens(text: &str, config: &TokenReductionConfig, language_hint: Option<&str>) -> PyResult<String> {
+pub fn reduce_tokens(text: &str, config: &TokenReductionConfigDTO, language_hint: Option<&str>) -> PyResult<String> {
     let reducer = TokenReducer::new(config, language_hint)?;
     Ok(reducer.reduce(text))
 }
@@ -29,7 +29,7 @@ pub fn reduce_tokens(text: &str, config: &TokenReductionConfig, language_hint: O
 #[pyo3(signature = (texts, config, language_hint=None))]
 pub fn batch_reduce_tokens(
     texts: Vec<String>,
-    config: &TokenReductionConfig,
+    config: &TokenReductionConfigDTO,
     language_hint: Option<&str>,
 ) -> PyResult<Vec<String>> {
     let reducer = TokenReducer::new(config, language_hint)?;

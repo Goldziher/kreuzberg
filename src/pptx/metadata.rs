@@ -1,15 +1,15 @@
 //! Metadata extraction from PPTX docProps
 
-use crate::pptx::types::{PptxMetadata, Result};
+use crate::pptx::types::{PptxMetadataDTO, Result};
 use roxmltree::Document;
 
 /// Extract metadata from docProps/core.xml
-pub fn extract_metadata(core_xml: &[u8]) -> Result<PptxMetadata> {
+pub fn extract_metadata(core_xml: &[u8]) -> Result<PptxMetadataDTO> {
     let xml_str = std::str::from_utf8(core_xml)?;
     let doc = Document::parse(xml_str)?;
     let root = doc.root_element();
 
-    let mut metadata = PptxMetadata {
+    let mut metadata = PptxMetadataDTO {
         title: None,
         author: None,
         description: None,
@@ -17,7 +17,6 @@ pub fn extract_metadata(core_xml: &[u8]) -> Result<PptxMetadata> {
         fonts: Vec::new(),
     };
 
-    // Extract Dublin Core metadata
     for node in root.descendants() {
         match node.tag_name().name() {
             "title" => {

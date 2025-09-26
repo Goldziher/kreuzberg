@@ -35,11 +35,9 @@ pub fn compress_png(
 pub fn compress_auto(image: &DynamicImage, target_size_kb: Option<u32>) -> Result<(Vec<u8>, String), ImageError> {
     let has_transparency = matches!(image, DynamicImage::ImageRgba8(_) | DynamicImage::ImageLumaA8(_));
 
-    // Analyze image characteristics
     let (width, height) = (image.width(), image.height());
     let total_pixels = width * height;
 
-    // Sample pixels to determine complexity
     let rgb = image.to_rgb8();
     let mut unique_colors = std::collections::HashSet::new();
     let sample_rate = (total_pixels / 10000).max(1);
@@ -48,20 +46,17 @@ pub fn compress_auto(image: &DynamicImage, target_size_kb: Option<u32>) -> Resul
         if i % sample_rate as usize == 0 {
             unique_colors.insert((pixel[0], pixel[1], pixel[2]));
             if unique_colors.len() > 1000 {
-                break; // Photo-like
+                break;
             }
         }
     }
 
     let is_photo = unique_colors.len() > 1000;
 
-    // Choose format and compress
     let (compressed, format) = if has_transparency {
-        // Must use PNG for transparency
         let compressed = compress_png(image, image::codecs::png::CompressionType::Default)?;
         (compressed, "PNG")
     } else if is_photo {
-        // Use JPEG for photos
         let quality = if let Some(target_kb) = target_size_kb {
             find_optimal_jpeg_quality(image, target_kb)?
         } else {
@@ -70,7 +65,6 @@ pub fn compress_auto(image: &DynamicImage, target_size_kb: Option<u32>) -> Resul
         let compressed = compress_jpeg(image, quality)?;
         (compressed, "JPEG")
     } else {
-        // Try both formats, use smaller
         let png = compress_png(image, image::codecs::png::CompressionType::Best)?;
         let jpeg = compress_jpeg(image, 90)?;
 
@@ -118,8 +112,6 @@ fn find_optimal_jpeg_quality(image: &DynamicImage, target_kb: u32) -> Result<u8,
 
     Ok(best_quality)
 }
-
-// Python bindings
 
 /// Compress image as JPEG
 #[pyfunction]

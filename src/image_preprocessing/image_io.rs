@@ -11,11 +11,9 @@ pub fn detect_format(bytes: &[u8]) -> Option<ImageFormat> {
 
 /// Load image from bytes with format detection
 pub fn load_image_from_bytes(bytes: &[u8]) -> ImageResult<DynamicImage> {
-    // Try to detect format first for better performance
     if let Some(format) = detect_format(bytes) {
         image::load_from_memory_with_format(bytes, format)
     } else {
-        // Fallback to generic loader
         image::load_from_memory(bytes)
     }
 }
@@ -26,8 +24,6 @@ pub fn save_image_to_bytes(image: &DynamicImage, format: ImageFormat) -> ImageRe
     image.write_to(&mut cursor, format)?;
     Ok(cursor.into_inner())
 }
-
-// Python bindings
 
 /// Load image from bytes
 #[pyfunction]
@@ -48,7 +44,6 @@ pub fn load_image<'py>(_py: Python<'py>, data: &Bound<'py, PyBytes>) -> PyResult
     }
     .to_string();
 
-    // Convert to RGB8 for consistency
     let rgb_image = image.to_rgb8();
     let raw_bytes = rgb_image.into_raw();
 
@@ -66,14 +61,12 @@ pub fn save_image<'py>(
 ) -> PyResult<Bound<'py, PyBytes>> {
     use image::RgbImage;
 
-    // Reconstruct image from raw bytes
     let image = RgbImage::from_raw(width, height, data).ok_or_else(|| {
         PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid image dimensions: {}x{}", width, height))
     })?;
 
     let dynamic_image = DynamicImage::ImageRgb8(image);
 
-    // Parse format string
     let format = match format_str.to_lowercase().as_str() {
         "png" => ImageFormat::Png,
         "jpeg" | "jpg" => ImageFormat::Jpeg,

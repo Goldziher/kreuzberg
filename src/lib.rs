@@ -16,20 +16,22 @@ use cache::{
     filter_old_cache_entries, generate_cache_key, get_available_disk_space, get_cache_metadata, is_cache_valid,
     smart_cleanup_cache, sort_cache_by_access_time, validate_cache_key, CacheStats,
 };
-use excel::{benchmark_excel_reading, excel_to_markdown, read_excel_bytes, read_excel_file, ExcelSheet, ExcelWorkbook};
+use excel::{
+    benchmark_excel_reading, excel_to_markdown, read_excel_bytes, read_excel_file, ExcelSheetDTO, ExcelWorkbookDTO,
+};
 use image_preprocessing::{
     batch_normalize_images, calculate_optimal_dpi, compress_image_auto, compress_image_jpeg, compress_image_png,
     convert_format, detect_image_format, load_image, load_image_as_numpy, normalize_image_dpi, rgb_to_grayscale,
-    rgb_to_rgba, rgba_to_rgb, save_image, save_numpy_as_image, ExtractionConfig, ImagePreprocessingMetadata,
+    rgb_to_rgba, rgba_to_rgb, save_image, save_numpy_as_image, ExtractionConfigDTO, ImagePreprocessingMetadataDTO,
 };
-use pptx::extractor::PptxExtractor;
-use pptx::streaming::extractor::StreamingPptxExtractor;
-use pptx::types::{PptxExtractionResult, PptxMetadata};
+use pptx::extractor::PptxExtractorDTO;
+use pptx::streaming::extractor::StreamingPptxExtractorDTO;
+use pptx::types::{PptxExtractionResultDTO, PptxMetadataDTO};
 use quality::{calculate_quality_score, clean_extracted_text, normalize_spaces};
 use string_utils::{batch_process_texts, calculate_text_confidence, fix_mojibake, get_encoding_cache_key, safe_decode};
 use table_processing::table_from_arrow_to_markdown;
 use token_reduction::{
-    batch_reduce_tokens, get_reduction_statistics, reduce_tokens, ReductionLevel, TokenReductionConfig,
+    batch_reduce_tokens, get_reduction_statistics, reduce_tokens, ReductionLevelDTO, TokenReductionConfigDTO,
 };
 
 /// Internal Rust bindings for kreuzberg - not for direct use
@@ -48,22 +50,19 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(normalize_image_dpi, m)?)?;
     m.add_function(wrap_pyfunction!(batch_normalize_images, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_optimal_dpi, m)?)?;
-    m.add_class::<ImagePreprocessingMetadata>()?;
-    m.add_class::<ExtractionConfig>()?;
+    m.add_class::<ImagePreprocessingMetadataDTO>()?;
+    m.add_class::<ExtractionConfigDTO>()?;
 
-    // Image I/O functions
     m.add_function(wrap_pyfunction!(load_image, m)?)?;
     m.add_function(wrap_pyfunction!(save_image, m)?)?;
     m.add_function(wrap_pyfunction!(detect_image_format, m)?)?;
     m.add_function(wrap_pyfunction!(load_image_as_numpy, m)?)?;
     m.add_function(wrap_pyfunction!(save_numpy_as_image, m)?)?;
 
-    // Compression functions
     m.add_function(wrap_pyfunction!(compress_image_jpeg, m)?)?;
     m.add_function(wrap_pyfunction!(compress_image_png, m)?)?;
     m.add_function(wrap_pyfunction!(compress_image_auto, m)?)?;
 
-    // Format conversion functions
     m.add_function(wrap_pyfunction!(rgb_to_grayscale, m)?)?;
     m.add_function(wrap_pyfunction!(rgb_to_rgba, m)?)?;
     m.add_function(wrap_pyfunction!(rgba_to_rgb, m)?)?;
@@ -72,10 +71,9 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(reduce_tokens, m)?)?;
     m.add_function(wrap_pyfunction!(batch_reduce_tokens, m)?)?;
     m.add_function(wrap_pyfunction!(get_reduction_statistics, m)?)?;
-    m.add_class::<TokenReductionConfig>()?;
-    m.add_class::<ReductionLevel>()?;
+    m.add_class::<TokenReductionConfigDTO>()?;
+    m.add_class::<ReductionLevelDTO>()?;
 
-    // Cache functions
     m.add_function(wrap_pyfunction!(generate_cache_key, m)?)?;
     m.add_function(wrap_pyfunction!(batch_generate_cache_keys, m)?)?;
     m.add_function(wrap_pyfunction!(fast_hash, m)?)?;
@@ -91,22 +89,19 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(batch_cleanup_caches, m)?)?;
     m.add_class::<CacheStats>()?;
 
-    // Table processing via Arrow IPC bridge
     m.add_function(wrap_pyfunction!(table_from_arrow_to_markdown, m)?)?;
 
-    // Excel processing with Calamine
     m.add_function(wrap_pyfunction!(read_excel_file, m)?)?;
     m.add_function(wrap_pyfunction!(read_excel_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(excel_to_markdown, m)?)?;
     m.add_function(wrap_pyfunction!(benchmark_excel_reading, m)?)?;
-    m.add_class::<ExcelWorkbook>()?;
-    m.add_class::<ExcelSheet>()?;
+    m.add_class::<ExcelWorkbookDTO>()?;
+    m.add_class::<ExcelSheetDTO>()?;
 
-    // PPTX processing
-    m.add_class::<PptxExtractor>()?;
-    m.add_class::<StreamingPptxExtractor>()?;
-    m.add_class::<PptxExtractionResult>()?;
-    m.add_class::<PptxMetadata>()?;
+    m.add_class::<PptxExtractorDTO>()?;
+    m.add_class::<StreamingPptxExtractorDTO>()?;
+    m.add_class::<PptxExtractionResultDTO>()?;
+    m.add_class::<PptxMetadataDTO>()?;
 
     Ok(())
 }

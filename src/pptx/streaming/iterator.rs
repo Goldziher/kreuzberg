@@ -41,20 +41,16 @@ impl SlideIterator {
             return Ok(None);
         }
 
-        let slide_path = self.slide_paths[self.current_index].clone(); // Clone to avoid borrow conflicts
+        let slide_path = self.slide_paths[self.current_index].clone();
         let slide_number = (self.current_index + 1) as u32;
 
-        // Load slide XML
         let slide_xml = self.container.read_file(&slide_path)?;
 
-        // Load relationships
         let rels_path = self.container.get_slide_rels_path(&slide_path);
         let rels_data = self.container.read_file(&rels_path).ok();
 
-        // Create slide from XML
         let mut slide = Slide::from_xml(slide_number, &slide_xml, rels_data.as_deref())?;
 
-        // Load images if enabled
         if self.config.extract_images {
             let image_data = self.load_slide_images(&slide, &slide_path)?;
             slide.set_image_data(image_data);
@@ -70,21 +66,17 @@ impl SlideIterator {
         for img_ref in &slide.images {
             let image_path = PptxContainer::get_full_image_path(slide_path, &img_ref.target);
 
-            // Check cache first
             if let Some(cached_data) = self.cache.get(&image_path) {
                 image_data.insert(img_ref.id.clone(), cached_data.clone());
                 continue;
             }
 
-            // Load from archive
             match self.container.read_file(&image_path) {
                 Ok(data) => {
-                    // Cache the image data
                     self.cache.insert(image_path.clone(), data.clone());
                     image_data.insert(img_ref.id.clone(), data);
                 }
                 Err(_) => {
-                    // Skip missing images rather than failing
                     eprintln!("Warning: Image not found: {}", image_path);
                 }
             }

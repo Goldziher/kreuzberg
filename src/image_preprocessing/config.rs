@@ -1,9 +1,9 @@
 use pyo3::prelude::*;
 
-/// Configuration for image extraction matching Python's `ExtractionConfig`
+/// Configuration for image extraction DTO (Data Transfer Object)
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct ExtractionConfig {
+pub struct ExtractionConfigDTO {
     #[pyo3(get, set)]
     pub target_dpi: i32,
     #[pyo3(get, set)]
@@ -17,7 +17,7 @@ pub struct ExtractionConfig {
 }
 
 #[pymethods]
-impl ExtractionConfig {
+impl ExtractionConfigDTO {
     #[new]
     #[pyo3(signature = (target_dpi=300, max_image_dimension=4096, auto_adjust_dpi=false, min_dpi=72, max_dpi=600))]
     #[must_use]

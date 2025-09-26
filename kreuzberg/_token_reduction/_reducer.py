@@ -9,19 +9,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from kreuzberg._internal_bindings import (
-    ReductionLevel,
+    ReductionLevelDTO,
+    TokenReductionConfigDTO,
 )
 from kreuzberg._internal_bindings import (
-    TokenReductionConfig as RustTokenReductionConfig,
+    batch_reduce_tokens as _batch_reduce_tokens,
 )
 from kreuzberg._internal_bindings import (
-    batch_reduce_tokens as batch_reduce_tokens_rust,
+    get_reduction_statistics as _get_reduction_statistics,
 )
 from kreuzberg._internal_bindings import (
-    get_reduction_statistics as get_reduction_statistics_rust,
-)
-from kreuzberg._internal_bindings import (
-    reduce_tokens as reduce_tokens_rust,
+    reduce_tokens as _reduce_tokens,
 )
 
 if TYPE_CHECKING:
@@ -45,7 +43,7 @@ def reduce_tokens(
         The reduced text.
     """
     rust_config = _convert_config_to_rust(config)
-    return reduce_tokens_rust(text, rust_config, language)
+    return _reduce_tokens(text, rust_config, language)
 
 
 def batch_reduce_tokens(
@@ -65,7 +63,7 @@ def batch_reduce_tokens(
         List of reduced texts.
     """
     rust_config = _convert_config_to_rust(config)
-    return batch_reduce_tokens_rust(texts, rust_config, language)
+    return _batch_reduce_tokens(texts, rust_config, language)
 
 
 def get_reduction_statistics(original: str, reduced: str) -> dict[str, float | int]:
@@ -85,7 +83,7 @@ def get_reduction_statistics(original: str, reduced: str) -> dict[str, float | i
         reduced_chars,
         original_tokens,
         reduced_tokens,
-    ) = get_reduction_statistics_rust(original, reduced)
+    ) = _get_reduction_statistics(original, reduced)
 
     return {
         "character_reduction_ratio": char_reduction,
@@ -97,30 +95,27 @@ def get_reduction_statistics(original: str, reduced: str) -> dict[str, float | i
     }
 
 
-def _convert_config_to_rust(config: TokenReductionConfig) -> RustTokenReductionConfig:
-    """Convert Python config to Rust config."""
-    # Map Python mode strings to Rust ReductionLevel enum
+def _convert_config_to_rust(config: TokenReductionConfig) -> TokenReductionConfigDTO:
+    """Convert Python config to Rust config DTO."""
+    # Map the mode string to ReductionLevelDTO
     level_mapping = {
-        "off": ReductionLevel.Off,
-        "light": ReductionLevel.Light,
-        "moderate": ReductionLevel.Moderate,
-        "aggressive": ReductionLevel.Aggressive,
-        "maximum": ReductionLevel.Maximum,
+        "off": ReductionLevelDTO.Off,
+        "light": ReductionLevelDTO.Light,
+        "moderate": ReductionLevelDTO.Moderate,
+        "aggressive": ReductionLevelDTO.Aggressive,
+        "maximum": ReductionLevelDTO.Maximum,
     }
 
-    rust_level = level_mapping.get(config.mode, ReductionLevel.Moderate)
-
-    # Create Rust configuration with modern features
-    return RustTokenReductionConfig(
-        level=rust_level,
-        language_hint=config.language_hint,
-        preserve_markdown=config.preserve_markdown,
-        preserve_code=True,  # Always preserve code for better results
-        semantic_threshold=0.3,  # Default semantic importance threshold
-        enable_parallel=True,  # Enable parallel processing for performance
-        use_simd=True,  # Enable SIMD optimizations
-        custom_stopwords=config.custom_stopwords,
-        preserve_patterns=[],  # Could be extended to preserve regex patterns
-        target_reduction=None,  # Could be configured for adaptive reduction
-        enable_semantic_clustering=rust_level in (ReductionLevel.Aggressive, ReductionLevel.Maximum),
-    )
+    dto = TokenReductionConfigDTO()
+    dto.level = level_mapping.get(config.mode, ReductionLevelDTO.Moderate)
+    dto.language_hint = config.language_hint
+    dto.preserve_markdown = config.preserve_markdown
+    dto.preserve_code = True  # Default to preserving code
+    dto.semantic_threshold = 0.3  # Default semantic threshold
+    dto.enable_parallel = True
+    dto.use_simd = True
+    dto.custom_stopwords = list(config.custom_stopwords) if config.custom_stopwords else []
+    dto.preserve_patterns = []
+    dto.target_reduction = None
+    dto.enable_semantic_clustering = config.mode in ("aggressive", "maximum")
+    return dto

@@ -10,20 +10,20 @@ use std::fmt::Write as FmtWrite;
 use std::io::Cursor;
 use std::path::Path;
 
-/// Represents extracted Excel workbook data
+/// Represents extracted Excel workbook DTO (Data Transfer Object)
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct ExcelWorkbook {
+pub struct ExcelWorkbookDTO {
     #[pyo3(get)]
-    pub sheets: Vec<ExcelSheet>,
+    pub sheets: Vec<ExcelSheetDTO>,
     #[pyo3(get)]
     pub metadata: HashMap<String, String>,
 }
 
-/// Represents a single Excel sheet
+/// Represents a single Excel sheet DTO (Data Transfer Object)
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct ExcelSheet {
+pub struct ExcelSheetDTO {
     #[pyo3(get)]
     pub name: String,
     #[pyo3(get)]
@@ -38,7 +38,7 @@ pub struct ExcelSheet {
 
 /// Read Excel file from path
 #[pyfunction]
-pub fn read_excel_file(file_path: &str) -> PyResult<ExcelWorkbook> {
+pub fn read_excel_file(file_path: &str) -> PyResult<ExcelWorkbookDTO> {
     let workbook = open_workbook_auto(Path::new(file_path))
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
 
@@ -47,11 +47,10 @@ pub fn read_excel_file(file_path: &str) -> PyResult<ExcelWorkbook> {
 
 /// Read Excel file from bytes
 #[pyfunction]
-pub fn read_excel_bytes(data: &Bound<'_, PyBytes>, file_extension: &str) -> PyResult<ExcelWorkbook> {
+pub fn read_excel_bytes(data: &Bound<'_, PyBytes>, file_extension: &str) -> PyResult<ExcelWorkbookDTO> {
     let bytes = data.as_bytes();
     let cursor = Cursor::new(bytes);
 
-    // Use const match for better optimization
     match file_extension.to_lowercase().as_str() {
         ".xlsx" | ".xlsm" | ".xlam" | ".xltm" => {
             let workbook =
@@ -81,38 +80,32 @@ pub fn read_excel_bytes(data: &Bound<'_, PyBytes>, file_extension: &str) -> PyRe
 }
 
 /// Process any workbook type that implements Reader trait
-fn process_workbook<RS, R>(mut workbook: R) -> PyResult<ExcelWorkbook>
+fn process_workbook<RS, R>(mut workbook: R) -> PyResult<ExcelWorkbookDTO>
 where
     RS: std::io::Read + std::io::Seek,
     R: Reader<RS>,
 {
     let sheet_names = workbook.sheet_names();
 
-    // Pre-allocate with known capacity
     let mut sheets = Vec::with_capacity(sheet_names.len());
 
-    // Process sheets sequentially (mutable borrowing prevents parallelization)
     for name in &sheet_names {
         if let Ok(range) = workbook.worksheet_range(name) {
             sheets.push(process_sheet(name, &range));
         }
-        // Skip sheets that can't be read (don't fail the whole workbook)
     }
 
-    // Extract metadata efficiently
     let metadata = extract_metadata(&workbook, &sheet_names);
 
-    Ok(ExcelWorkbook { sheets, metadata })
+    Ok(ExcelWorkbookDTO { sheets, metadata })
 }
 
 /// Process a single sheet to markdown with optimized memory usage
 #[inline]
-fn process_sheet(name: &str, range: &Range<Data>) -> ExcelSheet {
+fn process_sheet(name: &str, range: &Range<Data>) -> ExcelSheetDTO {
     let (rows, cols) = range.get_size();
     let cell_count = range.used_cells().count();
 
-    // Pre-calculate markdown capacity to avoid reallocations
-    // Estimate: sheet name (20) + header (cols * 15) + rows * cols * 10
     let estimated_capacity = 50 + (cols * 20) + (rows * cols * 12);
 
     let markdown = if rows == 0 || cols == 0 {
@@ -121,7 +114,7 @@ fn process_sheet(name: &str, range: &Range<Data>) -> ExcelSheet {
         generate_markdown_from_range_optimized(name, range, estimated_capacity)
     };
 
-    ExcelSheet {
+    ExcelSheetDTO {
         name: name.to_owned(),
         markdown,
         row_count: rows,
@@ -134,7 +127,6 @@ fn process_sheet(name: &str, range: &Range<Data>) -> ExcelSheet {
 fn generate_markdown_from_range_optimized(sheet_name: &str, range: &Range<Data>, capacity: usize) -> String {
     let mut result = String::with_capacity(capacity);
 
-    // Write sheet header
     write!(result, "## {}\n\n", sheet_name).unwrap();
 
     let rows: Vec<_> = range.rows().collect();
@@ -146,7 +138,6 @@ fn generate_markdown_from_range_optimized(sheet_name: &str, range: &Range<Data>,
     let header = &rows[0];
     let header_len = header.len();
 
-    // Write table header
     result.push_str("| ");
     for (i, cell) in header.iter().enumerate() {
         if i > 0 {
@@ -156,7 +147,6 @@ fn generate_markdown_from_range_optimized(sheet_name: &str, range: &Range<Data>,
     }
     result.push_str(" |\n");
 
-    // Write separator row - Python uses "---" for all columns
     result.push_str("| ");
     for i in 0..header_len {
         if i > 0 {
@@ -166,7 +156,6 @@ fn generate_markdown_from_range_optimized(sheet_name: &str, range: &Range<Data>,
     }
     result.push_str(" |\n");
 
-    // Write data rows
     for row in rows.iter().skip(1) {
         result.push_str("| ");
         for i in 0..header_len {
@@ -189,7 +178,6 @@ fn format_cell_value_into(buffer: &mut String, data: &Data) {
     match data {
         Data::Empty => {}
         Data::String(s) => {
-            // Optimize common case: no special chars
             if s.contains('|') || s.contains('\\') {
                 escape_markdown_into(buffer, s);
             } else {
@@ -197,15 +185,13 @@ fn format_cell_value_into(buffer: &mut String, data: &Data) {
             }
         }
         Data::Float(f) => {
-            // Python preserves .0 for whole numbers, so we force display of .0 for compatibility
             if f.fract() == 0.0 {
-                write!(buffer, "{:.1}", f).unwrap(); // Force .0 display
+                write!(buffer, "{:.1}", f).unwrap();
             } else {
                 write!(buffer, "{}", f).unwrap();
             }
         }
         Data::Int(i) => {
-            // Python calamine shows integers as floats (1.0, 2.0, etc)
             write!(buffer, "{}.0", i).unwrap();
         }
         Data::Bool(b) => {
@@ -254,7 +240,6 @@ where
     let sheet_count = sheet_names.len();
     metadata.insert("sheet_count".to_owned(), sheet_count.to_string());
 
-    // Optimize string building for sheet names
     let sheet_names_str = if sheet_count <= 5 {
         sheet_names.join(", ")
     } else {
@@ -270,7 +255,6 @@ where
     };
     metadata.insert("sheet_names".to_owned(), sheet_names_str);
 
-    // Access metadata efficiently (avoid unused variable warning)
     let _workbook_metadata = workbook.metadata();
 
     metadata
@@ -281,10 +265,7 @@ where
 pub fn excel_to_markdown(file_path: &str) -> PyResult<String> {
     let workbook = read_excel_file(file_path)?;
 
-    // Pre-calculate result capacity
-    let total_capacity: usize = workbook.sheets.iter()
-        .map(|sheet| sheet.markdown.len() + 2)  // +2 for \n\n
-        .sum();
+    let total_capacity: usize = workbook.sheets.iter().map(|sheet| sheet.markdown.len() + 2).sum();
 
     let mut result = String::with_capacity(total_capacity);
 
@@ -292,7 +273,6 @@ pub fn excel_to_markdown(file_path: &str) -> PyResult<String> {
         if i > 0 {
             result.push_str("\n\n");
         }
-        // Trim trailing newline from sheet to avoid extra newlines when joining
         let sheet_content = sheet.markdown.trim_end();
         result.push_str(sheet_content);
     }
@@ -366,11 +346,9 @@ mod tests {
 
     #[test]
     fn test_capacity_optimization() {
-        // Test that our capacity estimates are reasonable
         let mut buffer = String::with_capacity(100);
         format_cell_value_into(&mut buffer, &Data::String("test".to_owned()));
 
-        // Should not have reallocated
         assert!(buffer.capacity() >= 100);
     }
 }

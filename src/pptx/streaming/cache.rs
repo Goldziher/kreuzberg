@@ -23,7 +23,7 @@ impl ResourceCache {
             data: HashMap::new(),
             access_order: VecDeque::new(),
             current_size: 0,
-            max_size: max_size_mb * 1024 * 1024, // Convert MB to bytes
+            max_size: max_size_mb * 1024 * 1024,
             max_items,
         }
     }
@@ -31,7 +31,6 @@ impl ResourceCache {
     /// Get resource data, marking it as recently accessed
     pub fn get(&mut self, key: &str) -> Option<&Vec<u8>> {
         if self.data.contains_key(key) {
-            // Move to front of access order
             self.access_order.retain(|k| k != key);
             self.access_order.push_front(key.to_string());
             self.data.get(key)
@@ -44,20 +43,17 @@ impl ResourceCache {
     pub fn insert(&mut self, key: String, value: Vec<u8>) {
         let value_size = value.len();
 
-        // Remove if already exists to update
         if let Some(old_value) = self.data.remove(&key) {
             self.current_size -= old_value.len();
             self.access_order.retain(|k| k != &key);
         }
 
-        // Evict items if necessary
         while (self.current_size + value_size > self.max_size || self.data.len() >= self.max_items)
             && !self.access_order.is_empty()
         {
             self.evict_lru();
         }
 
-        // Insert new item
         self.data.insert(key.clone(), value);
         self.access_order.push_front(key);
         self.current_size += value_size;

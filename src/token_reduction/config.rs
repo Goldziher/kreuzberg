@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Token reduction levels with different semantic preservation strategies
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[pyclass(eq, eq_int)]
-pub enum ReductionLevel {
+pub enum ReductionLevelDTO {
     /// No reduction, return original text
     Off = 0,
     /// Light formatting cleanup only (normalize whitespace, punctuation)
@@ -20,14 +20,14 @@ pub enum ReductionLevel {
 }
 
 #[pymethods]
-impl ReductionLevel {
+impl ReductionLevelDTO {
     fn __str__(&self) -> &'static str {
         match self {
-            ReductionLevel::Off => "off",
-            ReductionLevel::Light => "light",
-            ReductionLevel::Moderate => "moderate",
-            ReductionLevel::Aggressive => "aggressive",
-            ReductionLevel::Maximum => "maximum",
+            ReductionLevelDTO::Off => "off",
+            ReductionLevelDTO::Light => "light",
+            ReductionLevelDTO::Moderate => "moderate",
+            ReductionLevelDTO::Aggressive => "aggressive",
+            ReductionLevelDTO::Maximum => "maximum",
         }
     }
 
@@ -36,15 +36,15 @@ impl ReductionLevel {
     }
 }
 
-impl From<&str> for ReductionLevel {
+impl From<&str> for ReductionLevelDTO {
     fn from(s: &str) -> Self {
         match s.to_lowercase().as_str() {
-            "off" => ReductionLevel::Off,
-            "light" => ReductionLevel::Light,
-            "moderate" => ReductionLevel::Moderate,
-            "aggressive" => ReductionLevel::Aggressive,
-            "maximum" => ReductionLevel::Maximum,
-            _ => ReductionLevel::Moderate,
+            "off" => ReductionLevelDTO::Off,
+            "light" => ReductionLevelDTO::Light,
+            "moderate" => ReductionLevelDTO::Moderate,
+            "aggressive" => ReductionLevelDTO::Aggressive,
+            "maximum" => ReductionLevelDTO::Maximum,
+            _ => ReductionLevelDTO::Moderate,
         }
     }
 }
@@ -52,10 +52,10 @@ impl From<&str> for ReductionLevel {
 /// Modern token reduction configuration with semantic-aware options
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[pyclass]
-pub struct TokenReductionConfig {
+pub struct TokenReductionConfigDTO {
     /// Reduction level determining the aggressiveness of token removal
     #[pyo3(get, set)]
-    pub level: ReductionLevel,
+    pub level: ReductionLevelDTO,
 
     /// Language hint for language-specific optimizations
     #[pyo3(get, set)]
@@ -98,10 +98,10 @@ pub struct TokenReductionConfig {
     pub enable_semantic_clustering: bool,
 }
 
-impl Default for TokenReductionConfig {
+impl Default for TokenReductionConfigDTO {
     fn default() -> Self {
         Self {
-            level: ReductionLevel::Moderate,
+            level: ReductionLevelDTO::Moderate,
             language_hint: None,
             preserve_markdown: false,
             preserve_code: true,
@@ -117,10 +117,10 @@ impl Default for TokenReductionConfig {
 }
 
 #[pymethods]
-impl TokenReductionConfig {
+impl TokenReductionConfigDTO {
     #[new]
     #[pyo3(signature = (
-        level = ReductionLevel::Moderate,
+        level = ReductionLevelDTO::Moderate,
         language_hint = None,
         preserve_markdown = false,
         preserve_code = true,
@@ -134,7 +134,7 @@ impl TokenReductionConfig {
     ))]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        level: ReductionLevel,
+        level: ReductionLevelDTO,
         language_hint: Option<String>,
         preserve_markdown: bool,
         preserve_code: bool,

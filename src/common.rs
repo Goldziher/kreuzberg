@@ -66,7 +66,6 @@ mod tests {
         let pattern = &TEST_PATTERN;
         let result = replace_with_if_matches(text, pattern, |_| "replaced".to_string());
 
-        // Should return borrowed when no match
         assert!(matches!(result, Cow::Borrowed(_)));
         assert_eq!(result, "hello world");
     }
@@ -77,7 +76,6 @@ mod tests {
         let pattern = &TEST_PATTERN;
         let result = replace_with_if_matches(text, pattern, |_| "replaced".to_string());
 
-        // Should return owned when match exists
         assert!(matches!(result, Cow::Owned(_)));
         assert_eq!(result, "this is a replaced string");
     }
@@ -111,21 +109,21 @@ mod tests {
     fn test_sum_match_lengths_single_match() {
         let text = "this is a test";
         let pattern = &TEST_PATTERN;
-        assert_eq!(sum_match_lengths(text, pattern), 4); // "test" = 4 chars
+        assert_eq!(sum_match_lengths(text, pattern), 4);
     }
 
     #[test]
     fn test_sum_match_lengths_multiple_matches() {
         let text = "test one test two";
         let pattern = &TEST_PATTERN;
-        assert_eq!(sum_match_lengths(text, pattern), 8); // "test" + "test" = 8 chars
+        assert_eq!(sum_match_lengths(text, pattern), 8);
     }
 
     #[test]
     fn test_sum_match_lengths_variable_length() {
         let text = "1 22 333 4444";
         let pattern = &NUMBER_PATTERN;
-        assert_eq!(sum_match_lengths(text, pattern), 10); // 1 + 2 + 3 + 4 = 10 chars
+        assert_eq!(sum_match_lengths(text, pattern), 10);
     }
 
     #[test]
@@ -142,7 +140,6 @@ mod tests {
         let replacements = &[(&*TEST_PATTERN, "replaced"), (&*NUMBER_PATTERN, "NUM")];
         let result = chain_replacements(text, replacements);
 
-        // Should remain borrowed when no replacements
         assert!(matches!(result, Cow::Borrowed(_)));
         assert_eq!(result, "hello world");
     }
@@ -173,12 +170,10 @@ mod tests {
     fn test_chain_replacements_order_matters() {
         let text = Cow::Borrowed("test123");
 
-        // Replace numbers first, then test
         let replacements1 = &[(&*NUMBER_PATTERN, "_"), (&*TEST_PATTERN, "exam")];
         let result1 = chain_replacements(text.clone(), replacements1);
         assert_eq!(result1, "exam_");
 
-        // Replace test first, then numbers
         let replacements2 = &[(&*TEST_PATTERN, "exam"), (&*NUMBER_PATTERN, "_")];
         let result2 = chain_replacements(text, replacements2);
         assert_eq!(result2, "exam_");
@@ -197,27 +192,24 @@ mod tests {
     fn test_quality_weights_values() {
         use quality_weights::*;
 
-        // Ensure weights are reasonable
         assert!(OCR_PENALTY_WEIGHT > 0.0 && OCR_PENALTY_WEIGHT <= 1.0);
         assert!(SCRIPT_PENALTY_WEIGHT > 0.0 && SCRIPT_PENALTY_WEIGHT <= 1.0);
         assert!(NAV_PENALTY_WEIGHT > 0.0 && NAV_PENALTY_WEIGHT <= 1.0);
         assert!(STRUCTURE_BONUS_WEIGHT > 0.0 && STRUCTURE_BONUS_WEIGHT <= 1.0);
         assert!(METADATA_BONUS_WEIGHT > 0.0 && METADATA_BONUS_WEIGHT <= 1.0);
 
-        // Ensure total weights are reasonable
         let total = OCR_PENALTY_WEIGHT
             + SCRIPT_PENALTY_WEIGHT
             + NAV_PENALTY_WEIGHT
             + STRUCTURE_BONUS_WEIGHT
             + METADATA_BONUS_WEIGHT;
-        assert!(total <= 2.0); // Should not exceed reasonable bounds
+        assert!(total <= 2.0);
     }
 
     #[test]
     fn test_text_thresholds_values() {
         use text_thresholds::*;
 
-        // Ensure thresholds make sense
         assert!(MIN_TEXT_LENGTH < LARGE_TEXT_LENGTH);
         assert!(MIN_SENTENCE_WORDS < MAX_SENTENCE_WORDS);
         assert!(MIN_PARAGRAPH_WORDS < MAX_PARAGRAPH_WORDS);

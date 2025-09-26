@@ -7,13 +7,13 @@ mod metadata;
 mod resize;
 
 pub use compression::{compress_image_auto, compress_image_jpeg, compress_image_png};
-pub use config::ExtractionConfig;
+pub use config::ExtractionConfigDTO;
 pub use conversions::{
     convert_format, load_image_as_numpy, rgb_to_grayscale, rgb_to_rgba, rgba_to_rgb, save_numpy_as_image,
 };
 pub use dpi::calculate_optimal_dpi;
 pub use image_io::{detect_image_format, load_image, save_image};
-pub use metadata::ImagePreprocessingMetadata;
+pub use metadata::ImagePreprocessingMetadataDTO;
 
 use crate::error_utils::errors;
 use ndarray::ArrayView3;
@@ -66,14 +66,14 @@ const PDF_POINTS_PER_INCH: f64 = 72.0;
 pub fn normalize_image_dpi<'py>(
     py: Python<'py>,
     image_array: &Bound<'py, PyArray3<u8>>,
-    config: &ExtractionConfig,
+    config: &ExtractionConfigDTO,
     dpi_info: Option<&Bound<'py, PyDict>>,
-) -> PyResult<(Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadata)> {
+) -> PyResult<(Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadataDTO)> {
     let array_view = unsafe { image_array.as_array() };
     let (height, width, _channels) = array_view.dim();
 
     let dims = ImageDimensions::from_array_dims(width, height)?;
-    dims.validate_bounds(65536)?; // Reasonable max dimension
+    dims.validate_bounds(65536)?;
 
     let (original_width, original_height) = (dims.width, dims.height);
 
@@ -136,7 +136,7 @@ fn calculate_target_dpi(
     width: u32,
     height: u32,
     current_dpi: f64,
-    config: &ExtractionConfig,
+    config: &ExtractionConfigDTO,
     max_memory_mb: f64,
 ) -> (i32, bool, Option<i32>) {
     if config.auto_adjust_dpi {
@@ -157,7 +157,7 @@ fn calculate_target_dpi(
     }
 }
 
-fn needs_resize(width: u32, height: u32, scale_factor: f64, config: &ExtractionConfig) -> bool {
+fn needs_resize(width: u32, height: u32, scale_factor: f64, config: &ExtractionConfigDTO) -> bool {
     let max_dimension = width.max(height);
     let exceeds_max = i32::try_from(max_dimension).map_or(true, |dim| dim > config.max_image_dimension);
 
@@ -169,7 +169,7 @@ fn calculate_new_dimensions(
     original_width: u32,
     original_height: u32,
     scale_factor: f64,
-    config: &ExtractionConfig,
+    config: &ExtractionConfigDTO,
 ) -> (u32, u32, f64, bool) {
     let mut new_width = (f64::from(original_width) * scale_factor).round() as u32;
     let mut new_height = (f64::from(original_height) * scale_factor).round() as u32;
@@ -196,15 +196,15 @@ fn create_skip_result<'py>(
     width: u32,
     height: u32,
     original_dpi: (f64, f64),
-    config: &ExtractionConfig,
+    config: &ExtractionConfigDTO,
     target_dpi: i32,
     scale_factor: f64,
     auto_adjusted: bool,
     calculated_dpi: Option<i32>,
-) -> (Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadata) {
+) -> (Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadataDTO) {
     (
         image_array,
-        ImagePreprocessingMetadata {
+        ImagePreprocessingMetadataDTO {
             original_dimensions: (width, height),
             original_dpi,
             target_dpi: config.target_dpi,
@@ -235,15 +235,15 @@ fn perform_resize<'py>(
     auto_adjusted: bool,
     dimension_clamped: bool,
     calculated_dpi: Option<i32>,
-    config: &ExtractionConfig,
-) -> PyResult<(Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadata)> {
+    config: &ExtractionConfigDTO,
+) -> PyResult<(Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadataDTO)> {
     let image = numpy_to_image(array_view)?;
 
     let resized = resize_image(&image, new_width, new_height, final_scale)?;
 
     let result_array = image_to_numpy(py, &resized);
 
-    let metadata = ImagePreprocessingMetadata {
+    let metadata = ImagePreprocessingMetadataDTO {
         original_dimensions: (original_width, original_height),
         original_dpi,
         target_dpi: config.target_dpi,
@@ -266,8 +266,8 @@ fn perform_resize<'py>(
 pub fn batch_normalize_images<'py>(
     py: Python<'py>,
     images: Vec<Bound<'py, PyArray3<u8>>>,
-    config: &ExtractionConfig,
-) -> PyResult<Vec<(Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadata)>> {
+    config: &ExtractionConfigDTO,
+) -> PyResult<Vec<(Bound<'py, PyArray3<u8>>, ImagePreprocessingMetadataDTO)>> {
     images
         .into_iter()
         .map(|img| normalize_image_dpi(py, &img, config, None))

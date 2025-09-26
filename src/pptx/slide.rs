@@ -10,10 +10,8 @@ use std::collections::HashMap;
 impl Slide {
     /// Create a new slide from XML data and metadata
     pub fn from_xml(slide_number: u32, xml_data: &[u8], rels_data: Option<&[u8]>) -> Result<Self> {
-        // Parse slide elements from XML
         let elements = parse_slide_xml(xml_data)?;
 
-        // Parse image relationships if available
         let images = if let Some(rels) = rels_data {
             parse_slide_rels(rels)?
         } else {
@@ -32,18 +30,15 @@ impl Slide {
     pub fn to_markdown(&self, config: &ParserConfig) -> String {
         let mut builder = ContentBuilder::new();
 
-        // Add slide comment if configured
         if config.include_slide_comment {
             builder.add_slide_header(self.slide_number);
         }
 
-        // Process elements in order (already sorted by XML parser)
         for element in &self.elements {
             match element {
                 SlideElement::Text(text, _) => {
                     let text_content: String = text.runs.iter().map(|run| run.render_as_md()).collect();
 
-                    // Normalize text for title detection - remove newlines and check clean text
                     let normalized = text_content.replace('\n', " ");
                     let is_title = normalized.len() < 100 && !normalized.trim().is_empty();
 

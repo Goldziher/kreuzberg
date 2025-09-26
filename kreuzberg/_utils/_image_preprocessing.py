@@ -8,9 +8,10 @@ import numpy as np
 from PIL import Image
 
 from kreuzberg._internal_bindings import (
-    ExtractionConfig as RustExtractionConfig,
-    calculate_optimal_dpi,
-    normalize_image_dpi as normalize_image_dpi_rust,
+    ExtractionConfigDTO,
+)
+from kreuzberg._internal_bindings import (
+    normalize_image_dpi as _normalize_image_dpi,
 )
 from kreuzberg._types import ImagePreprocessingMetadata
 
@@ -44,7 +45,7 @@ def normalize_image_dpi(
     if image_array.dtype != np.uint8:
         image_array = image_array.astype(np.uint8)
 
-    rust_config = RustExtractionConfig(
+    rust_config = ExtractionConfigDTO(
         target_dpi=config.target_dpi,
         max_image_dimension=config.max_image_dimension,
         auto_adjust_dpi=config.auto_adjust_dpi,
@@ -52,20 +53,20 @@ def normalize_image_dpi(
         max_dpi=config.max_dpi,
     )
 
-    result_array, rust_metadata = normalize_image_dpi_rust(image_array, rust_config, dpi_info)
+    result_array, metadata_obj = _normalize_image_dpi(image_array, rust_config, dpi_info)
 
     result_image = Image.fromarray(result_array)
 
     metadata = ImagePreprocessingMetadata(
-        original_dimensions=rust_metadata.original_dimensions,
-        original_dpi=rust_metadata.original_dpi,
-        target_dpi=rust_metadata.target_dpi,
-        scale_factor=rust_metadata.scale_factor,
-        auto_adjusted=rust_metadata.auto_adjusted,
-        final_dpi=rust_metadata.final_dpi,
-        new_dimensions=rust_metadata.new_dimensions,
-        resample_method=rust_metadata.resample_method,
-        skipped_resize=rust_metadata.skipped_resize,
+        original_dimensions=metadata_obj.original_dimensions,
+        original_dpi=metadata_obj.original_dpi,
+        target_dpi=metadata_obj.target_dpi,
+        scale_factor=metadata_obj.scale_factor,
+        auto_adjusted=metadata_obj.auto_adjusted,
+        final_dpi=metadata_obj.final_dpi,
+        new_dimensions=metadata_obj.new_dimensions,
+        resample_method=metadata_obj.resample_method,
+        skipped_resize=metadata_obj.skipped_resize,
     )
 
     return result_image, metadata

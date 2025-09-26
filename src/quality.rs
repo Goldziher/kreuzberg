@@ -110,7 +110,6 @@ fn count_non_table_dash_artifacts(text: &str) -> usize {
                 .all(|c| c == '|' || c == '-' || c.is_whitespace() || c == ':');
 
         if !is_table_separator {
-            // Count dash artifacts only in non-table lines
             for m in DASH_PATTERN.find_iter(line) {
                 artifact_count += m.len();
             }
@@ -208,19 +207,14 @@ pub fn clean_extracted_text(text: &str) -> String {
         return String::new();
     }
 
-    // Build the complete pipeline using Cow throughout
     let mut working_text = Cow::Borrowed(text);
 
-    // Step 1: Clean scripts
     working_text = clean_scripts(working_text);
 
-    // Step 2: Clean OCR artifacts
     working_text = clean_ocr_artifacts_cow(working_text);
 
-    // Step 3: Clean navigation elements
     working_text = clean_navigation_elements_cow(working_text);
 
-    // Step 4: Normalize whitespace and newlines
     working_text = normalize_whitespace_cow(working_text);
 
     working_text.trim().to_string()
@@ -257,7 +251,6 @@ fn normalize_whitespace_cow<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
 /// Clean OCR artifacts using Cow pattern for better memory efficiency
 #[inline]
 fn clean_ocr_artifacts_cow<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
-    // Handle scattered characters first
     let result = if SCATTERED_CHARS_PATTERN.is_match(&text) {
         Cow::Owned(
             replace_with_if_matches(&text, &SCATTERED_CHARS_PATTERN, |caps: &regex::Captures| {
@@ -269,7 +262,6 @@ fn clean_ocr_artifacts_cow<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
         text
     };
 
-    // Handle dashes separately to preserve table separators
     let result = clean_dashes_preserve_tables(result);
 
     let ocr_replacements = [
@@ -297,8 +289,6 @@ fn clean_dashes_preserve_tables<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
             result.push('\n');
         }
 
-        // Check if this line looks like a markdown table separator
-        // Pattern: | --- | --- | (with possible whitespace variations)
         let trimmed = line.trim();
         let is_table_separator = trimmed.starts_with('|')
             && trimmed.ends_with('|')
@@ -307,10 +297,8 @@ fn clean_dashes_preserve_tables<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
                 .all(|c| c == '|' || c == '-' || c.is_whitespace() || c == ':');
 
         if is_table_separator {
-            // Preserve table separator line as-is
             result.push_str(line);
         } else {
-            // Apply dash cleaning to non-table lines
             let cleaned_line = DASH_PATTERN.replace_all(line, "...");
             result.push_str(&cleaned_line);
         }
@@ -402,7 +390,6 @@ mod tests {
     fn test_calculate_quality_score_with_ocr_artifacts() {
         let text = "T h i s   i s   s c a t t e r e d   t e x t ... ... ... with repeated punctuation";
         let score = calculate_quality_score(text, None);
-        // Score should be lower due to artifacts, but exact threshold may vary
         assert!(score <= 1.0);
     }
 
@@ -415,7 +402,6 @@ mod tests {
             More normal text.
         "#;
         let score = calculate_quality_score(text, None);
-        // Score should be affected by script content
         assert!(score <= 1.0);
     }
 
@@ -423,7 +409,6 @@ mod tests {
     fn test_calculate_quality_score_with_navigation() {
         let text = "Skip to main content. Home > Products > Item. Page 1 of 10. Next page. Normal content here.";
         let score = calculate_quality_score(text, None);
-        // Navigation should affect score but not dramatically for short text
         assert!(score <= 1.0);
     }
 
@@ -471,8 +456,6 @@ mod tests {
     fn test_clean_extracted_text_fixes_scattered_chars() {
         let text = "T h i s   i s   s c a t t e r e d";
         let cleaned = clean_extracted_text(text);
-        // The scattered pattern reducer should consolidate the letters
-        // Check that excessive spacing is reduced
         let space_count_orig = text.chars().filter(|&c| c == ' ').count();
         let space_count_cleaned = cleaned.chars().filter(|&c| c == ' ').count();
         assert!(space_count_cleaned < space_count_orig);

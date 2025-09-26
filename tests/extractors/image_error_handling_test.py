@@ -119,7 +119,7 @@ class TestImageExtractionErrorHandling:
         with patch("pptx.Presentation") as mock_pptx:
             mock_pptx.return_value = mock_presentation
 
-            result = extractor._extract_pptx(b"fake_pptx")
+            result = extractor._extract_from_bytes(b"fake_pptx")
 
         assert len(result.images) == 1
         assert result.images[0].data == b"good_image"

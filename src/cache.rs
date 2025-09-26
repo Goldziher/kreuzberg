@@ -67,7 +67,6 @@ pub fn generate_cache_key(kwargs: Option<&Bound<'_, PyDict>>) -> String {
     let dict = kwargs.unwrap();
     let mut parts: Vec<String> = Vec::with_capacity(dict.len());
 
-    // Sort keys for consistent ordering
     let mut keys: Vec<String> = Vec::new();
     for key in dict.keys() {
         if let Ok(key_str) = key.extract::<String>() {
@@ -82,7 +81,6 @@ pub fn generate_cache_key(kwargs: Option<&Bound<'_, PyDict>>) -> String {
         }
     }
 
-    // Pre-allocate string with estimated capacity for better performance
     let estimated_size = parts.iter().map(|p| p.len()).sum::<usize>() + parts.len();
     let mut cache_str = String::with_capacity(estimated_size);
     for (i, part) in parts.iter().enumerate() {
@@ -92,12 +90,10 @@ pub fn generate_cache_key(kwargs: Option<&Bound<'_, PyDict>>) -> String {
         cache_str.push_str(part);
     }
 
-    // Use fast hashing
     let mut hasher = AHasher::default();
     cache_str.hash(&mut hasher);
     let hash = hasher.finish();
 
-    // Return 32 chars of hex representation for 128-bit entropy
     format!("{:032x}", hash)
 }
 
@@ -122,7 +118,6 @@ pub fn batch_generate_cache_keys(items: &Bound<'_, PyList>) -> PyResult<Vec<Stri
 pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
     let path = Path::new(path);
 
-    // Try to get the actual path or its parent
     let check_path = if path.exists() {
         path
     } else if let Some(parent) = path.parent() {
@@ -136,7 +131,6 @@ pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
         use libc::{statvfs, statvfs as statvfs_struct};
         use std::ffi::CString;
 
-        // Handle non-UTF8 paths safely
         let path_str = check_path
             .to_str()
             .ok_or_else(|| errors::value_error("Path error", "contains invalid UTF-8"))?;
@@ -149,16 +143,14 @@ pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
             let available_bytes = stat.f_bavail as u64 * stat.f_frsize;
             Ok(available_bytes as f64 / (1024.0 * 1024.0))
         } else {
-            // Log error and return fallback
             eprintln!("Failed to get disk stats for {}: errno {}", path_str, result);
-            Ok(10000.0) // 10GB default
+            Ok(10000.0)
         }
     }
 
     #[cfg(not(unix))]
     {
-        // For non-Unix systems, return a reasonable default
-        Ok(10000.0) // 10GB default
+        Ok(10000.0)
     }
 }
 
@@ -185,12 +177,11 @@ fn scan_cache_directory(cache_dir: &str) -> PyResult<CacheScanResult> {
         .unwrap_or_default()
         .as_secs() as f64;
 
-    // Use iterator to avoid loading everything into memory at once
     let read_dir = fs::read_dir(dir_path).into_io_error("Failed to read cache directory")?;
 
     let mut total_size = 0u64;
-    let mut oldest_age = 0.0f64; // Start at 0, will track maximum age
-    let mut newest_age = f64::INFINITY; // Start at infinity, will track minimum age
+    let mut oldest_age = 0.0f64;
+    let mut newest_age = f64::INFINITY;
     let mut entries = Vec::new();
 
     for entry in read_dir {
@@ -223,17 +214,15 @@ fn scan_cache_directory(cache_dir: &str) -> PyResult<CacheScanResult> {
         let size = metadata.len();
         total_size += size;
 
-        // Calculate age - oldest file has the maximum age value
         if let Ok(duration) = modified.duration_since(UNIX_EPOCH) {
             let age_days = (current_time - duration.as_secs() as f64) / (24.0 * 3600.0);
-            oldest_age = oldest_age.max(age_days); // Track the maximum age (oldest file)
-            newest_age = newest_age.min(age_days); // Track the minimum age (newest file)
+            oldest_age = oldest_age.max(age_days);
+            newest_age = newest_age.min(age_days);
         }
 
         entries.push(CacheEntry { path, size, modified });
     }
 
-    // Adjust age values if no files were found
     if entries.is_empty() {
         oldest_age = 0.0;
         newest_age = 0.0;
@@ -283,12 +272,10 @@ pub fn cleanup_cache(
     let mut remaining_entries = Vec::new();
     let mut total_remaining_size = 0u64;
 
-    // First pass: Remove files older than max_age_days
     for entry in scan_result.entries {
         if let Ok(age) = entry.modified.duration_since(UNIX_EPOCH) {
             let age_seconds = current_time - age.as_secs() as f64;
             if age_seconds > max_age_seconds {
-                // Delete old file
                 match fs::remove_file(&entry.path) {
                     Ok(_) => {
                         removed_count += 1;
@@ -307,9 +294,7 @@ pub fn cleanup_cache(
 
     let mut total_size_mb = total_remaining_size as f64 / (1024.0 * 1024.0);
 
-    // Second pass: Remove oldest files if still over size limit
     if total_size_mb > max_size_mb {
-        // Sort by modification time (oldest first)
         remaining_entries.sort_by_key(|e| e.modified);
 
         let target_size = max_size_mb * target_size_ratio;
@@ -319,7 +304,6 @@ pub fn cleanup_cache(
                 break;
             }
 
-            // Delete file
             match fs::remove_file(&entry.path) {
                 Ok(_) => {
                     let size_mb = entry.size as f64 / (1024.0 * 1024.0);
@@ -345,10 +329,8 @@ pub fn smart_cleanup_cache(
     max_size_mb: f64,
     min_free_space_mb: f64,
 ) -> PyResult<(usize, f64)> {
-    // Get current cache stats (efficient single scan)
     let stats = get_cache_metadata(cache_dir)?;
 
-    // Check if we need cleanup based on disk space or age
     let needs_cleanup = stats.available_space_mb < min_free_space_mb
         || stats.total_size_mb > max_size_mb
         || stats.oldest_file_age_days > max_age_days;
@@ -357,11 +339,10 @@ pub fn smart_cleanup_cache(
         return Ok((0, 0.0));
     }
 
-    // Calculate target size based on available space
     let target_ratio = if stats.available_space_mb < min_free_space_mb {
-        0.5 // Aggressive cleanup if low on space
+        0.5
     } else {
-        0.8 // Normal cleanup
+        0.8
     };
 
     cleanup_cache(cache_dir, max_age_days, max_size_mb, target_ratio)
@@ -386,7 +367,6 @@ pub fn filter_old_cache_entries(cache_times: Vec<f64>, current_time: f64, max_ag
 /// Sort cache entries by access time for LRU eviction
 #[pyfunction]
 pub fn sort_cache_by_access_time(mut entries: Vec<(String, f64)>) -> Vec<String> {
-    // Handle NaN values safely
     entries.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
     entries.into_iter().map(|(key, _)| key).collect()
 }
@@ -402,7 +382,6 @@ pub fn fast_hash(data: &[u8]) -> u64 {
 /// Concurrent safe cache key validation
 #[pyfunction]
 pub fn validate_cache_key(key: &str) -> bool {
-    // Validate that key is a valid hex string of length 32 (128-bit)
     key.len() == 32 && key.chars().all(|c| c.is_ascii_hexdigit())
 }
 
@@ -525,8 +504,8 @@ mod tests {
     fn test_validate_cache_key() {
         assert!(validate_cache_key("0123456789abcdef0123456789abcdef"));
         assert!(!validate_cache_key("invalid_key"));
-        assert!(!validate_cache_key("0123456789abcdef")); // Too short (16 chars)
-        assert!(!validate_cache_key("0123456789abcdef0123456789abcdef0")); // Too long
+        assert!(!validate_cache_key("0123456789abcdef"));
+        assert!(!validate_cache_key("0123456789abcdef0123456789abcdef0"));
     }
 
     #[test]
@@ -569,7 +548,6 @@ mod tests {
             ("key3".to_string(), 200.0),
         ];
 
-        // Should not panic
         let sorted = sort_cache_by_access_time(entries);
         assert_eq!(sorted.len(), 3);
     }
@@ -579,7 +557,6 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let cache_dir = temp_dir.path().to_str().unwrap();
 
-        // Create some test files
         let file1 = temp_dir.path().join("test1.msgpack");
         let file2 = temp_dir.path().join("test2.msgpack");
         File::create(&file1).unwrap();
@@ -597,13 +574,11 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let cache_dir = temp_dir.path().to_str().unwrap();
 
-        // Create a test file with some data
         let file1 = temp_dir.path().join("old.msgpack");
         let mut f = File::create(&file1).unwrap();
         f.write_all(b"test data for cleanup").unwrap();
         drop(f);
 
-        // Test size-based cleanup (very small limit - 0 MB)
         let (removed_count, _) = cleanup_cache(cache_dir, 1000.0, 0.000001, 0.8).unwrap();
         assert_eq!(removed_count, 1);
         assert!(!file1.exists());
@@ -617,10 +592,8 @@ mod tests {
 
         let path_str = file_path.to_str().unwrap();
 
-        // Should be valid for a just-created file
         assert!(is_cache_valid(path_str, 1.0));
 
-        // Should be invalid for non-existent file
         assert!(!is_cache_valid("/nonexistent/path", 1.0));
     }
 }

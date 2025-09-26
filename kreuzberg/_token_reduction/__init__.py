@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from kreuzberg._token_reduction._reducer import (
-    batch_reduce_tokens as batch_reduce_tokens_impl,
+    batch_reduce_tokens as _batch_reduce_tokens,
 )
 from kreuzberg._token_reduction._reducer import (
     get_reduction_statistics,
 )
 from kreuzberg._token_reduction._reducer import (
-    reduce_tokens as reduce_tokens_impl,
+    reduce_tokens as _reduce_tokens,
 )
 from kreuzberg.exceptions import ValidationError
 
@@ -33,7 +33,6 @@ def reduce_tokens(
     Returns:
         The reduced text.
     """
-    # Input validation
     if text is None:
         raise ValidationError("Text cannot be None")
     if not isinstance(text, str):
@@ -47,7 +46,7 @@ def reduce_tokens(
     if language is not None and not language.replace("-", "").replace("_", "").isalnum():
         raise ValidationError("Invalid language code format")
 
-    return reduce_tokens_impl(text, config=config, language=language)
+    return _reduce_tokens(text, config=config, language=language)
 
 
 def batch_reduce_tokens(
@@ -66,7 +65,7 @@ def batch_reduce_tokens(
     Returns:
         List of reduced texts.
     """
-    return batch_reduce_tokens_impl(texts, config=config, language=language)
+    return _batch_reduce_tokens(texts, config=config, language=language)
 
 
 def get_reduction_stats(original: str, reduced: str) -> dict[str, float | int]:
@@ -79,7 +78,6 @@ def get_reduction_stats(original: str, reduced: str) -> dict[str, float | int]:
     Returns:
         Dictionary containing reduction statistics.
     """
-    # Input validation
     if original is None:
         raise ValidationError("Original text cannot be None")
     if not isinstance(original, str):

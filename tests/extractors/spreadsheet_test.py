@@ -35,7 +35,6 @@ async def test_extract_xlsx_multi_sheet_file(excel_multi_sheet_document: Path, e
     assert isinstance(result, ExtractionResult)
     assert result.mime_type == MARKDOWN_MIME_TYPE
 
-    # Verify content structure
     assert "## first_sheet" in result.content
     assert "## second_sheet" in result.content
     assert "Column 1" in result.content
@@ -43,7 +42,6 @@ async def test_extract_xlsx_multi_sheet_file(excel_multi_sheet_document: Path, e
     assert "Product" in result.content
     assert "Value" in result.content
 
-    # Check for proper table formatting
     assert "| --- | --- |" in result.content
     assert "1.0" in result.content
     assert "2.0" in result.content
@@ -56,7 +54,7 @@ def test_extract_bytes_sync(excel_document: Path, extractor: SpreadSheetExtracto
     assert isinstance(result, ExtractionResult)
     assert result.mime_type == MARKDOWN_MIME_TYPE
     assert result.content
-    assert "##" in result.content  # Sheet headers
+    assert "##" in result.content
 
 
 def test_extract_path_sync(excel_document: Path, extractor: SpreadSheetExtractor) -> None:
@@ -65,7 +63,7 @@ def test_extract_path_sync(excel_document: Path, extractor: SpreadSheetExtractor
     assert isinstance(result, ExtractionResult)
     assert result.mime_type == MARKDOWN_MIME_TYPE
     assert result.content
-    assert "##" in result.content  # Sheet headers
+    assert "##" in result.content
 
 
 def test_extract_path_sync_with_metadata(excel_multi_sheet_document: Path, extractor: SpreadSheetExtractor) -> None:
@@ -74,7 +72,6 @@ def test_extract_path_sync_with_metadata(excel_multi_sheet_document: Path, extra
     assert isinstance(result, ExtractionResult)
     assert result.metadata
 
-    # Check Rust-generated metadata
     assert "sheet_count" in result.metadata
     assert result.metadata["sheet_count"] == "2"
     assert "total_cells" in result.metadata
@@ -84,27 +81,22 @@ def test_extract_path_sync_with_metadata(excel_multi_sheet_document: Path, extra
 
 
 def test_bytes_and_path_extraction_consistency(excel_document: Path, extractor: SpreadSheetExtractor) -> None:
-    # Extract using both methods
     path_result = extractor.extract_path_sync(excel_document)
 
     content = SyncPath(excel_document).read_bytes()
     bytes_result = extractor.extract_bytes_sync(content)
 
-    # Results should be identical
     assert path_result.content == bytes_result.content
     assert path_result.mime_type == bytes_result.mime_type
-    # Metadata might differ slightly but should have same basic structure
     assert "sheet_count" in path_result.metadata
     assert "sheet_count" in bytes_result.metadata
 
 
 @pytest.mark.anyio
 async def test_async_sync_consistency(excel_document: Path, extractor: SpreadSheetExtractor) -> None:
-    # Test async vs sync consistency
     async_result = await extractor.extract_path_async(excel_document)
     sync_result = extractor.extract_path_sync(excel_document)
 
-    # Should produce identical results since async delegates to sync
     assert async_result.content == sync_result.content
     assert async_result.metadata == sync_result.metadata
 
@@ -130,7 +122,6 @@ def test_extract_bytes_sync_with_invalid_data(extractor: SpreadSheetExtractor) -
 
 
 def test_get_file_extension_mapping(extractor: SpreadSheetExtractor) -> None:
-    # Test MIME type to extension mapping
     test_cases = [
         ("application/vnd.ms-excel", ".xls"),
         ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"),
@@ -139,7 +130,7 @@ def test_get_file_extension_mapping(extractor: SpreadSheetExtractor) -> None:
         ("application/vnd.ms-excel.addin.macroEnabled.12", ".xlam"),
         ("application/vnd.ms-excel.template.macroEnabled.12", ".xltm"),
         ("application/vnd.oasis.opendocument.spreadsheet", ".ods"),
-        ("unknown/mime-type", ".xlsx"),  # Default fallback
+        ("unknown/mime-type", ".xlsx"),
     ]
 
     for mime_type, expected_ext in test_cases:
@@ -155,18 +146,15 @@ def test_rust_excel_implementation_performance(excel_document: Path, extractor: 
     result = extractor.extract_path_sync(excel_document)
     end_time = time.time()
 
-    # Should be very fast with Rust implementation
     processing_time = end_time - start_time
-    assert processing_time < 1.0  # Should complete in under 1 second even for large files
+    assert processing_time < 1.0
 
-    # Verify Rust-specific output format
     assert isinstance(result.content, str)
     assert result.content.strip()
 
-    # Should contain proper markdown table formatting from Rust
-    if "##" in result.content:  # Has sheet headers
-        assert "|" in result.content  # Has table format
-        assert "---" in result.content  # Has table separators (not ...)
+    if "##" in result.content:
+        assert "|" in result.content
+        assert "---" in result.content
 
 
 def test_quality_processing_preserves_table_separators(
@@ -175,9 +163,7 @@ def test_quality_processing_preserves_table_separators(
     """Test that quality processing preserves table separators (doesn't convert --- to ...)."""
     result = extractor.extract_path_sync(excel_multi_sheet_document)
 
-    # After our fix, table separators should remain as ---
     assert "| --- | --- |" in result.content
-    # Should not have ellipsis as table separators
     assert "| ... | ... |" not in result.content
 
 
@@ -199,7 +185,6 @@ def test_supported_mime_types(mime_type: str) -> None:
 
 def test_invalid_file_error_handling(extractor: SpreadSheetExtractor) -> None:
     """Test that invalid files are handled gracefully."""
-    # Test with a non-existent file
     from pathlib import Path
 
     non_existent = Path("/tmp/does_not_exist.xlsx")

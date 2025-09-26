@@ -50,7 +50,6 @@ impl CjkTokenizer {
     pub fn tokenize_mixed_text(&self, text: &str) -> Vec<String> {
         let whitespace_tokens: Vec<&str> = text.split_whitespace().collect();
 
-        // Handle empty text
         if whitespace_tokens.is_empty() {
             return if text.is_empty() {
                 vec![]
@@ -59,7 +58,6 @@ impl CjkTokenizer {
             };
         }
 
-        // Single token case
         if whitespace_tokens.len() == 1 {
             let token = whitespace_tokens[0];
             if self.has_cjk(token) {
@@ -69,14 +67,11 @@ impl CjkTokenizer {
             }
         }
 
-        // Multiple tokens - process each based on content
         let mut all_tokens = Vec::new();
         for token in whitespace_tokens {
             if self.has_cjk(token) {
-                // This token contains CJK - split into 2-character tokens
                 all_tokens.extend(self.tokenize_cjk_string(token));
             } else {
-                // Regular non-CJK token
                 all_tokens.push(token.to_string());
             }
         }
@@ -137,19 +132,15 @@ mod tests {
     fn test_tokenize_mixed_text() {
         let tokenizer = CjkTokenizer::new();
 
-        // Pure English
         let tokens = tokenizer.tokenize_mixed_text("hello world");
         assert_eq!(tokens, vec!["hello", "world"]);
 
-        // Pure CJK
         let tokens = tokenizer.tokenize_mixed_text("中国");
         assert_eq!(tokens, vec!["中国"]);
 
-        // Mixed content
         let tokens = tokenizer.tokenize_mixed_text("hello 中国 world");
         assert_eq!(tokens, vec!["hello", "中国", "world"]);
 
-        // Complex mixed
         let tokens = tokenizer.tokenize_mixed_text("学习 machine learning 技术");
         assert_eq!(tokens, vec!["学习", "machine", "learning", "技术"]);
     }

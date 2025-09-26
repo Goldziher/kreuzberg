@@ -3,7 +3,7 @@
 //! Implements multiple levels of filtering from simple formatting cleanup
 //! to sophisticated semantic filtering and pattern preservation.
 
-use crate::token_reduction::config::TokenReductionConfig;
+use crate::token_reduction::config::TokenReductionConfigDTO;
 use ahash::{AHashMap, AHashSet};
 use once_cell::sync::Lazy;
 use pyo3::prelude::*;
@@ -13,7 +13,6 @@ use std::sync::Arc;
 
 /// Load stopwords from JSON files (matching Python implementation)
 fn load_stopwords_from_json(language: &str) -> AHashSet<String> {
-    // Try to find stopwords using relative paths only (production-safe)
     let paths = [
         format!("kreuzberg/_token_reduction/stopwords/{}_stopwords.json", language),
         format!("../_token_reduction/stopwords/{}_stopwords.json", language),
@@ -29,7 +28,6 @@ fn load_stopwords_from_json(language: &str) -> AHashSet<String> {
         }
     }
 
-    // Fallback to basic stopwords if JSON loading fails
     match language {
         "en" => [
             "a", "an", "and", "are", "as", "at", "be", "been", "by", "for", "from", "has", "have", "had", "he", "him",
@@ -51,11 +49,9 @@ fn load_stopwords_from_json(language: &str) -> AHashSet<String> {
 static STOPWORDS: Lazy<AHashMap<String, AHashSet<String>>> = Lazy::new(|| {
     let mut map = AHashMap::new();
 
-    // Load English stopwords from JSON
     let en_stopwords = load_stopwords_from_json("en");
     map.insert("en".to_string(), en_stopwords);
 
-    // Spanish stopwords (subset)
     let es_stopwords: AHashSet<String> = [
         "a",
         "al",
@@ -331,7 +327,7 @@ static MARKDOWN_LISTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[ \t]*[-*+
 
 /// Advanced filtering pipeline
 pub struct FilterPipeline {
-    config: Arc<TokenReductionConfig>,
+    config: Arc<TokenReductionConfigDTO>,
     stopwords: AHashSet<String>,
     #[allow(dead_code)]
     preserve_patterns: Vec<Regex>,
@@ -340,13 +336,12 @@ pub struct FilterPipeline {
 }
 
 impl FilterPipeline {
-    pub fn new(config: &Arc<TokenReductionConfig>, language: &str) -> PyResult<Self> {
+    pub fn new(config: &Arc<TokenReductionConfigDTO>, language: &str) -> PyResult<Self> {
         let mut stopwords = STOPWORDS
             .get(language)
             .cloned()
             .unwrap_or_else(|| STOPWORDS.get("en").cloned().unwrap_or_default());
 
-        // Add custom stopwords if specified
         if let Some(ref custom) = config.custom_stopwords {
             if let Some(custom_for_lang) = custom.get(language) {
                 for word in custom_for_lang {
@@ -355,7 +350,6 @@ impl FilterPipeline {
             }
         }
 
-        // Compile preserve patterns
         let preserve_patterns: Result<Vec<Regex>, _> = config
             .preserve_patterns
             .iter()
@@ -377,27 +371,21 @@ impl FilterPipeline {
     pub fn apply_light_filters(&self, text: &str) -> String {
         let mut result = text.to_string();
 
-        // Preserve code blocks if markdown preservation is enabled
         let mut preserved_blocks = Vec::new();
         if self.config.preserve_markdown {
             result = self.extract_and_preserve_code(&result, &mut preserved_blocks);
         }
 
-        // Remove HTML comments
         result = HTML_COMMENT_REGEX.replace_all(&result, "").to_string();
 
-        // Normalize whitespace after HTML comment removal
         result = MULTIPLE_SPACES_REGEX.replace_all(&result, " ").to_string();
 
-        // Normalize excessive newlines
         result = EXCESSIVE_NEWLINES_REGEX.replace_all(&result, "\n\n").to_string();
 
-        // Handle markdown preservation (non-code elements)
         if self.config.preserve_markdown {
             result = self.preserve_markdown_structure(&result);
         }
 
-        // Restore preserved code blocks
         result = self.restore_preserved_blocks(&result, &preserved_blocks);
 
         result
@@ -407,22 +395,17 @@ impl FilterPipeline {
     pub fn apply_moderate_filters(&self, text: &str) -> String {
         let mut result = self.apply_light_filters(text);
 
-        // Preserve code blocks if requested
         let mut preserved_blocks = Vec::new();
         if self.config.preserve_code {
             result = self.extract_and_preserve_code(&result, &mut preserved_blocks);
         }
 
-        // If markdown preservation is enabled, apply stopword removal line by line,
-        // skipping markdown structural elements
         if self.config.preserve_markdown {
             result = self.remove_stopwords_preserving_markdown(&result);
         } else {
-            // Apply stopword filtering normally
             result = self.remove_stopwords(&result);
         }
 
-        // Restore preserved blocks
         result = self.restore_preserved_blocks(&result, &preserved_blocks);
 
         result
@@ -434,27 +417,21 @@ impl FilterPipeline {
         let mut processed_lines = Vec::new();
 
         for line in lines {
-            // Skip stopword removal for markdown headers
             if MARKDOWN_HEADERS_REGEX.is_match(line) {
                 processed_lines.push(line.to_string());
                 continue;
             }
 
-            // Skip stopword removal for markdown lists (preserve structure but process content)
             if MARKDOWN_LISTS_REGEX.is_match(line) {
                 processed_lines.push(line.to_string());
                 continue;
             }
 
-            // Skip stopword removal for table headers and separators
             if line.trim().starts_with('|') && line.trim().ends_with('|') {
-                // For table content, we could optionally apply stopword removal to cell content
-                // but for now, preserve the entire structure
                 processed_lines.push(line.to_string());
                 continue;
             }
 
-            // Apply stopword removal to paragraph content
             let processed_line = self.remove_stopwords(line);
             processed_lines.push(processed_line);
         }
@@ -468,41 +445,33 @@ impl FilterPipeline {
         let mut filtered_words = Vec::with_capacity(words.len());
 
         for word in words {
-            // Quick checks first for performance
             if word.is_empty() {
                 continue;
             }
 
-            // Preserve ALL-CAPS words (fast path)
             if word.len() > 1 && word.bytes().all(|b| b.is_ascii_uppercase() || !b.is_ascii_alphabetic()) {
                 filtered_words.push(word);
                 continue;
             }
 
-            // Preserve words with numbers (fast path)
             if word.bytes().any(|b| b.is_ascii_digit()) {
                 filtered_words.push(word);
                 continue;
             }
 
-            // Optimized word cleaning - use bytes for ASCII performance
             let clean_word = if word.is_ascii() {
-                // Fast ASCII path - avoid char iteration
                 let clean_bytes: Vec<u8> = word
                     .bytes()
                     .filter(|&b| b.is_ascii_alphabetic())
                     .map(|b| b.to_ascii_lowercase())
                     .collect();
-                // Safe UTF-8 conversion - filtered ASCII bytes are always valid UTF-8
                 String::from_utf8(clean_bytes).unwrap_or_else(|_| {
-                    // Fallback to safe char-based processing if something goes wrong
                     word.chars()
                         .filter(|c| c.is_alphabetic())
                         .collect::<String>()
                         .to_lowercase()
                 })
             } else {
-                // Fallback for non-ASCII
                 word.chars()
                     .filter(|c| c.is_alphabetic())
                     .collect::<String>()
@@ -510,18 +479,15 @@ impl FilterPipeline {
             };
 
             if clean_word.is_empty() {
-                // Keep words that are all punctuation/numbers
                 filtered_words.push(word);
                 continue;
             }
 
-            // Preserve very short words
             if clean_word.len() <= 1 {
                 filtered_words.push(word);
                 continue;
             }
 
-            // Check if it's a stopword - only preserve if it's NOT a stopword
             if !self.stopwords.contains(&clean_word) {
                 filtered_words.push(word);
             }
@@ -538,12 +504,10 @@ impl FilterPipeline {
         let mut start = 0;
         let mut end = chars.len();
 
-        // Find start of core word (skip leading non-alphanumeric)
         while start < chars.len() && !chars[start].is_alphanumeric() {
             start += 1;
         }
 
-        // Find end of core word (skip trailing non-alphanumeric)
         while end > start && !chars[end - 1].is_alphanumeric() {
             end -= 1;
         }
@@ -566,24 +530,20 @@ impl FilterPipeline {
 
     /// Preserve markdown structural elements
     fn preserve_markdown_structure(&self, text: &str) -> String {
-        // This is a simplified version - in practice, you'd want more sophisticated parsing
         let lines: Vec<&str> = text.lines().collect();
         let mut processed_lines = Vec::new();
 
         for line in lines {
-            // Preserve headers
             if MARKDOWN_HEADERS_REGEX.is_match(line) {
                 processed_lines.push(line);
                 continue;
             }
 
-            // Preserve list items
             if MARKDOWN_LISTS_REGEX.is_match(line) {
                 processed_lines.push(line);
                 continue;
             }
 
-            // Process other lines normally
             processed_lines.push(line);
         }
 
@@ -595,7 +555,6 @@ impl FilterPipeline {
         let mut result = text.to_string();
         let mut placeholder_id = 0;
 
-        // Preserve code blocks
         result = MARKDOWN_CODE_BLOCK_REGEX
             .replace_all(&result, |caps: &regex::Captures| {
                 let code_block = caps[0].to_string();
@@ -606,7 +565,6 @@ impl FilterPipeline {
             })
             .to_string();
 
-        // Preserve inline code
         result = MARKDOWN_INLINE_CODE_REGEX
             .replace_all(&result, |caps: &regex::Captures| {
                 let inline_code = caps[0].to_string();
@@ -644,13 +602,12 @@ mod tests {
 
     #[test]
     fn test_stopword_removal() {
-        let config = Arc::new(TokenReductionConfig::default());
+        let config = Arc::new(TokenReductionConfigDTO::default());
         let pipeline = FilterPipeline::new(&config, "en").unwrap();
 
         let input = "The quick brown fox is jumping over the lazy dog";
         let result = pipeline.remove_stopwords(input);
 
-        // Should remove "the", "is", "over"
         assert!(!result.contains(" the "));
         assert!(!result.contains(" is "));
         assert!(result.contains("quick"));
@@ -660,8 +617,8 @@ mod tests {
 
     #[test]
     fn test_preserve_patterns() {
-        let mut config = TokenReductionConfig::default();
-        config.preserve_patterns = vec!["\\b[A-Z]{2,}\\b".to_string()]; // Preserve acronyms
+        let mut config = TokenReductionConfigDTO::default();
+        config.preserve_patterns = vec!["\\b[A-Z]{2,}\\b".to_string()];
 
         let config = Arc::new(config);
         let pipeline = FilterPipeline::new(&config, "en").unwrap();
@@ -676,7 +633,7 @@ mod tests {
 
     #[test]
     fn test_markdown_preservation() {
-        let mut config = TokenReductionConfig::default();
+        let mut config = TokenReductionConfigDTO::default();
         config.preserve_markdown = true;
         config.preserve_code = true;
 

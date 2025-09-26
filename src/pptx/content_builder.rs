@@ -8,7 +8,7 @@ pub struct ContentBuilder {
 impl ContentBuilder {
     pub fn new() -> Self {
         Self {
-            content: String::with_capacity(8192), // Pre-allocate reasonable capacity
+            content: String::with_capacity(8192),
         }
     }
 
@@ -20,7 +20,7 @@ impl ContentBuilder {
 
     /// Add slide header with number
     pub fn add_slide_header(&mut self, slide_number: u32) {
-        self.content.reserve(50); // Reserve space for header
+        self.content.reserve(50);
         self.content.push_str("\n\n<!-- Slide number: ");
         self.content.push_str(&slide_number.to_string());
         self.content.push_str(" -->\n");

@@ -19,72 +19,69 @@ class PresentationExtractor(Extractor):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        # Initialize Rust PPTX extractor with image extraction setting
-        self._rust_extractor = PptxExtractor(self.config.extract_images)
+        self._extractor = PptxExtractor(self.config.extract_images)
 
     async def extract_bytes_async(self, content: bytes) -> ExtractionResult:
-        return self._extract_with_rust(content)
+        return self._extract_from_bytes(content)
 
     async def extract_path_async(self, path: Path) -> ExtractionResult:
-        return self._extract_with_rust_path(str(path))
+        return self._extract_from_path(str(path))
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
-        return self._extract_with_rust(content)
+        return self._extract_from_bytes(content)
 
     def extract_path_sync(self, path: Path) -> ExtractionResult:
-        return self._extract_with_rust_path(str(path))
+        return self._extract_from_path(str(path))
 
-    def _extract_with_rust(self, content: bytes) -> ExtractionResult:
-        """Extract PPTX using Rust implementation from bytes."""
+    def _extract_from_bytes(self, content: bytes) -> ExtractionResult:
+        """Extract PPTX from bytes."""
         try:
-            rust_result = self._rust_extractor.extract_from_bytes(content)
+            extraction_result = self._extractor.extract_from_bytes(content)
 
-            # Convert Rust result to Python ExtractionResult
             result = ExtractionResult(
-                content=rust_result.content,
+                content=extraction_result.content,
                 mime_type=MARKDOWN_MIME_TYPE,
-                metadata=self._convert_rust_metadata(rust_result.metadata),
+                metadata=self._convert_metadata(extraction_result.metadata),
                 chunks=[],
             )
 
             return self._apply_quality_processing(result)
 
         except Exception as e:
-            logger.error("Failed to extract PPTX with Rust implementation: %s", e)
+            logger.error("Failed to extract PPTX: %s", e)
             raise
 
-    def _extract_with_rust_path(self, path: str) -> ExtractionResult:
-        """Extract PPTX using Rust implementation from file path."""
+    def _extract_from_path(self, path: str) -> ExtractionResult:
+        """Extract PPTX from file path."""
         try:
-            rust_result = self._rust_extractor.extract_from_path(path)
+            extraction_result = self._extractor.extract_from_path(path)
 
-            # Convert Rust result to Python ExtractionResult
             result = ExtractionResult(
-                content=rust_result.content,
+                content=extraction_result.content,
                 mime_type=MARKDOWN_MIME_TYPE,
-                metadata=self._convert_rust_metadata(rust_result.metadata),
+                metadata=self._convert_metadata(extraction_result.metadata),
                 chunks=[],
             )
 
             return self._apply_quality_processing(result)
 
         except Exception as e:
-            logger.error("Failed to extract PPTX with Rust implementation: %s", e)
+            logger.error("Failed to extract PPTX: %s", e)
             raise
 
-    def _convert_rust_metadata(self, rust_metadata: Any) -> Metadata:
-        """Convert Rust metadata to Python metadata format."""
+    def _convert_metadata(self, metadata_obj: Any) -> Metadata:
+        """Convert metadata to Python format."""
         metadata: Metadata = {}
 
-        if rust_metadata.title:
-            metadata["title"] = rust_metadata.title
-        if rust_metadata.author:
-            metadata["authors"] = rust_metadata.author
-        if rust_metadata.description:
-            metadata["description"] = rust_metadata.description
-        if rust_metadata.summary:
-            metadata["summary"] = rust_metadata.summary
-        if rust_metadata.fonts:
-            metadata["fonts"] = rust_metadata.fonts
+        if metadata_obj.title:
+            metadata["title"] = metadata_obj.title
+        if metadata_obj.author:
+            metadata["authors"] = metadata_obj.author
+        if metadata_obj.description:
+            metadata["description"] = metadata_obj.description
+        if metadata_obj.summary:
+            metadata["summary"] = metadata_obj.summary
+        if metadata_obj.fonts:
+            metadata["fonts"] = metadata_obj.fonts
 
         return metadata

@@ -13,19 +13,11 @@ import polars as pl
 from anyio import Path as AsyncPath
 
 from kreuzberg._internal_bindings import (
-    clear_cache_directory as _rust_clear_directory,
-)
-from kreuzberg._internal_bindings import (
-    generate_cache_key as _rust_generate_key,
-)
-from kreuzberg._internal_bindings import (
-    get_cache_metadata as _rust_get_metadata,
-)
-from kreuzberg._internal_bindings import (
-    is_cache_valid as _rust_is_valid,
-)
-from kreuzberg._internal_bindings import (
-    smart_cleanup_cache as _rust_smart_cleanup,
+    clear_cache_directory,
+    generate_cache_key,
+    get_cache_metadata,
+    is_cache_valid,
+    smart_cleanup_cache,
 )
 from kreuzberg._types import ExtractionResult
 from kreuzberg._utils._ref import Ref
@@ -35,7 +27,7 @@ from kreuzberg._utils._sync import run_sync
 T = TypeVar("T")
 
 CACHE_CLEANUP_FREQUENCY = 100
-MIN_FREE_SPACE_MB = 1000.0  # Minimum 1GB free space
+MIN_FREE_SPACE_MB = 1000.0
 
 
 class KreuzbergCache(Generic[T]):
@@ -61,13 +53,13 @@ class KreuzbergCache(Generic[T]):
         self._lock = threading.Lock()
 
     def _get_cache_key(self, **kwargs: Any) -> str:
-        return _rust_generate_key(**kwargs)
+        return generate_cache_key(**kwargs)
 
     def _get_cache_path(self, cache_key: str) -> Path:
         return self.cache_dir / f"{cache_key}.msgpack"
 
     def _is_cache_valid(self, cache_path: Path) -> bool:
-        return _rust_is_valid(str(cache_path), float(self.max_age_days))
+        return is_cache_valid(str(cache_path), float(self.max_age_days))
 
     def _serialize_result(self, result: T) -> dict[str, Any]:
         if isinstance(result, list) and result and isinstance(result[0], dict) and "df" in result[0]:
@@ -129,7 +121,7 @@ class KreuzbergCache(Generic[T]):
 
     def _cleanup_cache(self) -> None:
         with suppress(OSError, ValueError, TypeError):
-            _rust_smart_cleanup(
+            smart_cleanup_cache(
                 str(self.cache_dir),
                 float(self.max_age_days),
                 float(self.max_cache_size_mb),
@@ -219,14 +211,14 @@ class KreuzbergCache(Generic[T]):
 
     def clear(self) -> None:
         with suppress(OSError):
-            _rust_clear_directory(str(self.cache_dir))
+            clear_cache_directory(str(self.cache_dir))
 
         with self._lock:
             pass
 
     def get_stats(self) -> dict[str, Any]:
         try:
-            stats = _rust_get_metadata(str(self.cache_dir))
+            stats = get_cache_metadata(str(self.cache_dir))
             avg_size_kb = (stats.total_size_mb * 1024 / stats.total_files) if stats.total_files else 0
 
             return {

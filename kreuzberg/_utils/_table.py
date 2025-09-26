@@ -10,13 +10,9 @@ if TYPE_CHECKING:
 
     from kreuzberg._types import TableData
 
-# Import Rust functions
 from kreuzberg._internal_bindings import (
     table_from_arrow_to_markdown,
     # TODO: Add these once implemented in Rust
-    # table_from_arrow_to_csv,
-    # table_from_arrow_to_structure_info,
-    # tables_from_arrow_to_summary,
 )
 
 
@@ -40,7 +36,6 @@ def enhance_table_markdown(table: TableData) -> str:
     if df.is_empty():
         return table.get("text", "")
 
-    # Convert to Arrow IPC and process in Rust
     arrow_bytes = _dataframe_to_arrow_bytes(df)
     return table_from_arrow_to_markdown(arrow_bytes)
 
@@ -93,7 +88,6 @@ def extract_table_structure_info(table: TableData) -> dict[str, Any]:
     info["column_count"] = df.width
     info["has_headers"] = df.width > 0
 
-    # Simple column type analysis
     for col in df.columns:
         dtype_str = str(df[col].dtype)
         if dtype_str in {
@@ -112,7 +106,6 @@ def extract_table_structure_info(table: TableData) -> dict[str, Any]:
         else:
             info["text_columns"] += 1
 
-    # Calculate data density
     total_cells = df.height * df.width
     if total_cells > 0:
         null_counts = df.null_count()

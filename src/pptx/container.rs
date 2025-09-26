@@ -20,7 +20,6 @@ impl PptxContainer {
         let file = File::open(path)?;
         let mut archive = ZipArchive::new(file)?;
 
-        // Find slide paths by reading the presentation relationships
         let slide_paths = Self::find_slide_paths(&mut archive)?;
 
         Ok(Self { archive, slide_paths })
@@ -55,14 +54,12 @@ impl PptxContainer {
     }
 
     fn find_slide_paths(archive: &mut ZipArchive<File>) -> Result<Vec<String>> {
-        // First try to read from presentation.xml.rels
         if let Ok(rels_data) = Self::read_file_from_archive(archive, "ppt/_rels/presentation.xml.rels") {
             if let Ok(paths) = parse_presentation_rels(&rels_data) {
                 return Ok(paths);
             }
         }
 
-        // Fallback: scan archive for slide files
         let mut slide_paths = Vec::new();
         for i in 0..archive.len() {
             if let Ok(file) = archive.by_index(i) {

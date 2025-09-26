@@ -20,16 +20,13 @@ pub fn rgb_to_grayscale<'py>(
         )));
     }
 
-    // Create grayscale array
     let gray_array = PyArray3::<u8>::zeros(py, (height, width, 1), false);
     let gray_slice = unsafe { gray_array.as_slice_mut()? };
 
-    // ITU-R BT.709 coefficients as integers for faster computation
-    const R_COEFF: u32 = 54; // 0.2126 * 256
-    const G_COEFF: u32 = 183; // 0.7152 * 256
-    const B_COEFF: u32 = 19; // 0.0722 * 256
+    const R_COEFF: u32 = 54;
+    const G_COEFF: u32 = 183;
+    const B_COEFF: u32 = 19;
 
-    // Process rows in parallel for better cache performance
     rgb.axis_iter(Axis(0))
         .zip(gray_slice.chunks_exact_mut(width))
         .for_each(|(row, gray_row)| {
@@ -62,11 +59,9 @@ pub fn rgb_to_rgba<'py>(
         )));
     }
 
-    // Create RGBA array
     let rgba_array = PyArray3::<u8>::zeros(py, (height, width, 4), false);
     let rgba_slice = unsafe { rgba_array.as_slice_mut()? };
 
-    // Process row by row for better cache locality
     for y in 0..height {
         let rgb_row = &rgb.slice(s![y, .., ..]);
         let rgba_row = &mut rgba_slice[y * width * 4..(y + 1) * width * 4];
@@ -96,11 +91,9 @@ pub fn rgba_to_rgb<'py>(py: Python<'py>, rgba_array: PyReadonlyArray3<'py, u8>) 
         )));
     }
 
-    // Create RGB array
     let rgb_array = PyArray3::<u8>::zeros(py, (height, width, 3), false);
     let rgb_slice = unsafe { rgb_array.as_slice_mut()? };
 
-    // Fast copy ignoring alpha channel
     rgba.axis_iter(Axis(0)).enumerate().for_each(|(y, row)| {
         let rgb_row = &mut rgb_slice[y * width * 3..(y + 1) * width * 3];
         for x in 0..width {
@@ -129,7 +122,6 @@ pub fn convert_format<'py>(
         (4, "RGB") => rgba_to_rgb(py, array),
         (3, "L") | (3, "GRAY") | (3, "GRAYSCALE") => rgb_to_grayscale(py, array),
         (1, "RGB") => {
-            // Grayscale to RGB
             let rgb_array = PyArray3::<u8>::zeros(py, (height, width, 3), false);
             let rgb_slice = unsafe { rgb_array.as_slice_mut()? };
 
@@ -146,7 +138,6 @@ pub fn convert_format<'py>(
             Ok(rgb_array)
         }
         (1, "RGBA") => {
-            // Grayscale to RGBA
             let rgba_array = PyArray3::<u8>::zeros(py, (height, width, 4), false);
             let rgba_slice = unsafe { rgba_array.as_slice_mut()? };
 
@@ -173,18 +164,14 @@ pub fn convert_format<'py>(
 /// Load image from bytes directly into NumPy array
 #[pyfunction]
 pub fn load_image_as_numpy<'py>(py: Python<'py>, data: &[u8]) -> PyResult<Bound<'py, PyArray3<u8>>> {
-    // Load and decode image
     let img = image::load_from_memory(data)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to load image: {}", e)))?;
 
-    // Convert to RGB8 and get dimensions
     let rgb = img.to_rgb8();
     let (width, height) = rgb.dimensions();
 
-    // Move image data directly into NumPy array
     let raw_vec = rgb.into_raw();
 
-    // Create array and copy data
     let array = PyArray3::zeros(py, (height as usize, width as usize, 3), false);
     unsafe {
         let slice = array.as_slice_mut()?;
@@ -200,10 +187,8 @@ pub fn save_numpy_as_image<'py>(_py: Python<'py>, array: PyReadonlyArray3<'py, u
     let arr = array.as_array();
     let (height, width, channels) = arr.dim();
 
-    // Create image from array data
     let img = match channels {
         3 => {
-            // RGB - collect into contiguous buffer
             let mut buffer = Vec::with_capacity(height * width * 3);
             for y in 0..height {
                 for x in 0..width {
@@ -216,7 +201,6 @@ pub fn save_numpy_as_image<'py>(_py: Python<'py>, array: PyReadonlyArray3<'py, u
             RgbImage::from_raw(width as u32, height as u32, buffer).map(DynamicImage::ImageRgb8)
         }
         4 => {
-            // RGBA
             let mut buffer = Vec::with_capacity(height * width * 4);
             for y in 0..height {
                 for x in 0..width {
@@ -230,7 +214,6 @@ pub fn save_numpy_as_image<'py>(_py: Python<'py>, array: PyReadonlyArray3<'py, u
             RgbaImage::from_raw(width as u32, height as u32, buffer).map(DynamicImage::ImageRgba8)
         }
         1 => {
-            // Grayscale
             let mut buffer = Vec::with_capacity(height * width);
             for y in 0..height {
                 for x in 0..width {
@@ -249,7 +232,6 @@ pub fn save_numpy_as_image<'py>(_py: Python<'py>, array: PyReadonlyArray3<'py, u
         ))
     })?;
 
-    // Encode to format
     let mut cursor = std::io::Cursor::new(Vec::new());
     let format_enum = match format.to_uppercase().as_str() {
         "PNG" => image::ImageFormat::Png,

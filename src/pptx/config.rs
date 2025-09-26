@@ -18,8 +18,8 @@ impl Default for ParserConfig {
         Self {
             extract_images: true,
             include_slide_comment: false,
-            max_cache_size_mb: 256, // 256MB default cache
-            max_cached_images: 100, // Max 100 cached images
+            max_cache_size_mb: 256,
+            max_cached_images: 100,
         }
     }
 }

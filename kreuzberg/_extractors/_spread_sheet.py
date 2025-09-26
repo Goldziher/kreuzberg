@@ -47,10 +47,8 @@ class SpreadSheetExtractor(Extractor):
         file_extension = self._get_file_extension()
 
         try:
-            # Use Rust implementation directly for bytes
             workbook = read_excel_bytes(content, file_extension)
 
-            # Generate markdown from all sheets
             markdown_content = self._generate_markdown_from_workbook(workbook)
 
             result = ExtractionResult(
@@ -71,10 +69,8 @@ class SpreadSheetExtractor(Extractor):
     def extract_path_sync(self, path: Path) -> ExtractionResult:
         """Extract from file path synchronously using Rust Calamine."""
         try:
-            # Use Rust implementation directly for file path
             workbook = read_excel_file(str(path))
 
-            # Generate markdown from all sheets
             markdown_content = self._generate_markdown_from_workbook(workbook)
 
             result = ExtractionResult(
@@ -94,27 +90,22 @@ class SpreadSheetExtractor(Extractor):
 
     def _generate_markdown_from_workbook(self, workbook: Any) -> str:
         """Generate markdown content from Excel workbook."""
-        # Concatenate all sheet markdowns with proper separation
         return "\n\n".join(sheet.markdown.rstrip() for sheet in workbook.sheets)
 
     def _extract_metadata_from_workbook(self, workbook: Any) -> Metadata:
         """Extract metadata from Excel workbook."""
         metadata: Metadata = {}
 
-        # Copy Rust-extracted metadata
         for key, value in workbook.metadata.items():
             if isinstance(key, str) and isinstance(value, str):
                 metadata[key] = value  # type: ignore[literal-required]
 
-        # Add additional structural information
         sheet_count = len(workbook.sheets)
         total_cells = sum(sheet.cell_count for sheet in workbook.sheets)
 
-        # Ensure these are always present (even if Rust already provided them)
         metadata["sheet_count"] = str(sheet_count)
         metadata["total_cells"] = str(total_cells)
 
-        # Add description (prefer our detailed version)
         if sheet_count == 1:
             metadata["description"] = f"Spreadsheet with 1 sheet: {workbook.sheets[0].name}"
         else:
@@ -127,7 +118,6 @@ class SpreadSheetExtractor(Extractor):
                     f"Spreadsheet with {sheet_count} sheets: {first_five}, ... (and {sheet_count - 5} more)"
                 )
 
-        # Add summary
         if total_cells > 0:
             metadata["summary"] = (
                 f"Spreadsheet containing {total_cells} cells across {sheet_count} sheet{'s' if sheet_count != 1 else ''}."

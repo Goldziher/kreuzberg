@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn test_safe_decode_latin1() {
-        let text = b"H\xe9llo"; // Latin-1 encoded é
+        let text = b"H\xe9llo";
         let decoded = safe_decode(text, Some("latin1"));
         assert!(decoded.contains("llo"));
     }
@@ -195,7 +195,6 @@ mod tests {
     #[test]
     fn test_safe_decode_invalid_encoding_name() {
         let text = b"Hello";
-        // Should fallback to auto-detection
         assert_eq!(safe_decode(text, Some("invalid-encoding")), "Hello");
     }
 
@@ -229,8 +228,6 @@ mod tests {
     fn test_calculate_text_confidence_cyrillic_text() {
         let text = "Normal text followed by много кириллического текста здесь";
         let confidence = calculate_text_confidence(text);
-        // Cyrillic text may have lower confidence due to heuristics
-        // Just verify it returns a valid score
         assert!(confidence >= 0.0 && confidence <= 1.0);
     }
 
@@ -338,7 +335,6 @@ mod tests {
         let large_data = vec![b'a'; 2048];
         let small_data = vec![b'a'; 512];
 
-        // Keys should be different due to size being part of the hash
         let large_key = calculate_cache_key(&large_data);
         let small_key = calculate_cache_key(&small_data);
         assert_ne!(large_key, small_key);
@@ -348,10 +344,8 @@ mod tests {
     fn test_safe_decode_caching() {
         let data = b"cached text";
 
-        // First decode should cache the encoding
         let result1 = safe_decode(data, None);
 
-        // Second decode should use cached encoding
         let result2 = safe_decode(data, None);
 
         assert_eq!(result1, result2);
@@ -359,12 +353,9 @@ mod tests {
 
     #[test]
     fn test_safe_decode_fallback_encodings() {
-        // Test that fallback encodings are tried when main detection has errors
-        // Using bytes that might trigger fallback logic
-        let data = vec![0xE9, 0xE8, 0xE0]; // Common Latin-1 accented characters
+        let data = vec![0xE9, 0xE8, 0xE0];
         let result = safe_decode(&data, None);
 
-        // Should produce some result without panicking
         assert!(!result.is_empty() || result.is_empty());
     }
 }

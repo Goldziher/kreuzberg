@@ -13,9 +13,7 @@ pub struct SimdTextProcessor {
 
 impl Default for SimdTextProcessor {
     fn default() -> Self {
-        Self {
-            chunk_size: 64, // Optimized for AVX-512
-        }
+        Self { chunk_size: 64 }
     }
 }
 
@@ -32,26 +30,21 @@ impl SimdTextProcessor {
         let mut i = 0;
         let mut in_whitespace = false;
 
-        // Process in SIMD chunks where possible
         while i + self.chunk_size <= bytes.len() {
             let chunk = &bytes[i..i + self.chunk_size];
 
-            // Use SIMD to find whitespace characters
             if let Some(ws_pos) = self.find_whitespace_simd(chunk) {
-                // Copy non-whitespace prefix
                 let prefix_end = i + ws_pos;
                 if !in_whitespace && i < prefix_end {
                     result.extend_from_slice(&bytes[i..prefix_end]);
                 }
 
-                // Skip to after whitespace sequence
                 i = self.skip_whitespace_sequence(bytes, prefix_end);
                 if !in_whitespace {
-                    result.push(b' '); // Single space replacement
+                    result.push(b' ');
                 }
                 in_whitespace = true;
             } else {
-                // No whitespace in chunk, copy as-is
                 if !in_whitespace {
                     result.extend_from_slice(chunk);
                 }
@@ -60,7 +53,6 @@ impl SimdTextProcessor {
             }
         }
 
-        // Process remaining bytes
         while i < bytes.len() {
             let byte = bytes[i];
             if self.is_whitespace(byte) {
@@ -87,19 +79,14 @@ impl SimdTextProcessor {
         while i < bytes.len() {
             let byte = bytes[i];
 
-            // Handle punctuation sequences with SIMD
             if self.is_repeated_punctuation(byte) {
                 let sequence_end = self.find_complex_punctuation_sequence_end(bytes, i);
 
-                // For complex sequences (mixed punctuation), simplify to the first punctuation mark
-                // For simple sequences (repeated same punctuation), apply normal rules
                 if sequence_end - i > 1 {
-                    // Check if this is a mixed punctuation sequence
                     let sequence_slice = &bytes[i..sequence_end];
                     let has_mixed_punctuation = sequence_slice.windows(2).any(|pair| pair[0] != pair[1]);
 
                     if has_mixed_punctuation {
-                        // Mixed punctuation like "?!?!?!" -> use first punctuation mark
                         match byte {
                             b'!' | b'?' => result.push(byte),
                             b'.' => result.push(b'.'),
@@ -107,16 +94,14 @@ impl SimdTextProcessor {
                             _ => result.push(byte),
                         }
                     } else {
-                        // Repeated same punctuation - apply normal rules
                         match byte {
-                            b'!' | b'?' => result.push(byte), // Keep single instance
-                            b'.' => result.push(b'.'),        // Compress multiple dots to single dot
-                            b',' => result.push(b','),        // Single comma
+                            b'!' | b'?' => result.push(byte),
+                            b'.' => result.push(b'.'),
+                            b',' => result.push(b','),
                             _ => result.push(byte),
                         }
                     }
                 } else {
-                    // Single punctuation mark, keep as-is
                     result.push(byte);
                 }
 
@@ -138,7 +123,6 @@ impl SimdTextProcessor {
         let mut i = 0;
 
         while i < bytes.len() {
-            // Use memchr for fast whitespace detection
             if let Some(pos) = memchr3(b' ', b'\t', b'\n', &bytes[i..]) {
                 boundaries.push(i + pos);
                 i += pos + 1;
@@ -154,7 +138,6 @@ impl SimdTextProcessor {
     #[allow(dead_code)]
     #[inline]
     fn find_whitespace_simd(&self, chunk: &[u8]) -> Option<usize> {
-        // Use memchr for fast whitespace detection - it's already SIMD-optimized
         memchr3(b' ', b'\t', b'\n', chunk)
     }
 
@@ -181,7 +164,6 @@ impl SimdTextProcessor {
     fn find_complex_punctuation_sequence_end(&self, bytes: &[u8], start: usize) -> usize {
         let mut i = start + 1;
 
-        // Continue while we encounter punctuation marks
         while i < bytes.len() && self.is_repeated_punctuation(bytes[i]) {
             i += 1;
         }
@@ -213,9 +195,7 @@ pub fn chunk_text_for_parallel(text: &str, target_chunks: usize) -> Vec<&str> {
     while start < text.len() {
         let mut end = (start + approximate_chunk_size).min(text.len());
 
-        // Find sentence boundary near target end
         if end < text.len() {
-            // Look for sentence endings within reasonable distance
             let search_start = (end.saturating_sub(200)).max(start);
             let search_end = (end + 200).min(text.len());
 

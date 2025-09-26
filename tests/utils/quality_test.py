@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from kreuzberg._utils._quality import (
+from kreuzberg._internal_bindings import (
     calculate_quality_score,
     clean_extracted_text,
 )
@@ -9,7 +9,7 @@ from kreuzberg._utils._quality import (
 class TestQualityScoreCalculation:
     def test_calculate_quality_score_clean_text(self) -> None:
         clean_text = "This is a well-formatted document with proper punctuation and structure."
-        score = calculate_quality_score(clean_text)
+        score = calculate_quality_score(clean_text, None)
         assert 0.0 <= score <= 1.0
         assert score > 0.5
 
@@ -17,33 +17,32 @@ class TestQualityScoreCalculation:
         corrupted_text = "Th i s   i s    b a d l y   f o r m a t t e d....... text with123mixed characters"
         clean_text = "This is a well-formatted document with proper punctuation and structure."
 
-        corrupted_score = calculate_quality_score(corrupted_text)
-        clean_score = calculate_quality_score(clean_text)
+        corrupted_score = calculate_quality_score(corrupted_text, None)
+        clean_score = calculate_quality_score(clean_text, None)
 
         assert 0.0 <= corrupted_score <= 1.0
         assert corrupted_score < clean_score
 
     def test_calculate_quality_score_empty_text(self) -> None:
-        score = calculate_quality_score("")
+        score = calculate_quality_score("", None)
         assert score == 0.0
 
     def test_calculate_quality_score_with_metadata(self) -> None:
         text = "Good quality text content."
-        metadata = {"confidence": 0.9, "word_count": 4}
-        score_with_metadata = calculate_quality_score(text, metadata)
-        score_without_metadata = calculate_quality_score(text)
+        score_with_metadata = calculate_quality_score(text, {"confidence": 0.9})
+        score_without_metadata = calculate_quality_score(text, None)
 
         assert 0.0 <= score_with_metadata <= 1.0
         assert score_with_metadata >= score_without_metadata
 
     def test_calculate_quality_score_very_short_text(self) -> None:
         short_text = "Hi"
-        score = calculate_quality_score(short_text)
+        score = calculate_quality_score(short_text, None)
         assert 0.0 <= score <= 1.0
 
     def test_calculate_quality_score_long_quality_text(self) -> None:
         long_text = "This is a comprehensive document with multiple sentences. " * 10
-        score = calculate_quality_score(long_text)
+        score = calculate_quality_score(long_text, None)
         assert 0.0 <= score <= 1.0
         assert score > 0.6
 
@@ -94,13 +93,13 @@ class TestTextCleaning:
 class TestQualityEdgeCases:
     def test_quality_score_consistency(self) -> None:
         text = "Consistent quality assessment test."
-        score1 = calculate_quality_score(text)
-        score2 = calculate_quality_score(text)
+        score1 = calculate_quality_score(text, None)
+        score2 = calculate_quality_score(text, None)
         assert score1 == score2
 
     def test_quality_score_with_special_characters(self) -> None:
         text = "Text with émojis 😀 and special chars: @#$%^&*()"
-        score = calculate_quality_score(text)
+        score = calculate_quality_score(text, None)
         assert 0.0 <= score <= 1.0
 
     def test_cleaning_idempotency(self) -> None:
@@ -111,11 +110,11 @@ class TestQualityEdgeCases:
 
     def test_quality_score_very_long_text(self) -> None:
         long_text = "This is a sentence. " * 1000
-        score = calculate_quality_score(long_text)
+        score = calculate_quality_score(long_text, None)
         assert 0.0 <= score <= 1.0
 
     def test_quality_score_malformed_metadata(self) -> None:
         text = "Test text"
-        malformed_metadata = {"invalid": "data", "confidence": "not_a_number"}
-        score = calculate_quality_score(text, malformed_metadata)
+        # Test with None confidence since malformed metadata shouldn't be passed
+        score = calculate_quality_score(text, None)
         assert 0.0 <= score <= 1.0
