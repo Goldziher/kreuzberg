@@ -169,6 +169,10 @@ jobs:
             sudo apt-get install -y tesseract-ocr tesseract-ocr-deu pandoc
           shell: bash
 
+      - name: Install SpaCy Model for Testing
+        run: |
+          uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+
       - name: Run Tests with Coverage
         uses: nick-fields/retry@v3
         with:
@@ -259,6 +263,10 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y tesseract-ocr tesseract-ocr-deu pandoc
           shell: bash
+
+      - name: Install SpaCy Model for Testing
+        run: |
+          uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 
       - name: Run All Tests with Coverage
         uses: nick-fields/retry@v3
@@ -440,6 +448,11 @@ jobs:
             tesseract --version
             pandoc --version
           shell: pwsh
+
+      - name: Install SpaCy Model for Testing
+        if: matrix.test-category.system-deps
+        run: |
+          uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 
       - name: Run Tests - ${{ matrix.test-category.name }}
         uses: nick-fields/retry@v3
