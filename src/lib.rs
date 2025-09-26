@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 
 mod cache;
 mod common;
+mod email;
 mod error_utils;
 mod excel;
 mod image_preprocessing;
@@ -15,6 +16,11 @@ use cache::{
     CacheStats, batch_cleanup_caches, batch_generate_cache_keys, cleanup_cache, clear_cache_directory, fast_hash,
     filter_old_cache_entries, generate_cache_key, get_available_disk_space, get_cache_metadata, is_cache_valid,
     smart_cleanup_cache, sort_cache_by_access_time, validate_cache_key,
+};
+use email::{
+    EmailAttachmentDTO, EmailExtractionResultDTO, build_email_text_output, extract_email_content,
+    extract_email_from_file, extract_eml_content, extract_msg_content, get_supported_email_formats,
+    validate_email_content,
 };
 use excel::{
     ExcelSheetDTO, ExcelWorkbookDTO, benchmark_excel_reading, excel_to_markdown, read_excel_bytes, read_excel_file,
@@ -103,6 +109,16 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<StreamingPptxExtractorDTO>()?;
     m.add_class::<PptxExtractionResultDTO>()?;
     m.add_class::<PptxMetadataDTO>()?;
+
+    m.add_function(wrap_pyfunction!(extract_email_content, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_eml_content, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_msg_content, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_email_from_file, m)?)?;
+    m.add_function(wrap_pyfunction!(get_supported_email_formats, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_email_content, m)?)?;
+    m.add_function(wrap_pyfunction!(build_email_text_output, m)?)?;
+    m.add_class::<EmailExtractionResultDTO>()?;
+    m.add_class::<EmailAttachmentDTO>()?;
 
     Ok(())
 }

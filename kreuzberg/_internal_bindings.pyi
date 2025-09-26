@@ -153,3 +153,57 @@ class PptxExtractorDTO:
 class StreamingPptxExtractorDTO:
     def __init__(self, extract_images: bool | None = None, max_cache_mb: int | None = None) -> None: ...
     def extract_from_path(self, path: str) -> PptxExtractionResult: ...
+
+class EmailAttachmentDTO:
+    name: str | None
+    filename: str | None
+    mime_type: str | None
+    size: int | None
+    is_image: bool
+    data: bytes | None
+
+    def __init__(
+        self,
+        name: str | None,
+        filename: str | None,
+        mime_type: str | None,
+        size: int | None,
+        is_image: bool,
+        data: bytes | None,
+    ) -> None: ...
+
+class EmailExtractionResultDTO:
+    subject: str | None
+    from_email: str | None
+    to_emails: list[str]
+    cc_emails: list[str]
+    bcc_emails: list[str]
+    date: str | None
+    message_id: str | None
+    plain_text: str | None
+    html_content: str | None
+    cleaned_text: str
+    attachments: list[EmailAttachmentDTO]
+    metadata: dict[str, str]
+
+    def __init__(
+        self,
+        subject: str | None,
+        from_email: str | None,
+        to_emails: list[str],
+        cc_emails: list[str],
+        bcc_emails: list[str],
+        date: str | None,
+        message_id: str | None,
+        plain_text: str | None,
+        html_content: str | None,
+        cleaned_text: str,
+        attachments: list[EmailAttachmentDTO],
+        metadata: dict[str, str],
+    ) -> None: ...
+    def to_dict(self) -> dict[str, Any]: ...
+
+def extract_email_content(data: bytes, mime_type: str) -> EmailExtractionResultDTO: ...
+def extract_eml_content(data: bytes) -> EmailExtractionResultDTO: ...
+def extract_msg_content(data: bytes) -> EmailExtractionResultDTO: ...
+def build_email_text_output(result: EmailExtractionResultDTO) -> str: ...

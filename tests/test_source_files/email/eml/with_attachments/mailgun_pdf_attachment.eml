@@ -1,0 +1,46 @@
+Content-Type: multipart/mixed;
+	boundary="_001_538f5bb0a7956_457a8046c758764ef_"
+Mime-Version: 1.0
+Date: Mon, 04 Jun 2014 13:50:00 -0400
+Subject: Test message with PDF attachment
+From: test@mailgun.com
+To: recipient@example.com
+
+
+--_001_538f5bb0a7956_457a8046c758764ef_
+Content-Type: multipart/alternative;
+	boundary="_000_538f5bb0a7956_457a8046c758764ef_"
+
+
+This is the preamble.  It is to be ignored, though it
+is a handy place for mail composers to include an
+explanatory note to non-MIME compliant readers.
+Content-Type: text/foo
+
+--_000_538f5bb0a7956_457a8046c758764ef_
+Content-Type: text/plain
+
+Test - body content
+
+
+--_000_538f5bb0a7956_457a8046c758764ef_--
+This is the epilogue.  It is also to be ignored.
+Content-Type: text/bar
+
+
+--_001_538f5bb0a7956_457a8046c758764ef_
+Content-Disposition: attachment;
+	filename=test.pdf
+Content-Type: application/pdf;
+	name="test.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjMNCiXi48/TDQoxIDAgb2JqDQo8PA0KL1R5cGUgL0NhdGFsb2cNCi9PdXRsaW5lcyAy
+IDAgUg0KL1BhZ2VzIDMgMCBSDQo+Pg0KZW5kb2JqDQoNCjIgMCBvYmoNCjw8DQovVHlwZSAvT3V0
+bGluZXMNCi9Db3VudCAwDQo+Pg0KZW5kb2JqDQoNCjMgMCBvYmoNCjw8DQovVHlwZSAvUGFnZXMN
+Ci9Db3VudCAyDQovS2lkcyBbIDQgMCBSIDYgMCBSIF0NCj4+DQplbmRvYmoNCg0KNCAwIG9iag0K
+PDwNCi9UeXBlIC9QYWdlDQovUGFyZW50IDMgMCBSDQovUmVzb3VyY2VzIDw8DQovRm9udCA8PA0K
+L0YxIDkgMCBSDQo+Pg0KL1Byb2NTZXQgOCAwIFINCj4+DQovTWVkaWFCb3ggWzAgMCA2MTIuMDAw
+MCA3OTIuMDAwMF0NCi9Db250ZW50cyA1IDAgUg0KPj4NCmVuZG9iag0KDQo1IDAgb2JqDQo8PANK
+L0xlbmd0aCA0NDRQK>
+--_001_538f5bb0a7956_457a8046c758764ef_--
