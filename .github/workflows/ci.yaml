@@ -94,7 +94,7 @@ jobs:
             fi
             uv sync --all-extras --dev
             uv pip install maturin
-            maturin develop --release
+            uv run maturin develop --release
           shell: bash
 
       - name: Run Rust Checks
@@ -166,7 +166,7 @@ jobs:
           command: |
             uv sync --all-extras --dev
             uv pip install maturin
-            maturin develop --release
+            uv run maturin develop --release
           shell: bash
 
       - name: Install System Dependencies
@@ -260,7 +260,7 @@ jobs:
           command: |
             uv sync --all-extras --dev
             uv pip install maturin
-            maturin develop --release
+            uv run maturin develop --release
           shell: bash
 
       - name: Install System Dependencies
@@ -328,7 +328,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.11", "3.12"]
+        python: ["3.10", "3.11", "3.12", "3.13"]
         test-category:
           - name: "core"
             path: "tests/core,tests/utils"
@@ -407,7 +407,7 @@ jobs:
             fi
             uv sync --all-extras --dev
             uv pip install maturin
-            maturin develop --release
+            uv run maturin develop --release
           shell: bash
 
       - name: Cache Test Artifacts
