@@ -60,21 +60,24 @@ fn generate_markdown_table(df: &DataFrame) -> PyResult<String> {
 
 /// Write the header row
 fn write_header_row<T: AsRef<str>>(result: &mut String, column_names: &[T]) {
-    result.push('|');
-    for name in column_names.iter() {
-        result.push(' ');
+    result.push_str("| ");
+    for (i, name) in column_names.iter().enumerate() {
+        if i > 0 {
+            result.push_str(" | ");
+        }
         result.push_str(name.as_ref());
-        result.push_str(" |");
     }
-    result.push('\n');
+    result.push_str(" |\n");
 }
 
 /// Write the separator row with alignment indicators
 fn write_separator_row<T: AsRef<str>>(result: &mut String, df: &DataFrame, column_names: &[T]) -> PyResult<()> {
-    result.push('|');
+    result.push_str("| ");
 
-    for col_name in column_names.iter() {
-        result.push(' ');
+    for (i, col_name) in column_names.iter().enumerate() {
+        if i > 0 {
+            result.push_str(" | ");
+        }
 
         let col = df
             .column(col_name.as_ref())
@@ -95,20 +98,21 @@ fn write_separator_row<T: AsRef<str>>(result: &mut String, df: &DataFrame, colum
         );
 
         result.push_str(if is_numeric { "---:" } else { "---" });
-        result.push_str(" |");
     }
 
-    result.push('\n');
+    result.push_str(" |\n");
     Ok(())
 }
 
 /// Write all data rows
 fn write_data_rows(result: &mut String, df: &DataFrame, height: usize) -> PyResult<()> {
     for row_idx in 0..height {
-        result.push('|');
+        result.push_str("| ");
 
-        for col in df.get_columns().iter() {
-            result.push(' ');
+        for (col_idx, col) in df.get_columns().iter().enumerate() {
+            if col_idx > 0 {
+                result.push_str(" | ");
+            }
 
             let value = col
                 .get(row_idx)
@@ -116,11 +120,9 @@ fn write_data_rows(result: &mut String, df: &DataFrame, height: usize) -> PyResu
 
             let formatted = format_cell_value(&value);
             result.push_str(&formatted);
-
-            result.push_str(" |");
         }
 
-        result.push('\n');
+        result.push_str(" |\n");
     }
     Ok(())
 }
@@ -144,8 +146,18 @@ fn format_cell_value(value: &AnyValue) -> String {
         AnyValue::Float64(f) => format_float(*f),
 
         AnyValue::String(s) => escape_markdown_pipes(s),
+        AnyValue::StringOwned(s) => escape_markdown_pipes(s),
 
-        _ => format!("{}", value),
+        // Handle other string types that might format with quotes
+        _ => {
+            let formatted = format!("{}", value);
+            // Remove surrounding quotes if present
+            if formatted.starts_with('"') && formatted.ends_with('"') && formatted.len() > 1 {
+                formatted[1..formatted.len() - 1].to_string()
+            } else {
+                formatted
+            }
+        }
     }
 }
 
