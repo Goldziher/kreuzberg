@@ -12,17 +12,18 @@ mod table_processing;
 mod token_reduction;
 
 use cache::{
-    batch_cleanup_caches, batch_generate_cache_keys, cleanup_cache, clear_cache_directory, fast_hash,
+    CacheStats, batch_cleanup_caches, batch_generate_cache_keys, cleanup_cache, clear_cache_directory, fast_hash,
     filter_old_cache_entries, generate_cache_key, get_available_disk_space, get_cache_metadata, is_cache_valid,
-    smart_cleanup_cache, sort_cache_by_access_time, validate_cache_key, CacheStats,
+    smart_cleanup_cache, sort_cache_by_access_time, validate_cache_key,
 };
 use excel::{
-    benchmark_excel_reading, excel_to_markdown, read_excel_bytes, read_excel_file, ExcelSheetDTO, ExcelWorkbookDTO,
+    ExcelSheetDTO, ExcelWorkbookDTO, benchmark_excel_reading, excel_to_markdown, read_excel_bytes, read_excel_file,
 };
 use image_preprocessing::{
-    batch_normalize_images, calculate_optimal_dpi, compress_image_auto, compress_image_jpeg, compress_image_png,
-    convert_format, detect_image_format, load_image, load_image_as_numpy, normalize_image_dpi, rgb_to_grayscale,
-    rgb_to_rgba, rgba_to_rgb, save_image, save_numpy_as_image, ExtractionConfigDTO, ImagePreprocessingMetadataDTO,
+    ExtractionConfigDTO, ImagePreprocessingMetadataDTO, batch_normalize_images, calculate_optimal_dpi,
+    compress_image_auto, compress_image_jpeg, compress_image_png, convert_format, detect_image_format, load_image,
+    load_image_as_numpy, normalize_image_dpi, rgb_to_grayscale, rgb_to_rgba, rgba_to_rgb, save_image,
+    save_numpy_as_image,
 };
 use pptx::extractor::PptxExtractorDTO;
 use pptx::streaming::extractor::StreamingPptxExtractorDTO;
@@ -31,7 +32,7 @@ use quality::{calculate_quality_score, clean_extracted_text, normalize_spaces};
 use string_utils::{batch_process_texts, calculate_text_confidence, fix_mojibake, get_encoding_cache_key, safe_decode};
 use table_processing::table_from_arrow_to_markdown;
 use token_reduction::{
-    batch_reduce_tokens, get_reduction_statistics, reduce_tokens, ReductionLevelDTO, TokenReductionConfigDTO,
+    ReductionLevelDTO, TokenReductionConfigDTO, batch_reduce_tokens, get_reduction_statistics, reduce_tokens,
 };
 
 /// Internal Rust bindings for kreuzberg - not for direct use

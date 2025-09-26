@@ -16,13 +16,12 @@ pub fn parse_slide_rels(xml_data: &[u8]) -> Result<Vec<ImageReference>> {
             rel_node.attribute("Id"),
             rel_node.attribute("Target"),
             rel_node.attribute("Type"),
-        ) {
-            if rel_type.contains("image") {
-                image_refs.push(ImageReference {
-                    id: id.to_string(),
-                    target: target.to_string(),
-                });
-            }
+        ) && rel_type.contains("image")
+        {
+            image_refs.push(ImageReference {
+                id: id.to_string(),
+                target: target.to_string(),
+            });
         }
     }
 
@@ -38,19 +37,20 @@ pub fn parse_presentation_rels(xml_data: &[u8]) -> Result<Vec<String>> {
     let mut slide_paths = Vec::new();
 
     for rel_node in root.children().filter(|n| n.tag_name().name() == "Relationship") {
-        if let (Some(target), Some(rel_type)) = (rel_node.attribute("Target"), rel_node.attribute("Type")) {
-            if rel_type.contains("slide") && !rel_type.contains("slideMaster") {
-                let full_path = if target.starts_with("/ppt/") {
-                    target.trim_start_matches('/').to_string()
-                } else if target.starts_with("ppt/") {
-                    target.to_string()
-                } else if target.starts_with("slides/") {
-                    format!("ppt/{}", target)
-                } else {
-                    format!("ppt/slides/{}", target)
-                };
-                slide_paths.push(full_path);
-            }
+        if let (Some(target), Some(rel_type)) = (rel_node.attribute("Target"), rel_node.attribute("Type"))
+            && rel_type.contains("slide")
+            && !rel_type.contains("slideMaster")
+        {
+            let full_path = if target.starts_with("/ppt/") {
+                target.trim_start_matches('/').to_string()
+            } else if target.starts_with("ppt/") {
+                target.to_string()
+            } else if target.starts_with("slides/") {
+                format!("ppt/{}", target)
+            } else {
+                format!("ppt/slides/{}", target)
+            };
+            slide_paths.push(full_path);
         }
     }
 

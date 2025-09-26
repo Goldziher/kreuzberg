@@ -1,7 +1,7 @@
 [package]
 name = "kreuzberg"
 version = "4.0.0"
-edition = "2021"
+edition = "2024"
 authors = ["Na'aman Hirschfeld <nhirschfed@gmail.com>"]
 description = "Document intelligence framework - Rust acceleration module"
 license = "MIT"
@@ -13,48 +13,27 @@ name = "_internal_bindings"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.25.0", features = ["abi3-py310"] }
-regex = "1.11.2"
-once_cell = "1.21.3"
-rayon = "1.11.0"
+ahash = "0.8.12"
+calamine = { version = "0.30.1", features = ["dates"] }
 chardetng = "0.1.17"
 encoding_rs = "0.8.35"
-
-# Image processing dependencies
-numpy = "0.25.0"
-ndarray = "0.16.1"
 fast_image_resize = "5.3.0"
 image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"] }
-num-traits = "0.2.19"
-
-# System dependencies for cache
 libc = "0.2"
-
-# Modern token reduction dependencies
-tokenizers = "0.22.1"
-unicode-normalization = "0.1.24"
-
-# PPTX extraction dependencies (vendored pptx-to-md)
-zip = "2.2.2"
-roxmltree = "0.20.0"
-thiserror = "2.0.8"
-base64 = "0.22.1"
-ahash = "0.8.12"
-smallvec = "1.13.2"
 memchr = "2.7.5"
-bstr = "1.12.0"
+ndarray = "0.16.1"
+numpy = "0.26.0"
+once_cell = "1.21.3"
+polars = { version = "0.51.0", default-features = false, features = ["ipc"] }
+pyo3 = { version = "0.26.0", features = ["abi3-py310"] }
+rayon = "1.11.0"
+regex = "1.11.3"
+roxmltree = "0.20.0"
 serde = { version = "1.0.226", features = ["derive"] }
 serde_json = "1.0.145"
-
-# High-performance table processing using Arrow IPC bridge
-# We use Arrow IPC format as an interop layer between Python and Rust Polars
-# This avoids pyo3-polars compatibility issues while providing 10-15x speedup
-polars = { version = "0.51.0", default-features = false, features = ["ipc"] }
-
-# Direct Excel processing using Calamine
-# Replaces python-calamine bridge for 5-10x performance improvement
-calamine = { version = "0.30.1", features = ["dates"] }
-chrono = "0.4"
+thiserror = "2.0.8"
+unicode-normalization = "0.1.24"
+zip = "2.2.2"
 
 [dev-dependencies]
 tempfile = "3.15.0"
@@ -63,7 +42,6 @@ tempfile = "3.15.0"
 default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
 
-# Optional performance optimizations
 [profile.release]
 lto = "thin"
 codegen-units = 1

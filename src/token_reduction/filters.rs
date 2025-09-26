@@ -21,10 +21,10 @@ fn load_stopwords_from_json(language: &str) -> AHashSet<String> {
     ];
 
     for json_path in &paths {
-        if let Ok(content) = fs::read_to_string(json_path) {
-            if let Ok(words) = serde_json::from_str::<Vec<String>>(&content) {
-                return words.into_iter().collect();
-            }
+        if let Ok(content) = fs::read_to_string(json_path)
+            && let Ok(words) = serde_json::from_str::<Vec<String>>(&content)
+        {
+            return words.into_iter().collect();
         }
     }
 
@@ -342,11 +342,11 @@ impl FilterPipeline {
             .cloned()
             .unwrap_or_else(|| STOPWORDS.get("en").cloned().unwrap_or_default());
 
-        if let Some(ref custom) = config.custom_stopwords {
-            if let Some(custom_for_lang) = custom.get(language) {
-                for word in custom_for_lang {
-                    stopwords.insert(word.to_lowercase());
-                }
+        if let Some(ref custom) = config.custom_stopwords
+            && let Some(custom_for_lang) = custom.get(language)
+        {
+            for word in custom_for_lang {
+                stopwords.insert(word.to_lowercase());
             }
         }
 

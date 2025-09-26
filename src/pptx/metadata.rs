@@ -35,10 +35,10 @@ pub fn extract_metadata(core_xml: &[u8]) -> Result<PptxMetadataDTO> {
                 }
             }
             "subject" => {
-                if let Some(text) = node.text() {
-                    if metadata.description.is_none() {
-                        metadata.description = Some(text.trim().to_string());
-                    }
+                if let Some(text) = node.text()
+                    && metadata.description.is_none()
+                {
+                    metadata.description = Some(text.trim().to_string());
                 }
             }
             _ => {}

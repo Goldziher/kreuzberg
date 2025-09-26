@@ -60,10 +60,10 @@ impl ResourceCache {
     }
 
     fn evict_lru(&mut self) {
-        if let Some(lru_key) = self.access_order.pop_back() {
-            if let Some(value) = self.data.remove(&lru_key) {
-                self.current_size -= value.len();
-            }
+        if let Some(lru_key) = self.access_order.pop_back()
+            && let Some(value) = self.data.remove(&lru_key)
+        {
+            self.current_size -= value.len();
         }
     }
 }

@@ -1,4 +1,4 @@
-use fast_image_resize::{images::Image as FirImage, FilterType, PixelType, ResizeAlg, ResizeOptions, Resizer};
+use fast_image_resize::{FilterType, PixelType, ResizeAlg, ResizeOptions, Resizer, images::Image as FirImage};
 use image::{DynamicImage, ImageBuffer, Rgb};
 use ndarray::{Array3, ArrayView3};
 use numpy::{PyArray3, ToPyArray};

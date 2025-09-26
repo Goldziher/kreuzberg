@@ -87,12 +87,12 @@ fn parse_group(node: &Node) -> Result<Vec<SlideElement>> {
 
 fn extract_position(node: &Node) -> ElementPosition {
     for child in node.descendants() {
-        if child.tag_name().name() == "xfrm" {
-            if let Some(off) = child.children().find(|n| n.tag_name().name() == "off") {
-                let x = off.attribute("x").and_then(|v| v.parse::<i32>().ok()).unwrap_or(0);
-                let y = off.attribute("y").and_then(|v| v.parse::<i32>().ok()).unwrap_or(0);
-                return ElementPosition { x, y };
-            }
+        if child.tag_name().name() == "xfrm"
+            && let Some(off) = child.children().find(|n| n.tag_name().name() == "off")
+        {
+            let x = off.attribute("x").and_then(|v| v.parse::<i32>().ok()).unwrap_or(0);
+            let y = off.attribute("y").and_then(|v| v.parse::<i32>().ok()).unwrap_or(0);
+            return ElementPosition { x, y };
         }
     }
     ElementPosition::default()
@@ -184,10 +184,10 @@ fn parse_run_properties(r_node: &Node) -> Formatting {
             formatting.underline = true;
         }
 
-        if let Some(sz_node) = r_pr.children().find(|n| n.tag_name().name() == "sz") {
-            if let Some(val) = sz_node.attribute("val") {
-                formatting.font_size = val.parse::<f32>().ok().map(|v| v / 100.0);
-            }
+        if let Some(sz_node) = r_pr.children().find(|n| n.tag_name().name() == "sz")
+            && let Some(val) = sz_node.attribute("val")
+        {
+            formatting.font_size = val.parse::<f32>().ok().map(|v| v / 100.0);
         }
     }
 
@@ -253,15 +253,14 @@ fn parse_table(table_node: &Node) -> Result<TableElement> {
 }
 
 fn parse_pic(node: &Node) -> Result<ImageReference> {
-    if let Some(blip_fill) = node.descendants().find(|n| n.tag_name().name() == "blipFill") {
-        if let Some(blip) = blip_fill.children().find(|n| n.tag_name().name() == "blip") {
-            if let Some(embed_attr) = blip.attribute("embed") {
-                return Ok(ImageReference {
-                    id: embed_attr.to_string(),
-                    target: String::new(),
-                });
-            }
-        }
+    if let Some(blip_fill) = node.descendants().find(|n| n.tag_name().name() == "blipFill")
+        && let Some(blip) = blip_fill.children().find(|n| n.tag_name().name() == "blip")
+        && let Some(embed_attr) = blip.attribute("embed")
+    {
+        return Ok(ImageReference {
+            id: embed_attr.to_string(),
+            target: String::new(),
+        });
     }
 
     Err(PptxError::ParseError("No image reference found in pic element"))

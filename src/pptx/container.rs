@@ -54,10 +54,10 @@ impl PptxContainer {
     }
 
     fn find_slide_paths(archive: &mut ZipArchive<File>) -> Result<Vec<String>> {
-        if let Ok(rels_data) = Self::read_file_from_archive(archive, "ppt/_rels/presentation.xml.rels") {
-            if let Ok(paths) = parse_presentation_rels(&rels_data) {
-                return Ok(paths);
-            }
+        if let Ok(rels_data) = Self::read_file_from_archive(archive, "ppt/_rels/presentation.xml.rels")
+            && let Ok(paths) = parse_presentation_rels(&rels_data)
+        {
+            return Ok(paths);
         }
 
         let mut slide_paths = Vec::new();

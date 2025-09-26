@@ -177,14 +177,14 @@ fn calculate_new_dimensions(
     let mut dimension_clamped = false;
 
     let max_new_dimension = new_width.max(new_height);
-    if let Ok(max_dim_i32) = i32::try_from(max_new_dimension) {
-        if max_dim_i32 > config.max_image_dimension {
-            let dimension_scale = f64::from(config.max_image_dimension) / f64::from(max_new_dimension);
-            new_width = (f64::from(new_width) * dimension_scale).round() as u32;
-            new_height = (f64::from(new_height) * dimension_scale).round() as u32;
-            final_scale *= dimension_scale;
-            dimension_clamped = true;
-        }
+    if let Ok(max_dim_i32) = i32::try_from(max_new_dimension)
+        && max_dim_i32 > config.max_image_dimension
+    {
+        let dimension_scale = f64::from(config.max_image_dimension) / f64::from(max_new_dimension);
+        new_width = (f64::from(new_width) * dimension_scale).round() as u32;
+        new_height = (f64::from(new_height) * dimension_scale).round() as u32;
+        final_scale *= dimension_scale;
+        dimension_clamped = true;
     }
 
     (new_width, new_height, final_scale, dimension_clamped)

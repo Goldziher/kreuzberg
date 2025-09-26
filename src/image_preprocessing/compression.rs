@@ -1,5 +1,5 @@
 /// Image compression with JPEG, PNG, and smart format selection
-use image::{codecs::jpeg::JpegEncoder, codecs::png::PngEncoder, DynamicImage, ImageEncoder, ImageError};
+use image::{DynamicImage, ImageEncoder, ImageError, codecs::jpeg::JpegEncoder, codecs::png::PngEncoder};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use std::io::Cursor;

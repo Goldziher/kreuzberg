@@ -5,7 +5,7 @@ use crate::token_reduction::{
     config::{ReductionLevelDTO, TokenReductionConfigDTO},
     filters::FilterPipeline,
     semantic::SemanticAnalyzer,
-    simd_text::{chunk_text_for_parallel, SimdTextProcessor},
+    simd_text::{SimdTextProcessor, chunk_text_for_parallel},
 };
 use once_cell::sync::Lazy;
 use pyo3::prelude::*;
@@ -133,10 +133,10 @@ impl TokenReducer {
     fn apply_maximum_reduction_optimized(&self, text: &str) -> String {
         let mut result = self.apply_aggressive_reduction_optimized(text);
 
-        if let Some(ref analyzer) = self.semantic_analyzer {
-            if self.config.enable_semantic_clustering {
-                result = analyzer.apply_hypernym_compression(&result, self.config.target_reduction);
-            }
+        if let Some(ref analyzer) = self.semantic_analyzer
+            && self.config.enable_semantic_clustering
+        {
+            result = analyzer.apply_hypernym_compression(&result, self.config.target_reduction);
         }
 
         result
@@ -461,11 +461,7 @@ impl TokenReducer {
             .values()
             .map(|&freq| {
                 let p = freq as f32 / total_chars;
-                if p > 0.0 {
-                    -p * p.log2()
-                } else {
-                    0.0
-                }
+                if p > 0.0 { -p * p.log2() } else { 0.0 }
             })
             .sum::<f32>()
             .min(5.0)

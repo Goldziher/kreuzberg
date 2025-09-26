@@ -141,10 +141,10 @@ impl SemanticAnalyzer {
             result.truncate(target_count.max(1));
         } else {
             for token in &mut result {
-                if token.importance_score < 0.5 {
-                    if let Some(hypernym) = self.get_hypernym(&token.token) {
-                        token.token = hypernym;
-                    }
+                if token.importance_score < 0.5
+                    && let Some(hypernym) = self.get_hypernym(&token.token)
+                {
+                    token.token = hypernym;
                 }
             }
         }

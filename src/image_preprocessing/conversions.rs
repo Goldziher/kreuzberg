@@ -1,6 +1,6 @@
 /// Image format conversions with zero-copy NumPy integration
 use image::{DynamicImage, GrayImage, RgbImage, RgbaImage};
-use ndarray::{s, Axis};
+use ndarray::{Axis, s};
 use numpy::{PyArray3, PyArrayMethods, PyReadonlyArray3};
 use pyo3::prelude::*;
 
@@ -243,7 +243,7 @@ pub fn save_numpy_as_image<'py>(_py: Python<'py>, array: PyReadonlyArray3<'py, u
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
                 "Unsupported image format: {}",
                 format
-            )))
+            )));
         }
     };
 

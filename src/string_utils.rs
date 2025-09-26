@@ -26,30 +26,30 @@ pub fn safe_decode(byte_data: &[u8], encoding: Option<&str>) -> String {
         return String::new();
     }
 
-    if let Some(enc_name) = encoding {
-        if let Some(enc) = Encoding::for_label(enc_name.as_bytes()) {
-            let (decoded, _, _) = enc.decode(byte_data);
-            return fix_mojibake_internal(&decoded);
-        }
+    if let Some(enc_name) = encoding
+        && let Some(enc) = Encoding::for_label(enc_name.as_bytes())
+    {
+        let (decoded, _, _) = enc.decode(byte_data);
+        return fix_mojibake_internal(&decoded);
     }
 
     let cache_key = calculate_cache_key(byte_data);
 
-    if let Ok(cache) = ENCODING_CACHE.read() {
-        if let Some(&cached_encoding) = cache.get(&cache_key) {
-            let (decoded, _, _) = cached_encoding.decode(byte_data);
-            return fix_mojibake_internal(&decoded);
-        }
+    if let Ok(cache) = ENCODING_CACHE.read()
+        && let Some(&cached_encoding) = cache.get(&cache_key)
+    {
+        let (decoded, _, _) = cached_encoding.decode(byte_data);
+        return fix_mojibake_internal(&decoded);
     }
 
     let mut detector = EncodingDetector::new();
     detector.feed(byte_data, true);
     let encoding = detector.guess(None, true);
 
-    if let Ok(mut cache) = ENCODING_CACHE.write() {
-        if cache.len() < CACHE_SIZE_LIMIT {
-            cache.insert(cache_key, encoding);
-        }
+    if let Ok(mut cache) = ENCODING_CACHE.write()
+        && cache.len() < CACHE_SIZE_LIMIT
+    {
+        cache.insert(cache_key, encoding);
     }
 
     let (decoded, _, had_errors) = encoding.decode(byte_data);

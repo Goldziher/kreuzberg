@@ -2,7 +2,7 @@
 ///
 /// This module provides direct Excel reading and processing in Rust,
 /// replacing the python-calamine bridge for 5-10x performance improvement.
-use calamine::{open_workbook_auto, Data, Range, Reader};
+use calamine::{Data, Range, Reader, open_workbook_auto};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use std::collections::HashMap;

@@ -77,7 +77,7 @@ pub fn save_image<'py>(
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
                 "Unsupported format: {}",
                 format_str
-            )))
+            )));
         }
     };
 
