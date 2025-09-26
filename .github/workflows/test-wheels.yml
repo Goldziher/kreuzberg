@@ -65,7 +65,7 @@ jobs:
 
           # Test the built wheels
           CIBW_TEST_REQUIRES: pytest
-          CIBW_TEST_COMMAND: python -c "import kreuzberg; print('Import successful'); print(f'Version: {kreuzberg.__version__ if hasattr(kreuzberg, '__version__') else 'unknown'}')"
+          CIBW_TEST_COMMAND: 'python -c "import kreuzberg; print(\"Import successful\")"'
 
           # Skip some builds for speed during testing
           CIBW_SKIP: pp* *-musllinux* *-win32 *-manylinux_i686
