@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from PIL import Image
 
+from kreuzberg._internal_bindings import normalize_spaces
 from kreuzberg._mime_types import PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
 from kreuzberg._types import ExtractionResult, Metadata, PaddleOCRConfig
@@ -22,7 +23,6 @@ from kreuzberg._utils._ocr_cache import (
     handle_cache_lookup_sync,
     mark_processing_complete,
 )
-from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
 

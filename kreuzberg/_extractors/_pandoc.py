@@ -14,9 +14,9 @@ from anyio import run_process
 
 from kreuzberg._constants import MINIMAL_SUPPORTED_PANDOC_VERSION
 from kreuzberg._extractors._base import Extractor
+from kreuzberg._internal_bindings import normalize_spaces
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE
 from kreuzberg._types import ExtractedImage, ExtractionResult, ImageOCRResult, Metadata
-from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_maybe_async, run_taskgroup
 from kreuzberg._utils._tmp import temporary_directory, temporary_file, temporary_file_sync
 from kreuzberg.exceptions import MissingDependencyError, ParsingError, ValidationError

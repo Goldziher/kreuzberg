@@ -59,8 +59,7 @@ classifiers = [
 ]
 
 dependencies = [
-  "anyio>=4.11.0",
-  "chardetng-py>=0.3.5",
+  "anyio>=4.10.0",
   "exceptiongroup>=1.2.2; python_version<'3.11'",
   "html-to-markdown[lxml]>=1.16.0",
   "langcodes>=3.5.0",

@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from kreuzberg._extractors._base import Extractor
-from kreuzberg._internal_bindings import PptxExtractor
+from kreuzberg._internal_bindings import PptxExtractorDTO
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE, POWER_POINT_MIME_TYPE
 from kreuzberg._types import ExtractionResult, Metadata
 
@@ -19,7 +19,7 @@ class PresentationExtractor(Extractor):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._extractor = PptxExtractor(self.config.extract_images)
+        self._extractor = PptxExtractorDTO(self.config.extract_images)
 
     async def extract_bytes_async(self, content: bytes) -> ExtractionResult:
         return self._extract_from_bytes(content)

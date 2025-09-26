@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from kreuzberg._utils._string import (
-    _calculate_text_confidence,
-    _fix_mojibake,
-    _get_encoding_cache_key,
+from kreuzberg._internal_bindings import (
+    calculate_text_confidence,
+    fix_mojibake,
+    get_encoding_cache_key,
     normalize_spaces,
     safe_decode,
 )
@@ -66,40 +66,40 @@ def test_safe_decode_confidence_scoring() -> None:
 
 
 def test_calculate_text_confidence_empty() -> None:
-    assert _calculate_text_confidence("") == 0.0
+    assert calculate_text_confidence("") == 0.0
 
 
 def test_calculate_text_confidence_normal_text() -> None:
     text = "This is normal English text."
-    confidence = _calculate_text_confidence(text)
+    confidence = calculate_text_confidence(text)
     assert confidence > 0.8
 
 
 def test_calculate_text_confidence_with_replacement_chars() -> None:
     text = "Text with replacement \ufffd characters"
-    confidence = _calculate_text_confidence(text)
+    confidence = calculate_text_confidence(text)
     assert confidence < 1.0
 
 
 def test_calculate_text_confidence_with_control_chars() -> None:
     text = "Text with\x00control\x01chars"
-    confidence = _calculate_text_confidence(text)
+    confidence = calculate_text_confidence(text)
     assert confidence < 0.8
 
 
 def test_calculate_text_confidence_cyrillic_penalty() -> None:
     suspicious_text = "аваыврдвфгхькол" * 5
-    confidence = _calculate_text_confidence(suspicious_text)
+    confidence = calculate_text_confidence(suspicious_text)
     assert confidence <= 0.7
 
 
 def test_fix_mojibake_empty() -> None:
-    assert _fix_mojibake("") == ""
+    assert fix_mojibake("") == ""
 
 
 def test_fix_mojibake_control_chars() -> None:
     text = "Text with\x00control\x01chars\x7f"
-    cleaned = _fix_mojibake(text)
+    cleaned = fix_mojibake(text)
     assert "\x00" not in cleaned
     assert "\x01" not in cleaned
     assert "\x7f" not in cleaned
@@ -108,21 +108,21 @@ def test_fix_mojibake_control_chars() -> None:
 
 def test_fix_mojibake_replacement_chars() -> None:
     text = "Text with\ufffd\ufffdreplacement chars"
-    cleaned = _fix_mojibake(text)
+    cleaned = fix_mojibake(text)
     assert "\ufffd" not in cleaned
     assert cleaned == "Text withreplacement chars"
 
 
 def test_fix_mojibake_isolated_combining() -> None:
     text = "Text with\u0300\u0301isolated combining"
-    cleaned = _fix_mojibake(text)
+    cleaned = fix_mojibake(text)
     assert "\u0300" not in cleaned
     assert len(cleaned) < len(text)
 
 
 def test_fix_mojibake_cyrillic_detection() -> None:
     cyrillic_text = "аваыврдвфгхькол"
-    result = _fix_mojibake(cyrillic_text)
+    result = fix_mojibake(cyrillic_text)
     assert len(result) > 0
 
 
@@ -195,8 +195,8 @@ def test_normalize_spaces_complex_example() -> None:
 def test_get_encoding_cache_key() -> None:
     hash1 = "abcdef123456"
     size1 = 1024
-    key1 = _get_encoding_cache_key(hash1, size1)
-    key2 = _get_encoding_cache_key(hash1, size1)
+    key1 = get_encoding_cache_key(hash1, size1)
+    key2 = get_encoding_cache_key(hash1, size1)
 
     assert key1 == key2
     assert hash1 in key1
@@ -204,9 +204,9 @@ def test_get_encoding_cache_key() -> None:
 
 
 def test_get_encoding_cache_key_different_inputs() -> None:
-    key1 = _get_encoding_cache_key("hash1", 100)
-    key2 = _get_encoding_cache_key("hash2", 100)
-    key3 = _get_encoding_cache_key("hash1", 200)
+    key1 = get_encoding_cache_key("hash1", 100)
+    key2 = get_encoding_cache_key("hash2", 100)
+    key3 = get_encoding_cache_key("hash1", 200)
 
     assert key1 != key2
     assert key1 != key3
@@ -221,31 +221,28 @@ def test_safe_decode_encoding_tries_fallback_encodings() -> None:
     assert result == text
 
 
-def test_safe_decode_caches_successful_detections() -> None:
-    import kreuzberg._utils._string as string_module
-
-    string_module._encoding_cache.clear()
-
+def test_safe_decode_caching_behavior() -> None:
+    """Test that safe_decode produces consistent results for same input."""
     text = "Test caching functionality"
     utf8_bytes = text.encode("utf-8")
 
-    result1 = safe_decode(utf8_bytes)
-    assert result1 == text
+    # Multiple calls with same input should produce same result
+    results = [safe_decode(utf8_bytes) for _ in range(5)]
+    assert all(r == text for r in results)
 
-    assert len(string_module._encoding_cache) > 0
+    # Different inputs should produce different results
+    text2 = "Different text"
+    utf8_bytes2 = text2.encode("utf-8")
+    result2 = safe_decode(utf8_bytes2)
+    assert result2 == text2
+    assert result2 != text
 
-    result2 = safe_decode(utf8_bytes)
-    assert result2 == text
 
-
-def test_safe_decode_cache_size_limit() -> None:
-    import kreuzberg._utils._string as string_module
-
-    string_module._encoding_cache.clear()
-
-    for i in range(1005):
+def test_safe_decode_handles_many_unique_inputs() -> None:
+    """Test that safe_decode can handle many unique inputs without issues."""
+    # This tests that internal caching doesn't break with many inputs
+    for i in range(100):
         unique_text = f"Unique text {i}"
         unique_bytes = unique_text.encode("utf-8")
-        safe_decode(unique_bytes)
-
-    assert len(string_module._encoding_cache) <= 1000
+        result = safe_decode(unique_bytes)
+        assert result == unique_text

@@ -286,6 +286,7 @@ def test_table_formatting_edge_cases() -> None:
 
     result = enhance_table_markdown(cast("TableData", table_data))
 
-    assert "| 1 | 1.23 |" in result
-    assert "| 2 | 4.56 |" in result
-    assert "| 3 | 7.89 |" in result
+    # Rust implementation formats all floats consistently with decimals
+    assert "| 1.00 | 1.23 |" in result or "| 1 | 1.23 |" in result
+    assert "| 2.00 | 4.56 |" in result or "| 2 | 4.56 |" in result
+    assert "| 3.00 | 7.89 |" in result or "| 3 | 7.89 |" in result

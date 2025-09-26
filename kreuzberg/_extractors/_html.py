@@ -12,10 +12,10 @@ from bs4 import BeautifulSoup
 from PIL import Image
 
 from kreuzberg._extractors._base import MAX_SINGLE_IMAGE_SIZE, Extractor
+from kreuzberg._internal_bindings import safe_decode
 from kreuzberg._mime_types import HTML_MIME_TYPE, MARKDOWN_MIME_TYPE
 from kreuzberg._types import ExtractedImage, ExtractionResult, HTMLToMarkdownConfig
 from kreuzberg._utils._html_streaming import should_use_streaming
-from kreuzberg._utils._string import safe_decode
 from kreuzberg._utils._sync import run_maybe_async, run_sync
 
 if TYPE_CHECKING:
