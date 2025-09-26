@@ -13,6 +13,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  rust-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Run Rust Tests
+        run: cargo test --release
+
+      - name: Check Rust Formatting
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo clippy -- -D warnings
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -30,6 +60,16 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
       - name: Install Dependencies
         uses: nick-fields/retry@v3
         with:
@@ -42,7 +82,14 @@ jobs:
               rm -rf .venv
             fi
             uv sync --all-extras --dev
+            uv pip install maturin
+            maturin develop --release
           shell: bash
+
+      - name: Run Rust Checks
+        run: |
+          cargo fmt --check
+          cargo clippy -- -D warnings
 
       - name: Install prek
         run: |
@@ -61,7 +108,7 @@ jobs:
         run: prek run --show-diff-on-failure --color=always --all-files
 
   coverage:
-    needs: validate
+    needs: [validate, rust-tests]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -79,6 +126,14 @@ jobs:
         id: setup-python
         with:
           python-version: "3.13"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
 
       - name: Cache Python Dependencies
         id: python-cache
@@ -99,6 +154,8 @@ jobs:
           retry_wait_seconds: 30
           command: |
             uv sync --all-extras --dev
+            uv pip install maturin
+            maturin develop --release
           shell: bash
 
       - name: Install System Dependencies
@@ -145,8 +202,8 @@ jobs:
           retention-days: 7
 
   test-pr:
-    needs: validate
-    if: github.event_name == 'pull_request' && needs.validate.result == 'success'
+    needs: [validate, rust-tests]
+    if: github.event_name == 'pull_request' && needs.validate.result == 'success' && needs.rust-tests.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -163,6 +220,14 @@ jobs:
         id: setup-python
         with:
           python-version: "3.13"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
 
       - name: Cache Python Dependencies
         id: python-cache
@@ -183,6 +248,8 @@ jobs:
           retry_wait_seconds: 30
           command: |
             uv sync --all-extras --dev
+            uv pip install maturin
+            maturin develop --release
           shell: bash
 
       - name: Install System Dependencies
@@ -243,8 +310,8 @@ jobs:
           ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
 
   test-full:
-    needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.validate.result == 'success'
+    needs: [validate, rust-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.validate.result == 'success' && needs.rust-tests.result == 'success'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -297,6 +364,14 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
       - name: Cache Python Dependencies
         id: python-cache
         uses: actions/cache@v4
@@ -320,6 +395,8 @@ jobs:
               rm -rf .venv
             fi
             uv sync --all-extras --dev
+            uv pip install maturin
+            maturin develop --release
           shell: bash
 
       - name: Cache Test Artifacts
