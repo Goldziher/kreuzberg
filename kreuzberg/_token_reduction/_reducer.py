@@ -113,7 +113,7 @@ def _convert_config_to_rust(config: TokenReductionConfig) -> TokenReductionConfi
     dto.semantic_threshold = 0.3
     dto.enable_parallel = True
     dto.use_simd = True
-    dto.custom_stopwords = list(config.custom_stopwords) if config.custom_stopwords else []
+    dto.custom_stopwords = config.custom_stopwords
     dto.preserve_patterns = []
     dto.target_reduction = None
     dto.enable_semantic_clustering = config.mode in ("aggressive", "maximum")

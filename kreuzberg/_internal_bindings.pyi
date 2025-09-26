@@ -113,7 +113,7 @@ class TokenReductionConfigDTO:
     semantic_threshold: float
     enable_parallel: bool
     use_simd: bool
-    custom_stopwords: list[str]
+    custom_stopwords: dict[str, list[str]] | None
     preserve_patterns: list[str]
     target_reduction: float | None
     enable_semantic_clustering: bool
