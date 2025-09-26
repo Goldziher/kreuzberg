@@ -186,13 +186,13 @@ fn format_cell_value_into(buffer: &mut String, data: &Data) {
         }
         Data::Float(f) => {
             if f.fract() == 0.0 {
-                write!(buffer, "{:.1}", f).unwrap();
+                write!(buffer, "{:.0}", f).unwrap();
             } else {
                 write!(buffer, "{}", f).unwrap();
             }
         }
         Data::Int(i) => {
-            write!(buffer, "{}.0", i).unwrap();
+            write!(buffer, "{}", i).unwrap();
         }
         Data::Bool(b) => {
             buffer.push_str(if *b { "true" } else { "false" });

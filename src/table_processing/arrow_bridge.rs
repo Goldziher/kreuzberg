@@ -39,6 +39,11 @@ pub fn table_from_arrow_to_markdown(arrow_bytes: &Bound<'_, PyBytes>) -> PyResul
 fn generate_markdown_table(df: &DataFrame) -> PyResult<String> {
     let height = df.height();
     let width = df.width();
+
+    if width == 0 || height == 0 {
+        return Ok(String::new());
+    }
+
     let column_names = df.get_column_names();
 
     let estimated_capacity = height * width * 13 + width * 20;
@@ -55,24 +60,21 @@ fn generate_markdown_table(df: &DataFrame) -> PyResult<String> {
 
 /// Write the header row
 fn write_header_row<T: AsRef<str>>(result: &mut String, column_names: &[T]) {
-    result.push_str("| ");
-    for (i, name) in column_names.iter().enumerate() {
-        if i > 0 {
-            result.push_str(" | ");
-        }
+    result.push('|');
+    for name in column_names.iter() {
+        result.push(' ');
         result.push_str(name.as_ref());
+        result.push_str(" |");
     }
-    result.push_str(" |\n");
+    result.push('\n');
 }
 
 /// Write the separator row with alignment indicators
 fn write_separator_row<T: AsRef<str>>(result: &mut String, df: &DataFrame, column_names: &[T]) -> PyResult<()> {
-    result.push_str("| ");
+    result.push('|');
 
-    for (i, col_name) in column_names.iter().enumerate() {
-        if i > 0 {
-            result.push_str(" | ");
-        }
+    for col_name in column_names.iter() {
+        result.push(' ');
 
         let col = df
             .column(col_name.as_ref())
@@ -93,21 +95,20 @@ fn write_separator_row<T: AsRef<str>>(result: &mut String, df: &DataFrame, colum
         );
 
         result.push_str(if is_numeric { "---:" } else { "---" });
+        result.push_str(" |");
     }
 
-    result.push_str(" |\n");
+    result.push('\n');
     Ok(())
 }
 
 /// Write all data rows
 fn write_data_rows(result: &mut String, df: &DataFrame, height: usize) -> PyResult<()> {
     for row_idx in 0..height {
-        result.push_str("| ");
+        result.push('|');
 
-        for (col_idx, col) in df.get_columns().iter().enumerate() {
-            if col_idx > 0 {
-                result.push_str(" | ");
-            }
+        for col in df.get_columns().iter() {
+            result.push(' ');
 
             let value = col
                 .get(row_idx)
@@ -115,9 +116,11 @@ fn write_data_rows(result: &mut String, df: &DataFrame, height: usize) -> PyResu
 
             let formatted = format_cell_value(&value);
             result.push_str(&formatted);
+
+            result.push_str(" |");
         }
 
-        result.push_str(" |\n");
+        result.push('\n');
     }
     Ok(())
 }
