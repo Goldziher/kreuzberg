@@ -480,8 +480,8 @@ mod tests {
 
     #[test]
     fn test_generate_cache_key_empty() {
-        pyo3::prepare_freethreaded_python();
-        Python::with_gil(|_py| {
+        pyo3::Python::initialize();
+        Python::attach(|_py| {
             let result = generate_cache_key(None);
             assert_eq!(result, "empty");
         });
@@ -489,8 +489,8 @@ mod tests {
 
     #[test]
     fn test_generate_cache_key_consistent() {
-        pyo3::prepare_freethreaded_python();
-        Python::with_gil(|py| {
+        pyo3::Python::initialize();
+        Python::attach(|py| {
             use pyo3::types::IntoPyDict;
             let dict = [("key1", "value1"), ("key2", "value2")].into_py_dict(py).unwrap();
             let key1 = generate_cache_key(Some(&dict));
