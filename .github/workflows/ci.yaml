@@ -38,7 +38,11 @@ jobs:
           cache-on-failure: true
 
       - name: Run Rust Tests
-        run: cargo test --release
+        env:
+          RUST_BACKTRACE: full
+        run: |
+          echo "Running Rust tests with full debugging..."
+          cargo test --release -vv -- --nocapture --test-threads=1
 
       - name: Check Rust Formatting
         if: matrix.os == 'ubuntu-latest'
