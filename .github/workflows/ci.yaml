@@ -32,6 +32,8 @@ jobs:
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
 
       - name: Run Rust Tests
         env:
@@ -130,6 +132,8 @@ jobs:
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
 
       - name: Cache Python Dependencies
         id: python-cache
@@ -219,6 +223,8 @@ jobs:
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
 
       - name: Cache Python Dependencies
         id: python-cache
@@ -357,6 +363,8 @@ jobs:
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
 
       - name: Cache Python Dependencies
         id: python-cache
