@@ -60,6 +60,11 @@ fn generate_markdown_table(df: &DataFrame) -> PyResult<String> {
 
 /// Write the header row
 fn write_header_row<T: AsRef<str>>(result: &mut String, column_names: &[T]) {
+    if column_names.is_empty() {
+        result.push_str("| |\n");
+        return;
+    }
+
     result.push_str("| ");
     for (i, name) in column_names.iter().enumerate() {
         if i > 0 {
@@ -72,6 +77,11 @@ fn write_header_row<T: AsRef<str>>(result: &mut String, column_names: &[T]) {
 
 /// Write the separator row with alignment indicators
 fn write_separator_row<T: AsRef<str>>(result: &mut String, df: &DataFrame, column_names: &[T]) -> PyResult<()> {
+    if column_names.is_empty() {
+        result.push_str("| |\n");
+        return Ok(());
+    }
+
     result.push_str("| ");
 
     for (i, col_name) in column_names.iter().enumerate() {
@@ -106,10 +116,17 @@ fn write_separator_row<T: AsRef<str>>(result: &mut String, df: &DataFrame, colum
 
 /// Write all data rows
 fn write_data_rows(result: &mut String, df: &DataFrame, height: usize) -> PyResult<()> {
+    let columns = df.get_columns();
+
     for row_idx in 0..height {
+        if columns.is_empty() {
+            result.push_str("| |\n");
+            continue;
+        }
+
         result.push_str("| ");
 
-        for (col_idx, col) in df.get_columns().iter().enumerate() {
+        for (col_idx, col) in columns.iter().enumerate() {
             if col_idx > 0 {
                 result.push_str(" | ");
             }
@@ -148,12 +165,24 @@ fn format_cell_value(value: &AnyValue) -> String {
         AnyValue::String(s) => escape_markdown_pipes(s),
         AnyValue::StringOwned(s) => escape_markdown_pipes(s),
 
-        // Handle other string types that might format with quotes
+        // Handle other variants that might contain strings
+        AnyValue::Binary(_) | AnyValue::BinaryOwned(_) => {
+            // For binary data, use the default format
+            format!("{}", value)
+        }
+
+        // Handle other types but remove quotes from strings
         _ => {
             let formatted = format!("{}", value);
-            // Remove surrounding quotes if present
+            // Remove surrounding quotes if it looks like a quoted string
             if formatted.starts_with('"') && formatted.ends_with('"') && formatted.len() > 1 {
-                formatted[1..formatted.len() - 1].to_string()
+                let unquoted = &formatted[1..formatted.len() - 1];
+                // Only remove quotes if it doesn't contain control characters that would require quoting
+                if !unquoted.contains('\n') && !unquoted.contains('\r') && !unquoted.contains('\t') {
+                    unquoted.to_string()
+                } else {
+                    formatted
+                }
             } else {
                 formatted
             }

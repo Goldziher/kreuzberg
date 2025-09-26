@@ -185,11 +185,7 @@ fn format_cell_value_into(buffer: &mut String, data: &Data) {
             }
         }
         Data::Float(f) => {
-            if f.fract() == 0.0 {
-                write!(buffer, "{:.0}", f).unwrap();
-            } else {
-                write!(buffer, "{}", f).unwrap();
-            }
+            write!(buffer, "{}", f).unwrap();
         }
         Data::Int(i) => {
             write!(buffer, "{}", i).unwrap();
@@ -313,7 +309,7 @@ mod tests {
 
         buffer.clear();
         format_cell_value_into(&mut buffer, &Data::Float(42.0));
-        assert_eq!(buffer, "42");
+        assert_eq!(buffer, "42.0");
 
         buffer.clear();
         format_cell_value_into(&mut buffer, &Data::Float(3.14159));
