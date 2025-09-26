@@ -3,7 +3,7 @@ name = "kreuzberg"
 version = "4.0.0"
 edition = "2024"
 authors = ["Na'aman Hirschfeld <nhirschfed@gmail.com>"]
-description = "Document intelligence framework - Rust acceleration module"
+description = "Kreuzberg - Internal rust bindings module"
 license = "MIT"
 repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://goldziher.github.io/kreuzberg/"
@@ -20,7 +20,7 @@ encoding_rs = "0.8.35"
 fast_image_resize = "5.3.0"
 image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"] }
 libc = "0.2"
-memchr = "2.7.5"
+memchr = "2.7.6"
 ndarray = "0.16.1"
 numpy = "0.26.0"
 once_cell = "1.21.3"
@@ -29,14 +29,14 @@ pyo3 = { version = "0.26.0", features = ["abi3-py310"] }
 rayon = "1.11.0"
 regex = "1.11.3"
 roxmltree = "0.20.0"
-serde = { version = "1.0.226", features = ["derive"] }
+serde = { version = "1.0.227", features = ["derive"] }
 serde_json = "1.0.145"
-thiserror = "2.0.8"
+thiserror = "2.0.16"
 unicode-normalization = "0.1.24"
-zip = "2.2.2"
+zip = "5.1.1"
 
 [dev-dependencies]
-tempfile = "3.15.0"
+tempfile = "3.23.0"
 
 [features]
 default = ["extension-module"]
