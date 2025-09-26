@@ -205,178 +205,9 @@ jobs:
             .coverage
           retention-days: 7
 
-  python-tests-pr:
+  python-tests:
     needs: [validate]
-    if: github.event_name == 'pull_request' && needs.validate.result == 'success'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python: ["3.10", "3.13"]
-        test-category:
-          - name: "core"
-            path: "tests/core,tests/utils"
-            system-deps: false
-            timeout: 20
-          - name: "extractors"
-            path: "tests/extractors"
-            system-deps: true
-            timeout: 25
-          - name: "integration"
-            path: "tests/integration,tests/api"
-            system-deps: true
-            timeout: 30
-          - name: "features"
-            path: "tests/features,tests/interfaces,tests/mcp,tests/multiprocessing,tests/ocr"
-            system-deps: true
-            timeout: 25
-        exclude:
-          # Skip system-dependent tests on older Python for PRs
-          - test-category: { name: "extractors" }
-            python: "3.10"
-          - test-category: { name: "integration" }
-            python: "3.10"
-          - test-category: { name: "features" }
-            python: "3.10"
-    timeout-minutes: ${{ matrix.test-category.timeout }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-
-      - name: Install Python
-        uses: actions/setup-python@v6
-        id: setup-python
-        with:
-          python-version: ${{ matrix.python }}
-
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache Python Dependencies
-        id: python-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/uv
-            .venv
-          key: python-dependencies-${{ matrix.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            python-dependencies-${{ matrix.os }}-${{ matrix.python }}-
-
-      - name: Install Dependencies
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            if [[ "${{ runner.os }}" == "Windows" ]] && [[ -d ".venv" ]]; then
-              echo "Removing existing .venv directory on Windows"
-              rm -rf .venv
-            fi
-            uv sync --all-extras --dev
-            uv pip install maturin
-            uv run maturin develop --release
-          shell: bash
-
-      - name: Cache Test Artifacts
-        uses: actions/cache@v4
-        with:
-          path: .pytest_cache/
-          key: pytest-cache-${{ matrix.os }}-${{ matrix.python }}
-
-      - name: Cache and Install Homebrew (macOS)
-        if: runner.os == 'macOS' && matrix.test-category.system-deps
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            # Using the underlying homebrew commands instead of the action
-            brew update || true
-            brew install tesseract tesseract-lang pandoc || brew upgrade tesseract tesseract-lang pandoc || true
-            brew list tesseract tesseract-lang pandoc
-          shell: bash
-
-      - name: Cache and Install APT Packages (Linux)
-        if: runner.os == 'Linux' && matrix.test-category.system-deps
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            sudo apt-get update
-            sudo apt-get install -y tesseract-ocr tesseract-ocr-deu pandoc
-          shell: bash
-
-      - name: Install System Dependencies (Windows)
-        if: runner.os == 'Windows' && matrix.test-category.system-deps
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            choco install -y tesseract pandoc --no-progress
-            Write-Output "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            Write-Output "C:\Program Files\Pandoc" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            $env:PATH = "C:\Program Files\Tesseract-OCR;C:\Program Files\Pandoc;" + $env:PATH
-            tesseract --version
-            pandoc --version
-          shell: pwsh
-
-      - name: Install SpaCy Model for Testing
-        if: matrix.test-category.system-deps
-        run: |
-          uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
-
-      - name: Run Tests - ${{ matrix.test-category.name }}
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 10
-          max_attempts: 2
-          retry_wait_seconds: 5
-          command: |
-            uv run pytest $(echo "${{ matrix.test-category.path }}" | tr ',' ' ') -v --reruns 1 --reruns-delay 1
-          shell: bash
-
-  coverage-pr:
-    needs: python-tests-pr
-    if: github.event_name == 'pull_request' && needs.python-tests-pr.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Download Coverage Artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: coverage-pr-${{ github.sha }}
-
-      - name: Upload Coverage to DeepSource
-        if: always() && needs.python-tests-pr.result == 'success'
-        env:
-          DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
-        run: |
-          # Install DeepSource CLI
-          curl -fsSL https://deepsource.io/cli | sh
-          # Upload coverage report
-          ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
-
-  python-tests-main:
-    needs: [validate]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.validate.result == 'success'
+    if: needs.validate.result == 'success'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -400,19 +231,6 @@ jobs:
             path: "tests/features,tests/interfaces,tests/mcp,tests/multiprocessing,tests/ocr"
             system-deps: true
             timeout: 25
-        exclude:
-          - test-category: { name: "extractors" }
-            python: "3.11"
-          - test-category: { name: "extractors" }
-            python: "3.12"
-          - test-category: { name: "integration" }
-            python: "3.11"
-          - test-category: { name: "integration" }
-            python: "3.12"
-          - test-category: { name: "features" }
-            python: "3.11"
-          - test-category: { name: "features" }
-            python: "3.12"
     timeout-minutes: ${{ matrix.test-category.timeout }}
     steps:
       - name: Checkout
@@ -468,7 +286,7 @@ jobs:
           key: pytest-cache-${{ matrix.os }}-${{ matrix.python }}
 
       - name: Cache and Install Homebrew (macOS)
-        if: runner.os == 'macOS' && matrix.test-category.system-deps
+        if: runner.os == 'macOS'
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 10
@@ -482,7 +300,7 @@ jobs:
           shell: bash
 
       - name: Cache and Install APT Packages (Linux)
-        if: runner.os == 'Linux' && matrix.test-category.system-deps
+        if: runner.os == 'Linux'
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 5
@@ -494,7 +312,7 @@ jobs:
           shell: bash
 
       - name: Install System Dependencies (Windows)
-        if: runner.os == 'Windows' && matrix.test-category.system-deps
+        if: runner.os == 'Windows'
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 10
