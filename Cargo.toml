@@ -45,7 +45,7 @@ hex = "0.4.3"
 tempfile = "3.23.0"
 
 [features]
-default = ["extension-module"]
+default = []
 extension-module = ["pyo3/extension-module"]
 
 [profile.release]
