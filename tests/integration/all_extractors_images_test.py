@@ -86,29 +86,25 @@ class TestAllExtractorsImageIntegration:
             mime_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", config=config
         )
 
-        mock_image = MagicMock()
-        mock_image.blob = b"fake_image_data"
-        mock_image.ext = "png"
+        # Use the real PPTX test file
+        pptx_path = Path("tests/test_source_files/pitch-deck-presentation.pptx")
+        if not pptx_path.exists():
+            pytest.skip(f"Test file not found: {pptx_path}")
 
-        mock_shape = MagicMock()
-        mock_shape.shape_type = 13
-        mock_shape.image = mock_image
+        content = pptx_path.read_bytes()
+        result = await extractor.extract_bytes_async(content)
 
-        mock_slide = MagicMock()
-        mock_slide.shapes = [mock_shape]
+        # Check that images were extracted
+        assert len(result.images) > 0
 
-        mock_presentation = MagicMock()
-        mock_presentation.slides = [mock_slide, mock_slide]
-
-        with patch("pptx.Presentation") as mock_pptx:
-            mock_pptx.return_value = mock_presentation
-
-            result = await extractor.extract_bytes_async(b"fake_pptx_data")
-
-        assert len(result.images) == 2
-        assert all(img.format == "png" for img in result.images)
-        assert result.images[0].page_number == 1
-        assert result.images[1].page_number == 2
+        # Check basic image properties
+        for img in result.images:
+            assert img.data is not None
+            assert len(img.data) > 0
+            assert img.format in {"png", "jpg", "jpeg", "gif", "bmp", "tiff", "svg", "unknown"}
+            # The Rust extractor should set page numbers
+            if img.page_number is not None:
+                assert img.page_number > 0
 
     async def test_pandoc_extractor_with_images(self, tmp_path: Path) -> None:
         config = ExtractionConfig(extract_images=True)

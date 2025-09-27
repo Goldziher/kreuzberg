@@ -138,12 +138,18 @@ class PptxMetadata:
     summary: str | None
     fonts: list[str]
 
+class ExtractedImageDTO:
+    data: bytes
+    format: str
+    slide_number: int | None
+
 class PptxExtractionResult:
     content: str
     metadata: PptxMetadata
     slide_count: int
     image_count: int
     table_count: int
+    images: list[ExtractedImageDTO]
 
 class PptxExtractorDTO:
     def __init__(self, extract_images: bool) -> None: ...

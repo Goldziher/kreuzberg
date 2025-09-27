@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from kreuzberg._extractors._base import Extractor
 from kreuzberg._internal_bindings import PptxExtractorDTO
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE, POWER_POINT_MIME_TYPE
-from kreuzberg._types import ExtractionResult, Metadata
+from kreuzberg._types import ExtractedImage, ExtractionResult, Metadata
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,11 +38,20 @@ class PresentationExtractor(Extractor):
         try:
             extraction_result = self._extractor.extract_from_bytes(content)
 
+            # Convert Rust images to Python ExtractedImage objects
+            images = []
+            if self.config.extract_images:
+                images = [
+                    ExtractedImage(data=bytes(img.data), format=img.format, page_number=img.slide_number)
+                    for img in extraction_result.images
+                ]
+
             result = ExtractionResult(
                 content=extraction_result.content,
                 mime_type=MARKDOWN_MIME_TYPE,
                 metadata=self._convert_metadata(extraction_result.metadata),
                 chunks=[],
+                images=images,
             )
 
             return self._apply_quality_processing(result)
@@ -56,11 +65,20 @@ class PresentationExtractor(Extractor):
         try:
             extraction_result = self._extractor.extract_from_path(path)
 
+            # Convert Rust images to Python ExtractedImage objects
+            images = []
+            if self.config.extract_images:
+                images = [
+                    ExtractedImage(data=bytes(img.data), format=img.format, page_number=img.slide_number)
+                    for img in extraction_result.images
+                ]
+
             result = ExtractionResult(
                 content=extraction_result.content,
                 mime_type=MARKDOWN_MIME_TYPE,
                 metadata=self._convert_metadata(extraction_result.metadata),
                 chunks=[],
+                images=images,
             )
 
             return self._apply_quality_processing(result)

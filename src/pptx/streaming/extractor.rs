@@ -6,7 +6,7 @@ use crate::pptx::content_builder::ContentBuilder;
 use crate::pptx::metadata::extract_metadata;
 use crate::pptx::notes::extract_all_notes;
 use crate::pptx::streaming::iterator::SlideIterator;
-use crate::pptx::types::{PptxExtractionResultDTO, PptxMetadataDTO, Result};
+use crate::pptx::types::{ExtractedImageDTO, PptxExtractionResultDTO, PptxMetadataDTO, Result};
 use pyo3::prelude::*;
 use std::path::Path;
 
@@ -55,6 +55,7 @@ impl StreamingPptxExtractorDTO {
 
         let mut total_image_count = 0;
         let mut total_table_count = 0;
+        let mut extracted_images = Vec::new();
 
         while let Some(slide) = iterator.next_slide()? {
             content_builder.add_slide_header(slide.slide_number);
@@ -64,6 +65,37 @@ impl StreamingPptxExtractorDTO {
 
             if let Some(slide_notes) = notes.get(&slide.slide_number) {
                 content_builder.add_notes(slide_notes);
+            }
+
+            // Extract images if enabled
+            if self.config.extract_images {
+                // Get image data from the iterator's cache
+                if let Ok(image_data) = iterator.get_slide_images(&slide) {
+                    for (_, data) in image_data {
+                        // Determine format from data
+                        let format = if data.starts_with(&[0xFF, 0xD8, 0xFF]) {
+                            "jpeg".to_string()
+                        } else if data.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
+                            "png".to_string()
+                        } else if data.starts_with(b"GIF") {
+                            "gif".to_string()
+                        } else if data.starts_with(b"BM") {
+                            "bmp".to_string()
+                        } else if data.starts_with(b"<svg") || data.starts_with(b"<?xml") {
+                            "svg".to_string()
+                        } else if data.starts_with(b"II\x2A\x00") || data.starts_with(b"MM\x00\x2A") {
+                            "tiff".to_string()
+                        } else {
+                            "unknown".to_string()
+                        };
+
+                        extracted_images.push(ExtractedImageDTO {
+                            data,
+                            format,
+                            slide_number: Some(slide.slide_number as usize),
+                        });
+                    }
+                }
             }
 
             total_image_count += slide.image_count();
@@ -76,6 +108,7 @@ impl StreamingPptxExtractorDTO {
             slide_count,
             image_count: total_image_count,
             table_count: total_table_count,
+            images: extracted_images,
         })
     }
 

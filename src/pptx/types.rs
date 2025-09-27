@@ -149,6 +149,19 @@ pub struct PptxExtractionResultDTO {
     pub image_count: usize,
     #[pyo3(get)]
     pub table_count: usize,
+    #[pyo3(get)]
+    pub images: Vec<ExtractedImageDTO>,
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ExtractedImageDTO {
+    #[pyo3(get)]
+    pub data: Vec<u8>,
+    #[pyo3(get)]
+    pub format: String,
+    #[pyo3(get)]
+    pub slide_number: Option<usize>,
 }
 
 /// Error types for PPTX processing
