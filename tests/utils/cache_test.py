@@ -70,8 +70,8 @@ def test_get_cache_key(cache: KreuzbergCache[ExtractionResult]) -> None:
     # Different params should produce different key  # ~keep
     assert key1 != key3
 
-    # Keys should be 16 characters (truncated sha256)  # ~keep
-    assert len(key1) == 16
+    # Keys should be 32 characters (128-bit hash for security)  # ~keep
+    assert len(key1) == 32
 
 
 def test_get_cache_path(cache: KreuzbergCache[ExtractionResult]) -> None:

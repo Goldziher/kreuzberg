@@ -1,6 +1,6 @@
 # Content Chunking
 
-Kreuzberg provides a powerful content chunking capability that allows you to split extracted text into smaller, more manageable chunks. This feature is particularly useful for processing large documents, working with language models that have token limits, or implementing semantic search functionality.
+Kreuzberg provides content chunking capability that allows you to split extracted text into smaller, more manageable chunks. This feature is particularly useful for processing large documents, working with language models that have token limits, or implementing semantic search functionality.
 
 ## Overview
 

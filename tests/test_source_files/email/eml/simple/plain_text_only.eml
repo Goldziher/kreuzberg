@@ -1,0 +1,13 @@
+From: test@example.com
+To: recipient@example.com
+Subject: Simple Plain Text Email
+Date: Mon, 1 Jan 2024 12:00:00 +0000
+Message-ID: <simple123@example.com>
+Content-Type: text/plain; charset=utf-8
+
+This is a simple plain text email without any attachments.
+
+It contains multiple lines of text.
+
+Best regards,
+Test User

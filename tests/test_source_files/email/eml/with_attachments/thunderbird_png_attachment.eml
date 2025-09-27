@@ -1,0 +1,30 @@
+Message-ID: <50AB9546.7020800@gmail.com>
+Date: Tue, 20 Nov 2012 23:35:50 +0900
+From: John Smith <JSmith@somenet.foo>
+User-Agent: Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2.17) Gecko/20110428 Fedora/3.1.10-1.fc13 Thunderbird/3.1.10
+MIME-Version: 1.0
+To: redmine@somenet.foo
+Subject: Test email with PNG attachment
+Content-Type: multipart/mixed;
+ boundary="------------050902080306030406090208"
+
+This is a multi-part message in MIME format.
+--------------050902080306030406090208
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 7bit
+
+This is a test email with a PNG image attachment.
+
+Best regards,
+John Smith
+
+--------------050902080306030406090208
+Content-Type: image/png;
+ name="test_image.png"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment;
+ filename="test_image.png"
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==
+
+--------------050902080306030406090208--

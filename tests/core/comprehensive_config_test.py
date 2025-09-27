@@ -174,19 +174,21 @@ def test_configure_gmft_disabled() -> None:
 def test_configure_gmft_from_cli() -> None:
     config_dict: dict[str, Any] = {"extract_tables": True}
     file_config: dict[str, Any] = {}
-    cli_args: MutableMapping[str, Any] = {"gmft_config": {"verbosity": 2, "detector_base_threshold": 0.8}}
+    cli_args: MutableMapping[str, Any] = {"gmft_config": {"detection_threshold": 0.8, "structure_threshold": 0.6}}
     _configure_gmft(config_dict, file_config, cli_args)
     assert isinstance(config_dict["gmft_config"], GMFTConfig)
-    assert config_dict["gmft_config"].verbosity == 2
+    assert config_dict["gmft_config"].detection_threshold == 0.8
+    assert config_dict["gmft_config"].structure_threshold == 0.6
 
 
 def test_configure_gmft_from_file() -> None:
     config_dict: dict[str, Any] = {"extract_tables": True}
-    file_config: dict[str, Any] = {"gmft": {"verbosity": 1, "formatter_base_threshold": 0.9}}
+    file_config: dict[str, Any] = {"gmft": {"detection_threshold": 0.9, "crop_padding": 30}}
     cli_args: MutableMapping[str, Any] = {}
     _configure_gmft(config_dict, file_config, cli_args)
     assert isinstance(config_dict["gmft_config"], GMFTConfig)
-    assert config_dict["gmft_config"].verbosity == 1
+    assert config_dict["gmft_config"].detection_threshold == 0.9
+    assert config_dict["gmft_config"].crop_padding == 30
 
 
 def test_configure_gmft_invalid_config() -> None:

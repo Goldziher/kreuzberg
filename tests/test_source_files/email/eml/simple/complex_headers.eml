@@ -1,0 +1,25 @@
+Return-Path: <complex@example.com>
+Received: from mail.example.com ([192.168.1.1])
+	by server.example.com (8.15.2/8.15.2) with ESMTP id 1234567890
+	for <recipient@example.com>; Wed, 15 Mar 2024 14:30:00 +0000
+From: "Complex Sender" <complex@example.com>
+To: recipient1@example.com, recipient2@example.com
+Cc: cc@example.com
+Bcc: bcc@example.com
+Reply-To: reply@example.com
+Subject: Complex Email with Multiple Recipients
+Date: Wed, 15 Mar 2024 14:30:00 +0000
+Message-ID: <complex123@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+X-Mailer: Test Mailer v1.0
+X-Custom-Header: Custom Value
+
+This email has complex headers with multiple recipients.
+
+It tests CC, BCC, Reply-To, and custom headers.
+
+The parser should handle all these headers correctly.
+
+Best regards,
+Complex Sender

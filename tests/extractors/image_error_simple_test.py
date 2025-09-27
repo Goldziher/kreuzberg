@@ -39,13 +39,16 @@ def test_presentation_image_extraction() -> None:
         mime_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", config=config
     )
 
-    assert hasattr(extractor, "_extract_images_from_pptx")
+    # Test that the extractor has the Rust backend
+    assert hasattr(extractor, "_extractor")
 
-    mock_pres = MagicMock()
-    mock_pres.slides = []
+    # Test with real PPTX file to ensure images are extracted
+    from pathlib import Path
 
-    images = extractor._extract_images_from_pptx(mock_pres)
-    assert images == []
+    pptx_path = Path("tests/test_source_files/pitch-deck-presentation.pptx")
+    if pptx_path.exists():
+        result = extractor.extract_path_sync(pptx_path)
+        assert len(result.images) > 0  # This file has images
 
 
 def test_extractors_respect_extract_images_flag() -> None:

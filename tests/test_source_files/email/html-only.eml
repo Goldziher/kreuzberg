@@ -1,0 +1,44 @@
+From: html-sender@example.com
+To: html-recipient@example.com
+Subject: HTML Only Email
+Date: Fri, 10 May 2024 16:45:00 +0000
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html>
+<head>
+    <title>HTML Email</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .header { color: blue; }
+        .content { margin: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Welcome to Our Service</h1>
+    </div>
+
+    <div class="content">
+        <p>This email contains <strong>only HTML</strong> content.</p>
+
+        <p>It includes:</p>
+        <ul>
+            <li>HTML entities: &lt;, &gt;, &amp;, &quot;</li>
+            <li>Special characters: €, ©, ®</li>
+            <li>Formatting: <em>italic</em>, <strong>bold</strong></li>
+        </ul>
+
+        <p>The Rust implementation should clean this HTML and extract meaningful text.</p>
+
+        <script>
+            // This script should be removed during HTML cleaning
+            alert('Should not appear in extracted text');
+        </script>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Example Company</p>
+    </footer>
+</body>
+</html>

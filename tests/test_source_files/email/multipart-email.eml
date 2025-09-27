@@ -1,0 +1,37 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Multipart Email Test
+Date: Wed, 15 Mar 2024 14:30:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="boundary123"
+
+--boundary123
+Content-Type: text/plain; charset=utf-8
+
+This is the plain text version of the email.
+It has multiple lines and some formatting.
+
+Best regards,
+Sender
+
+--boundary123
+Content-Type: text/html; charset=utf-8
+
+<html>
+<head>
+    <title>HTML Email</title>
+</head>
+<body>
+    <h1>HTML Version</h1>
+    <p>This is the <strong>HTML</strong> version with <em>formatting</em>.</p>
+    <ul>
+        <li>Item 1</li>
+        <li>Item 2</li>
+        <li>Item 3</li>
+    </ul>
+    <p>Best regards,<br>
+    <strong>Sender</strong></p>
+</body>
+</html>
+
+--boundary123--

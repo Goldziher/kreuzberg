@@ -24,6 +24,7 @@ from PIL import Image
 from PIL.Image import Image as PILImage
 from typing_extensions import Self
 
+from kreuzberg._internal_bindings import normalize_spaces
 from kreuzberg._mime_types import HTML_MIME_TYPE, MARKDOWN_MIME_TYPE, PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
 from kreuzberg._ocr._table_extractor import extract_words, reconstruct_table, to_markdown
@@ -31,7 +32,6 @@ from kreuzberg._types import ExtractionResult, HTMLToMarkdownConfig, PSMMode, Ta
 from kreuzberg._utils._cache import get_ocr_cache
 from kreuzberg._utils._html_streaming import should_use_streaming
 from kreuzberg._utils._process_pool import ProcessPoolManager, get_optimal_worker_count
-from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
 from kreuzberg._utils._tmp import create_temp_file, temporary_file_sync
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError

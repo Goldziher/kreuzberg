@@ -10,6 +10,7 @@ import anyio
 from kreuzberg._chunker import get_chunker
 from kreuzberg._document_classification import auto_detect_document_type
 from kreuzberg._entity_extraction import extract_entities, extract_keywords
+from kreuzberg._internal_bindings import safe_decode
 from kreuzberg._language_detection import detect_languages
 from kreuzberg._mime_types import (
     validate_mime_type,
@@ -19,7 +20,6 @@ from kreuzberg._token_reduction import get_reduction_stats, reduce_tokens
 from kreuzberg._types import ExtractionConfig, ExtractionResult
 from kreuzberg._utils._document_cache import get_document_cache
 from kreuzberg._utils._errors import create_error_context
-from kreuzberg._utils._string import safe_decode
 from kreuzberg._utils._sync import run_maybe_sync, run_sync_only
 from kreuzberg.exceptions import ValidationError
 

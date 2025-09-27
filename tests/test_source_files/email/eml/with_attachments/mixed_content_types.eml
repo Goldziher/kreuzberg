@@ -1,0 +1,50 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Test Email with Multiple Attachments
+Date: Mon, 26 Sep 2024 10:30:00 -0400
+Message-ID: <test123@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_NextPart_000_0001_01DA1234.56789ABC"
+
+------=_NextPart_000_0001_01DA1234.56789ABC
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+This is a test email with both plain text and attachments.
+
+It contains multiple lines of text to test proper extraction.
+
+Best regards,
+Test Sender
+
+------=_NextPart_000_0001_01DA1234.56789ABC
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+<html>
+<body>
+<p>This is the <strong>HTML</strong> version of the email.</p>
+<p>It has <em>formatting</em> and should be cleaned properly.</p>
+</body>
+</html>
+
+------=_NextPart_000_0001_01DA1234.56789ABC
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="document.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4K
+ZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPJ4K
+ZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAg
+MCA2MTIgNzkyXQo+PgplbmRvYmoKCnhyZWYKMCA0CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAw
+MDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKdHJh
+aWxlcgo8PAovU2l6ZSA0Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgoxODUKJSVFT0YK
+
+------=_NextPart_000_0001_01DA1234.56789ABC
+Content-Type: image/png
+Content-Disposition: attachment; filename="image.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==
+
+------=_NextPart_000_0001_01DA1234.56789ABC--

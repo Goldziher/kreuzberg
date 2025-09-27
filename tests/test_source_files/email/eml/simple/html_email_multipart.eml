@@ -1,0 +1,29 @@
+From: html-sender@example.com
+To: html-recipient@example.com
+Subject: HTML Email Test
+Date: Tue, 20 Feb 2024 10:15:00 +0000
+Message-ID: <html123@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="boundary123"
+
+--boundary123
+Content-Type: text/plain; charset=utf-8
+
+Plain text version of the email.
+
+This is the fallback for email clients that don't support HTML.
+
+--boundary123
+Content-Type: text/html; charset=utf-8
+
+<html><body>
+<h1>HTML Email</h1>
+<p>This is the <em>HTML</em> version with <strong>formatting</strong>.</p>
+<ul>
+<li>Item 1</li>
+<li>Item 2</li>
+</ul>
+<p>Should be cleaned of HTML tags by our parser.</p>
+</body></html>
+
+--boundary123--

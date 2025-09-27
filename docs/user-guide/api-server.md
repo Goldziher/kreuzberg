@@ -324,9 +324,10 @@ curl -X POST http://localhost:8000/extract \
   -H "X-Extraction-Config: {
     \"extract_tables\": true,
     \"gmft_config\": {
-      \"detector_base_threshold\": 0.85,
-      \"remove_null_rows\": true,
-      \"enable_multi_header\": true
+      \"detection_threshold\": 0.7,
+      \"structure_threshold\": 0.5,
+      \"detection_device\": \"auto\",
+      \"structure_device\": \"auto\"
     }
   }" \
   -F "data=@document_with_tables.pdf"

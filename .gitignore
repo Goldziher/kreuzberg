@@ -38,6 +38,7 @@ __pycache__/
 AGENTS.md
 benchmark_results.json
 benchmarks/results/
+!benchmarks/baselines/
 build/
 CLAUDE.md
 coverage.lcov
@@ -72,3 +73,12 @@ TODO.md
 # AI Rules generated files
 .claude/agents/
 AGENTS.md
+
+# Rust / Cargo files
+target/
+Cargo.lock
+*.rs.bk
+*.pdb
+*.so
+*.dylib
+*.dll

@@ -1,0 +1,24 @@
+From: "Complex Sender" <complex@example.com>
+To: "Recipient One" <recipient1@example.com>, recipient2@example.com
+Cc: cc1@example.com, "CC Person" <cc2@example.com>
+Bcc: bcc@example.com
+Subject: Complex Email with Multiple Recipients
+Date: Thu, 20 Jun 2024 09:15:30 +0000
+Message-ID: <12345@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+This email has complex headers with multiple recipients,
+CC and BCC fields, and proper RFC2822 formatting.
+
+It should test the parsing of:
+- Multiple To recipients
+- CC recipients
+- BCC recipients
+- Message-ID header
+- Properly quoted names in email addresses
+
+The Rust implementation should handle all of these correctly.
+
+Best regards,
+Complex Sender
