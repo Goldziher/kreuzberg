@@ -51,7 +51,7 @@ def benchmark_config(pdf_path: Path, config: GMFTConfig, config_name: str) -> di
     return results
 
 
-def main():
+def main() -> None:
     """Run benchmarks with different configurations."""
 
     # Test PDFs
@@ -115,7 +115,7 @@ def main():
         config_stats[config_name]["total_time"] += result["extraction_time"]
         config_stats[config_name]["pdf_count"] += 1
 
-    for config_name, stats in config_stats.items():
+    for stats in config_stats.values():
         if stats["pdf_count"] > 0:
             stats["total_time"] / stats["pdf_count"]
 
@@ -123,7 +123,7 @@ def main():
     output_path = Path("tests/gmft/benchmark_results.json")
     output_path.parent.mkdir(exist_ok=True)
 
-    with open(output_path, "w") as f:
+    with output_path.open("w") as f:
         json.dump(all_results, f, indent=2)
 
     # Recommendations

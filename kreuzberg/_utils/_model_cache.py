@@ -84,7 +84,7 @@ def ensure_cache_dir(cache_dir: str | None) -> str | None:
             cache_path.mkdir(parents=True, exist_ok=True)
             return str(cache_path)
         except (OSError, PermissionError) as e:
-            logger.warning(f"Failed to create cache directory {cache_dir}: {e}")
+            logger.warning("Failed to create cache directory %s: %s", cache_dir, e)
             return None
     return None
 
@@ -104,7 +104,7 @@ async def ensure_cache_dir_async(cache_dir: str | None) -> str | None:
             await cache_path.mkdir(parents=True, exist_ok=True)
             return str(cache_path)
         except (OSError, PermissionError) as e:
-            logger.warning(f"Failed to create cache directory {cache_dir}: {e}")
+            logger.warning("Failed to create cache directory %s: %s", cache_dir, e)
             return None
     return None
 
@@ -128,7 +128,7 @@ def setup_huggingface_cache(cache_dir: str | None = None) -> str | None:
             os.environ["HF_HOME"] = cache_dir
             # Legacy support
             os.environ["TRANSFORMERS_CACHE"] = cache_dir
-            logger.debug(f"Using HuggingFace cache directory: {cache_dir}")
+            logger.debug("Using HuggingFace cache directory: %s", cache_dir)
 
     return cache_dir
 
@@ -152,7 +152,7 @@ async def setup_huggingface_cache_async(cache_dir: str | None = None) -> str | N
             os.environ["HF_HOME"] = cache_dir
             # Legacy support
             os.environ["TRANSFORMERS_CACHE"] = cache_dir
-            logger.debug(f"Using HuggingFace cache directory: {cache_dir}")
+            logger.debug("Using HuggingFace cache directory: %s", cache_dir)
 
     return cache_dir
 

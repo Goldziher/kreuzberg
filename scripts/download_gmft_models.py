@@ -15,15 +15,11 @@ import os
 import sys
 from pathlib import Path
 
+from transformers import AutoImageProcessor, TableTransformerForObjectDetection  # type: ignore[attr-defined]
+
 
 def download_models() -> None:
     """Download the Table Transformer models from HuggingFace."""
-    try:
-        import torch
-        from transformers import AutoImageProcessor, TableTransformerForObjectDetection
-    except ImportError:
-        sys.exit(1)
-
     models = [
         # Detection model
         "microsoft/table-transformer-detection",
@@ -41,8 +37,8 @@ def download_models() -> None:
     else:
         pass
 
-    for model_name in models:
-        try:
+    try:
+        for model_name in models:
             # Download the image processor
             AutoImageProcessor.from_pretrained(model_name, cache_dir=cache_dir)
 
@@ -53,8 +49,8 @@ def download_models() -> None:
             param_count = sum(p.numel() for p in model.parameters())
             param_count * 4 / (1024 * 1024)  # Assuming float32
 
-        except Exception:
-            sys.exit(1)
+    except (ImportError, RuntimeError, OSError):
+        sys.exit(1)
 
     # Print cache information
     if cache_dir:
