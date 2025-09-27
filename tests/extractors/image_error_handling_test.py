@@ -12,6 +12,7 @@ from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._extractors._presentation import PresentationExtractor
 from kreuzberg._types import ExtractedImage
+from kreuzberg.exceptions import ParsingError
 
 if TYPE_CHECKING:
     import io
@@ -110,8 +111,6 @@ class TestImageExtractionErrorHandling:
             assert img.format in {"png", "jpg", "jpeg", "gif", "bmp", "tiff", "svg", "unknown"}
 
         # Also test with invalid PPTX data to ensure error handling
-        from kreuzberg.exceptions import ParsingError
-
         with pytest.raises(ParsingError, match="PPTX extraction failed"):
             extractor._extract_from_bytes(b"invalid_pptx_data")
 

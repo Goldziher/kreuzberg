@@ -7,6 +7,7 @@ from kreuzberg._extractors._base import Extractor
 from kreuzberg._internal_bindings import PptxExtractorDTO
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE, POWER_POINT_MIME_TYPE
 from kreuzberg._types import ExtractedImage, ExtractionResult, Metadata
+from kreuzberg.exceptions import ParsingError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -58,7 +59,7 @@ class PresentationExtractor(Extractor):
 
         except Exception as e:
             logger.error("Failed to extract PPTX: %s", e)
-            raise
+            raise ParsingError(f"PPTX extraction failed: {e}") from e
 
     def _extract_from_path(self, path: str) -> ExtractionResult:
         """Extract PPTX from file path."""
@@ -85,7 +86,7 @@ class PresentationExtractor(Extractor):
 
         except Exception as e:
             logger.error("Failed to extract PPTX: %s", e)
-            raise
+            raise ParsingError(f"PPTX extraction failed: {e}") from e
 
     def _convert_metadata(self, metadata_obj: Any) -> Metadata:
         """Convert metadata to Python format."""
