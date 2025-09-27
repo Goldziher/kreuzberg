@@ -115,11 +115,39 @@ pip install "kreuzberg[chunking]"
 
 ### Table Extraction
 
-Table extraction is an optional feature that allows Kreuzberg to extract tables from PDFs. It uses the [GMFT](https://github.com/conjuncts/gmft) package. To install Kreuzberg with table extraction support, you can use:
+Kreuzberg offers multiple approaches for extracting tables from documents:
+
+#### Vision-Based Table Extraction (Recommended)
+
+Uses computer vision models for high-accuracy table detection and structure recognition. Best for complex tables and diverse document types.
 
 ```shell
 pip install "kreuzberg[gmft]"
 ```
+
+**Features:**
+
+- Complex table layouts with spanning cells and multi-level headers
+- Works on any document type (PDFs, images, presentations)
+- GPU acceleration support
+- ~1GB model download on first use
+
+#### OCR-Based Table Extraction (Lightweight)
+
+Uses Tesseract OCR analysis to detect simple table structures. Included with the base installation.
+
+```shell
+pip install kreuzberg  # Already included
+```
+
+**Features:**
+
+- Fast processing with minimal resource usage
+- No additional dependencies beyond Tesseract
+- Good for simple, well-formatted tables
+- Works with scanned documents
+
+See the [Table Extraction Guide](../user-guide/table-extraction.md) for detailed comparison and usage instructions.
 
 ### Language Detection
 

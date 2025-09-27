@@ -65,9 +65,12 @@ use_gpu = false
 # Table extraction configuration (GMFT)
 [gmft]
 verbosity = 1
-detector_base_threshold = 0.9
-remove_null_rows = true
-enable_multi_header = true
+detection_threshold = 0.7
+structure_threshold = 0.5
+# Uses optimized model defaults
+detection_device = "auto"
+structure_device = "auto"
+enable_model_caching = true
 
 # DPI and Image Processing configuration
 target_dpi = 150                  # Target DPI for document processing
@@ -149,8 +152,10 @@ language = "eng"
 psm = 6
 
 [tool.kreuzberg.gmft]
-detector_base_threshold = 0.85
-remove_null_rows = true
+detection_threshold = 0.7
+structure_threshold = 0.5
+detection_device = "auto"
+structure_device = "auto"
 ```
 
 ### Using Configuration Files
@@ -397,91 +402,40 @@ result = await extract_file(
 
 ### Table Extraction
 
-Kreuzberg provides advanced table extraction from PDF documents using Microsoft's Table Transformer (TATR) models. The implementation is adapted from [GMFT], an excellent library for table extraction using Table Transformer models.
+Kreuzberg offers multiple approaches for extracting tables from documents. For detailed information, see the [Table Extraction Guide](table-extraction.md).
+
+#### Quick Configuration
 
 ```python
 from kreuzberg import extract_file, ExtractionConfig, GMFTConfig
 
-# Extract tables with default configuration
-result = await extract_file("document_with_tables.pdf", config=ExtractionConfig(extract_tables=True))
+# Vision-based table extraction (recommended for complex tables)
+config_ai = ExtractionConfig(extract_tables=True, gmft_config=GMFTConfig(detection_threshold=0.7))
 
-# Extract tables with custom configuration
-config = ExtractionConfig(
+# OCR-based table extraction (lightweight, for simple tables)
+config_ocr = ExtractionConfig(extract_tables_from_ocr=True)
+
+# Both methods combined (maximum coverage)
+config_both = ExtractionConfig(
     extract_tables=True,
-    gmft_config=GMFTConfig(
-        detection_model="microsoft/table-transformer-detection",
-        structure_model="microsoft/table-transformer-structure-recognition-v1.1-all",
-        detection_threshold=0.8,
-        structure_threshold=0.6,
-        crop_padding=25,
-        min_table_area=1000,
-        model_cache_dir="/path/to/model/cache",  # Optional: custom model cache
-    ),
+    extract_tables_from_ocr=True,
 )
-result = await extract_file("document_with_tables.pdf", config=config)
+
+result = await extract_file("document_with_tables.pdf", config=config_ai)
 
 # Access extracted tables
-for i, table in enumerate(result.tables):
-    print(f"Table {i+1} on page {table['page_number']}:")
+for table in result.tables:
+    print(f"Table from page {table['page_number']}:")
     print(table["text"])  # Markdown representation
-    df = table["df"]  # Polars DataFrame
-    print(df.shape)  # (rows, columns)
-
-    # Access the cropped table image
-    image = table["cropped_image"]  # PIL Image
-    image.save(f"table_{i+1}.png")
+    # table["df"] contains structured data as Polars DataFrame
 ```
 
-#### Table Transformer Models
+**See [Table Extraction Guide](table-extraction.md) for:**
 
-Kreuzberg uses Microsoft's state-of-the-art Table Transformer v1.1 models:
-
-- **Detection model**: `microsoft/table-transformer-detection` - Locates tables in documents
-- **Structure models**: Choose based on your document type:
-    - `microsoft/table-transformer-structure-recognition-v1.1-all` (default) - Trained on PubTables1M + FinTabNet
-    - `microsoft/table-transformer-structure-recognition-v1.1-pub` - PubTables1M only (academic papers)
-    - `microsoft/table-transformer-structure-recognition-v1.1-fin` - FinTabNet only (financial documents)
-
-#### Configuration Options
-
-- `detection_threshold` (0.7): Confidence threshold for table detection
-- `structure_threshold` (0.5): Confidence threshold for table structure elements
-- `detection_device` / `structure_device` ("auto"): Device placement ("cpu", "cuda", "auto")
-- `crop_padding` (20): Pixels to add around detected table regions
-- `min_table_area` (1000): Minimum table area in pixels to process
-- `max_table_area` (None): Maximum table area in pixels (None = no limit)
-- `model_cache_dir` (None): Custom directory for caching downloaded models
-
-#### Model Caching
-
-Models are automatically downloaded and cached on first use. Set a custom cache directory to control where models are stored:
-
-```python
-# Global cache for all models
-config = ExtractionConfig(
-    model_cache_dir="/shared/models",
-    extract_tables=True,
-)
-
-# Or GMFT-specific cache
-config = ExtractionConfig(
-    extract_tables=True,
-    gmft_config=GMFTConfig(model_cache_dir="/shared/gmft_models"),
-)
-```
-
-You can also use environment variables:
-
-```bash
-export KREUZBERG_MODEL_CACHE=/shared/models  # Global cache
-export HF_HOME=/shared/hf_models            # HuggingFace models only
-```
-
-Note that table extraction requires the `gmft` dependency. You can install it with:
-
-```shell
-pip install "kreuzberg[gmft]"
-```
+- Detailed comparison of AI vs OCR methods
+- Performance characteristics and hardware requirements
+- Advanced configuration options
+- Troubleshooting and optimization tips
 
 ### Language Detection
 
@@ -1028,5 +982,3 @@ When configuring OCR for your documents, consider these best practices:
     - PaddleOCR: Excellent for Chinese and other Asian languages
 
 1. **Preprocessing**: For better OCR results, consider using validation and post-processing hooks to clean up the extracted text.
-
-[gmft]: https://github.com/conjuncts/gmft

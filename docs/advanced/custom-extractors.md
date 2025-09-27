@@ -100,7 +100,7 @@ ExtractorRegistry.remove_extractor(CustomExtractor)
 
 ## OCR Configuration in Custom Extractors
 
-When creating custom extractors that need OCR capabilities, you can leverage Kreuzberg's OCR configuration options:
+When creating custom extractors that need OCR capabilities, you can use Kreuzberg's OCR configuration options:
 
 ```python
 from kreuzberg import ExtractorRegistry, ExtractionResult, ExtractionConfig, TesseractConfig, PSMMode

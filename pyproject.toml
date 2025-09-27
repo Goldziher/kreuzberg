@@ -165,13 +165,6 @@ lint.ignore = [
   "TD",      # We allow todo and fixme comments
   "TRY",     # Try except block, rules are too strict
 ]
-lint.per-file-ignores."benchmarks/**/*.*" = [
-  "BLE001",  # Allow broad exception catching in benchmarks
-  "C901",    # Allow complex functions in benchmarks
-  "D",
-  "PLR0912", # Allow many branches in benchmarks
-  "PLR0915", # Allow many statements in benchmarks
-]
 lint.per-file-ignores."tests/**/*.*" = [
   "A005",    # Module shadows standard library
   "ANN",     # Disable all annotation rules for tests
@@ -196,9 +189,6 @@ lint.per-file-ignores."tests/**/*.*" = [
   "SIM117",  # Combine with statements
   "SLF001",
 ]
-lint.per-file-ignores."tests/e2e/*_test.py" = [
-  "T201", # print statements are needed for test output
-]
 lint.isort.known-first-party = [ "kreuzberg", "tests" ]
 lint.mccabe.max-complexity = 15
 lint.pydocstyle.convention = "google"
@@ -218,8 +208,6 @@ max_supported_python = "3.13"
 timeout = 300
 testpaths = [ "tests" ]
 norecursedirs = [
-  "benchmarks",
-  "python-text-extraction-libs-benchmarks",
   "dist",
   "build",
   "*.egg",
@@ -237,8 +225,6 @@ branch = true
 omit = [
   "tests/*",
   "scripts/*",
-  "benchmarks/*",
-  "python-text-extraction-libs-benchmarks/*",
 ]
 plugins = [ "covdefaults" ]
 source = [ "kreuzberg" ]
@@ -260,51 +246,9 @@ exclude_lines = [
 [tool.mypy]
 packages = [ "kreuzberg", "tests", "benchmarks" ]
 python_version = "3.10"
-disable_error_code = 'import-untyped'
 implicit_reexport = false
 show_error_codes = true
 strict = true
 
-[[tool.mypy.overrides]]
-module = "tests.e2e.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = [
-  "rich.*",
-  "typer.*",
-  "matplotlib.*",
-  "memory_profiler.*",
-  "py_spy.*",
-  "litestar.*",
-  "structlog.*",
-  "opentelemetry.*",
-  "fast_langdetect.*",
-  "numpy.*",
-  "torch.*",
-  "easyocr.*",
-  "paddleocr.*",
-  "gmft.*",
-  "semantic_text_splitter.*",
-  "spacy.*",
-  "keybert.*",
-  "mailparse.*",
-  "deep_translator.*",
-  "msgpack.*",
-]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "benchmarks.*"
-disable_error_code = [ "misc" ]
-
-[[tool.mypy.overrides]]
-module = [ "kreuzberg._gmft" ]
-disable_error_code = [ "unused-ignore" ]
-
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
-kreuzberg-benchmarks = { workspace = true }
-
-[tool.uv.workspace]
-members = [ ".", "benchmarks" ]
