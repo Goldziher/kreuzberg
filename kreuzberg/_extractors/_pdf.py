@@ -95,14 +95,10 @@ class PDFExtractor(Extractor):
         result.metadata = metadata
 
         if self.config.extract_tables:
-            # GMFT is optional dependency ~keep
-            try:
-                from kreuzberg._gmft import extract_tables  # noqa: PLC0415
+            from kreuzberg._gmft import extract_tables_async  # noqa: PLC0415
 
-                tables = await extract_tables(path, self.config.gmft_config)
-                result.tables = tables
-            except ImportError:  # pragma: no cover
-                result.tables = []
+            tables = await extract_tables_async(path, self.config.gmft_config)
+            result.tables = tables
 
             if result.tables:
                 table_summary = generate_table_summary(result.tables)
@@ -147,13 +143,9 @@ class PDFExtractor(Extractor):
 
         tables = []
         if self.config.extract_tables:
-            # GMFT is optional dependency ~keep
-            try:
-                from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
+            from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
 
-                tables = extract_tables_sync(path)
-            except ImportError:  # pragma: no cover
-                tables = []
+            tables = extract_tables_sync(path)
 
         if not self.config.force_ocr and self._validate_extracted_text(text):
             text = self._extract_with_playa_sync(path, fallback_text=text)

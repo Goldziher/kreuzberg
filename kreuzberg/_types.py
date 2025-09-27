@@ -255,104 +255,137 @@ class PaddleOCRConfig(ConfigDict):
 
 @dataclass(unsafe_hash=True, frozen=True, slots=True)
 class GMFTConfig(ConfigDict):
-    verbosity: int = 0
-    """
-    Verbosity level for logging.
+    """Configuration for GMFT table extraction using TATR v1.1 models.
 
-    0: errors only
-    1: print warnings
-    2: print warnings and info
-    3: print warnings, info, and debug
+    This configuration controls table detection and structure recognition
+    using Microsoft's Table Transformer models.
     """
-    formatter_base_threshold: float = 0.3
-    """
-    Base threshold for the confidence demanded of a table feature (row/column).
 
-    Note that a low threshold is actually better, because overzealous rows means that generally, numbers are still aligned and there are just many empty rows (having fewer rows than expected merges cells, which is bad).
-    """
-    cell_required_confidence: dict[Literal[0, 1, 2, 3, 4, 5, 6], float] = field(
-        default_factory=lambda: {
-            0: 0.3,
-            1: 0.3,
-            2: 0.3,
-            3: 0.3,
-            4: 0.5,
-            5: 0.5,
-            6: 99,
-        },
-        hash=False,
-    )
-    """
-    Confidences required (>=) for a row/column feature to be considered good. See TATRFormattedTable.id2label
+    # Model Configuration
+    detection_model: str = "microsoft/table-transformer-detection"
+    """HuggingFace model path for table detection."""
 
-    But low confidences may be better than too high confidence (see formatter_base_threshold)
-    """
-    detector_base_threshold: float = 0.9
-    """Minimum confidence score required for a table"""
-    remove_null_rows: bool = True
-    """
-    Flag to remove rows with no text.
-    """
-    enable_multi_header: bool = False
-    """
-    Enable multi-indices in the dataframe.
+    structure_model: str = "microsoft/table-transformer-structure-recognition-v1.1-all"
+    """HuggingFace model path for table structure recognition.
 
-    If false, then multiple headers will be merged column-wise.
+    Available v1.1 models:
+    - microsoft/table-transformer-structure-recognition-v1.1-all (PubTables1M + FinTabNet)
+    - microsoft/table-transformer-structure-recognition-v1.1-pub (PubTables1M only)
+    - microsoft/table-transformer-structure-recognition-v1.1-fin (FinTabNet only)
     """
-    semantic_spanning_cells: bool = False
-    """
-    [Experimental] Enable semantic spanning cells, which often encode hierarchical multi-level indices.
-    """
-    semantic_hierarchical_left_fill: Literal["algorithm", "deep"] | None = "algorithm"
-    """
-    [Experimental] When semantic spanning cells is enabled, when a left header is detected which might represent a group of rows, that same value is reduplicated for each row.
 
-    Possible values: 'algorithm', 'deep', None.
-    """
-    large_table_if_n_rows_removed: int = 8
-    """
-    If >= n rows are removed due to non-maxima suppression (NMS), then this table is classified as a large table.
-    """
-    large_table_threshold: int = 10
-    """
-    With large tables, table transformer struggles with placing too many overlapping rows. Luckily, with more rows, we have more info on the usual size of text, which we can use to make a guess on the height such that no rows are merged or overlapping.
+    model_cache_dir: str | None = None
+    """Custom cache directory for model downloads. If None, uses HuggingFace default."""
 
-    Large table assumption is only applied when (# of rows > large_table_threshold) AND (total overlap > large_table_row_overlap_threshold). Set 9999 to disable; set 0 to force large table assumption to run every time.
-    """
-    large_table_row_overlap_threshold: float = 0.2
-    """
-    With large tables, table transformer struggles with placing too many overlapping rows. Luckily, with more rows, we have more info on the usual size of text, which we can use to make a guess on the height such that no rows are merged or overlapping.
+    # Detection Settings
+    detection_threshold: float = 0.7
+    """Confidence threshold for table detection (0.0-1.0).
 
-    Large table assumption is only applied when (# of rows > large_table_threshold) AND (total overlap > large_table_row_overlap_threshold).
-    """
-    large_table_maximum_rows: int = 1000
-    """
-    Maximum number of rows allowed for a large table.
-    """
-    force_large_table_assumption: bool | None = None
-    """
-    Force the large table assumption to be applied, regardless of the number of rows and overlap.
-    """
+    Microsoft's recommended default is 0.7 for balanced precision/recall."""
+
+    detection_device: str = "auto"
+    """Device for detection model ('auto', 'cpu', 'cuda', 'cuda:0', etc)."""
+
+    # Structure Recognition Settings
+    structure_threshold: float = 0.5
+    """Confidence threshold for structure elements (rows/columns).
+
+    Lower than detection threshold to capture more structural details within detected tables."""
+
+    structure_device: str = "auto"
+    """Device for structure model ('auto', 'cpu', 'cuda', 'cuda:0', etc)."""
+
+    # Table Processing
+    crop_padding: int = 20
+    """Pixels to add around detected tables when cropping."""
+
+    min_table_area: int = 1000
+    """Minimum table area in pixels² to process."""
+
+    max_table_area: int | None = None
+    """Maximum table area in pixels² to process. None = no limit."""
+
+    # Cell Confidence Thresholds
+    cell_confidence_table: float = 0.3
+    """Confidence threshold for table cells."""
+
+    cell_confidence_column: float = 0.3
+    """Confidence threshold for columns."""
+
+    cell_confidence_row: float = 0.3
+    """Confidence threshold for rows."""
+
+    cell_confidence_column_header: float = 0.3
+    """Confidence threshold for column headers."""
+
+    cell_confidence_projected_row_header: float = 0.5
+    """Confidence threshold for projected row headers."""
+
+    cell_confidence_spanning_cell: float = 0.5
+    """Confidence threshold for spanning cells."""
+
+    # Quality Control
     total_overlap_reject_threshold: float = 0.9
-    """
-    Reject if total overlap is > 90% of table area.
-    """
+    """Reject table if total overlap > this fraction of table area."""
+
     total_overlap_warn_threshold: float = 0.1
-    """
-    Warn if total overlap is > 10% of table area.
-    """
-    nms_warn_threshold: int = 5
-    """
-    Warn if non maxima suppression removes > 5 rows.
-    """
+    """Warn if total overlap > this fraction of table area."""
+
     iob_reject_threshold: float = 0.05
-    """
-    Reject if iob between textbox and cell is < 5%.
-    """
+    """Reject if intersection-over-box between text and cell < this value."""
+
     iob_warn_threshold: float = 0.5
-    """
-    Warn if iob between textbox and cell is < 50%.
-    """
+    """Warn if intersection-over-box between text and cell < this value."""
+
+    # Large Table Handling
+    large_table_threshold: int = 10
+    """Row count threshold to trigger large table handling."""
+
+    large_table_row_overlap_threshold: float = 0.2
+    """Overlap threshold to trigger large table handling."""
+
+    large_table_maximum_rows: int = 1000
+    """Maximum rows allowed in a large table."""
+
+    force_large_table_assumption: bool | None = None
+    """Force large table handling regardless of thresholds."""
+
+    # Output Settings
+    remove_null_rows: bool = True
+    """Remove rows with no text content."""
+
+    enable_multi_header: bool = False
+    """Enable multi-level column headers in output."""
+
+    semantic_spanning_cells: bool = False
+    """Enable semantic interpretation of spanning cells."""
+
+    # Performance
+    enable_model_caching: bool = True
+    """Cache loaded models for reuse."""
+
+    batch_size: int = 1
+    """Batch size for processing multiple tables."""
+
+    mixed_precision: bool = False
+    """Use mixed precision (FP16) when available for faster inference."""
+
+    # Logging
+    verbosity: int = 1
+    """Verbosity level (0=errors, 1=warnings, 2=info, 3=debug)."""
+
+    @property
+    def cell_required_confidence(self) -> dict[int, float]:
+        """Get cell confidence thresholds as dict for internal use."""
+        return {
+            0: self.cell_confidence_table,
+            1: self.cell_confidence_column,
+            2: self.cell_confidence_row,
+            3: self.cell_confidence_column_header,
+            4: self.cell_confidence_projected_row_header,
+            5: self.cell_confidence_spanning_cell,
+            6: 99.0,  # no object
+        }
 
 
 @dataclass(unsafe_hash=True, frozen=True, slots=True)
@@ -924,6 +957,11 @@ class JSONExtractionConfig(ConfigDict):
 
 @dataclass(unsafe_hash=True, frozen=True, slots=True)
 class ExtractionConfig(ConfigDict):
+    model_cache_dir: str | None = None
+    """Global cache directory for all ML models (GMFT, OCR, spaCy, etc.).
+
+    If set, this overrides individual model cache settings.
+    Can also be set via KREUZBERG_MODEL_CACHE or HF_HOME environment variables."""
     force_ocr: bool = False
     """Whether to force OCR."""
     chunk_content: bool = False

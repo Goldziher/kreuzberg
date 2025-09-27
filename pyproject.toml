@@ -93,7 +93,10 @@ optional-dependencies.crypto = [ "playa-pdf[crypto]>=0.7.0" ]
 optional-dependencies.document-classification = [ "deep-translator>=1.11.4" ]
 optional-dependencies.easyocr = [ "easyocr>=1.7.2" ]
 optional-dependencies.entity-extraction = [ "keybert>=0.9.0", "spacy>=3.8.7" ]
-optional-dependencies.gmft = [ "gmft>=0.4.2" ]
+optional-dependencies.gmft = [
+  "torch>=2.8.0",
+  "transformers>=4.35.2",
+]
 optional-dependencies.langdetect = [ "fast-langdetect>=1.0.0" ]
 optional-dependencies.paddleocr = [
   "paddleocr>=3.2.0",

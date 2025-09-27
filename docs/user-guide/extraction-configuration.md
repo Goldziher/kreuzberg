@@ -219,22 +219,30 @@ Configure extraction options directly via URL query parameters when making reque
 Enable chunking with custom settings:
 
 ```bash
-curl -X POST "http://localhost:8000/extract?chunk_content=true&max_chars=500&max_overlap=50" \
-  -F "data=@document.pdf"
+curl -X POST "http://localhost:8000/extract" \
+  -F "data=@document.pdf" \
+  -F "chunk_content=true" \
+  -F "max_chars=500" \
+  -F "max_overlap=50"
 ```
 
 Extract entities and keywords:
 
 ```bash
-curl -X POST "http://localhost:8000/extract?extract_entities=true&extract_keywords=true&keyword_count=5" \
-  -F "data=@document.pdf"
+curl -X POST "http://localhost:8000/extract" \
+  -F "data=@document.pdf" \
+  -F "extract_entities=true" \
+  -F "extract_keywords=true" \
+  -F "keyword_count=5"
 ```
 
 Force OCR with specific backend:
 
 ```bash
-curl -X POST "http://localhost:8000/extract?force_ocr=true&ocr_backend=tesseract" \
-  -F "data=@image.jpg"
+curl -X POST "http://localhost:8000/extract" \
+  -F "data=@image.jpg" \
+  -F "force_ocr=true" \
+  -F "ocr_backend=tesseract"
 ```
 
 **Supported Query Parameters:**
@@ -262,7 +270,8 @@ For complex nested configurations (like OCR-specific settings), use the `X-Extra
 Advanced OCR configuration:
 
 ```bash
-curl -X POST http://localhost:8000/extract \
+curl -X POST "http://localhost:8000/extract" \
+  -H "Content-Type: multipart/form-data" \
   -H "X-Extraction-Config: {
     \"force_ocr\": true,
     \"ocr_backend\": \"tesseract\",
@@ -278,13 +287,15 @@ curl -X POST http://localhost:8000/extract \
 Table extraction with GMFT configuration:
 
 ```bash
-curl -X POST http://localhost:8000/extract \
+curl -X POST "http://localhost:8000/extract" \
+  -H "Content-Type: multipart/form-data" \
   -H "X-Extraction-Config: {
     \"extract_tables\": true,
     \"gmft_config\": {
-      \"detector_base_threshold\": 0.85,
-      \"remove_null_rows\": true,
-      \"enable_multi_header\": true
+      \"detection_threshold\": 0.8,
+      \"structure_threshold\": 0.6,
+      \"crop_padding\": 25,
+      \"min_table_area\": 1000
     }
   }" \
   -F "data=@document_with_tables.pdf"
@@ -386,7 +397,7 @@ result = await extract_file(
 
 ### Table Extraction
 
-Kreuzberg can extract tables from PDF documents using the [GMFT](https://github.com/conjuncts/gmft) package:
+Kreuzberg provides advanced table extraction from PDF documents using Microsoft's Table Transformer (TATR) models. The implementation is adapted from [GMFT], an excellent library for table extraction using Table Transformer models.
 
 ```python
 from kreuzberg import extract_file, ExtractionConfig, GMFTConfig
@@ -398,9 +409,13 @@ result = await extract_file("document_with_tables.pdf", config=ExtractionConfig(
 config = ExtractionConfig(
     extract_tables=True,
     gmft_config=GMFTConfig(
-        detector_base_threshold=0.85,
-        remove_null_rows=True,
-        enable_multi_header=True,
+        detection_model="microsoft/table-transformer-detection",
+        structure_model="microsoft/table-transformer-structure-recognition-v1.1-all",
+        detection_threshold=0.8,
+        structure_threshold=0.6,
+        crop_padding=25,
+        min_table_area=1000,
+        model_cache_dir="/path/to/model/cache",  # Optional: custom model cache
     ),
 )
 result = await extract_file("document_with_tables.pdf", config=config)
@@ -408,9 +423,58 @@ result = await extract_file("document_with_tables.pdf", config=config)
 # Access extracted tables
 for i, table in enumerate(result.tables):
     print(f"Table {i+1} on page {table['page_number']}:")
-    print(table["text"])
-    df = table["df"]
+    print(table["text"])  # Markdown representation
+    df = table["df"]  # Polars DataFrame
     print(df.shape)  # (rows, columns)
+
+    # Access the cropped table image
+    image = table["cropped_image"]  # PIL Image
+    image.save(f"table_{i+1}.png")
+```
+
+#### Table Transformer Models
+
+Kreuzberg uses Microsoft's state-of-the-art Table Transformer v1.1 models:
+
+- **Detection model**: `microsoft/table-transformer-detection` - Locates tables in documents
+- **Structure models**: Choose based on your document type:
+    - `microsoft/table-transformer-structure-recognition-v1.1-all` (default) - Trained on PubTables1M + FinTabNet
+    - `microsoft/table-transformer-structure-recognition-v1.1-pub` - PubTables1M only (academic papers)
+    - `microsoft/table-transformer-structure-recognition-v1.1-fin` - FinTabNet only (financial documents)
+
+#### Configuration Options
+
+- `detection_threshold` (0.7): Confidence threshold for table detection
+- `structure_threshold` (0.5): Confidence threshold for table structure elements
+- `detection_device` / `structure_device` ("auto"): Device placement ("cpu", "cuda", "auto")
+- `crop_padding` (20): Pixels to add around detected table regions
+- `min_table_area` (1000): Minimum table area in pixels to process
+- `max_table_area` (None): Maximum table area in pixels (None = no limit)
+- `model_cache_dir` (None): Custom directory for caching downloaded models
+
+#### Model Caching
+
+Models are automatically downloaded and cached on first use. Set a custom cache directory to control where models are stored:
+
+```python
+# Global cache for all models
+config = ExtractionConfig(
+    model_cache_dir="/shared/models",
+    extract_tables=True,
+)
+
+# Or GMFT-specific cache
+config = ExtractionConfig(
+    extract_tables=True,
+    gmft_config=GMFTConfig(model_cache_dir="/shared/gmft_models"),
+)
+```
+
+You can also use environment variables:
+
+```bash
+export KREUZBERG_MODEL_CACHE=/shared/models  # Global cache
+export HF_HOME=/shared/hf_models            # HuggingFace models only
 ```
 
 Note that table extraction requires the `gmft` dependency. You can install it with:
@@ -964,3 +1028,5 @@ When configuring OCR for your documents, consider these best practices:
     - PaddleOCR: Excellent for Chinese and other Asian languages
 
 1. **Preprocessing**: For better OCR results, consider using validation and post-processing hooks to clean up the extracted text.
+
+[gmft]: https://github.com/conjuncts/gmft

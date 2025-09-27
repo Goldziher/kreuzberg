@@ -173,8 +173,31 @@ jobs:
         run: |
           uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 
+      - name: Cache HuggingFace Models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: huggingface-models-gmft-v1-${{ runner.os }}
+          restore-keys: |
+            huggingface-models-gmft-v1-
+
+      - name: Download GMFT Models if Not Cached
+        env:
+          HF_HOME: ~/.cache/huggingface
+          TRANSFORMERS_CACHE: ~/.cache/huggingface
+        run: |
+          if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
+            echo "Cache miss - downloading GMFT models..."
+            uv run python scripts/download_gmft_models.py
+          else
+            echo "Using cached GMFT models"
+          fi
+
       - name: Run Tests with Coverage
         uses: nick-fields/retry@v3
+        env:
+          HF_HOME: ~/.cache/huggingface
+          TRANSFORMERS_CACHE: ~/.cache/huggingface
         with:
           timeout_minutes: 15
           max_attempts: 3
@@ -331,6 +354,27 @@ jobs:
         if: matrix.test-category.system-deps
         run: |
           uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+
+      - name: Cache HuggingFace Models
+        if: contains(matrix.test-category.path, 'gmft')
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: huggingface-models-gmft-v1-${{ runner.os }}
+          restore-keys: |
+            huggingface-models-gmft-v1-
+
+      - name: Download GMFT Models if Not Cached
+        if: contains(matrix.test-category.path, 'gmft')
+        env:
+          TRANSFORMERS_CACHE: ~/.cache/huggingface
+        run: |
+          if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
+            echo "Cache miss - downloading GMFT models..."
+            uv run python scripts/download_gmft_models.py
+          else
+            echo "Using cached GMFT models"
+          fi
 
       - name: Run Tests - ${{ matrix.test-category.name }}
         uses: nick-fields/retry@v3

@@ -37,7 +37,7 @@ zip = "5.1.1"
 mail-parser = "0.11.1"
 msg_parser = "0.1.1"
 html-escape = "0.2.13"
-chrono = { version = "0.4.38", default-features = false, features = ["clock", "std", "serde"] }
+chrono = { version = "0.4.42", default-features = false, features = ["clock", "std", "serde"] }
 base64 = "0.22.1"
 hex = "0.4.3"
 
