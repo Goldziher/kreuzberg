@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn test_format_float() {
-        assert_eq!(format_float(3.14159), "3.14");
+        assert_eq!(format_float(std::f64::consts::PI), "3.14");
         assert_eq!(format_float(100.0), "100.00");
         assert_eq!(format_float(0.0), "0.00");
         assert_eq!(format_float(-42.7), "-42.70");
@@ -271,10 +271,10 @@ mod tests {
         assert_eq!(format_cell_value(&AnyValue::UInt64(0)), "0");
         assert_eq!(format_cell_value(&AnyValue::UInt64(u64::MAX)), "18446744073709551615");
 
-        assert_eq!(format_cell_value(&AnyValue::Float32(3.14)), "3.14");
+        assert_eq!(format_cell_value(&AnyValue::Float32(std::f32::consts::PI)), "3.14");
         assert_eq!(format_cell_value(&AnyValue::Float32(0.0)), "0.00");
         assert_eq!(format_cell_value(&AnyValue::Float32(-1.5)), "-1.50");
-        assert_eq!(format_cell_value(&AnyValue::Float64(3.14159)), "3.14");
+        assert_eq!(format_cell_value(&AnyValue::Float64(std::f64::consts::PI)), "3.14");
         assert_eq!(format_cell_value(&AnyValue::Float64(0.001)), "0.00");
         assert_eq!(format_cell_value(&AnyValue::Float64(-999.999)), "-1000.00");
 

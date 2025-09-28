@@ -316,7 +316,7 @@ mod tests {
         assert_eq!(buffer, "42.0");
 
         buffer.clear();
-        format_cell_value_into(&mut buffer, &Data::Float(3.14159));
+        format_cell_value_into(&mut buffer, &Data::Float(std::f64::consts::PI));
         assert_eq!(buffer, "3.14159");
 
         buffer.clear();
