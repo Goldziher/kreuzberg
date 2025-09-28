@@ -228,7 +228,7 @@ mod tests {
     fn test_calculate_text_confidence_cyrillic_text() {
         let text = "Normal text followed by много кириллического текста здесь";
         let confidence = calculate_text_confidence(text);
-        assert!(confidence >= 0.0 && confidence <= 1.0);
+        assert!((0.0..=1.0).contains(&confidence));
     }
 
     #[test]

@@ -617,8 +617,10 @@ mod tests {
 
     #[test]
     fn test_preserve_patterns() {
-        let mut config = TokenReductionConfigDTO::default();
-        config.preserve_patterns = vec!["\\b[A-Z]{2,}\\b".to_string()];
+        let config = TokenReductionConfigDTO {
+            preserve_patterns: vec!["\\b[A-Z]{2,}\\b".to_string()],
+            ..Default::default()
+        };
 
         let config = Arc::new(config);
         let pipeline = FilterPipeline::new(&config, "en").unwrap();
@@ -633,9 +635,11 @@ mod tests {
 
     #[test]
     fn test_markdown_preservation() {
-        let mut config = TokenReductionConfigDTO::default();
-        config.preserve_markdown = true;
-        config.preserve_code = true;
+        let config = TokenReductionConfigDTO {
+            preserve_markdown: true,
+            preserve_code: true,
+            ..Default::default()
+        };
 
         let config = Arc::new(config);
         let pipeline = FilterPipeline::new(&config, "en").unwrap();

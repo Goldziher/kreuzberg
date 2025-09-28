@@ -559,7 +559,7 @@ mod tests {
         let reducer = TokenReducer::new(&config, None).unwrap();
         assert_eq!(reducer.reduce(""), "");
         let result = reducer.reduce("   ");
-        assert!(result == "   " || result == "");
+        assert!(result == "   " || result.is_empty());
     }
 
     #[test]
@@ -695,7 +695,7 @@ mod tests {
         let text = "The quick brown fox jumps over the lazy dog";
 
         let single_result = reducer.reduce(text);
-        let batch_results = reducer.batch_reduce(&vec![text]);
+        let batch_results = reducer.batch_reduce(&[text]);
 
         assert_eq!(single_result, batch_results[0]);
     }
