@@ -74,6 +74,12 @@ repos:
             --arg-type-hints-in-docstring=False,
           ]
         exclude: ^benchmarks/|^kreuzberg/_|^tests/|^scripts/|^run_benchmarks\.py
+  - repo: https://github.com/FeryET/pre-commit-rust
+    rev: v1.2.1
+    hooks:
+      - id: fmt
+      - id: cargo-check
+      - id: clippy
   - repo: local
     hooks:
       - id: mypy
@@ -82,4 +88,4 @@ repos:
         require_serial: true
         language: system
         types: [python]
-        exclude: ^scripts/|^benchmarks/
+        exclude: ^benchmarks/
