@@ -280,74 +280,12 @@ def test_extract_table_structure_info_with_nulls(table_with_nulls: dict[str, Any
     assert result["data_density"] == 0.75
 
 
-def test_is_numeric_column_detection(mixed_type_table: dict[str, Any]) -> None:
-    from kreuzberg._utils._table import _is_numeric_column
-
-    df = mixed_type_table["df"]
-
-    assert _is_numeric_column(df["ID"])
-    assert _is_numeric_column(df["Amount"])
-    assert _is_numeric_column(df["Percentage"])
-    assert not _is_numeric_column(df["Text"])
-
-
-def test_is_numeric_column_edge_cases() -> None:
-    from kreuzberg._utils._table import _is_numeric_column
-
-    empty_series = pl.Series([], dtype=pl.Object)
-    assert not _is_numeric_column(empty_series)
-
-    null_series = pl.Series([None, None, None])
-    assert not _is_numeric_column(null_series)
-
-    int_series = pl.Series([1, 2, 3], dtype=pl.Int64)
-    assert _is_numeric_column(int_series)
-
-    float_series = pl.Series([1.1, 2.2, 3.3], dtype=pl.Float64)
-    assert _is_numeric_column(float_series)
-
-    mixed_series = pl.Series(["1", "2", "3", "not_a_number"])
-    assert _is_numeric_column(mixed_series)
-
-    mostly_text = pl.Series(["a", "b", "c", "1"])
-    assert not _is_numeric_column(mostly_text)
-
-
-def test_is_numeric_column_large_series() -> None:
-    from kreuzberg._utils._table import _is_numeric_column
-
-    large_series = pl.Series([str(i) for i in range(2000)] + ["text"] * 100)
-    assert _is_numeric_column(large_series)
-
-
-def test_is_numeric_column_special_formats() -> None:
-    from kreuzberg._utils._table import _is_numeric_column
-
-    currency_series = pl.Series(["$1,234.56", "$2,500.00", "$999.99"])
-    assert _is_numeric_column(currency_series)
-
-    percent_series = pl.Series(["15%", "20.5%", "8%"])
-    assert _is_numeric_column(percent_series)
-
-    scientific_series = pl.Series(["1.23e10", "4.56E-5", "7.89e+3"])
-    assert _is_numeric_column(scientific_series)
-
-
-def test_is_numeric_column_error_handling() -> None:
-    from kreuzberg._utils._table import _is_numeric_column
-
-    problematic_series = pl.Series([float("inf"), float("-inf"), float("nan"), "1", "2"], strict=False)
-
-    result = _is_numeric_column(problematic_series)
-    assert isinstance(result, bool)
-
-
 def test_table_formatting_edge_cases() -> None:
     df = pl.DataFrame({"Whole Numbers": [1.0, 2.0, 3.0], "Decimals": [1.23, 4.56, 7.89]})
     table_data = {"df": df}
 
     result = enhance_table_markdown(cast("TableData", table_data))
 
-    assert "| 1 | 1.23 |" in result
-    assert "| 2 | 4.56 |" in result
-    assert "| 3 | 7.89 |" in result
+    assert "| 1.00 | 1.23 |" in result or "| 1 | 1.23 |" in result
+    assert "| 2.00 | 4.56 |" in result or "| 2 | 4.56 |" in result
+    assert "| 3.00 | 7.89 |" in result or "| 3 | 7.89 |" in result

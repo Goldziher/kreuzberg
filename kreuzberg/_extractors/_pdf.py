@@ -6,6 +6,7 @@ import logging
 import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict
 from itertools import count
 from multiprocessing import cpu_count
 from pathlib import Path
@@ -22,20 +23,22 @@ from playa.image import get_image_suffix_and_writer
 
 from kreuzberg._constants import PDF_POINTS_PER_INCH
 from kreuzberg._extractors._base import Extractor
+from kreuzberg._internal_bindings import calculate_optimal_dpi, normalize_spaces
 from kreuzberg._mime_types import PDF_MIME_TYPE, PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr import get_ocr_backend
 from kreuzberg._playa import extract_pdf_metadata, extract_pdf_metadata_sync
 from kreuzberg._types import (
+    EasyOCRConfig,
     ExtractedImage,
     ExtractionResult,
     ImageOCRResult,
     Metadata,
     OcrBackendType,
+    PaddleOCRConfig,
+    TesseractConfig,
 )
 from kreuzberg._utils._errors import create_error_context, should_retry
-from kreuzberg._utils._image_preprocessing import calculate_optimal_dpi
 from kreuzberg._utils._resource_managers import pdf_document, pdf_document_sync, pdf_resources_sync
-from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_maybe_async, run_taskgroup, run_taskgroup_batched
 from kreuzberg._utils._table import generate_table_summary
 from kreuzberg._utils._tmp import temporary_file, temporary_file_sync
@@ -92,14 +95,10 @@ class PDFExtractor(Extractor):
         result.metadata = metadata
 
         if self.config.extract_tables:
-            # GMFT is optional dependency ~keep
-            try:
-                from kreuzberg._gmft import extract_tables  # noqa: PLC0415
+            from kreuzberg._gmft import extract_tables_async  # noqa: PLC0415
 
-                tables = await extract_tables(path, self.config.gmft_config)
-                result.tables = tables
-            except ImportError:  # pragma: no cover
-                result.tables = []
+            tables = await extract_tables_async(path, self.config.gmft_config)
+            result.tables = tables
 
             if result.tables:
                 table_summary = generate_table_summary(result.tables)
@@ -130,47 +129,44 @@ class PDFExtractor(Extractor):
     def extract_path_sync(self, path: Path) -> ExtractionResult:
         content_bytes = path.read_bytes()
 
-        result: ExtractionResult | None = None
-
         document: Document | None = None
         if self.config.extract_images or self.config.extract_tables:
             document = self._parse_with_password_attempts(content_bytes)
 
-        if not self.config.force_ocr:
-            try:
-                content = self._extract_pdf_searchable_text_sync(path)
-                if self._validate_extracted_text(content):
-                    result = ExtractionResult(content=content, mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
-            except ParsingError:
-                pass
+        try:
+            text = self._extract_pdf_searchable_text_sync(path)
+        except ParsingError:
+            text = ""
 
-        if not result and self.config.ocr_backend is not None:
-            result = self._extract_pdf_text_with_ocr_sync(path, self.config.ocr_backend)
+        if (self.config.force_ocr or not self._validate_extracted_text(text)) and self.config.ocr_backend is not None:
+            text = self._extract_pdf_with_ocr_sync(path)
 
-        if not result:
-            result = ExtractionResult(content="", mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
-
-        metadata = self._extract_metadata_with_password_attempts_sync(content_bytes)
-        result.metadata = metadata
-
+        tables = []
         if self.config.extract_tables:
-            # GMFT is optional dependency ~keep
-            try:
-                from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
+            from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
 
-                tables = extract_tables_sync(path)
-                result.tables = tables
-            except ImportError:  # pragma: no cover
-                result.tables = []
+            tables = extract_tables_sync(path)
 
-            if result.tables:
-                table_summary = generate_table_summary(result.tables)
-                result.metadata = result.metadata | {
-                    "table_count": table_summary["table_count"],
-                    "tables_summary": f"Document contains {table_summary['table_count']} tables "
-                    f"across {table_summary['pages_with_tables']} pages with "
-                    f"{table_summary['total_rows']} total rows",
-                }
+        if not self.config.force_ocr and self._validate_extracted_text(text):
+            text = self._extract_with_playa_sync(path, fallback_text=text)
+
+        text = normalize_spaces(text)
+
+        result = ExtractionResult(
+            content=text,
+            mime_type=PLAIN_TEXT_MIME_TYPE,
+            metadata={},
+            tables=list(tables),
+        )
+
+        if tables:
+            table_summary = generate_table_summary(tables)
+            result.metadata = result.metadata | {
+                "table_count": table_summary["table_count"],
+                "tables_summary": f"Document contains {table_summary['table_count']} tables "
+                f"across {table_summary['pages_with_tables']} pages with "
+                f"{table_summary['total_rows']} total rows",
+            }
 
         if self.config.extract_images and document:
             images = self._extract_images_from_playa_sync(document)
@@ -400,7 +396,7 @@ class PDFExtractor(Extractor):
         except Exception as e:
             raise ParsingError(f"Failed to extract PDF text: {e}") from e
 
-    def _extract_pdf_text_with_ocr_sync(self, path: Path, ocr_backend: OcrBackendType) -> ExtractionResult:
+    def _extract_pdf_with_ocr_sync(self, path: Path) -> str:
         temp_files: list[Path] = []
         try:
             with pdf_document_sync(path) as pdf:
@@ -438,8 +434,7 @@ class PDFExtractor(Extractor):
                         with pdf_resources_sync(bitmap, page):
                             pil_image.close()
 
-            content = self._process_pdf_images_with_ocr([str(p) for p in temp_files], ocr_backend)
-            return ExtractionResult(content=content, mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
+            return self._process_pdf_images_with_ocr([str(p) for p in temp_files])
 
         except Exception as e:
             raise ParsingError(f"Failed to OCR PDF: {e}") from e
@@ -448,11 +443,28 @@ class PDFExtractor(Extractor):
                 with contextlib.suppress(OSError):
                     p.unlink()
 
-    def _process_pdf_images_with_ocr(self, image_paths: list[str], ocr_backend: OcrBackendType) -> str:
-        backend = get_ocr_backend(ocr_backend)
+    def _process_pdf_images_with_ocr(self, image_paths: list[str]) -> str:
+        backend = get_ocr_backend(self.config.ocr_backend)
         paths = [Path(p) for p in image_paths]
 
-        results = backend.process_batch_sync(paths, **self.config.get_config_dict())
+        match self.config.ocr_backend:
+            case "tesseract":
+                config = (
+                    self.config.ocr_config if isinstance(self.config.ocr_config, TesseractConfig) else TesseractConfig()
+                )
+                results = backend.process_batch_sync(paths, **asdict(config))
+            case "paddleocr":
+                paddle_config = (
+                    self.config.ocr_config if isinstance(self.config.ocr_config, PaddleOCRConfig) else PaddleOCRConfig()
+                )
+                results = backend.process_batch_sync(paths, **asdict(paddle_config))
+            case "easyocr":
+                easy_config = (
+                    self.config.ocr_config if isinstance(self.config.ocr_config, EasyOCRConfig) else EasyOCRConfig()
+                )
+                results = backend.process_batch_sync(paths, **asdict(easy_config))
+            case _:
+                raise NotImplementedError(f"Sync OCR not implemented for {self.config.ocr_backend}")
 
         return "\n\n".join(result.content for result in results)
 

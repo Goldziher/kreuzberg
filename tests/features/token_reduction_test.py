@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
-from kreuzberg._token_reduction import StopwordsManager, get_reduction_stats, reduce_tokens
+from kreuzberg._token_reduction import get_reduction_stats, reduce_tokens
 from kreuzberg._types import TokenReductionConfig
 from kreuzberg.exceptions import ValidationError
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_reduce_tokens_off_mode_returns_original_text() -> None:
@@ -169,45 +164,6 @@ def test_get_reduction_stats_with_empty_original() -> None:
     assert stats["token_reduction_ratio"] == 0.0
     assert stats["original_characters"] == 0
     assert stats["reduced_characters"] == 0
-
-
-def test_stopwords_manager_loads_english_stopwords() -> None:
-    manager = StopwordsManager()
-
-    stopwords = manager.get_stopwords("en")
-
-    assert len(stopwords) > 0
-    assert "the" in stopwords
-    assert "and" in stopwords
-    assert "is" in stopwords
-
-
-def test_stopwords_manager_has_language_check() -> None:
-    manager = StopwordsManager()
-
-    assert manager.has_language("en") is True
-    assert manager.has_language("nonexistent") is False
-
-
-def test_stopwords_manager_supported_languages() -> None:
-    manager = StopwordsManager()
-
-    languages = manager.supported_languages()
-
-    assert len(languages) > 0
-    assert "en" in languages
-    assert isinstance(languages, list)
-    assert languages == sorted(languages)
-
-
-def test_stopwords_manager_custom_stopwords() -> None:
-    custom_stopwords = {"test": ["custom", "words"]}
-    manager = StopwordsManager(custom_stopwords=custom_stopwords)
-
-    stopwords = manager.get_stopwords("test")
-
-    assert "custom" in stopwords
-    assert "words" in stopwords
 
 
 def test_reduce_tokens_empty_text_returns_empty() -> None:
@@ -474,49 +430,6 @@ def test_get_reduction_stats_edge_case_expansion() -> None:
     assert stats["reduced_tokens"] == 2
 
 
-def test_stopwords_manager_concurrent_access() -> None:
-    import concurrent.futures
-
-    manager = StopwordsManager()
-    languages = ["en", "es", "fr", "de", "it"]
-
-    def load_language(lang: str) -> int:
-        stopwords = manager.get_stopwords(lang)
-        return len(stopwords)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        futures = [executor.submit(load_language, lang) for lang in languages * 3]
-        results = [f.result() for f in concurrent.futures.as_completed(futures)]
-
-    assert all(r > 0 for r in results)
-    assert len(results) == 15
-
-
-def test_stopwords_manager_handles_corrupted_file(tmp_path: Path) -> None:
-    from unittest.mock import patch
-
-    corrupted_dir = tmp_path / "stopwords"
-    corrupted_dir.mkdir()
-    corrupted_file = corrupted_dir / "xx_stopwords.json"
-    corrupted_file.write_text("not valid json {[}")
-
-    with patch("kreuzberg._token_reduction._stopwords._STOPWORDS_DIR", corrupted_dir):
-        manager = StopwordsManager()
-
-        stopwords = manager.get_stopwords("xx")
-        assert isinstance(stopwords, set)
-        assert len(stopwords) == 0
-
-
-def test_stopwords_manager_handles_missing_file() -> None:
-    manager = StopwordsManager()
-
-    stopwords = manager.get_stopwords("zz_nonexistent")
-
-    assert isinstance(stopwords, set)
-    assert len(stopwords) == 0
-
-
 def test_reduce_tokens_thread_safety() -> None:
     import concurrent.futures
 
@@ -539,40 +452,6 @@ def test_reduce_tokens_thread_safety() -> None:
     assert len(results) == 15
     assert all(isinstance(r, str) for r in results)
     assert all(len(r) > 0 for r in results)
-
-
-def test_stopwords_manager_lru_cache_size() -> None:
-    manager = StopwordsManager()
-
-    languages = [
-        "en",
-        "es",
-        "fr",
-        "de",
-        "it",
-        "pt",
-        "nl",
-        "sv",
-        "no",
-        "da",
-        "fi",
-        "pl",
-        "cs",
-        "sk",
-        "hu",
-        "ro",
-        "bg",
-        "hr",
-        "sr",
-    ]
-
-    for lang in languages:
-        if manager.has_language(lang):
-            manager.get_stopwords(lang)
-
-    stopwords = manager.get_stopwords("en")
-    assert "the" in stopwords
-    assert len(stopwords) > 0
 
 
 def test_reduce_tokens_with_custom_stopwords_thread_safety() -> None:
@@ -664,21 +543,6 @@ def test_markdown_table_detection_improved() -> None:
     assert "pipe" in not_table_result
     assert "table" in not_table_result
     assert "but" not in not_table_result
-
-
-def test_path_traversal_protection() -> None:
-    manager = StopwordsManager()
-
-    dangerous_codes = [
-        "../../../etc/passwd",
-        "..\\..\\windows\\system32",
-        "en/../../../etc/passwd",
-        "en/../../secret",
-    ]
-
-    for dangerous_code in dangerous_codes:
-        stopwords = manager.get_stopwords(dangerous_code)
-        assert stopwords == set()
 
 
 def test_empty_result_handling() -> None:

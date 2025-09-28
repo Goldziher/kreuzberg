@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from PIL import Image
 
+from kreuzberg._internal_bindings import calculate_quality_score, clean_extracted_text
 from kreuzberg._ocr import get_ocr_backend
 from kreuzberg._types import (
     EasyOCRConfig,
@@ -21,7 +22,6 @@ from kreuzberg._types import (
     TesseractConfig,
     normalize_metadata,
 )
-from kreuzberg._utils._quality import calculate_quality_score, clean_extracted_text
 from kreuzberg._utils._sync import run_taskgroup_batched
 
 if TYPE_CHECKING:
@@ -73,7 +73,8 @@ class Extractor(ABC):
 
         cleaned_content = clean_extracted_text(result.content)
 
-        quality_score = calculate_quality_score(cleaned_content, dict(result.metadata) if result.metadata else None)
+        metadata_dict = dict(result.metadata) if result.metadata else None
+        quality_score = calculate_quality_score(cleaned_content, metadata_dict)
 
         enhanced_metadata = (dict(result.metadata) if result.metadata else {}) | {"quality_score": quality_score}
 

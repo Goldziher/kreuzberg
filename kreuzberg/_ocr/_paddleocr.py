@@ -4,14 +4,17 @@ import os
 import platform
 import warnings
 from importlib.util import find_spec
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from PIL import Image
 
+from kreuzberg._internal_bindings import normalize_spaces
 from kreuzberg._mime_types import PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
 from kreuzberg._types import ExtractionResult, Metadata, PaddleOCRConfig
 from kreuzberg._utils._device import DeviceInfo, validate_device_request
+from kreuzberg._utils._model_cache import resolve_model_cache_dir
 from kreuzberg._utils._ocr_cache import (
     build_cache_kwargs,
     cache_and_complete_async,
@@ -22,12 +25,8 @@ from kreuzberg._utils._ocr_cache import (
     handle_cache_lookup_sync,
     mark_processing_complete,
 )
-from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 try:  # pragma: no cover
     from typing import Unpack  # type: ignore[attr-defined]
@@ -243,6 +242,19 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
 
         kwargs.setdefault("enable_mkldnn", cls._is_mkldnn_supported())
 
+        # Setup model directories if cache is configured
+        cache_dir = resolve_model_cache_dir(None, env_prefix="PADDLE")
+        if cache_dir:
+            # PaddleOCR allows specifying model directories
+            cache_path = Path(cache_dir)
+            models_path = cache_path / "models"
+            models_path.mkdir(parents=True, exist_ok=True)
+
+            # Set model directories if not already specified
+            kwargs.setdefault("det_model_dir", str(models_path / "det"))
+            kwargs.setdefault("rec_model_dir", str(models_path / "rec"))
+            kwargs.setdefault("cls_model_dir", str(models_path / "cls"))
+
         try:
             cls._paddle_ocr = await run_sync(_paddle_ocr, lang=language, **kwargs)
         except Exception as e:
@@ -405,6 +417,19 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
         kwargs.pop("gpu_memory_limit", None)
 
         kwargs.setdefault("enable_mkldnn", cls._is_mkldnn_supported())
+
+        # Setup model directories if cache is configured
+        cache_dir = resolve_model_cache_dir(None, env_prefix="PADDLE")
+        if cache_dir:
+            # PaddleOCR allows specifying model directories
+            cache_path = Path(cache_dir)
+            models_path = cache_path / "models"
+            models_path.mkdir(parents=True, exist_ok=True)
+
+            # Set model directories if not already specified
+            kwargs.setdefault("det_model_dir", str(models_path / "det"))
+            kwargs.setdefault("rec_model_dir", str(models_path / "rec"))
+            kwargs.setdefault("cls_model_dir", str(models_path / "cls"))
 
         try:
             cls._paddle_ocr = _paddle_ocr(lang=language, **kwargs)

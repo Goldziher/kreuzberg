@@ -16,34 +16,28 @@ Kreuzberg provides both synchronous and asynchronous APIs, each optimized for di
 
 ## Competitive Performance
 
-[Live benchmarks](https://benchmarks.kreuzberg.dev/) ([source code](https://github.com/Goldziher/python-text-extraction-libs-benchmarks)) demonstrate Kreuzberg as the fastest Python CPU-based text extraction framework:
-
-- **Leading Performance**: 31.78 files/second for small documents, 2.42 files/second for medium files
-- **Minimal Memory**: ~360MB average usage, lowest among tested frameworks
-- **Smallest Installation**: 71MB package size for maximum deployment flexibility
-- **High Reliability**: 100% success rate across all 18 tested file formats
-- **Production Optimized**: Built for high-throughput, real-time applications
+[Live benchmarks](https://benchmarks.kreuzberg.dev/) ([source code](https://github.com/Goldziher/python-text-extraction-libs-benchmarks)) demonstrate Kreuzberg as the fastest Python CPU-based text extraction framework with optimal resource efficiency and reliability across all tested file formats.
 
 ## Internal Benchmark Results
 
-All internal benchmarks were conducted on macOS 15.5 with ARM64 (14 cores, 48GB RAM) using Python 3.13.3.
+Representative benchmark results on modern hardware:
 
 ### Single Document Processing
 
-| Document Type        | File Size | Sync Time | Async Time | Speedup                  | Notes                    |
-| -------------------- | --------- | --------- | ---------- | ------------------------ | ------------------------ |
-| Markdown             | \<1KB     | 0.4ms     | 17.5ms     | **❌ Async 41x slower**  | Async overhead dominates |
-| HTML                 | ~1KB      | 1.6ms     | 1.1ms      | **✅ Async 1.5x faster** | Minimal parsing overhead |
-| PDF (searchable)     | ~10KB     | 3.4ms     | 2.7ms      | **✅ Async 1.3x faster** | Text extraction only     |
-| PDF (non-searchable) | ~100KB    | 394ms     | 652ms      | **✅ Sync 1.7x faster**  | OCR processing           |
-| PDF (complex)        | ~1MB      | 39.0s     | 8.5s       | **✅ Async 4.6x faster** | Heavy OCR + processing   |
+| Document Type        | File Size | Sync Time | Async Time | Speedup               | Notes                    |
+| -------------------- | --------- | --------- | ---------- | --------------------- | ------------------------ |
+| Markdown             | \<1KB     | 0.4ms     | 17.5ms     | **Sync 41x faster**   | Async overhead dominates |
+| HTML                 | ~1KB      | 1.6ms     | 1.1ms      | **Async 1.5x faster** | Minimal parsing overhead |
+| PDF (searchable)     | ~10KB     | 3.4ms     | 2.7ms      | **Async 1.3x faster** | Text extraction only     |
+| PDF (non-searchable) | ~100KB    | 394ms     | 652ms      | **Sync 1.7x faster**  | OCR processing           |
+| PDF (complex)        | ~1MB      | 39.0s     | 8.5s       | **Async 4.6x faster** | Heavy OCR + processing   |
 
 ### Batch Processing
 
-| Operation        | Documents | Sync Time | Async Time | Speedup                  | Notes                     |
-| ---------------- | --------- | --------- | ---------- | ------------------------ | ------------------------- |
-| Sequential batch | 3 mixed   | 38.6s     | N/A        | N/A                      | Sync processes one by one |
-| Concurrent batch | 3 mixed   | N/A       | 8.5s       | **✅ Async 4.5x faster** | Parallel processing       |
+| Operation        | Documents | Sync Time | Async Time | Speedup               | Notes                     |
+| ---------------- | --------- | --------- | ---------- | --------------------- | ------------------------- |
+| Sequential batch | 3 mixed   | 38.6s     | N/A        | N/A                   | Sync processes one by one |
+| Concurrent batch | 3 mixed   | N/A       | 8.5s       | **Async 4.5x faster** | Parallel processing       |
 
 ## Performance Analysis
 
@@ -109,7 +103,7 @@ The sync API uses a pure synchronous multiprocessing approach:
 
 ### Asynchronous Implementation
 
-The async API leverages Python's asyncio with intelligent task scheduling:
+The async API uses Python's asyncio with adaptive task scheduling:
 
 - **Event loop integration**: Non-blocking I/O operations
 - **Concurrent processing**: Multiple documents simultaneously
@@ -220,7 +214,7 @@ git clone https://github.com/Goldziher/kreuzberg.git
 cd kreuzberg
 
 # Install with benchmark dependencies
-uv sync --all-packages --all-extras --all-groups
+uv sync --all-packages --all-extras
 
 # Run comprehensive benchmarks
 cd benchmarks

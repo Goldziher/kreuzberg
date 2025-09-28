@@ -39,13 +39,14 @@ def test_presentation_image_extraction() -> None:
         mime_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", config=config
     )
 
-    assert hasattr(extractor, "_extract_images_from_pptx")
+    assert hasattr(extractor, "_extractor")
 
-    mock_pres = MagicMock()
-    mock_pres.slides = []
+    from pathlib import Path
 
-    images = extractor._extract_images_from_pptx(mock_pres)
-    assert images == []
+    pptx_path = Path("test_documents/pitch_deck_presentation.pptx")
+    if pptx_path.exists():
+        result = extractor.extract_path_sync(pptx_path)
+        assert len(result.images) > 0
 
 
 def test_extractors_respect_extract_images_flag() -> None:

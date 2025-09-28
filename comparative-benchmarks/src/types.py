@@ -10,8 +10,10 @@ from .config_defaults import DefaultValues
 
 
 class Framework(str, Enum):
-    KREUZBERG_SYNC = "kreuzberg_sync"
-    KREUZBERG_ASYNC = "kreuzberg_async"
+    KREUZBERG_V3_SYNC = "kreuzberg_v3_sync"
+    KREUZBERG_V3_ASYNC = "kreuzberg_v3_async"
+    KREUZBERG_V4_SYNC = "kreuzberg_v4_sync"
+    KREUZBERG_V4_ASYNC = "kreuzberg_v4_async"
     DOCLING = "docling"
     MARKITDOWN = "markitdown"
     UNSTRUCTURED = "unstructured"

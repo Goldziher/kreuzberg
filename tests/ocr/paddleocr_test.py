@@ -526,7 +526,7 @@ async def test_process_paddle_result_with_close_lines() -> None:
 @pytest.mark.anyio
 async def test_integration_process_file(backend: PaddleBackend, ocr_image: Path) -> None:
     try:
-        from paddleocr import PaddleOCR  # noqa: F401
+        from paddleocr import PaddleOCR  # noqa: F401  # type: ignore[import-untyped]
     except ImportError:
         pytest.skip("PaddleOCR not installed")
 
@@ -543,7 +543,7 @@ async def test_integration_process_file(backend: PaddleBackend, ocr_image: Path)
 @pytest.mark.anyio
 async def test_integration_process_image(backend: PaddleBackend, ocr_image: Path) -> None:
     try:
-        from paddleocr import PaddleOCR  # noqa: F401
+        from paddleocr import PaddleOCR  # noqa: F401  # type: ignore[import-untyped]
     except ImportError:
         pytest.skip("PaddleOCR not installed")
 

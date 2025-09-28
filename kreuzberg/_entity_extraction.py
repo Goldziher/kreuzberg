@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 import anyio
 
 from kreuzberg._types import Entity, SpacyEntityExtractionConfig
+from kreuzberg._utils._model_cache import resolve_model_cache_dir
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import KreuzbergError, MissingDependencyError
 
@@ -138,8 +139,10 @@ def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig)
     except ImportError:
         return None
 
-    if spacy_config.model_cache_dir:
-        os.environ["SPACY_DATA"] = str(spacy_config.model_cache_dir)
+    # Setup cache directory using unified model cache management
+    cache_dir = resolve_model_cache_dir(spacy_config.model_cache_dir, env_prefix="SPACY")
+    if cache_dir:
+        os.environ["SPACY_DATA"] = cache_dir
 
     try:
         nlp = spacy.load(model_name)
