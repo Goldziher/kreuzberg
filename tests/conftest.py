@@ -30,7 +30,7 @@ def non_searchable_pdf() -> Path:
 
 @pytest.fixture(scope="session")
 def non_ascii_pdf() -> Path:
-    return test_documents_folder / "pdfs" / "non-ascii-text.pdf"
+    return test_documents_folder / "pdfs" / "non_ascii_text.pdf"
 
 
 @pytest.fixture(scope="session")
@@ -45,7 +45,7 @@ def test_contract() -> Path:
 
 @pytest.fixture(scope="session")
 def ocr_image() -> Path:
-    return test_documents_folder / "images" / "ocr-image.jpg"
+    return test_documents_folder / "images" / "ocr_image.jpg"
 
 
 @pytest.fixture(scope="session")
