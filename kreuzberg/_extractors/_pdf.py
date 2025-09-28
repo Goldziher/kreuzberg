@@ -23,6 +23,7 @@ from playa.image import get_image_suffix_and_writer
 
 from kreuzberg._constants import PDF_POINTS_PER_INCH
 from kreuzberg._extractors._base import Extractor
+from kreuzberg._internal_bindings import calculate_optimal_dpi, normalize_spaces
 from kreuzberg._mime_types import PDF_MIME_TYPE, PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr import get_ocr_backend
 from kreuzberg._playa import extract_pdf_metadata, extract_pdf_metadata_sync
@@ -37,9 +38,7 @@ from kreuzberg._types import (
     TesseractConfig,
 )
 from kreuzberg._utils._errors import create_error_context, should_retry
-from kreuzberg._utils._image_preprocessing import calculate_optimal_dpi
 from kreuzberg._utils._resource_managers import pdf_document, pdf_document_sync, pdf_resources_sync
-from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_maybe_async, run_taskgroup, run_taskgroup_batched
 from kreuzberg._utils._table import generate_table_summary
 from kreuzberg._utils._tmp import temporary_file, temporary_file_sync
@@ -96,14 +95,10 @@ class PDFExtractor(Extractor):
         result.metadata = metadata
 
         if self.config.extract_tables:
-            # GMFT is optional dependency ~keep
-            try:
-                from kreuzberg._gmft import extract_tables  # noqa: PLC0415
+            from kreuzberg._gmft import extract_tables_async  # noqa: PLC0415
 
-                tables = await extract_tables(path, self.config.gmft_config)
-                result.tables = tables
-            except ImportError:  # pragma: no cover
-                result.tables = []
+            tables = await extract_tables_async(path, self.config.gmft_config)
+            result.tables = tables
 
             if result.tables:
                 table_summary = generate_table_summary(result.tables)
@@ -148,13 +143,9 @@ class PDFExtractor(Extractor):
 
         tables = []
         if self.config.extract_tables:
-            # GMFT is optional dependency ~keep
-            try:
-                from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
+            from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
 
-                tables = extract_tables_sync(path)
-            except ImportError:  # pragma: no cover
-                tables = []
+            tables = extract_tables_sync(path)
 
         if not self.config.force_ocr and self._validate_extracted_text(text):
             text = self._extract_with_playa_sync(path, fallback_text=text)

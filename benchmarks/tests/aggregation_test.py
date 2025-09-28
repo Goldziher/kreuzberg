@@ -27,7 +27,7 @@ def sample_results() -> list[BenchmarkResult]:
             file_size=1024,
             file_type=FileType.PDF,
             category=DocumentCategory.TINY,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.5,
             peak_memory_mb=50.0,
@@ -43,7 +43,7 @@ def sample_results() -> list[BenchmarkResult]:
             file_size=2048,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=1.0,
             peak_memory_mb=60.0,
@@ -190,7 +190,7 @@ class TestResultAggregator:
         for framework in fw_summaries:
             assert isinstance(framework, Framework)
 
-        assert Framework.KREUZBERG_SYNC in fw_summaries
+        assert Framework.KREUZBERG_V4_SYNC in fw_summaries
         assert Framework.MARKITDOWN in fw_summaries
 
     def test_category_summaries_structure(self, temp_results_dirs: list[Path]) -> None:

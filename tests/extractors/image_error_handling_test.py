@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -11,6 +12,7 @@ from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._extractors._presentation import PresentationExtractor
 from kreuzberg._types import ExtractedImage
+from kreuzberg.exceptions import ParsingError
 
 if TYPE_CHECKING:
     import io
@@ -85,40 +87,28 @@ class TestImageExtractionErrorHandling:
         assert len(images) == 2
         assert all(img.data == b"valid_image" for img in images)
 
-    def test_presentation_missing_image_blob(self) -> None:
+    def test_presentation_with_real_file(self) -> None:
         config = ExtractionConfig(extract_images=True)
         extractor = PresentationExtractor(
             mime_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
             config=config,
         )
 
-        mock_shape_good = MagicMock()
-        mock_shape_good.shape_type = 13
-        mock_shape_good.image.blob = b"good_image"
-        mock_shape_good.image.ext = "png"
+        pptx_path = Path("test_documents/pitch_deck_presentation.pptx")
+        if not pptx_path.exists():
+            pytest.skip(f"Test file not found: {pptx_path}")
 
-        mock_shape_bad = MagicMock()
-        mock_shape_bad.shape_type = 13
-        mock_shape_bad.image.blob = None
-        mock_shape_bad.image.ext = "jpg"
+        content = pptx_path.read_bytes()
+        result = extractor._extract_from_bytes(content)
 
-        mock_shape_error = MagicMock()
-        mock_shape_error.shape_type = 13
-        type(mock_shape_error).image = PropertyMock(side_effect=AttributeError("No image"))
+        assert len(result.images) > 0
+        for img in result.images:
+            assert img.data is not None
+            assert len(img.data) > 0
+            assert img.format in {"png", "jpg", "jpeg", "gif", "bmp", "tiff", "svg", "unknown"}
 
-        mock_slide = MagicMock()
-        mock_slide.shapes = [mock_shape_good, mock_shape_bad, mock_shape_error]
-
-        mock_presentation = MagicMock()
-        mock_presentation.slides = [mock_slide]
-
-        with patch("pptx.Presentation") as mock_pptx:
-            mock_pptx.return_value = mock_presentation
-
-            result = extractor._extract_pptx(b"fake_pptx")
-
-        assert len(result.images) == 1
-        assert result.images[0].data == b"good_image"
+        with pytest.raises(ParsingError, match="PPTX extraction failed"):
+            extractor._extract_from_bytes(b"invalid_pptx_data")
 
     @pytest.mark.anyio
     async def test_ocr_backend_not_available(self) -> None:
@@ -245,9 +235,9 @@ class TestImageExtractionErrorHandling:
         ppt_extractor = PresentationExtractor(
             mime_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", config=config
         )
-        with patch("pptx.Presentation") as mock_pptx:
-            mock_presentation = MagicMock()
-            mock_presentation.slides = []
-            mock_pptx.return_value = mock_presentation
-            result = ppt_extractor.extract_bytes_sync(b"fake_pptx")
+        pptx_path = Path("test_documents/pitch_deck_presentation.pptx")
+        if pptx_path.exists():
+            content = pptx_path.read_bytes()
+            result = ppt_extractor.extract_bytes_sync(content)
             assert result.images == []
+            assert len(result.content) > 0

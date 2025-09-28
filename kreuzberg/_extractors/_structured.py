@@ -20,10 +20,10 @@ except ImportError:  # pragma: no cover
 from anyio import Path as AsyncPath
 
 from kreuzberg._extractors._base import Extractor
+from kreuzberg._internal_bindings import normalize_spaces, safe_decode
 from kreuzberg._mime_types import JSON_MIME_TYPE, PLAIN_TEXT_MIME_TYPE, TOML_MIME_TYPE, YAML_MIME_TYPE
 from kreuzberg._types import ExtractionResult, JSONExtractionConfig, normalize_metadata
 from kreuzberg._utils._serialization import deserialize
-from kreuzberg._utils._string import normalize_spaces, safe_decode
 from kreuzberg._utils._sync import run_sync
 
 if TYPE_CHECKING:

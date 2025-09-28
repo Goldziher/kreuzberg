@@ -202,6 +202,52 @@ agents:
     targets:
       - CLAUDE.md
       - .claude/**/*.md
+  - description: Expert Rust developer for high-performance system components
+    id: rust-engineer
+    name: rust-engineer
+    priority: critical
+    system_prompt: |
+      You are an expert Rust engineer specializing in the Kreuzberg text extraction library.
+
+      Your expertise includes:
+      - **PyO3 integration**: Python bindings with abi3-py310 for stable API
+      - **Performance optimization**: SIMD, parallelism, zero-copy operations
+      - **Text processing**: Regex, string manipulation, character encoding
+      - **File parsing**: Binary formats, structured data, streaming
+      - **Memory management**: Efficient allocation, resource cleanup
+      - **Error handling**: Result types, proper error propagation
+
+      Key architectural knowledge:
+      - Rust code in src/ with Python bindings
+      - PyO3 macros for Python function exports
+      - Edition 2024 with let-chains and modern features
+      - Maturin for building Python extensions
+      - Integration with existing Python codebase
+
+      Development commands:
+      - Build: maturin develop --release
+      - Test: cargo test --release
+      - Format: cargo fmt
+      - Lint: cargo clippy -- -D warnings
+      - Check: cargo check
+
+      IMPORTANT: Follow these principles strictly:
+      - Zero-cost abstractions where possible
+      - Proper error handling with Result types
+      - Memory safety without performance penalty
+      - Clear, documented public APIs
+      - Comprehensive test coverage
+      - Integration with existing Python patterns
+
+      Focus on:
+      - High-performance text and data processing
+      - Efficient binary format parsing
+      - Optimized algorithms and data structures
+      - Safe concurrent operations
+      - Clear Python integration points
+    targets:
+      - CLAUDE.md
+      - .claude/**/*.md
   - description: Optimizes performance and resource usage
     id: performance-optimizer
     name: performance-optimizer
@@ -354,7 +400,7 @@ rules:
   - content: |
       ### Dependencies
       - Install dependencies: `uv sync`
-      - Install with all optional dependencies: `uv sync --all-packages --all-extras --all-groups`
+      - Install with all optional dependencies: `uv sync --all-extras`
 
       ### Testing
       - Run all tests: `pytest`
@@ -376,6 +422,7 @@ rules:
       ### Documentation
       - Build docs: `uv run mkdocs build --clean --strict`
       - Serve docs locally: `uv run mkdocs serve`
+      - Install doc dependencies: `uv sync --group doc`
     name: Development Commands
     priority: critical
   - content: |
@@ -520,6 +567,7 @@ rules:
 
       ### Common Issues
       - **Docker version detection**: Use `git tag --sort=-version:refname | head -n1` not `git describe`
+      - **Docs dependencies**: Use `uv sync --group doc` for proper mkdocs-material[imaging] support
       - **Docker Hub README**: May fail due to permissions, use `continue-on-error: true`
     name: CI/CD and Deployment
     priority: minimal
@@ -590,7 +638,11 @@ rules:
       ```
 
       ### Installation Patterns
-      - Development: `uv sync --all-packages --all-extras --all-groups`
+      - Basic: `pip install kreuzberg`
+      - With features: `pip install "kreuzberg[api,cli]"`
+      - With crypto support: `pip install "kreuzberg[crypto]"`
+      - All features: `pip install "kreuzberg[all]"`
+      - Development: `uv sync --all-extras`
 
       ### Dependencies
       - **Core**: pypdfium2, playa-pdf, python-pptx, etc.

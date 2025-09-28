@@ -1,9 +1,6 @@
 name: Comparative Framework Benchmark
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       iterations:
@@ -18,17 +15,7 @@ on:
         type: string
 
 jobs:
-  # Dummy job that succeeds on push to prevent workflow failure
-  skip-on-push:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skip benchmark on push
-        run: echo "Comparative benchmarks only run on manual dispatch"
-
   comparative-benchmark:
-    # Only run on manual dispatch to avoid expensive automated runs
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
@@ -76,6 +63,8 @@ jobs:
             echo "Installing entire workspace with all packages and extras..."
             # Install everything for benchmarks - all extras, all packages, all groups
             uv sync --all-extras --all-packages --all-groups
+            uv pip install maturin
+            uv run maturin develop --release --features extension-module
           shell: bash
 
       - name: Clear Kreuzberg Cache
@@ -151,7 +140,29 @@ jobs:
           # Add summary from aggregated results if available
           if [ -f "benchmarks/aggregated-results/aggregated_results.json" ]; then
             echo "### Results Summary" >> $GITHUB_STEP_SUMMARY
-            python -c 'import json; data=json.load(open("benchmarks/aggregated-results/aggregated_results.json")); print(f"- **Total Files**: {data.get(\"total_files_processed\", 0)}") if "error" not in data else print("❌ " + data.get("error", "Unknown error"))' >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "⚠️ Could not parse results" >> $GITHUB_STEP_SUMMARY
+            python -c "
+import json
+import sys
+
+with open('benchmarks/aggregated-results/aggregated_results.json', 'r') as f:
+    data = json.load(f)
+
+if 'error' not in data:
+    print(f'- **Total Files Processed**: {data.get(\"total_files_processed\", 0)}')
+    print(f'- **Total Runs**: {data.get(\"total_runs\", 0)}')
+    print(f'- **Total Time**: {data.get(\"total_time_seconds\", 0):.2f}s')
+
+    if 'framework_summaries' in data:
+        print('')
+        print('### Framework Performance')
+        for fw, summary in data['framework_summaries'].items():
+            print(f'**{fw}**:')
+            print(f'  - Success Rate: {summary.get(\"success_rate\", 0)*100:.1f}%')
+            print(f'  - Avg Time: {summary.get(\"avg_extraction_time\", 0):.2f}s')
+            print(f'  - Avg Memory: {summary.get(\"avg_memory_mb\", 0):.1f}MB')
+else:
+    print('❌ ' + data.get('error', 'Unknown error'))
+" >> $GITHUB_STEP_SUMMARY || echo "⚠️ Could not parse results" >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ No results file found" >> $GITHUB_STEP_SUMMARY
           fi

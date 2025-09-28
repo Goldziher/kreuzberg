@@ -1,0 +1,161 @@
+name: Test Wheel Building
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - v4-dev
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pyproject.toml'
+      - '.github/workflows/test-wheels.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==3.2.0
+
+      - name: Build wheels
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          # Build for Python 3.10+ only (matching our project requirements)
+          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-*
+
+          # Install Rust in the build environment
+          CIBW_BEFORE_ALL_LINUX: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
+          CIBW_BEFORE_ALL_MACOS: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
+          CIBW_BEFORE_ALL_WINDOWS: >
+            curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+            refreshenv
+
+          # Install maturin and build the Rust extension
+          CIBW_BEFORE_BUILD: pip install maturin
+
+          # Configure maturin to use abi3 for better compatibility
+          CIBW_ENVIRONMENT: MATURIN_BUILD_ARGS="--compatibility linux"
+          CIBW_ENVIRONMENT_WINDOWS: MATURIN_BUILD_ARGS=""
+          CIBW_ENVIRONMENT_MACOS: MATURIN_BUILD_ARGS=""
+
+          # Test the built wheels
+          CIBW_TEST_REQUIRES: pytest
+          CIBW_TEST_COMMAND: 'python -c "import kreuzberg; print(\"Import successful\")"'
+
+          # Skip some builds for speed during testing
+          CIBW_SKIP: "*-musllinux* *-win32 *-manylinux_i686"
+
+          # Use manylinux2014 for broader compatibility
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+
+      - name: Upload wheels as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+          retention-days: 7
+
+  test_wheels:
+    name: Test wheels installation
+    needs: build_wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheels
+
+      - name: Install wheel and test
+        shell: bash
+        run: |
+          # Find the wheel file for this Python version
+          wheel_file=$(find ./wheels -name "*cp$(echo ${{ matrix.python-version }} | tr -d '.')*" -name "*.whl" | head -1)
+
+          if [ -z "$wheel_file" ]; then
+            echo "No wheel found for Python ${{ matrix.python-version }}"
+            ls ./wheels/
+            exit 1
+          fi
+
+          echo "Installing wheel: $wheel_file"
+          pip install "$wheel_file"
+
+          # Test basic import and functionality
+          python -c "
+          import kreuzberg
+          print('✓ Import successful')
+
+          # Test basic functionality
+          from kreuzberg._internal_bindings import reduce_tokens_rust
+          result = reduce_tokens_rust('Hello world', 'en', 'moderate', False, None, 0.3, True, True, None, [], None, False)
+          print('✓ Rust function call successful')
+          print(f'Result: {result[:50]}...' if len(result) > 50 else f'Result: {result}')
+
+          # Test token reduction
+          from kreuzberg._token_reduction import reduce_tokens
+          from kreuzberg._types import TokenReductionConfig
+          config = TokenReductionConfig(mode='light')
+          result = reduce_tokens('This is a test with extra    spaces.', config=config)
+          print('✓ Token reduction successful')
+          print(f'Reduced: {result}')
+          "
+
+  summarize:
+    name: Wheel building summary
+    needs: [build_wheels, test_wheels]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Display results
+        run: |
+          echo "## Wheel Building Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build Status: ${{ needs.build_wheels.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "Test Status: ${{ needs.test_wheels.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.build_wheels.result }}" = "success" ] && [ "${{ needs.test_wheels.result }}" = "success" ]; then
+            echo "✅ All wheels built and tested successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "Ready to integrate with release pipeline." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some wheel builds or tests failed." >> $GITHUB_STEP_SUMMARY
+            echo "Check job details for more information." >> $GITHUB_STEP_SUMMARY
+          fi

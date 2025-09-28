@@ -1067,26 +1067,26 @@ def test_tesseract_config_edge_cases_unicode_language_combinations() -> None:
     "test_image_path,expected_content_keywords,description",
     [
         (
-            "tests/test_source_files/ocr-image.jpg",
+            "test_documents/ocr_image.jpg",
             ["Nasdaq", "AMEX", "Stock", "Track"],
             "Financial newspaper table with stock data",
         ),
         (
-            "tests/test_source_files/layout-parser-ocr.jpg",
+            "test_documents/layout_parser_ocr.jpg",
             ["LayoutParser", "Table", "Dataset", "document"],
             "Academic paper with tables and technical content",
         ),
         (
-            "tests/test_source_files/tables/simple_table.png",
+            "test_documents/tables/simple_table.png",
             ["Product", "Price", "Quantity", "Apple", "Banana"],
             "Simple product table with clear borders",
         ),
         (
-            "tests/test_source_files/invoice_image.png",
+            "test_documents/invoice_image.png",
             [],
             "Invoice document image",
         ),
-        ("tests/test_source_files/images/test_hello_world.png", ["Hello", "World"], "Simple text image"),
+        ("test_documents/images/test_hello_world.png", ["Hello", "World"], "Simple text image"),
     ],
 )
 @pytest.mark.anyio
@@ -1130,8 +1130,8 @@ async def test_markdown_extraction_diverse_documents(
 @pytest.mark.parametrize(
     "test_image_path,description",
     [
-        ("tests/test_source_files/tables/simple_table.png", "Simple table with clear borders"),
-        ("tests/test_source_files/ocr-image.jpg", "Financial data table"),
+        ("test_documents/tables/simple_table.png", "Simple table with clear borders"),
+        ("test_documents/ocr_image.jpg", "Financial data table"),
     ],
 )
 @pytest.mark.anyio

@@ -122,39 +122,76 @@ async def detect_multilingual_document():
 
 ## Table Extraction
 
+Kreuzberg offers multiple methods for extracting tables from documents. See the [Table Extraction Guide](../user-guide/table-extraction.md) for detailed comparison.
+
 ```python
 from kreuzberg import extract_file, ExtractionConfig, GMFTConfig
 
-async def extract_tables_from_pdf():
-    # Enable table extraction with default settings
-    result = await extract_file("document_with_tables.pdf", config=ExtractionConfig(extract_tables=True))
-
-    # Process extracted tables
-    print(f"Found {len(result.tables)} tables")
-    for i, table in enumerate(result.tables):
-        print(f"Table {i+1} on page {table['page_number']}:")
-        print(table["text"])  # Markdown formatted table
-
-        # Work with the polars DataFrame
-        df = table["df"]
-        print(f"Table shape: {df.shape}")
-
-        # The cropped table image is also available
-        # table['cropped_image'].save(f"table_{i+1}.png")
-
-    # With custom GMFT configuration
-    custom_config = ExtractionConfig(
+async def extract_tables_examples():
+    # Vision-based table extraction (best for complex tables)
+    ai_config = ExtractionConfig(
         extract_tables=True,
         gmft_config=GMFTConfig(
-            detector_base_threshold=0.85,  # Min confidence for table detection
-            enable_multi_header=True,  # Support multi-level headers
-            semantic_spanning_cells=True,  # Handle spanning cells
-            semantic_hierarchical_left_fill="deep",  # Handle hierarchical headers
+            detection_threshold=0.7,
+            structure_threshold=0.5,
         ),
     )
 
-    result = await extract_file("complex_tables.pdf", config=custom_config)
-    # Process tables...
+    result = await extract_file("complex_tables.pdf", config=ai_config)
+
+    # OCR-based table extraction (lightweight, good for simple tables)
+    ocr_config = ExtractionConfig(extract_tables_from_ocr=True)
+
+    result_ocr = await extract_file("simple_tables.pdf", config=ocr_config)
+
+    # Combined approach (maximum table coverage)
+    combined_config = ExtractionConfig(
+        extract_tables=True,  # Vision method
+        extract_tables_from_ocr=True,  # OCR method
+    )
+
+    result_combined = await extract_file("mixed_tables.pdf", config=combined_config)
+
+    # Process extracted tables
+    for i, table in enumerate(result.tables):
+        print(f"Table {i+1} on page {table['page_number']}:")
+        print(table["text"])  # Markdown representation
+
+        # Access structured data
+        df = table["df"]  # Polars DataFrame
+        print(f"Table dimensions: {df.shape[0]} rows × {df.shape[1]} columns")
+
+        # Save table data in different formats
+        df.write_csv(f"table_{i+1}.csv")
+
+        # Save table image (available with vision method)
+        if "cropped_image" in table:
+            table["cropped_image"].save(f"table_{i+1}.png")
+
+# Compare methods
+async def compare_table_methods():
+    """Example showing when to use different table extraction methods."""
+
+    # For scientific papers with complex tables - use vision method
+    scientific_config = ExtractionConfig(
+        extract_tables=True,
+        gmft_config=GMFTConfig(
+            detection_threshold=0.6,  # Lower threshold for academic tables
+        ),
+    )
+
+    # For simple forms and basic tables - use OCR method
+    forms_config = ExtractionConfig(extract_tables_from_ocr=True)
+
+    # For financial reports - use higher precision settings
+    financial_config = ExtractionConfig(
+        extract_tables=True,
+        gmft_config=GMFTConfig(
+            detection_threshold=0.8,  # Higher threshold for clean financial docs
+        ),
+    )
+
+    print("See Table Extraction Guide for detailed method comparison")
 ```
 
 ## OCR Output Formats and Table Extraction

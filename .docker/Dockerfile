@@ -7,12 +7,26 @@ ENV PYTHONUNBUFFERED=1
 ENV UV_LINK_MODE=copy
 ENV UV_CACHE_DIR=/tmp/uv-cache
 
-# Copy dependency files
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Copy all necessary files for Rust build
 COPY pyproject.toml uv.lock README.md ./
+COPY Cargo.toml Cargo.lock ./
+COPY src src
 COPY kreuzberg kreuzberg
 
-# Install dependencies with optimizations
+# Install maturin and build Rust extension
+# Use --compatibility linux to avoid manylinux issues in Docker
 RUN --mount=type=cache,target=/tmp/uv-cache \
+    --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/root/.cargo/git \
+    --mount=type=cache,target=/app/target \
+    uv pip install --system maturin && \
+    maturin build --release --out dist --compatibility linux && \
+    uv venv && \
+    uv pip install dist/*.whl && \
     if [ -z "$EXTRAS" ]; then \
         uv sync --extra api --no-editable --no-dev --compile-bytecode; \
     else \
@@ -25,7 +39,8 @@ RUN --mount=type=cache,target=/tmp/uv-cache \
     rm -rf /app/.venv/lib/python*/site-packages/**/__pycache__ && \
     find /app/.venv -type f -name "*.pyc" -delete && \
     find /app/.venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/.venv -type d -name "test" -exec rm -rf {} + 2>/dev/null || true
+    find /app/.venv -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+    rm -rf dist
 
 # Runtime stage
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS runtime

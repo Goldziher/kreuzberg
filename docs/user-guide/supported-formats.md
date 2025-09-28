@@ -36,6 +36,18 @@ Kreuzberg handles a wide range of document, image, text, and structured data for
 - EndNote and JATS XML (`.xml`)
 - RIS (`.ris`)
 
+## Email Formats
+
+- EML files (`.eml`) - RFC 5322 email message format with full header and attachment support
+- MSG files (`.msg`) - Microsoft Outlook email format with native Rust implementation for enhanced performance and reliability
+
+These formats support:
+
+- **Header extraction**: From, To, CC, BCC, Subject, Date, and custom headers
+- **Body extraction**: Plain text and HTML email content
+- **Attachment processing**: Extract and process file attachments
+- **Metadata preservation**: Email routing information and delivery details
+
 ## Structured Data Formats
 
 - JSON (`.json`) - High-performance extraction using msgspec with schema analysis

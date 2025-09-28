@@ -29,16 +29,15 @@ def download_models() -> None:
 
     cache_dir = os.environ.get("HF_HOME") or os.environ.get("TRANSFORMERS_CACHE")
     if cache_dir:
-        # Expand ~ to home directory
-        cache_path = Path(cache_dir).expanduser()
+        cache_path = Path(cache_dir)
         cache_path.mkdir(parents=True, exist_ok=True)
-        cache_dir = str(cache_path)
     else:
         pass
 
     try:
         for model_name in models:
             AutoImageProcessor.from_pretrained(model_name, cache_dir=cache_dir)
+
             model = TableTransformerForObjectDetection.from_pretrained(model_name, cache_dir=cache_dir)
 
             param_count = sum(p.numel() for p in model.parameters())

@@ -14,8 +14,8 @@ from src.types import (
 
 def test_framework_enum() -> None:
     expected_frameworks = [
-        Framework.KREUZBERG_SYNC,
-        Framework.KREUZBERG_ASYNC,
+        Framework.KREUZBERG_V4_SYNC,
+        Framework.KREUZBERG_V4_ASYNC,
         Framework.DOCLING,
         Framework.UNSTRUCTURED,
         Framework.EXTRACTOUS,
@@ -108,7 +108,7 @@ def test_benchmark_result_creation() -> None:
         file_size=1024,
         file_type=FileType.PDF,
         category=DocumentCategory.SMALL,
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         iteration=1,
         extraction_time=1.5,
         peak_memory_mb=256.0,
@@ -124,7 +124,7 @@ def test_benchmark_result_creation() -> None:
     assert result.file_size == 1024
     assert result.file_type == FileType.PDF
     assert result.category == DocumentCategory.SMALL
-    assert result.framework == Framework.KREUZBERG_SYNC
+    assert result.framework == Framework.KREUZBERG_V4_SYNC
     assert result.iteration == 1
     assert result.extraction_time == 1.5
     assert result.peak_memory_mb == 256.0
@@ -142,7 +142,7 @@ def test_benchmark_result_with_optional_fields() -> None:
         file_size=1024,
         file_type=FileType.PDF,
         category=DocumentCategory.SMALL,
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         iteration=1,
         extraction_time=1.5,
         peak_memory_mb=256.0,
@@ -168,7 +168,7 @@ def test_benchmark_result_with_optional_fields() -> None:
 
 def test_benchmark_summary_creation() -> None:
     summary = BenchmarkSummary(
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         category=DocumentCategory.SMALL,
         total_files=10,
         successful_files=9,
@@ -184,7 +184,7 @@ def test_benchmark_summary_creation() -> None:
         mb_per_second=40.0,
     )
 
-    assert summary.framework == Framework.KREUZBERG_SYNC
+    assert summary.framework == Framework.KREUZBERG_V4_SYNC
     assert summary.category == DocumentCategory.SMALL
     assert summary.total_files == 10
     assert summary.successful_files == 9
@@ -198,7 +198,7 @@ def test_benchmark_summary_creation() -> None:
 
 def test_benchmark_summary_consistency() -> None:
     summary = BenchmarkSummary(
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         category=DocumentCategory.SMALL,
         total_files=10,
         successful_files=7,
@@ -224,7 +224,7 @@ def test_benchmark_summary_consistency() -> None:
 
 def test_aggregated_results_creation() -> None:
     summary = BenchmarkSummary(
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         category=DocumentCategory.SMALL,
         total_files=1,
         successful_files=1,
@@ -244,13 +244,13 @@ def test_aggregated_results_creation() -> None:
         total_runs=1,
         total_files_processed=1,
         total_time_seconds=1.5,
-        framework_summaries={Framework.KREUZBERG_SYNC: [summary]},
+        framework_summaries={Framework.KREUZBERG_V4_SYNC: [summary]},
         category_summaries={DocumentCategory.SMALL: [summary]},
         framework_category_matrix={"kreuzberg_sync_small": summary},
         failure_patterns={},
         timeout_files=[],
-        performance_over_iterations={Framework.KREUZBERG_SYNC: [1.5]},
-        platform_results={"Linux": {Framework.KREUZBERG_SYNC: summary}},
+        performance_over_iterations={Framework.KREUZBERG_V4_SYNC: [1.5]},
+        platform_results={"Linux": {Framework.KREUZBERG_V4_SYNC: summary}},
     )
 
     assert aggregated.total_runs == 1
@@ -268,7 +268,7 @@ def test_benchmark_config_creation() -> None:
         cooldown_seconds=10,
         timeout_seconds=600,
         max_memory_mb=2048,
-        frameworks=[Framework.KREUZBERG_SYNC, Framework.EXTRACTOUS],
+        frameworks=[Framework.KREUZBERG_V4_SYNC, Framework.EXTRACTOUS],
         categories=[DocumentCategory.SMALL, DocumentCategory.MEDIUM],
         file_types=[FileType.PDF, FileType.DOCX],
         save_extracted_text=True,
@@ -307,7 +307,7 @@ def test_msgspec_serialization() -> None:
         file_size=1024,
         file_type=FileType.PDF,
         category=DocumentCategory.SMALL,
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         iteration=1,
         extraction_time=1.5,
         peak_memory_mb=256.0,
@@ -325,7 +325,7 @@ def test_msgspec_serialization() -> None:
     decoded = msgspec.json.decode(encoded, type=BenchmarkResult)
     assert decoded.file_path == "test.pdf"
     assert decoded.extraction_time == 1.5
-    assert decoded.framework == Framework.KREUZBERG_SYNC
+    assert decoded.framework == Framework.KREUZBERG_V4_SYNC
     assert decoded.status == ExtractionStatus.SUCCESS
 
 
@@ -354,7 +354,7 @@ def test_benchmark_result_validation() -> None:
         file_size=1024,
         file_type=FileType.PDF,
         category=DocumentCategory.SMALL,
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         iteration=1,
         extraction_time=1.5,
         peak_memory_mb=256.0,
@@ -378,7 +378,7 @@ def test_benchmark_result_with_error() -> None:
         file_size=1024,
         file_type=FileType.PDF,
         category=DocumentCategory.SMALL,
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         iteration=1,
         extraction_time=0.1,
         peak_memory_mb=50.0,
@@ -407,7 +407,7 @@ def test_nested_structure_serialization() -> None:
             file_size=1024 * (i + 1),
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=1.5 + i * 0.5,
             peak_memory_mb=256.0 + i * 50,
@@ -419,7 +419,7 @@ def test_nested_structure_serialization() -> None:
         results.append(result)
 
         summary = BenchmarkSummary(
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             category=DocumentCategory.SMALL,
             total_files=1,
             successful_files=1,
@@ -440,13 +440,13 @@ def test_nested_structure_serialization() -> None:
         total_runs=3,
         total_files_processed=3,
         total_time_seconds=6.0,
-        framework_summaries={Framework.KREUZBERG_SYNC: summaries},
+        framework_summaries={Framework.KREUZBERG_V4_SYNC: summaries},
         category_summaries={DocumentCategory.SMALL: summaries},
         framework_category_matrix={f"kreuzberg_sync_small_{i}": summary for i, summary in enumerate(summaries)},
         failure_patterns={},
         timeout_files=[],
-        performance_over_iterations={Framework.KREUZBERG_SYNC: [1.5, 2.0, 2.5]},
-        platform_results={"Linux": {Framework.KREUZBERG_SYNC: summaries[0]}},
+        performance_over_iterations={Framework.KREUZBERG_V4_SYNC: [1.5, 2.0, 2.5]},
+        platform_results={"Linux": {Framework.KREUZBERG_V4_SYNC: summaries[0]}},
     )
 
     encoded = msgspec.json.encode(aggregated)
@@ -454,7 +454,7 @@ def test_nested_structure_serialization() -> None:
 
     assert decoded.total_runs == 3
     assert decoded.total_files_processed == 3
-    assert len(decoded.framework_summaries[Framework.KREUZBERG_SYNC]) == 3
+    assert len(decoded.framework_summaries[Framework.KREUZBERG_V4_SYNC]) == 3
     assert len(decoded.category_summaries[DocumentCategory.SMALL]) == 3
 
 
@@ -464,7 +464,7 @@ def test_partial_data_handling() -> None:
         file_size=1024,
         file_type=FileType.PDF,
         category=DocumentCategory.SMALL,
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         iteration=1,
         extraction_time=0.0,
         peak_memory_mb=50.0,

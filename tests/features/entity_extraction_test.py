@@ -260,12 +260,10 @@ def test_extract_keywords_missing_keybert() -> None:
 
 
 def test_get_spacy_model_url() -> None:
-    # Test default version
     url = get_spacy_model_url("en_core_web_sm")
     expected = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
     assert url == expected
 
-    # Test custom version
     url = get_spacy_model_url("de_core_news_sm", "3.7.0")
     expected = "https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl"
     assert url == expected

@@ -48,7 +48,7 @@ def _get_translated_text(result: ExtractionResult) -> str:
         text_to_classify = f"{text_to_classify} {metadata_text}"
 
     try:
-        from deep_translator import GoogleTranslator  # noqa: PLC0415
+        from deep_translator import GoogleTranslator  # noqa: PLC0415  # type: ignore[import-untyped]
     except ImportError as e:  # pragma: no cover
         raise MissingDependencyError(
             "The 'deep-translator' library is not installed. Please install it with: pip install 'kreuzberg[document-classification]'"
@@ -105,7 +105,7 @@ def classify_document_from_layout(
         text_to_classify = f"{text_to_classify} {metadata_text}"
 
     try:
-        from deep_translator import GoogleTranslator  # noqa: PLC0415
+        from deep_translator import GoogleTranslator  # noqa: PLC0415  # type: ignore[import-untyped]
 
         translated_text = str(GoogleTranslator(source="auto", target="en").translate(text_to_classify).lower())
     except Exception:  # noqa: BLE001

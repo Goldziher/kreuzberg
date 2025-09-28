@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![DeepSource](https://app.deepsource.com/gh/Goldziher/kreuzberg.svg/?label=code+coverage&show_trend=true&token=U8AW1VWWSLwVhrbtL8LmLBDN)](https://app.deepsource.com/gh/Goldziher/kreuzberg/)
 
-**A document intelligence framework for Python.** Extract text, metadata, and structured information from diverse document formats through a unified, extensible API. Built on established open source foundations including Pandoc, PDFium, and Tesseract.
+**A document intelligence framework for Python.** Extract text, metadata, and structured information from diverse document formats through a unified, extensible API. Built on established open source foundations with hybrid Rust-Python architecture for maximum performance.
 
 📖 **[Complete Documentation](https://kreuzberg.dev/)**
 
@@ -18,14 +18,16 @@
 - **Text Extraction**: High-fidelity text extraction preserving document structure and formatting
 - **Image Extraction**: Extract embedded images from PDFs, presentations, HTML, and Office documents with optional OCR
 - **Metadata Extraction**: Comprehensive metadata including author, creation date, language, and document properties
-- **Format Support**: 21 document types including PDF, Microsoft Office, images, HTML, and structured data formats
-- **OCR Integration**: Tesseract OCR with markdown output (default) and table extraction from scanned documents
+- **Format Support**: 20+ document types including PDF, Microsoft Office, images, HTML, and structured data formats
+- **OCR Integration**: Tesseract OCR with markdown output (default) and comprehensive table extraction
+- **Table Extraction**: Multiple approaches including vision-based detection and OCR-based extraction
 - **Document Classification**: Automatic document type detection (contracts, forms, invoices, receipts, reports)
 
 ### Technical Architecture
 
-- **Performance**: Highest throughput among Python document processing frameworks (30+ docs/second)
-- **Resource Efficiency**: 71MB installation, ~360MB runtime memory footprint
+- **Hybrid Implementation**: Rust-Python architecture with performance-critical operations in Rust
+- **Performance**: Fastest text extraction framework in its category
+- **Resource Efficiency**: Minimal installation footprint and memory usage
 - **Extensibility**: Plugin architecture for custom extractors via the Extractor base class
 - **API Design**: Synchronous and asynchronous APIs with consistent interfaces
 - **Type Safety**: Complete type annotations throughout the codebase
@@ -37,7 +39,7 @@ Kreuzberg leverages established open source technologies:
 - **Pandoc**: Universal document converter for robust format support
 - **PDFium**: Google's PDF rendering engine for accurate PDF processing
 - **Tesseract**: Google's OCR engine for text recognition
-- **Python-docx/pptx**: Native Microsoft Office format support
+- **Rust**: Performance-critical operations implemented in Rust for maximum speed
 
 ## Quick Start
 
@@ -146,30 +148,19 @@ claude mcp add kreuzberg uvx kreuzberg-mcp
 | **Structured Data** | JSON, YAML, TOML               |
 | **Archives**        | Support via extraction         |
 
-## 📊 Performance Characteristics
+## 📊 Performance
 
-[View comprehensive benchmarks](https://benchmarks.kreuzberg.dev/) • [Benchmark methodology](https://github.com/Goldziher/python-text-extraction-libs-benchmarks) • [**Detailed Analysis**](https://kreuzberg.dev/performance-analysis/)
+Kreuzberg consistently ranks as the fastest Python CPU-based text extraction framework with optimal resource efficiency and 100% reliability across all tested file formats.
 
-### Technical Specifications
-
-| Metric                       | Kreuzberg Sync | Kreuzberg Async | Benchmarked        |
-| ---------------------------- | -------------- | --------------- | ------------------ |
-| **Throughput (tiny files)**  | 31.78 files/s  | 23.94 files/s   | Highest throughput |
-| **Throughput (small files)** | 8.91 files/s   | 9.31 files/s    | Highest throughput |
-| **Memory footprint**         | 359.8 MB       | 395.2 MB        | Lowest usage       |
-| **Installation size**        | 71 MB          | 71 MB           | Smallest size      |
-| **Success rate**             | 100%           | 100%            | Perfect            |
-| **Supported formats**        | 18             | 18              | Comprehensive      |
+**[View Live Benchmarks](https://benchmarks.kreuzberg.dev/)** • **[Benchmark Methodology](https://github.com/Goldziher/python-text-extraction-libs-benchmarks)**
 
 ### Architecture Advantages
 
-- **Native C extensions**: Built on PDFium and Tesseract for maximum performance
-- **Async/await support**: True asynchronous processing with intelligent task scheduling
-- **Memory efficiency**: Streaming architecture minimizes memory allocation
+- **Hybrid Rust-Python**: Performance-critical operations in Rust for maximum speed
+- **Async/await support**: True asynchronous processing with adaptive task scheduling
+- **Memory efficiency**: Minimal memory allocation and optimized data handling
 - **Process pooling**: Automatic multiprocessing for CPU-intensive operations
-- **Optimized data flow**: Efficient data handling with minimal transformations
-
-> **Benchmark details**: Tests include PDFs, Word docs, HTML, images, and spreadsheets in multiple languages (English, Hebrew, German, Chinese, Japanese, Korean) on standardized hardware.
+- **Native foundations**: Built on PDFium and Tesseract for proven reliability
 
 ## Documentation
 
@@ -177,12 +168,14 @@ claude mcp add kreuzberg uvx kreuzberg-mcp
 
 - [Installation Guide](https://kreuzberg.dev/getting-started/installation/) - Setup and dependencies
 - [User Guide](https://kreuzberg.dev/user-guide/) - Comprehensive usage guide
-- [Performance Analysis](https://kreuzberg.dev/performance-analysis/) - Detailed benchmark results
+- [Performance Guide](https://kreuzberg.dev/advanced/performance/) - Optimization and analysis
 - [API Reference](https://kreuzberg.dev/api-reference/) - Complete API documentation
 - [Docker Guide](https://kreuzberg.dev/user-guide/docker/) - Container deployment
 - [REST API](https://kreuzberg.dev/user-guide/api-server/) - HTTP endpoints
 - [CLI Guide](https://kreuzberg.dev/cli/) - Command-line usage
-- [OCR Configuration](https://kreuzberg.dev/user-guide/ocr-configuration/) - OCR engine setup
+- [OCR Backends](https://kreuzberg.dev/user-guide/ocr-backends/) - OCR engine setup
+- [Table Extraction](https://kreuzberg.dev/user-guide/table-extraction/) - Vision-based and OCR table extraction
+- [Changelog](https://kreuzberg.dev/CHANGELOG/) - Version history and release notes
 
 ## License
 

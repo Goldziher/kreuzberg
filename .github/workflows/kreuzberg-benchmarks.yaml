@@ -2,6 +2,10 @@ name: Kreuzberg Performance Benchmarks
 
 on:
   schedule:
+<<<<<<< HEAD
+    # Run nightly at 2 AM UTC
+=======
+>>>>>>> origin/main
     - cron: '0 2 * * *'
   workflow_dispatch:
 
@@ -12,7 +16,11 @@ jobs:
 
     strategy:
       matrix:
+<<<<<<< HEAD
+        python-version: ["3.12"]  # Single version for benchmarks
+=======
         python-version: ["3.13"]
+>>>>>>> origin/main
 
     steps:
       - name: Checkout Repository
@@ -41,7 +49,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          uv sync --all-packages --all-extras --all-groups
+          uv sync --all-extras
 
       - name: Build Rust extension
         run: |

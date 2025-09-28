@@ -65,9 +65,12 @@ use_gpu = false
 # Table extraction configuration (GMFT)
 [gmft]
 verbosity = 1
-detector_base_threshold = 0.9
-remove_null_rows = true
-enable_multi_header = true
+detection_threshold = 0.7
+structure_threshold = 0.5
+# Uses optimized model defaults
+detection_device = "auto"
+structure_device = "auto"
+enable_model_caching = true
 
 # DPI and Image Processing configuration
 target_dpi = 150                  # Target DPI for document processing
@@ -149,8 +152,10 @@ language = "eng"
 psm = 6
 
 [tool.kreuzberg.gmft]
-detector_base_threshold = 0.85
-remove_null_rows = true
+detection_threshold = 0.7
+structure_threshold = 0.5
+detection_device = "auto"
+structure_device = "auto"
 ```
 
 ### Using Configuration Files
@@ -219,22 +224,30 @@ Configure extraction options directly via URL query parameters when making reque
 Enable chunking with custom settings:
 
 ```bash
-curl -X POST "http://localhost:8000/extract?chunk_content=true&max_chars=500&max_overlap=50" \
-  -F "data=@document.pdf"
+curl -X POST "http://localhost:8000/extract" \
+  -F "data=@document.pdf" \
+  -F "chunk_content=true" \
+  -F "max_chars=500" \
+  -F "max_overlap=50"
 ```
 
 Extract entities and keywords:
 
 ```bash
-curl -X POST "http://localhost:8000/extract?extract_entities=true&extract_keywords=true&keyword_count=5" \
-  -F "data=@document.pdf"
+curl -X POST "http://localhost:8000/extract" \
+  -F "data=@document.pdf" \
+  -F "extract_entities=true" \
+  -F "extract_keywords=true" \
+  -F "keyword_count=5"
 ```
 
 Force OCR with specific backend:
 
 ```bash
-curl -X POST "http://localhost:8000/extract?force_ocr=true&ocr_backend=tesseract" \
-  -F "data=@image.jpg"
+curl -X POST "http://localhost:8000/extract" \
+  -F "data=@image.jpg" \
+  -F "force_ocr=true" \
+  -F "ocr_backend=tesseract"
 ```
 
 **Supported Query Parameters:**
@@ -262,7 +275,8 @@ For complex nested configurations (like OCR-specific settings), use the `X-Extra
 Advanced OCR configuration:
 
 ```bash
-curl -X POST http://localhost:8000/extract \
+curl -X POST "http://localhost:8000/extract" \
+  -H "Content-Type: multipart/form-data" \
   -H "X-Extraction-Config: {
     \"force_ocr\": true,
     \"ocr_backend\": \"tesseract\",
@@ -278,13 +292,15 @@ curl -X POST http://localhost:8000/extract \
 Table extraction with GMFT configuration:
 
 ```bash
-curl -X POST http://localhost:8000/extract \
+curl -X POST "http://localhost:8000/extract" \
+  -H "Content-Type: multipart/form-data" \
   -H "X-Extraction-Config: {
     \"extract_tables\": true,
     \"gmft_config\": {
-      \"detector_base_threshold\": 0.85,
-      \"remove_null_rows\": true,
-      \"enable_multi_header\": true
+      \"detection_threshold\": 0.8,
+      \"structure_threshold\": 0.6,
+      \"crop_padding\": 25,
+      \"min_table_area\": 1000
     }
   }" \
   -F "data=@document_with_tables.pdf"
@@ -386,38 +402,40 @@ result = await extract_file(
 
 ### Table Extraction
 
-Kreuzberg can extract tables from PDF documents using the [GMFT](https://github.com/conjuncts/gmft) package:
+Kreuzberg offers multiple approaches for extracting tables from documents. For detailed information, see the [Table Extraction Guide](table-extraction.md).
+
+#### Quick Configuration
 
 ```python
 from kreuzberg import extract_file, ExtractionConfig, GMFTConfig
 
-# Extract tables with default configuration
-result = await extract_file("document_with_tables.pdf", config=ExtractionConfig(extract_tables=True))
+# Vision-based table extraction (recommended for complex tables)
+config_ai = ExtractionConfig(extract_tables=True, gmft_config=GMFTConfig(detection_threshold=0.7))
 
-# Extract tables with custom configuration
-config = ExtractionConfig(
+# OCR-based table extraction (lightweight, for simple tables)
+config_ocr = ExtractionConfig(extract_tables_from_ocr=True)
+
+# Both methods combined (maximum coverage)
+config_both = ExtractionConfig(
     extract_tables=True,
-    gmft_config=GMFTConfig(
-        detector_base_threshold=0.85,
-        remove_null_rows=True,
-        enable_multi_header=True,
-    ),
+    extract_tables_from_ocr=True,
 )
-result = await extract_file("document_with_tables.pdf", config=config)
+
+result = await extract_file("document_with_tables.pdf", config=config_ai)
 
 # Access extracted tables
-for i, table in enumerate(result.tables):
-    print(f"Table {i+1} on page {table['page_number']}:")
-    print(table["text"])
-    df = table["df"]
-    print(df.shape)  # (rows, columns)
+for table in result.tables:
+    print(f"Table from page {table['page_number']}:")
+    print(table["text"])  # Markdown representation
+    # table["df"] contains structured data as Polars DataFrame
 ```
 
-Note that table extraction requires the `gmft` dependency. You can install it with:
+**See [Table Extraction Guide](table-extraction.md) for:**
 
-```shell
-pip install "kreuzberg[gmft]"
-```
+- Detailed comparison of AI vs OCR methods
+- Performance characteristics and hardware requirements
+- Advanced configuration options
+- Troubleshooting and optimization tips
 
 ### Language Detection
 

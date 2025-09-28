@@ -13,6 +13,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  rust-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
+      - name: Run Rust Tests
+        env:
+          RUST_BACKTRACE: full
+        run: |
+          echo "Running Rust tests with full debugging..."
+          cargo test --release --no-default-features -vv -- --nocapture --test-threads=1
+
+      - name: Check Rust Formatting
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo clippy -- -D warnings
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -30,6 +66,12 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
+
       - name: Install Dependencies
         uses: nick-fields/retry@v3
         with:
@@ -41,8 +83,15 @@ jobs:
               echo "Removing existing .venv directory on Windows"
               rm -rf .venv
             fi
-            uv sync --all-packages --all-extras --all-groups
+            uv sync --all-extras --dev
+            uv pip install maturin
+            uv run maturin develop --release --features extension-module
           shell: bash
+
+      - name: Run Rust Checks
+        run: |
+          cargo fmt --check
+          cargo clippy -- -D warnings
 
       - name: Install prek
         run: |
@@ -80,6 +129,11 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
       - name: Cache Python Dependencies
         id: python-cache
         uses: actions/cache@v4
@@ -87,9 +141,9 @@ jobs:
           path: |
             ~/.cache/uv
             .venv
-          key: python-dependencies-ubuntu-latest-3.13-${{ hashFiles('uv.lock') }}
+          key: python-dependencies-ubuntu-latest-3.10-${{ hashFiles('uv.lock') }}
           restore-keys: |
-            python-dependencies-ubuntu-latest-3.13-
+            python-dependencies-ubuntu-latest-3.10-
 
       - name: Install Dependencies
         uses: nick-fields/retry@v3
@@ -98,7 +152,9 @@ jobs:
           max_attempts: 3
           retry_wait_seconds: 30
           command: |
-            uv sync --all-packages --all-extras --all-groups
+            uv sync --all-extras --dev
+            uv pip install maturin
+            uv run maturin develop --release --features extension-module
           shell: bash
 
       - name: Install System Dependencies
@@ -127,10 +183,11 @@ jobs:
       - name: Download GMFT Models if Not Cached
         env:
           HF_HOME: ~/.cache/huggingface
+          TRANSFORMERS_CACHE: ~/.cache/huggingface
         run: |
           if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
             echo "Cache miss - downloading GMFT models..."
-            uv run --script scripts/download_gmft_models.py
+            uv run python scripts/download_gmft_models.py
           else
             echo "Using cached GMFT models"
           fi
@@ -139,6 +196,7 @@ jobs:
         uses: nick-fields/retry@v3
         env:
           HF_HOME: ~/.cache/huggingface
+          TRANSFORMERS_CACHE: ~/.cache/huggingface
         with:
           timeout_minutes: 15
           max_attempts: 3
@@ -170,13 +228,14 @@ jobs:
           retention-days: 7
 
   python-tests:
+    needs: [validate]
     if: needs.validate.result == 'success'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.13"]
+        python: ["3.10", "3.11", "3.12", "3.13"]
         test-category:
           - name: "core"
             path: "tests/core,tests/utils"
@@ -214,6 +273,11 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
       - name: Cache Python Dependencies
         id: python-cache
         uses: actions/cache@v4
@@ -236,7 +300,9 @@ jobs:
               echo "Removing existing .venv directory on Windows"
               rm -rf .venv
             fi
-            uv sync --all-packages --all-extras --all-groups
+            uv sync --all-extras --dev
+            uv pip install maturin
+            uv run maturin develop --release --features extension-module
           shell: bash
 
       - name: Cache Test Artifacts
@@ -304,11 +370,11 @@ jobs:
       - name: Download GMFT Models if Not Cached
         if: contains(matrix.test-category.path, 'gmft')
         env:
-          HF_HOME: ~/.cache/huggingface
+          TRANSFORMERS_CACHE: ~/.cache/huggingface
         run: |
           if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
             echo "Cache miss - downloading GMFT models..."
-            uv run --script scripts/download_gmft_models.py
+            uv run python scripts/download_gmft_models.py
           else
             echo "Using cached GMFT models"
           fi

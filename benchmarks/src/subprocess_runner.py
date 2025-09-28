@@ -132,14 +132,20 @@ def _extract_in_subprocess(
         import asyncio
 
         if hasattr(extractor, "extract_with_metadata"):
-            metadata_call = extractor.extract_with_metadata(file_path)
-            if asyncio.iscoroutine(metadata_call):
-                text, metadata = asyncio.run(metadata_call)
-            else:
-                text, metadata = metadata_call
+            extraction_call = extractor.extract_with_metadata(file_path)
         else:
-            text_call = extractor.extract_text(file_path)
-            text = asyncio.run(text_call) if asyncio.iscoroutine(text_call) else text_call
+            extraction_call = extractor.extract_text(file_path)
+
+        if asyncio.iscoroutine(extraction_call):
+            if hasattr(extractor, "extract_with_metadata"):
+                text, metadata = asyncio.run(extraction_call)
+            else:
+                text = asyncio.run(extraction_call)
+                metadata = None
+        elif hasattr(extractor, "extract_with_metadata"):
+            text, metadata = extraction_call
+        else:
+            text = extraction_call
             metadata = None
 
         extraction_time = time.time() - start_time
@@ -229,7 +235,7 @@ class SubprocessRunner:
         self._baseline_cpu_percent = sum(cpu_values) / len(cpu_values)
         self._baseline_memory_mb = sum(memory_values) / len(memory_values)
 
-    def _monitor_subprocess_resources(self, process: subprocess.Popen[bytes]) -> ProcessResourceMetrics:
+    def _monitor_subprocess_resources(self, process: subprocess.Popen) -> ProcessResourceMetrics:
         if process.pid is None:
             raise RuntimeError("Cannot monitor process: subprocess PID is None")
 
@@ -256,10 +262,9 @@ class SubprocessRunner:
                 io_read_mb = None
                 io_write_mb = None
                 try:
-                    io_counters = getattr(ps_process, "io_counters", lambda: None)()
-                    if io_counters:
-                        io_read_mb = io_counters.read_bytes / (1024 * 1024)
-                        io_write_mb = io_counters.write_bytes / (1024 * 1024)
+                    io_counters = ps_process.io_counters()
+                    io_read_mb = io_counters.read_bytes / (1024 * 1024)
+                    io_write_mb = io_counters.write_bytes / (1024 * 1024)
                 except (AttributeError, psutil.AccessDenied):
                     pass
 
@@ -399,7 +404,7 @@ _extract_in_subprocess({framework!r}, {file_path!r}, {result_file!r}, {resource_
                 import queue
                 import threading
 
-                resource_queue: queue.Queue[ProcessResourceMetrics] = queue.Queue()
+                resource_queue = queue.Queue()
                 monitor_thread = threading.Thread(
                     target=lambda: resource_queue.put(self._monitor_subprocess_resources(process))
                 )

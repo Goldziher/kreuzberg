@@ -17,6 +17,19 @@ except ImportError:
     TesseractConfig = None  # type: ignore[assignment,misc]
     PSMMode = None  # type: ignore[assignment,misc]
 
+try:
+    import kreuzberg as kreuzberg_v4
+    from kreuzberg import ExtractionConfig as ExtractionConfigV4
+    from kreuzberg import PSMMode as PSMModeV4
+    from kreuzberg import TesseractConfig as TesseractConfigV4
+
+    KREUZBERG_V4_AVAILABLE = True
+except ImportError:
+    kreuzberg_v4 = None  # type: ignore[assignment]
+    ExtractionConfigV4 = None  # type: ignore[assignment,misc]
+    TesseractConfigV4 = None  # type: ignore[assignment,misc]
+    PSMModeV4 = None  # type: ignore[assignment,misc]
+    KREUZBERG_V4_AVAILABLE = False
 
 try:
     from docling.document_converter import DocumentConverter
@@ -38,15 +51,10 @@ except ImportError:
 try:
     from extractous import Extractor
 except ImportError:
-    Extractor = None
+    Extractor = None  # type: ignore[assignment,misc]
 
 
-from typing import TYPE_CHECKING, Any
-
-try:
-    from typing import Never
-except ImportError:
-    from typing_extensions import Never
+from typing import TYPE_CHECKING, Any, Never
 
 if TYPE_CHECKING:
     from .types import AsyncExtractorProtocol, ExtractorProtocol
@@ -119,6 +127,60 @@ class KreuzbergAsyncExtractor:
         tesseract_config = TesseractConfig(language=lang_code, psm=PSMMode.AUTO, output_format="text")
 
         return ExtractionConfig(ocr_backend="tesseract", ocr_config=tesseract_config, use_cache=False)
+
+
+class KreuzbergV4SyncExtractor:
+    def extract_text(self, file_path: str) -> str:
+        if not KREUZBERG_V4_AVAILABLE or kreuzberg_v4 is None:
+            msg = "Kreuzberg v4 (dev) is not installed"
+            raise ImportError(msg)
+        config = self._get_optimized_config(file_path)
+        result = kreuzberg_v4.extract_file_sync(file_path, config=config)
+        return result.content
+
+    def extract_with_metadata(self, file_path: str) -> tuple[str, dict[str, Any]]:
+        if not KREUZBERG_V4_AVAILABLE or kreuzberg_v4 is None:
+            msg = "Kreuzberg v4 (dev) is not installed"
+            raise ImportError(msg)
+        config = self._get_optimized_config(file_path)
+        result = kreuzberg_v4.extract_file_sync(file_path, config=config)
+        metadata = dict(result.metadata) if hasattr(result, "metadata") else {}
+        metadata["kreuzberg_version"] = "v4_dev"
+        return result.content, metadata
+
+    def _get_optimized_config(self, file_path: str) -> ExtractionConfigV4:
+        lang_code = get_language_config(file_path)
+
+        tesseract_config = TesseractConfigV4(language=lang_code, psm=PSMModeV4.AUTO, output_format="text")
+
+        return ExtractionConfigV4(ocr_backend="tesseract", ocr_config=tesseract_config, use_cache=False)
+
+
+class KreuzbergV4AsyncExtractor:
+    async def extract_text(self, file_path: str) -> str:
+        if not KREUZBERG_V4_AVAILABLE or kreuzberg_v4 is None:
+            msg = "Kreuzberg v4 (dev) is not installed"
+            raise ImportError(msg)
+        config = self._get_optimized_config(file_path)
+        result = await kreuzberg_v4.extract_file(file_path, config=config)
+        return result.content
+
+    async def extract_with_metadata(self, file_path: str) -> tuple[str, dict[str, Any]]:
+        if not KREUZBERG_V4_AVAILABLE or kreuzberg_v4 is None:
+            msg = "Kreuzberg v4 (dev) is not installed"
+            raise ImportError(msg)
+        config = self._get_optimized_config(file_path)
+        result = await kreuzberg_v4.extract_file(file_path, config=config)
+        metadata = dict(result.metadata) if hasattr(result, "metadata") else {}
+        metadata["kreuzberg_version"] = "v4_dev"
+        return result.content, metadata
+
+    def _get_optimized_config(self, file_path: str) -> ExtractionConfigV4:
+        lang_code = get_language_config(file_path)
+
+        tesseract_config = TesseractConfigV4(language=lang_code, psm=PSMModeV4.AUTO, output_format="text")
+
+        return ExtractionConfigV4(ocr_backend="tesseract", ocr_config=tesseract_config, use_cache=False)
 
 
 class DoclingExtractor:
@@ -203,7 +265,7 @@ class DoclingExtractor:
             text = result.document.export_to_text()
             text = text if text else ""
 
-            metadata: dict[str, Any] = {}
+            metadata = {}
             if hasattr(result.document, "origin"):
                 metadata["origin"] = {
                     "mimetype": getattr(result.document.origin, "mimetype", None),
@@ -420,7 +482,7 @@ class UnstructuredExtractor:
                     if hasattr(elem_meta, "languages"):
                         metadata["languages"] = elem_meta.languages
 
-                element_types: dict[str, int] = {}
+                element_types = {}
                 for elem in elements:
                     elem_type = type(elem).__name__
                     element_types[elem_type] = element_types.get(elem_type, 0) + 1
@@ -524,8 +586,10 @@ def get_extractor(framework: Framework | str) -> ExtractorProtocol | AsyncExtrac
     framework_str = framework.value if isinstance(framework, FrameworkEnum) else framework
 
     extractors = {
-        "kreuzberg_sync": KreuzbergSyncExtractor,
-        "kreuzberg_async": KreuzbergAsyncExtractor,
+        "kreuzberg_v3_sync": KreuzbergSyncExtractor,
+        "kreuzberg_v3_async": KreuzbergAsyncExtractor,
+        "kreuzberg_v4_sync": KreuzbergV4SyncExtractor,
+        "kreuzberg_v4_async": KreuzbergV4AsyncExtractor,
         "docling": DoclingExtractor,
         "markitdown": MarkItDownExtractor,
         "unstructured": UnstructuredExtractor,

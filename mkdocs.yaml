@@ -130,6 +130,7 @@ nav:
       - user-guide/index.md
       - Basic Usage: user-guide/basic-usage.md
       - Extraction Configuration: user-guide/extraction-configuration.md
+      - Table Extraction: user-guide/table-extraction.md
       - Metadata Extraction: user-guide/metadata-extraction.md
       - Content Chunking: user-guide/chunking.md
       - OCR Configuration: user-guide/ocr-configuration.md
@@ -158,3 +159,4 @@ nav:
       - Custom Hooks: advanced/custom-hooks.md
       - Custom Extractors: advanced/custom-extractors.md
   - Contributing: contributing.md
+  - Changelog: CHANGELOG.md

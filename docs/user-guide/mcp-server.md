@@ -1,6 +1,6 @@
 # MCP Server
 
-The Kreuzberg MCP (Model Context Protocol) server enables seamless integration with AI tools like Claude Desktop, Cursor, and other MCP-compatible applications. This allows AI assistants to directly extract text from documents without requiring API calls or manual file processing.
+The Kreuzberg MCP (Model Context Protocol) server enables integration with AI tools like Claude Desktop, Cursor, and other MCP-compatible applications. This allows AI assistants to directly extract text from documents without requiring API calls or manual file processing.
 
 ## What is MCP?
 

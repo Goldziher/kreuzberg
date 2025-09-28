@@ -181,17 +181,10 @@ class ResultAggregator:
             avg_chars = int(statistics.mean(char_counts)) if char_counts else None
             avg_words = int(statistics.mean(word_counts)) if word_counts else None
         else:
-            avg_time = None
-            median_time = None
-            min_time = None
-            max_time = None
-            std_time = None
-            avg_peak_memory = None
-            avg_cpu = None
-            files_per_second = None
-            mb_per_second = None
-            avg_chars = None
-            avg_words = None
+            avg_time = median_time = min_time = max_time = std_time = None
+            avg_peak_memory = avg_cpu = None
+            files_per_second = mb_per_second = None
+            avg_chars = avg_words = None
 
         return BenchmarkSummary(
             framework=framework,
@@ -216,7 +209,7 @@ class ResultAggregator:
         )
 
     def _analyze_failures(self, results: list[BenchmarkResult]) -> dict[str, int]:
-        failures: dict[str, int] = defaultdict(int)
+        failures = defaultdict(int)
 
         for result in results:
             if result.status == ExtractionStatus.FAILED and result.error_type:
@@ -225,7 +218,7 @@ class ResultAggregator:
         return dict(failures)
 
     def _calculate_performance_trends(self, results: list[BenchmarkResult]) -> dict[Framework, list[float]]:
-        trends: dict[Framework, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+        trends = defaultdict(lambda: defaultdict(list))
 
         for result in results:
             if result.status == ExtractionStatus.SUCCESS:

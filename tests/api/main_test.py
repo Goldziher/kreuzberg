@@ -795,7 +795,7 @@ async def test_extract_pdf_without_tables_with_table_extraction_enabled(
     test_config = ExtractionConfig(
         extract_tables=True,
         gmft_config=GMFTConfig(
-            detector_base_threshold=0.9,
+            detection_threshold=0.9,
             remove_null_rows=True,
         ),
     )
