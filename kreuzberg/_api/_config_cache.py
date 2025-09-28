@@ -6,6 +6,7 @@ by avoiding repeated file system operations and object creation.
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -71,7 +72,7 @@ def _cached_create_ocr_config(
     config_json: str,
 ) -> TesseractConfig | EasyOCRConfig | PaddleOCRConfig:
     """Cache OCR config object creation."""
-    config_dict = deserialize(config_json, dict[str, Any])
+    config_dict = deserialize(config_json, dict[str, Any], json=True)
 
     if config_type == "tesseract":
         return TesseractConfig(**config_dict)
@@ -86,31 +87,31 @@ def _cached_create_ocr_config(
 @lru_cache(maxsize=64)
 def _cached_create_gmft_config(config_json: str) -> GMFTConfig:
     """Cache GMFT config creation."""
-    return GMFTConfig(**deserialize(config_json, dict[str, Any]))
+    return GMFTConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=64)
 def _cached_create_language_detection_config(config_json: str) -> LanguageDetectionConfig:
     """Cache language detection config creation."""
-    return LanguageDetectionConfig(**deserialize(config_json, dict[str, Any]))
+    return LanguageDetectionConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=64)
 def _cached_create_spacy_config(config_json: str) -> SpacyEntityExtractionConfig:
     """Cache spaCy entity extraction config creation."""
-    return SpacyEntityExtractionConfig(**deserialize(config_json, dict[str, Any]))
+    return SpacyEntityExtractionConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=64)
 def _cached_create_html_markdown_config(config_json: str) -> HTMLToMarkdownConfig:
     """Cache HTML to Markdown config creation."""
-    return HTMLToMarkdownConfig(**deserialize(config_json, dict[str, Any]))
+    return HTMLToMarkdownConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=256)
 def _cached_parse_header_config(header_value: str) -> dict[str, Any]:
     """Cache parsed header configurations."""
-    parsed_config: dict[str, Any] = deserialize(header_value, dict[str, Any])
+    parsed_config: dict[str, Any] = json.loads(header_value)
     return parsed_config
 
 
@@ -129,31 +130,41 @@ def create_ocr_config_cached(
     if not ocr_backend:
         return TesseractConfig()
 
-    config_json = serialize(config_dict, json=True).decode()
+    # Sort keys for consistent serialization
+    sorted_config = dict(sorted(config_dict.items()))
+    config_json = serialize(sorted_config, json=True).decode()
     return _cached_create_ocr_config(ocr_backend, config_json)
 
 
 def create_gmft_config_cached(config_dict: dict[str, Any]) -> GMFTConfig:
     """Cached version of GMFT config creation."""
-    config_json = serialize(config_dict, json=True).decode()
+    # Sort keys for consistent serialization
+    sorted_config = dict(sorted(config_dict.items()))
+    config_json = serialize(sorted_config, json=True).decode()
     return _cached_create_gmft_config(config_json)
 
 
 def create_language_detection_config_cached(config_dict: dict[str, Any]) -> LanguageDetectionConfig:
     """Cached version of language detection config creation."""
-    config_json = serialize(config_dict, json=True).decode()
+    # Sort keys for consistent serialization
+    sorted_config = dict(sorted(config_dict.items()))
+    config_json = serialize(sorted_config, json=True).decode()
     return _cached_create_language_detection_config(config_json)
 
 
 def create_spacy_config_cached(config_dict: dict[str, Any]) -> SpacyEntityExtractionConfig:
     """Cached version of spaCy config creation."""
-    config_json = serialize(config_dict, json=True).decode()
+    # Sort keys for consistent serialization
+    sorted_config = dict(sorted(config_dict.items()))
+    config_json = serialize(sorted_config, json=True).decode()
     return _cached_create_spacy_config(config_json)
 
 
 def create_html_markdown_config_cached(config_dict: dict[str, Any]) -> HTMLToMarkdownConfig:
     """Cached version of HTML to Markdown config creation."""
-    config_json = serialize(config_dict, json=True).decode()
+    # Sort keys for consistent serialization
+    sorted_config = dict(sorted(config_dict.items()))
+    config_json = serialize(sorted_config, json=True).decode()
     return _cached_create_html_markdown_config(config_json)
 
 
