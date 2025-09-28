@@ -211,8 +211,8 @@ def test_caching_behavior_header_parsing() -> None:
 def test_config_dict_serialization_consistency() -> None:
     clear_all_caches()
 
-    config1 = {"verbosity": 2, "formatter_base_threshold": 0.1}
-    config2 = {"formatter_base_threshold": 0.1, "verbosity": 2}
+    config1 = {"verbosity": 2, "detection_threshold": 0.8}
+    config2 = {"detection_threshold": 0.8, "verbosity": 2}
 
     result1 = create_gmft_config_cached(config1)
     result2 = create_gmft_config_cached(config2)
