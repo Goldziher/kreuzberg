@@ -1,11 +1,11 @@
 [build-system]
-build-backend = "hatchling.build"
+build-backend = "maturin"
 
-requires = [ "hatchling" ]
+requires = [ "maturin>=1.9,<2.0" ]
 
 [project]
 name = "kreuzberg"
-version = "3.18.0"
+version = "4.0.0"
 description = "Document intelligence framework for Python - Extract text, metadata, and structured data from diverse file formats"
 readme = "README.md"
 keywords = [
@@ -46,6 +46,8 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Rust",
   "Topic :: Database",
   "Topic :: Multimedia :: Graphics :: Capture :: Scanners",
   "Topic :: Office/Business :: Office Suites",
@@ -57,20 +59,18 @@ classifiers = [
 ]
 
 dependencies = [
-  "anyio>=4.11.0",
-  "chardetng-py>=0.3.5",
+  "anyio>=4.10.0",
   "exceptiongroup>=1.2.2; python_version<'3.11'",
   "html-to-markdown[lxml]>=1.16.0",
   "langcodes>=3.5.0",
   "mcp>=1.15.0",
   "msgspec>=0.18.0",
   "numpy>=2.0.0",
+  "pillow>=11.3.0",
   "playa-pdf>=0.7.0",
   "polars>=1.33.1",
   "psutil>=7.1.0",
-  "pypdfium2==4.30.0",                                # pinned due to bug in 4.30.1, until v5 is stable
-  "python-calamine>=0.5.3",
-  "python-pptx>=1.0.2",
+  "pypdfium2==4.30.0",
   "typing-extensions>=4.15.0; python_version<'3.12'",
 ]
 
@@ -94,7 +94,10 @@ optional-dependencies.crypto = [ "playa-pdf[crypto]>=0.7.0" ]
 optional-dependencies.document-classification = [ "deep-translator>=1.11.4" ]
 optional-dependencies.easyocr = [ "easyocr>=1.7.2" ]
 optional-dependencies.entity-extraction = [ "keybert>=0.9.0", "spacy>=3.8.7" ]
-optional-dependencies.gmft = [ "gmft>=0.4.2" ]
+optional-dependencies.gmft = [
+  "torch>=2.8.0",
+  "transformers>=4.35.2",
+]
 optional-dependencies.langdetect = [ "fast-langdetect>=1.0.0" ]
 optional-dependencies.paddleocr = [
   "paddleocr>=3.2.0",
@@ -110,8 +113,11 @@ scripts.kreuzberg-mcp = "kreuzberg._mcp.server:main"
 [dependency-groups]
 dev = [
   "covdefaults>=2.3.0",
+  "maturin>=1.9.4",
+  "memory-profiler>=0.61.0",
   "mypy>=1.18.2",
   "pytest>=8.4.2",
+  "pytest-benchmark>=5.1.0",
   "pytest-cov>=7.0.0",
   "pytest-mock>=3.15.1",
   "pytest-rerunfailures>=16.0.1",
@@ -131,11 +137,11 @@ doc = [
   "mkdocstrings[python]>=0.29.0",
 ]
 
-[tool.setuptools]
-packages = [ "kreuzberg" ]
-
-[tool.setuptools.package-data]
-kreuzberg = [ "py.typed" ]
+[tool.maturin]
+python-source = "."
+module-name = "kreuzberg._internal_bindings"
+features = [ "pyo3/extension-module" ]
+compatibility = "manylinux2014"
 
 [tool.ruff]
 target-version = "py310"
@@ -188,15 +194,20 @@ lint.per-file-ignores."**/tests/**/*.*" = [
   "SLF001",
 ]
 lint.per-file-ignores."benchmarks/**/*.*" = [
-  "BLE001",  # Allow broad exception catching in benchmarks
-  "C901",    # Allow complex functions in benchmarks
-  "D",
-  "PERF203",
-  "PLC0415", # Allow imports not at top level for conditional/lazy loading
-  "PLR0912", # Allow many branches in benchmarks
-  "PLR0915", # Allow many statements in benchmarks
+  "BLE001",  # Blind exception catching (common in benchmarks)
+  "C901",    # Function complexity (benchmarks can be complex)
+  "D101",    # Missing docstring in public class
+  "D102",    # Missing docstring in public method
+  "D103",    # Missing docstring in public function
+  "D105",    # Missing docstring in magic method
+  "PERF203", # Try-except within a loop (acceptable in benchmarks)
+  "PLC0415", # Import at top level (conditional imports for optional deps)
+  "PLR0912", # Too many branches
+  "PLR0913", # Too many arguments
+  "PLR0915", # Too many statements
   "S101",
-  "SLF001",
+  "S110",    # Try-except-pass (acceptable in benchmarks)
+  "SLF001",  # Private member access (needed for benchmark configuration)
 ]
 lint.per-file-ignores."tests/e2e/*_test.py" = [
   "T201", # print statements are needed for test output
@@ -278,11 +289,6 @@ module = [
   "keybert",
 ]
 ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "scripts.*"
-ignore_missing_imports = true
-disallow_untyped_calls = false
 
 [tool.uv.workspace]
 members = [ ".", "benchmarks" ]
