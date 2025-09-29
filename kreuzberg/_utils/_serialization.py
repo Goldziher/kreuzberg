@@ -55,9 +55,13 @@ def deserialize(value: str | bytes, target_type: type[T], json: bool = False) ->
         raise ValueError(f"Failed to deserialize to {target_type.__name__}: {e}") from e
 
 
-def serialize(value: Any, json: bool = False, **kwargs: Any) -> bytes:
+def serialize(value: Any, json: bool = False, sort_keys: bool = False, **kwargs: Any) -> bytes:
     if isinstance(value, dict) and kwargs:
         value = value | kwargs
+
+    # Ensure deterministic ordering for dicts if requested
+    if sort_keys and isinstance(value, dict):
+        value = dict(sorted(value.items()))
 
     encoder = msgspec.json.encode if json else msgspec.msgpack.encode
     try:

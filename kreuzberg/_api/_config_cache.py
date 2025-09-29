@@ -128,41 +128,31 @@ def create_ocr_config_cached(
     if not ocr_backend:
         return TesseractConfig()
 
-    # Sort keys for consistent serialization
-    sorted_config = dict(sorted(config_dict.items()))
-    config_json = serialize(sorted_config, json=True).decode()
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
     return _cached_create_ocr_config(ocr_backend, config_json)
 
 
 def create_gmft_config_cached(config_dict: dict[str, Any]) -> GMFTConfig:
     """Cached version of GMFT config creation."""
-    # Sort keys for consistent serialization
-    sorted_config = dict(sorted(config_dict.items()))
-    config_json = serialize(sorted_config, json=True).decode()
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
     return _cached_create_gmft_config(config_json)
 
 
 def create_language_detection_config_cached(config_dict: dict[str, Any]) -> LanguageDetectionConfig:
     """Cached version of language detection config creation."""
-    # Sort keys for consistent serialization
-    sorted_config = dict(sorted(config_dict.items()))
-    config_json = serialize(sorted_config, json=True).decode()
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
     return _cached_create_language_detection_config(config_json)
 
 
 def create_spacy_config_cached(config_dict: dict[str, Any]) -> SpacyEntityExtractionConfig:
     """Cached version of spaCy config creation."""
-    # Sort keys for consistent serialization
-    sorted_config = dict(sorted(config_dict.items()))
-    config_json = serialize(sorted_config, json=True).decode()
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
     return _cached_create_spacy_config(config_json)
 
 
 def create_html_markdown_config_cached(config_dict: dict[str, Any]) -> HTMLToMarkdownConfig:
     """Cached version of HTML to Markdown config creation."""
-    # Sort keys for consistent serialization
-    sorted_config = dict(sorted(config_dict.items()))
-    config_json = serialize(sorted_config, json=True).decode()
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
     return _cached_create_html_markdown_config(config_json)
 
 
