@@ -5,8 +5,6 @@ by avoiding repeated file system operations and object creation.
 """
 
 from __future__ import annotations
-
-import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -111,7 +109,7 @@ def _cached_create_html_markdown_config(config_json: str) -> HTMLToMarkdownConfi
 @lru_cache(maxsize=256)
 def _cached_parse_header_config(header_value: str) -> dict[str, Any]:
     """Cache parsed header configurations."""
-    parsed_config: dict[str, Any] = json.loads(header_value)
+    parsed_config: dict[str, Any] = deserialize(header_value, dict[str, Any], json=True)
     return parsed_config
 
 
