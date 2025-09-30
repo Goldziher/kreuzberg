@@ -81,7 +81,7 @@ class XMLExtractor(Extractor):
             return self._apply_quality_processing(result)
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            raise
+            raise  # OSError/RuntimeError must bubble up - system errors need user reports ~keep
         except Exception as e:
             raise ParsingError(
                 "Failed to parse XML content",

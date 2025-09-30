@@ -76,7 +76,7 @@ class EmailExtractor(Extractor):
             if self.config.extract_images:
                 images = self._extract_images_from_rust_attachments(rust_result)
                 result.images = images
-                if self.config.ocr_extracted_images and result.images:
+                if self.config.image_ocr_config and self.config.image_ocr_config.enabled and result.images:
                     image_ocr_results: list[ImageOCRResult] = run_maybe_async(
                         self._process_images_with_ocr, result.images
                     )
@@ -85,7 +85,7 @@ class EmailExtractor(Extractor):
             return result
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            raise
+            raise  # OSError/RuntimeError must bubble up - system errors need user reports ~keep
         except Exception as e:
             raise ParsingError(
                 "Failed to parse email content", context={"mime_type": self.mime_type, "error": str(e)}

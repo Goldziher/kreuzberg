@@ -171,7 +171,7 @@ class PandocExtractor(Extractor):
             if self.config.extract_images:
                 images = await self._extract_images_with_pandoc(str(path))
                 result.images = images
-                if self.config.ocr_extracted_images and result.images:
+                if self.config.image_ocr_config and self.config.image_ocr_config.enabled and result.images:
                     image_ocr_results = await self._process_images_with_ocr(result.images)
                     result.image_ocr_results = image_ocr_results
 
@@ -199,7 +199,7 @@ class PandocExtractor(Extractor):
             if self.config.extract_images:
                 images: list[ExtractedImage] = run_maybe_async(self._extract_images_with_pandoc, str(path))
                 result.images = images
-                if self.config.ocr_extracted_images and result.images:
+                if self.config.image_ocr_config and self.config.image_ocr_config.enabled and result.images:
                     image_ocr_results: list[ImageOCRResult] = run_maybe_async(
                         self._process_images_with_ocr, result.images
                     )
@@ -207,7 +207,7 @@ class PandocExtractor(Extractor):
 
             return result
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            raise
+            raise  # OSError/RuntimeError must bubble up - subprocess errors are system issues ~keep
         except Exception as e:
             raise ParsingError("Failed to process file", context={"file": str(path), "error": str(e)}) from e
 

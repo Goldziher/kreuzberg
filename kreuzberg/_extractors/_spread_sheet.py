@@ -62,7 +62,7 @@ class SpreadSheetExtractor(Extractor):
             return self._apply_quality_processing(result)
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            raise
+            raise  # OSError/RuntimeError must bubble up - Calamine raises OSError for "Cannot detect file format" ~keep
         except Exception as e:
             raise ParsingError(
                 "Failed to extract spreadsheet data from bytes",
@@ -86,7 +86,7 @@ class SpreadSheetExtractor(Extractor):
             return self._apply_quality_processing(result)
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            raise
+            raise  # OSError/RuntimeError must bubble up - Calamine raises OSError for "Cannot detect file format" ~keep
         except Exception as e:
             raise ParsingError(
                 "Failed to extract spreadsheet data from file",

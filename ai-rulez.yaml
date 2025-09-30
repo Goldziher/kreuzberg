@@ -486,9 +486,64 @@ rules:
         - User reports about these errors help improve the library
         - Never suppress or handle these gracefully - they must surface to users
         - SystemExit, KeyboardInterrupt, MemoryError also always bubble up
+
+      ### OSError Handling Decision Tree
+
+      **General Rule**: All OSError instances MUST bubble up unchanged (never wrap in ParsingError).
+
+      **Exception Patterns**:
+
+      1. **Rust Library Misuse (Calamine/Excel)**:
+         - Calamine incorrectly raises OSError for "Cannot detect file format" (should be ValueError)
+         - Pattern: Always bubble up (library limitation, users should report)
+         - Example: `kreuzberg/_extractors/_spread_sheet.py:88`
+         ```python
+         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
+             raise  # Always bubble up - even if Calamine misuses OSError
+         ```
+
+      2. **Subprocess Analysis (LibreOffice/Pandoc)**:
+         - Analyze stderr/stdout for format/parsing keywords
+         - If contains "format", "unsupported", "error:", "failed" → ParsingError
+         - Otherwise → OSError (true system error)
+         - Example: `kreuzberg/_utils/_libreoffice.py:75-88`
+         ```python
+         if any(keyword in stderr.lower() for keyword in ["format", "unsupported", "error:", "failed"]):
+             raise ParsingError(...)  # Parsing issue detected
+         raise OSError(...)  # True system error
+         ```
+
+      3. **Cache Operations**:
+         - OSError when reading/writing cache → silently ignore (cache is optional)
+         - Example: `kreuzberg/_utils/_cache.py:142`
+         ```python
+         except (OSError, ValueError, KeyError):
+             pass  # Cache read failure - continue without cache
+         ```
+
+      4. **Optional Dependencies**:
+         - OSError from missing system tools (tesseract, pandoc) → already raised as MissingDependencyError
+         - OSError from model loading (PyTorch) → always bubble up
+
+      ### Code Comment Requirements
+
+      When catching OSError, add a comment explaining the decision:
+      ```python
+      except (OSError, RuntimeError):
+          raise  # OSError/RuntimeError must bubble up - system errors need user reports ~keep
+
+      except OSError:
+          pass  # Cache failure - safe to ignore, cache is optional fallback ~keep
+
+      # Subprocess error analysis - wrap only if format/parsing error detected ~keep
+      if "format" in stderr.lower():
+          raise ParsingError(...)
+      raise OSError(...)
+      ```
+
       - **Common exceptions**:
         - `ValidationError`: Configuration or input validation failures
-        - `ParsingError`: Document parsing failures
+        - `ParsingError`: Document parsing failures (NOT for library OSError misuse)
         - `OCRError`: OCR processing failures
         - `MissingDependencyError`: Missing optional dependencies
     name: Error Handling

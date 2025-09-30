@@ -72,6 +72,7 @@ async def convert_office_doc(
             stderr = result.stderr.decode("utf-8", errors="replace")
             stdout = result.stdout.decode("utf-8", errors="replace")
 
+            # Subprocess error analysis - wrap only if format/parsing error detected ~keep
             if any(
                 keyword in stderr.lower() or keyword in stdout.lower()
                 for keyword in ["format", "unsupported", "error:", "failed"]
@@ -85,6 +86,7 @@ async def convert_office_doc(
                     },
                 )
 
+            # True system error - bubble up for user reporting ~keep
             raise OSError(f"LibreOffice process failed with return code {result.returncode}: {stderr or stdout}")
 
         expected_output = output_dir / f"{input_path.stem}.{target_format}"

@@ -57,7 +57,7 @@ class PresentationExtractor(Extractor):
             return self._apply_quality_processing(result)
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            raise
+            raise  # OSError/RuntimeError must bubble up - system errors need user reports ~keep
         except Exception as e:
             logger.error("Failed to extract PPTX: %s", e)
             raise ParsingError(f"PPTX extraction failed: {e}") from e
@@ -85,7 +85,7 @@ class PresentationExtractor(Extractor):
             return self._apply_quality_processing(result)
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            raise
+            raise  # OSError/RuntimeError must bubble up - system errors need user reports ~keep
         except Exception as e:
             logger.error("Failed to extract PPTX: %s", e)
             raise ParsingError(f"PPTX extraction failed: {e}") from e
