@@ -105,8 +105,8 @@ jobs:
       - name: Install wheel and test
         shell: bash
         run: |
-          # Find the wheel file for this Python version
-          wheel_file=$(find ./wheels -name "*cp$(echo ${{ matrix.python-version }} | tr -d '.')*" -name "*.whl" | head -1)
+          # Find the wheel file for this Python version (cp310-abi3 is compatible with all Python 3.10+)
+          wheel_file=$(find ./wheels -name "*.whl" | head -1)
 
           if [ -z "$wheel_file" ]; then
             echo "No wheel found for Python ${{ matrix.python-version }}"

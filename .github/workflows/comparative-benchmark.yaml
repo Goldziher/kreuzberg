@@ -33,6 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         framework:
+          - kreuzberg_v3_sync
+          - kreuzberg_v3_async
           - kreuzberg_v4_sync
           - kreuzberg_v4_async
           - docling
