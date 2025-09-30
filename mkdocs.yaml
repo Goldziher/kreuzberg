@@ -126,6 +126,7 @@ nav:
       - getting-started/index.md
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quick-start.md
+      - Migration Guide (v3→v4): getting-started/migration-guide.md
   - User Guide:
       - user-guide/index.md
       - Basic Usage: user-guide/basic-usage.md
