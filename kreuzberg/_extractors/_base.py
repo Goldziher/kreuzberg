@@ -203,14 +203,17 @@ class Extractor(ABC):
         return cfg
 
     def _validate_image_for_ocr(self, img: ExtractedImage) -> str | None:
+        if not self.config.image_ocr_config:
+            return None
+
         fmt = img.format.lower()
-        if fmt not in self.config.image_ocr_formats:
+        if fmt not in self.config.image_ocr_config.allowed_formats:
             return f"Unsupported format: {img.format}"
 
         if img.dimensions is not None:
             w, h = img.dimensions
-            min_w, min_h = self.config.image_ocr_min_dimensions
-            max_w, max_h = self.config.image_ocr_max_dimensions
+            min_w, min_h = self.config.image_ocr_config.min_dimensions
+            max_w, max_h = self.config.image_ocr_config.max_dimensions
 
             if w < min_w or h < min_h:
                 return f"Too small: {w}x{h}"
@@ -247,13 +250,13 @@ class Extractor(ABC):
     async def _process_images_with_ocr(
         self, images: tuple[ExtractedImage, ...] | list[ExtractedImage]
     ) -> list[ImageOCRResult]:
-        if not images or not self.config.ocr_extracted_images:
+        if not images or not self.config.image_ocr_config or not self.config.image_ocr_config.enabled:
             return []
 
         images_list = list(self._deduplicate_images(list(images)))
         images_list = self._check_image_memory_limits(images_list)
 
-        backend_name = self.config.image_ocr_backend or self.config.ocr_backend
+        backend_name = self.config.image_ocr_config.backend or self.config.ocr_backend
         if backend_name is None:
             return []
 

@@ -29,14 +29,24 @@ class HTMLExtractor(Extractor):
 
     async def extract_bytes_async(self, content: bytes) -> ExtractionResult:
         result = await run_sync(self.extract_bytes_sync, content)
-        if self.config.extract_images and self.config.ocr_extracted_images and result.images:
+        if (
+            self.config.extract_images
+            and self.config.image_ocr_config
+            and self.config.image_ocr_config.enabled
+            and result.images
+        ):
             result.image_ocr_results = await self._process_images_with_ocr(result.images)
         return result
 
     async def extract_path_async(self, path: Path) -> ExtractionResult:
         content = await AsyncPath(path).read_bytes()
         result = await run_sync(self.extract_bytes_sync, content)
-        if self.config.extract_images and self.config.ocr_extracted_images and result.images:
+        if (
+            self.config.extract_images
+            and self.config.image_ocr_config
+            and self.config.image_ocr_config.enabled
+            and result.images
+        ):
             result.image_ocr_results = await self._process_images_with_ocr(result.images)
         return result
 
@@ -59,7 +69,7 @@ class HTMLExtractor(Extractor):
 
         if self.config.extract_images:
             extraction_result.images = self._extract_images_from_html(html_content)
-            if self.config.ocr_extracted_images and extraction_result.images:
+            if self.config.image_ocr_config and self.config.image_ocr_config.enabled and extraction_result.images:
                 extraction_result.image_ocr_results = run_maybe_async(
                     self._process_images_with_ocr, extraction_result.images
                 )

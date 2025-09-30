@@ -118,7 +118,7 @@ class PDFExtractor(Extractor):
             images = await self._extract_images_from_playa(document)
             images = self._check_image_memory_limits(images)
             result.images = images
-            if self.config.ocr_extracted_images:
+            if self.config.image_ocr_config and self.config.image_ocr_config.enabled:
                 image_ocr_results = await self._process_images_with_ocr(result.images)
                 result.image_ocr_results = image_ocr_results
 
@@ -183,7 +183,7 @@ class PDFExtractor(Extractor):
             images = self._extract_images_from_playa_sync(document)
             images = self._check_image_memory_limits(images)
             result.images = images
-            if self.config.ocr_extracted_images:
+            if self.config.image_ocr_config and self.config.image_ocr_config.enabled:
                 image_ocr_results: list[ImageOCRResult] = run_maybe_async(self._process_images_with_ocr, result.images)
                 result.image_ocr_results = image_ocr_results
 
