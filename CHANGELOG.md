@@ -101,6 +101,12 @@ The following internal GMFT options have been removed for simplicity:
 - **Cross-Platform Wheels**: Cibuildwheel integration for universal wheel distribution
 - **Enhanced Testing**: Comprehensive Rust test coverage with performance benchmarks
 
+#### Legacy MS Office Support
+
+- **Legacy Word Documents**: Added extraction support for `.doc` files via LibreOffice conversion
+- **Legacy PowerPoint**: Added extraction support for `.ppt` files via LibreOffice conversion
+- **Conversion Utilities**: LibreOffice integration with timeout protection and validation
+
 ### Changed
 
 - **Performance**: Significant speed improvements across all major operations
@@ -122,6 +128,7 @@ The following internal GMFT options have been removed for simplicity:
 - **CI/CD Pipeline**: Unified testing workflows with comprehensive Rust support
 - **PPTX Extraction**: Enhanced image extraction and metadata handling
 - **Excel Float Formatting**: Improved decimal place display consistency
+- **Async File Operations**: Fixed blocking file operations in pandoc extractor to use AsyncPath properly
 
 ## [3.19.0] - 2025-09-28
 
