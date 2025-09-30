@@ -555,7 +555,7 @@ class PandocExtractor(Extractor):
 
         with temporary_directory() as temp_dir:
             media_dir = Path(temp_dir) / "media"
-            media_dir.mkdir()
+            await AsyncPath(media_dir).mkdir()
 
             try:
                 cmd = [
@@ -571,9 +571,10 @@ class PandocExtractor(Extractor):
 
                 await run_process(cmd)
 
-                if media_dir.exists():
-                    for img_path in media_dir.rglob("*"):
-                        if img_path.is_file() and img_path.suffix.lower() in {
+                async_media_dir = AsyncPath(media_dir)
+                if await async_media_dir.exists():
+                    async for img_path in async_media_dir.rglob("*"):
+                        if await AsyncPath(img_path).is_file() and img_path.suffix.lower() in {
                             ".jpg",
                             ".jpeg",
                             ".png",

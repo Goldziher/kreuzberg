@@ -720,6 +720,8 @@ class Metadata(TypedDict, total=False):
     """Metadata about image preprocessing operations (DPI adjustments, scaling, etc.)."""
     source_format: NotRequired[str]
     """Source format of the extracted content."""
+    converted_via: NotRequired[str]
+    """Tool used to convert the document (e.g., 'libreoffice', 'pandoc')."""
     error: NotRequired[str]
     """Error message if extraction failed."""
     error_context: NotRequired[dict[str, Any]]
@@ -797,6 +799,7 @@ _VALID_METADATA_KEYS = {
     "quality_score",
     "image_preprocessing",
     "source_format",
+    "converted_via",
     "error",
     "error_context",
     "json_schema",

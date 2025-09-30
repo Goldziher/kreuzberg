@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ClassVar
 from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg._extractors._image import ImageExtractor
+from kreuzberg._extractors._legacy_office import LegacyPresentationExtractor, LegacyWordExtractor
 from kreuzberg._extractors._pandoc import (
     BibliographyExtractor,
     EbookExtractor,
@@ -38,6 +39,8 @@ class ExtractorRegistry:
 
     _default_extractors: ClassVar[list[type[Extractor]]] = [
         PDFExtractor,
+        LegacyWordExtractor,
+        LegacyPresentationExtractor,
         OfficeDocumentExtractor,
         PresentationExtractor,
         SpreadSheetExtractor,

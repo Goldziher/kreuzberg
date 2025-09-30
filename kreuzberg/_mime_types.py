@@ -17,6 +17,8 @@ PDF_MIME_TYPE: Final = "application/pdf"
 PLAIN_TEXT_MIME_TYPE: Final = "text/plain"
 POWER_POINT_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 DOCX_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+LEGACY_WORD_MIME_TYPE: Final = "application/msword"
+LEGACY_POWERPOINT_MIME_TYPE: Final = "application/vnd.ms-powerpoint"
 
 EML_MIME_TYPE: Final = "message/rfc822"
 MSG_MIME_TYPE: Final = "application/vnd.ms-outlook"
@@ -157,6 +159,8 @@ EXT_TO_MIME_TYPE: Final[Mapping[str, str]] = {
     ".xla": EXCEL_TEMPLATE_MIME_TYPE,
     ".ods": OPENDOC_SPREADSHEET_MIME_TYPE,
     ".pptx": POWER_POINT_MIME_TYPE,
+    ".doc": LEGACY_WORD_MIME_TYPE,
+    ".ppt": LEGACY_POWERPOINT_MIME_TYPE,
     ".bmp": "image/bmp",
     ".gif": "image/gif",
     ".jpg": "image/jpeg",
@@ -202,6 +206,8 @@ SUPPORTED_MIME_TYPES: Final[set[str]] = (
     | {
         PDF_MIME_TYPE,
         POWER_POINT_MIME_TYPE,
+        LEGACY_WORD_MIME_TYPE,
+        LEGACY_POWERPOINT_MIME_TYPE,
         HTML_MIME_TYPE,
         EML_MIME_TYPE,
         MSG_MIME_TYPE,

@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -133,7 +132,7 @@ def test_parse_header_config_cached() -> None:
 
 def test_parse_header_config_cached_invalid_json() -> None:
     header_value = "invalid json"
-    with pytest.raises(json.JSONDecodeError):
+    with pytest.raises(ValueError, match="Failed to deserialize"):
         parse_header_config_cached(header_value)
 
 
