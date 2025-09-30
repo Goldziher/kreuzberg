@@ -115,13 +115,9 @@ jobs:
           import kreuzberg
           print('✓ Import successful')
 
-          # Test presentation extractor (Rust binding)
-          from kreuzberg._rust_extractors import PresentationExtractor as RustPptxExtractor
-          print('✓ Rust PPTX extractor available')
-
-          # Test spreadsheet extractor (Rust binding)
-          from kreuzberg._rust_extractors import SpreadsheetExtractor as RustXlsxExtractor
-          print('✓ Rust XLSX extractor available')
+          # Test Rust internal bindings
+          from kreuzberg import _internal_bindings
+          print('✓ Rust internal bindings available')
 
           # Test basic extraction
           from kreuzberg import extract_file_sync
