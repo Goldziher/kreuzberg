@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,9 +13,6 @@ from kreuzberg._extractors._pandoc import PandocExtractor
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._extractors._presentation import PresentationExtractor
 from kreuzberg._types import ExtractedImage
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.anyio

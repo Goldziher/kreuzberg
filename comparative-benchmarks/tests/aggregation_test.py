@@ -137,8 +137,8 @@ class TestResultAggregator:
             )
 
         expected_keys = {
-            "kreuzberg_sync_tiny",
-            "kreuzberg_sync_small",
+            "kreuzberg_v4_sync_tiny",
+            "kreuzberg_v4_sync_small",
             "markitdown_tiny",
         }
 
@@ -240,8 +240,8 @@ class TestResultAggregator:
         matrix = aggregator._create_matrix(sample_results)
 
         expected_keys = [
-            "kreuzberg_sync_tiny",
-            "kreuzberg_sync_small",
+            "kreuzberg_v4_sync_tiny",
+            "kreuzberg_v4_sync_small",
             "markitdown_tiny",
         ]
 

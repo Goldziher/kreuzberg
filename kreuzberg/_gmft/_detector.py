@@ -20,17 +20,20 @@ from kreuzberg.exceptions import MissingDependencyError
 from ._base import BBox, Rect
 from ._types import CroppedTable
 
-# Import ML dependencies conditionally
-try:
-    from transformers import AutoImageProcessor, TableTransformerForObjectDetection  # type: ignore[attr-defined]
-except ImportError:
-    AutoImageProcessor = None
-    TableTransformerForObjectDetection = None
-
 if TYPE_CHECKING:
     from PIL import Image
 
 logger = logging.getLogger(__name__)
+
+
+def _import_transformers() -> tuple[Any, Any]:
+    """Lazy import of transformers dependencies."""
+    try:
+        from transformers import AutoImageProcessor, TableTransformerForObjectDetection  # noqa: PLC0415
+
+        return AutoImageProcessor, TableTransformerForObjectDetection
+    except ImportError:
+        return None, None
 
 
 class TableDetector:
@@ -58,6 +61,7 @@ class TableDetector:
 
     def _try_load_model(self) -> None:
         """Attempt to load the Table Transformer model."""
+        AutoImageProcessor, TableTransformerForObjectDetection = _import_transformers()  # noqa: N806
         if AutoImageProcessor is None or TableTransformerForObjectDetection is None:
             # Dependencies not available
             return

@@ -21,7 +21,7 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
             "file_size": 1024,
             "file_type": "pdf",
             "category": "small",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.5,
             "peak_memory_mb": 100.0,
@@ -38,7 +38,7 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
             "file_size": 2048,
             "file_type": "pdf",
             "category": "small",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.8,
             "peak_memory_mb": 120.0,
@@ -55,7 +55,7 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
             "file_size": 512,
             "file_type": "docx",
             "category": "tiny",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.3,
             "peak_memory_mb": 80.0,
@@ -129,7 +129,7 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
     # Verify content
     index_content = (docs_dir / "index.md").read_text()
     assert "Performance Leaders" in index_content
-    assert "kreuzberg_sync" in index_content
+    assert "kreuzberg_v4_sync" in index_content
 
 
 def test_visualize_command_creates_all_charts(tmp_path: Path) -> None:
@@ -142,7 +142,7 @@ def test_visualize_command_creates_all_charts(tmp_path: Path) -> None:
             "file_size": 1024,
             "file_type": "pdf",
             "category": "small",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.5,
             "peak_memory_mb": 100.0,
@@ -198,7 +198,7 @@ def test_generate_docs_command_creates_all_files(tmp_path: Path) -> None:
             "file_size": 1024,
             "file_type": "pdf",
             "category": "small",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.5,
             "peak_memory_mb": 100.0,

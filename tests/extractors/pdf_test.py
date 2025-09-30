@@ -280,7 +280,7 @@ def test_extract_pdf_with_ocr_sync_error(extractor: PDFExtractor, tmp_path: Path
     pdf_path.write_text("invalid pdf content")
 
     with pytest.raises(ParsingError, match="Failed to OCR PDF"):
-        extractor._extract_pdf_text_with_ocr_sync(pdf_path, ocr_backend="tesseract")
+        extractor._extract_pdf_with_ocr_sync(pdf_path)
 
 
 @pytest.mark.anyio
@@ -973,9 +973,9 @@ def test_extract_pdf_searchable_text_sync(extractor: PDFExtractor, searchable_pd
 
 @pytest.mark.xfail(IS_CI, reason="OCR tests may fail in CI due to Tesseract issues")
 def test_extract_pdf_text_with_ocr_sync(extractor: PDFExtractor, scanned_pdf: Path) -> None:
-    result = extractor._extract_pdf_text_with_ocr_sync(scanned_pdf, ocr_backend="tesseract")
-    assert isinstance(result, ExtractionResult)
-    assert result.content.strip()
+    result = extractor._extract_pdf_with_ocr_sync(scanned_pdf)
+    assert isinstance(result, str)
+    assert result.strip()
 
 
 @pytest.mark.xfail(IS_CI, reason="OCR tests may fail in CI due to Tesseract issues")

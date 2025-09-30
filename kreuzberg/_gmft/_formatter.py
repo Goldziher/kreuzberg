@@ -28,22 +28,22 @@ from ._types import (
     TablePredictions,
 )
 
-# Import ML dependencies conditionally
-try:
-    from transformers import AutoImageProcessor, TableTransformerForObjectDetection  # type: ignore[attr-defined]
-except ImportError:
-    AutoImageProcessor = None
-    TableTransformerForObjectDetection = None
-
 if TYPE_CHECKING:
     from PIL import Image
 
     from ._base import BBox
-else:
-    # Runtime import for actual use
-    BBox = tuple  # Use tuple as type alias for runtime
 
 logger = logging.getLogger(__name__)
+
+
+def _import_transformers() -> tuple[Any, Any]:
+    """Lazy import of transformers dependencies."""
+    try:
+        from transformers import AutoImageProcessor, TableTransformerForObjectDetection  # noqa: PLC0415
+
+        return AutoImageProcessor, TableTransformerForObjectDetection
+    except ImportError:
+        return None, None
 
 
 class TableFormatter:
@@ -71,6 +71,7 @@ class TableFormatter:
 
     def _try_load_model(self) -> None:
         """Attempt to load the Table Transformer model."""
+        AutoImageProcessor, TableTransformerForObjectDetection = _import_transformers()  # noqa: N806
         if AutoImageProcessor is None or TableTransformerForObjectDetection is None:
             # Dependencies not available
             return

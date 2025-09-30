@@ -33,8 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         framework:
-          - kreuzberg_sync
-          - kreuzberg_async
+          - kreuzberg_v4_sync
+          - kreuzberg_v4_async
           - docling
           - markitdown
           - unstructured
@@ -56,6 +56,11 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
 
       - name: Cache uv dependencies
         uses: actions/cache@v4
@@ -84,6 +89,8 @@ jobs:
             echo "Installing entire workspace with all packages and extras..."
             # Install everything for benchmarks - all extras, all packages, all groups
             uv sync --all-extras --all-packages --all-groups
+            uv pip install maturin
+            uv run maturin develop --release --features extension-module
           shell: bash
 
       - name: Clear Kreuzberg Cache
@@ -147,9 +154,16 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
       - name: Install Dependencies
         run: |
           uv sync --all-extras --all-packages --all-groups
+          uv pip install maturin
+          uv run maturin develop --release --features extension-module
 
       - name: Download All Framework Results
         uses: actions/download-artifact@v5

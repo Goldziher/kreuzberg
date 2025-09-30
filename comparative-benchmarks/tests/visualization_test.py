@@ -20,7 +20,7 @@ from src.visualization import (
 def test_create_performance_comparison_chart_creates_file(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "extractous"],
+            "framework": ["kreuzberg_v4_sync", "extractous"],
             "avg_extraction_time": [0.5, 0.8],
             "success_rate": [0.95, 0.90],
             "total_files": [100, 100],
@@ -38,7 +38,7 @@ def test_create_performance_comparison_chart_creates_file(tmp_path: Path) -> Non
 def test_create_performance_comparison_chart_with_single_row(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "avg_extraction_time": [0.5],
             "success_rate": [0.95],
             "total_files": [100],
@@ -54,7 +54,7 @@ def test_create_performance_comparison_chart_with_single_row(tmp_path: Path) -> 
 def test_create_performance_comparison_chart_with_custom_config(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "avg_extraction_time": [0.5],
             "success_rate": [0.95],
             "total_files": [100],
@@ -76,7 +76,7 @@ def test_create_performance_comparison_chart_with_custom_config(tmp_path: Path) 
 def test_create_memory_usage_chart_creates_file(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "extractous"],
+            "framework": ["kreuzberg_v4_sync", "extractous"],
             "avg_peak_memory_mb": [100.0, 150.0],
             "total_files": [100, 100],
         }
@@ -93,7 +93,7 @@ def test_create_memory_usage_chart_creates_file(tmp_path: Path) -> None:
 def test_create_throughput_chart_creates_file(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "extractous"],
+            "framework": ["kreuzberg_v4_sync", "extractous"],
             "files_per_second": [2.5, 1.8],
             "mb_per_second": [5.0, 3.6],
         }
@@ -109,7 +109,7 @@ def test_create_throughput_chart_creates_file(tmp_path: Path) -> None:
 def test_create_throughput_chart_handles_missing_columns(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "files_per_second": [2.5],
         }
     )
@@ -124,8 +124,8 @@ def test_create_time_distribution_chart_creates_file(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
             "framework": [
-                "kreuzberg_sync",
-                "kreuzberg_sync",
+                "kreuzberg_v4_sync",
+                "kreuzberg_v4_sync",
                 "extractous",
                 "extractous",
             ],
@@ -144,7 +144,7 @@ def test_create_time_distribution_chart_creates_file(tmp_path: Path) -> None:
 def test_create_time_distribution_chart_with_single_framework(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync", "kreuzberg_v4_sync"],
             "extraction_time": [0.5, 0.6],
             "file_path": ["/test/1.pdf", "/test/2.pdf"],
         }
@@ -159,7 +159,7 @@ def test_create_time_distribution_chart_with_single_framework(tmp_path: Path) ->
 def test_create_interactive_dashboard_creates_file(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "extractous"],
+            "framework": ["kreuzberg_v4_sync", "extractous"],
             "avg_extraction_time": [0.5, 0.8],
             "success_rate": [0.95, 0.90],
             "avg_peak_memory_mb": [100.0, 150.0],
@@ -181,7 +181,7 @@ def test_create_interactive_dashboard_content_includes_all_charts(
 ) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "extractous"],
+            "framework": ["kreuzberg_v4_sync", "extractous"],
             "avg_extraction_time": [0.5, 0.8],
             "success_rate": [0.95, 0.90],
             "avg_peak_memory_mb": [100.0, 150.0],
@@ -201,8 +201,8 @@ def test_create_per_format_heatmap_creates_file(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
             "framework": [
-                "kreuzberg_sync",
-                "kreuzberg_sync",
+                "kreuzberg_v4_sync",
+                "kreuzberg_v4_sync",
                 "extractous",
                 "extractous",
             ],
@@ -221,7 +221,11 @@ def test_create_per_format_heatmap_creates_file(tmp_path: Path) -> None:
 def test_create_per_format_heatmap_with_multiple_formats(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "kreuzberg_sync", "kreuzberg_sync"],
+            "framework": [
+                "kreuzberg_v4_sync",
+                "kreuzberg_v4_sync",
+                "kreuzberg_v4_sync",
+            ],
             "file_type": ["pdf", "docx", "xlsx"],
             "success_rate": [0.95, 0.93, 0.91],
         }
@@ -243,7 +247,7 @@ def test_all_charts_create_parent_directories(tmp_path: Path) -> None:
     nested_path = tmp_path / "charts" / "subdir" / "performance.html"
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "avg_extraction_time": [0.5],
             "success_rate": [0.95],
             "total_files": [100],
@@ -260,7 +264,7 @@ def test_charts_handle_special_characters_in_framework_names(tmp_path: Path) -> 
     df = pl.DataFrame(
         {
             "framework": [
-                "kreuzberg_sync",
+                "kreuzberg_v4_sync",
                 "framework-with-dashes",
                 "framework_with_underscores",
             ],
@@ -279,7 +283,7 @@ def test_charts_handle_special_characters_in_framework_names(tmp_path: Path) -> 
 def test_memory_chart_with_zero_memory_values(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "avg_peak_memory_mb": [0.0],
             "total_files": [100],
         }
@@ -294,7 +298,11 @@ def test_memory_chart_with_zero_memory_values(tmp_path: Path) -> None:
 def test_time_distribution_with_extreme_values(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "kreuzberg_sync", "kreuzberg_sync"],
+            "framework": [
+                "kreuzberg_v4_sync",
+                "kreuzberg_v4_sync",
+                "kreuzberg_v4_sync",
+            ],
             "extraction_time": [0.1, 5.0, 100.0],
             "file_path": ["/test/fast.pdf", "/test/medium.pdf", "/test/slow.pdf"],
         }

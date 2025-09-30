@@ -2,10 +2,7 @@ name: Kreuzberg Performance Benchmarks
 
 on:
   schedule:
-<<<<<<< HEAD
     # Run nightly at 2 AM UTC
-=======
->>>>>>> origin/main
     - cron: '0 2 * * *'
   workflow_dispatch:
 
@@ -16,11 +13,7 @@ jobs:
 
     strategy:
       matrix:
-<<<<<<< HEAD
-        python-version: ["3.12"]  # Single version for benchmarks
-=======
         python-version: ["3.13"]
->>>>>>> origin/main
 
     steps:
       - name: Checkout Repository
@@ -37,6 +30,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -50,6 +48,8 @@ jobs:
       - name: Install Python dependencies
         run: |
           uv sync --all-extras
+          uv pip install maturin
+          uv run maturin develop --release --features extension-module
 
       - name: Run benchmark tests
         env:

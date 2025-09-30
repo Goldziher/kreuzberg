@@ -44,11 +44,17 @@ if TYPE_CHECKING:
 try:
     import kreuzberg
     from kreuzberg import ExtractionConfig, PSMMode, TesseractConfig
+
+    # Detect version - v4 has __version__ attribute, v3 might not
+    _KREUZBERG_VERSION = getattr(kreuzberg, "__version__", "3.x")
+    _IS_KREUZBERG_V4 = _KREUZBERG_VERSION.startswith("4.")
 except ImportError:
     kreuzberg = None  # type: ignore[assignment]
     ExtractionConfig = None  # type: ignore[assignment,misc]
     TesseractConfig = None  # type: ignore[assignment,misc]
     PSMMode = None  # type: ignore[assignment,misc]
+    _KREUZBERG_VERSION = None
+    _IS_KREUZBERG_V4 = False
 
 
 try:
@@ -101,18 +107,18 @@ def get_language_config(file_path: str | Path) -> str:
     return "eng"
 
 
-class KreuzbergSyncExtractor:
+class KreuzbergV3SyncExtractor:
     def extract_text(self, file_path: str) -> str:
-        if kreuzberg is None:
-            msg = "Kreuzberg is not installed"
+        if kreuzberg is None or _IS_KREUZBERG_V4:
+            msg = "Kreuzberg v3 is not installed. Install with: uv sync --extra kreuzberg-v3"
             raise ImportError(msg)
         config = self._get_optimized_config(file_path)
         result = kreuzberg.extract_file_sync(file_path, config=config)
         return result.content
 
     def extract_with_metadata(self, file_path: str) -> tuple[str, dict[str, Any]]:
-        if kreuzberg is None:
-            msg = "Kreuzberg is not installed"
+        if kreuzberg is None or _IS_KREUZBERG_V4:
+            msg = "Kreuzberg v3 is not installed. Install with: uv sync --extra kreuzberg-v3"
             raise ImportError(msg)
         config = self._get_optimized_config(file_path)
         result = kreuzberg.extract_file_sync(file_path, config=config)
@@ -141,18 +147,106 @@ class KreuzbergSyncExtractor:
         )
 
 
-class KreuzbergAsyncExtractor:
+class KreuzbergV3AsyncExtractor:
     async def extract_text(self, file_path: str) -> str:
-        if kreuzberg is None:
-            msg = "Kreuzberg is not installed"
+        if kreuzberg is None or _IS_KREUZBERG_V4:
+            msg = "Kreuzberg v3 is not installed. Install with: uv sync --extra kreuzberg-v3"
             raise ImportError(msg)
         config = self._get_optimized_config(file_path)
         result = await kreuzberg.extract_file(file_path, config=config)
         return result.content
 
     async def extract_with_metadata(self, file_path: str) -> tuple[str, dict[str, Any]]:
-        if kreuzberg is None:
-            msg = "Kreuzberg is not installed"
+        if kreuzberg is None or _IS_KREUZBERG_V4:
+            msg = "Kreuzberg v3 is not installed. Install with: uv sync --extra kreuzberg-v3"
+            raise ImportError(msg)
+        config = self._get_optimized_config(file_path)
+        result = await kreuzberg.extract_file(file_path, config=config)
+        metadata = dict(result.metadata) if hasattr(result, "metadata") else {}
+        return result.content, metadata
+
+    def _get_optimized_config(self, file_path: str) -> ExtractionConfig:
+        """~keep Get optimized Kreuzberg config following official best practices.
+
+        Uses Kreuzberg's documented optimal defaults:
+        - PSM AUTO_ONLY: Faster than AUTO without orientation detection overhead
+        - Dynamic language selection based on filename heuristics
+        - Text output format: Fastest extraction mode
+        - Cache disabled: Ensures fair benchmark measurements
+        """
+        lang_code = get_language_config(file_path)
+
+        tesseract_config = TesseractConfig(
+            language=lang_code,
+            psm=PSMMode.AUTO_ONLY,  # Kreuzberg's optimized default (faster than AUTO)
+            output_format="text",
+        )
+
+        return ExtractionConfig(
+            ocr_backend="tesseract", ocr_config=tesseract_config, use_cache=False
+        )
+
+
+class KreuzbergV4SyncExtractor:
+    def extract_text(self, file_path: str) -> str:
+        if kreuzberg is None or not _IS_KREUZBERG_V4:
+            msg = (
+                "Kreuzberg v4 is not installed. Install with: uv sync --extra kreuzberg"
+            )
+            raise ImportError(msg)
+        config = self._get_optimized_config(file_path)
+        result = kreuzberg.extract_file_sync(file_path, config=config)
+        return result.content
+
+    def extract_with_metadata(self, file_path: str) -> tuple[str, dict[str, Any]]:
+        if kreuzberg is None or not _IS_KREUZBERG_V4:
+            msg = (
+                "Kreuzberg v4 is not installed. Install with: uv sync --extra kreuzberg"
+            )
+            raise ImportError(msg)
+        config = self._get_optimized_config(file_path)
+        result = kreuzberg.extract_file_sync(file_path, config=config)
+        metadata = dict(result.metadata) if hasattr(result, "metadata") else {}
+        return result.content, metadata
+
+    def _get_optimized_config(self, file_path: str) -> ExtractionConfig:
+        """~keep Get optimized Kreuzberg config following official best practices.
+
+        Uses Kreuzberg's documented optimal defaults:
+        - PSM AUTO_ONLY: Faster than AUTO without orientation detection overhead
+        - Dynamic language selection based on filename heuristics
+        - Text output format: Fastest extraction mode
+        - Cache disabled: Ensures fair benchmark measurements
+        """
+        lang_code = get_language_config(file_path)
+
+        tesseract_config = TesseractConfig(
+            language=lang_code,
+            psm=PSMMode.AUTO_ONLY,  # Kreuzberg's optimized default (faster than AUTO)
+            output_format="text",
+        )
+
+        return ExtractionConfig(
+            ocr_backend="tesseract", ocr_config=tesseract_config, use_cache=False
+        )
+
+
+class KreuzbergV4AsyncExtractor:
+    async def extract_text(self, file_path: str) -> str:
+        if kreuzberg is None or not _IS_KREUZBERG_V4:
+            msg = (
+                "Kreuzberg v4 is not installed. Install with: uv sync --extra kreuzberg"
+            )
+            raise ImportError(msg)
+        config = self._get_optimized_config(file_path)
+        result = await kreuzberg.extract_file(file_path, config=config)
+        return result.content
+
+    async def extract_with_metadata(self, file_path: str) -> tuple[str, dict[str, Any]]:
+        if kreuzberg is None or not _IS_KREUZBERG_V4:
+            msg = (
+                "Kreuzberg v4 is not installed. Install with: uv sync --extra kreuzberg"
+            )
             raise ImportError(msg)
         config = self._get_optimized_config(file_path)
         result = await kreuzberg.extract_file(file_path, config=config)
@@ -685,8 +779,10 @@ def get_extractor(
     )
 
     extractors = {
-        "kreuzberg_sync": KreuzbergSyncExtractor,
-        "kreuzberg_async": KreuzbergAsyncExtractor,
+        "kreuzberg_v3_sync": KreuzbergV3SyncExtractor,
+        "kreuzberg_v3_async": KreuzbergV3AsyncExtractor,
+        "kreuzberg_v4_sync": KreuzbergV4SyncExtractor,
+        "kreuzberg_v4_async": KreuzbergV4AsyncExtractor,
         "docling": DoclingExtractor,
         "markitdown": MarkItDownExtractor,
         "unstructured": UnstructuredExtractor,
