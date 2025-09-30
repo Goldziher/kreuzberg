@@ -37,7 +37,12 @@ async def test_extract_bytes_with_valid_mime_type() -> None:
     assert result.content == "Hello, World!"
     assert result.mime_type == "text/plain"
     assert result.chunks == []
-    assert result.metadata == {}
+    assert "line_count" in result.metadata
+    assert "word_count" in result.metadata
+    assert "character_count" in result.metadata
+    assert result.metadata["line_count"] == 1
+    assert result.metadata["word_count"] == 2
+    assert result.metadata["character_count"] == 13
 
 
 @pytest.mark.anyio
@@ -61,6 +66,12 @@ def test_extract_bytes_sync_with_valid_mime_type() -> None:
     assert isinstance(result, ExtractionResult)
     assert result.content == "Hello, World!"
     assert result.mime_type == "text/plain"
+    assert "line_count" in result.metadata
+    assert "word_count" in result.metadata
+    assert "character_count" in result.metadata
+    assert result.metadata["line_count"] == 1
+    assert result.metadata["word_count"] == 2
+    assert result.metadata["character_count"] == 13
 
 
 def test_extract_bytes_sync_with_unknown_mime_type() -> None:

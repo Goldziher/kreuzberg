@@ -636,8 +636,12 @@ class Metadata(TypedDict, total=False):
     """List of document authors."""
     categories: NotRequired[list[str]]
     """Categories or classifications."""
+    character_count: NotRequired[int]
+    """Number of characters in text content."""
     citations: NotRequired[list[str]]
     """Citation identifiers."""
+    code_blocks: NotRequired[list[dict[str, str]]]
+    """Code blocks extracted from markdown (language and code)."""
     comments: NotRequired[str]
     """General comments."""
     copyright: NotRequired[str]
@@ -650,6 +654,8 @@ class Metadata(TypedDict, total=False):
     """Document description."""
     fonts: NotRequired[list[str]]
     """List of fonts used in the document."""
+    headers: NotRequired[list[str]]
+    """Headers extracted from markdown content."""
     height: NotRequired[int]
     """Height of the document page/slide/image, if applicable."""
     identifier: NotRequired[str]
@@ -660,6 +666,10 @@ class Metadata(TypedDict, total=False):
     """Document language code."""
     license: NotRequired[str]
     """License information."""
+    line_count: NotRequired[int]
+    """Number of lines in text content."""
+    links: NotRequired[list[dict[str, str]]]
+    """Links extracted from markdown (text and url)."""
     modified_at: NotRequired[str]
     """Last modification timestamp in ISO format."""
     modified_by: NotRequired[str]
@@ -690,6 +700,8 @@ class Metadata(TypedDict, total=False):
     """Version identifier or revision number."""
     width: NotRequired[int]
     """Width of the document page/slide/image, if applicable."""
+    word_count: NotRequired[int]
+    """Number of words in text content."""
     email_from: NotRequired[str]
     """Email sender (from field)."""
     email_to: NotRequired[str]
@@ -758,7 +770,9 @@ _VALID_METADATA_KEYS = {
     "abstract",
     "authors",
     "categories",
+    "character_count",
     "citations",
+    "code_blocks",
     "comments",
     "content",
     "copyright",
@@ -766,11 +780,14 @@ _VALID_METADATA_KEYS = {
     "created_by",
     "description",
     "fonts",
+    "headers",
     "height",
     "identifier",
     "keywords",
     "languages",
     "license",
+    "line_count",
+    "links",
     "modified_at",
     "modified_by",
     "organization",
@@ -788,6 +805,7 @@ _VALID_METADATA_KEYS = {
     "version",
     "warning",
     "width",
+    "word_count",
     "email_from",
     "email_to",
     "email_cc",
