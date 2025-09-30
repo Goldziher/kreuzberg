@@ -29,7 +29,10 @@ logger = logging.getLogger(__name__)
 def _import_transformers() -> tuple[Any, Any]:
     """Lazy import of transformers dependencies."""
     try:
-        from transformers import AutoImageProcessor, TableTransformerForObjectDetection  # noqa: PLC0415
+        from transformers import (  # noqa: PLC0415
+            AutoImageProcessor,
+            TableTransformerForObjectDetection,
+        )
 
         return AutoImageProcessor, TableTransformerForObjectDetection
     except ImportError:
@@ -52,7 +55,6 @@ class TableDetector:
         self._processor: Any = None
         self._device: str = self._resolve_device(self.config.detection_device)
 
-        # Try to load ML model, but don't fail if dependencies missing
         self._try_load_model()
 
     def _resolve_device(self, device_config: str) -> str:
@@ -63,17 +65,11 @@ class TableDetector:
         """Attempt to load the Table Transformer model."""
         AutoImageProcessor, TableTransformerForObjectDetection = _import_transformers()  # noqa: N806
         if AutoImageProcessor is None or TableTransformerForObjectDetection is None:
-            # Dependencies not available
             return
 
         try:
-            # Setup cache directory using unified model cache management
             cache_dir = setup_huggingface_cache(self.config.model_cache_dir)
 
-            # HuggingFace handles caching automatically - it will:
-            # 1. Check cache first
-            # 2. Download if not cached
-            # 3. Cache for future use
             logger.info("Loading Table Transformer detector (cache: %s)", cache_dir or "default")
 
             self._processor = AutoImageProcessor.from_pretrained(
@@ -81,14 +77,12 @@ class TableDetector:
                 cache_dir=cache_dir,
             )
 
-            # Fix processor size config if needed (transformers v4.52+ compatibility)
             if (
                 hasattr(self._processor, "size")
                 and isinstance(self._processor.size, dict)
                 and "longest_edge" in self._processor.size
                 and "shortest_edge" not in self._processor.size
             ):
-                # Add shortest_edge to match longest_edge for square sizing
                 self._processor.size["shortest_edge"] = self._processor.size["longest_edge"]
 
             self._model = TableTransformerForObjectDetection.from_pretrained(
@@ -96,7 +90,6 @@ class TableDetector:
                 cache_dir=cache_dir,
             )
 
-            # Move to appropriate device
             if hasattr(self._model, "to"):
                 self._model.to(self._device)
 
@@ -139,34 +132,27 @@ class TableDetector:
         """Perform table detection using the loaded model."""
         require_torch("table detection using TATR models")
 
-        # Prepare inputs
         inputs = self._processor(images=image, return_tensors="pt")
 
-        # Move to device
         if hasattr(inputs, "to"):
             inputs = {k: v.to(self._device) if hasattr(v, "to") else v for k, v in inputs.items()}
 
-        # Run inference
         with with_no_grad():
             outputs = self._model(**inputs)
 
-        # Process results
-        target_sizes = tensor([image.size[::-1]])  # (height, width)
+        target_sizes = tensor([image.size[::-1]])
         results = self._processor.post_process_object_detection(
             outputs, threshold=self.config.detection_threshold, target_sizes=target_sizes
         )[0]
 
-        # Convert to CroppedTable objects
         tables = []
         for score, _label_id, box in zip(results["scores"], results["labels"], results["boxes"], strict=True):
-            # Convert box from tensor to tuple
             bbox: BBox = tuple(box.cpu().numpy())
 
-            # Create table object
             table = CroppedTable(
                 rect=Rect(bbox),
                 confidence_score=float(score),
-                page_number=0,  # Will be set by caller
+                page_number=0,
                 label="table",
             )
             tables.append(table)
@@ -185,7 +171,6 @@ class TableDetector:
         """
         tables = self.detect_tables_in_image(image)
 
-        # Update page numbers
         return [
             CroppedTable(
                 rect=table.rect,
@@ -199,8 +184,6 @@ class TableDetector:
 
     async def detect_tables_in_image_async(self, image: Image.Image) -> list[CroppedTable]:
         """Async version of table detection."""
-        # For now, just run sync version in thread pool
-        # Could be enhanced with async model inference in the future
         return await run_sync(self.detect_tables_in_image, image)
 
     async def detect_tables_in_page_region_async(self, image: Image.Image, page_number: int = 0) -> list[CroppedTable]:

@@ -21,6 +21,7 @@ from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._extractors._presentation import PresentationExtractor
 from kreuzberg._extractors._spread_sheet import SpreadSheetExtractor
 from kreuzberg._extractors._structured import StructuredDataExtractor
+from kreuzberg._extractors._xml import XMLExtractor
 
 if TYPE_CHECKING:
     from kreuzberg._extractors._base import Extractor
@@ -45,6 +46,7 @@ class ExtractorRegistry:
         StructuredDataExtractor,
         MarkdownExtractor,
         ImageExtractor,
+        XMLExtractor,
         BibliographyExtractor,
         EbookExtractor,
         LaTeXExtractor,

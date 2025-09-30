@@ -193,7 +193,6 @@ impl EmailExtractionResultDTO {
     }
 }
 
-// Regex patterns for HTML cleaning with proper error handling
 static HTML_TAG_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"<[^>]+>").expect("HTML tag regex pattern is valid"));
 
 static SCRIPT_REGEX: Lazy<Regex> =
@@ -216,21 +215,16 @@ fn clean_html_content(html: &str) -> String {
         return String::new();
     }
 
-    // Remove script and style tags with their content
     let cleaned = SCRIPT_REGEX.replace_all(html, "");
     let cleaned = STYLE_REGEX.replace_all(&cleaned, "");
 
-    // Remove all HTML tags
     let cleaned = HTML_TAG_REGEX.replace_all(&cleaned, "");
 
-    // Decode HTML entities
     let cleaned = decode_html_entities(&cleaned);
 
-    // Normalize Unicode quotes
     let cleaned = UNICODE_QUOTES_REGEX.replace_all(&cleaned, "\"");
     let cleaned = UNICODE_SINGLE_QUOTES_REGEX.replace_all(&cleaned, "'");
 
-    // Normalize whitespace
     let cleaned = WHITESPACE_REGEX.replace_all(&cleaned, " ");
 
     cleaned.trim().to_string()
@@ -292,7 +286,6 @@ fn build_metadata(
         metadata.insert("message_id".to_string(), msg_id.clone());
     }
 
-    // Add attachment names to metadata
     if !attachments.is_empty() {
         let attachment_names: Vec<String> = attachments
             .iter()
@@ -315,7 +308,6 @@ fn parse_eml_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
             message: "Failed to parse EML content - invalid email format".to_string(),
         })?;
 
-    // Extract basic information
     let subject = message.subject().map(|s| s.to_string());
     let message_id = message.message_id().map(|s| s.to_string());
 
@@ -325,7 +317,6 @@ fn parse_eml_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
         .and_then(|addr| addr.address())
         .map(|s| s.to_string());
 
-    // Extract recipients with proper error handling
     let to_emails: Vec<String> = message
         .to()
         .map(|to| {
@@ -355,11 +346,9 @@ fn parse_eml_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
 
     let date = message.date().map(|d| d.to_rfc3339());
 
-    // Extract body content
     let plain_text = message.body_text(0).map(|s| s.to_string());
     let html_content = message.body_html(0).map(|s| s.to_string());
 
-    // Create cleaned text from available content
     let cleaned_text = if let Some(plain) = &plain_text {
         plain.clone()
     } else if let Some(html) = &html_content {
@@ -368,12 +357,10 @@ fn parse_eml_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
         String::new()
     };
 
-    // Extract attachments using mail-parser with proper MIME type detection
     let mut attachments = Vec::new();
     for attachment in message.attachments() {
         let filename = attachment.attachment_name().map(|s| s.to_string());
 
-        // Get proper MIME type from mail-parser
         let mime_type = attachment
             .content_type()
             .map(|ct| {
@@ -396,7 +383,6 @@ fn parse_eml_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
         });
     }
 
-    // Build metadata
     let metadata = build_metadata(
         &subject,
         &from_email,
@@ -427,12 +413,10 @@ fn parse_eml_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
 /// Parse MSG content using msg_parser's from_slice method
 /// Attribution: Uses msg_parser library (MIT licensed) by marirs
 fn parse_msg_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailError> {
-    // Use msg_parser's from_slice method which works with byte arrays directly
     let outlook = msg_parser::Outlook::from_slice(content).map_err(|e| EmailError::MsgError {
         message: format!("Failed to parse MSG file: {}", e),
     })?;
 
-    // Extract basic fields
     let subject = Some(outlook.subject.clone());
     let from_email = Some(outlook.sender.email.clone());
     let from_name = if !outlook.sender.name.is_empty() {
@@ -441,7 +425,6 @@ fn parse_msg_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
         None
     };
 
-    // Extract recipients
     let to_emails = outlook
         .to
         .iter()
@@ -462,7 +445,6 @@ fn parse_msg_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
         vec![]
     };
 
-    // Extract date from headers
     let date = if !outlook.headers.date.is_empty() {
         Some(outlook.headers.date.clone())
     } else {
@@ -475,19 +457,15 @@ fn parse_msg_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
         None
     };
 
-    // Extract body content
     let plain_text = if !outlook.body.is_empty() {
         Some(outlook.body.clone())
     } else {
         None
     };
 
-    // MSG files typically store RTF rather than HTML
-    // For now, we'll just use the plain text body
     let html_content = None;
     let cleaned_text = plain_text.clone();
 
-    // Extract attachments
     let attachments: Vec<EmailAttachmentDTO> = outlook
         .attachments
         .iter()
@@ -507,7 +485,6 @@ fn parse_msg_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
             };
 
             let data = if !att.payload.is_empty() {
-                // The payload is hex-encoded in msg_parser
                 hex::decode(&att.payload).ok()
             } else {
                 None
@@ -527,7 +504,6 @@ fn parse_msg_content(content: &[u8]) -> Result<EmailExtractionResultDTO, EmailEr
         })
         .collect();
 
-    // Build metadata
     let mut metadata = HashMap::new();
     if let Some(ref subj) = subject {
         metadata.insert("subject".to_string(), subj.to_string());
@@ -625,11 +601,10 @@ pub fn extract_email_from_file(file_path: &str) -> PyResult<EmailExtractionResul
 
     let content = std::fs::read(path).map_err(EmailError::IoError)?;
 
-    // Determine format from file extension
     let mime_type = match path.extension().and_then(|s| s.to_str()) {
         Some("eml") => "message/rfc822",
         Some("msg") => "application/vnd.ms-outlook",
-        _ => "message/rfc822", // Default to EML
+        _ => "message/rfc822",
     };
 
     extract_email_content(&content, mime_type)
@@ -641,7 +616,7 @@ pub fn get_supported_email_formats() -> Vec<String> {
     vec![
         "message/rfc822".to_string(),
         "application/vnd.ms-outlook".to_string(),
-        "text/plain".to_string(), // Some EML files are served as text/plain
+        "text/plain".to_string(),
     ]
 }
 
@@ -654,11 +629,7 @@ pub fn validate_email_content(content: &[u8], mime_type: &str) -> bool {
 
     match mime_type {
         "message/rfc822" | "text/plain" => mail_parser::MessageParser::default().parse(content).is_some(),
-        "application/vnd.ms-outlook" => {
-            // For MSG, we currently don't support validation to avoid temp file issues
-            // Return false for now - this is safer than potential security vulnerabilities
-            false
-        }
+        "application/vnd.ms-outlook" => false,
         _ => false,
     }
 }
@@ -668,7 +639,6 @@ pub fn validate_email_content(content: &[u8], mime_type: &str) -> bool {
 pub fn build_email_text_output(result: &EmailExtractionResultDTO) -> String {
     let mut text_parts = Vec::new();
 
-    // Add headers in consistent order
     if let Some(ref subject) = result.subject {
         text_parts.push(format!("Subject: {}", subject));
     }
@@ -693,10 +663,8 @@ pub fn build_email_text_output(result: &EmailExtractionResultDTO) -> String {
         text_parts.push(format!("Date: {}", date));
     }
 
-    // Add body content
     text_parts.push(result.cleaned_text.clone());
 
-    // Add attachments info
     if !result.attachments.is_empty() {
         let attachment_names: Vec<String> = result
             .attachments
@@ -754,12 +722,7 @@ mod tests {
         let valid_eml = b"From: test@example.com\r\nSubject: Test\r\n\r\nBody";
         assert!(validate_email_content(valid_eml, "message/rfc822"));
 
-        // Empty content should be invalid
         assert!(!validate_email_content(b"", "message/rfc822"));
-
-        // Note: mail_parser is very permissive and accepts many formats
-        // Even plain text without headers can be parsed as an email body
-        // This is by design in mail_parser for robustness
     }
 
     #[test]
@@ -795,11 +758,9 @@ mod tests {
 
     #[test]
     fn test_error_handling() {
-        // Test invalid content
         let result = extract_email_content(b"", "message/rfc822");
         assert!(result.is_err());
 
-        // Test unsupported format
         let result = extract_email_content(b"test", "unsupported/format");
         assert!(result.is_err());
     }

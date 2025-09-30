@@ -23,7 +23,6 @@ from kreuzberg.exceptions import MissingDependencyError
 if TYPE_CHECKING:
     import torch
 else:
-    # Import torch conditionally to support CPU-only installations
     try:
         import torch
     except ImportError:
@@ -67,7 +66,7 @@ def is_cuda_available() -> bool:
     """
     if not is_torch_available():
         return False
-    return torch.cuda.is_available()
+    return bool(torch.cuda.is_available())
 
 
 def is_mps_available() -> bool:
@@ -79,9 +78,8 @@ def is_mps_available() -> bool:
     if not is_torch_available():
         return False
     try:
-        return torch.backends.mps.is_available()
+        return bool(torch.backends.mps.is_available())
     except AttributeError:
-        # Older PyTorch versions don't have MPS
         return False
 
 
@@ -111,7 +109,7 @@ def get_cuda_device_count() -> int:
     """
     if not is_cuda_available():
         return 0
-    return torch.cuda.device_count()
+    return int(torch.cuda.device_count())
 
 
 def get_cuda_device_properties(device_id: int) -> dict[str, Any] | None:
@@ -130,7 +128,7 @@ def get_cuda_device_properties(device_id: int) -> dict[str, Any] | None:
         props = torch.cuda.get_device_properties(device_id)
         return {
             "name": props.name,
-            "total_memory": props.total_memory / (1024**3),  # GB
+            "total_memory": props.total_memory / (1024**3),
             "major": props.major,
             "minor": props.minor,
             "multi_processor_count": props.multi_processor_count,
@@ -153,9 +151,8 @@ def get_cuda_memory_info(device_id: int) -> tuple[float, float] | None:
 
     try:
         props = torch.cuda.get_device_properties(device_id)
-        total_memory = props.total_memory / (1024**3)  # GB
+        total_memory = props.total_memory / (1024**3)
 
-        # Get allocated memory
         allocated = torch.cuda.memory_allocated(device_id) / (1024**3)
         available_memory = total_memory - allocated
 
@@ -188,7 +185,6 @@ def with_no_grad() -> Any:
         MissingDependencyError: If torch is required but not available
     """
     if not is_torch_available():
-        # Return a no-op context manager for CPU-only fallbacks
         return nullcontext()
 
     return torch.no_grad()
@@ -219,7 +215,7 @@ def get_torch_version() -> str | None:
     """
     if not is_torch_available():
         return None
-    return torch.__version__
+    return str(torch.__version__)
 
 
 def log_torch_info() -> None:

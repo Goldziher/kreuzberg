@@ -64,7 +64,6 @@ class PDFExtractor(Extractor):
     async def extract_bytes_async(self, content: bytes) -> ExtractionResult:
         async with temporary_file(".pdf", content) as file_path:
             result = await self.extract_path_async(file_path)
-            # Override with metadata extracted from original bytes (not temp file)
             metadata = await self._extract_metadata_with_password_attempts(content)
             result.metadata = metadata
             return result
@@ -72,12 +71,10 @@ class PDFExtractor(Extractor):
     async def extract_path_async(self, path: Path) -> ExtractionResult:
         content_bytes = await AsyncPath(path).read_bytes()
 
-        # Parse document if needed for tables/images
         document: Document | None = None
         if self.config.extract_images or self.config.extract_tables:
             document = self._parse_with_password_attempts(content_bytes)
 
-        # Extract text content
         text = ""
         if not self.config.force_ocr:
             try:
@@ -85,15 +82,12 @@ class PDFExtractor(Extractor):
             except ParsingError:
                 text = ""
 
-        # Fall back to OCR if text is invalid or force_ocr is enabled
         if (self.config.force_ocr or not self._validate_extracted_text(text)) and self.config.ocr_backend is not None:
             ocr_result = await self._extract_pdf_text_with_ocr(path, self.config.ocr_backend)
             text = normalize_spaces(ocr_result.content)
 
-        # Extract metadata
         metadata = await self._extract_metadata_with_password_attempts(content_bytes)
 
-        # Create result
         result = ExtractionResult(
             content=text,
             mime_type=PLAIN_TEXT_MIME_TYPE,
@@ -133,7 +127,6 @@ class PDFExtractor(Extractor):
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         with temporary_file_sync(".pdf", content) as temp_path:
             result = self.extract_path_sync(temp_path)
-            # Override with metadata extracted from original bytes (not temp file)
             metadata = self._extract_metadata_with_password_attempts_sync(content)
             result.metadata = metadata
             return result
@@ -168,7 +161,6 @@ class PDFExtractor(Extractor):
 
         text = normalize_spaces(text)
 
-        # Extract PDF metadata
         metadata = self._extract_metadata_with_password_attempts_sync(content_bytes)
 
         result = ExtractionResult(

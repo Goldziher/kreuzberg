@@ -301,8 +301,6 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
             "OFF",
         ]
 
-        # Handle output format - use config option for HOCR to ensure Windows compatibility
-        # Windows Tesseract 5.5.0 doesn't respect 'hocr' configfile, needs explicit config
         tesseract_format = run_config["tesseract_format"]
         if tesseract_format == "hocr":
             command.extend(["-c", "tessedit_create_hocr=1"])
@@ -1169,8 +1167,6 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
             "OFF",
         ]
 
-        # Handle output format - use config option for HOCR to ensure Windows compatibility
-        # Windows Tesseract 5.5.0 doesn't respect 'hocr' configfile, needs explicit config
         if output_format == "hocr":
             command.extend(["-c", "tessedit_create_hocr=1"])
         elif output_format == "tsv":
@@ -1251,7 +1247,6 @@ def _process_image_with_tesseract(
             language = config_dict.get("language", "eng")
             psm = config_dict.get("psm", 3)
 
-            # Convert PSM enum to integer value if needed
             psm_value = psm.value if hasattr(psm, "value") else psm
 
             command = [
@@ -1307,7 +1302,6 @@ def _process_image_with_tesseract(
             with Path(output_file).open(encoding="utf-8") as f:
                 text = f.read()
 
-            # Process based on output format
             if output_format == "markdown" and tesseract_format == "hocr":
                 # Import here to avoid circular dependency ~keep
                 from html_to_markdown import convert_to_markdown  # noqa: PLC0415

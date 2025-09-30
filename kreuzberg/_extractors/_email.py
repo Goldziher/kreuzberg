@@ -60,13 +60,10 @@ class EmailExtractor(Extractor):
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         try:
-            # Use Rust implementation for email parsing
             rust_result = extract_email_content(content, self.mime_type)
 
-            # Build combined text using Rust function
             combined_text = build_email_text_output(rust_result)
 
-            # Convert Rust metadata to Python dict
             metadata = dict(rust_result.metadata)
 
             result = ExtractionResult(
@@ -88,7 +85,6 @@ class EmailExtractor(Extractor):
             return result
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            # OSError and RuntimeError must always bubble up per CLAUDE.md
             raise
         except Exception as e:
             raise ParsingError(

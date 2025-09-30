@@ -45,7 +45,6 @@ try:
     import kreuzberg
     from kreuzberg import ExtractionConfig, PSMMode, TesseractConfig
 
-    # Detect version - v4 has __version__ attribute, v3 might not
     _KREUZBERG_VERSION = getattr(kreuzberg, "__version__", "3.x")
     _IS_KREUZBERG_V4 = _KREUZBERG_VERSION.startswith("4.")
 except ImportError:
@@ -138,7 +137,7 @@ class KreuzbergV3SyncExtractor:
 
         tesseract_config = TesseractConfig(
             language=lang_code,
-            psm=PSMMode.AUTO_ONLY,  # Kreuzberg's optimized default (faster than AUTO)
+            psm=PSMMode.AUTO_ONLY,
             output_format="text",
         )
 
@@ -178,7 +177,7 @@ class KreuzbergV3AsyncExtractor:
 
         tesseract_config = TesseractConfig(
             language=lang_code,
-            psm=PSMMode.AUTO_ONLY,  # Kreuzberg's optimized default (faster than AUTO)
+            psm=PSMMode.AUTO_ONLY,
             output_format="text",
         )
 
@@ -222,7 +221,7 @@ class KreuzbergV4SyncExtractor:
 
         tesseract_config = TesseractConfig(
             language=lang_code,
-            psm=PSMMode.AUTO_ONLY,  # Kreuzberg's optimized default (faster than AUTO)
+            psm=PSMMode.AUTO_ONLY,
             output_format="text",
         )
 
@@ -266,7 +265,7 @@ class KreuzbergV4AsyncExtractor:
 
         tesseract_config = TesseractConfig(
             language=lang_code,
-            psm=PSMMode.AUTO_ONLY,  # Kreuzberg's optimized default (faster than AUTO)
+            psm=PSMMode.AUTO_ONLY,
             output_format="text",
         )
 
@@ -300,9 +299,6 @@ class DoclingExtractor:
                 ThreadedPdfPipelineOptions,
             )
 
-            # EasyOCR with comprehensive multilingual support
-            # Language codes: en=English, de=German, fr=French, es=Spanish,
-            #                 ch_sim=Chinese Simplified, ja=Japanese, ko=Korean, ar=Arabic
             ocr_options = EasyOcrOptions(
                 lang=[
                     "en",
@@ -313,34 +309,30 @@ class DoclingExtractor:
                     "ja",
                     "ko",
                     "ar",
-                ],  # Comprehensive language support
-                confidence_threshold=0.3,  # Balance between recall and precision
+                ],
+                confidence_threshold=0.3,
                 suppress_mps_warnings=True,
             )
 
-            # Accurate table detection with cell matching
             from docling.datamodel.pipeline_options import TableFormerMode
 
             table_options = TableStructureOptions(
                 do_cell_matching=True, mode=TableFormerMode.ACCURATE
             )
 
-            # Layout options for preserving document structure
             layout_options = LayoutOptions(
                 create_orphan_clusters=True, keep_empty_clusters=False
             )
 
-            # Threaded pipeline with optimized batch sizes
-            # Batch sizes balance throughput and memory usage
             pdf_options = ThreadedPdfPipelineOptions(
-                do_table_structure=True,  # Enable table extraction
-                do_ocr=True,  # Enable OCR for scanned documents
-                do_picture_classification=False,  # Disable for speed (not needed for text extraction)
-                do_picture_description=False,  # Disable for speed (not needed for text extraction)
+                do_table_structure=True,
+                do_ocr=True,
+                do_picture_classification=False,
+                do_picture_description=False,
                 ocr_options=ocr_options,
                 table_structure_options=table_options,
                 layout_options=layout_options,
-                ocr_batch_size=2,  # Conservative for memory
+                ocr_batch_size=2,
                 layout_batch_size=2,
                 table_batch_size=2,
                 batch_timeout_seconds=30.0,
@@ -354,7 +346,6 @@ class DoclingExtractor:
             self.timeout = 600
 
         except ImportError:
-            # Fallback to default configuration if pipeline options unavailable
             self.converter = DocumentConverter()
             self.max_file_size = 1024 * 1024 * 1024
             self.timeout = 600
@@ -429,10 +420,9 @@ class MarkItDownExtractor:
             msg = "MarkItDown is not installed"
             raise ImportError(msg)
 
-        # Use documented defaults: enable_builtins=True, no plugins needed
         self.converter = MarkItDown(enable_builtins=True)
-        self.timeout = 90  # Reasonable timeout for processing
-        self.max_file_size = 100 * 1024 * 1024  # 100MB limit per docs
+        self.timeout = 90
+        self.max_file_size = 100 * 1024 * 1024
 
     def _validate_file(self, file_path: str) -> bool:
         try:
@@ -534,7 +524,6 @@ class UnstructuredExtractor:
         lang_code = get_language_config(file_path)
         file_ext = Path(file_path).suffix.lower()
 
-        # Map Tesseract language codes to Unstructured format
         unstructured_langs = {
             "eng": ["eng"],
             "deu": ["deu"],
@@ -547,14 +536,12 @@ class UnstructuredExtractor:
         }
         languages = unstructured_langs.get(lang_code, ["eng"])
 
-        # Start with documented defaults
         config = {
             "languages": languages,
-            "strategy": "auto",  # Let Unstructured choose intelligently (fast vs hi_res)
+            "strategy": "auto",
             "include_metadata": True,
         }
 
-        # Chunking for very large files to prevent memory issues
         if file_size > 100 * 1024 * 1024:
             config["chunking_strategy"] = "by_title"
             config["max_characters"] = 10000
@@ -562,21 +549,14 @@ class UnstructuredExtractor:
             config["chunking_strategy"] = "basic"
             config["max_characters"] = 5000
 
-        # Format-specific optimizations
         if file_ext in [".pdf"]:
-            # Use "auto" to intelligently choose between fast/hi_res
-            # This is fair and represents real-world usage
             config["strategy"] = "auto"
-            config["extract_images_in_pdf"] = (
-                False  # Disable for speed (text extraction focus)
-            )
+            config["extract_images_in_pdf"] = False
         elif file_ext in [".docx", ".pptx", ".xlsx"]:
-            config["strategy"] = "fast"  # Office docs have good text extraction
+            config["strategy"] = "fast"
         elif file_ext in [".html", ".htm"]:
             config["strategy"] = "fast"
-            config["skip_infer_table_types"] = (
-                True  # HTML tables are already structured
-            )
+            config["skip_infer_table_types"] = True
 
         return config
 
@@ -685,10 +665,9 @@ class ExtractousExtractor:
             raise ImportError(msg)
 
         self.extractor = Extractor()
-        self.max_file_size = 500 * 1024 * 1024  # 500MB limit
+        self.max_file_size = 500 * 1024 * 1024
 
-        # Set initial extraction limit (adaptive per-file)
-        self.extractor.set_extract_string_max_length(10000000)  # 10MB text
+        self.extractor.set_extract_string_max_length(10000000)
 
     def _get_file_characteristics(self, file_path: str) -> dict[str, Any]:
         try:

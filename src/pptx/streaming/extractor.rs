@@ -67,34 +67,31 @@ impl StreamingPptxExtractorDTO {
                 content_builder.add_notes(slide_notes);
             }
 
-            // Extract images if enabled
-            if self.config.extract_images {
-                // Get image data from the iterator's cache
-                if let Ok(image_data) = iterator.get_slide_images(&slide) {
-                    for (_, data) in image_data {
-                        // Determine format from data
-                        let format = if data.starts_with(&[0xFF, 0xD8, 0xFF]) {
-                            "jpeg".to_string()
-                        } else if data.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
-                            "png".to_string()
-                        } else if data.starts_with(b"GIF") {
-                            "gif".to_string()
-                        } else if data.starts_with(b"BM") {
-                            "bmp".to_string()
-                        } else if data.starts_with(b"<svg") || data.starts_with(b"<?xml") {
-                            "svg".to_string()
-                        } else if data.starts_with(b"II\x2A\x00") || data.starts_with(b"MM\x00\x2A") {
-                            "tiff".to_string()
-                        } else {
-                            "unknown".to_string()
-                        };
+            if self.config.extract_images
+                && let Ok(image_data) = iterator.get_slide_images(&slide)
+            {
+                for (_, data) in image_data {
+                    let format = if data.starts_with(&[0xFF, 0xD8, 0xFF]) {
+                        "jpeg".to_string()
+                    } else if data.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
+                        "png".to_string()
+                    } else if data.starts_with(b"GIF") {
+                        "gif".to_string()
+                    } else if data.starts_with(b"BM") {
+                        "bmp".to_string()
+                    } else if data.starts_with(b"<svg") || data.starts_with(b"<?xml") {
+                        "svg".to_string()
+                    } else if data.starts_with(b"II\x2A\x00") || data.starts_with(b"MM\x00\x2A") {
+                        "tiff".to_string()
+                    } else {
+                        "unknown".to_string()
+                    };
 
-                        extracted_images.push(ExtractedImageDTO {
-                            data,
-                            format,
-                            slide_number: Some(slide.slide_number as usize),
-                        });
-                    }
+                    extracted_images.push(ExtractedImageDTO {
+                        data,
+                        format,
+                        slide_number: Some(slide.slide_number as usize),
+                    });
                 }
             }
 

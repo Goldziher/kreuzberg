@@ -62,7 +62,6 @@ class SpreadSheetExtractor(Extractor):
             return self._apply_quality_processing(result)
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            # OSError and RuntimeError must always bubble up per CLAUDE.md
             raise
         except Exception as e:
             raise ParsingError(
@@ -87,7 +86,6 @@ class SpreadSheetExtractor(Extractor):
             return self._apply_quality_processing(result)
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            # OSError and RuntimeError must always bubble up per CLAUDE.md
             raise
         except Exception as e:
             raise ParsingError(

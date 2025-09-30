@@ -242,15 +242,12 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
 
         kwargs.setdefault("enable_mkldnn", cls._is_mkldnn_supported())
 
-        # Setup model directories if cache is configured
         cache_dir = resolve_model_cache_dir(None, env_prefix="PADDLE")
         if cache_dir:
-            # PaddleOCR allows specifying model directories
             cache_path = Path(cache_dir)
             models_path = cache_path / "models"
             models_path.mkdir(parents=True, exist_ok=True)
 
-            # Set model directories if not already specified
             kwargs.setdefault("det_model_dir", str(models_path / "det"))
             kwargs.setdefault("rec_model_dir", str(models_path / "rec"))
             kwargs.setdefault("cls_model_dir", str(models_path / "cls"))
@@ -418,15 +415,12 @@ class PaddleBackend(OCRBackend[PaddleOCRConfig]):
 
         kwargs.setdefault("enable_mkldnn", cls._is_mkldnn_supported())
 
-        # Setup model directories if cache is configured
         cache_dir = resolve_model_cache_dir(None, env_prefix="PADDLE")
         if cache_dir:
-            # PaddleOCR allows specifying model directories
             cache_path = Path(cache_dir)
             models_path = cache_path / "models"
             models_path.mkdir(parents=True, exist_ok=True)
 
-            # Set model directories if not already specified
             kwargs.setdefault("det_model_dir", str(models_path / "det"))
             kwargs.setdefault("rec_model_dir", str(models_path / "rec"))
             kwargs.setdefault("cls_model_dir", str(models_path / "cls"))

@@ -105,8 +105,6 @@ def test_extract_path_sync_with_invalid_file(extractor: SpreadSheetExtractor, tm
     invalid_file = tmp_path / "not_an_excel_file.txt"
     invalid_file.write_text("This is not Excel data")
 
-    # Rust Calamine library raises OSError for format detection failures
-    # Per CLAUDE.md, OSError must always bubble up
     with pytest.raises(OSError, match="Cannot detect file format"):
         extractor.extract_path_sync(invalid_file)
 
@@ -114,9 +112,6 @@ def test_extract_path_sync_with_invalid_file(extractor: SpreadSheetExtractor, tm
 def test_extract_bytes_sync_with_invalid_data(extractor: SpreadSheetExtractor) -> None:
     invalid_data = b"This is not Excel data"
 
-    # Rust Calamine library raises OSError for format detection failures
-    # Per CLAUDE.md, OSError must always bubble up
-    # Different error messages possible: "Zip error" or "Cannot detect file format"
     with pytest.raises(OSError, match=r"(Zip error|Cannot detect file format)"):
         extractor.extract_bytes_sync(invalid_data)
 
@@ -185,7 +180,5 @@ def test_invalid_file_error_handling(extractor: SpreadSheetExtractor) -> None:
 
     non_existent = Path("/tmp/does_not_exist.xlsx")
 
-    # Rust Calamine library raises OSError for I/O errors
-    # Per CLAUDE.md, OSError must always bubble up
     with pytest.raises(OSError, match="No such file or directory"):
         extractor.extract_path_sync(non_existent)

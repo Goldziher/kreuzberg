@@ -34,7 +34,6 @@ class ImageExtractor(Extractor):
         file_path, unlink = await create_temp_file(f".{extension}")
         await AsyncPath(file_path).write_bytes(content)
         try:
-            # extract_path_async will handle self-reference image if extract_images is enabled
             return await self.extract_path_async(file_path)
         finally:
             await unlink()

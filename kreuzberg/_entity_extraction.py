@@ -66,7 +66,7 @@ async def install_spacy_model_with_spacy(model_name: str) -> bool:
         True if successful, False otherwise
     """
     try:
-        import spacy.cli.download  # noqa: PLC0415
+        import spacy.cli  # noqa: PLC0415
 
         await run_sync(spacy.cli.download, model_name)  # type: ignore[attr-defined]
         return True
@@ -139,7 +139,6 @@ def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig)
     except ImportError:
         return None
 
-    # Setup cache directory using unified model cache management
     cache_dir = resolve_model_cache_dir(spacy_config.model_cache_dir, env_prefix="SPACY")
     if cache_dir:
         os.environ["SPACY_DATA"] = cache_dir

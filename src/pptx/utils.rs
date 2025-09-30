@@ -27,16 +27,11 @@ pub fn get_slide_notes_path(slide_path: &str) -> String {
 
 /// Get full image path within the archive
 pub fn get_full_image_path(slide_path: &str, image_target: &str) -> String {
-    // Handle absolute paths (e.g., /ppt/media/image.jpg)
     if let Some(stripped) = image_target.strip_prefix("/") {
         stripped.to_string()
-    }
-    // Handle relative parent paths (e.g., ../media/image.jpg)
-    else if let Some(stripped) = image_target.strip_prefix("../") {
+    } else if let Some(stripped) = image_target.strip_prefix("../") {
         format!("ppt/{}", stripped)
-    }
-    // Handle relative paths from slide directory
-    else {
+    } else {
         let slide_dir = slide_path.rsplit_once('/').map(|x| x.0).unwrap_or("ppt/slides");
         format!("{}/{}", slide_dir, image_target)
     }

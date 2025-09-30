@@ -97,7 +97,6 @@ class FormattedTable:
     metadata: dict[str, Any] | None = None
 
     def __hash__(self) -> int:
-        # Hash based on table identity and structure
         return hash((self.cropped_table, id(self.dataframe)))
 
     def to_csv(self) -> str:
@@ -110,11 +109,9 @@ class FormattedTable:
 
     def to_markdown(self) -> str:
         """Export table as Markdown string."""
-        # Use polars' built-in string representation which is quite readable
         return str(self.dataframe)
 
 
-# Label mappings for TATR model
 TATR_ID_TO_LABEL = {
     0: "table",
     1: "table column",
@@ -127,7 +124,6 @@ TATR_ID_TO_LABEL = {
 
 TATR_LABEL_TO_ID = {v: k for k, v in TATR_ID_TO_LABEL.items()}
 
-# Table element classifications
 POSSIBLE_ROWS = [
     "table row",
     "table spanning cell",

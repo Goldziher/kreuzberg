@@ -39,7 +39,6 @@ class PresentationExtractor(Extractor):
         try:
             extraction_result = self._extractor.extract_from_bytes(content)
 
-            # Convert Rust images to Python ExtractedImage objects
             images = []
             if self.config.extract_images:
                 images = [
@@ -58,7 +57,6 @@ class PresentationExtractor(Extractor):
             return self._apply_quality_processing(result)
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            # OSError and RuntimeError must always bubble up per CLAUDE.md
             raise
         except Exception as e:
             logger.error("Failed to extract PPTX: %s", e)
@@ -69,7 +67,6 @@ class PresentationExtractor(Extractor):
         try:
             extraction_result = self._extractor.extract_from_path(path)
 
-            # Convert Rust images to Python ExtractedImage objects
             images = []
             if self.config.extract_images:
                 images = [
@@ -88,7 +85,6 @@ class PresentationExtractor(Extractor):
             return self._apply_quality_processing(result)
 
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            # OSError and RuntimeError must always bubble up per CLAUDE.md
             raise
         except Exception as e:
             logger.error("Failed to extract PPTX: %s", e)

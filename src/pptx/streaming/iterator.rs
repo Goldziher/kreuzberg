@@ -87,7 +87,6 @@ impl SlideIterator {
 
     /// Get images for a slide (public method for extractor)
     pub fn get_slide_images(&mut self, slide: &Slide) -> Result<HashMap<String, Vec<u8>>> {
-        // Get the slide path for this slide
         if let Some(slide_path) = self.slide_paths.get(self.current_index.saturating_sub(1)).cloned() {
             self.load_slide_images(slide, &slide_path)
         } else {

@@ -152,7 +152,7 @@ pub fn get_available_disk_space(path: &str) -> PyResult<f64> {
 
     #[cfg(not(unix))]
     {
-        let _ = path; // Suppress unused variable warning
+        let _ = path;
         Ok(10000.0)
     }
 }

@@ -44,32 +44,25 @@ jobs:
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          # Build for Python 3.10+ only (matching our project requirements)
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-*
 
-          # Install Rust in the build environment
           CIBW_BEFORE_ALL_LINUX: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
           CIBW_BEFORE_ALL_MACOS: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
           CIBW_BEFORE_ALL_WINDOWS: >
             curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
             refreshenv
 
-          # Install maturin and build the Rust extension
           CIBW_BEFORE_BUILD: pip install maturin
 
-          # Configure maturin to use abi3 for better compatibility
           CIBW_ENVIRONMENT: MATURIN_BUILD_ARGS="--compatibility linux"
           CIBW_ENVIRONMENT_WINDOWS: MATURIN_BUILD_ARGS=""
           CIBW_ENVIRONMENT_MACOS: MATURIN_BUILD_ARGS=""
 
-          # Test the built wheels
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: 'python -c "import kreuzberg; print(\"Import successful\")"'
 
-          # Skip some builds for speed during testing
           CIBW_SKIP: "*-musllinux* *-win32 *-manylinux_i686"
 
-          # Use manylinux2014 for broader compatibility
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
 

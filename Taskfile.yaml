@@ -75,7 +75,6 @@ tasks:
     cmds:
       - uv run mkdocs serve
 
-  # Benchmarks tasks
   bench:quick:
     desc: "Run quick benchmarks (tiny/small/medium categories)"
     cmds:

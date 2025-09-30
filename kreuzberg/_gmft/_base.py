@@ -6,7 +6,6 @@ Uses functional approaches and hashable structures for caching.
 
 from __future__ import annotations
 
-# Type alias for bounding box coordinates
 BBox = tuple[float, float, float, float]
 
 
@@ -79,7 +78,6 @@ class Rect:
         return f"Rect({self.bbox})"
 
 
-# Functional geometry operations for performance and caching
 def rect_intersect(bbox1: BBox, bbox2: BBox) -> Rect:
     """Compute intersection of two bounding boxes."""
     xmin = max(bbox1[0], bbox2[0])
@@ -148,5 +146,4 @@ def iob_for_rows(bbox1: BBox, bbox2: BBox) -> float:
     return 0.0
 
 
-# Constants
 EMPTY_RECT = Rect((0, 0, 0, 0))

@@ -11,6 +11,7 @@ mod quality;
 mod string_utils;
 mod table_processing;
 mod token_reduction;
+mod xml;
 
 use cache::{
     CacheStats, batch_cleanup_caches, batch_generate_cache_keys, cleanup_cache, clear_cache_directory, fast_hash,
@@ -119,6 +120,8 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(build_email_text_output, m)?)?;
     m.add_class::<EmailExtractionResultDTO>()?;
     m.add_class::<EmailAttachmentDTO>()?;
+
+    xml::register_xml_functions(m)?;
 
     Ok(())
 }

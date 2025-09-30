@@ -262,7 +262,6 @@ class GMFTConfig(ConfigDict):
     using Microsoft's Table Transformer models.
     """
 
-    # Model Configuration
     detection_model: str = "microsoft/table-transformer-detection"
     """HuggingFace model path for table detection."""
 
@@ -278,7 +277,6 @@ class GMFTConfig(ConfigDict):
     model_cache_dir: str | None = None
     """Custom cache directory for model downloads. If None, uses HuggingFace default."""
 
-    # Detection Settings
     detection_threshold: float = 0.7
     """Confidence threshold for table detection (0.0-1.0).
 
@@ -287,7 +285,6 @@ class GMFTConfig(ConfigDict):
     detection_device: str = "auto"
     """Device for detection model ('auto', 'cpu', 'cuda', 'cuda:0', etc)."""
 
-    # Structure Recognition Settings
     structure_threshold: float = 0.5
     """Confidence threshold for structure elements (rows/columns).
 
@@ -296,7 +293,6 @@ class GMFTConfig(ConfigDict):
     structure_device: str = "auto"
     """Device for structure model ('auto', 'cpu', 'cuda', 'cuda:0', etc)."""
 
-    # Table Processing
     crop_padding: int = 20
     """Pixels to add around detected tables when cropping."""
 
@@ -306,7 +302,6 @@ class GMFTConfig(ConfigDict):
     max_table_area: int | None = None
     """Maximum table area in pixels² to process. None = no limit."""
 
-    # Cell Confidence Thresholds
     cell_confidence_table: float = 0.3
     """Confidence threshold for table cells."""
 
@@ -325,7 +320,6 @@ class GMFTConfig(ConfigDict):
     cell_confidence_spanning_cell: float = 0.5
     """Confidence threshold for spanning cells."""
 
-    # Quality Control
     total_overlap_reject_threshold: float = 0.9
     """Reject table if total overlap > this fraction of table area."""
 
@@ -338,7 +332,6 @@ class GMFTConfig(ConfigDict):
     iob_warn_threshold: float = 0.5
     """Warn if intersection-over-box between text and cell < this value."""
 
-    # Large Table Handling
     large_table_threshold: int = 10
     """Row count threshold to trigger large table handling."""
 
@@ -351,7 +344,6 @@ class GMFTConfig(ConfigDict):
     force_large_table_assumption: bool | None = None
     """Force large table handling regardless of thresholds."""
 
-    # Output Settings
     remove_null_rows: bool = True
     """Remove rows with no text content."""
 
@@ -361,7 +353,6 @@ class GMFTConfig(ConfigDict):
     semantic_spanning_cells: bool = False
     """Enable semantic interpretation of spanning cells."""
 
-    # Performance
     enable_model_caching: bool = True
     """Cache loaded models for reuse."""
 
@@ -371,7 +362,6 @@ class GMFTConfig(ConfigDict):
     mixed_precision: bool = False
     """Use mixed precision (FP16) when available for faster inference."""
 
-    # Logging
     verbosity: int = 1
     """Verbosity level (0=errors, 1=warnings, 2=info, 3=debug)."""
 
@@ -385,7 +375,7 @@ class GMFTConfig(ConfigDict):
             3: self.cell_confidence_column_header,
             4: self.cell_confidence_projected_row_header,
             5: self.cell_confidence_spanning_cell,
-            6: 99.0,  # no object
+            6: 99.0,
         }
 
 
@@ -740,6 +730,10 @@ class Metadata(TypedDict, total=False):
     """Notes or additional information extracted from documents."""
     note: NotRequired[str]
     """Single note or annotation."""
+    element_count: NotRequired[int]
+    """Total number of XML elements encountered."""
+    unique_elements: NotRequired[int]
+    """Number of unique XML element names."""
     name: NotRequired[str]
     """Name field from structured data."""
     body: NotRequired[str]
@@ -816,6 +810,8 @@ _VALID_METADATA_KEYS = {
     "token_reduction",
     "processing_errors",
     "extraction_error",
+    "element_count",
+    "unique_elements",
 }
 
 

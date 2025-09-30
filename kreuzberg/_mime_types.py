@@ -23,6 +23,9 @@ MSG_MIME_TYPE: Final = "application/vnd.ms-outlook"
 JSON_MIME_TYPE: Final = "application/json"
 YAML_MIME_TYPE: Final = "application/x-yaml"
 TOML_MIME_TYPE: Final = "application/toml"
+XML_MIME_TYPE: Final = "application/xml"
+XML_TEXT_MIME_TYPE: Final = "text/xml"
+SVG_MIME_TYPE: Final = "image/svg+xml"
 
 EXCEL_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 EXCEL_BINARY_MIME_TYPE: Final = "application/vnd.ms-excel"
@@ -187,6 +190,8 @@ EXT_TO_MIME_TYPE: Final[Mapping[str, str]] = {
     ".bib": "application/x-bibtex",
     ".ipynb": "application/x-ipynb+json",
     ".tex": "application/x-latex",
+    ".xml": XML_MIME_TYPE,
+    ".svg": SVG_MIME_TYPE,
 }
 
 SUPPORTED_MIME_TYPES: Final[set[str]] = (
@@ -203,6 +208,9 @@ SUPPORTED_MIME_TYPES: Final[set[str]] = (
         JSON_MIME_TYPE,
         YAML_MIME_TYPE,
         TOML_MIME_TYPE,
+        XML_MIME_TYPE,
+        XML_TEXT_MIME_TYPE,
+        SVG_MIME_TYPE,
         "text/json",
         "text/yaml",
         "text/x-yaml",

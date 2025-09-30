@@ -41,31 +41,25 @@ def get_model_cache_dir(
     Returns:
         Cache directory path or None to use model defaults
     """
-    # 1. Explicit model-specific directory
     if model_specific_dir:
         return model_specific_dir
 
-    # 2. Config's global cache directory
     if config and config.model_cache_dir:
         return config.model_cache_dir
 
-    # 3. KREUZBERG_MODEL_CACHE environment variable
     cache_dir = os.environ.get("KREUZBERG_MODEL_CACHE")
     if cache_dir:
         return cache_dir
 
-    # 4. HF_HOME (for HuggingFace models)
     cache_dir = os.environ.get("HF_HOME")
     if cache_dir:
         return cache_dir
 
-    # 5. TRANSFORMERS_CACHE (legacy, will be deprecated)
     cache_dir = os.environ.get("TRANSFORMERS_CACHE")
     if cache_dir:
         logger.debug("Using legacy TRANSFORMERS_CACHE - consider using HF_HOME instead")
         return cache_dir
 
-    # 6. None - let the model use its default
     return None
 
 
@@ -124,9 +118,7 @@ def setup_huggingface_cache(cache_dir: str | None = None) -> str | None:
     if cache_dir:
         cache_dir = ensure_cache_dir(cache_dir)
         if cache_dir:
-            # HuggingFace will handle the actual caching
             os.environ["HF_HOME"] = cache_dir
-            # Legacy support
             os.environ["TRANSFORMERS_CACHE"] = cache_dir
             logger.debug("Using HuggingFace cache directory: %s", cache_dir)
 
@@ -148,9 +140,7 @@ async def setup_huggingface_cache_async(cache_dir: str | None = None) -> str | N
     if cache_dir:
         cache_dir = await ensure_cache_dir_async(cache_dir)
         if cache_dir:
-            # HuggingFace will handle the actual caching
             os.environ["HF_HOME"] = cache_dir
-            # Legacy support
             os.environ["TRANSFORMERS_CACHE"] = cache_dir
             logger.debug("Using HuggingFace cache directory: %s", cache_dir)
 
@@ -177,11 +167,9 @@ def resolve_model_cache_dir(
     Returns:
         Resolved cache directory or None
     """
-    # Config takes precedence
     if config_cache_dir:
         return ensure_cache_dir(config_cache_dir)
 
-    # Check environment variables
     for env_var in [f"{env_prefix}_MODEL_CACHE", "HF_HOME", "TRANSFORMERS_CACHE"]:
         cache_dir = os.environ.get(env_var)
         if cache_dir:
@@ -209,11 +197,9 @@ async def resolve_model_cache_dir_async(
     Returns:
         Resolved cache directory or None
     """
-    # Config takes precedence
     if config_cache_dir:
         return await ensure_cache_dir_async(config_cache_dir)
 
-    # Check environment variables
     for env_var in [f"{env_prefix}_MODEL_CACHE", "HF_HOME", "TRANSFORMERS_CACHE"]:
         cache_dir = os.environ.get(env_var)
         if cache_dir:

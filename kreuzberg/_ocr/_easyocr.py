@@ -324,13 +324,10 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
 
         languages = cls._validate_language_code(kwargs.pop("language", "en"))
 
-        # Setup model cache directory if configured
         model_cache_dir = kwargs.pop("model_storage_directory", None)
         if not model_cache_dir:
-            # Use unified cache resolution
             cache_dir = resolve_model_cache_dir(None, env_prefix="EASYOCR")
             if cache_dir:
-                # EasyOCR looks for EASYOCR_MODULE_PATH first, then MODULE_PATH
                 os.environ["EASYOCR_MODULE_PATH"] = cache_dir
                 model_cache_dir = cache_dir
 
@@ -493,13 +490,10 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
 
         languages = cls._validate_language_code(kwargs.pop("language", "en"))
 
-        # Setup model cache directory if configured
         model_cache_dir = kwargs.pop("model_storage_directory", None)
         if not model_cache_dir:
-            # Use unified cache resolution
             cache_dir = resolve_model_cache_dir(None, env_prefix="EASYOCR")
             if cache_dir:
-                # EasyOCR looks for EASYOCR_MODULE_PATH first, then MODULE_PATH
                 os.environ["EASYOCR_MODULE_PATH"] = cache_dir
                 model_cache_dir = cache_dir
 

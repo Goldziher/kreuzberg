@@ -136,8 +136,6 @@ jobs:
           retention-days: 90
 
   aggregate-results:
-    # Always run aggregation, even if some frameworks fail
-    # This allows partial results to be collected and analyzed
     if: ${{ always() && github.event_name == 'workflow_dispatch' }}
     needs: framework-benchmark
     runs-on: ubuntu-latest

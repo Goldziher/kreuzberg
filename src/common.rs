@@ -192,8 +192,6 @@ mod tests {
     fn test_text_thresholds_values() {
         use text_thresholds::*;
 
-        // These are compile-time constants, so we just verify they're defined
-        // The actual values are tested through their usage in the code
         let _ = MIN_TEXT_LENGTH;
         let _ = LARGE_TEXT_LENGTH;
         let _ = MIN_SENTENCE_WORDS;

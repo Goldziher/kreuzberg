@@ -207,7 +207,6 @@ class PandocExtractor(Extractor):
 
             return result
         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
-            # OSError and RuntimeError must always bubble up per CLAUDE.md
             raise
         except Exception as e:
             raise ParsingError("Failed to process file", context={"file": str(path), "error": str(e)}) from e

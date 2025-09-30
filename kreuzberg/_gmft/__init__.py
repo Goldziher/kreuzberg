@@ -54,11 +54,9 @@ def _get_cached_detector(
 
     HuggingFace handles model downloads automatically.
     """
-    # Set up cache directory if provided
     if cache_dir:
         setup_huggingface_cache(cache_dir)
 
-    # Create config with specific detection settings
     config = GMFTConfig(
         detection_model=detection_model,
         detection_threshold=detection_threshold,
@@ -75,11 +73,9 @@ async def _get_cached_detector_async(
 
     HuggingFace handles model downloads automatically.
     """
-    # Set up cache directory if provided
     if cache_dir:
         await setup_huggingface_cache_async(cache_dir)
 
-    # Create config with specific detection settings
     config = GMFTConfig(
         detection_model=detection_model,
         detection_threshold=detection_threshold,
@@ -94,11 +90,9 @@ def _get_cached_formatter(
     structure_model: str, structure_threshold: float, cache_dir: str | None = None
 ) -> TableFormatter:
     """Get cached table formatter instance."""
-    # Set up cache directory if provided
     if cache_dir:
         setup_huggingface_cache(cache_dir)
 
-    # Create config with specific structure settings
     config = GMFTConfig(
         structure_model=structure_model,
         structure_threshold=structure_threshold,
@@ -111,11 +105,9 @@ async def _get_cached_formatter_async(
     structure_model: str, structure_threshold: float, cache_dir: str | None = None
 ) -> TableFormatter:
     """Get cached table formatter instance (async version)."""
-    # Set up cache directory if provided
     if cache_dir:
         await setup_huggingface_cache_async(cache_dir)
 
-    # Create config with specific structure settings
     config = GMFTConfig(
         structure_model=structure_model,
         structure_threshold=structure_threshold,
@@ -164,30 +156,25 @@ def extract_tables_sync(file_path: str | Path, config: GMFTConfig | None = None)
         MissingDependencyError: If transformers or torch dependencies are missing
         ParsingError: If PDF processing or table extraction fails
     """
-    # Convert to Path object
     pdf_path = Path(file_path)
 
-    # Use default config if none provided
     if config is None:
         config = GMFTConfig()
 
-    # Get cached detector and formatter instances
     detector = _get_cached_detector(config.detection_model, config.detection_threshold, config.model_cache_dir)
     formatter = _get_cached_formatter(config.structure_model, config.structure_threshold, config.model_cache_dir)
 
     tables = []
 
-    # Use Kreuzberg's PDF facilities
     with pdf_document_sync(pdf_path) as document:
         for page_idx in range(len(document)):
             page = document[page_idx]
             width, height = page.get_size()
 
-            # Use Kreuzberg's DPI optimization (from Rust bindings)
             optimal_dpi = calculate_optimal_dpi(
                 page_width=width,
                 page_height=height,
-                target_dpi=150,  # Standard DPI for table extraction
+                target_dpi=150,
                 max_dimension=25000,
                 min_dpi=72,
                 max_dpi=600,
@@ -195,40 +182,32 @@ def extract_tables_sync(file_path: str | Path, config: GMFTConfig | None = None)
 
             scale = optimal_dpi / PDF_POINTS_PER_INCH
 
-            # Render page to image using Kreuzberg's facilities
             bitmap = page.render(scale=scale)
             page_image = bitmap.to_pil()
 
             with pdf_resources_sync(bitmap), image_resources(page_image):
-                # Detect tables on the page
                 detected_tables = detector.detect_tables_in_page_region(page_image, page_idx)
 
-                # Process each detected table
                 for cropped_table in detected_tables:
-                    # Crop the table region from the page image
                     rect = cropped_table.rect
                     table_image = page_image.crop((rect.xmin, rect.ymin, rect.xmax, rect.ymax))
 
                     with image_resources(table_image):
-                        # Format the table structure
                         formatted_table = formatter.format_table(cropped_table, table_image)
 
-                        # Create complete TableData for enhance_table_markdown
                         temp_table_data: TableData = {
-                            "cropped_image": table_image.copy(),  # Make a copy for safe keeping
+                            "cropped_image": table_image.copy(),
                             "df": formatted_table.dataframe,
-                            "page_number": page_idx + 1,  # 1-indexed for user display
+                            "page_number": page_idx + 1,
                             "text": "",
                         }
 
-                        # Generate enhanced markdown
                         table_text = enhance_table_markdown(temp_table_data)
 
-                        # Create final TableData with enhanced text
                         table_data: TableData = {
-                            "cropped_image": table_image.copy(),  # Make a copy for safe keeping
+                            "cropped_image": table_image.copy(),
                             "df": formatted_table.dataframe,
-                            "page_number": page_idx + 1,  # 1-indexed for user display
+                            "page_number": page_idx + 1,
                             "text": table_text,
                         }
 
@@ -238,5 +217,4 @@ def extract_tables_sync(file_path: str | Path, config: GMFTConfig | None = None)
     return tables
 
 
-# Backward compatibility alias
 extract_tables = extract_tables_async
