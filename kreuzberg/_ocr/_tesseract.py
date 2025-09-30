@@ -1303,10 +1303,7 @@ def _process_image_with_tesseract(
                 text = f.read()
 
             if output_format == "markdown" and tesseract_format == "hocr":
-                # Import here to avoid circular dependency ~keep
-                from html_to_markdown import convert_to_markdown  # noqa: PLC0415
-
-                text = convert_to_markdown(text, heading_style="atx")
+                text = html_to_markdown.convert_to_markdown(text, heading_style="atx")
 
             text = normalize_spaces(text)
 

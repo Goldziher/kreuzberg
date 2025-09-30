@@ -19,7 +19,7 @@ from kreuzberg._mime_types import (
 )
 from kreuzberg._registry import ExtractorRegistry
 from kreuzberg._token_reduction import get_reduction_stats, reduce_tokens
-from kreuzberg._types import ExtractionConfig, ExtractionResult
+from kreuzberg._types import ExtractionConfig, ExtractionResult, LanguageDetectionConfig
 from kreuzberg._utils._document_cache import get_document_cache
 from kreuzberg._utils._errors import create_error_context
 from kreuzberg._utils._sync import run_maybe_sync, run_sync_only
@@ -94,8 +94,6 @@ def _validate_and_post_process_helper(
         def _detect_language() -> list[str]:
             lang_config = config.language_detection_config
             if lang_config is None:
-                from kreuzberg._types import LanguageDetectionConfig  # noqa: PLC0415
-
                 lang_config = LanguageDetectionConfig(model=config.language_detection_model)
 
             return detect_languages(result.content, config=lang_config) or []
