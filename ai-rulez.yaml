@@ -459,7 +459,7 @@ rules:
       5. **Configuration**: `ExtractionConfig` dataclass controls all extraction behavior
 
       ### Key Components
-      - **Extractors**: Specialized classes for each file type (PDF, image, HTML, etc.)
+      - **Extractors**: Specialized classes for each file type (PDF, image, HTML, XML, plain text, etc.)
       - **OCR Backends**: Pluggable OCR engines with separate configuration classes
       - **GMFT Integration**: Table extraction using GMFT library for PDFs
       - **Chunking**: Text splitting functionality in `_chunker.py`
@@ -467,6 +467,8 @@ rules:
       - **Async/Sync**: Primary async implementation with sync wrappers in `_utils/_sync.py`
       - **API Server**: REST API using Litestar framework in `_api/main.py`
       - **CLI**: Command-line interface for batch processing and automation
+      - **Rust Streaming Parsers**: Memory-efficient parsers for XML (`src/xml.rs`) and plain text/markdown (`src/text.rs`)
+      - **LibreOffice Integration**: Optional legacy Office format support via LibreOffice conversion
 
       ### Adding New Features
       - New extractors: Inherit from `BaseExtractor` and register with `ExtractorRegistry`
@@ -668,6 +670,61 @@ rules:
     name: Package Management
     priority: minimal
 sections:
+  - content: |
+      ### XML Extraction (v4.0)
+      - **Implementation**: Rust streaming parser using `quick-xml` in `src/xml.rs`
+      - **Features**:
+        - Memory-efficient streaming for multi-GB XML files
+        - Element counting and unique element tracking
+        - Preserves text content while filtering XML structure
+        - Optional whitespace preservation
+      - **Extractors**: `XMLExtractor` in `_extractors/_xml.py`
+      - **Supported MIME types**: `application/xml`, `text/xml`, `image/svg+xml`
+      - **Metadata**: `element_count`, `unique_elements`
+
+      ### Plain Text & Markdown Extraction (v4.0)
+      - **Implementation**: Rust streaming parser in `src/text.rs`
+      - **Features**:
+        - Memory-efficient line-by-line streaming for multi-GB text files
+        - Markdown metadata extraction: headers, links, code blocks
+        - Word count, line count, character count tracking
+        - CRLF line ending support
+        - Lazy regex compilation for performance
+      - **Extractors**: `PlainTextExtractor` in `_extractors/_text.py`
+      - **Supported MIME types**: `text/plain`, `text/markdown`, `text/x-markdown`
+      - **Metadata (markdown only)**: `headers`, `links`, `code_blocks`, `line_count`, `word_count`, `character_count`
+
+      ### Legacy MS Office Support (v4.0)
+      - **Implementation**: LibreOffice conversion via `_extractors/_legacy_office.py`
+      - **System Dependency**: Requires LibreOffice installed (optional)
+      - **Supported Formats**:
+        - Word (.doc) - `LegacyWordExtractor`
+        - PowerPoint (.ppt) - `LegacyPresentationExtractor`
+      - **Process**: Converts legacy formats to modern formats (DOCX/PPTX) then extracts
+      - **Installation**:
+        - macOS: `brew install libreoffice`
+        - Ubuntu/Debian: `sudo apt-get install libreoffice`
+        - RHEL/CentOS/Fedora: `sudo dnf install libreoffice`
+        - Docker: Pre-installed in all Kreuzberg images
+      - **Detection**: Automatically detects LibreOffice availability
+
+      ### Hybrid Rust-Python Architecture (v4.0)
+      - **Rust Modules**:
+        - `src/xml.rs`: XML streaming parser with quick-xml
+        - `src/text.rs`: Plain text/markdown streaming parser
+        - `src/excel.rs`: Excel extraction with calamine
+        - `src/pptx/`: PowerPoint extraction with python-pptx
+        - `src/email.rs`: Email extraction with mail-parser
+        - `src/image_preprocessing.rs`: Image processing with image-rs
+        - `src/token_reduction.rs`: Token reduction algorithms
+        - `src/quality.rs`: Text quality scoring
+        - `src/string_utils.rs`: String utilities (safe_decode, mojibake fixing)
+        - `src/cache.rs`: Cache management utilities
+      - **Python Integration**: PyO3 bindings in `src/lib.rs`, type stubs in `_internal_bindings.pyi`
+      - **Build**: Maturin for building Rust extensions (`maturin develop --release`)
+      - **Benefits**: 10-50x performance improvements for text processing operations
+    id: v4-features
+    name: v4 Features (NEW)
   - content: |
       ### Automatic Language Detection (v3.5.0+)
       - **Feature**: Automatically detect languages in extracted text
