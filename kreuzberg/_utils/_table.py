@@ -10,10 +10,7 @@ if TYPE_CHECKING:
 
     from kreuzberg._types import TableData
 
-from kreuzberg._internal_bindings import (
-    table_from_arrow_to_markdown,
-    # TODO: Add these once implemented in Rust
-)
+from kreuzberg._internal_bindings import table_from_arrow_to_markdown
 
 
 def _dataframe_to_arrow_bytes(df: pl.DataFrame) -> bytes:
@@ -43,8 +40,8 @@ def enhance_table_markdown(table: TableData) -> str:
 def export_table_to_csv(table: TableData, separator: str = ",") -> str:
     """Export table to CSV format.
 
-    Currently uses Python Polars implementation.
-    TODO: Implement Rust version with Arrow bridge.
+    Uses Polars native write_csv() which is already Rust-accelerated.
+    No additional Rust implementation needed.
     """
     if "df" not in table or table["df"] is None:
         return ""
@@ -63,8 +60,8 @@ def export_table_to_tsv(table: TableData) -> str:
 def extract_table_structure_info(table: TableData) -> dict[str, Any]:
     """Extract structural information about table.
 
-    Currently uses Python implementation.
-    TODO: Implement Rust version with Arrow bridge.
+    Simple metadata extraction using Polars methods (already Rust-accelerated).
+    Python overhead is negligible for this operation.
     """
     info = {
         "has_headers": False,
@@ -119,8 +116,7 @@ def extract_table_structure_info(table: TableData) -> dict[str, Any]:
 def generate_table_summary(tables: list[TableData]) -> dict[str, Any]:
     """Generate summary statistics for multiple tables.
 
-    Currently uses Python implementation.
-    TODO: Implement Rust version with Arrow bridge.
+    Basic aggregation logic - Python is sufficient for this simple operation.
     """
     if not tables:
         return {
