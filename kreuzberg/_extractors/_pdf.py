@@ -63,36 +63,43 @@ class PDFExtractor(Extractor):
 
     async def extract_bytes_async(self, content: bytes) -> ExtractionResult:
         async with temporary_file(".pdf", content) as file_path:
-            metadata = await self._extract_metadata_with_password_attempts(content)
             result = await self.extract_path_async(file_path)
+            # Override with metadata extracted from original bytes (not temp file)
+            metadata = await self._extract_metadata_with_password_attempts(content)
             result.metadata = metadata
             return result
 
     async def extract_path_async(self, path: Path) -> ExtractionResult:
         content_bytes = await AsyncPath(path).read_bytes()
 
-        result: ExtractionResult | None = None
-
+        # Parse document if needed for tables/images
         document: Document | None = None
         if self.config.extract_images or self.config.extract_tables:
             document = self._parse_with_password_attempts(content_bytes)
 
+        # Extract text content
+        text = ""
         if not self.config.force_ocr:
             try:
-                content = await self._extract_pdf_searchable_text(path)
-                if self._validate_extracted_text(content):
-                    result = ExtractionResult(content=content, mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
+                text = await self._extract_pdf_searchable_text(path)
             except ParsingError:
-                pass
+                text = ""
 
-        if not result and self.config.ocr_backend is not None:
-            result = await self._extract_pdf_text_with_ocr(path, self.config.ocr_backend)
+        # Fall back to OCR if text is invalid or force_ocr is enabled
+        if (self.config.force_ocr or not self._validate_extracted_text(text)) and self.config.ocr_backend is not None:
+            ocr_result = await self._extract_pdf_text_with_ocr(path, self.config.ocr_backend)
+            text = normalize_spaces(ocr_result.content)
 
-        if not result:
-            result = ExtractionResult(content="", mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
-
+        # Extract metadata
         metadata = await self._extract_metadata_with_password_attempts(content_bytes)
-        result.metadata = metadata
+
+        # Create result
+        result = ExtractionResult(
+            content=text,
+            mime_type=PLAIN_TEXT_MIME_TYPE,
+            metadata=metadata,
+            tables=[],
+        )
 
         if self.config.extract_tables:
             try:
@@ -107,7 +114,7 @@ class PDFExtractor(Extractor):
                         "table_count": table_summary["table_count"],
                         "tables_summary": f"Document contains {table_summary['table_count']} tables "
                         f"across {table_summary['pages_with_tables']} pages with "
-                        f"{table_summary['total_rows']} total_rows",
+                        f"{table_summary['total_rows']} total rows",
                     }
             except ImportError:
                 logger.warning("GMFT not available, skipping table extraction")
@@ -126,6 +133,7 @@ class PDFExtractor(Extractor):
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         with temporary_file_sync(".pdf", content) as temp_path:
             result = self.extract_path_sync(temp_path)
+            # Override with metadata extracted from original bytes (not temp file)
             metadata = self._extract_metadata_with_password_attempts_sync(content)
             result.metadata = metadata
             return result
@@ -396,16 +404,45 @@ class PDFExtractor(Extractor):
     def _extract_pdf_searchable_text_sync(self, path: Path) -> str:
         try:
             with pdf_document_sync(path) as pdf:
-                pages_text = []
-                for page in pdf:
-                    text_page = page.get_textpage()
-                    text = text_page.get_text_bounded()
-                    pages_text.append(text)
-                    with pdf_resources_sync(text_page, page):
-                        pass
-                return "\n".join(pages_text)
-        except Exception as e:
-            raise ParsingError(f"Failed to extract PDF text: {e}") from e
+                pages_content = []
+                page_errors = []
+
+                for i, page in enumerate(pdf):
+                    try:
+                        text_page = page.get_textpage()
+                        page_content = text_page.get_text_bounded()
+                        pages_content.append(page_content)
+                        with pdf_resources_sync(text_page, page):
+                            pass
+                    except Exception as e:  # noqa: PERF203, BLE001
+                        page_errors.append({"page": i + 1, "error": str(e)})
+                        pages_content.append(f"[Error extracting page {i + 1}]")
+
+                text = "\n".join(pages_content)
+                has_content = bool(text.strip())
+
+                if page_errors and has_content:
+                    return normalize_spaces(text)
+                if not has_content:
+                    raise ParsingError(
+                        "Could not extract any text from PDF",
+                        context=create_error_context(
+                            operation="extract_pdf_searchable_text_sync",
+                            file_path=path,
+                            page_errors=page_errors,
+                        ),
+                    )
+
+                return normalize_spaces(text)
+        except pypdfium2.PdfiumError as e:
+            raise ParsingError(
+                f"Failed to extract PDF text: {e}",
+                context=create_error_context(
+                    operation="extract_pdf_searchable_text_sync",
+                    file_path=path,
+                    error=e,
+                ),
+            ) from e
 
     def _extract_pdf_with_ocr_sync(self, path: Path) -> str:
         temp_files: list[Path] = []
@@ -476,16 +513,6 @@ class PDFExtractor(Extractor):
                 results = backend.process_batch_sync(paths, **asdict(easy_config))
             case _:
                 raise NotImplementedError(f"Sync OCR not implemented for {self.config.ocr_backend}")
-
-        return "\n\n".join(result.content for result in results)
-
-    def _process_pdf_images_with_ocr_direct(self, images: list[Image]) -> str:
-        if not self.config.ocr_backend:
-            raise ValueError("OCR backend must be specified")
-        backend = get_ocr_backend(self.config.ocr_backend)
-        config = self._prepare_ocr_config(self.config.ocr_backend)
-
-        results = [backend.process_image_sync(image, **config) for image in images]
 
         return "\n\n".join(result.content for result in results)
 
