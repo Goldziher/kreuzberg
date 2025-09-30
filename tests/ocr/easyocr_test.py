@@ -415,25 +415,11 @@ def test_is_gpu_available_without_torch() -> None:
         assert result is False
 
 
-def test_resolve_device_config_deprecated_use_gpu_true() -> None:
-    with pytest.warns(DeprecationWarning, match="The 'use_gpu' parameter is deprecated"):
-        device_info = EasyOCRBackend._resolve_device_config(use_gpu=True, device="auto")
-
-        assert device_info.device_type in ["cpu", "cuda", "mps"]
-
-
-def test_resolve_device_config_deprecated_use_gpu_conflicts() -> None:
-    with pytest.warns(DeprecationWarning, match="Both 'use_gpu' and 'device' parameters specified"):
-        device_info = EasyOCRBackend._resolve_device_config(use_gpu=True, device="cpu")
-
-        assert device_info.device_type == "cpu"
-
-
 def test_resolve_device_config_validation_error_fallback() -> None:
     with patch(
         "kreuzberg._utils._device.validate_device_request", side_effect=ValidationError("Device validation failed")
     ):
-        device_info = EasyOCRBackend._resolve_device_config(use_gpu=False, device="cpu")
+        device_info = EasyOCRBackend._resolve_device_config(device="cpu")
         assert device_info.device_type == "cpu"
         assert device_info.name == "CPU"
 

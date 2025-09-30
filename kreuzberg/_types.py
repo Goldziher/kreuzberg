@@ -149,8 +149,6 @@ class EasyOCRConfig(ConfigDict):
     """Maximum slope for merging text boxes."""
     text_threshold: float = 0.7
     """Text confidence threshold."""
-    use_gpu: bool = False
-    """Whether to use GPU for inference. DEPRECATED: Use 'device' parameter instead."""
     device: DeviceType = "auto"
     """Device to use for inference. Options: 'cpu', 'cuda', 'mps', 'auto'."""
     gpu_memory_limit: float | None = None
@@ -179,12 +177,6 @@ class PaddleOCRConfig(ConfigDict):
     """Image shape for classification algorithm in format 'channels,height,width'."""
     det_algorithm: Literal["DB", "EAST", "SAST", "PSE", "FCE", "PAN", "CT", "DB++", "Layout"] = "DB"
     """Detection algorithm."""
-    det_db_box_thresh: float = 0.5
-    """DEPRECATED in PaddleOCR 3.2.0+: Use 'text_det_box_thresh' instead. Score threshold for detected boxes."""
-    det_db_thresh: float = 0.3
-    """DEPRECATED in PaddleOCR 3.2.0+: Use 'text_det_thresh' instead. Binarization threshold for DB output map."""
-    det_db_unclip_ratio: float = 2.0
-    """DEPRECATED in PaddleOCR 3.2.0+: Use 'text_det_unclip_ratio' instead. Expansion ratio for detected text boxes."""
     det_east_cover_thresh: float = 0.1
     """Score threshold for EAST output boxes."""
     det_east_nms_thresh: float = 0.2
@@ -199,8 +191,6 @@ class PaddleOCRConfig(ConfigDict):
     """Filter recognition results by confidence score. Results below this are discarded."""
     enable_mkldnn: bool = False
     """Whether to enable MKL-DNN acceleration (Intel CPU only)."""
-    gpu_mem: int = 8000
-    """DEPRECATED in PaddleOCR 3.2.0+: Parameter no longer supported. GPU memory size (in MB) to use for initialization."""
     language: str = "en"
     """Language to use for OCR."""
     max_text_length: int = 25
@@ -229,14 +219,8 @@ class PaddleOCRConfig(ConfigDict):
     """Directory for recognition model. If None, uses default model location."""
     table: bool = True
     """Whether to enable table recognition."""
-    use_angle_cls: bool = True
-    """DEPRECATED in PaddleOCR 3.2.0+: Use 'use_textline_orientation' instead. Whether to use text orientation classification model."""
-    use_gpu: bool = False
-    """DEPRECATED in PaddleOCR 3.2.0+: Parameter no longer supported. Use hardware acceleration flags instead."""
     device: DeviceType = "auto"
     """Device to use for inference. Options: 'cpu', 'cuda', 'auto'. Note: MPS not supported by PaddlePaddle."""
-    gpu_memory_limit: float | None = None
-    """DEPRECATED in PaddleOCR 3.2.0+: Parameter no longer supported. Maximum GPU memory to use in GB."""
     fallback_to_cpu: bool = True
     """Whether to fallback to CPU if requested device is unavailable."""
     use_space_char: bool = True
@@ -439,8 +423,6 @@ class LanguageDetectionConfig(ConfigDict):
     If False, uses single language detection."""
     cache_dir: str | None = None
     """Custom directory for model cache. If None, uses system default."""
-    low_memory: bool = True
-    """Deprecated. Use 'model' parameter instead. If True, uses 'lite' model."""
 
 
 @dataclass(unsafe_hash=True, frozen=True, slots=True)
@@ -1011,35 +993,6 @@ class ExtractionConfig(ConfigDict):
     """Whether to remove duplicate images using CRC32 checksums."""
     image_ocr_config: ImageOCRConfig | None = None
     """Configuration for OCR processing of extracted images."""
-    ocr_extracted_images: bool = False
-    """Deprecated: Use image_ocr_config.enabled instead."""
-    image_ocr_backend: OcrBackendType | None = None
-    """Deprecated: Use image_ocr_config.backend instead."""
-    image_ocr_min_dimensions: tuple[int, int] = (50, 50)
-    """Deprecated: Use image_ocr_config.min_dimensions instead."""
-    image_ocr_max_dimensions: tuple[int, int] = (10000, 10000)
-    """Deprecated: Use image_ocr_config.max_dimensions instead."""
-    image_ocr_formats: frozenset[str] = frozenset(
-        {
-            "jpg",
-            "jpeg",
-            "png",
-            "gif",
-            "bmp",
-            "tiff",
-            "tif",
-            "webp",
-            "jp2",
-            "jpx",
-            "jpm",
-            "mj2",
-            "pnm",
-            "pbm",
-            "pgm",
-            "ppm",
-        }
-    )
-    """Deprecated: Use image_ocr_config.allowed_formats instead."""
     max_chars: int = DEFAULT_MAX_CHARACTERS
     """The size of each chunk in characters."""
     max_overlap: int = DEFAULT_MAX_OVERLAP
@@ -1117,48 +1070,6 @@ class ExtractionConfig(ConfigDict):
 
         if isinstance(self.pdf_password, list):
             object.__setattr__(self, "pdf_password", tuple(self.pdf_password))
-
-        if isinstance(self.image_ocr_formats, list):
-            object.__setattr__(self, "image_ocr_formats", frozenset(self.image_ocr_formats))
-
-        if self.image_ocr_config is None and (
-            self.ocr_extracted_images
-            or self.image_ocr_backend is not None
-            or self.image_ocr_min_dimensions != (50, 50)
-            or self.image_ocr_max_dimensions != (10000, 10000)
-            or self.image_ocr_formats
-            != frozenset(
-                {
-                    "jpg",
-                    "jpeg",
-                    "png",
-                    "gif",
-                    "bmp",
-                    "tiff",
-                    "tif",
-                    "webp",
-                    "jp2",
-                    "jpx",
-                    "jpm",
-                    "mj2",
-                    "pnm",
-                    "pbm",
-                    "pgm",
-                    "ppm",
-                }
-            )
-        ):
-            object.__setattr__(
-                self,
-                "image_ocr_config",
-                ImageOCRConfig(
-                    enabled=self.ocr_extracted_images,
-                    backend=self.image_ocr_backend,
-                    min_dimensions=self.image_ocr_min_dimensions,
-                    max_dimensions=self.image_ocr_max_dimensions,
-                    allowed_formats=self.image_ocr_formats,
-                ),
-            )
 
         if self.ocr_backend is None and self.ocr_config is not None:
             raise ValidationError("'ocr_backend' is None but 'ocr_config' is provided")
