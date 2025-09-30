@@ -11,7 +11,7 @@ from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._extractors._presentation import PresentationExtractor
-from kreuzberg._types import ExtractedImage
+from kreuzberg._types import ExtractedImage, ImageOCRConfig
 from kreuzberg.exceptions import ParsingError
 
 if TYPE_CHECKING:
@@ -114,7 +114,7 @@ class TestImageExtractionErrorHandling:
     async def test_ocr_backend_not_available(self) -> None:
         config = ExtractionConfig(
             extract_images=True,
-            ocr_extracted_images=True,
+            image_ocr_config=ImageOCRConfig(enabled=True, backend=None),
             ocr_backend=None,
         )
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
@@ -129,7 +129,7 @@ class TestImageExtractionErrorHandling:
     async def test_ocr_processing_exception(self) -> None:
         config = ExtractionConfig(
             extract_images=True,
-            ocr_extracted_images=True,
+            image_ocr_config=ImageOCRConfig(enabled=True, backend="tesseract"),
             ocr_backend="tesseract",
         )
         extractor = PDFExtractor(mime_type="application/pdf", config=config)

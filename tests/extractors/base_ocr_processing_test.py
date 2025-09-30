@@ -7,13 +7,13 @@ import pytest
 
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._pdf import PDFExtractor
-from kreuzberg._types import ExtractedImage, ExtractionResult
+from kreuzberg._types import ExtractedImage, ExtractionResult, ImageOCRConfig
 
 
 @pytest.mark.anyio
 class TestImageOCRProcessing:
     async def test_process_images_with_ocr_disabled(self) -> None:
-        config = ExtractionConfig(extract_images=True, ocr_extracted_images=False)
+        config = ExtractionConfig(extract_images=True, image_ocr_config=ImageOCRConfig(enabled=False))
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
 
         images = [
@@ -25,7 +25,7 @@ class TestImageOCRProcessing:
         assert results == []
 
     async def test_process_images_with_ocr_empty_list(self) -> None:
-        config = ExtractionConfig(extract_images=True, ocr_extracted_images=True)
+        config = ExtractionConfig(extract_images=True, image_ocr_config=ImageOCRConfig(enabled=True))
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
 
         results = await extractor._process_images_with_ocr([])
@@ -34,9 +34,8 @@ class TestImageOCRProcessing:
     async def test_process_images_with_ocr_format_filtering(self) -> None:
         config = ExtractionConfig(
             extract_images=True,
-            ocr_extracted_images=True,
+            image_ocr_config=ImageOCRConfig(enabled=True),
             ocr_backend="tesseract",
-            image_ocr_formats=frozenset({"png", "jpg"}),
         )
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
 
@@ -85,10 +84,8 @@ class TestImageOCRProcessing:
     async def test_process_images_with_ocr_size_filtering(self) -> None:
         config = ExtractionConfig(
             extract_images=True,
-            ocr_extracted_images=True,
+            image_ocr_config=ImageOCRConfig(enabled=True),
             ocr_backend="tesseract",
-            image_ocr_min_dimensions=(100, 100),
-            image_ocr_max_dimensions=(1000, 1000),
         )
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
 
@@ -133,7 +130,7 @@ class TestImageOCRProcessing:
     async def test_process_images_with_ocr_memory_limits_applied(self) -> None:
         config = ExtractionConfig(
             extract_images=True,
-            ocr_extracted_images=True,
+            image_ocr_config=ImageOCRConfig(enabled=True),
             ocr_backend="tesseract",
         )
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
@@ -162,7 +159,7 @@ class TestImageOCRProcessing:
     async def test_process_images_with_ocr_parallel_processing(self) -> None:
         config = ExtractionConfig(
             extract_images=True,
-            ocr_extracted_images=True,
+            image_ocr_config=ImageOCRConfig(enabled=True),
             ocr_backend="tesseract",
         )
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
@@ -198,7 +195,7 @@ class TestImageOCRProcessing:
     async def test_process_images_with_ocr_error_handling(self) -> None:
         config = ExtractionConfig(
             extract_images=True,
-            ocr_extracted_images=True,
+            image_ocr_config=ImageOCRConfig(enabled=True),
             ocr_backend="tesseract",
         )
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
@@ -246,9 +243,8 @@ class TestImageOCRProcessing:
         for backend_name in ["tesseract", "easyocr", "paddleocr"]:
             config = ExtractionConfig(
                 extract_images=True,
-                ocr_extracted_images=True,
+                image_ocr_config=ImageOCRConfig(enabled=True),
                 ocr_backend=backend_name,  # type: ignore[arg-type]
-                image_ocr_backend=backend_name,  # type: ignore[arg-type]
             )
             extractor = PDFExtractor(mime_type="application/pdf", config=config)
 

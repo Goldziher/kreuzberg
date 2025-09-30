@@ -112,11 +112,10 @@ def test_build_ocr_config_from_cli_easyocr() -> None:
 
 
 def test_build_ocr_config_from_cli_paddleocr() -> None:
-    cli_args: MutableMapping[str, Any] = {"paddleocr_config": {"language": "en", "use_angle_cls": True}}
+    cli_args: MutableMapping[str, Any] = {"paddleocr_config": {"language": "en"}}
     config = _build_ocr_config_from_cli("paddleocr", cli_args)
     assert isinstance(config, PaddleOCRConfig)
     assert config.language == "en"
-    assert config.use_angle_cls is True
 
 
 def test_build_ocr_config_from_cli_unknown_backend() -> None:
@@ -670,10 +669,8 @@ def test_build_extraction_config_from_dict_no_gmft_config() -> None:
 def test_extract_images_config_default() -> None:
     cfg = ExtractionConfig()
     assert cfg.extract_images is False
-    assert cfg.ocr_extracted_images is False
 
 
 def test_extract_images_config_enabled() -> None:
-    cfg = ExtractionConfig(extract_images=True, ocr_extracted_images=True)
+    cfg = ExtractionConfig(extract_images=True)
     assert cfg.extract_images is True
-    assert cfg.ocr_extracted_images is True

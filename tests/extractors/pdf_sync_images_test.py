@@ -8,7 +8,7 @@ from unittest.mock import patch
 import kreuzberg._extractors._pdf as pdf_module
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._pdf import PDFExtractor
-from kreuzberg._types import ExtractionResult, ImageOCRResult
+from kreuzberg._types import ExtractionResult, ImageOCRConfig, ImageOCRResult
 
 if TYPE_CHECKING:
     import io
@@ -181,7 +181,9 @@ class TestPDFSyncImageExtraction:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"%PDF-1.4\n%%EOF")
 
-        config = ExtractionConfig(extract_images=True, ocr_extracted_images=True, ocr_backend="tesseract")
+        config = ExtractionConfig(
+            extract_images=True, image_ocr_config=ImageOCRConfig(enabled=True), ocr_backend="tesseract"
+        )
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
 
         mock_doc = MockDocument([MockPage([MockImageObj()])])

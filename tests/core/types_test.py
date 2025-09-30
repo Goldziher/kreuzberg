@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from kreuzberg import ExtractionConfig
 from kreuzberg._types import ExtractedImage
 
 
@@ -11,36 +10,21 @@ def test_extracted_image_hashable() -> None:
     assert len(s) == 1
 
 
-def test_extraction_config_image_ocr_defaults() -> None:
-    cfg = ExtractionConfig()
-    assert cfg.extract_images is False
-    assert cfg.ocr_extracted_images is False
-    assert isinstance(cfg.image_ocr_min_dimensions, tuple)
-    assert len(cfg.image_ocr_min_dimensions) == 2
-    assert isinstance(cfg.image_ocr_max_dimensions, tuple)
-    assert len(cfg.image_ocr_max_dimensions) == 2
-    assert isinstance(cfg.image_ocr_formats, frozenset)
-    assert "png" in cfg.image_ocr_formats
-
-
 def test_config_dict_to_dict_with_none_values() -> None:
     from kreuzberg._types import LanguageDetectionConfig
 
     cfg = LanguageDetectionConfig(
-        low_memory=True,
         top_k=3,
         cache_dir=None,
     )
 
     dict_without_none = cfg.to_dict(include_none=False)
     assert "cache_dir" not in dict_without_none
-    assert dict_without_none["low_memory"] is True
     assert dict_without_none["top_k"] == 3
 
     dict_with_none = cfg.to_dict(include_none=True)
     assert "cache_dir" in dict_with_none
     assert dict_with_none["cache_dir"] is None
-    assert dict_with_none["low_memory"] is True
     assert dict_with_none["top_k"] == 3
 
 
@@ -304,17 +288,6 @@ def test_extraction_config_validation_errors() -> None:
         ExtractionConfig(ocr_backend="easyocr", ocr_config=TesseractConfig())
 
 
-def test_extraction_config_image_ocr_auto_creation() -> None:
-    from kreuzberg._types import ExtractionConfig, ImageOCRConfig
-
-    config = ExtractionConfig(ocr_extracted_images=True, image_ocr_backend="tesseract")
-
-    assert config.image_ocr_config is not None
-    assert isinstance(config.image_ocr_config, ImageOCRConfig)
-    assert config.image_ocr_config.enabled is True
-    assert config.image_ocr_config.backend == "tesseract"
-
-
 def test_extraction_config_post_init_conversion() -> None:
     from kreuzberg._types import ExtractionConfig
 
@@ -323,7 +296,6 @@ def test_extraction_config_post_init_conversion() -> None:
         post_processing_hooks=[],
         validators=[],
         pdf_password=["pass1", "pass2"],
-        image_ocr_formats=frozenset(["png", "jpg"]),
     )
 
     assert isinstance(config.custom_entity_patterns, frozenset)
@@ -331,8 +303,6 @@ def test_extraction_config_post_init_conversion() -> None:
     assert isinstance(config.validators, tuple)
     assert isinstance(config.pdf_password, tuple)
     assert config.pdf_password == ("pass1", "pass2")
-    assert isinstance(config.image_ocr_formats, frozenset)
-    assert config.image_ocr_formats == frozenset(["png", "jpg"])
 
 
 def test_html_to_markdown_config_to_dict() -> None:
@@ -352,7 +322,7 @@ def test_extraction_config_nested_object_to_dict() -> None:
 
     html_config = HTMLToMarkdownConfig(autolinks=True, wrap=True)
     tesseract_config = TesseractConfig(language="eng")
-    lang_config = LanguageDetectionConfig(low_memory=False, top_k=5)
+    lang_config = LanguageDetectionConfig(top_k=5)
 
     config = ExtractionConfig(
         ocr_backend="tesseract",
@@ -367,7 +337,6 @@ def test_extraction_config_nested_object_to_dict() -> None:
     assert isinstance(dict_result["language_detection_config"], dict)
     assert dict_result["html_to_markdown_config"]["autolinks"] is True
     assert dict_result["ocr_config"]["language"] == "eng"
-    assert dict_result["language_detection_config"]["low_memory"] is False
     assert dict_result["language_detection_config"]["top_k"] == 5
 
     dict_with_none = config.to_dict(include_none=True)
@@ -419,15 +388,6 @@ def test_extraction_config_post_init_custom_entity_patterns_dict() -> None:
     assert isinstance(config.custom_entity_patterns, frozenset)
     expected_frozenset = frozenset([("PERSON", r"\b[A-Z][a-z]+\b"), ("EMAIL", r"\S+@\S+")])
     assert config.custom_entity_patterns == expected_frozenset
-
-
-def test_extraction_config_post_init_image_ocr_formats_list() -> None:
-    from kreuzberg._types import ExtractionConfig
-
-    config = ExtractionConfig(image_ocr_formats=["png", "jpg", "webp"])  # type: ignore[arg-type]
-
-    assert isinstance(config.image_ocr_formats, frozenset)
-    assert config.image_ocr_formats == frozenset(["png", "jpg", "webp"])
 
 
 def test_extraction_config_nested_to_dict_calls() -> None:

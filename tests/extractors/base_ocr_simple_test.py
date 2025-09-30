@@ -6,13 +6,13 @@ import pytest
 
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._pdf import PDFExtractor
-from kreuzberg._types import ExtractedImage, ExtractionResult, ImageOCRResult
+from kreuzberg._types import ExtractedImage, ExtractionResult, ImageOCRConfig, ImageOCRResult
 
 
 @pytest.mark.anyio
 async def test_process_images_filters_by_format() -> None:
     config = ExtractionConfig(
-        extract_images=True, ocr_extracted_images=True, image_ocr_formats=frozenset(["png", "jpg"])
+        extract_images=True, image_ocr_config=ImageOCRConfig(enabled=True, allowed_formats=frozenset(["png", "jpg"]))
     )
 
     extractor = PDFExtractor(mime_type="application/pdf", config=config)
@@ -23,7 +23,9 @@ async def test_process_images_filters_by_format() -> None:
             ExtractedImage(data=b"test", format="svg", filename="test.svg"),
         ]
 
-        filtered = [img for img in images if img.format in config.image_ocr_formats]
+        filtered = [
+            img for img in images if config.image_ocr_config and img.format in config.image_ocr_config.allowed_formats
+        ]
 
         assert len(filtered) == 1
         assert filtered[0].format == "png"

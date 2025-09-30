@@ -12,7 +12,7 @@ from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg._extractors._pandoc import PandocExtractor
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._extractors._presentation import PresentationExtractor
-from kreuzberg._types import ExtractedImage
+from kreuzberg._types import ExtractedImage, ImageOCRConfig
 
 
 @pytest.mark.anyio
@@ -53,7 +53,9 @@ class TestAllExtractorsImageIntegration:
         """
 
         config = ExtractionConfig(
-            extract_images=True, ocr_extracted_images=True, ocr_backend="tesseract", image_ocr_min_dimensions=(1, 1)
+            extract_images=True,
+            image_ocr_config=ImageOCRConfig(enabled=True, backend="tesseract", min_dimensions=(1, 1)),
+            ocr_backend="tesseract",
         )
         extractor = HTMLExtractor(mime_type="text/html", config=config)
 
@@ -178,7 +180,7 @@ Email body content.
 
         config = ExtractionConfig(
             extract_images=True,
-            ocr_extracted_images=True,
+            image_ocr_config=ImageOCRConfig(enabled=True, backend="tesseract"),
             ocr_backend="tesseract",
         )
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
