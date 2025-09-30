@@ -95,19 +95,23 @@ class PDFExtractor(Extractor):
         result.metadata = metadata
 
         if self.config.extract_tables:
-            from kreuzberg._gmft import extract_tables_async  # noqa: PLC0415
+            try:
+                from kreuzberg._gmft import extract_tables_async  # noqa: PLC0415
 
-            tables = await extract_tables_async(path, self.config.gmft_config)
-            result.tables = tables
+                tables = await extract_tables_async(path, self.config.gmft_config)
+                result.tables = tables
 
-            if result.tables:
-                table_summary = generate_table_summary(result.tables)
-                result.metadata = result.metadata | {
-                    "table_count": table_summary["table_count"],
-                    "tables_summary": f"Document contains {table_summary['table_count']} tables "
-                    f"across {table_summary['pages_with_tables']} pages with "
-                    f"{table_summary['total_rows']} total rows",
-                }
+                if result.tables:
+                    table_summary = generate_table_summary(result.tables)
+                    result.metadata = result.metadata | {
+                        "table_count": table_summary["table_count"],
+                        "tables_summary": f"Document contains {table_summary['table_count']} tables "
+                        f"across {table_summary['pages_with_tables']} pages with "
+                        f"{table_summary['total_rows']} total_rows",
+                    }
+            except ImportError:
+                logger.warning("GMFT not available, skipping table extraction")
+                result.tables = []
 
         if self.config.extract_images and document:
             images = await self._extract_images_from_playa(document)
@@ -143,19 +147,26 @@ class PDFExtractor(Extractor):
 
         tables = []
         if self.config.extract_tables:
-            from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
+            try:
+                from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
 
-            tables = extract_tables_sync(path)
+                tables = extract_tables_sync(path)
+            except ImportError:
+                logger.warning("GMFT not available, skipping table extraction")
+                tables = []
 
         if not self.config.force_ocr and self._validate_extracted_text(text):
             text = self._extract_with_playa_sync(path, fallback_text=text)
 
         text = normalize_spaces(text)
 
+        # Extract PDF metadata
+        metadata = self._extract_metadata_with_password_attempts_sync(content_bytes)
+
         result = ExtractionResult(
             content=text,
             mime_type=PLAIN_TEXT_MIME_TYPE,
-            metadata={},
+            metadata=metadata,
             tables=list(tables),
         )
 

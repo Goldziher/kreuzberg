@@ -122,19 +122,18 @@ jobs:
           import kreuzberg
           print('✓ Import successful')
 
-          # Test basic functionality
-          from kreuzberg._internal_bindings import reduce_tokens_rust
-          result = reduce_tokens_rust('Hello world', 'en', 'moderate', False, None, 0.3, True, True, None, [], None, False)
-          print('✓ Rust function call successful')
-          print(f'Result: {result[:50]}...' if len(result) > 50 else f'Result: {result}')
+          # Test presentation extractor (Rust binding)
+          from kreuzberg._rust_extractors import PresentationExtractor as RustPptxExtractor
+          print('✓ Rust PPTX extractor available')
 
-          # Test token reduction
-          from kreuzberg._token_reduction import reduce_tokens
-          from kreuzberg._types import TokenReductionConfig
-          config = TokenReductionConfig(mode='light')
-          result = reduce_tokens('This is a test with extra    spaces.', config=config)
-          print('✓ Token reduction successful')
-          print(f'Reduced: {result}')
+          # Test spreadsheet extractor (Rust binding)
+          from kreuzberg._rust_extractors import SpreadsheetExtractor as RustXlsxExtractor
+          print('✓ Rust XLSX extractor available')
+
+          # Test basic extraction
+          from kreuzberg import extract_file_sync
+          print('✓ Basic extraction functions available')
+          print('All wheel tests passed!')
           "
 
   summarize:

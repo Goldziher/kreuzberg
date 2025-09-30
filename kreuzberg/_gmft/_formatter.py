@@ -90,6 +90,17 @@ class TableFormatter:
                 self.config.structure_model,
                 cache_dir=cache_dir,
             )
+
+            # Fix processor size config if needed (transformers v4.52+ compatibility)
+            if (
+                hasattr(self._processor, "size")
+                and isinstance(self._processor.size, dict)
+                and "longest_edge" in self._processor.size
+                and "shortest_edge" not in self._processor.size
+            ):
+                # Add shortest_edge to match longest_edge for square sizing
+                self._processor.size["shortest_edge"] = self._processor.size["longest_edge"]
+
             self._model = TableTransformerForObjectDetection.from_pretrained(
                 self.config.structure_model,
                 cache_dir=cache_dir,
@@ -222,7 +233,7 @@ class TableFormatter:
 
     def _calculate_confidence_scores(self, results: dict[str, Any]) -> dict[str, float]:
         """Calculate aggregate confidence scores for the table structure."""
-        if not results["scores"]:
+        if len(results["scores"]) == 0:
             return {"overall": 0.0, "structure": 0.0}
 
         scores = [float(s) for s in results["scores"]]

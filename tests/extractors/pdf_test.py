@@ -668,7 +668,10 @@ async def test_pdf_extract_path_async_with_tables(
     mock_extract_metadata = mocker.patch.object(pdf_extractor, "_extract_metadata_with_password_attempts")
     mock_extract_metadata.return_value = {"pages": 2}
 
-    mock_extract_tables = mocker.patch("kreuzberg._gmft.extract_tables")
+    mock_parse = mocker.patch.object(pdf_extractor, "_parse_with_password_attempts")
+    mock_parse.return_value = None
+
+    mock_extract_tables = mocker.patch("kreuzberg._gmft.extract_tables_async")
     mock_extract_tables.return_value = [
         {"text": "Table 1", "page_number": 1},
         {"text": "Table 2", "page_number": 2},
@@ -676,9 +679,6 @@ async def test_pdf_extract_path_async_with_tables(
 
     mock_generate_summary = mocker.patch("kreuzberg._extractors._pdf.generate_table_summary")
     mock_generate_summary.return_value = {"table_count": 2, "pages_with_tables": 2, "total_rows": 10}
-
-    mock_convert_images = mocker.patch.object(pdf_extractor, "_convert_pdf_to_images")
-    mock_convert_images.return_value = []
 
     mock_apply_quality = mocker.patch.object(pdf_extractor, "_apply_quality_processing")
     mock_apply_quality.side_effect = lambda x: x
@@ -781,9 +781,8 @@ def test_pdf_extract_path_sync_parsing_error(
 
     pdf_extractor.config = replace(pdf_extractor.config, ocr_backend="tesseract")
 
-    ocr_result = ExtractionResult(content="OCR sync content", mime_type="text/plain", metadata={})
-    mock_extract_ocr = mocker.patch.object(pdf_extractor, "_extract_pdf_text_with_ocr_sync")
-    mock_extract_ocr.return_value = ocr_result
+    mock_extract_ocr = mocker.patch.object(pdf_extractor, "_extract_pdf_with_ocr_sync")
+    mock_extract_ocr.return_value = "OCR sync content"
 
     mock_extract_metadata = mocker.patch.object(pdf_extractor, "_extract_metadata_with_password_attempts_sync")
     mock_extract_metadata.return_value = {"test": "metadata"}
@@ -794,7 +793,7 @@ def test_pdf_extract_path_sync_parsing_error(
     result = pdf_extractor.extract_path_sync(test_file)
 
     assert result.content == "OCR sync content"
-    mock_extract_ocr.assert_called_once_with(test_file, "tesseract")
+    mock_extract_ocr.assert_called_once_with(test_file)
 
 
 def test_pdf_extract_path_sync_tables_import_error(
@@ -838,9 +837,8 @@ def test_pdf_extract_path_sync_invalid_text_ocr_fallback(
     mock_validate = mocker.patch.object(pdf_extractor, "_validate_extracted_text")
     mock_validate.return_value = False
 
-    ocr_result = ExtractionResult(content="Valid OCR text", mime_type="text/plain", metadata={})
-    mock_extract_ocr = mocker.patch.object(pdf_extractor, "_extract_pdf_text_with_ocr_sync")
-    mock_extract_ocr.return_value = ocr_result
+    mock_extract_ocr = mocker.patch.object(pdf_extractor, "_extract_pdf_with_ocr_sync")
+    mock_extract_ocr.return_value = "Valid OCR text"
 
     mock_extract_metadata = mocker.patch.object(pdf_extractor, "_extract_metadata_with_password_attempts_sync")
     mock_extract_metadata.return_value = {}
@@ -851,7 +849,7 @@ def test_pdf_extract_path_sync_invalid_text_ocr_fallback(
     result = pdf_extractor.extract_path_sync(test_file)
 
     assert result.content == "Valid OCR text"
-    mock_extract_ocr.assert_called_once_with(test_file, "tesseract")
+    mock_extract_ocr.assert_called_once_with(test_file)
 
 
 def test_pdf_corrupted_pattern_matching(pdf_extractor: PDFExtractor) -> None:

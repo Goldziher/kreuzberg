@@ -80,6 +80,17 @@ class TableDetector:
                 self.config.detection_model,
                 cache_dir=cache_dir,
             )
+
+            # Fix processor size config if needed (transformers v4.52+ compatibility)
+            if (
+                hasattr(self._processor, "size")
+                and isinstance(self._processor.size, dict)
+                and "longest_edge" in self._processor.size
+                and "shortest_edge" not in self._processor.size
+            ):
+                # Add shortest_edge to match longest_edge for square sizing
+                self._processor.size["shortest_edge"] = self._processor.size["longest_edge"]
+
             self._model = TableTransformerForObjectDetection.from_pretrained(
                 self.config.detection_model,
                 cache_dir=cache_dir,
