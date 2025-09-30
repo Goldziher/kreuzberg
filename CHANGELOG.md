@@ -104,6 +104,10 @@ The following internal GMFT options have been removed for simplicity:
 
 #### New Format Support
 
+- **Plain Text & Markdown**: Native support for `text/plain` and `text/markdown` with comprehensive metadata extraction
+  - Extract line count, word count, character count
+  - For markdown: extract headers, links, code blocks with language detection
+  - Fully integrated with chunking, compression, and entity extraction features
 - **XML Documents**: Native support for XML files (`application/xml`, `text/xml`, `image/svg+xml`) with streaming parser
 - **Legacy Word Documents**: Support for `.doc` files (`application/msword`) via LibreOffice conversion
 - **Legacy PowerPoint**: Support for `.ppt` files (`application/vnd.ms-powerpoint`) via LibreOffice conversion
