@@ -98,7 +98,7 @@ async def detect_multilingual_document():
     lang_config = LanguageDetectionConfig(
         multilingual=True,  # Detect multiple languages in mixed text
         top_k=5,  # Return top 5 languages
-        low_memory=False,  # Use high accuracy mode
+        model="standard",  # Use standard model for best accuracy
     )
 
     result = await extract_file(

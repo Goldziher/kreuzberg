@@ -74,6 +74,58 @@ The following internal GMFT options have been removed for simplicity:
 - **Updated GMFT**: Now requires `torch>=2.8.0` and `transformers>=4.35.2` instead of `gmft` package
 - **Build Requirements**: Now requires `maturin>=1.9.0` instead of `hatchling`
 
+#### Removed Deprecated Parameters
+
+All deprecated configuration parameters have been removed. Users must update their code to use the current parameter names:
+
+**EasyOCRConfig:**
+
+- Removed `use_gpu` → Use `device="cuda"` or `device="auto"` instead
+
+**PaddleOCRConfig:**
+
+- Removed `use_gpu` → Use `device="cuda"` or `device="auto"` instead
+- Removed `gpu_mem` → No longer supported (parameter unused in PaddleOCR 3.2.0+)
+- Removed `gpu_memory_limit` → No longer supported (parameter unused in PaddleOCR 3.2.0+)
+- Removed `use_angle_cls` → Use `use_textline_orientation` instead
+- Removed `det_db_box_thresh` → Use `text_det_box_thresh` instead
+- Removed `det_db_thresh` → Use `text_det_thresh` instead
+- Removed `det_db_unclip_ratio` → Use `text_det_unclip_ratio` instead
+
+**GMFTConfig:**
+
+- Removed `low_memory` → Use `model="lite"` instead
+
+**ExtractionConfig:**
+
+- Removed `ocr_extracted_images` → Use `image_ocr_config=ImageOCRConfig(enabled=True)` instead
+- Removed `image_ocr_backend` → Use `image_ocr_config=ImageOCRConfig(backend="tesseract")` instead
+- Removed `image_ocr_min_dimensions` → Use `image_ocr_config=ImageOCRConfig(min_dimensions=(50, 50))` instead
+- Removed `image_ocr_max_dimensions` → Use `image_ocr_config=ImageOCRConfig(max_dimensions=(10000, 10000))` instead
+- Removed `image_ocr_formats` → Use `image_ocr_config=ImageOCRConfig(allowed_formats=frozenset(...))` instead
+
+**Migration Example:**
+
+```python
+# Old (v3.x)
+config = ExtractionConfig(
+    ocr_extracted_images=True,
+    image_ocr_backend="tesseract",
+    image_ocr_min_dimensions=(100, 100),
+)
+
+# New (v4.0)
+from kreuzberg._types import ImageOCRConfig
+
+config = ExtractionConfig(
+    image_ocr_config=ImageOCRConfig(
+        enabled=True,
+        backend="tesseract",
+        min_dimensions=(100, 100),
+    )
+)
+```
+
 ### Added
 
 #### Rust-Powered Performance Improvements

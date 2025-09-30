@@ -574,7 +574,7 @@ print(f"OCR processed {len(result.image_ocr_results)} images")
 You can use different OCR backends with specific configurations for image processing:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, TesseractConfig, EasyOCRConfig
+from kreuzberg import extract_file, ExtractionConfig, ImageOCRConfig, TesseractConfig, EasyOCRConfig
 
 # Use Tesseract with specific configuration for image OCR
 tesseract_config = TesseractConfig(
@@ -585,9 +585,11 @@ tesseract_config = TesseractConfig(
 
 config = ExtractionConfig(
     extract_images=True,
-    ocr_extracted_images=True,
-    image_ocr_backend="tesseract",
-    image_ocr_config=tesseract_config,
+    image_ocr_config=ImageOCRConfig(
+        enabled=True,
+        backend="tesseract",
+        ocr_config=tesseract_config,
+    ),
     deduplicate_images=True,
 )
 
@@ -596,15 +598,17 @@ result = await extract_file("multilingual_presentation.pptx", config=config)
 # Use EasyOCR for better handling of scene text
 easyocr_config = EasyOCRConfig(
     language_list=["en", "de"],
-    gpu=False,
+    device="cpu",
     confidence_threshold=0.5,
 )
 
 config = ExtractionConfig(
     extract_images=True,
-    ocr_extracted_images=True,
-    image_ocr_backend="easyocr",
-    image_ocr_config=easyocr_config,
+    image_ocr_config=ImageOCRConfig(
+        enabled=True,
+        backend="easyocr",
+        ocr_config=easyocr_config,
+    ),
 )
 
 result = await extract_file("document_with_photos.pdf", config=config)

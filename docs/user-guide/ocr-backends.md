@@ -71,7 +71,7 @@ result = await extract_file(
     GPU support is not considered an official feature and might be subject to change or removal in future versions.
 
 - EasyOCR can use GPU acceleration when PyTorch with CUDA is available
-- To enable GPU, set `use_gpu=True` in the configuration
+- To enable GPU, set `device="cuda"` or `device="auto"` in the configuration
 - Kreuzberg will automatically check if CUDA is available via PyTorch
 
 **Language Support:**
@@ -89,7 +89,7 @@ result = await extract_file(
     "document.jpg",
     config=ExtractionConfig(
         ocr_backend="easyocr",
-        ocr_config=EasyOCRConfig(language_list=["en", "de"], use_gpu=True),
+        ocr_config=EasyOCRConfig(language_list=["en", "de"], device="auto"),
     ),
 )
 ```
@@ -115,7 +115,7 @@ result = await extract_file(
 
 - PaddleOCR can utilize GPU acceleration if the paddlepaddle-gpu package is installed
 - Kreuzberg automatically detects if paddlepaddle-gpu is available
-- To explicitly enable GPU, set `use_gpu=True` in the configuration
+- To explicitly enable GPU, set `device="cuda"` or `device="auto"` in the configuration
 - For GPU usage, install: `pip install paddlepaddle-gpu` instead of the standard paddlepaddle package
 
 **Language Support:**
@@ -132,7 +132,7 @@ result = await extract_file(
     "chinese_document.jpg",
     config=ExtractionConfig(
         ocr_backend="paddleocr",
-        ocr_config=PaddleOCRConfig(language="ch", use_gpu=True, gpu_mem=4000),
+        ocr_config=PaddleOCRConfig(language="ch", device="auto"),
     ),
 )
 ```

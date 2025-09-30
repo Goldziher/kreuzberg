@@ -141,15 +141,18 @@ curl -X POST "http://localhost:8000/extract?extract_images=true" \
   -F "data=@document.pdf"
 
 # Extract images and run OCR on them using Tesseract
-curl -X POST "http://localhost:8000/extract?extract_images=true&ocr_extracted_images=true&image_ocr_backend=tesseract" \
+curl -X POST http://localhost:8000/extract \
+  -H "X-Extraction-Config: {\"extract_images\": true, \"image_ocr_config\": {\"enabled\": true, \"backend\": \"tesseract\"}}" \
   -F "data=@scanned_document.pdf"
 
 # Extract images from PowerPoint presentations with dimension filtering
-curl -X POST "http://localhost:8000/extract?extract_images=true&ocr_extracted_images=true&image_ocr_min_width=100&image_ocr_min_height=100&image_ocr_max_width=3000&image_ocr_max_height=3000" \
+curl -X POST http://localhost:8000/extract \
+  -H "X-Extraction-Config: {\"extract_images\": true, \"image_ocr_config\": {\"enabled\": true, \"backend\": \"tesseract\", \"min_dimensions\": [100, 100], \"max_dimensions\": [3000, 3000]}}" \
   -F "data=@presentation.pptx"
 
 # Use EasyOCR for better scene text recognition
-curl -X POST "http://localhost:8000/extract?extract_images=true&ocr_extracted_images=true&image_ocr_backend=easyocr" \
+curl -X POST http://localhost:8000/extract \
+  -H "X-Extraction-Config: {\"extract_images\": true, \"image_ocr_config\": {\"enabled\": true, \"backend\": \"easyocr\"}}" \
   -F "data=@document_with_photos.pdf"
 
 # Extract images from HTML with inline base64 images
@@ -157,7 +160,8 @@ curl -X POST "http://localhost:8000/extract?extract_images=true" \
   -F "data=@webpage.html"
 
 # Process multiple documents with different image extraction settings
-curl -X POST "http://localhost:8000/extract?extract_images=true&ocr_extracted_images=true&image_ocr_backend=tesseract" \
+curl -X POST http://localhost:8000/extract \
+  -H "X-Extraction-Config: {\"extract_images\": true, \"image_ocr_config\": {\"enabled\": true, \"backend\": \"tesseract\"}}" \
   -F "data=@document1.pdf" \
   -F "data=@presentation.pptx" \
   -F "data=@email.eml"
@@ -217,29 +221,33 @@ For complex image OCR scenarios, use header-based configuration:
 curl -X POST http://localhost:8000/extract \
   -H "X-Extraction-Config: {
     \"extract_images\": true,
-    \"ocr_extracted_images\": true,
-    \"image_ocr_backend\": \"tesseract\",
     \"image_ocr_config\": {
-      \"language\": \"eng+deu+fra\",
-      \"psm\": 6,
-      \"output_format\": \"text\"
+      \"enabled\": true,
+      \"backend\": \"tesseract\",
+      \"ocr_config\": {
+        \"language\": \"eng+deu+fra\",
+        \"psm\": 6,
+        \"output_format\": \"text\"
+      },
+      \"min_dimensions\": [200, 200],
+      \"max_dimensions\": [4000, 4000]
     },
-    \"deduplicate_images\": true,
-    \"image_ocr_min_dimensions\": [200, 200],
-    \"image_ocr_max_dimensions\": [4000, 4000]
+    \"deduplicate_images\": true
   }" \
   -F "data=@multilingual_presentation.pptx"
 
-# EasyOCR with confidence threshold and GPU acceleration
+# EasyOCR with confidence threshold
 curl -X POST http://localhost:8000/extract \
   -H "X-Extraction-Config: {
     \"extract_images\": true,
-    \"ocr_extracted_images\": true,
-    \"image_ocr_backend\": \"easyocr\",
     \"image_ocr_config\": {
-      \"language_list\": [\"en\", \"de\"],
-      \"gpu\": false,
-      \"confidence_threshold\": 0.6
+      \"enabled\": true,
+      \"backend\": \"easyocr\",
+      \"ocr_config\": {
+        \"language_list\": [\"en\", \"de\"],
+        \"device\": \"cpu\",
+        \"confidence_threshold\": 0.6
+      }
     }
   }" \
   -F "data=@document_with_scene_text.pdf"
@@ -274,11 +282,9 @@ curl -X POST "http://localhost:8000/extract?auto_detect_language=true" \
 - `auto_detect_language` (boolean): Enable automatic language detection
 - `pdf_password` (string): Password for encrypted PDFs
 - `extract_images` (boolean): Extract embedded images from supported formats (PDF, PPTX, HTML, Office, Email)
-- `ocr_extracted_images` (boolean): Run OCR on extracted images to get text content
-- `image_ocr_backend` (string): OCR engine to use for images (`tesseract`, `easyocr`, `paddleocr`)
-- `image_ocr_min_width` / `image_ocr_min_height` (integer): Minimum image dimensions for OCR eligibility
-- `image_ocr_max_width` / `image_ocr_max_height` (integer): Maximum image dimensions for OCR processing
 - `deduplicate_images` (boolean): Remove duplicate images by content hash (enabled by default)
+
+**Note:** For advanced image OCR configuration (backend selection, dimension filtering, OCR-specific settings), use the `X-Extraction-Config` header with the `image_ocr_config` object as shown in the examples above.
 
 **Boolean Parameter Formats:**
 
