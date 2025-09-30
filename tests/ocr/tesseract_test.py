@@ -377,16 +377,22 @@ async def test_process_image_cache_processing_coordination(
     image_bytes = b"fake image bytes"
     image_hash = hashlib.sha256(image_bytes).hexdigest()[:16]
 
-    cache.mark_processing(image_hash=image_hash, config="test_config")
+    ocr_config = str(sorted([("language", "eng")]))
+    cache_kwargs = {
+        "image_hash": image_hash,
+        "ocr_backend": "tesseract",
+        "ocr_config": ocr_config,
+    }
+
+    cache.mark_processing(**cache_kwargs)
 
     async def complete_processing(event: anyio.Event) -> None:
         await anyio.sleep(0.1)
-        cache.mark_complete(image_hash=image_hash, config="test_config")
+        cache.mark_complete(**cache_kwargs)
 
         cache.set(
             ExtractionResult(content="cached text", mime_type="text/plain", metadata={}, chunks=[], tables=[]),
-            image_hash=image_hash,
-            config="test_config",
+            **cache_kwargs,
         )
         event.set()
 
