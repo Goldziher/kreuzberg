@@ -6,6 +6,7 @@ from kreuzberg._extractors._base import Extractor
 from kreuzberg._internal_bindings import read_excel_bytes, read_excel_file
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE, SPREADSHEET_MIME_TYPES
 from kreuzberg._types import ExtractionResult, Metadata
+from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import ParsingError
 
 if TYPE_CHECKING:
@@ -36,11 +37,11 @@ class SpreadSheetExtractor(Extractor):
 
     async def extract_bytes_async(self, content: bytes) -> ExtractionResult:
         """Extract from bytes asynchronously using temporary file."""
-        return self.extract_bytes_sync(content)
+        return await run_sync(self.extract_bytes_sync, content)
 
     async def extract_path_async(self, path: Path) -> ExtractionResult:
         """Extract from file path asynchronously."""
-        return self.extract_path_sync(path)
+        return await run_sync(self.extract_path_sync, path)
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         """Extract from bytes synchronously using Rust Calamine."""
@@ -60,6 +61,9 @@ class SpreadSheetExtractor(Extractor):
 
             return self._apply_quality_processing(result)
 
+        except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
+            # OSError and RuntimeError must always bubble up per CLAUDE.md
+            raise
         except Exception as e:
             raise ParsingError(
                 "Failed to extract spreadsheet data from bytes",
@@ -82,6 +86,9 @@ class SpreadSheetExtractor(Extractor):
 
             return self._apply_quality_processing(result)
 
+        except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
+            # OSError and RuntimeError must always bubble up per CLAUDE.md
+            raise
         except Exception as e:
             raise ParsingError(
                 "Failed to extract spreadsheet data from file",

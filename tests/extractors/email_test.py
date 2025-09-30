@@ -5,6 +5,7 @@ import pytest
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._mime_types import EML_MIME_TYPE, MSG_MIME_TYPE
+from kreuzberg.exceptions import ParsingError
 
 
 @pytest.fixture
@@ -232,7 +233,7 @@ def test_email_with_no_attachments(email_extractor: EmailExtractor, sample_email
 
 
 def test_email_empty_content(email_extractor: EmailExtractor) -> None:
-    with pytest.raises(RuntimeError, match="Failed to parse email content"):
+    with pytest.raises(ParsingError, match="Failed to parse email content"):
         email_extractor.extract_bytes_sync(b"")
 
 

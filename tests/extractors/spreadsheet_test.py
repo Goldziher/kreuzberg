@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kreuzberg import ExtractionResult, ParsingError
+from kreuzberg import ExtractionResult
 from kreuzberg._extractors._spread_sheet import SpreadSheetExtractor
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE
 from kreuzberg.extraction import DEFAULT_CONFIG
@@ -105,20 +105,20 @@ def test_extract_path_sync_with_invalid_file(extractor: SpreadSheetExtractor, tm
     invalid_file = tmp_path / "not_an_excel_file.txt"
     invalid_file.write_text("This is not Excel data")
 
-    with pytest.raises(ParsingError) as exc_info:
+    # Rust Calamine library raises OSError for format detection failures
+    # Per CLAUDE.md, OSError must always bubble up
+    with pytest.raises(OSError, match="Cannot detect file format"):
         extractor.extract_path_sync(invalid_file)
-
-    assert "Failed to extract spreadsheet data from file" in str(exc_info.value)
-    assert str(invalid_file) in str(exc_info.value.context["file"])
 
 
 def test_extract_bytes_sync_with_invalid_data(extractor: SpreadSheetExtractor) -> None:
     invalid_data = b"This is not Excel data"
 
-    with pytest.raises(ParsingError) as exc_info:
+    # Rust Calamine library raises OSError for format detection failures
+    # Per CLAUDE.md, OSError must always bubble up
+    # Different error messages possible: "Zip error" or "Cannot detect file format"
+    with pytest.raises(OSError, match=r"(Zip error|Cannot detect file format)"):
         extractor.extract_bytes_sync(invalid_data)
-
-    assert "Failed to extract spreadsheet data from bytes" in str(exc_info.value)
 
 
 def test_get_file_extension_mapping(extractor: SpreadSheetExtractor) -> None:
@@ -185,8 +185,7 @@ def test_invalid_file_error_handling(extractor: SpreadSheetExtractor) -> None:
 
     non_existent = Path("/tmp/does_not_exist.xlsx")
 
-    with pytest.raises(ParsingError) as exc_info:
+    # Rust Calamine library raises OSError for I/O errors
+    # Per CLAUDE.md, OSError must always bubble up
+    with pytest.raises(OSError, match="No such file or directory"):
         extractor.extract_path_sync(non_existent)
-
-    assert "Failed to extract spreadsheet data from file" in str(exc_info.value)
-    assert str(non_existent) in str(exc_info.value.context["file"])

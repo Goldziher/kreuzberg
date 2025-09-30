@@ -184,10 +184,12 @@ def test_eml_error_handling_malformed_file(email_extractor: EmailExtractor, tmp_
 
 
 def test_eml_empty_file_handling(email_extractor: EmailExtractor, tmp_path: Path) -> None:
+    from kreuzberg.exceptions import ParsingError
+
     empty_file = tmp_path / "empty.eml"
     empty_file.write_bytes(b"")
 
-    with pytest.raises(RuntimeError, match="Failed to parse email content"):
+    with pytest.raises(ParsingError, match="Failed to parse email content"):
         email_extractor.extract_path_sync(empty_file)
 
 

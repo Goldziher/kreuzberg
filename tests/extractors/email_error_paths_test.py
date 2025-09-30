@@ -6,6 +6,7 @@ import pytest
 
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._email import EmailExtractor
+from kreuzberg.exceptions import ParsingError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -23,7 +24,7 @@ def test_email_invalid_email_data() -> None:
 
 def test_email_empty_content() -> None:
     extractor = _make_extractor()
-    with pytest.raises(RuntimeError, match="Failed to parse email content"):
+    with pytest.raises(ParsingError, match="Failed to parse email content"):
         extractor.extract_bytes_sync(b"")
 
 
@@ -48,7 +49,7 @@ Body content.
     try:
         result = extractor.extract_path_sync(email_path)
         assert "Body content." in result.content
-    except RuntimeError:
+    except ParsingError:
         pass
 
 
@@ -82,5 +83,5 @@ Body content.
         result = extractor.extract_path_sync(email_path)
         assert "Body content." in result.content
         assert long_subject in result.content
-    except RuntimeError:
+    except ParsingError:
         pass

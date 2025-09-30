@@ -9,6 +9,7 @@ from kreuzberg._internal_bindings import build_email_text_output, extract_email_
 from kreuzberg._mime_types import EML_MIME_TYPE, MSG_MIME_TYPE, PLAIN_TEXT_MIME_TYPE
 from kreuzberg._types import ExtractedImage, ExtractionResult, ImageOCRResult, normalize_metadata
 from kreuzberg._utils._sync import run_maybe_async, run_sync
+from kreuzberg.exceptions import ParsingError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -86,9 +87,13 @@ class EmailExtractor(Extractor):
 
             return result
 
+        except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
+            # OSError and RuntimeError must always bubble up per CLAUDE.md
+            raise
         except Exception as e:
-            msg = f"Failed to parse email content: {e}"
-            raise RuntimeError(msg) from e
+            raise ParsingError(
+                "Failed to parse email content", context={"mime_type": self.mime_type, "error": str(e)}
+            ) from e
 
     def extract_path_sync(self, path: Path) -> ExtractionResult:
         content = path.read_bytes()

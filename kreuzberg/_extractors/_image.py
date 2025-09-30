@@ -34,10 +34,8 @@ class ImageExtractor(Extractor):
         file_path, unlink = await create_temp_file(f".{extension}")
         await AsyncPath(file_path).write_bytes(content)
         try:
-            result = await self.extract_path_async(file_path)
-            if self.config.extract_images:
-                result.images = [self._create_self_reference_image(content, self.mime_type)]
-            return result
+            # extract_path_async will handle self-reference image if extract_images is enabled
+            return await self.extract_path_async(file_path)
         finally:
             await unlink()
 
@@ -46,19 +44,24 @@ class ImageExtractor(Extractor):
             raise ValidationError("ocr_backend is None, cannot perform OCR")
 
         image = await run_sync(Image.open, str(path))
-        normalized_image, preprocessing_metadata = normalize_image_dpi(image, self.config)
+        try:
+            normalized_image, preprocessing_metadata = normalize_image_dpi(image, self.config)
 
-        backend = get_ocr_backend(self.config.ocr_backend)
-        result = await backend.process_image(normalized_image, **self.config.get_config_dict())
+            backend = get_ocr_backend(self.config.ocr_backend)
+            result = await backend.process_image(normalized_image, **self.config.get_config_dict())
 
-        if preprocessing_metadata:
-            result.metadata["image_preprocessing"] = preprocessing_metadata
+            if preprocessing_metadata:
+                result.metadata["image_preprocessing"] = preprocessing_metadata
 
-        if self.config.extract_images:
-            content = await AsyncPath(path).read_bytes()
-            result.images = [self._create_self_reference_image(content, self.mime_type)]
+            if self.config.extract_images:
+                content = await AsyncPath(path).read_bytes()
+                result.images = [self._create_self_reference_image(content, self.mime_type)]
 
-        return self._apply_quality_processing(result)
+            return self._apply_quality_processing(result)
+        finally:
+            image.close()
+            if normalized_image is not image:
+                normalized_image.close()
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         extension = self._get_extension_from_mime_type(self.mime_type)
@@ -78,19 +81,24 @@ class ImageExtractor(Extractor):
             raise ValidationError("ocr_backend is None, cannot perform OCR")
 
         image = Image.open(str(path))
-        normalized_image, preprocessing_metadata = normalize_image_dpi(image, self.config)
+        try:
+            normalized_image, preprocessing_metadata = normalize_image_dpi(image, self.config)
 
-        backend = get_ocr_backend(self.config.ocr_backend)
-        result = backend.process_image_sync(normalized_image, **self.config.get_config_dict())
+            backend = get_ocr_backend(self.config.ocr_backend)
+            result = backend.process_image_sync(normalized_image, **self.config.get_config_dict())
 
-        if preprocessing_metadata:
-            result.metadata["image_preprocessing"] = preprocessing_metadata
+            if preprocessing_metadata:
+                result.metadata["image_preprocessing"] = preprocessing_metadata
 
-        if self.config.extract_images:
-            content = path.read_bytes()
-            result.images = [self._create_self_reference_image(content, self.mime_type)]
+            if self.config.extract_images:
+                content = path.read_bytes()
+                result.images = [self._create_self_reference_image(content, self.mime_type)]
 
-        return self._apply_quality_processing(result)
+            return self._apply_quality_processing(result)
+        finally:
+            image.close()
+            if normalized_image is not image:
+                normalized_image.close()
 
     def _get_extension_from_mime_type(self, mime_type: str) -> str:
         if mime_type in self.IMAGE_MIME_TYPE_EXT_MAP:
