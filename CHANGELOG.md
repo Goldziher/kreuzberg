@@ -78,6 +78,7 @@ The following internal GMFT options have been removed for simplicity:
 
 #### Rust-Powered Performance Improvements
 
+- **XML Extraction**: Streaming Rust parser using quick-xml for memory-efficient processing of multi-GB XML files
 - **Excel Extraction**: Native Rust implementation using Calamine for ~3x speed improvement
 - **PPTX Extraction**: Complete Rust rewrite with streaming support and enhanced metadata extraction
 - **Email Parsing**: Full MSG format support with Rust implementation for improved reliability
@@ -101,11 +102,12 @@ The following internal GMFT options have been removed for simplicity:
 - **Cross-Platform Wheels**: Cibuildwheel integration for universal wheel distribution
 - **Enhanced Testing**: Comprehensive Rust test coverage with performance benchmarks
 
-#### Legacy MS Office Support
+#### New Format Support
 
-- **Legacy Word Documents**: Added extraction support for `.doc` files via LibreOffice conversion
-- **Legacy PowerPoint**: Added extraction support for `.ppt` files via LibreOffice conversion
-- **Conversion Utilities**: LibreOffice integration with timeout protection and validation
+- **XML Documents**: Native support for XML files (`application/xml`, `text/xml`, `image/svg+xml`) with streaming parser
+- **Legacy Word Documents**: Support for `.doc` files (`application/msword`) via LibreOffice conversion
+- **Legacy PowerPoint**: Support for `.ppt` files (`application/vnd.ms-powerpoint`) via LibreOffice conversion
+- **LibreOffice Integration**: Automatic conversion utilities with timeout protection, validation, and comprehensive error handling
 
 ### Changed
 
