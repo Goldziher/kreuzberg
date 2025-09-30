@@ -18,10 +18,11 @@
 - **Text Extraction**: High-fidelity text extraction preserving document structure and formatting
 - **Image Extraction**: Extract embedded images from PDFs, presentations, HTML, and Office documents with optional OCR
 - **Metadata Extraction**: Comprehensive metadata including author, creation date, language, and document properties
-- **Format Support**: 20+ document types including PDF, Microsoft Office, images, HTML, and structured data formats
+- **Format Support**: 50+ document types including PDF, Microsoft Office (modern + legacy), images, HTML, XML, and structured data formats
 - **OCR Integration**: Tesseract OCR with markdown output (default) and comprehensive table extraction
 - **Table Extraction**: Multiple approaches including vision-based detection and OCR-based extraction
 - **Document Classification**: Automatic document type detection (contracts, forms, invoices, receipts, reports)
+- **Streaming Parsers**: Memory-efficient Rust streaming for XML, plain text, and markdown (handles multi-GB files)
 
 ### Technical Architecture
 
@@ -88,6 +89,43 @@ print(f"Word count: {result.metadata.word_count}")
 print(f"Keywords: {result.metadata.keywords}")
 ```
 
+### Advanced Examples
+
+**XML extraction with streaming parser:**
+
+```python
+from kreuzberg import extract_file_sync
+
+# Handles multi-GB XML files efficiently
+result = extract_file_sync("large_dataset.xml")
+print(f"Element count: {result.metadata['element_count']}")
+print(f"Unique elements: {result.metadata['unique_elements']}")
+```
+
+**Legacy Office formats (.doc, .ppt):**
+
+```python
+from kreuzberg import extract_file_sync
+
+# Requires LibreOffice installed
+result = extract_file_sync("legacy_document.doc")
+print(result.content)
+
+result = extract_file_sync("old_presentation.ppt")
+print(f"Slides: {result.metadata['slide_count']}")
+```
+
+**Markdown with metadata extraction:**
+
+```python
+from kreuzberg import extract_file_sync
+
+result = extract_file_sync("README.md")
+print(f"Headers: {result.metadata['headers']}")  # All markdown headers
+print(f"Links: {result.metadata['links']}")  # All [text](url) links
+print(f"Code blocks: {result.metadata['code_blocks']}")  # Language and code
+```
+
 ### Docker
 
 Two optimized images available:
@@ -104,6 +142,39 @@ curl -X POST -F "file=@document.pdf" http://localhost:8000/extract
 ```
 
 📖 **[Installation Guide](https://kreuzberg.dev/getting-started/installation/)** • **[CLI Documentation](https://kreuzberg.dev/cli/)** • **[API Reference](https://kreuzberg.dev/api-reference/)**
+
+### System Dependencies
+
+#### LibreOffice (Optional - for legacy Office formats)
+
+Required only for `.doc` and `.ppt` file support. Modern Office formats (`.docx`, `.pptx`, `.xlsx`) work without LibreOffice.
+
+**macOS:**
+
+```bash
+brew install libreoffice
+```
+
+**Ubuntu/Debian:**
+
+```bash
+sudo apt-get update
+sudo apt-get install libreoffice
+```
+
+**RHEL/CentOS/Fedora:**
+
+```bash
+sudo dnf install libreoffice
+```
+
+**Windows:**
+
+Download from [libreoffice.org](https://www.libreoffice.org/download/download/) and add to PATH.
+
+**Docker:**
+
+LibreOffice is pre-installed in all Kreuzberg Docker images.
 
 ## Deployment Options
 
@@ -138,15 +209,79 @@ claude mcp add kreuzberg uvx kreuzberg-mcp
 
 ## Supported Formats
 
-| Category            | Formats                        |
-| ------------------- | ------------------------------ |
-| **Documents**       | PDF, DOCX, DOC, RTF, TXT, EPUB |
-| **Images**          | JPG, PNG, TIFF, BMP, GIF, WEBP |
-| **Spreadsheets**    | XLSX, XLS, CSV, ODS            |
-| **Presentations**   | PPTX, PPT, ODP                 |
-| **Web**             | HTML, XML, MHTML               |
-| **Structured Data** | JSON, YAML, TOML               |
-| **Archives**        | Support via extraction         |
+### Document Formats
+
+| Format            | Extensions | Implementation | OCR | Table Extraction | Metadata    | Notes                                 |
+| ----------------- | ---------- | -------------- | --- | ---------------- | ----------- | ------------------------------------- |
+| **PDF**           | `.pdf`     | PDFium (Rust)  | ✅  | ✅ GMFT          | ✅ Full     | Fastest, most reliable PDF extraction |
+| **Word (Modern)** | `.docx`    | Pandoc         | ❌  | ✅ Native        | ✅ Full     | Office Open XML format                |
+| **Word (Legacy)** | `.doc`     | LibreOffice    | ❌  | ✅ Native        | ✅ Full     | Requires LibreOffice (optional)       |
+| **Plain Text**    | `.txt`     | Rust           | ❌  | ❌               | ✅ Basic    | Streaming parser for multi-GB files   |
+| **Markdown**      | `.md`      | Rust           | ❌  | ❌               | ✅ Enhanced | Extracts headers, links, code blocks  |
+| **Rich Text**     | `.rtf`     | Pandoc         | ❌  | ❌               | ✅ Basic    | Rich Text Format                      |
+| **EPUB**          | `.epub`    | Pandoc         | ❌  | ❌               | ✅ Full     | E-book format                         |
+| **ODT**           | `.odt`     | Pandoc         | ❌  | ✅ Native        | ✅ Full     | OpenDocument Text                     |
+
+### Image Formats
+
+| Format        | Extensions                     | Implementation  | OCR | Notes                    |
+| ------------- | ------------------------------ | --------------- | --- | ------------------------ |
+| **JPEG**      | `.jpg`, `.jpeg`                | Rust (image-rs) | ✅  | Most common image format |
+| **PNG**       | `.png`                         | Rust (image-rs) | ✅  | Lossless compression     |
+| **TIFF**      | `.tiff`, `.tif`                | Rust (image-rs) | ✅  | Multi-page support       |
+| **BMP**       | `.bmp`                         | Rust (image-rs) | ✅  | Windows bitmap           |
+| **GIF**       | `.gif`                         | Rust (image-rs) | ✅  | Animated support         |
+| **WEBP**      | `.webp`                        | Rust (image-rs) | ✅  | Modern web format        |
+| **JPEG 2000** | `.jp2`, `.jpx`, `.jpm`, `.mj2` | Rust (image-rs) | ✅  | Advanced JPEG            |
+
+### Spreadsheet Formats
+
+| Format             | Extensions | Implementation  | Table Extraction | Metadata | Notes                    |
+| ------------------ | ---------- | --------------- | ---------------- | -------- | ------------------------ |
+| **Excel (Modern)** | `.xlsx`    | Rust (calamine) | ✅ Markdown      | ✅ Full  | Fastest Excel extraction |
+| **Excel (Legacy)** | `.xls`     | Rust (calamine) | ✅ Markdown      | ✅ Full  | Binary format (BIFF)     |
+| **Excel (Macro)**  | `.xlsm`    | Rust (calamine) | ✅ Markdown      | ✅ Full  | Macro-enabled workbooks  |
+| **Excel (Binary)** | `.xlsb`    | Rust (calamine) | ✅ Markdown      | ✅ Full  | Binary Office Open XML   |
+| **OpenDocument**   | `.ods`     | Rust (calamine) | ✅ Markdown      | ✅ Full  | OpenDocument Spreadsheet |
+| **CSV**            | `.csv`     | Pandoc          | ✅ Markdown      | ❌       | Comma-separated values   |
+| **TSV**            | `.tsv`     | Pandoc          | ✅ Markdown      | ❌       | Tab-separated values     |
+
+### Presentation Formats
+
+| Format                  | Extensions | Implementation     | Image Extraction | Table Extraction | Metadata | Notes                           |
+| ----------------------- | ---------- | ------------------ | ---------------- | ---------------- | -------- | ------------------------------- |
+| **PowerPoint (Modern)** | `.pptx`    | Rust (python-pptx) | ✅               | ✅ Markdown      | ✅ Full  | Office Open XML                 |
+| **PowerPoint (Legacy)** | `.ppt`     | LibreOffice        | ✅               | ✅ Markdown      | ✅ Full  | Requires LibreOffice (optional) |
+
+### Web & Structured Formats
+
+| Format   | Extensions      | Implementation       | Features                            | Notes                    |
+| -------- | --------------- | -------------------- | ----------------------------------- | ------------------------ |
+| **HTML** | `.html`, `.htm` | Python (markdownify) | Image extraction, link preservation | Web pages                |
+| **XML**  | `.xml`          | Rust (quick-xml)     | Streaming parser, element tracking  | Multi-GB file support    |
+| **SVG**  | `.svg`          | Rust (quick-xml)     | XML extraction                      | Scalable vector graphics |
+| **JSON** | `.json`         | Python (stdlib)      | Intelligent text field detection    | Structured data          |
+| **YAML** | `.yaml`, `.yml` | Python (pyyaml)      | Nested structure preservation       | Configuration files      |
+| **TOML** | `.toml`         | Python (stdlib)      | Structure preservation              | Configuration files      |
+
+### Email Formats
+
+| Format  | Extensions | Implementation     | Attachment Extraction | Metadata | Notes                  |
+| ------- | ---------- | ------------------ | --------------------- | -------- | ---------------------- |
+| **EML** | `.eml`     | Rust (mail-parser) | ✅                    | ✅ Full  | RFC 822 email messages |
+| **MSG** | `.msg`     | Rust (mail-parser) | ✅                    | ✅ Full  | Outlook email messages |
+
+### Academic & Technical Formats
+
+| Format               | Extensions | Implementation | Features                | Notes                |
+| -------------------- | ---------- | -------------- | ----------------------- | -------------------- |
+| **LaTeX**            | `.tex`     | Pandoc         | Math formula extraction | TeX documents        |
+| **BibTeX**           | `.bib`     | Pandoc         | Bibliography parsing    | Citation databases   |
+| **Jupyter**          | `.ipynb`   | Pandoc         | Code cell extraction    | Jupyter notebooks    |
+| **reStructuredText** | `.rst`     | Pandoc         | Directive parsing       | Python documentation |
+| **Org Mode**         | `.org`     | Pandoc         | Outline structure       | Emacs Org files      |
+
+**Total Supported Formats**: 50+ file types across 8 categories
 
 ## 📊 Performance
 
