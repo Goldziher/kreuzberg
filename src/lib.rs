@@ -10,6 +10,7 @@ mod pptx;
 mod quality;
 mod string_utils;
 mod table_processing;
+mod text;
 mod token_reduction;
 mod xml;
 
@@ -122,6 +123,7 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<EmailAttachmentDTO>()?;
 
     xml::register_xml_functions(m)?;
+    text::register_text_functions(m)?;
 
     Ok(())
 }

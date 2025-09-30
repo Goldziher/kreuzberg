@@ -222,3 +222,25 @@ class XmlExtractionResult:
     def __init__(self, content: str, element_count: int, unique_elements: list[str]) -> None: ...
 
 def parse_xml(xml_bytes: bytes, preserve_whitespace: bool) -> XmlExtractionResult: ...
+
+class TextExtractionResult:
+    content: str
+    line_count: int
+    word_count: int
+    character_count: int
+    headers: list[str] | None
+    links: list[tuple[str, str]] | None
+    code_blocks: list[tuple[str, str]] | None
+
+    def __init__(
+        self,
+        content: str,
+        line_count: int,
+        word_count: int,
+        character_count: int,
+        headers: list[str] | None,
+        links: list[tuple[str, str]] | None,
+        code_blocks: list[tuple[str, str]] | None,
+    ) -> None: ...
+
+def parse_text(text_bytes: bytes, is_markdown: bool) -> TextExtractionResult: ...

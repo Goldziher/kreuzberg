@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from anyio import Path as AsyncPath
 
 from kreuzberg._extractors._base import Extractor
-from kreuzberg._internal_bindings import safe_decode
+from kreuzberg._internal_bindings import TextExtractionResult, parse_text
 from kreuzberg._types import ExtractionResult, normalize_metadata
 from kreuzberg._utils._sync import run_sync
 
@@ -16,6 +15,10 @@ if TYPE_CHECKING:
 
 class PlainTextExtractor(Extractor):
     """Extract and analyze plain text and markdown files.
+
+    Uses Rust-powered streaming parser for memory-efficient processing
+    of large text files. Can handle multi-GB files through line-by-line
+    streaming.
 
     Supports MIME types:
     - text/plain
@@ -37,11 +40,13 @@ class PlainTextExtractor(Extractor):
         return await self.extract_bytes_async(content)
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
-        text = safe_decode(content)
-        metadata = self._extract_metadata(text)
+        is_markdown = self.mime_type in {"text/markdown", "text/x-markdown"}
+        rust_result: TextExtractionResult = parse_text(content, is_markdown)
+
+        metadata = self._convert_rust_metadata_to_dict(rust_result, is_markdown)
 
         result = ExtractionResult(
-            content=text,
+            content=rust_result.content,
             mime_type=self.mime_type,
             metadata=normalize_metadata(metadata),
         )
@@ -52,36 +57,22 @@ class PlainTextExtractor(Extractor):
         content = path.read_bytes()
         return self.extract_bytes_sync(content)
 
-    def _extract_metadata(self, text: str) -> dict[str, Any]:
-        """Extract metadata from text content."""
-        metadata: dict[str, Any] = {}
+    def _convert_rust_metadata_to_dict(self, rust_result: TextExtractionResult, is_markdown: bool) -> dict[str, Any]:
+        """Convert Rust TextExtractionResult to metadata dict."""
+        metadata: dict[str, Any] = {
+            "line_count": rust_result.line_count,
+            "word_count": rust_result.word_count,
+            "character_count": rust_result.character_count,
+        }
 
-        lines = text.splitlines()
-        metadata["line_count"] = len(lines)
-        metadata["word_count"] = len(text.split())
-        metadata["character_count"] = len(text)
+        if is_markdown:
+            if rust_result.headers:
+                metadata["headers"] = rust_result.headers
 
-        if self.mime_type in {"text/markdown", "text/x-markdown"}:
-            metadata.update(self._extract_markdown_metadata(text))
+            if rust_result.links:
+                metadata["links"] = [{"text": text, "url": url} for text, url in rust_result.links]
 
-        return metadata
-
-    def _extract_markdown_metadata(self, text: str) -> dict[str, Any]:
-        """Extract markdown-specific metadata."""
-        metadata: dict[str, Any] = {}
-
-        headers = re.findall(r"^#{1,6}\s+(.+)$", text, re.MULTILINE)
-        if headers:
-            metadata["headers"] = headers
-
-        links = re.findall(r"\[([^\]]+)\]\(([^)]+)\)", text)
-        if links:
-            metadata["links"] = [{"text": link[0], "url": link[1]} for link in links]
-
-        code_blocks = re.findall(r"```(\w*)\n(.*?)```", text, re.DOTALL)
-        if code_blocks:
-            metadata["code_blocks"] = [
-                {"language": lang or "plain", "code": code.strip()} for lang, code in code_blocks
-            ]
+            if rust_result.code_blocks:
+                metadata["code_blocks"] = [{"language": lang, "code": code} for lang, code in rust_result.code_blocks]
 
         return metadata
