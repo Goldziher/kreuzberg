@@ -20,7 +20,8 @@ class PresentationExtractor(Extractor):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._extractor = PptxExtractorDTO(self.config.extract_images)
+        # V4: Image extraction enabled via config.images
+        self._extractor = PptxExtractorDTO(self.config.images is not None)
 
     async def extract_bytes_async(self, content: bytes) -> ExtractionResult:
         return self._extract_from_bytes(content)
@@ -40,7 +41,8 @@ class PresentationExtractor(Extractor):
             extraction_result = self._extractor.extract_from_bytes(content)
 
             images = []
-            if self.config.extract_images:
+            # V4: Image extraction enabled via config.images
+            if self.config.images is not None:
                 images = [
                     ExtractedImage(data=bytes(img.data), format=img.format, page_number=img.slide_number)
                     for img in extraction_result.images
@@ -68,7 +70,8 @@ class PresentationExtractor(Extractor):
             extraction_result = self._extractor.extract_from_path(path)
 
             images = []
-            if self.config.extract_images:
+            # V4: Image extraction enabled via config.images
+            if self.config.images is not None:
                 images = [
                     ExtractedImage(data=bytes(img.data), format=img.format, page_number=img.slide_number)
                     for img in extraction_result.images

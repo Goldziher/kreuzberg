@@ -6,6 +6,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from kreuzberg._utils._serialization import to_dict
+
 if TYPE_CHECKING:
     from kreuzberg._types import ExtractionConfig, ExtractionResult
 
@@ -31,17 +33,10 @@ class DocumentCache:
         except OSError:
             file_info = {"path": str(path), "size": 0, "mtime": 0}
 
+        # V4: Convert entire config to dict for cache key
         config_info = {}
         if config:
-            config_info = {
-                "force_ocr": config.force_ocr,
-                "ocr_backend": config.ocr_backend,
-                "extract_tables": config.extract_tables,
-                "chunk_content": config.chunk_content,
-                "max_chars": config.max_chars,
-                "max_overlap": config.max_overlap,
-                "auto_detect_document_type": config.auto_detect_document_type,
-            }
+            config_info = to_dict(config, include_none=False)
 
         cache_data = {**file_info, **config_info}
         cache_str = str(sorted(cache_data.items()))

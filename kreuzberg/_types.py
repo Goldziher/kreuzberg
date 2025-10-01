@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Awaitable, Callable, Mapping
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypedDict
 
-import langcodes
 import msgspec
 
 from kreuzberg._constants import DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OVERLAP
@@ -16,9 +14,10 @@ from kreuzberg._utils._table import (
     export_table_to_tsv,
     extract_table_structure_info,
 )
-from kreuzberg.exceptions import ValidationError
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from kreuzberg._utils._device import DeviceType
 
 if sys.version_info < (3, 11):  # pragma: no cover
@@ -33,20 +32,6 @@ if TYPE_CHECKING:
 OcrBackendType = Literal["tesseract", "easyocr", "paddleocr"]
 OutputFormatType = Literal["text", "tsv", "hocr", "markdown"]
 ErrorContextType = Literal["batch_processing", "optional_feature", "single_extraction", "unknown"]
-
-
-class ConfigDict:
-    def to_dict(self, include_none: bool = False) -> dict[str, Any]:
-        result = msgspec.to_builtins(
-            self,
-            builtin_types=(type(None),),
-            order="deterministic",
-        )
-
-        if include_none:
-            return result  # type: ignore[no-any-return]
-
-        return {k: v for k, v in result.items() if v is not None}
 
 
 class PSMMode(Enum):
@@ -74,8 +59,22 @@ class PSMMode(Enum):
     """Treat the image as a single character."""
 
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class TesseractConfig(ConfigDict):
+class OCRBackendConfig(msgspec.Struct, tag_field="backend", kw_only=True, frozen=True):
+    """Base class for OCR backend configurations.
+
+    Uses msgspec tagged unions for automatic backend discrimination during serialization.
+    """
+
+
+class TesseractConfig(OCRBackendConfig, tag="tesseract", kw_only=True, frozen=True):
+    """Tesseract OCR configuration.
+
+    V4 defaults optimized for best quality:
+    - Markdown output format with table extraction enabled
+    - English language
+    - Auto page segmentation
+    """
+
     classify_use_pre_adapted_templates: bool = True
     """Whether to use pre-adapted templates during classification to improve recognition accuracy."""
     language: str = "eng"
@@ -106,8 +105,8 @@ class TesseractConfig(ConfigDict):
     """Enable or disable specific thresholding methods during image preprocessing for better OCR accuracy."""
     output_format: OutputFormatType = "markdown"
     """Output format: 'markdown' (default), 'text', 'tsv' (for structured data), or 'hocr' (HTML-based)."""
-    enable_table_detection: bool = False
-    """Enable table structure detection from TSV output."""
+    enable_table_detection: bool = True
+    """Enable table structure detection from TSV output (enabled by default in V4)."""
     table_column_threshold: int = 20
     """Pixel threshold for column clustering in table detection."""
     table_row_threshold_ratio: float = 0.5
@@ -116,8 +115,9 @@ class TesseractConfig(ConfigDict):
     """Minimum confidence score to include a word in table extraction."""
 
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class EasyOCRConfig(ConfigDict):
+class EasyOCRConfig(OCRBackendConfig, tag="easyocr", kw_only=True, frozen=True):
+    """EasyOCR backend configuration."""
+
     add_margin: float = 0.1
     """Extend bounding boxes in all directions."""
     adjust_contrast: float = 0.5
@@ -132,9 +132,9 @@ class EasyOCRConfig(ConfigDict):
     """Decoder method. Options: 'greedy', 'beamsearch', 'wordbeamsearch'."""
     height_ths: float = 0.5
     """Maximum difference in box height for merging."""
-    language: str | list[str] = "en"
+    language: str | tuple[str, ...] = "en"
     """Language or languages to use for OCR. Can be a single language code (e.g., 'en'),
-    a comma-separated string of language codes (e.g., 'en,ch_sim'), or a list of language codes."""
+    or a tuple of language codes (e.g., ('en', 'ch_sim')). Lists will be automatically converted to tuples."""
     link_threshold: float = 0.4
     """Link confidence threshold."""
     low_text: float = 0.4
@@ -143,8 +143,8 @@ class EasyOCRConfig(ConfigDict):
     """Image magnification ratio."""
     min_size: int = 10
     """Minimum text box size in pixels."""
-    rotation_info: list[int] | None = None
-    """List of angles to try for detection."""
+    rotation_info: tuple[int, ...] | None = None
+    """Tuple of angles to try for detection. Lists will be automatically converted to tuples."""
     slope_ths: float = 0.1
     """Maximum slope for merging text boxes."""
     text_threshold: float = 0.7
@@ -164,15 +164,10 @@ class EasyOCRConfig(ConfigDict):
     ycenter_ths: float = 0.5
     """Maximum shift in y direction for merging."""
 
-    def __post_init__(self) -> None:
-        if isinstance(self.language, list):
-            object.__setattr__(self, "language", tuple(self.language))
-        if isinstance(self.rotation_info, list):
-            object.__setattr__(self, "rotation_info", tuple(self.rotation_info))
 
+class PaddleOCRConfig(OCRBackendConfig, tag="paddleocr", kw_only=True, frozen=True):
+    """PaddleOCR backend configuration."""
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class PaddleOCRConfig(ConfigDict):
     cls_image_shape: str = "3,48,192"
     """Image shape for classification algorithm in format 'channels,height,width'."""
     det_algorithm: Literal["DB", "EAST", "SAST", "PSE", "FCE", "PAN", "CT", "DB++", "Layout"] = "DB"
@@ -238,114 +233,91 @@ class PaddleOCRConfig(ConfigDict):
     """Whether to use text line orientation classification model (replaces use_angle_cls)."""
 
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class VisionTablesConfig(ConfigDict):
-    """Configuration for vision-based table extraction using TATR v1.1 models.
+# Feature Extraction Configs
 
-    This configuration controls table detection and structure recognition
-    using Microsoft's Table Transformer models.
+
+class ChunkingConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """Configuration for text chunking.
+
+    When enabled via ExtractionConfig.chunking, splits extracted text into smaller chunks
+    for downstream processing (e.g., LLM context windows, vector databases).
     """
 
+    max_chars: int = DEFAULT_MAX_CHARACTERS
+    """Maximum size of each chunk in characters."""
+    max_overlap: int = DEFAULT_MAX_OVERLAP
+    """Overlap between consecutive chunks in characters."""
+
+
+class TableExtractionConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """Configuration for table extraction using vision models.
+
+    Extracts tables from documents using Microsoft's Table Transformer models.
+    Requires the 'gmft' optional dependency.
+    """
+
+    extract_from_ocr: bool = False
+    """Extract tables from Tesseract OCR TSV output (Tesseract backend only)."""
     detection_model: str = "microsoft/table-transformer-detection"
     """HuggingFace model path for table detection."""
-
     structure_model: str = "microsoft/table-transformer-structure-recognition-v1.1-all"
-    """HuggingFace model path for table structure recognition.
-
-    Available v1.1 models:
-    - microsoft/table-transformer-structure-recognition-v1.1-all (PubTables1M + FinTabNet)
-    - microsoft/table-transformer-structure-recognition-v1.1-pub (PubTables1M only)
-    - microsoft/table-transformer-structure-recognition-v1.1-fin (FinTabNet only)
-    """
-
+    """HuggingFace model path for table structure recognition."""
     model_cache_dir: str | None = None
     """Custom cache directory for model downloads. If None, uses HuggingFace default."""
-
     detection_threshold: float = 0.7
-    """Confidence threshold for table detection (0.0-1.0).
-
-    Microsoft's recommended default is 0.7 for balanced precision/recall."""
-
+    """Confidence threshold for table detection (0.0-1.0)."""
     detection_device: str = "auto"
     """Device for detection model ('auto', 'cpu', 'cuda', 'cuda:0', etc)."""
-
     structure_threshold: float = 0.5
-    """Confidence threshold for structure elements (rows/columns).
-
-    Lower than detection threshold to capture more structural details within detected tables."""
-
+    """Confidence threshold for structure elements (rows/columns)."""
     structure_device: str = "auto"
     """Device for structure model ('auto', 'cpu', 'cuda', 'cuda:0', etc)."""
-
     crop_padding: int = 20
     """Pixels to add around detected tables when cropping."""
-
     min_table_area: int = 1000
     """Minimum table area in pixels² to process."""
-
     max_table_area: int | None = None
     """Maximum table area in pixels² to process. None = no limit."""
-
     cell_confidence_table: float = 0.3
     """Confidence threshold for table cells."""
-
     cell_confidence_column: float = 0.3
     """Confidence threshold for columns."""
-
     cell_confidence_row: float = 0.3
     """Confidence threshold for rows."""
-
     cell_confidence_column_header: float = 0.3
     """Confidence threshold for column headers."""
-
     cell_confidence_projected_row_header: float = 0.5
     """Confidence threshold for projected row headers."""
-
     cell_confidence_spanning_cell: float = 0.5
     """Confidence threshold for spanning cells."""
-
     total_overlap_reject_threshold: float = 0.9
     """Reject table if total overlap > this fraction of table area."""
-
     total_overlap_warn_threshold: float = 0.1
     """Warn if total overlap > this fraction of table area."""
-
     iob_reject_threshold: float = 0.05
     """Reject if intersection-over-box between text and cell < this value."""
-
     iob_warn_threshold: float = 0.5
     """Warn if intersection-over-box between text and cell < this value."""
-
     large_table_threshold: int = 10
     """Row count threshold to trigger large table handling."""
-
     large_table_row_overlap_threshold: float = 0.2
     """Overlap threshold to trigger large table handling."""
-
     large_table_maximum_rows: int = 1000
     """Maximum rows allowed in a large table."""
-
     force_large_table_assumption: bool | None = None
     """Force large table handling regardless of thresholds."""
-
     remove_null_rows: bool = True
     """Remove rows with no text content."""
-
     enable_multi_header: bool = False
     """Enable multi-level column headers in output."""
-
     semantic_spanning_cells: bool = False
     """Enable semantic interpretation of spanning cells."""
-
     enable_model_caching: bool = True
     """Cache loaded models for reuse."""
-
     batch_size: int = 1
     """Batch size for processing multiple tables."""
-
     mixed_precision: bool = False
     """Use mixed precision (FP16) when available for faster inference."""
-
     verbosity: int = 1
     """Verbosity level (0=errors, 1=warnings, 2=info, 3=debug)."""
 
@@ -363,21 +335,19 @@ class VisionTablesConfig(ConfigDict):
         }
 
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class ImageOCRConfig(ConfigDict):
-    """Configuration for OCR processing of extracted images."""
+class ImageExtractionConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """Configuration for image extraction from documents.
 
-    enabled: bool = False
-    """Whether to perform OCR on extracted images."""
-    backend: OcrBackendType | None = None
-    """OCR backend for image OCR. Falls back to main ocr_backend when None."""
-    backend_config: TesseractConfig | PaddleOCRConfig | EasyOCRConfig | None = None
-    """Backend-specific configuration for image OCR."""
-    min_dimensions: tuple[int, int] = (50, 50)
-    """Minimum (width, height) in pixels for image OCR eligibility."""
-    max_dimensions: tuple[int, int] = (10000, 10000)
-    """Maximum (width, height) in pixels for image OCR eligibility."""
-    allowed_formats: frozenset[str] = frozenset(
+    Controls how images embedded in documents are extracted and optionally processed with OCR.
+    """
+
+    deduplicate: bool = True
+    """Remove duplicate images using CRC32 checksums."""
+    ocr_min_dimensions: tuple[int, int] | None = None
+    """Minimum (width, height) in pixels for OCR on extracted images. None = disabled."""
+    ocr_max_dimensions: tuple[int, int] = (10000, 10000)
+    """Maximum (width, height) in pixels for OCR on extracted images."""
+    ocr_allowed_formats: frozenset[str] = frozenset(
         {
             "jpg",
             "jpeg",
@@ -398,51 +368,39 @@ class ImageOCRConfig(ConfigDict):
         }
     )
     """Allowed image formats for OCR processing (lowercase, without dot)."""
-    batch_size: int = 4
+    ocr_batch_size: int = 4
     """Number of images to process in parallel for OCR."""
-    timeout_seconds: int = 30
+    ocr_timeout_seconds: int = 30
     """Maximum time in seconds for OCR processing per image."""
 
-    def __post_init__(self) -> None:
-        if isinstance(self.allowed_formats, list):
-            object.__setattr__(self, "allowed_formats", frozenset(self.allowed_formats))
 
+class LanguageDetectionConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """Configuration for automatic language detection."""
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class LanguageDetectionConfig(ConfigDict):
     model: Literal["lite", "full", "auto"] = "auto"
-    """Language detection model to use:
-    - 'lite': Smaller, faster model with good accuracy
-    - 'full': Larger model with highest accuracy
-    - 'auto': Automatically choose based on memory availability (default)
-    """
+    """Language detection model: 'lite' (fast), 'full' (accurate), 'auto' (choose based on memory)."""
     top_k: int = 3
     """Maximum number of languages to return for multilingual detection."""
     multilingual: bool = False
-    """If True, uses multilingual detection to handle mixed-language text.
-    If False, uses single language detection."""
+    """Enable multilingual detection to handle mixed-language text."""
     cache_dir: str | None = None
     """Custom directory for model cache. If None, uses system default."""
 
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class SpacyEntityExtractionConfig(ConfigDict):
+class KeywordExtractionConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """Configuration for keyword extraction."""
+
+    count: int = 10
+    """Number of keywords to extract."""
+
+
+class EntityExtractionConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """Configuration for named entity extraction using spaCy."""
+
     model_cache_dir: str | Path | None = None
     """Directory to cache spaCy models. If None, uses spaCy's default."""
-    language_models: dict[str, str] | tuple[tuple[str, str], ...] | None = None
-    """Mapping of language codes to spaCy model names.
-
-    If None, uses default mappings:
-    - en: en_core_web_sm
-    - de: de_core_news_sm
-    - fr: fr_core_news_sm
-    - es: es_core_news_sm
-    - pt: pt_core_news_sm
-    - it: it_core_news_sm
-    - nl: nl_core_news_sm
-    - zh: zh_core_web_sm
-    - ja: ja_core_news_sm
-    """
+    language_models: tuple[tuple[str, str], ...] | None = None
+    """Mapping of language codes to spaCy model names. If None, uses default mappings."""
     fallback_to_multilingual: bool = True
     """If True and language-specific model fails, try xx_ent_wiki_sm (multilingual)."""
     max_doc_length: int = 1000000
@@ -450,18 +408,9 @@ class SpacyEntityExtractionConfig(ConfigDict):
     batch_size: int = 1000
     """Batch size for processing multiple texts."""
 
-    def __post_init__(self) -> None:
-        if isinstance(self.model_cache_dir, Path):
-            object.__setattr__(self, "model_cache_dir", str(self.model_cache_dir))
-
-        if self.language_models is None:
-            object.__setattr__(self, "language_models", self._get_default_language_models())
-
-        if isinstance(self.language_models, dict):
-            object.__setattr__(self, "language_models", tuple(sorted(self.language_models.items())))
-
     @staticmethod
-    def _get_default_language_models() -> dict[str, str]:
+    def get_default_language_models() -> dict[str, str]:
+        """Get default spaCy model mappings for supported languages."""
         return {
             "en": "en_core_web_sm",
             "de": "de_core_news_sm",
@@ -491,10 +440,8 @@ class SpacyEntityExtractionConfig(ConfigDict):
         }
 
     def get_model_for_language(self, language_code: str) -> str | None:
-        if not self.language_models:
-            return None
-
-        models_dict = dict(self.language_models) if isinstance(self.language_models, tuple) else self.language_models
+        """Get the spaCy model name for a given language code."""
+        models_dict = self.get_default_language_models() if not self.language_models else dict(self.language_models)
 
         if language_code in models_dict:
             return models_dict[language_code]
@@ -506,6 +453,7 @@ class SpacyEntityExtractionConfig(ConfigDict):
         return None
 
     def get_fallback_model(self) -> str | None:
+        """Get the fallback multilingual model if enabled."""
         return "xx_ent_wiki_sm" if self.fallback_to_multilingual else None
 
 
@@ -948,199 +896,103 @@ PostProcessingHook = Callable[[ExtractionResult], ExtractionResult | Awaitable[E
 ValidationHook = Callable[[ExtractionResult], None | Awaitable[None]]
 
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class JSONExtractionConfig(ConfigDict):
+class JSONExtractionConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """Configuration for enhanced JSON extraction."""
+
     extract_schema: bool = False
     """Extract and include JSON schema information in metadata."""
     custom_text_field_patterns: frozenset[str] | None = None
     """Custom patterns to identify text fields beyond default keywords."""
     max_depth: int = 10
-    """Maximum nesting depth to process in JSON structures."""
+    """Maximum nesting depth to process in JSON structures (must be positive)."""
     array_item_limit: int = 1000
-    """Maximum number of array items to process to prevent memory issues."""
+    """Maximum number of array items to process to prevent memory issues (must be positive)."""
     include_type_info: bool = False
     """Include data type information in extracted content."""
     flatten_nested_objects: bool = True
     """Flatten nested objects using dot notation for better text extraction."""
 
-    def __post_init__(self) -> None:
-        if self.max_depth <= 0:
-            raise ValidationError("max_depth must be positive", context={"max_depth": self.max_depth})
-        if self.array_item_limit <= 0:
-            raise ValidationError(
-                "array_item_limit must be positive", context={"array_item_limit": self.array_item_limit}
-            )
 
+class ExtractionConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """V4 extraction configuration with flat structure and tagged unions.
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class ExtractionConfig(ConfigDict):
+    Breaking changes from V3:
+    - OCR: Use tagged union (ocr=TesseractConfig()) instead of ocr_backend + ocr_config
+    - Features: Use None = disabled pattern (tables=None) instead of extract_tables=False
+    - Simplified: No more redundant flags, cleaner structure
+    """
+
+    # Model cache
     model_cache_dir: str | None = None
-    """Global cache directory for all ML models (vision-tables, OCR, spaCy, etc.).
+    """Global cache directory for all ML models (OCR, vision-tables, spaCy, etc.).
+    Overrides individual model cache settings. Can also be set via KREUZBERG_MODEL_CACHE or HF_HOME."""
 
-    If set, this overrides individual model cache settings.
-    Can also be set via KREUZBERG_MODEL_CACHE or HF_HOME environment variables."""
+    # OCR configuration (tagged union)
+    ocr: TesseractConfig | EasyOCRConfig | PaddleOCRConfig | None = TesseractConfig()
+    """OCR backend configuration. None = OCR disabled. Default: Tesseract with markdown + table detection."""
     force_ocr: bool = False
-    """Whether to force OCR."""
-    chunk_content: bool = False
-    """Whether to chunk the content into smaller chunks."""
-    extract_tables: bool = False
-    """Whether to extract tables from the content. This requires the 'vision-tables' dependency."""
-    extract_tables_from_ocr: bool = False
-    """Extract tables from OCR output using TSV format (Tesseract only)."""
-    extract_images: bool = False
-    """Whether to extract images from documents."""
-    deduplicate_images: bool = True
-    """Whether to remove duplicate images using CRC32 checksums."""
-    image_ocr_config: ImageOCRConfig | None = None
-    """Configuration for OCR processing of extracted images."""
-    max_chars: int = DEFAULT_MAX_CHARACTERS
-    """The size of each chunk in characters."""
-    max_overlap: int = DEFAULT_MAX_OVERLAP
-    """The overlap between chunks in characters."""
-    ocr_backend: OcrBackendType | None = "tesseract"
-    """The OCR backend to use.
+    """Force OCR even for searchable PDFs and text-based documents."""
 
-    Notes:
-        - If set to 'None', OCR will not be performed.
-    """
-    ocr_config: TesseractConfig | PaddleOCRConfig | EasyOCRConfig | None = None
-    """Configuration to pass to the OCR backend."""
-    vision_tables_config: VisionTablesConfig | None = None
-    """Vision-based table extraction configuration."""
-    post_processing_hooks: list[PostProcessingHook] | None = None
-    """Post processing hooks to call after processing is done and before the final result is returned."""
-    validators: list[ValidationHook] | None = None
-    """Validation hooks to call after processing is done and before post-processing and result return."""
-    extract_entities: bool = False
-    """Whether to extract named entities from the content."""
-    extract_keywords: bool = False
-    """Whether to extract keywords from the content."""
-    keyword_count: int = 10
-    """Number of keywords to extract if extract_keywords is True."""
-    custom_entity_patterns: frozenset[tuple[str, str]] | None = None
-    """Custom entity patterns as a frozenset of (entity_type, regex_pattern) tuples."""
-    auto_detect_language: bool = False
-    """Whether to automatically detect language and configure OCR accordingly."""
-    language_detection_model: Literal["lite", "full", "auto"] = "auto"
-    """Language detection model to use when auto_detect_language is True.
-    - 'lite': Smaller, faster model with good accuracy
-    - 'full': Larger model with highest accuracy
-    - 'auto': Automatically choose based on memory availability (default)
-    """
-    language_detection_config: LanguageDetectionConfig | None = None
-    """Configuration for language detection. If None, uses default settings with language_detection_model."""
-    spacy_entity_extraction_config: SpacyEntityExtractionConfig | None = None
-    """Configuration for spaCy entity extraction. If None, uses default settings."""
-    auto_detect_document_type: bool = False
-    """Whether to automatically detect the document type."""
-    document_type_confidence_threshold: float = 0.5
-    """Confidence threshold for document type detection."""
-    document_classification_mode: Literal["text", "vision"] = "text"
-    """The mode to use for document classification."""
-    enable_quality_processing: bool = True
-    """Whether to apply quality post-processing to improve extraction results."""
-    pdf_password: str | list[str] = ""
-    """Password(s) for encrypted PDF files. Can be a single password or list of passwords to try in sequence. Only used when crypto extra is installed."""
-    html_to_markdown_config: HTMLToMarkdownConfig | None = None
-    """Configuration for HTML to Markdown conversion. If None, uses default settings."""
-    json_config: JSONExtractionConfig | None = None
-    """Configuration for enhanced JSON extraction features. If None, uses standard JSON processing."""
-    use_cache: bool = True
-    """Whether to use caching for extraction results. Set to False to disable all caching."""
-    target_dpi: int = 150
-    """Target DPI for OCR processing. Images and PDF pages will be scaled to this DPI for optimal OCR results."""
-    max_image_dimension: int = 25000
-    """Maximum allowed pixel dimension (width or height) for processed images to prevent memory issues."""
-    auto_adjust_dpi: bool = True
-    """Whether to automatically adjust DPI based on image dimensions to stay within max_image_dimension limits."""
-    min_dpi: int = 72
-    """Minimum DPI threshold when auto-adjusting DPI."""
-    max_dpi: int = 600
-    """Maximum DPI threshold when auto-adjusting DPI."""
+    # Feature configurations (None = feature disabled)
+    chunking: ChunkingConfig | None = None
+    """Text chunking configuration. None = chunking disabled."""
+    tables: TableExtractionConfig | None = None
+    """Table extraction configuration. None = table extraction disabled."""
+    images: ImageExtractionConfig | None = None
+    """Image extraction configuration. None = image extraction disabled."""
+    language_detection: LanguageDetectionConfig | None = None
+    """Language detection configuration. None = language detection disabled."""
+    entities: EntityExtractionConfig | None = None
+    """Named entity extraction configuration. None = entity extraction disabled."""
+    keywords: KeywordExtractionConfig | None = None
+    """Keyword extraction configuration. None = keyword extraction disabled."""
+
+    # Format-specific configurations
+    html_to_markdown: HTMLToMarkdownConfig | None = None
+    """HTML to Markdown conversion configuration. None = use default settings."""
+    json_extraction: JSONExtractionConfig | None = None
+    """JSON extraction configuration. None = use standard JSON processing."""
     token_reduction: TokenReductionConfig | None = None
-    """Configuration for token reduction to optimize output size while preserving meaning."""
+    """Token reduction configuration. None = token reduction disabled."""
 
-    def __post_init__(self) -> None:
-        if self.custom_entity_patterns is not None and isinstance(self.custom_entity_patterns, dict):
-            object.__setattr__(self, "custom_entity_patterns", frozenset(self.custom_entity_patterns.items()))
-        if self.post_processing_hooks is not None and isinstance(self.post_processing_hooks, list):
-            object.__setattr__(self, "post_processing_hooks", tuple(self.post_processing_hooks))
-        if self.validators is not None and isinstance(self.validators, list):
-            object.__setattr__(self, "validators", tuple(self.validators))
+    # Global settings
+    pdf_password: str | tuple[str, ...] = ""
+    """Password(s) for encrypted PDFs. Single string or tuple of passwords to try."""
+    custom_entity_patterns: frozenset[tuple[str, str]] | None = None
+    """Custom entity patterns as frozenset of (entity_type, regex_pattern) tuples."""
+    post_processing_hooks: tuple[PostProcessingHook, ...] | None = None
+    """Post-processing hooks called after extraction, before final result."""
+    validators: tuple[ValidationHook, ...] | None = None
+    """Validation hooks called after extraction, before post-processing."""
+    use_cache: bool = True
+    """Enable caching for extraction results. False = disable all caching."""
+    enable_quality_processing: bool = True
+    """Apply quality post-processing to improve extraction results."""
 
-        if isinstance(self.pdf_password, list):
-            object.__setattr__(self, "pdf_password", tuple(self.pdf_password))
+    # DPI and image settings
+    target_dpi: int = 150
+    """Target DPI for OCR processing. Images/PDFs scaled to this DPI."""
+    max_image_dimension: int = 25000
+    """Maximum pixel dimension (width or height) to prevent memory issues."""
+    auto_adjust_dpi: bool = True
+    """Auto-adjust DPI based on dimensions to stay within max_image_dimension."""
+    min_dpi: int = 72
+    """Minimum DPI threshold when auto-adjusting."""
+    max_dpi: int = 600
+    """Maximum DPI threshold when auto-adjusting."""
 
-        if self.ocr_backend is None and self.ocr_config is not None:
-            raise ValidationError("'ocr_backend' is None but 'ocr_config' is provided")
-
-        if self.ocr_config is not None and (
-            (self.ocr_backend == "tesseract" and not isinstance(self.ocr_config, TesseractConfig))
-            or (self.ocr_backend == "easyocr" and not isinstance(self.ocr_config, EasyOCRConfig))
-            or (self.ocr_backend == "paddleocr" and not isinstance(self.ocr_config, PaddleOCRConfig))
-        ):
-            raise ValidationError(
-                "incompatible 'ocr_config' value provided for 'ocr_backend'",
-                context={"ocr_backend": self.ocr_backend, "ocr_config": type(self.ocr_config).__name__},
-            )
-
-        if self.target_dpi <= 0:
-            raise ValidationError("target_dpi must be positive", context={"target_dpi": self.target_dpi})
-        if self.min_dpi <= 0:
-            raise ValidationError("min_dpi must be positive", context={"min_dpi": self.min_dpi})
-        if self.max_dpi <= 0:
-            raise ValidationError("max_dpi must be positive", context={"max_dpi": self.max_dpi})
-        if self.min_dpi >= self.max_dpi:
-            raise ValidationError(
-                "min_dpi must be less than max_dpi", context={"min_dpi": self.min_dpi, "max_dpi": self.max_dpi}
-            )
-        if self.max_image_dimension <= 0:
-            raise ValidationError(
-                "max_image_dimension must be positive", context={"max_image_dimension": self.max_image_dimension}
-            )
-        if not (self.min_dpi <= self.target_dpi <= self.max_dpi):
-            raise ValidationError(
-                "target_dpi must be between min_dpi and max_dpi",
-                context={"target_dpi": self.target_dpi, "min_dpi": self.min_dpi, "max_dpi": self.max_dpi},
-            )
-
-    def get_config_dict(self) -> dict[str, Any]:
-        match self.ocr_backend:
-            case None:
-                return {"use_cache": self.use_cache}
-            case _ if self.ocr_config is not None:
-                config_dict = asdict(self.ocr_config)
-                config_dict["use_cache"] = self.use_cache
-                return config_dict
-            case "tesseract":
-                config_dict = asdict(TesseractConfig())
-            case "easyocr":
-                config_dict = asdict(EasyOCRConfig())
-            case _:
-                config_dict = asdict(PaddleOCRConfig())
-
-        config_dict["use_cache"] = self.use_cache
-        return config_dict
-
-    def to_dict(self, include_none: bool = False) -> dict[str, Any]:
-        result = msgspec.to_builtins(
-            self,
-            builtin_types=(type(None),),
-            order="deterministic",
-        )
-
-        for field_name, value in result.items():
-            if hasattr(value, "to_dict"):
-                result[field_name] = value.to_dict(include_none=include_none)
-
-        if include_none:
-            return result  # type: ignore[no-any-return]
-
-        return {k: v for k, v in result.items() if v is not None}
+    # Document classification (deprecated, may be removed in future)
+    auto_detect_document_type: bool = False
+    """Auto-detect document type (deprecated)."""
+    document_type_confidence_threshold: float = 0.5
+    """Confidence threshold for document type detection (deprecated)."""
+    document_classification_mode: Literal["text", "vision"] = "text"
+    """Document classification mode (deprecated)."""
 
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class HTMLToMarkdownConfig:
+class HTMLToMarkdownConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """Configuration for HTML to Markdown conversion."""
+
     autolinks: bool = True
     """Automatically convert valid URLs to Markdown links."""
     br_in_tables: bool = False
@@ -1151,8 +1003,8 @@ class HTMLToMarkdownConfig:
     """Default language identifier for fenced code blocks."""
     code_language_callback: Callable[[Any], str] | None = None
     """Function to dynamically determine code block language."""
-    convert: list[str] | None = None
-    """List of HTML tags to convert (None = all supported tags)."""
+    convert: tuple[str, ...] | None = None
+    """Tuple of HTML tags to convert (None = all supported tags)."""
     convert_as_inline: bool = False
     """Treat content as inline elements only."""
     custom_converters: Mapping[str, Callable[..., str]] | None = None
@@ -1171,7 +1023,7 @@ class HTMLToMarkdownConfig:
     """Style for markdown headings."""
     highlight_style: Literal["double-equal", "html", "bold"] = "double-equal"
     """Style for highlighting text."""
-    keep_inline_images_in: list[str] | None = None
+    keep_inline_images_in: tuple[str, ...] | None = None
     """Tags where inline images should be preserved."""
     list_indent_type: Literal["spaces", "tabs"] = "spaces"
     """Type of indentation to use for lists."""
@@ -1187,8 +1039,8 @@ class HTMLToMarkdownConfig:
     """Remove form elements during preprocessing."""
     remove_navigation: bool = True
     """Remove navigation elements during preprocessing."""
-    strip: list[str] | None = None
-    """List of HTML tags to remove from output."""
+    strip: tuple[str, ...] | None = None
+    """Tuple of HTML tags to remove from output."""
     strip_newlines: bool = False
     """Remove newlines from HTML input before processing."""
     strong_em_symbol: Literal["*", "_"] = "*"
@@ -1204,32 +1056,15 @@ class HTMLToMarkdownConfig:
     wrap_width: int = 80
     """Width for text wrapping."""
 
-    def to_dict(self) -> dict[str, Any]:
-        result = msgspec.to_builtins(self, builtin_types=(type(None),), order="deterministic")
-        return {k: v for k, v in result.items() if v is not None}
 
+class TokenReductionConfig(msgspec.Struct, kw_only=True, frozen=True):
+    """Configuration for token reduction to optimize output size while preserving meaning."""
 
-@dataclass(unsafe_hash=True, frozen=True, slots=True)
-class TokenReductionConfig:
     mode: Literal["off", "light", "moderate", "aggressive"] = "off"
+    """Token reduction mode: off (disabled), light, moderate, or aggressive."""
     preserve_markdown: bool = True
-    custom_stopwords: dict[str, list[str]] | None = field(default=None, compare=False, hash=False)
+    """Preserve markdown formatting during token reduction."""
+    custom_stopwords: dict[str, tuple[str, ...]] | None = None
+    """Custom stopwords per language for token reduction."""
     language_hint: str | None = None
-
-    def __post_init__(self) -> None:
-        if self.language_hint:
-            hint = self.language_hint.strip()
-
-            if not hint or len(hint) > 50 or any(c in hint for c in "\x00\r\n\t"):
-                object.__setattr__(self, "language_hint", None)
-                return
-
-            try:
-                normalized = langcodes.standardize_tag(hint)
-
-                lang = langcodes.Language.get(normalized).language
-
-                if lang and lang != hint:
-                    object.__setattr__(self, "language_hint", lang)
-            except (ValueError, AttributeError, TypeError):
-                object.__setattr__(self, "language_hint", None)
+    """Language hint for token reduction. Will be normalized to language code."""

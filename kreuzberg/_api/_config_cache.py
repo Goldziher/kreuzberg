@@ -13,13 +13,13 @@ from typing import Any
 from kreuzberg._config import discover_config
 from kreuzberg._types import (
     EasyOCRConfig,
+    EntityExtractionConfig,
     ExtractionConfig,
     HTMLToMarkdownConfig,
     LanguageDetectionConfig,
     PaddleOCRConfig,
-    SpacyEntityExtractionConfig,
+    TableExtractionConfig,
     TesseractConfig,
-    VisionTablesConfig,
 )
 from kreuzberg._utils._serialization import deserialize, serialize
 
@@ -84,9 +84,9 @@ def _cached_create_ocr_config(
 
 
 @lru_cache(maxsize=64)
-def _cached_create_vision_tables_config(config_json: str) -> VisionTablesConfig:
-    """Cache vision-based table extraction config creation."""
-    return VisionTablesConfig(**deserialize(config_json, dict[str, Any], json=True))
+def _cached_create_table_extraction_config(config_json: str) -> TableExtractionConfig:
+    """Cache table extraction config creation."""
+    return TableExtractionConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=64)
@@ -96,9 +96,9 @@ def _cached_create_language_detection_config(config_json: str) -> LanguageDetect
 
 
 @lru_cache(maxsize=64)
-def _cached_create_spacy_config(config_json: str) -> SpacyEntityExtractionConfig:
-    """Cache spaCy entity extraction config creation."""
-    return SpacyEntityExtractionConfig(**deserialize(config_json, dict[str, Any], json=True))
+def _cached_create_entity_extraction_config(config_json: str) -> EntityExtractionConfig:
+    """Cache entity extraction config creation."""
+    return EntityExtractionConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=64)
@@ -133,10 +133,10 @@ def create_ocr_config_cached(
     return _cached_create_ocr_config(ocr_backend, config_json)
 
 
-def create_vision_tables_config_cached(config_dict: dict[str, Any]) -> VisionTablesConfig:
-    """Cached version of vision-based table extraction config creation."""
+def create_table_extraction_config_cached(config_dict: dict[str, Any]) -> TableExtractionConfig:
+    """Cached version of table extraction config creation."""
     config_json = serialize(config_dict, json=True, sort_keys=True).decode()
-    return _cached_create_vision_tables_config(config_json)
+    return _cached_create_table_extraction_config(config_json)
 
 
 def create_language_detection_config_cached(config_dict: dict[str, Any]) -> LanguageDetectionConfig:
@@ -145,10 +145,10 @@ def create_language_detection_config_cached(config_dict: dict[str, Any]) -> Lang
     return _cached_create_language_detection_config(config_json)
 
 
-def create_spacy_config_cached(config_dict: dict[str, Any]) -> SpacyEntityExtractionConfig:
-    """Cached version of spaCy config creation."""
+def create_entity_extraction_config_cached(config_dict: dict[str, Any]) -> EntityExtractionConfig:
+    """Cached version of entity extraction config creation."""
     config_json = serialize(config_dict, json=True, sort_keys=True).decode()
-    return _cached_create_spacy_config(config_json)
+    return _cached_create_entity_extraction_config(config_json)
 
 
 def create_html_markdown_config_cached(config_dict: dict[str, Any]) -> HTMLToMarkdownConfig:
@@ -173,9 +173,9 @@ def clear_all_caches() -> None:
     """Clear all LRU caches."""
     _cached_discover_config.cache_clear()
     _cached_create_ocr_config.cache_clear()
-    _cached_create_vision_tables_config.cache_clear()
+    _cached_create_table_extraction_config.cache_clear()
     _cached_create_language_detection_config.cache_clear()
-    _cached_create_spacy_config.cache_clear()
+    _cached_create_entity_extraction_config.cache_clear()
     _cached_create_html_markdown_config.cache_clear()
     _cached_parse_header_config.cache_clear()
 
@@ -199,11 +199,11 @@ def get_cache_stats() -> dict[str, dict[str, int | None]]:
             "size": _cached_create_ocr_config.cache_info().currsize,
             "max_size": _cached_create_ocr_config.cache_info().maxsize,
         },
-        "vision_tables_config": {
-            "hits": _cached_create_vision_tables_config.cache_info().hits,
-            "misses": _cached_create_vision_tables_config.cache_info().misses,
-            "size": _cached_create_vision_tables_config.cache_info().currsize,
-            "max_size": _cached_create_vision_tables_config.cache_info().maxsize,
+        "table_extraction_config": {
+            "hits": _cached_create_table_extraction_config.cache_info().hits,
+            "misses": _cached_create_table_extraction_config.cache_info().misses,
+            "size": _cached_create_table_extraction_config.cache_info().currsize,
+            "max_size": _cached_create_table_extraction_config.cache_info().maxsize,
         },
         "language_detection_config": {
             "hits": _cached_create_language_detection_config.cache_info().hits,
@@ -211,11 +211,11 @@ def get_cache_stats() -> dict[str, dict[str, int | None]]:
             "size": _cached_create_language_detection_config.cache_info().currsize,
             "max_size": _cached_create_language_detection_config.cache_info().maxsize,
         },
-        "spacy_config": {
-            "hits": _cached_create_spacy_config.cache_info().hits,
-            "misses": _cached_create_spacy_config.cache_info().misses,
-            "size": _cached_create_spacy_config.cache_info().currsize,
-            "max_size": _cached_create_spacy_config.cache_info().maxsize,
+        "entity_extraction_config": {
+            "hits": _cached_create_entity_extraction_config.cache_info().hits,
+            "misses": _cached_create_entity_extraction_config.cache_info().misses,
+            "size": _cached_create_entity_extraction_config.cache_info().currsize,
+            "max_size": _cached_create_entity_extraction_config.cache_info().maxsize,
         },
         "html_markdown_config": {
             "hits": _cached_create_html_markdown_config.cache_info().hits,

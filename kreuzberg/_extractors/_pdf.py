@@ -6,7 +6,6 @@ import logging
 import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict
 from itertools import count
 from multiprocessing import cpu_count
 from pathlib import Path
@@ -28,14 +27,10 @@ from kreuzberg._mime_types import PDF_MIME_TYPE, PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr import get_ocr_backend
 from kreuzberg._playa import extract_pdf_metadata, extract_pdf_metadata_sync
 from kreuzberg._types import (
-    EasyOCRConfig,
     ExtractedImage,
     ExtractionResult,
     ImageOCRResult,
     Metadata,
-    OcrBackendType,
-    PaddleOCRConfig,
-    TesseractConfig,
 )
 from kreuzberg._utils._errors import create_error_context, should_retry
 from kreuzberg._utils._resource_managers import pdf_document, pdf_document_sync, pdf_resources_sync
@@ -71,8 +66,9 @@ class PDFExtractor(Extractor):
     async def extract_path_async(self, path: Path) -> ExtractionResult:
         content_bytes = await AsyncPath(path).read_bytes()
 
+        # V4: Parse document if we need images or tables
         document: Document | None = None
-        if self.config.extract_images or self.config.extract_tables:
+        if self.config.images is not None or self.config.tables is not None:
             document = self._parse_with_password_attempts(content_bytes)
 
         text = ""
@@ -82,8 +78,9 @@ class PDFExtractor(Extractor):
             except ParsingError:
                 text = ""
 
-        if (self.config.force_ocr or not self._validate_extracted_text(text)) and self.config.ocr_backend is not None:
-            ocr_result = await self._extract_pdf_text_with_ocr(path, self.config.ocr_backend)
+        # V4: Check if OCR is enabled via config.ocr
+        if (self.config.force_ocr or not self._validate_extracted_text(text)) and self.config.ocr is not None:
+            ocr_result = await self._extract_pdf_text_with_ocr(path)
             text = normalize_spaces(ocr_result.content)
 
         metadata = await self._extract_metadata_with_password_attempts(content_bytes)
@@ -95,11 +92,12 @@ class PDFExtractor(Extractor):
             tables=[],
         )
 
-        if self.config.extract_tables:
+        # V4: Table extraction enabled via config.tables
+        if self.config.tables is not None:
             try:
                 from kreuzberg._vision_tables import extract_tables_async  # noqa: PLC0415
 
-                tables = await extract_tables_async(path, self.config.vision_tables_config)
+                tables = await extract_tables_async(path, self.config.tables)
                 result.tables = tables
 
                 if result.tables:
@@ -114,11 +112,13 @@ class PDFExtractor(Extractor):
                 logger.warning("Vision-based table extraction not available, skipping table extraction")
                 result.tables = []
 
-        if self.config.extract_images and document:
+        # V4: Image extraction enabled via config.images
+        if self.config.images is not None and document:
             images = await self._extract_images_from_playa(document)
             images = self._check_image_memory_limits(images)
             result.images = images
-            if self.config.image_ocr_config and self.config.image_ocr_config.enabled:
+            # V4: Image OCR enabled if ocr_min_dimensions is set
+            if self.config.images.ocr_min_dimensions is not None:
                 image_ocr_results = await self._process_images_with_ocr(result.images)
                 result.image_ocr_results = image_ocr_results
 
@@ -134,27 +134,21 @@ class PDFExtractor(Extractor):
     def extract_path_sync(self, path: Path) -> ExtractionResult:
         content_bytes = path.read_bytes()
 
+        # V4: Parse document if we need images or tables
         document: Document | None = None
-        if self.config.extract_images or self.config.extract_tables:
+        if self.config.images is not None or self.config.tables is not None:
             document = self._parse_with_password_attempts(content_bytes)
 
-        try:
-            text = self._extract_pdf_searchable_text_sync(path)
-        except ParsingError:
-            text = ""
-
-        if (self.config.force_ocr or not self._validate_extracted_text(text)) and self.config.ocr_backend is not None:
-            text = self._extract_pdf_with_ocr_sync(path)
-
-        tables = []
-        if self.config.extract_tables:
+        text = ""
+        if not self.config.force_ocr:
             try:
-                from kreuzberg._vision_tables import extract_tables_sync  # noqa: PLC0415
+                text = self._extract_pdf_searchable_text_sync(path)
+            except ParsingError:
+                text = ""
 
-                tables = extract_tables_sync(path)
-            except ImportError:
-                logger.warning("Vision-based table extraction not available, skipping table extraction")
-                tables = []
+        # V4: Check if OCR is enabled via config.ocr
+        if (self.config.force_ocr or not self._validate_extracted_text(text)) and self.config.ocr is not None:
+            text = self._extract_pdf_with_ocr_sync(path)
 
         if not self.config.force_ocr and self._validate_extracted_text(text):
             text = self._extract_with_playa_sync(path, fallback_text=text)
@@ -167,23 +161,36 @@ class PDFExtractor(Extractor):
             content=text,
             mime_type=PLAIN_TEXT_MIME_TYPE,
             metadata=metadata,
-            tables=list(tables),
+            tables=[],
         )
 
-        if tables:
-            table_summary = generate_table_summary(tables)
-            result.metadata = result.metadata | {
-                "table_count": table_summary["table_count"],
-                "tables_summary": f"Document contains {table_summary['table_count']} tables "
-                f"across {table_summary['pages_with_tables']} pages with "
-                f"{table_summary['total_rows']} total rows",
-            }
+        # V4: Table extraction enabled via config.tables
+        if self.config.tables is not None:
+            try:
+                from kreuzberg._vision_tables import extract_tables_sync
 
-        if self.config.extract_images and document:
+                tables = extract_tables_sync(path, self.config.tables)
+                result.tables = tables
+
+                if tables:
+                    table_summary = generate_table_summary(tables)
+                    result.metadata = result.metadata | {
+                        "table_count": table_summary["table_count"],
+                        "tables_summary": f"Document contains {table_summary['table_count']} tables "
+                        f"across {table_summary['pages_with_tables']} pages with "
+                        f"{table_summary['total_rows']} total rows",
+                    }
+            except ImportError:
+                logger.warning("Vision-based table extraction not available, skipping table extraction")
+                result.tables = []
+
+        # V4: Image extraction enabled via config.images
+        if self.config.images is not None and document:
             images = self._extract_images_from_playa_sync(document)
             images = self._check_image_memory_limits(images)
             result.images = images
-            if self.config.image_ocr_config and self.config.image_ocr_config.enabled:
+            # V4: Image OCR enabled if ocr_min_dimensions is set
+            if self.config.images.ocr_min_dimensions is not None:
                 image_ocr_results: list[ImageOCRResult] = run_maybe_async(self._process_images_with_ocr, result.images)
                 result.image_ocr_results = image_ocr_results
 
@@ -338,11 +345,19 @@ class PDFExtractor(Extractor):
             ),
         ) from last_error
 
-    async def _extract_pdf_text_with_ocr(self, input_file: Path, ocr_backend: OcrBackendType) -> ExtractionResult:
+    async def _extract_pdf_text_with_ocr(self, input_file: Path) -> ExtractionResult:
+        # V4: Get backend from tagged union discriminator
+        backend_name = (
+            self.config.ocr.backend if self.config.ocr and hasattr(self.config.ocr, "backend") else "tesseract"
+        )
+        backend = get_ocr_backend(backend_name)
+
         images = await self._convert_pdf_to_images(input_file)
-        backend = get_ocr_backend(ocr_backend)
+
+        # V4: Use base class method to prepare OCR config
+        ocr_config = self._prepare_ocr_config()
         ocr_results = await run_taskgroup_batched(
-            *[backend.process_image(image, **self.config.get_config_dict()) for image in images],
+            *[backend.process_image(image, **ocr_config) for image in images],
             batch_size=cpu_count(),
         )
         content = "\n".join(result.content for result in ocr_results)
@@ -484,27 +499,16 @@ class PDFExtractor(Extractor):
                     p.unlink()
 
     def _process_pdf_images_with_ocr(self, image_paths: list[str]) -> str:
-        backend = get_ocr_backend(self.config.ocr_backend)
+        # V4: Get backend from tagged union discriminator
+        backend_name = (
+            self.config.ocr.backend if self.config.ocr and hasattr(self.config.ocr, "backend") else "tesseract"
+        )
+        backend = get_ocr_backend(backend_name)
         paths = [Path(p) for p in image_paths]
 
-        match self.config.ocr_backend:
-            case "tesseract":
-                config = (
-                    self.config.ocr_config if isinstance(self.config.ocr_config, TesseractConfig) else TesseractConfig()
-                )
-                results = backend.process_batch_sync(paths, **asdict(config))
-            case "paddleocr":
-                paddle_config = (
-                    self.config.ocr_config if isinstance(self.config.ocr_config, PaddleOCRConfig) else PaddleOCRConfig()
-                )
-                results = backend.process_batch_sync(paths, **asdict(paddle_config))
-            case "easyocr":
-                easy_config = (
-                    self.config.ocr_config if isinstance(self.config.ocr_config, EasyOCRConfig) else EasyOCRConfig()
-                )
-                results = backend.process_batch_sync(paths, **asdict(easy_config))
-            case _:
-                raise NotImplementedError(f"Sync OCR not implemented for {self.config.ocr_backend}")
+        # V4: Use base class method to prepare OCR config
+        ocr_config = self._prepare_ocr_config()
+        results = backend.process_batch_sync(paths, **ocr_config)
 
         return "\n\n".join(result.content for result in results)
 

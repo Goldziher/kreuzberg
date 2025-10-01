@@ -67,3 +67,28 @@ def serialize(value: Any, json: bool = False, sort_keys: bool = False, **kwargs:
         return encoder(value, enc_hook=encode_hook)
     except (MsgspecError, TypeError) as e:
         raise ValueError(f"Failed to serialize {type(value).__name__}: {e}") from e
+
+
+def to_dict(obj: Any, include_none: bool = False) -> dict[str, Any]:
+    """Convert a msgspec.Struct or dataclass to a dictionary.
+
+    Args:
+        obj: Object to convert (msgspec.Struct, dataclass, or dict)
+        include_none: Whether to include None values in the output
+
+    Returns:
+        Dictionary representation of the object
+    """
+    if isinstance(obj, dict):
+        result = obj
+    else:
+        result = msgspec.to_builtins(
+            obj,
+            builtin_types=(type(None),),
+            order="deterministic",
+        )
+
+    if include_none or not isinstance(result, dict):
+        return result
+
+    return {k: v for k, v in result.items() if v is not None}

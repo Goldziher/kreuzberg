@@ -73,10 +73,12 @@ class EmailExtractor(Extractor):
                 chunks=[],
             )
 
-            if self.config.extract_images:
+            # V4: Image extraction enabled via config.images
+            if self.config.images is not None:
                 images = self._extract_images_from_rust_attachments(rust_result)
                 result.images = images
-                if self.config.image_ocr_config and self.config.image_ocr_config.enabled and result.images:
+                # V4: Image OCR enabled if ocr_min_dimensions is set
+                if self.config.images.ocr_min_dimensions is not None and result.images:
                     image_ocr_results: list[ImageOCRResult] = run_maybe_async(
                         self._process_images_with_ocr, result.images
                     )

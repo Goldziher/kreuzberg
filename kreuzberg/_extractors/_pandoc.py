@@ -168,10 +168,12 @@ class PandocExtractor(Extractor):
                 content=normalize_spaces(content), metadata=metadata, mime_type=MARKDOWN_MIME_TYPE
             )
 
-            if self.config.extract_images:
+            # V4: Image extraction enabled via config.images
+            if self.config.images is not None:
                 images = await self._extract_images_with_pandoc(str(path))
                 result.images = images
-                if self.config.image_ocr_config and self.config.image_ocr_config.enabled and result.images:
+                # V4: Image OCR enabled if ocr_min_dimensions is set
+                if self.config.images.ocr_min_dimensions is not None and result.images:
                     image_ocr_results = await self._process_images_with_ocr(result.images)
                     result.image_ocr_results = image_ocr_results
 
@@ -196,10 +198,12 @@ class PandocExtractor(Extractor):
                 content=normalize_spaces(content), metadata=metadata, mime_type=MARKDOWN_MIME_TYPE
             )
 
-            if self.config.extract_images:
+            # V4: Image extraction enabled via config.images
+            if self.config.images is not None:
                 images: list[ExtractedImage] = run_maybe_async(self._extract_images_with_pandoc, str(path))
                 result.images = images
-                if self.config.image_ocr_config and self.config.image_ocr_config.enabled and result.images:
+                # V4: Image OCR enabled if ocr_min_dimensions is set
+                if self.config.images.ocr_min_dimensions is not None and result.images:
                     image_ocr_results: list[ImageOCRResult] = run_maybe_async(
                         self._process_images_with_ocr, result.images
                     )

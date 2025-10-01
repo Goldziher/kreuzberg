@@ -39,20 +39,27 @@ class ImageExtractor(Extractor):
             await unlink()
 
     async def extract_path_async(self, path: Path) -> ExtractionResult:
-        if self.config.ocr_backend is None:
-            raise ValidationError("ocr_backend is None, cannot perform OCR")
+        # V4: Check if OCR is enabled via config.ocr
+        if self.config.ocr is None:
+            raise ValidationError("OCR is not configured, cannot perform OCR on images")
 
         image = await run_sync(Image.open, str(path))
         try:
             normalized_image, preprocessing_metadata = normalize_image_dpi(image, self.config)
 
-            backend = get_ocr_backend(self.config.ocr_backend)
-            result = await backend.process_image(normalized_image, **self.config.get_config_dict())
+            # V4: Get backend from tagged union discriminator
+            backend_name = self.config.ocr.backend if hasattr(self.config.ocr, "backend") else "tesseract"
+            backend = get_ocr_backend(backend_name)
+
+            # V4: Use base class method to prepare OCR config
+            ocr_config = self._prepare_ocr_config()
+            result = await backend.process_image(normalized_image, **ocr_config)
 
             if preprocessing_metadata:
                 result.metadata["image_preprocessing"] = preprocessing_metadata
 
-            if self.config.extract_images:
+            # V4: Image extraction enabled via config.images
+            if self.config.images is not None:
                 content = await AsyncPath(path).read_bytes()
                 result.images = [self._create_self_reference_image(content, self.mime_type)]
 
@@ -76,20 +83,27 @@ class ImageExtractor(Extractor):
                 Path(temp_path).unlink()
 
     def extract_path_sync(self, path: Path) -> ExtractionResult:
-        if self.config.ocr_backend is None:
-            raise ValidationError("ocr_backend is None, cannot perform OCR")
+        # V4: Check if OCR is enabled via config.ocr
+        if self.config.ocr is None:
+            raise ValidationError("OCR is not configured, cannot perform OCR on images")
 
         image = Image.open(str(path))
         try:
             normalized_image, preprocessing_metadata = normalize_image_dpi(image, self.config)
 
-            backend = get_ocr_backend(self.config.ocr_backend)
-            result = backend.process_image_sync(normalized_image, **self.config.get_config_dict())
+            # V4: Get backend from tagged union discriminator
+            backend_name = self.config.ocr.backend if hasattr(self.config.ocr, "backend") else "tesseract"
+            backend = get_ocr_backend(backend_name)
+
+            # V4: Use base class method to prepare OCR config
+            ocr_config = self._prepare_ocr_config()
+            result = backend.process_image_sync(normalized_image, **ocr_config)
 
             if preprocessing_metadata:
                 result.metadata["image_preprocessing"] = preprocessing_metadata
 
-            if self.config.extract_images:
+            # V4: Image extraction enabled via config.images
+            if self.config.images is not None:
                 content = path.read_bytes()
                 result.images = [self._create_self_reference_image(content, self.mime_type)]
 

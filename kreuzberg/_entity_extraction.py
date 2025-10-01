@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import anyio
 
-from kreuzberg._types import Entity, SpacyEntityExtractionConfig
+from kreuzberg._types import Entity, EntityExtractionConfig
 from kreuzberg._utils._model_cache import resolve_model_cache_dir
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import KreuzbergError, MissingDependencyError
@@ -79,7 +79,7 @@ def extract_entities(
     entity_types: Sequence[str] = ("PERSON", "ORGANIZATION", "LOCATION", "DATE", "EMAIL", "PHONE"),
     custom_patterns: frozenset[tuple[str, str]] | None = None,
     languages: list[str] | None = None,
-    spacy_config: SpacyEntityExtractionConfig | None = None,
+    spacy_config: EntityExtractionConfig | None = None,
 ) -> list[Entity]:
     entities: list[Entity] = []
     if custom_patterns:
@@ -94,7 +94,7 @@ def extract_entities(
         )
 
     if spacy_config is None:
-        spacy_config = SpacyEntityExtractionConfig()
+        spacy_config = EntityExtractionConfig()
 
     try:
         import spacy  # noqa: F401, PLC0415
@@ -138,7 +138,7 @@ def extract_entities(
 
 
 @lru_cache(maxsize=32)
-def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig) -> Any:  # noqa: C901, PLR0915
+def load_spacy_model(model_name: str, spacy_config: EntityExtractionConfig) -> Any:  # noqa: C901, PLR0915
     try:
         import spacy  # noqa: PLC0415
     except ImportError:
@@ -234,7 +234,7 @@ def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig)
     return nlp
 
 
-def select_spacy_model(languages: list[str] | None, spacy_config: SpacyEntityExtractionConfig) -> str | None:
+def select_spacy_model(languages: list[str] | None, spacy_config: EntityExtractionConfig) -> str | None:
     if not languages:
         return spacy_config.get_model_for_language("en")
 

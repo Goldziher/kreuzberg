@@ -11,7 +11,17 @@ from mcp.server import FastMCP
 from mcp.types import TextContent
 
 from kreuzberg._config import discover_config
-from kreuzberg._types import ExtractionConfig, OcrBackendType, PSMMode, TesseractConfig
+from kreuzberg._types import (
+    ChunkingConfig,
+    EntityExtractionConfig,
+    ExtractionConfig,
+    KeywordExtractionConfig,
+    OcrBackendType,
+    PSMMode,
+    TableExtractionConfig,
+    TesseractConfig,
+)
+from kreuzberg._utils._serialization import to_dict
 from kreuzberg.exceptions import ValidationError
 from kreuzberg.extraction import (
     batch_extract_bytes_sync,
@@ -119,38 +129,51 @@ def _validate_base64_content(content_base64: str, context_info: str | None = Non
     return content_bytes
 
 
-def _create_config_with_overrides(**kwargs: Any) -> ExtractionConfig:
+def _create_config_with_overrides(**kwargs: Any) -> ExtractionConfig:  # noqa: C901, PLR0912
+    """Create V4 ExtractionConfig from V3-style flat parameters.
+
+    Converts legacy MCP API parameters to V4 config structure.
+    """
     base_config = discover_config()
 
+    # Pop MCP-specific parameters that need special handling
     tesseract_lang = kwargs.pop("tesseract_lang", None)
     tesseract_psm = kwargs.pop("tesseract_psm", None)
     tesseract_output_format = kwargs.pop("tesseract_output_format", None)
     enable_table_detection = kwargs.pop("enable_table_detection", None)
 
-    if base_config is None:
-        config_dict = kwargs
-    else:
-        config_dict = {
-            "force_ocr": base_config.force_ocr,
-            "chunk_content": base_config.chunk_content,
-            "extract_tables": base_config.extract_tables,
-            "extract_entities": base_config.extract_entities,
-            "extract_keywords": base_config.extract_keywords,
-            "ocr_backend": base_config.ocr_backend,
-            "max_chars": base_config.max_chars,
-            "max_overlap": base_config.max_overlap,
-            "keyword_count": base_config.keyword_count,
-            "auto_detect_language": base_config.auto_detect_language,
-            "ocr_config": base_config.ocr_config,
-            "vision_tables_config": base_config.vision_tables_config,
-        }
-        config_dict = config_dict | kwargs
+    # Pop V3-style flags
+    extract_tables = kwargs.pop("extract_tables", False)
+    extract_entities = kwargs.pop("extract_entities", False)
+    extract_keywords = kwargs.pop("extract_keywords", False)
+    chunk_content = kwargs.pop("chunk_content", False)
+    ocr_backend = kwargs.pop("ocr_backend", "tesseract")
 
-    ocr_backend = config_dict.get("ocr_backend")
-    if ocr_backend == "tesseract" and (
-        tesseract_lang or tesseract_psm is not None or tesseract_output_format or enable_table_detection
-    ):
-        tesseract_config_dict = {}
+    # Pop chunking parameters
+    max_chars = kwargs.pop("max_chars", 1000)
+    max_overlap = kwargs.pop("max_overlap", 200)
+    keyword_count = kwargs.pop("keyword_count", 10)
+
+    # Start with base config or defaults
+    if base_config is None:
+        # No base config, build from scratch
+        config_dict: dict[str, Any] = {
+            "force_ocr": kwargs.pop("force_ocr", False),
+            "auto_detect_language": kwargs.pop("auto_detect_language", False),
+        }
+    else:
+        # Start with base config, convert to dict
+        config_dict = to_dict(base_config, include_none=False)
+
+        # Override with provided parameters
+        if "force_ocr" in kwargs:
+            config_dict["force_ocr"] = kwargs.pop("force_ocr")
+        if "auto_detect_language" in kwargs:
+            config_dict["auto_detect_language"] = kwargs.pop("auto_detect_language")
+
+    # V4: Build OCR config from parameters
+    if ocr_backend:
+        tesseract_config_dict: dict[str, Any] = {}
 
         if tesseract_lang:
             tesseract_config_dict["language"] = tesseract_lang
@@ -165,16 +188,29 @@ def _create_config_with_overrides(**kwargs: Any) -> ExtractionConfig:
         if tesseract_output_format:
             tesseract_config_dict["output_format"] = tesseract_output_format
         if enable_table_detection:
-            tesseract_config_dict["enable_table_detection"] = True
+            tesseract_config_dict["enable_table_detection"] = enable_table_detection
 
+        # Create OCR config (currently only Tesseract supported in MCP)
         if tesseract_config_dict:
-            existing_ocr_config = config_dict.get("ocr_config")
-            if existing_ocr_config and isinstance(existing_ocr_config, TesseractConfig):
-                existing_dict = existing_ocr_config.to_dict()
-                merged_dict = existing_dict | tesseract_config_dict
-                config_dict["ocr_config"] = TesseractConfig(**merged_dict)
-            else:
-                config_dict["ocr_config"] = TesseractConfig(**tesseract_config_dict)
+            config_dict["ocr"] = TesseractConfig(**tesseract_config_dict)
+        elif ocr_backend == "tesseract":
+            config_dict["ocr"] = TesseractConfig()
+
+    # V4: Convert boolean flags to config objects
+    if extract_tables:
+        config_dict["tables"] = TableExtractionConfig()
+
+    if extract_entities:
+        config_dict["entities"] = EntityExtractionConfig()
+
+    if extract_keywords:
+        config_dict["keywords"] = KeywordExtractionConfig(count=keyword_count)
+
+    if chunk_content:
+        config_dict["chunking"] = ChunkingConfig(max_chars=max_chars, max_overlap=max_overlap)
+
+    # Include any remaining kwargs
+    config_dict.update(kwargs)
 
     return ExtractionConfig(**config_dict)
 
