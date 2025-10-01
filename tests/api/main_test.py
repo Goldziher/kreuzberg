@@ -717,13 +717,13 @@ async def test_extract_with_invalid_ocr_config(test_client: AsyncTestClient[Any]
 
 
 @pytest.mark.anyio
-async def test_extract_with_invalid_gmft_config(test_client: AsyncTestClient[Any], tmp_path: Path) -> None:
+async def test_extract_with_invalid_vision_tables_config(test_client: AsyncTestClient[Any], tmp_path: Path) -> None:
     from kreuzberg.exceptions import ValidationError
 
     with patch("kreuzberg._api.main.discover_config_cached") as mock_discover:
         mock_discover.side_effect = ValidationError(
             "Invalid GMFT configuration: Invalid parameter 'invalid_param'",
-            context={"gmft_config": {"invalid_param": "value"}, "error": "Unknown parameter"},
+            context={"vision_tables_config": {"invalid_param": "value"}, "error": "Unknown parameter"},
         )
 
         test_file = tmp_path / "test.pdf"
@@ -790,11 +790,11 @@ async def test_extract_with_invalid_extraction_config(test_client: AsyncTestClie
 async def test_extract_pdf_without_tables_with_table_extraction_enabled(
     test_client: AsyncTestClient[Any], searchable_pdf: Path
 ) -> None:
-    from kreuzberg import ExtractionConfig, GMFTConfig
+    from kreuzberg import ExtractionConfig, VisionTablesConfig
 
     test_config = ExtractionConfig(
         extract_tables=True,
-        gmft_config=GMFTConfig(
+        vision_tables_config=VisionTablesConfig(
             detection_threshold=0.9,
         ),
     )

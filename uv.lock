@@ -1955,10 +1955,6 @@ entity-extraction = [
     { name = "keybert" },
     { name = "spacy" },
 ]
-gmft = [
-    { name = "torch" },
-    { name = "transformers" },
-]
 langdetect = [
     { name = "fast-langdetect" },
 ]
@@ -1966,6 +1962,10 @@ paddleocr = [
     { name = "paddleocr" },
     { name = "paddlepaddle" },
     { name = "setuptools" },
+]
+vision-tables = [
+    { name = "torch" },
+    { name = "transformers" },
 ]
 
 [package.dev-dependencies]
@@ -2006,7 +2006,7 @@ requires-dist = [
     { name = "fast-langdetect", marker = "extra == 'langdetect'", specifier = ">=1.0.0" },
     { name = "html-to-markdown", extras = ["lxml"], specifier = ">=1.16.0" },
     { name = "keybert", marker = "extra == 'entity-extraction'", specifier = ">=0.9.0" },
-    { name = "kreuzberg", extras = ["additional-extensions", "api", "chunking", "cli", "crypto", "document-classification", "easyocr", "entity-extraction", "gmft", "langdetect", "paddleocr"], marker = "extra == 'all'" },
+    { name = "kreuzberg", extras = ["additional-extensions", "api", "chunking", "cli", "crypto", "document-classification", "easyocr", "entity-extraction", "vision-tables", "langdetect", "paddleocr"], marker = "extra == 'all'" },
     { name = "langcodes", specifier = ">=3.5.0" },
     { name = "litestar", extras = ["standard", "structlog", "opentelemetry"], marker = "extra == 'api'", specifier = ">=2.17.0" },
     { name = "mailparse", marker = "extra == 'additional-extensions'", specifier = ">=1.0.15" },
@@ -2027,11 +2027,11 @@ requires-dist = [
     { name = "spacy", marker = "extra == 'entity-extraction'", specifier = ">=3.8.7" },
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'additional-extensions'", specifier = ">=2.0.0" },
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'cli'", specifier = ">=2.0.0" },
-    { name = "torch", marker = "extra == 'gmft'", specifier = ">=2.8.0" },
-    { name = "transformers", marker = "extra == 'gmft'", specifier = ">=4.56.2" },
+    { name = "torch", marker = "extra == 'vision-tables'", specifier = ">=2.8.0" },
+    { name = "transformers", marker = "extra == 'vision-tables'", specifier = ">=4.56.2" },
     { name = "typing-extensions", marker = "python_full_version < '3.12'", specifier = ">=4.15.0" },
 ]
-provides-extras = ["additional-extensions", "all", "api", "chunking", "cli", "crypto", "document-classification", "easyocr", "entity-extraction", "gmft", "langdetect", "paddleocr"]
+provides-extras = ["additional-extensions", "all", "api", "chunking", "cli", "crypto", "document-classification", "easyocr", "entity-extraction", "vision-tables", "langdetect", "paddleocr"]
 
 [package.metadata.requires-dev]
 dev = [

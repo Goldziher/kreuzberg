@@ -97,9 +97,9 @@ class PDFExtractor(Extractor):
 
         if self.config.extract_tables:
             try:
-                from kreuzberg._gmft import extract_tables_async  # noqa: PLC0415
+                from kreuzberg._vision_tables import extract_tables_async  # noqa: PLC0415
 
-                tables = await extract_tables_async(path, self.config.gmft_config)
+                tables = await extract_tables_async(path, self.config.vision_tables_config)
                 result.tables = tables
 
                 if result.tables:
@@ -111,7 +111,7 @@ class PDFExtractor(Extractor):
                         f"{table_summary['total_rows']} total rows",
                     }
             except ImportError:
-                logger.warning("GMFT not available, skipping table extraction")
+                logger.warning("Vision-based table extraction not available, skipping table extraction")
                 result.tables = []
 
         if self.config.extract_images and document:
@@ -149,11 +149,11 @@ class PDFExtractor(Extractor):
         tables = []
         if self.config.extract_tables:
             try:
-                from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
+                from kreuzberg._vision_tables import extract_tables_sync  # noqa: PLC0415
 
                 tables = extract_tables_sync(path)
             except ImportError:
-                logger.warning("GMFT not available, skipping table extraction")
+                logger.warning("Vision-based table extraction not available, skipping table extraction")
                 tables = []
 
         if not self.config.force_ocr and self._validate_extracted_text(text):

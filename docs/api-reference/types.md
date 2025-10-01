@@ -54,11 +54,11 @@ Configuration for OCR processing of extracted images:
 
 ::: kreuzberg.PaddleOCRConfig
 
-## GMFT Configuration
+## Vision-Based Table Extraction Configuration
 
-Configuration options for the GMFT table extraction engine:
+Configuration options for vision-based table extraction:
 
-::: kreuzberg.GMFTConfig
+::: kreuzberg.VisionTablesConfig
 
 ## Entity Extraction Configuration
 

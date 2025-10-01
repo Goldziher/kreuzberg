@@ -10,12 +10,12 @@ All extraction functions in Kreuzberg accept an [`ExtractionConfig`](../api-refe
 
 The `language` parameter in a [`TesseractConfig`](../api-reference/ocr-configuration.md#tesseractconfig) object specifies which language model Tesseract should use for OCR:
 
-```python
+````python
 from kreuzberg import extract_file, ExtractionConfig, TesseractConfig
 
 # Extract text from a German document
 result = await extract_file("german_document.pdf", config=ExtractionConfig(ocr_config=TesseractConfig(language="deu")))
-```
+```text
 
 #### Supported Language Codes
 
@@ -35,7 +35,7 @@ You can specify multiple languages by joining codes with a plus sign:
 ```python
 # Document contains both English and German text
 result = await extract_file("multilingual.pdf", config=ExtractionConfig(ocr_config=TesseractConfig(language="eng+deu")))
-```
+```text
 
 !!! note
 
@@ -58,7 +58,7 @@ from kreuzberg import extract_file, ExtractionConfig, TesseractConfig, PSMMode
 
 # Extract text from a document with a simple layout
 result = await extract_file("document.pdf", config=ExtractionConfig(ocr_config=TesseractConfig(psm=PSMMode.SINGLE_BLOCK)))
-```
+```text
 
 #### Available PSM Modes
 
@@ -81,7 +81,7 @@ from kreuzberg import extract_file, ExtractionConfig
 
 # Force OCR even for searchable PDFs
 result = await extract_file("searchable.pdf", config=ExtractionConfig(force_ocr=True))
-```
+```text
 
 This is useful when:
 
@@ -111,7 +111,7 @@ result = await extract_file(
     "document.jpg",
     config=ExtractionConfig(ocr_backend="easyocr", ocr_config=EasyOCRConfig(language_list=["en"])),
 )
-```
+```text
 
 ### PaddleOCR (Optional)
 
@@ -129,7 +129,7 @@ result = await extract_file(
         ocr_backend="paddleocr", ocr_config=PaddleOCRConfig(language="en")  # PaddleOCR uses different language codes
     ),
 )
-```
+```text
 
 !!! note
 
@@ -153,7 +153,7 @@ from kreuzberg import extract_file
 # Uses markdown format by default
 result = await extract_file("document.jpg")
 print(result.content)  # Markdown-formatted text
-```
+```text
 
 ### Performance Considerations
 
@@ -167,7 +167,7 @@ Direct text extraction with minimal overhead.
 from kreuzberg import extract_file, ExtractionConfig, TesseractConfig
 
 result = await extract_file("document.jpg", config=ExtractionConfig(ocr_config=TesseractConfig(output_format="text")))
-```
+```text
 
 Use when: You only need plain text without formatting.
 
@@ -177,7 +177,7 @@ Raw HTML-based OCR output with no post-processing.
 
 ```python
 result = await extract_file("document.jpg", config=ExtractionConfig(ocr_config=TesseractConfig(output_format="hocr")))
-```
+```text
 
 Use when: You need word positions and bounding boxes for layout analysis.
 
@@ -187,7 +187,7 @@ Structured markdown with HTML parsing and conversion.
 
 ```python
 result = await extract_file("document.jpg", config=ExtractionConfig(ocr_config=TesseractConfig(output_format="markdown")))
-```
+```text
 
 Use when: You want readable, structured output with preserved formatting.
 
@@ -197,7 +197,7 @@ Tab-separated values with optional table detection.
 
 ```python
 result = await extract_file("document.jpg", config=ExtractionConfig(ocr_config=TesseractConfig(output_format="tsv")))
-```
+```text
 
 Use when: You need confidence scores or want to extract tables.
 
@@ -226,7 +226,7 @@ for i, table in enumerate(result.tables):
     print(f"Table {i+1}:")
     print(table["text"])  # Markdown-formatted table
     print(f"Found on page: {table['page_number']}")
-```
+```text
 
 #### Table Detection Parameters
 
@@ -257,7 +257,7 @@ if result.tables:
     receipt_table = result.tables[0]
     print("Receipt items:")
     print(receipt_table["text"])
-```
+```text
 
 ## Performance Optimization
 
@@ -302,7 +302,7 @@ accuracy_config = ExtractionConfig(
         tessedit_enable_dict_correction=True,  # Correct OCR errors
     ),
 )
-```
+```text
 
 ### Language Model N-gram Settings
 
@@ -319,7 +319,7 @@ historical_config = ExtractionConfig(
         language_model_ngram_on=True,  # Enable for better accuracy on poor quality text
     ),
 )
-```
+```text
 
 ### When to Disable OCR
 
@@ -328,7 +328,7 @@ For documents with text layers (searchable PDFs, Office docs), disable OCR entir
 ```python
 # No OCR overhead for text documents
 text_config = ExtractionConfig(ocr_backend=None)
-```
+```text
 
 This provides significant speedup (78% of PDFs have text layers and extract in \<0.01s)
 
@@ -345,7 +345,7 @@ from kreuzberg import extract_file, ExtractionConfig
 
 # Default configuration with automatic DPI adjustment
 result = await extract_file("large_document.pdf")  # Handles oversized pages automatically
-```
+```text
 
 ### Custom DPI Configuration
 
@@ -364,7 +364,7 @@ config = ExtractionConfig(
 )
 
 result = await extract_file("technical_drawing.pdf", config=config)
-```
+```text
 
 ### DPI Configuration Guidelines
 
@@ -389,7 +389,7 @@ quality_config = ExtractionConfig(
     max_image_dimension=40000,  # Allow larger images for detail preservation
     min_dpi=150,  # Higher minimum for small text
 )
-```
+```text
 
 ## Best Practices
 
@@ -412,3 +412,4 @@ quality_config = ExtractionConfig(
     - Increase `target_dpi` for documents with small text or fine details
     - Decrease `target_dpi` for faster processing of simple documents
     - Leave `auto_adjust_dpi=True` to prevent memory issues with large documents
+````

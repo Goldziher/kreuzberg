@@ -1,6 +1,6 @@
-"""Data types for table extraction.
+"""Data types for vision-based table extraction.
 
-Adapted from GMFT with Kreuzberg patterns:
+Adapted from the GMFT library with Kreuzberg patterns:
 - TypedDicts for DTOs
 - Dataclasses with slots for performance
 - Hashable structures for caching

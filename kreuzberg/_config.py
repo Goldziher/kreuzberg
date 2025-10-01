@@ -12,12 +12,12 @@ else:  # pragma: no cover
 from kreuzberg._types import (
     EasyOCRConfig,
     ExtractionConfig,
-    GMFTConfig,
     HTMLToMarkdownConfig,
     OcrBackendType,
     PaddleOCRConfig,
     PSMMode,
     TesseractConfig,
+    VisionTablesConfig,
 )
 from kreuzberg.exceptions import ValidationError
 
@@ -109,7 +109,7 @@ def _configure_ocr_backend(
         config_dict["ocr_config"] = ocr_config
 
 
-def _configure_gmft(
+def _configure_vision_tables(
     config_dict: dict[str, Any],
     file_config: dict[str, Any],
     cli_args: MutableMapping[str, Any],
@@ -117,20 +117,23 @@ def _configure_gmft(
     if not config_dict.get("extract_tables"):
         return
 
-    gmft_config = None
+    vision_tables_config = None
     try:
-        if cli_args.get("gmft_config"):
-            gmft_config = GMFTConfig(**cli_args["gmft_config"])
-        elif "gmft" in file_config and isinstance(file_config["gmft"], dict):  # pragma: no cover
-            gmft_config = GMFTConfig(**file_config["gmft"])
+        if cli_args.get("vision_tables_config"):
+            vision_tables_config = VisionTablesConfig(**cli_args["vision_tables_config"])
+        elif "vision_tables" in file_config and isinstance(file_config["vision_tables"], dict):  # pragma: no cover
+            vision_tables_config = VisionTablesConfig(**file_config["vision_tables"])
     except (TypeError, ValueError) as e:
         raise ValidationError(
-            f"Invalid GMFT configuration: {e}",
-            context={"gmft_config": cli_args.get("gmft_config") or file_config.get("gmft"), "error": str(e)},
+            f"Invalid vision-based table extraction configuration: {e}",
+            context={
+                "vision_tables_config": cli_args.get("vision_tables_config") or file_config.get("vision_tables"),
+                "error": str(e),
+            },
         ) from e
 
-    if gmft_config:  # pragma: no cover
-        config_dict["gmft_config"] = gmft_config
+    if vision_tables_config:  # pragma: no cover
+        config_dict["vision_tables_config"] = vision_tables_config
 
 
 def _create_ocr_config(
@@ -223,13 +226,17 @@ def build_extraction_config_from_dict(config_dict: dict[str, Any]) -> Extraction
         if ocr_config:
             extraction_config["ocr_config"] = ocr_config
 
-    if extraction_config.get("extract_tables") and "gmft" in config_dict and isinstance(config_dict["gmft"], dict):
+    if (
+        extraction_config.get("extract_tables")
+        and "vision_tables" in config_dict
+        and isinstance(config_dict["vision_tables"], dict)
+    ):
         try:
-            extraction_config["gmft_config"] = GMFTConfig(**config_dict["gmft"])
+            extraction_config["vision_tables_config"] = VisionTablesConfig(**config_dict["vision_tables"])
         except (TypeError, ValueError) as e:
             raise ValidationError(
-                f"Invalid GMFT configuration: {e}",
-                context={"gmft_config": config_dict["gmft"], "error": str(e)},
+                f"Invalid vision-based table extraction configuration: {e}",
+                context={"vision_tables_config": config_dict["vision_tables"], "error": str(e)},
             ) from e
 
     if "html_to_markdown" in config_dict and isinstance(config_dict["html_to_markdown"], dict):
@@ -263,7 +270,7 @@ def build_extraction_config(
     _merge_cli_args(config_dict, cli_args)
 
     _configure_ocr_backend(config_dict, file_config, cli_args)
-    _configure_gmft(config_dict, file_config, cli_args)
+    _configure_vision_tables(config_dict, file_config, cli_args)
 
     if config_dict.get("ocr_backend") == "none":
         config_dict["ocr_backend"] = None

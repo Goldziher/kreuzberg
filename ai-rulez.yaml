@@ -461,7 +461,7 @@ rules:
       ### Key Components
       - **Extractors**: Specialized classes for each file type (PDF, image, HTML, XML, plain text, etc.)
       - **OCR Backends**: Pluggable OCR engines with separate configuration classes
-      - **GMFT Integration**: Table extraction using GMFT library for PDFs
+      - **Vision-Based Table Extraction**: Table extraction using vendored vision models for PDFs
       - **Chunking**: Text splitting functionality in `_chunker.py`
       - **Language Detection**: Automatic language detection using fast-langdetect
       - **Async/Sync**: Primary async implementation with sync wrappers in `_utils/_sync.py`
@@ -624,7 +624,7 @@ rules:
       - **Core** (`goldziher/kreuzberg:v3.5.0`): API + Tesseract OCR
       - **EasyOCR** (`goldziher/kreuzberg:v3.5.0-easyocr`): Core + EasyOCR
       - **PaddleOCR** (`goldziher/kreuzberg:v3.5.0-paddle`): Core + PaddleOCR
-      - **GMFT** (`goldziher/kreuzberg:v3.5.0-gmft`): Core + table extraction
+      - **Vision-Tables** (`goldziher/kreuzberg:v3.5.0-vision-tables`): Core + table extraction
       - **All** (`goldziher/kreuzberg:v3.5.0-all`): All features included
 
       ### Manual Triggers
@@ -697,10 +697,10 @@ rules:
       chunking = ["semantic-text-splitter>=0.27.0"]
       crypto = ["playa-pdf[crypto]>=0.6.4"]
       easyocr = ["easyocr>=1.7.2"]
-      gmft = ["gmft>=0.4.2"]
+      vision-tables = ["torch>=2.8.0", "transformers>=4.56.2"]
       langdetect = ["fast-langdetect>=0.2.0"]
       paddleocr = ["paddleocr>=3.1.0", "paddlepaddle>=3.1.0", "setuptools>=80.9.0"]
-      all = ["kreuzberg[api,chunking,cli,crypto,easyocr,gmft,langdetect,paddleocr]"]
+      all = ["kreuzberg[api,chunking,cli,crypto,easyocr,vision-tables,langdetect,paddleocr]"]
       ```
 
       ### Installation Patterns

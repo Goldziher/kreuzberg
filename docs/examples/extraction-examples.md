@@ -125,13 +125,13 @@ async def detect_multilingual_document():
 Kreuzberg offers multiple methods for extracting tables from documents. See the [Table Extraction Guide](../user-guide/table-extraction.md) for detailed comparison.
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, GMFTConfig
+from kreuzberg import extract_file, ExtractionConfig, VisionTablesConfig
 
 async def extract_tables_examples():
     # Vision-based table extraction (best for complex tables)
     ai_config = ExtractionConfig(
         extract_tables=True,
-        gmft_config=GMFTConfig(
+        vision_tables_config=VisionTablesConfig(
             detection_threshold=0.7,
             structure_threshold=0.5,
         ),
@@ -175,7 +175,7 @@ async def compare_table_methods():
     # For scientific papers with complex tables - use vision method
     scientific_config = ExtractionConfig(
         extract_tables=True,
-        gmft_config=GMFTConfig(
+        vision_tables_config=VisionTablesConfig(
             detection_threshold=0.6,  # Lower threshold for academic tables
         ),
     )
@@ -186,7 +186,7 @@ async def compare_table_methods():
     # For financial reports - use higher precision settings
     financial_config = ExtractionConfig(
         extract_tables=True,
-        gmft_config=GMFTConfig(
+        vision_tables_config=VisionTablesConfig(
             detection_threshold=0.8,  # Higher threshold for clean financial docs
         ),
     )

@@ -10,8 +10,8 @@ import pytest
 from kreuzberg import ExtractionConfig
 from kreuzberg._config import (
     _build_ocr_config_from_cli,
-    _configure_gmft,
     _configure_ocr_backend,
+    _configure_vision_tables,
     _create_ocr_config,
     _merge_cli_args,
     _merge_file_config,
@@ -29,11 +29,11 @@ from kreuzberg._config import (
 )
 from kreuzberg._types import (
     EasyOCRConfig,
-    GMFTConfig,
     HTMLToMarkdownConfig,
     PaddleOCRConfig,
     PSMMode,
     TesseractConfig,
+    VisionTablesConfig,
 )
 from kreuzberg.exceptions import ValidationError
 
@@ -163,40 +163,40 @@ def test_configure_ocr_backend_from_file() -> None:
     assert config_dict["ocr_config"].language == ("en",)  # type: ignore[comparison-overlap]
 
 
-def test_configure_gmft_disabled() -> None:
+def test_configure_vision_tables_disabled() -> None:
     config_dict: dict[str, Any] = {"extract_tables": False}
     file_config: dict[str, Any] = {}
     cli_args: MutableMapping[str, Any] = {}
-    _configure_gmft(config_dict, file_config, cli_args)
-    assert "gmft_config" not in config_dict
+    _configure_vision_tables(config_dict, file_config, cli_args)
+    assert "vision_tables_config" not in config_dict
 
 
-def test_configure_gmft_from_cli() -> None:
+def test_configure_vision_tables_from_cli() -> None:
     config_dict: dict[str, Any] = {"extract_tables": True}
     file_config: dict[str, Any] = {}
-    cli_args: MutableMapping[str, Any] = {"gmft_config": {"verbosity": 2, "detection_threshold": 0.8}}
-    _configure_gmft(config_dict, file_config, cli_args)
-    assert isinstance(config_dict["gmft_config"], GMFTConfig)
-    assert config_dict["gmft_config"].verbosity == 2
-    assert config_dict["gmft_config"].detection_threshold == 0.8
+    cli_args: MutableMapping[str, Any] = {"vision_tables_config": {"verbosity": 2, "detection_threshold": 0.8}}
+    _configure_vision_tables(config_dict, file_config, cli_args)
+    assert isinstance(config_dict["vision_tables_config"], VisionTablesConfig)
+    assert config_dict["vision_tables_config"].verbosity == 2
+    assert config_dict["vision_tables_config"].detection_threshold == 0.8
 
 
-def test_configure_gmft_from_file() -> None:
+def test_configure_vision_tables_from_file() -> None:
     config_dict: dict[str, Any] = {"extract_tables": True}
     file_config: dict[str, Any] = {"gmft": {"verbosity": 1, "structure_threshold": 0.9}}
     cli_args: MutableMapping[str, Any] = {}
-    _configure_gmft(config_dict, file_config, cli_args)
-    assert isinstance(config_dict["gmft_config"], GMFTConfig)
-    assert config_dict["gmft_config"].verbosity == 1
-    assert config_dict["gmft_config"].structure_threshold == 0.9
+    _configure_vision_tables(config_dict, file_config, cli_args)
+    assert isinstance(config_dict["vision_tables_config"], VisionTablesConfig)
+    assert config_dict["vision_tables_config"].verbosity == 1
+    assert config_dict["vision_tables_config"].structure_threshold == 0.9
 
 
-def test_configure_gmft_invalid_config() -> None:
+def test_configure_vision_tables_invalid_config() -> None:
     config_dict: dict[str, Any] = {"extract_tables": True}
     file_config: dict[str, Any] = {}
-    cli_args: MutableMapping[str, Any] = {"gmft_config": {"invalid_field": "value"}}
+    cli_args: MutableMapping[str, Any] = {"vision_tables_config": {"invalid_field": "value"}}
     with pytest.raises(ValidationError) as exc_info:
-        _configure_gmft(config_dict, file_config, cli_args)
+        _configure_vision_tables(config_dict, file_config, cli_args)
     assert "Invalid GMFT configuration" in str(exc_info.value)
 
 
@@ -374,7 +374,7 @@ def test_build_extraction_config_from_dict_with_gmft() -> None:
     }
     config = build_extraction_config_from_dict(config_dict)
     assert config.extract_tables is True
-    assert isinstance(config.gmft_config, GMFTConfig)
+    assert isinstance(config.vision_tables_config, VisionTablesConfig)
 
 
 def test_build_extraction_config_from_dict_invalid_gmft() -> None:
@@ -605,28 +605,28 @@ def test_find_default_config_none() -> None:
     assert result is None
 
 
-def test_configure_gmft_with_cli_config() -> None:
+def test_configure_vision_tables_with_cli_config() -> None:
     config_dict: dict[str, Any] = {"extract_tables": True}
     file_config: dict[str, Any] = {}
-    cli_args: MutableMapping[str, Any] = {"gmft_config": {"verbosity": 2}}
+    cli_args: MutableMapping[str, Any] = {"vision_tables_config": {"verbosity": 2}}
 
-    _configure_gmft(config_dict, file_config, cli_args)
+    _configure_vision_tables(config_dict, file_config, cli_args)
 
-    assert "gmft_config" in config_dict
-    assert isinstance(config_dict["gmft_config"], GMFTConfig)
-    assert config_dict["gmft_config"].verbosity == 2
+    assert "vision_tables_config" in config_dict
+    assert isinstance(config_dict["vision_tables_config"], VisionTablesConfig)
+    assert config_dict["vision_tables_config"].verbosity == 2
 
 
-def test_configure_gmft_with_file_config() -> None:
+def test_configure_vision_tables_with_file_config() -> None:
     config_dict: dict[str, Any] = {"extract_tables": True}
     file_config = {"gmft": {"verbosity": 1}}
     cli_args: MutableMapping[str, Any] = {}
 
-    _configure_gmft(config_dict, file_config, cli_args)
+    _configure_vision_tables(config_dict, file_config, cli_args)
 
-    assert "gmft_config" in config_dict
-    assert isinstance(config_dict["gmft_config"], GMFTConfig)
-    assert config_dict["gmft_config"].verbosity == 1
+    assert "vision_tables_config" in config_dict
+    assert isinstance(config_dict["vision_tables_config"], VisionTablesConfig)
+    assert config_dict["vision_tables_config"].verbosity == 1
 
 
 def test_configure_ocr_backend_no_ocr_config_from_cli_or_file() -> None:
@@ -654,7 +654,7 @@ def test_build_extraction_config_from_dict_no_ocr_config() -> None:
     assert config.ocr_config is None
 
 
-def test_build_extraction_config_from_dict_no_gmft_config() -> None:
+def test_build_extraction_config_from_dict_no_vision_tables_config() -> None:
     from kreuzberg._config import build_extraction_config_from_dict
 
     config_dict = {
@@ -663,7 +663,7 @@ def test_build_extraction_config_from_dict_no_gmft_config() -> None:
 
     config = build_extraction_config_from_dict(config_dict)
     assert config.extract_tables is True
-    assert config.gmft_config is None
+    assert config.vision_tables_config is None
 
 
 def test_extract_images_config_default() -> None:

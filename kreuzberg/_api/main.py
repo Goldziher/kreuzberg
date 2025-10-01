@@ -25,11 +25,11 @@ from kreuzberg import (
     batch_extract_bytes,
 )
 from kreuzberg._api._config_cache import (
-    create_gmft_config_cached,
     create_html_markdown_config_cached,
     create_language_detection_config_cached,
     create_ocr_config_cached,
     create_spacy_config_cached,
+    create_vision_tables_config_cached,
     discover_config_cached,
     parse_header_config_cached,
 )
@@ -216,8 +216,8 @@ def merge_configs(
         ocr_backend = config_dict.get("ocr_backend")
         config_dict["ocr_config"] = create_ocr_config_cached(ocr_backend, config_dict["ocr_config"])
 
-    if "gmft_config" in config_dict and isinstance(config_dict["gmft_config"], dict):
-        config_dict["gmft_config"] = create_gmft_config_cached(config_dict["gmft_config"])
+    if "vision_tables_config" in config_dict and isinstance(config_dict["vision_tables_config"], dict):
+        config_dict["vision_tables_config"] = create_vision_tables_config_cached(config_dict["vision_tables_config"])
 
     if "language_detection_config" in config_dict and isinstance(config_dict["language_detection_config"], dict):
         config_dict["language_detection_config"] = create_language_detection_config_cached(

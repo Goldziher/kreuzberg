@@ -213,7 +213,7 @@ claude mcp add kreuzberg uvx kreuzberg-mcp
 
 | Format            | Extensions | Implementation | OCR | Table Extraction | Metadata    | Notes                                 |
 | ----------------- | ---------- | -------------- | --- | ---------------- | ----------- | ------------------------------------- |
-| **PDF**           | `.pdf`     | PDFium (Rust)  | ✅  | ✅ GMFT          | ✅ Full     | Fastest, most reliable PDF extraction |
+| **PDF**           | `.pdf`     | PDFium (Rust)  | ✅  | ✅ Vision-based  | ✅ Full     | Fastest, most reliable PDF extraction |
 | **Word (Modern)** | `.docx`    | Pandoc         | ❌  | ✅ Native        | ✅ Full     | Office Open XML format                |
 | **Word (Legacy)** | `.doc`     | LibreOffice    | ❌  | ✅ Native        | ✅ Full     | Requires LibreOffice (optional)       |
 | **Plain Text**    | `.txt`     | Rust           | ❌  | ❌               | ✅ Basic    | Streaming parser for multi-GB files   |

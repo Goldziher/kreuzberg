@@ -62,8 +62,8 @@ gpu = false
 language = "en"
 use_gpu = false
 
-# Table extraction configuration (GMFT)
-[gmft]
+# Vision-based table extraction configuration
+[vision_tables]
 verbosity = 1
 detection_threshold = 0.7
 structure_threshold = 0.5
@@ -151,7 +151,7 @@ batch_size = 10                    # Number of images to process in parallel
 language = "eng"
 psm = 6
 
-[tool.kreuzberg.gmft]
+[tool.kreuzberg.vision_tables]
 detection_threshold = 0.7
 structure_threshold = 0.5
 detection_device = "auto"
@@ -289,14 +289,14 @@ curl -X POST "http://localhost:8000/extract" \
   -F "data=@multilingual_document.pdf"
 ```
 
-Table extraction with GMFT configuration:
+Vision-based table extraction configuration:
 
 ```bash
 curl -X POST "http://localhost:8000/extract" \
   -H "Content-Type: multipart/form-data" \
   -H "X-Extraction-Config: {
     \"extract_tables\": true,
-    \"gmft_config\": {
+    \"vision_tables_config\": {
       \"detection_threshold\": 0.8,
       \"structure_threshold\": 0.6,
       \"crop_padding\": 25,
@@ -321,15 +321,15 @@ This means you can have a base configuration in files, override specific setting
 
 The runtime API parameters correspond directly to the programmatic configuration options:
 
-| Query Parameter    | Config Class Field                  | Header JSON Key                 |
-| ------------------ | ----------------------------------- | ------------------------------- |
-| `chunk_content`    | `ExtractionConfig.chunk_content`    | `"chunk_content"`               |
-| `max_chars`        | `ExtractionConfig.max_chars`        | `"max_chars"`                   |
-| `extract_entities` | `ExtractionConfig.extract_entities` | `"extract_entities"`            |
-| `force_ocr`        | `ExtractionConfig.force_ocr`        | `"force_ocr"`                   |
-| `ocr_backend`      | `ExtractionConfig.ocr_backend`      | `"ocr_backend"`                 |
-| N/A                | `ExtractionConfig.ocr_config`       | `"ocr_config"` (nested object)  |
-| N/A                | `ExtractionConfig.gmft_config`      | `"gmft_config"` (nested object) |
+| Query Parameter    | Config Class Field                      | Header JSON Key                          |
+| ------------------ | --------------------------------------- | ---------------------------------------- |
+| `chunk_content`    | `ExtractionConfig.chunk_content`        | `"chunk_content"`                        |
+| `max_chars`        | `ExtractionConfig.max_chars`            | `"max_chars"`                            |
+| `extract_entities` | `ExtractionConfig.extract_entities`     | `"extract_entities"`                     |
+| `force_ocr`        | `ExtractionConfig.force_ocr`            | `"force_ocr"`                            |
+| `ocr_backend`      | `ExtractionConfig.ocr_backend`          | `"ocr_backend"`                          |
+| N/A                | `ExtractionConfig.ocr_config`           | `"ocr_config"` (nested object)           |
+| N/A                | `ExtractionConfig.vision_tables_config` | `"vision_tables_config"` (nested object) |
 
 For complete API documentation and examples, see the [API Server guide](api-server.md).
 
@@ -343,7 +343,7 @@ All extraction functions accept an optional `config` parameter of type `Extracti
 
 - Control OCR behavior with `force_ocr` and `ocr_backend`
 - Provide engine-specific OCR configuration via `ocr_config`
-- Enable table extraction with `extract_tables` and configure it via `gmft_config`
+- Enable table extraction with `extract_tables` and configure it via `vision_tables_config`
 - Enable automatic language detection with `auto_detect_language`
 - Add validation and post-processing hooks
 - Configure custom extractors
@@ -407,10 +407,10 @@ Kreuzberg offers multiple approaches for extracting tables from documents. For d
 #### Quick Configuration
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, GMFTConfig
+from kreuzberg import extract_file, ExtractionConfig, VisionTablesConfig
 
 # Vision-based table extraction (recommended for complex tables)
-config_ai = ExtractionConfig(extract_tables=True, gmft_config=GMFTConfig(detection_threshold=0.7))
+config_ai = ExtractionConfig(extract_tables=True, vision_tables_config=VisionTablesConfig(detection_threshold=0.7))
 
 # OCR-based table extraction (lightweight, for simple tables)
 config_ocr = ExtractionConfig(extract_tables_from_ocr=True)

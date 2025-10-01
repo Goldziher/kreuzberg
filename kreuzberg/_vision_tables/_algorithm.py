@@ -1,7 +1,7 @@
-"""Table structure extraction algorithm adapted from GMFT.
+"""Vision-based table structure extraction algorithm.
 
 Converts ML predictions to structured Polars DataFrames using functional
-approaches and Kreuzberg patterns.
+approaches and Kreuzberg patterns. Adapted from the GMFT library.
 """
 
 from __future__ import annotations
@@ -19,12 +19,14 @@ from ._types import BboxPredictions, TablePredictions
 if TYPE_CHECKING:
     from PIL import Image
 
-    from kreuzberg._types import GMFTConfig
+    from kreuzberg._types import VisionTablesConfig
 
 logger = logging.getLogger(__name__)
 
 
-def extract_table_dataframe(image: Image.Image, predictions: TablePredictions, config: GMFTConfig) -> pl.DataFrame:
+def extract_table_dataframe(
+    image: Image.Image, predictions: TablePredictions, config: VisionTablesConfig
+) -> pl.DataFrame:
     """Extract structured DataFrame from table predictions.
 
     Args:
@@ -85,7 +87,7 @@ def _filter_predictions_cached(predictions: BboxPredictions, required_conf: floa
     )
 
 
-def _filter_predictions_by_confidence(predictions: TablePredictions, config: GMFTConfig) -> TablePredictions:
+def _filter_predictions_by_confidence(predictions: TablePredictions, config: VisionTablesConfig) -> TablePredictions:
     """Filter predictions based on confidence thresholds."""
     threshold = config.structure_threshold
 

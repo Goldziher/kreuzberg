@@ -18,7 +18,7 @@ def test_exports() -> None:
         "ExtractionConfig",
         "ExtractionResult",
         "ExtractorRegistry",
-        "GMFTConfig",
+        "VisionTablesConfig",
         "ImageOCRConfig",
         "ImageOCRResult",
         "JSONExtractionConfig",
@@ -71,7 +71,7 @@ def test_config_classes() -> None:
     assert is_dataclass(kreuzberg.TesseractConfig)
     assert is_dataclass(kreuzberg.EasyOCRConfig)
     assert is_dataclass(kreuzberg.PaddleOCRConfig)
-    assert is_dataclass(kreuzberg.GMFTConfig)
+    assert is_dataclass(kreuzberg.VisionTablesConfig)
 
 
 def test_extraction_functions_exist() -> None:

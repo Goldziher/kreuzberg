@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from kreuzberg._gmft._base import (
+from kreuzberg._vision_tables._base import (
     EMPTY_RECT,
     Rect,
     iob_bbox,

@@ -142,7 +142,7 @@ def _create_config_with_overrides(**kwargs: Any) -> ExtractionConfig:
             "keyword_count": base_config.keyword_count,
             "auto_detect_language": base_config.auto_detect_language,
             "ocr_config": base_config.ocr_config,
-            "gmft_config": base_config.gmft_config,
+            "vision_tables_config": base_config.vision_tables_config,
         }
         config_dict = config_dict | kwargs
 

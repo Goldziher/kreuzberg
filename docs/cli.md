@@ -90,7 +90,7 @@ ocr_backend = "tesseract"
 language = "eng+deu"
 psm = 3
 
-[tool.kreuzberg.gmft]
+[tool.kreuzberg.vision_tables]
 verbosity = 1
 cell_required_confidence = 50
 ```

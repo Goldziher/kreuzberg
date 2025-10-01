@@ -114,7 +114,7 @@ Kreuzberg MCP server supports enhanced functionality through optional dependenci
 | **Language Detection** | `langdetect`           | Automatically detect document languages          |
 | **Entity Extraction**  | `entity-extraction`    | Extract named entities and keywords              |
 | **Advanced OCR**       | `easyocr`, `paddleocr` | Alternative OCR engines                          |
-| **Table Extraction**   | `gmft`                 | Extract structured tables from PDFs              |
+| **Table Extraction**   | `vision-tables`        | Extract structured tables from PDFs              |
 | **All Features**       | `all`                  | Install all optional dependencies                |
 
 ### Installation Examples
@@ -183,7 +183,7 @@ For different use cases:
   "mcpServers": {
     "kreuzberg": {
       "command": "uvx",
-      "args": ["--with", "kreuzberg[easyocr,paddleocr,gmft]", "kreuzberg-mcp"]
+      "args": ["--with", "kreuzberg[easyocr,paddleocr,vision-tables]", "kreuzberg-mcp"]
     }
   }
 }
@@ -544,8 +544,8 @@ Claude: I'll extract all tables from your financial report.
         - Solution: `uvx --from "kreuzberg[entity-extraction]" kreuzberg-mcp`
     - **Advanced OCR Unavailable**: `easyocr` or `paddleocr` backend not found
         - Solution: `uvx --from "kreuzberg[easyocr,paddleocr]" kreuzberg-mcp`
-    - **Table Extraction Error**: `MissingDependencyError: The package 'gmft' is required`
-        - Solution: `uvx --from "kreuzberg[gmft]" kreuzberg-mcp`
+    - **Table Extraction Error**: `MissingDependencyError: The package 'vision-tables' is required`
+        - Solution: `uvx --from "kreuzberg[vision-tables]" kreuzberg-mcp`
 
 1. **uvx Command Not Found**
 

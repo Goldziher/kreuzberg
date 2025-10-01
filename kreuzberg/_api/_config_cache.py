@@ -14,12 +14,12 @@ from kreuzberg._config import discover_config
 from kreuzberg._types import (
     EasyOCRConfig,
     ExtractionConfig,
-    GMFTConfig,
     HTMLToMarkdownConfig,
     LanguageDetectionConfig,
     PaddleOCRConfig,
     SpacyEntityExtractionConfig,
     TesseractConfig,
+    VisionTablesConfig,
 )
 from kreuzberg._utils._serialization import deserialize, serialize
 
@@ -84,9 +84,9 @@ def _cached_create_ocr_config(
 
 
 @lru_cache(maxsize=64)
-def _cached_create_gmft_config(config_json: str) -> GMFTConfig:
-    """Cache GMFT config creation."""
-    return GMFTConfig(**deserialize(config_json, dict[str, Any], json=True))
+def _cached_create_vision_tables_config(config_json: str) -> VisionTablesConfig:
+    """Cache vision-based table extraction config creation."""
+    return VisionTablesConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=64)
@@ -133,10 +133,10 @@ def create_ocr_config_cached(
     return _cached_create_ocr_config(ocr_backend, config_json)
 
 
-def create_gmft_config_cached(config_dict: dict[str, Any]) -> GMFTConfig:
-    """Cached version of GMFT config creation."""
+def create_vision_tables_config_cached(config_dict: dict[str, Any]) -> VisionTablesConfig:
+    """Cached version of vision-based table extraction config creation."""
     config_json = serialize(config_dict, json=True, sort_keys=True).decode()
-    return _cached_create_gmft_config(config_json)
+    return _cached_create_vision_tables_config(config_json)
 
 
 def create_language_detection_config_cached(config_dict: dict[str, Any]) -> LanguageDetectionConfig:
@@ -173,7 +173,7 @@ def clear_all_caches() -> None:
     """Clear all LRU caches."""
     _cached_discover_config.cache_clear()
     _cached_create_ocr_config.cache_clear()
-    _cached_create_gmft_config.cache_clear()
+    _cached_create_vision_tables_config.cache_clear()
     _cached_create_language_detection_config.cache_clear()
     _cached_create_spacy_config.cache_clear()
     _cached_create_html_markdown_config.cache_clear()
@@ -199,11 +199,11 @@ def get_cache_stats() -> dict[str, dict[str, int | None]]:
             "size": _cached_create_ocr_config.cache_info().currsize,
             "max_size": _cached_create_ocr_config.cache_info().maxsize,
         },
-        "gmft_config": {
-            "hits": _cached_create_gmft_config.cache_info().hits,
-            "misses": _cached_create_gmft_config.cache_info().misses,
-            "size": _cached_create_gmft_config.cache_info().currsize,
-            "max_size": _cached_create_gmft_config.cache_info().maxsize,
+        "vision_tables_config": {
+            "hits": _cached_create_vision_tables_config.cache_info().hits,
+            "misses": _cached_create_vision_tables_config.cache_info().misses,
+            "size": _cached_create_vision_tables_config.cache_info().currsize,
+            "max_size": _cached_create_vision_tables_config.cache_info().maxsize,
         },
         "language_detection_config": {
             "hits": _cached_create_language_detection_config.cache_info().hits,

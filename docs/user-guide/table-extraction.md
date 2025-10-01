@@ -11,12 +11,12 @@ Kreuzberg provides multiple approaches for extracting tables from documents, eac
 Uses computer vision models to detect and extract table structure with high accuracy.
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, GMFTConfig
+from kreuzberg import extract_file, ExtractionConfig, VisionTablesConfig
 
 # Enable vision-based table extraction
 config = ExtractionConfig(
     extract_tables=True,
-    gmft_config=GMFTConfig(
+    vision_tables_config=VisionTablesConfig(
         detection_threshold=0.7,  # Confidence threshold for finding tables
         structure_threshold=0.5,  # Confidence threshold for table structure
         detection_device="auto",  # Use available GPU/CPU
@@ -43,7 +43,7 @@ for i, table in enumerate(result.tables):
 
 **Requirements:**
 
-- Install with: `pip install "kreuzberg[gmft]"`
+- Install with: `pip install "kreuzberg[vision-tables]"`
 - Dependencies: Machine learning libraries (~1GB download)
 - Optional: GPU acceleration support
 
@@ -87,7 +87,7 @@ You can enable multiple table extraction methods simultaneously for comprehensiv
 config = ExtractionConfig(
     extract_tables=True,  # Vision-based method
     extract_tables_from_ocr=True,  # OCR-based method
-    gmft_config=GMFTConfig(
+    vision_tables_config=VisionTablesConfig(
         detection_threshold=0.8,  # Higher threshold for vision method
     ),
 )
@@ -110,9 +110,9 @@ print(f"Found {len(result.tables)} tables total")
 ### Vision-Based Table Extraction
 
 ```python
-from kreuzberg import GMFTConfig
+from kreuzberg import VisionTablesConfig
 
-config = GMFTConfig(
+config = VisionTablesConfig(
     # Model selection (optional, uses optimized defaults)
     # Accuracy settings
     detection_threshold=0.7,  # Lower = more tables detected, more false positives
@@ -199,7 +199,7 @@ extract_tables = true
 extract_tables_from_ocr = true
 
 # Vision-based table extraction settings
-[gmft]
+[vision_tables]
 detection_threshold = 0.7
 structure_threshold = 0.5
 detection_device = "auto"
@@ -222,7 +222,7 @@ table_min_confidence = 30.0
 extract_tables = true
 extract_tables_from_ocr = true
 
-[tool.kreuzberg.gmft]
+[tool.kreuzberg.vision_tables]
 detection_threshold = 0.8
 structure_threshold = 0.6
 
@@ -260,7 +260,7 @@ for table in result.tables:
 ### Vision-Based Method Issues
 
 **Problem:** "Missing dependency" error
-**Solution:** Install with `pip install "kreuzberg[gmft]"`
+**Solution:** Install with `pip install "kreuzberg[vision-tables]"`
 
 **Problem:** Slow processing
 **Solution:** Enable GPU acceleration or increase `batch_size` for GPU processing

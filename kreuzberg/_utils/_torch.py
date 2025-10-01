@@ -4,7 +4,7 @@ This module provides a unified way to handle PyTorch dependencies across Kreuzbe
 supporting both CPU-only and GPU-accelerated workflows.
 
 Features that REQUIRE torch (will raise MissingDependencyError):
-- GMFT table extraction (Table Transformer models)
+- Vision-based table extraction (Table Transformer models)
 
 Features that OPTIONALLY use torch (graceful fallback):
 - EasyOCR GPU acceleration
@@ -40,12 +40,12 @@ def is_torch_available() -> bool:
     return torch is not None
 
 
-def require_torch(functionality: str, dependency_group: str = "gmft") -> None:
+def require_torch(functionality: str, dependency_group: str = "vision-tables") -> None:
     """Require PyTorch for a specific functionality.
 
     Args:
         functionality: Description of what needs torch (e.g., "table extraction")
-        dependency_group: Which dependency group provides torch (e.g., "gmft")
+        dependency_group: Which dependency group provides torch (e.g., "vision-tables")
 
     Raises:
         MissingDependencyError: If torch is not available

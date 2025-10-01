@@ -617,7 +617,7 @@ async def test_pdf_extract_path_async_searchable_text(
     mock_apply_quality = mocker.patch.object(pdf_extractor, "_apply_quality_processing")
     mock_apply_quality.side_effect = lambda x: x
 
-    mocker.patch("kreuzberg._gmft.extract_tables", return_value=[])
+    mocker.patch("kreuzberg._vision_tables.extract_tables", return_value=[])
 
     result = await pdf_extractor.extract_path_async(test_file)
 
@@ -645,7 +645,7 @@ async def test_pdf_extract_path_async_force_ocr(
     mock_apply_quality = mocker.patch.object(pdf_extractor, "_apply_quality_processing")
     mock_apply_quality.side_effect = lambda x: x
 
-    mocker.patch("kreuzberg._gmft.extract_tables", return_value=[])
+    mocker.patch("kreuzberg._vision_tables.extract_tables", return_value=[])
 
     result = await pdf_extractor.extract_path_async(test_file)
 
@@ -671,7 +671,7 @@ async def test_pdf_extract_path_async_with_tables(
     mock_parse = mocker.patch.object(pdf_extractor, "_parse_with_password_attempts")
     mock_parse.return_value = None
 
-    mock_extract_tables = mocker.patch("kreuzberg._gmft.extract_tables_async")
+    mock_extract_tables = mocker.patch("kreuzberg._vision_tables.extract_tables_async")
     mock_extract_tables.return_value = [
         {"text": "Table 1", "page_number": 1},
         {"text": "Table 2", "page_number": 2},
@@ -713,7 +713,7 @@ async def test_pdf_extract_path_async_searchable_fails(
     mock_apply_quality = mocker.patch.object(pdf_extractor, "_apply_quality_processing")
     mock_apply_quality.side_effect = lambda x: x
 
-    mocker.patch("kreuzberg._gmft.extract_tables", return_value=[])
+    mocker.patch("kreuzberg._vision_tables.extract_tables", return_value=[])
 
     result = await pdf_extractor.extract_path_async(test_file)
 
@@ -739,7 +739,7 @@ async def test_pdf_extract_path_async_no_extraction_possible(
     mock_apply_quality = mocker.patch.object(pdf_extractor, "_apply_quality_processing")
     mock_apply_quality.side_effect = lambda x: x
 
-    mocker.patch("kreuzberg._gmft.extract_tables", return_value=[])
+    mocker.patch("kreuzberg._vision_tables.extract_tables", return_value=[])
 
     result = await pdf_extractor.extract_path_async(test_file)
 
@@ -813,7 +813,7 @@ def test_pdf_extract_path_sync_tables_import_error(
     mock_extract_metadata = mocker.patch.object(pdf_extractor, "_extract_metadata_with_password_attempts_sync")
     mock_extract_metadata.return_value = {}
 
-    with patch.dict("sys.modules", {"kreuzberg._gmft": None}):
+    with patch.dict("sys.modules", {"kreuzberg._vision_tables": None}):
         mock_apply_quality = mocker.patch.object(pdf_extractor, "_apply_quality_processing")
         mock_apply_quality.side_effect = lambda x: x
 
@@ -901,7 +901,7 @@ async def test_pdf_extract_path_async_table_import_error(
     mock_extract_metadata = mocker.patch.object(pdf_extractor, "_extract_metadata_with_password_attempts")
     mock_extract_metadata.return_value = {"pages": 1}
 
-    with patch.dict("sys.modules", {"kreuzberg._gmft": None}):
+    with patch.dict("sys.modules", {"kreuzberg._vision_tables": None}):
         mock_apply_quality = mocker.patch.object(pdf_extractor, "_apply_quality_processing")
         mock_apply_quality.side_effect = lambda x: x
 

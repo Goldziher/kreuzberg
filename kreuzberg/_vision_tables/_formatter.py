@@ -1,6 +1,6 @@
-"""Table structure formatting using Table Transformer.
+"""Vision-based table structure formatting using Table Transformer.
 
-Adapted from GMFT's TATRFormatter with Kreuzberg patterns:
+Adapted from the GMFT library's TATRFormatter with Kreuzberg patterns:
 - Proper dependency handling
 - Polars DataFrames instead of pandas
 - Slots and functional design for performance
@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from kreuzberg._types import GMFTConfig
+from kreuzberg._types import VisionTablesConfig
 from kreuzberg._utils._model_cache import setup_huggingface_cache
 from kreuzberg._utils._sync import run_sync
 from kreuzberg._utils._torch import require_torch, resolve_device, tensor, with_no_grad
@@ -58,9 +58,9 @@ class TableFormatter:
 
     __slots__ = ("_device", "_model", "_processor", "config")
 
-    def __init__(self, config: GMFTConfig | None = None) -> None:
+    def __init__(self, config: VisionTablesConfig | None = None) -> None:
         """Initialize table formatter with optional ML model loading."""
-        self.config = config or GMFTConfig()
+        self.config = config or VisionTablesConfig()
         self._model: Any = None
         self._processor: Any = None
         self._device: str = self._resolve_device(self.config.structure_device)
@@ -134,7 +134,7 @@ class TableFormatter:
         if not self.is_available():
             raise MissingDependencyError(
                 "Table formatting requires 'transformers' and 'torch' packages. "
-                "Install with: pip install 'kreuzberg[gmft]'"
+                "Install with: pip install 'kreuzberg[vision-tables]'"
             )
 
         return self._format_table_with_model(cropped_table, image)

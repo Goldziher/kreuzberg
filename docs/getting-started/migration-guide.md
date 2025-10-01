@@ -7,7 +7,7 @@ This guide helps you migrate from Kreuzberg v3.x to v4.0, which introduces break
 Version 4.0 removes all previously deprecated configuration parameters and introduces a hybrid Rust-Python architecture for improved performance. The main changes affect:
 
 - OCR backend configuration (EasyOCR, PaddleOCR)
-- GMFT table extraction configuration
+- Vision-based table extraction configuration (renamed from GMFT)
 - Image OCR configuration in ExtractionConfig
 - Python 3.10+ requirement (using modern union syntax)
 
@@ -101,7 +101,9 @@ config = ExtractionConfig(
 
 **Note:** PaddleOCR does not support MPS (Apple Silicon). The `device` parameter only accepts `"auto"`, `"cuda"`, or `"cpu"`.
 
-### GMFTConfig
+### VisionTablesConfig (formerly GMFTConfig)
+
+**Breaking Change:** `gmft_config` renamed to `vision_tables_config`, `GMFTConfig` renamed to `VisionTablesConfig`
 
 **Removed Parameter:**
 
@@ -121,11 +123,11 @@ config = ExtractionConfig(
 )
 
 # v4.0 (current)
-from kreuzberg import extract_file, ExtractionConfig, GMFTConfig
+from kreuzberg import extract_file, ExtractionConfig, VisionTablesConfig
 
 config = ExtractionConfig(
     extract_tables=True,
-    gmft_config=GMFTConfig(
+    vision_tables_config=VisionTablesConfig(
         model="lite",  # Explicitly specify lite model
     ),
 )
@@ -199,11 +201,11 @@ config = ExtractionConfig(
 )
 ```
 
-## GMFT Configuration Redesign
+## Vision-Based Table Extraction Configuration Redesign
 
-Version 4.0 completely redesigns GMFT configuration to use TATR v1.1 models with simplified options.
+Version 4.0 renames GMFT to "vision-tables" and completely redesigns the configuration to use TATR v1.1 models with simplified options.
 
-### Old GMFT Configuration (v3.x)
+### Old Configuration (v3.x - GMFT)
 
 ```python
 from kreuzberg import ExtractionConfig, GMFTConfig
@@ -219,14 +221,14 @@ config = ExtractionConfig(
 )
 ```
 
-### New GMFT Configuration (v4.0)
+### New Configuration (v4.0 - VisionTables)
 
 ```python
-from kreuzberg import ExtractionConfig, GMFTConfig
+from kreuzberg import ExtractionConfig, VisionTablesConfig
 
 config = ExtractionConfig(
     extract_tables=True,
-    gmft_config=GMFTConfig(
+    vision_tables_config=VisionTablesConfig(
         # Model selection
         detection_model="microsoft/table-transformer-detection",
         structure_model="microsoft/table-transformer-structure-recognition-v1.1-all",
@@ -301,7 +303,7 @@ Version 4.0 migrates from Hatchling to Maturin for Rust-Python integration:
 
 ### Updated Requirements
 
-- **GMFT**: Now requires `torch>=2.8.0` and `transformers>=4.35.2`
+- **Vision-Tables** (formerly GMFT): Now requires `torch>=2.8.0` and `transformers>=4.35.2`
 - **Build**: Requires `maturin>=1.9.0` for development builds
 
 ## Migration Checklist
@@ -312,9 +314,10 @@ Use this checklist to ensure a smooth migration:
 - [ ] Replace `use_gpu` with `device` in EasyOCRConfig and PaddleOCRConfig
 - [ ] Update PaddleOCR threshold parameters (`det_db_*` → `text_det_*`)
 - [ ] Replace `use_angle_cls` with `use_textline_orientation` in PaddleOCRConfig
-- [ ] Replace `low_memory` with `model` in GMFTConfig
+- [ ] Replace `gmft_config` with `vision_tables_config` and `GMFTConfig` with `VisionTablesConfig`
+- [ ] Replace `low_memory` with `model` in VisionTablesConfig
 - [ ] Migrate flat image OCR parameters to nested `ImageOCRConfig`
-- [ ] Update GMFT configuration to use simplified v4.0 options
+- [ ] Update vision-tables configuration to use simplified v4.0 options
 - [ ] Test your application with the new configuration
 - [ ] Update any API server query parameters to use nested structures
 

@@ -6,23 +6,23 @@ import pytest
 
 from kreuzberg._api._config_cache import (
     clear_all_caches,
-    create_gmft_config_cached,
     create_html_markdown_config_cached,
     create_language_detection_config_cached,
     create_ocr_config_cached,
     create_spacy_config_cached,
+    create_vision_tables_config_cached,
     discover_config_cached,
     get_cache_stats,
     parse_header_config_cached,
 )
 from kreuzberg._types import (
     EasyOCRConfig,
-    GMFTConfig,
     HTMLToMarkdownConfig,
     LanguageDetectionConfig,
     PaddleOCRConfig,
     SpacyEntityExtractionConfig,
     TesseractConfig,
+    VisionTablesConfig,
 )
 
 
@@ -97,10 +97,10 @@ def test_create_ocr_config_cached_invalid_backend() -> None:
         create_ocr_config_cached("invalid", config_dict)
 
 
-def test_create_gmft_config_cached() -> None:
+def test_create_vision_tables_config_cached() -> None:
     config_dict = {"verbosity": 1}
-    result = create_gmft_config_cached(config_dict)
-    assert isinstance(result, GMFTConfig)
+    result = create_vision_tables_config_cached(config_dict)
+    assert isinstance(result, VisionTablesConfig)
     assert result.verbosity == 1
 
 
@@ -140,7 +140,7 @@ def test_get_cache_stats() -> None:
     clear_all_caches()
 
     create_ocr_config_cached("tesseract", {})
-    create_gmft_config_cached({})
+    create_vision_tables_config_cached({})
     parse_header_config_cached("{}")
 
     stats = get_cache_stats()
@@ -149,7 +149,7 @@ def test_get_cache_stats() -> None:
         "discover_config",
         "ocr_config",
         "header_parsing",
-        "gmft_config",
+        "vision_tables_config",
         "language_detection_config",
         "spacy_config",
     ]
@@ -164,7 +164,7 @@ def test_get_cache_stats() -> None:
 
 def test_clear_all_caches() -> None:
     create_ocr_config_cached("tesseract", {})
-    create_gmft_config_cached({})
+    create_vision_tables_config_cached({})
 
     clear_all_caches()
 
@@ -213,11 +213,11 @@ def test_config_dict_serialization_consistency() -> None:
     config1 = {"verbosity": 2, "detection_threshold": 0.8}
     config2 = {"detection_threshold": 0.8, "verbosity": 2}
 
-    result1 = create_gmft_config_cached(config1)
-    result2 = create_gmft_config_cached(config2)
+    result1 = create_vision_tables_config_cached(config1)
+    result2 = create_vision_tables_config_cached(config2)
 
     stats = get_cache_stats()
-    assert stats["gmft_config"]["hits"] == 1
-    assert stats["gmft_config"]["misses"] == 1
+    assert stats["vision_tables_config"]["hits"] == 1
+    assert stats["vision_tables_config"]["misses"] == 1
 
     assert result1.__dict__ == result2.__dict__

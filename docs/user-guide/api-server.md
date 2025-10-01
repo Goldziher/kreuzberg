@@ -323,13 +323,13 @@ curl -X POST http://localhost:8000/extract \
   -F "data=@multilingual_document.pdf"
 ```
 
-Table extraction with GMFT configuration:
+Vision-based table extraction configuration:
 
 ```bash
 curl -X POST http://localhost:8000/extract \
   -H "X-Extraction-Config: {
     \"extract_tables\": true,
-    \"gmft_config\": {
+    \"vision_tables_config\": {
       \"detection_threshold\": 0.7,
       \"structure_threshold\": 0.5,
       \"detection_device\": \"auto\",
@@ -468,7 +468,7 @@ The API server uses the default Kreuzberg extraction configuration:
 
 - Tesseract OCR is included by default
 - PDF, image, and document extraction is supported
-- Table extraction with GMFT (if installed)
+- Vision-based table extraction (if installed)
 
 ### Environment Variables
 

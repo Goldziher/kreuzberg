@@ -1,6 +1,6 @@
-"""Base geometric and data structures for table extraction.
+"""Base geometric and data structures for vision-based table extraction.
 
-Adapted from GMFT: https://github.com/conjuncts/gmft
+Adapted from the GMFT library (https://github.com/conjuncts/gmft).
 Uses functional approaches and hashable structures for caching.
 """
 
@@ -12,7 +12,7 @@ BBox = tuple[float, float, float, float]
 class Rect:
     """A hashable floating-point rectangle for bounding box operations.
 
-    Adapted from GMFT's Rect class with slots and caching support.
+    Adapted from the GMFT library's Rect class with slots and caching support.
     """
 
     __slots__ = ("bbox",)

@@ -17,11 +17,22 @@ Version 4.0 introduces a hybrid architecture where performance-critical operatio
 - **Dependencies**: Removed `python-pptx`, `python-calamine`, and `chardetng-py` (replaced by native Rust implementations)
 - **Python 3.10+ Required**: Now using modern union syntax (`|` instead of `Union`)
 
-#### GMFT Table Extraction Configuration
+#### Vision-Based Table Extraction Rename (GMFT → VisionTables)
 
-Complete redesign of GMFT configuration to use TATR v1.1 models with simplified, user-friendly options:
+**Breaking Change**: The GMFT feature has been renamed to "vision-tables" for clarity:
 
-**Old Configuration (v3.x):**
+- **Package extra**: `gmft` → `vision-tables` (install with `pip install "kreuzberg[vision-tables]"`)
+- **Config class**: `GMFTConfig` → `VisionTablesConfig`
+- **Config field**: `gmft_config` → `vision_tables_config` in `ExtractionConfig`
+- **Directory**: `kreuzberg/_gmft/` → `kreuzberg/_vision_tables/`
+
+This rename clarifies that it's vision-based table extraction, not a dependency on the external GMFT package. The functionality remains unchanged.
+
+#### Vision-Based Table Extraction Configuration Redesign
+
+Complete redesign of vision-based table extraction configuration to use TATR v1.1 models with simplified, user-friendly options:
+
+**Old Configuration (v3.x - GMFT):**
 
 ```python
 from kreuzberg._types import GMFTConfig
@@ -34,12 +45,12 @@ config = GMFTConfig(
 )
 ```
 
-**New Configuration (v4.0):**
+**New Configuration (v4.0 - VisionTables):**
 
 ```python
-from kreuzberg._types import GMFTConfig
+from kreuzberg._types import VisionTablesConfig
 
-config = GMFTConfig(
+config = VisionTablesConfig(
     # Model selection
     detection_model="microsoft/table-transformer-detection",
     structure_model="microsoft/table-transformer-structure-recognition-v1.1-all",
@@ -60,7 +71,7 @@ config = GMFTConfig(
 
 #### Removed Configuration Options
 
-The following internal GMFT options have been removed for simplicity:
+The following internal vision-based table extraction options have been removed for simplicity:
 
 - `formatter_base_threshold`, `cell_required_confidence`
 - `remove_null_rows`, `enable_multi_header`
@@ -71,7 +82,7 @@ The following internal GMFT options have been removed for simplicity:
 #### Dependencies Changes
 
 - **Removed Python Dependencies**: `python-pptx`, `python-calamine`, `chardetng-py`
-- **Updated GMFT**: Now requires `torch>=2.8.0` and `transformers>=4.35.2` instead of `gmft` package
+- **Vision-Based Table Extraction**: Now requires `torch>=2.8.0` and `transformers>=4.56.2` (vendored, not external package)
 - **Build Requirements**: Now requires `maturin>=1.9.0` instead of `hatchling`
 
 #### Removed Deprecated Parameters
@@ -80,7 +91,7 @@ All deprecated configuration parameters have been removed. This affects:
 
 - **EasyOCRConfig**: `use_gpu` parameter removed (use `device` instead)
 - **PaddleOCRConfig**: `use_gpu`, `gpu_mem`, `gpu_memory_limit`, `use_angle_cls`, and legacy detection thresholds removed
-- **GMFTConfig**: `low_memory` parameter removed (use `model` instead)
+- **VisionTablesConfig** (formerly GMFTConfig): `low_memory` parameter removed (use `model` instead)
 - **ExtractionConfig**: All flat image OCR parameters removed (use nested `ImageOCRConfig` instead)
 
 **📖 See the [Migration Guide](https://kreuzberg.dev/getting-started/migration-guide/) for detailed migration instructions and code examples.**
@@ -98,7 +109,7 @@ All deprecated configuration parameters have been removed. This affects:
 - **Cache Management**: High-performance caching system with automatic cleanup and statistics
 - **Table Processing**: Arrow IPC bridge for efficient data exchange between Rust and Python
 
-#### Enhanced GMFT Integration
+#### Enhanced Vision-Based Table Extraction
 
 - **TATR v1.1 Support**: Latest Table Transformer models with improved accuracy
 - **Model Variants**: Support for specialized models (all/pub/fin variants)
@@ -116,9 +127,9 @@ All deprecated configuration parameters have been removed. This affects:
 #### New Format Support
 
 - **Plain Text & Markdown**: Native support for `text/plain` and `text/markdown` with comprehensive metadata extraction
-  - Extract line count, word count, character count
-  - For markdown: extract headers, links, code blocks with language detection
-  - Fully integrated with chunking, compression, and entity extraction features
+    - Extract line count, word count, character count
+    - For markdown: extract headers, links, code blocks with language detection
+    - Fully integrated with chunking, compression, and entity extraction features
 - **XML Documents**: Native support for XML files (`application/xml`, `text/xml`, `image/svg+xml`) with streaming parser
 - **Legacy Word Documents**: Support for `.doc` files (`application/msword`) via LibreOffice conversion
 - **Legacy PowerPoint**: Support for `.ppt` files (`application/vnd.ms-powerpoint`) via LibreOffice conversion
@@ -136,7 +147,7 @@ All deprecated configuration parameters have been removed. This affects:
 
 - **Python Implementations**: Replaced Excel, PPTX, and email extractors with Rust versions
 - **Legacy Dependencies**: Removed Python-based office document parsing libraries
-- **Complex GMFT Options**: Simplified configuration by removing internal tuning parameters
+- **Complex Vision-Based Table Extraction Options**: Simplified configuration by removing internal tuning parameters
 
 ### Fixed
 
@@ -264,7 +275,7 @@ All deprecated configuration parameters have been removed. This affects:
 
 ### Fixed
 
-- **Table Detection**: Improved error handling for empty DataFrames in GMFT (fixes [#128](https://github.com/Goldziher/kreuzberg/issues/128))
+- **Table Detection**: Improved error handling for empty DataFrames in vision-based table extraction (fixes [#128](https://github.com/Goldziher/kreuzberg/issues/128))
 - **CI Coverage**: Enhanced robustness of lcov coverage combining
 
 ## [3.13.3] - 2025-09-10
@@ -345,7 +356,7 @@ All deprecated configuration parameters have been removed. This affects:
 
 ### Fixed
 
-- **GMFT Table Extraction**: Handle empty DataFrames to prevent pandas.errors.EmptyDataError
+- **Vision-Based Table Extraction**: Handle empty DataFrames to prevent pandas.errors.EmptyDataError
 
 ## [3.11.1] - 2025-08-13
 
@@ -374,7 +385,7 @@ All deprecated configuration parameters have been removed. This affects:
 
 ### Added
 
-- **Enhanced Test Suite**: Comprehensive tests for entity extraction, GMFT edge cases, and CLI modules
+- **Enhanced Test Suite**: Comprehensive tests for entity extraction, vision-based table extraction edge cases, and CLI modules
 - **Performance Optimizations**: Improved test reliability with retry mechanisms
 
 ## [3.9.1] - 2025-07-29

@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 from PIL import Image
 
-from kreuzberg._gmft import (
+from kreuzberg._types import VisionTablesConfig
+from kreuzberg._vision_tables import (
     CroppedTable,
     TableDetector,
     TableFormatter,
@@ -12,7 +13,7 @@ from kreuzberg._gmft import (
     extract_tables_async,
     extract_tables_sync,
 )
-from kreuzberg._gmft._algorithm import (
+from kreuzberg._vision_tables._algorithm import (
     _apply_non_maximum_suppression,
     _calculate_cell_intersection,
     _extract_cell_text,
@@ -20,18 +21,17 @@ from kreuzberg._gmft._algorithm import (
     _merge_close_predictions,
     extract_table_dataframe,
 )
-from kreuzberg._gmft._base import Rect
-from kreuzberg._gmft._types import (
+from kreuzberg._vision_tables._base import Rect
+from kreuzberg._vision_tables._types import (
     BboxPredictions,
     FormattedTable,
     TablePredictions,
 )
-from kreuzberg._types import GMFTConfig
 from kreuzberg.exceptions import MissingDependencyError
 
 
 def test_gmft_config_defaults() -> None:
-    config = GMFTConfig()
+    config = VisionTablesConfig()
     assert config.detection_threshold == 0.7
     assert config.structure_threshold == 0.5
     assert config.detection_device == "auto"
@@ -41,7 +41,7 @@ def test_gmft_config_defaults() -> None:
 
 
 def test_gmft_config_custom() -> None:
-    config = GMFTConfig(
+    config = VisionTablesConfig(
         detection_threshold=0.8,
         structure_threshold=0.6,
         model_cache_dir="/tmp/models",
@@ -56,10 +56,10 @@ def test_gmft_config_custom() -> None:
 
 
 def test_gmft_config_model_variants() -> None:
-    config = GMFTConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-pub")
+    config = VisionTablesConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-pub")
     assert "v1.1-pub" in config.structure_model
 
-    config = GMFTConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-fin")
+    config = VisionTablesConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-fin")
     assert "v1.1-fin" in config.structure_model
 
 
@@ -76,14 +76,14 @@ def test_table_formatter_initialization() -> None:
 
 
 def test_detector_with_custom_config() -> None:
-    config = GMFTConfig(detection_device="cpu", detection_threshold=0.9)
+    config = VisionTablesConfig(detection_device="cpu", detection_threshold=0.9)
     detector = TableDetector(config)
     assert detector.config == config
     assert detector._device == "cpu"
 
 
 def test_formatter_with_custom_config() -> None:
-    config = GMFTConfig(structure_device="cpu", structure_threshold=0.3)
+    config = VisionTablesConfig(structure_device="cpu", structure_threshold=0.3)
     formatter = TableFormatter(config)
     assert formatter.config == config
     assert formatter._device == "cpu"
@@ -267,7 +267,7 @@ def test_extract_table_dataframe() -> None:
         spanning_cells=BboxPredictions(boxes=(), scores=(), labels=()),
     )
 
-    config = GMFTConfig()
+    config = VisionTablesConfig()
 
     df = extract_table_dataframe(image, predictions, config)
 

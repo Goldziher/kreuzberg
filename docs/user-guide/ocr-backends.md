@@ -15,7 +15,7 @@ Kreuzberg supports multiple OCR (Optical Character Recognition) backends, giving
 
 **Installation Instructions:**
 
-```bash
+````bash
 # Ubuntu/Debian
 sudo apt-get install tesseract-ocr
 
@@ -24,7 +24,7 @@ brew install tesseract
 
 # Windows
 choco install -y tesseract
-```
+```text
 
 **Language Support:**
 
@@ -53,7 +53,7 @@ result = await extract_file(
         ),
     ),
 )
-```
+```text
 
 ### 2. EasyOCR
 
@@ -68,7 +68,9 @@ result = await extract_file(
 
 !!! warning "Experimental Feature"
 
-    GPU support is not considered an official feature and might be subject to change or removal in future versions.
+```text
+GPU support is not considered an official feature and might be subject to change or removal in future versions.
+```text
 
 - EasyOCR can use GPU acceleration when PyTorch with CUDA is available
 - To enable GPU, set `device="cuda"` or `device="auto"` in the configuration
@@ -92,7 +94,7 @@ result = await extract_file(
         ocr_config=EasyOCRConfig(language_list=["en", "de"], device="auto"),
     ),
 )
-```
+```text
 
 ### 3. PaddleOCR
 
@@ -111,7 +113,9 @@ result = await extract_file(
 
 !!! warning "Experimental Feature"
 
-    GPU support is not considered an official feature and might be subject to change or removal in future versions.
+```text
+GPU support is not considered an official feature and might be subject to change or removal in future versions.
+```text
 
 - PaddleOCR can utilize GPU acceleration if the paddlepaddle-gpu package is installed
 - Kreuzberg automatically detects if paddlepaddle-gpu is available
@@ -135,7 +139,7 @@ result = await extract_file(
         ocr_config=PaddleOCRConfig(language="ch", device="auto"),
     ),
 )
-```
+```text
 
 ### 4. No OCR
 
@@ -147,7 +151,7 @@ You can also disable OCR completely, which is useful for documents that already 
 from kreuzberg import extract_file, ExtractionConfig
 
 result = await extract_file("searchable_pdf.pdf", config=ExtractionConfig(ocr_backend=None))
-```
+```text
 
 ## Choosing the Right Backend
 
@@ -238,10 +242,13 @@ pip install "kreuzberg[chunking]"
 
 # With all optional dependencies (includes all OCR backends)
 pip install "kreuzberg[all]"
-```
+```text
 
 !!! note "System Dependencies"
 
-    Remember that Pandoc and Tesseract are system dependencies that must be installed separately from the Python package.
+```text
+Remember that Pandoc and Tesseract are system dependencies that must be installed separately from the Python package.
 
-    For Tesseract, you must install version 5.0 or higher, and you'll need to install additional language data files for languages other than English.
+For Tesseract, you must install version 5.0 or higher, and you'll need to install additional language data files for languages other than English.
+```text
+````

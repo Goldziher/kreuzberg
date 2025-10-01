@@ -60,7 +60,7 @@ class TestRequireTorch:
 
             error = exc_info.value
             assert "test functionality" in str(error)
-            assert "gmft" in str(error)
+            assert "vision-tables" in str(error)
             assert "torch" in str(error)
 
     def test_require_torch_missing_custom_group(self) -> None:

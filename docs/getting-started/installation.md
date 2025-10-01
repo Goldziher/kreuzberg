@@ -66,22 +66,22 @@ choco install -y tesseract
 
     Tesseract includes English language support by default. Kreuzberg Docker images come pre-configured with 12 common business languages: English, Spanish, French, German, Italian, Portuguese, Chinese (Simplified & Traditional), Japanese, Arabic, Russian, and Hindi.
 
-    For local installations requiring additional languages, you must install the appropriate language data files:
+For local installations requiring additional languages, you must install the appropriate language data files:
 
-    - **Ubuntu/Debian**: `sudo apt-get install tesseract-ocr-deu` (for German)
-    - **macOS**: `brew install tesseract-lang` (includes all languages)
-    - **Windows**: Download language files manually to the Tesseract `tessdata` directory:
+- **Ubuntu/Debian**: `sudo apt-get install tesseract-ocr-deu` (for German)
+- **macOS**: `brew install tesseract-lang` (includes all languages)
+- **Windows**: Download language files manually to the Tesseract `tessdata` directory:
 
-    ```powershell
-    # For German language support on Windows
-    $tessDataDir = "C:\Program Files\Tesseract-OCR\tessdata"
-    Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/deu.traineddata" -OutFile "$tessDataDir\deu.traineddata"
+```powershell
+# For German language support on Windows
+$tessDataDir = "C:\Program Files\Tesseract-OCR\tessdata"
+Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/deu.traineddata" -OutFile "$tessDataDir\deu.traineddata"
 
-    # Verify installation
-    tesseract --list-langs
-    ```
+# Verify installation
+tesseract --list-langs
+```
 
-    For more details on language installation and configuration, refer to the [Tesseract documentation](https://tesseract-ocr.github.io/tessdoc/Installation.html).
+For more details on language installation and configuration, refer to the [Tesseract documentation](https://tesseract-ocr.github.io/tessdoc/Installation.html).
 
 #### EasyOCR
 
@@ -131,7 +131,7 @@ Kreuzberg offers multiple approaches for extracting tables from documents:
 Uses computer vision models for high-accuracy table detection and structure recognition. Best for complex tables and diverse document types.
 
 ```shell
-pip install "kreuzberg[gmft]"
+pip install "kreuzberg[vision-tables]"
 ```
 
 **Features:**
@@ -187,7 +187,7 @@ pip install "kreuzberg[all]"
 This is equivalent to:
 
 ```shell
-pip install "kreuzberg[api,chunking,cli,crypto,document-classification,easyocr,entity-extraction,gmft,langdetect,paddleocr,additional-extensions]"
+pip install "kreuzberg[api,chunking,cli,crypto,document-classification,easyocr,entity-extraction,vision-tables,langdetect,paddleocr,additional-extensions]"
 ```
 
 ## Development Setup

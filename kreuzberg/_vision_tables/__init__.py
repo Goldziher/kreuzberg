@@ -1,8 +1,9 @@
-"""Table extraction using Table Transformer (TATR) adapted from GMFT.
+"""Vision-based table extraction using Table Transformer (TATR).
 
 This module provides table detection and structure extraction capabilities
-adapted from GMFT (https://github.com/conjuncts/gmft) to work with Kreuzberg's
-architecture and patterns.
+using Microsoft's Table Transformer models. The implementation is adapted
+from the GMFT library (https://github.com/conjuncts/gmft) to work with
+Kreuzberg's architecture and patterns.
 
 See ATTRIBUTION.md for proper attribution and licensing information.
 """
@@ -16,7 +17,7 @@ from typing import TYPE_CHECKING
 
 from kreuzberg._constants import PDF_POINTS_PER_INCH
 from kreuzberg._internal_bindings import calculate_optimal_dpi
-from kreuzberg._types import GMFTConfig
+from kreuzberg._types import VisionTablesConfig
 from kreuzberg._utils._model_cache import (
     setup_huggingface_cache,
     setup_huggingface_cache_async,
@@ -57,7 +58,7 @@ def _get_cached_detector(
     if cache_dir:
         setup_huggingface_cache(cache_dir)
 
-    config = GMFTConfig(
+    config = VisionTablesConfig(
         detection_model=detection_model,
         detection_threshold=detection_threshold,
         model_cache_dir=cache_dir,
@@ -76,7 +77,7 @@ async def _get_cached_detector_async(
     if cache_dir:
         await setup_huggingface_cache_async(cache_dir)
 
-    config = GMFTConfig(
+    config = VisionTablesConfig(
         detection_model=detection_model,
         detection_threshold=detection_threshold,
         model_cache_dir=cache_dir,
@@ -93,7 +94,7 @@ def _get_cached_formatter(
     if cache_dir:
         setup_huggingface_cache(cache_dir)
 
-    config = GMFTConfig(
+    config = VisionTablesConfig(
         structure_model=structure_model,
         structure_threshold=structure_threshold,
         model_cache_dir=cache_dir,
@@ -108,7 +109,7 @@ async def _get_cached_formatter_async(
     if cache_dir:
         await setup_huggingface_cache_async(cache_dir)
 
-    config = GMFTConfig(
+    config = VisionTablesConfig(
         structure_model=structure_model,
         structure_threshold=structure_threshold,
         model_cache_dir=cache_dir,
@@ -116,15 +117,15 @@ async def _get_cached_formatter_async(
     return TableFormatter(config)
 
 
-async def extract_tables_async(file_path: str | Path, config: GMFTConfig | None = None) -> list[TableData]:
+async def extract_tables_async(file_path: str | Path, config: VisionTablesConfig | None = None) -> list[TableData]:
     """Extract tables from PDF documents using Table Transformer (TATR).
 
     Uses Microsoft's Table Transformer models for table detection and structure
-    recognition, adapted from GMFT with Kreuzberg patterns.
+    recognition, adapted from the GMFT library with Kreuzberg patterns.
 
     Args:
         file_path: Path to PDF file to extract tables from
-        config: Optional GMFT configuration for customizing extraction behavior
+        config: Optional vision-based table extraction configuration for customizing extraction behavior
 
     Returns:
         List of TableData objects containing extracted tables with:
@@ -140,14 +141,14 @@ async def extract_tables_async(file_path: str | Path, config: GMFTConfig | None 
     return await run_sync(extract_tables_sync, file_path, config)
 
 
-def extract_tables_sync(file_path: str | Path, config: GMFTConfig | None = None) -> list[TableData]:
+def extract_tables_sync(file_path: str | Path, config: VisionTablesConfig | None = None) -> list[TableData]:
     """Synchronous table extraction from PDF documents.
 
     Leverages Kreuzberg's existing PDF processing facilities and DPI optimization.
 
     Args:
         file_path: Path to PDF file to extract tables from
-        config: Optional GMFT configuration for customizing extraction behavior
+        config: Optional vision-based table extraction configuration for customizing extraction behavior
 
     Returns:
         List of TableData objects containing extracted tables
@@ -159,7 +160,7 @@ def extract_tables_sync(file_path: str | Path, config: GMFTConfig | None = None)
     pdf_path = Path(file_path)
 
     if config is None:
-        config = GMFTConfig()
+        config = VisionTablesConfig()
 
     detector = _get_cached_detector(config.detection_model, config.detection_threshold, config.model_cache_dir)
     formatter = _get_cached_formatter(config.structure_model, config.structure_threshold, config.model_cache_dir)

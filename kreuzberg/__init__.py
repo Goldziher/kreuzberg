@@ -7,7 +7,6 @@ from ._types import (
     ExtractedImage,
     ExtractionConfig,
     ExtractionResult,
-    GMFTConfig,
     HTMLToMarkdownConfig,
     ImageOCRConfig,
     ImageOCRResult,
@@ -20,6 +19,7 @@ from ._types import (
     TableData,
     TesseractConfig,
     TokenReductionConfig,
+    VisionTablesConfig,
 )
 from .exceptions import KreuzbergError, MissingDependencyError, OCRError, ParsingError, ValidationError
 from .extraction import (
@@ -42,7 +42,6 @@ __all__ = [
     "ExtractionConfig",
     "ExtractionResult",
     "ExtractorRegistry",
-    "GMFTConfig",
     "HTMLToMarkdownConfig",
     "ImageOCRConfig",
     "ImageOCRResult",
@@ -60,6 +59,7 @@ __all__ = [
     "TesseractConfig",
     "TokenReductionConfig",
     "ValidationError",
+    "VisionTablesConfig",
     "__version__",
     "batch_extract_bytes",
     "batch_extract_bytes_sync",

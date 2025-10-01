@@ -239,8 +239,8 @@ class PaddleOCRConfig(ConfigDict):
 
 
 @dataclass(unsafe_hash=True, frozen=True, slots=True)
-class GMFTConfig(ConfigDict):
-    """Configuration for GMFT table extraction using TATR v1.1 models.
+class VisionTablesConfig(ConfigDict):
+    """Configuration for vision-based table extraction using TATR v1.1 models.
 
     This configuration controls table detection and structure recognition
     using Microsoft's Table Transformer models.
@@ -975,7 +975,7 @@ class JSONExtractionConfig(ConfigDict):
 @dataclass(unsafe_hash=True, frozen=True, slots=True)
 class ExtractionConfig(ConfigDict):
     model_cache_dir: str | None = None
-    """Global cache directory for all ML models (GMFT, OCR, spaCy, etc.).
+    """Global cache directory for all ML models (vision-tables, OCR, spaCy, etc.).
 
     If set, this overrides individual model cache settings.
     Can also be set via KREUZBERG_MODEL_CACHE or HF_HOME environment variables."""
@@ -984,7 +984,7 @@ class ExtractionConfig(ConfigDict):
     chunk_content: bool = False
     """Whether to chunk the content into smaller chunks."""
     extract_tables: bool = False
-    """Whether to extract tables from the content. This requires the 'gmft' dependency."""
+    """Whether to extract tables from the content. This requires the 'vision-tables' dependency."""
     extract_tables_from_ocr: bool = False
     """Extract tables from OCR output using TSV format (Tesseract only)."""
     extract_images: bool = False
@@ -1005,8 +1005,8 @@ class ExtractionConfig(ConfigDict):
     """
     ocr_config: TesseractConfig | PaddleOCRConfig | EasyOCRConfig | None = None
     """Configuration to pass to the OCR backend."""
-    gmft_config: GMFTConfig | None = None
-    """GMFT configuration."""
+    vision_tables_config: VisionTablesConfig | None = None
+    """Vision-based table extraction configuration."""
     post_processing_hooks: list[PostProcessingHook] | None = None
     """Post processing hooks to call after processing is done and before the final result is returned."""
     validators: list[ValidationHook] | None = None

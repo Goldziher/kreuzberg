@@ -52,16 +52,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## GMFT (Give Me Formatted Tables)
+## Vision-Based Table Extraction (Originally GMFT)
 
-Table extraction code adapted for Kreuzberg's table detection and formatting.
+Table extraction code originally based on GMFT (Give Me Formatted Tables), adapted and vendored for Kreuzberg's vision-based table detection and formatting.
 
-**Source**: <https://github.com/conjuncts/gmft>
+**Original Source**: <https://github.com/conjuncts/gmft>
 **Author**: Galen Wei
 **License**: MIT License
-**Location**: `kreuzberg/_gmft/`
+**Location**: `kreuzberg/_vision_tables/`
 
-### MIT License (GMFT)
+### MIT License (Vision-Based Table Extraction / GMFT)
 
 ```text
 MIT License

@@ -10,7 +10,15 @@ import pytest
 from anyio import Path as AsyncPath
 from PIL import Image
 
-from kreuzberg._gmft import (
+from kreuzberg._types import TableData, VisionTablesConfig
+from kreuzberg._utils._model_cache import (
+    ensure_cache_dir_async,
+    resolve_model_cache_dir,
+    resolve_model_cache_dir_async,
+    setup_huggingface_cache,
+    setup_huggingface_cache_async,
+)
+from kreuzberg._vision_tables import (
     CroppedTable,
     FormattedTable,
     Rect,
@@ -19,20 +27,12 @@ from kreuzberg._gmft import (
     extract_tables_async,
     extract_tables_sync,
 )
-from kreuzberg._gmft._algorithm import extract_table_dataframe
-from kreuzberg._gmft._types import BboxPredictions, TablePredictions
-from kreuzberg._types import GMFTConfig, TableData
-from kreuzberg._utils._model_cache import (
-    ensure_cache_dir_async,
-    resolve_model_cache_dir,
-    resolve_model_cache_dir_async,
-    setup_huggingface_cache,
-    setup_huggingface_cache_async,
-)
+from kreuzberg._vision_tables._algorithm import extract_table_dataframe
+from kreuzberg._vision_tables._types import BboxPredictions, TablePredictions
 from kreuzberg.exceptions import MissingDependencyError
 
 if TYPE_CHECKING:
-    from kreuzberg._gmft._base import BBox
+    from kreuzberg._vision_tables._base import BBox
 
 
 def test_rect_initialization() -> None:
@@ -113,7 +113,7 @@ def test_table_predictions_structure() -> None:
 
 
 def test_gmft_config_defaults() -> None:
-    config = GMFTConfig()
+    config = VisionTablesConfig()
 
     assert config.detection_model == "microsoft/table-transformer-detection"
     assert config.structure_model == "microsoft/table-transformer-structure-recognition-v1.1-all"
@@ -123,9 +123,9 @@ def test_gmft_config_defaults() -> None:
 
 
 def test_gmft_config_hashable() -> None:
-    config1 = GMFTConfig(detection_threshold=0.8)
-    config2 = GMFTConfig(detection_threshold=0.8)
-    config3 = GMFTConfig(detection_threshold=0.7)
+    config1 = VisionTablesConfig(detection_threshold=0.8)
+    config2 = VisionTablesConfig(detection_threshold=0.8)
+    config3 = VisionTablesConfig(detection_threshold=0.7)
 
     assert hash(config1) == hash(config2)
     assert hash(config1) != hash(config3)
@@ -135,9 +135,9 @@ def test_gmft_config_hashable() -> None:
 
 
 def test_table_detector_initialization() -> None:
-    config = GMFTConfig(detection_threshold=0.8)
+    config = VisionTablesConfig(detection_threshold=0.8)
 
-    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
+    with patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector(config)
 
     assert detector.config == config
@@ -145,7 +145,7 @@ def test_table_detector_initialization() -> None:
 
 
 def test_table_detector_missing_dependencies() -> None:
-    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
+    with patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector()
 
     assert not detector.is_available()
@@ -156,9 +156,9 @@ def test_table_detector_missing_dependencies() -> None:
 
 
 def test_table_formatter_initialization() -> None:
-    config = GMFTConfig(structure_threshold=0.6)
+    config = VisionTablesConfig(structure_threshold=0.6)
 
-    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
+    with patch("kreuzberg._vision_tables._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter(config)
 
     assert formatter.config == config
@@ -166,7 +166,7 @@ def test_table_formatter_initialization() -> None:
 
 
 def test_table_formatter_missing_dependencies() -> None:
-    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
+    with patch("kreuzberg._vision_tables._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter()
 
     assert not formatter.is_available()
@@ -293,13 +293,13 @@ async def test_extract_tables_async_nonexistent_file() -> None:
 
 
 def test_extract_tables_sync_with_config() -> None:
-    config = GMFTConfig(
+    config = VisionTablesConfig(
         detection_threshold=0.9,
         structure_threshold=0.8,
         model_cache_dir="/custom/cache",
     )
 
-    with patch("kreuzberg._gmft.pdf_document_sync") as mock_pdf:
+    with patch("kreuzberg._vision_tables.pdf_document_sync") as mock_pdf:
         mock_doc = Mock()
         mock_doc.__enter__ = Mock(return_value=mock_doc)
         mock_doc.__exit__ = Mock(return_value=None)
@@ -314,13 +314,13 @@ def test_extract_tables_sync_with_config() -> None:
 
 @pytest.mark.anyio
 async def test_extract_tables_async_with_config() -> None:
-    config = GMFTConfig(
+    config = VisionTablesConfig(
         detection_threshold=0.9,
         structure_threshold=0.8,
     )
 
     with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
-        with patch("kreuzberg._gmft.run_sync") as mock_run_sync:
+        with patch("kreuzberg._vision_tables.run_sync") as mock_run_sync:
             mock_run_sync.return_value = []
 
             result = await extract_tables_async(tmp.name, config)
@@ -329,31 +329,31 @@ async def test_extract_tables_async_with_config() -> None:
 
 
 def test_table_detector_device_resolution() -> None:
-    config = GMFTConfig(detection_device="auto")
-    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
+    config = VisionTablesConfig(detection_device="auto")
+    with patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector(config)
         assert detector._device in ["cpu", "cuda", "mps"]
 
-    config = GMFTConfig(detection_device="cpu")
-    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
+    config = VisionTablesConfig(detection_device="cpu")
+    with patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector(config)
         assert detector._device == "cpu"
 
 
 def test_table_formatter_device_resolution() -> None:
-    config = GMFTConfig(structure_device="auto")
-    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
+    config = VisionTablesConfig(structure_device="auto")
+    with patch("kreuzberg._vision_tables._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter(config)
         assert formatter._device in ["cpu", "cuda", "mps"]
 
-    config = GMFTConfig(structure_device="cpu")
-    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
+    config = VisionTablesConfig(structure_device="cpu")
+    with patch("kreuzberg._vision_tables._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter(config)
         assert formatter._device == "cpu"
 
 
 def test_detector_page_number_propagation() -> None:
-    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
+    with patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector()
 
         image = Image.new("RGB", (100, 100))
@@ -364,7 +364,7 @@ def test_detector_page_number_propagation() -> None:
 
 @pytest.mark.anyio
 async def test_detector_async_methods() -> None:
-    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
+    with patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector()
 
         image = Image.new("RGB", (100, 100))
@@ -378,7 +378,7 @@ async def test_detector_async_methods() -> None:
 
 @pytest.mark.anyio
 async def test_formatter_async_method() -> None:
-    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
+    with patch("kreuzberg._vision_tables._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter()
 
         image = Image.new("RGB", (100, 100))
@@ -449,7 +449,7 @@ def test_bbox_predictions_validation() -> None:
 
 
 def test_gmft_config_device_settings() -> None:
-    config = GMFTConfig(
+    config = VisionTablesConfig(
         detection_device="cuda",
         structure_device="cpu",
     )
@@ -457,13 +457,13 @@ def test_gmft_config_device_settings() -> None:
     assert config.detection_device == "cuda"
     assert config.structure_device == "cpu"
 
-    default_config = GMFTConfig()
+    default_config = VisionTablesConfig()
     assert default_config.detection_device == "auto"
     assert default_config.structure_device == "auto"
 
 
 def test_gmft_config_threshold_settings() -> None:
-    config = GMFTConfig(
+    config = VisionTablesConfig(
         detection_threshold=0.9,
         structure_threshold=0.8,
         crop_padding=30,
@@ -483,7 +483,7 @@ def test_extract_table_dataframe_empty_predictions() -> None:
         columns=BboxPredictions.from_lists([], [], []),
         spanning_cells=BboxPredictions.from_lists([], [], []),
     )
-    config = GMFTConfig()
+    config = VisionTablesConfig()
 
     df = extract_table_dataframe(image, predictions, config)
 
