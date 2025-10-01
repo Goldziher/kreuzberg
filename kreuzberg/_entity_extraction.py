@@ -109,7 +109,12 @@ def extract_entities(
     if not model_name:
         return entities
 
-    nlp = load_spacy_model(model_name, spacy_config)
+    try:
+        nlp = load_spacy_model(model_name, spacy_config)
+    except OSError:
+        # Spacy model not installed - return empty entities
+        # Entity extraction is optional, so we gracefully skip it
+        return entities
 
     if len(text) > spacy_config.max_doc_length:
         text = text[: spacy_config.max_doc_length]
@@ -133,7 +138,7 @@ def extract_entities(
 
 
 @lru_cache(maxsize=32)
-def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig) -> Any:
+def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig) -> Any:  # noqa: C901, PLR0915
     try:
         import spacy  # noqa: PLC0415
     except ImportError:
@@ -168,7 +173,26 @@ def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig)
             return False, spacy_error
 
         try:
-            success, error_details = anyio.run(install_model)
+            import sniffio  # noqa: PLC0415
+
+            # Check if we're in an async context
+            try:
+                sniffio.current_async_library()
+                # We're in an async context, can't install model here
+                # OSError should bubble up as per error handling rules ~keep
+                raise
+            except sniffio.AsyncLibraryNotFoundError:
+                # We're in a sync context, safe to install
+                success, error_details = anyio.run(install_model)
+        except (ImportError, sniffio.AsyncLibraryNotFoundError):
+            # sniffio not available or not in async context, try anyio.run
+            try:
+                success, error_details = anyio.run(install_model)
+            except RuntimeError:
+                # Already in async context, OSError must bubble up ~keep
+                raise OSError(
+                    f"spaCy model '{model_name}' not found. Install it first with: uv pip install {get_spacy_model_url(model_name)}"
+                ) from None
         except SystemExit as e:
             success, error_details = False, f"spaCy CLI exit code: {e.code}"
 

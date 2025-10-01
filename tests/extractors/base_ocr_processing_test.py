@@ -43,7 +43,7 @@ class TestImageOCRProcessing:
             ExtractedImage(data=b"png_data", format="png", filename="test.png"),
             ExtractedImage(data=b"svg_data", format="svg", filename="test.svg"),
             ExtractedImage(data=b"jpg_data", format="jpg", filename="test.jpg"),
-            ExtractedImage(data=b"bmp_data", format="bmp", filename="test.bmp"),
+            ExtractedImage(data=b"ico_data", format="ico", filename="test.ico"),
         ]
 
         async def mock_process_image(*args: Any, **kwargs: Any) -> ExtractionResult:
@@ -65,9 +65,9 @@ class TestImageOCRProcessing:
         assert svg_result.skipped_reason
         assert "Unsupported format" in svg_result.skipped_reason
 
-        bmp_result = next(r for r in results if r.image.filename == "test.bmp")
-        assert bmp_result.skipped_reason
-        assert "Unsupported format" in bmp_result.skipped_reason
+        ico_result = next(r for r in results if r.image.filename == "test.ico")
+        assert ico_result.skipped_reason
+        assert "Unsupported format" in ico_result.skipped_reason
 
         png_result = next(r for r in results if r.image.filename == "test.png")
         if png_result.skipped_reason:

@@ -137,7 +137,7 @@ def test_gmft_config_hashable() -> None:
 def test_table_detector_initialization() -> None:
     config = GMFTConfig(detection_threshold=0.8)
 
-    with patch("kreuzberg._gmft._detector.transformers", None):
+    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector(config)
 
     assert detector.config == config
@@ -145,7 +145,7 @@ def test_table_detector_initialization() -> None:
 
 
 def test_table_detector_missing_dependencies() -> None:
-    with patch("kreuzberg._gmft._detector.transformers", None):
+    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector()
 
     assert not detector.is_available()
@@ -158,7 +158,7 @@ def test_table_detector_missing_dependencies() -> None:
 def test_table_formatter_initialization() -> None:
     config = GMFTConfig(structure_threshold=0.6)
 
-    with patch("kreuzberg._gmft._formatter._import_table_transformer"):
+    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter(config)
 
     assert formatter.config == config
@@ -166,7 +166,7 @@ def test_table_formatter_initialization() -> None:
 
 
 def test_table_formatter_missing_dependencies() -> None:
-    with patch("kreuzberg._gmft._formatter._import_table_transformer"):
+    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter()
 
     assert not formatter.is_available()
@@ -330,30 +330,30 @@ async def test_extract_tables_async_with_config() -> None:
 
 def test_table_detector_device_resolution() -> None:
     config = GMFTConfig(detection_device="auto")
-    with patch("kreuzberg._gmft._detector.transformers", None):
+    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector(config)
-        assert detector._device in ["cpu", "cuda"]
+        assert detector._device in ["cpu", "cuda", "mps"]
 
     config = GMFTConfig(detection_device="cpu")
-    with patch("kreuzberg._gmft._detector.transformers", None):
+    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector(config)
         assert detector._device == "cpu"
 
 
 def test_table_formatter_device_resolution() -> None:
     config = GMFTConfig(structure_device="auto")
-    with patch("kreuzberg._gmft._formatter._import_table_transformer"):
+    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter(config)
-        assert formatter._device in ["cpu", "cuda"]
+        assert formatter._device in ["cpu", "cuda", "mps"]
 
     config = GMFTConfig(structure_device="cpu")
-    with patch("kreuzberg._gmft._formatter._import_table_transformer"):
+    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter(config)
         assert formatter._device == "cpu"
 
 
 def test_detector_page_number_propagation() -> None:
-    with patch("kreuzberg._gmft._detector.transformers", None):
+    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector()
 
         image = Image.new("RGB", (100, 100))
@@ -364,7 +364,7 @@ def test_detector_page_number_propagation() -> None:
 
 @pytest.mark.anyio
 async def test_detector_async_methods() -> None:
-    with patch("kreuzberg._gmft._detector.transformers", None):
+    with patch("kreuzberg._gmft._detector._import_transformers", return_value=(None, None)):
         detector = TableDetector()
 
         image = Image.new("RGB", (100, 100))
@@ -378,7 +378,7 @@ async def test_detector_async_methods() -> None:
 
 @pytest.mark.anyio
 async def test_formatter_async_method() -> None:
-    with patch("kreuzberg._gmft._formatter._import_table_transformer"):
+    with patch("kreuzberg._gmft._formatter._import_transformers", return_value=(None, None)):
         formatter = TableFormatter()
 
         image = Image.new("RGB", (100, 100))
