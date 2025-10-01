@@ -183,7 +183,7 @@ def test_configure_vision_tables_from_cli() -> None:
 
 def test_configure_vision_tables_from_file() -> None:
     config_dict: dict[str, Any] = {"extract_tables": True}
-    file_config: dict[str, Any] = {"gmft": {"verbosity": 1, "structure_threshold": 0.9}}
+    file_config: dict[str, Any] = {"vision_tables": {"verbosity": 1, "structure_threshold": 0.9}}
     cli_args: MutableMapping[str, Any] = {}
     _configure_vision_tables(config_dict, file_config, cli_args)
     assert isinstance(config_dict["vision_tables_config"], VisionTablesConfig)
@@ -197,7 +197,7 @@ def test_configure_vision_tables_invalid_config() -> None:
     cli_args: MutableMapping[str, Any] = {"vision_tables_config": {"invalid_field": "value"}}
     with pytest.raises(ValidationError) as exc_info:
         _configure_vision_tables(config_dict, file_config, cli_args)
-    assert "Invalid GMFT configuration" in str(exc_info.value)
+    assert "Invalid vision-based table extraction configuration" in str(exc_info.value)
 
 
 def test_create_ocr_config_tesseract() -> None:
@@ -370,7 +370,7 @@ def test_build_extraction_config_from_dict_invalid_ocr_backend() -> None:
 def test_build_extraction_config_from_dict_with_gmft() -> None:
     config_dict = {
         "extract_tables": True,
-        "gmft": {"verbosity": 1},
+        "vision_tables": {"verbosity": 1},
     }
     config = build_extraction_config_from_dict(config_dict)
     assert config.extract_tables is True
@@ -380,11 +380,11 @@ def test_build_extraction_config_from_dict_with_gmft() -> None:
 def test_build_extraction_config_from_dict_invalid_gmft() -> None:
     config_dict = {
         "extract_tables": True,
-        "gmft": {"invalid": "field"},
+        "vision_tables": {"invalid": "field"},
     }
     with pytest.raises(ValidationError) as exc_info:
         build_extraction_config_from_dict(config_dict)
-    assert "Invalid GMFT configuration" in str(exc_info.value)
+    assert "Invalid vision-based table extraction configuration" in str(exc_info.value)
 
 
 def test_build_extraction_config_from_dict_with_html_to_markdown() -> None:
@@ -619,7 +619,7 @@ def test_configure_vision_tables_with_cli_config() -> None:
 
 def test_configure_vision_tables_with_file_config() -> None:
     config_dict: dict[str, Any] = {"extract_tables": True}
-    file_config = {"gmft": {"verbosity": 1}}
+    file_config = {"vision_tables": {"verbosity": 1}}
     cli_args: MutableMapping[str, Any] = {}
 
     _configure_vision_tables(config_dict, file_config, cli_args)
