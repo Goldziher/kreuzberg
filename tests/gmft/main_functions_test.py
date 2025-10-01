@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -11,15 +12,16 @@ from kreuzberg._vision_tables import (
     extract_tables_async,
     extract_tables_sync,
 )
-from kreuzberg._vision_tables._detector import _import_transformers
 from kreuzberg.exceptions import MissingDependencyError
 
+if TYPE_CHECKING:
+    import pytest_mock
 
-@pytest.mark.skipif(
-    _import_transformers()[0] is not None,
-    reason="Skipping missing deps test - vision-tables dependencies are installed",
-)
-def test_extract_tables_sync_with_path_object() -> None:
+
+def test_extract_tables_sync_with_path_object(mocker: pytest_mock.MockerFixture) -> None:
+    # Mock missing transformers/torch
+    mocker.patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None))
+
     test_pdf = Path("test_documents/gmft/tiny.pdf")
 
     with pytest.raises(MissingDependencyError) as exc_info:
@@ -29,11 +31,10 @@ def test_extract_tables_sync_with_path_object() -> None:
 
 
 @pytest.mark.anyio
-@pytest.mark.skipif(
-    _import_transformers()[0] is not None,
-    reason="Skipping missing deps test - vision-tables dependencies are installed",
-)
-async def test_extract_tables_async_with_path_object() -> None:
+async def test_extract_tables_async_with_path_object(mocker: pytest_mock.MockerFixture) -> None:
+    # Mock missing transformers/torch
+    mocker.patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None))
+
     test_pdf = Path("test_documents/gmft/tiny.pdf")
 
     with pytest.raises(MissingDependencyError) as exc_info:
@@ -42,11 +43,10 @@ async def test_extract_tables_async_with_path_object() -> None:
     assert "transformers" in str(exc_info.value) or "torch" in str(exc_info.value)
 
 
-@pytest.mark.skipif(
-    _import_transformers()[0] is not None,
-    reason="Skipping missing deps test - vision-tables dependencies are installed",
-)
-def test_extract_tables_sync_with_default_config() -> None:
+def test_extract_tables_sync_with_default_config(mocker: pytest_mock.MockerFixture) -> None:
+    # Mock missing transformers/torch
+    mocker.patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None))
+
     test_pdf = "test_documents/gmft/tiny.pdf"
 
     with pytest.raises(MissingDependencyError) as exc_info:

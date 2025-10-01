@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from PIL import Image
 
@@ -13,7 +15,6 @@ from kreuzberg._vision_tables import (
     extract_tables_async,
     extract_tables_sync,
 )
-from kreuzberg._vision_tables._detector import _import_transformers
 from kreuzberg._vision_tables._algorithm import (
     _apply_non_maximum_suppression,
     _calculate_cell_intersection,
@@ -29,6 +30,9 @@ from kreuzberg._vision_tables._types import (
     TablePredictions,
 )
 from kreuzberg.exceptions import MissingDependencyError
+
+if TYPE_CHECKING:
+    import pytest_mock
 
 
 def test_gmft_config_defaults() -> None:
@@ -277,12 +281,11 @@ def test_extract_table_dataframe() -> None:
     assert df.shape == (2, 2)
 
 
-@pytest.mark.skipif(
-    _import_transformers()[0] is not None,
-    reason="Skipping missing deps test - vision-tables dependencies are installed",
-)
-def test_extract_tables_sync_missing_deps() -> None:
+def test_extract_tables_sync_missing_deps(mocker: pytest_mock.MockerFixture) -> None:
     from pathlib import Path
+
+    # Mock missing transformers/torch
+    mocker.patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None))
 
     test_pdf = Path("test_documents/gmft/tiny.pdf")
 
@@ -291,12 +294,11 @@ def test_extract_tables_sync_missing_deps() -> None:
 
 
 @pytest.mark.anyio
-@pytest.mark.skipif(
-    _import_transformers()[0] is not None,
-    reason="Skipping missing deps test - vision-tables dependencies are installed",
-)
-async def test_extract_tables_async_missing_deps() -> None:
+async def test_extract_tables_async_missing_deps(mocker: pytest_mock.MockerFixture) -> None:
     from pathlib import Path
+
+    # Mock missing transformers/torch
+    mocker.patch("kreuzberg._vision_tables._detector._import_transformers", return_value=(None, None))
 
     test_pdf = Path("test_documents/gmft/tiny.pdf")
 
