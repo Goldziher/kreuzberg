@@ -10,7 +10,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'pyproject.toml'
-      - '.github/workflows/test-wheels.yml'
+      - '.github/workflows/test-wheels.yaml'
 
 env:
   CARGO_TERM_COLOR: always
