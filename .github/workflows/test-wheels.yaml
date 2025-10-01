@@ -113,15 +113,15 @@ jobs:
           # Test basic import and functionality
           python -c "
           import kreuzberg
-          print('✓ Import successful')
+          print('Import successful')
 
           # Test Rust internal bindings
           from kreuzberg import _internal_bindings
-          print('✓ Rust internal bindings available')
+          print('Rust internal bindings available')
 
           # Test basic extraction
           from kreuzberg import extract_file_sync
-          print('✓ Basic extraction functions available')
+          print('Basic extraction functions available')
           print('All wheel tests passed!')
           "
 
@@ -141,9 +141,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.build_wheels.result }}" = "success" ] && [ "${{ needs.test_wheels.result }}" = "success" ]; then
-            echo "✅ All wheels built and tested successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "All wheels built and tested successfully!" >> $GITHUB_STEP_SUMMARY
             echo "Ready to integrate with release pipeline." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Some wheel builds or tests failed." >> $GITHUB_STEP_SUMMARY
+            echo "Some wheel builds or tests failed." >> $GITHUB_STEP_SUMMARY
             echo "Check job details for more information." >> $GITHUB_STEP_SUMMARY
           fi

@@ -45,7 +45,7 @@ repos:
     rev: "v3.6.2"
     hooks:
       - id: prettier
-        exclude: ^tests|^.idea|^migrations|^.git|README.md|^docs
+        exclude: ^tests|^.idea|^migrations|^.git|^docs|\.md$
   - repo: https://github.com/tox-dev/pyproject-fmt
     rev: "v2.6.0"
     hooks:
