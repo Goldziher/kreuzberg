@@ -400,17 +400,13 @@ async def test_process_easyocr_result_full_format(backend: EasyOCRBackend) -> No
 
 
 def test_is_gpu_available_with_torch() -> None:
-    mock_torch = Mock()
-    mock_torch.cuda.is_available.return_value = True
-
-    with patch("kreuzberg._ocr._easyocr.torch", mock_torch):
+    with patch("kreuzberg._ocr._easyocr.is_cuda_available", return_value=True):
         result = EasyOCRBackend._is_gpu_available()
         assert result is True
-        mock_torch.cuda.is_available.assert_called_once()
 
 
 def test_is_gpu_available_without_torch() -> None:
-    with patch("kreuzberg._ocr._easyocr.torch", None):
+    with patch("kreuzberg._ocr._easyocr.is_cuda_available", return_value=False):
         result = EasyOCRBackend._is_gpu_available()
         assert result is False
 
