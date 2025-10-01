@@ -5,7 +5,13 @@ from typing import Literal
 import pytest
 
 from kreuzberg import extract_bytes_sync
-from kreuzberg._types import ExtractionConfig, TokenReductionConfig
+from kreuzberg._types import (
+    ChunkingConfig,
+    EntityExtractionConfig,
+    ExtractionConfig,
+    LanguageDetectionConfig,
+    TokenReductionConfig,
+)
 
 
 def test_token_reduction_integration_off_mode() -> None:
@@ -50,7 +56,7 @@ def test_token_reduction_integration_with_language_detection() -> None:
     Cette phrase est repetee plusieurs fois. Cette phrase est repetee plusieurs fois.
     Cette phrase est repetee plusieurs fois. Cette phrase est repetee plusieurs fois."""
     config = ExtractionConfig(
-        auto_detect_language=True,
+        language_detection=LanguageDetectionConfig(),
         token_reduction=TokenReductionConfig(mode="moderate"),
     )
 
@@ -93,8 +99,9 @@ def function():
 
 def test_token_reduction_integration_with_custom_stopwords() -> None:
     content = b"The custom word should be removed but other words remain."
+    # V4: custom_stopwords dict values must be tuples, not lists
     config = ExtractionConfig(
-        token_reduction=TokenReductionConfig(mode="moderate", custom_stopwords={"en": ["custom", "should"]})
+        token_reduction=TokenReductionConfig(mode="moderate", custom_stopwords={"en": ("custom", "should")})
     )
 
     result = extract_bytes_sync(content, "text/plain", config)
@@ -109,7 +116,7 @@ def test_token_reduction_integration_with_custom_stopwords() -> None:
 def test_token_reduction_integration_preserves_entities() -> None:
     content = b"John Doe works at OpenAI in San Francisco."
     config = ExtractionConfig(
-        extract_entities=True,
+        entities=EntityExtractionConfig(),
         token_reduction=TokenReductionConfig(mode="moderate"),
     )
 
@@ -132,9 +139,7 @@ def test_token_reduction_integration_preserves_entities() -> None:
 def test_token_reduction_integration_with_chunking() -> None:
     content = b"The quick brown fox jumps over the lazy dog and the cat and the bird. " * 10
     config = ExtractionConfig(
-        chunk_content=True,
-        max_chars=200,
-        max_overlap=50,
+        chunking=ChunkingConfig(max_chars=200, max_overlap=50),
         token_reduction=TokenReductionConfig(mode="moderate"),
     )
 

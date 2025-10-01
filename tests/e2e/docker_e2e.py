@@ -316,9 +316,10 @@ import asyncio
 from kreuzberg import extract_file, ExtractionConfig
 
 async def main():
+    from kreuzberg._types import TableExtractionConfig
     result = await extract_file(
         '/data/pdfs_with_tables/tiny.pdf',
-        config=ExtractionConfig(extract_tables=True)
+        config=ExtractionConfig(tables=TableExtractionConfig())
     )
     print(f"Tables found: {len(result.tables)}")
     return len(result.tables) > 0

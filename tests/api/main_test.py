@@ -399,15 +399,13 @@ async def test_get_configuration_no_config(
 
 @pytest.mark.anyio
 async def test_get_configuration_with_config(test_client: AsyncTestClient[Any]) -> None:
-    from kreuzberg import ExtractionConfig, PSMMode, TesseractConfig
+    from kreuzberg import ChunkingConfig, ExtractionConfig, PSMMode, TableExtractionConfig, TesseractConfig
 
     test_config = ExtractionConfig(
-        ocr_backend="tesseract",
-        ocr_config=TesseractConfig(language="fra", psm=PSMMode.SINGLE_BLOCK),
-        extract_tables=True,
-        chunk_content=True,
+        ocr=TesseractConfig(language="fra", psm=PSMMode.SINGLE_BLOCK),
+        tables=TableExtractionConfig(),
+        chunking=ChunkingConfig(max_chars=5000),
         enable_quality_processing=True,
-        max_chars=5000,
     )
 
     with patch("kreuzberg._api.main.discover_config", return_value=test_config):
@@ -417,18 +415,19 @@ async def test_get_configuration_with_config(test_client: AsyncTestClient[Any]) 
     data = response.json()
     assert data["message"] == "Configuration loaded successfully"
     assert data["config"] is not None
-    assert data["config"]["ocr_backend"] == "tesseract"
-    assert data["config"]["extract_tables"] is True
-    assert data["config"]["chunk_content"] is True
+    assert data["config"]["ocr"] is not None
+    assert data["config"]["ocr"]["backend"] == "tesseract"
+    assert data["config"]["tables"] is not None
+    assert data["config"]["chunking"] is not None
     assert data["config"]["enable_quality_processing"] is True
-    assert data["config"]["max_chars"] == 5000
+    assert data["config"]["chunking"]["max_chars"] == 5000
 
 
 @pytest.mark.anyio
 async def test_extract_with_discovered_config(test_client: AsyncTestClient[Any], searchable_pdf: Path) -> None:
-    from kreuzberg import ExtractionConfig
+    from kreuzberg import ChunkingConfig, ExtractionConfig
 
-    test_config = ExtractionConfig(chunk_content=True, max_chars=1000, max_overlap=200)
+    test_config = ExtractionConfig(chunking=ChunkingConfig(max_chars=1000, max_overlap=200))
 
     with patch("kreuzberg._api.main.discover_config_cached", return_value=test_config):
         with patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract:
@@ -444,9 +443,9 @@ async def test_extract_with_discovered_config(test_client: AsyncTestClient[Any],
             assert mock_extract.called
             call_args = mock_extract.call_args
             used_config = call_args[1]["config"]
-            assert used_config.chunk_content is True
-            assert used_config.max_chars == 1000
-            assert used_config.max_overlap == 200
+            assert used_config.chunking is not None
+            assert used_config.chunking.max_chars == 1000
+            assert used_config.chunking.max_overlap == 200
 
     assert response.status_code == 201
 
@@ -467,8 +466,7 @@ async def test_extract_without_discovered_config(test_client: AsyncTestClient[An
             assert mock_extract.called
             call_args = mock_extract.call_args
             used_config = call_args[1]["config"]
-            assert used_config.chunk_content is False
-            assert used_config.max_chars == 2000
+            assert used_config.chunking is None
 
     assert response.status_code == 201
 
@@ -638,10 +636,10 @@ async def test_exception_handlers_registered() -> None:
 async def test_msgspec_serialization_deterministic(test_client: AsyncTestClient[Any]) -> None:
     import msgspec
 
-    from kreuzberg import ExtractionConfig
+    from kreuzberg import ChunkingConfig, ExtractionConfig, TableExtractionConfig, TesseractConfig
 
     config = ExtractionConfig(
-        ocr_backend="tesseract", extract_tables=True, chunk_content=True, max_chars=5000, max_overlap=1000
+        ocr=TesseractConfig(), tables=TableExtractionConfig(), chunking=ChunkingConfig(max_chars=5000, max_overlap=1000)
     )
 
     serialized_results = []
@@ -790,11 +788,10 @@ async def test_extract_with_invalid_extraction_config(test_client: AsyncTestClie
 async def test_extract_pdf_without_tables_with_table_extraction_enabled(
     test_client: AsyncTestClient[Any], searchable_pdf: Path
 ) -> None:
-    from kreuzberg import ExtractionConfig, VisionTablesConfig
+    from kreuzberg import ExtractionConfig, TableExtractionConfig
 
     test_config = ExtractionConfig(
-        extract_tables=True,
-        vision_tables_config=VisionTablesConfig(
+        tables=TableExtractionConfig(
             detection_threshold=0.9,
         ),
     )
