@@ -90,9 +90,9 @@ class TestImageOCRProcessing:
         extractor = PDFExtractor(mime_type="application/pdf", config=config)
 
         images = [
-            ExtractedImage(data=b"tiny", format="png", dimensions=(50, 50), filename="tiny.png"),
+            ExtractedImage(data=b"tiny", format="png", dimensions=(40, 40), filename="tiny.png"),
             ExtractedImage(data=b"ok", format="png", dimensions=(500, 500), filename="ok.png"),
-            ExtractedImage(data=b"huge", format="png", dimensions=(2000, 2000), filename="huge.png"),
+            ExtractedImage(data=b"huge", format="png", dimensions=(15000, 15000), filename="huge.png"),
             ExtractedImage(data=b"no_dim", format="png", dimensions=None, filename="no_dim.png"),
         ]
 
