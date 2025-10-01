@@ -11,7 +11,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from kreuzberg._types import VisionTablesConfig
+import msgspec
+
+from kreuzberg._types import TableExtractionConfig
 from kreuzberg._utils._model_cache import setup_huggingface_cache
 from kreuzberg._utils._sync import run_sync
 from kreuzberg._utils._torch import require_torch, resolve_device, tensor, with_no_grad
@@ -58,9 +60,9 @@ class TableFormatter:
 
     __slots__ = ("_device", "_model", "_processor", "config")
 
-    def __init__(self, config: VisionTablesConfig | None = None) -> None:
+    def __init__(self, config: TableExtractionConfig | None = None) -> None:
         """Initialize table formatter with optional ML model loading."""
-        self.config = config or VisionTablesConfig()
+        self.config = config or TableExtractionConfig()
         self._model: Any = None
         self._processor: Any = None
         self._device: str = self._resolve_device(self.config.structure_device)
@@ -165,7 +167,7 @@ class TableFormatter:
             dataframe=dataframe,
             predictions=predictions,
             confidence_scores=self._calculate_confidence_scores(results),
-            metadata={"formatter_config": self.config.to_dict()},
+            metadata={"formatter_config": msgspec.to_builtins(self.config)},
         )
 
     def _extract_structure_predictions(self, results: dict[str, Any]) -> TablePredictions:

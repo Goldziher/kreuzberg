@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 from PIL import Image
 
-from kreuzberg._types import VisionTablesConfig
+from kreuzberg._types import TableExtractionConfig
 from kreuzberg._vision_tables import (
     CroppedTable,
     TableDetector,
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 
 def test_gmft_config_defaults() -> None:
-    config = VisionTablesConfig()
+    config = TableExtractionConfig()
     assert config.detection_threshold == 0.7
     assert config.structure_threshold == 0.5
     assert config.detection_device == "auto"
@@ -46,7 +46,7 @@ def test_gmft_config_defaults() -> None:
 
 
 def test_gmft_config_custom() -> None:
-    config = VisionTablesConfig(
+    config = TableExtractionConfig(
         detection_threshold=0.8,
         structure_threshold=0.6,
         model_cache_dir="/tmp/models",
@@ -61,10 +61,10 @@ def test_gmft_config_custom() -> None:
 
 
 def test_gmft_config_model_variants() -> None:
-    config = VisionTablesConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-pub")
+    config = TableExtractionConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-pub")
     assert "v1.1-pub" in config.structure_model
 
-    config = VisionTablesConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-fin")
+    config = TableExtractionConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-fin")
     assert "v1.1-fin" in config.structure_model
 
 
@@ -83,14 +83,14 @@ def test_table_formatter_initialization() -> None:
 
 
 def test_detector_with_custom_config() -> None:
-    config = VisionTablesConfig(detection_device="cpu", detection_threshold=0.9)
+    config = TableExtractionConfig(detection_device="cpu", detection_threshold=0.9)
     detector = TableDetector(config)
     assert detector.config == config
     assert detector._device == "cpu"
 
 
 def test_formatter_with_custom_config() -> None:
-    config = VisionTablesConfig(structure_device="cpu", structure_threshold=0.3)
+    config = TableExtractionConfig(structure_device="cpu", structure_threshold=0.3)
     formatter = TableFormatter(config)
     assert formatter.config == config
     assert formatter._device == "cpu"
@@ -274,7 +274,7 @@ def test_extract_table_dataframe() -> None:
         spanning_cells=BboxPredictions(boxes=(), scores=(), labels=()),
     )
 
-    config = VisionTablesConfig()
+    config = TableExtractionConfig()
 
     df = extract_table_dataframe(image, predictions, config)
 

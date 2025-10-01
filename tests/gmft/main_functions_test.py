@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kreuzberg._types import VisionTablesConfig
+from kreuzberg._types import TableExtractionConfig
 from kreuzberg._vision_tables import (
     _get_cached_detector,
     _get_cached_formatter,
@@ -74,7 +74,7 @@ def test_cached_formatter_different_configs() -> None:
 
 
 def test_gmft_config_custom_thresholds() -> None:
-    config = VisionTablesConfig(detection_threshold=0.85, structure_threshold=0.25, verbosity=3)
+    config = TableExtractionConfig(detection_threshold=0.85, structure_threshold=0.25, verbosity=3)
 
     assert config.detection_threshold == 0.85
     assert config.structure_threshold == 0.25
@@ -82,8 +82,8 @@ def test_gmft_config_custom_thresholds() -> None:
 
 
 def test_config_hash_generation() -> None:
-    config1 = VisionTablesConfig(detection_threshold=0.9, structure_threshold=0.3)
-    config2 = VisionTablesConfig(detection_threshold=0.8, structure_threshold=0.4)
+    config1 = TableExtractionConfig(detection_threshold=0.9, structure_threshold=0.3)
+    config2 = TableExtractionConfig(detection_threshold=0.8, structure_threshold=0.4)
 
     hash1 = f"{config1.detection_threshold}_{config1.structure_threshold}"
     hash2 = f"{config2.detection_threshold}_{config2.structure_threshold}"
@@ -94,7 +94,7 @@ def test_config_hash_generation() -> None:
 
 
 def test_detector_model_configuration() -> None:
-    config = VisionTablesConfig(
+    config = TableExtractionConfig(
         detection_model="custom/detector",
         detection_device="cuda",
         detection_threshold=0.95,
@@ -108,7 +108,7 @@ def test_detector_model_configuration() -> None:
 
 
 def test_structure_model_configuration() -> None:
-    config = VisionTablesConfig(
+    config = TableExtractionConfig(
         structure_model="custom/formatter",
         structure_device="cuda",
         structure_threshold=0.2,

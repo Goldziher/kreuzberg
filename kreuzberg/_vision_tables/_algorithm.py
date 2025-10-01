@@ -19,13 +19,13 @@ from ._types import BboxPredictions, TablePredictions
 if TYPE_CHECKING:
     from PIL import Image
 
-    from kreuzberg._types import VisionTablesConfig
+    from kreuzberg._types import TableExtractionConfig
 
 logger = logging.getLogger(__name__)
 
 
 def extract_table_dataframe(
-    image: Image.Image, predictions: TablePredictions, config: VisionTablesConfig
+    image: Image.Image, predictions: TablePredictions, config: TableExtractionConfig
 ) -> pl.DataFrame:
     """Extract structured DataFrame from table predictions.
 
@@ -87,7 +87,7 @@ def _filter_predictions_cached(predictions: BboxPredictions, required_conf: floa
     )
 
 
-def _filter_predictions_by_confidence(predictions: TablePredictions, config: VisionTablesConfig) -> TablePredictions:
+def _filter_predictions_by_confidence(predictions: TablePredictions, config: TableExtractionConfig) -> TablePredictions:
     """Filter predictions based on confidence thresholds."""
     threshold = config.structure_threshold
 

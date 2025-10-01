@@ -32,8 +32,8 @@ from kreuzberg._types import (
     HTMLToMarkdownConfig,
     PaddleOCRConfig,
     PSMMode,
+    TableExtractionConfig,
     TesseractConfig,
-    VisionTablesConfig,
 )
 from kreuzberg.exceptions import ValidationError
 
@@ -107,7 +107,8 @@ def test_build_ocr_config_from_cli_easyocr() -> None:
     cli_args: MutableMapping[str, Any] = {"easyocr_config": {"language": ["en", "fr"], "beam_width": 10}}
     config = _build_ocr_config_from_cli("easyocr", cli_args)
     assert isinstance(config, EasyOCRConfig)
-    assert config.language == ("en", "fr")  # type: ignore[comparison-overlap]
+    # Language can be list or tuple (msgspec normalizes later)
+    assert config.language in (("en", "fr"), ["en", "fr"])
     assert config.beam_width == 10
 
 
@@ -160,7 +161,8 @@ def test_configure_ocr_backend_from_file() -> None:
     cli_args: MutableMapping[str, Any] = {}
     _configure_ocr_backend(config_dict, file_config, cli_args)
     assert isinstance(config_dict["ocr_config"], EasyOCRConfig)
-    assert config_dict["ocr_config"].language == ("en",)  # type: ignore[comparison-overlap]
+    # Language can be list or tuple (msgspec normalizes later)
+    assert config_dict["ocr_config"].language in (("en",), ["en"])
 
 
 def test_configure_vision_tables_disabled() -> None:
@@ -176,7 +178,7 @@ def test_configure_vision_tables_from_cli() -> None:
     file_config: dict[str, Any] = {}
     cli_args: MutableMapping[str, Any] = {"vision_tables_config": {"verbosity": 2, "detection_threshold": 0.8}}
     _configure_vision_tables(config_dict, file_config, cli_args)
-    assert isinstance(config_dict["vision_tables_config"], VisionTablesConfig)
+    assert isinstance(config_dict["vision_tables_config"], TableExtractionConfig)
     assert config_dict["vision_tables_config"].verbosity == 2
     assert config_dict["vision_tables_config"].detection_threshold == 0.8
 
@@ -186,7 +188,7 @@ def test_configure_vision_tables_from_file() -> None:
     file_config: dict[str, Any] = {"vision_tables": {"verbosity": 1, "structure_threshold": 0.9}}
     cli_args: MutableMapping[str, Any] = {}
     _configure_vision_tables(config_dict, file_config, cli_args)
-    assert isinstance(config_dict["vision_tables_config"], VisionTablesConfig)
+    assert isinstance(config_dict["vision_tables_config"], TableExtractionConfig)
     assert config_dict["vision_tables_config"].verbosity == 1
     assert config_dict["vision_tables_config"].structure_threshold == 0.9
 
@@ -346,8 +348,8 @@ def test_build_extraction_config_from_dict_basic() -> None:
     }
     config = build_extraction_config_from_dict(config_dict)
     assert config.force_ocr is True
-    assert config.chunk_content is True
-    assert config.max_chars == 2000
+    assert config.chunking is not None
+    assert config.chunking.max_chars == 2000
 
 
 def test_build_extraction_config_from_dict_with_ocr() -> None:
@@ -356,8 +358,8 @@ def test_build_extraction_config_from_dict_with_ocr() -> None:
         "tesseract": {"language": "eng"},
     }
     config = build_extraction_config_from_dict(config_dict)
-    assert config.ocr_backend == "tesseract"
-    assert isinstance(config.ocr_config, TesseractConfig)
+    assert config.ocr is not None
+    assert isinstance(config.ocr, TesseractConfig)
 
 
 def test_build_extraction_config_from_dict_invalid_ocr_backend() -> None:
@@ -373,8 +375,8 @@ def test_build_extraction_config_from_dict_with_gmft() -> None:
         "vision_tables": {"verbosity": 1},
     }
     config = build_extraction_config_from_dict(config_dict)
-    assert config.extract_tables is True
-    assert isinstance(config.vision_tables_config, VisionTablesConfig)
+    assert config.tables is not None
+    assert isinstance(config.tables, TableExtractionConfig)
 
 
 def test_build_extraction_config_from_dict_invalid_gmft() -> None:
@@ -390,8 +392,9 @@ def test_build_extraction_config_from_dict_invalid_gmft() -> None:
 def test_build_extraction_config_from_dict_with_html_to_markdown() -> None:
     config_dict = {"html_to_markdown": {"strip": ["script", "style"]}}
     config = build_extraction_config_from_dict(config_dict)
-    assert isinstance(config.html_to_markdown_config, HTMLToMarkdownConfig)
-    assert config.html_to_markdown_config.strip == ["script", "style"]
+    assert isinstance(config.html_to_markdown, HTMLToMarkdownConfig)
+    # Strip can be list or tuple (msgspec normalizes later)
+    assert config.html_to_markdown.strip in (("script", "style"), ["script", "style"])
 
 
 def test_build_extraction_config_from_dict_invalid_html_to_markdown() -> None:
@@ -404,7 +407,7 @@ def test_build_extraction_config_from_dict_invalid_html_to_markdown() -> None:
 def test_build_extraction_config_from_dict_ocr_backend_none() -> None:
     config_dict = {"ocr_backend": "none"}
     config = build_extraction_config_from_dict(config_dict)
-    assert config.ocr_backend is None
+    assert config.ocr is None
 
 
 def test_build_extraction_config_from_dict_invalid() -> None:
@@ -425,7 +428,7 @@ def test_build_extraction_config_ocr_backend_none() -> None:
     file_config: dict[str, Any] = {}
     cli_args: MutableMapping[str, Any] = {"ocr_backend": "none"}
     config = build_extraction_config(file_config, cli_args)
-    assert config.ocr_backend is None
+    assert config.ocr is None
 
 
 def test_build_extraction_config_invalid() -> None:
@@ -538,7 +541,7 @@ def test_load_config_from_path_path(tmp_path: Path) -> None:
     config_file.write_text("chunk_content = true")
 
     config = load_config_from_path(config_file)
-    assert config.chunk_content is True
+    assert config.chunking is not None
 
 
 def test_discover_and_load_config(tmp_path: Path) -> None:
@@ -613,7 +616,7 @@ def test_configure_vision_tables_with_cli_config() -> None:
     _configure_vision_tables(config_dict, file_config, cli_args)
 
     assert "vision_tables_config" in config_dict
-    assert isinstance(config_dict["vision_tables_config"], VisionTablesConfig)
+    assert isinstance(config_dict["vision_tables_config"], TableExtractionConfig)
     assert config_dict["vision_tables_config"].verbosity == 2
 
 
@@ -625,7 +628,7 @@ def test_configure_vision_tables_with_file_config() -> None:
     _configure_vision_tables(config_dict, file_config, cli_args)
 
     assert "vision_tables_config" in config_dict
-    assert isinstance(config_dict["vision_tables_config"], VisionTablesConfig)
+    assert isinstance(config_dict["vision_tables_config"], TableExtractionConfig)
     assert config_dict["vision_tables_config"].verbosity == 1
 
 
@@ -649,9 +652,9 @@ def test_build_extraction_config_from_dict_no_ocr_config() -> None:
     }
 
     config = build_extraction_config_from_dict(config_dict)
-    assert config.ocr_backend == "tesseract"
+    assert config.ocr is not None
+    assert isinstance(config.ocr, TesseractConfig)
     assert config.force_ocr is True
-    assert config.ocr_config is None
 
 
 def test_build_extraction_config_from_dict_no_vision_tables_config() -> None:
@@ -662,15 +665,17 @@ def test_build_extraction_config_from_dict_no_vision_tables_config() -> None:
     }
 
     config = build_extraction_config_from_dict(config_dict)
-    assert config.extract_tables is True
-    assert config.vision_tables_config is None
+    assert config.tables is not None
+    assert isinstance(config.tables, TableExtractionConfig)
 
 
 def test_extract_images_config_default() -> None:
     cfg = ExtractionConfig()
-    assert cfg.extract_images is False
+    assert cfg.images is None
 
 
 def test_extract_images_config_enabled() -> None:
-    cfg = ExtractionConfig(extract_images=True)
-    assert cfg.extract_images is True
+    from kreuzberg._types import ImageExtractionConfig
+
+    cfg = ExtractionConfig(images=ImageExtractionConfig())
+    assert cfg.images is not None

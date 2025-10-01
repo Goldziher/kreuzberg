@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 from kreuzberg._constants import PDF_POINTS_PER_INCH
 from kreuzberg._internal_bindings import calculate_optimal_dpi
-from kreuzberg._types import VisionTablesConfig
+from kreuzberg._types import TableExtractionConfig
 from kreuzberg._utils._model_cache import (
     setup_huggingface_cache,
     setup_huggingface_cache_async,
@@ -58,7 +58,7 @@ def _get_cached_detector(
     if cache_dir:
         setup_huggingface_cache(cache_dir)
 
-    config = VisionTablesConfig(
+    config = TableExtractionConfig(
         detection_model=detection_model,
         detection_threshold=detection_threshold,
         model_cache_dir=cache_dir,
@@ -77,7 +77,7 @@ async def _get_cached_detector_async(
     if cache_dir:
         await setup_huggingface_cache_async(cache_dir)
 
-    config = VisionTablesConfig(
+    config = TableExtractionConfig(
         detection_model=detection_model,
         detection_threshold=detection_threshold,
         model_cache_dir=cache_dir,
@@ -94,7 +94,7 @@ def _get_cached_formatter(
     if cache_dir:
         setup_huggingface_cache(cache_dir)
 
-    config = VisionTablesConfig(
+    config = TableExtractionConfig(
         structure_model=structure_model,
         structure_threshold=structure_threshold,
         model_cache_dir=cache_dir,
@@ -109,7 +109,7 @@ async def _get_cached_formatter_async(
     if cache_dir:
         await setup_huggingface_cache_async(cache_dir)
 
-    config = VisionTablesConfig(
+    config = TableExtractionConfig(
         structure_model=structure_model,
         structure_threshold=structure_threshold,
         model_cache_dir=cache_dir,
@@ -117,7 +117,7 @@ async def _get_cached_formatter_async(
     return TableFormatter(config)
 
 
-async def extract_tables_async(file_path: str | Path, config: VisionTablesConfig | None = None) -> list[TableData]:
+async def extract_tables_async(file_path: str | Path, config: TableExtractionConfig | None = None) -> list[TableData]:
     """Extract tables from PDF documents using Table Transformer (TATR).
 
     Uses Microsoft's Table Transformer models for table detection and structure
@@ -141,7 +141,7 @@ async def extract_tables_async(file_path: str | Path, config: VisionTablesConfig
     return await run_sync(extract_tables_sync, file_path, config)
 
 
-def extract_tables_sync(file_path: str | Path, config: VisionTablesConfig | None = None) -> list[TableData]:
+def extract_tables_sync(file_path: str | Path, config: TableExtractionConfig | None = None) -> list[TableData]:
     """Synchronous table extraction from PDF documents.
 
     Leverages Kreuzberg's existing PDF processing facilities and DPI optimization.
@@ -160,7 +160,7 @@ def extract_tables_sync(file_path: str | Path, config: VisionTablesConfig | None
     pdf_path = Path(file_path)
 
     if config is None:
-        config = VisionTablesConfig()
+        config = TableExtractionConfig()
 
     detector = _get_cached_detector(config.detection_model, config.detection_threshold, config.model_cache_dir)
     formatter = _get_cached_formatter(config.structure_model, config.structure_threshold, config.model_cache_dir)

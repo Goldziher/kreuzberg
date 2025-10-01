@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from kreuzberg._types import VisionTablesConfig
+from kreuzberg._types import TableExtractionConfig
 from kreuzberg._vision_tables import extract_tables_async, extract_tables_sync
 from kreuzberg.exceptions import MissingDependencyError
 
@@ -31,12 +31,12 @@ def test_extract_tables_from_tiny_pdf() -> None:
 def test_custom_detection_threshold() -> None:
     pdf_path = Path("test_documents/gmft/tiny.pdf")
 
-    config_high = VisionTablesConfig(detection_threshold=0.9)
+    config_high = TableExtractionConfig(detection_threshold=0.9)
 
     try:
         tables_high = extract_tables_sync(pdf_path, config=config_high)
 
-        config_low = VisionTablesConfig(detection_threshold=0.3)
+        config_low = TableExtractionConfig(detection_threshold=0.3)
         tables_low = extract_tables_sync(pdf_path, config=config_low)
 
         assert len(tables_low) >= len(tables_high)
@@ -48,7 +48,7 @@ def test_custom_detection_threshold() -> None:
 def test_custom_structure_threshold() -> None:
     pdf_path = Path("test_documents/gmft/tiny.pdf")
 
-    config = VisionTablesConfig(
+    config = TableExtractionConfig(
         detection_threshold=0.5,
         structure_threshold=0.3,
     )
@@ -69,9 +69,9 @@ def test_custom_structure_threshold() -> None:
 def test_model_variants() -> None:
     pdf_path = Path("test_documents/gmft/tiny.pdf")
 
-    config_all = VisionTablesConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-all")
+    config_all = TableExtractionConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-all")
 
-    config_pub = VisionTablesConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-pub")
+    config_pub = TableExtractionConfig(structure_model="microsoft/table-transformer-structure-recognition-v1.1-pub")
 
     try:
         tables_all = extract_tables_sync(pdf_path, config=config_all)
@@ -87,7 +87,7 @@ def test_model_variants() -> None:
 def test_device_configuration() -> None:
     pdf_path = Path("test_documents/gmft/tiny.pdf")
 
-    config = VisionTablesConfig(detection_device="cpu", structure_device="cpu")
+    config = TableExtractionConfig(detection_device="cpu", structure_device="cpu")
 
     try:
         tables = extract_tables_sync(pdf_path, config=config)

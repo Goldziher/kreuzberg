@@ -5,12 +5,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-from kreuzberg._types import VisionTablesConfig
+from kreuzberg._types import TableExtractionConfig
 from kreuzberg._vision_tables import extract_tables_sync
 from kreuzberg.exceptions import MissingDependencyError
 
 
-def benchmark_config(pdf_path: Path, config: VisionTablesConfig, config_name: str) -> dict[str, Any]:
+def benchmark_config(pdf_path: Path, config: TableExtractionConfig, config_name: str) -> dict[str, Any]:
     start_time = time.time()
     results = {
         "config_name": config_name,
@@ -53,25 +53,25 @@ def main() -> None:
     ]
 
     configs = {
-        "default": VisionTablesConfig(),
-        "conservative": VisionTablesConfig(
+        "default": TableExtractionConfig(),
+        "conservative": TableExtractionConfig(
             detection_threshold=0.8,
             structure_threshold=0.6,
         ),
-        "balanced": VisionTablesConfig(
+        "balanced": TableExtractionConfig(
             detection_threshold=0.7,
             structure_threshold=0.5,
         ),
-        "aggressive": VisionTablesConfig(
+        "aggressive": TableExtractionConfig(
             detection_threshold=0.5,
             structure_threshold=0.3,
         ),
-        "v1.1-pub": VisionTablesConfig(
+        "v1.1-pub": TableExtractionConfig(
             structure_model="microsoft/table-transformer-structure-recognition-v1.1-pub",
             detection_threshold=0.7,
             structure_threshold=0.5,
         ),
-        "v1.1-fin": VisionTablesConfig(
+        "v1.1-fin": TableExtractionConfig(
             structure_model="microsoft/table-transformer-structure-recognition-v1.1-fin",
             detection_threshold=0.7,
             structure_threshold=0.5,

@@ -6,23 +6,23 @@ import pytest
 
 from kreuzberg._api._config_cache import (
     clear_all_caches,
+    create_entity_extraction_config_cached,
     create_html_markdown_config_cached,
     create_language_detection_config_cached,
     create_ocr_config_cached,
-    create_spacy_config_cached,
-    create_vision_tables_config_cached,
+    create_table_extraction_config_cached,
     discover_config_cached,
     get_cache_stats,
     parse_header_config_cached,
 )
 from kreuzberg._types import (
     EasyOCRConfig,
+    EntityExtractionConfig,
     HTMLToMarkdownConfig,
     LanguageDetectionConfig,
     PaddleOCRConfig,
-    SpacyEntityExtractionConfig,
+    TableExtractionConfig,
     TesseractConfig,
-    VisionTablesConfig,
 )
 
 
@@ -97,11 +97,10 @@ def test_create_ocr_config_cached_invalid_backend() -> None:
         create_ocr_config_cached("invalid", config_dict)
 
 
-def test_create_vision_tables_config_cached() -> None:
-    config_dict = {"verbosity": 1}
-    result = create_vision_tables_config_cached(config_dict)
-    assert isinstance(result, VisionTablesConfig)
-    assert result.verbosity == 1
+def test_create_table_extraction_config_cached() -> None:
+    config_dict: dict[str, Any] = {}
+    result = create_table_extraction_config_cached(config_dict)
+    assert isinstance(result, TableExtractionConfig)
 
 
 def test_create_language_detection_config_cached() -> None:
@@ -111,10 +110,10 @@ def test_create_language_detection_config_cached() -> None:
     assert result.top_k == 5
 
 
-def test_create_spacy_config_cached() -> None:
-    config_dict = {"language_models": {"en": "en_core_web_sm"}}
-    result = create_spacy_config_cached(config_dict)
-    assert isinstance(result, SpacyEntityExtractionConfig)
+def test_create_entity_extraction_config_cached() -> None:
+    config_dict: dict[str, Any] = {}
+    result = create_entity_extraction_config_cached(config_dict)
+    assert isinstance(result, EntityExtractionConfig)
 
 
 def test_create_html_markdown_config_cached() -> None:
@@ -140,7 +139,7 @@ def test_get_cache_stats() -> None:
     clear_all_caches()
 
     create_ocr_config_cached("tesseract", {})
-    create_vision_tables_config_cached({})
+    create_table_extraction_config_cached({})
     parse_header_config_cached("{}")
 
     stats = get_cache_stats()
@@ -149,9 +148,9 @@ def test_get_cache_stats() -> None:
         "discover_config",
         "ocr_config",
         "header_parsing",
-        "vision_tables_config",
+        "table_extraction_config",
         "language_detection_config",
-        "spacy_config",
+        "entity_extraction_config",
     ]
 
     for section in expected_sections:
@@ -164,7 +163,7 @@ def test_get_cache_stats() -> None:
 
 def test_clear_all_caches() -> None:
     create_ocr_config_cached("tesseract", {})
-    create_vision_tables_config_cached({})
+    create_table_extraction_config_cached({})
 
     clear_all_caches()
 
@@ -188,7 +187,7 @@ def test_caching_behavior_ocr_config() -> None:
     assert stats_after_second["ocr_config"]["misses"] == 1
     assert stats_after_second["ocr_config"]["hits"] == 1
 
-    assert result1.__dict__ == result2.__dict__
+    assert result1 == result2
 
 
 def test_caching_behavior_header_parsing() -> None:
@@ -210,14 +209,14 @@ def test_caching_behavior_header_parsing() -> None:
 def test_config_dict_serialization_consistency() -> None:
     clear_all_caches()
 
-    config1 = {"verbosity": 2, "detection_threshold": 0.8}
-    config2 = {"detection_threshold": 0.8, "verbosity": 2}
+    config1: dict[str, Any] = {}
+    config2: dict[str, Any] = {}
 
-    result1 = create_vision_tables_config_cached(config1)
-    result2 = create_vision_tables_config_cached(config2)
+    result1 = create_table_extraction_config_cached(config1)
+    result2 = create_table_extraction_config_cached(config2)
 
     stats = get_cache_stats()
-    assert stats["vision_tables_config"]["hits"] == 1
-    assert stats["vision_tables_config"]["misses"] == 1
+    assert stats["table_extraction_config"]["hits"] == 1
+    assert stats["table_extraction_config"]["misses"] == 1
 
-    assert result1.__dict__ == result2.__dict__
+    assert result1 == result2

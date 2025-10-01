@@ -10,9 +10,14 @@ else:  # pragma: no cover
     import tomli as tomllib  # type: ignore[import-not-found]
 
 from kreuzberg._types import (
+    ChunkingConfig,
     EasyOCRConfig,
+    EntityExtractionConfig,
     ExtractionConfig,
     HTMLToMarkdownConfig,
+    ImageExtractionConfig,
+    KeywordExtractionConfig,
+    LanguageDetectionConfig,
     OcrBackendType,
     PaddleOCRConfig,
     PSMMode,
@@ -212,10 +217,27 @@ def parse_ocr_backend_config(
         ) from e
 
 
-def build_extraction_config_from_dict(config_dict: dict[str, Any]) -> ExtractionConfig:
-    extraction_config: dict[str, Any] = {field: config_dict[field] for field in _CONFIG_FIELDS if field in config_dict}
+def build_extraction_config_from_dict(config_dict: dict[str, Any]) -> ExtractionConfig:  # noqa: C901, PLR0912
+    """Build V4 ExtractionConfig from V3-style config dict.
 
-    ocr_backend = extraction_config.get("ocr_backend")
+    Translates V3 field names and structure to V4 tagged unions and nested configs.
+    """
+    v4_config: dict[str, Any] = {}
+
+    # Direct mappings (fields that exist in both V3 and V4)
+    direct_fields = [
+        "force_ocr",
+        "enable_quality_processing",
+        "auto_detect_document_type",
+        "document_type_confidence_threshold",
+        "document_classification_mode",
+    ]
+    for field in direct_fields:
+        if field in config_dict:
+            v4_config[field] = config_dict[field]
+
+    # OCR configuration: ocr_backend + ocr_config → ocr (tagged union)
+    ocr_backend = config_dict.get("ocr_backend")
     if ocr_backend and ocr_backend != "none":
         if ocr_backend not in _VALID_OCR_BACKENDS:
             raise ValidationError(
@@ -224,39 +246,71 @@ def build_extraction_config_from_dict(config_dict: dict[str, Any]) -> Extraction
             )
         ocr_config = parse_ocr_backend_config(config_dict, ocr_backend)
         if ocr_config:
-            extraction_config["ocr_config"] = ocr_config
+            v4_config["ocr"] = ocr_config
+        else:
+            # No backend config provided, create default config for the backend
+            v4_config["ocr"] = _create_ocr_config(ocr_backend, {})
+    elif ocr_backend == "none":
+        v4_config["ocr"] = None
 
-    if (
-        extraction_config.get("extract_tables")
-        and "vision_tables" in config_dict
-        and isinstance(config_dict["vision_tables"], dict)
-    ):
-        try:
-            extraction_config["vision_tables_config"] = TableExtractionConfig(**config_dict["vision_tables"])
-        except (TypeError, ValueError) as e:
-            raise ValidationError(
-                f"Invalid vision-based table extraction configuration: {e}",
-                context={"vision_tables_config": config_dict["vision_tables"], "error": str(e)},
-            ) from e
+    # Chunking: chunk_content + max_chars + max_overlap → chunking
+    if config_dict.get("chunk_content"):
+        chunking_params = {}
+        if "max_chars" in config_dict:
+            chunking_params["max_chars"] = config_dict["max_chars"]
+        if "max_overlap" in config_dict:
+            chunking_params["max_overlap"] = config_dict["max_overlap"]
+        v4_config["chunking"] = ChunkingConfig(**chunking_params)
 
+    # Tables: extract_tables + vision_tables → tables
+    if config_dict.get("extract_tables"):
+        if "vision_tables" in config_dict and isinstance(config_dict["vision_tables"], dict):
+            try:
+                v4_config["tables"] = TableExtractionConfig(**config_dict["vision_tables"])
+            except (TypeError, ValueError) as e:
+                raise ValidationError(
+                    f"Invalid vision-based table extraction configuration: {e}",
+                    context={"vision_tables_config": config_dict["vision_tables"], "error": str(e)},
+                ) from e
+        else:
+            # extract_tables=True without config → use default
+            v4_config["tables"] = TableExtractionConfig()
+
+    # Images: extract_images → images
+    if config_dict.get("extract_images"):
+        v4_config["images"] = ImageExtractionConfig()
+
+    # Language detection: auto_detect_language → language_detection
+    if config_dict.get("auto_detect_language"):
+        v4_config["language_detection"] = LanguageDetectionConfig()
+
+    # Entities: extract_entities → entities
+    if config_dict.get("extract_entities"):
+        v4_config["entities"] = EntityExtractionConfig()
+
+    # Keywords: extract_keywords + keyword_count → keywords
+    if config_dict.get("extract_keywords"):
+        keyword_params = {}
+        if "keyword_count" in config_dict:
+            keyword_params["top_k"] = config_dict["keyword_count"]
+        v4_config["keywords"] = KeywordExtractionConfig(**keyword_params)
+
+    # HTML to Markdown: html_to_markdown_config → html_to_markdown
     if "html_to_markdown" in config_dict and isinstance(config_dict["html_to_markdown"], dict):
         try:
-            extraction_config["html_to_markdown_config"] = HTMLToMarkdownConfig(**config_dict["html_to_markdown"])
+            v4_config["html_to_markdown"] = HTMLToMarkdownConfig(**config_dict["html_to_markdown"])
         except (TypeError, ValueError) as e:
             raise ValidationError(
                 f"Invalid HTML to Markdown configuration: {e}",
                 context={"html_to_markdown_config": config_dict["html_to_markdown"], "error": str(e)},
             ) from e
 
-    if extraction_config.get("ocr_backend") == "none":
-        extraction_config["ocr_backend"] = None
-
     try:
-        return ExtractionConfig(**extraction_config)
+        return ExtractionConfig(**v4_config)
     except (TypeError, ValueError) as e:  # pragma: no cover
         raise ValidationError(
             f"Invalid extraction configuration: {e}",
-            context={"config": extraction_config, "error": str(e)},
+            context={"config": v4_config, "error": str(e)},
         ) from e
 
 
@@ -264,6 +318,10 @@ def build_extraction_config(
     file_config: dict[str, Any],
     cli_args: MutableMapping[str, Any],
 ) -> ExtractionConfig:
+    """Build V4 ExtractionConfig from V3-style file and CLI inputs.
+
+    Merges file config and CLI args, then translates to V4 structure.
+    """
     config_dict: dict[str, Any] = {}
 
     _merge_file_config(config_dict, file_config)
@@ -272,16 +330,8 @@ def build_extraction_config(
     _configure_ocr_backend(config_dict, file_config, cli_args)
     _configure_vision_tables(config_dict, file_config, cli_args)
 
-    if config_dict.get("ocr_backend") == "none":
-        config_dict["ocr_backend"] = None
-
-    try:
-        return ExtractionConfig(**config_dict)
-    except (TypeError, ValueError) as e:  # pragma: no cover
-        raise ValidationError(
-            f"Invalid extraction configuration: {e}",
-            context={"config": config_dict, "error": str(e)},
-        ) from e
+    # Now translate the merged V3 config to V4
+    return build_extraction_config_from_dict(config_dict)
 
 
 def find_config_file(start_path: Path | None = None) -> Path | None:
