@@ -130,12 +130,12 @@ def test_token_reduction_integration_preserves_entities() -> None:
 
 
 def test_token_reduction_integration_with_chunking() -> None:
-    content = b"The quick brown fox jumps over the lazy dog. " * 10
+    content = b"The quick brown fox jumps over the lazy dog and the cat and the bird. " * 10
     config = ExtractionConfig(
         chunk_content=True,
         max_chars=200,
         max_overlap=50,
-        token_reduction=TokenReductionConfig(mode="light"),
+        token_reduction=TokenReductionConfig(mode="moderate"),
     )
 
     result = extract_bytes_sync(content, "text/plain", config)

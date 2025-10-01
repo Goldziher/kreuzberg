@@ -355,13 +355,13 @@ async def test_extract_images_with_ocr_skip_small(test_client: AsyncTestClient[A
     html = (
         b"<html><body>"
         b'<img src="data:image/png;base64,'
-        b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-        b'" alt="Tiny">'
+        b"iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAIAAAACDbGyAAAAEUlEQVR4nGP8z4ACmFC5JPMBUJEBCVdmRcsAAAAASUVORK5CYII="
+        b'" alt="Small">'
         b"</body></html>"
     )
 
     response = await test_client.post(
-        "/extract?extract_images=true&ocr_extracted_images=true",
+        "/extract?extract_images=true&ocr_extracted_images=true&image_ocr_min_width=10&image_ocr_min_height=10",
         files=[("data", ("inline.html", html, "text/html"))],
     )
 

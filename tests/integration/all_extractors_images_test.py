@@ -136,16 +136,29 @@ class TestAllExtractorsImageIntegration:
                         return '{"title": "Test Document", "author": "Test Author"}'
                     return "Document content"
 
-                mock_path_instance = MagicMock()
-                mock_path_instance.read_text = mock_read_text
-                mock_path_instance.read_bytes = AsyncMock(return_value=b"image_data")
-                mock_async_path.return_value = mock_path_instance
+                # Create mock image path
+                mock_img_path = MagicMock()
+                mock_img_path.suffix = ".png"
+                mock_img_path.name = "image1.png"
+
+                # Create async iterator for rglob
+                async def async_rglob_iter(*args):  # noqa: ARG001
+                    yield mock_img_path
+
+                # Mock AsyncPath to return different instances
+                def create_async_path_mock(path):  # noqa: ARG001
+                    mock_instance = MagicMock()
+                    mock_instance.read_text = mock_read_text
+                    mock_instance.read_bytes = AsyncMock(return_value=b"image_data")
+                    mock_instance.mkdir = AsyncMock()
+                    mock_instance.exists = AsyncMock(return_value=True)
+                    mock_instance.is_file = AsyncMock(return_value=True)
+                    mock_instance.rglob = MagicMock(return_value=async_rglob_iter())
+                    return mock_instance
+
+                mock_async_path.side_effect = create_async_path_mock
 
                 with patch("pathlib.Path.rglob") as mock_rglob:
-                    mock_img_path = MagicMock()
-                    mock_img_path.is_file.return_value = True
-                    mock_img_path.suffix = ".png"
-                    mock_img_path.name = "image1.png"
                     mock_rglob.return_value = [mock_img_path]
 
                     with patch("pathlib.Path.exists") as mock_exists:
