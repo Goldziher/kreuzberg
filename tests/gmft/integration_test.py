@@ -114,7 +114,7 @@ async def test_async_extraction() -> None:
 
 
 def test_empty_pdf_handling() -> None:
-    pdf_path = Path("test_documents/searchable.pdf")
+    pdf_path = Path("test_documents/pdfs/searchable.pdf")
 
     try:
         tables = extract_tables_sync(pdf_path)

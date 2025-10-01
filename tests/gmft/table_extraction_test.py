@@ -13,6 +13,7 @@ from kreuzberg._vision_tables import (
     extract_tables_async,
     extract_tables_sync,
 )
+from kreuzberg._vision_tables._detector import _import_transformers
 from kreuzberg._vision_tables._algorithm import (
     _apply_non_maximum_suppression,
     _calculate_cell_intersection,
@@ -66,13 +67,15 @@ def test_gmft_config_model_variants() -> None:
 def test_table_detector_initialization() -> None:
     detector = TableDetector()
     assert detector.config is not None
-    assert detector.is_available() is False
+    # When vision-tables dependencies are installed, is_available() returns True
+    assert detector.is_available() is True
 
 
 def test_table_formatter_initialization() -> None:
     formatter = TableFormatter()
     assert formatter.config is not None
-    assert formatter.is_available() is False
+    # When vision-tables dependencies are installed, is_available() returns True
+    assert formatter.is_available() is True
 
 
 def test_detector_with_custom_config() -> None:
@@ -274,6 +277,10 @@ def test_extract_table_dataframe() -> None:
     assert df.shape == (2, 2)
 
 
+@pytest.mark.skipif(
+    _import_transformers()[0] is not None,
+    reason="Skipping missing deps test - vision-tables dependencies are installed",
+)
 def test_extract_tables_sync_missing_deps() -> None:
     from pathlib import Path
 
@@ -284,6 +291,10 @@ def test_extract_tables_sync_missing_deps() -> None:
 
 
 @pytest.mark.anyio
+@pytest.mark.skipif(
+    _import_transformers()[0] is not None,
+    reason="Skipping missing deps test - vision-tables dependencies are installed",
+)
 async def test_extract_tables_async_missing_deps() -> None:
     from pathlib import Path
 

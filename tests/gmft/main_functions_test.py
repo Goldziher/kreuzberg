@@ -11,9 +11,14 @@ from kreuzberg._vision_tables import (
     extract_tables_async,
     extract_tables_sync,
 )
+from kreuzberg._vision_tables._detector import _import_transformers
 from kreuzberg.exceptions import MissingDependencyError
 
 
+@pytest.mark.skipif(
+    _import_transformers()[0] is not None,
+    reason="Skipping missing deps test - vision-tables dependencies are installed",
+)
 def test_extract_tables_sync_with_path_object() -> None:
     test_pdf = Path("test_documents/gmft/tiny.pdf")
 
@@ -24,6 +29,10 @@ def test_extract_tables_sync_with_path_object() -> None:
 
 
 @pytest.mark.anyio
+@pytest.mark.skipif(
+    _import_transformers()[0] is not None,
+    reason="Skipping missing deps test - vision-tables dependencies are installed",
+)
 async def test_extract_tables_async_with_path_object() -> None:
     test_pdf = Path("test_documents/gmft/tiny.pdf")
 
@@ -33,6 +42,10 @@ async def test_extract_tables_async_with_path_object() -> None:
     assert "transformers" in str(exc_info.value) or "torch" in str(exc_info.value)
 
 
+@pytest.mark.skipif(
+    _import_transformers()[0] is not None,
+    reason="Skipping missing deps test - vision-tables dependencies are installed",
+)
 def test_extract_tables_sync_with_default_config() -> None:
     test_pdf = "test_documents/gmft/tiny.pdf"
 
