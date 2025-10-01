@@ -16,8 +16,8 @@ from kreuzberg._types import (
     OcrBackendType,
     PaddleOCRConfig,
     PSMMode,
+    TableExtractionConfig,
     TesseractConfig,
-    VisionTablesConfig,
 )
 from kreuzberg.exceptions import ValidationError
 
@@ -120,9 +120,9 @@ def _configure_vision_tables(
     vision_tables_config = None
     try:
         if cli_args.get("vision_tables_config"):
-            vision_tables_config = VisionTablesConfig(**cli_args["vision_tables_config"])
+            vision_tables_config = TableExtractionConfig(**cli_args["vision_tables_config"])
         elif "vision_tables" in file_config and isinstance(file_config["vision_tables"], dict):  # pragma: no cover
-            vision_tables_config = VisionTablesConfig(**file_config["vision_tables"])
+            vision_tables_config = TableExtractionConfig(**file_config["vision_tables"])
     except (TypeError, ValueError) as e:
         raise ValidationError(
             f"Invalid vision-based table extraction configuration: {e}",
@@ -232,7 +232,7 @@ def build_extraction_config_from_dict(config_dict: dict[str, Any]) -> Extraction
         and isinstance(config_dict["vision_tables"], dict)
     ):
         try:
-            extraction_config["vision_tables_config"] = VisionTablesConfig(**config_dict["vision_tables"])
+            extraction_config["vision_tables_config"] = TableExtractionConfig(**config_dict["vision_tables"])
         except (TypeError, ValueError) as e:
             raise ValidationError(
                 f"Invalid vision-based table extraction configuration: {e}",

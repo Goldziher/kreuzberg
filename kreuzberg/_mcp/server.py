@@ -12,16 +12,11 @@ from mcp.types import TextContent
 
 from kreuzberg._config import discover_config
 from kreuzberg._types import (
-    ChunkingConfig,
     EntityExtractionConfig,
     ExtractionConfig,
     KeywordExtractionConfig,
-    OcrBackendType,
-    PSMMode,
     TableExtractionConfig,
-    TesseractConfig,
 )
-from kreuzberg._utils._serialization import to_dict
 from kreuzberg.exceptions import ValidationError
 from kreuzberg.extraction import (
     batch_extract_bytes_sync,
@@ -129,193 +124,105 @@ def _validate_base64_content(content_base64: str, context_info: str | None = Non
     return content_bytes
 
 
-def _create_config_with_overrides(**kwargs: Any) -> ExtractionConfig:  # noqa: C901, PLR0912
-    """Create V4 ExtractionConfig from V3-style flat parameters.
+def _build_config(**kwargs: Any) -> ExtractionConfig:
+    """Build V4 ExtractionConfig from MCP parameters.
 
-    Converts legacy MCP API parameters to V4 config structure.
+    All parameters match V4 config structure directly - no conversion.
     """
     base_config = discover_config()
 
-    # Pop MCP-specific parameters that need special handling
-    tesseract_lang = kwargs.pop("tesseract_lang", None)
-    tesseract_psm = kwargs.pop("tesseract_psm", None)
-    tesseract_output_format = kwargs.pop("tesseract_output_format", None)
-    enable_table_detection = kwargs.pop("enable_table_detection", None)
-
-    # Pop V3-style flags
-    extract_tables = kwargs.pop("extract_tables", False)
-    extract_entities = kwargs.pop("extract_entities", False)
-    extract_keywords = kwargs.pop("extract_keywords", False)
-    chunk_content = kwargs.pop("chunk_content", False)
-    ocr_backend = kwargs.pop("ocr_backend", "tesseract")
-
-    # Pop chunking parameters
-    max_chars = kwargs.pop("max_chars", 1000)
-    max_overlap = kwargs.pop("max_overlap", 200)
-    keyword_count = kwargs.pop("keyword_count", 10)
-
-    # Start with base config or defaults
     if base_config is None:
-        # No base config, build from scratch
-        config_dict: dict[str, Any] = {
-            "force_ocr": kwargs.pop("force_ocr", False),
-            "auto_detect_language": kwargs.pop("auto_detect_language", False),
-        }
-    else:
-        # Start with base config, convert to dict
-        config_dict = to_dict(base_config, include_none=False)
+        # No base config, build from kwargs
+        return ExtractionConfig(**kwargs)
 
-        # Override with provided parameters
-        if "force_ocr" in kwargs:
-            config_dict["force_ocr"] = kwargs.pop("force_ocr")
-        if "auto_detect_language" in kwargs:
-            config_dict["auto_detect_language"] = kwargs.pop("auto_detect_language")
+    # Merge base config with overrides
+    config_dict = msgspec.to_builtins(base_config, order="deterministic")
 
-    # V4: Build OCR config from parameters
-    if ocr_backend:
-        tesseract_config_dict: dict[str, Any] = {}
-
-        if tesseract_lang:
-            tesseract_config_dict["language"] = tesseract_lang
-        if tesseract_psm is not None:
-            try:
-                tesseract_config_dict["psm"] = PSMMode(tesseract_psm)
-            except ValueError as e:
-                raise ValidationError(
-                    f"Invalid PSM mode value: {tesseract_psm}",
-                    context={"psm_value": tesseract_psm, "error": str(e)},
-                ) from e
-        if tesseract_output_format:
-            tesseract_config_dict["output_format"] = tesseract_output_format
-        if enable_table_detection:
-            tesseract_config_dict["enable_table_detection"] = enable_table_detection
-
-        # Create OCR config (currently only Tesseract supported in MCP)
-        if tesseract_config_dict:
-            config_dict["ocr"] = TesseractConfig(**tesseract_config_dict)
-        elif ocr_backend == "tesseract":
-            config_dict["ocr"] = TesseractConfig()
-
-    # V4: Convert boolean flags to config objects
-    if extract_tables:
-        config_dict["tables"] = TableExtractionConfig()
-
-    if extract_entities:
-        config_dict["entities"] = EntityExtractionConfig()
-
-    if extract_keywords:
-        config_dict["keywords"] = KeywordExtractionConfig(count=keyword_count)
-
-    if chunk_content:
-        config_dict["chunking"] = ChunkingConfig(max_chars=max_chars, max_overlap=max_overlap)
-
-    # Include any remaining kwargs
-    config_dict.update(kwargs)
+    # Only include non-None kwargs to override base config
+    config_dict.update({k: v for k, v in kwargs.items() if v is not None})
 
     return ExtractionConfig(**config_dict)
 
 
 @mcp.tool()
-def extract_document(  # noqa: PLR0913
+def extract_document(
     file_path: str,
     mime_type: str | None = None,
-    force_ocr: bool = False,
-    chunk_content: bool = False,
-    extract_tables: bool = False,
-    extract_entities: bool = False,
-    extract_keywords: bool = False,
-    ocr_backend: OcrBackendType = "tesseract",
-    max_chars: int = 1000,
-    max_overlap: int = 200,
-    keyword_count: int = 10,
-    auto_detect_language: bool = False,
-    tesseract_lang: str | None = None,
-    tesseract_psm: int | None = None,
-    tesseract_output_format: str | None = None,
-    enable_table_detection: bool | None = None,
+    config_json: str | None = None,
 ) -> dict[str, Any]:
+    """Extract text and metadata from a document file.
+
+    Args:
+        file_path: Path to the document file
+        mime_type: MIME type override (optional, auto-detected if None)
+        config_json: JSON string with V4 ExtractionConfig parameters (optional)
+
+    Returns:
+        ExtractionResult as dict
+
+    Example config_json:
+        {
+            "force_ocr": true,
+            "ocr": {"backend": "tesseract", "language": "eng"},
+            "tables": {},
+            "keywords": {"count": 20},
+            "chunking": {"max_chars": 500}
+        }
+    """
     validated_path = _validate_file_path(file_path)
-    config = _create_config_with_overrides(
-        force_ocr=force_ocr,
-        chunk_content=chunk_content,
-        extract_tables=extract_tables,
-        extract_entities=extract_entities,
-        extract_keywords=extract_keywords,
-        ocr_backend=ocr_backend,
-        max_chars=max_chars,
-        max_overlap=max_overlap,
-        keyword_count=keyword_count,
-        auto_detect_language=auto_detect_language,
-        tesseract_lang=tesseract_lang,
-        tesseract_psm=tesseract_psm,
-        tesseract_output_format=tesseract_output_format,
-        enable_table_detection=enable_table_detection,
-    )
+
+    if config_json:
+        config_dict = json.loads(config_json)
+        config = _build_config(**config_dict)
+    else:
+        config = _build_config()
 
     result = extract_file_sync(str(validated_path), mime_type, config)
     return result.to_dict(include_none=True)
 
 
 @mcp.tool()
-def extract_bytes(  # noqa: PLR0913
+def extract_bytes(
     content_base64: str,
     mime_type: str,
-    force_ocr: bool = False,
-    chunk_content: bool = False,
-    extract_tables: bool = False,
-    extract_entities: bool = False,
-    extract_keywords: bool = False,
-    ocr_backend: OcrBackendType = "tesseract",
-    max_chars: int = 1000,
-    max_overlap: int = 200,
-    keyword_count: int = 10,
-    auto_detect_language: bool = False,
-    tesseract_lang: str | None = None,
-    tesseract_psm: int | None = None,
-    tesseract_output_format: str | None = None,
-    enable_table_detection: bool | None = None,
+    config_json: str | None = None,
 ) -> dict[str, Any]:
+    """Extract text and metadata from base64-encoded document content.
+
+    Args:
+        content_base64: Base64-encoded document content
+        mime_type: MIME type of the content
+        config_json: JSON string with V4 ExtractionConfig parameters (optional)
+
+    Returns:
+        ExtractionResult as dict
+    """
     content_bytes = _validate_base64_content(content_base64, "extract_bytes")
 
-    config = _create_config_with_overrides(
-        force_ocr=force_ocr,
-        chunk_content=chunk_content,
-        extract_tables=extract_tables,
-        extract_entities=extract_entities,
-        extract_keywords=extract_keywords,
-        ocr_backend=ocr_backend,
-        max_chars=max_chars,
-        max_overlap=max_overlap,
-        keyword_count=keyword_count,
-        auto_detect_language=auto_detect_language,
-        tesseract_lang=tesseract_lang,
-        tesseract_psm=tesseract_psm,
-        tesseract_output_format=tesseract_output_format,
-        enable_table_detection=enable_table_detection,
-    )
+    if config_json:
+        config_dict = json.loads(config_json)
+        config = _build_config(**config_dict)
+    else:
+        config = _build_config()
 
     result = extract_bytes_sync(content_bytes, mime_type, config)
     return result.to_dict(include_none=True)
 
 
 @mcp.tool()
-def batch_extract_document(  # noqa: PLR0913
+def batch_extract_document(
     file_paths: list[str],
-    force_ocr: bool = False,
-    chunk_content: bool = False,
-    extract_tables: bool = False,
-    extract_entities: bool = False,
-    extract_keywords: bool = False,
-    ocr_backend: OcrBackendType = "tesseract",
-    max_chars: int = 1000,
-    max_overlap: int = 200,
-    keyword_count: int = 10,
-    auto_detect_language: bool = False,
-    tesseract_lang: str | None = None,
-    tesseract_psm: int | None = None,
-    tesseract_output_format: str | None = None,
-    enable_table_detection: bool | None = None,
+    config_json: str | None = None,
 ) -> list[dict[str, Any]]:
+    """Extract text and metadata from multiple document files.
+
+    Args:
+        file_paths: List of file paths to extract
+        config_json: JSON string with V4 ExtractionConfig parameters (optional)
+
+    Returns:
+        List of ExtractionResult as dict
+    """
     if len(file_paths) > MAX_BATCH_SIZE:
         raise ValidationError(
             f"Batch size exceeds maximum limit of {MAX_BATCH_SIZE}",
@@ -332,45 +239,31 @@ def batch_extract_document(  # noqa: PLR0913
     for i, file_path in enumerate(file_paths):
         validated_path = _validate_file_path_with_context(file_path, i, len(file_paths))
         validated_paths.append(str(validated_path))
-    config = _create_config_with_overrides(
-        force_ocr=force_ocr,
-        chunk_content=chunk_content,
-        extract_tables=extract_tables,
-        extract_entities=extract_entities,
-        extract_keywords=extract_keywords,
-        ocr_backend=ocr_backend,
-        max_chars=max_chars,
-        max_overlap=max_overlap,
-        keyword_count=keyword_count,
-        auto_detect_language=auto_detect_language,
-        tesseract_lang=tesseract_lang,
-        tesseract_psm=tesseract_psm,
-        tesseract_output_format=tesseract_output_format,
-        enable_table_detection=enable_table_detection,
-    )
+
+    if config_json:
+        config_dict = json.loads(config_json)
+        config = _build_config(**config_dict)
+    else:
+        config = _build_config()
 
     results = batch_extract_file_sync(validated_paths, config)
     return [result.to_dict(include_none=True) for result in results]
 
 
 @mcp.tool()
-def batch_extract_bytes(  # noqa: PLR0913
+def batch_extract_bytes(
     content_items: list[dict[str, str]],
-    force_ocr: bool = False,
-    chunk_content: bool = False,
-    extract_tables: bool = False,
-    extract_entities: bool = False,
-    extract_keywords: bool = False,
-    ocr_backend: OcrBackendType = "tesseract",
-    max_chars: int = 1000,
-    max_overlap: int = 200,
-    keyword_count: int = 10,
-    auto_detect_language: bool = False,
-    tesseract_lang: str | None = None,
-    tesseract_psm: int | None = None,
-    tesseract_output_format: str | None = None,
-    enable_table_detection: bool | None = None,
+    config_json: str | None = None,
 ) -> list[dict[str, Any]]:
+    """Extract text and metadata from multiple base64-encoded documents.
+
+    Args:
+        content_items: List of dicts with 'content_base64' and 'mime_type' keys
+        config_json: JSON string with V4 ExtractionConfig parameters (optional)
+
+    Returns:
+        List of ExtractionResult as dict
+    """
     if not content_items:
         raise ValidationError("content_items cannot be empty", context={"content_items": content_items})
 
@@ -385,22 +278,11 @@ def batch_extract_bytes(  # noqa: PLR0913
             context={"batch_size": len(content_items), "max_batch_size": MAX_BATCH_SIZE},
         )
 
-    config = _create_config_with_overrides(
-        force_ocr=force_ocr,
-        chunk_content=chunk_content,
-        extract_tables=extract_tables,
-        extract_entities=extract_entities,
-        extract_keywords=extract_keywords,
-        ocr_backend=ocr_backend,
-        max_chars=max_chars,
-        max_overlap=max_overlap,
-        keyword_count=keyword_count,
-        auto_detect_language=auto_detect_language,
-        tesseract_lang=tesseract_lang,
-        tesseract_psm=tesseract_psm,
-        tesseract_output_format=tesseract_output_format,
-        enable_table_detection=enable_table_detection,
-    )
+    if config_json:
+        config_dict = json.loads(config_json)
+        config = _build_config(**config_dict)
+    else:
+        config = _build_config()
 
     contents = []
     for i, item in enumerate(content_items):
@@ -445,7 +327,7 @@ def extract_simple(
     mime_type: str | None = None,
 ) -> str:
     validated_path = _validate_file_path(file_path)
-    config = _create_config_with_overrides()
+    config = _build_config()
     result = extract_file_sync(str(validated_path), mime_type, config)
     return result.content
 
@@ -485,7 +367,7 @@ def get_supported_formats() -> str:
 @mcp.prompt()
 def extract_and_summarize(file_path: str) -> list[TextContent]:
     validated_path = _validate_file_path(file_path)
-    result = extract_file_sync(str(validated_path), None, _create_config_with_overrides())
+    result = extract_file_sync(str(validated_path), None, _build_config())
 
     return [
         TextContent(
@@ -498,10 +380,10 @@ def extract_and_summarize(file_path: str) -> list[TextContent]:
 @mcp.prompt()
 def extract_structured(file_path: str) -> list[TextContent]:
     validated_path = _validate_file_path(file_path)
-    config = _create_config_with_overrides(
-        extract_entities=True,
-        extract_keywords=True,
-        extract_tables=True,
+    config = _build_config(
+        entities=EntityExtractionConfig(),
+        keywords=KeywordExtractionConfig(),
+        tables=TableExtractionConfig(),
     )
     result = extract_file_sync(str(validated_path), None, config)
 

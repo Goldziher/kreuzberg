@@ -46,7 +46,8 @@ class StructuredDataExtractor(Extractor):
 
     @property
     def _json_config(self) -> JSONExtractionConfig | None:
-        return self.config.json_config
+        # V4: json_config is now named 'json_extraction'
+        return self.config.json_extraction
 
     def _get_text_field_keywords(self) -> frozenset[str]:
         json_config = self._json_config
