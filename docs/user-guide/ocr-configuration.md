@@ -368,7 +368,7 @@ force_ocr = false
 [ocr]
 backend = "tesseract"  # or "easyocr", "paddleocr"
 language = "eng+deu"
-psm = 6
+psm = 6                # Page Segmentation Mode: 0-10 (6 = single uniform block)
 output_format = "markdown"
 
 # DPI settings

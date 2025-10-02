@@ -42,7 +42,7 @@ for i, table in enumerate(result.tables):
 
 **Requirements:**
 
-- Install with: `pip install "kreuzberg[gmft]"`
+- Install with: `pip install "kreuzberg[vision-tables]"`
 - Dependencies: Machine learning libraries (~1GB download)
 - Optional: GPU acceleration support
 
@@ -264,7 +264,7 @@ for table in result.tables:
 ### Vision-Based Method Issues
 
 **Problem:** "Missing dependency" error
-**Solution:** Install with `pip install "kreuzberg[gmft]"`
+**Solution:** Install with `pip install "kreuzberg[vision-tables]"`
 
 **Problem:** Slow processing
 **Solution:** Enable GPU acceleration with `detection_device="cuda"` or increase batch processing

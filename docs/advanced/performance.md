@@ -141,8 +141,7 @@ from kreuzberg._ocr._tesseract import TesseractConfig, PSMMode
 
 # Maximum speed configuration (for high-volume processing)
 speed_config = ExtractionConfig(
-    ocr_backend="tesseract",
-    ocr_config=TesseractConfig(
+    ocr=TesseractConfig(
         psm=PSMMode.SINGLE_BLOCK,  # Assume simple layout
         language_model_ngram_on=False,  # Already disabled by default
         tessedit_enable_dict_correction=False,  # Disable for maximum speed
@@ -151,8 +150,7 @@ speed_config = ExtractionConfig(
 
 # Maximum accuracy configuration (for degraded documents)
 accuracy_config = ExtractionConfig(
-    ocr_backend="tesseract",
-    ocr_config=TesseractConfig(
+    ocr=TesseractConfig(
         psm=PSMMode.AUTO,  # Full analysis with orientation detection
         language_model_ngram_on=True,  # Enable for historical/degraded text
         tessedit_enable_dict_correction=True,  # Default - keep enabled
@@ -160,14 +158,14 @@ accuracy_config = ExtractionConfig(
 )
 
 # No OCR configuration (text documents only)
-text_only_config = ExtractionConfig(ocr_backend=None, force_ocr=False)
+text_only_config = ExtractionConfig(ocr=None, force_ocr=False)
 ```
 
 ### Performance Optimization Tips
 
 Based on comprehensive benchmarking with 138+ documents:
 
-1. **Disable OCR for text documents**: Setting `ocr_backend=None` provides significant speedup for documents with text layers
+1. **Disable OCR for text documents**: Setting `ocr=None` provides significant speedup for documents with text layers
 1. **Use PSM `AUTO_ONLY` (default)**: Optimized for modern documents without orientation detection overhead
 1. **Language model trade-offs**: Disabling `language_model_ngram_on` can provide 30x+ speedup with minimal quality impact on clean documents
 1. **Dictionary correction**: Disabling `tessedit_enable_dict_correction` speeds up processing for technical documents

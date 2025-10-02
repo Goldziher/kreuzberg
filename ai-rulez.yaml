@@ -302,7 +302,7 @@ agents:
 metadata:
   description: A text extraction library supporting PDFs, images, office documents and more
   name: Kreuzberg
-  version: 3.5.0
+  version: 4.0.0
 outputs:
   - path: CLAUDE.md
     template:
@@ -461,7 +461,7 @@ rules:
       ### Key Components
       - **Extractors**: Specialized classes for each file type (PDF, image, HTML, XML, plain text, etc.)
       - **OCR Backends**: Pluggable OCR engines with separate configuration classes
-      - **Vision-Based Table Extraction**: Table extraction using vendored vision models for PDFs
+      - **Vision-Based Table Extraction**: Vision-based table extraction using vendored models (vision-tables package)
       - **Chunking**: Text splitting functionality in `_chunker.py`
       - **Language Detection**: Automatic language detection using fast-langdetect
       - **Async/Sync**: Primary async implementation with sync wrappers in `_utils/_sync.py`
@@ -621,11 +621,11 @@ rules:
       - **CI**: Comprehensive testing across multiple Python versions and platforms
 
       ### Docker Variants
-      - **Core** (`goldziher/kreuzberg:v3.5.0`): API + Tesseract OCR
-      - **EasyOCR** (`goldziher/kreuzberg:v3.5.0-easyocr`): Core + EasyOCR
-      - **PaddleOCR** (`goldziher/kreuzberg:v3.5.0-paddle`): Core + PaddleOCR
-      - **Vision-Tables** (`goldziher/kreuzberg:v3.5.0-vision-tables`): Core + table extraction
-      - **All** (`goldziher/kreuzberg:v3.5.0-all`): All features included
+      - **Core** (`goldziher/kreuzberg:v4.0.0`): API + Tesseract OCR
+      - **EasyOCR** (`goldziher/kreuzberg:v4.0.0-easyocr`): Core + EasyOCR
+      - **PaddleOCR** (`goldziher/kreuzberg:v4.0.0-paddle`): Core + PaddleOCR
+      - **Vision-Tables** (`goldziher/kreuzberg:v4.0.0-vision-tables`): Core + vision-based table extraction
+      - **All** (`goldziher/kreuzberg:v4.0.0-all`): All features included
 
       ### Manual Triggers
       - Docker builds: `gh workflow run "Publish Docker Images"`
@@ -781,12 +781,12 @@ sections:
     id: v4-features
     name: v4 Features (NEW)
   - content: |
-      ### Automatic Language Detection (v3.5.0+)
+      ### Automatic Language Detection (v4.0+)
       - **Feature**: Automatically detect languages in extracted text
       - **Implementation**: Uses fast-langdetect library for high-performance detection
       - **Configuration**:
-        - Enable with `auto_detect_language=True` in `ExtractionConfig`
-        - Configure via `LanguageDetectionConfig` for confidence thresholds
+        - Enable with `language_detection=LanguageDetectionConfig()` in `ExtractionConfig`
+        - Configure confidence thresholds via `LanguageDetectionConfig` parameters
       - **Output**: Results available in `ExtractionResult.detected_languages`
       - **Integration**: Works with all extraction methods and file types
     id: language-detection

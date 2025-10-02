@@ -372,18 +372,16 @@ async def extract_images_from_pdf():
 Extract text content from images using OCR:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig, ImageOCRConfig
+from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig
 
 async def extract_and_ocr_images():
     # Extract images and run OCR on them
     config = ExtractionConfig(
         images=ImageExtractionConfig(
             deduplicate=True,  # Remove duplicate images
-            ocr=ImageOCRConfig(
-                # Only process reasonably sized images
-                min_dimensions=(100, 100),
-                max_dimensions=(3000, 3000),
-            ),
+            # Only process reasonably sized images
+            ocr_min_dimensions=(100, 100),
+            ocr_max_dimensions=(3000, 3000),
         ),
     )
 
@@ -406,23 +404,19 @@ async def extract_and_ocr_images():
 Use different OCR backends and configurations for optimal results:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig, ImageOCRConfig, TesseractConfig, PSMMode
+from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig, TesseractConfig, PSMMode
 
 async def advanced_image_ocr():
     # Tesseract with multilingual support for technical documents
-    tesseract_config = TesseractConfig(
-        language="eng+deu",  # English and German
-        psm=PSMMode.SINGLE_BLOCK,  # Treat each image as single text block
-        output_format="text",
-    )
-
     config = ExtractionConfig(
+        ocr=TesseractConfig(
+            language="eng+deu",  # English and German
+            psm=PSMMode.SINGLE_BLOCK,  # Treat each image as single text block
+            output_format="text",
+        ),
         images=ImageExtractionConfig(
-            ocr=ImageOCRConfig(
-                backend_config=tesseract_config,
-                min_dimensions=(150, 50),  # Allow narrow images like table headers
-                max_dimensions=(4000, 4000),
-            ),
+            ocr_min_dimensions=(150, 50),  # Allow narrow images like table headers
+            ocr_max_dimensions=(4000, 4000),
         ),
     )
 
@@ -431,18 +425,13 @@ async def advanced_image_ocr():
     # EasyOCR for natural scene text and photos
     from kreuzberg import EasyOCRConfig
 
-    easyocr_config = EasyOCRConfig(
-        language=("en",),
-        device="cpu",  # Use CPU processing
-        confidence_threshold=0.4,  # Lower threshold for challenging images
-    )
-
     config = ExtractionConfig(
-        images=ImageExtractionConfig(
-            ocr=ImageOCRConfig(
-                backend_config=easyocr_config,
-            ),
+        ocr=EasyOCRConfig(
+            language=("en",),
+            device="cpu",  # Use CPU processing
+            confidence_threshold=0.4,  # Lower threshold for challenging images
         ),
+        images=ImageExtractionConfig(),  # Use default image extraction settings
     )
 
     result = await extract_file("document_with_photos.pdf", config=config)
@@ -453,12 +442,12 @@ async def advanced_image_ocr():
 Image extraction works with various document formats:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig, ImageOCRConfig
+from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig
 
 async def extract_from_various_formats():
     config = ExtractionConfig(
         images=ImageExtractionConfig(
-            ocr=ImageOCRConfig(),
+            ocr_min_dimensions=(100, 100),  # Enable OCR for images
         ),
     )
 
@@ -488,14 +477,14 @@ async def extract_from_various_formats():
 Control performance and resource usage:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig, ImageOCRConfig
+from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig
 
 async def optimized_image_processing():
     # Fast processing for large batches - no OCR
     fast_config = ExtractionConfig(
         images=ImageExtractionConfig(
             deduplicate=True,  # Remove duplicates
-            # No OCR config means OCR is disabled
+            # No ocr_min_dimensions means OCR is disabled
         ),
     )
 
@@ -503,10 +492,8 @@ async def optimized_image_processing():
     quality_config = ExtractionConfig(
         images=ImageExtractionConfig(
             deduplicate=True,
-            ocr=ImageOCRConfig(
-                min_dimensions=(50, 50),  # Process smaller images
-                max_dimensions=(5000, 5000),  # Allow larger images
-            ),
+            ocr_min_dimensions=(50, 50),  # Process smaller images
+            ocr_max_dimensions=(5000, 5000),  # Allow larger images
         ),
     )
 
@@ -514,10 +501,8 @@ async def optimized_image_processing():
     selective_config = ExtractionConfig(
         images=ImageExtractionConfig(
             deduplicate=True,
-            ocr=ImageOCRConfig(
-                min_dimensions=(300, 100),  # Good for charts and tables
-                max_dimensions=(3000, 3000),
-            ),
+            ocr_min_dimensions=(300, 100),  # Good for charts and tables
+            ocr_max_dimensions=(3000, 3000),
         ),
     )
 
@@ -537,7 +522,6 @@ from kreuzberg import (
     extract_file,
     ExtractionConfig,
     ImageExtractionConfig,
-    ImageOCRConfig,
     ChunkingConfig,
     TableExtractionConfig,
     KeywordExtractionConfig,
@@ -549,9 +533,9 @@ async def comprehensive_extraction():
     config = ExtractionConfig(
         # Text chunking
         chunking=ChunkingConfig(max_chars=1000),
-        # Image extraction
+        # Image extraction with OCR
         images=ImageExtractionConfig(
-            ocr=ImageOCRConfig(),
+            ocr_min_dimensions=(100, 100),  # Enable OCR on images
         ),
         # Table extraction
         tables=TableExtractionConfig(),

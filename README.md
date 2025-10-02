@@ -138,7 +138,7 @@ docker run -p 8000:8000 goldziher/kreuzberg
 docker run -p 8000:8000 goldziher/kreuzberg-core:latest
 
 # Extract via API
-curl -X POST -F "file=@document.pdf" http://localhost:8000/extract
+curl -X POST -F "files=@document.pdf" http://localhost:8000/extract
 ```
 
 📖 **[Installation Guide](https://kreuzberg.dev/getting-started/installation/)** • **[CLI Documentation](https://kreuzberg.dev/cli/)** • **[API Reference](https://kreuzberg.dev/api-reference/)**

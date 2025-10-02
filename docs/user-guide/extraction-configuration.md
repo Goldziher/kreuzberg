@@ -27,7 +27,8 @@ force_ocr = false
 [ocr]
 backend = "tesseract"  # Required to specify backend type
 language = "eng+deu"   # English and German
-psm = 6                # Uniform block of text
+psm = 6                # Page Segmentation Mode (0-10): 6 = Uniform block of text
+                       # Common values: 3=Auto, 4=Single column, 6=Single block, 7=Single line
 
 # Alternative OCR backends:
 # [ocr]
@@ -230,10 +231,13 @@ You can also configure Kreuzberg entirely through code using the `ExtractionConf
 
 All extraction functions accept an optional `config` parameter of type `ExtractionConfig`. This object allows you to:
 
-- Control OCR behavior with `force_ocr` and `ocr_backend`
-- Provide engine-specific OCR configuration via `ocr_config`
-- Enable table extraction with `extract_tables` and configure it via `vision_tables_config`
-- Enable automatic language detection with `auto_detect_language`
+- Control OCR behavior with `force_ocr` and configure OCR engines via `ocr` (TesseractConfig, EasyOCRConfig, PaddleOCRConfig)
+- Enable table extraction with `tables` (TableExtractionConfig)
+- Enable automatic language detection with `language_detection` (LanguageDetectionConfig)
+- Enable content chunking with `chunking` (ChunkingConfig)
+- Enable keyword extraction with `keywords` (KeywordExtractionConfig)
+- Enable entity extraction with `entities` (EntityExtractionConfig)
+- Enable image extraction with `images` (ImageExtractionConfig)
 - Add validation and post-processing hooks
 - Configure custom extractors
 
