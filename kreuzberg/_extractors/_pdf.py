@@ -167,7 +167,7 @@ class PDFExtractor(Extractor):
         # V4: Table extraction enabled via config.tables
         if self.config.tables is not None:
             try:
-                from kreuzberg._vision_tables import extract_tables_sync
+                from kreuzberg._vision_tables import extract_tables_sync  # noqa: PLC0415
 
                 tables = extract_tables_sync(path, self.config.tables)
                 result.tables = tables
