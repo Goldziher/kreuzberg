@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypedDict
 import msgspec
 
 from kreuzberg._constants import DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OVERLAP
+from kreuzberg._utils._device import DeviceType  # noqa: TC001  # Needed at runtime for msgspec deserialization
 from kreuzberg._utils._table import (
     export_table_to_csv,
     export_table_to_tsv,
@@ -16,18 +17,13 @@ from kreuzberg._utils._table import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-    from kreuzberg._utils._device import DeviceType
+    from PIL.Image import Image
+    from polars import DataFrame
 
 if sys.version_info < (3, 11):  # pragma: no cover
     from typing_extensions import NotRequired
 else:  # pragma: no cover
     from typing import NotRequired
-
-if TYPE_CHECKING:
-    from PIL.Image import Image
-    from polars import DataFrame
 
 OcrBackendType = Literal["tesseract", "easyocr", "paddleocr"]
 OutputFormatType = Literal["text", "tsv", "hocr", "markdown"]
@@ -397,8 +393,8 @@ class KeywordExtractionConfig(msgspec.Struct, kw_only=True, frozen=True):
 class EntityExtractionConfig(msgspec.Struct, kw_only=True, frozen=True):
     """Configuration for named entity extraction using spaCy."""
 
-    model_cache_dir: str | Path | None = None
-    """Directory to cache spaCy models. If None, uses spaCy's default."""
+    model_cache_dir: str | None = None
+    """Directory to cache spaCy models. If None, uses spaCy's default. Can be a string path."""
     language_models: tuple[tuple[str, str], ...] | None = None
     """Mapping of language codes to spaCy model names. If None, uses default mappings."""
     fallback_to_multilingual: bool = True
