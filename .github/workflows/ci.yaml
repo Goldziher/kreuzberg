@@ -32,7 +32,7 @@ jobs:
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
 
       - name: Run Rust Tests
         env:
@@ -69,7 +69,7 @@ jobs:
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
 
 
       - name: Install Dependencies
@@ -130,7 +130,7 @@ jobs:
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
 
       - name: Cache Python Dependencies
         id: python-cache
@@ -209,6 +209,12 @@ jobs:
             uv run coverage report --precision=2
           shell: bash
 
+      - name: Install cargo-llvm-cov for Rust Coverage
+        run: cargo install cargo-llvm-cov
+
+      - name: Generate Rust Coverage
+        run: cargo llvm-cov --no-default-features --lcov --output-path rust-coverage.lcov
+
       - name: Upload Coverage to DeepSource
         if: always()
         env:
@@ -216,8 +222,10 @@ jobs:
         run: |
           # Install DeepSource CLI
           curl -fsSL https://deepsource.io/cli | sh
-          # Upload coverage report
+          # Upload Python coverage report
           ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
+          # Upload Rust coverage report
+          ./bin/deepsource report --analyzer test-coverage --key rust --value-file ./rust-coverage.lcov
 
       - name: Upload Coverage Artifacts
         if: always()
@@ -226,6 +234,7 @@ jobs:
           name: coverage-report-${{ github.sha }}
           path: |
             coverage.lcov
+            rust-coverage.lcov
             .coverage
           retention-days: 7
 
@@ -276,7 +285,7 @@ jobs:
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
 
       - name: Cache Python Dependencies
         id: python-cache
