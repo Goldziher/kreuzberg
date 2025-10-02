@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from kreuzberg import ExtractionConfig, ImageExtractionConfig
+from kreuzberg import ExtractionConfig, ImageExtractionConfig, TesseractConfig
 from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._mime_types import EML_MIME_TYPE, MSG_MIME_TYPE
 from kreuzberg.exceptions import ParsingError
@@ -486,7 +486,7 @@ def test_email_attachment_no_data() -> None:
     assert len(images) == 0
 
 
-def test_email_attachment_mime_type_without_slash() -> None:
+def test_email_attachment_mime_type_without_subtype() -> None:
     from unittest.mock import Mock
 
     from kreuzberg._mime_types import EML_MIME_TYPE
@@ -497,9 +497,9 @@ def test_email_attachment_mime_type_without_slash() -> None:
     mock_attachment = Mock()
     mock_attachment.is_image = True
     mock_attachment.data = b"test"
-    mock_attachment.filename = None
-    mock_attachment.name = None
-    mock_attachment.mime_type = "image"
+    mock_attachment.filename = "test_image"
+    mock_attachment.name = "test_image"
+    mock_attachment.mime_type = "image/unknown"
 
     mock_rust_result = Mock()
     mock_rust_result.attachments = [mock_attachment]
@@ -508,6 +508,7 @@ def test_email_attachment_mime_type_without_slash() -> None:
 
     assert len(images) == 1
     assert images[0].format == "unknown"
+    assert images[0].filename == "test_image"
 
 
 def test_email_with_image_ocr_enabled(tmp_path: Path) -> None:
@@ -543,7 +544,7 @@ Test email
     ):
         mock_run.return_value = []
 
-        result = extractor.extract_path_sync(email_path)
+        extractor.extract_path_sync(email_path)
 
         assert mock_run.called
 
