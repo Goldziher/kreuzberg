@@ -34,11 +34,11 @@ Contains the result of running OCR on an extracted image:
 
 ::: kreuzberg.ImageOCRResult
 
-### ImageOCRConfig
+### ImageExtractionConfig
 
-Configuration for OCR processing of extracted images:
+Configuration for extracting images from documents:
 
-::: kreuzberg.ImageOCRConfig
+::: kreuzberg.ImageExtractionConfig
 
 ## OCR Configuration
 
@@ -54,17 +54,29 @@ Configuration for OCR processing of extracted images:
 
 ::: kreuzberg.PaddleOCRConfig
 
-## Vision-Based Table Extraction Configuration
+## Table Extraction Configuration
 
-Configuration options for vision-based table extraction:
+Configuration options for table extraction (vision-based and OCR-based):
 
-::: kreuzberg.VisionTablesConfig
+::: kreuzberg.TableExtractionConfig
+
+## Chunking Configuration
+
+Configuration for text chunking:
+
+::: kreuzberg.ChunkingConfig
+
+## Keyword Extraction Configuration
+
+Configuration for keyword extraction using KeyBERT:
+
+::: kreuzberg.KeywordExtractionConfig
 
 ## Entity Extraction Configuration
 
-Configuration options for spaCy-based entity extraction:
+Configuration for entity extraction using spaCy:
 
-::: kreuzberg.SpacyEntityExtractionConfig
+::: kreuzberg.EntityExtractionConfig
 
 ## Language Detection Configuration
 
