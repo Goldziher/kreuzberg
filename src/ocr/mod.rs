@@ -11,6 +11,7 @@
 
 pub mod cache;
 pub mod error;
+pub mod hocr;
 pub mod processor;
 pub mod table;
 pub mod types;

@@ -764,4 +764,223 @@ mod tests {
         let result = extract_email_content(b"test", "unsupported/format");
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_format_email_addresses() {
+        let addresses = vec![
+            "user1@example.com".to_string(),
+            "user2@example.com".to_string(),
+            "user3@example.com".to_string(),
+        ];
+        assert_eq!(
+            format_email_addresses(&addresses),
+            "user1@example.com, user2@example.com, user3@example.com"
+        );
+
+        let empty: Vec<String> = vec![];
+        assert_eq!(format_email_addresses(&empty), "");
+
+        let single = vec!["single@example.com".to_string()];
+        assert_eq!(format_email_addresses(&single), "single@example.com");
+    }
+
+    #[test]
+    fn test_build_metadata() {
+        let subject = Some("Test Subject".to_string());
+        let from_email = Some("sender@example.com".to_string());
+        let to_emails = vec!["recipient@example.com".to_string()];
+        let cc_emails = vec!["cc@example.com".to_string()];
+        let bcc_emails = vec!["bcc@example.com".to_string()];
+        let date = Some("2024-01-01T12:00:00Z".to_string());
+        let message_id = Some("<abc123@example.com>".to_string());
+        let attachments = vec![];
+
+        let metadata = build_metadata(
+            &subject,
+            &from_email,
+            &to_emails,
+            &cc_emails,
+            &bcc_emails,
+            &date,
+            &message_id,
+            &attachments,
+        );
+
+        assert_eq!(metadata.get("subject"), Some(&"Test Subject".to_string()));
+        assert_eq!(
+            metadata.get("email_from"),
+            Some(&"sender@example.com".to_string())
+        );
+        assert_eq!(
+            metadata.get("email_to"),
+            Some(&"recipient@example.com".to_string())
+        );
+        assert_eq!(metadata.get("email_cc"), Some(&"cc@example.com".to_string()));
+        assert_eq!(
+            metadata.get("email_bcc"),
+            Some(&"bcc@example.com".to_string())
+        );
+        assert_eq!(
+            metadata.get("date"),
+            Some(&"2024-01-01T12:00:00Z".to_string())
+        );
+        assert_eq!(
+            metadata.get("message_id"),
+            Some(&"<abc123@example.com>".to_string())
+        );
+    }
+
+    #[test]
+    fn test_build_metadata_with_attachments() {
+        let attachments = vec![
+            EmailAttachmentDTO {
+                name: Some("file1.pdf".to_string()),
+                filename: Some("file1.pdf".to_string()),
+                mime_type: Some("application/pdf".to_string()),
+                size: Some(1024),
+                is_image: false,
+                data: None,
+            },
+            EmailAttachmentDTO {
+                name: Some("image.png".to_string()),
+                filename: Some("image.png".to_string()),
+                mime_type: Some("image/png".to_string()),
+                size: Some(2048),
+                is_image: true,
+                data: None,
+            },
+        ];
+
+        let metadata = build_metadata(&None, &None, &[], &[], &[], &None, &None, &attachments);
+
+        assert_eq!(
+            metadata.get("attachments"),
+            Some(&"file1.pdf, image.png".to_string())
+        );
+    }
+
+    #[test]
+    fn test_build_email_text_output() {
+        let result = EmailExtractionResultDTO {
+            subject: Some("Test Subject".to_string()),
+            from_email: Some("sender@example.com".to_string()),
+            to_emails: vec!["recipient@example.com".to_string()],
+            cc_emails: vec![],
+            bcc_emails: vec![],
+            date: Some("2024-01-01T12:00:00Z".to_string()),
+            message_id: Some("<abc123@example.com>".to_string()),
+            plain_text: Some("This is the email body.".to_string()),
+            html_content: None,
+            cleaned_text: "This is the email body.".to_string(),
+            attachments: vec![],
+            metadata: HashMap::new(),
+        };
+
+        let output = build_email_text_output(&result);
+
+        assert!(output.contains("Subject: Test Subject"));
+        assert!(output.contains("From: sender@example.com"));
+        assert!(output.contains("To: recipient@example.com"));
+        assert!(output.contains("Date: 2024-01-01T12:00:00Z"));
+        assert!(output.contains("Message-ID: <abc123@example.com>"));
+        assert!(output.contains("This is the email body."));
+    }
+
+    #[test]
+    fn test_build_email_text_output_with_attachments() {
+        let attachments = vec![EmailAttachmentDTO {
+            name: Some("file.pdf".to_string()),
+            filename: Some("file.pdf".to_string()),
+            mime_type: Some("application/pdf".to_string()),
+            size: Some(1024),
+            is_image: false,
+            data: None,
+        }];
+
+        let result = EmailExtractionResultDTO {
+            subject: Some("Test".to_string()),
+            from_email: Some("sender@example.com".to_string()),
+            to_emails: vec!["recipient@example.com".to_string()],
+            cc_emails: vec![],
+            bcc_emails: vec![],
+            date: None,
+            message_id: None,
+            plain_text: Some("Body".to_string()),
+            html_content: None,
+            cleaned_text: "Body".to_string(),
+            attachments,
+            metadata: HashMap::new(),
+        };
+
+        let output = build_email_text_output(&result);
+
+        assert!(output.contains("Attachments:"));
+        assert!(output.contains("- file.pdf (application/pdf, 1024 bytes)"));
+    }
+
+    #[test]
+    fn test_build_email_text_output_minimal() {
+        let result = EmailExtractionResultDTO {
+            subject: None,
+            from_email: None,
+            to_emails: vec![],
+            cc_emails: vec![],
+            bcc_emails: vec![],
+            date: None,
+            message_id: None,
+            plain_text: None,
+            html_content: None,
+            cleaned_text: "Just content".to_string(),
+            attachments: vec![],
+            metadata: HashMap::new(),
+        };
+
+        let output = build_email_text_output(&result);
+
+        assert!(output.contains("Just content"));
+        assert!(!output.contains("Subject:"));
+        assert!(!output.contains("From:"));
+    }
+
+    #[test]
+    fn test_extract_eml_from_file() {
+        use std::fs::File;
+        use std::io::Write;
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.eml");
+        let mut file = File::create(&file_path).unwrap();
+        writeln!(
+            file,
+            "From: test@example.com\r\nSubject: Test\r\n\r\nTest body"
+        )
+        .unwrap();
+
+        let result = extract_email_from_file(file_path.to_str().unwrap()).unwrap();
+        assert_eq!(result.subject, Some("Test".to_string()));
+        assert_eq!(result.from_email, Some("test@example.com".to_string()));
+        assert_eq!(result.cleaned_text, "Test body");
+    }
+
+    #[test]
+    fn test_parse_content_type_edge_cases() {
+        assert_eq!(parse_content_type(""), "application/octet-stream");
+        assert_eq!(parse_content_type("text/plain"), "text/plain");
+        assert_eq!(
+            parse_content_type("text/plain; charset=utf-8; format=flowed"),
+            "text/plain"
+        );
+        assert_eq!(parse_content_type("IMAGE/JPEG"), "image/jpeg");
+    }
+
+    #[test]
+    fn test_clean_html_content_edge_cases() {
+        assert_eq!(clean_html_content(""), "");
+        assert_eq!(clean_html_content("plain text"), "plain text");
+        assert_eq!(
+            clean_html_content("<p>&lt;tag&gt;</p>"),
+            "<tag>"
+        );
+    }
 }

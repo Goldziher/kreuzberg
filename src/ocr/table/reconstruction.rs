@@ -48,7 +48,8 @@ pub fn reconstruct_table(
         let col_idx = find_column_index(&col_positions, word);
 
         if let (Some(r), Some(c)) = (row_idx, col_idx)
-            && r < num_rows && c < num_cols
+            && r < num_rows
+            && c < num_cols
         {
             table[r][c].push(word.text.clone());
         }

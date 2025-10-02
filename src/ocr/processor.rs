@@ -9,6 +9,7 @@ use tesseract_rs::{TessPageSegMode, TesseractAPI};
 
 use super::cache::OCRCache;
 use super::error::OCRError;
+use super::hocr::convert_hocr_to_markdown;
 use super::table::{extract_words, reconstruct_table, table_to_markdown};
 use super::types::{ExtractionResultDTO, TesseractConfigDTO};
 
@@ -126,17 +127,20 @@ impl OCRProcessor {
 
         // Extract text based on output format
         let (mut content, mime_type) = match config.output_format.as_str() {
-            "text" | "markdown" => {
-                // Extract UTF-8 text
+            "text" => {
+                // Plain text output
                 let text = api
                     .get_utf8_text()
                     .map_err(|e| OCRError::ProcessingFailed(format!("Failed to extract text: {}", e)))?;
-                let mime = if config.output_format == "markdown" {
-                    "text/markdown"
-                } else {
-                    "text/plain"
-                };
-                (text, mime.to_string())
+                (text, "text/plain".to_string())
+            }
+            "markdown" => {
+                // Markdown output - extract hOCR and convert to markdown for better formatting
+                let hocr = api
+                    .get_hocr_text(0)
+                    .map_err(|e| OCRError::ProcessingFailed(format!("Failed to extract hOCR: {}", e)))?;
+                let markdown = convert_hocr_to_markdown(&hocr, None)?;
+                (markdown, "text/markdown".to_string())
             }
             "hocr" => {
                 // hOCR output
