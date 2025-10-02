@@ -2026,3 +2026,31 @@ def test_pandoc_sync_image_ocr_processing(docx_document: Path) -> None:
     # If images were extracted and OCR was run, image_ocr_results should be populated
     if result.images:
         assert result.image_ocr_results is not None
+
+
+def test_pandoc_extract_metadata_sync_subprocess_error(test_config: ExtractionConfig) -> None:
+    """Test _extract_metadata_sync when subprocess returns non-zero exit code - hits line 524."""
+    extractor = PandocExtractor("text/x-markdown", test_config)
+    test_path = Path("/test/file.md")
+
+    with (
+        patch.object(extractor, "_get_pandoc_type_from_mime_type", return_value="markdown"),
+        patch("tempfile.mkstemp") as mock_mkstemp,
+        patch("os.close") as mock_close,
+        patch("subprocess.run") as mock_run,
+        patch("pathlib.Path.unlink") as mock_unlink,
+    ):
+        mock_fd = 3
+        temp_path = "/tmp/metadata.json"
+        mock_mkstemp.return_value = (mock_fd, temp_path)
+
+        mock_result = Mock()
+        mock_result.returncode = 1
+        mock_result.stderr = "pandoc: error processing document"
+        mock_run.return_value = mock_result
+
+        with pytest.raises(ParsingError, match="Failed to extract file data"):
+            extractor._extract_metadata_sync(test_path)
+
+        mock_close.assert_called_once_with(mock_fd)
+        mock_unlink.assert_called_once()

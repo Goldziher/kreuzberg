@@ -368,10 +368,6 @@ class PandocExtractor(Extractor):
             if pandoc_key is None:
                 continue
 
-            if key == "valid" and isinstance(value, dict) and value.get("t") == "MetaString" and "c" in value:
-                meta[key] = value["c"]  # type: ignore[literal-required]
-                continue
-
             extracted = self._extract_meta_value(value)
             if extracted:
                 if pandoc_key in ("languages", "authors") and not isinstance(extracted, list):
