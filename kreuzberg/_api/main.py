@@ -126,6 +126,15 @@ class HealthResponse(msgspec.Struct):
     """Health status."""
 
 
+class ConfigResponse(msgspec.Struct):
+    """Response model for configuration endpoint."""
+
+    message: str
+    """Status message."""
+    config: ExtractionConfig | None
+    """Current extraction configuration if found."""
+
+
 def _get_max_upload_size() -> int:
     """Get the maximum upload size from environment variable.
 
@@ -323,11 +332,50 @@ async def extract_endpoint(
         file = data.files[0]
         content = await file.read()
         mime_type = file.content_type or "application/octet-stream"
-        result = await extract_bytes(content, mime_type, final_config)
+        result = await extract_bytes(content, mime_type=mime_type, config=final_config)
         return [result]
 
     files_data = [(await f.read(), f.content_type or "application/octet-stream") for f in data.files]
     return await batch_extract_bytes(files_data, config=final_config)
+
+
+@get("/config", operation_id="GetConfiguration")
+async def get_configuration() -> ConfigResponse:
+    """Get the current extraction configuration from kreuzberg.toml.
+
+    This endpoint returns the configuration discovered from kreuzberg.toml file
+    in the current directory or parent directories. Useful for debugging and
+    verifying what settings the API server is using.
+
+    Returns:
+        Configuration response with status message and config if found
+
+    Examples:
+        ```bash
+        # Check current configuration
+        curl http://localhost:8000/config
+
+        # Response when config found:
+        {
+          "message": "Configuration loaded successfully",
+          "config": {
+            "ocr": {"backend": "tesseract", "language": "eng"},
+            "tables": {"detection_threshold": 0.7},
+            ...
+          }
+        }
+
+        # Response when no config:
+        {
+          "message": "No configuration file found",
+          "config": null
+        }
+        ```
+    """
+    config = discover_config_cached()
+    if config is None:
+        return ConfigResponse(message="No configuration file found", config=None)
+    return ConfigResponse(message="Configuration loaded successfully", config=config)
 
 
 def _get_all_cache_stats() -> CacheStats:
@@ -534,7 +582,15 @@ def _get_plugins() -> list[Any]:
 
 
 app = Litestar(
-    route_handlers=[extract_endpoint, get_all_cache_stats, get_cache_stats, clear_cache, get_info, health_check],
+    route_handlers=[
+        extract_endpoint,
+        get_configuration,
+        get_all_cache_stats,
+        get_cache_stats,
+        clear_cache,
+        get_info,
+        health_check,
+    ],
     plugins=_get_plugins(),
     logging_config=StructLoggingConfig(),
     openapi_config=openapi_config,

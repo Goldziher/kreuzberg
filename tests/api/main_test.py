@@ -25,7 +25,7 @@ async def test_health_check(test_client: AsyncTestClient[Any]) -> None:
 async def test_extract_from_file(test_client: AsyncTestClient[Any], searchable_pdf: Path) -> None:
     with searchable_pdf.open("rb") as f:
         response = await test_client.post(
-            "/extract", files=[("data", (searchable_pdf.name, f.read(), "application/pdf"))]
+            "/extract", files=[("files", (searchable_pdf.name, f.read(), "application/pdf"))]
         )
 
     assert response.status_code == 201
@@ -42,8 +42,8 @@ async def test_extract_from_multiple_files(
         response = await test_client.post(
             "/extract",
             files=[
-                ("data", (searchable_pdf.name, f1.read(), "application/pdf")),
-                ("data", (scanned_pdf.name, f2.read(), "application/pdf")),
+                ("files", (searchable_pdf.name, f1.read(), "application/pdf")),
+                ("files", (scanned_pdf.name, f2.read(), "application/pdf")),
             ],
         )
 
@@ -59,10 +59,10 @@ async def test_extract_from_file_extraction_error(test_client: AsyncTestClient[A
     test_file = tmp_path / "test.txt"
     test_file.write_text("hello world")
 
-    with patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract:
+    with patch("kreuzberg._api.main.extract_bytes", new_callable=AsyncMock) as mock_extract:
         mock_extract.side_effect = Exception("Test error")
         with test_file.open("rb") as f:
-            response = await test_client.post("/extract", files=[("data", (test_file.name, f.read(), "text/plain"))])
+            response = await test_client.post("/extract", files=[("files", (test_file.name, f.read(), "text/plain"))])
 
     assert response.status_code == 500
     error_response = response.json()
@@ -78,10 +78,10 @@ async def test_extract_validation_error_response(test_client: AsyncTestClient[An
     test_file = tmp_path / "test.txt"
     test_file.write_text("hello world")
 
-    with patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract:
+    with patch("kreuzberg._api.main.extract_bytes", new_callable=AsyncMock) as mock_extract:
         mock_extract.side_effect = ValidationError("Invalid configuration", context={"param": "invalid_value"})
         with test_file.open("rb") as f:
-            response = await test_client.post("/extract", files=[("data", (test_file.name, f.read(), "text/plain"))])
+            response = await test_client.post("/extract", files=[("files", (test_file.name, f.read(), "text/plain"))])
 
     assert response.status_code == 400
     error_response = response.json()
@@ -94,10 +94,10 @@ async def test_extract_parsing_error_response(test_client: AsyncTestClient[Any],
     test_file = tmp_path / "test.txt"
     test_file.write_text("hello world")
 
-    with patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract:
+    with patch("kreuzberg._api.main.extract_bytes", new_callable=AsyncMock) as mock_extract:
         mock_extract.side_effect = ParsingError("Failed to parse document", context={"file_type": "unknown"})
         with test_file.open("rb") as f:
-            response = await test_client.post("/extract", files=[("data", (test_file.name, f.read(), "text/plain"))])
+            response = await test_client.post("/extract", files=[("files", (test_file.name, f.read(), "text/plain"))])
 
     assert response.status_code == 422
     error_response = response.json()
@@ -110,12 +110,12 @@ async def test_extract_ocr_error_response(test_client: AsyncTestClient[Any], tmp
     test_file = tmp_path / "test.txt"
     test_file.write_text("hello world")
 
-    with patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract:
+    with patch("kreuzberg._api.main.extract_bytes", new_callable=AsyncMock) as mock_extract:
         mock_extract.side_effect = OCRError("OCR processing failed", context={"engine": "tesseract"})
         with test_file.open("rb") as f:
-            response = await test_client.post("/extract", files=[("data", (test_file.name, f.read(), "text/plain"))])
+            response = await test_client.post("/extract", files=[("files", (test_file.name, f.read(), "text/plain"))])
 
-    assert response.status_code == 500
+    assert response.status_code == 422
     error_response = response.json()
     assert "OCR processing failed" in error_response["message"]
     assert error_response["context"]["engine"] == "tesseract"
@@ -127,7 +127,7 @@ async def test_extract_from_unsupported_file(test_client: AsyncTestClient[Any], 
     test_file.write_text("hello world")
 
     with test_file.open("rb") as f:
-        response = await test_client.post("/extract", files=[("data", (test_file.name, f.read()))])
+        response = await test_client.post("/extract", files=[("files", (test_file.name, f.read()))])
 
     assert response.status_code in [201, 400, 422]
     if response.status_code != 201:
@@ -142,7 +142,7 @@ async def test_extract_from_docx(test_client: AsyncTestClient[Any], docx_documen
             "/extract",
             files=[
                 (
-                    "data",
+                    "files",
                     (
                         docx_document.name,
                         f.read(),
@@ -162,7 +162,7 @@ async def test_extract_from_docx(test_client: AsyncTestClient[Any], docx_documen
 @pytest.mark.anyio
 async def test_extract_from_image(test_client: AsyncTestClient[Any], ocr_image: Path) -> None:
     with ocr_image.open("rb") as f:
-        response = await test_client.post("/extract", files=[("data", (ocr_image.name, f.read(), "image/jpeg"))])
+        response = await test_client.post("/extract", files=[("files", (ocr_image.name, f.read(), "image/jpeg"))])
 
     assert response.status_code == 201
     data = response.json()
@@ -178,7 +178,7 @@ async def test_extract_from_excel(test_client: AsyncTestClient[Any], excel_docum
             "/extract",
             files=[
                 (
-                    "data",
+                    "files",
                     (
                         excel_document.name,
                         f.read(),
@@ -198,7 +198,7 @@ async def test_extract_from_excel(test_client: AsyncTestClient[Any], excel_docum
 @pytest.mark.anyio
 async def test_extract_from_html(test_client: AsyncTestClient[Any], html_document: Path) -> None:
     with html_document.open("rb") as f:
-        response = await test_client.post("/extract", files=[("data", (html_document.name, f.read(), "text/html"))])
+        response = await test_client.post("/extract", files=[("files", (html_document.name, f.read(), "text/html"))])
 
     assert response.status_code == 201
     data = response.json()
@@ -211,7 +211,7 @@ async def test_extract_from_html(test_client: AsyncTestClient[Any], html_documen
 async def test_extract_from_markdown(test_client: AsyncTestClient[Any], markdown_document: Path) -> None:
     with markdown_document.open("rb") as f:
         response = await test_client.post(
-            "/extract", files=[("data", (markdown_document.name, f.read(), "text/markdown"))]
+            "/extract", files=[("files", (markdown_document.name, f.read(), "text/markdown"))]
         )
 
     assert response.status_code == 201
@@ -228,7 +228,7 @@ async def test_extract_from_pptx(test_client: AsyncTestClient[Any], pptx_documen
             "/extract",
             files=[
                 (
-                    "data",
+                    "files",
                     (
                         pptx_document.name,
                         f.read(),
@@ -252,9 +252,9 @@ async def test_extract_mixed_file_types(
     files = []
     with searchable_pdf.open("rb") as f1, docx_document.open("rb") as f2, excel_document.open("rb") as f3:
         files = [
-            ("data", (searchable_pdf.name, f1.read(), "application/pdf")),
+            ("files", (searchable_pdf.name, f1.read(), "application/pdf")),
             (
-                "data",
+                "files",
                 (
                     docx_document.name,
                     f2.read(),
@@ -262,7 +262,7 @@ async def test_extract_mixed_file_types(
                 ),
             ),
             (
-                "data",
+                "files",
                 (excel_document.name, f3.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             ),
         ]
@@ -286,7 +286,7 @@ async def test_extract_empty_file_list(test_client: AsyncTestClient[Any]) -> Non
 async def test_extract_non_ascii_pdf(test_client: AsyncTestClient[Any], non_ascii_pdf: Path) -> None:
     with non_ascii_pdf.open("rb") as f:
         response = await test_client.post(
-            "/extract", files=[("data", (non_ascii_pdf.name, f.read(), "application/pdf"))]
+            "/extract", files=[("files", (non_ascii_pdf.name, f.read(), "application/pdf"))]
         )
 
     assert response.status_code == 201
@@ -388,7 +388,7 @@ def test_import_error_handling() -> None:
 async def test_get_configuration_no_config(
     test_client: AsyncTestClient[Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    with patch("kreuzberg._api.main.discover_config", return_value=None):
+    with patch("kreuzberg._api.main.discover_config_cached", return_value=None):
         response = await test_client.get("/config")
 
     assert response.status_code == 200
@@ -408,7 +408,7 @@ async def test_get_configuration_with_config(test_client: AsyncTestClient[Any]) 
         enable_quality_processing=True,
     )
 
-    with patch("kreuzberg._api.main.discover_config", return_value=test_config):
+    with patch("kreuzberg._api.main.discover_config_cached", return_value=test_config):
         response = await test_client.get("/config")
 
     assert response.status_code == 200
@@ -425,19 +425,19 @@ async def test_get_configuration_with_config(test_client: AsyncTestClient[Any]) 
 
 @pytest.mark.anyio
 async def test_extract_with_discovered_config(test_client: AsyncTestClient[Any], searchable_pdf: Path) -> None:
-    from kreuzberg import ChunkingConfig, ExtractionConfig
+    from kreuzberg import ChunkingConfig, ExtractionConfig, ExtractionResult
 
     test_config = ExtractionConfig(chunking=ChunkingConfig(max_chars=1000, max_overlap=200))
 
     with patch("kreuzberg._api.main.discover_config_cached", return_value=test_config):
-        with patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract:
-            mock_extract.return_value = [
-                {"content": "Test content", "mime_type": "text/plain", "metadata": {}, "chunks": ["chunk1", "chunk2"]}
-            ]
+        with patch("kreuzberg._api.main.extract_bytes", new_callable=AsyncMock) as mock_extract:
+            mock_extract.return_value = ExtractionResult(
+                content="Test content", mime_type="text/plain", metadata={}, chunks=["chunk1", "chunk2"]
+            )
 
             with searchable_pdf.open("rb") as f:
                 response = await test_client.post(
-                    "/extract", files=[("data", (searchable_pdf.name, f.read(), "application/pdf"))]
+                    "/extract", files=[("files", (searchable_pdf.name, f.read(), "application/pdf"))]
                 )
 
             assert mock_extract.called
@@ -452,15 +452,17 @@ async def test_extract_with_discovered_config(test_client: AsyncTestClient[Any],
 
 @pytest.mark.anyio
 async def test_extract_without_discovered_config(test_client: AsyncTestClient[Any], searchable_pdf: Path) -> None:
-    with patch("kreuzberg._api.main.discover_config", return_value=None):
-        with patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract:
-            mock_extract.return_value = [
-                {"content": "Test content", "mime_type": "text/plain", "metadata": {}, "chunks": []}
-            ]
+    from kreuzberg import ExtractionResult
+
+    with patch("kreuzberg._api.main.discover_config_cached", return_value=None):
+        with patch("kreuzberg._api.main.extract_bytes", new_callable=AsyncMock) as mock_extract:
+            mock_extract.return_value = ExtractionResult(
+                content="Test content", mime_type="text/plain", metadata={}, chunks=[]
+            )
 
             with searchable_pdf.open("rb") as f:
                 response = await test_client.post(
-                    "/extract", files=[("data", (searchable_pdf.name, f.read(), "application/pdf"))]
+                    "/extract", files=[("files", (searchable_pdf.name, f.read(), "application/pdf"))]
                 )
 
             assert mock_extract.called
@@ -478,7 +480,7 @@ async def test_extract_large_file_list(test_client: AsyncTestClient[Any], tmp_pa
         test_file = tmp_path / f"test_{i}.txt"
         test_file.write_text(f"Content {i}")
         with test_file.open("rb") as f:
-            files.append(("data", (test_file.name, f.read(), "text/plain")))
+            files.append(("files", (test_file.name, f.read(), "text/plain")))
 
     response = await test_client.post("/extract", files=files)
 
@@ -495,30 +497,34 @@ async def test_extract_with_custom_mime_types(test_client: AsyncTestClient[Any],
     test_file.write_bytes(b"binary content")
 
     with test_file.open("rb") as f:
-        response = await test_client.post("/extract", files=[("data", (test_file.name, f.read()))])
+        response = await test_client.post("/extract", files=[("files", (test_file.name, f.read()))])
 
     assert response.status_code in [201, 400, 422]
 
 
 @pytest.mark.anyio
 async def test_extract_file_with_none_content_type(test_client: AsyncTestClient[Any], tmp_path: Path) -> None:
+    from kreuzberg import ExtractionResult
+
     test_file = tmp_path / "test.txt"
     test_file.write_text("Hello world")
 
-    with patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract:
-        mock_extract.return_value = [
-            {"content": "Hello world", "mime_type": "text/plain", "metadata": {}, "chunks": []}
-        ]
+    with patch("kreuzberg._api.main.extract_bytes", new_callable=AsyncMock) as mock_extract:
+        mock_extract.return_value = ExtractionResult(
+            content="Hello world", mime_type="text/plain", metadata={}, chunks=[]
+        )
 
         with test_file.open("rb") as f:
             response = await test_client.post(
                 "/extract",
-                files=[("data", (test_file.name, f.read(), None))],
+                files=[("files", (test_file.name, f.read(), None))],
             )
 
         assert mock_extract.called
-        call_args = mock_extract.call_args[0][0]
-        assert len(call_args) == 1
+        call_args = mock_extract.call_args
+        # Litestar test client infers MIME type from filename when None is provided
+        # For "test.txt", it infers "text/plain"
+        assert call_args[1]["mime_type"] == "text/plain"
 
     assert response.status_code == 201
 
@@ -540,11 +546,11 @@ async def test_extract_memory_error_handling(test_client: AsyncTestClient[Any], 
     test_file = tmp_path / "test.txt"
     test_file.write_text("test content")
 
-    with patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract:
+    with patch("kreuzberg._api.main.extract_bytes", new_callable=AsyncMock) as mock_extract:
         mock_extract.side_effect = MemoryError("Out of memory")
 
         with test_file.open("rb") as f:
-            response = await test_client.post("/extract", files=[("data", (test_file.name, f.read(), "text/plain"))])
+            response = await test_client.post("/extract", files=[("files", (test_file.name, f.read(), "text/plain"))])
 
     assert response.status_code == 500
 
@@ -664,7 +670,7 @@ async def test_extract_with_invalid_config_file(test_client: AsyncTestClient[Any
         test_file.write_text("test content")
 
         with test_file.open("rb") as f:
-            response = await test_client.post("/extract", files=[("data", (test_file.name, f.read(), "text/plain"))])
+            response = await test_client.post("/extract", files=[("files", (test_file.name, f.read(), "text/plain"))])
 
     assert response.status_code == 400
     error_response = response.json()
@@ -677,7 +683,7 @@ async def test_extract_with_invalid_config_file(test_client: AsyncTestClient[Any
 async def test_get_config_with_invalid_config_file(test_client: AsyncTestClient[Any]) -> None:
     from kreuzberg.exceptions import ValidationError
 
-    with patch("kreuzberg._api.main.discover_config") as mock_discover:
+    with patch("kreuzberg._api.main.discover_config_cached") as mock_discover:
         mock_discover.side_effect = ValidationError(
             "Invalid OCR backend: unknown. Must be one of: easyocr, paddleocr, tesseract or 'none'",
             context={"provided": "unknown", "valid": ["easyocr", "paddleocr", "tesseract"]},
@@ -706,7 +712,7 @@ async def test_extract_with_invalid_ocr_config(test_client: AsyncTestClient[Any]
         test_file.write_text("test content")
 
         with test_file.open("rb") as f:
-            response = await test_client.post("/extract", files=[("data", (test_file.name, f.read(), "text/plain"))])
+            response = await test_client.post("/extract", files=[("files", (test_file.name, f.read(), "text/plain"))])
 
     assert response.status_code == 400
     error_response = response.json()
@@ -729,7 +735,7 @@ async def test_extract_with_invalid_vision_tables_config(test_client: AsyncTestC
 
         with test_file.open("rb") as f:
             response = await test_client.post(
-                "/extract", files=[("data", (test_file.name, f.read(), "application/pdf"))]
+                "/extract", files=[("files", (test_file.name, f.read(), "application/pdf"))]
             )
 
     assert response.status_code == 400
@@ -752,7 +758,7 @@ async def test_extract_with_unreadable_config_file(test_client: AsyncTestClient[
         test_file.write_text("test content")
 
         with test_file.open("rb") as f:
-            response = await test_client.post("/extract", files=[("data", (test_file.name, f.read(), "text/plain"))])
+            response = await test_client.post("/extract", files=[("files", (test_file.name, f.read(), "text/plain"))])
 
     assert response.status_code == 400
     error_response = response.json()
@@ -775,7 +781,7 @@ async def test_extract_with_invalid_extraction_config(test_client: AsyncTestClie
         test_file.write_text("test content")
 
         with test_file.open("rb") as f:
-            response = await test_client.post("/extract", files=[("data", (test_file.name, f.read(), "text/plain"))])
+            response = await test_client.post("/extract", files=[("files", (test_file.name, f.read(), "text/plain"))])
 
     assert response.status_code == 400
     error_response = response.json()
@@ -799,7 +805,7 @@ async def test_extract_pdf_without_tables_with_table_extraction_enabled(
     with patch("kreuzberg._api.main.discover_config_cached", return_value=test_config):
         with searchable_pdf.open("rb") as f:
             response = await test_client.post(
-                "/extract", files=[("data", (searchable_pdf.name, f.read(), "application/pdf"))]
+                "/extract", files=[("files", (searchable_pdf.name, f.read(), "application/pdf"))]
             )
 
     assert response.status_code == 201
