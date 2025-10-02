@@ -45,19 +45,21 @@ Kreuzberg addresses the complete document intelligence pipeline through a modula
 
 ### Document Intelligence Features
 
-- **Format Support**: 20+ document types including PDF, DOCX, PPTX, email (EML/MSG), images, HTML, and structured data formats
+- **Format Support**: 20+ document types including PDF, DOCX/DOC, PPTX/PPT, email (EML/MSG), XML, images, HTML, and structured data formats
 - **OCR Engines**: Tesseract (default), EasyOCR, PaddleOCR with automatic fallback strategies
 - **Data Extraction**: Text content, document metadata, table structures, embedded images, and media resources
 - **Image Processing**: Extract embedded images from documents with optional OCR text recognition
 - **Processing Capabilities**: Content chunking for RAG pipelines, language detection, format preservation
 - **Document Classification**: Automatic document type detection (contracts, forms, invoices, receipts, reports)
+- **High-Performance Streaming**: Memory-efficient Rust parsers for multi-GB XML, plain text, and Markdown files
+- **Legacy Format Support**: Optional LibreOffice integration for .doc and .ppt files
 - **Extensibility**: Plugin architecture for custom extractors and hooks
 
 ## Architecture Philosophy
 
 Kreuzberg combines the best of both worlds: performance-critical operations implemented in Rust for maximum speed, built on established open source foundations including Pandoc's universal document conversion, PDFium's robust PDF handling, and Tesseract's proven OCR technology. This hybrid approach ensures both reliability and performance.
 
-The framework is designed for modern document processing workflows including Retrieval Augmented Generation (RAG) pipelines, batch document analysis, and real-time content extraction in cloud-native environments. Version 4.0 introduces significant performance improvements through native Rust implementations of Excel, PowerPoint, email parsing, and text processing operations.
+The framework is designed for modern document processing workflows including Retrieval Augmented Generation (RAG) pipelines, batch document analysis, and real-time content extraction in cloud-native environments. Version 4.0 introduces significant performance improvements through native Rust implementations of Excel, PowerPoint, email parsing, XML streaming, and text processing operations—delivering 10-50x speedups for large document processing while maintaining memory efficiency for multi-GB files.
 
 ## Quick Navigation
 
