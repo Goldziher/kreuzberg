@@ -454,7 +454,7 @@ def test_validate_and_post_process_helper_with_all_features() -> None:
     assert processed_result.detected_languages == ["en"]
 
     mock_chunker.assert_called_once_with(mime_type="text/plain", max_characters=10, overlap_characters=2)
-    mock_entities.assert_called_once_with(result.content, custom_patterns=None)
+    mock_entities.assert_called_once_with(result.content, custom_patterns=None, spacy_config=config.entities)
     mock_keywords.assert_called_once_with(result.content, keyword_count=3)
     mock_languages.assert_called_once()
     mock_doc_type.assert_called_once_with(result, config, file_path=Path("/test/path.txt"))
