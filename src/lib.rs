@@ -6,6 +6,7 @@ mod email;
 mod error_utils;
 mod excel;
 mod image_preprocessing;
+mod ocr;
 mod pptx;
 mod quality;
 mod string_utils;
@@ -33,6 +34,7 @@ use image_preprocessing::{
     load_image_as_numpy, normalize_image_dpi, rgb_to_grayscale, rgb_to_rgba, rgba_to_rgb, save_image,
     save_numpy_as_image,
 };
+use ocr::{ExtractionResultDTO, PSMMode, TesseractConfigDTO, validate_language_code, validate_tesseract_version};
 use pptx::extractor::PptxExtractorDTO;
 use pptx::streaming::extractor::StreamingPptxExtractorDTO;
 use pptx::types::{PptxExtractionResultDTO, PptxMetadataDTO};
@@ -121,6 +123,13 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(build_email_text_output, m)?)?;
     m.add_class::<EmailExtractionResultDTO>()?;
     m.add_class::<EmailAttachmentDTO>()?;
+
+    // OCR (Tesseract)
+    m.add_function(wrap_pyfunction!(validate_language_code, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_tesseract_version, m)?)?;
+    m.add_class::<PSMMode>()?;
+    m.add_class::<TesseractConfigDTO>()?;
+    m.add_class::<ExtractionResultDTO>()?;
 
     xml::register_xml_functions(m)?;
     text::register_text_functions(m)?;

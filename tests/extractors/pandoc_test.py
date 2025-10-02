@@ -1993,3 +1993,36 @@ def test_pandoc_constants_and_types_file_cleanup_on_exception(test_config: Extra
             extractor.extract_bytes_sync(content)
 
         mock_unlink.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_pandoc_async_image_ocr_processing(docx_document: Path) -> None:
+    """Test async image OCR processing when ocr_min_dimensions is set - hits lines 177-178."""
+    from kreuzberg import ExtractionConfig, ImageExtractionConfig
+
+    config = ExtractionConfig(images=ImageExtractionConfig(ocr_min_dimensions=(100, 100)))
+    extractor = OfficeDocumentExtractor(
+        mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", config=config
+    )
+
+    result = await extractor.extract_path_async(docx_document)
+    assert isinstance(result, ExtractionResult)
+    # If images were extracted and OCR was run, image_ocr_results should be populated
+    if result.images:
+        assert result.image_ocr_results is not None
+
+
+def test_pandoc_sync_image_ocr_processing(docx_document: Path) -> None:
+    """Test sync image OCR processing when ocr_min_dimensions is set - hits lines 203-210."""
+    from kreuzberg import ExtractionConfig, ImageExtractionConfig
+
+    config = ExtractionConfig(images=ImageExtractionConfig(ocr_min_dimensions=(100, 100)))
+    extractor = OfficeDocumentExtractor(
+        mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", config=config
+    )
+
+    result = extractor.extract_path_sync(docx_document)
+    assert isinstance(result, ExtractionResult)
+    # If images were extracted and OCR was run, image_ocr_results should be populated
+    if result.images:
+        assert result.image_ocr_results is not None

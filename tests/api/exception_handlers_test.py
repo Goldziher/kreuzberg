@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -70,7 +69,9 @@ async def test_generic_kreuzberg_error_handler(test_client: AsyncTestClient[Any]
 
 
 @pytest.mark.anyio
-async def test_max_upload_size_with_invalid_env_var(test_client: AsyncTestClient[Any], monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_max_upload_size_with_invalid_env_var(
+    test_client: AsyncTestClient[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("KREUZBERG_MAX_UPLOAD_SIZE", "invalid_number")
 
     response = await test_client.get("/info")
@@ -78,7 +79,9 @@ async def test_max_upload_size_with_invalid_env_var(test_client: AsyncTestClient
 
 
 @pytest.mark.anyio
-async def test_max_upload_size_with_negative_value(test_client: AsyncTestClient[Any], monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_max_upload_size_with_negative_value(
+    test_client: AsyncTestClient[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("KREUZBERG_MAX_UPLOAD_SIZE", "-1000")
 
     response = await test_client.get("/info")
@@ -96,7 +99,9 @@ async def test_info_endpoint_cache_disabled(test_client: AsyncTestClient[Any], m
 
 
 @pytest.mark.anyio
-async def test_info_endpoint_cache_enabled_variations(test_client: AsyncTestClient[Any], monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_info_endpoint_cache_enabled_variations(
+    test_client: AsyncTestClient[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
     for value in ["true", "1", "yes", "on"]:
         monkeypatch.setenv("KREUZBERG_CACHE_ENABLED", value)
         response = await test_client.get("/info")

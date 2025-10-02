@@ -1,8 +1,3 @@
-from typing import Any
-
-import pytest
-
-
 def test_check_ocr_backend_unknown() -> None:
     """Test OCR backend check with unknown backend name."""
     from kreuzberg._api.main import _check_ocr_backend_available

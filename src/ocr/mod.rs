@@ -1,0 +1,17 @@
+//! Tesseract OCR Rust implementation
+//!
+//! This module provides a high-performance Rust implementation of Tesseract OCR
+//! functionality, replacing the Python implementation for improved speed and
+//! reduced memory usage.
+//!
+//! ## Performance Targets
+//! - 2x faster than Python implementation
+//! - ≤70% memory usage of Python
+//! - Match Python quality (±2%)
+
+pub mod error;
+pub mod types;
+pub mod validation;
+
+pub use types::{ExtractionResultDTO, PSMMode, TesseractConfigDTO};
+pub use validation::{validate_language_code, validate_tesseract_version};
