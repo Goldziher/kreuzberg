@@ -11,12 +11,11 @@ Kreuzberg provides multiple approaches for extracting tables from documents, eac
 Uses computer vision models to detect and extract table structure with high accuracy.
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, VisionTablesConfig
+from kreuzberg import extract_file, ExtractionConfig, TableExtractionConfig
 
 # Enable vision-based table extraction
 config = ExtractionConfig(
-    extract_tables=True,
-    vision_tables_config=VisionTablesConfig(
+    tables=TableExtractionConfig(
         detection_threshold=0.7,  # Confidence threshold for finding tables
         structure_threshold=0.5,  # Confidence threshold for table structure
         detection_device="auto",  # Use available GPU/CPU
@@ -43,7 +42,7 @@ for i, table in enumerate(result.tables):
 
 **Requirements:**
 
-- Install with: `pip install "kreuzberg[vision-tables]"`
+- Install with: `pip install "kreuzberg[gmft]"`
 - Dependencies: Machine learning libraries (~1GB download)
 - Optional: GPU acceleration support
 
@@ -54,10 +53,12 @@ for i, table in enumerate(result.tables):
 Uses OCR text analysis to identify and reconstruct table structures.
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig
+from kreuzberg import extract_file, ExtractionConfig, TableExtractionConfig
 
 # Enable OCR-based table extraction from TSV data
-config = ExtractionConfig(extract_tables_from_ocr=True)
+config = ExtractionConfig(
+    tables=TableExtractionConfig(extract_from_ocr=True),
+)
 
 result = await extract_file("scanned_table.pdf", config=config)
 
@@ -81,14 +82,14 @@ for table in result.tables:
 
 ### Combining Multiple Methods
 
-You can enable multiple table extraction methods simultaneously for comprehensive coverage:
+You can enable both vision-based and OCR-based table extraction simultaneously:
 
 ```python
 config = ExtractionConfig(
-    extract_tables=True,  # Vision-based method
-    extract_tables_from_ocr=True,  # OCR-based method
-    vision_tables_config=VisionTablesConfig(
-        detection_threshold=0.8,  # Higher threshold for vision method
+    tables=TableExtractionConfig(
+        extract_from_ocr=True,  # Enable OCR-based extraction
+        detection_threshold=0.8,  # Vision-based detection threshold
+        structure_threshold=0.6,  # Vision-based structure threshold
     ),
 )
 
@@ -110,47 +111,47 @@ print(f"Found {len(result.tables)} tables total")
 ### Vision-Based Table Extraction
 
 ```python
-from kreuzberg import VisionTablesConfig
+from kreuzberg import TableExtractionConfig
 
-config = VisionTablesConfig(
-    # Model selection (optional, uses optimized defaults)
+config = TableExtractionConfig(
+    # Model selection
+    detection_model="microsoft/table-transformer-detection",
+    structure_model="microsoft/table-transformer-structure-recognition-v1.1-all",
     # Accuracy settings
     detection_threshold=0.7,  # Lower = more tables detected, more false positives
     structure_threshold=0.5,  # Lower = more lenient structure recognition
     # Performance settings
-    detection_device="auto",  # "auto", "cpu", "cuda", "mps"
+    detection_device="auto",  # "auto", "cpu", "cuda", "cuda:0", etc.
     structure_device="auto",  # Use same device or specify different
-    batch_size=1,  # Images processed per batch (GPU only)
-    mixed_precision=False,  # Use FP16 for faster GPU processing
     # Caching
     model_cache_dir="/custom/cache/path",  # Optional custom cache location
-    enable_model_caching=True,  # Cache models for faster subsequent runs
-    # Output
-    verbosity=1,  # 0=silent, 1=info, 2=debug
+    # Table filtering
+    min_table_area=1000,  # Minimum table area in pixels²
+    max_table_area=None,  # Maximum table area (None = no limit)
+    crop_padding=20,  # Pixels to add around detected tables
+    # Cell confidence
+    cell_confidence_table=0.3,  # Confidence threshold for table cells
 )
 ```
 
 ### OCR-Based Table Extraction
 
 ```python
-from kreuzberg import ExtractionConfig, TesseractConfig
+from kreuzberg import ExtractionConfig, TableExtractionConfig, TesseractConfig
 
 config = ExtractionConfig(
-    extract_tables_from_ocr=True,
+    tables=TableExtractionConfig(extract_from_ocr=True),
     # Optional: Configure OCR settings for better table detection
-    ocr_config=TesseractConfig(
+    ocr=TesseractConfig(
         output_format="tsv",  # Use TSV format for coordinate data
-        enable_table_detection=True,  # Enable HOCR-based table detection
-        table_column_threshold=20,  # Pixel threshold for column detection
-        table_row_threshold_ratio=0.5,  # Row detection sensitivity
-        table_min_confidence=30.0,  # Minimum OCR confidence
+        enable_table_detection=True,  # Enable coordinate-based table detection
     ),
 )
 ```
 
 ## Choosing the Right Method
 
-### Use AI-Powered Table Extraction When
+### Use Vision-Based Table Extraction When
 
 - **Document Types:** Scientific papers, financial reports, complex layouts
 - **Table Complexity:** Spanning cells, multi-level headers, irregular structures
@@ -194,39 +195,42 @@ config = ExtractionConfig(
 ### kreuzberg.toml
 
 ```toml
-# Enable both table extraction methods
-extract_tables = true
-extract_tables_from_ocr = true
-
-# Vision-based table extraction settings
-[vision_tables]
+# Vision-based table extraction
+[tables]
 detection_threshold = 0.7
 structure_threshold = 0.5
 detection_device = "auto"
 structure_device = "auto"
-enable_model_caching = true
-verbosity = 1
+extract_from_ocr = false
 
-# OCR-based table extraction settings
-[tesseract]
+# Enable OCR-based table extraction
+[tables]
+extract_from_ocr = true
+
+# Or enable both methods
+[tables]
+extract_from_ocr = true
+detection_threshold = 0.8
+structure_threshold = 0.6
+
+# OCR configuration for table extraction
+[ocr]
+backend = "tesseract"
 output_format = "tsv"
 enable_table_detection = true
-table_column_threshold = 20
-table_min_confidence = 30.0
 ```
 
 ### pyproject.toml
 
 ```toml
-[tool.kreuzberg]
-extract_tables = true
-extract_tables_from_ocr = true
-
-[tool.kreuzberg.vision_tables]
+[tool.kreuzberg.tables]
 detection_threshold = 0.8
 structure_threshold = 0.6
+extract_from_ocr = true
 
-[tool.kreuzberg.tesseract]
+[tool.kreuzberg.ocr]
+backend = "tesseract"
+output_format = "tsv"
 enable_table_detection = true
 ```
 
@@ -240,11 +244,11 @@ for table in result.tables:
     print(table["text"])
 
     # Structured data as Polars DataFrame
-    print("\\nStructured data:")
+    print("\nStructured data:")
     print(table["df"].head())
 
     # Table metadata
-    print(f"\\nFound on page: {table['page_number']}")
+    print(f"\nFound on page: {table['page_number']}")
 
     # Save table image (vision method only)
     if "cropped_image" in table:
@@ -260,27 +264,27 @@ for table in result.tables:
 ### Vision-Based Method Issues
 
 **Problem:** "Missing dependency" error
-**Solution:** Install with `pip install "kreuzberg[vision-tables]"`
+**Solution:** Install with `pip install "kreuzberg[gmft]"`
 
 **Problem:** Slow processing
-**Solution:** Enable GPU acceleration or increase `batch_size` for GPU processing
+**Solution:** Enable GPU acceleration with `detection_device="cuda"` or increase batch processing
 
 **Problem:** No tables detected
 **Solution:** Lower `detection_threshold` (try 0.5 or 0.6)
 
 **Problem:** Poor table structure
-**Solution:** Lower `structure_threshold` or try different model variant
+**Solution:** Lower `structure_threshold` or adjust `cell_confidence_table`
 
 ### OCR-Based Method Issues
 
 **Problem:** Tables not detected
-**Solution:** Enable `enable_table_detection=True` in OCR config
+**Solution:** Enable `extract_from_ocr=True` in `TableExtractionConfig`
 
 **Problem:** Poor table structure
-**Solution:** Adjust `table_column_threshold` or `table_row_threshold_ratio`
+**Solution:** Ensure OCR is configured with `output_format="tsv"` and `enable_table_detection=True`
 
 **Problem:** Missing text in tables
-**Solution:** Lower `table_min_confidence` threshold
+**Solution:** Improve OCR quality with higher DPI or better image preprocessing
 
 **Problem:** False table detection
-**Solution:** Increase confidence thresholds or use vision method for better accuracy
+**Solution:** Use vision-based method for better accuracy or combine both methods
