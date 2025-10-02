@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
+⚠️ **Version 4.0 has no backward compatibility with v3.x configurations. See the [Migration Guide](https://kreuzberg.dev/getting-started/migration-guide/) for detailed migration instructions.**
+
+#### Configuration System Redesign
+
+Complete redesign of the configuration system with breaking changes to all configuration patterns:
+
+**OCR Configuration - Tagged Union Design:**
+
+- **v3.x**: `ocr_backend="tesseract", ocr_config=TesseractConfig()`
+- **v4.0**: `ocr=TesseractConfig()` (backend determined by config type)
+- No backward compatibility - all v3 config patterns will raise `ValidationError`
+
+**Feature Flags → Config Objects:**
+
+- **v3.x**: `extract_tables=True`, `extract_keywords=True`, `chunk_content=True`
+- **v4.0**: `tables=TableExtractionConfig()`, `keywords=KeywordExtractionConfig()`, `chunking=ChunkingConfig()`
+
+**Type System Changes:**
+
+- **msgspec.Struct**: All configs now use `msgspec.Struct` (frozen, immutable) instead of dataclasses
+- **Tuples Required**: All sequence parameters must use tuples instead of lists
+- **Method Removal**: `config.to_dict()` removed - use `msgspec.structs.asdict(config)` instead
+
+**Class Renames:**
+
+- `GMFTConfig` → `TableExtractionConfig`
+- `VisionTablesConfig` → `TableExtractionConfig`
+- `SpacyEntityExtractionConfig` → `EntityExtractionConfig`
+- `ImageOCRConfig` → `ImageExtractionConfig`
+
+**Parameter Renames:**
+
+- `keyword_count` → `top_k` (in KeywordExtractionConfig)
+- `min_dimensions` → `ocr_min_dimensions` (in ImageExtractionConfig)
+- `max_dimensions` → `ocr_max_dimensions` (in ImageExtractionConfig)
+- `allowed_formats` → `ocr_allowed_formats` (in ImageExtractionConfig)
+
+**API Server Changes:**
+
+- Query parameter configuration removed
+- Must use `config` field in multipart form data
+- Config must use v4 nested structure
+
 #### Hybrid Rust-Python Architecture
 
 Version 4.0 introduces a hybrid architecture where performance-critical operations are implemented in Rust while maintaining the Python API:
@@ -17,82 +60,50 @@ Version 4.0 introduces a hybrid architecture where performance-critical operatio
 - **Dependencies**: Removed `python-pptx`, `python-calamine`, and `chardetng-py` (replaced by native Rust implementations)
 - **Python 3.10+ Required**: Now using modern union syntax (`|` instead of `Union`)
 
-#### Vision-Based Table Extraction Rename (GMFT → VisionTables)
+#### Table Extraction Configuration Redesign
 
-**Breaking Change**: The GMFT feature has been renamed to "vision-tables" for clarity:
+Complete redesign of table extraction configuration with simplified options:
 
-- **Package extra**: `gmft` → `vision-tables` (install with `pip install "kreuzberg[vision-tables]"`)
-- **Config class**: `GMFTConfig` → `VisionTablesConfig`
-- **Config field**: `gmft_config` → `vision_tables_config` in `ExtractionConfig`
-- **Directory**: `kreuzberg/_gmft/` → `kreuzberg/_vision_tables/`
-
-This rename clarifies that it's vision-based table extraction, not a dependency on the external GMFT package. The functionality remains unchanged.
-
-#### Vision-Based Table Extraction Configuration Redesign
-
-Complete redesign of vision-based table extraction configuration to use TATR v1.1 models with simplified, user-friendly options:
-
-**Old Configuration (v3.x - GMFT):**
+**Old Configuration (v3.x):**
 
 ```python
-from kreuzberg._types import GMFTConfig
+from kreuzberg import ExtractionConfig, GMFTConfig
 
-config = GMFTConfig(
-    detector_base_threshold=0.5,
-    formatter_base_threshold=0.7,
-    verbosity=1,
-    # ... many internal parameters
+config = ExtractionConfig(
+    extract_tables=True,
+    vision_tables_config=GMFTConfig(
+        detection_threshold=0.7,
+    ),
 )
 ```
 
-**New Configuration (v4.0 - VisionTables):**
+**New Configuration (v4.0):**
 
 ```python
-from kreuzberg._types import VisionTablesConfig
+from kreuzberg import ExtractionConfig, TableExtractionConfig
 
-config = VisionTablesConfig(
-    # Model selection
-    detection_model="microsoft/table-transformer-detection",
-    structure_model="microsoft/table-transformer-structure-recognition-v1.1-all",
-    # Simple thresholds
-    detection_threshold=0.7,
-    structure_threshold=0.5,
-    # Device selection
-    detection_device="auto",  # "auto", "cpu", "cuda", "mps"
-    structure_device="auto",
-    # Optional features
-    model_cache_dir="/custom/cache/path",
-    enable_model_caching=True,
-    batch_size=1,
-    mixed_precision=False,
-    verbosity=1,
+config = ExtractionConfig(
+    tables=TableExtractionConfig(
+        detection_threshold=0.7,
+    ),
 )
 ```
 
-#### Removed Configuration Options
-
-The following internal vision-based table extraction options have been removed for simplicity:
-
-- `formatter_base_threshold`, `cell_required_confidence`
-- `remove_null_rows`, `enable_multi_header`
-- `semantic_spanning_cells`, `semantic_hierarchical_left_fill`
-- `large_table_*` parameters
-- Complex internal tuning parameters
+**Removed Options:** Complex internal tuning parameters removed for simplicity (e.g., `formatter_base_threshold`, `cell_required_confidence`, `remove_null_rows`, `semantic_spanning_cells`, `large_table_*` parameters)
 
 #### Dependencies Changes
 
 - **Removed Python Dependencies**: `python-pptx`, `python-calamine`, `chardetng-py`
-- **Vision-Based Table Extraction**: Now requires `torch>=2.8.0` and `transformers>=4.56.2` (vendored, not external package)
 - **Build Requirements**: Now requires `maturin>=1.9.0` instead of `hatchling`
 
 #### Removed Deprecated Parameters
 
-All deprecated configuration parameters have been removed. This affects:
+All deprecated configuration parameters have been removed:
 
 - **EasyOCRConfig**: `use_gpu` parameter removed (use `device` instead)
 - **PaddleOCRConfig**: `use_gpu`, `gpu_mem`, `gpu_memory_limit`, `use_angle_cls`, and legacy detection thresholds removed
-- **VisionTablesConfig** (formerly GMFTConfig): `low_memory` parameter removed (use `model` instead)
-- **ExtractionConfig**: All flat image OCR parameters removed (use nested `ImageOCRConfig` instead)
+- **TableExtractionConfig** (formerly GMFTConfig): Complex internal tuning parameters removed
+- **ExtractionConfig**: All flat feature flags and parameters moved to nested config objects
 
 **📖 See the [Migration Guide](https://kreuzberg.dev/getting-started/migration-guide/) for detailed migration instructions and code examples.**
 
