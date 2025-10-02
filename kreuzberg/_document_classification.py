@@ -4,6 +4,7 @@ import re
 from typing import TYPE_CHECKING
 
 import polars as pl
+from msgspec import structs
 
 from kreuzberg._ocr import get_ocr_backend
 from kreuzberg._types import ExtractionConfig, ExtractionResult  # noqa: TC001
@@ -153,7 +154,7 @@ def auto_detect_document_type(
     result: ExtractionResult, config: ExtractionConfig, file_path: Path | None = None
 ) -> ExtractionResult:
     if config.document_classification_mode == "vision" and file_path:
-        layout_result = get_ocr_backend("tesseract").process_file_sync(file_path, **config.get_config_dict())
+        layout_result = get_ocr_backend("tesseract").process_file_sync(file_path, **structs.asdict(config))
         result.document_type, result.document_type_confidence = classify_document_from_layout(layout_result, config)
     elif result.layout is not None and not result.layout.is_empty():
         result.document_type, result.document_type_confidence = classify_document_from_layout(result, config)

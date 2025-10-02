@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kreuzberg import ExtractionConfig
+from kreuzberg import ExtractionConfig, ImageExtractionConfig
 from kreuzberg._extractors._legacy_office import LegacyPresentationExtractor, LegacyWordExtractor
 from kreuzberg._mime_types import LEGACY_POWERPOINT_MIME_TYPE, LEGACY_WORD_MIME_TYPE
 from kreuzberg.exceptions import MissingDependencyError, ParsingError
@@ -156,15 +156,15 @@ def test_presentation_mime_type_support() -> None:
 
 
 def test_word_with_config() -> None:
-    config = ExtractionConfig(extract_images=True)
+    config = ExtractionConfig(images=ImageExtractionConfig())
     extractor = LegacyWordExtractor(mime_type=LEGACY_WORD_MIME_TYPE, config=config)
-    assert extractor.config.extract_images is True
+    assert extractor.config.images is not None
 
 
 def test_presentation_with_config() -> None:
-    config = ExtractionConfig(extract_images=True)
+    config = ExtractionConfig(images=ImageExtractionConfig())
     extractor = LegacyPresentationExtractor(mime_type=LEGACY_POWERPOINT_MIME_TYPE, config=config)
-    assert extractor.config.extract_images is True
+    assert extractor.config.images is not None
 
 
 @pytest.mark.anyio

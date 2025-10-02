@@ -20,6 +20,7 @@ from anyio import Path as AsyncPath
 from anyio import run_process
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+from msgspec import structs
 from PIL import Image
 from PIL.Image import Image as PILImage
 from typing_extensions import Self
@@ -530,7 +531,7 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
         if config.custom_converters:
             all_converters.update(config.custom_converters)
 
-        config_dict = config.to_dict()
+        config_dict = structs.asdict(config)
         config_dict["custom_converters"] = all_converters
 
         use_streaming, chunk_size = should_use_streaming(len(hocr_content.encode()))
@@ -680,7 +681,7 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
                 custom_converters=converters,
             )
 
-            config_dict = html_config.to_dict()
+            config_dict = structs.asdict(html_config)
 
             use_streaming, chunk_size = should_use_streaming(len(hocr_content.encode()))
             config_dict["stream_processing"] = use_streaming

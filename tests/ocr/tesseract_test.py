@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import anyio
 import pytest
+from msgspec import structs
 from PIL import Image
 
 from kreuzberg import PSMMode
@@ -1207,7 +1208,7 @@ async def test_markdown_no_excessive_escaping(backend: TesseractBackend, tmp_pat
     from kreuzberg._types import TesseractConfig
 
     config = TesseractConfig(output_format="markdown")
-    result = await backend.process_file(image_path, **config.to_dict())
+    result = await backend.process_file(image_path, **structs.asdict(config))
 
     assert r"\-\-" not in result.content
     assert r"\|" not in result.content

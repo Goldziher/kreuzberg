@@ -4,13 +4,13 @@ from typing import Any
 
 import pytest
 
-from kreuzberg import ExtractionConfig
+from kreuzberg import ExtractionConfig, ImageExtractionConfig
 from kreuzberg.extraction import extract_file
 
 
 @pytest.mark.anyio
 async def test_pptx_complex_images_smoke(pptx_document: Any) -> None:
-    cfg = ExtractionConfig(extract_images=True)
+    cfg = ExtractionConfig(images=ImageExtractionConfig())
     result = await extract_file(str(pptx_document), config=cfg)
 
     assert isinstance(result.images, list)

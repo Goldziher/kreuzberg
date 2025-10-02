@@ -91,12 +91,11 @@ def test_entity_extraction_config_post_init_conversions() -> None:
     # V4: language_models must be tuple of tuples, not dict
     tuple_models = (("en", "en_core_web_sm"), ("fr", "fr_core_news_sm"))
     config = EntityExtractionConfig(
-        model_cache_dir=Path("/tmp/cache"),
+        model_cache_dir=str(Path("/tmp/cache")),
         language_models=tuple_models,
     )
 
-    # V4: model_cache_dir can be str or Path
-    assert config.model_cache_dir == Path("/tmp/cache") or config.model_cache_dir == str(Path("/tmp/cache"))
+    assert config.model_cache_dir == str(Path("/tmp/cache"))
     assert isinstance(config.language_models, tuple)
     assert config.language_models == tuple_models
 

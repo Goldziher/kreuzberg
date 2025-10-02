@@ -1061,7 +1061,7 @@ class TokenReductionConfig(msgspec.Struct, kw_only=True, frozen=True):
     """Token reduction mode: off (disabled), light, moderate, or aggressive."""
     preserve_markdown: bool = True
     """Preserve markdown formatting during token reduction."""
-    custom_stopwords: dict[str, tuple[str, ...]] | None = None
+    custom_stopwords: dict[str, list[str]] | None = None
     """Custom stopwords per language for token reduction."""
     language_hint: str | None = None
     """Language hint for token reduction. Will be normalized to language code."""

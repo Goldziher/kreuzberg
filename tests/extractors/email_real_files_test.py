@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from kreuzberg import ExtractionConfig
+from kreuzberg import ExtractionConfig, ImageExtractionConfig
 from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._mime_types import EML_MIME_TYPE, MSG_MIME_TYPE
 
@@ -119,7 +119,7 @@ def test_multiple_attachments_eml_file(email_extractor: EmailExtractor) -> None:
 
 
 def test_eml_file_with_image_extraction(email_extractor: EmailExtractor) -> None:
-    email_extractor.config = ExtractionConfig(extract_images=True)
+    email_extractor.config = ExtractionConfig(images=ImageExtractionConfig())
 
     test_file = (
         Path(__file__).parent.parent / "test_documents/email/eml/with_attachments/thunderbird_png_attachment.eml"

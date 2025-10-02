@@ -11,7 +11,6 @@ from click.testing import CliRunner
 from kreuzberg import ExtractionResult
 from kreuzberg.cli import (
     OcrBackendParamType,
-    _build_cli_args,
     _load_config,
     _perform_extraction,
     _write_output,
@@ -173,117 +172,6 @@ def test_load_config_default_error() -> None:
         result = _load_config(None, verbose=False)
 
         assert result == {}
-
-
-def test_build_cli_args_basic() -> None:
-    params = {
-        "force_ocr": True,
-        "chunk_content": False,
-        "extract_tables": True,
-        "extract_entities": False,
-        "extract_keywords": False,
-        "auto_detect_language": True,
-        "keyword_count": 10,
-        "max_chars": 1000,
-        "max_overlap": 200,
-        "ocr_backend": "tesseract",
-        "tesseract_lang": None,
-        "tesseract_psm": None,
-        "tesseract_output_format": None,
-        "enable_table_detection": False,
-        "easyocr_languages": None,
-        "paddleocr_languages": None,
-    }
-
-    result = _build_cli_args(params)
-
-    assert result["force_ocr"] is True
-    assert result["chunk_content"] is None
-    assert result["extract_tables"] is True
-    assert result["auto_detect_language"] is True
-    assert result["keyword_count"] is None
-    assert result["ocr_backend"] == "tesseract"
-
-
-def test_build_cli_args_tesseract() -> None:
-    params = {
-        "force_ocr": False,
-        "chunk_content": False,
-        "extract_tables": False,
-        "extract_entities": False,
-        "extract_keywords": False,
-        "auto_detect_language": False,
-        "keyword_count": 10,
-        "max_chars": 1000,
-        "max_overlap": 200,
-        "ocr_backend": "tesseract",
-        "tesseract_lang": "eng+deu",
-        "tesseract_psm": 3,
-        "tesseract_output_format": "tsv",
-        "enable_table_detection": True,
-        "easyocr_languages": None,
-        "paddleocr_languages": None,
-    }
-
-    result = _build_cli_args(params)
-
-    assert "tesseract_config" in result
-    assert result["tesseract_config"]["language"] == "eng+deu"
-    assert result["tesseract_config"]["psm"] == 3
-    assert result["tesseract_config"]["output_format"] == "tsv"
-    assert result["tesseract_config"]["enable_table_detection"] is True
-
-
-def test_build_cli_args_easyocr() -> None:
-    params = {
-        "force_ocr": False,
-        "chunk_content": False,
-        "extract_tables": False,
-        "extract_entities": False,
-        "extract_keywords": False,
-        "auto_detect_language": False,
-        "keyword_count": 10,
-        "max_chars": 1000,
-        "max_overlap": 200,
-        "ocr_backend": "easyocr",
-        "tesseract_lang": None,
-        "tesseract_psm": None,
-        "tesseract_output_format": None,
-        "enable_table_detection": False,
-        "easyocr_languages": "en,de",
-        "paddleocr_languages": None,
-    }
-
-    result = _build_cli_args(params)
-
-    assert "easyocr_config" in result
-    assert result["easyocr_config"]["languages"] == ["en", "de"]
-
-
-def test_build_cli_args_paddleocr() -> None:
-    params = {
-        "force_ocr": False,
-        "chunk_content": False,
-        "extract_tables": False,
-        "extract_entities": False,
-        "extract_keywords": False,
-        "auto_detect_language": False,
-        "keyword_count": 10,
-        "max_chars": 1000,
-        "max_overlap": 200,
-        "ocr_backend": "paddleocr",
-        "tesseract_lang": None,
-        "tesseract_psm": None,
-        "tesseract_output_format": None,
-        "enable_table_detection": False,
-        "easyocr_languages": None,
-        "paddleocr_languages": "en,ch_sim",
-    }
-
-    result = _build_cli_args(params)
-
-    assert "paddleocr_config" in result
-    assert result["paddleocr_config"]["languages"] == ["en", "ch_sim"]
 
 
 def test_perform_extraction_from_file(tmp_path: Path) -> None:

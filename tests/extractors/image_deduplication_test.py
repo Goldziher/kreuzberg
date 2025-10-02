@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from kreuzberg import ExtractionConfig, ExtractionResult
+from kreuzberg import ExtractionConfig, ExtractionResult, ImageExtractionConfig
 from kreuzberg._extractors._base import Extractor
 from kreuzberg._types import ExtractedImage, Metadata
 
@@ -25,7 +25,7 @@ class MockExtractor(Extractor):
 
 
 def test_deduplicate_images_removes_duplicates() -> None:
-    config = ExtractionConfig(deduplicate_images=True)
+    config = ExtractionConfig(images=ImageExtractionConfig(deduplicate=True))
     extractor = MockExtractor(config)
 
     image_data_1 = b"fake_image_data_1"
@@ -48,7 +48,7 @@ def test_deduplicate_images_removes_duplicates() -> None:
 
 
 def test_deduplicate_images_disabled() -> None:
-    config = ExtractionConfig(deduplicate_images=False)
+    config = ExtractionConfig(images=ImageExtractionConfig(deduplicate=False))
     extractor = MockExtractor(config)
 
     image_data = b"fake_image_data"
@@ -63,7 +63,7 @@ def test_deduplicate_images_disabled() -> None:
 
 
 def test_deduplicate_images_empty_list() -> None:
-    config = ExtractionConfig(deduplicate_images=True)
+    config = ExtractionConfig(images=ImageExtractionConfig(deduplicate=True))
     extractor = MockExtractor(config)
 
     result = extractor._deduplicate_images([])
@@ -72,7 +72,7 @@ def test_deduplicate_images_empty_list() -> None:
 
 
 def test_deduplicate_images_no_duplicates() -> None:
-    config = ExtractionConfig(deduplicate_images=True)
+    config = ExtractionConfig(images=ImageExtractionConfig(deduplicate=True))
     extractor = MockExtractor(config)
 
     images = [

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from kreuzberg import ExtractionConfig
+from kreuzberg import ExtractionConfig, ImageExtractionConfig
 from kreuzberg._extractors._presentation import PresentationExtractor
 from kreuzberg.extraction import DEFAULT_CONFIG
 
@@ -18,7 +18,7 @@ def extractor() -> PresentationExtractor:
 
 @pytest.fixture(scope="session")
 def extractor_with_images() -> PresentationExtractor:
-    config = ExtractionConfig(extract_images=True)
+    config = ExtractionConfig(images=ImageExtractionConfig())
     return PresentationExtractor(
         mime_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", config=config
     )

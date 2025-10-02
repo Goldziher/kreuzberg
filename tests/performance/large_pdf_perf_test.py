@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kreuzberg import ExtractionConfig
+from kreuzberg import ExtractionConfig, ImageExtractionConfig
 from kreuzberg.extraction import extract_file
 
 if TYPE_CHECKING:
@@ -24,6 +24,6 @@ async def test_large_pdf_image_extraction_performance(test_files_path: Path) -> 
     if candidate is None:
         pytest.skip("No large PDF available for performance test")
 
-    cfg = ExtractionConfig(extract_images=True)
+    cfg = ExtractionConfig(images=ImageExtractionConfig())
     result = await extract_file(str(candidate), config=cfg)
     assert isinstance(result.images, list)

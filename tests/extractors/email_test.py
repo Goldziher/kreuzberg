@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from kreuzberg import ExtractionConfig
+from kreuzberg import ExtractionConfig, ImageExtractionConfig
 from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._mime_types import EML_MIME_TYPE, MSG_MIME_TYPE
 from kreuzberg.exceptions import ParsingError
@@ -217,7 +217,7 @@ Please see attached files.
 
 
 def test_email_extract_images_config(email_extractor: EmailExtractor, sample_email_path: Path) -> None:
-    email_extractor.config = ExtractionConfig(extract_images=True)
+    email_extractor.config = ExtractionConfig(images=ImageExtractionConfig())
 
     result = email_extractor.extract_path_sync(sample_email_path)
 
