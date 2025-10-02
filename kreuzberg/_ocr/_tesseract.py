@@ -1376,13 +1376,13 @@ class TesseractProcessPool:
         cfg = config or self.config
 
         config_dict = {}
-        for field_name in cfg.__dataclass_fields__:
-            value = getattr(cfg, field_name)
+        for field_info in structs.fields(cfg):
+            value = getattr(cfg, field_info.name)
 
             if hasattr(value, "value"):
-                config_dict[field_name] = value.value
+                config_dict[field_info.name] = value.value
             else:
-                config_dict[field_name] = value
+                config_dict[field_info.name] = value
 
         return config_dict
 

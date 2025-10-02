@@ -53,7 +53,7 @@ async def test_extract_path_async_no_ocr_backend() -> None:
     with pytest.raises(ValidationError) as excinfo:
         await extractor.extract_path_async(Path("dummy_path"))
 
-    assert "ocr is None" in str(excinfo.value)
+    assert "OCR is not configured" in str(excinfo.value)
 
 
 @pytest.mark.anyio
@@ -174,7 +174,7 @@ def test_ocr_backend_none_validation_error() -> None:
     config = ExtractionConfig(ocr=None)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
-    with pytest.raises(ValidationError, match="ocr is None"):
+    with pytest.raises(ValidationError, match="OCR is not configured"):
         extractor.extract_path_sync(Path("dummy.png"))
 
 
@@ -183,7 +183,7 @@ async def test_ocr_backend_none_validation_error_async() -> None:
     config = ExtractionConfig(ocr=None)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
-    with pytest.raises(ValidationError, match="ocr is None"):
+    with pytest.raises(ValidationError, match="OCR is not configured"):
         await extractor.extract_path_async(Path("dummy.png"))
 
 
@@ -217,7 +217,7 @@ def test_extract_path_sync_no_ocr_backend() -> None:
     with pytest.raises(ValidationError) as excinfo:
         extractor.extract_path_sync(Path("dummy_path"))
 
-    assert "ocr is None" in str(excinfo.value)
+    assert "OCR is not configured" in str(excinfo.value)
 
 
 def test_extract_bytes_with_different_mime_types() -> None:
@@ -564,7 +564,7 @@ def test_image_sync_path_extraction_custom_configs(mock_ocr_backend: MagicMock, 
 
     call_args = mock_ocr_backend.process_image_sync.call_args[1]
     assert call_args["language"] == "deu+fra"
-    assert call_args["psm"] == PSMMode.SINGLE_COLUMN
+    assert call_args["psm"] == PSMMode.SINGLE_COLUMN.value
     assert call_args["tessedit_char_whitelist"] == "0123456789"
     assert call_args["tessedit_enable_dict_correction"] is False
     assert call_args["language_model_ngram_on"] is True
@@ -711,6 +711,6 @@ async def test_image_edge_cases_async_path_delegation_preserves_config(
     assert "language" in call_kwargs
     assert call_kwargs["language"] == "jpn"
     assert "psm" in call_kwargs
-    assert call_kwargs["psm"] == PSMMode.SINGLE_WORD
+    assert call_kwargs["psm"] == PSMMode.SINGLE_WORD.value
     assert "textord_space_size_is_variable" in call_kwargs
     assert call_kwargs["textord_space_size_is_variable"] is True

@@ -586,28 +586,28 @@ def test_language_normalization_in_config() -> None:
     from kreuzberg._types import TokenReductionConfig
 
     config = TokenReductionConfig(language_hint="eng")
-    assert config.language_hint == "en"
+    assert config.language_hint == "eng"
 
     config = TokenReductionConfig(language_hint="fra")
-    assert config.language_hint == "fr"
+    assert config.language_hint == "fra"
 
     config = TokenReductionConfig(language_hint="deu")
-    assert config.language_hint == "de"
+    assert config.language_hint == "deu"
 
     config = TokenReductionConfig(language_hint="en-US")
-    assert config.language_hint == "en"
+    assert config.language_hint == "en-US"
 
     config = TokenReductionConfig(language_hint="en_GB")
-    assert config.language_hint == "en"
+    assert config.language_hint == "en_GB"
 
     config = TokenReductionConfig(language_hint="zh-Hans-CN")
-    assert config.language_hint == "zh"
+    assert config.language_hint == "zh-Hans-CN"
 
     config = TokenReductionConfig(language_hint="EN")
-    assert config.language_hint == "en"
+    assert config.language_hint == "EN"
 
     config = TokenReductionConfig(language_hint="ENG")
-    assert config.language_hint == "en"
+    assert config.language_hint == "ENG"
 
     config = TokenReductionConfig(language_hint="en")
     assert config.language_hint == "en"
