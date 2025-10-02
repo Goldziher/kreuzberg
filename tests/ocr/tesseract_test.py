@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import anyio
 import pytest
 from msgspec import structs
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from kreuzberg import PSMMode
 from kreuzberg._ocr._tesseract import (
@@ -121,6 +121,16 @@ def mock_run_process_error(mocker: MockerFixture) -> Mock:
     return mock
 
 
+def create_test_image(text: str) -> Image.Image:
+    """Create a test image with the given text."""
+
+    img = Image.new("RGB", (400, 100), "white")
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default()
+    draw.text((10, 30), text, fill="black", font=font)
+    return img
+
+
 @pytest.mark.anyio
 async def test_validate_tesseract_version(backend: TesseractBackend) -> None:
     TesseractBackend._version_checked = False
@@ -200,8 +210,6 @@ async def test_process_file_runtime_error(backend: TesseractBackend, fresh_cache
 
 @pytest.mark.anyio
 async def test_process_image(backend: TesseractBackend) -> None:
-    from PIL import ImageDraw
-
     image = Image.new("RGB", (400, 100), "white")
     draw = ImageDraw.Draw(image)
     draw.text((10, 30), "Hello World Test", fill="black")
@@ -215,8 +223,6 @@ async def test_process_image(backend: TesseractBackend) -> None:
 
 @pytest.mark.anyio
 async def test_process_image_with_tesseract_pillow(backend: TesseractBackend) -> None:
-    from PIL import ImageDraw
-
     image = Image.new("RGB", (400, 100), "white")
     draw = ImageDraw.Draw(image)
     draw.text((10, 30), "Test Document", fill="black")
@@ -499,8 +505,6 @@ async def test_process_file_validation_error(backend: TesseractBackend, tmp_path
 
 
 def test_process_image_sync(backend: TesseractBackend) -> None:
-    from PIL import ImageDraw
-
     image = Image.new("RGB", (200, 100), "white")
     draw = ImageDraw.Draw(image)
     draw.text((10, 30), "Sync Test", fill="black")
@@ -818,8 +822,6 @@ def test_tesseract_language_validation_case_insensitive_language_codes() -> None
 
 
 def test_tesseract_sync_methods_run_tesseract_sync_success(backend: TesseractBackend, tmp_path: Path) -> None:
-    from PIL import ImageDraw
-
     img = Image.new("RGB", (200, 100), "white")
     draw = ImageDraw.Draw(img)
     draw.text((10, 40), "TEST", fill="black")
@@ -1176,8 +1178,6 @@ async def test_markdown_extraction_with_table_detection(
 
 @pytest.mark.anyio
 async def test_markdown_no_excessive_escaping(backend: TesseractBackend, tmp_path: Path) -> None:
-    from PIL import ImageDraw, ImageFont
-
     image = Image.new("RGB", (800, 400), color="white")
     draw = ImageDraw.Draw(image)
 
@@ -1276,8 +1276,6 @@ def test_tesseract_utility_functions_normalize_spaces_in_results(
 
 @pytest.mark.anyio
 async def test_tesseract_concurrent_processing(backend: TesseractBackend) -> None:
-    from PIL import ImageDraw
-
     images = []
     for i in range(3):  # ~keep Reduce to 3 for faster testing
         img = Image.new("RGB", (200, 100), "white")
@@ -1319,3 +1317,946 @@ async def test_tesseract_memory_efficiency(backend: TesseractBackend, mock_run_p
     small_image = Image.new("RGB", (100, 100), "white")
     result2 = await backend.process_image(small_image, language="eng")
     assert isinstance(result2, ExtractionResult)
+
+
+@pytest.mark.anyio
+async def test_tesseract_output_format_tsv() -> None:
+    backend = TesseractBackend()
+    img = create_test_image("Test TSV Output")
+
+    result = await backend.process_image(img, output_format="tsv")
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+@pytest.mark.anyio
+async def test_tesseract_output_format_hocr() -> None:
+    backend = TesseractBackend()
+    img = create_test_image("Test HOCR Output")
+
+    result = await backend.process_image(img, output_format="hocr")
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+@pytest.mark.anyio
+async def test_tesseract_output_format_text() -> None:
+    backend = TesseractBackend()
+    img = create_test_image("Test Text Output")
+
+    result = await backend.process_image(img, output_format="text")
+    assert isinstance(result, ExtractionResult)
+    assert "Test Text Output" in result.content
+
+
+@pytest.mark.anyio
+async def test_tesseract_table_detection_with_tsv() -> None:
+    backend = TesseractBackend()
+
+    # Create image with table-like structure
+    img = Image.new("RGB", (400, 200), "white")
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default()
+
+    # Draw a simple table
+    draw.text((10, 10), "Name    Age    City", fill="black", font=font)
+    draw.text((10, 40), "Alice   30     NYC", fill="black", font=font)
+    draw.text((10, 70), "Bob     25     LA", fill="black", font=font)
+
+    result = await backend.process_image(img, enable_table_detection=True)
+    assert isinstance(result, ExtractionResult)
+    # Table detection might or might not find tables depending on OCR quality
+    # but should not crash
+
+
+def test_process_batch_sync_empty_list() -> None:
+    backend = TesseractBackend()
+    results = backend.process_batch_sync([])
+    assert results == []
+
+
+def test_process_batch_sync_single_image(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create test image file
+    img = create_test_image("Batch Test 1")
+    img_path = tmp_path / "test1.png"
+    img.save(img_path)
+
+    results = backend.process_batch_sync([img_path])
+    assert len(results) == 1
+    assert isinstance(results[0], ExtractionResult)
+
+
+def test_process_batch_sync_multiple_images(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create multiple test images
+    paths = []
+    for i in range(3):
+        img = create_test_image(f"Batch Test {i + 1}")
+        img_path = tmp_path / f"test{i}.png"
+        img.save(img_path)
+        paths.append(img_path)
+
+    results = backend.process_batch_sync(paths)
+    assert len(results) == 3
+    for result in results:
+        assert isinstance(result, ExtractionResult)
+
+
+def test_process_batch_sync_with_invalid_image(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create one valid and one invalid image
+    valid_img = create_test_image("Valid")
+    valid_path = tmp_path / "valid.png"
+    valid_img.save(valid_path)
+
+    invalid_path = tmp_path / "invalid.png"
+    invalid_path.write_text("not an image")
+
+    results = backend.process_batch_sync([valid_path, invalid_path])
+    assert len(results) == 2
+    # First should succeed
+    assert isinstance(results[0], ExtractionResult)
+    # Second should have error message
+    assert "[OCR error:" in results[1].content
+
+
+@pytest.mark.anyio
+async def test_tesseract_tsv_table_extraction_edge_cases() -> None:
+    backend = TesseractBackend()
+
+    # Create image that won't produce valid table data
+    img = Image.new("RGB", (100, 100), "white")
+    draw = ImageDraw.Draw(img)
+    draw.text((10, 10), "Just text", fill="black")
+
+    # Should not crash even if table extraction fails
+    result = await backend.process_image(img, enable_table_detection=True)
+    assert isinstance(result, ExtractionResult)
+
+
+@pytest.mark.anyio
+async def test_tesseract_extract_text_from_tsv_error_handling() -> None:
+    backend = TesseractBackend()
+
+    # Process with TSV format to trigger _extract_text_from_tsv
+    img = create_test_image("TSV Test")
+    result = await backend.process_image(img, output_format="tsv")
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+@pytest.mark.integration
+@pytest.mark.anyio
+async def test_tesseract_hocr_with_tables_integration() -> None:
+    backend = TesseractBackend()
+
+    # Create image with table-like structure - use larger font and spacing for better OCR
+    img = Image.new("RGB", (800, 300), "white")
+    draw = ImageDraw.Draw(img)
+    # Use a larger font size
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 24)
+    except Exception:
+        font = ImageFont.load_default()  # type: ignore[assignment]
+
+    # Draw table headers and rows with clear spacing
+    draw.text((50, 30), "Product", fill="black", font=font)
+    draw.text((300, 30), "Price", fill="black", font=font)
+    draw.text((500, 30), "Quantity", fill="black", font=font)
+
+    draw.text((50, 100), "Apple", fill="black", font=font)
+    draw.text((300, 100), "150", fill="black", font=font)
+    draw.text((500, 100), "10", fill="black", font=font)
+
+    draw.text((50, 170), "Banana", fill="black", font=font)
+    draw.text((300, 170), "75", fill="black", font=font)
+    draw.text((500, 170), "15", fill="black", font=font)
+
+    # Process with HOCR format and table detection
+    result = await backend.process_image(img, output_format="hocr", enable_table_detection=True)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+    # Verify at least some expected text is extracted
+    content_lower = result.content.lower()
+    assert "product" in content_lower or "apple" in content_lower or "banana" in content_lower
+
+
+@pytest.mark.integration
+@pytest.mark.anyio
+async def test_tesseract_tsv_with_table_reconstruction_integration() -> None:
+    backend = TesseractBackend()
+
+    # Create a more structured table image with larger, clearer text
+    img = Image.new("RGB", (1000, 400), "white")
+    draw = ImageDraw.Draw(img)
+
+    # Use larger font for better OCR
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 28)
+    except Exception:
+        font = ImageFont.load_default()  # type: ignore[assignment]
+
+    # Draw clear table structure with consistent spacing
+    y_pos = 40
+    draw.text((80, y_pos), "Name", fill="black", font=font)
+    draw.text((320, y_pos), "Age", fill="black", font=font)
+    draw.text((520, y_pos), "City", fill="black", font=font)
+    draw.text((750, y_pos), "Score", fill="black", font=font)
+
+    y_pos += 80
+    draw.text((80, y_pos), "Alice", fill="black", font=font)
+    draw.text((320, y_pos), "30", fill="black", font=font)
+    draw.text((520, y_pos), "NYC", fill="black", font=font)
+    draw.text((750, y_pos), "95", fill="black", font=font)
+
+    y_pos += 80
+    draw.text((80, y_pos), "Bob", fill="black", font=font)
+    draw.text((320, y_pos), "25", fill="black", font=font)
+    draw.text((520, y_pos), "LA", fill="black", font=font)
+    draw.text((750, y_pos), "88", fill="black", font=font)
+
+    y_pos += 80
+    draw.text((80, y_pos), "Charlie", fill="black", font=font)
+    draw.text((320, y_pos), "35", fill="black", font=font)
+    draw.text((520, y_pos), "Chicago", fill="black", font=font)
+    draw.text((750, y_pos), "92", fill="black", font=font)
+
+    # Process with TSV format and table detection
+    result = await backend.process_image(img, output_format="tsv", enable_table_detection=True)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+    # Verify expected names are extracted
+    content_lower = result.content.lower()
+    # Check for at least 2 of the 3 names
+    matches = sum([name in content_lower for name in ["alice", "bob", "charlie"]])
+    assert matches >= 2, f"Expected at least 2 names in OCR output, but found {matches}"
+
+
+@pytest.mark.integration
+def test_process_batch_sync_integration(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create multiple test images with distinct content
+    expected_texts = ["BATCH001", "BATCH002", "BATCH003"]
+    paths = []
+
+    for i, text in enumerate(expected_texts):
+        img = Image.new("RGB", (600, 150), "white")
+        draw = ImageDraw.Draw(img)
+
+        try:
+            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 36)
+        except Exception:
+            font = ImageFont.load_default()  # type: ignore[assignment]
+
+        draw.text((100, 50), text, fill="black", font=font)
+
+        img_path = tmp_path / f"batch_test_{i}.png"
+        img.save(img_path)
+        paths.append(img_path)
+
+    # Process batch synchronously
+    results = backend.process_batch_sync(paths)
+
+    assert len(results) == 3
+    # Verify each result contains some expected text
+    for i, result in enumerate(results):
+        assert isinstance(result, ExtractionResult)
+        assert len(result.content) > 0
+        # Check that at least the batch number appears
+        content_upper = result.content.upper().replace(" ", "")
+        assert "BATCH" in content_upper, f"Expected 'BATCH' in result {i}, got: {result.content}"
+
+
+def test_tesseract_sync_process_file_integration(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create test image with clear text
+    img = Image.new("RGB", (700, 150), "white")
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 36)
+    except Exception:
+        font = ImageFont.load_default()  # type: ignore[assignment]
+
+    test_text = "HELLO WORLD"
+    draw.text((100, 50), test_text, fill="black", font=font)
+
+    img_path = tmp_path / "sync_test.png"
+    img.save(img_path)
+
+    # Process file synchronously
+    result = backend.process_file_sync(img_path)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+    # Verify expected text appears
+    content_upper = result.content.upper().replace(" ", "")
+    assert "HELLO" in content_upper or "WORLD" in content_upper
+
+
+def test_tesseract_sync_process_image_integration() -> None:
+    backend = TesseractBackend()
+
+    # Create test image with numbers for better OCR reliability
+    img = Image.new("RGB", (700, 150), "white")
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 48)
+    except Exception:
+        font = ImageFont.load_default()  # type: ignore[assignment]
+
+    test_text = "12345"
+    draw.text((150, 40), test_text, fill="black", font=font)
+
+    # Process image synchronously
+    result = backend.process_image_sync(img)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+    # Numbers should be reliably detected
+    content_cleaned = result.content.replace(" ", "").replace("\n", "")
+    assert any(digit in content_cleaned for digit in "12345")
+
+
+@pytest.mark.anyio
+async def test_tesseract_with_cache_enabled(tmp_path: Path) -> None:
+    from kreuzberg._utils._cache import get_ocr_cache
+
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("CACHE TEST")
+    img_path = tmp_path / "cache_test.png"
+    img.save(img_path)
+
+    # Clear cache first
+    cache = get_ocr_cache()
+    cache.clear()
+
+    # First call - should process and cache
+    result1 = await backend.process_file(img_path, use_cache=True)
+    assert isinstance(result1, ExtractionResult)
+
+    # Second call - should hit cache
+    result2 = await backend.process_file(img_path, use_cache=True)
+    assert isinstance(result2, ExtractionResult)
+    assert result2.content == result1.content
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_image_with_cache(tmp_path: Path) -> None:
+    from kreuzberg._utils._cache import get_ocr_cache
+
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("IMAGE CACHE")
+
+    # Clear cache first
+    cache = get_ocr_cache()
+    cache.clear()
+
+    # First call - should process and cache
+    result1 = await backend.process_image(img, use_cache=True)
+    assert isinstance(result1, ExtractionResult)
+
+    # Second call - should hit cache
+    result2 = await backend.process_image(img, use_cache=True)
+    assert isinstance(result2, ExtractionResult)
+
+
+@pytest.mark.anyio
+async def test_tesseract_table_detection_auto_tsv() -> None:
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("Test table detection auto TSV")
+
+    # enable_table_detection=True with output_format="text" should auto-switch to tsv
+    result = await backend.process_image(img, enable_table_detection=True, output_format="text")
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+@pytest.mark.anyio
+async def test_tesseract_extract_text_from_tsv_error_handling_malformed() -> None:
+    backend = TesseractBackend()
+
+    # Test malformed TSV that triggers error path
+    malformed_tsv = "not\tvalid\ttsv\ndata\there"
+
+    result = backend._extract_text_from_tsv(malformed_tsv)
+
+    assert isinstance(result, ExtractionResult)
+    # Should fallback to simple parsing
+
+
+@pytest.mark.anyio
+async def test_tesseract_extract_text_from_tsv_paragraph_spacing() -> None:
+    backend = TesseractBackend()
+
+    # Test TSV with paragraph changes to hit lines 486-487
+    tsv_content = """level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext
+5\t1\t1\t1\t1\t1\t50\t50\t100\t30\t95.0\tFirst
+5\t1\t1\t2\t2\t1\t50\t80\t100\t30\t94.0\tSecond
+5\t1\t2\t1\t1\t1\t50\t150\t100\t30\t96.0\tThird"""
+
+    result = backend._extract_text_from_tsv(tsv_content)
+
+    assert isinstance(result, ExtractionResult)
+    assert "First" in result.content
+    assert "Second" in result.content
+    assert "Third" in result.content
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_initialization() -> None:
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    pool = TesseractProcessPool()
+    assert pool.config is not None
+    assert pool.process_manager is not None
+    pool.shutdown()
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_with_config() -> None:
+    from kreuzberg import TesseractConfig
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    config = TesseractConfig(language="eng", psm=PSMMode.AUTO)
+    pool = TesseractProcessPool(config=config, max_processes=2)
+    assert pool.config.language == "eng"
+    pool.shutdown()
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_process_image(tmp_path: Path) -> None:
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    pool = TesseractProcessPool()
+
+    # Create test image
+    img = create_test_image("POOL TEST")
+    img_path = tmp_path / "pool_test.png"
+    img.save(img_path)
+
+    try:
+        result = await pool.process_image(img_path)
+        assert isinstance(result, ExtractionResult)
+        assert len(result.content) > 0
+    finally:
+        pool.shutdown()
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_process_image_bytes() -> None:
+    from io import BytesIO
+
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    pool = TesseractProcessPool()
+
+    # Create test image
+    img = create_test_image("POOL BYTES TEST")
+    img_buffer = BytesIO()
+    img.save(img_buffer, format="PNG")
+    img_bytes = img_buffer.getvalue()
+
+    try:
+        result = await pool.process_image_bytes(img_bytes)
+        assert isinstance(result, ExtractionResult)
+        assert len(result.content) > 0
+    finally:
+        pool.shutdown()
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_batch_images(tmp_path: Path) -> None:
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    pool = TesseractProcessPool()
+
+    # Create multiple test images
+    paths: list[str | Path] = []
+    for i in range(2):
+        img = create_test_image(f"BATCH {i}")
+        img_path = tmp_path / f"batch_{i}.png"
+        img.save(img_path)
+        paths.append(img_path)
+
+    try:
+        results = await pool.process_batch_images(paths)
+        assert len(results) == 2
+        for result in results:
+            assert isinstance(result, ExtractionResult)
+    finally:
+        pool.shutdown()
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_batch_images_empty() -> None:
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    pool = TesseractProcessPool()
+
+    try:
+        results = await pool.process_batch_images([])
+        assert results == []
+    finally:
+        pool.shutdown()
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_batch_bytes() -> None:
+    from io import BytesIO
+
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    pool = TesseractProcessPool()
+
+    # Create multiple test images as bytes
+    image_bytes_list = []
+    for i in range(2):
+        img = create_test_image(f"BYTES BATCH {i}")
+        img_bytes = BytesIO()
+        img.save(img_bytes, format="PNG")
+        image_bytes_list.append(img_bytes.getvalue())
+
+    try:
+        results = await pool.process_batch_bytes(image_bytes_list)
+        assert len(results) == 2
+        for result in results:
+            assert isinstance(result, ExtractionResult)
+    finally:
+        pool.shutdown()
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_batch_bytes_empty() -> None:
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    pool = TesseractProcessPool()
+
+    try:
+        results = await pool.process_batch_bytes([])
+        assert results == []
+    finally:
+        pool.shutdown()
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_get_system_info() -> None:
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    pool = TesseractProcessPool()
+
+    try:
+        info = pool.get_system_info()
+        assert isinstance(info, dict)
+    finally:
+        pool.shutdown()
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_context_manager() -> None:
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    async with TesseractProcessPool() as pool:
+        assert pool is not None
+        info = pool.get_system_info()
+        assert isinstance(info, dict)
+
+
+@pytest.mark.anyio
+async def test_tesseract_extract_text_from_tsv_fallback_parsing() -> None:
+    backend = TesseractBackend()
+
+    # TSV with missing required columns - triggers ValueError/KeyError in primary parsing
+    malformed_tsv = """level\tpage_num
+5\t1
+5\t1"""
+
+    result = backend._extract_text_from_tsv(malformed_tsv)
+
+    assert isinstance(result, ExtractionResult)
+    # Should use fallback parsing
+
+
+@pytest.mark.anyio
+async def test_tesseract_tsv_fallback_with_text_column() -> None:
+    backend = TesseractBackend()
+
+    # TSV with level="5" and text column but missing page_num/block_num/etc - triggers KeyError
+    # Has 12 columns so fallback can extract column 11 (0-indexed)
+    malformed_tsv_with_text = """level\ta\tb\tc\td\te\tf\tg\th\ti\tj\ttext
+5\t1\t2\t3\t4\t5\t6\t7\t8\t9\t10\tFallbackText"""
+
+    result = backend._extract_text_from_tsv(malformed_tsv_with_text)
+
+    assert isinstance(result, ExtractionResult)
+    # Fallback should extract column 11 (0-indexed) which is "text" column
+    assert "FallbackText" in result.content
+
+
+@pytest.mark.anyio
+async def test_tesseract_cache_hit_on_second_call(tmp_path: Path) -> None:
+    from kreuzberg._utils._cache import get_ocr_cache
+
+    backend = TesseractBackend()
+
+    # Create unique test image
+    img = create_test_image("UNIQUE CACHE TEST 12345")
+    img_path = tmp_path / "unique_cache.png"
+    img.save(img_path)
+
+    # Clear cache
+    cache = get_ocr_cache()
+    cache.clear()
+
+    # First call - processes and caches (hits line 228)
+    result1 = await backend.process_file(img_path, use_cache=True)
+    assert isinstance(result1, ExtractionResult)
+    assert len(result1.content) > 0
+
+    # Second call - should hit cache at line 210
+    result2 = await backend.process_file(img_path, use_cache=True)
+    assert isinstance(result2, ExtractionResult)
+    assert result2.content == result1.content
+
+
+@pytest.mark.anyio
+async def test_tesseract_invalid_file_triggers_error(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create an invalid image file
+    bad_file = tmp_path / "bad_image.png"
+    bad_file.write_text("This is not a valid PNG file")
+
+    # Should raise OCRError when tesseract fails
+    with pytest.raises(OCRError) as exc_info:
+        await backend.process_file(bad_file)
+    assert "OCR failed" in str(exc_info.value) or "Failed to OCR" in str(exc_info.value)
+
+
+@pytest.mark.anyio
+async def test_tesseract_hocr_with_custom_converters() -> None:
+    from kreuzberg import HTMLToMarkdownConfig
+
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("CUSTOM CONVERTER TEST")
+
+    # Define custom converter
+    def custom_span_converter(*, tag: Any, text: str, **kwargs: Any) -> str:
+        return f"[CUSTOM: {text}]"
+
+    html_config = HTMLToMarkdownConfig(custom_converters={"span": custom_span_converter})
+
+    # Process with custom converter
+    result = await backend.process_image(img, output_format="hocr", html_to_markdown_config=html_config)
+
+    assert isinstance(result, ExtractionResult)
+    # Custom converter should have been used
+    assert len(result.content) > 0
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_pool_error_handling() -> None:
+    from kreuzberg._ocr._tesseract import TesseractProcessPool
+
+    pool = TesseractProcessPool()
+
+    try:
+        # Test _result_from_dict with error
+        error_dict = {"success": False, "text": "", "confidence": None, "error": "Test error"}
+
+        with pytest.raises(OCRError) as exc_info:
+            pool._result_from_dict(error_dict)
+
+        assert "Tesseract processing failed" in str(exc_info.value)
+        assert "Test error" in str(exc_info.value)
+    finally:
+        pool.shutdown()
+
+
+def test_tesseract_sync_process_image_with_cache_hit() -> None:
+    from kreuzberg._utils._cache import get_ocr_cache
+
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("SYNC CACHE IMAGE 789")
+
+    # Clear cache
+    cache = get_ocr_cache()
+    cache.clear()
+
+    # First call - processes and caches
+    result1 = backend.process_image_sync(img, use_cache=True)
+    assert isinstance(result1, ExtractionResult)
+    assert len(result1.content) > 0
+
+    # Second call - should hit cache at line 1008
+    result2 = backend.process_image_sync(img, use_cache=True)
+    assert isinstance(result2, ExtractionResult)
+    assert result2.content == result1.content
+
+
+def test_tesseract_sync_process_file_with_cache_hit(tmp_path: Path) -> None:
+    from kreuzberg._utils._cache import get_ocr_cache
+
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("SYNC CACHE FILE 456")
+    img_path = tmp_path / "sync_cache_file.png"
+    img.save(img_path)
+
+    # Clear cache
+    cache = get_ocr_cache()
+    cache.clear()
+
+    # First call - processes and caches (hits line 1019)
+    result1 = backend.process_file_sync(img_path, use_cache=True)
+    assert isinstance(result1, ExtractionResult)
+    assert len(result1.content) > 0
+
+    # Second call - should hit cache at line 1040
+    result2 = backend.process_file_sync(img_path, use_cache=True)
+    assert isinstance(result2, ExtractionResult)
+    assert result2.content == result1.content
+
+
+def test_tesseract_sync_process_file_with_hocr_output(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("SYNC HOCR TEST")
+    img_path = tmp_path / "sync_hocr.png"
+    img.save(img_path)
+
+    # Process with HOCR output to hit sync _process_tesseract_output_sync paths
+    result = backend.process_file_sync(img_path, output_format="hocr", use_cache=False)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+def test_tesseract_sync_process_file_with_markdown_output(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("SYNC MARKDOWN TEST")
+    img_path = tmp_path / "sync_markdown.png"
+    img.save(img_path)
+
+    # Process with markdown output to hit sync _process_hocr_to_markdown_sync
+    result = backend.process_file_sync(img_path, output_format="markdown", use_cache=False)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+def test_tesseract_sync_process_file_with_tsv_output(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("SYNC TSV TEST")
+    img_path = tmp_path / "sync_tsv.png"
+    img.save(img_path)
+
+    # Process with TSV output to hit sync TSV processing
+    result = backend.process_file_sync(img_path, output_format="tsv", use_cache=False)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+def test_tesseract_sync_process_file_with_tsv_and_table_detection(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create test image with table-like structure
+    img = create_test_image("SYNC TSV TABLE TEST")
+    img_path = tmp_path / "sync_tsv_table.png"
+    img.save(img_path)
+
+    # Process with TSV and table detection to hit sync _process_tsv_output_sync
+    result = backend.process_file_sync(img_path, output_format="tsv", enable_table_detection=True, use_cache=False)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+def test_tesseract_sync_process_image_no_cache() -> None:
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("NO CACHE IMAGE")
+
+    # Process without cache to hit use_cache=False branches
+    result = backend.process_image_sync(img, use_cache=False)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+def test_tesseract_sync_process_file_no_cache(tmp_path: Path) -> None:
+    backend = TesseractBackend()
+
+    # Create test image
+    img = create_test_image("NO CACHE FILE")
+    img_path = tmp_path / "no_cache_file.png"
+    img.save(img_path)
+
+    # Process without cache to hit use_cache=False branches
+    result = backend.process_file_sync(img_path, use_cache=False)
+
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_image_no_cache() -> None:
+    """Test process_image with use_cache=False - hits branch 207->212, 227->230."""
+    backend = TesseractBackend()
+    img = create_test_image("NO CACHE IMAGE")
+
+    result = await backend.process_image(img, use_cache=False)
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+@pytest.mark.anyio
+async def test_tesseract_process_file_no_cache(tmp_path: Path) -> None:
+    """Test process_file with use_cache=False - hits branch 377->382, 396->409."""
+    backend = TesseractBackend()
+    img = create_test_image("NO CACHE FILE ASYNC")
+    img_path = tmp_path / "no_cache_test.png"
+    img.save(img_path)
+
+    result = await backend.process_file(img_path, use_cache=False)
+    assert isinstance(result, ExtractionResult)
+    assert len(result.content) > 0
+
+
+@pytest.mark.anyio
+async def test_tesseract_with_custom_converters(tmp_path: Path) -> None:
+    """Test HOCR with custom converters - hits line 534."""
+    from kreuzberg._types import HTMLToMarkdownConfig
+
+    def custom_converter(**kwargs: Any) -> str:
+        return "[CUSTOM]"
+
+    backend = TesseractBackend()
+    img = create_test_image("CUSTOM CONVERTER TEST")
+    img_path = tmp_path / "custom.png"
+    img.save(img_path)
+
+    config = HTMLToMarkdownConfig(custom_converters={"custom_tag": custom_converter})
+    result = await backend.process_file(img_path, output_format="markdown", html_to_markdown_config=config)
+    assert isinstance(result, ExtractionResult)
+
+
+@pytest.mark.anyio
+async def test_tesseract_text_output_format(tmp_path: Path) -> None:
+    """Test plain text output format - hits line 986."""
+    backend = TesseractBackend()
+    img = create_test_image("PLAIN TEXT TEST")
+    img_path = tmp_path / "plain_text.png"
+    img.save(img_path)
+
+    result = await backend.process_file(img_path, output_format="text")
+    assert isinstance(result, ExtractionResult)
+    assert result.mime_type == "text/plain"
+
+
+def test_tesseract_sync_image_mode_conversion() -> None:
+    """Test image mode conversion for unsupported modes - hits line 993."""
+    backend = TesseractBackend()
+
+    # Create image with CMYK mode (not in supported modes)
+    img = Image.new("CMYK", (400, 100), "white")
+
+    result = backend.process_image_sync(img, use_cache=False)
+    assert isinstance(result, ExtractionResult)
+
+
+def test_tesseract_table_prefix_kwargs(tmp_path: Path) -> None:
+    """Test that table_ prefixed kwargs are skipped - hits line 1209."""
+    backend = TesseractBackend()
+    img = create_test_image("TABLE PREFIX TEST")
+    img_path = tmp_path / "table_prefix.png"
+    img.save(img_path)
+
+    # table_ prefixed kwargs should be skipped in command building
+    result = backend.process_file_sync(
+        img_path, table_column_threshold=10, table_row_threshold_ratio=0.5, use_cache=False
+    )
+    assert isinstance(result, ExtractionResult)
+
+
+def test_tesseract_sync_timeout_error(tmp_path: Path, mocker: MockerFixture) -> None:
+    """Test timeout handling in sync execution - hits line 955."""
+    import subprocess
+
+    backend = TesseractBackend()
+    img = create_test_image("TIMEOUT TEST")
+    img_path = tmp_path / "timeout.png"
+    img.save(img_path)
+
+    # Mock subprocess.run to raise TimeoutExpired
+    mock_run = mocker.patch("subprocess.run")
+    mock_run.side_effect = subprocess.TimeoutExpired(cmd=["tesseract"], timeout=30)
+
+    with pytest.raises(OCRError, match="timed out"):
+        backend.process_file_sync(img_path, use_cache=False)
+
+
+def test_tesseract_batch_processing_error(tmp_path: Path) -> None:
+    """Test error handling in batch processing - hits lines 1168-1169."""
+    backend = TesseractBackend()
+
+    # Create one valid image and one invalid path
+    valid_img = create_test_image("BATCH TEST")
+    valid_path = tmp_path / "valid.png"
+    valid_img.save(valid_path)
+
+    invalid_path = tmp_path / "nonexistent.png"
+
+    # Process batch with invalid path
+    results = backend.process_batch_sync([valid_path, invalid_path], use_cache=False)
+
+    # First should succeed, second should have error message
+    assert len(results) == 2
+    assert isinstance(results[0], ExtractionResult)
+    assert "[OCR error:" in results[1].content
+
+
+@pytest.mark.anyio
+async def test_tesseract_hocr_empty_words(tmp_path: Path, mocker: MockerFixture) -> None:
+    """Test HOCR with empty words - hits lines 885-888."""
+    backend = TesseractBackend()
+
+    # Mock _identify_table_regions to receive empty words list
+    mock_identify = mocker.patch.object(backend, "_identify_table_regions")
+    mock_identify.return_value = []
+
+    img = create_test_image("EMPTY WORDS TEST")
+    img_path = tmp_path / "empty_words.png"
+    img.save(img_path)
+
+    result = await backend.process_file(img_path, output_format="markdown", enable_table_detection=True)
+    assert isinstance(result, ExtractionResult)
