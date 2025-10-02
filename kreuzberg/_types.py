@@ -26,6 +26,7 @@ else:  # pragma: no cover
     from typing import NotRequired
 
 OcrBackendType = Literal["tesseract", "easyocr", "paddleocr"]
+FeatureBackendType = Literal["vision_tables", "spacy"]
 OutputFormatType = Literal["text", "tsv", "hocr", "markdown"]
 ErrorContextType = Literal["batch_processing", "optional_feature", "single_extraction", "unknown"]
 

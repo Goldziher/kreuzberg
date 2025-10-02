@@ -20,10 +20,12 @@ from kreuzberg import (
     OCRError,
     ParsingError,
     ValidationError,
+    __version__,
     batch_extract_bytes,
     extract_bytes,
 )
 from kreuzberg._api._config_cache import discover_config_cached
+from kreuzberg._types import FeatureBackendType, OcrBackendType  # noqa: TC001  # Needed at runtime for func sigs
 from kreuzberg._utils._cache import (
     clear_all_caches,
     get_document_cache,
@@ -31,6 +33,7 @@ from kreuzberg._utils._cache import (
     get_ocr_cache,
     get_table_cache,
 )
+from kreuzberg._utils._serialization import deserialize
 
 if TYPE_CHECKING:
     from litestar.datastructures import UploadFile
@@ -96,6 +99,15 @@ class CacheClearResponse(msgspec.Struct):
     """Unix timestamp when cache was cleared."""
 
 
+class AvailableBackends(msgspec.Struct):
+    """Available backends grouped by type."""
+
+    ocr: dict[OcrBackendType, bool]
+    """Available OCR backends (tesseract, easyocr, paddleocr)."""
+    features: dict[FeatureBackendType, bool]
+    """Available feature backends (vision_tables for table extraction, spacy for entities)."""
+
+
 class ServerInfo(msgspec.Struct):
     """Response model for server information endpoint."""
 
@@ -105,8 +117,8 @@ class ServerInfo(msgspec.Struct):
     """Static configuration loaded from kreuzberg.toml, if any."""
     cache_enabled: bool
     """Whether caching is enabled."""
-    available_backends: dict[str, bool]
-    """Available OCR and feature backends."""
+    available_backends: AvailableBackends
+    """Available backends grouped by type."""
 
 
 class HealthResponse(msgspec.Struct):
@@ -145,29 +157,37 @@ def _is_opentelemetry_enabled() -> bool:
     return os.environ.get("KREUZBERG_ENABLE_OPENTELEMETRY", "true").lower() in ("true", "1", "yes", "on")
 
 
-def _check_backend_available(backend: str) -> bool:
-    """Check if a specific backend is available."""
+def _check_ocr_backend_available(backend: OcrBackendType) -> bool:
+    """Check if OCR backend is available by attempting to import it."""
     try:
         if backend == "tesseract":
-            from kreuzberg._ocr._tesseract import TesseractBackend
+            from kreuzberg._ocr._tesseract import TesseractBackend  # noqa: PLC0415, F401
 
-            return TesseractBackend.is_available()
+            return True
         if backend == "easyocr":
-            from kreuzberg._ocr._easyocr import EasyOCRBackend
+            from kreuzberg._ocr._easyocr import EasyOCRBackend  # noqa: PLC0415, F401
 
-            return EasyOCRBackend.is_available()
+            return True
         if backend == "paddleocr":
-            from kreuzberg._ocr._paddleocr import PaddleOCRBackend
+            from kreuzberg._ocr._paddleocr import PaddleBackend  # noqa: PLC0415, F401
 
-            return PaddleOCRBackend.is_available()
+            return True
+        return False
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _check_feature_backend_available(backend: FeatureBackendType) -> bool:
+    """Check if feature backend is available by attempting to import it."""
+    try:
         if backend == "vision_tables":
-            from kreuzberg._vision_tables._detector import is_available
+            from kreuzberg._vision_tables._detector import TableDetector  # noqa: PLC0415, F401
 
-            return is_available()
+            return True
         if backend == "spacy":
-            from kreuzberg._extractors._spacy_entity_extraction import is_available
+            import spacy  # noqa: PLC0415, F401
 
-            return is_available()
+            return True
         return False
     except Exception:  # noqa: BLE001
         return False
@@ -279,9 +299,14 @@ async def extract_endpoint(
         # Single file with default config
         curl -F "files=@document.pdf" http://localhost:8000/extract
 
-        # Multiple files with custom config
+        # Multiple files with chunking enabled (V4 config format)
         curl -F "files=@doc1.pdf" -F "files=@doc2.docx" \\
-             -F 'config={"chunk_content":true,"max_chars":500}' \\
+             -F 'config={"chunking":{"max_chars":500,"max_overlap":100}}' \\
+             http://localhost:8000/extract
+
+        # With OCR and table extraction (V4 tagged union format)
+        curl -F "files=@document.pdf" \\
+             -F 'config={"ocr":{"backend":"tesseract","language":"eng"},"tables":{"detection_threshold":0.7}}' \\
              http://localhost:8000/extract
         ```
     """
@@ -289,7 +314,12 @@ async def extract_endpoint(
         raise ValidationError("No files provided for extraction", context={"file_count": 0})
 
     static_config = discover_config_cached()
-    final_config = data.config if data.config is not None else (static_config or ExtractionConfig())
+
+    # V4: Deserialize JSON config string to ExtractionConfig object
+    if data.config is not None:
+        final_config = deserialize(data.config, ExtractionConfig, json=True)
+    else:
+        final_config = static_config or ExtractionConfig()
 
     if len(data.files) == 1:
         file = data.files[0]
@@ -302,20 +332,8 @@ async def extract_endpoint(
     return await batch_extract_bytes(files_data, config=final_config)
 
 
-@get("/cache/stats", operation_id="GetAllCacheStats")
-async def get_all_cache_stats() -> CacheStats:
-    """Get statistics for all cache types.
-
-    Returns comprehensive statistics including:
-    - Number of cached items per cache type
-    - Total size in MB per cache type
-    - Average item size
-    - Cache age information
-    - Available disk space
-
-    Returns:
-        Cache statistics for all cache types
-    """
+def _get_all_cache_stats() -> CacheStats:
+    """Get statistics for all cache types."""
     ocr = get_ocr_cache().get_stats()
     documents = get_document_cache().get_stats()
     tables = get_table_cache().get_stats()
@@ -345,6 +363,23 @@ async def get_all_cache_stats() -> CacheStats:
     )
 
 
+@get("/cache/stats", operation_id="GetAllCacheStats")
+async def get_all_cache_stats() -> CacheStats:
+    """Get statistics for all cache types.
+
+    Returns comprehensive statistics including:
+    - Number of cached items per cache type
+    - Total size in MB per cache type
+    - Average item size
+    - Cache age information
+    - Available disk space
+
+    Returns:
+        Cache statistics for all cache types
+    """
+    return _get_all_cache_stats()
+
+
 @get("/cache/{cache_type:str}/stats", operation_id="GetCacheStats")
 async def get_cache_stats(cache_type: str) -> dict[str, Any]:
     """Get statistics for a specific cache type.
@@ -359,8 +394,8 @@ async def get_cache_stats(cache_type: str) -> dict[str, Any]:
         ValidationError: If cache_type is invalid
     """
     if cache_type == "all":
-        stats = await get_all_cache_stats()
-        return msgspec.to_builtins(stats, order="deterministic")
+        stats = _get_all_cache_stats()
+        return msgspec.to_builtins(stats, order="deterministic")  # type: ignore[no-any-return]
 
     if cache_type == "ocr":
         return get_ocr_cache().get_stats()
@@ -420,23 +455,24 @@ async def get_info() -> ServerInfo:
     Returns:
         Server information with static configuration and feature availability
     """
-    from kreuzberg import __version__
-
     config = discover_config_cached()
 
-    available_backends = {
-        "tesseract": _check_backend_available("tesseract"),
-        "easyocr": _check_backend_available("easyocr"),
-        "paddleocr": _check_backend_available("paddleocr"),
-        "vision_tables": _check_backend_available("vision_tables"),
-        "spacy": _check_backend_available("spacy"),
+    ocr_backends: dict[OcrBackendType, bool] = {
+        "tesseract": _check_ocr_backend_available("tesseract"),
+        "easyocr": _check_ocr_backend_available("easyocr"),
+        "paddleocr": _check_ocr_backend_available("paddleocr"),
+    }
+
+    feature_backends: dict[FeatureBackendType, bool] = {
+        "vision_tables": _check_feature_backend_available("vision_tables"),
+        "spacy": _check_feature_backend_available("spacy"),
     }
 
     return ServerInfo(
         version=__version__,
         config=config,
         cache_enabled=os.environ.get("KREUZBERG_CACHE_ENABLED", "true").lower() in ("true", "1", "yes", "on"),
-        available_backends=available_backends,
+        available_backends=AvailableBackends(ocr=ocr_backends, features=feature_backends),
     )
 
 

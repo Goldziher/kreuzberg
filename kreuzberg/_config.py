@@ -75,7 +75,7 @@ def build_extraction_config_from_dict(config_dict: dict[str, Any]) -> Extraction
     _check_for_v3_config(config_dict)
 
     try:
-        # Convert dict to JSON string, then use deserialize to get ExtractionConfig
+        # Convert dict to JSON string, then deserialize using our utils
         json_str = json.dumps(config_dict)
         return deserialize(json_str, ExtractionConfig, json=True)
     except (TypeError, ValueError) as e:
