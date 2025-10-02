@@ -240,6 +240,7 @@ jobs:
 
   python-tests:
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.python == '3.14-dev' }}
     strategy:
       fail-fast: false
       matrix:

@@ -79,7 +79,6 @@ tests/benchmarks/results/*.json
 tests/e2e/logs/
 tests/e2e/test_report.json
 todo.md
-TODO.md
 visualizations/
 wheels/
 yarn-debug.log*
