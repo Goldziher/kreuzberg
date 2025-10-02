@@ -8,7 +8,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from kreuzberg import ExtractionResult
+from kreuzberg import ExtractionConfig, ExtractionResult
 from kreuzberg.cli import (
     OcrBackendParamType,
     _load_config,
@@ -426,3 +426,207 @@ def test_config_command_error() -> None:
         result = runner.invoke(config, [])
 
         assert result.exit_code == 1
+
+
+def test_extract_with_tesseract_params(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.pdf"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--ocr-backend",
+                "tesseract",
+                "--tesseract-lang",
+                "eng+deu",
+                "--tesseract-psm",
+                "6",
+                "--tesseract-output-format",
+                "markdown",
+                "--enable-table-detection",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.ocr is not None
+        assert config_arg.ocr.language == "eng+deu"
+
+
+def test_extract_with_easyocr_backend(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.pdf"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--ocr-backend",
+                "easyocr",
+                "--easyocr-languages",
+                "en,de",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.ocr is not None
+
+
+def test_extract_with_paddleocr_backend(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.pdf"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--ocr-backend",
+                "paddleocr",
+                "--paddleocr-languages",
+                "en",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.ocr is not None
+
+
+def test_extract_with_ocr_none(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.pdf"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--ocr-backend",
+                "none",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.ocr is None
+
+
+def test_extract_with_entities_and_keywords(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--extract-entities",
+                "--extract-keywords",
+                "--keyword-count",
+                "15",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.entities is not None
+        assert config_arg.keywords is not None
+        assert config_arg.keywords.count == 15
+
+
+def test_extract_with_language_detection(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--auto-detect-language",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.language_detection is not None
+
+
+def test_extract_with_chunking_params(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--chunk-content",
+                "--max-chars",
+                "500",
+                "--max-overlap",
+                "100",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.chunking is not None
+        assert config_arg.chunking.max_chars == 500
+        assert config_arg.chunking.max_overlap == 100
+
+
+def test_perform_extraction_stdin_detect_yaml() -> None:
+    stdin_content = "---\nkey: value\n"
+
+    mock_result = ExtractionResult(content="Extracted", mime_type="text/plain")
+
+    with patch("kreuzberg.cli.extract_bytes_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        with patch("sys.stdin.buffer.read", return_value=stdin_content.encode()):
+            result = _perform_extraction(None, ExtractionConfig(), verbose=False)
+
+        assert result == mock_result
+        call_args = mock_extract.call_args
+        assert call_args[0][1] == "application/x-yaml"
