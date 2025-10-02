@@ -9,9 +9,14 @@
 //! - ≤70% memory usage of Python
 //! - Match Python quality (±2%)
 
+pub mod cache;
 pub mod error;
+pub mod processor;
+pub mod table;
 pub mod types;
 pub mod validation;
 
+pub use cache::OCRCacheStats;
+pub use processor::OCRProcessor;
 pub use types::{ExtractionResultDTO, PSMMode, TesseractConfigDTO};
 pub use validation::{validate_language_code, validate_tesseract_version};

@@ -244,3 +244,61 @@ class TextExtractionResult:
     ) -> None: ...
 
 def parse_text(text_bytes: bytes, is_markdown: bool) -> TextExtractionResult: ...
+
+# OCR / Tesseract
+class PSMMode:
+    OsdOnly: int
+    AutoOsd: int
+    AutoOnly: int
+    Auto: int
+    SingleColumn: int
+    SingleBlockVertical: int
+    SingleBlock: int
+    SingleLine: int
+    SingleWord: int
+    CircleWord: int
+    SingleChar: int
+
+    def __init__(self, value: int) -> None: ...
+
+class TesseractConfigDTO:
+    language: str
+    psm: int
+    output_format: str
+    enable_table_detection: bool
+    table_min_confidence: float
+    table_column_threshold: int
+    table_row_threshold_ratio: float
+    use_cache: bool
+
+    def __init__(
+        self,
+        language: str = "eng",
+        psm: int = 3,
+        output_format: str = "markdown",
+        enable_table_detection: bool = True,
+        table_min_confidence: float = 0.0,
+        table_column_threshold: int = 50,
+        table_row_threshold_ratio: float = 0.5,
+        use_cache: bool = True,
+    ) -> None: ...
+
+class ExtractionResultDTO:
+    content: str
+    mime_type: str
+    metadata: dict[str, str]
+
+    def __init__(self, content: str, mime_type: str, metadata: dict[str, str] | None = None) -> None: ...
+
+class OCRCacheStats:
+    total_files: int
+    total_size_mb: float
+
+class OCRProcessor:
+    def __init__(self, cache_dir: str | None = None) -> None: ...
+    def process_image(self, image_bytes: bytes, config: TesseractConfigDTO) -> ExtractionResultDTO: ...
+    def clear_cache(self) -> None: ...
+    def get_cache_stats(self) -> OCRCacheStats: ...
+
+def validate_language_code(lang: str) -> str: ...
+def validate_tesseract_version() -> None: ...

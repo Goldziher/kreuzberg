@@ -390,3 +390,188 @@ def test_email_comprehensive_extraction(email_extractor: EmailExtractor, complex
         result.metadata["date"] == "2024-03-15T14:30:00Z"
         or result.metadata["date"] == "Wed, 15 Mar 2024 14:30:00 +0000"
     )
+
+
+def test_email_with_image_attachments() -> None:
+    from unittest.mock import Mock
+
+    from kreuzberg._mime_types import EML_MIME_TYPE
+
+    config = ExtractionConfig(images=ImageExtractionConfig())
+    extractor = EmailExtractor(EML_MIME_TYPE, config)
+
+    mock_attachment = Mock()
+    mock_attachment.is_image = True
+    mock_attachment.data = b"\x89PNG\r\n\x1a\n"
+    mock_attachment.filename = "test.png"
+    mock_attachment.name = "test.png"
+    mock_attachment.mime_type = "image/png"
+
+    mock_rust_result = Mock()
+    mock_rust_result.attachments = [mock_attachment]
+    mock_rust_result.metadata = {"subject": "Test"}
+
+    images = extractor._extract_images_from_rust_attachments(mock_rust_result)
+
+    assert len(images) == 1
+    assert images[0].format == "png"
+    assert images[0].filename == "test.png"
+    assert images[0].data == b"\x89PNG\r\n\x1a\n"
+
+
+def test_email_image_attachment_without_extension() -> None:
+    from unittest.mock import Mock
+
+    from kreuzberg._mime_types import EML_MIME_TYPE
+
+    config = ExtractionConfig(images=ImageExtractionConfig())
+    extractor = EmailExtractor(EML_MIME_TYPE, config)
+
+    mock_attachment = Mock()
+    mock_attachment.is_image = True
+    mock_attachment.data = b"\xff\xd8\xff"
+    mock_attachment.filename = None
+    mock_attachment.name = None
+    mock_attachment.mime_type = "image/jpeg"
+
+    mock_rust_result = Mock()
+    mock_rust_result.attachments = [mock_attachment]
+
+    images = extractor._extract_images_from_rust_attachments(mock_rust_result)
+
+    assert len(images) == 1
+    assert images[0].format == "jpeg"
+    assert images[0].filename == "attachment_image_1.jpeg"
+
+
+def test_email_attachment_not_image() -> None:
+    from unittest.mock import Mock
+
+    from kreuzberg._mime_types import EML_MIME_TYPE
+
+    config = ExtractionConfig(images=ImageExtractionConfig())
+    extractor = EmailExtractor(EML_MIME_TYPE, config)
+
+    mock_attachment = Mock()
+    mock_attachment.is_image = False
+    mock_attachment.data = b"test"
+    mock_attachment.mime_type = "application/pdf"
+
+    mock_rust_result = Mock()
+    mock_rust_result.attachments = [mock_attachment]
+
+    images = extractor._extract_images_from_rust_attachments(mock_rust_result)
+
+    assert len(images) == 0
+
+
+def test_email_attachment_no_data() -> None:
+    from unittest.mock import Mock
+
+    from kreuzberg._mime_types import EML_MIME_TYPE
+
+    config = ExtractionConfig(images=ImageExtractionConfig())
+    extractor = EmailExtractor(EML_MIME_TYPE, config)
+
+    mock_attachment = Mock()
+    mock_attachment.is_image = True
+    mock_attachment.data = None
+    mock_attachment.mime_type = "image/png"
+
+    mock_rust_result = Mock()
+    mock_rust_result.attachments = [mock_attachment]
+
+    images = extractor._extract_images_from_rust_attachments(mock_rust_result)
+
+    assert len(images) == 0
+
+
+def test_email_attachment_mime_type_without_slash() -> None:
+    from unittest.mock import Mock
+
+    from kreuzberg._mime_types import EML_MIME_TYPE
+
+    config = ExtractionConfig(images=ImageExtractionConfig())
+    extractor = EmailExtractor(EML_MIME_TYPE, config)
+
+    mock_attachment = Mock()
+    mock_attachment.is_image = True
+    mock_attachment.data = b"test"
+    mock_attachment.filename = None
+    mock_attachment.name = None
+    mock_attachment.mime_type = "image"
+
+    mock_rust_result = Mock()
+    mock_rust_result.attachments = [mock_attachment]
+
+    images = extractor._extract_images_from_rust_attachments(mock_rust_result)
+
+    assert len(images) == 1
+    assert images[0].format == "unknown"
+
+
+def test_email_with_image_ocr_enabled(tmp_path: Path) -> None:
+    from unittest.mock import Mock, patch
+
+    from kreuzberg._mime_types import EML_MIME_TYPE
+
+    email_content = """From: sender@example.com
+To: recipient@example.com
+Subject: Test
+Content-Type: text/plain
+
+Test email
+"""
+    email_path = tmp_path / "test.eml"
+    email_path.write_text(email_content)
+
+    config = ExtractionConfig(
+        images=ImageExtractionConfig(ocr_min_dimensions=(100, 100)),
+        ocr=TesseractConfig(),
+    )
+    extractor = EmailExtractor(EML_MIME_TYPE, config)
+
+    mock_image = Mock()
+    mock_image.data = b"test"
+    mock_image.format = "png"
+    mock_image.filename = "test.png"
+    mock_image.dimensions = (200, 200)
+
+    with (
+        patch.object(extractor, "_extract_images_from_rust_attachments", return_value=[mock_image]),
+        patch("kreuzberg._extractors._email.run_maybe_async") as mock_run,
+    ):
+        mock_run.return_value = []
+
+        result = extractor.extract_path_sync(email_path)
+
+        assert mock_run.called
+
+
+def test_email_oserror_bubbles_up(tmp_path: Path) -> None:
+    from unittest.mock import patch
+
+    from kreuzberg._mime_types import EML_MIME_TYPE
+
+    email_path = tmp_path / "test.eml"
+    email_path.write_text("test")
+
+    config = ExtractionConfig()
+    extractor = EmailExtractor(EML_MIME_TYPE, config)
+
+    with patch("kreuzberg._extractors._email.extract_email_content", side_effect=OSError("File error")):
+        with pytest.raises(OSError, match="File error"):
+            extractor.extract_bytes_sync(b"test")
+
+
+def test_email_runtime_error_bubbles_up(tmp_path: Path) -> None:
+    from unittest.mock import patch
+
+    from kreuzberg._mime_types import EML_MIME_TYPE
+
+    config = ExtractionConfig()
+    extractor = EmailExtractor(EML_MIME_TYPE, config)
+
+    with patch("kreuzberg._extractors._email.extract_email_content", side_effect=RuntimeError("Runtime error")):
+        with pytest.raises(RuntimeError, match="Runtime error"):
+            extractor.extract_bytes_sync(b"test")

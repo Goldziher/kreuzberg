@@ -10,19 +10,15 @@ const MINIMAL_SUPPORTED_TESSERACT_VERSION: u32 = 5;
 /// Supported Tesseract language codes (177 languages)
 static TESSERACT_SUPPORTED_LANGUAGE_CODES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     [
-        "afr", "amh", "ara", "asm", "aze", "aze_cyrl", "bel", "ben", "bod", "bos",
-        "bre", "bul", "cat", "ceb", "ces", "chi_sim", "chi_tra", "chr", "cos", "cym",
-        "dan", "dan_frak", "deu", "deu_frak", "deu_latf", "dzo", "ell", "eng", "enm", "epo",
-        "equ", "est", "eus", "fao", "fas", "fil", "fin", "fra", "frk", "frm",
-        "fry", "gla", "gle", "glg", "grc", "guj", "hat", "heb", "hin", "hrv",
-        "hun", "hye", "iku", "ind", "isl", "ita", "ita_old", "jav", "jpn", "kan",
-        "kat", "kat_old", "kaz", "khm", "kir", "kmr", "kor", "kor_vert", "kur", "lao",
-        "lat", "lav", "lit", "ltz", "mal", "mar", "mkd", "mlt", "mon", "mri",
-        "msa", "mya", "nep", "nld", "nor", "oci", "ori", "osd", "pan", "pol",
-        "por", "pus", "que", "ron", "rus", "san", "sin", "slk", "slk_frak", "slv",
-        "snd", "spa", "spa_old", "sqi", "srp", "srp_latn", "sun", "swa", "swe", "syr",
-        "tam", "tat", "tel", "tgk", "tgl", "tha", "tir", "ton", "tur", "uig",
-        "ukr", "urd", "uzb", "uzb_cyrl", "vie", "yid", "yor",
+        "afr", "amh", "ara", "asm", "aze", "aze_cyrl", "bel", "ben", "bod", "bos", "bre", "bul", "cat", "ceb", "ces",
+        "chi_sim", "chi_tra", "chr", "cos", "cym", "dan", "dan_frak", "deu", "deu_frak", "deu_latf", "dzo", "ell",
+        "eng", "enm", "epo", "equ", "est", "eus", "fao", "fas", "fil", "fin", "fra", "frk", "frm", "fry", "gla", "gle",
+        "glg", "grc", "guj", "hat", "heb", "hin", "hrv", "hun", "hye", "iku", "ind", "isl", "ita", "ita_old", "jav",
+        "jpn", "kan", "kat", "kat_old", "kaz", "khm", "kir", "kmr", "kor", "kor_vert", "kur", "lao", "lat", "lav",
+        "lit", "ltz", "mal", "mar", "mkd", "mlt", "mon", "mri", "msa", "mya", "nep", "nld", "nor", "oci", "ori", "osd",
+        "pan", "pol", "por", "pus", "que", "ron", "rus", "san", "sin", "slk", "slk_frak", "slv", "snd", "spa",
+        "spa_old", "sqi", "srp", "srp_latn", "sun", "swa", "swe", "syr", "tam", "tat", "tel", "tgk", "tgl", "tha",
+        "tir", "ton", "tur", "uig", "ukr", "urd", "uzb", "uzb_cyrl", "vie", "yid", "yor",
     ]
     .into_iter()
     .collect()
@@ -37,9 +33,7 @@ static VERSION_CHECKED: Lazy<Mutex<Option<bool>>> = Lazy::new(|| Mutex::new(None
 #[pyo3::pyfunction]
 pub fn validate_language_code(lang: &str) -> pyo3::PyResult<String> {
     if lang.is_empty() {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "Language code cannot be empty",
-        ));
+        return Err(pyo3::exceptions::PyValueError::new_err("Language code cannot be empty"));
     }
 
     // Handle multi-language codes (e.g., "eng+deu")
@@ -83,14 +77,13 @@ pub fn validate_tesseract_version() -> pyo3::PyResult<()> {
     let output = Command::new("tesseract")
         .arg("--version")
         .output()
-        .map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to execute tesseract: {}", e))
-        })?;
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to execute tesseract: {}", e)))?;
 
     let version_output = String::from_utf8_lossy(&output.stdout);
-    let version_str = version_output.lines().next().ok_or_else(|| {
-        pyo3::exceptions::PyRuntimeError::new_err("Could not read tesseract version")
-    })?;
+    let version_str = version_output
+        .lines()
+        .next()
+        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("Could not read tesseract version"))?;
 
     // Parse version number (format: "tesseract 5.3.0")
     let version = version_str
@@ -99,10 +92,7 @@ pub fn validate_tesseract_version() -> pyo3::PyResult<()> {
         .and_then(|v| v.split('.').next())
         .and_then(|v| v.parse::<u32>().ok())
         .ok_or_else(|| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!(
-                "Could not parse tesseract version: {}",
-                version_str
-            ))
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Could not parse tesseract version: {}", version_str))
         })?;
 
     // Validate version

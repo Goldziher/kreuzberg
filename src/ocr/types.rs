@@ -1,6 +1,7 @@
 //! Type definitions for Tesseract OCR
 
 use pyo3::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Page Segmentation Mode (PSM) for Tesseract
@@ -123,7 +124,7 @@ impl TesseractConfigDTO {
 
 /// Extraction result data transfer object
 #[pyclass]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtractionResultDTO {
     #[pyo3(get, set)]
     pub content: String,

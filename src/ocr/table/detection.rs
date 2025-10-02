@@ -1,0 +1,247 @@
+//! Column and row detection algorithms for table reconstruction
+
+use super::tsv_parser::TSVWord;
+
+/// Detect column positions from word positions
+///
+/// Groups words by their x-position and returns the median x-position
+/// for each detected column.
+///
+/// # Arguments
+///
+/// * `words` - Vector of TSVWord structs
+/// * `column_threshold` - Maximum horizontal distance to group words into same column
+///
+/// # Returns
+///
+/// Vector of x-positions representing column boundaries (sorted)
+pub fn detect_columns(words: &[TSVWord], column_threshold: u32) -> Vec<u32> {
+    if words.is_empty() {
+        return Vec::new();
+    }
+
+    // Group words by approximate x-position
+    let mut position_groups: Vec<Vec<u32>> = Vec::new();
+
+    for word in words {
+        let x_pos = word.left;
+
+        // Find existing group within threshold
+        let mut found_group = false;
+        for group in &mut position_groups {
+            if let Some(&first_pos) = group.first()
+                && x_pos.abs_diff(first_pos) <= column_threshold
+            {
+                group.push(x_pos);
+                found_group = true;
+                break;
+            }
+        }
+
+        // Create new group if not found
+        if !found_group {
+            position_groups.push(vec![x_pos]);
+        }
+    }
+
+    // Calculate median for each group
+    let mut columns: Vec<u32> = position_groups
+        .iter()
+        .filter(|group| !group.is_empty())
+        .map(|group| {
+            let mut sorted = group.clone();
+            sorted.sort_unstable();
+            let mid = sorted.len() / 2;
+            sorted[mid]
+        })
+        .collect();
+
+    // Sort columns left to right
+    columns.sort_unstable();
+    columns
+}
+
+/// Detect row positions from word positions
+///
+/// Groups words by their vertical center position and returns the median
+/// y-position for each detected row.
+///
+/// # Arguments
+///
+/// * `words` - Vector of TSVWord structs
+/// * `row_threshold_ratio` - Ratio of median height to use as grouping threshold
+///
+/// # Returns
+///
+/// Vector of y-positions representing row centers (sorted)
+pub fn detect_rows(words: &[TSVWord], row_threshold_ratio: f64) -> Vec<u32> {
+    if words.is_empty() {
+        return Vec::new();
+    }
+
+    // Calculate median height for threshold
+    let mut heights: Vec<u32> = words.iter().map(|w| w.height).collect();
+    heights.sort_unstable();
+    let median_height = heights[heights.len() / 2];
+    let row_threshold = (median_height as f64 * row_threshold_ratio) as u32;
+
+    // Group words by approximate y-center
+    let mut position_groups: Vec<Vec<f64>> = Vec::new();
+
+    for word in words {
+        let y_center = word.y_center();
+
+        // Find existing group within threshold
+        let mut found_group = false;
+        for group in &mut position_groups {
+            if let Some(&first_pos) = group.first()
+                && (y_center - first_pos).abs() <= row_threshold as f64
+            {
+                group.push(y_center);
+                found_group = true;
+                break;
+            }
+        }
+
+        // Create new group if not found
+        if !found_group {
+            position_groups.push(vec![y_center]);
+        }
+    }
+
+    // Calculate median for each group
+    let mut rows: Vec<u32> = position_groups
+        .iter()
+        .filter(|group| !group.is_empty())
+        .map(|group| {
+            let mut sorted = group.clone();
+            sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let mid = sorted.len() / 2;
+            sorted[mid] as u32
+        })
+        .collect();
+
+    // Sort rows top to bottom
+    rows.sort_unstable();
+    rows
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_word(left: u32, top: u32, width: u32, height: u32, text: &str) -> TSVWord {
+        TSVWord {
+            level: 5,
+            page_num: 1,
+            block_num: 0,
+            par_num: 0,
+            line_num: 0,
+            word_num: 0,
+            left,
+            top,
+            width,
+            height,
+            conf: 95.0,
+            text: text.to_string(),
+        }
+    }
+
+    #[test]
+    fn test_detect_columns_simple() {
+        let words = vec![
+            create_test_word(100, 50, 80, 30, "A1"),
+            create_test_word(105, 90, 75, 30, "A2"),
+            create_test_word(300, 50, 70, 30, "B1"),
+            create_test_word(295, 90, 75, 30, "B2"),
+        ];
+
+        let columns = detect_columns(&words, 20);
+        assert_eq!(columns.len(), 2);
+        assert!(columns[0] < 120); // First column around 100
+        assert!(columns[1] > 280); // Second column around 300
+    }
+
+    #[test]
+    fn test_detect_columns_single() {
+        let words = vec![
+            create_test_word(100, 50, 80, 30, "A1"),
+            create_test_word(105, 90, 75, 30, "A2"),
+            create_test_word(110, 130, 70, 30, "A3"),
+        ];
+
+        let columns = detect_columns(&words, 20);
+        assert_eq!(columns.len(), 1);
+    }
+
+    #[test]
+    fn test_detect_columns_empty() {
+        let words: Vec<TSVWord> = vec![];
+        let columns = detect_columns(&words, 20);
+        assert_eq!(columns.len(), 0);
+    }
+
+    #[test]
+    fn test_detect_rows_simple() {
+        let words = vec![
+            create_test_word(100, 50, 80, 30, "A1"),
+            create_test_word(300, 52, 70, 30, "B1"),
+            create_test_word(100, 90, 75, 30, "A2"),
+            create_test_word(300, 88, 75, 30, "B2"),
+        ];
+
+        let rows = detect_rows(&words, 0.5);
+        assert_eq!(rows.len(), 2);
+        assert!(rows[0] < 70); // First row around y=65
+        assert!(rows[1] > 80); // Second row around y=105
+    }
+
+    #[test]
+    fn test_detect_rows_single() {
+        let words = vec![
+            create_test_word(100, 50, 80, 30, "A1"),
+            create_test_word(300, 52, 70, 30, "B1"),
+            create_test_word(500, 48, 75, 30, "C1"),
+        ];
+
+        let rows = detect_rows(&words, 0.5);
+        assert_eq!(rows.len(), 1);
+    }
+
+    #[test]
+    fn test_detect_rows_empty() {
+        let words: Vec<TSVWord> = vec![];
+        let rows = detect_rows(&words, 0.5);
+        assert_eq!(rows.len(), 0);
+    }
+
+    #[test]
+    fn test_detect_columns_sorted() {
+        let words = vec![
+            create_test_word(500, 50, 80, 30, "C1"),
+            create_test_word(100, 50, 80, 30, "A1"),
+            create_test_word(300, 50, 70, 30, "B1"),
+        ];
+
+        let columns = detect_columns(&words, 20);
+        assert_eq!(columns.len(), 3);
+        // Verify columns are sorted left to right
+        assert!(columns[0] < columns[1]);
+        assert!(columns[1] < columns[2]);
+    }
+
+    #[test]
+    fn test_detect_rows_sorted() {
+        let words = vec![
+            create_test_word(100, 130, 80, 30, "A3"),
+            create_test_word(100, 50, 80, 30, "A1"),
+            create_test_word(100, 90, 80, 30, "A2"),
+        ];
+
+        let rows = detect_rows(&words, 0.5);
+        assert_eq!(rows.len(), 3);
+        // Verify rows are sorted top to bottom
+        assert!(rows[0] < rows[1]);
+        assert!(rows[1] < rows[2]);
+    }
+}

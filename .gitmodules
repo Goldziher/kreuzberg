@@ -1,0 +1,4 @@
+[submodule "vendor/html-to-markdown"]
+	path = vendor/html-to-markdown
+	url = https://github.com/Goldziher/html-to-markdown.git
+	branch = v2-dev

@@ -20,6 +20,9 @@ pub enum OCRError {
     #[error("OCR processing failed: {0}")]
     ProcessingFailed(String),
 
+    #[error("Configuration error: {0}")]
+    ConfigurationError(String),
+
     #[error("Image format not supported: {0}")]
     UnsupportedImageFormat(String),
 

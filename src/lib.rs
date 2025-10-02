@@ -34,7 +34,10 @@ use image_preprocessing::{
     load_image_as_numpy, normalize_image_dpi, rgb_to_grayscale, rgb_to_rgba, rgba_to_rgb, save_image,
     save_numpy_as_image,
 };
-use ocr::{ExtractionResultDTO, PSMMode, TesseractConfigDTO, validate_language_code, validate_tesseract_version};
+use ocr::{
+    ExtractionResultDTO, OCRCacheStats, OCRProcessor, PSMMode, TesseractConfigDTO, validate_language_code,
+    validate_tesseract_version,
+};
 use pptx::extractor::PptxExtractorDTO;
 use pptx::streaming::extractor::StreamingPptxExtractorDTO;
 use pptx::types::{PptxExtractionResultDTO, PptxMetadataDTO};
@@ -130,6 +133,8 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PSMMode>()?;
     m.add_class::<TesseractConfigDTO>()?;
     m.add_class::<ExtractionResultDTO>()?;
+    m.add_class::<OCRProcessor>()?;
+    m.add_class::<OCRCacheStats>()?;
 
     xml::register_xml_functions(m)?;
     text::register_text_functions(m)?;
