@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
-from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 from unittest.mock import patch
 
+import msgspec.structs
 import polars as pl
 import pytest
 from PIL.Image import Image
@@ -636,7 +636,7 @@ async def test_pdf_extract_path_async_searchable_text(
 async def test_pdf_extract_path_async_force_ocr(
     pdf_extractor: PDFExtractor, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    pdf_extractor.config = replace(pdf_extractor.config, force_ocr=True, ocr=TesseractConfig())
+    pdf_extractor.config = msgspec.structs.replace(pdf_extractor.config, force_ocr=True, ocr=TesseractConfig())
 
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"dummy pdf content")
@@ -657,14 +657,14 @@ async def test_pdf_extract_path_async_force_ocr(
     result = await pdf_extractor.extract_path_async(test_file)
 
     assert result.content == "OCR extracted text"
-    mock_extract_ocr.assert_called_once_with(test_file, TesseractConfig())
+    mock_extract_ocr.assert_called_once_with(test_file)
 
 
 @pytest.mark.anyio
 async def test_pdf_extract_path_async_with_tables(
     pdf_extractor: PDFExtractor, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    pdf_extractor.config = replace(pdf_extractor.config, tables=TableExtractionConfig())
+    pdf_extractor.config = msgspec.structs.replace(pdf_extractor.config, tables=TableExtractionConfig())
 
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"dummy pdf content")
@@ -708,7 +708,7 @@ async def test_pdf_extract_path_async_searchable_fails(
     mock_extract_searchable = mocker.patch.object(pdf_extractor, "_extract_pdf_searchable_text")
     mock_extract_searchable.side_effect = ParsingError("PDF parsing failed")
 
-    pdf_extractor.config = replace(pdf_extractor.config, ocr=TesseractConfig())
+    pdf_extractor.config = msgspec.structs.replace(pdf_extractor.config, ocr=TesseractConfig())
     mock_extract_ocr = mocker.patch.object(pdf_extractor, "_extract_pdf_text_with_ocr")
     mock_extract_ocr.return_value = ExtractionResult(
         content="OCR fallback content", mime_type="text/plain", metadata={}, chunks=[]
@@ -732,7 +732,7 @@ async def test_pdf_extract_path_async_searchable_fails(
 async def test_pdf_extract_path_async_no_extraction_possible(
     pdf_extractor: PDFExtractor, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    pdf_extractor.config = replace(pdf_extractor.config, ocr=None)
+    pdf_extractor.config = msgspec.structs.replace(pdf_extractor.config, ocr=None)
 
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"dummy pdf content")
@@ -786,7 +786,7 @@ def test_pdf_extract_path_sync_parsing_error(
     mock_extract_searchable = mocker.patch.object(pdf_extractor, "_extract_pdf_searchable_text_sync")
     mock_extract_searchable.side_effect = ParsingError("Sync parsing failed")
 
-    pdf_extractor.config = replace(pdf_extractor.config, ocr=TesseractConfig())
+    pdf_extractor.config = msgspec.structs.replace(pdf_extractor.config, ocr=TesseractConfig())
 
     mock_extract_ocr = mocker.patch.object(pdf_extractor, "_extract_pdf_with_ocr_sync")
     mock_extract_ocr.return_value = "OCR sync content"
@@ -806,7 +806,7 @@ def test_pdf_extract_path_sync_parsing_error(
 def test_pdf_extract_path_sync_tables_import_error(
     pdf_extractor: PDFExtractor, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    pdf_extractor.config = replace(pdf_extractor.config, tables=TableExtractionConfig())
+    pdf_extractor.config = msgspec.structs.replace(pdf_extractor.config, tables=TableExtractionConfig())
 
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"dummy pdf content")
@@ -833,7 +833,7 @@ def test_pdf_extract_path_sync_tables_import_error(
 def test_pdf_extract_path_sync_invalid_text_ocr_fallback(
     pdf_extractor: PDFExtractor, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    pdf_extractor.config = replace(pdf_extractor.config, ocr=TesseractConfig())
+    pdf_extractor.config = msgspec.structs.replace(pdf_extractor.config, ocr=TesseractConfig())
 
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"dummy pdf content")
@@ -897,7 +897,7 @@ def test_pdf_class_constants_values(pdf_extractor: PDFExtractor) -> None:
 async def test_pdf_extract_path_async_table_import_error(
     pdf_extractor: PDFExtractor, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    pdf_extractor.config = replace(pdf_extractor.config, tables=TableExtractionConfig())
+    pdf_extractor.config = msgspec.structs.replace(pdf_extractor.config, tables=TableExtractionConfig())
 
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"dummy pdf content")

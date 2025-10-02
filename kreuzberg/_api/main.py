@@ -5,7 +5,7 @@ import io
 import os
 import time
 import traceback
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
 import msgspec
 import polars as pl
@@ -35,12 +35,10 @@ from kreuzberg._utils._cache import (
 )
 from kreuzberg._utils._serialization import deserialize
 
-if TYPE_CHECKING:
-    from litestar.datastructures import UploadFile
-
 try:
     from litestar import Litestar, Request, Response, delete, get, post
     from litestar.contrib.opentelemetry import OpenTelemetryConfig, OpenTelemetryPlugin
+    from litestar.datastructures import UploadFile  # noqa: TC002  # Litestar needs this at runtime
     from litestar.enums import RequestEncodingType
     from litestar.logging import StructLoggingConfig
     from litestar.openapi.config import OpenAPIConfig

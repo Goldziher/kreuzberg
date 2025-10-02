@@ -86,7 +86,7 @@ async def test_extract_validation_error_response(test_client: AsyncTestClient[An
     assert response.status_code == 400
     error_response = response.json()
     assert "Invalid configuration" in error_response["message"]
-    assert '"param": "invalid_value"' in error_response["details"]
+    assert error_response["context"]["param"] == "invalid_value"
 
 
 @pytest.mark.anyio
@@ -102,7 +102,7 @@ async def test_extract_parsing_error_response(test_client: AsyncTestClient[Any],
     assert response.status_code == 422
     error_response = response.json()
     assert "Failed to parse document" in error_response["message"]
-    assert '"file_type": "unknown"' in error_response["details"]
+    assert error_response["context"]["file_type"] == "unknown"
 
 
 @pytest.mark.anyio
@@ -118,7 +118,7 @@ async def test_extract_ocr_error_response(test_client: AsyncTestClient[Any], tmp
     assert response.status_code == 500
     error_response = response.json()
     assert "OCR processing failed" in error_response["message"]
-    assert '"engine": "tesseract"' in error_response["details"]
+    assert error_response["context"]["engine"] == "tesseract"
 
 
 @pytest.mark.anyio
@@ -310,11 +310,11 @@ def test_exception_handler_validation_error() -> None:
 
     assert response.status_code == 400
     assert "Invalid input" in response.content["message"]
-    assert '"field": "test"' in response.content["details"]
+    assert response.content["context"]["field"] == "test"
 
     mock_app.logger.error.assert_called_once()
     call_args = mock_app.logger.error.call_args
-    assert call_args[0][0] == "API error"
+    assert call_args[0][0] == "Kreuzberg API error"
     assert call_args[1]["method"] == "POST"
     assert call_args[1]["status_code"] == 400
 
@@ -333,7 +333,7 @@ def test_exception_handler_parsing_error() -> None:
 
     assert response.status_code == 422
     assert "Failed to parse document" in response.content["message"]
-    assert '"file": "test.pdf"' in response.content["details"]
+    assert response.content["context"]["file"] == "test.pdf"
 
 
 def test_exception_handler_other_error() -> None:
@@ -348,9 +348,9 @@ def test_exception_handler_other_error() -> None:
 
     response = exception_handler(mock_request, error)
 
-    assert response.status_code == 500
+    assert response.status_code == 422
     assert "OCR processing failed" in response.content["message"]
-    assert '"engine": "tesseract"' in response.content["details"]
+    assert response.content["context"]["engine"] == "tesseract"
 
 
 def test_exception_handler_no_logger() -> None:
@@ -563,7 +563,7 @@ def test_exception_handler_with_empty_context() -> None:
 
     assert response.status_code == 400
     assert response.content["message"] == "ValidationError: Test error"
-    assert response.content["details"] == "{}"
+    assert response.content["context"] == {}
 
 
 def test_exception_handler_context_serialization() -> None:
@@ -582,11 +582,11 @@ def test_exception_handler_context_serialization() -> None:
     response = exception_handler(mock_request, error)
 
     assert response.status_code == 422
-    assert '"numbers": [1, 2, 3]' in response.content["details"]
-    assert '"nested": {"key": "value"}' in response.content["details"]
-    assert '"boolean": true' in response.content["details"]
-    assert '"none": null' in response.content["details"]
-    assert '"float": 3.14' in response.content["details"]
+    assert response.content["context"]["numbers"] == [1, 2, 3]
+    assert response.content["context"]["nested"] == {"key": "value"}
+    assert response.content["context"]["boolean"] is True
+    assert response.content["context"]["none"] is None
+    assert response.content["context"]["float"] == 3.14
 
 
 @pytest.mark.anyio
@@ -669,8 +669,8 @@ async def test_extract_with_invalid_config_file(test_client: AsyncTestClient[Any
     assert response.status_code == 400
     error_response = response.json()
     assert "Invalid TOML in configuration file" in error_response["message"]
-    assert "TOML parse error" in error_response["details"]
-    assert "/path/to/kreuzberg.toml" in error_response["details"]
+    assert error_response["context"]["error"] == "TOML parse error"
+    assert error_response["context"]["file"] == "/path/to/kreuzberg.toml"
 
 
 @pytest.mark.anyio
@@ -688,8 +688,8 @@ async def test_get_config_with_invalid_config_file(test_client: AsyncTestClient[
     assert response.status_code == 400
     error_response = response.json()
     assert "Invalid OCR backend: unknown" in error_response["message"]
-    assert '"provided": "unknown"' in error_response["details"]
-    assert "easyocr" in error_response["details"]
+    assert error_response["context"]["provided"] == "unknown"
+    assert "easyocr" in str(error_response["context"]["valid"])
 
 
 @pytest.mark.anyio
@@ -711,7 +711,7 @@ async def test_extract_with_invalid_ocr_config(test_client: AsyncTestClient[Any]
     assert response.status_code == 400
     error_response = response.json()
     assert "Invalid PSM mode value: 99" in error_response["message"]
-    assert '"psm_value": 99' in error_response["details"]
+    assert error_response["context"]["psm_value"] == 99
 
 
 @pytest.mark.anyio
@@ -735,7 +735,7 @@ async def test_extract_with_invalid_vision_tables_config(test_client: AsyncTestC
     assert response.status_code == 400
     error_response = response.json()
     assert "Invalid GMFT configuration" in error_response["message"]
-    assert "invalid_param" in error_response["details"]
+    assert "invalid_param" in str(error_response["context"]["vision_tables_config"])
 
 
 @pytest.mark.anyio
@@ -757,8 +757,8 @@ async def test_extract_with_unreadable_config_file(test_client: AsyncTestClient[
     assert response.status_code == 400
     error_response = response.json()
     assert "Failed to read pyproject.toml" in error_response["message"]
-    assert "Permission denied" in error_response["details"]
-    assert "/path/to/pyproject.toml" in error_response["details"]
+    assert error_response["context"]["error"] == "Permission denied"
+    assert error_response["context"]["file"] == "/path/to/pyproject.toml"
 
 
 @pytest.mark.anyio
@@ -781,7 +781,7 @@ async def test_extract_with_invalid_extraction_config(test_client: AsyncTestClie
     error_response = response.json()
     assert "Invalid extraction configuration" in error_response["message"]
     assert "max_chars must be positive" in error_response["message"]
-    assert '"max_chars": -100' in error_response["details"]
+    assert error_response["context"]["config"]["max_chars"] == -100
 
 
 @pytest.mark.anyio
