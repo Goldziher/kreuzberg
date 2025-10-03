@@ -44,15 +44,15 @@ pub fn detect_columns(words: &[TSVWord], column_threshold: u32) -> Vec<u32> {
         }
     }
 
-    // Calculate median for each group
+    // Calculate median for each group using partial sort for efficiency
     let mut columns: Vec<u32> = position_groups
         .iter()
         .filter(|group| !group.is_empty())
         .map(|group| {
-            let mut sorted = group.clone();
-            sorted.sort_unstable();
-            let mid = sorted.len() / 2;
-            sorted[mid]
+            let mut positions = group.clone();
+            let mid = positions.len() / 2;
+            positions.select_nth_unstable(mid);
+            positions[mid]
         })
         .collect();
 
@@ -109,15 +109,15 @@ pub fn detect_rows(words: &[TSVWord], row_threshold_ratio: f64) -> Vec<u32> {
         }
     }
 
-    // Calculate median for each group
+    // Calculate median for each group using partial sort for efficiency
     let mut rows: Vec<u32> = position_groups
         .iter()
         .filter(|group| !group.is_empty())
         .map(|group| {
-            let mut sorted = group.clone();
-            sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-            let mid = sorted.len() / 2;
-            sorted[mid] as u32
+            let mut positions = group.clone();
+            let mid = positions.len() / 2;
+            positions.select_nth_unstable_by(mid, |a, b| a.partial_cmp(b).unwrap());
+            positions[mid] as u32
         })
         .collect();
 

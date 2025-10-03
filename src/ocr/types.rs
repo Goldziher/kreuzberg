@@ -147,8 +147,19 @@ impl TesseractConfigDTO {
         tessedit_use_primary_params_model: bool,
         textord_space_size_is_variable: bool,
         thresholding_method: bool,
-    ) -> Self {
-        Self {
+    ) -> PyResult<Self> {
+        // Validate output format early
+        match output_format.as_str() {
+            "text" | "markdown" | "hocr" | "tsv" => {}
+            _ => {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Invalid output_format: '{}'. Must be one of: text, markdown, hocr, tsv",
+                    output_format
+                )));
+            }
+        }
+
+        Ok(Self {
             language,
             psm,
             output_format,
@@ -166,7 +177,7 @@ impl TesseractConfigDTO {
             tessedit_use_primary_params_model,
             textord_space_size_is_variable,
             thresholding_method,
-        }
+        })
     }
 
     fn __repr__(&self) -> String {

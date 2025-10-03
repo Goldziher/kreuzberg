@@ -41,7 +41,7 @@ impl OCRProcessor {
     pub fn process_image(&self, image_bytes: &[u8], config: &TesseractConfigDTO) -> PyResult<ExtractionResultDTO> {
         // Generate cache key
         let image_hash = compute_image_hash(image_bytes);
-        let config_str = self.serialize_config(config);
+        let config_str = self.hash_config(config);
 
         // Check cache if enabled
         if config.use_cache
@@ -98,16 +98,16 @@ impl OCRProcessor {
         config: &TesseractConfigDTO,
     ) -> PyResult<Vec<BatchItemResult>> {
         let results: Vec<BatchItemResult> = file_paths
-            .iter()
-            .map(|path| match self.process_file(path, config) {
+            .into_iter()
+            .map(|path| match self.process_file(&path, config) {
                 Ok(result) => BatchItemResult {
-                    file_path: path.clone(),
+                    file_path: path,
                     success: true,
                     result: Some(result),
                     error: None,
                 },
                 Err(e) => BatchItemResult {
-                    file_path: path.clone(),
+                    file_path: path,
                     success: false,
                     result: None,
                     error: Some(e.to_string()),
@@ -117,24 +117,31 @@ impl OCRProcessor {
         Ok(results)
     }
 
-    /// Serialize config for cache key generation
-    fn serialize_config(&self, config: &TesseractConfigDTO) -> String {
-        format!(
-            "lang={}&psm={}&format={}&table_detection={}&classify_pre_adapted={}&ngram={}&blkrej={}&rowrej={}&dict_correction={}&whitelist={}&primary_params={}&space_variable={}&threshold={}",
-            config.language,
-            config.psm,
-            config.output_format,
-            config.enable_table_detection,
-            config.classify_use_pre_adapted_templates,
-            config.language_model_ngram_on,
-            config.tessedit_dont_blkrej_good_wds,
-            config.tessedit_dont_rowrej_good_wds,
-            config.tessedit_enable_dict_correction,
-            config.tessedit_char_whitelist,
-            config.tessedit_use_primary_params_model,
-            config.textord_space_size_is_variable,
-            config.thresholding_method
-        )
+    /// Generate config hash for cache key generation
+    /// Directly hashes config fields without intermediate string allocation
+    fn hash_config(&self, config: &TesseractConfigDTO) -> String {
+        use ahash::AHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = AHasher::default();
+        config.language.hash(&mut hasher);
+        config.psm.hash(&mut hasher);
+        config.output_format.hash(&mut hasher);
+        config.enable_table_detection.hash(&mut hasher);
+        config.table_min_confidence.to_bits().hash(&mut hasher);
+        config.table_column_threshold.hash(&mut hasher);
+        config.table_row_threshold_ratio.to_bits().hash(&mut hasher);
+        config.classify_use_pre_adapted_templates.hash(&mut hasher);
+        config.language_model_ngram_on.hash(&mut hasher);
+        config.tessedit_dont_blkrej_good_wds.hash(&mut hasher);
+        config.tessedit_dont_rowrej_good_wds.hash(&mut hasher);
+        config.tessedit_enable_dict_correction.hash(&mut hasher);
+        config.tessedit_char_whitelist.hash(&mut hasher);
+        config.tessedit_use_primary_params_model.hash(&mut hasher);
+        config.textord_space_size_is_variable.hash(&mut hasher);
+        config.thresholding_method.hash(&mut hasher);
+
+        format!("{:016x}", hasher.finish())
     }
 
     /// Perform the actual OCR processing
@@ -242,15 +249,15 @@ impl OCRProcessor {
         .map_err(|e| OCRError::ProcessingFailed(format!("Failed to set image: {}", e)))?;
 
         // Extract text based on output format
-        // Note: If table detection is enabled, we need TSV data regardless of output format
-        let tsv_data_for_tables =
-            if config.enable_table_detection {
-                Some(api.get_tsv_text(0).map_err(|e| {
-                    OCRError::ProcessingFailed(format!("Failed to extract TSV for table detection: {}", e))
-                })?)
-            } else {
-                None
-            };
+        // Note: Extract TSV if table detection is enabled OR if TSV is the output format
+        let tsv_data_for_tables = if config.enable_table_detection || config.output_format == "tsv" {
+            Some(
+                api.get_tsv_text(0)
+                    .map_err(|e| OCRError::ProcessingFailed(format!("Failed to extract TSV: {}", e)))?,
+            )
+        } else {
+            None
+        };
 
         let (content, mime_type) = match config.output_format.as_str() {
             "text" => {
@@ -289,13 +296,12 @@ impl OCRProcessor {
                 (hocr, "text/html".to_string())
             }
             "tsv" => {
-                // TSV output - reuse data if already extracted for table detection
-                let tsv = if let Some(ref tsv) = tsv_data_for_tables {
-                    tsv.clone()
-                } else {
-                    api.get_tsv_text(0)
-                        .map_err(|e| OCRError::ProcessingFailed(format!("Failed to extract TSV: {}", e)))?
-                };
+                // TSV output - always extracted above when output_format="tsv"
+                // Clone so we can still use for table detection if enabled
+                let tsv = tsv_data_for_tables
+                    .as_ref()
+                    .expect("TSV data should be extracted when output_format is 'tsv'")
+                    .clone();
                 (tsv, "text/tab-separated-values".to_string())
             }
             _ => {

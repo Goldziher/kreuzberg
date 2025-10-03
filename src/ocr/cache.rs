@@ -104,7 +104,7 @@ impl OCRCache {
         cache_string.hash(&mut hasher);
         let hash = hasher.finish();
 
-        format!("{:032x}", hash)
+        format!("{:016x}", hash)
     }
 
     /// Clear all cached OCR results
@@ -183,6 +183,7 @@ mod tests {
             content: "Test OCR result".to_string(),
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
+            tables: Vec::new(),
         };
 
         // Set cache
@@ -214,6 +215,7 @@ mod tests {
             content: "Test".to_string(),
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
+            tables: Vec::new(),
         };
 
         cache.set_cached_result("test", "tesseract", "eng", &result).unwrap();
@@ -236,6 +238,7 @@ mod tests {
             content: "Test".to_string(),
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
+            tables: Vec::new(),
         };
 
         cache.set_cached_result("test", "tesseract", "eng", &result).unwrap();
