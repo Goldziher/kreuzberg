@@ -17,6 +17,11 @@ on:
         required: true
         type: boolean
         default: true
+      build_full:
+        description: 'Build full image'
+        required: true
+        type: boolean
+        default: true
   release:
     types: [published]
 
@@ -47,6 +52,10 @@ jobs:
             extras: "cli chunking crypto document-classification langdetect additional-extensions"
             image_name: "goldziher/kreuzberg-core"
             should_build: ${{ github.event_name == 'release' || inputs.build_core == true }}
+          - name: full
+            extras: "all"
+            image_name: "goldziher/kreuzberg-full"
+            should_build: ${{ github.event_name == 'release' || inputs.build_full == true }}
 
     steps:
       - name: Free up disk space

@@ -44,6 +44,38 @@ tasks:
     cmds:
       - uv run mkdocs serve
 
+  docker:build-base:
+    desc: "Build base Docker image"
+    cmds:
+      - docker build -t kreuzberg:base --build-arg EXTRAS="cli" -f .docker/Dockerfile .
+
+  docker:build-core:
+    desc: "Build core Docker image"
+    cmds:
+      - docker build -t kreuzberg:core --build-arg EXTRAS="cli chunking crypto document-classification langdetect additional-extensions" -f .docker/Dockerfile .
+
+  docker:build-full:
+    desc: "Build full Docker image with all extras + LibreOffice"
+    cmds:
+      - docker build -t kreuzberg:full --build-arg EXTRAS="all" -f .docker/Dockerfile .
+
+  docker:build-all:
+    desc: "Build all Docker images"
+    cmds:
+      - task: docker:build-base
+      - task: docker:build-core
+      - task: docker:build-full
+
+  docker:test:
+    desc: "Run Docker E2E tests"
+    cmds:
+      - python tests/e2e/docker_e2e.py
+
+  docker:test-image:
+    desc: "Test specific Docker image (usage: task docker:test-image IMAGE=kreuzberg:base)"
+    cmds:
+      - python tests/e2e/docker_e2e.py --image {{.IMAGE}}
+
   default:
     desc: "Show available tasks"
     cmds:

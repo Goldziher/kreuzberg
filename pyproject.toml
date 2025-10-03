@@ -293,6 +293,14 @@ module = [
 ]
 ignore_missing_imports = true
 
+[tool.uv]
+cache-keys = [
+  { file = "pyproject.toml" },
+  { file = "Cargo.toml" },
+  { file = "Cargo.lock" },
+  { file = "src/**/*.rs" },
+]
+
 [tool.uv.workspace]
 members = [ ".", "comparative-benchmarks" ]
 

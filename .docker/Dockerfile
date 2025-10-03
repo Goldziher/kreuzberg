@@ -17,30 +17,24 @@ COPY Cargo.toml Cargo.lock ./
 COPY src src
 COPY kreuzberg kreuzberg
 
-# Install maturin and build Rust extension
-# Use --compatibility linux to avoid manylinux issues in Docker
+# Build and install with uv sync (handles maturin automatically)
 RUN --mount=type=cache,target=/tmp/uv-cache \
     --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
     --mount=type=cache,target=/app/target \
-    uv pip install --system maturin && \
-    maturin build --release --out dist --compatibility linux && \
-    uv venv && \
-    uv pip install dist/*.whl && \
     if [ -z "$EXTRAS" ]; then \
-        uv sync --extra api --no-editable --no-dev --compile-bytecode; \
+        uv sync --extra api --no-dev --frozen --compile-bytecode; \
     else \
         extras_args="--extra api"; \
         for extra in $EXTRAS; do \
             extras_args="$extras_args --extra $extra"; \
         done; \
-        uv sync $extras_args --no-editable --no-dev --compile-bytecode; \
+        uv sync $extras_args --no-dev --frozen --compile-bytecode; \
     fi && \
     rm -rf /app/.venv/lib/python*/site-packages/**/__pycache__ && \
     find /app/.venv -type f -name "*.pyc" -delete && \
     find /app/.venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/.venv -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
-    rm -rf dist
+    find /app/.venv -type d -name "test" -exec rm -rf {} + 2>/dev/null || true
 
 # Runtime stage
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS runtime
@@ -75,7 +69,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender-dev \
     libgomp1 \
     libgl1 \
-    libglib2.0-0 \
+    && if echo "$EXTRAS" | grep -q "all"; then \
+        apt-get install -y --no-install-recommends libreoffice; \
+    fi \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy virtual environment from builder

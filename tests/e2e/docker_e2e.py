@@ -13,6 +13,7 @@ from typing import Any
 DOCKER_IMAGES = {
     "base": "kreuzberg:base",
     "core": "kreuzberg:core",
+    "full": "kreuzberg:full",
 }
 
 OPTIONAL_IMAGES: set[str] = set()
@@ -26,7 +27,7 @@ SECURITY_CONFIG = {
 }
 
 TEST_DIR = Path(__file__).parent.parent
-TEST_FILES_DIR = TEST_DIR / "test_source_files"
+TEST_FILES_DIR = TEST_DIR.parent / "test_documents"
 
 test_results: dict[str, dict[str, Any]] = {}
 
@@ -397,6 +398,41 @@ def test_malicious_input_handling(image_name: str) -> bool:
         return exit_code != 0 or "passwd" not in stdout
 
 
+def test_libreoffice_extraction(image_name: str) -> bool:
+    test_file = "legacy_office/unit_test_lists.doc"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--memory",
+        "1g",
+        "--cpus",
+        "1.0",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=120)
+    success = exit_code == 0 and len(stdout) > 20
+
+    if not success and stderr:
+        pass
+    return success
+
+
 def run_tests_for_image(image_variant: str, image_name: str) -> dict[str, bool]:
     results = {}
 
@@ -415,6 +451,9 @@ def run_tests_for_image(image_variant: str, image_name: str) -> dict[str, bool]:
     results["ocr"] = test_ocr_extraction(image_name, image_variant)
 
     results["api_extract"] = test_api_extraction(image_name)
+
+    if image_variant == "full":
+        results["libreoffice"] = test_libreoffice_extraction(image_name)
 
     results["volume_security"] = test_volume_security(image_name)
     results["resource_limits"] = test_resource_limits(image_name)
