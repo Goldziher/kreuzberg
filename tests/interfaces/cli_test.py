@@ -8,10 +8,9 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from kreuzberg import ExtractionResult
+from kreuzberg import ExtractionConfig, ExtractionResult
 from kreuzberg.cli import (
     OcrBackendParamType,
-    _build_cli_args,
     _load_config,
     _perform_extraction,
     _write_output,
@@ -175,117 +174,6 @@ def test_load_config_default_error() -> None:
         assert result == {}
 
 
-def test_build_cli_args_basic() -> None:
-    params = {
-        "force_ocr": True,
-        "chunk_content": False,
-        "extract_tables": True,
-        "extract_entities": False,
-        "extract_keywords": False,
-        "auto_detect_language": True,
-        "keyword_count": 10,
-        "max_chars": 1000,
-        "max_overlap": 200,
-        "ocr_backend": "tesseract",
-        "tesseract_lang": None,
-        "tesseract_psm": None,
-        "tesseract_output_format": None,
-        "enable_table_detection": False,
-        "easyocr_languages": None,
-        "paddleocr_languages": None,
-    }
-
-    result = _build_cli_args(params)
-
-    assert result["force_ocr"] is True
-    assert result["chunk_content"] is None
-    assert result["extract_tables"] is True
-    assert result["auto_detect_language"] is True
-    assert result["keyword_count"] is None
-    assert result["ocr_backend"] == "tesseract"
-
-
-def test_build_cli_args_tesseract() -> None:
-    params = {
-        "force_ocr": False,
-        "chunk_content": False,
-        "extract_tables": False,
-        "extract_entities": False,
-        "extract_keywords": False,
-        "auto_detect_language": False,
-        "keyword_count": 10,
-        "max_chars": 1000,
-        "max_overlap": 200,
-        "ocr_backend": "tesseract",
-        "tesseract_lang": "eng+deu",
-        "tesseract_psm": 3,
-        "tesseract_output_format": "tsv",
-        "enable_table_detection": True,
-        "easyocr_languages": None,
-        "paddleocr_languages": None,
-    }
-
-    result = _build_cli_args(params)
-
-    assert "tesseract_config" in result
-    assert result["tesseract_config"]["language"] == "eng+deu"
-    assert result["tesseract_config"]["psm"] == 3
-    assert result["tesseract_config"]["output_format"] == "tsv"
-    assert result["tesseract_config"]["enable_table_detection"] is True
-
-
-def test_build_cli_args_easyocr() -> None:
-    params = {
-        "force_ocr": False,
-        "chunk_content": False,
-        "extract_tables": False,
-        "extract_entities": False,
-        "extract_keywords": False,
-        "auto_detect_language": False,
-        "keyword_count": 10,
-        "max_chars": 1000,
-        "max_overlap": 200,
-        "ocr_backend": "easyocr",
-        "tesseract_lang": None,
-        "tesseract_psm": None,
-        "tesseract_output_format": None,
-        "enable_table_detection": False,
-        "easyocr_languages": "en,de",
-        "paddleocr_languages": None,
-    }
-
-    result = _build_cli_args(params)
-
-    assert "easyocr_config" in result
-    assert result["easyocr_config"]["languages"] == ["en", "de"]
-
-
-def test_build_cli_args_paddleocr() -> None:
-    params = {
-        "force_ocr": False,
-        "chunk_content": False,
-        "extract_tables": False,
-        "extract_entities": False,
-        "extract_keywords": False,
-        "auto_detect_language": False,
-        "keyword_count": 10,
-        "max_chars": 1000,
-        "max_overlap": 200,
-        "ocr_backend": "paddleocr",
-        "tesseract_lang": None,
-        "tesseract_psm": None,
-        "tesseract_output_format": None,
-        "enable_table_detection": False,
-        "easyocr_languages": None,
-        "paddleocr_languages": "en,ch_sim",
-    }
-
-    result = _build_cli_args(params)
-
-    assert "paddleocr_config" in result
-    assert result["paddleocr_config"]["languages"] == ["en", "ch_sim"]
-
-
 def test_perform_extraction_from_file(tmp_path: Path) -> None:
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test content")
@@ -315,7 +203,6 @@ def test_perform_extraction_from_stdin() -> None:
 
         result = _perform_extraction(None, mock_config, verbose=True)
         assert result == mock_result
-        # MIME type detection now uses simple content inspection
         mock_extract.assert_called_once_with(b"Test input", "text/plain", config=mock_config)
 
 
@@ -349,7 +236,6 @@ def test_perform_extraction_stdin_detect_html() -> None:
 
         result = _perform_extraction(Path("-"), mock_config, verbose=False)
         assert result == mock_result
-        # HTML detection now works through content inspection
         mock_extract.assert_called_once_with(b"<html><body>Test</body></html>", "text/html", config=mock_config)
 
 
@@ -366,7 +252,6 @@ def test_perform_extraction_stdin_detect_json() -> None:
 
         result = _perform_extraction(Path("-"), mock_config, verbose=False)
         assert result == mock_result
-        # JSON detection now works through content inspection
         mock_extract.assert_called_once_with(b'{"test": "data"}', "application/json", config=mock_config)
 
 
@@ -541,3 +426,207 @@ def test_config_command_error() -> None:
         result = runner.invoke(config, [])
 
         assert result.exit_code == 1
+
+
+def test_extract_with_tesseract_params(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.pdf"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--ocr-backend",
+                "tesseract",
+                "--tesseract-lang",
+                "eng+deu",
+                "--tesseract-psm",
+                "6",
+                "--tesseract-output-format",
+                "markdown",
+                "--enable-table-detection",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.ocr is not None
+        assert config_arg.ocr.language == "eng+deu"
+
+
+def test_extract_with_easyocr_backend(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.pdf"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--ocr-backend",
+                "easyocr",
+                "--easyocr-languages",
+                "en,de",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.ocr is not None
+
+
+def test_extract_with_paddleocr_backend(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.pdf"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--ocr-backend",
+                "paddleocr",
+                "--paddleocr-languages",
+                "en",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.ocr is not None
+
+
+def test_extract_with_ocr_none(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.pdf"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--ocr-backend",
+                "none",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.ocr is None
+
+
+def test_extract_with_entities_and_keywords(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--extract-entities",
+                "--extract-keywords",
+                "--keyword-count",
+                "15",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.entities is not None
+        assert config_arg.keywords is not None
+        assert config_arg.keywords.count == 15
+
+
+def test_extract_with_language_detection(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--auto-detect-language",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.language_detection is not None
+
+
+def test_extract_with_chunking_params(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+
+    mock_result = ExtractionResult(content="text", mime_type="text/plain")
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--chunk-content",
+                "--max-chars",
+                "500",
+                "--max-overlap",
+                "100",
+            ],
+        )
+
+        assert result.exit_code == 0
+        config_arg = mock_extract.call_args[1]["config"]
+        assert config_arg.chunking is not None
+        assert config_arg.chunking.max_chars == 500
+        assert config_arg.chunking.max_overlap == 100
+
+
+def test_perform_extraction_stdin_detect_yaml() -> None:
+    stdin_content = "---\nkey: value\n"
+
+    mock_result = ExtractionResult(content="Extracted", mime_type="text/plain")
+
+    with patch("kreuzberg.cli.extract_bytes_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        with patch("sys.stdin.buffer.read", return_value=stdin_content.encode()):
+            result = _perform_extraction(None, ExtractionConfig(), verbose=False)
+
+        assert result == mock_result
+        call_args = mock_extract.call_args
+        assert call_args[0][1] == "application/x-yaml"

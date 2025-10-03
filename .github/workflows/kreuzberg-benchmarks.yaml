@@ -29,6 +29,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -41,7 +46,9 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          uv sync --all-packages --all-extras --all-groups
+          uv sync --all-extras
+          uv pip install maturin
+          uv run maturin develop --release --features extension-module
 
       - name: Run benchmark tests
         env:

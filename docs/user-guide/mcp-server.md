@@ -1,6 +1,6 @@
 # MCP Server
 
-The Kreuzberg MCP (Model Context Protocol) server enables seamless integration with AI tools like Claude Desktop, Cursor, and other MCP-compatible applications. This allows AI assistants to directly extract text from documents without requiring API calls or manual file processing.
+The Kreuzberg MCP (Model Context Protocol) server enables integration with AI tools like Claude Desktop, Cursor, and other MCP-compatible applications. This allows AI assistants to directly extract text from documents without requiring API calls or manual file processing.
 
 ## What is MCP?
 
@@ -114,7 +114,7 @@ Kreuzberg MCP server supports enhanced functionality through optional dependenci
 | **Language Detection** | `langdetect`           | Automatically detect document languages          |
 | **Entity Extraction**  | `entity-extraction`    | Extract named entities and keywords              |
 | **Advanced OCR**       | `easyocr`, `paddleocr` | Alternative OCR engines                          |
-| **Table Extraction**   | `gmft`                 | Extract structured tables from PDFs              |
+| **Table Extraction**   | `vision-tables`        | Extract structured tables from PDFs              |
 | **All Features**       | `all`                  | Install all optional dependencies                |
 
 ### Installation Examples
@@ -183,7 +183,7 @@ For different use cases:
   "mcpServers": {
     "kreuzberg": {
       "command": "uvx",
-      "args": ["--with", "kreuzberg[easyocr,paddleocr,gmft]", "kreuzberg-mcp"]
+      "args": ["--with", "kreuzberg[easyocr,paddleocr,vision-tables]", "kreuzberg-mcp"]
     }
   }
 }
@@ -210,12 +210,12 @@ For different use cases:
 
 Without optional dependencies, certain features will be disabled:
 
-- **Chunking**: `chunk_content=True` will raise an error
-- **Language Detection**: `auto_detect_language=True` will be ignored
-- **Entity Extraction**: `extract_entities=True` will be ignored
-- **Keyword Extraction**: `extract_keywords=True` will be ignored
-- **Advanced OCR**: Only Tesseract will be available
-- **Table Extraction**: `extract_tables=True` will raise an error
+- **Chunking**: Requires `chunking` config - will raise an error without `semantic-text-splitter`
+- **Language Detection**: Requires `language_detection` config - will be ignored without `fast-langdetect`
+- **Entity Extraction**: Requires `entities` config - will be ignored without `spacy`
+- **Keyword Extraction**: Requires `keywords` config - will be ignored without `keybert`
+- **Advanced OCR**: Only Tesseract will be available (EasyOCR/PaddleOCR require extra packages)
+- **Table Extraction**: Requires `tables` config - will raise an error without `vision-tables`
 
 The MCP server will inform you when features are unavailable due to missing dependencies.
 
@@ -233,16 +233,32 @@ Comprehensive document extraction with full configuration options.
 
 - `file_path` (required): Path to the document file
 - `mime_type` (optional): MIME type of the document
-- `force_ocr` (optional): Force OCR even for text-based documents
-- `chunk_content` (optional): Split content into chunks
-- `extract_tables` (optional): Extract tables from the document
-- `extract_entities` (optional): Extract named entities
-- `extract_keywords` (optional): Extract keywords
-- `ocr_backend` (optional): OCR backend to use (tesseract, easyocr, paddleocr)
-- `max_chars` (optional): Maximum characters per chunk
-- `max_overlap` (optional): Character overlap between chunks
-- `keyword_count` (optional): Number of keywords to extract
-- `auto_detect_language` (optional): Auto-detect document language
+- `config_json` (optional): JSON string with v4 ExtractionConfig parameters
+
+**Configuration Options (via config_json):**
+
+Configure extraction behavior using a JSON object with nested config structures:
+
+- `force_ocr` (bool): Force OCR even for text-based documents
+- `ocr` (object): OCR configuration - `{"backend": "tesseract", "language": "eng"}`
+- `tables` (object): Table extraction configuration - `{}`
+- `entities` (object): Entity extraction configuration - `{}`
+- `keywords` (object): Keyword extraction configuration - `{"count": 20}`
+- `chunking` (object): Chunking configuration - `{"max_chars": 500}`
+- `language_detection` (object): Language detection configuration - `{}`
+- `images` (object): Image extraction configuration - `{}`
+
+**Example config_json:**
+
+```json
+{
+  "force_ocr": true,
+  "ocr": {"backend": "tesseract", "language": "eng"},
+  "tables": {},
+  "keywords": {"count": 20},
+  "chunking": {"max_chars": 500}
+}
+```
 
 **Returns:** Dictionary with extracted content, metadata, tables, chunks, entities, and keywords.
 
@@ -254,7 +270,7 @@ Extract text from document bytes (base64-encoded).
 
 - `content_base64` (required): Base64-encoded document content
 - `mime_type` (required): MIME type of the document
-- All other parameters same as `extract_document`
+- `config_json` (optional): JSON string with v4 ExtractionConfig parameters (same format as `extract_document`)
 
 **Returns:** Dictionary with extracted content, metadata, and optional features.
 
@@ -330,7 +346,7 @@ Human: Process this document with full analysis: /path/to/document.pdf
 
 Claude: I'll perform a comprehensive analysis of your document using all of Kreuzberg's features.
 
-[Uses extract_document tool with chunk_content=true, extract_entities=true, extract_keywords=true, extract_tables=true, auto_detect_language=true]
+[Uses extract_document tool with config_json: {"chunking": {}, "entities": {}, "keywords": {}, "tables": {}, "language_detection": {}}]
 
 ## Document Analysis Results:
 
@@ -371,7 +387,7 @@ Human: Analyze this document and extract all information including tables and en
 
 Claude: I'll perform a comprehensive analysis of your document using Kreuzberg's advanced extraction features.
 
-[Uses extract_document tool with extract_tables=true, extract_entities=true, extract_keywords=true]
+[Uses extract_document tool with config_json: {"tables": {}, "entities": {}, "keywords": {}}]
 
 ## Document Analysis Results:
 
@@ -450,7 +466,7 @@ Human: Extract text from this image using EasyOCR: /path/to/image.png
 
 Claude: I'll extract text from your image using EasyOCR.
 
-[Uses extract_document tool with ocr_backend="easyocr"]
+[Uses extract_document tool with config_json: {"ocr": {"backend": "easyocr"}}]
 ```
 
 ### Chunking for RAG Applications
@@ -462,7 +478,7 @@ Human: Extract and chunk this document for RAG: /path/to/document.pdf
 
 Claude: I'll extract the content and split it into chunks suitable for RAG applications.
 
-[Uses extract_document tool with chunk_content=true, max_chars=1000, max_overlap=200]
+[Uses extract_document tool with config_json: {"chunking": {"max_chars": 1000, "max_overlap": 200}}]
 
 The document has been processed and split into [number] chunks:
 
@@ -482,7 +498,7 @@ Human: Extract text and detect the language: /path/to/multilingual.pdf
 
 Claude: I'll extract the text and detect the language of your document.
 
-[Uses extract_document tool with auto_detect_language=true]
+[Uses extract_document tool with config_json: {"language_detection": {}}]
 
 **Detected Languages:** [list of detected languages]
 **Content:** [extracted text content]
@@ -497,7 +513,7 @@ Human: Extract all tables from this financial report: /path/to/report.pdf
 
 Claude: I'll extract all tables from your financial report.
 
-[Uses extract_document tool with extract_tables=true]
+[Uses extract_document tool with config_json: {"tables": {}}]
 
 **Tables Found:** [number] tables
 
@@ -538,14 +554,14 @@ Claude: I'll extract all tables from your financial report.
 
     - **Chunking Error**: `MissingDependencyError: The package 'semantic-text-splitter' is required`
         - Solution: `uvx --from "kreuzberg[chunking]" kreuzberg-mcp`
-    - **Language Detection Ignored**: No error, but `auto_detect_language=True` has no effect
+    - **Language Detection Ignored**: No error, but `language_detection` config has no effect
         - Solution: `uvx --from "kreuzberg[langdetect]" kreuzberg-mcp`
     - **Entity/Keyword Extraction Ignored**: No error, but features return None
         - Solution: `uvx --from "kreuzberg[entity-extraction]" kreuzberg-mcp`
     - **Advanced OCR Unavailable**: `easyocr` or `paddleocr` backend not found
         - Solution: `uvx --from "kreuzberg[easyocr,paddleocr]" kreuzberg-mcp`
-    - **Table Extraction Error**: `MissingDependencyError: The package 'gmft' is required`
-        - Solution: `uvx --from "kreuzberg[gmft]" kreuzberg-mcp`
+    - **Table Extraction Error**: `MissingDependencyError: The package 'vision-tables' is required`
+        - Solution: `uvx --from "kreuzberg[vision-tables]" kreuzberg-mcp`
 
 1. **uvx Command Not Found**
 

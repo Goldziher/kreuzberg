@@ -13,6 +13,7 @@ from typing import Any
 DOCKER_IMAGES = {
     "base": "kreuzberg:base",
     "core": "kreuzberg:core",
+    "full": "kreuzberg:full",
 }
 
 OPTIONAL_IMAGES: set[str] = set()
@@ -26,7 +27,7 @@ SECURITY_CONFIG = {
 }
 
 TEST_DIR = Path(__file__).parent.parent
-TEST_FILES_DIR = TEST_DIR / "test_source_files"
+TEST_FILES_DIR = TEST_DIR.parent / "test_documents"
 
 test_results: dict[str, dict[str, Any]] = {}
 
@@ -193,7 +194,7 @@ def test_file_extraction(image_name: str, test_file: str) -> bool:
 
 
 def test_ocr_extraction(image_name: str, image_variant: str) -> bool:
-    test_file = "ocr-image.jpg"
+    test_file = "images/ocr_image.jpg"
     test_file_path = TEST_FILES_DIR / test_file
 
     if not test_file_path.exists():
@@ -261,7 +262,7 @@ def test_api_extraction(image_name: str) -> bool:
             temp_file = f.name
 
         try:
-            cmd = ["curl", "-s", "-X", "POST", f"http://localhost:{port}/extract", "-F", f"data=@{temp_file}"]
+            cmd = ["curl", "-s", "-X", "POST", f"http://localhost:{port}/extract", "-F", f"files=@{temp_file}"]
             exit_code, stdout, stderr = run_command(cmd, timeout=30)
 
             if exit_code == 0:
@@ -316,9 +317,10 @@ import asyncio
 from kreuzberg import extract_file, ExtractionConfig
 
 async def main():
+    from kreuzberg._types import TableExtractionConfig
     result = await extract_file(
         '/data/pdfs_with_tables/tiny.pdf',
-        config=ExtractionConfig(extract_tables=True)
+        config=ExtractionConfig(tables=TableExtractionConfig())
     )
     print(f"Tables found: {len(result.tables)}")
     return len(result.tables) > 0
@@ -396,6 +398,170 @@ def test_malicious_input_handling(image_name: str) -> bool:
         return exit_code != 0 or "passwd" not in stdout
 
 
+def test_libreoffice_extraction(image_name: str) -> bool:
+    test_file = "legacy_office/unit_test_lists.doc"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--memory",
+        "1g",
+        "--cpus",
+        "1.0",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=120)
+    success = exit_code == 0 and len(stdout) > 20
+
+    if not success and stderr:
+        pass
+    return success
+
+
+def test_chunking_extraction(image_name: str) -> bool:
+    test_file = "text/contract.txt"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+        "--chunk-content",
+        "--max-chars",
+        "500",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=60)
+    success = exit_code == 0 and len(stdout) > 10
+
+    if not success and stderr:
+        pass
+    return success
+
+
+def test_langdetect_extraction(image_name: str) -> bool:
+    test_file = "text/contract.txt"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+        "--auto-detect-language",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=60)
+    success = exit_code == 0 and len(stdout) > 10
+
+    if not success and stderr:
+        pass
+    return success
+
+
+def test_email_extraction(image_name: str) -> bool:
+    test_file = "email/html_only.eml"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=60)
+    success = exit_code == 0 and len(stdout) > 10
+
+    if not success and stderr:
+        pass
+    return success
+
+
+def test_entity_extraction(image_name: str) -> bool:
+    test_file = "text/contract.txt"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+        "--extract-entities",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=120)
+    success = exit_code == 0 and len(stdout) > 10
+
+    if not success and stderr:
+        pass
+    return success
+
+
 def run_tests_for_image(image_variant: str, image_name: str) -> dict[str, bool]:
     results = {}
 
@@ -403,18 +569,31 @@ def run_tests_for_image(image_variant: str, image_name: str) -> dict[str, bool]:
     if not results["exists"]:
         return results
 
+    # Core tests - all variants
     results["cli_help"] = test_cli_help(image_name)
     results["cli_version"] = test_cli_version(image_name)
     results["api_health"] = test_api_health(image_name)
 
-    results["extract_txt"] = test_file_extraction(image_name, "contract.txt")
-    results["extract_pdf"] = test_file_extraction(image_name, "searchable.pdf")
-    results["extract_docx"] = test_file_extraction(image_name, "document.docx")
+    results["extract_txt"] = test_file_extraction(image_name, "text/contract.txt")
+    results["extract_pdf"] = test_file_extraction(image_name, "pdfs/searchable.pdf")
+    results["extract_docx"] = test_file_extraction(image_name, "office/document.docx")
 
     results["ocr"] = test_ocr_extraction(image_name, image_variant)
 
     results["api_extract"] = test_api_extraction(image_name)
 
+    # Core/Full features
+    if image_variant in ("core", "full"):
+        results["chunking"] = test_chunking_extraction(image_name)
+        results["langdetect"] = test_langdetect_extraction(image_name)
+        results["email"] = test_email_extraction(image_name)
+
+    # Full-only features
+    if image_variant == "full":
+        results["libreoffice"] = test_libreoffice_extraction(image_name)
+        results["entities"] = test_entity_extraction(image_name)
+
+    # Security tests - all variants
     results["volume_security"] = test_volume_security(image_name)
     results["resource_limits"] = test_resource_limits(image_name)
     results["malicious_input"] = test_malicious_input_handling(image_name)

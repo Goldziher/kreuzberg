@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-import warnings
+import os
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from PIL import Image
 
+from kreuzberg._internal_bindings import normalize_spaces
 from kreuzberg._mime_types import PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr._base import OCRBackend
 from kreuzberg._types import EasyOCRConfig, ExtractionResult, Metadata
 from kreuzberg._utils._device import DeviceInfo, validate_device_request
+from kreuzberg._utils._model_cache import resolve_model_cache_dir
 from kreuzberg._utils._ocr_cache import (
     build_cache_kwargs,
     cache_and_complete_async,
@@ -19,8 +21,8 @@ from kreuzberg._utils._ocr_cache import (
     handle_cache_lookup_sync,
     mark_processing_complete,
 )
-from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_sync
+from kreuzberg._utils._torch import is_cuda_available
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
 
 if TYPE_CHECKING:
@@ -312,9 +314,7 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
 
     @classmethod
     def _is_gpu_available(cls) -> bool:
-        if torch is None:
-            return False
-        return bool(torch.cuda.is_available())
+        return is_cuda_available()
 
     @classmethod
     async def _init_easyocr(cls, **kwargs: Unpack[EasyOCRConfig]) -> None:
@@ -322,6 +322,13 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
             return
 
         languages = cls._validate_language_code(kwargs.pop("language", "en"))
+
+        model_cache_dir = kwargs.pop("model_storage_directory", None)
+        if not model_cache_dir:
+            cache_dir = resolve_model_cache_dir(None, env_prefix="EASYOCR")
+            if cache_dir:
+                os.environ["EASYOCR_MODULE_PATH"] = cache_dir
+                model_cache_dir = cache_dir
 
         easyocr_module, _ = _import_easyocr()
         if easyocr_module is None:
@@ -343,33 +350,16 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
                 languages,
                 gpu=use_gpu,
                 verbose=False,
+                model_storage_directory=model_cache_dir,
             )
         except Exception as e:
             raise OCRError(f"Failed to initialize EasyOCR: {e}") from e
 
     @classmethod
     def _resolve_device_config(cls, **kwargs: Unpack[EasyOCRConfig]) -> DeviceInfo:
-        use_gpu = kwargs.get("use_gpu", False)
         device = kwargs.get("device", "auto")
         memory_limit = kwargs.get("gpu_memory_limit")
         fallback_to_cpu = kwargs.get("fallback_to_cpu", True)
-
-        if use_gpu and device == "auto":
-            warnings.warn(
-                "The 'use_gpu' parameter is deprecated and will be removed in a future version. "
-                "Use 'device=\"cuda\"' or 'device=\"auto\"' instead.",
-                DeprecationWarning,
-                stacklevel=4,
-            )
-
-            device = "auto" if use_gpu else "cpu"
-        elif use_gpu and device != "auto":
-            warnings.warn(
-                "Both 'use_gpu' and 'device' parameters specified. The 'use_gpu' parameter is deprecated. "
-                "Using 'device' parameter value.",
-                DeprecationWarning,
-                stacklevel=4,
-            )
 
         try:
             return validate_device_request(
@@ -379,7 +369,7 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
                 fallback_to_cpu=fallback_to_cpu,
             )
         except ValidationError:
-            if not use_gpu and device == "cpu":
+            if device == "cpu":
                 return DeviceInfo(device_type="cpu", name="CPU")
             raise
 
@@ -481,6 +471,13 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
 
         languages = cls._validate_language_code(kwargs.pop("language", "en"))
 
+        model_cache_dir = kwargs.pop("model_storage_directory", None)
+        if not model_cache_dir:
+            cache_dir = resolve_model_cache_dir(None, env_prefix="EASYOCR")
+            if cache_dir:
+                os.environ["EASYOCR_MODULE_PATH"] = cache_dir
+                model_cache_dir = cache_dir
+
         easyocr_module, _ = _import_easyocr()
         if easyocr_module is None:
             raise MissingDependencyError.create_for_package(
@@ -500,6 +497,7 @@ class EasyOCRBackend(OCRBackend[EasyOCRConfig]):
                 languages,
                 gpu=use_gpu,
                 verbose=False,
+                model_storage_directory=model_cache_dir,
             )
         except Exception as e:
             raise OCRError(f"Failed to initialize EasyOCR: {e}") from e

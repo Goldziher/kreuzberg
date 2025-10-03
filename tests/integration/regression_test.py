@@ -102,8 +102,7 @@ async def test_batch_extraction_regression(
 @pytest.mark.anyio
 async def test_psm_mode_4_specifically(google_doc_pdf: Path) -> None:
     config = ExtractionConfig(
-        ocr_backend="tesseract",
-        ocr_config=TesseractConfig(psm=PSMMode.SINGLE_COLUMN),
+        ocr=TesseractConfig(psm=PSMMode.SINGLE_COLUMN),
     )
 
     result = await extract_file(str(google_doc_pdf), config=config)

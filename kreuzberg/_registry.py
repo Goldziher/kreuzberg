@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ClassVar
 from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg._extractors._image import ImageExtractor
+from kreuzberg._extractors._legacy_office import LegacyPresentationExtractor, LegacyWordExtractor
 from kreuzberg._extractors._pandoc import (
     BibliographyExtractor,
     EbookExtractor,
@@ -21,6 +22,8 @@ from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._extractors._presentation import PresentationExtractor
 from kreuzberg._extractors._spread_sheet import SpreadSheetExtractor
 from kreuzberg._extractors._structured import StructuredDataExtractor
+from kreuzberg._extractors._text import PlainTextExtractor
+from kreuzberg._extractors._xml import XMLExtractor
 
 if TYPE_CHECKING:
     from kreuzberg._extractors._base import Extractor
@@ -37,6 +40,8 @@ class ExtractorRegistry:
 
     _default_extractors: ClassVar[list[type[Extractor]]] = [
         PDFExtractor,
+        LegacyWordExtractor,
+        LegacyPresentationExtractor,
         OfficeDocumentExtractor,
         PresentationExtractor,
         SpreadSheetExtractor,
@@ -44,7 +49,9 @@ class ExtractorRegistry:
         EmailExtractor,
         StructuredDataExtractor,
         MarkdownExtractor,
+        PlainTextExtractor,
         ImageExtractor,
+        XMLExtractor,
         BibliographyExtractor,
         EbookExtractor,
         LaTeXExtractor,

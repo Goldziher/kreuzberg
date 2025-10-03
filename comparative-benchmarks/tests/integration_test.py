@@ -14,14 +14,13 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
     """Test complete pipeline: load results -> visualize -> generate docs."""
     runner = CliRunner()
 
-    # Create mock results file
     results_data = [
         {
             "file_path": "/test/doc1.pdf",
             "file_size": 1024,
             "file_type": "pdf",
             "category": "small",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.5,
             "peak_memory_mb": 100.0,
@@ -38,7 +37,7 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
             "file_size": 2048,
             "file_type": "pdf",
             "category": "small",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.8,
             "peak_memory_mb": 120.0,
@@ -55,7 +54,7 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
             "file_size": 512,
             "file_type": "docx",
             "category": "tiny",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.3,
             "peak_memory_mb": 80.0,
@@ -75,7 +74,6 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
     charts_dir = tmp_path / "charts"
     docs_dir = tmp_path / "docs"
 
-    # Test visualize command
     result = runner.invoke(
         cli,
         [
@@ -90,7 +88,6 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
     assert result.exit_code == 0, f"Visualize failed: {result.output}"
     assert "Generated 6 visualizations" in result.output
 
-    # Verify charts were created
     assert (charts_dir / "performance_comparison.html").exists()
     assert (charts_dir / "memory_usage.html").exists()
     assert (charts_dir / "throughput.html").exists()
@@ -98,7 +95,6 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
     assert (charts_dir / "dashboard.html").exists()
     assert (charts_dir / "format_heatmap.html").exists()
 
-    # Test generate-docs command
     result = runner.invoke(
         cli,
         [
@@ -115,21 +111,18 @@ def test_full_pipeline_with_visualize_and_docs(tmp_path: Path) -> None:
     assert result.exit_code == 0, f"Generate-docs failed: {result.output}"
     assert "Generated documentation" in result.output
 
-    # Verify docs were created
     assert (docs_dir / "index.md").exists()
     assert (docs_dir / "latest-results.md").exists()
     assert (docs_dir / "methodology.md").exists()
     assert (docs_dir / "framework-comparison.md").exists()
 
-    # Verify data exports
     assert (docs_dir / "data" / "latest.csv").exists()
     assert (docs_dir / "data" / "latest.json").exists()
     assert (docs_dir / "data" / "latest.parquet").exists()
 
-    # Verify content
     index_content = (docs_dir / "index.md").read_text()
     assert "Performance Leaders" in index_content
-    assert "kreuzberg_sync" in index_content
+    assert "kreuzberg_v4_sync" in index_content
 
 
 def test_visualize_command_creates_all_charts(tmp_path: Path) -> None:
@@ -142,7 +135,7 @@ def test_visualize_command_creates_all_charts(tmp_path: Path) -> None:
             "file_size": 1024,
             "file_type": "pdf",
             "category": "small",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.5,
             "peak_memory_mb": 100.0,
@@ -172,7 +165,6 @@ def test_visualize_command_creates_all_charts(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
 
-    # Check all 6 charts exist
     expected_charts = [
         "performance_comparison.html",
         "memory_usage.html",
@@ -198,7 +190,7 @@ def test_generate_docs_command_creates_all_files(tmp_path: Path) -> None:
             "file_size": 1024,
             "file_type": "pdf",
             "category": "small",
-            "framework": "kreuzberg_sync",
+            "framework": "kreuzberg_v4_sync",
             "iteration": 1,
             "extraction_time": 0.5,
             "peak_memory_mb": 100.0,
@@ -228,7 +220,6 @@ def test_generate_docs_command_creates_all_files(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
 
-    # Check all doc files exist
     expected_docs = [
         "index.md",
         "latest-results.md",

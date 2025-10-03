@@ -17,6 +17,7 @@ jobs:
         image:
           - { name: "base", extras: "cli" }
           - { name: "core", extras: "cli chunking crypto document-classification langdetect additional-extensions" }
+          - { name: "full", extras: "all" }
       fail-fast: false
 
     steps:

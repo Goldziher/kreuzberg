@@ -34,11 +34,11 @@ Contains the result of running OCR on an extracted image:
 
 ::: kreuzberg.ImageOCRResult
 
-### ImageOCRConfig
+### ImageExtractionConfig
 
-Configuration for OCR processing of extracted images:
+Configuration for extracting images from documents:
 
-::: kreuzberg.ImageOCRConfig
+::: kreuzberg.ImageExtractionConfig
 
 ## OCR Configuration
 
@@ -54,17 +54,29 @@ Configuration for OCR processing of extracted images:
 
 ::: kreuzberg.PaddleOCRConfig
 
-## GMFT Configuration
+## Table Extraction Configuration
 
-Configuration options for the GMFT table extraction engine:
+Configuration options for table extraction (vision-based and OCR-based):
 
-::: kreuzberg.GMFTConfig
+::: kreuzberg.TableExtractionConfig
+
+## Chunking Configuration
+
+Configuration for text chunking:
+
+::: kreuzberg.ChunkingConfig
+
+## Keyword Extraction Configuration
+
+Configuration for keyword extraction using KeyBERT:
+
+::: kreuzberg.KeywordExtractionConfig
 
 ## Entity Extraction Configuration
 
-Configuration options for spaCy-based entity extraction:
+Configuration for entity extraction using spaCy:
 
-::: kreuzberg.SpacyEntityExtractionConfig
+::: kreuzberg.EntityExtractionConfig
 
 ## Language Detection Configuration
 
@@ -93,6 +105,38 @@ Configuration options for token reduction and text optimization:
 ## PSMMode (Page Segmentation Mode)
 
 ::: kreuzberg.PSMMode
+
+**Usage Notes:**
+
+- **In Python code**: Use the `PSMMode` enum values:
+
+    ```python
+    from kreuzberg import TesseractConfig
+    from kreuzberg._types import PSMMode
+
+    config = TesseractConfig(psm=PSMMode.SINGLE_BLOCK)
+    ```
+
+- **In TOML configuration**: Use integer values (0-10):
+
+    ```toml
+    [ocr]
+    backend = "tesseract"
+    psm = 6  # SINGLE_BLOCK mode
+    ```
+
+- **In JSON/API config**: Use integer values:
+
+    ```json
+    {"ocr": {"backend": "tesseract", "psm": 6}}
+    ```
+
+Common PSM values:
+
+- `3` - AUTO (default): Fully automatic page segmentation
+- `4` - SINGLE_COLUMN: Single column of text
+- `6` - SINGLE_BLOCK: Single uniform block of text
+- `7` - SINGLE_LINE: Single text line
 
 ## Entity
 

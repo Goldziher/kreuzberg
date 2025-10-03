@@ -12,10 +12,11 @@ from bs4 import BeautifulSoup
 from PIL import Image
 
 from kreuzberg._extractors._base import MAX_SINGLE_IMAGE_SIZE, Extractor
+from kreuzberg._internal_bindings import safe_decode
 from kreuzberg._mime_types import HTML_MIME_TYPE, MARKDOWN_MIME_TYPE
 from kreuzberg._types import ExtractedImage, ExtractionResult, HTMLToMarkdownConfig
 from kreuzberg._utils._html_streaming import should_use_streaming
-from kreuzberg._utils._string import safe_decode
+from kreuzberg._utils._serialization import to_dict
 from kreuzberg._utils._sync import run_maybe_async, run_sync
 
 if TYPE_CHECKING:
@@ -29,23 +30,26 @@ class HTMLExtractor(Extractor):
 
     async def extract_bytes_async(self, content: bytes) -> ExtractionResult:
         result = await run_sync(self.extract_bytes_sync, content)
-        if self.config.extract_images and self.config.ocr_extracted_images and result.images:
+        # V4: Image OCR enabled if ocr_min_dimensions is set
+        if self.config.images is not None and self.config.images.ocr_min_dimensions is not None and result.images:
             result.image_ocr_results = await self._process_images_with_ocr(result.images)
         return result
 
     async def extract_path_async(self, path: Path) -> ExtractionResult:
         content = await AsyncPath(path).read_bytes()
         result = await run_sync(self.extract_bytes_sync, content)
-        if self.config.extract_images and self.config.ocr_extracted_images and result.images:
+        # V4: Image OCR enabled if ocr_min_dimensions is set
+        if self.config.images is not None and self.config.images.ocr_min_dimensions is not None and result.images:
             result.image_ocr_results = await self._process_images_with_ocr(result.images)
         return result
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
-        config = self.config.html_to_markdown_config if self.config else None
+        # V4: Use config.html_to_markdown for HTML conversion settings
+        config = self.config.html_to_markdown if self.config else None
         if config is None:
             config = HTMLToMarkdownConfig()
 
-        config_dict = config.to_dict()
+        config_dict = to_dict(config)
 
         html_content = safe_decode(content)
 
@@ -57,9 +61,11 @@ class HTMLExtractor(Extractor):
 
         extraction_result = ExtractionResult(content=result, mime_type=MARKDOWN_MIME_TYPE, metadata={})
 
-        if self.config.extract_images:
+        # V4: Image extraction enabled via config.images
+        if self.config.images is not None:
             extraction_result.images = self._extract_images_from_html(html_content)
-            if self.config.ocr_extracted_images and extraction_result.images:
+            # V4: Image OCR enabled if ocr_min_dimensions is set
+            if self.config.images.ocr_min_dimensions is not None and extraction_result.images:
                 extraction_result.image_ocr_results = run_maybe_async(
                     self._process_images_with_ocr, extraction_result.images
                 )

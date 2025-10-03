@@ -1,6 +1,6 @@
 # Content Chunking
 
-Kreuzberg provides a powerful content chunking capability that allows you to split extracted text into smaller, more manageable chunks. This feature is particularly useful for processing large documents, working with language models that have token limits, or implementing semantic search functionality.
+Kreuzberg provides content chunking capability that allows you to split extracted text into smaller, more manageable chunks. This feature is particularly useful for processing large documents, working with language models that have token limits, or implementing semantic search functionality.
 
 ## Overview
 
@@ -8,21 +8,29 @@ Content chunking divides the extracted text into smaller segments while maintain
 
 ## Configuration
 
-Chunking is controlled through the `ExtractionConfig` class with these parameters:
+Chunking is configured through the `ChunkingConfig` class:
 
-- `chunk_content`: Boolean flag to enable/disable chunking (default: `False`)
-- `max_chars`: Maximum number of characters per chunk (default: 4000)
-- `max_overlap`: Number of characters to overlap between chunks (default: 200)
+```python
+from kreuzberg import ChunkingConfig
+
+config = ChunkingConfig(
+    max_chars=4000,  # Maximum characters per chunk (default: 1000)
+    max_overlap=200,  # Characters to overlap between chunks (default: 200)
+)
+```
 
 ## Basic Usage
 
 To enable chunking in your extraction process:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig
+from kreuzberg import extract_file, ExtractionConfig, ChunkingConfig
 
 # Enable chunking with default chunk size and overlap
-result = await extract_file("large_document.pdf", config=ExtractionConfig(chunk_content=True))
+result = await extract_file(
+    "large_document.pdf",
+    config=ExtractionConfig(chunking=ChunkingConfig()),
+)
 
 # Access the full content
 full_text = result.content
@@ -38,10 +46,18 @@ for i, chunk in enumerate(result.chunks):
 You can customize the chunk size and overlap to suit your specific needs:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig
+from kreuzberg import extract_file, ExtractionConfig, ChunkingConfig
 
 # Custom chunk size (2000 characters) and overlap (100 characters)
-result = await extract_file("large_document.pdf", config=ExtractionConfig(chunk_content=True, max_chars=2000, max_overlap=100))
+result = await extract_file(
+    "large_document.pdf",
+    config=ExtractionConfig(
+        chunking=ChunkingConfig(
+            max_chars=2000,
+            max_overlap=100,
+        ),
+    ),
+)
 ```
 
 ## Format-Aware Chunking
@@ -58,10 +74,13 @@ Kreuzberg's chunking system is format-aware, meaning it handles different conten
 When using LLMs with token limits, chunking allows you to process documents that would otherwise exceed those limits:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig
+from kreuzberg import extract_file, ExtractionConfig, ChunkingConfig
 
 # Extract with chunking enabled
-result = await extract_file("large_report.pdf", config=ExtractionConfig(chunk_content=True))
+result = await extract_file(
+    "large_report.pdf",
+    config=ExtractionConfig(chunking=ChunkingConfig()),
+)
 
 # Process each chunk with an LLM
 summaries = []
@@ -79,11 +98,14 @@ final_summary = "\n\n".join(summaries)
 Chunking is essential for implementing effective semantic search:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig
+from kreuzberg import extract_file, ExtractionConfig, ChunkingConfig
 import numpy as np
 
 # Extract with chunking enabled
-result = await extract_file("knowledge_base.pdf", config=ExtractionConfig(chunk_content=True))
+result = await extract_file(
+    "knowledge_base.pdf",
+    config=ExtractionConfig(chunking=ChunkingConfig()),
+)
 
 # Create embeddings for each chunk (using a hypothetical embedding function)
 embeddings = [create_embedding(chunk) for chunk in result.chunks]
@@ -103,6 +125,24 @@ def semantic_search(query, chunks, embeddings, top_k=3):
 
 # Example usage
 results = semantic_search("renewable energy benefits", result.chunks, embeddings)
+```
+
+## Configuration Files
+
+### kreuzberg.toml
+
+```toml
+[chunking]
+max_chars = 2000
+max_overlap = 100
+```
+
+### pyproject.toml
+
+```toml
+[tool.kreuzberg.chunking]
+max_chars = 2000
+max_overlap = 100
 ```
 
 ## Technical Details

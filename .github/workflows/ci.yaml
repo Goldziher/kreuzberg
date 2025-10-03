@@ -13,12 +13,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  rust-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Run Rust Tests
+        env:
+          RUST_BACKTRACE: full
+        run: |
+          echo "Running Rust tests with full debugging..."
+          cargo test --release --no-default-features -vv -- --nocapture --test-threads=1
+
+      - name: Check Rust Formatting
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo clippy -- -D warnings
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -29,6 +69,12 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
 
       - name: Install Dependencies
         uses: nick-fields/retry@v3
@@ -41,8 +87,15 @@ jobs:
               echo "Removing existing .venv directory on Windows"
               rm -rf .venv
             fi
-            uv sync --all-packages --all-extras --all-groups
+            uv sync --all-packages --all-groups --all-extras
+            uv pip install maturin
+            uv run maturin develop --release --features extension-module
           shell: bash
+
+      - name: Run Rust Checks
+        run: |
+          cargo fmt --check
+          cargo clippy -- -D warnings
 
       - name: Install prek
         run: |
@@ -66,6 +119,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -78,6 +133,11 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
       - name: Cache Python Dependencies
         id: python-cache
         uses: actions/cache@v4
@@ -85,9 +145,9 @@ jobs:
           path: |
             ~/.cache/uv
             .venv
-          key: python-dependencies-ubuntu-latest-3.13-${{ hashFiles('uv.lock') }}
+          key: python-dependencies-ubuntu-latest-3.10-${{ hashFiles('uv.lock') }}
           restore-keys: |
-            python-dependencies-ubuntu-latest-3.13-
+            python-dependencies-ubuntu-latest-3.10-
 
       - name: Install Dependencies
         uses: nick-fields/retry@v3
@@ -96,7 +156,9 @@ jobs:
           max_attempts: 3
           retry_wait_seconds: 30
           command: |
-            uv sync --all-packages --all-extras --all-groups
+            uv sync --all-packages --all-groups --all-extras
+            uv pip install maturin
+            uv run maturin develop --release --features extension-module
           shell: bash
 
       - name: Install System Dependencies
@@ -107,7 +169,11 @@ jobs:
           retry_wait_seconds: 30
           command: |
             sudo apt-get update
-            sudo apt-get install -y tesseract-ocr tesseract-ocr-deu pandoc
+            sudo apt-get install -y tesseract-ocr tesseract-ocr-deu pandoc libreoffice
+            echo "Verifying installations..."
+            tesseract --version
+            pandoc --version
+            soffice --version
           shell: bash
 
       - name: Install SpaCy Model for Testing
@@ -118,25 +184,27 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          key: huggingface-models-gmft-v1-${{ runner.os }}
+          key: huggingface-models-vision-tables-v1-${{ runner.os }}
           restore-keys: |
-            huggingface-models-gmft-v1-
+            huggingface-models-vision-tables-v1-
 
-      - name: Download GMFT Models if Not Cached
+      - name: Download Vision-Tables Models if Not Cached
         env:
           HF_HOME: ~/.cache/huggingface
+          TRANSFORMERS_CACHE: ~/.cache/huggingface
         run: |
           if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
-            echo "Cache miss - downloading GMFT models..."
-            uv run --script scripts/download_gmft_models.py
+            echo "Cache miss - downloading vision-tables models..."
+            uv run python scripts/download_vision_tables_models.py
           else
-            echo "Using cached GMFT models"
+            echo "Using cached vision-tables models"
           fi
 
       - name: Run Tests with Coverage
         uses: nick-fields/retry@v3
         env:
           HF_HOME: ~/.cache/huggingface
+          TRANSFORMERS_CACHE: ~/.cache/huggingface
         with:
           timeout_minutes: 15
           max_attempts: 3
@@ -147,6 +215,12 @@ jobs:
             uv run coverage report --precision=2
           shell: bash
 
+      - name: Install cargo-llvm-cov for Rust Coverage
+        run: cargo install cargo-llvm-cov
+
+      - name: Generate Rust Coverage
+        run: cargo llvm-cov --no-default-features --lcov --output-path rust-coverage.lcov
+
       - name: Upload Coverage to DeepSource
         if: always()
         env:
@@ -154,8 +228,10 @@ jobs:
         run: |
           # Install DeepSource CLI
           curl -fsSL https://deepsource.io/cli | sh
-          # Upload coverage report
+          # Upload Python coverage report
           ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
+          # Upload Rust coverage report
+          ./bin/deepsource report --analyzer test-coverage --key rust --value-file ./rust-coverage.lcov
 
       - name: Upload Coverage Artifacts
         if: always()
@@ -164,16 +240,18 @@ jobs:
           name: coverage-report-${{ github.sha }}
           path: |
             coverage.lcov
+            rust-coverage.lcov
             .coverage
           retention-days: 7
 
   python-tests:
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.python == '3.14-dev' }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.13"]
+        python: ["3.10", "3.13", "3.14-dev"]
         test-category:
           - name: "core"
             path: "tests/core,tests/utils"
@@ -199,6 +277,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -210,6 +290,11 @@ jobs:
         id: setup-python
         with:
           python-version: ${{ matrix.python }}
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
 
       - name: Cache Python Dependencies
         id: python-cache
@@ -233,7 +318,9 @@ jobs:
               echo "Removing existing .venv directory on Windows"
               rm -rf .venv
             fi
-            uv sync --all-packages --all-extras --all-groups
+            uv sync --all-packages --all-groups --all-extras
+            uv pip install maturin
+            uv run maturin develop --release --features extension-module
           shell: bash
 
       - name: Cache Test Artifacts
@@ -253,7 +340,10 @@ jobs:
             # Using the underlying homebrew commands instead of the action
             brew update || true
             brew install tesseract tesseract-lang pandoc || brew upgrade tesseract tesseract-lang pandoc || true
+            brew install --cask libreoffice || brew upgrade --cask libreoffice || true
             brew list tesseract tesseract-lang pandoc
+            echo "Verifying LibreOffice installation..."
+            soffice --version || echo "Warning: soffice not found in PATH"
           shell: bash
 
       - name: Cache and Install APT Packages (Linux)
@@ -265,7 +355,11 @@ jobs:
           retry_wait_seconds: 30
           command: |
             sudo apt-get update
-            sudo apt-get install -y tesseract-ocr tesseract-ocr-deu pandoc
+            sudo apt-get install -y tesseract-ocr tesseract-ocr-deu pandoc libreoffice
+            echo "Verifying installations..."
+            tesseract --version
+            pandoc --version
+            soffice --version
           shell: bash
 
       - name: Install System Dependencies (Windows)
@@ -276,10 +370,11 @@ jobs:
           max_attempts: 3
           retry_wait_seconds: 30
           command: |
-            choco install -y tesseract pandoc --no-progress
+            choco install -y tesseract pandoc libreoffice --no-progress
             Write-Output "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
             Write-Output "C:\Program Files\Pandoc" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            $env:PATH = "C:\Program Files\Tesseract-OCR;C:\Program Files\Pandoc;" + $env:PATH
+            Write-Output "C:\Program Files\LibreOffice\program" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            $env:PATH = "C:\Program Files\Tesseract-OCR;C:\Program Files\Pandoc;C:\Program Files\LibreOffice\program;" + $env:PATH
 
             # Install python-magic-bin for Windows
             pip install python-magic-bin
@@ -294,6 +389,7 @@ jobs:
             tesseract --version
             tesseract --list-langs
             pandoc --version
+            soffice --version
           shell: pwsh
 
       - name: Install SpaCy Model for Testing
@@ -313,11 +409,11 @@ jobs:
       - name: Download GMFT Models if Not Cached
         if: contains(matrix.test-category.path, 'gmft')
         env:
-          HF_HOME: ~/.cache/huggingface
+          TRANSFORMERS_CACHE: ~/.cache/huggingface
         run: |
           if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
             echo "Cache miss - downloading GMFT models..."
-            uv run --script scripts/download_gmft_models.py
+            uv run python scripts/download_gmft_models.py
           else
             echo "Using cached GMFT models"
           fi

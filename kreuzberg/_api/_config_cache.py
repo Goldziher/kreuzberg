@@ -6,8 +6,6 @@ by avoiding repeated file system operations and object creation.
 
 from __future__ import annotations
 
-import hashlib
-import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -15,14 +13,15 @@ from typing import Any
 from kreuzberg._config import discover_config
 from kreuzberg._types import (
     EasyOCRConfig,
+    EntityExtractionConfig,
     ExtractionConfig,
-    GMFTConfig,
     HTMLToMarkdownConfig,
     LanguageDetectionConfig,
     PaddleOCRConfig,
-    SpacyEntityExtractionConfig,
+    TableExtractionConfig,
     TesseractConfig,
 )
+from kreuzberg._utils._serialization import deserialize, serialize
 
 
 @lru_cache(maxsize=16)
@@ -72,7 +71,7 @@ def _cached_create_ocr_config(
     config_json: str,
 ) -> TesseractConfig | EasyOCRConfig | PaddleOCRConfig:
     """Cache OCR config object creation."""
-    config_dict = json.loads(config_json)
+    config_dict = deserialize(config_json, dict[str, Any], json=True)
 
     if config_type == "tesseract":
         return TesseractConfig(**config_dict)
@@ -85,33 +84,33 @@ def _cached_create_ocr_config(
 
 
 @lru_cache(maxsize=64)
-def _cached_create_gmft_config(config_json: str) -> GMFTConfig:
-    """Cache GMFT config creation."""
-    return GMFTConfig(**json.loads(config_json))
+def _cached_create_table_extraction_config(config_json: str) -> TableExtractionConfig:
+    """Cache table extraction config creation."""
+    return TableExtractionConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=64)
 def _cached_create_language_detection_config(config_json: str) -> LanguageDetectionConfig:
     """Cache language detection config creation."""
-    return LanguageDetectionConfig(**json.loads(config_json))
+    return LanguageDetectionConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=64)
-def _cached_create_spacy_config(config_json: str) -> SpacyEntityExtractionConfig:
-    """Cache spaCy entity extraction config creation."""
-    return SpacyEntityExtractionConfig(**json.loads(config_json))
+def _cached_create_entity_extraction_config(config_json: str) -> EntityExtractionConfig:
+    """Cache entity extraction config creation."""
+    return EntityExtractionConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=64)
 def _cached_create_html_markdown_config(config_json: str) -> HTMLToMarkdownConfig:
     """Cache HTML to Markdown config creation."""
-    return HTMLToMarkdownConfig(**json.loads(config_json))
+    return HTMLToMarkdownConfig(**deserialize(config_json, dict[str, Any], json=True))
 
 
 @lru_cache(maxsize=256)
 def _cached_parse_header_config(header_value: str) -> dict[str, Any]:
     """Cache parsed header configurations."""
-    parsed_config: dict[str, Any] = json.loads(header_value)
+    parsed_config: dict[str, Any] = deserialize(header_value, dict[str, Any], json=True)
     return parsed_config
 
 
@@ -130,31 +129,31 @@ def create_ocr_config_cached(
     if not ocr_backend:
         return TesseractConfig()
 
-    config_json = json.dumps(config_dict, sort_keys=True)
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
     return _cached_create_ocr_config(ocr_backend, config_json)
 
 
-def create_gmft_config_cached(config_dict: dict[str, Any]) -> GMFTConfig:
-    """Cached version of GMFT config creation."""
-    config_json = json.dumps(config_dict, sort_keys=True)
-    return _cached_create_gmft_config(config_json)
+def create_table_extraction_config_cached(config_dict: dict[str, Any]) -> TableExtractionConfig:
+    """Cached version of table extraction config creation."""
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
+    return _cached_create_table_extraction_config(config_json)
 
 
 def create_language_detection_config_cached(config_dict: dict[str, Any]) -> LanguageDetectionConfig:
     """Cached version of language detection config creation."""
-    config_json = json.dumps(config_dict, sort_keys=True)
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
     return _cached_create_language_detection_config(config_json)
 
 
-def create_spacy_config_cached(config_dict: dict[str, Any]) -> SpacyEntityExtractionConfig:
-    """Cached version of spaCy config creation."""
-    config_json = json.dumps(config_dict, sort_keys=True)
-    return _cached_create_spacy_config(config_json)
+def create_entity_extraction_config_cached(config_dict: dict[str, Any]) -> EntityExtractionConfig:
+    """Cached version of entity extraction config creation."""
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
+    return _cached_create_entity_extraction_config(config_json)
 
 
 def create_html_markdown_config_cached(config_dict: dict[str, Any]) -> HTMLToMarkdownConfig:
     """Cached version of HTML to Markdown config creation."""
-    config_json = json.dumps(config_dict, sort_keys=True)
+    config_json = serialize(config_dict, json=True, sort_keys=True).decode()
     return _cached_create_html_markdown_config(config_json)
 
 
@@ -170,32 +169,23 @@ def parse_header_config_cached(header_value: str) -> dict[str, Any]:
     return _cached_parse_header_config(header_value)
 
 
-@lru_cache(maxsize=512)
-def _cached_merge_configs(
-    static_config_hash: str,
-    query_params_hash: str,
-    header_config_hash: str,
-) -> ExtractionConfig:
-    """Cache the complete config merging process.
+def clear_all_caches() -> None:
+    """Clear all LRU caches."""
+    _cached_discover_config.cache_clear()
+    _cached_create_ocr_config.cache_clear()
+    _cached_create_table_extraction_config.cache_clear()
+    _cached_create_language_detection_config.cache_clear()
+    _cached_create_entity_extraction_config.cache_clear()
+    _cached_create_html_markdown_config.cache_clear()
+    _cached_parse_header_config.cache_clear()
 
-    This is the ultimate optimization - cache the entire result of merge_configs()
-    based on content hashes of all inputs.
+
+def get_cache_stats() -> dict[str, dict[str, int | None]]:
+    """Get statistics for all caches.
+
+    Returns:
+        Dictionary with cache statistics for each cached function
     """
-    msg = "Not implemented yet - use individual component caching"
-    raise NotImplementedError(msg)
-
-
-def _hash_dict(data: dict[str, Any] | None) -> str:
-    """Create a hash string from a dictionary for cache keys."""
-    if data is None:
-        return "none"
-
-    json_str = json.dumps(data, sort_keys=True, default=str)
-    return hashlib.sha256(json_str.encode()).hexdigest()[:16]
-
-
-def get_cache_stats() -> dict[str, Any]:
-    """Get cache statistics for monitoring performance."""
     return {
         "discover_config": {
             "hits": _cached_discover_config.cache_info().hits,
@@ -209,17 +199,11 @@ def get_cache_stats() -> dict[str, Any]:
             "size": _cached_create_ocr_config.cache_info().currsize,
             "max_size": _cached_create_ocr_config.cache_info().maxsize,
         },
-        "header_parsing": {
-            "hits": _cached_parse_header_config.cache_info().hits,
-            "misses": _cached_parse_header_config.cache_info().misses,
-            "size": _cached_parse_header_config.cache_info().currsize,
-            "max_size": _cached_parse_header_config.cache_info().maxsize,
-        },
-        "gmft_config": {
-            "hits": _cached_create_gmft_config.cache_info().hits,
-            "misses": _cached_create_gmft_config.cache_info().misses,
-            "size": _cached_create_gmft_config.cache_info().currsize,
-            "max_size": _cached_create_gmft_config.cache_info().maxsize,
+        "table_extraction_config": {
+            "hits": _cached_create_table_extraction_config.cache_info().hits,
+            "misses": _cached_create_table_extraction_config.cache_info().misses,
+            "size": _cached_create_table_extraction_config.cache_info().currsize,
+            "max_size": _cached_create_table_extraction_config.cache_info().maxsize,
         },
         "language_detection_config": {
             "hits": _cached_create_language_detection_config.cache_info().hits,
@@ -227,21 +211,22 @@ def get_cache_stats() -> dict[str, Any]:
             "size": _cached_create_language_detection_config.cache_info().currsize,
             "max_size": _cached_create_language_detection_config.cache_info().maxsize,
         },
-        "spacy_config": {
-            "hits": _cached_create_spacy_config.cache_info().hits,
-            "misses": _cached_create_spacy_config.cache_info().misses,
-            "size": _cached_create_spacy_config.cache_info().currsize,
-            "max_size": _cached_create_spacy_config.cache_info().maxsize,
+        "entity_extraction_config": {
+            "hits": _cached_create_entity_extraction_config.cache_info().hits,
+            "misses": _cached_create_entity_extraction_config.cache_info().misses,
+            "size": _cached_create_entity_extraction_config.cache_info().currsize,
+            "max_size": _cached_create_entity_extraction_config.cache_info().maxsize,
+        },
+        "html_markdown_config": {
+            "hits": _cached_create_html_markdown_config.cache_info().hits,
+            "misses": _cached_create_html_markdown_config.cache_info().misses,
+            "size": _cached_create_html_markdown_config.cache_info().currsize,
+            "max_size": _cached_create_html_markdown_config.cache_info().maxsize,
+        },
+        "header_parsing": {
+            "hits": _cached_parse_header_config.cache_info().hits,
+            "misses": _cached_parse_header_config.cache_info().misses,
+            "size": _cached_parse_header_config.cache_info().currsize,
+            "max_size": _cached_parse_header_config.cache_info().maxsize,
         },
     }
-
-
-def clear_all_caches() -> None:
-    """Clear all API configuration caches."""
-    _cached_discover_config.cache_clear()
-    _cached_create_ocr_config.cache_clear()
-    _cached_create_gmft_config.cache_clear()
-    _cached_create_language_detection_config.cache_clear()
-    _cached_create_spacy_config.cache_clear()
-    _cached_create_html_markdown_config.cache_clear()
-    _cached_parse_header_config.cache_clear()

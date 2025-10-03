@@ -6,7 +6,13 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from kreuzberg import extract_file_sync
-from kreuzberg._types import ExtractionConfig, TesseractConfig
+from kreuzberg._types import (
+    ChunkingConfig,
+    ExtractionConfig,
+    KeywordExtractionConfig,
+    LanguageDetectionConfig,
+    TesseractConfig,
+)
 from kreuzberg._utils._cache import clear_all_caches
 from tests.benchmarks.files_test import get_benchmark_files
 
@@ -21,11 +27,11 @@ ALL_TEST_FILES = get_benchmark_files()
 
 BENCHMARK_CONFIGS = {
     "default": ExtractionConfig(use_cache=False),
-    "with_ocr": ExtractionConfig(ocr_backend="tesseract", ocr_config=TesseractConfig(), use_cache=False),
+    "with_ocr": ExtractionConfig(ocr=TesseractConfig(), use_cache=False),
     "with_features": ExtractionConfig(
-        chunk_content=True,
-        auto_detect_language=True,
-        extract_keywords=True,
+        chunking=ChunkingConfig(),
+        language_detection=LanguageDetectionConfig(),
+        keywords=KeywordExtractionConfig(),
         use_cache=False,
     ),
 }

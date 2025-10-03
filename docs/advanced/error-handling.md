@@ -92,7 +92,7 @@ except MissingDependencyError as e:
 ### OCR Errors
 
 ```python
-from kreuzberg import extract_file, OCRError, TesseractConfig, PSMMode
+from kreuzberg import extract_file, ExtractionConfig, OCRError, TesseractConfig, PSMMode
 
 async def extract_with_fallback(path):
     # Try with default settings
@@ -103,7 +103,8 @@ async def extract_with_fallback(path):
         # Try with different OCR settings
         try:
             result = await extract_file(
-                path, force_ocr=True, ocr_config=TesseractConfig(psm=PSMMode.SINGLE_BLOCK, language="eng")
+                path,
+                config=ExtractionConfig(force_ocr=True, ocr=TesseractConfig(psm=PSMMode.SINGLE_BLOCK, language="eng")),
             )
             return result.content
         except OCRError as e:
@@ -114,13 +115,16 @@ async def extract_with_fallback(path):
 ### Validation Errors
 
 ```python
-from kreuzberg import extract_file, ValidationError, TesseractConfig
+from kreuzberg import extract_file, ExtractionConfig, ValidationError, TesseractConfig
 
 async def extract_with_validation_handling():
     try:
-        # This will raise a ValidationError - incompatible config
+        # This will raise a ValidationError - incompatible OCR config
+        # Note: In v4, the OCR backend is determined by the config type, not a separate parameter
+        # Using the correct config type automatically selects the right backend
         result = await extract_file(
-            "document.pdf", ocr_backend="easyocr", ocr_config=TesseractConfig(language="eng")  # Wrong config type for easyocr
+            "document.pdf",
+            config=ExtractionConfig(ocr=TesseractConfig(language="eng")),
         )
     except ValidationError as e:
         print(f"Configuration error: {e}")
@@ -128,7 +132,8 @@ async def extract_with_validation_handling():
         from kreuzberg import EasyOCRConfig
 
         result = await extract_file(
-            "document.pdf", ocr_backend="easyocr", ocr_config=EasyOCRConfig(language="en")  # Correct config type
+            "document.pdf",
+            config=ExtractionConfig(ocr=EasyOCRConfig(language=("en",))),  # Use EasyOCR instead
         )
 
     return result.content

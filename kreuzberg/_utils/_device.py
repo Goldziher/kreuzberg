@@ -1,4 +1,4 @@
-# ruff: noqa: BLE001  # ~keep
+# ~keep
 
 from __future__ import annotations
 
@@ -7,6 +7,14 @@ from dataclasses import dataclass
 from itertools import chain
 from typing import Literal
 
+from kreuzberg._utils._torch import (
+    clear_gpu_cache,
+    get_cuda_device_count,
+    get_cuda_device_properties,
+    get_cuda_memory_info,
+    is_cuda_available,
+    is_mps_available,
+)
 from kreuzberg.exceptions import ValidationError
 
 DeviceType = Literal["cpu", "cuda", "mps", "auto"]
@@ -29,8 +37,8 @@ class DeviceInfo:
 def detect_available_devices() -> list[DeviceInfo]:
     cpu_device = DeviceInfo(device_type="cpu", name="CPU")
 
-    cuda_devices = _get_cuda_devices() if _is_cuda_available() else []
-    mps_device = _get_mps_device() if _is_mps_available() else None
+    cuda_devices = _get_cuda_devices() if is_cuda_available() else []
+    mps_device = _get_mps_device() if is_mps_available() else None
     mps_devices = [mps_device] if mps_device else []
 
     return list(chain(cuda_devices, mps_devices, [cpu_device]))
@@ -99,97 +107,44 @@ def get_device_memory_info(device: DeviceInfo) -> tuple[float | None, float | No
     return None, None
 
 
-def _is_cuda_available() -> bool:
-    try:
-        import torch  # type: ignore[import-not-found,unused-ignore]  # noqa: PLC0415
-
-        return bool(torch.cuda.is_available())
-    except ImportError:  # pragma: no cover
-        return False
-
-
-def _is_mps_available() -> bool:
-    try:
-        import torch  # type: ignore[import-not-found,unused-ignore]  # noqa: PLC0415
-
-        return bool(torch.backends.mps.is_available())
-    except ImportError:  # pragma: no cover
-        return False
-
-
 def _get_cuda_devices() -> list[DeviceInfo]:
     devices: list[DeviceInfo] = []
 
-    try:
-        import torch  # noqa: PLC0415
+    if not is_cuda_available():
+        return devices
 
-        if not torch.cuda.is_available():
-            return devices
+    device_count = get_cuda_device_count()
+    for i in range(device_count):
+        props = get_cuda_device_properties(i)
+        memory_info = get_cuda_memory_info(i)
 
-        for i in range(torch.cuda.device_count()):
-            props = torch.cuda.get_device_properties(i)
-            total_memory = props.total_memory / (1024**3)
-
-            torch.cuda.set_device(i)
-            available_memory = torch.cuda.get_device_properties(i).total_memory / (1024**3)
-            try:
-                allocated = torch.cuda.memory_allocated(i) / (1024**3)
-                available_memory = total_memory - allocated
-            except Exception:
-                available_memory = total_memory
-
+        if props and memory_info:
+            total_memory, available_memory = memory_info
             devices.append(
                 DeviceInfo(
                     device_type="cuda",
                     device_id=i,
                     memory_total=total_memory,
                     memory_available=available_memory,
-                    name=props.name,
+                    name=props["name"],
                 )
             )
-
-    except ImportError:  # pragma: no cover
-        pass
 
     return devices
 
 
 def _get_mps_device() -> DeviceInfo | None:
-    try:
-        import torch  # noqa: PLC0415
-
-        if not torch.backends.mps.is_available():
-            return None
-
-        return DeviceInfo(
-            device_type="mps",
-            name="Apple Silicon GPU (MPS)",
-        )
-
-    except ImportError:  # pragma: no cover
+    if not is_mps_available():
         return None
+
+    return DeviceInfo(
+        device_type="mps",
+        name="Apple Silicon GPU (MPS)",
+    )
 
 
 def _get_cuda_memory_info(device_id: int) -> tuple[float | None, float | None]:
-    try:
-        import torch  # noqa: PLC0415
-
-        if not torch.cuda.is_available():
-            return None, None
-
-        props = torch.cuda.get_device_properties(device_id)
-        total_memory = props.total_memory / (1024**3)
-
-        try:
-            allocated = torch.cuda.memory_allocated(device_id) / (1024**3)
-            available_memory = total_memory - allocated
-        except Exception:
-            available_memory = total_memory
-
-        return total_memory, available_memory
-
-    except ImportError:  # pragma: no cover
-        return None, None
+    return get_cuda_memory_info(device_id) or (None, None)
 
 
 def _get_mps_memory_info() -> tuple[float | None, float | None]:
@@ -250,21 +205,6 @@ def get_recommended_batch_size(device: DeviceInfo, input_size_mb: float = 10.0) 
     return min(estimated_batch_size, 32)
 
 
-def cleanup_device_memory(device: DeviceInfo) -> None:
-    if device.device_type == "cuda":
-        try:
-            import torch  # noqa: PLC0415
-
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        except ImportError:  # pragma: no cover  # pragma: no cover
-            pass
-
-    elif device.device_type == "mps":
-        try:
-            import torch  # noqa: PLC0415
-
-            if torch.backends.mps.is_available():
-                torch.mps.empty_cache()
-        except (ImportError, AttributeError):
-            pass
+def cleanup_device_memory(_device: DeviceInfo) -> None:
+    """Clean up device memory cache."""
+    clear_gpu_cache()
