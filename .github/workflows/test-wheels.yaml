@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -58,8 +60,10 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: MATURIN_BUILD_ARGS=""
           CIBW_ENVIRONMENT_MACOS: MATURIN_BUILD_ARGS=""
 
-          CIBW_TEST_REQUIRES: pytest
-          CIBW_TEST_COMMAND: 'python -c "import kreuzberg; print(\"Import successful\")"'
+          CIBW_TEST_REQUIRES: pytest pytest-reruns pytest-timeout pytest-mock pytest-asyncio pytest-benchmark faker anyio msgspec
+          CIBW_TEST_COMMAND: >
+            python -c "import kreuzberg; print('Kreuzberg imported successfully')" &&
+            pytest {project}/tests/core -v --reruns 1 --reruns-delay 1
 
           CIBW_SKIP: "*-musllinux* *-win32 *-manylinux_i686"
 

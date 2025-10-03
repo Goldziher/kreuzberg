@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -55,6 +57,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -115,6 +119,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -271,6 +277,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
