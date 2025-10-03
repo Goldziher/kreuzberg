@@ -180,3 +180,202 @@ pub enum PptxError {
 }
 
 pub type Result<T> = std::result::Result<T, PptxError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_element_position_default() {
+        let pos = ElementPosition::default();
+        assert_eq!(pos.x, 0);
+        assert_eq!(pos.y, 0);
+    }
+
+    #[test]
+    fn test_element_position_equality() {
+        let pos1 = ElementPosition { x: 100, y: 200 };
+        let pos2 = ElementPosition { x: 100, y: 200 };
+        let pos3 = ElementPosition { x: 100, y: 300 };
+        assert_eq!(pos1, pos2);
+        assert_ne!(pos1, pos3);
+    }
+
+    #[test]
+    fn test_formatting_default() {
+        let formatting = Formatting::default();
+        assert!(!formatting.bold);
+        assert!(!formatting.italic);
+        assert!(!formatting.underline);
+        assert!(formatting.font_size.is_none());
+    }
+
+    #[test]
+    fn test_formatting_with_values() {
+        let formatting = Formatting {
+            bold: true,
+            italic: true,
+            underline: false,
+            font_size: Some(12.0),
+        };
+        assert!(formatting.bold);
+        assert!(formatting.italic);
+        assert!(!formatting.underline);
+        assert_eq!(formatting.font_size, Some(12.0));
+    }
+
+    #[test]
+    fn test_run_extract() {
+        let run = Run {
+            text: "Hello World".to_string(),
+            formatting: Formatting::default(),
+        };
+        assert_eq!(run.extract(), "Hello World");
+    }
+
+    #[test]
+    fn test_run_render_plain() {
+        let run = Run {
+            text: "Hello".to_string(),
+            formatting: Formatting::default(),
+        };
+        assert_eq!(run.render_as_md(), "Hello");
+    }
+
+    #[test]
+    fn test_run_render_bold() {
+        let run = Run {
+            text: "Hello".to_string(),
+            formatting: Formatting {
+                bold: true,
+                italic: false,
+                underline: false,
+                font_size: None,
+            },
+        };
+        assert_eq!(run.render_as_md(), "**Hello**");
+    }
+
+    #[test]
+    fn test_run_render_italic() {
+        let run = Run {
+            text: "Hello".to_string(),
+            formatting: Formatting {
+                bold: false,
+                italic: true,
+                underline: false,
+                font_size: None,
+            },
+        };
+        assert_eq!(run.render_as_md(), "*Hello*");
+    }
+
+    #[test]
+    fn test_run_render_bold_italic() {
+        let run = Run {
+            text: "Hello".to_string(),
+            formatting: Formatting {
+                bold: true,
+                italic: true,
+                underline: false,
+                font_size: None,
+            },
+        };
+        assert_eq!(run.render_as_md(), "***Hello***");
+    }
+
+    #[test]
+    fn test_text_element() {
+        let text = TextElement {
+            runs: vec![Run {
+                text: "Test".to_string(),
+                formatting: Formatting::default(),
+            }],
+        };
+        assert_eq!(text.runs.len(), 1);
+        assert_eq!(text.runs[0].text, "Test");
+    }
+
+    #[test]
+    fn test_list_item() {
+        let item = ListItem {
+            level: 1,
+            is_ordered: true,
+            runs: vec![],
+        };
+        assert_eq!(item.level, 1);
+        assert!(item.is_ordered);
+        assert_eq!(item.runs.len(), 0);
+    }
+
+    #[test]
+    fn test_list_element() {
+        let list = ListElement { items: vec![] };
+        assert_eq!(list.items.len(), 0);
+    }
+
+    #[test]
+    fn test_table_cell() {
+        let cell = TableCell { runs: vec![] };
+        assert_eq!(cell.runs.len(), 0);
+    }
+
+    #[test]
+    fn test_table_row() {
+        let row = TableRow { cells: vec![] };
+        assert_eq!(row.cells.len(), 0);
+    }
+
+    #[test]
+    fn test_table_element() {
+        let table = TableElement { rows: vec![] };
+        assert_eq!(table.rows.len(), 0);
+    }
+
+    #[test]
+    fn test_image_reference() {
+        let img = ImageReference {
+            id: "rId1".to_string(),
+            target: "media/image1.png".to_string(),
+        };
+        assert_eq!(img.id, "rId1");
+        assert_eq!(img.target, "media/image1.png");
+    }
+
+    #[test]
+    fn test_slide_element_position() {
+        let pos = ElementPosition { x: 100, y: 200 };
+        let text = SlideElement::Text(TextElement { runs: vec![] }, pos.clone());
+        assert_eq!(text.position(), pos);
+
+        let table = SlideElement::Table(TableElement { rows: vec![] }, pos.clone());
+        assert_eq!(table.position(), pos);
+
+        let img = SlideElement::Image(
+            ImageReference {
+                id: "rId1".to_string(),
+                target: "media/image1.png".to_string(),
+            },
+            pos.clone(),
+        );
+        assert_eq!(img.position(), pos);
+
+        let list = SlideElement::List(ListElement { items: vec![] }, pos.clone());
+        assert_eq!(list.position(), pos);
+    }
+
+    #[test]
+    fn test_pptx_error_display() {
+        let err = PptxError::ParseError("test error");
+        assert_eq!(err.to_string(), "Parse error: test error");
+    }
+
+    #[test]
+    fn test_pptx_error_from_utf8() {
+        let invalid_utf8 = vec![0xFF, 0xFE, 0xFD];
+        let result = std::str::from_utf8(&invalid_utf8);
+        assert!(result.is_err());
+        let err: PptxError = result.unwrap_err().into();
+        assert!(err.to_string().contains("UTF-8"));
+    }
+}

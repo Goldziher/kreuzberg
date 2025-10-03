@@ -19,5 +19,5 @@ pub mod validation;
 
 pub use cache::OCRCacheStats;
 pub use processor::OCRProcessor;
-pub use types::{ExtractionResultDTO, PSMMode, TesseractConfigDTO};
+pub use types::{BatchItemResult, ExtractionResultDTO, PSMMode, TableDTO, TesseractConfigDTO};
 pub use validation::{validate_language_code, validate_tesseract_version};

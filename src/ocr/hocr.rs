@@ -3,7 +3,7 @@
 //! This module provides functionality to convert hOCR (HTML-formatted OCR output)
 //! to clean Markdown text.
 
-use html_to_markdown::{convert, ConversionOptions};
+use html_to_markdown::{ConversionOptions, convert};
 
 use super::error::OCRError;
 
@@ -37,10 +37,7 @@ use super::error::OCRError;
 /// let markdown = convert_hocr_to_markdown(hocr, None).unwrap();
 /// assert!(markdown.contains("Hello World"));
 /// ```
-pub fn convert_hocr_to_markdown(
-    hocr_html: &str,
-    options: Option<ConversionOptions>,
-) -> Result<String, OCRError> {
+pub fn convert_hocr_to_markdown(hocr_html: &str, options: Option<ConversionOptions>) -> Result<String, OCRError> {
     convert(hocr_html, options).map_err(|e| OCRError::ProcessingFailed(format!("hOCR conversion failed: {}", e)))
 }
 

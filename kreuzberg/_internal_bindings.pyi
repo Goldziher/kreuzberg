@@ -270,6 +270,15 @@ class TesseractConfigDTO:
     table_column_threshold: int
     table_row_threshold_ratio: float
     use_cache: bool
+    classify_use_pre_adapted_templates: bool
+    language_model_ngram_on: bool
+    tessedit_dont_blkrej_good_wds: bool
+    tessedit_dont_rowrej_good_wds: bool
+    tessedit_enable_dict_correction: bool
+    tessedit_char_whitelist: str
+    tessedit_use_primary_params_model: bool
+    textord_space_size_is_variable: bool
+    thresholding_method: bool
 
     def __init__(
         self,
@@ -281,22 +290,57 @@ class TesseractConfigDTO:
         table_column_threshold: int = 50,
         table_row_threshold_ratio: float = 0.5,
         use_cache: bool = True,
+        classify_use_pre_adapted_templates: bool = True,
+        language_model_ngram_on: bool = False,
+        tessedit_dont_blkrej_good_wds: bool = True,
+        tessedit_dont_rowrej_good_wds: bool = True,
+        tessedit_enable_dict_correction: bool = True,
+        tessedit_char_whitelist: str = "",
+        tessedit_use_primary_params_model: bool = True,
+        textord_space_size_is_variable: bool = True,
+        thresholding_method: bool = False,
     ) -> None: ...
+
+class TableDTO:
+    cells: list[list[str]]
+    markdown: str
+    page_number: int
+
+    def __init__(self, cells: list[list[str]], markdown: str, page_number: int) -> None: ...
 
 class ExtractionResultDTO:
     content: str
     mime_type: str
     metadata: dict[str, str]
+    tables: list[TableDTO]
 
-    def __init__(self, content: str, mime_type: str, metadata: dict[str, str] | None = None) -> None: ...
+    def __init__(
+        self,
+        content: str,
+        mime_type: str,
+        metadata: dict[str, str] | None = None,
+        tables: list[TableDTO] | None = None,
+    ) -> None: ...
 
 class OCRCacheStats:
     total_files: int
     total_size_mb: float
 
+class BatchItemResult:
+    file_path: str
+    success: bool
+    result: ExtractionResultDTO | None
+    error: str | None
+
+    def __init__(
+        self, file_path: str, success: bool, result: ExtractionResultDTO | None, error: str | None
+    ) -> None: ...
+
 class OCRProcessor:
     def __init__(self, cache_dir: str | None = None) -> None: ...
     def process_image(self, image_bytes: bytes, config: TesseractConfigDTO) -> ExtractionResultDTO: ...
+    def process_file(self, file_path: str, config: TesseractConfigDTO) -> ExtractionResultDTO: ...
+    def process_files_batch(self, file_paths: list[str], config: TesseractConfigDTO) -> list[BatchItemResult]: ...
     def clear_cache(self) -> None: ...
     def get_cache_stats(self) -> OCRCacheStats: ...
 

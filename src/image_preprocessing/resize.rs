@@ -90,3 +90,91 @@ pub fn resize_image(
 
     Ok(DynamicImage::ImageRgb8(img_buffer))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::Rgb;
+    use ndarray::Array3;
+
+    fn create_test_image() -> DynamicImage {
+        let mut img = ImageBuffer::new(100, 100);
+        for y in 0..100 {
+            for x in 0..100 {
+                img.put_pixel(x, y, Rgb([255u8, 0u8, 0u8]));
+            }
+        }
+        DynamicImage::ImageRgb8(img)
+    }
+
+    fn create_test_array() -> Array3<u8> {
+        Array3::from_elem((100, 100, 3), 255)
+    }
+
+    #[test]
+    fn test_numpy_to_image() {
+        let array = create_test_array();
+        let result = numpy_to_image(array.view());
+        assert!(result.is_ok());
+        let img = result.unwrap();
+        assert_eq!(img.width(), 100);
+        assert_eq!(img.height(), 100);
+    }
+
+    #[test]
+    fn test_numpy_to_image_invalid_channels() {
+        let array = Array3::from_elem((100, 100, 4), 255);
+        let result = numpy_to_image(array.view());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resize_image_downscale() {
+        let img = create_test_image();
+        let result = resize_image(&img, 50, 50, 0.5);
+        assert!(result.is_ok());
+        let resized = result.unwrap();
+        assert_eq!(resized.width(), 50);
+        assert_eq!(resized.height(), 50);
+    }
+
+    #[test]
+    fn test_resize_image_upscale() {
+        let img = create_test_image();
+        let result = resize_image(&img, 200, 200, 2.0);
+        assert!(result.is_ok());
+        let resized = result.unwrap();
+        assert_eq!(resized.width(), 200);
+        assert_eq!(resized.height(), 200);
+    }
+
+    #[test]
+    fn test_resize_image_no_scale() {
+        let img = create_test_image();
+        let result = resize_image(&img, 100, 100, 1.0);
+        assert!(result.is_ok());
+        let resized = result.unwrap();
+        assert_eq!(resized.width(), 100);
+        assert_eq!(resized.height(), 100);
+    }
+
+    #[test]
+    fn test_numpy_to_image_dimension_overflow() {
+        let large_width = u32::MAX as usize + 1;
+        let array = Array3::from_elem((10, large_width, 3), 255);
+        let result = numpy_to_image(array.view());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resize_preserves_aspect_ratio() {
+        let img = create_test_image();
+        let result = resize_image(&img, 50, 50, 0.5);
+        assert!(result.is_ok());
+        let resized = result.unwrap();
+
+        let original_aspect = img.width() as f64 / img.height() as f64;
+        let resized_aspect = resized.width() as f64 / resized.height() as f64;
+        assert!((original_aspect - resized_aspect).abs() < 0.01);
+    }
+}

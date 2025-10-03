@@ -253,3 +253,341 @@ pub fn save_numpy_as_image<'py>(_py: Python<'py>, array: PyReadonlyArray3<'py, u
 
     Ok(cursor.into_inner())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{ImageBuffer, Rgb};
+    use ndarray::Array3;
+
+    fn create_rgb_array() -> Array3<u8> {
+        let mut arr = Array3::zeros((10, 10, 3));
+        for y in 0..10 {
+            for x in 0..10 {
+                arr[[y, x, 0]] = 255;
+                arr[[y, x, 1]] = 128;
+                arr[[y, x, 2]] = 64;
+            }
+        }
+        arr
+    }
+
+    fn create_rgba_array() -> Array3<u8> {
+        let mut arr = Array3::zeros((10, 10, 4));
+        for y in 0..10 {
+            for x in 0..10 {
+                arr[[y, x, 0]] = 255;
+                arr[[y, x, 1]] = 128;
+                arr[[y, x, 2]] = 64;
+                arr[[y, x, 3]] = 255;
+            }
+        }
+        arr
+    }
+
+    fn create_grayscale_array() -> Array3<u8> {
+        let mut arr = Array3::zeros((10, 10, 1));
+        for y in 0..10 {
+            for x in 0..10 {
+                arr[[y, x, 0]] = 128;
+            }
+        }
+        arr
+    }
+
+    #[test]
+    fn test_rgb_to_grayscale_conversion() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let readonly = rgb_array.readonly();
+            let result = rgb_to_grayscale(py, readonly).unwrap();
+
+            let gray = unsafe { result.as_array() };
+            assert_eq!(gray.dim(), (10, 10, 1));
+
+            let expected = (255u32 * 54 + 128 * 183 + 64 * 19) >> 8;
+            assert_eq!(gray[[0, 0, 0]] as u32, expected);
+        });
+    }
+
+    #[test]
+    fn test_rgb_to_grayscale_wrong_channels() {
+        let rgba = create_rgba_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgba_array = PyArray3::from_array(py, &rgba);
+            let result = rgb_to_grayscale(py, rgba_array.readonly());
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_rgb_to_rgba_default_alpha() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let result = rgb_to_rgba(py, rgb_array.readonly(), 255).unwrap();
+
+            let rgba = unsafe { result.as_array() };
+            assert_eq!(rgba.dim(), (10, 10, 4));
+            assert_eq!(rgba[[0, 0, 0]], 255);
+            assert_eq!(rgba[[0, 0, 1]], 128);
+            assert_eq!(rgba[[0, 0, 2]], 64);
+            assert_eq!(rgba[[0, 0, 3]], 255);
+        });
+    }
+
+    #[test]
+    fn test_rgb_to_rgba_custom_alpha() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let result = rgb_to_rgba(py, rgb_array.readonly(), 128).unwrap();
+
+            let rgba = unsafe { result.as_array() };
+            assert_eq!(rgba[[0, 0, 3]], 128);
+        });
+    }
+
+    #[test]
+    fn test_rgb_to_rgba_wrong_channels() {
+        let rgba = create_rgba_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgba_array = PyArray3::from_array(py, &rgba);
+            let result = rgb_to_rgba(py, rgba_array.readonly(), 255);
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_rgba_to_rgb_conversion() {
+        let rgba = create_rgba_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgba_array = PyArray3::from_array(py, &rgba);
+            let result = rgba_to_rgb(py, rgba_array.readonly()).unwrap();
+
+            let rgb = unsafe { result.as_array() };
+            assert_eq!(rgb.dim(), (10, 10, 3));
+            assert_eq!(rgb[[0, 0, 0]], 255);
+            assert_eq!(rgb[[0, 0, 1]], 128);
+            assert_eq!(rgb[[0, 0, 2]], 64);
+        });
+    }
+
+    #[test]
+    fn test_rgba_to_rgb_wrong_channels() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let result = rgba_to_rgb(py, rgb_array.readonly());
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_convert_format_rgb_to_rgba() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let result = convert_format(py, rgb_array.readonly(), "RGBA").unwrap();
+
+            let rgba = unsafe { result.as_array() };
+            assert_eq!(rgba.dim(), (10, 10, 4));
+        });
+    }
+
+    #[test]
+    fn test_convert_format_rgba_to_rgb() {
+        let rgba = create_rgba_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgba_array = PyArray3::from_array(py, &rgba);
+            let result = convert_format(py, rgba_array.readonly(), "RGB").unwrap();
+
+            let rgb = unsafe { result.as_array() };
+            assert_eq!(rgb.dim(), (10, 10, 3));
+        });
+    }
+
+    #[test]
+    fn test_convert_format_rgb_to_grayscale() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let result = convert_format(py, rgb_array.readonly(), "GRAY").unwrap();
+
+            let gray = unsafe { result.as_array() };
+            assert_eq!(gray.dim(), (10, 10, 1));
+        });
+    }
+
+    #[test]
+    fn test_convert_format_grayscale_to_rgb() {
+        let gray = create_grayscale_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let gray_array = PyArray3::from_array(py, &gray);
+            let result = convert_format(py, gray_array.readonly(), "RGB").unwrap();
+
+            let rgb = unsafe { result.as_array() };
+            assert_eq!(rgb.dim(), (10, 10, 3));
+            assert_eq!(rgb[[0, 0, 0]], 128);
+            assert_eq!(rgb[[0, 0, 1]], 128);
+            assert_eq!(rgb[[0, 0, 2]], 128);
+        });
+    }
+
+    #[test]
+    fn test_convert_format_grayscale_to_rgba() {
+        let gray = create_grayscale_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let gray_array = PyArray3::from_array(py, &gray);
+            let result = convert_format(py, gray_array.readonly(), "RGBA").unwrap();
+
+            let rgba = unsafe { result.as_array() };
+            assert_eq!(rgba.dim(), (10, 10, 4));
+            assert_eq!(rgba[[0, 0, 3]], 255);
+        });
+    }
+
+    #[test]
+    fn test_convert_format_unsupported() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let result = convert_format(py, rgb_array.readonly(), "CMYK");
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_load_image_as_numpy() {
+        let img = ImageBuffer::from_fn(50, 50, |_, _| Rgb([255u8, 0u8, 0u8]));
+        let dynamic_img = DynamicImage::ImageRgb8(img);
+        let mut bytes = Vec::new();
+        dynamic_img
+            .write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Png)
+            .unwrap();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let result = load_image_as_numpy(py, &bytes).unwrap();
+            let arr = unsafe { result.as_array() };
+            assert_eq!(arr.dim(), (50, 50, 3));
+        });
+    }
+
+    #[test]
+    fn test_load_image_as_numpy_invalid() {
+        let invalid_bytes = vec![0u8; 100];
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let result = load_image_as_numpy(py, &invalid_bytes);
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_save_numpy_as_image_png() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let result = save_numpy_as_image(py, rgb_array.readonly(), "PNG").unwrap();
+            assert!(!result.is_empty());
+
+            let loaded = image::load_from_memory(&result).unwrap();
+            assert_eq!(loaded.width(), 10);
+            assert_eq!(loaded.height(), 10);
+        });
+    }
+
+    #[test]
+    fn test_save_numpy_as_image_jpeg() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let result = save_numpy_as_image(py, rgb_array.readonly(), "JPEG").unwrap();
+            assert!(!result.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_save_numpy_as_image_rgba() {
+        let rgba = create_rgba_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgba_array = PyArray3::from_array(py, &rgba);
+            let result = save_numpy_as_image(py, rgba_array.readonly(), "PNG").unwrap();
+            assert!(!result.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_save_numpy_as_image_grayscale() {
+        let gray = create_grayscale_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let gray_array = PyArray3::from_array(py, &gray);
+            let result = save_numpy_as_image(py, gray_array.readonly(), "PNG").unwrap();
+            assert!(!result.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_save_numpy_as_image_unsupported_format() {
+        let rgb = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let rgb_array = PyArray3::from_array(py, &rgb);
+            let result = save_numpy_as_image(py, rgb_array.readonly(), "XYZ");
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_roundtrip_load_save_numpy() {
+        let original = create_rgb_array();
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let original_array = PyArray3::from_array(py, &original);
+            let bytes = save_numpy_as_image(py, original_array.readonly(), "PNG").unwrap();
+            let loaded = load_image_as_numpy(py, &bytes).unwrap();
+            let loaded_arr = unsafe { loaded.as_array() };
+
+            assert_eq!(original.dim(), loaded_arr.dim());
+        });
+    }
+}

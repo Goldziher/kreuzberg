@@ -76,6 +76,34 @@ pub struct TesseractConfigDTO {
 
     #[pyo3(get, set)]
     pub use_cache: bool,
+
+    // Additional Tesseract configuration options
+    #[pyo3(get, set)]
+    pub classify_use_pre_adapted_templates: bool,
+
+    #[pyo3(get, set)]
+    pub language_model_ngram_on: bool,
+
+    #[pyo3(get, set)]
+    pub tessedit_dont_blkrej_good_wds: bool,
+
+    #[pyo3(get, set)]
+    pub tessedit_dont_rowrej_good_wds: bool,
+
+    #[pyo3(get, set)]
+    pub tessedit_enable_dict_correction: bool,
+
+    #[pyo3(get, set)]
+    pub tessedit_char_whitelist: String,
+
+    #[pyo3(get, set)]
+    pub tessedit_use_primary_params_model: bool,
+
+    #[pyo3(get, set)]
+    pub textord_space_size_is_variable: bool,
+
+    #[pyo3(get, set)]
+    pub thresholding_method: bool,
 }
 
 #[pymethods]
@@ -90,6 +118,15 @@ impl TesseractConfigDTO {
         table_column_threshold = 50,
         table_row_threshold_ratio = 0.5,
         use_cache = true,
+        classify_use_pre_adapted_templates = true,
+        language_model_ngram_on = false,
+        tessedit_dont_blkrej_good_wds = true,
+        tessedit_dont_rowrej_good_wds = true,
+        tessedit_enable_dict_correction = true,
+        tessedit_char_whitelist = String::new(),
+        tessedit_use_primary_params_model = true,
+        textord_space_size_is_variable = true,
+        thresholding_method = false,
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -101,6 +138,15 @@ impl TesseractConfigDTO {
         table_column_threshold: u32,
         table_row_threshold_ratio: f64,
         use_cache: bool,
+        classify_use_pre_adapted_templates: bool,
+        language_model_ngram_on: bool,
+        tessedit_dont_blkrej_good_wds: bool,
+        tessedit_dont_rowrej_good_wds: bool,
+        tessedit_enable_dict_correction: bool,
+        tessedit_char_whitelist: String,
+        tessedit_use_primary_params_model: bool,
+        textord_space_size_is_variable: bool,
+        thresholding_method: bool,
     ) -> Self {
         Self {
             language,
@@ -111,6 +157,15 @@ impl TesseractConfigDTO {
             table_column_threshold,
             table_row_threshold_ratio,
             use_cache,
+            classify_use_pre_adapted_templates,
+            language_model_ngram_on,
+            tessedit_dont_blkrej_good_wds,
+            tessedit_dont_rowrej_good_wds,
+            tessedit_enable_dict_correction,
+            tessedit_char_whitelist,
+            tessedit_use_primary_params_model,
+            textord_space_size_is_variable,
+            thresholding_method,
         }
     }
 
@@ -134,24 +189,99 @@ pub struct ExtractionResultDTO {
 
     #[pyo3(get, set)]
     pub metadata: HashMap<String, String>,
+
+    #[pyo3(get, set)]
+    pub tables: Vec<TableDTO>,
 }
 
 #[pymethods]
 impl ExtractionResultDTO {
     #[new]
-    fn new(content: String, mime_type: String, metadata: Option<HashMap<String, String>>) -> Self {
+    fn new(
+        content: String,
+        mime_type: String,
+        metadata: Option<HashMap<String, String>>,
+        tables: Option<Vec<TableDTO>>,
+    ) -> Self {
         Self {
             content,
             mime_type,
             metadata: metadata.unwrap_or_default(),
+            tables: tables.unwrap_or_default(),
         }
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "ExtractionResultDTO(mime_type='{}', content_length={})",
+            "ExtractionResultDTO(mime_type='{}', content_length={}, tables={})",
             self.mime_type,
-            self.content.len()
+            self.content.len(),
+            self.tables.len()
         )
+    }
+}
+
+/// Table data transfer object
+#[pyclass]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TableDTO {
+    #[pyo3(get, set)]
+    pub cells: Vec<Vec<String>>,
+
+    #[pyo3(get, set)]
+    pub markdown: String,
+
+    #[pyo3(get, set)]
+    pub page_number: i32,
+}
+
+#[pymethods]
+impl TableDTO {
+    #[new]
+    fn new(cells: Vec<Vec<String>>, markdown: String, page_number: i32) -> Self {
+        Self {
+            cells,
+            markdown,
+            page_number,
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "TableDTO(rows={}, cols={}, page={})",
+            self.cells.len(),
+            self.cells.first().map(|r| r.len()).unwrap_or(0),
+            self.page_number
+        )
+    }
+}
+
+/// Result for a single item in batch processing
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct BatchItemResult {
+    #[pyo3(get, set)]
+    pub file_path: String,
+
+    #[pyo3(get, set)]
+    pub success: bool,
+
+    #[pyo3(get, set)]
+    pub result: Option<ExtractionResultDTO>,
+
+    #[pyo3(get, set)]
+    pub error: Option<String>,
+}
+
+#[pymethods]
+impl BatchItemResult {
+    #[new]
+    fn new(file_path: String, success: bool, result: Option<ExtractionResultDTO>, error: Option<String>) -> Self {
+        Self {
+            file_path,
+            success,
+            result,
+            error,
+        }
     }
 }

@@ -30,6 +30,7 @@ static VERSION_CHECKED: Lazy<Mutex<Option<bool>>> = Lazy::new(|| Mutex::new(None
 /// Validate Tesseract language code(s)
 ///
 /// Supports single language codes (e.g., "eng") and multi-language codes (e.g., "eng+deu")
+/// Returns the lowercase normalized version of the language code
 #[pyo3::pyfunction]
 pub fn validate_language_code(lang: &str) -> pyo3::PyResult<String> {
     if lang.is_empty() {
@@ -38,6 +39,7 @@ pub fn validate_language_code(lang: &str) -> pyo3::PyResult<String> {
 
     // Handle multi-language codes (e.g., "eng+deu")
     let codes: Vec<&str> = lang.split('+').collect();
+    let mut normalized_codes = Vec::new();
 
     for code in &codes {
         let normalized = code.trim().to_lowercase();
@@ -48,9 +50,12 @@ pub fn validate_language_code(lang: &str) -> pyo3::PyResult<String> {
                 code
             )));
         }
+
+        normalized_codes.push(normalized);
     }
 
-    Ok(lang.to_string())
+    // Return lowercase normalized version
+    Ok(normalized_codes.join("+"))
 }
 
 /// Validate Tesseract version

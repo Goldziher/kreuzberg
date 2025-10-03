@@ -37,3 +37,36 @@ impl ExtractionConfigDTO {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config_new_with_defaults() {
+        let config = ExtractionConfigDTO::new(300, 4096, false, 72, 600);
+        assert_eq!(config.target_dpi, 300);
+        assert_eq!(config.max_image_dimension, 4096);
+        assert!(!config.auto_adjust_dpi);
+        assert_eq!(config.min_dpi, 72);
+        assert_eq!(config.max_dpi, 600);
+    }
+
+    #[test]
+    fn test_config_new_with_custom_values() {
+        let config = ExtractionConfigDTO::new(150, 2048, true, 96, 400);
+        assert_eq!(config.target_dpi, 150);
+        assert_eq!(config.max_image_dimension, 2048);
+        assert!(config.auto_adjust_dpi);
+        assert_eq!(config.min_dpi, 96);
+        assert_eq!(config.max_dpi, 400);
+    }
+
+    #[test]
+    fn test_config_clone() {
+        let config1 = ExtractionConfigDTO::new(300, 4096, false, 72, 600);
+        let config2 = config1.clone();
+        assert_eq!(config1.target_dpi, config2.target_dpi);
+        assert_eq!(config1.max_image_dimension, config2.max_image_dimension);
+    }
+}

@@ -205,3 +205,165 @@ pub fn compress_image_auto<'py>(
 
     Ok((PyBytes::new(py, &compressed), format))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{ImageBuffer, Rgb, Rgba};
+
+    fn create_photo_image() -> DynamicImage {
+        let img = ImageBuffer::from_fn(100, 100, |x, y| {
+            Rgb([(x % 256) as u8, (y % 256) as u8, ((x + y) % 256) as u8])
+        });
+        DynamicImage::ImageRgb8(img)
+    }
+
+    fn create_simple_image() -> DynamicImage {
+        let img = ImageBuffer::from_fn(100, 100, |_, _| Rgb([255u8, 0u8, 0u8]));
+        DynamicImage::ImageRgb8(img)
+    }
+
+    fn create_transparent_image() -> DynamicImage {
+        let img = ImageBuffer::from_fn(100, 100, |_, _| Rgba([255u8, 0u8, 0u8, 128u8]));
+        DynamicImage::ImageRgba8(img)
+    }
+
+    #[test]
+    fn test_compress_jpeg_quality_85() {
+        let img = create_photo_image();
+        let result = compress_jpeg(&img, 85);
+        assert!(result.is_ok());
+        let compressed = result.unwrap();
+        assert!(!compressed.is_empty());
+    }
+
+    #[test]
+    fn test_compress_jpeg_quality_ranges() {
+        let img = create_photo_image();
+
+        let high_quality = compress_jpeg(&img, 95).unwrap();
+        let mid_quality = compress_jpeg(&img, 85).unwrap();
+        let low_quality = compress_jpeg(&img, 50).unwrap();
+
+        assert!(high_quality.len() > mid_quality.len());
+        assert!(mid_quality.len() > low_quality.len());
+    }
+
+    #[test]
+    fn test_compress_png_default() {
+        let img = create_simple_image();
+        let result = compress_png(&img, image::codecs::png::CompressionType::Default);
+        assert!(result.is_ok());
+        assert!(!result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_compress_png_compression_levels() {
+        let img = create_photo_image();
+
+        let fast = compress_png(&img, image::codecs::png::CompressionType::Fast).unwrap();
+        let default = compress_png(&img, image::codecs::png::CompressionType::Default).unwrap();
+        let best = compress_png(&img, image::codecs::png::CompressionType::Best).unwrap();
+
+        assert!(best.len() <= default.len());
+        assert!(default.len() <= fast.len());
+    }
+
+    #[test]
+    fn test_compress_auto_transparent_uses_png() {
+        let img = create_transparent_image();
+        let (compressed, format) = compress_auto(&img, None).unwrap();
+        assert_eq!(format, "PNG");
+        assert!(!compressed.is_empty());
+    }
+
+    #[test]
+    fn test_compress_auto_photo_uses_jpeg() {
+        let img = create_photo_image();
+        let (compressed, format) = compress_auto(&img, None).unwrap();
+        assert_eq!(format, "JPEG");
+        assert!(!compressed.is_empty());
+    }
+
+    #[test]
+    fn test_compress_auto_simple_graphics() {
+        let img = create_simple_image();
+        let (compressed, format) = compress_auto(&img, None).unwrap();
+        assert!(format == "PNG" || format == "JPEG");
+        assert!(!compressed.is_empty());
+    }
+
+    #[test]
+    fn test_compress_auto_with_target_size() {
+        let img = create_photo_image();
+        let (compressed, format) = compress_auto(&img, Some(50)).unwrap();
+        assert_eq!(format, "JPEG");
+
+        let size_kb = compressed.len() / 1024;
+        assert!(size_kb <= 55);
+    }
+
+    #[test]
+    fn test_find_optimal_jpeg_quality() {
+        let img = create_photo_image();
+        let quality = find_optimal_jpeg_quality(&img, 100).unwrap();
+        assert!(quality >= 20);
+        assert!(quality <= 95);
+
+        let compressed = compress_jpeg(&img, quality).unwrap();
+        let size_kb = compressed.len() / 1024;
+        assert!(size_kb <= 105);
+    }
+
+    #[test]
+    fn test_find_optimal_jpeg_quality_very_small_target() {
+        let img = create_photo_image();
+        let quality = find_optimal_jpeg_quality(&img, 5).unwrap();
+        assert!(quality >= 20);
+        assert!(quality <= 95);
+    }
+
+    #[test]
+    fn test_find_optimal_jpeg_quality_large_target() {
+        let img = create_simple_image();
+        let quality = find_optimal_jpeg_quality(&img, 1000).unwrap();
+        assert!(quality >= 20);
+        assert!(quality <= 95);
+    }
+
+    #[test]
+    fn test_compress_jpeg_small_image() {
+        let img = ImageBuffer::from_fn(10, 10, |_, _| Rgb([128u8, 128u8, 128u8]));
+        let dynamic_img = DynamicImage::ImageRgb8(img);
+        let result = compress_jpeg(&dynamic_img, 85);
+        assert!(result.is_ok());
+        assert!(!result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_compress_png_small_image() {
+        let img = ImageBuffer::from_fn(10, 10, |_, _| Rgb([255u8, 0u8, 0u8]));
+        let dynamic_img = DynamicImage::ImageRgb8(img);
+        let result = compress_png(&dynamic_img, image::codecs::png::CompressionType::Default);
+        assert!(result.is_ok());
+        assert!(!result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_roundtrip_jpeg() {
+        let img = create_photo_image();
+        let compressed = compress_jpeg(&img, 85).unwrap();
+        let loaded = image::load_from_memory(&compressed).unwrap();
+        assert_eq!(img.width(), loaded.width());
+        assert_eq!(img.height(), loaded.height());
+    }
+
+    #[test]
+    fn test_roundtrip_png() {
+        let img = create_simple_image();
+        let compressed = compress_png(&img, image::codecs::png::CompressionType::Default).unwrap();
+        let loaded = image::load_from_memory(&compressed).unwrap();
+        assert_eq!(img.width(), loaded.width());
+        assert_eq!(img.height(), loaded.height());
+    }
+}

@@ -11,7 +11,7 @@ use super::cache::OCRCache;
 use super::error::OCRError;
 use super::hocr::convert_hocr_to_markdown;
 use super::table::{extract_words, reconstruct_table, table_to_markdown};
-use super::types::{ExtractionResultDTO, TesseractConfigDTO};
+use super::types::{BatchItemResult, ExtractionResultDTO, TableDTO, TesseractConfigDTO};
 
 /// Compute hash of image bytes for caching
 fn compute_image_hash(image_bytes: &[u8]) -> String {
@@ -82,11 +82,58 @@ impl OCRProcessor {
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
+    /// Process image file with Tesseract OCR
+    pub fn process_file(&self, file_path: &str, config: &TesseractConfigDTO) -> PyResult<ExtractionResultDTO> {
+        let image_bytes = std::fs::read(file_path)
+            .map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("Failed to read file '{}': {}", file_path, e)))?;
+        self.process_image(&image_bytes, config)
+    }
+
+    /// Process multiple image files sequentially
+    /// Note: Using sequential processing instead of parallel to avoid potential
+    /// deadlocks and thread safety issues with Tesseract C API
+    pub fn process_files_batch(
+        &self,
+        file_paths: Vec<String>,
+        config: &TesseractConfigDTO,
+    ) -> PyResult<Vec<BatchItemResult>> {
+        let results: Vec<BatchItemResult> = file_paths
+            .iter()
+            .map(|path| match self.process_file(path, config) {
+                Ok(result) => BatchItemResult {
+                    file_path: path.clone(),
+                    success: true,
+                    result: Some(result),
+                    error: None,
+                },
+                Err(e) => BatchItemResult {
+                    file_path: path.clone(),
+                    success: false,
+                    result: None,
+                    error: Some(e.to_string()),
+                },
+            })
+            .collect();
+        Ok(results)
+    }
+
     /// Serialize config for cache key generation
     fn serialize_config(&self, config: &TesseractConfigDTO) -> String {
         format!(
-            "lang={}&psm={}&format={}&table_detection={}",
-            config.language, config.psm, config.output_format, config.enable_table_detection
+            "lang={}&psm={}&format={}&table_detection={}&classify_pre_adapted={}&ngram={}&blkrej={}&rowrej={}&dict_correction={}&whitelist={}&primary_params={}&space_variable={}&threshold={}",
+            config.language,
+            config.psm,
+            config.output_format,
+            config.enable_table_detection,
+            config.classify_use_pre_adapted_templates,
+            config.language_model_ngram_on,
+            config.tessedit_dont_blkrej_good_wds,
+            config.tessedit_dont_rowrej_good_wds,
+            config.tessedit_enable_dict_correction,
+            config.tessedit_char_whitelist,
+            config.tessedit_use_primary_params_model,
+            config.textord_space_size_is_variable,
+            config.thresholding_method
         )
     }
 
@@ -105,8 +152,26 @@ impl OCRProcessor {
         // Initialize Tesseract API
         let api = TesseractAPI::new();
 
-        // Initialize with language (empty string for auto-detected tessdata directory)
-        api.init("", &config.language).map_err(|e| {
+        // Try to find tessdata directory
+        let tessdata_path = std::env::var("TESSDATA_PREFIX")
+            .ok()
+            .or_else(|| {
+                // Try common tessdata directory paths
+                let paths = vec![
+                    "/opt/homebrew/opt/tesseract/share/tessdata", // Homebrew on ARM Mac
+                    "/usr/local/opt/tesseract/share/tessdata",    // Homebrew on Intel Mac
+                    "/usr/share/tessdata",                        // Linux
+                    "/usr/local/share/tessdata",                  // Linux/macOS
+                ];
+                paths
+                    .into_iter()
+                    .find(|p| std::path::Path::new(p).exists())
+                    .map(String::from)
+            })
+            .unwrap_or_default();
+
+        // Initialize with language
+        api.init(&tessdata_path, &config.language).map_err(|e| {
             OCRError::InitializationFailed(format!("Failed to initialize language '{}': {}", config.language, e))
         })?;
 
@@ -114,6 +179,57 @@ impl OCRProcessor {
         let psm_mode = TessPageSegMode::from_int(config.psm as i32);
         api.set_page_seg_mode(psm_mode)
             .map_err(|e| OCRError::ConfigurationError(format!("Failed to set PSM mode: {}", e)))?;
+
+        // Apply additional Tesseract configuration variables
+        api.set_variable(
+            "classify_use_pre_adapted_templates",
+            &config.classify_use_pre_adapted_templates.to_string(),
+        )
+        .map_err(|e| {
+            OCRError::ConfigurationError(format!("Failed to set classify_use_pre_adapted_templates: {}", e))
+        })?;
+
+        api.set_variable("language_model_ngram_on", &config.language_model_ngram_on.to_string())
+            .map_err(|e| OCRError::ConfigurationError(format!("Failed to set language_model_ngram_on: {}", e)))?;
+
+        api.set_variable(
+            "tessedit_dont_blkrej_good_wds",
+            &config.tessedit_dont_blkrej_good_wds.to_string(),
+        )
+        .map_err(|e| OCRError::ConfigurationError(format!("Failed to set tessedit_dont_blkrej_good_wds: {}", e)))?;
+
+        api.set_variable(
+            "tessedit_dont_rowrej_good_wds",
+            &config.tessedit_dont_rowrej_good_wds.to_string(),
+        )
+        .map_err(|e| OCRError::ConfigurationError(format!("Failed to set tessedit_dont_rowrej_good_wds: {}", e)))?;
+
+        api.set_variable(
+            "tessedit_enable_dict_correction",
+            &config.tessedit_enable_dict_correction.to_string(),
+        )
+        .map_err(|e| OCRError::ConfigurationError(format!("Failed to set tessedit_enable_dict_correction: {}", e)))?;
+
+        // Only set whitelist if non-empty
+        if !config.tessedit_char_whitelist.is_empty() {
+            api.set_variable("tessedit_char_whitelist", &config.tessedit_char_whitelist)
+                .map_err(|e| OCRError::ConfigurationError(format!("Failed to set tessedit_char_whitelist: {}", e)))?;
+        }
+
+        api.set_variable(
+            "tessedit_use_primary_params_model",
+            &config.tessedit_use_primary_params_model.to_string(),
+        )
+        .map_err(|e| OCRError::ConfigurationError(format!("Failed to set tessedit_use_primary_params_model: {}", e)))?;
+
+        api.set_variable(
+            "textord_space_size_is_variable",
+            &config.textord_space_size_is_variable.to_string(),
+        )
+        .map_err(|e| OCRError::ConfigurationError(format!("Failed to set textord_space_size_is_variable: {}", e)))?;
+
+        api.set_variable("thresholding_method", &config.thresholding_method.to_string())
+            .map_err(|e| OCRError::ConfigurationError(format!("Failed to set thresholding_method: {}", e)))?;
 
         // Set image data
         api.set_image(
@@ -126,7 +242,17 @@ impl OCRProcessor {
         .map_err(|e| OCRError::ProcessingFailed(format!("Failed to set image: {}", e)))?;
 
         // Extract text based on output format
-        let (mut content, mime_type) = match config.output_format.as_str() {
+        // Note: If table detection is enabled, we need TSV data regardless of output format
+        let tsv_data_for_tables =
+            if config.enable_table_detection {
+                Some(api.get_tsv_text(0).map_err(|e| {
+                    OCRError::ProcessingFailed(format!("Failed to extract TSV for table detection: {}", e))
+                })?)
+            } else {
+                None
+            };
+
+        let (content, mime_type) = match config.output_format.as_str() {
             "text" => {
                 // Plain text output
                 let text = api
@@ -135,11 +261,24 @@ impl OCRProcessor {
                 (text, "text/plain".to_string())
             }
             "markdown" => {
-                // Markdown output - extract hOCR and convert to markdown for better formatting
+                // Markdown output - extract hOCR and convert to markdown with table extraction
                 let hocr = api
                     .get_hocr_text(0)
                     .map_err(|e| OCRError::ProcessingFailed(format!("Failed to extract hOCR: {}", e)))?;
-                let markdown = convert_hocr_to_markdown(&hocr, None)?;
+
+                // Configure hOCR conversion with table extraction if enabled
+                let options = if config.enable_table_detection {
+                    Some(html_to_markdown::ConversionOptions {
+                        hocr_extract_tables: true,
+                        hocr_table_column_threshold: config.table_column_threshold,
+                        hocr_table_row_threshold_ratio: config.table_row_threshold_ratio,
+                        ..Default::default()
+                    })
+                } else {
+                    None
+                };
+
+                let markdown = convert_hocr_to_markdown(&hocr, options)?;
                 (markdown, "text/markdown".to_string())
             }
             "hocr" => {
@@ -150,10 +289,13 @@ impl OCRProcessor {
                 (hocr, "text/html".to_string())
             }
             "tsv" => {
-                // TSV output
-                let tsv = api
-                    .get_tsv_text(0)
-                    .map_err(|e| OCRError::ProcessingFailed(format!("Failed to extract TSV: {}", e)))?;
+                // TSV output - reuse data if already extracted for table detection
+                let tsv = if let Some(ref tsv) = tsv_data_for_tables {
+                    tsv.clone()
+                } else {
+                    api.get_tsv_text(0)
+                        .map_err(|e| OCRError::ProcessingFailed(format!("Failed to extract TSV: {}", e)))?
+                };
                 (tsv, "text/tab-separated-values".to_string())
             }
             _ => {
@@ -170,12 +312,13 @@ impl OCRProcessor {
         metadata.insert("psm".to_string(), config.psm.to_string());
         metadata.insert("output_format".to_string(), config.output_format.clone());
 
+        // Tables vector to store extracted tables
+        let mut tables = Vec::new();
+
         // Perform table detection if enabled
         if config.enable_table_detection {
-            // Get TSV data for table detection
-            let tsv_data = api
-                .get_tsv_text(0)
-                .map_err(|e| OCRError::ProcessingFailed(format!("Failed to extract TSV for table detection: {}", e)))?;
+            // Use the TSV data we already extracted
+            let tsv_data = tsv_data_for_tables.unwrap(); // Safe: we only reach here if enable_table_detection is true
 
             // Extract words from TSV using configured minimum confidence
             let words = extract_words(&tsv_data, config.table_min_confidence)?;
@@ -189,14 +332,18 @@ impl OCRProcessor {
                         metadata.insert("table_rows".to_string(), table.len().to_string());
                         metadata.insert("table_cols".to_string(), table[0].len().to_string());
 
-                        // If output format is markdown, append the table to content
-                        if config.output_format == "markdown" {
-                            let markdown_table = table_to_markdown(&table);
-                            if !content.is_empty() && !content.ends_with('\n') {
-                                content.push_str("\n\n");
-                            }
-                            content.push_str(&markdown_table);
-                        }
+                        // Create markdown representation
+                        let markdown_table = table_to_markdown(&table);
+
+                        // Note: For markdown output, tables are already included via hOCR conversion
+                        // For other outputs (text, tsv, hocr), we keep the TableDTO for API compatibility
+
+                        // Create TableDTO and add to tables vector
+                        tables.push(TableDTO {
+                            cells: table,
+                            markdown: markdown_table,
+                            page_number: 0, // Single image, page 0
+                        });
                     }
                     _ => {
                         metadata.insert("table_count".to_string(), "0".to_string());
@@ -211,6 +358,7 @@ impl OCRProcessor {
             content,
             mime_type,
             metadata,
+            tables,
         })
     }
 }

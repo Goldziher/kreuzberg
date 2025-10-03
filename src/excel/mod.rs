@@ -351,4 +351,281 @@ mod tests {
 
         assert!(buffer.capacity() >= 100);
     }
+
+    #[test]
+    fn test_format_cell_value_datetime() {
+        use calamine::DataType;
+        let mut buffer = String::new();
+
+        let dt = Data::DateTime(49353.5); // Excel date serial
+        format_cell_value_into(&mut buffer, &dt);
+        assert!(buffer.contains("2035-02-08") || buffer.contains("49353.5"));
+    }
+
+    #[test]
+    fn test_format_cell_value_error() {
+        use calamine::CellErrorType;
+        let mut buffer = String::new();
+
+        format_cell_value_into(&mut buffer, &Data::Error(CellErrorType::Div0));
+        assert!(buffer.contains("#ERR"));
+    }
+
+    #[test]
+    fn test_format_cell_value_datetime_iso() {
+        let mut buffer = String::new();
+        format_cell_value_into(&mut buffer, &Data::DateTimeIso("2024-01-01T10:30:00".to_owned()));
+        assert_eq!(buffer, "2024-01-01T10:30:00");
+    }
+
+    #[test]
+    fn test_format_cell_value_duration_iso() {
+        let mut buffer = String::new();
+        format_cell_value_into(&mut buffer, &Data::DurationIso("PT1H30M".to_owned()));
+        assert_eq!(buffer, "DURATION: PT1H30M");
+    }
+
+    #[test]
+    fn test_escape_markdown_combined() {
+        let mut buffer = String::new();
+        escape_markdown_into(&mut buffer, "text|with|pipes\\and\\slashes");
+        assert_eq!(buffer, "text\\|with\\|pipes\\\\and\\\\slashes");
+    }
+
+    #[test]
+    fn test_escape_markdown_no_special_chars() {
+        let mut buffer = String::new();
+        escape_markdown_into(&mut buffer, "plain text");
+        assert_eq!(buffer, "plain text");
+    }
+
+    #[test]
+    fn test_process_sheet_empty() {
+        let range: Range<Data> = Range::empty();
+        let sheet = process_sheet("EmptySheet", &range);
+
+        assert_eq!(sheet.name, "EmptySheet");
+        assert_eq!(sheet.row_count, 0);
+        assert_eq!(sheet.col_count, 0);
+        assert_eq!(sheet.cell_count, 0);
+        assert!(sheet.markdown.contains("Empty sheet"));
+    }
+
+    #[test]
+    fn test_process_sheet_single_cell() {
+        let mut range: Range<Data> = Range::new((0, 0), (0, 0));
+        range.set_value((0, 0), Data::String("Single Cell".to_owned()));
+
+        let sheet = process_sheet("Sheet1", &range);
+
+        assert_eq!(sheet.name, "Sheet1");
+        assert_eq!(sheet.row_count, 1);
+        assert_eq!(sheet.col_count, 1);
+        assert_eq!(sheet.cell_count, 1);
+        assert!(sheet.markdown.contains("Single Cell"));
+    }
+
+    #[test]
+    fn test_process_sheet_with_data() {
+        let mut range: Range<Data> = Range::new((0, 0), (2, 1));
+        range.set_value((0, 0), Data::String("Name".to_owned()));
+        range.set_value((0, 1), Data::String("Age".to_owned()));
+        range.set_value((1, 0), Data::String("Alice".to_owned()));
+        range.set_value((1, 1), Data::Int(30));
+        range.set_value((2, 0), Data::String("Bob".to_owned()));
+        range.set_value((2, 1), Data::Int(25));
+
+        let sheet = process_sheet("People", &range);
+
+        assert_eq!(sheet.name, "People");
+        assert_eq!(sheet.row_count, 3);
+        assert_eq!(sheet.col_count, 2);
+        assert!(sheet.markdown.contains("Name"));
+        assert!(sheet.markdown.contains("Age"));
+        assert!(sheet.markdown.contains("Alice"));
+        assert!(sheet.markdown.contains("30"));
+    }
+
+    #[test]
+    fn test_generate_markdown_empty_range() {
+        let range: Range<Data> = Range::new((0, 0), (0, 0));
+        let markdown = generate_markdown_from_range_optimized("Test", &range, 100);
+
+        assert!(markdown.contains("## Test"));
+        assert!(markdown.contains("|"));
+    }
+
+    #[test]
+    fn test_generate_markdown_with_headers() {
+        let mut range: Range<Data> = Range::new((0, 0), (1, 2));
+        range.set_value((0, 0), Data::String("Col1".to_owned()));
+        range.set_value((0, 1), Data::String("Col2".to_owned()));
+        range.set_value((0, 2), Data::String("Col3".to_owned()));
+        range.set_value((1, 0), Data::String("A".to_owned()));
+        range.set_value((1, 1), Data::String("B".to_owned()));
+        range.set_value((1, 2), Data::String("C".to_owned()));
+
+        let markdown = generate_markdown_from_range_optimized("Sheet1", &range, 200);
+
+        assert!(markdown.contains("## Sheet1"));
+        assert!(markdown.contains("Col1"));
+        assert!(markdown.contains("Col2"));
+        assert!(markdown.contains("Col3"));
+        assert!(markdown.contains("---"));
+        assert!(markdown.contains("A"));
+        assert!(markdown.contains("B"));
+        assert!(markdown.contains("C"));
+    }
+
+    #[test]
+    fn test_generate_markdown_sparse_data() {
+        let mut range: Range<Data> = Range::new((0, 0), (2, 2));
+        range.set_value((0, 0), Data::String("A".to_owned()));
+        range.set_value((0, 1), Data::String("B".to_owned()));
+        range.set_value((0, 2), Data::String("C".to_owned()));
+        range.set_value((1, 0), Data::String("X".to_owned()));
+        // (1, 1) is empty
+        range.set_value((1, 2), Data::String("Z".to_owned()));
+
+        let markdown = generate_markdown_from_range_optimized("Sparse", &range, 200);
+
+        assert!(markdown.contains("X"));
+        assert!(markdown.contains("Z"));
+        let lines: Vec<&str> = markdown.lines().collect();
+        // Check that empty cell is represented
+        assert!(lines.iter().any(|line| line.contains("|  |") || line.contains("| |")));
+    }
+
+    #[test]
+    fn test_excel_sheet_dto() {
+        let sheet = ExcelSheetDTO {
+            name: "TestSheet".to_owned(),
+            markdown: "# Test".to_owned(),
+            row_count: 10,
+            col_count: 5,
+            cell_count: 50,
+        };
+
+        assert_eq!(sheet.name, "TestSheet");
+        assert_eq!(sheet.markdown, "# Test");
+        assert_eq!(sheet.row_count, 10);
+        assert_eq!(sheet.col_count, 5);
+        assert_eq!(sheet.cell_count, 50);
+    }
+
+    #[test]
+    fn test_excel_workbook_dto() {
+        let sheet = ExcelSheetDTO {
+            name: "Sheet1".to_owned(),
+            markdown: "".to_owned(),
+            row_count: 0,
+            col_count: 0,
+            cell_count: 0,
+        };
+
+        let mut metadata = HashMap::new();
+        metadata.insert("sheet_count".to_owned(), "1".to_owned());
+
+        let workbook = ExcelWorkbookDTO {
+            sheets: vec![sheet],
+            metadata,
+        };
+
+        assert_eq!(workbook.sheets.len(), 1);
+        assert_eq!(workbook.metadata.get("sheet_count").unwrap(), "1");
+    }
+
+    #[test]
+    fn test_format_cell_value_float_integer() {
+        let mut buffer = String::new();
+        format_cell_value_into(&mut buffer, &Data::Float(100.0));
+        assert_eq!(buffer, "100.0");
+    }
+
+    #[test]
+    fn test_format_cell_value_float_decimal() {
+        let mut buffer = String::new();
+        format_cell_value_into(&mut buffer, &Data::Float(3.14159));
+        assert_eq!(buffer, "3.14159");
+    }
+
+    #[test]
+    fn test_format_cell_value_bool_false() {
+        let mut buffer = String::new();
+        format_cell_value_into(&mut buffer, &Data::Bool(false));
+        assert_eq!(buffer, "false");
+    }
+
+    #[test]
+    fn test_format_cell_value_string_with_pipe() {
+        let mut buffer = String::new();
+        format_cell_value_into(&mut buffer, &Data::String("value|with|pipes".to_owned()));
+        assert_eq!(buffer, "value\\|with\\|pipes");
+    }
+
+    #[test]
+    fn test_format_cell_value_string_with_backslash() {
+        let mut buffer = String::new();
+        format_cell_value_into(&mut buffer, &Data::String("path\\to\\file".to_owned()));
+        assert_eq!(buffer, "path\\\\to\\\\file");
+    }
+
+    #[test]
+    fn test_markdown_table_structure() {
+        let mut range: Range<Data> = Range::new((0, 0), (2, 1));
+        range.set_value((0, 0), Data::String("H1".to_owned()));
+        range.set_value((0, 1), Data::String("H2".to_owned()));
+        range.set_value((1, 0), Data::String("A".to_owned()));
+        range.set_value((1, 1), Data::String("B".to_owned()));
+
+        let markdown = generate_markdown_from_range_optimized("Test", &range, 100);
+
+        let lines: Vec<&str> = markdown.lines().collect();
+        assert!(lines[0].contains("## Test"));
+        assert!(lines[2].starts_with("| "));
+        assert!(lines[3].contains("---"));
+        assert!(lines[4].starts_with("| "));
+    }
+
+    #[test]
+    fn test_process_sheet_metadata() {
+        let mut range: Range<Data> = Range::new((0, 0), (9, 4));
+        for row in 0..10 {
+            for col in 0..5 {
+                range.set_value((row, col), Data::String(format!("R{}C{}", row, col)));
+            }
+        }
+
+        let sheet = process_sheet("Data", &range);
+
+        assert_eq!(sheet.row_count, 10);
+        assert_eq!(sheet.col_count, 5);
+        assert_eq!(sheet.cell_count, 50);
+    }
+
+    #[test]
+    fn test_excel_sheet_dto_clone() {
+        let sheet1 = ExcelSheetDTO {
+            name: "Original".to_owned(),
+            markdown: "Content".to_owned(),
+            row_count: 5,
+            col_count: 3,
+            cell_count: 15,
+        };
+
+        let sheet2 = sheet1.clone();
+        assert_eq!(sheet1.name, sheet2.name);
+        assert_eq!(sheet1.row_count, sheet2.row_count);
+    }
+
+    #[test]
+    fn test_excel_workbook_dto_clone() {
+        let workbook1 = ExcelWorkbookDTO {
+            sheets: vec![],
+            metadata: HashMap::new(),
+        };
+
+        let workbook2 = workbook1.clone();
+        assert_eq!(workbook1.sheets.len(), workbook2.sheets.len());
+    }
 }
