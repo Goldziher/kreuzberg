@@ -299,14 +299,123 @@ config = ExtractionConfig(
 )
 ```
 
+## 2025 OCR Backend Evaluation
+
+### Research Summary
+
+Based on comprehensive 2025 research, all three backends remain relevant with distinct strengths:
+
+#### Tesseract (Default)
+
+- **Maturity**: Industry standard since 2006, maintained by Google
+- **Performance**: Optimized for CPU processing, fastest on standard hardware
+- **Languages**: 100+ languages with active community support
+- **Use Cases**: General-purpose OCR, production environments, printed documents
+- **Deployment**: Minimal dependencies, easy to containerize
+
+#### EasyOCR
+
+- **Model Architecture**: Deep learning-based with PyTorch
+- **GPU Acceleration**: Best performance on GPU (CUDA/MPS)
+- **Memory**: High RAM usage (~2-4GB for models)
+- **Use Cases**: Scene text, handwriting, GPU-accelerated batch processing
+- **Accuracy**: Superior for low-quality images and handwritten text
+
+#### PaddleOCR
+
+- **Model Architecture**: Lightweight deep learning models
+- **Accuracy**: Best for complex document layouts and tables
+- **Model Size**: Smallest deep learning models (~10-50MB vs 100-500MB for EasyOCR)
+- **Asian Languages**: Superior accuracy for Chinese, Japanese, Korean
+- **Use Cases**: Complex documents, Asian languages, resource-constrained environments
+
+### Rust OCR Alternatives (2025 Status)
+
+Research into Rust-native OCR engines:
+
+**oar-ocr** (github.com/aiola-lab/oar-ocr):
+
+- Released January 2025 (1 month old)
+- Uses PaddleOCR models via ONNX Runtime
+- **Status**: Too early stage for production use
+- **Decision**: Not recommended for integration at this time
+
+**ocrs** (github.com/robertknight/ocrs):
+
+- Pure Rust OCR implementation
+- **Limitations**: Preview stage, Latin alphabet only, limited language support
+- **Decision**: Not suitable for production requirements
+
+**Recommendation**: Continue with current multi-backend approach. Rust alternatives are not mature enough for production use in 2025.
+
+### Download Statistics
+
+PyPI does not track downloads by optional dependencies (e.g., `kreuzberg[easyocr]`), making it difficult to determine which backends are most popular. Total kreuzberg downloads: ~93K/month (as of 2025).
+
+**Decision**: Keep all three backends as optional dependencies to serve different use cases.
+
+## Backend Selection by Use Case
+
+### When to Use Tesseract
+
+✅ **Recommended for:**
+
+- General-purpose OCR
+- Printed documents (invoices, reports, forms)
+- Multi-language documents (100+ languages)
+- Production environments
+- CPU-only infrastructure
+- Docker/containerized deployments
+- Batch processing on standard hardware
+
+❌ **Not ideal for:**
+
+- Handwritten text
+- Scene text (photos, signs)
+- Extreme low-quality images
+
+### When to Use EasyOCR
+
+✅ **Recommended for:**
+
+- Scene text extraction (photos, screenshots)
+- Handwritten text
+- GPU-accelerated workloads
+- Real-time processing with GPU
+- Low-quality or degraded images
+- Mixed orientations
+
+❌ **Not ideal for:**
+
+- CPU-only environments (very slow)
+- Memory-constrained systems
+- Simple printed documents (overkill)
+
+### When to Use PaddleOCR
+
+✅ **Recommended for:**
+
+- Complex document layouts
+- Table-heavy documents
+- Chinese/Japanese/Korean documents
+- Resource-constrained environments (small models)
+- High-accuracy requirements
+- Asian language documents
+
+❌ **Not ideal for:**
+
+- Simple printed text (Tesseract is faster)
+- 100+ language support (fewer languages than Tesseract)
+
 ## Best Practices
 
 1. **Start with Tesseract**: Default backend works well for most use cases
 1. **Use EasyOCR for scene text**: Switch to EasyOCR for photos or handwriting
-1. **Use PaddleOCR for CJK**: Dedicated support for Asian languages
+1. **Use PaddleOCR for complex layouts**: Best accuracy for tables and Asian languages
 1. **Enable GPU when available**: Significant speedup for EasyOCR/PaddleOCR
 1. **Disable OCR for text PDFs**: Set `ocr=None` when processing searchable PDFs
 1. **Match language to content**: Use correct language codes for best accuracy
+1. **Consider model size**: PaddleOCR has smallest deep learning models (~10MB vs ~100-500MB for EasyOCR)
 
 ## See Also
 

@@ -19,8 +19,40 @@
 - **Image Extraction**: Extract embedded images from PDFs, presentations, HTML, and Office documents with optional OCR
 - **Metadata Extraction**: Comprehensive metadata including author, creation date, language, and document properties
 - **Format Support**: 50+ document types including PDF, Microsoft Office (modern + legacy), images, HTML, XML, and structured data formats
-- **OCR Integration**: Tesseract OCR with markdown output (default) and comprehensive table extraction
+- **OCR Integration**: Multiple OCR backends with different strengths (Tesseract, EasyOCR, PaddleOCR)
 - **Table Extraction**: Multiple approaches including vision-based detection and OCR-based extraction
+
+### OCR Backend Selection
+
+Kreuzberg supports three OCR engines optimized for different scenarios:
+
+| Backend       | Best For                            | Strengths                                                      | Model Size | Installation                         |
+| ------------- | ----------------------------------- | -------------------------------------------------------------- | ---------- | ------------------------------------ |
+| **Tesseract** | General purpose, CPU environments   | 100+ languages, stable, CPU-optimized                          | ~5-10MB    | System package (default)             |
+| **EasyOCR**   | GPU workloads, real-time processing | Best GPU performance, 80+ languages                            | ~100-500MB | `pip install "kreuzberg[easyocr]"`   |
+| **PaddleOCR** | Best accuracy, complex layouts      | Lightweight (\<10MB), Asian languages, superior table handling | ~10-50MB   | `pip install "kreuzberg[paddleocr]"` |
+
+**Quick Start:**
+
+```python
+from kreuzberg import extract_file, ExtractionConfig, TesseractConfig
+
+# Default: Tesseract (CPU-optimized, 100+ languages)
+result = await extract_file("document.pdf")
+
+# EasyOCR (GPU-accelerated)
+from kreuzberg import EasyOCRConfig
+
+result = await extract_file("photo.jpg", config=ExtractionConfig(ocr=EasyOCRConfig(language=("en",), device="cuda")))
+
+# PaddleOCR (best accuracy for complex layouts)
+from kreuzberg import PaddleOCRConfig
+
+result = await extract_file("invoice.pdf", config=ExtractionConfig(ocr=PaddleOCRConfig(language="ch")))
+```
+
+📖 **[OCR Backend Selection Guide](https://kreuzberg.dev/user-guide/ocr-backends/)**
+
 - **Document Classification**: Automatic document type detection (contracts, forms, invoices, receipts, reports)
 - **Streaming Parsers**: Memory-efficient Rust streaming for XML, plain text, and markdown (handles multi-GB files)
 
