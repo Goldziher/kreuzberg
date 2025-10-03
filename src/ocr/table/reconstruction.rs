@@ -143,23 +143,7 @@ fn remove_empty_rows_and_columns(table: Vec<Vec<String>>) -> Vec<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn create_test_word(left: u32, top: u32, width: u32, height: u32, text: &str) -> TSVWord {
-        TSVWord {
-            level: 5,
-            page_num: 1,
-            block_num: 0,
-            par_num: 0,
-            line_num: 0,
-            word_num: 0,
-            left,
-            top,
-            width,
-            height,
-            conf: 95.0,
-            text: text.to_string(),
-        }
-    }
+    use crate::ocr::table::test_helpers::create_test_word;
 
     #[test]
     fn test_reconstruct_simple_table() {

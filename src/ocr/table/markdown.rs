@@ -1,5 +1,7 @@
 //! Markdown table generation from reconstructed tables
 
+use super::super::utils::MIN_COLUMN_WIDTH;
+
 /// Convert 2D table to markdown format
 ///
 /// Generates a markdown table with proper formatting, including:
@@ -47,7 +49,10 @@ pub fn table_to_markdown(table: &[Vec<String>]) -> String {
 
         // Add separator after header (first row)
         if row_idx == 0 {
-            let separator_parts: Vec<String> = col_widths.iter().map(|&width| "-".repeat(width.max(3))).collect();
+            let separator_parts: Vec<String> = col_widths
+                .iter()
+                .map(|&width| "-".repeat(width.max(MIN_COLUMN_WIDTH)))
+                .collect();
             result.push(format!("| {} |", separator_parts.join(" | ")));
         }
     }
@@ -72,8 +77,8 @@ fn calculate_column_widths(table: &[Vec<String>]) -> Vec<usize> {
         }
     }
 
-    // Minimum width of 3 for readability
-    widths.iter_mut().for_each(|w| *w = (*w).max(3));
+    // Minimum column width for readability
+    widths.iter_mut().for_each(|w| *w = (*w).max(MIN_COLUMN_WIDTH));
 
     widths
 }

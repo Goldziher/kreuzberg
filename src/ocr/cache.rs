@@ -9,6 +9,7 @@ use pyo3::prelude::*;
 
 use super::error::OCRError;
 use super::types::ExtractionResultDTO;
+use super::utils::compute_hash;
 
 /// OCR Cache manager
 pub struct OCRCache {
@@ -96,15 +97,7 @@ impl OCRCache {
             image_hash, backend, config
         );
 
-        // Use existing hash function
-        use ahash::AHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = AHasher::default();
-        cache_string.hash(&mut hasher);
-        let hash = hasher.finish();
-
-        format!("{:016x}", hash)
+        compute_hash(&cache_string)
     }
 
     /// Clear all cached OCR results
@@ -246,5 +239,244 @@ mod tests {
         let stats = cache.get_stats().unwrap();
         assert_eq!(stats.total_files, 1);
         assert!(stats.total_size_mb > 0.0);
+    }
+
+    #[test]
+    fn test_cache_key_generation_deterministic() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let key1 = cache.generate_cache_key("abc123", "tesseract", "eng");
+        let key2 = cache.generate_cache_key("abc123", "tesseract", "eng");
+
+        assert_eq!(key1, key2);
+        assert_eq!(key1.len(), 16);
+    }
+
+    #[test]
+    fn test_cache_key_generation_different_inputs() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let key1 = cache.generate_cache_key("abc123", "tesseract", "eng");
+        let key2 = cache.generate_cache_key("def456", "tesseract", "eng");
+        let key3 = cache.generate_cache_key("abc123", "easyocr", "eng");
+        let key4 = cache.generate_cache_key("abc123", "tesseract", "fra");
+
+        assert_ne!(key1, key2);
+        assert_ne!(key1, key3);
+        assert_ne!(key1, key4);
+    }
+
+    #[test]
+    fn test_cache_multiple_entries() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let result1 = ExtractionResultDTO {
+            content: "First".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: Vec::new(),
+        };
+
+        let result2 = ExtractionResultDTO {
+            content: "Second".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: Vec::new(),
+        };
+
+        cache.set_cached_result("hash1", "tesseract", "eng", &result1).unwrap();
+        cache.set_cached_result("hash2", "tesseract", "eng", &result2).unwrap();
+
+        let stats = cache.get_stats().unwrap();
+        assert_eq!(stats.total_files, 2);
+
+        let retrieved1 = cache.get_cached_result("hash1", "tesseract", "eng").unwrap();
+        let retrieved2 = cache.get_cached_result("hash2", "tesseract", "eng").unwrap();
+
+        assert_eq!(retrieved1.unwrap().content, "First");
+        assert_eq!(retrieved2.unwrap().content, "Second");
+    }
+
+    #[test]
+    fn test_cache_overwrite() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let result1 = ExtractionResultDTO {
+            content: "Original".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: Vec::new(),
+        };
+
+        let result2 = ExtractionResultDTO {
+            content: "Updated".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: Vec::new(),
+        };
+
+        cache.set_cached_result("test", "tesseract", "eng", &result1).unwrap();
+        cache.set_cached_result("test", "tesseract", "eng", &result2).unwrap();
+
+        let retrieved = cache.get_cached_result("test", "tesseract", "eng").unwrap();
+        assert_eq!(retrieved.unwrap().content, "Updated");
+
+        let stats = cache.get_stats().unwrap();
+        assert_eq!(stats.total_files, 1);
+    }
+
+    #[test]
+    fn test_cache_with_tables() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        use crate::ocr::types::TableDTO;
+
+        let table = TableDTO {
+            cells: vec![vec!["A".to_string(), "B".to_string()]],
+            markdown: "| A | B |".to_string(),
+            page_number: 0,
+        };
+
+        let result = ExtractionResultDTO {
+            content: "Content with table".to_string(),
+            mime_type: "text/markdown".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![table],
+        };
+
+        cache.set_cached_result("test", "tesseract", "eng", &result).unwrap();
+
+        let retrieved = cache.get_cached_result("test", "tesseract", "eng").unwrap().unwrap();
+        assert_eq!(retrieved.tables.len(), 1);
+        assert_eq!(retrieved.tables[0].cells[0][0], "A");
+    }
+
+    #[test]
+    fn test_cache_with_metadata() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let mut metadata = HashMap::new();
+        metadata.insert("language".to_string(), "eng".to_string());
+        metadata.insert("confidence".to_string(), "95.5".to_string());
+
+        let result = ExtractionResultDTO {
+            content: "Content".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata,
+            tables: Vec::new(),
+        };
+
+        cache.set_cached_result("test", "tesseract", "eng", &result).unwrap();
+
+        let retrieved = cache.get_cached_result("test", "tesseract", "eng").unwrap().unwrap();
+        assert_eq!(retrieved.metadata.get("language").unwrap(), "eng");
+        assert_eq!(retrieved.metadata.get("confidence").unwrap(), "95.5");
+    }
+
+    #[test]
+    fn test_cache_clear_selective() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let result = ExtractionResultDTO {
+            content: "Test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: Vec::new(),
+        };
+
+        cache.set_cached_result("test1", "tesseract", "eng", &result).unwrap();
+        cache.set_cached_result("test2", "tesseract", "eng", &result).unwrap();
+
+        std::fs::write(temp_dir.path().join("other.txt"), "not a msgpack file").unwrap();
+
+        cache.clear().unwrap();
+
+        assert!(cache.get_cached_result("test1", "tesseract", "eng").unwrap().is_none());
+        assert!(cache.get_cached_result("test2", "tesseract", "eng").unwrap().is_none());
+
+        assert!(temp_dir.path().join("other.txt").exists());
+    }
+
+    #[test]
+    fn test_cache_stats_nonexistent_dir() {
+        let temp_dir = tempdir().unwrap();
+        let cache_path = temp_dir.path().join("nonexistent");
+        let cache = OCRCache { cache_dir: cache_path };
+
+        let stats = cache.get_stats().unwrap();
+        assert_eq!(stats.total_files, 0);
+        assert_eq!(stats.total_size_mb, 0.0);
+    }
+
+    #[test]
+    fn test_cache_clear_nonexistent_dir() {
+        let temp_dir = tempdir().unwrap();
+        let cache_path = temp_dir.path().join("nonexistent");
+        let cache = OCRCache { cache_dir: cache_path };
+
+        assert!(cache.clear().is_ok());
+    }
+
+    #[test]
+    fn test_cache_get_path() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let path = cache.get_cache_path("abc123");
+
+        assert!(path.to_string_lossy().contains("abc123.msgpack"));
+        assert!(path.parent().unwrap() == temp_dir.path());
+    }
+
+    #[test]
+    fn test_cache_stats_default() {
+        let stats = OCRCacheStats::default();
+        assert_eq!(stats.total_files, 0);
+        assert_eq!(stats.total_size_mb, 0.0);
+    }
+
+    #[test]
+    fn test_cache_empty_content() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let result = ExtractionResultDTO {
+            content: String::new(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: Vec::new(),
+        };
+
+        cache.set_cached_result("empty", "tesseract", "eng", &result).unwrap();
+
+        let retrieved = cache.get_cached_result("empty", "tesseract", "eng").unwrap();
+        assert_eq!(retrieved.unwrap().content, "");
+    }
+
+    #[test]
+    fn test_cache_large_content() {
+        let temp_dir = tempdir().unwrap();
+        let cache = OCRCache::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let large_content = "x".repeat(10_000);
+
+        let result = ExtractionResultDTO {
+            content: large_content.clone(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: Vec::new(),
+        };
+
+        cache.set_cached_result("large", "tesseract", "eng", &result).unwrap();
+
+        let retrieved = cache.get_cached_result("large", "tesseract", "eng").unwrap();
+        assert_eq!(retrieved.unwrap().content.len(), 10_000);
     }
 }

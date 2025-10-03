@@ -1,11 +1,12 @@
 //! Validation functions for Tesseract configuration
 
-use once_cell::sync::Lazy;
 use std::collections::HashSet;
 use std::process::Command;
 use std::sync::Mutex;
 
-const MINIMAL_SUPPORTED_TESSERACT_VERSION: u32 = 5;
+use once_cell::sync::Lazy;
+
+use super::utils::MINIMAL_SUPPORTED_TESSERACT_VERSION;
 
 /// Supported Tesseract language codes (177 languages)
 static TESSERACT_SUPPORTED_LANGUAGE_CODES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
@@ -150,9 +151,70 @@ mod tests {
 
     #[test]
     fn test_validate_tesseract_version() {
-        // This test requires tesseract to be installed
-        // We can't test the actual version without tesseract installed
         let _result = validate_tesseract_version();
-        // Just ensure it doesn't panic
+    }
+
+    #[test]
+    fn test_validate_language_code_multi_with_spaces() {
+        let result = validate_language_code("eng + deu").unwrap();
+        assert_eq!(result, "eng+deu");
+    }
+
+    #[test]
+    fn test_validate_language_code_multi_invalid_one() {
+        let result = validate_language_code("eng+invalid");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not supported"));
+    }
+
+    #[test]
+    fn test_validate_language_code_normalization() {
+        let result = validate_language_code("ENG+DEU+FRA").unwrap();
+        assert_eq!(result, "eng+deu+fra");
+    }
+
+    #[test]
+    fn test_validate_language_code_all_supported() {
+        let test_langs = [
+            "eng", "deu", "fra", "spa", "ita", "por", "jpn", "chi_sim", "chi_tra", "ara",
+        ];
+        for lang in &test_langs {
+            assert!(
+                validate_language_code(lang).is_ok(),
+                "Language {} should be valid",
+                lang
+            );
+        }
+    }
+
+    #[test]
+    fn test_validate_language_code_edge_cases() {
+        assert!(validate_language_code("osd").is_ok());
+        assert!(validate_language_code("equ").is_ok());
+        assert!(validate_language_code("aze_cyrl").is_ok());
+        assert!(validate_language_code("chi_sim+chi_tra").is_ok());
+    }
+
+    #[test]
+    fn test_validate_language_code_invalid_multi() {
+        assert!(validate_language_code("eng+xyz+deu").is_err());
+        assert!(validate_language_code("xxx+yyy").is_err());
+    }
+
+    #[test]
+    fn test_language_code_constants() {
+        assert!(TESSERACT_SUPPORTED_LANGUAGE_CODES.contains("eng"));
+        assert!(TESSERACT_SUPPORTED_LANGUAGE_CODES.contains("jpn"));
+        assert!(!TESSERACT_SUPPORTED_LANGUAGE_CODES.contains("invalid"));
+        assert!(TESSERACT_SUPPORTED_LANGUAGE_CODES.len() > 100);
+    }
+
+    #[test]
+    fn test_validate_language_code_trimming() {
+        let result = validate_language_code("  eng  ").unwrap();
+        assert_eq!(result, "eng");
+
+        let result = validate_language_code("eng + deu + fra").unwrap();
+        assert_eq!(result, "eng+deu+fra");
     }
 }

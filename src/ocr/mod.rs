@@ -15,6 +15,7 @@ pub mod hocr;
 pub mod processor;
 pub mod table;
 pub mod types;
+pub mod utils;
 pub mod validation;
 
 pub use cache::OCRCacheStats;

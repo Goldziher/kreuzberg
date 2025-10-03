@@ -106,6 +106,30 @@ pub struct TesseractConfigDTO {
     pub thresholding_method: bool,
 }
 
+impl Default for TesseractConfigDTO {
+    fn default() -> Self {
+        Self {
+            language: "eng".to_string(),
+            psm: 3,
+            output_format: "markdown".to_string(),
+            enable_table_detection: true,
+            table_min_confidence: 0.0,
+            table_column_threshold: 50,
+            table_row_threshold_ratio: 0.5,
+            use_cache: true,
+            classify_use_pre_adapted_templates: true,
+            language_model_ngram_on: false,
+            tessedit_dont_blkrej_good_wds: true,
+            tessedit_dont_rowrej_good_wds: true,
+            tessedit_enable_dict_correction: true,
+            tessedit_char_whitelist: String::new(),
+            tessedit_use_primary_params_model: true,
+            textord_space_size_is_variable: true,
+            thresholding_method: false,
+        }
+    }
+}
+
 #[pymethods]
 impl TesseractConfigDTO {
     #[new]
@@ -294,5 +318,335 @@ impl BatchItemResult {
             result,
             error,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_psm_mode_creation_valid() {
+        let modes = [
+            (0, PSMMode::OsdOnly),
+            (1, PSMMode::AutoOsd),
+            (2, PSMMode::AutoOnly),
+            (3, PSMMode::Auto),
+            (4, PSMMode::SingleColumn),
+            (5, PSMMode::SingleBlockVertical),
+            (6, PSMMode::SingleBlock),
+            (7, PSMMode::SingleLine),
+            (8, PSMMode::SingleWord),
+            (9, PSMMode::CircleWord),
+            (10, PSMMode::SingleChar),
+        ];
+
+        for (value, expected) in modes {
+            let mode = PSMMode::new(value).unwrap();
+            assert_eq!(mode, expected);
+        }
+    }
+
+    #[test]
+    fn test_psm_mode_creation_invalid() {
+        let invalid_values = [11, 12, 255, 100];
+
+        for value in invalid_values {
+            let result = PSMMode::new(value);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Invalid PSM mode"));
+        }
+    }
+
+    #[test]
+    fn test_psm_mode_repr() {
+        let mode = PSMMode::Auto;
+        let repr = mode.__repr__();
+        assert!(repr.contains("PSMMode"));
+        assert!(repr.contains("Auto"));
+    }
+
+    #[test]
+    fn test_tesseract_config_default() {
+        let config = TesseractConfigDTO {
+            language: "eng".to_string(),
+            psm: 3,
+            output_format: "markdown".to_string(),
+            enable_table_detection: true,
+            table_min_confidence: 0.0,
+            table_column_threshold: 50,
+            table_row_threshold_ratio: 0.5,
+            use_cache: true,
+            classify_use_pre_adapted_templates: true,
+            language_model_ngram_on: false,
+            tessedit_dont_blkrej_good_wds: true,
+            tessedit_dont_rowrej_good_wds: true,
+            tessedit_enable_dict_correction: true,
+            tessedit_char_whitelist: String::new(),
+            tessedit_use_primary_params_model: true,
+            textord_space_size_is_variable: true,
+            thresholding_method: false,
+        };
+
+        assert_eq!(config.language, "eng");
+        assert_eq!(config.psm, 3);
+        assert_eq!(config.output_format, "markdown");
+        assert!(config.enable_table_detection);
+        assert_eq!(config.table_min_confidence, 0.0);
+        assert_eq!(config.table_column_threshold, 50);
+        assert_eq!(config.table_row_threshold_ratio, 0.5);
+        assert!(config.use_cache);
+    }
+
+    #[test]
+    fn test_tesseract_config_valid_output_formats() {
+        let valid_formats = ["text", "markdown", "hocr", "tsv"];
+
+        for format in valid_formats {
+            let config = TesseractConfigDTO {
+                language: "eng".to_string(),
+                psm: 3,
+                output_format: format.to_string(),
+                enable_table_detection: false,
+                table_min_confidence: 0.0,
+                table_column_threshold: 50,
+                table_row_threshold_ratio: 0.5,
+                use_cache: true,
+                classify_use_pre_adapted_templates: true,
+                language_model_ngram_on: false,
+                tessedit_dont_blkrej_good_wds: true,
+                tessedit_dont_rowrej_good_wds: true,
+                tessedit_enable_dict_correction: true,
+                tessedit_char_whitelist: String::new(),
+                tessedit_use_primary_params_model: true,
+                textord_space_size_is_variable: true,
+                thresholding_method: false,
+            };
+
+            assert_eq!(config.output_format, format);
+        }
+    }
+
+    #[test]
+    fn test_tesseract_config_repr() {
+        let config = TesseractConfigDTO {
+            language: "eng".to_string(),
+            psm: 3,
+            output_format: "text".to_string(),
+            enable_table_detection: false,
+            table_min_confidence: 0.0,
+            table_column_threshold: 50,
+            table_row_threshold_ratio: 0.5,
+            use_cache: true,
+            classify_use_pre_adapted_templates: true,
+            language_model_ngram_on: false,
+            tessedit_dont_blkrej_good_wds: true,
+            tessedit_dont_rowrej_good_wds: true,
+            tessedit_enable_dict_correction: true,
+            tessedit_char_whitelist: String::new(),
+            tessedit_use_primary_params_model: true,
+            textord_space_size_is_variable: true,
+            thresholding_method: false,
+        };
+
+        let repr = config.__repr__();
+        assert!(repr.contains("TesseractConfigDTO"));
+        assert!(repr.contains("eng"));
+        assert!(repr.contains("psm=3"));
+        assert!(repr.contains("text"));
+    }
+
+    #[test]
+    fn test_extraction_result_dto_creation() {
+        let mut metadata = HashMap::new();
+        metadata.insert("key".to_string(), "value".to_string());
+
+        let table = TableDTO::new(vec![vec!["A".to_string(), "B".to_string()]], "| A | B |".to_string(), 0);
+
+        let result = ExtractionResultDTO::new(
+            "Test content".to_string(),
+            "text/plain".to_string(),
+            Some(metadata.clone()),
+            Some(vec![table.clone()]),
+        );
+
+        assert_eq!(result.content, "Test content");
+        assert_eq!(result.mime_type, "text/plain");
+        assert_eq!(result.metadata.get("key").unwrap(), "value");
+        assert_eq!(result.tables.len(), 1);
+    }
+
+    #[test]
+    fn test_extraction_result_dto_defaults() {
+        let result = ExtractionResultDTO::new("Test".to_string(), "text/plain".to_string(), None, None);
+
+        assert_eq!(result.content, "Test");
+        assert_eq!(result.mime_type, "text/plain");
+        assert!(result.metadata.is_empty());
+        assert!(result.tables.is_empty());
+    }
+
+    #[test]
+    fn test_extraction_result_dto_repr() {
+        let result = ExtractionResultDTO::new("Test content".to_string(), "text/plain".to_string(), None, None);
+
+        let repr = result.__repr__();
+        assert!(repr.contains("ExtractionResultDTO"));
+        assert!(repr.contains("text/plain"));
+        assert!(repr.contains("content_length=12"));
+        assert!(repr.contains("tables=0"));
+    }
+
+    #[test]
+    fn test_table_dto_creation() {
+        let cells = vec![
+            vec!["Header1".to_string(), "Header2".to_string()],
+            vec!["Value1".to_string(), "Value2".to_string()],
+        ];
+
+        let markdown = "| Header1 | Header2 |\n| ------- | ------- |\n| Value1  | Value2  |".to_string();
+
+        let table = TableDTO::new(cells.clone(), markdown.clone(), 1);
+
+        assert_eq!(table.cells.len(), 2);
+        assert_eq!(table.cells[0].len(), 2);
+        assert_eq!(table.markdown, markdown);
+        assert_eq!(table.page_number, 1);
+    }
+
+    #[test]
+    fn test_table_dto_repr() {
+        let cells = vec![
+            vec!["A".to_string(), "B".to_string(), "C".to_string()],
+            vec!["1".to_string(), "2".to_string(), "3".to_string()],
+        ];
+
+        let table = TableDTO::new(cells, "markdown".to_string(), 2);
+
+        let repr = table.__repr__();
+        assert!(repr.contains("TableDTO"));
+        assert!(repr.contains("rows=2"));
+        assert!(repr.contains("cols=3"));
+        assert!(repr.contains("page=2"));
+    }
+
+    #[test]
+    fn test_table_dto_empty() {
+        let table = TableDTO::new(vec![], String::new(), 0);
+
+        assert_eq!(table.cells.len(), 0);
+        assert_eq!(table.markdown, "");
+        assert_eq!(table.page_number, 0);
+
+        let repr = table.__repr__();
+        assert!(repr.contains("rows=0"));
+        assert!(repr.contains("cols=0"));
+    }
+
+    #[test]
+    fn test_batch_item_result_success() {
+        let result = ExtractionResultDTO::new("content".to_string(), "text/plain".to_string(), None, None);
+
+        let batch_result = BatchItemResult::new("/path/to/file.png".to_string(), true, Some(result), None);
+
+        assert_eq!(batch_result.file_path, "/path/to/file.png");
+        assert!(batch_result.success);
+        assert!(batch_result.result.is_some());
+        assert!(batch_result.error.is_none());
+    }
+
+    #[test]
+    fn test_batch_item_result_failure() {
+        let batch_result = BatchItemResult::new(
+            "/path/to/file.png".to_string(),
+            false,
+            None,
+            Some("File not found".to_string()),
+        );
+
+        assert_eq!(batch_result.file_path, "/path/to/file.png");
+        assert!(!batch_result.success);
+        assert!(batch_result.result.is_none());
+        assert_eq!(batch_result.error.as_ref().unwrap(), "File not found");
+    }
+
+    #[test]
+    fn test_tesseract_config_custom_settings() {
+        let config = TesseractConfigDTO {
+            language: "fra".to_string(),
+            psm: 6,
+            output_format: "hocr".to_string(),
+            enable_table_detection: true,
+            table_min_confidence: 90.0,
+            table_column_threshold: 100,
+            table_row_threshold_ratio: 0.8,
+            use_cache: false,
+            classify_use_pre_adapted_templates: false,
+            language_model_ngram_on: true,
+            tessedit_dont_blkrej_good_wds: false,
+            tessedit_dont_rowrej_good_wds: false,
+            tessedit_enable_dict_correction: false,
+            tessedit_char_whitelist: "0123456789".to_string(),
+            tessedit_use_primary_params_model: false,
+            textord_space_size_is_variable: false,
+            thresholding_method: true,
+        };
+
+        assert_eq!(config.language, "fra");
+        assert_eq!(config.psm, 6);
+        assert_eq!(config.output_format, "hocr");
+        assert!(config.enable_table_detection);
+        assert_eq!(config.table_min_confidence, 90.0);
+        assert_eq!(config.table_column_threshold, 100);
+        assert_eq!(config.table_row_threshold_ratio, 0.8);
+        assert!(!config.use_cache);
+        assert!(!config.classify_use_pre_adapted_templates);
+        assert!(config.language_model_ngram_on);
+        assert_eq!(config.tessedit_char_whitelist, "0123456789");
+        assert!(config.thresholding_method);
+    }
+
+    #[test]
+    fn test_extraction_result_clone() {
+        let result1 = ExtractionResultDTO::new("Test".to_string(), "text/plain".to_string(), None, None);
+
+        let result2 = result1.clone();
+
+        assert_eq!(result1.content, result2.content);
+        assert_eq!(result1.mime_type, result2.mime_type);
+    }
+
+    #[test]
+    fn test_table_dto_clone() {
+        let table1 = TableDTO::new(vec![vec!["A".to_string()]], "| A |".to_string(), 0);
+
+        let table2 = table1.clone();
+
+        assert_eq!(table1.cells, table2.cells);
+        assert_eq!(table1.markdown, table2.markdown);
+        assert_eq!(table1.page_number, table2.page_number);
+    }
+
+    #[test]
+    fn test_tesseract_config_default_trait() {
+        let config = TesseractConfigDTO::default();
+
+        assert_eq!(config.language, "eng");
+        assert_eq!(config.psm, 3);
+        assert_eq!(config.output_format, "markdown");
+        assert!(config.enable_table_detection);
+        assert_eq!(config.table_min_confidence, 0.0);
+        assert_eq!(config.table_column_threshold, 50);
+        assert_eq!(config.table_row_threshold_ratio, 0.5);
+        assert!(config.use_cache);
+        assert!(config.classify_use_pre_adapted_templates);
+        assert!(!config.language_model_ngram_on);
+        assert!(config.tessedit_dont_blkrej_good_wds);
+        assert!(config.tessedit_dont_rowrej_good_wds);
+        assert!(config.tessedit_enable_dict_correction);
+        assert!(config.tessedit_char_whitelist.is_empty());
+        assert!(config.tessedit_use_primary_params_model);
+        assert!(config.textord_space_size_is_variable);
+        assert!(!config.thresholding_method);
     }
 }

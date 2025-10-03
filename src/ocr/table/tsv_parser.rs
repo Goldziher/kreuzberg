@@ -4,6 +4,7 @@
 //! including position, dimensions, and confidence scores.
 
 use super::super::error::OCRError;
+use super::super::utils::{TSV_MIN_FIELDS, TSV_WORD_LEVEL};
 
 /// Represents a word extracted from Tesseract TSV output
 #[derive(Debug, Clone, PartialEq)]
@@ -24,13 +25,13 @@ pub struct TSVWord {
 
 impl TSVWord {
     /// Get the right edge position
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn right(&self) -> u32 {
         self.left + self.width
     }
 
     /// Get the bottom edge position
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn bottom(&self) -> u32 {
         self.top + self.height
     }
@@ -41,7 +42,7 @@ impl TSVWord {
     }
 
     /// Get the horizontal center position
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn x_center(&self) -> f64 {
         self.left as f64 + (self.width as f64 / 2.0)
     }
@@ -75,13 +76,13 @@ pub fn extract_words(tsv_data: &str, min_confidence: f64) -> Result<Vec<TSVWord>
 
         // Parse TSV line
         let fields: Vec<&str> = line.split('\t').collect();
-        if fields.len() < 12 {
+        if fields.len() < TSV_MIN_FIELDS {
             continue; // Skip malformed lines
         }
 
         // Parse level (filter for word level = 5)
         let level = fields[0].parse::<u32>().unwrap_or(0);
-        if level != 5 {
+        if level != TSV_WORD_LEVEL {
             continue;
         }
 
