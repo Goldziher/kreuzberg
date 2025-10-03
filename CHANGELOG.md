@@ -109,17 +109,6 @@ All deprecated configuration parameters have been removed:
 
 ### Added
 
-#### OCR Backend Ecosystem (2025 Research)
-
-- **Multi-Backend Strategy**: Retained all three OCR backends (Tesseract, EasyOCR, PaddleOCR) based on comprehensive 2025 research
-- **Backend Strengths**:
-    - **Tesseract**: Best for general-purpose OCR, CPU environments, 100+ languages
-    - **EasyOCR**: Best for GPU workloads, scene text, handwriting (~100-500MB models)
-    - **PaddleOCR**: Best accuracy for complex layouts, Asian languages, smallest deep learning models (~10-50MB)
-- **Rust OCR Evaluation**: Evaluated oar-ocr and ocrs - both too early stage for production use in 2025
-- **Documentation**: Enhanced OCR backend selection guide with detailed use case recommendations
-- **Optional Dependencies**: All OCR backends remain optional via `kreuzberg[easyocr]`, `kreuzberg[paddleocr]`, or `kreuzberg[all]`
-
 #### Rust-Powered Performance Improvements
 
 - **XML Extraction**: Streaming Rust parser using quick-xml for memory-efficient processing of multi-GB XML files
