@@ -7,6 +7,10 @@ ENV PYTHONUNBUFFERED=1
 ENV UV_LINK_MODE=copy
 ENV UV_CACHE_DIR=/tmp/uv-cache
 
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends cmake g++ && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
 ENV PATH="/root/.cargo/bin:${PATH}"
@@ -85,6 +89,8 @@ RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuse
 
 # Set default cache directory to prevent permission issues
 ENV KREUZBERG_CACHE_DIR=/app/.kreuzberg
+# Point to system Tesseract data
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 
 USER appuser
 CMD ["litestar", "--app", "kreuzberg._api.main:app", "run", "--host", "0.0.0.0"]

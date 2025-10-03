@@ -182,14 +182,15 @@ class Extractor(ABC):
         """Prepare OCR configuration dict from V4 tagged union config.
 
         In V4, config.ocr is already a TesseractConfig/EasyOCRConfig/PaddleOCRConfig,
-        so we just convert it to a dict and add use_cache.
+        so we just convert it to a dict. use_cache is handled at Rust layer, not here.
         """
         if self.config.ocr is None:
-            return {"use_cache": self.config.use_cache}
+            return {}
 
         # Convert msgspec.Struct to dict using our serialization utils
         cfg = to_dict(self.config.ocr)
-        cfg["use_cache"] = self.config.use_cache
+        # Remove backend field - it's used for tagged union discrimination, not constructor arg ~keep
+        cfg.pop("backend", None)
         return cfg
 
     def _validate_image_for_ocr(self, img: ExtractedImage) -> str | None:

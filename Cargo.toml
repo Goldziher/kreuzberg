@@ -22,7 +22,7 @@ encoding_rs = "0.8.35"
 fast_image_resize = "5.3.0"
 hex = "0.4.3"
 html-escape = "0.2.13"
-html-to-markdown = { path = "vendor/html-to-markdown/crates/html-to-markdown" }
+html-to-markdown = { git = "https://github.com/Goldziher/html-to-markdown.git", branch = "v2-dev" }
 image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"] }
 libc = "0.2"
 mail-parser = "0.11.1"
