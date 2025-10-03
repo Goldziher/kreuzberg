@@ -4,9 +4,11 @@ use crate::error_utils::errors;
 use ahash::AHasher;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
+use std::collections::HashSet;
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Cache statistics structure
@@ -37,6 +39,235 @@ struct CacheEntry {
 struct CacheScanResult {
     stats: CacheStats,
     entries: Vec<CacheEntry>,
+}
+
+/// Generic cache for storing extraction results
+#[pyclass]
+pub struct GenericCache {
+    cache_dir: PathBuf,
+    cache_type: String,
+    max_age_days: f64,
+    max_cache_size_mb: f64,
+    min_free_space_mb: f64,
+    processing_locks: Arc<Mutex<HashSet<String>>>,
+}
+
+// Private helper methods for GenericCache
+impl GenericCache {
+    /// Get cache path for a given cache key
+    fn get_cache_path(&self, cache_key: &str) -> PathBuf {
+        self.cache_dir.join(format!("{}.msgpack", cache_key))
+    }
+
+    /// Get metadata file path for source file tracking
+    fn get_metadata_path(&self, cache_key: &str) -> PathBuf {
+        self.cache_dir.join(format!("{}.meta", cache_key))
+    }
+
+    /// Check if cache is valid based on age and optional source file
+    fn is_valid(&self, cache_path: &Path, source_file: Option<&str>) -> bool {
+        if !cache_path.exists() {
+            return false;
+        }
+
+        // Check age
+        if let Ok(metadata) = fs::metadata(cache_path)
+            && let Ok(modified) = metadata.modified()
+            && let Ok(elapsed) = SystemTime::now().duration_since(modified)
+        {
+            let age_days = elapsed.as_secs() as f64 / (24.0 * 3600.0);
+            if age_days > self.max_age_days {
+                return false;
+            }
+        }
+
+        // Check source file metadata if provided
+        if let Some(source_path) = source_file {
+            let meta_path = self.get_metadata_path(cache_path.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
+
+            if meta_path.exists() {
+                if let Ok(cached_meta_bytes) = fs::read(&meta_path)
+                    && cached_meta_bytes.len() >= 16
+                {
+                    let cached_size = u64::from_le_bytes([
+                        cached_meta_bytes[0],
+                        cached_meta_bytes[1],
+                        cached_meta_bytes[2],
+                        cached_meta_bytes[3],
+                        cached_meta_bytes[4],
+                        cached_meta_bytes[5],
+                        cached_meta_bytes[6],
+                        cached_meta_bytes[7],
+                    ]);
+                    let cached_mtime = u64::from_le_bytes([
+                        cached_meta_bytes[8],
+                        cached_meta_bytes[9],
+                        cached_meta_bytes[10],
+                        cached_meta_bytes[11],
+                        cached_meta_bytes[12],
+                        cached_meta_bytes[13],
+                        cached_meta_bytes[14],
+                        cached_meta_bytes[15],
+                    ]);
+
+                    if let Ok(source_metadata) = fs::metadata(source_path) {
+                        let current_size = source_metadata.len();
+                        let current_mtime = source_metadata
+                            .modified()
+                            .ok()
+                            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                            .map(|d| d.as_secs())
+                            .unwrap_or(0);
+
+                        return cached_size == current_size && cached_mtime == current_mtime;
+                    }
+                }
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Save source file metadata for cache invalidation
+    fn save_metadata(&self, cache_key: &str, source_file: Option<&str>) {
+        if let Some(source_path) = source_file
+            && let Ok(metadata) = fs::metadata(source_path)
+        {
+            let size = metadata.len();
+            let mtime = metadata
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+
+            let mut bytes = Vec::with_capacity(16);
+            bytes.extend_from_slice(&size.to_le_bytes());
+            bytes.extend_from_slice(&mtime.to_le_bytes());
+
+            let meta_path = self.get_metadata_path(cache_key);
+            let _ = fs::write(meta_path, bytes);
+        }
+    }
+}
+
+#[pymethods]
+impl GenericCache {
+    #[new]
+    #[pyo3(signature = (cache_type, cache_dir=None, max_age_days=30.0, max_cache_size_mb=500.0, min_free_space_mb=1000.0))]
+    pub fn new(
+        cache_type: String,
+        cache_dir: Option<String>,
+        max_age_days: f64,
+        max_cache_size_mb: f64,
+        min_free_space_mb: f64,
+    ) -> PyResult<Self> {
+        let cache_dir_path = if let Some(dir) = cache_dir {
+            PathBuf::from(dir).join(&cache_type)
+        } else {
+            std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(".kreuzberg")
+                .join(&cache_type)
+        };
+
+        // Create cache directory
+        fs::create_dir_all(&cache_dir_path).into_io_error("Failed to create cache directory")?;
+
+        Ok(Self {
+            cache_dir: cache_dir_path,
+            cache_type,
+            max_age_days,
+            max_cache_size_mb,
+            min_free_space_mb,
+            processing_locks: Arc::new(Mutex::new(HashSet::new())),
+        })
+    }
+
+    /// Get cached result
+    #[pyo3(signature = (cache_key, source_file=None))]
+    pub fn get(&self, cache_key: String, source_file: Option<String>) -> PyResult<Option<Vec<u8>>> {
+        let cache_path = self.get_cache_path(&cache_key);
+
+        if !self.is_valid(&cache_path, source_file.as_deref()) {
+            return Ok(None);
+        }
+
+        match fs::read(&cache_path) {
+            Ok(content) => Ok(Some(content)),
+            Err(_) => {
+                // Clean up invalid cache
+                let _ = fs::remove_file(&cache_path);
+                let _ = fs::remove_file(self.get_metadata_path(&cache_key));
+                Ok(None)
+            }
+        }
+    }
+
+    /// Set cached result
+    #[pyo3(signature = (cache_key, data, source_file=None))]
+    pub fn set(&self, cache_key: String, data: Vec<u8>, source_file: Option<String>) -> PyResult<()> {
+        let cache_path = self.get_cache_path(&cache_key);
+
+        fs::write(&cache_path, data).into_io_error("Failed to write cache file")?;
+
+        self.save_metadata(&cache_key, source_file.as_deref());
+
+        // Periodic cleanup (every 100th write)
+        let mut hasher = AHasher::default();
+        cache_key.hash(&mut hasher);
+        if hasher.finish() % 100 == 0 {
+            let _ = smart_cleanup_cache(
+                self.cache_dir.to_str().unwrap_or("."),
+                self.max_age_days,
+                self.max_cache_size_mb,
+                self.min_free_space_mb,
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Check if a result is currently being processed
+    pub fn is_processing(&self, cache_key: String) -> bool {
+        let locks = self.processing_locks.lock().unwrap();
+        locks.contains(&cache_key)
+    }
+
+    /// Mark a result as being processed
+    pub fn mark_processing(&self, cache_key: String) {
+        let mut locks = self.processing_locks.lock().unwrap();
+        locks.insert(cache_key);
+    }
+
+    /// Mark a result as processing complete
+    pub fn mark_complete(&self, cache_key: String) {
+        let mut locks = self.processing_locks.lock().unwrap();
+        locks.remove(&cache_key);
+    }
+
+    /// Clear all cached results
+    pub fn clear(&self) -> PyResult<(usize, f64)> {
+        clear_cache_directory(self.cache_dir.to_str().unwrap_or("."))
+    }
+
+    /// Get cache statistics
+    pub fn get_stats(&self) -> PyResult<CacheStats> {
+        get_cache_metadata(self.cache_dir.to_str().unwrap_or("."))
+    }
+
+    /// Get cache directory path
+    #[getter]
+    pub fn cache_dir(&self) -> String {
+        self.cache_dir.to_string_lossy().to_string()
+    }
+
+    /// Get cache type
+    #[getter]
+    pub fn cache_type_name(&self) -> String {
+        self.cache_type.clone()
+    }
 }
 
 /// Helper to format key-value pairs efficiently
@@ -598,5 +829,237 @@ mod tests {
         assert!(is_cache_valid(path_str, 1.0));
 
         assert!(!is_cache_valid("/nonexistent/path", 1.0));
+    }
+
+    // GenericCache tests
+    #[test]
+    fn test_generic_cache_new() {
+        let temp_dir = tempdir().unwrap();
+        let cache = GenericCache::new(
+            "test".to_string(),
+            Some(temp_dir.path().to_str().unwrap().to_string()),
+            30.0,
+            500.0,
+            1000.0,
+        )
+        .unwrap();
+
+        assert_eq!(cache.cache_type, "test");
+        assert!(cache.cache_dir.exists());
+    }
+
+    #[test]
+    fn test_generic_cache_get_set() {
+        let temp_dir = tempdir().unwrap();
+        let cache = GenericCache::new(
+            "test".to_string(),
+            Some(temp_dir.path().to_str().unwrap().to_string()),
+            30.0,
+            500.0,
+            1000.0,
+        )
+        .unwrap();
+
+        let cache_key = "test_key".to_string();
+        let data = b"test data".to_vec();
+
+        // Set cache
+        cache.set(cache_key.clone(), data.clone(), None).unwrap();
+
+        // Get cache
+        let result = cache.get(cache_key.clone(), None).unwrap();
+        assert_eq!(result, Some(data));
+    }
+
+    #[test]
+    fn test_generic_cache_get_miss() {
+        let temp_dir = tempdir().unwrap();
+        let cache = GenericCache::new(
+            "test".to_string(),
+            Some(temp_dir.path().to_str().unwrap().to_string()),
+            30.0,
+            500.0,
+            1000.0,
+        )
+        .unwrap();
+
+        let result = cache.get("nonexistent".to_string(), None).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_generic_cache_source_file_invalidation() {
+        use std::io::Write;
+        use std::thread::sleep;
+        use std::time::Duration;
+
+        let temp_dir = tempdir().unwrap();
+        let cache = GenericCache::new(
+            "test".to_string(),
+            Some(temp_dir.path().to_str().unwrap().to_string()),
+            30.0,
+            500.0,
+            1000.0,
+        )
+        .unwrap();
+
+        // Create source file
+        let source_file = temp_dir.path().join("source.txt");
+        let mut f = File::create(&source_file).unwrap();
+        f.write_all(b"original content").unwrap();
+        drop(f);
+
+        let cache_key = "test_key".to_string();
+        let data = b"cached data".to_vec();
+
+        // Cache with source file
+        cache
+            .set(
+                cache_key.clone(),
+                data.clone(),
+                Some(source_file.to_str().unwrap().to_string()),
+            )
+            .unwrap();
+
+        // Should be valid
+        let result = cache
+            .get(cache_key.clone(), Some(source_file.to_str().unwrap().to_string()))
+            .unwrap();
+        assert_eq!(result, Some(data.clone()));
+
+        // Modify source file (change size to trigger invalidation)
+        sleep(Duration::from_millis(10));
+        let mut f = std::fs::OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .open(&source_file)
+            .unwrap();
+        f.write_all(b"modified content with different size").unwrap();
+        drop(f);
+
+        // Cache should be invalidated due to size change
+        let result = cache
+            .get(cache_key.clone(), Some(source_file.to_str().unwrap().to_string()))
+            .unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_generic_cache_processing_locks() {
+        let temp_dir = tempdir().unwrap();
+        let cache = GenericCache::new(
+            "test".to_string(),
+            Some(temp_dir.path().to_str().unwrap().to_string()),
+            30.0,
+            500.0,
+            1000.0,
+        )
+        .unwrap();
+
+        let cache_key = "test_key".to_string();
+
+        // Not processing initially
+        assert!(!cache.is_processing(cache_key.clone()));
+
+        // Mark as processing
+        cache.mark_processing(cache_key.clone());
+        assert!(cache.is_processing(cache_key.clone()));
+
+        // Mark complete
+        cache.mark_complete(cache_key.clone());
+        assert!(!cache.is_processing(cache_key.clone()));
+    }
+
+    #[test]
+    fn test_generic_cache_clear() {
+        let temp_dir = tempdir().unwrap();
+        let cache = GenericCache::new(
+            "test".to_string(),
+            Some(temp_dir.path().to_str().unwrap().to_string()),
+            30.0,
+            500.0,
+            1000.0,
+        )
+        .unwrap();
+
+        // Add some cache entries
+        cache.set("key1".to_string(), b"data1".to_vec(), None).unwrap();
+        cache.set("key2".to_string(), b"data2".to_vec(), None).unwrap();
+
+        let (removed, _freed) = cache.clear().unwrap();
+        assert_eq!(removed, 2);
+
+        // Verify cache is empty
+        assert_eq!(cache.get("key1".to_string(), None).unwrap(), None);
+        assert_eq!(cache.get("key2".to_string(), None).unwrap(), None);
+    }
+
+    #[test]
+    fn test_generic_cache_stats() {
+        let temp_dir = tempdir().unwrap();
+        let cache = GenericCache::new(
+            "test".to_string(),
+            Some(temp_dir.path().to_str().unwrap().to_string()),
+            30.0,
+            500.0,
+            1000.0,
+        )
+        .unwrap();
+
+        // Add cache entries
+        cache.set("key1".to_string(), b"test data 1".to_vec(), None).unwrap();
+        cache.set("key2".to_string(), b"test data 2".to_vec(), None).unwrap();
+
+        let stats = cache.get_stats().unwrap();
+        assert_eq!(stats.total_files, 2);
+        assert!(stats.total_size_mb > 0.0);
+        assert!(stats.available_space_mb > 0.0);
+    }
+
+    #[test]
+    fn test_generic_cache_expired_entry() {
+        use std::io::Write;
+
+        let temp_dir = tempdir().unwrap();
+        let cache = GenericCache::new(
+            "test".to_string(),
+            Some(temp_dir.path().to_str().unwrap().to_string()),
+            0.000001, // Very short max_age (1 microsecond)
+            500.0,
+            1000.0,
+        )
+        .unwrap();
+
+        let cache_key = "test_key".to_string();
+
+        // Create expired cache file
+        let cache_path = cache.cache_dir.join(format!("{}.msgpack", cache_key));
+        let mut f = File::create(&cache_path).unwrap();
+        f.write_all(b"test data").unwrap();
+        drop(f);
+
+        // Set old timestamp
+        let old_time = std::time::SystemTime::now() - std::time::Duration::from_secs(60);
+        filetime::set_file_mtime(&cache_path, filetime::FileTime::from_system_time(old_time)).unwrap();
+
+        // Should be None (expired)
+        let result = cache.get(cache_key, None).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_generic_cache_properties() {
+        let temp_dir = tempdir().unwrap();
+        let cache = GenericCache::new(
+            "test".to_string(),
+            Some(temp_dir.path().to_str().unwrap().to_string()),
+            30.0,
+            500.0,
+            1000.0,
+        )
+        .unwrap();
+
+        assert_eq!(cache.cache_type_name(), "test");
+        assert!(cache.cache_dir().contains("test"));
     }
 }

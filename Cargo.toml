@@ -47,6 +47,7 @@ zip = "5.1.1"
 
 [dev-dependencies]
 tempfile = "3.23.0"
+filetime = "0.2"
 
 [features]
 default = []

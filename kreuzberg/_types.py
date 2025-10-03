@@ -4,7 +4,7 @@ import sys
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypedDict
+from typing import Any, Literal, NamedTuple, TypedDict
 
 import msgspec
 
@@ -16,9 +16,15 @@ from kreuzberg._utils._table import (
     extract_table_structure_info,
 )
 
-if TYPE_CHECKING:
-    from PIL.Image import Image
-    from polars import DataFrame
+try:
+    from polars import DataFrame  # Needed at runtime for msgspec deserialization
+except ImportError:
+    DataFrame = None  # type: ignore[assignment, misc]
+
+try:
+    from PIL.Image import Image  # Needed at runtime for msgspec deserialization
+except ImportError:
+    Image = None  # type: ignore[assignment, misc]
 
 if sys.version_info < (3, 11):  # pragma: no cover
     from typing_extensions import NotRequired

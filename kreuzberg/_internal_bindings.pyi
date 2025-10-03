@@ -1,4 +1,16 @@
-from typing import Any
+from typing import Any, TypedDict
+
+class CacheStatsDict(TypedDict):
+    total_files: int
+    total_size_mb: float
+    available_space_mb: float
+    oldest_file_age_days: float
+    newest_file_age_days: float
+
+class DocumentCacheStatsDict(TypedDict):
+    cached_documents: int
+    processing_documents: int
+    total_cache_size_mb: float
 
 class CacheStats:
     total_files: int
@@ -6,6 +18,27 @@ class CacheStats:
     available_space_mb: float
     oldest_file_age_days: float
     newest_file_age_days: float
+
+class GenericCache:
+    def __init__(
+        self,
+        cache_type: str,
+        cache_dir: str | None = None,
+        max_age_days: float = 30.0,
+        max_cache_size_mb: float = 500.0,
+        min_free_space_mb: float = 1000.0,
+    ) -> None: ...
+    def get(self, cache_key: str, source_file: str | None = None) -> bytes | None: ...
+    def set(self, cache_key: str, data: bytes, source_file: str | None = None) -> None: ...
+    def is_processing(self, cache_key: str) -> bool: ...
+    def mark_processing(self, cache_key: str) -> None: ...
+    def mark_complete(self, cache_key: str) -> None: ...
+    def clear(self) -> tuple[int, float]: ...
+    def get_stats(self) -> CacheStats: ...
+    @property
+    def cache_dir(self) -> str: ...
+    @property
+    def cache_type_name(self) -> str: ...
 
 def generate_cache_key(**kwargs: Any) -> str: ...
 def batch_generate_cache_keys(items: list[Any]) -> list[str]: ...

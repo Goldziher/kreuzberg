@@ -16,9 +16,9 @@ mod token_reduction;
 mod xml;
 
 use cache::{
-    CacheStats, batch_cleanup_caches, batch_generate_cache_keys, cleanup_cache, clear_cache_directory, fast_hash,
-    filter_old_cache_entries, generate_cache_key, get_available_disk_space, get_cache_metadata, is_cache_valid,
-    smart_cleanup_cache, sort_cache_by_access_time, validate_cache_key,
+    CacheStats, GenericCache, batch_cleanup_caches, batch_generate_cache_keys, cleanup_cache, clear_cache_directory,
+    fast_hash, filter_old_cache_entries, generate_cache_key, get_available_disk_space, get_cache_metadata,
+    is_cache_valid, smart_cleanup_cache, sort_cache_by_access_time, validate_cache_key,
 };
 use email::{
     EmailAttachmentDTO, EmailExtractionResultDTO, build_email_text_output, extract_email_content,
@@ -102,6 +102,7 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(clear_cache_directory, m)?)?;
     m.add_function(wrap_pyfunction!(batch_cleanup_caches, m)?)?;
     m.add_class::<CacheStats>()?;
+    m.add_class::<GenericCache>()?;
 
     m.add_function(wrap_pyfunction!(table_from_arrow_to_markdown, m)?)?;
 

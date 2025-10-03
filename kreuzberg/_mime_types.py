@@ -4,6 +4,9 @@ from mimetypes import guess_type
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
+import msgspec
+
+from kreuzberg._internal_bindings import generate_cache_key
 from kreuzberg._utils._cache import get_mime_cache
 from kreuzberg.exceptions import ValidationError
 
@@ -251,16 +254,16 @@ def validate_mime_type(
                 "check_file_exists": check_file_exists,
             }
 
-        cache_kwargs = {"file_info": str(sorted(file_info.items())), "detector": "mime_type"}
+        cache_key = generate_cache_key(**file_info, detector="mime_type")
 
         mime_cache = get_mime_cache()
-        cached_result = mime_cache.get(**cache_kwargs)
-        if cached_result is not None:
-            return cached_result
+        cached_bytes = mime_cache.get(cache_key, source_file=str(path.resolve()))
+        if cached_bytes is not None:
+            return str(msgspec.msgpack.decode(cached_bytes))
 
         detected_mime_type = _detect_mime_type_uncached(file_path, check_file_exists)
 
-        mime_cache.set(detected_mime_type, **cache_kwargs)
+        mime_cache.set(cache_key, msgspec.msgpack.encode(detected_mime_type), source_file=str(path.resolve()))
 
         return detected_mime_type
 
