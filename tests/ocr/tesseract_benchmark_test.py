@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from PIL.Image import Image as PILImage
-    from pytest_benchmark.fixture import BenchmarkFixture
+    from pytest_benchmark.fixture import BenchmarkFixture  # type: ignore[import-untyped]
 
 
 def create_test_image_small() -> PILImage:
@@ -40,7 +40,7 @@ def create_test_image_small() -> PILImage:
     try:
         font: Any = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)
     except (OSError, AttributeError):
-        font = ImageFont.load_default()  # type: ignore[assignment]
+        font = ImageFont.load_default()
 
     draw.text((20, 30), "Small Test Image", fill="black", font=font)
     return img
@@ -54,7 +54,7 @@ def create_test_image_medium() -> PILImage:
     try:
         font: Any = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 24)
     except (OSError, AttributeError):
-        font = ImageFont.load_default()  # type: ignore[assignment]
+        font = ImageFont.load_default()
 
     y_pos = 50
     for i in range(10):
@@ -72,7 +72,7 @@ def create_test_image_large() -> PILImage:
     try:
         font: Any = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 28)
     except (OSError, AttributeError):
-        font = ImageFont.load_default()  # type: ignore[assignment]
+        font = ImageFont.load_default()
 
     y_pos = 50
     for i in range(20):
@@ -94,7 +94,7 @@ async def test_benchmark_async_process_image_small(benchmark: BenchmarkFixture) 
     image = create_test_image_small()
 
     async def process() -> ExtractionResult:
-        return await backend.process_image(image, use_cache=False)
+        return await backend.process_image(image)
 
     result = await benchmark.pedantic(process, rounds=5, iterations=1)
 
@@ -109,7 +109,7 @@ async def test_benchmark_async_process_image_medium(benchmark: BenchmarkFixture)
     image = create_test_image_medium()
 
     async def process() -> ExtractionResult:
-        return await backend.process_image(image, use_cache=False)
+        return await backend.process_image(image)
 
     result = await benchmark.pedantic(process, rounds=3, iterations=1)
 
@@ -124,7 +124,7 @@ async def test_benchmark_async_process_image_large(benchmark: BenchmarkFixture) 
     image = create_test_image_large()
 
     async def process() -> ExtractionResult:
-        return await backend.process_image(image, use_cache=False)
+        return await backend.process_image(image)
 
     result = await benchmark.pedantic(process, rounds=2, iterations=1)
 
@@ -141,7 +141,7 @@ async def test_benchmark_async_process_file(benchmark: BenchmarkFixture, tmp_pat
     image.save(img_path)
 
     async def process() -> ExtractionResult:
-        return await backend.process_file(img_path, use_cache=False)
+        return await backend.process_file(img_path)
 
     result = await benchmark.pedantic(process, rounds=5, iterations=1)
 
@@ -159,9 +159,7 @@ def test_benchmark_sync_process_image_small(benchmark: BenchmarkFixture) -> None
     backend = TesseractBackend()
     image = create_test_image_small()
 
-    result = benchmark.pedantic(
-        backend.process_image_sync, args=(image,), kwargs={"use_cache": False}, rounds=5, iterations=1
-    )
+    result = benchmark.pedantic(backend.process_image_sync, args=(image,), kwargs={}, rounds=5, iterations=1)
 
     assert isinstance(result, ExtractionResult)
     assert len(result.content) > 0
@@ -172,9 +170,7 @@ def test_benchmark_sync_process_image_medium(benchmark: BenchmarkFixture) -> Non
     backend = TesseractBackend()
     image = create_test_image_medium()
 
-    result = benchmark.pedantic(
-        backend.process_image_sync, args=(image,), kwargs={"use_cache": False}, rounds=3, iterations=1
-    )
+    result = benchmark.pedantic(backend.process_image_sync, args=(image,), kwargs={}, rounds=3, iterations=1)
 
     assert isinstance(result, ExtractionResult)
     assert len(result.content) > 0
@@ -185,9 +181,7 @@ def test_benchmark_sync_process_image_large(benchmark: BenchmarkFixture) -> None
     backend = TesseractBackend()
     image = create_test_image_large()
 
-    result = benchmark.pedantic(
-        backend.process_image_sync, args=(image,), kwargs={"use_cache": False}, rounds=2, iterations=1
-    )
+    result = benchmark.pedantic(backend.process_image_sync, args=(image,), kwargs={}, rounds=2, iterations=1)
 
     assert isinstance(result, ExtractionResult)
     assert len(result.content) > 0
@@ -200,9 +194,7 @@ def test_benchmark_sync_process_file(benchmark: BenchmarkFixture, tmp_path: Path
     img_path = tmp_path / "benchmark_sync.png"
     image.save(img_path)
 
-    result = benchmark.pedantic(
-        backend.process_file_sync, args=(img_path,), kwargs={"use_cache": False}, rounds=5, iterations=1
-    )
+    result = benchmark.pedantic(backend.process_file_sync, args=(img_path,), kwargs={}, rounds=5, iterations=1)
 
     assert isinstance(result, ExtractionResult)
     assert len(result.content) > 0
@@ -225,7 +217,7 @@ def test_benchmark_sync_batch_processing_10_images(benchmark: BenchmarkFixture, 
         paths.append(img_path)
 
     def process_batch() -> list[ExtractionResult]:
-        return backend.process_batch_sync(paths, use_cache=False)
+        return backend.process_batch_sync(paths)
 
     results = benchmark.pedantic(process_batch, rounds=2, iterations=1)
 
@@ -251,10 +243,10 @@ def test_benchmark_cache_hit(benchmark: BenchmarkFixture, tmp_path: Path) -> Non
     img_path = tmp_path / "cache_hit_test.png"
     image.save(img_path)
 
-    backend.process_file_sync(img_path, use_cache=True)
+    backend.process_file_sync(img_path)
 
     def process_with_cache() -> ExtractionResult:
-        return backend.process_file_sync(img_path, use_cache=True)
+        return backend.process_file_sync(img_path)
 
     result = benchmark.pedantic(process_with_cache, rounds=20, iterations=1)
 
@@ -273,7 +265,7 @@ def test_benchmark_cache_miss(benchmark: BenchmarkFixture, tmp_path: Path) -> No
         image = create_test_image_small()
         img_path = tmp_path / "cache_miss_test.png"
         image.save(img_path)
-        return backend.process_file_sync(img_path, use_cache=True)
+        return backend.process_file_sync(img_path)
 
     result = benchmark.pedantic(process_unique_image, rounds=3, iterations=1)
 
@@ -294,7 +286,7 @@ def test_benchmark_memory_small_image(benchmark: BenchmarkFixture) -> None:
         tracemalloc.start()
         gc.collect()
 
-        result = backend.process_image_sync(image, use_cache=False)
+        result = backend.process_image_sync(image)
 
         _current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -317,7 +309,7 @@ def test_benchmark_memory_medium_image(benchmark: BenchmarkFixture) -> None:
         tracemalloc.start()
         gc.collect()
 
-        result = backend.process_image_sync(image, use_cache=False)
+        result = backend.process_image_sync(image)
 
         _current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -340,7 +332,7 @@ def test_benchmark_memory_large_image(benchmark: BenchmarkFixture) -> None:
         tracemalloc.start()
         gc.collect()
 
-        result = backend.process_image_sync(image, use_cache=False)
+        result = backend.process_image_sync(image)
 
         _current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -369,7 +361,7 @@ def test_benchmark_memory_batch_10_images(benchmark: BenchmarkFixture, tmp_path:
         tracemalloc.start()
         gc.collect()
 
-        results = backend.process_batch_sync(paths, use_cache=False)
+        results = backend.process_batch_sync(paths)
 
         _current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -397,7 +389,7 @@ def test_benchmark_output_format(benchmark: BenchmarkFixture, output_format: str
     result = benchmark.pedantic(
         backend.process_image_sync,
         args=(image,),
-        kwargs={"output_format": output_format, "use_cache": False},
+        kwargs={"output_format": output_format},
         rounds=5,
         iterations=1,
     )
@@ -418,7 +410,7 @@ def test_benchmark_with_table_detection(benchmark: BenchmarkFixture) -> None:
     result = benchmark.pedantic(
         backend.process_image_sync,
         args=(image,),
-        kwargs={"enable_table_detection": True, "use_cache": False},
+        kwargs={"enable_table_detection": True},
         rounds=3,
         iterations=1,
     )
@@ -434,7 +426,7 @@ def test_benchmark_without_table_detection(benchmark: BenchmarkFixture) -> None:
     result = benchmark.pedantic(
         backend.process_image_sync,
         args=(image,),
-        kwargs={"enable_table_detection": False, "output_format": "text", "use_cache": False},
+        kwargs={"enable_table_detection": False, "output_format": "text"},
         rounds=3,
         iterations=1,
     )
