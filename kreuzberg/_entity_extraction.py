@@ -165,10 +165,7 @@ def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig)
 
             return False, spacy_error
 
-        try:
-            success, error_details = anyio.run(install_model)
-        except SystemExit as e:
-            success, error_details = False, f"spaCy CLI exit code: {e.code}"
+        success, error_details = anyio.run(install_model)
 
         if not success:
             if is_uv_available():
