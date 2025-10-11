@@ -22,6 +22,7 @@ from playa.image import get_image_suffix_and_writer
 
 from kreuzberg._constants import PDF_POINTS_PER_INCH
 from kreuzberg._extractors._base import Extractor
+from kreuzberg._internal_bindings import calculate_optimal_dpi, normalize_spaces
 from kreuzberg._mime_types import PDF_MIME_TYPE, PLAIN_TEXT_MIME_TYPE
 from kreuzberg._ocr import get_ocr_backend
 from kreuzberg._playa import extract_pdf_metadata, extract_pdf_metadata_sync
@@ -30,12 +31,9 @@ from kreuzberg._types import (
     ExtractionResult,
     ImageOCRResult,
     Metadata,
-    OcrBackendType,
 )
 from kreuzberg._utils._errors import create_error_context, should_retry
-from kreuzberg._utils._image_preprocessing import calculate_optimal_dpi
 from kreuzberg._utils._resource_managers import pdf_document, pdf_document_sync, pdf_resources_sync
-from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_maybe_async, run_taskgroup, run_taskgroup_batched
 from kreuzberg._utils._table import generate_table_summary
 from kreuzberg._utils._tmp import temporary_file, temporary_file_sync
@@ -60,61 +58,62 @@ class PDFExtractor(Extractor):
 
     async def extract_bytes_async(self, content: bytes) -> ExtractionResult:
         async with temporary_file(".pdf", content) as file_path:
-            metadata = await self._extract_metadata_with_password_attempts(content)
             result = await self.extract_path_async(file_path)
+            metadata = await self._extract_metadata_with_password_attempts(content)
             result.metadata = metadata
             return result
 
     async def extract_path_async(self, path: Path) -> ExtractionResult:
         content_bytes = await AsyncPath(path).read_bytes()
 
-        result: ExtractionResult | None = None
-
         document: Document | None = None
-        if self.config.extract_images or self.config.extract_tables:
+        if self.config.images is not None or self.config.tables is not None:
             document = self._parse_with_password_attempts(content_bytes)
 
+        text = ""
         if not self.config.force_ocr:
             try:
-                content = await self._extract_pdf_searchable_text(path)
-                if self._validate_extracted_text(content):
-                    result = ExtractionResult(content=content, mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
+                text = await self._extract_pdf_searchable_text(path)
             except ParsingError:
-                pass
+                text = ""
 
-        if not result and self.config.ocr_backend is not None:
-            result = await self._extract_pdf_text_with_ocr(path, self.config.ocr_backend)
-
-        if not result:
-            result = ExtractionResult(content="", mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
+        if (self.config.force_ocr or not self._validate_extracted_text(text)) and self.config.ocr is not None:
+            ocr_result = await self._extract_pdf_text_with_ocr(path)
+            text = normalize_spaces(ocr_result.content)
 
         metadata = await self._extract_metadata_with_password_attempts(content_bytes)
-        result.metadata = metadata
 
-        if self.config.extract_tables:
-            # GMFT is optional dependency ~keep
+        result = ExtractionResult(
+            content=text,
+            mime_type=PLAIN_TEXT_MIME_TYPE,
+            metadata=metadata,
+            tables=[],
+        )
+
+        if self.config.tables is not None:
             try:
-                from kreuzberg._gmft import extract_tables  # noqa: PLC0415
+                from kreuzberg._vision_tables import extract_tables_async  # noqa: PLC0415
 
-                tables = await extract_tables(path, self.config.gmft_config)
+                tables = await extract_tables_async(path, self.config.tables)
                 result.tables = tables
-            except ImportError:  # pragma: no cover
+
+                if result.tables:
+                    table_summary = generate_table_summary(result.tables)
+                    result.metadata = result.metadata | {
+                        "table_count": table_summary["table_count"],
+                        "tables_summary": f"Document contains {table_summary['table_count']} tables "
+                        f"across {table_summary['pages_with_tables']} pages with "
+                        f"{table_summary['total_rows']} total rows",
+                    }
+            except ImportError:
+                logger.warning("Vision-based table extraction not available, skipping table extraction")
                 result.tables = []
 
-            if result.tables:
-                table_summary = generate_table_summary(result.tables)
-                result.metadata = result.metadata | {
-                    "table_count": table_summary["table_count"],
-                    "tables_summary": f"Document contains {table_summary['table_count']} tables "
-                    f"across {table_summary['pages_with_tables']} pages with "
-                    f"{table_summary['total_rows']} total rows",
-                }
-
-        if self.config.extract_images and document:
+        if self.config.images is not None and document:
             images = await self._extract_images_from_playa(document)
             images = self._check_image_memory_limits(images)
             result.images = images
-            if self.config.ocr_extracted_images:
+            if self.config.images.ocr_min_dimensions is not None:
                 image_ocr_results = await self._process_images_with_ocr(result.images)
                 result.image_ocr_results = image_ocr_results
 
@@ -130,53 +129,58 @@ class PDFExtractor(Extractor):
     def extract_path_sync(self, path: Path) -> ExtractionResult:
         content_bytes = path.read_bytes()
 
-        result: ExtractionResult | None = None
-
         document: Document | None = None
-        if self.config.extract_images or self.config.extract_tables:
+        if self.config.images is not None or self.config.tables is not None:
             document = self._parse_with_password_attempts(content_bytes)
 
+        text = ""
         if not self.config.force_ocr:
             try:
-                content = self._extract_pdf_searchable_text_sync(path)
-                if self._validate_extracted_text(content):
-                    result = ExtractionResult(content=content, mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
+                text = self._extract_pdf_searchable_text_sync(path)
             except ParsingError:
-                pass
+                text = ""
 
-        if not result and self.config.ocr_backend is not None:
-            result = self._extract_pdf_text_with_ocr_sync(path, self.config.ocr_backend)
+        if (self.config.force_ocr or not self._validate_extracted_text(text)) and self.config.ocr is not None:
+            text = self._extract_pdf_with_ocr_sync(path)
 
-        if not result:
-            result = ExtractionResult(content="", mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
+        if not self.config.force_ocr and self._validate_extracted_text(text):
+            text = self._extract_with_playa_sync(path, fallback_text=text)
+
+        text = normalize_spaces(text)
 
         metadata = self._extract_metadata_with_password_attempts_sync(content_bytes)
-        result.metadata = metadata
 
-        if self.config.extract_tables:
-            # GMFT is optional dependency ~keep
+        result = ExtractionResult(
+            content=text,
+            mime_type=PLAIN_TEXT_MIME_TYPE,
+            metadata=metadata,
+            tables=[],
+        )
+
+        if self.config.tables is not None:
             try:
-                from kreuzberg._gmft import extract_tables_sync  # noqa: PLC0415
+                from kreuzberg._vision_tables import extract_tables_sync  # noqa: PLC0415
 
-                tables = extract_tables_sync(path)
+                tables = extract_tables_sync(path, self.config.tables)
                 result.tables = tables
-            except ImportError:  # pragma: no cover
+
+                if tables:
+                    table_summary = generate_table_summary(tables)
+                    result.metadata = result.metadata | {
+                        "table_count": table_summary["table_count"],
+                        "tables_summary": f"Document contains {table_summary['table_count']} tables "
+                        f"across {table_summary['pages_with_tables']} pages with "
+                        f"{table_summary['total_rows']} total rows",
+                    }
+            except ImportError:
+                logger.warning("Vision-based table extraction not available, skipping table extraction")
                 result.tables = []
 
-            if result.tables:
-                table_summary = generate_table_summary(result.tables)
-                result.metadata = result.metadata | {
-                    "table_count": table_summary["table_count"],
-                    "tables_summary": f"Document contains {table_summary['table_count']} tables "
-                    f"across {table_summary['pages_with_tables']} pages with "
-                    f"{table_summary['total_rows']} total rows",
-                }
-
-        if self.config.extract_images and document:
+        if self.config.images is not None and document:
             images = self._extract_images_from_playa_sync(document)
             images = self._check_image_memory_limits(images)
             result.images = images
-            if self.config.ocr_extracted_images:
+            if self.config.images.ocr_min_dimensions is not None:
                 image_ocr_results: list[ImageOCRResult] = run_maybe_async(self._process_images_with_ocr, result.images)
                 result.image_ocr_results = image_ocr_results
 
@@ -331,11 +335,18 @@ class PDFExtractor(Extractor):
             ),
         ) from last_error
 
-    async def _extract_pdf_text_with_ocr(self, input_file: Path, ocr_backend: OcrBackendType) -> ExtractionResult:
+    async def _extract_pdf_text_with_ocr(self, input_file: Path) -> ExtractionResult:
+        backend_name = (
+            self.config.ocr.backend if self.config.ocr and hasattr(self.config.ocr, "backend") else "tesseract"
+        )
+        backend = get_ocr_backend(backend_name)
+
         images = await self._convert_pdf_to_images(input_file)
-        backend = get_ocr_backend(ocr_backend)
+
+        ocr_config = self._prepare_ocr_config()
+        backend_kwargs = self._build_backend_kwargs(backend, ocr_config)
         ocr_results = await run_taskgroup_batched(
-            *[backend.process_image(image, **self.config.get_config_dict()) for image in images],
+            *[backend.process_image(image, **backend_kwargs) for image in images],
             batch_size=cpu_count(),
         )
         content = "\n".join(result.content for result in ocr_results)
@@ -389,18 +400,47 @@ class PDFExtractor(Extractor):
     def _extract_pdf_searchable_text_sync(self, path: Path) -> str:
         try:
             with pdf_document_sync(path) as pdf:
-                pages_text = []
-                for page in pdf:
-                    text_page = page.get_textpage()
-                    text = text_page.get_text_bounded()
-                    pages_text.append(text)
-                    with pdf_resources_sync(text_page, page):
-                        pass
-                return "\n".join(pages_text)
-        except Exception as e:
-            raise ParsingError(f"Failed to extract PDF text: {e}") from e
+                pages_content = []
+                page_errors = []
 
-    def _extract_pdf_text_with_ocr_sync(self, path: Path, ocr_backend: OcrBackendType) -> ExtractionResult:
+                for i, page in enumerate(pdf):
+                    try:
+                        text_page = page.get_textpage()
+                        page_content = text_page.get_text_bounded()
+                        pages_content.append(page_content)
+                        with pdf_resources_sync(text_page, page):
+                            pass
+                    except Exception as e:  # noqa: PERF203, BLE001
+                        page_errors.append({"page": i + 1, "error": str(e)})
+                        pages_content.append(f"[Error extracting page {i + 1}]")
+
+                text = "\n".join(pages_content)
+                has_content = bool(text.strip())
+
+                if page_errors and has_content:
+                    return normalize_spaces(text)
+                if not has_content:
+                    raise ParsingError(
+                        "Could not extract any text from PDF",
+                        context=create_error_context(
+                            operation="extract_pdf_searchable_text_sync",
+                            file_path=path,
+                            page_errors=page_errors,
+                        ),
+                    )
+
+                return normalize_spaces(text)
+        except pypdfium2.PdfiumError as e:
+            raise ParsingError(
+                f"Failed to extract PDF text: {e}",
+                context=create_error_context(
+                    operation="extract_pdf_searchable_text_sync",
+                    file_path=path,
+                    error=e,
+                ),
+            ) from e
+
+    def _extract_pdf_with_ocr_sync(self, path: Path) -> str:
         temp_files: list[Path] = []
         try:
             with pdf_document_sync(path) as pdf:
@@ -438,8 +478,7 @@ class PDFExtractor(Extractor):
                         with pdf_resources_sync(bitmap, page):
                             pil_image.close()
 
-            content = self._process_pdf_images_with_ocr([str(p) for p in temp_files], ocr_backend)
-            return ExtractionResult(content=content, mime_type=PLAIN_TEXT_MIME_TYPE, metadata={})
+            return self._process_pdf_images_with_ocr([str(p) for p in temp_files])
 
         except Exception as e:
             raise ParsingError(f"Failed to OCR PDF: {e}") from e
@@ -448,21 +487,16 @@ class PDFExtractor(Extractor):
                 with contextlib.suppress(OSError):
                     p.unlink()
 
-    def _process_pdf_images_with_ocr(self, image_paths: list[str], ocr_backend: OcrBackendType) -> str:
-        backend = get_ocr_backend(ocr_backend)
+    def _process_pdf_images_with_ocr(self, image_paths: list[str]) -> str:
+        backend_name = (
+            self.config.ocr.backend if self.config.ocr and hasattr(self.config.ocr, "backend") else "tesseract"
+        )
+        backend = get_ocr_backend(backend_name)
         paths = [Path(p) for p in image_paths]
 
-        results = backend.process_batch_sync(paths, **self.config.get_config_dict())
-
-        return "\n\n".join(result.content for result in results)
-
-    def _process_pdf_images_with_ocr_direct(self, images: list[Image]) -> str:
-        if not self.config.ocr_backend:
-            raise ValueError("OCR backend must be specified")
-        backend = get_ocr_backend(self.config.ocr_backend)
-        config = self._prepare_ocr_config(self.config.ocr_backend)
-
-        results = [backend.process_image_sync(image, **config) for image in images]
+        ocr_config = self._prepare_ocr_config()
+        backend_kwargs = self._build_backend_kwargs(backend, ocr_config)
+        results = backend.process_batch_sync(paths, **backend_kwargs)
 
         return "\n\n".join(result.content for result in results)
 

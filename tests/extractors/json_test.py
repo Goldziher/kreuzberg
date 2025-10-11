@@ -6,7 +6,7 @@ from kreuzberg import ExtractionConfig, JSONExtractionConfig
 from kreuzberg._extractors._structured import StructuredDataExtractor
 from kreuzberg._mime_types import JSON_MIME_TYPE
 
-REAL_WORLD_JSON_DIR = Path(__file__).parent.parent / "test_source_files" / "json" / "real_world"
+REAL_WORLD_JSON_DIR = Path(__file__).parent.parent.parent / "test_documents" / "json" / "real_world"
 
 
 def test_json_config_default_values() -> None:
@@ -40,15 +40,15 @@ def test_json_config_custom_values() -> None:
 
 def test_extraction_config_with_json_config() -> None:
     json_config = JSONExtractionConfig(extract_schema=True)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
 
-    assert config.json_config is not None
-    assert config.json_config.extract_schema is True
+    assert config.json_extraction is not None
+    assert config.json_extraction.extract_schema is True
 
 
 def test_structured_extractor_json_config_property() -> None:
     json_config = JSONExtractionConfig(extract_schema=True)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     assert extractor._json_config is not None
@@ -64,7 +64,7 @@ def test_structured_extractor_no_json_config() -> None:
 
 def test_include_type_info_feature() -> None:
     json_config = JSONExtractionConfig(include_type_info=True)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"string_val": "text", "int_val": 42, "float_val": 3.14, "bool_val": true}'
@@ -78,7 +78,7 @@ def test_include_type_info_feature() -> None:
 
 def test_include_type_info_disabled() -> None:
     json_config = JSONExtractionConfig(include_type_info=False)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"string_val": "text", "int_val": 42}'
@@ -92,7 +92,7 @@ def test_include_type_info_disabled() -> None:
 
 def test_flatten_nested_objects_enabled() -> None:
     json_config = JSONExtractionConfig(flatten_nested_objects=True)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"outer": {"inner": {"deep": "value"}}}'
@@ -103,7 +103,7 @@ def test_flatten_nested_objects_enabled() -> None:
 
 def test_flatten_nested_objects_disabled() -> None:
     json_config = JSONExtractionConfig(flatten_nested_objects=False)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"outer": {"inner": {"deep": "value"}}}'
@@ -115,7 +115,7 @@ def test_flatten_nested_objects_disabled() -> None:
 
 def test_custom_text_field_patterns() -> None:
     json_config = JSONExtractionConfig(custom_text_field_patterns=frozenset({"summary", "abstract"}))
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"summary": "Test Summary", "abstract": "Test Abstract", "other": "Not extracted"}'
@@ -128,7 +128,7 @@ def test_custom_text_field_patterns() -> None:
 
 def test_custom_text_field_patterns_with_nested() -> None:
     json_config = JSONExtractionConfig(custom_text_field_patterns=frozenset({"summary"}), flatten_nested_objects=True)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"data": {"summary": "Nested Summary", "info": {"summary": "Deep Summary"}}}'
@@ -141,7 +141,7 @@ def test_custom_text_field_patterns_with_nested() -> None:
 
 def test_schema_extraction_enabled() -> None:
     json_config = JSONExtractionConfig(extract_schema=True)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"name": "test", "value": 42, "nested": {"key": "val"}}'
@@ -158,7 +158,7 @@ def test_schema_extraction_enabled() -> None:
 
 def test_schema_extraction_disabled() -> None:
     json_config = JSONExtractionConfig(extract_schema=False)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"name": "test", "value": 42}'
@@ -169,7 +169,7 @@ def test_schema_extraction_disabled() -> None:
 
 def test_schema_extraction_max_depth() -> None:
     json_config = JSONExtractionConfig(extract_schema=True, max_depth=2)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"level1": {"level2": {"level3": {"level4": "deep"}}}}'
@@ -182,7 +182,7 @@ def test_schema_extraction_max_depth() -> None:
 
 def test_array_item_limit() -> None:
     json_config = JSONExtractionConfig(extract_schema=True, array_item_limit=3)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b'{"items": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}'
@@ -200,7 +200,7 @@ def test_combined_features() -> None:
         custom_text_field_patterns=frozenset({"abstract"}),
         flatten_nested_objects=True,
     )
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     json_content = b"""{
@@ -257,7 +257,7 @@ def test_iss_location_json() -> None:
 
 def test_github_emojis_json() -> None:
     json_config = JSONExtractionConfig(extract_schema=True, max_depth=2)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     test_file = REAL_WORLD_JSON_DIR / "github_emojis.json"
@@ -280,7 +280,7 @@ def test_package_json() -> None:
         extract_schema=True,
         flatten_nested_objects=False,
     )
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     test_file = REAL_WORLD_JSON_DIR / "package.json"
@@ -300,7 +300,7 @@ def test_openapi_spec_json() -> None:
     json_config = JSONExtractionConfig(
         extract_schema=True, max_depth=3, custom_text_field_patterns=frozenset({"summary", "operationId"})
     )
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     test_file = REAL_WORLD_JSON_DIR / "openapi_spec.json"
@@ -331,7 +331,7 @@ def test_large_json_array_handling() -> None:
         extract_schema=True,
         array_item_limit=5,
     )
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     large_array_json = (
@@ -349,7 +349,7 @@ def test_large_json_array_handling() -> None:
 
 def test_deeply_nested_json() -> None:
     json_config = JSONExtractionConfig(extract_schema=True, max_depth=3, flatten_nested_objects=True)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     nested_json = b"""{
@@ -378,7 +378,7 @@ def test_deeply_nested_json() -> None:
 
 def test_mixed_type_json() -> None:
     json_config = JSONExtractionConfig(include_type_info=True, extract_schema=True)
-    config = ExtractionConfig(json_config=json_config)
+    config = ExtractionConfig(json_extraction=json_config)
     extractor = StructuredDataExtractor(JSON_MIME_TYPE, config)
 
     mixed_json = b"""{

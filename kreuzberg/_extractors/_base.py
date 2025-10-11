@@ -5,23 +5,20 @@ import logging
 import time
 import zlib
 from abc import ABC, abstractmethod
-from dataclasses import asdict
 from multiprocessing import cpu_count
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from PIL import Image
 
+from kreuzberg._internal_bindings import calculate_quality_score, clean_extracted_text
 from kreuzberg._ocr import get_ocr_backend
 from kreuzberg._types import (
-    EasyOCRConfig,
     ExtractedImage,
     ExtractionResult,
     ImageOCRResult,
-    PaddleOCRConfig,
-    TesseractConfig,
     normalize_metadata,
 )
-from kreuzberg._utils._quality import calculate_quality_score, clean_extracted_text
+from kreuzberg._utils._serialization import to_dict
 from kreuzberg._utils._sync import run_taskgroup_batched
 
 if TYPE_CHECKING:
@@ -73,7 +70,8 @@ class Extractor(ABC):
 
         cleaned_content = clean_extracted_text(result.content)
 
-        quality_score = calculate_quality_score(cleaned_content, dict(result.metadata) if result.metadata else None)
+        metadata_dict = dict(result.metadata) if result.metadata else None
+        quality_score = calculate_quality_score(cleaned_content, metadata_dict)
 
         enhanced_metadata = (dict(result.metadata) if result.metadata else {}) | {"quality_score": quality_score}
 
@@ -157,7 +155,10 @@ class Extractor(ABC):
         return zlib.crc32(combined) & 0xFFFFFFFF
 
     def _deduplicate_images(self, images: list[ExtractedImage]) -> list[ExtractedImage]:
-        if not self.config.deduplicate_images or not images:
+        if not images:
+            return images
+
+        if self.config.images is None or not self.config.images.deduplicate:
             return images
 
         seen_hashes = set()
@@ -176,43 +177,48 @@ class Extractor(ABC):
 
         return unique_images
 
-    def _prepare_ocr_config(self, backend_name: str) -> dict[str, Any]:
-        default_config: TesseractConfig | EasyOCRConfig | PaddleOCRConfig
-        config_class: type[TesseractConfig | EasyOCRConfig | PaddleOCRConfig]
+    def _prepare_ocr_config(self) -> dict[str, Any]:
+        cache_enabled = self.config.use_cache
 
-        if backend_name == "tesseract":
-            default_config = TesseractConfig()
-            config_class = TesseractConfig
-        elif backend_name == "easyocr":
-            default_config = EasyOCRConfig()
-            config_class = EasyOCRConfig
-        elif backend_name == "paddleocr":
-            default_config = PaddleOCRConfig()
-            config_class = PaddleOCRConfig
-        else:
-            raise ValueError(f"Unknown OCR backend: {backend_name}")
+        if self.config.ocr is None:
+            return {"use_cache": cache_enabled}
 
-        cfg: dict[str, Any] = asdict(default_config)
-
-        if self.config.ocr_config and isinstance(self.config.ocr_config, config_class):
-            user_cfg: dict[str, Any] = asdict(self.config.ocr_config)
-            cfg.update(user_cfg)
-
-        cfg["use_cache"] = self.config.use_cache
+        cfg = to_dict(self.config.ocr)
+        # Remove backend field - it's used for tagged union discrimination, not constructor arg ~keep
+        cfg.pop("backend", None)
+        cfg.setdefault("use_cache", cache_enabled)
         return cfg
 
+    def _build_backend_kwargs(self, backend: Any, cfg: dict[str, Any]) -> dict[str, Any]:
+        kwargs = dict(cfg)
+        use_cache_flag = kwargs.pop("use_cache", True)
+
+        backend_module = backend.__class__.__module__.lower()
+        backend_name = backend.__class__.__name__.lower()
+
+        if "tesseract" in backend_module or "tesseract" in backend_name:
+            return kwargs
+
+        kwargs.setdefault("use_cache", use_cache_flag)
+        return kwargs
+
     def _validate_image_for_ocr(self, img: ExtractedImage) -> str | None:
+        if self.config.images is None:
+            return None
+
         fmt = img.format.lower()
-        if fmt not in self.config.image_ocr_formats:
+        if fmt not in self.config.images.ocr_allowed_formats:
             return f"Unsupported format: {img.format}"
 
         if img.dimensions is not None:
             w, h = img.dimensions
-            min_w, min_h = self.config.image_ocr_min_dimensions
-            max_w, max_h = self.config.image_ocr_max_dimensions
 
-            if w < min_w or h < min_h:
-                return f"Too small: {w}x{h}"
+            if self.config.images.ocr_min_dimensions is not None:
+                min_w, min_h = self.config.images.ocr_min_dimensions
+                if w < min_w or h < min_h:
+                    return f"Too small: {w}x{h}"
+
+            max_w, max_h = self.config.images.ocr_max_dimensions
             if w > max_w or h > max_h:
                 return f"Too large: {w}x{h}"
 
@@ -222,7 +228,8 @@ class Extractor(ABC):
         try:
             start = time.time()
             pil_img = Image.open(io.BytesIO(target.data))
-            ocr_res = await backend.process_image(pil_img, **cfg)
+            backend_kwargs = self._build_backend_kwargs(backend, cfg)
+            ocr_res = await backend.process_image(pil_img, **backend_kwargs)
             duration = time.time() - start
             return ImageOCRResult(
                 image=target,
@@ -246,17 +253,17 @@ class Extractor(ABC):
     async def _process_images_with_ocr(
         self, images: tuple[ExtractedImage, ...] | list[ExtractedImage]
     ) -> list[ImageOCRResult]:
-        if not images or not self.config.ocr_extracted_images:
+        if not images or self.config.images is None or self.config.images.ocr_min_dimensions is None:
             return []
 
         images_list = list(self._deduplicate_images(list(images)))
         images_list = self._check_image_memory_limits(images_list)
 
-        backend_name = self.config.image_ocr_backend or self.config.ocr_backend
-        if backend_name is None:
+        if self.config.ocr is None:
             return []
 
-        cfg = self._prepare_ocr_config(backend_name)
+        cfg = self._prepare_ocr_config()
+        backend_name = self.config.ocr.backend if hasattr(self.config.ocr, "backend") else "tesseract"
         backend = get_ocr_backend(backend_name)
 
         results: list[ImageOCRResult] = []

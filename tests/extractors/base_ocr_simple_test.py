@@ -6,13 +6,20 @@ import pytest
 
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._pdf import PDFExtractor
-from kreuzberg._types import ExtractedImage, ExtractionResult, ImageOCRResult
+from kreuzberg._types import (
+    ExtractedImage,
+    ExtractionResult,
+    ImageExtractionConfig,
+    ImageOCRResult,
+    TesseractConfig,
+)
 
 
 @pytest.mark.anyio
 async def test_process_images_filters_by_format() -> None:
     config = ExtractionConfig(
-        extract_images=True, ocr_extracted_images=True, image_ocr_formats=frozenset(["png", "jpg"])
+        images=ImageExtractionConfig(ocr_allowed_formats=frozenset(["png", "jpg"]), ocr_min_dimensions=(1, 1)),
+        ocr=TesseractConfig(),
     )
 
     extractor = PDFExtractor(mime_type="application/pdf", config=config)
@@ -23,14 +30,14 @@ async def test_process_images_filters_by_format() -> None:
             ExtractedImage(data=b"test", format="svg", filename="test.svg"),
         ]
 
-        filtered = [img for img in images if img.format in config.image_ocr_formats]
+        filtered = [img for img in images if config.images and img.format in config.images.ocr_allowed_formats]
 
         assert len(filtered) == 1
         assert filtered[0].format == "png"
 
 
 def test_memory_limit_check() -> None:
-    config = ExtractionConfig(extract_images=True)
+    config = ExtractionConfig(images=ImageExtractionConfig())
     extractor = PDFExtractor(mime_type="application/pdf", config=config)
 
     small_images = [ExtractedImage(data=b"x" * 1000, format="png")]

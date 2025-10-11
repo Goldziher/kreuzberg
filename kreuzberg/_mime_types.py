@@ -4,6 +4,9 @@ from mimetypes import guess_type
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
+import msgspec
+
+from kreuzberg._internal_bindings import generate_cache_key
 from kreuzberg._utils._cache import get_mime_cache
 from kreuzberg.exceptions import ValidationError
 
@@ -17,12 +20,17 @@ PDF_MIME_TYPE: Final = "application/pdf"
 PLAIN_TEXT_MIME_TYPE: Final = "text/plain"
 POWER_POINT_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 DOCX_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+LEGACY_WORD_MIME_TYPE: Final = "application/msword"
+LEGACY_POWERPOINT_MIME_TYPE: Final = "application/vnd.ms-powerpoint"
 
 EML_MIME_TYPE: Final = "message/rfc822"
 MSG_MIME_TYPE: Final = "application/vnd.ms-outlook"
 JSON_MIME_TYPE: Final = "application/json"
 YAML_MIME_TYPE: Final = "application/x-yaml"
 TOML_MIME_TYPE: Final = "application/toml"
+XML_MIME_TYPE: Final = "application/xml"
+XML_TEXT_MIME_TYPE: Final = "text/xml"
+SVG_MIME_TYPE: Final = "image/svg+xml"
 
 EXCEL_MIME_TYPE: Final = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 EXCEL_BINARY_MIME_TYPE: Final = "application/vnd.ms-excel"
@@ -154,6 +162,8 @@ EXT_TO_MIME_TYPE: Final[Mapping[str, str]] = {
     ".xla": EXCEL_TEMPLATE_MIME_TYPE,
     ".ods": OPENDOC_SPREADSHEET_MIME_TYPE,
     ".pptx": POWER_POINT_MIME_TYPE,
+    ".doc": LEGACY_WORD_MIME_TYPE,
+    ".ppt": LEGACY_POWERPOINT_MIME_TYPE,
     ".bmp": "image/bmp",
     ".gif": "image/gif",
     ".jpg": "image/jpeg",
@@ -187,6 +197,8 @@ EXT_TO_MIME_TYPE: Final[Mapping[str, str]] = {
     ".bib": "application/x-bibtex",
     ".ipynb": "application/x-ipynb+json",
     ".tex": "application/x-latex",
+    ".xml": XML_MIME_TYPE,
+    ".svg": SVG_MIME_TYPE,
 }
 
 SUPPORTED_MIME_TYPES: Final[set[str]] = (
@@ -197,12 +209,17 @@ SUPPORTED_MIME_TYPES: Final[set[str]] = (
     | {
         PDF_MIME_TYPE,
         POWER_POINT_MIME_TYPE,
+        LEGACY_WORD_MIME_TYPE,
+        LEGACY_POWERPOINT_MIME_TYPE,
         HTML_MIME_TYPE,
         EML_MIME_TYPE,
         MSG_MIME_TYPE,
         JSON_MIME_TYPE,
         YAML_MIME_TYPE,
         TOML_MIME_TYPE,
+        XML_MIME_TYPE,
+        XML_TEXT_MIME_TYPE,
+        SVG_MIME_TYPE,
         "text/json",
         "text/yaml",
         "text/x-yaml",
@@ -237,16 +254,35 @@ def validate_mime_type(
                 "check_file_exists": check_file_exists,
             }
 
-        cache_kwargs = {"file_info": str(sorted(file_info.items())), "detector": "mime_type"}
+        cache_key = generate_cache_key(**file_info, detector="mime_type")
 
         mime_cache = get_mime_cache()
-        cached_result = mime_cache.get(**cache_kwargs)
-        if cached_result is not None:
-            return cached_result
+        try:
+            cached_value = mime_cache.get(  # type: ignore[call-arg]
+                file_info=file_info,
+                detector="mime_type",
+            )
+        except (TypeError, AttributeError):
+            cached_value = mime_cache.get(cache_key, source_file=str(path.resolve()))
+        if cached_value is not None:
+            if isinstance(cached_value, (bytes, bytearray, memoryview)):
+                return str(msgspec.msgpack.decode(cached_value))
+            return str(cached_value)
 
         detected_mime_type = _detect_mime_type_uncached(file_path, check_file_exists)
 
-        mime_cache.set(detected_mime_type, **cache_kwargs)
+        try:
+            mime_cache.set(  # type: ignore[call-arg]
+                detected_mime_type,
+                file_info=file_info,
+                detector="mime_type",
+            )
+        except (TypeError, AttributeError):
+            mime_cache.set(
+                cache_key,
+                msgspec.msgpack.encode(detected_mime_type),
+                source_file=str(path.resolve()),
+            )
 
         return detected_mime_type
 

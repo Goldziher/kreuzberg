@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kreuzberg import ExtractionConfig
+from kreuzberg import ExtractionConfig, ImageExtractionConfig
 from kreuzberg.extraction import extract_file
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ def _candidate_paths(base: Path) -> list[Path]:
 
 @pytest.mark.anyio
 async def test_extract_images_from_real_pdfs_runs(test_files_path: Path) -> None:
-    cfg = ExtractionConfig(extract_images=True)
+    cfg = ExtractionConfig(images=ImageExtractionConfig())
     candidates = _candidate_paths(test_files_path)
     assert candidates, "No candidate real PDFs found in test_source_files."
 
@@ -37,7 +37,7 @@ async def test_extract_images_from_real_pdfs_runs(test_files_path: Path) -> None
 
 @pytest.mark.anyio
 async def test_at_least_one_real_pdf_has_images(test_files_path: Path) -> None:
-    cfg = ExtractionConfig(extract_images=True)
+    cfg = ExtractionConfig(images=ImageExtractionConfig())
     candidates = _candidate_paths(test_files_path)
     assert candidates, "No candidate real PDFs found in test_source_files."
 

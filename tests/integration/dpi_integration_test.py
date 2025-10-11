@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from kreuzberg import extract_file
-from kreuzberg._types import ExtractionConfig
+from kreuzberg._types import ExtractionConfig, TesseractConfig
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -71,7 +71,7 @@ class TestDPIIntegration:
     @pytest.mark.anyio
     async def test_large_image_dpi_adjustment(self, large_test_image: Path) -> None:
         config = ExtractionConfig(
-            ocr_backend="tesseract",
+            ocr=TesseractConfig(),
             target_dpi=300,
             max_image_dimension=10000,
             auto_adjust_dpi=True,
@@ -93,7 +93,7 @@ class TestDPIIntegration:
     @pytest.mark.anyio
     async def test_small_image_no_adjustment(self, small_test_image: Path) -> None:
         config = ExtractionConfig(
-            ocr_backend="tesseract",
+            ocr=TesseractConfig(),
             target_dpi=150,
             max_image_dimension=25000,
             auto_adjust_dpi=True,
@@ -112,7 +112,7 @@ class TestDPIIntegration:
     @pytest.mark.anyio
     async def test_dpi_disabled_auto_adjust(self, large_test_image: Path) -> None:
         config = ExtractionConfig(
-            ocr_backend="tesseract",
+            ocr=TesseractConfig(),
             target_dpi=72,
             max_image_dimension=25000,
             auto_adjust_dpi=False,
@@ -130,13 +130,13 @@ class TestDPIIntegration:
     @pytest.mark.anyio
     async def test_different_dpi_targets(self, small_test_image: Path) -> None:
         low_dpi_config = ExtractionConfig(
-            ocr_backend="tesseract",
+            ocr=TesseractConfig(),
             target_dpi=72,
             auto_adjust_dpi=False,
         )
 
         high_dpi_config = ExtractionConfig(
-            ocr_backend="tesseract",
+            ocr=TesseractConfig(),
             target_dpi=300,
             auto_adjust_dpi=False,
         )
@@ -152,7 +152,7 @@ class TestDPIIntegration:
     @pytest.mark.anyio
     async def test_pdf_dpi_integration(self, google_doc_pdf: Path) -> None:
         config = ExtractionConfig(
-            ocr_backend="tesseract",
+            ocr=TesseractConfig(),
             target_dpi=100,
             max_image_dimension=20000,
             auto_adjust_dpi=True,
@@ -171,7 +171,7 @@ class TestDPIIntegration:
     @pytest.mark.anyio
     async def test_extreme_dpi_values(self, small_test_image: Path) -> None:
         very_low_config = ExtractionConfig(
-            ocr_backend="tesseract",
+            ocr=TesseractConfig(),
             target_dpi=72,
             min_dpi=72,
             max_dpi=100,
@@ -186,7 +186,7 @@ class TestDPIIntegration:
     @pytest.mark.anyio
     async def test_metadata_preservation(self, small_test_image: Path) -> None:
         config = ExtractionConfig(
-            ocr_backend="tesseract",
+            ocr=TesseractConfig(),
             target_dpi=144,
             auto_adjust_dpi=True,
         )

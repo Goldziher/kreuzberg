@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rss version="0.91">
+  <channel>
+    <title>Project Gutenberg Recently Posted or Updated EBooks</title>
+    <link>https://www.gutenberg.org</link>
+    <description>
+       EBooks posted or updated today on Project Gutenberg.
+       This feed is regenerated every night.
+    </description>
+    <language>en-us</language>
+    <webMaster>webmaster2025@pglaf.org</webMaster>
+    <pubDate>Tue, 30 Sep 2025 05:51:18 -0400</pubDate>
+    <lastBuildDate>Tue, 30 Sep 2025 05:51:18 -0400</lastBuildDate>
+    <item>
+      <title>Pericles, Prince of Tyre by William Shakespeare</title>
+      <link>https://www.gutenberg.org/ebooks/1537</link>
+      <description>Language: English</description>
+    </item>
+
+    <item>
+      <title>Il piccolo Eyolf by Henrik Ibsen</title>
+      <link>https://www.gutenberg.org/ebooks/76951</link>
+      <description>Language: Italian</description>
+    </item>
+
+    <item>
+      <title>Dawid se reis na Groenland by David Binney Putnam</title>
+      <link>https://www.gutenberg.org/ebooks/76953</link>
+      <description>Language: Afrikaans</description>
+    </item>
+
+    <item>
+      <title>Silence, and other stories by Mary Eleanor Wilkins Freeman</title>
+      <link>https://www.gutenberg.org/ebooks/76948</link>
+      <description>Language: English</description>
+    </item>
+
+    <item>
+      <title>The works of John Dryden, now first collected in eighteen volumes. Volume 17 by John Dryden</title>
+      <link>https://www.gutenberg.org/ebooks/76952</link>
+      <description>Language: English</description>
+    </item>
+
+    <item>
+      <title>Nora's twin sister by Nina Rhoades</title>
+      <link>https://www.gutenberg.org/ebooks/76955</link>
+      <description>Language: English</description>
+    </item>
+
+    <item>
+      <title>Pharsalia; Dramatic Episodes of the Civil Wars by Lucan</title>
+      <link>https://www.gutenberg.org/ebooks/602</link>
+      <description>Language: English</description>
+    </item>
+
+    <item>
+      <title>The history of the Norman conquest of England, its causes and its results, Volume 2 (of 6)</title>
+      <link>https://www.gutenberg.org/ebooks/76954</link>
+      <description>Language: English</description>
+    </item>
+
+    <item>
+      <title>War letters from the living dead man by David Patterson  Hatch</title>
+      <link>https://www.gutenberg.org/ebooks/76949</link>
+      <description>Language: English</description>
+    </item>
+
+    <item>
+      <title>The ghost of Charlotte Cray and other stories by Florence Marryat</title>
+      <link>https://www.gutenberg.org/ebooks/76950</link>
+      <description>Language: English</description>
+    </item>
+
+  </channel>
+</rss>

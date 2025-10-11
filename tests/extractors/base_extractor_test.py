@@ -9,6 +9,7 @@ from kreuzberg._types import (
     ExtractedImage,
     ExtractionConfig,
     ExtractionResult,
+    ImageExtractionConfig,
     ImageOCRResult,
     PSMMode,
     TesseractConfig,
@@ -96,48 +97,56 @@ def test_apply_quality_processing_disabled() -> None:
     assert processed_result is original_result
 
 
-def test_prepare_ocr_config_unknown_backend() -> None:
-    config = ExtractionConfig()
+def test_prepare_ocr_config_with_none() -> None:
+    config = ExtractionConfig(ocr=None)
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
-    with pytest.raises(ValueError, match="Unknown OCR backend: unknown"):
-        extractor._prepare_ocr_config("unknown")
+    result_config = extractor._prepare_ocr_config()
+
+    assert result_config == {"use_cache": True}
+    assert "use_cache" in result_config
 
 
 def test_prepare_ocr_config_with_user_config() -> None:
     tesseract_config = TesseractConfig(language="spa", psm=PSMMode.SINGLE_BLOCK)
-    config = ExtractionConfig(ocr_config=tesseract_config)
+    config = ExtractionConfig(ocr=tesseract_config)
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
-    result_config = extractor._prepare_ocr_config("tesseract")
+    result_config = extractor._prepare_ocr_config()
 
     assert result_config["language"] == "spa"
-    assert result_config["psm"] == PSMMode.SINGLE_BLOCK
+    assert result_config["psm"] == PSMMode.SINGLE_BLOCK.value
     assert "use_cache" in result_config
 
 
 def test_prepare_ocr_config_easyocr() -> None:
-    config = ExtractionConfig()
+    from kreuzberg._types import EasyOCRConfig
+
+    config = ExtractionConfig(ocr=EasyOCRConfig())
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
-    result_config = extractor._prepare_ocr_config("easyocr")
+    result_config = extractor._prepare_ocr_config()
 
     assert "use_cache" in result_config
     assert isinstance(result_config, dict)
+    assert "language" in result_config
 
 
 def test_prepare_ocr_config_paddleocr() -> None:
-    config = ExtractionConfig()
+    from kreuzberg._types import PaddleOCRConfig
+
+    config = ExtractionConfig(ocr=PaddleOCRConfig())
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
-    result_config = extractor._prepare_ocr_config("paddleocr")
+    result_config = extractor._prepare_ocr_config()
 
     assert "use_cache" in result_config
     assert isinstance(result_config, dict)
+    assert "language" in result_config
 
 
 def test_deduplicate_images_disabled() -> None:
-    config = ExtractionConfig(deduplicate_images=False)
+    config = ExtractionConfig(images=ImageExtractionConfig(deduplicate=False))
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
     test_images = [
@@ -150,7 +159,7 @@ def test_deduplicate_images_disabled() -> None:
 
 
 def test_deduplicate_images_with_duplicates(caplog: Any) -> None:
-    config = ExtractionConfig(deduplicate_images=True)
+    config = ExtractionConfig(images=ImageExtractionConfig(deduplicate=True))
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
     test_images = [
@@ -170,7 +179,7 @@ def test_deduplicate_images_with_duplicates(caplog: Any) -> None:
 
 @pytest.mark.anyio
 async def test_process_images_with_ocr_no_backend() -> None:
-    config = ExtractionConfig(ocr_extracted_images=True, ocr_backend=None, image_ocr_backend=None)
+    config = ExtractionConfig(images=ImageExtractionConfig(ocr_min_dimensions=(1, 1)), ocr=None)
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
     test_images = [ExtractedImage(data=b"image_data", format="png", filename="test.png")]
@@ -183,7 +192,7 @@ async def test_process_images_with_ocr_no_backend() -> None:
 async def test_process_images_with_ocr_with_tasks() -> None:
     from unittest.mock import AsyncMock, patch
 
-    config = ExtractionConfig(ocr_extracted_images=True, image_ocr_backend="tesseract")
+    config = ExtractionConfig(images=ImageExtractionConfig(ocr_min_dimensions=(1, 1)), ocr=TesseractConfig())
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
     test_image = ExtractedImage(data=b"fake_image_data", format="png", filename="test.png", dimensions=(100, 100))
@@ -273,7 +282,7 @@ def test_compute_image_hash_large_image() -> None:
 
 
 def test_validate_image_for_ocr_unsupported_format() -> None:
-    config = ExtractionConfig(image_ocr_formats=frozenset({"png", "jpg"}))
+    config = ExtractionConfig(images=ImageExtractionConfig(ocr_allowed_formats=frozenset({"png", "jpg"})))
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
     unsupported_image = ExtractedImage(data=b"image_data", format="bmp", filename="test.bmp")
@@ -283,7 +292,9 @@ def test_validate_image_for_ocr_unsupported_format() -> None:
 
 
 def test_validate_image_for_ocr_too_small() -> None:
-    config = ExtractionConfig(image_ocr_formats=frozenset({"png"}), image_ocr_min_dimensions=(100, 100))
+    config = ExtractionConfig(
+        images=ImageExtractionConfig(ocr_allowed_formats=frozenset({"png"}), ocr_min_dimensions=(100, 100))
+    )
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
     small_image = ExtractedImage(data=b"image_data", format="png", filename="small.png", dimensions=(50, 50))
@@ -293,7 +304,9 @@ def test_validate_image_for_ocr_too_small() -> None:
 
 
 def test_validate_image_for_ocr_too_large() -> None:
-    config = ExtractionConfig(image_ocr_formats=frozenset({"png"}), image_ocr_max_dimensions=(1000, 1000))
+    config = ExtractionConfig(
+        images=ImageExtractionConfig(ocr_allowed_formats=frozenset({"png"}), ocr_max_dimensions=(1000, 1000))
+    )
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
     large_image = ExtractedImage(data=b"image_data", format="png", filename="large.png", dimensions=(2000, 2000))
@@ -304,7 +317,9 @@ def test_validate_image_for_ocr_too_large() -> None:
 
 def test_validate_image_for_ocr_valid() -> None:
     config = ExtractionConfig(
-        image_ocr_formats=frozenset({"png"}), image_ocr_min_dimensions=(50, 50), image_ocr_max_dimensions=(1000, 1000)
+        images=ImageExtractionConfig(
+            ocr_allowed_formats=frozenset({"png"}), ocr_min_dimensions=(50, 50), ocr_max_dimensions=(1000, 1000)
+        )
     )
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
@@ -316,9 +331,11 @@ def test_validate_image_for_ocr_valid() -> None:
 
 def test_validate_image_for_ocr_no_dimensions() -> None:
     config = ExtractionConfig(
-        image_ocr_formats=frozenset({"svg", "png"}),
-        image_ocr_min_dimensions=(100, 100),
-        image_ocr_max_dimensions=(1000, 1000),
+        images=ImageExtractionConfig(
+            ocr_allowed_formats=frozenset({"svg", "png"}),
+            ocr_min_dimensions=(100, 100),
+            ocr_max_dimensions=(1000, 1000),
+        )
     )
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
@@ -361,7 +378,7 @@ async def test_ocr_single_image_success() -> None:
 
 @pytest.mark.anyio
 async def test_process_images_with_ocr_disabled() -> None:
-    config = ExtractionConfig(ocr_extracted_images=False)
+    config = ExtractionConfig(images=ImageExtractionConfig())
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
     test_images = [ExtractedImage(data=b"image_data", format="png", filename="test.png")]
@@ -375,7 +392,8 @@ async def test_process_images_with_ocr_skipped_images() -> None:
     from unittest.mock import patch
 
     config = ExtractionConfig(
-        ocr_extracted_images=True, image_ocr_backend="tesseract", image_ocr_formats=frozenset({"png"})
+        images=ImageExtractionConfig(ocr_min_dimensions=(1, 1), ocr_allowed_formats=frozenset({"png"})),
+        ocr=TesseractConfig(),
     )
     extractor = MockExtractor(mime_type="test/mock", config=config)
 
@@ -399,7 +417,8 @@ async def test_process_images_with_ocr_no_tasks() -> None:
     from unittest.mock import patch
 
     config = ExtractionConfig(
-        ocr_extracted_images=True, image_ocr_backend="tesseract", image_ocr_formats=frozenset({"png"})
+        images=ImageExtractionConfig(ocr_min_dimensions=(1, 1), ocr_allowed_formats=frozenset({"png"})),
+        ocr=TesseractConfig(),
     )
     extractor = MockExtractor(mime_type="test/mock", config=config)
 

@@ -14,9 +14,9 @@ from anyio import run_process
 
 from kreuzberg._constants import MINIMAL_SUPPORTED_PANDOC_VERSION
 from kreuzberg._extractors._base import Extractor
+from kreuzberg._internal_bindings import normalize_spaces
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE
 from kreuzberg._types import ExtractedImage, ExtractionResult, ImageOCRResult, Metadata
-from kreuzberg._utils._string import normalize_spaces
 from kreuzberg._utils._sync import run_maybe_async, run_taskgroup
 from kreuzberg._utils._tmp import temporary_directory, temporary_file, temporary_file_sync
 from kreuzberg.exceptions import MissingDependencyError, ParsingError, ValidationError
@@ -168,10 +168,10 @@ class PandocExtractor(Extractor):
                 content=normalize_spaces(content), metadata=metadata, mime_type=MARKDOWN_MIME_TYPE
             )
 
-            if self.config.extract_images:
+            if self.config.images is not None:
                 images = await self._extract_images_with_pandoc(str(path))
                 result.images = images
-                if self.config.ocr_extracted_images and result.images:
+                if self.config.images.ocr_min_dimensions is not None and result.images:
                     image_ocr_results = await self._process_images_with_ocr(result.images)
                     result.image_ocr_results = image_ocr_results
 
@@ -196,16 +196,18 @@ class PandocExtractor(Extractor):
                 content=normalize_spaces(content), metadata=metadata, mime_type=MARKDOWN_MIME_TYPE
             )
 
-            if self.config.extract_images:
+            if self.config.images is not None:
                 images: list[ExtractedImage] = run_maybe_async(self._extract_images_with_pandoc, str(path))
                 result.images = images
-                if self.config.ocr_extracted_images and result.images:
+                if self.config.images.ocr_min_dimensions is not None and result.images:
                     image_ocr_results: list[ImageOCRResult] = run_maybe_async(
                         self._process_images_with_ocr, result.images
                     )
                     result.image_ocr_results = image_ocr_results
 
             return result
+        except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
+            raise  # OSError/RuntimeError must bubble up - subprocess errors are system issues ~keep
         except Exception as e:
             raise ParsingError("Failed to process file", context={"file": str(path), "error": str(e)}) from e
 
@@ -360,10 +362,6 @@ class PandocExtractor(Extractor):
 
             pandoc_key = self._get_pandoc_key(key)
             if pandoc_key is None:
-                continue
-
-            if key == "valid" and isinstance(value, dict) and value.get("t") == "MetaString" and "c" in value:
-                meta[key] = value["c"]  # type: ignore[literal-required]
                 continue
 
             extracted = self._extract_meta_value(value)
@@ -553,7 +551,7 @@ class PandocExtractor(Extractor):
 
         with temporary_directory() as temp_dir:
             media_dir = Path(temp_dir) / "media"
-            media_dir.mkdir()
+            await AsyncPath(media_dir).mkdir()
 
             try:
                 cmd = [
@@ -569,9 +567,10 @@ class PandocExtractor(Extractor):
 
                 await run_process(cmd)
 
-                if media_dir.exists():
-                    for img_path in media_dir.rglob("*"):
-                        if img_path.is_file() and img_path.suffix.lower() in {
+                async_media_dir = AsyncPath(media_dir)
+                if await async_media_dir.exists():
+                    async for img_path in async_media_dir.rglob("*"):
+                        if await AsyncPath(img_path).is_file() and img_path.suffix.lower() in {
                             ".jpg",
                             ".jpeg",
                             ".png",
