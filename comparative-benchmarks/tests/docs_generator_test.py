@@ -18,7 +18,7 @@ from src.docs_generator import (
 def test_generate_index_page_creates_file(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "extractous"],
+            "framework": ["kreuzberg_v4_sync", "extractous"],
             "avg_extraction_time": [0.5, 0.8],
             "success_rate": [0.95, 0.90],
             "avg_peak_memory_mb": [100.0, 150.0],
@@ -41,7 +41,7 @@ def test_generate_index_page_creates_file(tmp_path: Path) -> None:
 def test_generate_index_page_contains_expected_content(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "avg_extraction_time": [0.5],
             "success_rate": [0.95],
             "avg_peak_memory_mb": [100.0],
@@ -59,14 +59,14 @@ def test_generate_index_page_contains_expected_content(tmp_path: Path) -> None:
 
     content = result_path.read_text()
     assert "Performance Leaders" in content
-    assert "kreuzberg_sync" in content
+    assert "kreuzberg_v4_sync" in content
     assert "Framework Comparison" in content
 
 
 def test_generate_index_page_without_timestamp(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "avg_extraction_time": [0.5],
             "success_rate": [0.95],
             "avg_peak_memory_mb": [100.0],
@@ -90,7 +90,7 @@ def test_generate_index_page_without_timestamp(tmp_path: Path) -> None:
 def test_generate_detailed_results_page_creates_file(tmp_path: Path) -> None:
     summary_df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "extractous"],
+            "framework": ["kreuzberg_v4_sync", "extractous"],
             "total_files": [100, 100],
             "successful_files": [95, 90],
             "failed_files": [5, 10],
@@ -113,7 +113,7 @@ def test_generate_detailed_results_page_creates_file(tmp_path: Path) -> None:
 def test_generate_detailed_results_page_with_format_breakdown(tmp_path: Path) -> None:
     summary_df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "total_files": [100],
             "successful_files": [95],
             "failed_files": [5],
@@ -128,7 +128,7 @@ def test_generate_detailed_results_page_with_format_breakdown(tmp_path: Path) ->
 
     format_df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync", "kreuzberg_v4_sync"],
             "file_type": ["pdf", "docx"],
             "total_files": [50, 50],
             "success_rate": [0.96, 0.94],
@@ -148,7 +148,7 @@ def test_generate_detailed_results_page_with_format_breakdown(tmp_path: Path) ->
 def test_generate_detailed_results_page_contains_metrics(tmp_path: Path) -> None:
     summary_df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "total_files": [100],
             "successful_files": [95],
             "failed_files": [5],
@@ -194,7 +194,7 @@ def test_generate_methodology_page_contains_expected_sections(tmp_path: Path) ->
 def test_generate_framework_comparison_page_creates_file(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "extractous"],
+            "framework": ["kreuzberg_v4_sync", "extractous"],
             "avg_extraction_time": [0.5, 0.8],
             "success_rate": [0.95, 0.90],
             "avg_peak_memory_mb": [100.0, 150.0],
@@ -211,7 +211,7 @@ def test_generate_framework_comparison_page_creates_file(tmp_path: Path) -> None
 def test_generate_framework_comparison_page_contains_frameworks(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync", "extractous"],
+            "framework": ["kreuzberg_v4_sync", "extractous"],
             "avg_extraction_time": [0.5, 0.8],
             "success_rate": [0.95, 0.90],
             "avg_peak_memory_mb": [100.0, 150.0],
@@ -222,7 +222,7 @@ def test_generate_framework_comparison_page_contains_frameworks(tmp_path: Path) 
     result_path = generate_framework_comparison_page(df, output_path)
 
     content = result_path.read_text()
-    assert "kreuzberg_sync" in content
+    assert "kreuzberg_v4_sync" in content
     assert "extractous" in content
     assert "Framework Comparison" in content
 
@@ -230,7 +230,7 @@ def test_generate_framework_comparison_page_contains_frameworks(tmp_path: Path) 
 def test_generate_framework_comparison_page_has_recommendations(tmp_path: Path) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "avg_extraction_time": [0.5],
             "success_rate": [0.95],
             "avg_peak_memory_mb": [100.0],
@@ -249,7 +249,7 @@ def test_all_generators_create_parent_directories(tmp_path: Path) -> None:
 
     df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "avg_extraction_time": [0.5],
             "success_rate": [0.95],
             "avg_peak_memory_mb": [100.0],
@@ -273,7 +273,7 @@ def test_generate_index_page_with_multiple_frameworks_orders_by_speed(
 ) -> None:
     df = pl.DataFrame(
         {
-            "framework": ["slow_framework", "kreuzberg_sync", "medium_framework"],
+            "framework": ["slow_framework", "kreuzberg_v4_sync", "medium_framework"],
             "avg_extraction_time": [2.0, 0.5, 1.0],
             "success_rate": [0.85, 0.95, 0.90],
             "avg_peak_memory_mb": [200.0, 100.0, 150.0],
@@ -290,7 +290,7 @@ def test_generate_index_page_with_multiple_frameworks_orders_by_speed(
     result_path = generate_index_page(df, output_path)
 
     content = result_path.read_text()
-    kreuzberg_pos = content.find("kreuzberg_sync")
+    kreuzberg_pos = content.find("kreuzberg_v4_sync")
     slow_pos = content.find("slow_framework")
     assert kreuzberg_pos < slow_pos
 
@@ -298,7 +298,7 @@ def test_generate_index_page_with_multiple_frameworks_orders_by_speed(
 def test_generate_detailed_results_page_with_empty_format_df(tmp_path: Path) -> None:
     summary_df = pl.DataFrame(
         {
-            "framework": ["kreuzberg_sync"],
+            "framework": ["kreuzberg_v4_sync"],
             "total_files": [100],
             "successful_files": [95],
             "failed_files": [5],

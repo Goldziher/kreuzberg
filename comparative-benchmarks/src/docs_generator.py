@@ -1,5 +1,3 @@
-"""Benchmark documentation generation using Markdown and Polars."""
-
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -12,8 +10,6 @@ if TYPE_CHECKING:
 
 
 class DocConfig(TypedDict, total=False):
-    """Configuration for documentation generation."""
-
     title: str
     include_timestamp: bool
     include_methodology: bool
@@ -37,28 +33,24 @@ FRAMEWORK_EMOJI: dict[str, str] = {
 
 
 def _format_number(value: float | None, decimals: int = 2) -> str:
-    """Format number with specified decimal places."""
     if value is None:
         return "N/A"
     return f"{value:.{decimals}f}"
 
 
 def _format_percentage(value: float | None) -> str:
-    """Format decimal value as percentage."""
     if value is None:
         return "N/A"
     return f"{value * 100:.1f}%"
 
 
 def _format_memory(value: float | None) -> str:
-    """Format memory value in MB."""
     if value is None:
         return "N/A"
     return f"{value:.1f} MB"
 
 
 def _get_framework_emoji(framework: str) -> str:
-    """Get emoji for framework."""
     for key, emoji in FRAMEWORK_EMOJI.items():
         if key in framework.lower():
             return emoji
@@ -70,16 +62,6 @@ def generate_index_page(
     output_path: Path,
     config: DocConfig | None = None,
 ) -> Path:
-    """Generate main benchmark dashboard page.
-
-    Args:
-        summary_df: DataFrame with framework summaries
-        output_path: Path to save markdown file
-        config: Optional documentation configuration
-
-    Returns:
-        Path to generated markdown file
-    """
     cfg = {**DEFAULT_DOC_CONFIG, **(config or {})}
     charts_dir: Path | None = cfg.get("charts_dir")  # type: ignore[assignment]
 
@@ -162,17 +144,6 @@ def generate_detailed_results_page(
     output_path: Path,
     config: DocConfig | None = None,
 ) -> Path:
-    """Generate detailed results page.
-
-    Args:
-        summary_df: DataFrame with framework summaries
-        by_format_df: Optional DataFrame with per-format breakdowns
-        output_path: Path to save markdown file
-        config: Optional documentation configuration
-
-    Returns:
-        Path to generated markdown file
-    """
     cfg = {**DEFAULT_DOC_CONFIG, **(config or {})}
     charts_dir: Path | None = cfg.get("charts_dir")  # type: ignore[assignment]
 
@@ -261,14 +232,6 @@ def generate_detailed_results_page(
 
 
 def generate_methodology_page(output_path: Path) -> Path:
-    """Generate benchmark methodology documentation.
-
-    Args:
-        output_path: Path to save markdown file
-
-    Returns:
-        Path to generated markdown file
-    """
     content = """# Benchmark Methodology
 
 ## Overview
@@ -405,16 +368,6 @@ def generate_framework_comparison_page(
     output_path: Path,
     config: DocConfig | None = None,
 ) -> Path:
-    """Generate framework comparison page.
-
-    Args:
-        summary_df: DataFrame with framework summaries
-        output_path: Path to save markdown file
-        config: Optional documentation configuration
-
-    Returns:
-        Path to generated markdown file
-    """
     cfg = {**DEFAULT_DOC_CONFIG, **(config or {})}
     charts_dir: Path | None = cfg.get("charts_dir")  # type: ignore[assignment]
 
