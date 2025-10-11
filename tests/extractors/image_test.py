@@ -7,16 +7,28 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from kreuzberg._extractors._image import ImageExtractor
-from kreuzberg._types import ExtractionConfig, ExtractionResult
+from kreuzberg._types import (
+    EasyOCRConfig,
+    ExtractionConfig,
+    ExtractionResult,
+    PaddleOCRConfig,
+    TesseractConfig,
+)
 from kreuzberg.exceptions import ValidationError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+VALID_PNG_BYTES = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
+    b"\x00\x00\x03\x01\x01\x00\xc9\xfe\x92\xef\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
 
 @pytest.fixture(scope="session")
 def extractor() -> ImageExtractor:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     return ImageExtractor(mime_type="image/png", config=config)
 
 
@@ -35,26 +47,22 @@ def mock_ocr_backend() -> Generator[MagicMock, None, None]:
 
 @pytest.mark.anyio
 async def test_extract_path_async_no_ocr_backend() -> None:
-    config = ExtractionConfig(ocr_backend=None)
+    config = ExtractionConfig(ocr=None)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with pytest.raises(ValidationError) as excinfo:
         await extractor.extract_path_async(Path("dummy_path"))
 
-    assert "ocr_backend is None" in str(excinfo.value)
+    assert "OCR is not configured" in str(excinfo.value)
 
 
 @pytest.mark.anyio
 async def test_extract_path_async(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -68,15 +76,11 @@ async def test_extract_path_async(mock_ocr_backend: MagicMock, tmp_path: Path) -
 
 
 def test_extract_path_sync(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -90,7 +94,7 @@ def test_extract_path_sync(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
 
 
 def test_extract_bytes_sync(mock_ocr_backend: MagicMock) -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     expected_result = ExtractionResult(
@@ -121,7 +125,7 @@ def test_extract_bytes_sync(mock_ocr_backend: MagicMock) -> None:
     ],
 )
 def test_get_extension_from_mime_type(mime_type: str, expected_extension: str) -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type=mime_type, config=config)
 
     extension = extractor._get_extension_from_mime_type(mime_type)
@@ -129,7 +133,7 @@ def test_get_extension_from_mime_type(mime_type: str, expected_extension: str) -
 
 
 def test_get_extension_from_partial_mime_type() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/jpeg", config=config)
 
     extension = extractor._get_extension_from_mime_type("image")
@@ -137,7 +141,7 @@ def test_get_extension_from_partial_mime_type() -> None:
 
 
 def test_get_extension_from_unsupported_mime_type() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with pytest.raises(ValidationError) as excinfo:
@@ -149,14 +153,10 @@ def test_get_extension_from_unsupported_mime_type() -> None:
 
 @pytest.mark.anyio
 async def test_extract_bytes_async(mock_ocr_backend: MagicMock) -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
-    png_bytes = (
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    png_bytes = VALID_PNG_BYTES
 
     expected_result = ExtractionResult(
         content="extracted text from bytes", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -171,24 +171,24 @@ async def test_extract_bytes_async(mock_ocr_backend: MagicMock) -> None:
 
 
 def test_ocr_backend_none_validation_error() -> None:
-    config = ExtractionConfig(ocr_backend=None)
+    config = ExtractionConfig(ocr=None)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
-    with pytest.raises(ValidationError, match="ocr_backend is None"):
+    with pytest.raises(ValidationError, match="OCR is not configured"):
         extractor.extract_path_sync(Path("dummy.png"))
 
 
 @pytest.mark.anyio
 async def test_ocr_backend_none_validation_error_async() -> None:
-    config = ExtractionConfig(ocr_backend=None)
+    config = ExtractionConfig(ocr=None)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
-    with pytest.raises(ValidationError, match="ocr_backend is None"):
+    with pytest.raises(ValidationError, match="OCR is not configured"):
         await extractor.extract_path_async(Path("dummy.png"))
 
 
 def test_extract_bytes_temp_file_cleanup_on_error() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with patch("tempfile.mkstemp") as mock_mkstemp:
@@ -211,17 +211,17 @@ def test_extract_bytes_temp_file_cleanup_on_error() -> None:
 
 
 def test_extract_path_sync_no_ocr_backend() -> None:
-    config = ExtractionConfig(ocr_backend=None)
+    config = ExtractionConfig(ocr=None)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with pytest.raises(ValidationError) as excinfo:
         extractor.extract_path_sync(Path("dummy_path"))
 
-    assert "ocr_backend is None" in str(excinfo.value)
+    assert "OCR is not configured" in str(excinfo.value)
 
 
 def test_extract_bytes_with_different_mime_types() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
 
     mime_types = ["image/png", "image/jpeg", "image/tiff", "image/webp"]
 
@@ -232,13 +232,13 @@ def test_extract_bytes_with_different_mime_types() -> None:
 
 
 def test_extract_bytes_sync_with_ocr_config() -> None:
-    from kreuzberg._types import PSMMode, TesseractConfig
+    from kreuzberg._types import PSMMode
 
     tesseract_config = TesseractConfig(
         language="fra",
         psm=PSMMode.SINGLE_BLOCK,
     )
-    config = ExtractionConfig(ocr_backend="tesseract", ocr_config=tesseract_config)
+    config = ExtractionConfig(ocr=tesseract_config)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with patch("tempfile.mkstemp") as mock_mkstemp:
@@ -265,7 +265,7 @@ def test_extract_bytes_sync_with_ocr_config() -> None:
 
 
 def test_extract_bytes_sync_temp_file_creation() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with patch("tempfile.mkstemp") as mock_mkstemp:
@@ -296,7 +296,7 @@ def test_extract_bytes_sync_temp_file_creation() -> None:
 
 @pytest.mark.anyio
 async def test_extract_bytes_async_delegation() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with patch.object(extractor, "extract_path_async") as mock_async:
@@ -316,15 +316,11 @@ async def test_extract_bytes_async_delegation() -> None:
 
 @pytest.mark.anyio
 async def test_extract_path_async_delegation(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     test_path = tmp_path / "test_image.png"
-    test_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    test_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="async path extracted text",
@@ -340,18 +336,12 @@ async def test_extract_path_async_delegation(mock_ocr_backend: MagicMock, tmp_pa
 
 
 def test_extract_path_sync_with_tesseract_config(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    from kreuzberg._types import TesseractConfig
-
     tesseract_config = TesseractConfig()
-    config = ExtractionConfig(ocr_backend="tesseract", ocr_config=tesseract_config)
+    config = ExtractionConfig(ocr=tesseract_config)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -365,18 +355,12 @@ def test_extract_path_sync_with_tesseract_config(mock_ocr_backend: MagicMock, tm
 
 
 def test_extract_path_sync_with_paddleocr_config(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    from kreuzberg._types import PaddleOCRConfig
-
     paddle_config = PaddleOCRConfig()
-    config = ExtractionConfig(ocr_backend="paddleocr", ocr_config=paddle_config)
+    config = ExtractionConfig(ocr=paddle_config)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -390,18 +374,12 @@ def test_extract_path_sync_with_paddleocr_config(mock_ocr_backend: MagicMock, tm
 
 
 def test_extract_path_sync_with_easyocr_config(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    from kreuzberg._types import EasyOCRConfig
-
     easy_config = EasyOCRConfig()
-    config = ExtractionConfig(ocr_backend="easyocr", ocr_config=easy_config)
+    config = ExtractionConfig(ocr=easy_config)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(
         content="extracted text", chunks=[], mime_type="text/plain", metadata={"quality_score": 1.0}
@@ -415,12 +393,9 @@ def test_extract_path_sync_with_easyocr_config(mock_ocr_backend: MagicMock, tmp_
 
 
 @pytest.mark.anyio
-async def test_extract_real_image_integration() -> None:
-    test_image_path = Path(__file__).parent.parent / "test_source_files" / "images" / "test_hello_world.png"
-    if not test_image_path.exists():
-        pytest.skip("Test image not found")
-
-    config = ExtractionConfig(ocr_backend="tesseract")
+async def test_extract_real_image_integration(test_files_path: Path) -> None:
+    test_image_path = test_files_path / "images" / "test_hello_world.png"
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     result = await extractor.extract_path_async(test_image_path)
@@ -430,12 +405,9 @@ async def test_extract_real_image_integration() -> None:
     assert len(result.content) > 0
 
 
-def test_extract_real_image_sync_integration() -> None:
-    test_image_path = Path(__file__).parent.parent / "test_source_files" / "images" / "test_hello_world.png"
-    if not test_image_path.exists():
-        pytest.skip("Test image not found")
-
-    config = ExtractionConfig(ocr_backend="tesseract")
+def test_extract_real_image_sync_integration(test_files_path: Path) -> None:
+    test_image_path = test_files_path / "images" / "test_hello_world.png"
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     result = extractor.extract_path_sync(test_image_path)
@@ -469,7 +441,7 @@ def test_extract_real_image_sync_integration() -> None:
     ],
 )
 def test_image_mime_types_all_mappings(mime_type: str, expected_extension: str) -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type=mime_type, config=config)
 
     extension = extractor._get_extension_from_mime_type(mime_type)
@@ -477,7 +449,7 @@ def test_image_mime_types_all_mappings(mime_type: str, expected_extension: str) 
 
 
 def test_image_mime_types_partial_matching() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     extension = extractor._get_extension_from_mime_type("image")
@@ -491,7 +463,7 @@ def test_image_mime_types_partial_matching() -> None:
 
 
 def test_image_mime_types_case_sensitivity() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with pytest.raises(ValidationError, match="unsupported mimetype"):
@@ -502,7 +474,7 @@ def test_image_mime_types_case_sensitivity() -> None:
 
 
 def test_image_sync_path_extraction_unknown_backend(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    config = ExtractionConfig(ocr_backend="unknown_backend")  # type: ignore[arg-type]
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     mock_ocr_backend.process_image_sync.side_effect = NotImplementedError(
@@ -510,28 +482,20 @@ def test_image_sync_path_extraction_unknown_backend(mock_ocr_backend: MagicMock,
     )
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     with pytest.raises(NotImplementedError, match="Sync OCR not implemented for unknown_backend"):
         extractor.extract_path_sync(image_path)
 
 
 def test_image_sync_path_extraction_default_tesseract(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    config = ExtractionConfig(ocr_backend="tesseract", ocr_config=None)
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     expected_result = ExtractionResult(content="extracted text", chunks=[], mime_type="text/plain", metadata={})
     mock_ocr_backend.process_image_sync.return_value = expected_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
 
     mock_ocr_backend.process_image_sync.assert_called_once()
@@ -540,18 +504,14 @@ def test_image_sync_path_extraction_default_tesseract(mock_ocr_backend: MagicMoc
 
 
 def test_image_sync_path_extraction_default_paddleocr(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    config = ExtractionConfig(ocr_backend="paddleocr", ocr_config=None)
+    config = ExtractionConfig(ocr=PaddleOCRConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     expected_result = ExtractionResult(content="extracted text", chunks=[], mime_type="text/plain", metadata={})
     mock_ocr_backend.process_image_sync.return_value = expected_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
 
     mock_ocr_backend.process_image_sync.assert_called_once()
@@ -560,18 +520,14 @@ def test_image_sync_path_extraction_default_paddleocr(mock_ocr_backend: MagicMoc
 
 
 def test_image_sync_path_extraction_default_easyocr(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    config = ExtractionConfig(ocr_backend="easyocr", ocr_config=None)
+    config = ExtractionConfig(ocr=EasyOCRConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     expected_result = ExtractionResult(content="extracted text", chunks=[], mime_type="text/plain", metadata={})
     mock_ocr_backend.process_image_sync.return_value = expected_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
 
     mock_ocr_backend.process_image_sync.assert_called_once()
@@ -580,7 +536,7 @@ def test_image_sync_path_extraction_default_easyocr(mock_ocr_backend: MagicMock,
 
 
 def test_image_sync_path_extraction_custom_configs(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    from kreuzberg._types import PSMMode, TesseractConfig
+    from kreuzberg._types import PSMMode
 
     tesseract_config = TesseractConfig(
         language="deu+fra",
@@ -589,31 +545,27 @@ def test_image_sync_path_extraction_custom_configs(mock_ocr_backend: MagicMock, 
         tessedit_enable_dict_correction=False,
         language_model_ngram_on=True,
     )
-    config = ExtractionConfig(ocr_backend="tesseract", ocr_config=tesseract_config)
+    config = ExtractionConfig(ocr=tesseract_config)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     expected_result = ExtractionResult(content="German text", mime_type="text/plain", metadata={})
     mock_ocr_backend.process_image_sync.return_value = expected_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
     assert result.content == "German text"
 
     call_args = mock_ocr_backend.process_image_sync.call_args[1]
     assert call_args["language"] == "deu+fra"
-    assert call_args["psm"] == PSMMode.SINGLE_COLUMN
+    assert call_args["psm"] == PSMMode.SINGLE_COLUMN.value
     assert call_args["tessedit_char_whitelist"] == "0123456789"
     assert call_args["tessedit_enable_dict_correction"] is False
     assert call_args["language_model_ngram_on"] is True
 
 
 def test_image_temp_file_handling_fd_close_error() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with patch("tempfile.mkstemp") as mock_mkstemp:
@@ -632,7 +584,7 @@ def test_image_temp_file_handling_fd_close_error() -> None:
 
 
 def test_image_temp_file_handling_unlink_error_suppressed() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with patch("tempfile.mkstemp") as mock_mkstemp:
@@ -657,7 +609,7 @@ def test_image_temp_file_handling_unlink_error_suppressed() -> None:
 
 @pytest.mark.anyio
 async def test_image_temp_file_handling_async_cleanup() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     mock_path = Path("/tmp/test.png")
@@ -682,7 +634,7 @@ async def test_image_temp_file_handling_async_cleanup() -> None:
 
 
 def test_image_edge_cases_supported_mime_types_constant() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     for mime_type in extractor.IMAGE_MIME_TYPE_EXT_MAP:
@@ -690,7 +642,7 @@ def test_image_edge_cases_supported_mime_types_constant() -> None:
 
 
 def test_image_edge_cases_extract_bytes_all_mime_types() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
 
     for mime_type in ImageExtractor.IMAGE_MIME_TYPE_EXT_MAP:
         extractor = ImageExtractor(mime_type=mime_type, config=config)
@@ -706,7 +658,7 @@ def test_image_edge_cases_extract_bytes_all_mime_types() -> None:
 
 
 def test_image_edge_cases_mime_type_validation_context() -> None:
-    config = ExtractionConfig(ocr_backend="tesseract")
+    config = ExtractionConfig(ocr=TesseractConfig())
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     with pytest.raises(ValidationError) as exc_info:
@@ -717,18 +669,14 @@ def test_image_edge_cases_mime_type_validation_context() -> None:
 
 
 def test_image_edge_cases_quality_processing_applied(mock_ocr_backend: MagicMock, tmp_path: Path) -> None:
-    config = ExtractionConfig(ocr_backend="tesseract", enable_quality_processing=True)
+    config = ExtractionConfig(ocr=TesseractConfig(), enable_quality_processing=True)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     raw_result = ExtractionResult(content="Low quality text with ████ artifacts", mime_type="text/plain", metadata={})
     mock_ocr_backend.process_image_sync.return_value = raw_result
 
     image_path = tmp_path / "test.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
     result = extractor.extract_path_sync(image_path)
 
     assert result != raw_result
@@ -738,18 +686,14 @@ def test_image_edge_cases_quality_processing_applied(mock_ocr_backend: MagicMock
 async def test_image_edge_cases_async_path_delegation_preserves_config(
     mock_ocr_backend: MagicMock, tmp_path: Path
 ) -> None:
-    from kreuzberg._types import PSMMode, TesseractConfig
+    from kreuzberg._types import PSMMode
 
     tesseract_config = TesseractConfig(language="jpn", psm=PSMMode.SINGLE_WORD, textord_space_size_is_variable=True)
-    config = ExtractionConfig(ocr_backend="tesseract", ocr_config=tesseract_config, enable_quality_processing=True)
+    config = ExtractionConfig(ocr=tesseract_config, enable_quality_processing=True)
     extractor = ImageExtractor(mime_type="image/png", config=config)
 
     image_path = tmp_path / "japanese.png"
-    image_path.write_bytes(
-        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
-        b"\x00\x00\x00\x03\x00\x01\x8e\xb4`\xd1\x00\x00\x00\x00IEND\xaeB`\x82"
-    )
+    image_path.write_bytes(VALID_PNG_BYTES)
 
     expected_result = ExtractionResult(content="日本語", mime_type="text/plain", metadata={})
     mock_ocr_backend.process_image.return_value = expected_result
@@ -761,6 +705,6 @@ async def test_image_edge_cases_async_path_delegation_preserves_config(
     assert "language" in call_kwargs
     assert call_kwargs["language"] == "jpn"
     assert "psm" in call_kwargs
-    assert call_kwargs["psm"] == PSMMode.SINGLE_WORD
+    assert call_kwargs["psm"] == PSMMode.SINGLE_WORD.value
     assert "textord_space_size_is_variable" in call_kwargs
     assert call_kwargs["textord_space_size_is_variable"] is True
