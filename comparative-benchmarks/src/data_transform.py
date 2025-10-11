@@ -1,5 +1,3 @@
-"""Data transformation utilities for converting benchmark results to Polars DataFrames."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -14,14 +12,6 @@ if TYPE_CHECKING:
 
 
 def results_to_dataframe(results: list[BenchmarkResult]) -> pl.DataFrame:
-    """Convert list of BenchmarkResult to Polars DataFrame.
-
-    Args:
-        results: List of benchmark results
-
-    Returns:
-        DataFrame with all benchmark metrics
-    """
     if not results:
         return pl.DataFrame()
 
@@ -86,14 +76,6 @@ def results_to_dataframe(results: list[BenchmarkResult]) -> pl.DataFrame:
 
 
 def summaries_to_dataframe(summaries: list[BenchmarkSummary]) -> pl.DataFrame:
-    """Convert list of BenchmarkSummary to Polars DataFrame.
-
-    Args:
-        summaries: List of benchmark summaries
-
-    Returns:
-        DataFrame with summary metrics
-    """
     if not summaries:
         return pl.DataFrame()
 
@@ -111,14 +93,6 @@ def summaries_to_dataframe(summaries: list[BenchmarkSummary]) -> pl.DataFrame:
 
 
 def load_results_from_json(file_path: Path) -> pl.DataFrame:
-    """Load benchmark results from JSON file into DataFrame.
-
-    Args:
-        file_path: Path to JSON file containing benchmark results
-
-    Returns:
-        DataFrame with benchmark results
-    """
     with file_path.open("rb") as f:
         results = msgspec.json.decode(f.read(), type=list[BenchmarkResult])
 
@@ -126,14 +100,6 @@ def load_results_from_json(file_path: Path) -> pl.DataFrame:
 
 
 def aggregate_by_framework(df: pl.DataFrame) -> pl.DataFrame:
-    """Aggregate benchmark results by framework.
-
-    Args:
-        df: DataFrame with individual benchmark results
-
-    Returns:
-        DataFrame with aggregated metrics per framework
-    """
     return (
         df.group_by("framework")
         .agg(
@@ -178,14 +144,6 @@ def aggregate_by_framework(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def aggregate_by_framework_and_format(df: pl.DataFrame) -> pl.DataFrame:
-    """Aggregate benchmark results by framework and file type.
-
-    Args:
-        df: DataFrame with individual benchmark results
-
-    Returns:
-        DataFrame with aggregated metrics per framework and file type
-    """
     return (
         df.group_by(["framework", "file_type"])
         .agg(
@@ -205,14 +163,6 @@ def aggregate_by_framework_and_format(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def aggregate_by_framework_and_category(df: pl.DataFrame) -> pl.DataFrame:
-    """Aggregate benchmark results by framework and document category.
-
-    Args:
-        df: DataFrame with individual benchmark results
-
-    Returns:
-        DataFrame with aggregated metrics per framework and category
-    """
     return (
         df.group_by(["framework", "category"])
         .agg(
@@ -234,16 +184,6 @@ def aggregate_by_framework_and_category(df: pl.DataFrame) -> pl.DataFrame:
 def calculate_percentiles(
     df: pl.DataFrame, column: str, percentiles: list[float]
 ) -> dict[str, float | None]:
-    """Calculate multiple percentiles for a column.
-
-    Args:
-        df: DataFrame
-        column: Column name to calculate percentiles for
-        percentiles: List of percentile values (e.g., [0.50, 0.95, 0.99])
-
-    Returns:
-        Dictionary mapping percentile names to values
-    """
     result = {}
     for p in percentiles:
         percentile_name = f"p{int(p * 100)}_{column}"
@@ -254,26 +194,10 @@ def calculate_percentiles(
 
 
 def filter_successful_results(df: pl.DataFrame) -> pl.DataFrame:
-    """Filter DataFrame to only successful extractions.
-
-    Args:
-        df: DataFrame with benchmark results
-
-    Returns:
-        DataFrame containing only successful extractions
-    """
     return df.filter(pl.col("status") == "success")
 
 
 def add_derived_metrics(df: pl.DataFrame) -> pl.DataFrame:
-    """Add derived metrics to DataFrame.
-
-    Args:
-        df: DataFrame with benchmark results
-
-    Returns:
-        DataFrame with additional derived metrics
-    """
     return df.with_columns(
         (pl.col("file_size") / 1024 / 1024).alias("file_size_mb"),
         (pl.col("character_count") / pl.col("extraction_time")).alias(
@@ -287,45 +211,18 @@ def add_derived_metrics(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def export_to_csv(df: pl.DataFrame, output_path: Path) -> Path:
-    """Export DataFrame to CSV file.
-
-    Args:
-        df: DataFrame to export
-        output_path: Path to save CSV file
-
-    Returns:
-        Path to exported CSV file
-    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df.write_csv(str(output_path))
     return output_path
 
 
 def export_to_json(df: pl.DataFrame, output_path: Path) -> Path:
-    """Export DataFrame to JSON file.
-
-    Args:
-        df: DataFrame to export
-        output_path: Path to save JSON file
-
-    Returns:
-        Path to exported JSON file
-    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df.write_json(str(output_path))
     return output_path
 
 
 def export_to_parquet(df: pl.DataFrame, output_path: Path) -> Path:
-    """Export DataFrame to Parquet file.
-
-    Args:
-        df: DataFrame to export
-        output_path: Path to save Parquet file
-
-    Returns:
-        Path to exported Parquet file
-    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df.write_parquet(str(output_path))
     return output_path

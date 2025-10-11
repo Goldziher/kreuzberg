@@ -4,7 +4,7 @@
   "total_time_seconds": 6564.270669698715,
   "frameworks_tested": 6,
   "framework_performance": {
-    "kreuzberg_sync": {
+    "kreuzberg_v4_sync": {
       "total_files": 258,
       "successful_files": 258,
       "success_rate": 1.0,

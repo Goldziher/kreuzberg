@@ -16,7 +16,7 @@ class TestFieldMapping:
             file_size=1000,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=1.5,
             peak_memory_mb=100.0,
@@ -35,7 +35,7 @@ class TestFieldMapping:
 
     def test_benchmark_summary_field_mapping(self) -> None:
         summary = BenchmarkSummary(
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             category=DocumentCategory.SMALL,
             total_files=10,
             successful_files=8,

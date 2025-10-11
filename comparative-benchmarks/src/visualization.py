@@ -1,5 +1,3 @@
-"""Benchmark visualization generation using Plotly and Polars."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
@@ -13,8 +11,6 @@ if TYPE_CHECKING:
 
 
 class VisualizationConfig(TypedDict, total=False):
-    """Configuration for visualization generation."""
-
     width: int
     height: int
     template: str
@@ -45,16 +41,6 @@ def create_performance_comparison_chart(
     output_path: Path,
     config: VisualizationConfig | None = None,
 ) -> Path:
-    """Create performance comparison chart showing extraction time and success rate.
-
-    Args:
-        df: DataFrame with columns: framework, avg_extraction_time, success_rate
-        output_path: Path to save HTML file
-        config: Optional visualization configuration
-
-    Returns:
-        Path to generated HTML file
-    """
     cfg = {**DEFAULT_CONFIG, **(config or {})}
 
     frameworks = df.get_column("framework").to_list()
@@ -118,16 +104,6 @@ def create_memory_usage_chart(
     output_path: Path,
     config: VisualizationConfig | None = None,
 ) -> Path:
-    """Create memory usage chart showing average and peak memory consumption.
-
-    Args:
-        df: DataFrame with columns: framework, avg_peak_memory_mb, peak_memory_mb (optional)
-        output_path: Path to save HTML file
-        config: Optional visualization configuration
-
-    Returns:
-        Path to generated HTML file
-    """
     cfg = {**DEFAULT_CONFIG, **(config or {})}
 
     frameworks = df.get_column("framework").to_list()
@@ -167,16 +143,6 @@ def create_throughput_chart(
     output_path: Path,
     config: VisualizationConfig | None = None,
 ) -> Path:
-    """Create throughput chart showing files processed per second.
-
-    Args:
-        df: DataFrame with columns: framework, files_per_second
-        output_path: Path to save HTML file
-        config: Optional visualization configuration
-
-    Returns:
-        Path to generated HTML file
-    """
     cfg = {**DEFAULT_CONFIG, **(config or {})}
 
     frameworks = df.get_column("framework").to_list()
@@ -215,16 +181,6 @@ def create_time_distribution_chart(
     output_path: Path,
     config: VisualizationConfig | None = None,
 ) -> Path:
-    """Create box plot showing extraction time distribution.
-
-    Args:
-        df: DataFrame with columns: framework, extraction_time
-        output_path: Path to save HTML file
-        config: Optional visualization configuration
-
-    Returns:
-        Path to generated HTML file
-    """
     cfg = {**DEFAULT_CONFIG, **(config or {})}
 
     fig = go.Figure()
@@ -263,17 +219,6 @@ def create_interactive_dashboard(
     output_path: Path,
     config: VisualizationConfig | None = None,
 ) -> Path:
-    """Create comprehensive interactive dashboard with all key metrics.
-
-    Args:
-        df: DataFrame with columns: framework, avg_extraction_time, success_rate,
-            avg_peak_memory_mb, files_per_second
-        output_path: Path to save HTML file
-        config: Optional visualization configuration
-
-    Returns:
-        Path to generated HTML file
-    """
     cfg = {**DEFAULT_CONFIG, **(config or {})}
 
     fig = make_subplots(
@@ -354,17 +299,6 @@ def create_per_format_heatmap(
     metric: str = "success_rate",
     config: VisualizationConfig | None = None,
 ) -> Path:
-    """Create heatmap showing metric by framework and file format.
-
-    Args:
-        df: DataFrame with columns: framework, file_type, <metric>
-        output_path: Path to save HTML file
-        metric: Column name to visualize (success_rate, avg_extraction_time, etc.)
-        config: Optional visualization configuration
-
-    Returns:
-        Path to generated HTML file
-    """
     cfg = {**DEFAULT_CONFIG, **(config or {})}
 
     pivot = df.pivot(
