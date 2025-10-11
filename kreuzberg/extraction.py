@@ -12,16 +12,16 @@ from kreuzberg._chunker import get_chunker
 from kreuzberg._document_classification import auto_detect_document_type
 from kreuzberg._entity_extraction import extract_entities, extract_keywords
 from kreuzberg._error_handling import safe_feature_execution, should_exception_bubble_up
+from kreuzberg._internal_bindings import safe_decode
 from kreuzberg._language_detection import detect_languages
 from kreuzberg._mime_types import (
     validate_mime_type,
 )
 from kreuzberg._registry import ExtractorRegistry
 from kreuzberg._token_reduction import get_reduction_stats, reduce_tokens
-from kreuzberg._types import ExtractionConfig, ExtractionResult
+from kreuzberg._types import ChunkingConfig, ExtractionConfig, ExtractionResult
 from kreuzberg._utils._document_cache import get_document_cache
 from kreuzberg._utils._errors import create_error_context
-from kreuzberg._utils._string import safe_decode
 from kreuzberg._utils._sync import run_maybe_sync, run_sync_only
 from kreuzberg.exceptions import KreuzbergError, ValidationError
 
@@ -55,54 +55,47 @@ def _validate_and_post_process_helper(
     if result.metadata is None:
         result.metadata = {}
 
-    if config.chunk_content:
+    if config.chunking is not None:
+        chunking_config = config.chunking
         result.chunks = safe_feature_execution(
             feature_name="chunking",
             execution_func=lambda: _handle_chunk_content(
                 mime_type=result.mime_type,
-                config=config,
+                chunking_config=chunking_config,
                 content=result.content,
             ),
             default_value=[],
             result=result,
         )
 
-    if config.extract_entities:
+    if config.entities is not None:
         result.entities = safe_feature_execution(
             feature_name="entity_extraction",
             execution_func=lambda: extract_entities(
                 result.content,
                 custom_patterns=config.custom_entity_patterns,
+                spacy_config=config.entities,
             ),
             default_value=None,
             result=result,
         )
 
-    if config.extract_keywords:
+    if config.keywords is not None:
+        keywords_config = config.keywords
         result.keywords = safe_feature_execution(
             feature_name="keyword_extraction",
             execution_func=lambda: extract_keywords(
                 result.content,
-                keyword_count=config.keyword_count,
+                keyword_count=keywords_config.count,
             ),
             default_value=None,
             result=result,
         )
 
-    if config.auto_detect_language:
-
-        def _detect_language() -> list[str]:
-            lang_config = config.language_detection_config
-            if lang_config is None:
-                from kreuzberg._types import LanguageDetectionConfig  # noqa: PLC0415
-
-                lang_config = LanguageDetectionConfig(model=config.language_detection_model)
-
-            return detect_languages(result.content, config=lang_config) or []
-
+    if config.language_detection is not None:
         result.detected_languages = safe_feature_execution(
             feature_name="language_detection",
-            execution_func=_detect_language,
+            execution_func=lambda: detect_languages(result.content, config=config.language_detection) or [],
             default_value=[],
             result=result,
         )
@@ -201,10 +194,14 @@ def _validate_and_post_process_sync(
 
 def _handle_chunk_content(
     mime_type: str,
-    config: ExtractionConfig,
+    chunking_config: ChunkingConfig,
     content: str,
 ) -> list[str]:
-    chunker = get_chunker(mime_type=mime_type, max_characters=config.max_chars, overlap_characters=config.max_overlap)
+    chunker = get_chunker(
+        mime_type=mime_type,
+        max_characters=chunking_config.max_chars,
+        overlap_characters=chunking_config.max_overlap,
+    )
     return list(chunker.chunks(content))
 
 

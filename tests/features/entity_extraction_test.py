@@ -10,7 +10,7 @@ from kreuzberg._entity_extraction import (
     get_spacy_model_url,
     is_uv_available,
 )
-from kreuzberg._types import SpacyEntityExtractionConfig
+from kreuzberg._types import EntityExtractionConfig
 from kreuzberg.exceptions import KreuzbergError, MissingDependencyError
 
 
@@ -111,7 +111,7 @@ def test_extract_entities_with_spacy_success() -> None:
 
 def test_extract_entities_text_truncation() -> None:
     long_text = "A" * 2000000
-    config = SpacyEntityExtractionConfig(max_doc_length=1000000)
+    config = EntityExtractionConfig(max_doc_length=1000000)
 
     mock_nlp = Mock()
     mock_doc = Mock()

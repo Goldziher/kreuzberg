@@ -10,6 +10,7 @@ from kreuzberg._utils._serialization import (
     deserialize,
     encode_hook,
     serialize,
+    to_dict,
 )
 
 
@@ -377,3 +378,74 @@ def test_msgpack_vs_json_size() -> None:
 
     assert msgpack_decoded == data
     assert json_decoded == data
+
+
+def test_to_dict_with_dict_input() -> None:
+    input_dict = {"key": "value", "number": 42}
+    result = to_dict(input_dict)
+
+    assert result == input_dict
+
+
+def test_to_dict_with_dict_input_include_none() -> None:
+    input_dict = {"key": "value", "number": 42}
+    result = to_dict(input_dict, include_none=True)
+
+    assert result == input_dict
+    assert result is input_dict
+
+
+def test_to_dict_with_dataclass() -> None:
+    obj = SampleDataclass(name="test", value=100, color=Color.GREEN)
+    result = to_dict(obj)
+
+    assert result == {"name": "test", "value": 100, "color": "green"}
+
+
+def test_to_dict_with_none_values_excluded() -> None:
+    input_dict = {"key1": "value", "key2": None, "key3": 42}
+    result = to_dict(input_dict, include_none=False)
+
+    assert "key1" in result
+    assert "key3" in result
+    assert "key2" not in result
+    assert result == {"key1": "value", "key3": 42}
+
+
+def test_to_dict_with_none_values_included() -> None:
+    input_dict = {"key1": "value", "key2": None, "key3": 42}
+    result = to_dict(input_dict, include_none=True)
+
+    assert "key1" in result
+    assert "key2" in result
+    assert "key3" in result
+    assert result["key2"] is None
+
+
+def test_to_dict_non_dict_result() -> None:
+    result = to_dict([1, 2, 3], include_none=False)
+    assert result == [1, 2, 3]  # type: ignore[comparison-overlap]
+
+
+def test_serialize_with_sort_keys() -> None:
+    data = {"z": 1, "a": 2, "m": 3}
+    result_sorted = serialize(data, sort_keys=True)
+    result_unsorted = serialize(data, sort_keys=False)
+
+    from msgspec import msgpack
+
+    decoded_sorted = msgpack.decode(result_sorted)
+    decoded_unsorted = msgpack.decode(result_unsorted)
+
+    assert decoded_sorted == decoded_unsorted
+    assert list(decoded_sorted.keys()) == ["a", "m", "z"]
+
+
+def test_serialize_sort_keys_with_json() -> None:
+    data = {"zebra": 1, "apple": 2, "mango": 3}
+    result = serialize(data, sort_keys=True, json=True)
+
+    import json
+
+    decoded = json.loads(result)
+    assert list(decoded.keys()) == ["apple", "mango", "zebra"]

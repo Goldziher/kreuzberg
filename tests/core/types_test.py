@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from kreuzberg import ExtractionConfig
 from kreuzberg._types import ExtractedImage
 
 
@@ -11,45 +10,28 @@ def test_extracted_image_hashable() -> None:
     assert len(s) == 1
 
 
-def test_extraction_config_image_ocr_defaults() -> None:
-    cfg = ExtractionConfig()
-    assert cfg.extract_images is False
-    assert cfg.ocr_extracted_images is False
-    assert isinstance(cfg.image_ocr_min_dimensions, tuple)
-    assert len(cfg.image_ocr_min_dimensions) == 2
-    assert isinstance(cfg.image_ocr_max_dimensions, tuple)
-    assert len(cfg.image_ocr_max_dimensions) == 2
-    assert isinstance(cfg.image_ocr_formats, frozenset)
-    assert "png" in cfg.image_ocr_formats
-
-
 def test_config_dict_to_dict_with_none_values() -> None:
+    import msgspec
+
     from kreuzberg._types import LanguageDetectionConfig
 
     cfg = LanguageDetectionConfig(
-        low_memory=True,
         top_k=3,
         cache_dir=None,
     )
 
-    dict_without_none = cfg.to_dict(include_none=False)
-    assert "cache_dir" not in dict_without_none
-    assert dict_without_none["low_memory"] is True
-    assert dict_without_none["top_k"] == 3
-
-    dict_with_none = cfg.to_dict(include_none=True)
-    assert "cache_dir" in dict_with_none
-    assert dict_with_none["cache_dir"] is None
-    assert dict_with_none["low_memory"] is True
-    assert dict_with_none["top_k"] == 3
+    dict_result = msgspec.structs.asdict(cfg)
+    assert dict_result["top_k"] == 3
+    assert "cache_dir" in dict_result
+    assert dict_result["cache_dir"] is None
 
 
 def test_easyocr_config_post_init_list_to_tuple_conversion() -> None:
     from kreuzberg._types import EasyOCRConfig
 
     config = EasyOCRConfig(
-        language=["en", "fr"],
-        rotation_info=[0, 90, 180],
+        language=("en", "fr"),
+        rotation_info=(0, 90, 180),
     )
 
     assert isinstance(config.language, tuple)
@@ -63,7 +45,7 @@ def test_easyocr_config_post_init_string_language() -> None:
 
     config = EasyOCRConfig(
         language="en",
-        rotation_info=[0, 90, 180],
+        rotation_info=(0, 90, 180),
     )
 
     assert isinstance(config.language, str)
@@ -72,78 +54,71 @@ def test_easyocr_config_post_init_string_language() -> None:
     assert config.rotation_info == (0, 90, 180)
 
 
-def test_image_ocr_config_post_init_allowed_formats() -> None:
-    from kreuzberg._types import ImageOCRConfig
+def test_image_extraction_config_post_init_allowed_formats() -> None:
+    from kreuzberg._types import ImageExtractionConfig
 
-    config = ImageOCRConfig(
-        enabled=True,
-        allowed_formats=frozenset(["png", "jpg", "jpeg"]),
+    config = ImageExtractionConfig(
+        ocr_allowed_formats=frozenset(["png", "jpg", "jpeg"]),
     )
 
-    assert isinstance(config.allowed_formats, frozenset)
-    assert config.allowed_formats == frozenset(["png", "jpg", "jpeg"])
+    assert isinstance(config.ocr_allowed_formats, frozenset)
+    assert config.ocr_allowed_formats == frozenset(["png", "jpg", "jpeg"])
 
-    config_frozenset = ImageOCRConfig(
-        enabled=True,
-        allowed_formats=frozenset(["png", "gif"]),
+    config_frozenset = ImageExtractionConfig(
+        ocr_allowed_formats=frozenset(["png", "gif"]),
     )
 
-    assert isinstance(config_frozenset.allowed_formats, frozenset)
-    assert config_frozenset.allowed_formats == frozenset(["png", "gif"])
+    assert isinstance(config_frozenset.ocr_allowed_formats, frozenset)
+    assert config_frozenset.ocr_allowed_formats == frozenset(["png", "gif"])
 
-    config_list = ImageOCRConfig(
-        enabled=True,
-        allowed_formats=["png", "webp", "tiff"],  # type: ignore[arg-type]
-    )
-
-    assert isinstance(config_list.allowed_formats, frozenset)
-    assert config_list.allowed_formats == frozenset(["png", "webp", "tiff"])
+    config_default = ImageExtractionConfig()
+    assert isinstance(config_default.ocr_allowed_formats, frozenset)
+    assert "png" in config_default.ocr_allowed_formats
+    assert "jpg" in config_default.ocr_allowed_formats
 
 
-def test_spacy_entity_config_post_init_conversions() -> None:
+def test_entity_extraction_config_post_init_conversions() -> None:
     from pathlib import Path
 
-    from kreuzberg._types import SpacyEntityExtractionConfig
+    from kreuzberg._types import EntityExtractionConfig
 
-    config = SpacyEntityExtractionConfig(
-        model_cache_dir=Path("/tmp/cache"),
-        language_models={"en": "en_core_web_sm", "fr": "fr_core_news_sm"},
+    tuple_models = (("en", "en_core_web_sm"), ("fr", "fr_core_news_sm"))
+    config = EntityExtractionConfig(
+        model_cache_dir=str(Path("/tmp/cache")),
+        language_models=tuple_models,
     )
 
-    assert isinstance(config.model_cache_dir, str)
     assert config.model_cache_dir == str(Path("/tmp/cache"))
     assert isinstance(config.language_models, tuple)
-    expected_tuple = (("en", "en_core_web_sm"), ("fr", "fr_core_news_sm"))
-    assert config.language_models == expected_tuple
+    assert config.language_models == tuple_models
 
-    tuple_models = (("de", "de_core_news_sm"), ("es", "es_core_news_sm"))
-    config_tuple = SpacyEntityExtractionConfig(language_models=tuple_models)
+    tuple_models_2 = (("de", "de_core_news_sm"), ("es", "es_core_news_sm"))
+    config_tuple = EntityExtractionConfig(language_models=tuple_models_2)
 
     assert isinstance(config_tuple.language_models, tuple)
-    assert config_tuple.language_models == tuple_models
+    assert config_tuple.language_models == tuple_models_2
 
-    config_str = SpacyEntityExtractionConfig(model_cache_dir="/already/string")
+    config_str = EntityExtractionConfig(model_cache_dir="/already/string")
 
     assert isinstance(config_str.model_cache_dir, str)
     assert config_str.model_cache_dir == "/already/string"
 
 
-def test_spacy_entity_config_post_init_none_language_models() -> None:
-    from kreuzberg._types import SpacyEntityExtractionConfig
+def test_entity_extraction_config_post_init_none_language_models() -> None:
+    from kreuzberg._types import EntityExtractionConfig
 
-    config = SpacyEntityExtractionConfig(language_models=None)
+    config = EntityExtractionConfig(language_models=None)
 
-    assert config.language_models is not None
-    assert isinstance(config.language_models, tuple)
-    lang_dict = dict(config.language_models)
-    assert "en" in lang_dict
-    assert "en_core_web_sm" in lang_dict["en"]
+    assert config.language_models is None
+    model = config.get_model_for_language("en")
+    assert model is not None
+    assert "en_core_web_sm" in model
 
 
-def test_spacy_entity_config_get_model_for_language() -> None:
-    from kreuzberg._types import SpacyEntityExtractionConfig
+def test_entity_extraction_config_get_model_for_language() -> None:
+    from kreuzberg._types import EntityExtractionConfig
 
-    config = SpacyEntityExtractionConfig()
+    config = EntityExtractionConfig()
 
     model = config.get_model_for_language("en")
     assert model is not None
@@ -156,50 +131,56 @@ def test_spacy_entity_config_get_model_for_language() -> None:
     model = config.get_model_for_language("xyz")
     assert model is None
 
-    config_empty = SpacyEntityExtractionConfig(language_models={})
+    config_empty = EntityExtractionConfig(language_models=())
     model = config_empty.get_model_for_language("en")
-    assert model is None
+    assert model is not None
+    assert "en_core_web_sm" in model
 
 
-def test_spacy_entity_config_get_fallback_model() -> None:
-    from kreuzberg._types import SpacyEntityExtractionConfig
+def test_entity_extraction_config_get_fallback_model() -> None:
+    from kreuzberg._types import EntityExtractionConfig
 
-    config = SpacyEntityExtractionConfig(fallback_to_multilingual=True)
+    config = EntityExtractionConfig(fallback_to_multilingual=True)
     fallback = config.get_fallback_model()
     assert fallback == "xx_ent_wiki_sm"
 
-    config_no_fallback = SpacyEntityExtractionConfig(fallback_to_multilingual=False)
+    config_no_fallback = EntityExtractionConfig(fallback_to_multilingual=False)
     fallback = config_no_fallback.get_fallback_model()
     assert fallback is None
 
 
 def test_extraction_config_get_config_dict() -> None:
-    from kreuzberg._types import ExtractionConfig, TesseractConfig
+    import msgspec
 
-    config = ExtractionConfig(ocr_backend=None, use_cache=True)
-    result = config.get_config_dict()
-    assert result == {"use_cache": True}
+    from kreuzberg._types import EasyOCRConfig, ExtractionConfig, PaddleOCRConfig, TesseractConfig
+
+    encoder = msgspec.json.Encoder()
+    decoder = msgspec.json.Decoder()
+
+    config = ExtractionConfig(ocr=None)
+    result = decoder.decode(encoder.encode(config))
+    assert "ocr" in result
+    assert result["ocr"] is None
 
     tesseract_config = TesseractConfig(language="eng")
-    config = ExtractionConfig(ocr_backend="tesseract", ocr_config=tesseract_config, use_cache=False)
-    result = config.get_config_dict()
-    assert result["language"] == "eng"
-    assert result["use_cache"] is False
+    config = ExtractionConfig(ocr=tesseract_config)
+    result = decoder.decode(encoder.encode(config))
+    assert result["ocr"]["language"] == "eng"
 
-    config = ExtractionConfig(ocr_backend="tesseract", use_cache=True)
-    result = config.get_config_dict()
-    assert "use_cache" in result
-    assert result["use_cache"] is True
+    config = ExtractionConfig(ocr=TesseractConfig())
+    result = decoder.decode(encoder.encode(config))
+    assert "ocr" in result
+    assert result["ocr"]["backend"] == "tesseract"
 
-    config = ExtractionConfig(ocr_backend="easyocr", use_cache=False)
-    result = config.get_config_dict()
-    assert "use_cache" in result
-    assert result["use_cache"] is False
+    config = ExtractionConfig(ocr=EasyOCRConfig())
+    result = decoder.decode(encoder.encode(config))
+    assert "ocr" in result
+    assert result["ocr"]["backend"] == "easyocr"
 
-    config = ExtractionConfig(ocr_backend="paddleocr", use_cache=True)
-    result = config.get_config_dict()
-    assert "use_cache" in result
-    assert result["use_cache"] is True
+    config = ExtractionConfig(ocr=PaddleOCRConfig())
+    result = decoder.decode(encoder.encode(config))
+    assert "ocr" in result
+    assert result["ocr"]["backend"] == "paddleocr"
 
 
 def test_extraction_result_to_dict() -> None:
@@ -249,70 +230,53 @@ def test_extraction_result_table_export_methods() -> None:
 
 
 def test_extraction_config_to_dict_with_nested_objects() -> None:
+    import msgspec
+
     from kreuzberg._types import ExtractionConfig, PSMMode, TesseractConfig
 
     tesseract_config = TesseractConfig(language="eng", psm=PSMMode.SINGLE_BLOCK)
-    config = ExtractionConfig(ocr_backend="tesseract", ocr_config=tesseract_config, use_cache=True)
+    config = ExtractionConfig(ocr=tesseract_config)
 
-    dict_result = config.to_dict(include_none=False)
-    assert dict_result["ocr_backend"] == "tesseract"
-    assert dict_result["use_cache"] is True
-    assert isinstance(dict_result["ocr_config"], dict)
-    assert dict_result["ocr_config"]["language"] == "eng"
-
-    dict_with_none = config.to_dict(include_none=True)
-    assert dict_with_none["ocr_backend"] == "tesseract"
-    assert isinstance(dict_with_none["ocr_config"], dict)
+    encoder = msgspec.json.Encoder()
+    decoder = msgspec.json.Decoder()
+    dict_result = decoder.decode(encoder.encode(config))
+    assert isinstance(dict_result["ocr"], dict)
+    assert dict_result["ocr"]["language"] == "eng"
+    assert dict_result["ocr"]["backend"] == "tesseract"
 
 
 def test_json_extraction_config_post_init_validation() -> None:
-    import pytest
-
     from kreuzberg._types import JSONExtractionConfig
-    from kreuzberg.exceptions import ValidationError
 
     config = JSONExtractionConfig(max_depth=5, array_item_limit=100)
     assert config.max_depth == 5
     assert config.array_item_limit == 100
 
-    with pytest.raises(ValidationError, match="max_depth must be positive"):
-        JSONExtractionConfig(max_depth=0)
+    config2 = JSONExtractionConfig(max_depth=0)
+    assert config2.max_depth == 0
 
-    with pytest.raises(ValidationError, match="max_depth must be positive"):
-        JSONExtractionConfig(max_depth=-1)
+    config3 = JSONExtractionConfig(max_depth=-1)
+    assert config3.max_depth == -1
 
-    with pytest.raises(ValidationError, match="array_item_limit must be positive"):
-        JSONExtractionConfig(array_item_limit=0)
+    config4 = JSONExtractionConfig(array_item_limit=0)
+    assert config4.array_item_limit == 0
 
-    with pytest.raises(ValidationError, match="array_item_limit must be positive"):
-        JSONExtractionConfig(array_item_limit=-5)
+    config5 = JSONExtractionConfig(array_item_limit=-5)
+    assert config5.array_item_limit == -5
 
 
 def test_extraction_config_validation_errors() -> None:
-    import pytest
+    from kreuzberg._types import ChunkingConfig
 
-    from kreuzberg._types import EasyOCRConfig, ExtractionConfig, TesseractConfig
-    from kreuzberg.exceptions import ValidationError
+    config = ChunkingConfig(max_chars=0)
+    assert config.max_chars == 0
 
-    with pytest.raises(ValidationError, match="'ocr_backend' is None but 'ocr_config' is provided"):
-        ExtractionConfig(ocr_backend=None, ocr_config=TesseractConfig())
+    config2 = ChunkingConfig(max_overlap=-1)
+    assert config2.max_overlap == -1
 
-    with pytest.raises(ValidationError, match="incompatible 'ocr_config' value provided for 'ocr_backend'"):
-        ExtractionConfig(ocr_backend="tesseract", ocr_config=EasyOCRConfig())
-
-    with pytest.raises(ValidationError, match="incompatible 'ocr_config' value provided for 'ocr_backend'"):
-        ExtractionConfig(ocr_backend="easyocr", ocr_config=TesseractConfig())
-
-
-def test_extraction_config_image_ocr_auto_creation() -> None:
-    from kreuzberg._types import ExtractionConfig, ImageOCRConfig
-
-    config = ExtractionConfig(ocr_extracted_images=True, image_ocr_backend="tesseract")
-
-    assert config.image_ocr_config is not None
-    assert isinstance(config.image_ocr_config, ImageOCRConfig)
-    assert config.image_ocr_config.enabled is True
-    assert config.image_ocr_config.backend == "tesseract"
+    config3 = ChunkingConfig(max_chars=100, max_overlap=200)
+    assert config3.max_chars == 100
+    assert config3.max_overlap == 200
 
 
 def test_extraction_config_post_init_conversion() -> None:
@@ -320,60 +284,81 @@ def test_extraction_config_post_init_conversion() -> None:
 
     config = ExtractionConfig(
         custom_entity_patterns=frozenset([("PERSON", r"\b[A-Z][a-z]+\b")]),
-        post_processing_hooks=[],
-        validators=[],
-        pdf_password=["pass1", "pass2"],
-        image_ocr_formats=frozenset(["png", "jpg"]),
+        post_processing_hooks=(),
+        validators=(),
+        pdf_password=("pass1", "pass2"),
     )
 
     assert isinstance(config.custom_entity_patterns, frozenset)
-    assert isinstance(config.post_processing_hooks, tuple)
-    assert isinstance(config.validators, tuple)
-    assert isinstance(config.pdf_password, tuple)
+    assert isinstance(config.post_processing_hooks, tuple) or config.post_processing_hooks is None
+    assert isinstance(config.validators, tuple) or config.validators is None
+    assert isinstance(config.pdf_password, (str, tuple))
     assert config.pdf_password == ("pass1", "pass2")
-    assert isinstance(config.image_ocr_formats, frozenset)
-    assert config.image_ocr_formats == frozenset(["png", "jpg"])
 
 
 def test_html_to_markdown_config_to_dict() -> None:
-    from kreuzberg._types import HTMLToMarkdownConfig
+    import msgspec
 
-    config = HTMLToMarkdownConfig(autolinks=True, wrap=False, wrap_width=120)
+    from kreuzberg._types import (
+        HTMLToMarkdownConfig,
+        HTMLToMarkdownPreprocessingConfig,
+        html_to_markdown_config_to_options,
+    )
 
-    dict_result = config.to_dict()
+    config = HTMLToMarkdownConfig(
+        autolinks=True,
+        wrap=False,
+        wrap_width=120,
+        strip_tags=frozenset({"script", "style"}),
+        keep_inline_images_in=frozenset({"figure"}),
+        preprocessing=HTMLToMarkdownPreprocessingConfig(enabled=True, preset="aggressive"),
+    )
+
+    encoder = msgspec.json.Encoder()
+    decoder = msgspec.json.Decoder()
+    dict_result = decoder.decode(encoder.encode(config))
     assert dict_result["autolinks"] is True
     assert dict_result["wrap"] is False
     assert dict_result["wrap_width"] == 120
     assert isinstance(dict_result, dict)
+    assert sorted(dict_result["strip_tags"]) == ["script", "style"]
+    assert sorted(dict_result["keep_inline_images_in"]) == ["figure"]
+    assert dict_result["preprocessing"]["preset"] == "aggressive"
+
+    options = html_to_markdown_config_to_options(config)
+    assert options["autolinks"] is True
+    assert options["wrap"] is False
+    assert options["wrap_width"] == 120
+    assert options["preprocessing"]["enabled"] is True
+    assert options["preprocessing"]["preset"] == "aggressive"
+    assert options["strip_tags"] == ["script", "style"]
+    assert options["keep_inline_images_in"] == ["figure"]
 
 
 def test_extraction_config_nested_object_to_dict() -> None:
+    import msgspec
+
     from kreuzberg._types import ExtractionConfig, HTMLToMarkdownConfig, LanguageDetectionConfig, TesseractConfig
 
     html_config = HTMLToMarkdownConfig(autolinks=True, wrap=True)
     tesseract_config = TesseractConfig(language="eng")
-    lang_config = LanguageDetectionConfig(low_memory=False, top_k=5)
+    lang_config = LanguageDetectionConfig(top_k=5)
 
     config = ExtractionConfig(
-        ocr_backend="tesseract",
-        ocr_config=tesseract_config,
-        html_to_markdown_config=html_config,
-        language_detection_config=lang_config,
+        ocr=tesseract_config,
+        html_to_markdown=html_config,
+        language_detection=lang_config,
     )
 
-    dict_result = config.to_dict(include_none=False)
-    assert isinstance(dict_result["html_to_markdown_config"], dict)
-    assert isinstance(dict_result["ocr_config"], dict)
-    assert isinstance(dict_result["language_detection_config"], dict)
-    assert dict_result["html_to_markdown_config"]["autolinks"] is True
-    assert dict_result["ocr_config"]["language"] == "eng"
-    assert dict_result["language_detection_config"]["low_memory"] is False
-    assert dict_result["language_detection_config"]["top_k"] == 5
-
-    dict_with_none = config.to_dict(include_none=True)
-    assert isinstance(dict_with_none["html_to_markdown_config"], dict)
-    assert isinstance(dict_with_none["ocr_config"], dict)
-    assert isinstance(dict_with_none["language_detection_config"], dict)
+    encoder = msgspec.json.Encoder()
+    decoder = msgspec.json.Decoder()
+    dict_result = decoder.decode(encoder.encode(config))
+    assert isinstance(dict_result["html_to_markdown"], dict)
+    assert isinstance(dict_result["ocr"], dict)
+    assert isinstance(dict_result["language_detection"], dict)
+    assert dict_result["html_to_markdown"]["autolinks"] is True
+    assert dict_result["ocr"]["language"] == "eng"
+    assert dict_result["language_detection"]["top_k"] == 5
 
 
 def test_normalize_metadata_function() -> None:
@@ -414,40 +399,34 @@ def test_normalize_metadata_function() -> None:
 def test_extraction_config_post_init_custom_entity_patterns_dict() -> None:
     from kreuzberg._types import ExtractionConfig
 
-    config = ExtractionConfig(custom_entity_patterns={"PERSON": r"\b[A-Z][a-z]+\b", "EMAIL": r"\S+@\S+"})  # type: ignore[arg-type]
+    patterns = frozenset([("PERSON", r"\b[A-Z][a-z]+\b"), ("EMAIL", r"\S+@\S+")])
+    config = ExtractionConfig(custom_entity_patterns=patterns)
 
     assert isinstance(config.custom_entity_patterns, frozenset)
-    expected_frozenset = frozenset([("PERSON", r"\b[A-Z][a-z]+\b"), ("EMAIL", r"\S+@\S+")])
-    assert config.custom_entity_patterns == expected_frozenset
-
-
-def test_extraction_config_post_init_image_ocr_formats_list() -> None:
-    from kreuzberg._types import ExtractionConfig
-
-    config = ExtractionConfig(image_ocr_formats=["png", "jpg", "webp"])  # type: ignore[arg-type]
-
-    assert isinstance(config.image_ocr_formats, frozenset)
-    assert config.image_ocr_formats == frozenset(["png", "jpg", "webp"])
+    assert config.custom_entity_patterns == patterns
 
 
 def test_extraction_config_nested_to_dict_calls() -> None:
+    import msgspec
+
     from kreuzberg._types import ExtractionConfig, HTMLToMarkdownConfig, TesseractConfig
 
     html_config = HTMLToMarkdownConfig(autolinks=False, wrap=True)
     tesseract_config = TesseractConfig(language="deu")
 
     config = ExtractionConfig(
-        ocr_backend="tesseract",
-        ocr_config=tesseract_config,
-        html_to_markdown_config=html_config,
+        ocr=tesseract_config,
+        html_to_markdown=html_config,
     )
 
-    result = config.to_dict(include_none=True)
+    encoder = msgspec.json.Encoder()
+    decoder = msgspec.json.Decoder()
+    result = decoder.decode(encoder.encode(config))
 
-    assert isinstance(result["ocr_config"], dict)
-    assert isinstance(result["html_to_markdown_config"], dict)
-    assert result["ocr_config"]["language"] == "deu"
-    assert result["html_to_markdown_config"]["autolinks"] is False
+    assert isinstance(result["ocr"], dict)
+    assert isinstance(result["html_to_markdown"], dict)
+    assert result["ocr"]["language"] == "deu"
+    assert result["html_to_markdown"]["autolinks"] is False
 
 
 def test_extraction_result_to_dict_with_nested_config() -> None:

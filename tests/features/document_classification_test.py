@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 import polars as pl
 import pytest
+from msgspec import structs
 
 from kreuzberg._document_classification import (
     _get_translated_text,
@@ -473,7 +474,7 @@ def test_auto_detect_document_type_vision_mode() -> None:
     assert updated_result.document_type == "invoice"
     assert updated_result.document_type_confidence == 0.9
     mock_get_backend.assert_called_once_with("tesseract")
-    mock_backend.process_file_sync.assert_called_once_with(file_path, **config.get_config_dict())
+    mock_backend.process_file_sync.assert_called_once_with(file_path, **structs.asdict(config))
     mock_classify.assert_called_once_with(mock_layout_result, config)
 
 

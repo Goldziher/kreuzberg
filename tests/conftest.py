@@ -192,7 +192,7 @@ def test_config() -> ExtractionConfig:
 @pytest.fixture
 def user_config() -> ExtractionConfig:
     tesseract_config = TesseractConfig(psm=PSMMode.SINGLE_COLUMN, language="eng")
-    return ExtractionConfig(ocr_backend="tesseract", force_ocr=True, ocr_config=tesseract_config)
+    return ExtractionConfig(ocr=tesseract_config, force_ocr=True)
 
 
 @pytest.fixture

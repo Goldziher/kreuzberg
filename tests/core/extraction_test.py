@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from kreuzberg import ExtractionConfig, ExtractionResult, LanguageDetectionConfig
+from kreuzberg._types import ChunkingConfig, EntityExtractionConfig, KeywordExtractionConfig
 from kreuzberg.exceptions import ValidationError
 from kreuzberg.extraction import (
     DEFAULT_CONFIG,
@@ -23,7 +24,7 @@ from kreuzberg.extraction import (
 def test_default_config_is_extraction_config() -> None:
     assert isinstance(DEFAULT_CONFIG, ExtractionConfig)
     assert DEFAULT_CONFIG.use_cache is True
-    assert DEFAULT_CONFIG.chunk_content is False
+    assert DEFAULT_CONFIG.chunking is None
 
 
 @pytest.mark.anyio
@@ -37,7 +38,12 @@ async def test_extract_bytes_with_valid_mime_type() -> None:
     assert result.content == "Hello, World!"
     assert result.mime_type == "text/plain"
     assert result.chunks == []
-    assert result.metadata == {}
+    assert "line_count" in result.metadata
+    assert "word_count" in result.metadata
+    assert "character_count" in result.metadata
+    assert result.metadata["line_count"] == 1
+    assert result.metadata["word_count"] == 2
+    assert result.metadata["character_count"] == 13
 
 
 @pytest.mark.anyio
@@ -61,6 +67,12 @@ def test_extract_bytes_sync_with_valid_mime_type() -> None:
     assert isinstance(result, ExtractionResult)
     assert result.content == "Hello, World!"
     assert result.mime_type == "text/plain"
+    assert "line_count" in result.metadata
+    assert "word_count" in result.metadata
+    assert "character_count" in result.metadata
+    assert result.metadata["line_count"] == 1
+    assert result.metadata["word_count"] == 2
+    assert result.metadata["character_count"] == 13
 
 
 def test_extract_bytes_sync_with_unknown_mime_type() -> None:
@@ -168,11 +180,11 @@ def test_extract_file_sync_with_unknown_mime_type(tmp_path: Path) -> None:
 
 def test_handle_chunk_content() -> None:
     content = "This is a long text that should be chunked into smaller pieces for processing."
-    config = ExtractionConfig(max_chars=20, max_overlap=5)
+    chunking_config = ChunkingConfig(max_chars=20, max_overlap=5)
 
     chunks = _handle_chunk_content(
         mime_type="text/plain",
-        config=config,
+        chunking_config=chunking_config,
         content=content,
     )
 
@@ -184,7 +196,7 @@ def test_handle_chunk_content() -> None:
 async def test_extract_bytes_with_chunking() -> None:
     content = b"This is a long text that should be chunked into smaller pieces for processing."
     mime_type = "text/plain"
-    config = ExtractionConfig(chunk_content=True, max_chars=20, max_overlap=5)
+    config = ExtractionConfig(chunking=ChunkingConfig(max_chars=20, max_overlap=5))
 
     result = await extract_bytes(content, mime_type, config)
 
@@ -195,7 +207,7 @@ async def test_extract_bytes_with_chunking() -> None:
 def test_extract_bytes_sync_with_chunking() -> None:
     content = b"This is a long text that should be chunked into smaller pieces for processing."
     mime_type = "text/plain"
-    config = ExtractionConfig(chunk_content=True, max_chars=20, max_overlap=5)
+    config = ExtractionConfig(chunking=ChunkingConfig(max_chars=20, max_overlap=5))
 
     result = extract_bytes_sync(content, mime_type, config)
 
@@ -207,7 +219,7 @@ def test_extract_bytes_sync_with_chunking() -> None:
 async def test_extract_bytes_with_language_detection() -> None:
     content = b"This is some English text for language detection."
     mime_type = "text/plain"
-    config = ExtractionConfig(auto_detect_language=True, language_detection_config=LanguageDetectionConfig())
+    config = ExtractionConfig(language_detection=LanguageDetectionConfig())
 
     with patch("kreuzberg.extraction.detect_languages") as mock_detect:
         mock_detect.return_value = ["en"]
@@ -220,7 +232,7 @@ async def test_extract_bytes_with_language_detection() -> None:
 def test_extract_bytes_sync_with_language_detection() -> None:
     content = b"This is some English text for language detection."
     mime_type = "text/plain"
-    config = ExtractionConfig(auto_detect_language=True, language_detection_config=LanguageDetectionConfig())
+    config = ExtractionConfig(language_detection=LanguageDetectionConfig())
 
     with patch("kreuzberg.extraction.detect_languages") as mock_detect:
         mock_detect.return_value = ["en"]
@@ -234,7 +246,7 @@ def test_extract_bytes_sync_with_language_detection() -> None:
 async def test_extract_bytes_with_entity_extraction_success() -> None:
     content = b"John works at Apple Inc. in California."
     mime_type = "text/plain"
-    config = ExtractionConfig(extract_entities=True)
+    config = ExtractionConfig(entities=EntityExtractionConfig())
 
     with patch("kreuzberg.extraction.extract_entities") as mock_extract:
         mock_entities = [{"text": "John", "label": "PERSON"}]
@@ -249,7 +261,7 @@ async def test_extract_bytes_with_entity_extraction_success() -> None:
 async def test_extract_bytes_with_entity_extraction_runtime_error() -> None:
     content = b"Some text for entity extraction."
     mime_type = "text/plain"
-    config = ExtractionConfig(extract_entities=True)
+    config = ExtractionConfig(entities=EntityExtractionConfig())
 
     with patch("kreuzberg.extraction.extract_entities") as mock_extract:
         mock_extract.side_effect = RuntimeError("Entity extraction failed")
@@ -260,7 +272,7 @@ async def test_extract_bytes_with_entity_extraction_runtime_error() -> None:
 def test_extract_bytes_sync_with_entity_extraction_runtime_error() -> None:
     content = b"Some text for entity extraction."
     mime_type = "text/plain"
-    config = ExtractionConfig(extract_entities=True)
+    config = ExtractionConfig(entities=EntityExtractionConfig())
 
     with patch("kreuzberg.extraction.extract_entities") as mock_extract:
         mock_extract.side_effect = RuntimeError("Entity extraction failed")
@@ -272,7 +284,7 @@ def test_extract_bytes_sync_with_entity_extraction_runtime_error() -> None:
 async def test_extract_bytes_with_keyword_extraction_success() -> None:
     content = b"Machine learning and artificial intelligence are important technologies."
     mime_type = "text/plain"
-    config = ExtractionConfig(extract_keywords=True, keyword_count=5)
+    config = ExtractionConfig(keywords=KeywordExtractionConfig(count=5))
 
     with patch("kreuzberg.extraction.extract_keywords") as mock_extract:
         mock_keywords = ["machine", "learning", "artificial", "intelligence", "technologies"]
@@ -287,7 +299,7 @@ async def test_extract_bytes_with_keyword_extraction_success() -> None:
 async def test_extract_bytes_with_keyword_extraction_runtime_error() -> None:
     content = b"Some text for keyword extraction."
     mime_type = "text/plain"
-    config = ExtractionConfig(extract_keywords=True)
+    config = ExtractionConfig(keywords=KeywordExtractionConfig())
 
     with patch("kreuzberg.extraction.extract_keywords") as mock_extract:
         mock_extract.side_effect = RuntimeError("Keyword extraction failed")
@@ -298,7 +310,7 @@ async def test_extract_bytes_with_keyword_extraction_runtime_error() -> None:
 def test_extract_bytes_sync_with_keyword_extraction_runtime_error() -> None:
     content = b"Some text for keyword extraction."
     mime_type = "text/plain"
-    config = ExtractionConfig(extract_keywords=True)
+    config = ExtractionConfig(keywords=KeywordExtractionConfig())
 
     with patch("kreuzberg.extraction.extract_keywords") as mock_extract:
         mock_extract.side_effect = RuntimeError("Keyword extraction failed")
@@ -333,7 +345,7 @@ async def test_validate_and_post_process_async_with_validators() -> None:
     async_validator = AsyncMock()
     sync_validator = Mock()
 
-    config = ExtractionConfig(validators=[async_validator, sync_validator])
+    config = ExtractionConfig(validators=(async_validator, sync_validator))
 
     processed_result = await _validate_and_post_process_async(result, config)
 
@@ -356,7 +368,7 @@ async def test_validate_and_post_process_async_with_post_processors() -> None:
     async_processor = AsyncMock(return_value=modified_result)
     sync_processor = Mock(return_value=modified_result)
 
-    config = ExtractionConfig(post_processing_hooks=[async_processor, sync_processor])
+    config = ExtractionConfig(post_processing_hooks=(async_processor, sync_processor))
 
     with patch("kreuzberg.extraction._validate_and_post_process_helper", return_value=result):
         processed_result = await _validate_and_post_process_async(result, config)
@@ -369,7 +381,7 @@ def test_validate_and_post_process_sync_with_validators() -> None:
     result = ExtractionResult(content="Test content", mime_type="text/plain", metadata={}, chunks=[])
 
     validator = Mock()
-    config = ExtractionConfig(validators=[validator])
+    config = ExtractionConfig(validators=(validator,))
 
     processed_result = _validate_and_post_process_sync(result, config)
 
@@ -388,7 +400,7 @@ def test_validate_and_post_process_sync_with_post_processors() -> None:
     )
 
     processor = Mock(return_value=modified_result)
-    config = ExtractionConfig(post_processing_hooks=[processor])
+    config = ExtractionConfig(post_processing_hooks=(processor,))
 
     with patch("kreuzberg.extraction._validate_and_post_process_helper", return_value=result):
         processed_result = _validate_and_post_process_sync(result, config)
@@ -404,14 +416,11 @@ def test_validate_and_post_process_helper_with_all_features() -> None:
     )
 
     config = ExtractionConfig(
-        chunk_content=True,
-        extract_entities=True,
-        extract_keywords=True,
-        auto_detect_language=True,
+        chunking=ChunkingConfig(max_chars=10, max_overlap=2),
+        entities=EntityExtractionConfig(),
+        keywords=KeywordExtractionConfig(count=3),
+        language_detection=LanguageDetectionConfig(),
         auto_detect_document_type=True,
-        max_chars=10,
-        max_overlap=2,
-        keyword_count=3,
     )
 
     with (
@@ -438,7 +447,7 @@ def test_validate_and_post_process_helper_with_all_features() -> None:
     assert processed_result.detected_languages == ["en"]
 
     mock_chunker.assert_called_once_with(mime_type="text/plain", max_characters=10, overlap_characters=2)
-    mock_entities.assert_called_once_with(result.content, custom_patterns=None)
+    mock_entities.assert_called_once_with(result.content, custom_patterns=None, spacy_config=config.entities)
     mock_keywords.assert_called_once_with(result.content, keyword_count=3)
     mock_languages.assert_called_once()
     mock_doc_type.assert_called_once_with(result, config, file_path=Path("/test/path.txt"))
