@@ -22,62 +22,53 @@ Create a `kreuzberg.toml` file in your project root:
 ```toml
 # Basic extraction settings
 force_ocr = false
-chunk_content = true
-extract_tables = true
-extract_entities = false
-extract_keywords = true
-keyword_count = 15
+
+# OCR configuration (tagged union - backend determined by config type)
+[ocr]
+backend = "tesseract"  # Required to specify backend type
+language = "eng+deu"   # English and German
+psm = 6                # Page Segmentation Mode (0-10): 6 = Uniform block of text
+                       # Common values: 3=Auto, 4=Single column, 6=Single block, 7=Single line
+
+# Alternative OCR backends:
+# [ocr]
+# backend = "easyocr"
+# language = ["en", "de"]
+# device = "cpu"
+#
+# [ocr]
+# backend = "paddleocr"
+# language = "en"
+# device = "cpu"
+
+# Chunking configuration
+[chunking]
 max_chars = 2000
 max_overlap = 100
-ocr_backend = "tesseract"
-auto_detect_language = true
-auto_detect_document_type = true
-document_classification_mode = "text"  # or "vision"
-type_confidence_threshold = 0.5
+
+# Table extraction configuration
+[tables]
+detection_threshold = 0.7
+structure_threshold = 0.5
+detection_device = "auto"
+structure_device = "auto"
+enable_model_caching = true
+verbosity = 1
 
 # Image extraction configuration
-extract_images = true              # Extract embedded images from documents
-deduplicate_images = true          # Remove duplicate images
+[images]
+ocr_min_dimensions = [100, 100]        # Minimum image dimensions for OCR
+ocr_max_dimensions = [5000, 5000]      # Maximum image dimensions for OCR
+deduplicate = true                     # Remove duplicate images
 
-# Image OCR configuration
-[image_ocr_config]
-enabled = true                     # Run OCR on extracted images
-backend = "tesseract"              # OCR engine for images
-min_dimensions = [100, 100]        # Minimum image dimensions for OCR
-max_dimensions = [5000, 5000]      # Maximum image dimensions for OCR
-batch_size = 10                    # Number of images to process in parallel
+# Keyword extraction configuration
+[keywords]
+top_k = 15  # Number of keywords to extract
 
-# Tesseract OCR configuration
-[tesseract]
-language = "eng+deu"  # English and German
-psm = 6               # Uniform block of text
-
-# EasyOCR configuration (if using easyocr backend)
-[easyocr]
-language_list = ["en", "de"]
-gpu = false
-
-# PaddleOCR configuration (if using paddleocr backend)
-[paddleocr]
-language = "en"
-use_gpu = false
-
-!!! warning "GMFT Deprecation"
-    GMFT-based table extraction is deprecated and scheduled for removal in Kreuzberg v4.0. The new release ships a native `TableExtractionConfig` that replaces GMFT entirely. Begin migrating any GMFT settings to the upcoming configuration to avoid breaking changes.
-
-# Table extraction configuration (GMFT)
-[gmft]
-verbosity = 1
-detector_base_threshold = 0.9
-remove_null_rows = true
-enable_multi_header = true
-
-# DPI and Image Processing configuration
-target_dpi = 150                  # Target DPI for document processing
-max_image_dimension = 25000       # Maximum pixel dimension before auto-scaling
-auto_adjust_dpi = true           # Automatically adjust DPI for large documents
-min_dpi = 72                     # Minimum DPI threshold
-max_dpi = 600                    # Maximum DPI threshold
+# Entity extraction configuration
+[entities]
+language_models = { en = "en_core_web_sm", de = "de_core_news_sm" }
+fallback_to_multilingual = true
 
 # Language detection configuration
 [language_detection]
@@ -85,16 +76,17 @@ multilingual = true
 top_k = 3
 low_memory = false
 
-# Entity extraction configuration (spaCy)
-[spacy_entity_extraction]
-language_models = { en = "en_core_web_sm", de = "de_core_news_sm" }
-fallback_to_multilingual = true
+# DPI and Image Processing configuration
+target_dpi = 150                  # Target DPI for document processing
+max_image_dimension = 25000       # Maximum pixel dimension before auto-scaling
+auto_adjust_dpi = true            # Automatically adjust DPI for large documents
+min_dpi = 72                      # Minimum DPI threshold
+max_dpi = 600                     # Maximum DPI threshold
 
 # HTML to Markdown conversion configuration
 [html_to_markdown]
 heading_style = "atx"
 strong_em_symbol = "_"
-escape_underscores = false
 wrap = true
 wrap_width = 100
 list_indent_width = 2                # Use 2 spaces for Discord/Slack compatibility
@@ -103,8 +95,12 @@ whitespace_mode = "normalized"       # Handle whitespace intelligently
 br_in_tables = false                 # Use spaces instead of <br> in tables
 highlight_style = "double-equal"     # Style for highlighted text
 newline_style = "spaces"             # Style for line breaks
-preprocess_html = true               # Clean messy HTML before conversion
-preprocessing_preset = "standard"    # Level of HTML cleaning
+
+[html_to_markdown.preprocessing]
+enabled = true                       # Clean messy HTML before conversion
+preset = "standard"                  # Level of HTML cleaning
+remove_navigation = true
+remove_forms = true
 ```
 
 ### pyproject.toml Example
@@ -114,47 +110,41 @@ Alternatively, add configuration to your existing `pyproject.toml`:
 ```toml
 [tool.kreuzberg]
 force_ocr = false
-chunk_content = true
-extract_tables = true
-auto_detect_language = true
-auto_detect_document_type = true
-document_classification_mode = "text"
-type_confidence_threshold = 0.5
-
-# Image extraction configuration
-extract_images = true              # Extract embedded images from documents
-deduplicate_images = true          # Remove duplicate images
-
-# Image OCR configuration
-[image_ocr_config]
-enabled = true                     # Run OCR on extracted images
-backend = "tesseract"              # OCR engine for images
-min_dimensions = [100, 100]        # Minimum image dimensions for OCR
-max_dimensions = [5000, 5000]      # Maximum image dimensions for OCR
-batch_size = 10                    # Number of images to process in parallel
-
-# DPI and Image Processing
 target_dpi = 150
 max_image_dimension = 25000
 auto_adjust_dpi = true
 min_dpi = 72
 max_dpi = 600
 
-[tool.kreuzberg.image_ocr_config]
-enabled = true                     # Run OCR on extracted images
-backend = "tesseract"              # OCR engine for images
-min_dimensions = [100, 100]        # Minimum image dimensions for OCR
-max_dimensions = [5000, 5000]      # Maximum image dimensions for OCR
-batch_size = 10                    # Number of images to process in parallel
-
-[tool.kreuzberg.tesseract]
+[tool.kreuzberg.ocr]
+backend = "tesseract"
 language = "eng"
 psm = 6
 
-[tool.kreuzberg.gmft]
-# Deprecated: migrate to TableExtractionConfig in v4.0
-detector_base_threshold = 0.85
-remove_null_rows = true
+[tool.kreuzberg.chunking]
+max_chars = 2000
+max_overlap = 100
+
+[tool.kreuzberg.tables]
+detection_threshold = 0.7
+structure_threshold = 0.5
+detection_device = "auto"
+structure_device = "auto"
+
+[tool.kreuzberg.images]
+ocr_min_dimensions = [100, 100]
+ocr_max_dimensions = [5000, 5000]
+deduplicate = true
+
+[tool.kreuzberg.keywords]
+top_k = 10
+
+[tool.kreuzberg.entities]
+fallback_to_multilingual = true
+
+[tool.kreuzberg.language_detection]
+multilingual = true
+top_k = 3
 ```
 
 ### Using Configuration Files
@@ -179,12 +169,13 @@ result = await extract_file("document.pdf")
 You can check what configuration is being used:
 
 ```python
-from kreuzberg._config import try_discover_config
+from kreuzberg._config import discover_config
 
-config = try_discover_config()
+config = discover_config()
 if config:
-    print(f"Using configuration with OCR backend: {config.ocr_backend}")
-    print(f"Table extraction enabled: {config.extract_tables}")
+    print(f"Using configuration with OCR: {config.ocr}")
+    print(f"Table extraction: {config.tables}")
+    print(f"Chunking: {config.chunking}")
 else:
     print("No configuration file found, using defaults")
 ```
@@ -192,7 +183,7 @@ else:
 Or using the CLI:
 
 ```bash
-python -m kreuzberg.cli config
+kreuzberg config
 ```
 
 ### Configuration Priority
@@ -214,110 +205,24 @@ The priority order is:
 
 ## API Runtime Configuration
 
-When using the [Kreuzberg API Server](api-server.md), you can configure extraction behavior at runtime without requiring static configuration files. This allows different requests to use different extraction settings.
-
-### Query Parameters
-
-Configure extraction options directly via URL query parameters when making requests to the `/extract` endpoint:
-
-Enable chunking with custom settings:
+When using the [Kreuzberg API Server](api-server.md), you can configure extraction behavior at runtime by providing a JSON configuration in the multipart form data:
 
 ```bash
-curl -X POST "http://localhost:8000/extract?chunk_content=true&max_chars=500&max_overlap=50" \
-  -F "data=@document.pdf"
+# Extract with OCR enabled
+curl -F "files=@document.pdf" \
+     -F 'config={"force_ocr":true,"ocr":{"backend":"tesseract","language":"eng"}}' \
+     http://localhost:8000/extract
+
+# Extract with table extraction
+curl -F "files=@document.pdf" \
+     -F 'config={"tables":{"detection_threshold":0.8}}' \
+     http://localhost:8000/extract
+
+# Extract with chunking and keywords
+curl -F "files=@document.pdf" \
+     -F 'config={"chunking":{"max_chars":500},"keywords":{"top_k":5}}' \
+     http://localhost:8000/extract
 ```
-
-Extract entities and keywords:
-
-```bash
-curl -X POST "http://localhost:8000/extract?extract_entities=true&extract_keywords=true&keyword_count=5" \
-  -F "data=@document.pdf"
-```
-
-Force OCR with specific backend:
-
-```bash
-curl -X POST "http://localhost:8000/extract?force_ocr=true&ocr_backend=tesseract" \
-  -F "data=@image.jpg"
-```
-
-**Supported Query Parameters:**
-
-- `chunk_content` (boolean): Enable content chunking
-- `max_chars` (integer): Maximum characters per chunk
-- `max_overlap` (integer): Overlap between chunks in characters
-- `extract_tables` (boolean): Enable table extraction
-- `extract_entities` (boolean): Enable named entity extraction
-- `extract_keywords` (boolean): Enable keyword extraction
-- `keyword_count` (integer): Number of keywords to extract
-- `force_ocr` (boolean): Force OCR processing
-- `ocr_backend` (string): OCR engine (`tesseract`, `easyocr`, `paddleocr`)
-- `auto_detect_language` (boolean): Enable automatic language detection
-- `pdf_password` (string): Password for encrypted PDFs
-- `extract_images` (boolean): Extract embedded images from supported formats (PDF, PPTX, HTML, Office)
-- `extract_images` (boolean): Extract embedded images from documents
-- `deduplicate_images` (boolean): Remove duplicate images by content hash
-- Note: For image OCR configuration via API, use the `ImageOCRConfig` in request body instead of query parameters
-
-### Header Configuration
-
-For complex nested configurations (like OCR-specific settings), use the `X-Extraction-Config` header with JSON format:
-
-Advanced OCR configuration:
-
-```bash
-curl -X POST http://localhost:8000/extract \
-  -H "X-Extraction-Config: {
-    \"force_ocr\": true,
-    \"ocr_backend\": \"tesseract\",
-    \"ocr_config\": {
-      \"language\": \"eng+deu\",
-      \"psm\": 6,
-      \"output_format\": \"text\"
-    }
-  }" \
-  -F "data=@multilingual_document.pdf"
-```
-
-Table extraction with GMFT configuration:
-
-```bash
-curl -X POST http://localhost:8000/extract \
-  -H "X-Extraction-Config: {
-    \"extract_tables\": true,
-    \"gmft_config\": {
-      \"detector_base_threshold\": 0.85,
-      \"remove_null_rows\": true,
-      \"enable_multi_header\": true
-    }
-  }" \
-  -F "data=@document_with_tables.pdf"
-```
-
-### API Configuration Precedence
-
-When using the API server, configuration is merged with the following precedence:
-
-1. **Header config** (highest priority) - `X-Extraction-Config` header
-1. **Query params** - URL query parameters
-1. **Static config** - `kreuzberg.toml` or `pyproject.toml` files
-1. **Defaults** (lowest priority) - Built-in default values
-
-This means you can have a base configuration in files, override specific settings via query parameters, and use headers for complex nested configuration—all in the same request.
-
-### Mapping API Parameters to Configuration
-
-The runtime API parameters correspond directly to the programmatic configuration options:
-
-| Query Parameter    | Config Class Field                  | Header JSON Key                 |
-| ------------------ | ----------------------------------- | ------------------------------- |
-| `chunk_content`    | `ExtractionConfig.chunk_content`    | `"chunk_content"`               |
-| `max_chars`        | `ExtractionConfig.max_chars`        | `"max_chars"`                   |
-| `extract_entities` | `ExtractionConfig.extract_entities` | `"extract_entities"`            |
-| `force_ocr`        | `ExtractionConfig.force_ocr`        | `"force_ocr"`                   |
-| `ocr_backend`      | `ExtractionConfig.ocr_backend`      | `"ocr_backend"`                 |
-| N/A                | `ExtractionConfig.ocr_config`       | `"ocr_config"` (nested object)  |
-| N/A                | `ExtractionConfig.gmft_config`      | `"gmft_config"` (nested object) |
 
 For complete API documentation and examples, see the [API Server guide](api-server.md).
 
@@ -329,10 +234,13 @@ You can also configure Kreuzberg entirely through code using the `ExtractionConf
 
 All extraction functions accept an optional `config` parameter of type `ExtractionConfig`. This object allows you to:
 
-- Control OCR behavior with `force_ocr` and `ocr_backend`
-- Provide engine-specific OCR configuration via `ocr_config`
-- Enable table extraction with `extract_tables` and configure it via `gmft_config`
-- Enable automatic language detection with `auto_detect_language`
+- Control OCR behavior with `force_ocr` and configure OCR engines via `ocr` (TesseractConfig, EasyOCRConfig, PaddleOCRConfig)
+- Enable table extraction with `tables` (TableExtractionConfig)
+- Enable automatic language detection with `language_detection` (LanguageDetectionConfig)
+- Enable content chunking with `chunking` (ChunkingConfig)
+- Enable keyword extraction with `keywords` (KeywordExtractionConfig)
+- Enable entity extraction with `entities` (EntityExtractionConfig)
+- Enable image extraction with `images` (ImageExtractionConfig)
 - Add validation and post-processing hooks
 - Configure custom extractors
 
@@ -358,7 +266,13 @@ from kreuzberg import extract_file, ExtractionConfig, TesseractConfig, PSMMode
 # Configure Tesseract OCR with specific language and page segmentation mode
 result = await extract_file(
     "document.pdf",
-    config=ExtractionConfig(force_ocr=True, ocr_config=TesseractConfig(language="eng+deu", psm=PSMMode.SINGLE_BLOCK)),
+    config=ExtractionConfig(
+        force_ocr=True,
+        ocr=TesseractConfig(
+            language="eng+deu",
+            psm=PSMMode.SINGLE_BLOCK,
+        ),
+    ),
 )
 ```
 
@@ -379,49 +293,50 @@ from kreuzberg import extract_file, ExtractionConfig, EasyOCRConfig, PaddleOCRCo
 
 # Use EasyOCR backend
 result = await extract_file(
-    "document.jpg", config=ExtractionConfig(ocr_backend="easyocr", ocr_config=EasyOCRConfig(language_list=["en", "de"]))
+    "document.jpg",
+    config=ExtractionConfig(
+        ocr=EasyOCRConfig(language=("en", "de")),
+    ),
 )
 
 # Use PaddleOCR backend
 result = await extract_file(
-    "chinese_document.jpg", config=ExtractionConfig(ocr_backend="paddleocr", ocr_config=PaddleOCRConfig(language="ch"))
+    "chinese_document.jpg",
+    config=ExtractionConfig(
+        ocr=PaddleOCRConfig(language="ch"),
+    ),
 )
 ```
 
 ### Table Extraction
 
-Kreuzberg can extract tables from PDF documents using the [GMFT](https://github.com/conjuncts/gmft) package:
+Kreuzberg offers multiple approaches for extracting tables from documents. For detailed information, see the [Table Extraction Guide](table-extraction.md).
+
+#### Quick Configuration
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, GMFTConfig
+from kreuzberg import extract_file, ExtractionConfig, TableExtractionConfig
 
-# Extract tables with default configuration
-result = await extract_file("document_with_tables.pdf", config=ExtractionConfig(extract_tables=True))
-
-# Extract tables with custom configuration
+# Table extraction with custom threshold
 config = ExtractionConfig(
-    extract_tables=True,
-    gmft_config=GMFTConfig(
-        detector_base_threshold=0.85,
-        remove_null_rows=True,
-        enable_multi_header=True,
-    ),
+    tables=TableExtractionConfig(detection_threshold=0.7),
 )
+
 result = await extract_file("document_with_tables.pdf", config=config)
 
 # Access extracted tables
-for i, table in enumerate(result.tables):
-    print(f"Table {i+1} on page {table['page_number']}:")
-    print(table["text"])
-    df = table["df"]
-    print(df.shape)  # (rows, columns)
+for table in result.tables:
+    print(f"Table from page {table['page_number']}:")
+    print(table["text"])  # Markdown representation
+    # table["df"] contains structured data as Polars DataFrame
 ```
 
-Note that table extraction requires the `gmft` dependency. You can install it with:
+**See [Table Extraction Guide](table-extraction.md) for:**
 
-```shell
-pip install "kreuzberg[gmft]"
-```
+- Detailed comparison of AI vs OCR methods
+- Performance characteristics and hardware requirements
+- Advanced configuration options
+- Troubleshooting and optimization tips
 
 ### Language Detection
 
@@ -431,22 +346,28 @@ Kreuzberg can automatically detect the language of extracted text using fast-lan
 from kreuzberg import extract_file, ExtractionConfig, LanguageDetectionConfig
 
 # Simple automatic language detection
-result = await extract_file("multilingual_document.pdf", config=ExtractionConfig(auto_detect_language=True))
+result = await extract_file(
+    "multilingual_document.pdf",
+    config=ExtractionConfig(
+        language_detection=LanguageDetectionConfig(),
+    ),
+)
 
 # Access detected languages (lowercase ISO 639-1 codes)
 if result.detected_languages:
     print(f"Detected languages: {', '.join(result.detected_languages)}")
 
 # Advanced configuration with multilingual detection
-lang_config = LanguageDetectionConfig(
-    multilingual=True,
-    top_k=5,
-    low_memory=False,
-    cache_dir="/tmp/lang_models",
-)
-
 result = await extract_file(
-    "multilingual_document.pdf", config=ExtractionConfig(auto_detect_language=True, language_detection_config=lang_config)
+    "multilingual_document.pdf",
+    config=ExtractionConfig(
+        language_detection=LanguageDetectionConfig(
+            multilingual=True,
+            top_k=5,
+            low_memory=False,
+            cache_dir="/tmp/lang_models",
+        ),
+    ),
 )
 
 # Use detected languages for OCR
@@ -455,7 +376,10 @@ if result.detected_languages:
 
     result_with_ocr = await extract_file(
         "multilingual_document.pdf",
-        config=ExtractionConfig(force_ocr=True, ocr_config=TesseractConfig(language=result.detected_languages[0])),
+        config=ExtractionConfig(
+            force_ocr=True,
+            ocr=TesseractConfig(language=result.detected_languages[0]),
+        ),
     )
 ```
 
@@ -478,10 +402,19 @@ pip install "kreuzberg[langdetect]"
 Kreuzberg can extract embedded images from various document formats including PDF, PowerPoint presentations (PPTX), HTML, and Office documents. It also supports running OCR on extracted images to get text content from them.
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig
+from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig
 
-# Basic image extraction
-result = await extract_file("document.pdf", config=ExtractionConfig(extract_images=True))
+# Basic image extraction with OCR
+result = await extract_file(
+    "document.pdf",
+    config=ExtractionConfig(
+        images=ImageExtractionConfig(
+            ocr_min_dimensions=(100, 100),
+            ocr_max_dimensions=(5000, 5000),
+            deduplicate=True,
+        ),
+    ),
+)
 
 # Access extracted images
 for i, image in enumerate(result.images):
@@ -496,104 +429,25 @@ for i, image in enumerate(result.images):
         f.write(image.data)
 ```
 
-#### Image OCR Processing
-
-You can automatically run OCR on extracted images to extract text content:
-
-```python
-from kreuzberg import extract_file, ExtractionConfig, ImageOCRConfig
-
-# Extract images and run OCR on them
-config = ExtractionConfig(
-    extract_images=True,
-    image_ocr_config=ImageOCRConfig(
-        enabled=True,
-        backend="tesseract",  # or "easyocr", "paddleocr"
-        min_dimensions=(100, 100),  # Skip small images
-        max_dimensions=(5000, 5000),  # Skip very large images
-        batch_size=10,  # Process images in parallel
-    ),
-)
-
-result = await extract_file("presentation.pptx", config=config)
-
-# Access OCR results from images
-for ocr_result in result.image_ocr_results:
-    image = ocr_result.image
-    text_content = ocr_result.ocr_result.content
-    confidence = ocr_result.confidence_score
-
-    print(f"Image: {image.filename or 'unnamed'}")
-    print(f"OCR Text: {text_content[:100]}...")
-    if confidence:
-        print(f"Confidence: {confidence:.2f}")
-    if ocr_result.skipped_reason:
-        print(f"Skipped: {ocr_result.skipped_reason}")
-```
-
 #### Image Filtering and Deduplication
 
 Control which images are processed with dimension filtering and deduplication:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, ImageOCRConfig
+from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig
 
 # Extract only medium-sized images and remove duplicates
 config = ExtractionConfig(
-    extract_images=True,
-    deduplicate_images=True,  # Remove duplicate images by content hash
-    image_ocr_config=ImageOCRConfig(
-        enabled=True,
-        min_dimensions=(200, 200),  # At least 200x200 pixels
-        max_dimensions=(3000, 3000),  # At most 3000x3000 pixels
+    images=ImageExtractionConfig(
+        ocr_min_dimensions=(200, 200),  # At least 200x200 pixels
+        ocr_max_dimensions=(3000, 3000),  # At most 3000x3000 pixels
+        deduplicate=True,  # Remove duplicate images by content hash
     ),
 )
 
 result = await extract_file("document.pdf", config=config)
 
 print(f"Extracted {len(result.images)} unique images")
-print(f"OCR processed {len(result.image_ocr_results)} images")
-```
-
-#### Advanced Image OCR Configuration
-
-You can use different OCR backends with specific configurations for image processing:
-
-```python
-from kreuzberg import extract_file, ExtractionConfig, TesseractConfig, EasyOCRConfig
-
-# Use Tesseract with specific configuration for image OCR
-tesseract_config = TesseractConfig(
-    language="eng+deu",
-    psm=6,  # Uniform block of text
-    output_format="text",
-)
-
-config = ExtractionConfig(
-    extract_images=True,
-    ocr_extracted_images=True,
-    image_ocr_backend="tesseract",
-    image_ocr_config=tesseract_config,
-    deduplicate_images=True,
-)
-
-result = await extract_file("multilingual_presentation.pptx", config=config)
-
-# Use EasyOCR for better handling of scene text
-easyocr_config = EasyOCRConfig(
-    language_list=["en", "de"],
-    gpu=False,
-    confidence_threshold=0.5,
-)
-
-config = ExtractionConfig(
-    extract_images=True,
-    ocr_extracted_images=True,
-    image_ocr_backend="easyocr",
-    image_ocr_config=easyocr_config,
-)
-
-result = await extract_file("document_with_photos.pdf", config=config)
 ```
 
 #### Supported Image Sources
@@ -608,15 +462,11 @@ Image extraction works with these document types:
 
 #### Image Extraction Configuration Options
 
-- **`extract_images`** (default: False): Enable image extraction from documents
-- **`deduplicate_images`** (default: True): Remove duplicate images based on content hash
-- **`image_ocr_config`** (ImageOCRConfig): Configuration for OCR processing of extracted images
-    - **`enabled`** (default: False): Run OCR on extracted images
-    - **`backend`** (default: None): OCR engine for images ("tesseract", "easyocr", "paddleocr")
-    - **`min_dimensions`** (default: (50, 50)): Minimum (width, height) for OCR eligibility
-    - **`max_dimensions`** (default: (10000, 10000)): Maximum (width, height) for OCR processing
-    - **`batch_size`** (default: 10): Number of images to process in parallel
-    - **`allowed_formats`**: Set of image formats to process (jpg, png, gif, etc.)
+- **`images`** (ImageExtractionConfig | None): Configuration for image extraction
+    - **`ocr_min_dimensions`** (default: (50, 50)): Minimum (width, height) for OCR eligibility
+    - **`ocr_max_dimensions`** (default: (10000, 10000)): Maximum (width, height) for OCR processing
+    - **`deduplicate`** (default: True): Remove duplicate images based on content hash
+    - **`ocr_allowed_formats`**: Set of image formats to process (jpg, png, gif, etc.)
 
 #### Performance Considerations
 
@@ -692,15 +542,14 @@ array_item_limit = 1000           # Limit array processing for performance
 Kreuzberg can extract named entities and keywords from documents using spaCy for entity recognition and KeyBERT for keyword extraction:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, SpacyEntityExtractionConfig
+from kreuzberg import extract_file, ExtractionConfig, EntityExtractionConfig, KeywordExtractionConfig
 
 # Basic entity and keyword extraction
 result = await extract_file(
     "document.pdf",
     config=ExtractionConfig(
-        extract_entities=True,
-        extract_keywords=True,
-        keyword_count=10,
+        entities=EntityExtractionConfig(),
+        keywords=KeywordExtractionConfig(top_k=10),
     ),
 )
 
@@ -719,27 +568,23 @@ if result.keywords:
 spaCy supports entity extraction in multiple languages. You can configure language-specific models:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, SpacyEntityExtractionConfig
+from kreuzberg import extract_file, ExtractionConfig, EntityExtractionConfig, LanguageDetectionConfig
 
 # Configure spaCy for specific languages
-spacy_config = SpacyEntityExtractionConfig(
-    language_models={
-        "en": "en_core_web_sm",
-        "de": "de_core_news_sm",
-        "fr": "fr_core_news_sm",
-        "es": "es_core_news_sm",
-    },
-    model_cache_dir="/tmp/spacy_models",
-    fallback_to_multilingual=True,
-)
-
-# Extract with language detection to automatically choose the right model
 result = await extract_file(
     "multilingual_document.pdf",
     config=ExtractionConfig(
-        auto_detect_language=True,
-        extract_entities=True,
-        spacy_entity_extraction_config=spacy_config,
+        language_detection=LanguageDetectionConfig(),
+        entities=EntityExtractionConfig(
+            language_models={
+                "en": "en_core_web_sm",
+                "de": "de_core_news_sm",
+                "fr": "fr_core_news_sm",
+                "es": "es_core_news_sm",
+            },
+            model_cache_dir="/tmp/spacy_models",
+            fallback_to_multilingual=True,
+        ),
     ),
 )
 
@@ -756,12 +601,13 @@ You can define custom entity patterns using regular expressions:
 result = await extract_file(
     "invoice.pdf",
     config=ExtractionConfig(
-        extract_entities=True,
-        custom_entity_patterns={
-            "INVOICE_ID": r"INV-\d{4,}",
-            "PHONE": r"\+?\d{1,3}[-.\s]?\d{3,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}",
-            "EMAIL": r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+",
-        },
+        entities=EntityExtractionConfig(
+            custom_patterns={
+                "INVOICE_ID": r"INV-\d{4,}",
+                "PHONE": r"\+?\d{1,3}[-.\s]?\d{3,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}",
+                "EMAIL": r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+",
+            },
+        ),
     ),
 )
 
@@ -808,10 +654,6 @@ python -m spacy download en_core_web_sm    # English
 python -m spacy download de_core_news_sm   # German
 python -m spacy download fr_core_news_sm   # French
 ```
-
-!!! warning
-
-    spaCy has not yet published Python 3.14 wheels. Entity extraction is unavailable on 3.14 installations until upstream support arrives.
 
 Available spaCy models include: `en_core_web_sm`, `de_core_news_sm`, `fr_core_news_sm`, `es_core_news_sm`, `pt_core_news_sm`, `it_core_news_sm`, `nl_core_news_sm`, `zh_core_web_sm`, `ja_core_news_sm`, `ko_core_news_sm`, `ru_core_news_sm`, and many others.
 
@@ -892,7 +734,12 @@ results = await batch_extract_file(file_paths, config=config)
 Control how HTML content is converted to Markdown:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, HTMLToMarkdownConfig
+from kreuzberg import (
+    ExtractionConfig,
+    HTMLToMarkdownConfig,
+    HTMLToMarkdownPreprocessingConfig,
+    extract_file,
+)
 
 # Custom HTML to Markdown configuration
 html_config = HTMLToMarkdownConfig(
@@ -907,19 +754,13 @@ html_config = HTMLToMarkdownConfig(
     br_in_tables=False,  # Use spaces in table cells
     highlight_style="double-equal",  # ==highlighted== text style
     newline_style="spaces",  # Line break style
-    preprocess_html=True,  # Clean HTML before conversion
-    preprocessing_preset="standard",  # HTML cleaning level
-    strip_tags=("script", "style"),
+    preprocessing=HTMLToMarkdownPreprocessingConfig(enabled=True, preset="standard"),
 )
 
 result = await extract_file(
     "document.html",
-    config=ExtractionConfig(html_to_markdown_config=html_config),
+    config=ExtractionConfig(html_to_markdown=html_config),
 )
-
-# Inline images, SVGs, and embedded assets are automatically captured when
-# `ExtractionConfig(extract_images=True)` is enabled. The converter enforces
-# the extractor image size limits while decoding data URIs.
 ```
 
 Available heading styles:
@@ -934,7 +775,12 @@ Available heading styles:
 from kreuzberg import extract_file_sync, ExtractionConfig, TesseractConfig
 
 # Synchronous extraction with configuration
-result = extract_file_sync("document.pdf", config=ExtractionConfig(ocr_config=TesseractConfig(language="eng")))
+result = extract_file_sync(
+    "document.pdf",
+    config=ExtractionConfig(
+        ocr=TesseractConfig(language="eng"),
+    ),
+)
 ```
 
 ## Using Custom Extractors

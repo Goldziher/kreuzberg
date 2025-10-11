@@ -1,45 +1,12 @@
 # OCR Backends
 
-Kreuzberg supports multiple OCR (Optical Character Recognition) backends, giving you flexibility to choose the best option for your specific needs. Each backend has different strengths, language support, and installation requirements.
+Kreuzberg supports multiple OCR engines for text extraction from images and scanned documents. Each backend has different strengths, performance characteristics, and installation requirements.
 
 ## Supported Backends
 
 ### 1. Tesseract OCR
 
-[Tesseract OCR](https://github.com/tesseract-ocr/tesseract) is the default OCR backend in Kreuzberg. It's a mature, open-source OCR engine with support for over 100 languages.
-
-**Installation Requirements:**
-
-- Requires system-level installation
-- Minimum required version: Tesseract 5.0
-
-**Installation Instructions:**
-
-```bash
-# Ubuntu/Debian
-sudo apt-get install tesseract-ocr
-
-# macOS
-brew install tesseract
-
-# Windows
-choco install -y tesseract
-```
-
-**Language Support:**
-
-- Kreuzberg Docker images include 12 common business languages: English, Spanish, French, German, Italian, Portuguese, Chinese (Simplified & Traditional), Japanese, Arabic, Russian, Hindi
-- For additional languages, install language packs:
-    - Ubuntu: `sudo apt-get install tesseract-ocr-deu` (for German)
-    - macOS: `brew install tesseract-lang`
-
-**Output Formats:**
-
-- Default output format is `markdown` for better structure preservation
-- Supports `text`, `tsv`, `hocr`, and `markdown` formats
-- Table extraction capability via TSV format with automatic structure detection
-
-**Configuration:**
+**Default backend** - Fast, accurate, supports 100+ languages.
 
 ```python
 from kreuzberg import extract_file, ExtractionConfig, TesseractConfig, PSMMode
@@ -47,83 +14,86 @@ from kreuzberg import extract_file, ExtractionConfig, TesseractConfig, PSMMode
 result = await extract_file(
     "document.pdf",
     config=ExtractionConfig(
-        ocr_backend="tesseract",
-        ocr_config=TesseractConfig(
-            language="eng+deu", psm=PSMMode.AUTO, output_format="markdown"  # Default, can be text/tsv/hocr
+        ocr=TesseractConfig(
+            language="eng+deu",
+            psm=PSMMode.SINGLE_BLOCK,
+            output_format="markdown",
         ),
     ),
 )
 ```
 
+**Installation:**
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install tesseract-ocr tesseract-ocr-eng
+
+# macOS
+brew install tesseract tesseract-lang
+
+# Windows
+# Download from https://github.com/UB-Mannheim/tesseract/wiki
+```
+
+**Key Features:**
+
+- 100+ languages supported
+- Page segmentation modes for different layouts
+- Multiple output formats (text, markdown, hOCR, TSV)
+- Table detection with TSV output
+- Fast and lightweight
+
+**Best For:**
+
+- General-purpose OCR
+- Printed text
+- Multi-language documents
+- Production environments
+
 ### 2. EasyOCR
 
-[EasyOCR](https://github.com/JaidedAI/EasyOCR) is a Python library that uses deep learning models for OCR. It supports over 80 languages and can be more accurate for certain scripts.
-
-**Installation Requirements:**
-
-- Requires the `easyocr` optional dependency
-- Install with: `pip install "kreuzberg[easyocr]"`
-
-**GPU Support:**
-
-!!! warning "Experimental Feature"
-
-    GPU support is not considered an official feature and might be subject to change or removal in future versions.
-
-- EasyOCR can use GPU acceleration when PyTorch with CUDA is available
-- To enable GPU, set `use_gpu=True` in the configuration
-- Kreuzberg will automatically check if CUDA is available via PyTorch
-
-**Language Support:**
-
-- Uses different language codes than Tesseract
-- Examples: `en` (English), `de` (German), `zh` (Chinese), etc.
-- See the [EasyOCR documentation](https://github.com/JaidedAI/EasyOCR#supported-languages) for the full list
-
-**Configuration:**
+**Optional backend** - Better for scene text and handwriting.
 
 ```python
 from kreuzberg import extract_file, ExtractionConfig, EasyOCRConfig
 
 result = await extract_file(
-    "document.jpg",
+    "scene_text.jpg",
     config=ExtractionConfig(
-        ocr_backend="easyocr",
-        ocr_config=EasyOCRConfig(language_list=["en", "de"], use_gpu=True),
+        ocr=EasyOCRConfig(
+            language=("en", "de"),  # Must be tuple
+            device="cuda",  # or "cpu", "mps"
+            confidence_threshold=0.5,
+        ),
     ),
 )
 ```
 
+**Installation:**
+
+```bash
+pip install "kreuzberg[easyocr]"
+```
+
+**Key Features:**
+
+- 80+ languages supported
+- GPU acceleration (CUDA, MPS)
+- Confidence scores
+- Better for scene text and handwriting
+- Batch processing support
+
+**Best For:**
+
+- Scene text (photos, signs, natural environments)
+- Handwritten text
+- Low-quality or degraded images
+- Non-Latin scripts
+
 ### 3. PaddleOCR
 
-[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) is an OCR toolkit developed by Baidu. It's particularly strong for Chinese and other Asian languages.
-
-**Installation Requirements:**
-
-- Requires the `paddleocr` optional dependency
-- Install with: `pip install "kreuzberg[paddleocr]"`
-- **System Dependencies:** PaddleOCR uses OpenCV which requires OpenGL libraries:
-    - **Ubuntu/Debian:** `sudo apt-get install libgl1 libglib2.0-0`
-    - **macOS:** OpenGL is typically included; if needed: `brew install glfw`
-    - **Windows:** OpenGL libraries are typically included with graphics drivers
-
-**GPU Support:**
-
-!!! warning "Experimental Feature"
-
-    GPU support is not considered an official feature and might be subject to change or removal in future versions.
-
-- PaddleOCR can utilize GPU acceleration if the paddlepaddle-gpu package is installed
-- Kreuzberg automatically detects if paddlepaddle-gpu is available
-- To explicitly enable GPU, set `use_gpu=True` in the configuration
-- For GPU usage, install: `pip install paddlepaddle-gpu` instead of the standard paddlepaddle package
-
-**Language Support:**
-
-- Limited language support compared to other backends
-- Supported languages: `ch` (Chinese), `en` (English), `french`, `german`, `japan`, `korean`
-
-**Configuration:**
+**Optional backend** - Excellent for Chinese and Asian languages.
 
 ```python
 from kreuzberg import extract_file, ExtractionConfig, PaddleOCRConfig
@@ -131,101 +101,151 @@ from kreuzberg import extract_file, ExtractionConfig, PaddleOCRConfig
 result = await extract_file(
     "chinese_document.jpg",
     config=ExtractionConfig(
-        ocr_backend="paddleocr",
-        ocr_config=PaddleOCRConfig(language="ch", use_gpu=True, gpu_mem=4000),
+        ocr=PaddleOCRConfig(
+            language="ch",  # ch, en, french, german, japan, korean
+            device="cuda",  # or "cpu"
+        ),
     ),
 )
 ```
 
+**Installation:**
+
+```bash
+pip install "kreuzberg[paddleocr]"
+```
+
+**Key Features:**
+
+- Optimized for Chinese, Japanese, Korean
+- GPU acceleration
+- High accuracy for Asian languages
+- Lightweight models
+
+**Best For:**
+
+- Chinese documents
+- Japanese documents
+- Korean documents
+- Mixed CJK content
+
 ### 4. No OCR
 
-You can also disable OCR completely, which is useful for documents that already contain searchable text.
-
-**Configuration:**
+Disable OCR completely for text-based documents:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig
-
-result = await extract_file("searchable_pdf.pdf", config=ExtractionConfig(ocr_backend=None))
+result = await extract_file(
+    "text_document.pdf",
+    config=ExtractionConfig(ocr=None),  # No OCR overhead
+)
 ```
+
+**Use When:**
+
+- Processing only text-based (searchable) PDFs
+- Minimizing processing time
+- Reducing resource usage
 
 ## Choosing the Right Backend
 
-Here are some guidelines for choosing the appropriate OCR backend:
+### Decision Matrix
 
-### Tesseract OCR (Default)
+| Use Case                    | Recommended Backend | Why                                              |
+| --------------------------- | ------------------- | ------------------------------------------------ |
+| General printed text        | Tesseract           | Fast, accurate, well-supported                   |
+| Scene text (photos)         | EasyOCR             | Better detection of text in natural environments |
+| Handwritten text            | EasyOCR             | Better recognition of handwriting                |
+| Chinese/Japanese/Korean     | PaddleOCR           | Optimized for CJK characters                     |
+| Multi-language (100+ langs) | Tesseract           | Widest language support                          |
+| GPU acceleration needed     | EasyOCR/PaddleOCR   | Native CUDA/MPS support                          |
+| Production (speed critical) | Tesseract           | Fastest, most stable                             |
+| Text-based PDFs only        | None                | No OCR overhead                                  |
 
-**Advantages:**
+### Performance Comparison
 
-- Lightweight and CPU-optimized
-- No model downloads required (faster startup)
-- Mature and widely used
-- Lower memory usage
-- Good for general-purpose OCR across many languages
-- Good balance of accuracy and performance
-- Docker images include 12 common business languages out of the box
+**Speed** (fastest to slowest):
 
-**Considerations:**
+1. None (no OCR)
+1. Tesseract
+1. PaddleOCR (with GPU)
+1. EasyOCR (with GPU)
+1. PaddleOCR (CPU)
+1. EasyOCR (CPU)
 
-- Requires system-level installation
-- May have lower accuracy for some languages or complex layouts
-- More configuration may be needed for optimal results
+**Accuracy** (for specific use cases):
 
-### EasyOCR
+- **Printed text**: Tesseract ≈ EasyOCR > PaddleOCR
+- **Scene text**: EasyOCR > Tesseract > PaddleOCR
+- **Handwriting**: EasyOCR > PaddleOCR > Tesseract
+- **CJK languages**: PaddleOCR > EasyOCR > Tesseract
 
-**Advantages:**
+### Resource Requirements
 
-- Good accuracy across multiple languages
-- No system dependencies required (pure Python)
-- Simple configuration
-- Better for complex scripts and languages like Arabic, Thai, or Hindi
-- Can be more accurate for handwritten text
+| Backend   | RAM Usage | GPU Support | Model Size | Installation |
+| --------- | --------- | ----------- | ---------- | ------------ |
+| Tesseract | Low (MB)  | No          | ~5-10MB    | System       |
+| EasyOCR   | High (GB) | CUDA/MPS    | ~100-500MB | pip          |
+| PaddleOCR | Medium    | CUDA        | ~10-50MB   | pip          |
 
-**Considerations:**
+## Configuration Examples
 
-- Larger memory footprint (requires PyTorch)
-- Slower first-run due to model downloads
-- Heavier resource usage
-- Model files are downloaded on first use, causing initial delay
+### Default Configuration (Tesseract)
 
-### PaddleOCR
+```python
+# Automatically uses Tesseract if no OCR backend specified
+config = ExtractionConfig()
+```
 
-**Advantages:**
+### Multi-Language Document
 
-- Excellent accuracy, especially for Asian languages
-- No system dependencies required (beyond OpenGL)
-- Modern deep learning architecture
-- Fast processing once models are loaded
+```python
+# Tesseract with multiple languages
+config = ExtractionConfig(
+    ocr=TesseractConfig(language="eng+deu+fra"),
+)
+```
 
-**Considerations:**
+### GPU-Accelerated Processing
 
-- Largest memory footprint of the three options (requires PaddlePaddle)
-- Slower first-run due to model downloads
-- More resource-intensive
-- Model files are downloaded on first use, causing initial delay
-- Requires OpenGL system libraries (libgl1 on Linux) for OpenCV support
+```python
+# EasyOCR with GPU
+config = ExtractionConfig(
+    ocr=EasyOCRConfig(
+        language=("en",),
+        device="cuda",  # or "mps" for Apple Silicon
+    ),
+)
+```
 
-### No OCR (Setting ocr_backend=None)
+### High-Accuracy Chinese OCR
 
-**Use when:**
+```python
+# PaddleOCR optimized for Chinese
+config = ExtractionConfig(
+    ocr=PaddleOCRConfig(
+        language="ch",
+        device="cuda",
+    ),
+)
+```
 
-- Processing searchable PDFs or documents with embedded text
-- You want to extract embedded text only
-- You want to avoid the overhead of OCR processing
+### Mixed Configuration
 
-**Behavior:**
-
-- For searchable PDFs, embedded text will still be extracted
-- For images and non-searchable PDFs, an empty string will be returned for content
-- Fastest option as it skips OCR processing entirely
+```python
+# Process with language detection, then OCR
+config = ExtractionConfig(
+    language_detection=LanguageDetectionConfig(),
+    ocr=TesseractConfig(language="eng"),
+)
+```
 
 ## Installation Summary
-
-To install Kreuzberg with different OCR backends:
 
 ```bash
 # Basic installation (Tesseract requires separate system installation)
 pip install kreuzberg
+sudo apt-get install tesseract-ocr  # Ubuntu/Debian
+brew install tesseract               # macOS
 
 # With EasyOCR support
 pip install "kreuzberg[easyocr]"
@@ -233,15 +253,132 @@ pip install "kreuzberg[easyocr]"
 # With PaddleOCR support
 pip install "kreuzberg[paddleocr]"
 
-# With chunking support
-pip install "kreuzberg[chunking]"
+# With all OCR backends
+pip install "kreuzberg[easyocr,paddleocr]"
 
-# With all optional dependencies (includes all OCR backends)
+# With all features
 pip install "kreuzberg[all]"
 ```
 
-!!! note "System Dependencies"
+## Troubleshooting
 
-    Remember that Pandoc and Tesseract are system dependencies that must be installed separately from the Python package.
+### Tesseract Not Found
 
-    For Tesseract, you must install version 5.0 or higher, and you'll need to install additional language data files for languages other than English.
+```bash
+# Ubuntu/Debian
+sudo apt-get update && sudo apt-get install tesseract-ocr
+
+# macOS
+brew install tesseract
+
+# Verify installation
+tesseract --version
+```
+
+### EasyOCR/PaddleOCR GPU Issues
+
+```python
+# Force CPU if GPU not available
+config = ExtractionConfig(
+    ocr=EasyOCRConfig(
+        language=("en",),
+        device="cpu",  # Force CPU
+    ),
+)
+```
+
+### Memory Issues with EasyOCR
+
+```python
+# Reduce batch size to lower memory usage
+config = ExtractionConfig(
+    ocr=EasyOCRConfig(
+        language=("en",),
+        batch_size=1,  # Process one image at a time
+    ),
+)
+```
+
+## Backend Comparison
+
+| Feature             | Tesseract | EasyOCR      | PaddleOCR              |
+| ------------------- | --------- | ------------ | ---------------------- |
+| **Languages**       | 100+      | 80+          | Limited (focus on CJK) |
+| **Model Size**      | 5-10MB    | 100-500MB    | 10-50MB                |
+| **RAM Usage**       | Low (MB)  | High (2-4GB) | Medium                 |
+| **GPU Support**     | No        | CUDA/MPS     | CUDA                   |
+| **Speed (CPU)**     | Fast      | Slow         | Medium                 |
+| **Speed (GPU)**     | N/A       | Fast         | Fast                   |
+| **Printed Text**    | Excellent | Good         | Excellent              |
+| **Scene Text**      | Poor      | Excellent    | Good                   |
+| **Handwriting**     | Poor      | Good         | Fair                   |
+| **Complex Layouts** | Good      | Fair         | Excellent              |
+| **Asian Languages** | Good      | Good         | Excellent              |
+
+## When to Use Each Backend
+
+### When to Use Tesseract
+
+✅ **Recommended for:**
+
+- General-purpose OCR
+- Printed documents (invoices, reports, forms)
+- Multi-language documents (100+ languages)
+- Production environments
+- CPU-only infrastructure
+- Docker/containerized deployments
+- Batch processing on standard hardware
+
+❌ **Not ideal for:**
+
+- Handwritten text
+- Scene text (photos, signs)
+- Extreme low-quality images
+
+### When to Use EasyOCR
+
+✅ **Recommended for:**
+
+- Scene text extraction (photos, screenshots)
+- Handwritten text
+- GPU-accelerated workloads
+- Real-time processing with GPU
+- Low-quality or degraded images
+- Mixed orientations
+
+❌ **Not ideal for:**
+
+- CPU-only environments (very slow)
+- Memory-constrained systems
+- Simple printed documents (overkill)
+
+### When to Use PaddleOCR
+
+✅ **Recommended for:**
+
+- Complex document layouts
+- Table-heavy documents
+- Chinese/Japanese/Korean documents
+- Resource-constrained environments (small models)
+- High-accuracy requirements
+- Asian language documents
+
+❌ **Not ideal for:**
+
+- Simple printed text (Tesseract is faster)
+- 100+ language support (fewer languages than Tesseract)
+
+## Best Practices
+
+1. **Start with Tesseract** - Default backend works well for most printed documents
+1. **Use EasyOCR for scene text** - Photos, screenshots, handwriting
+1. **Use PaddleOCR for complex layouts** - Tables, Asian languages
+1. **Enable GPU when available** - Significant speedup for EasyOCR/PaddleOCR
+1. **Disable OCR for text PDFs** - Set `ocr=None` when processing searchable PDFs
+1. **Match language to content** - Use correct language codes for best accuracy
+
+## See Also
+
+- [OCR Configuration](ocr-configuration.md) - Detailed OCR configuration options
+- [Extraction Configuration](extraction-configuration.md) - Complete configuration guide
+- [API Reference](../api-reference/ocr-configuration.md) - OCR configuration API reference

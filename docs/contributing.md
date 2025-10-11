@@ -15,7 +15,7 @@ Thank you for contributing to Kreuzberg!
     ```bash
     git clone https://github.com/Goldziher/kreuzberg.git
     cd kreuzberg
-    uv sync --all-packages --all-extras --all-groups
+    uv sync --all-extras --dev
     ```
 
 1. **Install prek and hooks**:
@@ -72,7 +72,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Notes
 
-- Python 3.10-3.14 supported (note: EasyOCR, PaddleOCR, and entity extraction extras remain unavailable on 3.14 until upstream wheels support it)
+- Python 3.10-3.13 supported
 - System dependencies (optional): Tesseract, Pandoc
 - Prek runs automatically on commit
 - Join our [Discord](https://discord.gg/pXxagNK2zN) for help

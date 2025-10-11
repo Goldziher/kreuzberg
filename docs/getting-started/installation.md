@@ -34,10 +34,6 @@ The Kreuzberg core package can be installed using pip with:
 pip install kreuzberg
 ```
 
-!!! note "Python Compatibility"
-
-    Kreuzberg runs on Python 3.10 through 3.14. The core library fully supports 3.14, but some optional extras (EasyOCR, PaddleOCR, entity extraction via spaCy) remain unavailable until their upstream wheels add 3.14 support.
-
 ## Optional Features
 
 ### OCR
@@ -70,22 +66,22 @@ choco install -y tesseract
 
     Tesseract includes English language support by default. Kreuzberg Docker images come pre-configured with 12 common business languages: English, Spanish, French, German, Italian, Portuguese, Chinese (Simplified & Traditional), Japanese, Arabic, Russian, and Hindi.
 
-    For local installations requiring additional languages, you must install the appropriate language data files:
+For local installations requiring additional languages, you must install the appropriate language data files:
 
-    - **Ubuntu/Debian**: `sudo apt-get install tesseract-ocr-deu` (for German)
-    - **macOS**: `brew install tesseract-lang` (includes all languages)
-    - **Windows**: Download language files manually to the Tesseract `tessdata` directory:
+- **Ubuntu/Debian**: `sudo apt-get install tesseract-ocr-deu` (for German)
+- **macOS**: `brew install tesseract-lang` (includes all languages)
+- **Windows**: Download language files manually to the Tesseract `tessdata` directory:
 
-    ```powershell
-    # For German language support on Windows
-    $tessDataDir = "C:\Program Files\Tesseract-OCR\tessdata"
-    Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/deu.traineddata" -OutFile "$tessDataDir\deu.traineddata"
+```powershell
+# For German language support on Windows
+$tessDataDir = "C:\Program Files\Tesseract-OCR\tessdata"
+Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/deu.traineddata" -OutFile "$tessDataDir\deu.traineddata"
 
-    # Verify installation
-    tesseract --list-langs
-    ```
+# Verify installation
+tesseract --list-langs
+```
 
-    For more details on language installation and configuration, refer to the [Tesseract documentation](https://tesseract-ocr.github.io/tessdoc/Installation.html).
+For more details on language installation and configuration, refer to the [Tesseract documentation](https://tesseract-ocr.github.io/tessdoc/Installation.html).
 
 #### EasyOCR
 
@@ -94,10 +90,6 @@ EasyOCR is a Python-based OCR backend with wide language support and strong perf
 ```shell
 pip install "kreuzberg[easyocr]"
 ```
-
-!!! warning
-
-    EasyOCR wheels are currently available only for Python 3.13 and below. On Python 3.14 this extra is skipped until upstream support lands.
 
 #### PaddleOCR
 
@@ -122,31 +114,45 @@ OpenGL libraries are typically included with graphics drivers on Windows.
 pip install "kreuzberg[paddleocr]"
 ```
 
-!!! warning
-
-    PaddleOCR/PaddlePaddle do not yet ship Python 3.14 wheels. Installation on 3.14 will skip this extra until the upstream projects add support.
-
 ### Chunking
 
-Chunking is an optional feature - useful for RAG applications among others. Kreuzberg uses the excellent `semantic-text-splitter` package for chunking. To install Kreuzberg with chunking support, you can use:
-
-```shell
-pip install "kreuzberg[chunking]"
-```
+Chunking is built into Kreuzberg and requires no additional extras. The engine is implemented in Rust using the `text-splitter` crate and ships with the base installation. Enable it through the `ChunkingConfig` options—no extra installation step is necessary.
 
 ### Table Extraction
 
-!!! warning "GMFT Deprecation"
+Kreuzberg offers multiple approaches for extracting tables from documents:
 
-    The GMFT-powered table extraction pipeline is deprecated and will be removed in Kreuzberg v4.0. The upcoming release ships a native TATR-based `TableExtractionConfig` that replaces GMFT end-to-end.
+#### Vision-Based Table Extraction (Recommended)
 
-If you need to keep using the legacy GMFT integration in the current series, install the extra explicitly:
+Uses computer vision models for high-accuracy table detection and structure recognition. Best for complex tables and diverse document types.
 
 ```shell
-pip install "kreuzberg[gmft]"
+pip install "kreuzberg[vision-tables]"
 ```
 
-`GMFTConfig` will emit a `FutureWarning` whenever it is instantiated to remind you to migrate. Plan to switch to the new table extraction configuration before upgrading to v4.0.
+**Features:**
+
+- Complex table layouts with spanning cells and multi-level headers
+- Works on any document type (PDFs, images, presentations)
+- GPU acceleration support
+- ~1GB model download on first use
+
+#### OCR-Based Table Extraction (Lightweight)
+
+Uses Tesseract OCR analysis to detect simple table structures. Included with the base installation.
+
+```shell
+pip install kreuzberg  # Already included
+```
+
+**Features:**
+
+- Fast processing with minimal resource usage
+- No additional dependencies beyond Tesseract
+- Good for simple, well-formatted tables
+- Works with scanned documents
+
+See the [Table Extraction Guide](../user-guide/table-extraction.md) for detailed comparison and usage instructions.
 
 ### Language Detection
 
@@ -177,7 +183,7 @@ pip install "kreuzberg[all]"
 This is equivalent to:
 
 ```shell
-pip install "kreuzberg[api,chunking,cli,crypto,document-classification,easyocr,entity-extraction,gmft,langdetect,paddleocr,additional-extensions]"
+pip install "kreuzberg[api,cli,crypto,document-classification,easyocr,entity-extraction,vision-tables,langdetect,paddleocr,additional-extensions]"
 ```
 
 ## Development Setup

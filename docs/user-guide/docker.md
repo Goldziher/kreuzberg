@@ -31,7 +31,6 @@ Docker images are available on [Docker Hub](https://hub.docker.com/r/goldziher/k
 - **Image**: `goldziher/kreuzberg-core:latest`
 - **Size**: ~700MB compressed
 - **Includes**: Everything from base plus:
-    - ✅ Text chunking (semantic-text-splitter)
     - ✅ Encrypted PDF support (crypto)
     - ✅ Document classification
     - ✅ Language detection
@@ -68,14 +67,13 @@ docker run -p 8000:8000 goldziher/kreuzberg-core:latest
 
 # Extract with chunking for RAG
 curl -X POST http://localhost:8000/extract \
-  -F "data=@document.pdf" \
-  -F "chunk_content=true" \
-  -F "max_chars=1000"
+  -F "files=@document.pdf" \
+  -F 'config={"chunking":{"max_chars":1000}}'
 
 # Extract with language detection
 curl -X POST http://localhost:8000/extract \
-  -F "data=@document.pdf" \
-  -F "auto_detect_language=true"
+  -F "files=@document.pdf" \
+  -F 'config={"language_detection":{}}'
 
 # Extract from encrypted PDF
 curl -X POST http://localhost:8000/extract \
@@ -128,8 +126,8 @@ docker run -d --name test-kreuzberg -p 8000:8000 kreuzberg-custom
 
 # Verify language detection works
 curl -X POST http://localhost:8000/extract \
-  -F "data=@sample.pdf" \
-  -F "auto_detect_language=true"
+  -F "files=@sample.pdf" \
+  -F 'config={"language_detection":{}}'
 
 # Cleanup
 docker stop test-kreuzberg && docker rm test-kreuzberg
@@ -144,16 +142,19 @@ FROM goldziher/kreuzberg:latest
 
 USER root
 
-# Install chunking and language detection
-RUN pip install --upgrade "kreuzberg[chunking,langdetect]"
+# Install language detection (chunking ships with the core package)
+RUN pip install --upgrade "kreuzberg[langdetect]"
 
 USER appuser
 
-# RAG-optimized defaults
-ENV KREUZBERG_CHUNK_CONTENT=true
-ENV KREUZBERG_MAX_CHARS=1000
-ENV KREUZBERG_MAX_OVERLAP=100
-ENV KREUZBERG_AUTO_DETECT_LANGUAGE=true
+# Copy RAG-optimized configuration (mount kreuzberg.toml or use runtime config)
+# Configuration precedence: Runtime config > Static TOML > Defaults
+# For static defaults, mount a kreuzberg.toml file with:
+# [chunking]
+# max_chars = 1000
+# max_overlap = 100
+#
+# [language_detection]
 ```
 
 ### Example: Multi-Format Processing Image
@@ -170,8 +171,8 @@ RUN pip install --upgrade "kreuzberg[crypto]"
 
 USER appuser
 
-# Enable crypto support
-ENV KREUZBERG_CRYPTO_SUPPORT=true
+# Crypto support is automatically enabled when the package is installed
+# No environment variables needed
 ```
 
 ## Docker Compose
@@ -246,20 +247,20 @@ Create `kreuzberg.toml`:
 ```toml
 # Basic settings
 force_ocr = false
-ocr_backend = "tesseract"
 
-# Chunking (requires core image or custom build)
-chunk_content = true
+# OCR configuration
+[ocr]
+backend = "tesseract"
+language = "eng+spa+fra"  # English, Spanish, French
+psm = 6  # Uniform block of text
+
+# Chunking (built into the base image)
+[chunking]
 max_chars = 1000
 max_overlap = 100
 
-# Language detection (requires core image or custom build)
-auto_detect_language = true
-
-# OCR configuration
-[tesseract]
-language = "eng+spa+fra"  # English, Spanish, French
-psm = 6  # Uniform block of text
+# Language detection (requires langdetect extra installed)
+[language_detection]
 ```
 
 Mount the configuration:
@@ -275,21 +276,29 @@ docker run -p 8000:8000 \
 
 **Cache Configuration:**
 
+- `KREUZBERG_CACHE_ENABLED`: Enable/disable caching (default: `true`)
 - `KREUZBERG_CACHE_DIR`: Cache directory (default: `/app/.kreuzberg`)
 - `KREUZBERG_OCR_CACHE_SIZE_MB`: OCR cache size limit (default: `500`)
+- `KREUZBERG_OCR_CACHE_AGE_DAYS`: OCR cache age limit in days (default: `30`)
 - `KREUZBERG_DOCUMENT_CACHE_SIZE_MB`: Document cache size limit (default: `1000`)
+- `KREUZBERG_DOCUMENT_CACHE_AGE_DAYS`: Document cache age limit in days (default: `7`)
 
-**Runtime Configuration:**
+**API Server Configuration:**
 
-- `KREUZBERG_CHUNK_CONTENT`: Enable text chunking (`true`/`false`)
-- `KREUZBERG_AUTO_DETECT_LANGUAGE`: Enable language detection (`true`/`false`)
-- `KREUZBERG_MAX_CHARS`: Maximum characters per chunk (default: `1000`)
-- `KREUZBERG_OCR_BACKEND`: OCR backend to use (`tesseract` or `none`)
+- `KREUZBERG_MAX_UPLOAD_SIZE`: Maximum upload size in bytes (default: `1073741824` = 1GB)
+- `KREUZBERG_ENABLE_OPENTELEMETRY`: Enable OpenTelemetry tracing (default: `true`)
 
 **System Variables:**
 
 - `PYTHONUNBUFFERED=1`: Ensures proper logging output
 - `PYTHONDONTWRITEBYTECODE=1`: Prevents .pyc file creation
+
+**Note:** Extraction configuration (OCR, chunking, tables, etc.) is set via:
+
+1. Static TOML config file (`kreuzberg.toml`)
+1. Runtime config via API request (`config` multipart field)
+
+Environment variables for extraction settings are no longer supported in v4.
 
 ## Production Deployment
 
@@ -362,14 +371,15 @@ metadata:
   name: kreuzberg-config
 data:
   kreuzberg.toml: |
-    chunk_content = true
-    auto_detect_language = true
-    max_chars = 1000
-    ocr_backend = "tesseract"
-
-    [tesseract]
+    [ocr]
+    backend = "tesseract"
     language = "eng+spa+fra+deu"
     psm = 6
+
+    [chunking]
+    max_chars = 1000
+
+    [language_detection]
 ---
 apiVersion: v1
 kind: Service
@@ -482,9 +492,6 @@ docker run -p 8000:8000 \
 #### Feature Not Available Errors
 
 ```bash
-# Error: "chunking requires semantic-text-splitter"
-# Solution: Use core image or build custom image with required dependency
-
 # Error: "language detection requires fast-langdetect"
 # Solution: Use core image or add the dependency to custom build
 ```
@@ -507,13 +514,6 @@ print(result.content[:200])
 docker exec <container-id> python3 -c "
 import kreuzberg
 print(f'Kreuzberg version: {kreuzberg.__version__}')
-
-# Test imports to see what's available
-try:
-    import semantic_text_splitter
-    print('✅ Chunking available')
-except ImportError:
-    print('❌ Chunking not available')
 
 try:
     import fast_langdetect

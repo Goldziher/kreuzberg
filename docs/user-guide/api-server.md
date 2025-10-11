@@ -49,6 +49,38 @@ Returns the server status:
 }
 ```
 
+### Server Information
+
+```bash
+GET /info
+```
+
+Returns server version, configuration, and available backends:
+
+```json
+{
+  "version": "4.0.0",
+  "config": {
+    "force_ocr": false,
+    "ocr": null,
+    "tables": null,
+    "chunking": null
+  },
+  "cache_enabled": true,
+  "available_backends": {
+    "ocr": {
+      "tesseract": true,
+      "easyocr": false,
+      "paddleocr": false
+    },
+    "features": {
+      "vision_tables": true,
+      "spacy": true
+    }
+  }
+}
+```
+
 ### Extract Files
 
 ```bash
@@ -61,7 +93,9 @@ Extract text from one or more files.
 
 - Method: `POST`
 - Content-Type: `multipart/form-data`
-- Body: One or more files with field name `data`
+- Body:
+    - `files`: One or more files to extract (required)
+    - `config`: Optional JSON configuration (see examples below)
 - **Maximum file size: Configurable via `KREUZBERG_MAX_UPLOAD_SIZE` environment variable (default: 1GB per file)**
 
 **Response:**
@@ -69,18 +103,18 @@ Extract text from one or more files.
 - Status: 201 Created
 - Body: Array of extraction results
 
-**Example:**
+**Basic Example:**
 
 ```bash
-# Single file
-curl -X POST http://localhost:8000/extract \
-  -F "data=@document.pdf"
+# Single file with default configuration
+curl -F "files=@document.pdf" \
+     http://localhost:8000/extract
 
 # Multiple files
-curl -X POST http://localhost:8000/extract \
-  -F "data=@document1.pdf" \
-  -F "data=@document2.docx" \
-  -F "data=@image.jpg"
+curl -F "files=@document1.pdf" \
+     -F "files=@document2.docx" \
+     -F "files=@image.jpg" \
+     http://localhost:8000/extract
 ```
 
 **Response Format:**
@@ -97,70 +131,171 @@ curl -X POST http://localhost:8000/extract \
     "chunks": [],
     "entities": null,
     "keywords": null,
-    "detected_languages": null
+    "detected_languages": null,
+    "tables": [],
+    "images": []
   }
 ]
 ```
 
 ### Runtime Configuration
 
-The `/extract` endpoint supports runtime configuration via query parameters and HTTP headers, allowing you to customize extraction behavior without requiring static configuration files.
+Configure extraction behavior by providing a JSON configuration in the `config` field:
 
-#### Query Parameters
+#### Basic Configuration Examples
 
-Configure extraction options directly via URL query parameters:
-
-Enable chunking with custom settings:
+**Force OCR:**
 
 ```bash
-curl -X POST "http://localhost:8000/extract?chunk_content=true&max_chars=500&max_overlap=50" \
-  -F "data=@document.pdf"
+curl -F "files=@image.jpg" \
+     -F 'config={"force_ocr":true}' \
+     http://localhost:8000/extract
 ```
 
-Extract entities and keywords:
+**OCR with Tesseract:**
 
 ```bash
-curl -X POST "http://localhost:8000/extract?extract_entities=true&extract_keywords=true&keyword_count=5" \
-  -F "data=@document.pdf"
+curl -F "files=@document.pdf" \
+     -F 'config={"ocr":{"backend":"tesseract","language":"eng"}}' \
+     http://localhost:8000/extract
 ```
 
-Force OCR with specific backend:
+**OCR with EasyOCR:**
 
 ```bash
-curl -X POST "http://localhost:8000/extract?force_ocr=true&ocr_backend=tesseract" \
-  -F "data=@image.jpg"
+curl -F "files=@document.jpg" \
+     -F 'config={"ocr":{"backend":"easyocr","language":["en","de"]}}' \
+     http://localhost:8000/extract
 ```
 
-### Image Extraction and OCR
-
-Kreuzberg can extract embedded images from various document formats and optionally run OCR on them to extract text content:
+**OCR with PaddleOCR:**
 
 ```bash
-# Basic image extraction from PDF documents
-curl -X POST "http://localhost:8000/extract?extract_images=true" \
-  -F "data=@document.pdf"
+curl -F "files=@chinese_document.jpg" \
+     -F 'config={"ocr":{"backend":"paddleocr","language":"ch"}}' \
+     http://localhost:8000/extract
+```
 
-# Extract images and run OCR on them using Tesseract
-curl -X POST "http://localhost:8000/extract?extract_images=true&ocr_extracted_images=true&image_ocr_backend=tesseract" \
-  -F "data=@scanned_document.pdf"
+#### Advanced OCR Configuration
 
-# Extract images from PowerPoint presentations with dimension filtering
-curl -X POST "http://localhost:8000/extract?extract_images=true&ocr_extracted_images=true&image_ocr_min_width=100&image_ocr_min_height=100&image_ocr_max_width=3000&image_ocr_max_height=3000" \
-  -F "data=@presentation.pptx"
+**Tesseract with custom settings:**
 
-# Use EasyOCR for better scene text recognition
-curl -X POST "http://localhost:8000/extract?extract_images=true&ocr_extracted_images=true&image_ocr_backend=easyocr" \
-  -F "data=@document_with_photos.pdf"
+```bash
+curl -F "files=@multilingual_document.pdf" \
+     -F 'config={
+       "force_ocr": true,
+       "ocr": {
+         "backend": "tesseract",
+         "language": "eng+deu",
+         "psm": 6,
+         "output_format": "text"
+       }
+     }' \
+     http://localhost:8000/extract
+```
 
-# Extract images from HTML with inline base64 images
-curl -X POST "http://localhost:8000/extract?extract_images=true" \
-  -F "data=@webpage.html"
+**EasyOCR with device selection:**
 
-# Process multiple documents with different image extraction settings
-curl -X POST "http://localhost:8000/extract?extract_images=true&ocr_extracted_images=true&image_ocr_backend=tesseract" \
-  -F "data=@document1.pdf" \
-  -F "data=@presentation.pptx" \
-  -F "data=@email.eml"
+```bash
+curl -F "files=@document.jpg" \
+     -F 'config={
+       "ocr": {
+         "backend": "easyocr",
+         "language": ["en", "de"],
+         "device": "cpu",
+         "confidence_threshold": 0.6
+       }
+     }' \
+     http://localhost:8000/extract
+```
+
+#### Chunking Configuration
+
+**Enable chunking with custom settings:**
+
+```bash
+curl -F "files=@document.pdf" \
+     -F 'config={"chunking":{"max_chars":500,"max_overlap":50}}' \
+     http://localhost:8000/extract
+```
+
+#### Table Extraction
+
+**Enable table extraction:**
+
+```bash
+curl -F "files=@document_with_tables.pdf" \
+     -F 'config={"tables":{}}' \
+     http://localhost:8000/extract
+```
+
+**Table extraction with custom thresholds:**
+
+```bash
+curl -F "files=@document_with_tables.pdf" \
+     -F 'config={
+       "tables": {
+         "detection_threshold": 0.8,
+         "structure_threshold": 0.6,
+         "detection_device": "auto",
+         "structure_device": "auto"
+       }
+     }' \
+     http://localhost:8000/extract
+```
+
+#### Entity and Keyword Extraction
+
+**Extract entities and keywords:**
+
+```bash
+curl -F "files=@document.pdf" \
+     -F 'config={
+       "entities": {},
+       "keywords": {"top_k": 5}
+     }' \
+     http://localhost:8000/extract
+```
+
+**Entity extraction with language models:**
+
+```bash
+curl -F "files=@multilingual_document.pdf" \
+     -F 'config={
+       "language_detection": {},
+       "entities": {
+         "language_models": {
+           "en": "en_core_web_sm",
+           "de": "de_core_news_sm"
+         },
+         "fallback_to_multilingual": true
+       }
+     }' \
+     http://localhost:8000/extract
+```
+
+#### Image Extraction
+
+**Basic image extraction:**
+
+```bash
+curl -F "files=@document.pdf" \
+     -F 'config={"images":{}}' \
+     http://localhost:8000/extract
+```
+
+**Image extraction with OCR filtering:**
+
+```bash
+curl -F "files=@presentation.pptx" \
+     -F 'config={
+       "images": {
+         "ocr_min_dimensions": [100, 100],
+         "ocr_max_dimensions": [3000, 3000],
+         "deduplicate": true
+       }
+     }' \
+     http://localhost:8000/extract
 ```
 
 **Image Extraction Response Format:**
@@ -172,7 +307,7 @@ When image extraction is enabled, the response includes additional fields:
   {
     "content": "Main document text content...",
     "mime_type": "text/plain",
-    "metadata": { ... },
+    "metadata": {},
     "images": [
       {
         "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB...",
@@ -185,175 +320,118 @@ When image extraction is enabled, the response includes additional fields:
         "is_mask": false,
         "description": "Chart showing quarterly results"
       }
-    ],
-    "image_ocr_results": [
-      {
-        "image": {
-          "data": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD...",
-          "format": "jpeg",
-          "filename": "screenshot.jpg",
-          "dimensions": [1024, 768]
-        },
-        "ocr_result": {
-          "content": "Text extracted from image using OCR...",
-          "mime_type": "text/plain",
-          "metadata": { "quality_score": 0.95 }
-        },
-        "confidence_score": 0.87,
-        "processing_time": 1.23,
-        "skipped_reason": null
-      }
     ]
   }
 ]
 ```
 
-**Advanced Image OCR Configuration:**
+#### Language Detection
 
-For complex image OCR scenarios, use header-based configuration:
-
-```bash
-# Tesseract with multilingual support and custom PSM
-curl -X POST http://localhost:8000/extract \
-  -H "X-Extraction-Config: {
-    \"extract_images\": true,
-    \"ocr_extracted_images\": true,
-    \"image_ocr_backend\": \"tesseract\",
-    \"image_ocr_config\": {
-      \"language\": \"eng+deu+fra\",
-      \"psm\": 6,
-      \"output_format\": \"text\"
-    },
-    \"deduplicate_images\": true,
-    \"image_ocr_min_dimensions\": [200, 200],
-    \"image_ocr_max_dimensions\": [4000, 4000]
-  }" \
-  -F "data=@multilingual_presentation.pptx"
-
-# EasyOCR with confidence threshold and GPU acceleration
-curl -X POST http://localhost:8000/extract \
-  -H "X-Extraction-Config: {
-    \"extract_images\": true,
-    \"ocr_extracted_images\": true,
-    \"image_ocr_backend\": \"easyocr\",
-    \"image_ocr_config\": {
-      \"language_list\": [\"en\", \"de\"],
-      \"gpu\": false,
-      \"confidence_threshold\": 0.6
-    }
-  }" \
-  -F "data=@document_with_scene_text.pdf"
-```
-
-**Supported Document Types for Image Extraction:**
-
-- **PDF documents**: Embedded images, graphics, and charts
-- **PowerPoint presentations (PPTX)**: Slide images, shapes, and media
-- **HTML documents**: Inline images and base64-encoded images
-- **Microsoft Word documents (DOCX)**: Embedded images and charts
-- **Email files (EML, MSG)**: Image attachments and inline images
-
-Enable language detection:
+**Enable language detection:**
 
 ```bash
-curl -X POST "http://localhost:8000/extract?auto_detect_language=true" \
-  -F "data=@multilingual_document.pdf"
+curl -F "files=@multilingual_document.pdf" \
+     -F 'config={"language_detection":{}}' \
+     http://localhost:8000/extract
 ```
 
-**Supported Query Parameters:**
-
-- `chunk_content` (boolean): Enable content chunking
-- `max_chars` (integer): Maximum characters per chunk
-- `max_overlap` (integer): Overlap between chunks in characters
-- `extract_tables` (boolean): Enable table extraction
-- `extract_entities` (boolean): Enable named entity extraction
-- `extract_keywords` (boolean): Enable keyword extraction
-- `keyword_count` (integer): Number of keywords to extract
-- `force_ocr` (boolean): Force OCR processing
-- `ocr_backend` (string): OCR engine (`tesseract`, `easyocr`, `paddleocr`)
-- `auto_detect_language` (boolean): Enable automatic language detection
-- `pdf_password` (string): Password for encrypted PDFs
-- `extract_images` (boolean): Extract embedded images from supported formats (PDF, PPTX, HTML, Office, Email)
-- `ocr_extracted_images` (boolean): Run OCR on extracted images to get text content
-- `image_ocr_backend` (string): OCR engine to use for images (`tesseract`, `easyocr`, `paddleocr`)
-- `image_ocr_min_width` / `image_ocr_min_height` (integer): Minimum image dimensions for OCR eligibility
-- `image_ocr_max_width` / `image_ocr_max_height` (integer): Maximum image dimensions for OCR processing
-- `deduplicate_images` (boolean): Remove duplicate images by content hash (enabled by default)
-
-**Boolean Parameter Formats:**
-
-Query parameters accept flexible boolean values:
-
-- `true`, `false`
-- `1`, `0`
-- `yes`, `no`
-- `on`, `off`
-
-#### Header Configuration
-
-For complex nested configurations, use the `X-Extraction-Config` header with JSON format:
-
-Basic header configuration:
+**Advanced language detection:**
 
 ```bash
-curl -X POST http://localhost:8000/extract \
-  -H "X-Extraction-Config: {\"chunk_content\": true, \"max_chars\": 300, \"extract_keywords\": true}" \
-  -F "data=@document.pdf"
+curl -F "files=@multilingual_document.pdf" \
+     -F 'config={
+       "language_detection": {
+         "multilingual": true,
+         "top_k": 3,
+         "low_memory": false
+       }
+     }' \
+     http://localhost:8000/extract
 ```
 
-Advanced OCR configuration:
+#### Combined Configuration
+
+**Multiple features enabled:**
 
 ```bash
-curl -X POST http://localhost:8000/extract \
-  -H "X-Extraction-Config: {
-    \"force_ocr\": true,
-    \"ocr_backend\": \"tesseract\",
-    \"ocr_config\": {
-      \"language\": \"eng+deu\",
-      \"psm\": 6,
-      \"output_format\": \"text\"
-    }
-  }" \
-  -F "data=@multilingual_document.pdf"
+curl -F "files=@document.pdf" \
+     -F 'config={
+       "ocr": {
+         "backend": "tesseract",
+         "language": "eng"
+       },
+       "chunking": {
+         "max_chars": 1000,
+         "max_overlap": 200
+       },
+       "tables": {
+         "detection_threshold": 0.7
+       },
+       "keywords": {
+         "top_k": 10
+       },
+       "language_detection": {}
+     }' \
+     http://localhost:8000/extract
 ```
 
-!!! warning "GMFT Deprecation"
-
-    GMFT-based table extraction is deprecated and scheduled for removal in Kreuzberg v4.0. The example below exists for legacy users; plan to migrate to the TATR-based table extraction pipeline before upgrading.
-
-Table extraction with GMFT configuration:
-
-```bash
-curl -X POST http://localhost:8000/extract \
-  -H "X-Extraction-Config: {
-    \"extract_tables\": true,
-    \"gmft_config\": {
-      \"detector_base_threshold\": 0.85,
-      \"remove_null_rows\": true,
-      \"enable_multi_header\": true
-    }
-  }" \
-  -F "data=@document_with_tables.pdf"
-```
-
-#### Configuration Precedence
+### Configuration Precedence
 
 When multiple configuration sources are present, they are merged with the following precedence:
 
-1. **Header config** (highest priority) - `X-Extraction-Config` header
-1. **Query params** - URL query parameters
+1. **Request config** (highest priority) - `config` field in request
 1. **Static config** - `kreuzberg.toml` or `pyproject.toml` files
 1. **Defaults** (lowest priority) - Built-in default values
 
-Header overrides query parameters:
+### Cache Management
+
+#### Get Cache Statistics
 
 ```bash
-curl -X POST "http://localhost:8000/extract?max_chars=1000" \
-  -H "X-Extraction-Config: {\"max_chars\": 500}" \
-  -F "data=@document.pdf"
+GET /cache/stats?type=all
 ```
 
-Result: max_chars will be 500 (from header)
+Query parameters:
+
+- `type`: Cache type (`document`, `ocr`, `mime`, `table`, `all`) - default: `all`
+
+Returns statistics for the specified cache(s):
+
+```json
+{
+  "document": {
+    "hits": 150,
+    "misses": 50,
+    "size": 1024000,
+    "max_size": 10485760
+  },
+  "ocr": {
+    "hits": 75,
+    "misses": 25,
+    "size": 512000,
+    "max_size": 5242880
+  }
+}
+```
+
+#### Clear Cache
+
+```bash
+DELETE /cache?type=all
+```
+
+Query parameters:
+
+- `type`: Cache type (`document`, `ocr`, `mime`, `table`, `all`) - default: `all`
+
+Returns confirmation:
+
+```json
+{
+  "message": "Cache cleared successfully",
+  "type": "all"
+}
+```
 
 ## Interactive API Documentation
 
@@ -391,30 +469,13 @@ open http://localhost:8000/schema/swagger
 
 The documentation includes examples for all configuration options, making it easy to understand the full capabilities of the extraction API.
 
-#### Error Handling
-
-Invalid configuration returns appropriate error responses:
-
-```bash
-# Invalid JSON in header
-curl -X POST http://localhost:8000/extract \
-  -H "X-Extraction-Config: {invalid-json}" \
-  -F "data=@document.pdf"
-
-# Response: 400 Bad Request
-{
-  "message": "Invalid JSON in X-Extraction-Config header: ...",
-  "details": "{\"error\": \"...\"}"
-}
-```
-
 ## Error Handling
 
 The API uses standard HTTP status codes:
 
-- `200 OK`: Successful health check
+- `200 OK`: Successful health check or cache operation
 - `201 Created`: Successful extraction
-- `400 Bad Request`: Validation error (e.g., invalid file format)
+- `400 Bad Request`: Validation error (e.g., invalid configuration)
 - `422 Unprocessable Entity`: Parsing error (e.g., corrupted file)
 - `500 Internal Server Error`: Unexpected error
 
@@ -448,69 +509,63 @@ When `DEBUG=1` is set, 500 errors will include:
 
 ⚠️ **Warning**: Only enable debug mode in development environments. Debug information may expose sensitive details and should never be used in production.
 
-## Features
-
-- **Runtime Configuration**: Configure extraction via query parameters and HTTP headers
-- **Batch Processing**: Extract from multiple files in a single request
-- **Automatic Format Detection**: Detects file types from MIME types
-- **OCR Support**: Automatically applies OCR to images and scanned PDFs
-- **Configuration Precedence**: Flexible configuration merging with clear precedence
-- **Structured Logging**: Uses structlog for detailed logging
-- **OpenTelemetry**: Built-in observability support
-- **Async Processing**: High-performance async request handling
-
-## Configuration
-
-The API server uses the default Kreuzberg extraction configuration:
-
-- Tesseract OCR is included by default
-- PDF, image, and document extraction is supported
-- Table extraction with GMFT (if installed)
-
-### Environment Variables
+## Environment Variables
 
 The API server can be configured using environment variables for production deployments:
 
-#### Server Configuration
+### Server Configuration
 
 | Variable                         | Description                  | Default            | Example            |
 | -------------------------------- | ---------------------------- | ------------------ | ------------------ |
 | `KREUZBERG_MAX_UPLOAD_SIZE`      | Maximum upload size in bytes | `1073741824` (1GB) | `2147483648` (2GB) |
 | `KREUZBERG_ENABLE_OPENTELEMETRY` | Enable OpenTelemetry tracing | `true`             | `false`            |
+| `KREUZBERG_CACHE_ENABLED`        | Enable caching               | `true`             | `false`            |
+| `DEBUG`                          | Enable debug mode            | `false`            | `true`             |
 
-#### Usage Examples
+### Cache Configuration
+
+| Variable                   | Description             | Default     | Example      |
+| -------------------------- | ----------------------- | ----------- | ------------ |
+| `KREUZBERG_CACHE_DIR`      | Cache directory         | System temp | `/tmp/cache` |
+| `KREUZBERG_CACHE_MAX_SIZE` | Max cache size in bytes | `10485760`  | `52428800`   |
+| `KREUZBERG_CACHE_TTL`      | Cache TTL in seconds    | `3600`      | `7200`       |
+
+### Usage Examples
 
 ```bash
 # Set 2GB upload limit
 export KREUZBERG_MAX_UPLOAD_SIZE=2147483648
 litestar --app kreuzberg._api.main:app run
 
-# Disable telemetry
+# Disable telemetry and caching
 export KREUZBERG_ENABLE_OPENTELEMETRY=false
+export KREUZBERG_CACHE_ENABLED=false
 uvicorn kreuzberg._api.main:app --host 0.0.0.0 --port 8000
 
 # Production settings with Docker
 docker run -p 8000:8000 \
   -e KREUZBERG_MAX_UPLOAD_SIZE=5368709120 \
   -e KREUZBERG_ENABLE_OPENTELEMETRY=true \
+  -e KREUZBERG_CACHE_ENABLED=true \
   goldziher/kreuzberg:latest
 ```
 
 **Note**: Boolean environment variables accept `true`/`false`, `1`/`0`, `yes`/`no`, or `on`/`off` values.
 
-To use custom configuration, modify the extraction call in your own API wrapper:
+## Features
 
-```python
-from kreuzberg import ExtractionConfig, batch_extract_bytes
-from litestar import Litestar, post
-
-@post("/extract-custom")
-async def custom_extract(data: list[UploadFile]) -> list[ExtractionResult]:
-    config = ExtractionConfig(force_ocr=True, ocr_backend="easyocr", extract_tables=True)
-    return await batch_extract_bytes([(await file.read(), file.content_type) for file in data], config=config)
-
-app = Litestar(route_handlers=[custom_extract])
-```
+- **Runtime Configuration**: Configure extraction via JSON in multipart form data
+- **Batch Processing**: Extract from multiple files in a single request
+- **Automatic Format Detection**: Detects file types from MIME types
+- **OCR Support**: Multiple OCR backends (Tesseract, EasyOCR, PaddleOCR)
+- **Table Extraction**: Vision-based table detection and extraction
+- **Entity & Keyword Extraction**: Named entity recognition and keyword extraction
+- **Image Extraction**: Extract embedded images with optional OCR
+- **Language Detection**: Automatic language identification
+- **Caching**: High-performance caching with statistics and management
+- **Structured Logging**: Uses structlog for detailed logging
+- **OpenTelemetry**: Built-in observability support
+- **Async Processing**: High-performance async request handling
 
 ## Production Deployment
 
@@ -523,6 +578,7 @@ For production use, consider:
 1. **Rate Limiting**: Add rate limiting middleware
 1. **Authentication**: Add authentication middleware if needed
 1. **Security**: Ensure `DEBUG` environment variable is not set
+1. **Caching**: Configure appropriate cache size and TTL for your workload
 
 Example production command:
 
@@ -533,3 +589,30 @@ uvicorn kreuzberg._api.main:app \
   --workers 4 \
   --log-level info
 ```
+
+## Static Configuration
+
+The API server automatically loads configuration from `kreuzberg.toml` or `pyproject.toml` if present. This provides default extraction settings that can be overridden per-request.
+
+Example `kreuzberg.toml`:
+
+```toml
+force_ocr = false
+
+[ocr]
+backend = "tesseract"
+language = "eng"
+psm = 6
+
+[chunking]
+max_chars = 1000
+max_overlap = 200
+
+[tables]
+detection_threshold = 0.7
+
+[keywords]
+top_k = 10
+```
+
+See the [Extraction Configuration](extraction-configuration.md) guide for complete configuration file documentation.
