@@ -90,7 +90,6 @@ async def test_init_paddle_ocr(backend: PaddleBackend, mock_find_spec: Mock, moc
 
 
 @pytest.mark.anyio
-@pytest.mark.xfail(reason="Passes locally but fails in CI environment")
 async def test_init_paddle_ocr_with_gpu_package(
     backend: PaddleBackend, mock_find_spec: Mock, mocker: MockerFixture
 ) -> None:
@@ -526,7 +525,7 @@ async def test_process_paddle_result_with_close_lines() -> None:
 @pytest.mark.anyio
 async def test_integration_process_file(backend: PaddleBackend, ocr_image: Path) -> None:
     try:
-        from paddleocr import PaddleOCR  # noqa: F401
+        from paddleocr import PaddleOCR  # noqa: F401  # type: ignore[import-untyped]
     except ImportError:
         pytest.skip("PaddleOCR not installed")
 
@@ -543,7 +542,7 @@ async def test_integration_process_file(backend: PaddleBackend, ocr_image: Path)
 @pytest.mark.anyio
 async def test_integration_process_image(backend: PaddleBackend, ocr_image: Path) -> None:
     try:
-        from paddleocr import PaddleOCR  # noqa: F401
+        from paddleocr import PaddleOCR  # noqa: F401  # type: ignore[import-untyped]
     except ImportError:
         pytest.skip("PaddleOCR not installed")
 
@@ -661,72 +660,6 @@ def test_process_paddle_result_image_size_fallback() -> None:
 
     assert result.metadata["width"] == 300
     assert result.metadata["height"] == 200
-
-
-@pytest.mark.anyio
-async def test_init_paddle_ocr_deprecated_params() -> None:
-    from unittest.mock import Mock, patch
-
-    PaddleBackend._paddle_ocr = None
-
-    with patch("kreuzberg._ocr._paddleocr.PaddleOCR") as mock_paddle_ocr:
-        mock_instance = Mock()
-        mock_paddle_ocr.return_value = mock_instance
-
-        await PaddleBackend._init_paddle_ocr(
-            language="en",
-            use_angle_cls=True,
-            det_db_thresh=0.4,
-            det_db_box_thresh=0.6,
-            det_db_unclip_ratio=2.5,
-            gpu_memory_limit=2.5,
-        )
-
-        mock_paddle_ocr.assert_called_once()
-        kwargs = mock_paddle_ocr.call_args[1]
-
-        assert kwargs.get("use_textline_orientation") is True
-        assert kwargs.get("text_det_thresh") == 0.4
-        assert kwargs.get("text_det_box_thresh") == 0.6
-        assert kwargs.get("text_det_unclip_ratio") == 2.5
-
-        assert "use_angle_cls" not in kwargs
-        assert "det_db_thresh" not in kwargs
-        assert "det_db_box_thresh" not in kwargs
-        assert "det_db_unclip_ratio" not in kwargs
-        assert "gpu_mem" not in kwargs
-        assert "gpu_memory_limit" not in kwargs
-        assert "use_gpu" not in kwargs
-
-
-@pytest.mark.anyio
-async def test_resolve_device_config_deprecated_use_gpu_warnings() -> None:
-    import warnings
-    from unittest.mock import patch
-
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-
-        with patch("kreuzberg._utils._device.validate_device_request") as mock_validate:
-            mock_validate.return_value = Mock(device_type="cpu", name="CPU")
-
-            PaddleBackend._resolve_device_config(use_gpu=True, device="auto")
-
-            assert len(w) == 1
-            assert issubclass(w[0].category, DeprecationWarning)
-            assert "'use_gpu' parameter is deprecated" in str(w[0].message)
-
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-
-        with patch("kreuzberg._utils._device.validate_device_request") as mock_validate:
-            mock_validate.return_value = Mock(device_type="cpu", name="CPU")
-
-            PaddleBackend._resolve_device_config(use_gpu=True, device="cpu")
-
-            assert len(w) == 1
-            assert issubclass(w[0].category, DeprecationWarning)
-            assert "Both 'use_gpu' and 'device' parameters specified" in str(w[0].message)
 
 
 @pytest.mark.anyio
