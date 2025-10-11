@@ -77,27 +77,6 @@ mod tests {
     }
 
     #[test]
-    fn test_hocr_with_custom_options() {
-        use html_to_markdown_rs::ConversionOptions;
-
-        let hocr = r#"<div class="ocr_page">
-            <p class="ocr_par">
-                <span class="ocrx_word">Test</span>
-            </p>
-        </div>"#;
-
-        let options = ConversionOptions {
-            hocr_extract_tables: true,
-            hocr_table_column_threshold: 50,
-            hocr_table_row_threshold_ratio: 0.5,
-            ..Default::default()
-        };
-
-        let markdown = convert_hocr_to_markdown(hocr, Some(options)).unwrap();
-        assert!(markdown.contains("Test"));
-    }
-
-    #[test]
     fn test_hocr_with_line_breaks() {
         let hocr = r#"<div class="ocr_page">
             <p class="ocr_par">

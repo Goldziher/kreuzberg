@@ -22,7 +22,7 @@ encoding_rs = "0.8.35"
 fast_image_resize = "5.3.0"
 hex = "0.4.3"
 html-escape = "0.2.13"
-html-to-markdown-rs = "2.0.0"
+html-to-markdown-rs = { version = "2.1.2", features = ["inline-images"] }
 image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"] }
 libc = "0.2"
 mail-parser = "0.11.1"
@@ -45,6 +45,7 @@ thiserror = "2.0.16"
 text-splitter = { version = "0.28.0", features = ["markdown"] }
 unicode-normalization = "0.1.24"
 zip = "5.1.1"
+
 
 [dev-dependencies]
 tempfile = "3.23.0"
