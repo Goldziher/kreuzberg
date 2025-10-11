@@ -15,13 +15,27 @@ except ImportError as e:  # pragma: no cover
         "CLI dependencies are not installed. Please install kreuzberg with the 'cli' extra: pip install kreuzberg[cli]"
     ) from e
 
+import msgspec
+
 from kreuzberg import __version__, extract_bytes_sync, extract_file_sync
-from kreuzberg._config import build_extraction_config, find_config_file, load_config_from_file
+from kreuzberg._config import build_extraction_config_from_dict, find_config_file, load_config_from_file
 from kreuzberg._constants import DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OVERLAP
+from kreuzberg._types import (
+    ChunkingConfig,
+    EasyOCRConfig,
+    EntityExtractionConfig,
+    ExtractionConfig,
+    KeywordExtractionConfig,
+    LanguageDetectionConfig,
+    PaddleOCRConfig,
+    PSMMode,
+    TableExtractionConfig,
+    TesseractConfig,
+)
 from kreuzberg.exceptions import KreuzbergError, MissingDependencyError
 
 if TYPE_CHECKING:
-    from kreuzberg._types import ExtractionConfig, ExtractionResult
+    from kreuzberg._types import ExtractionResult
 
 console = Console(stderr=True)
 
@@ -116,45 +130,58 @@ def _load_config(config_path: Path | None, verbose: bool) -> dict[str, Any]:
     return file_config
 
 
-def _build_cli_args(params: dict[str, Any]) -> dict[str, Any]:
-    """Build CLI arguments dictionary."""
-    cli_args: dict[str, Any] = {
-        "force_ocr": params["force_ocr"] if params["force_ocr"] else None,
-        "chunk_content": params["chunk_content"] if params["chunk_content"] else None,
-        "extract_tables": params["extract_tables"] if params["extract_tables"] else None,
-        "extract_entities": params["extract_entities"] if params["extract_entities"] else None,
-        "extract_keywords": params["extract_keywords"] if params["extract_keywords"] else None,
-        "auto_detect_language": params["auto_detect_language"] if params["auto_detect_language"] else None,
-        "keyword_count": params["keyword_count"] if params["keyword_count"] != 10 else None,
-        "max_chars": params["max_chars"] if params["max_chars"] != DEFAULT_MAX_CHARACTERS else None,
-        "max_overlap": params["max_overlap"] if params["max_overlap"] != DEFAULT_MAX_OVERLAP else None,
-        "ocr_backend": params["ocr_backend"],
-    }
+def _build_config_from_cli_and_file(params: dict[str, Any], file_config: dict[str, Any]) -> ExtractionConfig:  # noqa: C901
+    """Build V4 ExtractionConfig from CLI args and file config."""
+    base_config = build_extraction_config_from_dict(file_config) if file_config else ExtractionConfig()
 
-    ocr_backend = params["ocr_backend"]
-    match ocr_backend:
-        case "tesseract" if (
-            params["tesseract_lang"]
-            or params["tesseract_psm"] is not None
-            or params["tesseract_output_format"]
-            or params["enable_table_detection"]
-        ):
-            tesseract_config = {}
-            if params["tesseract_lang"]:
-                tesseract_config["language"] = params["tesseract_lang"]
-            if params["tesseract_psm"] is not None:
-                tesseract_config["psm"] = params["tesseract_psm"]
-            if params["tesseract_output_format"]:
-                tesseract_config["output_format"] = params["tesseract_output_format"]
-            if params["enable_table_detection"]:
-                tesseract_config["enable_table_detection"] = True
-            cli_args["tesseract_config"] = tesseract_config
-        case "easyocr" if params["easyocr_languages"]:
-            cli_args["easyocr_config"] = {"languages": params["easyocr_languages"].split(",")}
-        case "paddleocr" if params["paddleocr_languages"]:
-            cli_args["paddleocr_config"] = {"languages": params["paddleocr_languages"].split(",")}
+    config_overrides: dict[str, Any] = {}
 
-    return cli_args
+    if params.get("force_ocr"):
+        config_overrides["force_ocr"] = True
+
+    ocr_backend = params.get("ocr_backend")
+    if ocr_backend == "none":
+        config_overrides["ocr"] = None
+    elif ocr_backend == "tesseract":
+        tesseract_params = {}
+        if params.get("tesseract_lang"):
+            tesseract_params["language"] = params["tesseract_lang"]
+        if params.get("tesseract_psm") is not None:
+            tesseract_params["psm"] = PSMMode(params["tesseract_psm"])
+        if params.get("tesseract_output_format"):
+            tesseract_params["output_format"] = params["tesseract_output_format"]
+        if params.get("enable_table_detection"):
+            tesseract_params["enable_table_detection"] = True
+        config_overrides["ocr"] = TesseractConfig(**tesseract_params) if tesseract_params else TesseractConfig()
+    elif ocr_backend == "easyocr" and params.get("easyocr_languages"):
+        languages = tuple(params["easyocr_languages"].split(","))
+        config_overrides["ocr"] = EasyOCRConfig(language=languages)
+    elif ocr_backend == "paddleocr" and params.get("paddleocr_languages"):
+        language = params["paddleocr_languages"]
+        config_overrides["ocr"] = PaddleOCRConfig(language=language)
+
+    if params.get("chunk_content"):
+        max_chars = params.get("max_chars", DEFAULT_MAX_CHARACTERS)
+        max_overlap = params.get("max_overlap", DEFAULT_MAX_OVERLAP)
+        config_overrides["chunking"] = ChunkingConfig(max_chars=max_chars, max_overlap=max_overlap)
+
+    if params.get("extract_tables"):
+        config_overrides["tables"] = TableExtractionConfig()
+
+    if params.get("extract_entities"):
+        config_overrides["entities"] = EntityExtractionConfig()
+
+    if params.get("extract_keywords"):
+        keyword_count = params.get("keyword_count", 10)
+        config_overrides["keywords"] = KeywordExtractionConfig(count=keyword_count)
+
+    if params.get("auto_detect_language"):
+        config_overrides["language_detection"] = LanguageDetectionConfig()
+
+    if config_overrides:
+        return msgspec.structs.replace(base_config, **config_overrides)
+
+    return base_config
 
 
 def _perform_extraction(file: Path | None, extraction_config: ExtractionConfig, verbose: bool) -> ExtractionResult:
@@ -168,7 +195,6 @@ def _perform_extraction(file: Path | None, extraction_config: ExtractionConfig, 
             input_text = sys.stdin.read()
             input_bytes = input_text.encode("utf-8")
 
-        # Detect MIME type from content
         content_str = input_bytes.decode("utf-8", errors="ignore").lower()
         if "<html" in content_str or "<!doctype html" in content_str or "<body" in content_str:
             mime_type = "text/html"
@@ -181,7 +207,6 @@ def _perform_extraction(file: Path | None, extraction_config: ExtractionConfig, 
         else:
             mime_type = "text/plain"
 
-        # Use progress display if possible, fallback to simple extraction on Windows issues
         try:
             with Progress(
                 SpinnerColumn(),
@@ -192,10 +217,8 @@ def _perform_extraction(file: Path | None, extraction_config: ExtractionConfig, 
                 progress.add_task("Extracting text...", total=None)
                 return extract_bytes_sync(input_bytes, mime_type, config=extraction_config)
         except (OSError, RuntimeError):  # pragma: no cover
-            # Fallback for Windows console issues
             return extract_bytes_sync(input_bytes, mime_type, config=extraction_config)
     else:
-        # Use progress display if possible, fallback to simple extraction on Windows issues
         try:
             with Progress(
                 SpinnerColumn(),
@@ -206,7 +229,6 @@ def _perform_extraction(file: Path | None, extraction_config: ExtractionConfig, 
                 progress.add_task(f"Extracting text from {file.name}...", total=None)
                 return extract_file_sync(str(file), config=extraction_config)
         except (OSError, RuntimeError):  # pragma: no cover
-            # Fallback for Windows console issues
             return extract_file_sync(str(file), config=extraction_config)
 
 
@@ -320,9 +342,7 @@ def extract(ctx: click.Context, /, **kwargs: Any) -> None:
     try:
         file_config = _load_config(params["config_file"], params["verbose"])
 
-        cli_args = _build_cli_args(params)
-
-        extraction_config = build_extraction_config(file_config, cli_args)
+        extraction_config = _build_config_from_cli_and_file(params, file_config)
 
         result = _perform_extraction(kwargs.get("file"), extraction_config, params["verbose"])
 
