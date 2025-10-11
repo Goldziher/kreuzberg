@@ -31,7 +31,7 @@ use email::{
 use excel::{
     ExcelSheetDTO, ExcelWorkbookDTO, benchmark_excel_reading, excel_to_markdown, read_excel_bytes, read_excel_file,
 };
-use html::convert_html_to_markdown;
+use html::{convert_html_to_markdown, process_html};
 use image_preprocessing::{
     ExtractionConfigDTO, ImagePreprocessingMetadataDTO, batch_normalize_images, calculate_optimal_dpi,
     compress_image_auto, compress_image_jpeg, compress_image_png, convert_format, detect_image_format, load_image,
@@ -109,6 +109,7 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(table_from_arrow_to_markdown, m)?)?;
     m.add_function(wrap_pyfunction!(convert_html_to_markdown, m)?)?;
+    m.add_function(wrap_pyfunction!(process_html, m)?)?;
 
     m.add_function(wrap_pyfunction!(read_excel_file, m)?)?;
     m.add_function(wrap_pyfunction!(read_excel_bytes, m)?)?;

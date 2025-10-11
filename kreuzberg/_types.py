@@ -496,7 +496,7 @@ class TableCell(TypedDict):
 
 
 class TableData(TypedDict):
-    cropped_image: Image
+    cropped_image: Image | None
     """The cropped image of the table."""
     df: DataFrame | None
     """The table data as a polars DataFrame."""

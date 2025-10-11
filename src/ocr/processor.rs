@@ -342,18 +342,7 @@ impl OCRProcessor {
                     .get_hocr_text(0)
                     .map_err(|e| OCRError::ProcessingFailed(format!("Failed to extract hOCR: {}", e)))?;
 
-                let options = if config.enable_table_detection {
-                    Some(html_to_markdown_rs::ConversionOptions {
-                        hocr_extract_tables: true,
-                        hocr_table_column_threshold: config.table_column_threshold,
-                        hocr_table_row_threshold_ratio: config.table_row_threshold_ratio,
-                        ..Default::default()
-                    })
-                } else {
-                    None
-                };
-
-                let markdown = convert_hocr_to_markdown(&hocr, options)?;
+                let markdown = convert_hocr_to_markdown(&hocr, None)?;
                 (markdown, "text/markdown".to_string())
             }
             "hocr" => {
@@ -403,7 +392,6 @@ impl OCRProcessor {
                         metadata.insert("table_cols".to_string(), table[0].len().to_string());
 
                         let markdown_table = table_to_markdown(&table);
-
                         tables.push(TableDTO {
                             cells: table,
                             markdown: markdown_table,

@@ -97,6 +97,16 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
                 metadata_dict[str(key)] = value
 
         tables_data: list[TableData] = []
+        if dto.tables:
+            tables_data.extend(
+                TableData(
+                    cropped_image=None,
+                    df=None,
+                    page_number=table.page_number,
+                    text=table.markdown,
+                )
+                for table in dto.tables
+            )
 
         return ExtractionResult(
             content=dto.content,

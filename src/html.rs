@@ -1,10 +1,12 @@
 use html_to_markdown_rs::{
-    CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, ListIndentType, NewlineStyle, ParsingOptions,
-    PreprocessingOptions, PreprocessingPreset, WhitespaceMode, convert as convert_html,
+    CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, InlineImage,
+    InlineImageConfig as RustInlineImageConfig, InlineImageFormat, InlineImageWarning, ListIndentType, NewlineStyle,
+    PreprocessingOptions, PreprocessingPreset, Result as HtmlResult, WhitespaceMode, convert as convert_html,
+    convert_with_inline_images,
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict};
+use pyo3::types::{PyAny, PyBytes, PyDict, PyList};
 
 fn extract_string_list(value: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
     if value.is_none() {
@@ -94,8 +96,12 @@ fn parse_preprocessing_preset(value: &Bound<'_, PyAny>) -> PyResult<Preprocessin
     }
 }
 
-fn build_conversion_options(dict: &Bound<'_, PyDict>) -> PyResult<ConversionOptions> {
+fn build_conversion_options(dict: Option<Bound<'_, PyDict>>) -> PyResult<ConversionOptions> {
     let mut options = ConversionOptions::default();
+
+    let Some(dict) = dict else {
+        return Ok(options);
+    };
 
     if let Some(value) = dict.get_item("heading_style")? {
         options.heading_style = parse_heading_style(&value)?;
@@ -172,21 +178,16 @@ fn build_conversion_options(dict: &Bound<'_, PyDict>) -> PyResult<ConversionOpti
     if let Some(value) = dict.get_item("keep_inline_images_in")? {
         options.keep_inline_images_in = extract_string_list(&value)?;
     }
-    if let Some(value) = dict.get_item("hocr_extract_tables")? {
-        options.hocr_extract_tables = value.extract::<bool>()?;
-    }
-    if let Some(value) = dict.get_item("hocr_table_column_threshold")? {
-        options.hocr_table_column_threshold = value.extract::<u32>()?;
-    }
-    if let Some(value) = dict.get_item("hocr_table_row_threshold_ratio")? {
-        options.hocr_table_row_threshold_ratio = value.extract::<f64>()?;
-    }
     if let Some(value) = dict.get_item("debug")? {
         options.debug = value.extract::<bool>()?;
     }
     if let Some(value) = dict.get_item("strip_tags")? {
         options.strip_tags = extract_string_list(&value)?;
     }
+    if let Some(value) = dict.get_item("encoding")? {
+        options.encoding = value.extract::<String>()?;
+    }
+
     if let Some(value) = dict.get_item("preprocessing")? {
         let prep_dict = value.downcast::<PyDict>()?;
         let mut preprocessing = PreprocessingOptions::default();
@@ -205,29 +206,129 @@ fn build_conversion_options(dict: &Bound<'_, PyDict>) -> PyResult<ConversionOpti
         options.preprocessing = preprocessing;
     }
 
-    if let Some(value) = dict.get_item("parsing")? {
-        let parsing_dict = value.downcast::<PyDict>()?;
-        let mut parsing = ParsingOptions::default();
-        if let Some(encoding) = parsing_dict.get_item("encoding")? {
-            parsing.encoding = encoding.extract::<String>()?;
+    Ok(options)
+}
+
+fn inline_image_format_to_str(format: &InlineImageFormat) -> String {
+    match format {
+        InlineImageFormat::Png => "png".to_string(),
+        InlineImageFormat::Jpeg => "jpeg".to_string(),
+        InlineImageFormat::Gif => "gif".to_string(),
+        InlineImageFormat::Bmp => "bmp".to_string(),
+        InlineImageFormat::Webp => "webp".to_string(),
+        InlineImageFormat::Svg => "svg".to_string(),
+        InlineImageFormat::Other(custom) => {
+            let trimmed = custom.trim();
+            if trimmed.is_empty() {
+                return "bin".to_string();
+            }
+
+            let lower = trimmed.to_ascii_lowercase();
+            if lower.starts_with("svg") {
+                return "svg".to_string();
+            }
+
+            let mut candidate = lower.as_str();
+
+            if let Some(idx) = candidate.find(['+', ';']) {
+                candidate = &candidate[..idx];
+            }
+
+            if let Some(idx) = candidate.rfind('.') {
+                candidate = &candidate[idx + 1..];
+            }
+
+            candidate = candidate.trim_start_matches("x-");
+
+            if candidate.is_empty() {
+                "bin".to_string()
+            } else {
+                candidate.to_string()
+            }
         }
-        if let Some(parser) = parsing_dict.get_item("parser")? {
-            parsing.parser = parser.extract::<Option<String>>()?;
-        }
-        options.parsing = parsing;
+    }
+}
+
+fn inline_image_to_py(py: Python<'_>, image: InlineImage) -> PyResult<Py<PyDict>> {
+    let dict = PyDict::new(py);
+    dict.set_item("data", PyBytes::new(py, &image.data))?;
+    dict.set_item("format", inline_image_format_to_str(&image.format))?;
+
+    match image.filename {
+        Some(filename) => dict.set_item("filename", filename)?,
+        None => dict.set_item("filename", py.None())?,
     }
 
-    Ok(options)
+    match image.description {
+        Some(description) => dict.set_item("description", description)?,
+        None => dict.set_item("description", py.None())?,
+    }
+
+    if let Some((width, height)) = image.dimensions {
+        dict.set_item("dimensions", (width, height))?;
+    } else {
+        dict.set_item("dimensions", py.None())?;
+    }
+
+    let attributes = PyDict::new(py);
+    for (key, value) in image.attributes {
+        attributes.set_item(key, value)?;
+    }
+    dict.set_item("attributes", attributes)?;
+
+    Ok(dict.into())
+}
+
+fn convert_html_inner(html: &str, options: ConversionOptions) -> HtmlResult<String> {
+    convert_html(html, Some(options))
+}
+
+fn convert_with_images_inner(
+    html: &str,
+    options: ConversionOptions,
+    max_image_size: u64,
+) -> HtmlResult<(String, Vec<InlineImage>, Vec<InlineImageWarning>)> {
+    let mut config = RustInlineImageConfig::new(max_image_size);
+    config.filename_prefix = Some("inline-image".to_string());
+    let extraction = convert_with_inline_images(html, Some(options), config)?;
+    Ok((extraction.markdown, extraction.inline_images, extraction.warnings))
 }
 
 #[pyfunction]
 pub fn convert_html_to_markdown(html: &str, options: Option<Bound<'_, PyDict>>) -> PyResult<String> {
-    let conversion_options = if let Some(dict) = options {
-        build_conversion_options(&dict)?
-    } else {
-        ConversionOptions::default()
-    };
-
-    convert_html(html, Some(conversion_options))
+    let conversion_options = build_conversion_options(options)?;
+    convert_html_inner(html, conversion_options)
         .map_err(|err| PyValueError::new_err(format!("Failed to convert HTML to Markdown: {err}")))
+}
+
+#[pyfunction]
+#[pyo3(signature = (html, options=None, extract_images=false, max_image_size=10 * 1024 * 1024))]
+pub fn process_html(
+    py: Python<'_>,
+    html: &str,
+    options: Option<Bound<'_, PyDict>>,
+    extract_images: bool,
+    max_image_size: usize,
+) -> PyResult<(String, Py<PyList>, Vec<String>)> {
+    let conversion_options = build_conversion_options(options)?;
+
+    if extract_images {
+        let (markdown, images, warnings) = convert_with_images_inner(html, conversion_options, max_image_size as u64)
+            .map_err(|err| {
+            PyValueError::new_err(format!("Failed to convert HTML to Markdown with images: {err}"))
+        })?;
+
+        let py_images = PyList::empty(py);
+        for image in images {
+            py_images.append(inline_image_to_py(py, image)?)?;
+        }
+
+        let warning_messages = warnings.into_iter().map(|warning| warning.message).collect();
+
+        Ok((markdown, py_images.into(), warning_messages))
+    } else {
+        let markdown = convert_html_inner(html, conversion_options)
+            .map_err(|err| PyValueError::new_err(format!("Failed to convert HTML to Markdown: {err}")))?;
+        Ok((markdown, PyList::empty(py).into(), Vec::new()))
+    }
 }
