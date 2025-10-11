@@ -1,0 +1,33 @@
+name: UV Sync
+description: Sync project dependencies with uv and install the package editable
+inputs:
+  retries:
+    description: Number of attempts for uv sync
+    required: false
+    default: "3"
+runs:
+  using: composite
+  steps:
+    - name: Sync dependencies with uv
+      shell: bash
+      env:
+        UV_SYNC_MAX_RETRIES: ${{ inputs.retries }}
+      run: |
+        set -euo pipefail
+        if [[ "$RUNNER_OS" == "Windows" && -d ".venv" ]]; then
+          rm -rf .venv
+        fi
+        attempt=1
+        while true; do
+          if uv sync --all-packages --all-groups --all-extras; then
+            break
+          fi
+          if [[ $attempt -ge "$UV_SYNC_MAX_RETRIES" ]]; then
+            echo "uv sync failed after $attempt attempts" >&2
+            exit 1
+          fi
+          echo "uv sync failed (attempt $attempt), retrying in 15 seconds..."
+          sleep 15
+          attempt=$((attempt + 1))
+        done
+        uv pip install --editable .

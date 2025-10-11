@@ -45,7 +45,7 @@ repos:
     rev: "v3.6.2"
     hooks:
       - id: prettier
-        exclude: ^tests|^.idea|^migrations|^.git|README.md|^docs
+        exclude: ^tests|^.idea|^migrations|^.git|^docs|\.md$
   - repo: https://github.com/tox-dev/pyproject-fmt
     rev: "v2.10.0"
     hooks:
@@ -74,6 +74,12 @@ repos:
             --arg-type-hints-in-docstring=False,
           ]
         exclude: ^benchmarks/|^kreuzberg/_|^tests/|^scripts/|^run_benchmarks\.py
+  - repo: https://github.com/FeryET/pre-commit-rust
+    rev: v1.2.1
+    hooks:
+      - id: fmt
+      - id: cargo-check
+      - id: clippy
   - repo: local
     hooks:
       - id: mypy

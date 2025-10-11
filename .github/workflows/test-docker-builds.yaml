@@ -18,8 +18,11 @@ jobs:
             extras: "cli"
             image_name: "goldziher/kreuzberg"
           - name: core
-            extras: "cli,chunking,crypto,document-classification,langdetect,additional-extensions"
+            extras: "cli chunking crypto document-classification langdetect additional-extensions"
             image_name: "goldziher/kreuzberg-core"
+          - name: full
+            extras: "all"
+            image_name: "goldziher/kreuzberg-full"
 
     steps:
       - name: Free up disk space

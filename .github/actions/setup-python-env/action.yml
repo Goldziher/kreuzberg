@@ -1,0 +1,41 @@
+name: Setup Python Environment
+description: Install uv, set up Python, and cache the local virtual environment
+inputs:
+  python-version:
+    description: Python version spec passed to actions/setup-python
+    required: true
+  cache-prefix:
+    description: Prefix for cache keys
+    required: false
+    default: python-dependencies
+outputs:
+  python-version:
+    description: Resolved Python version
+    value: ${{ steps.setup-python.outputs.python-version }}
+  cache-hit:
+    description: Whether the dependency cache was restored
+    value: ${{ steps.cache-python.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+
+    - name: Set up Python
+      id: setup-python
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Cache Python dependencies
+      id: cache-python
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('uv.lock') }}
+        restore-keys: |
+          ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-
