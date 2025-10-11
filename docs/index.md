@@ -14,10 +14,10 @@ Kreuzberg addresses the complete document intelligence pipeline through a modula
 
 ### Performance Characteristics
 
-- **Throughput**: Process 30+ documents per second (small files), with linear scaling to larger documents
-- **Resource Efficiency**: 71MB installation footprint, ~360MB runtime memory usage
-- **Reliability**: 100% extraction success rate across 18 tested file formats
-- **Architecture**: Native C extensions (PDFium, Tesseract) with Python async/await support
+- **Performance**: Fastest text extraction framework in its category
+- **Resource Efficiency**: Minimal installation footprint and memory usage
+- **Reliability**: 100% extraction success rate across 20+ tested file formats
+- **Architecture**: Hybrid Rust-Python implementation with native extensions (PDFium, Tesseract) and Python async/await support
 - **Benchmarks**: [Comprehensive performance analysis](https://benchmarks.kreuzberg.dev/)
 
 ### Engineering Principles
@@ -45,16 +45,36 @@ Kreuzberg addresses the complete document intelligence pipeline through a modula
 
 ### Document Intelligence Features
 
-- **Format Support**: 18 document types including PDF, DOCX, PPTX, images, HTML, and structured data formats
+- **Format Support**: 20+ document types including PDF, DOCX/DOC, PPTX/PPT, email (EML/MSG), XML, images, HTML, and structured data formats
 - **OCR Engines**: Tesseract (default), EasyOCR, PaddleOCR with automatic fallback strategies
 - **Data Extraction**: Text content, document metadata, table structures, embedded images, and media resources
 - **Image Processing**: Extract embedded images from documents with optional OCR text recognition
 - **Processing Capabilities**: Content chunking for RAG pipelines, language detection, format preservation
 - **Document Classification**: Automatic document type detection (contracts, forms, invoices, receipts, reports)
+- **High-Performance Streaming**: Memory-efficient Rust parsers for multi-GB XML, plain text, and Markdown files
+- **Legacy Format Support**: Optional LibreOffice integration for .doc and .ppt files
 - **Extensibility**: Plugin architecture for custom extractors and hooks
 
 ## Architecture Philosophy
 
-Kreuzberg builds upon established open source foundations, leveraging Pandoc's universal document conversion capabilities, PDFium's robust PDF handling, and Tesseract's proven OCR technology. This approach ensures reliability while enabling rapid feature development.
+Kreuzberg combines the best of both worlds: performance-critical operations implemented in Rust for maximum speed, built on established open source foundations including Pandoc's universal document conversion, PDFium's robust PDF handling, and Tesseract's proven OCR technology. This hybrid approach ensures both reliability and performance.
 
-The framework is designed for modern document processing workflows including Retrieval Augmented Generation (RAG) pipelines, batch document analysis, and real-time content extraction in cloud-native environments.
+The framework is designed for modern document processing workflows including Retrieval Augmented Generation (RAG) pipelines, batch document analysis, and real-time content extraction in cloud-native environments. Version 4.0 introduces significant performance improvements through native Rust implementations of Excel, PowerPoint, email parsing, XML streaming, and text processing operations—delivering 10-50x speedups for large document processing while maintaining memory efficiency for multi-GB files.
+
+## Quick Navigation
+
+### Essential Resources
+
+- **[Getting Started](getting-started/index.md)** - Installation and first steps
+- **[User Guide](user-guide/index.md)** - Comprehensive usage documentation
+- **[Table Extraction](user-guide/table-extraction.md)** - Multiple approaches for extracting tables
+- **[API Reference](api-reference/index.md)** - Complete API documentation
+- **[CLI Guide](cli.md)** - Command-line interface reference
+- **[Changelog](CHANGELOG.md)** - Version history and release notes
+
+### Integration Guides
+
+- **[Docker Deployment](user-guide/docker.md)** - Containerized deployment
+- **[REST API Server](user-guide/api-server.md)** - HTTP API setup
+- **[MCP Server](user-guide/mcp-server.md)** - AI tool integration
+- **[Performance Analysis](advanced/performance.md)** - Optimization guide

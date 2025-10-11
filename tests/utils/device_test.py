@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 import pytest
@@ -19,6 +18,7 @@ from kreuzberg._utils._device import (
     is_backend_gpu_compatible,
     validate_device_request,
 )
+from kreuzberg._utils._torch import is_cuda_available, is_mps_available
 from kreuzberg.exceptions import ValidationError
 
 
@@ -45,39 +45,49 @@ def test_device_info_with_gpu_details() -> None:
     assert device.name == "NVIDIA GeForce RTX 3080"
 
 
-@patch("kreuzberg._utils._device._is_cuda_available", return_value=False)
-@patch("kreuzberg._utils._device._is_mps_available", return_value=False)
-def test_detect_devices_cpu_only(mock_mps: Mock, mock_cuda: Mock) -> None:
-    devices = detect_available_devices()
-    assert len(devices) == 1
-    assert devices[0].device_type == "cpu"
-    assert devices[0].name == "CPU"
+def test_detect_devices_cpu_only() -> None:
+    with (
+        patch("kreuzberg._utils._device.is_cuda_available", return_value=False),
+        patch("kreuzberg._utils._device.is_mps_available", return_value=False),
+        patch("kreuzberg._utils._device._get_cuda_devices", return_value=[]),
+        patch("kreuzberg._utils._device._get_mps_device", return_value=None),
+    ):
+        devices = detect_available_devices()
+        assert len(devices) == 1
+        assert devices[0].device_type == "cpu"
+        assert devices[0].name == "CPU"
 
 
-@patch("kreuzberg._utils._device._is_cuda_available", return_value=True)
-@patch("kreuzberg._utils._device._is_mps_available", return_value=False)
-@patch("kreuzberg._utils._device._get_cuda_devices")
-def test_detect_devices_with_cuda(mock_get_cuda: Mock, mock_mps: Mock, mock_cuda: Mock) -> None:
-    mock_get_cuda.return_value = [
-        DeviceInfo(device_type="cuda", device_id=0, name="NVIDIA RTX 3080", memory_total=10.0)
-    ]
+def test_detect_devices_with_cuda() -> None:
+    with (
+        patch("kreuzberg._utils._device.is_cuda_available", return_value=True),
+        patch("kreuzberg._utils._device.is_mps_available", return_value=False),
+        patch("kreuzberg._utils._device._get_cuda_devices") as mock_get_cuda,
+        patch("kreuzberg._utils._device._get_mps_device", return_value=None),
+    ):
+        mock_get_cuda.return_value = [
+            DeviceInfo(device_type="cuda", device_id=0, name="NVIDIA RTX 3080", memory_total=10.0)
+        ]
 
-    devices = detect_available_devices()
-    assert len(devices) == 2
-    assert devices[0].device_type == "cuda"
-    assert devices[1].device_type == "cpu"
+        devices = detect_available_devices()
+        assert len(devices) == 2
+        assert devices[0].device_type == "cuda"
+        assert devices[1].device_type == "cpu"
 
 
-@patch("kreuzberg._utils._device._is_cuda_available", return_value=False)
-@patch("kreuzberg._utils._device._is_mps_available", return_value=True)
-@patch("kreuzberg._utils._device._get_mps_device")
-def test_detect_devices_with_mps(mock_get_mps: Mock, mock_mps: Mock, mock_cuda: Mock) -> None:
-    mock_get_mps.return_value = DeviceInfo(device_type="mps", name="Apple Silicon GPU (MPS)")
+def test_detect_devices_with_mps() -> None:
+    with (
+        patch("kreuzberg._utils._device.is_cuda_available", return_value=False),
+        patch("kreuzberg._utils._device.is_mps_available", return_value=True),
+        patch("kreuzberg._utils._device._get_cuda_devices", return_value=[]),
+        patch("kreuzberg._utils._device._get_mps_device") as mock_get_mps,
+    ):
+        mock_get_mps.return_value = DeviceInfo(device_type="mps", name="Apple Silicon GPU (MPS)")
 
-    devices = detect_available_devices()
-    assert len(devices) == 2
-    assert devices[0].device_type == "mps"
-    assert devices[1].device_type == "cpu"
+        devices = detect_available_devices()
+        assert len(devices) == 2
+        assert devices[0].device_type == "mps"
+        assert devices[1].device_type == "cpu"
 
 
 @patch("kreuzberg._utils._device.detect_available_devices")
@@ -160,35 +170,22 @@ def test_validate_device_memory_limit_warns_low_available(mock_memory: Mock, moc
 
 
 def test_is_cuda_available_true() -> None:
-    with patch("kreuzberg._utils._device._is_cuda_available", return_value=True):
-        from kreuzberg._utils._device import _is_cuda_available
-
-        assert _is_cuda_available() is True
+    mock_torch = Mock()
+    mock_torch.cuda.is_available.return_value = True
+    with patch("kreuzberg._utils._torch.torch", mock_torch):
+        assert is_cuda_available() is True
 
 
 def test_is_cuda_available_false() -> None:
-    with patch("kreuzberg._utils._device._is_cuda_available", return_value=False):
-        from kreuzberg._utils._device import _is_cuda_available
+    mock_torch = Mock()
+    mock_torch.cuda.is_available.return_value = False
+    with patch("kreuzberg._utils._torch.torch", mock_torch):
+        assert is_cuda_available() is False
 
-        assert _is_cuda_available() is False
 
-
-def test_is_cuda_available_no_torch(mocker: MockerFixture) -> None:
-    original_import = __builtins__["__import__"]  # type: ignore[index]
-
-    def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
-        if name == "torch":
-            raise ImportError("No module named 'torch'")
-        return original_import(name, *args, **kwargs)
-
-    mocker.patch("builtins.__import__", side_effect=mock_import)
-
-    if "torch" in sys.modules:
-        mocker.patch.dict("sys.modules", {"torch": None})
-
-    from kreuzberg._utils._device import _is_cuda_available
-
-    assert _is_cuda_available() is False
+def test_is_cuda_available_no_torch() -> None:
+    with patch("kreuzberg._utils._torch.torch", None):
+        assert is_cuda_available() is False
 
 
 def test_get_cuda_devices() -> None:
@@ -211,35 +208,22 @@ def test_get_cuda_devices() -> None:
 
 
 def test_is_mps_available_true() -> None:
-    with patch("kreuzberg._utils._device._is_mps_available", return_value=True):
-        from kreuzberg._utils._device import _is_mps_available
-
-        assert _is_mps_available() is True
+    mock_torch = Mock()
+    mock_torch.backends.mps.is_available.return_value = True
+    with patch("kreuzberg._utils._torch.torch", mock_torch):
+        assert is_mps_available() is True
 
 
 def test_is_mps_available_false() -> None:
-    with patch("kreuzberg._utils._device._is_mps_available", return_value=False):
-        from kreuzberg._utils._device import _is_mps_available
-
-        assert _is_mps_available() is False
+    mock_torch = Mock()
+    mock_torch.backends.mps.is_available.return_value = False
+    with patch("kreuzberg._utils._torch.torch", mock_torch):
+        assert is_mps_available() is False
 
 
 def test_is_mps_available_no_torch(mocker: MockerFixture) -> None:
-    original_import = __builtins__["__import__"]  # type: ignore[index]
-
-    def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
-        if name == "torch":
-            raise ImportError("No module named 'torch'")
-        return original_import(name, *args, **kwargs)
-
-    mocker.patch("builtins.__import__", side_effect=mock_import)
-
-    if "torch" in sys.modules:
-        mocker.patch.dict("sys.modules", {"torch": None})
-
-    from kreuzberg._utils._device import _is_mps_available
-
-    assert _is_mps_available() is False
+    with patch("kreuzberg._utils._torch.torch", None):
+        assert is_mps_available() is False
 
 
 def test_get_mps_device() -> None:

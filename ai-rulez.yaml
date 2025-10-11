@@ -202,6 +202,52 @@ agents:
     targets:
       - CLAUDE.md
       - .claude/**/*.md
+  - description: Expert Rust developer for high-performance system components
+    id: rust-engineer
+    name: rust-engineer
+    priority: critical
+    system_prompt: |
+      You are an expert Rust engineer specializing in the Kreuzberg text extraction library.
+
+      Your expertise includes:
+      - **PyO3 integration**: Python bindings with abi3-py310 for stable API
+      - **Performance optimization**: SIMD, parallelism, zero-copy operations
+      - **Text processing**: Regex, string manipulation, character encoding
+      - **File parsing**: Binary formats, structured data, streaming
+      - **Memory management**: Efficient allocation, resource cleanup
+      - **Error handling**: Result types, proper error propagation
+
+      Key architectural knowledge:
+      - Rust code in src/ with Python bindings
+      - PyO3 macros for Python function exports
+      - Edition 2024 with let-chains and modern features
+      - Maturin for building Python extensions
+      - Integration with existing Python codebase
+
+      Development commands:
+      - Build: maturin develop --release
+      - Test: cargo test --release
+      - Format: cargo fmt
+      - Lint: cargo clippy -- -D warnings
+      - Check: cargo check
+
+      IMPORTANT: Follow these principles strictly:
+      - Zero-cost abstractions where possible
+      - Proper error handling with Result types
+      - Memory safety without performance penalty
+      - Clear, documented public APIs
+      - Comprehensive test coverage
+      - Integration with existing Python patterns
+
+      Focus on:
+      - High-performance text and data processing
+      - Efficient binary format parsing
+      - Optimized algorithms and data structures
+      - Safe concurrent operations
+      - Clear Python integration points
+    targets:
+      - CLAUDE.md
+      - .claude/**/*.md
   - description: Optimizes performance and resource usage
     id: performance-optimizer
     name: performance-optimizer
@@ -256,7 +302,7 @@ agents:
 metadata:
   description: A text extraction library supporting PDFs, images, office documents and more
   name: Kreuzberg
-  version: 3.5.0
+  version: 4.0.0
 outputs:
   - path: CLAUDE.md
     template:
@@ -332,6 +378,7 @@ outputs:
         ## {{ .Name }}
         {{ .Content }}
         {{ end }}
+  - path: AGENTS.md
   - naming_scheme: "{priority:02d}-{name}.md"
     path: .claude/agents/
     template:
@@ -354,7 +401,7 @@ rules:
   - content: |
       ### Dependencies
       - Install dependencies: `uv sync`
-      - Install with all optional dependencies: `uv sync --all-packages --all-extras --all-groups`
+      - Install with all optional dependencies: `uv sync --all-extras`
 
       ### Testing
       - Run all tests: `pytest`
@@ -376,6 +423,7 @@ rules:
       ### Documentation
       - Build docs: `uv run mkdocs build --clean --strict`
       - Serve docs locally: `uv run mkdocs serve`
+      - Install doc dependencies: `uv sync --group doc`
     name: Development Commands
     priority: critical
   - content: |
@@ -412,14 +460,16 @@ rules:
       5. **Configuration**: `ExtractionConfig` dataclass controls all extraction behavior
 
       ### Key Components
-      - **Extractors**: Specialized classes for each file type (PDF, image, HTML, etc.)
+      - **Extractors**: Specialized classes for each file type (PDF, image, HTML, XML, plain text, etc.)
       - **OCR Backends**: Pluggable OCR engines with separate configuration classes
-      - **GMFT Integration**: Table extraction using GMFT library for PDFs
+      - **Vision-Based Table Extraction**: Vision-based table extraction using vendored models (vision-tables package)
       - **Chunking**: Text splitting functionality in `_chunker.py`
       - **Language Detection**: Automatic language detection using fast-langdetect
       - **Async/Sync**: Primary async implementation with sync wrappers in `_utils/_sync.py`
       - **API Server**: REST API using Litestar framework in `_api/main.py`
       - **CLI**: Command-line interface for batch processing and automation
+      - **Rust Streaming Parsers**: Memory-efficient parsers for XML (`src/xml.rs`) and plain text/markdown (`src/text.rs`)
+      - **LibreOffice Integration**: Optional legacy Office format support via LibreOffice conversion
 
       ### Adding New Features
       - New extractors: Inherit from `BaseExtractor` and register with `ExtractorRegistry`
@@ -437,9 +487,64 @@ rules:
         - User reports about these errors help improve the library
         - Never suppress or handle these gracefully - they must surface to users
         - SystemExit, KeyboardInterrupt, MemoryError also always bubble up
+
+      ### OSError Handling Decision Tree
+
+      **General Rule**: All OSError instances MUST bubble up unchanged (never wrap in ParsingError).
+
+      **Exception Patterns**:
+
+      1. **Rust Library Misuse (Calamine/Excel)**:
+         - Calamine incorrectly raises OSError for "Cannot detect file format" (should be ValueError)
+         - Pattern: Always bubble up (library limitation, users should report)
+         - Example: `kreuzberg/_extractors/_spread_sheet.py:88`
+         ```python
+         except (OSError, RuntimeError, SystemExit, KeyboardInterrupt, MemoryError):
+             raise  # Always bubble up - even if Calamine misuses OSError
+         ```
+
+      2. **Subprocess Analysis (LibreOffice/Pandoc)**:
+         - Analyze stderr/stdout for format/parsing keywords
+         - If contains "format", "unsupported", "error:", "failed" → ParsingError
+         - Otherwise → OSError (true system error)
+         - Example: `kreuzberg/_utils/_libreoffice.py:75-88`
+         ```python
+         if any(keyword in stderr.lower() for keyword in ["format", "unsupported", "error:", "failed"]):
+             raise ParsingError(...)  # Parsing issue detected
+         raise OSError(...)  # True system error
+         ```
+
+      3. **Cache Operations**:
+         - OSError when reading/writing cache → silently ignore (cache is optional)
+         - Example: `kreuzberg/_utils/_cache.py:142`
+         ```python
+         except (OSError, ValueError, KeyError):
+             pass  # Cache read failure - continue without cache
+         ```
+
+      4. **Optional Dependencies**:
+         - OSError from missing system tools (tesseract, pandoc) → already raised as MissingDependencyError
+         - OSError from model loading (PyTorch) → always bubble up
+
+      ### Code Comment Requirements
+
+      When catching OSError, add a comment explaining the decision:
+      ```python
+      except (OSError, RuntimeError):
+          raise  # OSError/RuntimeError must bubble up - system errors need user reports ~keep
+
+      except OSError:
+          pass  # Cache failure - safe to ignore, cache is optional fallback ~keep
+
+      # Subprocess error analysis - wrap only if format/parsing error detected ~keep
+      if "format" in stderr.lower():
+          raise ParsingError(...)
+      raise OSError(...)
+      ```
+
       - **Common exceptions**:
         - `ValidationError`: Configuration or input validation failures
-        - `ParsingError`: Document parsing failures
+        - `ParsingError`: Document parsing failures (NOT for library OSError misuse)
         - `OCRError`: OCR processing failures
         - `MissingDependencyError`: Missing optional dependencies
     name: Error Handling
@@ -517,11 +622,11 @@ rules:
       - **CI**: Comprehensive testing across multiple Python versions and platforms
 
       ### Docker Variants
-      - **Core** (`goldziher/kreuzberg:v3.5.0`): API + Tesseract OCR
-      - **EasyOCR** (`goldziher/kreuzberg:v3.5.0-easyocr`): Core + EasyOCR
-      - **PaddleOCR** (`goldziher/kreuzberg:v3.5.0-paddle`): Core + PaddleOCR
-      - **GMFT** (`goldziher/kreuzberg:v3.5.0-gmft`): Core + table extraction
-      - **All** (`goldziher/kreuzberg:v3.5.0-all`): All features included
+      - **Core** (`goldziher/kreuzberg:v4.0.0`): API + Tesseract OCR
+      - **EasyOCR** (`goldziher/kreuzberg:v4.0.0-easyocr`): Core + EasyOCR
+      - **PaddleOCR** (`goldziher/kreuzberg:v4.0.0-paddle`): Core + PaddleOCR
+      - **Vision-Tables** (`goldziher/kreuzberg:v4.0.0-vision-tables`): Core + vision-based table extraction
+      - **All** (`goldziher/kreuzberg:v4.0.0-all`): All features included
 
       ### Manual Triggers
       - Docker builds: `gh workflow run "Publish Docker Images"`
@@ -529,6 +634,7 @@ rules:
 
       ### Common Issues
       - **Docker version detection**: Use `git tag --sort=-version:refname | head -n1` not `git describe`
+      - **Docs dependencies**: Use `uv sync --group doc` for proper mkdocs-material[imaging] support
       - **Docker Hub README**: May fail due to permissions, use `continue-on-error: true`
     name: CI/CD and Deployment
     priority: minimal
@@ -589,17 +695,20 @@ rules:
       [project.optional-dependencies]
       api = ["litestar[standard,structlog,opentelemetry]>=2.1.6"]
       cli = ["click>=8.2.1", "rich>=14.0.0", "tomli>=2.0.0; python_version<'3.11'"]
-      chunking = ["semantic-text-splitter>=0.27.0"]
       crypto = ["playa-pdf[crypto]>=0.6.4"]
       easyocr = ["easyocr>=1.7.2"]
-      gmft = ["gmft>=0.4.2"]
+      vision-tables = ["torch>=2.8.0", "transformers>=4.56.2"]
       langdetect = ["fast-langdetect>=0.2.0"]
       paddleocr = ["paddleocr>=3.1.0", "paddlepaddle>=3.1.0", "setuptools>=80.9.0"]
-      all = ["kreuzberg[api,chunking,cli,crypto,easyocr,gmft,langdetect,paddleocr]"]
+      all = ["kreuzberg[api,cli,crypto,easyocr,vision-tables,langdetect,paddleocr]"]
       ```
 
       ### Installation Patterns
-      - Development: `uv sync --all-packages --all-extras --all-groups`
+      - Basic: `pip install kreuzberg`
+      - With features: `pip install "kreuzberg[api,cli]"`
+      - With crypto support: `pip install "kreuzberg[crypto]"`
+      - All features: `pip install "kreuzberg[all]"`
+      - Development: `uv sync --all-extras`
 
       ### Dependencies
       - **Core**: pypdfium2, playa-pdf, python-pptx, etc.
@@ -617,12 +726,67 @@ rules:
     priority: minimal
 sections:
   - content: |
-      ### Automatic Language Detection (v3.5.0+)
+      ### XML Extraction (v4.0)
+      - **Implementation**: Rust streaming parser using `quick-xml` in `src/xml.rs`
+      - **Features**:
+        - Memory-efficient streaming for multi-GB XML files
+        - Element counting and unique element tracking
+        - Preserves text content while filtering XML structure
+        - Optional whitespace preservation
+      - **Extractors**: `XMLExtractor` in `_extractors/_xml.py`
+      - **Supported MIME types**: `application/xml`, `text/xml`, `image/svg+xml`
+      - **Metadata**: `element_count`, `unique_elements`
+
+      ### Plain Text & Markdown Extraction (v4.0)
+      - **Implementation**: Rust streaming parser in `src/text.rs`
+      - **Features**:
+        - Memory-efficient line-by-line streaming for multi-GB text files
+        - Markdown metadata extraction: headers, links, code blocks
+        - Word count, line count, character count tracking
+        - CRLF line ending support
+        - Lazy regex compilation for performance
+      - **Extractors**: `PlainTextExtractor` in `_extractors/_text.py`
+      - **Supported MIME types**: `text/plain`, `text/markdown`, `text/x-markdown`
+      - **Metadata (markdown only)**: `headers`, `links`, `code_blocks`, `line_count`, `word_count`, `character_count`
+
+      ### Legacy MS Office Support (v4.0)
+      - **Implementation**: LibreOffice conversion via `_extractors/_legacy_office.py`
+      - **System Dependency**: Requires LibreOffice installed (optional)
+      - **Supported Formats**:
+        - Word (.doc) - `LegacyWordExtractor`
+        - PowerPoint (.ppt) - `LegacyPresentationExtractor`
+      - **Process**: Converts legacy formats to modern formats (DOCX/PPTX) then extracts
+      - **Installation**:
+        - macOS: `brew install libreoffice`
+        - Ubuntu/Debian: `sudo apt-get install libreoffice`
+        - RHEL/CentOS/Fedora: `sudo dnf install libreoffice`
+        - Docker: Pre-installed in all Kreuzberg images
+      - **Detection**: Automatically detects LibreOffice availability
+
+      ### Hybrid Rust-Python Architecture (v4.0)
+      - **Rust Modules**:
+        - `src/xml.rs`: XML streaming parser with quick-xml
+        - `src/text.rs`: Plain text/markdown streaming parser
+        - `src/excel.rs`: Excel extraction with calamine
+        - `src/pptx/`: PowerPoint extraction with python-pptx
+        - `src/email.rs`: Email extraction with mail-parser
+        - `src/image_preprocessing.rs`: Image processing with image-rs
+        - `src/token_reduction.rs`: Token reduction algorithms
+        - `src/quality.rs`: Text quality scoring
+        - `src/string_utils.rs`: String utilities (safe_decode, mojibake fixing)
+        - `src/cache.rs`: Cache management utilities
+      - **Python Integration**: PyO3 bindings in `src/lib.rs`, type stubs in `_internal_bindings.pyi`
+      - **Build**: Maturin for building Rust extensions (`maturin develop --release`)
+      - **Benefits**: 10-50x performance improvements for text processing operations
+    id: v4-features
+    name: v4 Features (NEW)
+  - content: |
+      ### Automatic Language Detection (v4.0+)
       - **Feature**: Automatically detect languages in extracted text
       - **Implementation**: Uses fast-langdetect library for high-performance detection
       - **Configuration**:
-        - Enable with `auto_detect_language=True` in `ExtractionConfig`
-        - Configure via `LanguageDetectionConfig` for confidence thresholds
+        - Enable with `language_detection=LanguageDetectionConfig()` in `ExtractionConfig`
+        - Configure confidence thresholds via `LanguageDetectionConfig` parameters
       - **Output**: Results available in `ExtractionResult.detected_languages`
       - **Integration**: Works with all extraction methods and file types
     id: language-detection

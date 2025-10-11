@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ClassVar
 from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg._extractors._image import ImageExtractor
+from kreuzberg._extractors._legacy_office import LegacyPresentationExtractor, LegacyWordExtractor
 from kreuzberg._extractors._pandoc import (
     BibliographyExtractor,
     EbookExtractor,
@@ -21,6 +22,8 @@ from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._extractors._presentation import PresentationExtractor
 from kreuzberg._extractors._spread_sheet import SpreadSheetExtractor
 from kreuzberg._extractors._structured import StructuredDataExtractor
+from kreuzberg._extractors._text import PlainTextExtractor
+from kreuzberg._extractors._xml import XMLExtractor
 
 if TYPE_CHECKING:
     from kreuzberg._extractors._base import Extractor
@@ -28,15 +31,12 @@ if TYPE_CHECKING:
 
 
 class ExtractorRegistry:
-    """Registry for managing document extractors.
-
-    This class maintains a registry of extractors for different file types and provides
-    functionality to get the appropriate extractor for a given MIME type, as well as
-    add or remove custom extractors.
-    """
+    """Registry for managing document extractors."""
 
     _default_extractors: ClassVar[list[type[Extractor]]] = [
         PDFExtractor,
+        LegacyWordExtractor,
+        LegacyPresentationExtractor,
         OfficeDocumentExtractor,
         PresentationExtractor,
         SpreadSheetExtractor,
@@ -44,7 +44,9 @@ class ExtractorRegistry:
         EmailExtractor,
         StructuredDataExtractor,
         MarkdownExtractor,
+        PlainTextExtractor,
         ImageExtractor,
+        XMLExtractor,
         BibliographyExtractor,
         EbookExtractor,
         LaTeXExtractor,
@@ -58,15 +60,7 @@ class ExtractorRegistry:
     @classmethod
     @lru_cache
     def get_extractor(cls, mime_type: str | None, config: ExtractionConfig) -> Extractor | None:
-        """Get an appropriate extractor for the given MIME type.
-
-        Args:
-            mime_type: The MIME type to find an extractor for.
-            config: The extraction configuration.
-
-        Returns:
-            An extractor instance if one supports the MIME type, None otherwise.
-        """
+        """Get an appropriate extractor for the given MIME type."""
         extractors: list[type[Extractor]] = [
             *cls._registered_extractors,
             *cls._default_extractors,
@@ -80,21 +74,13 @@ class ExtractorRegistry:
 
     @classmethod
     def add_extractor(cls, extractor: type[Extractor]) -> None:
-        """Add a custom extractor to the registry.
-
-        Args:
-            extractor: The extractor class to add to the registry.
-        """
+        """Add a custom extractor to the registry."""
         cls._registered_extractors.append(extractor)
         cls.get_extractor.cache_clear()
 
     @classmethod
     def remove_extractor(cls, extractor: type[Extractor]) -> None:
-        """Remove a custom extractor from the registry.
-
-        Args:
-            extractor: The extractor class to remove from the registry.
-        """
+        """Remove a custom extractor from the registry."""
         try:
             cls._registered_extractors.remove(extractor)
             cls.get_extractor.cache_clear()

@@ -33,7 +33,6 @@ async def create_temp_file(
 
 @contextlib.asynccontextmanager
 async def temporary_file(extension: str, content: bytes | None = None) -> AsyncGenerator[Path, None]:
-    """Async context manager for temporary files with automatic cleanup."""
     file_path, unlink = await create_temp_file(extension, content)
     try:
         yield file_path
@@ -43,7 +42,6 @@ async def temporary_file(extension: str, content: bytes | None = None) -> AsyncG
 
 @contextlib.contextmanager
 def temporary_file_sync(extension: str, content: bytes | None = None) -> Generator[Path, None, None]:
-    """Sync context manager for temporary files with automatic cleanup."""
     fd, temp_path = tempfile.mkstemp(suffix=extension)
     try:
         if content:
@@ -59,6 +57,5 @@ def temporary_file_sync(extension: str, content: bytes | None = None) -> Generat
 
 @contextlib.contextmanager
 def temporary_directory() -> Generator[Path, None, None]:
-    """Context manager for temporary directories with automatic cleanup."""
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)

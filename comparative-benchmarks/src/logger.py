@@ -19,7 +19,6 @@ class LogLevel(str, Enum):
 
 @cache
 def _get_console() -> Console:
-    """Get or create the console instance lazily."""
     return Console()
 
 

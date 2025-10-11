@@ -126,10 +126,8 @@ def _extract_in_subprocess(
                     }
                     if valid_overrides:
                         try:
-                            # Try dataclass replace first
                             return replace(config, **valid_overrides)
                         except TypeError:
-                            # Fallback for non-dataclass configs (TypedDict)
                             config_dict = (
                                 asdict(config)
                                 if hasattr(config, "__dataclass_fields__")

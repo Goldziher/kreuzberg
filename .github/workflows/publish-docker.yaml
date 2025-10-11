@@ -17,12 +17,17 @@ on:
         required: true
         type: boolean
         default: true
+      build_full:
+        description: 'Build full image'
+        required: true
+        type: boolean
+        default: true
   release:
     types: [published]
 
 jobs:
   test-images:
-    uses: ./.github/workflows/docker-e2e-tests.yaml
+    uses: ./.github/workflows/docker-e2e-tests.yml
 
   build-and-publish:
     needs: test-images
@@ -47,6 +52,10 @@ jobs:
             extras: "cli chunking crypto document-classification langdetect additional-extensions"
             image_name: "goldziher/kreuzberg-core"
             should_build: ${{ github.event_name == 'release' || inputs.build_core == true }}
+          - name: full
+            extras: "all"
+            image_name: "goldziher/kreuzberg-full"
+            should_build: ${{ github.event_name == 'release' || inputs.build_full == true }}
 
     steps:
       - name: Free up disk space
@@ -154,7 +163,7 @@ jobs:
 
       - name: Update Docker Hub README
         if: ${{ matrix.should_build }}
-        uses: peter-evans/dockerhub-description@v5
+        uses: peter-evans/dockerhub-description@v4
         continue-on-error: true
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}

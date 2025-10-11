@@ -32,7 +32,7 @@ from kreuzberg import extract_file, ExtractionConfig, TesseractConfig
 
 async def extract_multilingual():
     # Configure for English and German text
-    config = ExtractionConfig(ocr_config=TesseractConfig(language="eng+deu"))
+    config = ExtractionConfig(ocr=TesseractConfig(language="eng+deu"))
 
     result = await extract_file("multilingual.pdf", config=config)
     return result.content
@@ -41,7 +41,7 @@ async def extract_multilingual():
 from kreuzberg import PaddleOCRConfig
 
 async def extract_chinese():
-    config = ExtractionConfig(ocr_backend="paddleocr", ocr_config=PaddleOCRConfig(language="ch"))
+    config = ExtractionConfig(ocr=PaddleOCRConfig(language="ch"))
 
     result = await extract_file("chinese_document.jpg", config=config)
     return result.content

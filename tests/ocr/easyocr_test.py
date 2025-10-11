@@ -400,51 +400,31 @@ async def test_process_easyocr_result_full_format(backend: EasyOCRBackend) -> No
 
 
 def test_is_gpu_available_with_torch() -> None:
-    mock_torch = Mock()
-    mock_torch.cuda.is_available.return_value = True
-
-    with patch("kreuzberg._ocr._easyocr.torch", mock_torch):
+    with patch("kreuzberg._ocr._easyocr.is_cuda_available", return_value=True):
         result = EasyOCRBackend._is_gpu_available()
         assert result is True
-        mock_torch.cuda.is_available.assert_called_once()
 
 
 def test_is_gpu_available_without_torch() -> None:
-    with patch("kreuzberg._ocr._easyocr.torch", None):
+    with patch("kreuzberg._ocr._easyocr.is_cuda_available", return_value=False):
         result = EasyOCRBackend._is_gpu_available()
         assert result is False
-
-
-def test_resolve_device_config_deprecated_use_gpu_true() -> None:
-    with pytest.warns(DeprecationWarning, match="The 'use_gpu' parameter is deprecated"):
-        device_info = EasyOCRBackend._resolve_device_config(use_gpu=True, device="auto")
-
-        assert device_info.device_type in ["cpu", "cuda", "mps"]
-
-
-def test_resolve_device_config_deprecated_use_gpu_conflicts() -> None:
-    with pytest.warns(DeprecationWarning, match="Both 'use_gpu' and 'device' parameters specified"):
-        device_info = EasyOCRBackend._resolve_device_config(use_gpu=True, device="cpu")
-
-        assert device_info.device_type == "cpu"
 
 
 def test_resolve_device_config_validation_error_fallback() -> None:
     with patch(
         "kreuzberg._utils._device.validate_device_request", side_effect=ValidationError("Device validation failed")
     ):
-        device_info = EasyOCRBackend._resolve_device_config(use_gpu=False, device="cpu")
+        device_info = EasyOCRBackend._resolve_device_config(device="cpu")
         assert device_info.device_type == "cpu"
         assert device_info.name == "CPU"
 
 
-@pytest.mark.xfail(reason="Device validation behavior may differ in CI environment")
 def test_resolve_device_config_validation_error_reraise_other_cases() -> None:
     with pytest.raises(ValidationError, match=r"Requested device.*not available"):
         EasyOCRBackend._resolve_device_config(use_gpu=True, device="cuda", fallback_to_cpu=False)
 
 
-@pytest.mark.xfail(reason="Device validation behavior may differ in CI environment")
 def test_resolve_device_config_validation_error_reraise() -> None:
     with pytest.raises(ValidationError, match="Requested device 'invalid' is not available"):
         EasyOCRBackend._resolve_device_config(use_gpu=True, device="invalid", fallback_to_cpu=False)

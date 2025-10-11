@@ -83,8 +83,52 @@ class MissingDependencyError(KreuzbergError):
             f"The package '{package_name}' is required to use {functionality}. You can install using the provided optional dependency group by installing `kreuzberg['{dependency_group}']`."
         )
 
+    @classmethod
+    def create_for_system_dependency(
+        cls,
+        *,
+        executable: str,
+        functionality: str,
+        mac_install: str | None = None,
+        linux_install: str | None = None,
+        windows_install: str | None = None,
+    ) -> MissingDependencyError:
+        """Creates a MissingDependencyError for a system dependency.
+
+        Args:
+            executable: The name of the missing executable (e.g., 'soffice', 'pandoc').
+            functionality: The functionality that requires the missing executable.
+            mac_install: Installation command for macOS (e.g., 'brew install libreoffice').
+            linux_install: Installation command for Linux (e.g., 'apt install libreoffice').
+            windows_install: Installation command for Windows (e.g., 'winget install LibreOffice.LibreOffice').
+
+        Returns:
+            MissingDependencyError: A customized error indicating the missing
+            system dependency and platform-specific installation instructions.
+        """
+        msg = f"The '{executable}' executable is required to use {functionality}. Please install it on your system and make sure it's available in $PATH.\n\n"
+
+        install_instructions = []
+        if mac_install:
+            install_instructions.append(f"  macOS:   {mac_install}")
+        if linux_install:
+            install_instructions.append(f"  Linux:   {linux_install}")
+        if windows_install:
+            install_instructions.append(f"  Windows: {windows_install}")
+
+        if install_instructions:
+            msg += "Installation:\n" + "\n".join(install_instructions)
+
+        return MissingDependencyError(msg)
+
 
 class OCRError(KreuzbergError):
     """Raised when an OCR error occurs."""
+
+    __slots__ = ()
+
+
+class MemoryLimitError(KreuzbergError):
+    """Raised when memory or disk limits prevent image processing."""
 
     __slots__ = ()

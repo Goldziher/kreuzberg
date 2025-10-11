@@ -15,7 +15,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 @contextlib.asynccontextmanager
 async def pdf_document(file_path: Path) -> AsyncGenerator[pypdfium2.PdfDocument, None]:
-    """Async context manager for PyPDFium document resources."""
     document = None
     try:
         with pypdfium_file_lock(file_path):
@@ -29,7 +28,6 @@ async def pdf_document(file_path: Path) -> AsyncGenerator[pypdfium2.PdfDocument,
 
 @contextlib.contextmanager
 def pdf_document_sync(file_path: Path) -> Generator[pypdfium2.PdfDocument, None, None]:
-    """Sync context manager for PyPDFium document resources."""
     document = None
     try:
         with pypdfium_file_lock(file_path):
@@ -43,7 +41,6 @@ def pdf_document_sync(file_path: Path) -> Generator[pypdfium2.PdfDocument, None,
 
 @contextlib.contextmanager
 def pdf_resources_sync(*resources: object) -> Generator[None, None, None]:
-    """Context manager for multiple PDF resources (pages, textpages, bitmaps)."""
     try:
         yield
     finally:
@@ -55,7 +52,6 @@ def pdf_resources_sync(*resources: object) -> Generator[None, None, None]:
 
 @contextlib.contextmanager
 def image_resources(*images: object) -> Generator[None, None, None]:
-    """Context manager for PIL Image resources."""
     try:
         yield
     finally:

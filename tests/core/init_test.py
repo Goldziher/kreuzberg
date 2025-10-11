@@ -14,12 +14,13 @@ def test_exports() -> None:
     expected_exports = [
         "EasyOCRConfig",
         "Entity",
+        "EntityExtractionConfig",
         "ExtractedImage",
         "ExtractionConfig",
         "ExtractionResult",
         "ExtractorRegistry",
-        "GMFTConfig",
-        "ImageOCRConfig",
+        "TableExtractionConfig",
+        "ImageExtractionConfig",
         "ImageOCRResult",
         "JSONExtractionConfig",
         "KreuzbergError",
@@ -30,7 +31,6 @@ def test_exports() -> None:
         "PSMMode",
         "PaddleOCRConfig",
         "ParsingError",
-        "SpacyEntityExtractionConfig",
         "TableData",
         "TesseractConfig",
         "ValidationError",
@@ -65,13 +65,14 @@ def test_exception_hierarchy() -> None:
 
 
 def test_config_classes() -> None:
-    from dataclasses import is_dataclass
+    import msgspec
 
-    assert is_dataclass(kreuzberg.ExtractionConfig)
-    assert is_dataclass(kreuzberg.TesseractConfig)
-    assert is_dataclass(kreuzberg.EasyOCRConfig)
-    assert is_dataclass(kreuzberg.PaddleOCRConfig)
-    assert is_dataclass(kreuzberg.GMFTConfig)
+    assert isinstance(kreuzberg.ExtractionConfig, type)
+    assert issubclass(kreuzberg.ExtractionConfig, msgspec.Struct)
+    assert issubclass(kreuzberg.TesseractConfig, msgspec.Struct)
+    assert issubclass(kreuzberg.EasyOCRConfig, msgspec.Struct)
+    assert issubclass(kreuzberg.PaddleOCRConfig, msgspec.Struct)
+    assert issubclass(kreuzberg.TableExtractionConfig, msgspec.Struct)
 
 
 def test_extraction_functions_exist() -> None:

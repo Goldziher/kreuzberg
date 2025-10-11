@@ -47,15 +47,19 @@ def test_unstructured_import() -> None:
 def test_extractors_import() -> None:
     from src.extractors import (
         DoclingExtractor,
-        KreuzbergAsyncExtractor,
-        KreuzbergSyncExtractor,
+        KreuzbergV3AsyncExtractor,
+        KreuzbergV3SyncExtractor,
+        KreuzbergV4AsyncExtractor,
+        KreuzbergV4SyncExtractor,
         MarkItDownExtractor,
         UnstructuredExtractor,
         get_extractor,
     )
 
-    assert KreuzbergSyncExtractor is not None
-    assert KreuzbergAsyncExtractor is not None
+    assert KreuzbergV3SyncExtractor is not None
+    assert KreuzbergV3AsyncExtractor is not None
+    assert KreuzbergV4SyncExtractor is not None
+    assert KreuzbergV4AsyncExtractor is not None
     assert DoclingExtractor is not None
     assert MarkItDownExtractor is not None
     assert UnstructuredExtractor is not None

@@ -13,7 +13,8 @@ This benchmark suite evaluates document extraction frameworks across multiple me
 
 ## Tested Frameworks
 
-- **Kreuzberg** (sync/async) - Multi-format extraction with OCR backends
+- **Kreuzberg v4** (sync/async) - Multi-format extraction with OCR backends
+- **Kreuzberg v3** - Previous version for comparison
 - **Extractous** - Rust-based with Apache Tika integration
 - **Unstructured** - Enterprise document processing
 - **MarkItDown** - Microsoft's markdown converter

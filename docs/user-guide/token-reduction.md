@@ -162,11 +162,12 @@ Based on comprehensive testing across different text types:
 Reduce token costs and fit more content within model limits:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig
+from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig, ChunkingConfig
 
 # Optimize for LLM processing
 config = ExtractionConfig(
-    token_reduction=TokenReductionConfig(mode="moderate"), chunk_content=True, max_chars=3000  # Smaller chunks after reduction
+    token_reduction=TokenReductionConfig(mode="moderate"),
+    chunking=ChunkingConfig(max_chars=3000),  # Smaller chunks after reduction
 )
 
 result = await extract_file("large_report.pdf", config=config)

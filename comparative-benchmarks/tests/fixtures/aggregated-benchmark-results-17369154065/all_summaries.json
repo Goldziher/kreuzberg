@@ -1,6 +1,6 @@
 [
   {
-    "framework": "kreuzberg_sync",
+    "framework": "kreuzberg_v4_sync",
     "category": "tiny",
     "total_files": 141,
     "successful_files": 141,
@@ -27,7 +27,7 @@
     "avg_readability": null
   },
   {
-    "framework": "kreuzberg_sync",
+    "framework": "kreuzberg_v4_sync",
     "category": "small",
     "total_files": 81,
     "successful_files": 81,
@@ -54,7 +54,7 @@
     "avg_readability": null
   },
   {
-    "framework": "kreuzberg_sync",
+    "framework": "kreuzberg_v4_sync",
     "category": "medium",
     "total_files": 36,
     "successful_files": 36,
@@ -81,7 +81,7 @@
     "avg_readability": null
   },
   {
-    "framework": "kreuzberg_sync",
+    "framework": "kreuzberg_v4_sync",
     "category": "large",
     "total_files": 9,
     "successful_files": 9,
@@ -108,7 +108,7 @@
     "avg_readability": null
   },
   {
-    "framework": "kreuzberg_sync",
+    "framework": "kreuzberg_v4_sync",
     "category": "huge",
     "total_files": 9,
     "successful_files": 9,

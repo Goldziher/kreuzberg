@@ -102,8 +102,7 @@ async def test_batch_extraction_regression(
 @pytest.mark.anyio
 async def test_psm_mode_4_specifically(google_doc_pdf: Path) -> None:
     config = ExtractionConfig(
-        ocr_backend="tesseract",
-        ocr_config=TesseractConfig(psm=PSMMode.SINGLE_COLUMN),
+        ocr=TesseractConfig(psm=PSMMode.SINGLE_COLUMN),
     )
 
     result = await extract_file(str(google_doc_pdf), config=config)
@@ -133,22 +132,10 @@ async def test_batch_extract_bytes_regression(google_doc_pdf: Path, test_xls: Pa
 
 @pytest.mark.parametrize("test_mode", ["async", "sync"])
 @pytest.mark.anyio
-async def test_issue_149_windows_tesseract_hocr_regression(test_mode: str) -> None:
-    """Regression test for Issue #149 - Windows Tesseract HOCR output compatibility.
-
-    Windows Tesseract 5.5.0 doesn't respect the 'hocr' configfile positional argument,
-    causing empty HTML errors. This test verifies that force_ocr=True works correctly
-    with default config on all platforms by using explicit -c tessedit_create_hocr=1.
-
-    The test uses a German language PDF that previously failed on Windows.
-    """
+async def test_issue_149_windows_tesseract_hocr_regression(test_mode: str, german_image_pdf: Path) -> None:
     import re
 
-    pdf_path = Path("/tmp/issue_149_windows_tesseract_hocr.pdf")
-
-    if not pdf_path.exists():
-        pytest.skip("Test PDF not available - download from Issue #149")
-
+    pdf_path = german_image_pdf
     config = ExtractionConfig(force_ocr=True)
 
     if test_mode == "async":
@@ -159,10 +146,9 @@ async def test_issue_149_windows_tesseract_hocr_regression(test_mode: str) -> No
     def normalize_whitespace(text: str) -> str:
         return re.sub(r"\s+", " ", text.strip())
 
-    normalized_content = normalize_whitespace(result.content)
+    normalized_content = normalize_whitespace(result.content).lower()
 
     assert result.content is not None
-    assert len(result.content) > 1000, f"Expected substantial content, got {len(result.content)} chars"
-    assert "Freie Wohlfahrtspflege" in normalized_content
-    assert "Landesarbeitsgemeinschaft Bayern" in normalized_content
-    assert "Bayerischen" in normalized_content
+    assert len(result.content) > 200, f"Expected substantial content, got {len(result.content)} chars"
+    for expected_keyword in ("bayern", "heimatpflege", "landesverein"):
+        assert expected_keyword in normalized_content

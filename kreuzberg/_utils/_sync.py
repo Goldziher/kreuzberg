@@ -40,16 +40,6 @@ async def run_taskgroup_batched(
     batch_size: int,
     use_semaphore: bool = True,
 ) -> list[Any]:
-    """Run async tasks with controlled concurrency.
-
-    Args:
-        async_tasks: Tasks to execute
-        batch_size: Maximum concurrent tasks
-        use_semaphore: Use semaphore for concurrency control instead of sequential batches
-
-    Returns:
-        List of results in the same order as input tasks
-    """
     if not async_tasks:
         return []
 

@@ -1,0 +1,59 @@
+mod cjk_utils;
+mod config;
+mod core;
+mod filters;
+mod semantic;
+mod simd_text;
+
+pub use config::{ReductionLevelDTO, TokenReductionConfigDTO};
+pub use core::TokenReducer;
+
+use pyo3::prelude::*;
+
+#[pyfunction]
+#[pyo3(signature = (text, config, language_hint=None))]
+pub fn reduce_tokens(text: &str, config: &TokenReductionConfigDTO, language_hint: Option<&str>) -> PyResult<String> {
+    let reducer = TokenReducer::new(config, language_hint)?;
+    Ok(reducer.reduce(text))
+}
+
+#[pyfunction]
+#[pyo3(signature = (texts, config, language_hint=None))]
+pub fn batch_reduce_tokens(
+    texts: Vec<String>,
+    config: &TokenReductionConfigDTO,
+    language_hint: Option<&str>,
+) -> PyResult<Vec<String>> {
+    let reducer = TokenReducer::new(config, language_hint)?;
+    let text_refs: Vec<&str> = texts.iter().map(|s| s.as_str()).collect();
+    Ok(reducer.batch_reduce(&text_refs))
+}
+
+#[pyfunction]
+pub fn get_reduction_statistics(original: &str, reduced: &str) -> PyResult<(f64, f64, usize, usize, usize, usize)> {
+    let original_chars = original.chars().count();
+    let reduced_chars = reduced.chars().count();
+    let original_tokens = original.split_whitespace().count();
+    let reduced_tokens = reduced.split_whitespace().count();
+
+    let char_reduction = if original_chars > 0 {
+        1.0 - (reduced_chars as f64 / original_chars as f64)
+    } else {
+        0.0
+    };
+
+    let token_reduction = if original_tokens > 0 {
+        1.0 - (reduced_tokens as f64 / original_tokens as f64)
+    } else {
+        0.0
+    };
+
+    Ok((
+        char_reduction,
+        token_reduction,
+        original_chars,
+        reduced_chars,
+        original_tokens,
+        reduced_tokens,
+    ))
+}

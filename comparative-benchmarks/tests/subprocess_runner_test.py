@@ -12,7 +12,9 @@ def test_subprocess_runner_resource_monitoring() -> None:
         test_file_path = f.name
 
     try:
-        result = runner.extract_with_crash_detection("kreuzberg_sync", test_file_path)
+        result = runner.extract_with_crash_detection(
+            "kreuzberg_v4_sync", test_file_path
+        )
 
         assert result.resource_metrics is not None
         assert isinstance(result.resource_metrics, ProcessResourceMetrics)
@@ -51,7 +53,9 @@ def test_subprocess_runner_timeout_with_resource_metrics() -> None:
         test_file_path = f.name
 
     try:
-        result = runner.extract_with_crash_detection("kreuzberg_sync", test_file_path)
+        result = runner.extract_with_crash_detection(
+            "kreuzberg_v4_sync", test_file_path
+        )
 
         assert result.success is False
         assert result.error_type == "TimeoutError"

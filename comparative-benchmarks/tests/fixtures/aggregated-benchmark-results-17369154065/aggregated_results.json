@@ -3,9 +3,9 @@
   "total_files_processed": 1479,
   "total_time_seconds": 10003.446382045746,
   "framework_summaries": {
-    "kreuzberg_sync": [
+    "kreuzberg_v4_sync": [
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "tiny",
         "total_files": 141,
         "successful_files": 141,
@@ -32,7 +32,7 @@
         "avg_readability": null
       },
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "small",
         "total_files": 81,
         "successful_files": 81,
@@ -59,7 +59,7 @@
         "avg_readability": null
       },
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "medium",
         "total_files": 36,
         "successful_files": 36,
@@ -86,7 +86,7 @@
         "avg_readability": null
       },
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "large",
         "total_files": 9,
         "successful_files": 9,
@@ -113,7 +113,7 @@
         "avg_readability": null
       },
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "huge",
         "total_files": 9,
         "successful_files": 9,
@@ -748,7 +748,7 @@
   "category_summaries": {
     "tiny": [
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "tiny",
         "total_files": 141,
         "successful_files": 141,
@@ -912,7 +912,7 @@
     ],
     "small": [
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "small",
         "total_files": 81,
         "successful_files": 81,
@@ -1076,7 +1076,7 @@
     ],
     "medium": [
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "medium",
         "total_files": 36,
         "successful_files": 36,
@@ -1213,7 +1213,7 @@
     ],
     "large": [
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "large",
         "total_files": 9,
         "successful_files": 9,
@@ -1350,7 +1350,7 @@
     ],
     "huge": [
       {
-        "framework": "kreuzberg_sync",
+        "framework": "kreuzberg_v4_sync",
         "category": "huge",
         "total_files": 9,
         "successful_files": 9,
@@ -1488,7 +1488,7 @@
   },
   "framework_category_matrix": {
     "kreuzberg_sync_tiny": {
-      "framework": "kreuzberg_sync",
+      "framework": "kreuzberg_v4_sync",
       "category": "tiny",
       "total_files": 141,
       "successful_files": 141,
@@ -1515,7 +1515,7 @@
       "avg_readability": null
     },
     "kreuzberg_sync_small": {
-      "framework": "kreuzberg_sync",
+      "framework": "kreuzberg_v4_sync",
       "category": "small",
       "total_files": 81,
       "successful_files": 81,
@@ -1542,7 +1542,7 @@
       "avg_readability": null
     },
     "kreuzberg_sync_medium": {
-      "framework": "kreuzberg_sync",
+      "framework": "kreuzberg_v4_sync",
       "category": "medium",
       "total_files": 36,
       "successful_files": 36,
@@ -1569,7 +1569,7 @@
       "avg_readability": null
     },
     "kreuzberg_sync_large": {
-      "framework": "kreuzberg_sync",
+      "framework": "kreuzberg_v4_sync",
       "category": "large",
       "total_files": 9,
       "successful_files": 9,
@@ -1596,7 +1596,7 @@
       "avg_readability": null
     },
     "kreuzberg_sync_huge": {
-      "framework": "kreuzberg_sync",
+      "framework": "kreuzberg_v4_sync",
       "category": "huge",
       "total_files": 9,
       "successful_files": 9,
@@ -2236,7 +2236,7 @@
     "kreuzberg_async": [
       0.7593043269691887, 0.00014301184769515153, 0.00013871507330255194
     ],
-    "kreuzberg_sync": [
+    "kreuzberg_v4_sync": [
       5.045607351738473, 0.00013771264449409816, 0.00013752346453459367
     ],
     "markitdown": [0.3731289454868862, 0.33094258308410646, 0.3312664304460798],
@@ -2244,8 +2244,8 @@
   },
   "platform_results": {
     "Linux": {
-      "kreuzberg_sync": {
-        "framework": "kreuzberg_sync",
+      "kreuzberg_v4_sync": {
+        "framework": "kreuzberg_v4_sync",
         "category": "tiny",
         "total_files": 276,
         "successful_files": 276,

@@ -46,8 +46,9 @@ async def main():
     result = await extract_file(
         "german_document.jpg",
         config=ExtractionConfig(
-            ocr_config=TesseractConfig(
-                language="deu", psm=PSMMode.SINGLE_BLOCK  # German language model  # Treat as a single text block
+            ocr=TesseractConfig(
+                language="deu",  # German language model
+                psm=PSMMode.SINGLE_BLOCK,  # Treat as a single text block
             )
         ),
     )
