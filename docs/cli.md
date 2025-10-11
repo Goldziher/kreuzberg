@@ -76,23 +76,52 @@ kreuzberg extract -
 
 ## Configuration File
 
-Kreuzberg can load configuration from a `pyproject.toml` file:
+Kreuzberg can load configuration from a `pyproject.toml` or `kreuzberg.toml` file:
 
 ```toml
 [tool.kreuzberg]
 force_ocr = false
-chunk_content = true
-extract_tables = false
-max_chars = 5000
-ocr_backend = "tesseract"
 
-[tool.kreuzberg.tesseract]
+[tool.kreuzberg.ocr]
+backend = "tesseract"
+language = "eng+deu"
+psm = 3
+output_format = "markdown"
+
+[tool.kreuzberg.chunking]
+max_chars = 5000
+max_overlap = 200
+
+[tool.kreuzberg.tables]
+detection_threshold = 0.7
+structure_threshold = 0.5
+
+[tool.kreuzberg.keywords]
+top_k = 10
+
+[tool.kreuzberg.entities]
+# Entity extraction configuration
+```
+
+Or use a standalone `kreuzberg.toml`:
+
+```toml
+force_ocr = false
+
+[ocr]
+backend = "tesseract"
 language = "eng+deu"
 psm = 3
 
-[tool.kreuzberg.gmft]
-verbosity = 1
-cell_required_confidence = 50
+[chunking]
+max_chars = 2000
+max_overlap = 100
+
+[tables]
+detection_threshold = 0.7
+
+[keywords]
+top_k = 10
 ```
 
 Use a specific config file:
