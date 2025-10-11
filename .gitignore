@@ -52,7 +52,6 @@ aggregated-results/
 benchmark_results.json
 benchmarks/results/
 build/
-Cargo.lock
 CLAUDE.md
 coverage.lcov
 coverage.xml
@@ -79,8 +78,9 @@ tests/benchmarks/results/*.json
 tests/e2e/logs/
 tests/e2e/test_report.json
 todo.md
-TODO.md
 visualizations/
 wheels/
 yarn-debug.log*
 yarn-error.log*
+rust-coverage.lcov
+coverage.info

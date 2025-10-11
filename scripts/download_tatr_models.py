@@ -1,4 +1,4 @@
-"""Download GMFT (Table Transformer) models for offline use and CI caching."""
+"""Download TATR (Table Transformer) models for vision-based table extraction caching."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from transformers import AutoImageProcessor, TableTransformerForObjectDetection 
 
 
 def download_models() -> None:
-    """Download GMFT models for table extraction."""
+    """Download Table Transformer models for vision-based table extraction."""
     models = [
         "microsoft/table-transformer-detection",
         "microsoft/table-transformer-structure-recognition-v1.1-all",
