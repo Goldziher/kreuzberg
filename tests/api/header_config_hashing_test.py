@@ -17,7 +17,7 @@ async def test_header_config_with_nested_lists_dicts_does_not_error(test_client:
     }
 
     response = await test_client.post(
-        "/extract?chunk_content=true&max_chars=5&max_overlap=1",
+        "/extract?chunking.max_chars=5&chunking.max_overlap=1",
         files=files,
         headers={"X-Extraction-Config": json.dumps(header_config)},
     )

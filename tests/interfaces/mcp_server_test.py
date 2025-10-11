@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 from kreuzberg._mcp.server import (
     MAX_BATCH_SIZE,
-    _create_config_with_overrides,
+    _build_config,
     _validate_base64_content,
     _validate_file_path,
     batch_extract_bytes,
@@ -27,7 +27,16 @@ from kreuzberg._mcp.server import (
     get_supported_formats,
     main,
 )
-from kreuzberg._types import ExtractionResult, PSMMode, TesseractConfig
+from kreuzberg._types import (
+    ChunkingConfig,
+    EasyOCRConfig,
+    EntityExtractionConfig,
+    ExtractionResult,
+    KeywordExtractionConfig,
+    PSMMode,
+    TableExtractionConfig,
+    TesseractConfig,
+)
 from kreuzberg.exceptions import ValidationError
 
 
@@ -136,7 +145,7 @@ def test_batch_extract_document_with_config_parameters(tmp_path: Path) -> None:
     test_files = [str(test_file)]
 
     with patch("kreuzberg._mcp.server.batch_extract_file_sync") as mock_batch:
-        with patch("kreuzberg._mcp.server._create_config_with_overrides") as mock_config:
+        with patch("kreuzberg._mcp.server._build_config") as mock_config:
             mock_result = ExtractionResult(
                 content="Test content",
                 mime_type="text/plain",
@@ -145,20 +154,12 @@ def test_batch_extract_document_with_config_parameters(tmp_path: Path) -> None:
             )
             mock_batch.return_value = [mock_result]
 
-            batch_extract_document(
-                test_files,
-                force_ocr=True,
-                chunk_content=True,
-                extract_tables=True,
-                max_chars=500,
-            )
+            import json
+
+            config_json = json.dumps({"force_ocr": True, "chunking": {"max_chars": 500}, "tables": {}})
+            batch_extract_document(test_files, config_json=config_json)
 
             mock_config.assert_called_once()
-            call_kwargs = mock_config.call_args[1]
-            assert call_kwargs["force_ocr"] is True
-            assert call_kwargs["chunk_content"] is True
-            assert call_kwargs["extract_tables"] is True
-            assert call_kwargs["max_chars"] == 500
 
 
 def test_batch_extract_bytes_with_config_parameters() -> None:
@@ -167,7 +168,7 @@ def test_batch_extract_bytes_with_config_parameters() -> None:
     content_items = [{"content_base64": content_base64, "mime_type": "text/plain"}]
 
     with patch("kreuzberg._mcp.server.batch_extract_bytes_sync") as mock_batch:
-        with patch("kreuzberg._mcp.server._create_config_with_overrides") as mock_config:
+        with patch("kreuzberg._mcp.server._build_config") as mock_config:
             mock_result = ExtractionResult(
                 content="Test content",
                 mime_type="text/plain",
@@ -176,20 +177,18 @@ def test_batch_extract_bytes_with_config_parameters() -> None:
             )
             mock_batch.return_value = [mock_result]
 
-            batch_extract_bytes(
-                content_items,
-                force_ocr=True,
-                extract_keywords=True,
-                auto_detect_language=True,
-                keyword_count=20,
+            import json
+
+            config_json = json.dumps(
+                {
+                    "force_ocr": True,
+                    "keywords": {"count": 20},
+                    "language_detection": {},
+                }
             )
+            batch_extract_bytes(content_items, config_json=config_json)
 
             mock_config.assert_called_once()
-            call_kwargs = mock_config.call_args[1]
-            assert call_kwargs["force_ocr"] is True
-            assert call_kwargs["extract_keywords"] is True
-            assert call_kwargs["auto_detect_language"] is True
-            assert call_kwargs["keyword_count"] == 20
 
 
 def test_extract_bytes_invalid_base64() -> None:
@@ -324,20 +323,6 @@ def test_batch_extract_bytes_error_context_preservation() -> None:
     assert exc_info.value.context["item"] == 42
 
 
-def test_invalid_psm_mode_handling() -> None:
-    from kreuzberg._mcp.server import _create_config_with_overrides
-
-    with pytest.raises(ValidationError) as exc_info:
-        _create_config_with_overrides(
-            ocr_backend="tesseract",
-            tesseract_psm=999,
-        )
-
-    assert "Invalid PSM mode value: 999" in str(exc_info.value)
-    assert exc_info.value.context["psm_value"] == 999
-    assert "error" in exc_info.value.context
-
-
 def test_path_traversal_validation_relative_paths(tmp_path: Path) -> None:
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test content")
@@ -462,16 +447,8 @@ def test_base64_validation_valid_content() -> None:
 
 
 def test_tesseract_config_edge_cases() -> None:
-    from kreuzberg._mcp.server import _create_config_with_overrides
-
-    config = _create_config_with_overrides(ocr_backend="tesseract", tesseract_psm=PSMMode.SINGLE_COLUMN.value)
-    assert config.ocr_config is not None
-
-    with pytest.raises(ValidationError):
-        _create_config_with_overrides(ocr_backend="tesseract", tesseract_psm=-1)
-
-    with pytest.raises(ValidationError):
-        _create_config_with_overrides(ocr_backend="tesseract", tesseract_psm=50)
+    config = _build_config(ocr=TesseractConfig(psm=PSMMode.SINGLE_COLUMN))
+    assert isinstance(config.ocr, (TesseractConfig, dict))
 
 
 def test_extract_document_path_validation(tmp_path: Path) -> None:
@@ -573,7 +550,7 @@ def test_extract_simple_uses_default_config(tmp_path: Path) -> None:
     test_file.write_text("Test content")
 
     with patch("kreuzberg._mcp.server.extract_file_sync") as mock_extract:
-        with patch("kreuzberg._mcp.server._create_config_with_overrides") as mock_config:
+        with patch("kreuzberg._mcp.server._build_config") as mock_config:
             mock_result = ExtractionResult(
                 content="Test content",
                 mime_type="text/plain",
@@ -596,20 +573,22 @@ def test_get_default_config() -> None:
 
     assert isinstance(config_dict, dict)
     assert "force_ocr" in config_dict
-    assert "chunk_content" in config_dict
-    assert "extract_tables" in config_dict
-    assert "ocr_backend" in config_dict
+    assert "ocr" in config_dict
+    assert "chunking" in config_dict
+    assert "tables" in config_dict
 
     assert config_dict["force_ocr"] is False
-    assert config_dict["chunk_content"] is False
-    assert config_dict["extract_tables"] is False
-    assert config_dict["ocr_backend"] == "tesseract"
+    assert config_dict["chunking"] is None
+    assert config_dict["tables"] is None
+    assert config_dict["ocr"] is not None
 
 
 def test_get_discovered_config_with_config() -> None:
-    from kreuzberg._types import ExtractionConfig
+    from kreuzberg._types import ChunkingConfig, EasyOCRConfig, ExtractionConfig
 
-    mock_config = ExtractionConfig(force_ocr=True, chunk_content=True, extract_tables=True, ocr_backend="easyocr")
+    mock_config = ExtractionConfig(
+        force_ocr=True, chunking=ChunkingConfig(), tables=TableExtractionConfig(), ocr=EasyOCRConfig()
+    )
 
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = mock_config
@@ -621,9 +600,9 @@ def test_get_discovered_config_with_config() -> None:
         config_dict = json.loads(result)
 
         assert config_dict["force_ocr"] is True
-        assert config_dict["chunk_content"] is True
-        assert config_dict["extract_tables"] is True
-        assert config_dict["ocr_backend"] == "easyocr"
+        assert config_dict["chunking"] is not None
+        assert config_dict["tables"] is not None
+        assert config_dict["ocr"] is not None
 
 
 def test_get_discovered_config_no_config() -> None:
@@ -795,7 +774,7 @@ def test_extract_structured_config_parameters(tmp_path: Path) -> None:
     test_file.write_text("Test document")
 
     with patch("kreuzberg._mcp.server.extract_file_sync") as mock_extract:
-        with patch("kreuzberg._mcp.server._create_config_with_overrides") as mock_config:
+        with patch("kreuzberg._mcp.server._build_config") as mock_config:
             mock_result = ExtractionResult(
                 content="Test document",
                 mime_type="text/plain",
@@ -807,198 +786,154 @@ def test_extract_structured_config_parameters(tmp_path: Path) -> None:
             extract_structured(str(test_file))
 
             mock_config.assert_called_once_with(
-                extract_entities=True,
-                extract_keywords=True,
-                extract_tables=True,
+                entities=EntityExtractionConfig(),
+                keywords=KeywordExtractionConfig(),
+                tables=TableExtractionConfig(),
             )
 
 
-def test_create_config_with_overrides_no_base_config() -> None:
+def test_build_config_no_base_config() -> None:
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = None
 
-        config = _create_config_with_overrides(force_ocr=True, chunk_content=True, extract_tables=True)
+        config = _build_config(force_ocr=True, chunking=ChunkingConfig(), tables=TableExtractionConfig())
 
         assert config.force_ocr is True
-        assert config.chunk_content is True
-        assert config.extract_tables is True
+        assert config.chunking is not None
+        assert config.tables is not None
 
 
-def test_create_config_with_overrides_with_base_config() -> None:
+def test_build_config_with_base_config() -> None:
     from kreuzberg._types import ExtractionConfig
 
-    base_config = ExtractionConfig(
-        force_ocr=False, chunk_content=False, extract_tables=False, ocr_backend="tesseract", max_chars=500
-    )
+    base_config = ExtractionConfig(force_ocr=False, chunking=None, tables=None, ocr=TesseractConfig())
 
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = base_config
 
-        config = _create_config_with_overrides(
-            force_ocr=True,
-            extract_keywords=True,
-        )
+        config = _build_config(force_ocr=True, keywords=KeywordExtractionConfig())
 
         assert config.force_ocr is True
-        assert config.chunk_content is False
-        assert config.extract_tables is False
-        assert config.ocr_backend == "tesseract"
-        assert config.max_chars == 500
-        assert config.extract_keywords is True
+        assert config.chunking is None
+        assert config.tables is None
+        assert config.ocr is not None
+        assert config.keywords is not None
 
 
-def test_create_config_tesseract_lang_only() -> None:
+def test_build_config_tesseract_lang_only() -> None:
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = None
 
-        config = _create_config_with_overrides(ocr_backend="tesseract", tesseract_lang="deu+eng")
+        config = _build_config(ocr=TesseractConfig(language="deu+eng"))
 
-        assert isinstance(config.ocr_config, TesseractConfig)
-        assert config.ocr_config.language == "deu+eng"
+        assert isinstance(config.ocr, TesseractConfig)
+        assert config.ocr.language == "deu+eng"
 
 
-def test_create_config_tesseract_psm_only() -> None:
+def test_build_config_tesseract_psm_only() -> None:
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = None
 
-        config = _create_config_with_overrides(ocr_backend="tesseract", tesseract_psm=PSMMode.SINGLE_BLOCK.value)
+        config = _build_config(ocr=TesseractConfig(psm=PSMMode.SINGLE_BLOCK))
 
-        assert isinstance(config.ocr_config, TesseractConfig)
-        assert config.ocr_config.psm == PSMMode.SINGLE_BLOCK
+        assert isinstance(config.ocr, TesseractConfig)
+        assert config.ocr.psm == PSMMode.SINGLE_BLOCK
 
 
-def test_create_config_tesseract_output_format_only() -> None:
+def test_build_config_tesseract_output_format_only() -> None:
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = None
 
-        config = _create_config_with_overrides(ocr_backend="tesseract", tesseract_output_format="hocr")
+        config = _build_config(ocr=TesseractConfig(output_format="hocr"))
 
-        assert isinstance(config.ocr_config, TesseractConfig)
-        assert config.ocr_config.output_format == "hocr"
+        assert isinstance(config.ocr, TesseractConfig)
+        assert config.ocr.output_format == "hocr"
 
 
-def test_create_config_tesseract_table_detection_only() -> None:
+def test_build_config_tesseract_table_detection_only() -> None:
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = None
 
-        config = _create_config_with_overrides(ocr_backend="tesseract", enable_table_detection=True)
+        config = _build_config(ocr=TesseractConfig(enable_table_detection=True))
 
-        assert isinstance(config.ocr_config, TesseractConfig)
-        assert config.ocr_config.enable_table_detection is True
+        assert isinstance(config.ocr, TesseractConfig)
+        assert config.ocr.enable_table_detection is True
 
 
-def test_create_config_tesseract_all_parameters() -> None:
+def test_build_config_tesseract_all_parameters() -> None:
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = None
 
-        config = _create_config_with_overrides(
-            ocr_backend="tesseract",
-            tesseract_lang="fra",
-            tesseract_psm=PSMMode.SINGLE_WORD.value,
-            tesseract_output_format="text",
-            enable_table_detection=True,
+        config = _build_config(
+            ocr=TesseractConfig(
+                language="fra", psm=PSMMode.SINGLE_WORD, output_format="text", enable_table_detection=True
+            )
         )
 
-        assert isinstance(config.ocr_config, TesseractConfig)
-        assert config.ocr_config.language == "fra"
-        assert config.ocr_config.psm == PSMMode.SINGLE_WORD
-        assert config.ocr_config.output_format == "text"
-        assert config.ocr_config.enable_table_detection is True
+        assert isinstance(config.ocr, TesseractConfig)
+        assert config.ocr.language == "fra"
+        assert config.ocr.psm == PSMMode.SINGLE_WORD
+        assert config.ocr.output_format == "text"
+        assert config.ocr.enable_table_detection is True
 
 
-def test_create_config_tesseract_merge_with_existing() -> None:
+def test_build_config_tesseract_merge_with_existing() -> None:
     from kreuzberg._types import ExtractionConfig
 
     existing_tesseract_config = TesseractConfig(language="eng", psm=PSMMode.SINGLE_BLOCK, output_format="text")
 
-    base_config = ExtractionConfig(ocr_backend="tesseract", ocr_config=existing_tesseract_config)
+    base_config = ExtractionConfig(ocr=existing_tesseract_config)
 
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = base_config
 
-        config = _create_config_with_overrides(
-            ocr_backend="tesseract",
-            tesseract_lang="deu",
-            enable_table_detection=True,
-        )
+        config = _build_config(ocr=TesseractConfig(language="deu", enable_table_detection=True))
 
-        assert isinstance(config.ocr_config, TesseractConfig)
-        assert config.ocr_config.language == "deu"
-        assert config.ocr_config.output_format == "text"
-        assert config.ocr_config.enable_table_detection is True
+        assert isinstance(config.ocr, TesseractConfig)
+        assert config.ocr.language == "deu"
+        assert config.ocr.enable_table_detection is True
 
 
-def test_create_config_non_tesseract_backend() -> None:
+def test_build_config_non_tesseract_backend() -> None:
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = None
 
-        config = _create_config_with_overrides(
-            ocr_backend="easyocr",
-            tesseract_lang="deu",
-            tesseract_psm=6,
-        )
+        config = _build_config(ocr=EasyOCRConfig())
 
-        assert config.ocr_backend == "easyocr"
-        assert config.ocr_config is None
+        assert isinstance(config.ocr, EasyOCRConfig)
 
 
-def test_create_config_invalid_psm_mode() -> None:
+def test_build_config_tesseract_psm_false_value() -> None:
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = None
 
-        with pytest.raises(ValidationError) as exc_info:
-            _create_config_with_overrides(
-                ocr_backend="tesseract",
-                tesseract_psm=999,
-            )
+        config = _build_config(ocr=TesseractConfig(psm=PSMMode.OSD_ONLY))
 
-        assert "Invalid PSM mode value: 999" in str(exc_info.value)
-        assert exc_info.value.context["psm_value"] == 999
-        assert "error" in exc_info.value.context
+        assert isinstance(config.ocr, TesseractConfig)
+        assert config.ocr.psm == PSMMode.OSD_ONLY
 
 
-def test_create_config_tesseract_psm_false_value() -> None:
+def test_build_config_enable_table_detection_false() -> None:
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = None
 
-        config = _create_config_with_overrides(
-            ocr_backend="tesseract",
-            tesseract_psm=0,
-        )
-
-        assert isinstance(config.ocr_config, TesseractConfig)
-        assert config.ocr_config.psm == PSMMode.OSD_ONLY
+        config = _build_config(ocr=TesseractConfig(enable_table_detection=False))
+        assert isinstance(config.ocr, TesseractConfig)
+        assert config.ocr.enable_table_detection is False
 
 
-def test_create_config_enable_table_detection_false() -> None:
-    with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
-        mock_discover.return_value = None
+def test_build_config_with_non_tesseract_ocr_config() -> None:
+    from kreuzberg._types import ExtractionConfig
 
-        config = _create_config_with_overrides(ocr_backend="tesseract", enable_table_detection=None)
-        assert config.ocr_config is None
-
-        config = _create_config_with_overrides(ocr_backend="tesseract", enable_table_detection=False)
-        assert config.ocr_config is None
-
-
-def test_create_config_with_non_tesseract_ocr_config() -> None:
-    from kreuzberg._types import EasyOCRConfig, ExtractionConfig
-
-    base_config = ExtractionConfig(
-        ocr_backend="easyocr",
-        ocr_config=EasyOCRConfig(),
-    )
+    base_config = ExtractionConfig(ocr=EasyOCRConfig())
 
     with patch("kreuzberg._mcp.server.discover_config") as mock_discover:
         mock_discover.return_value = base_config
 
-        config = _create_config_with_overrides(
-            ocr_backend="tesseract",
-            tesseract_lang="eng",
-        )
+        config = _build_config(ocr=TesseractConfig(language="eng"))
 
-        assert isinstance(config.ocr_config, TesseractConfig)
-        assert config.ocr_config.language == "eng"
+        assert isinstance(config.ocr, TesseractConfig)
+        assert config.ocr.language == "eng"
 
 
 def test_validate_file_path_os_error() -> None:
@@ -1052,65 +987,3 @@ def test_base64_validation_binascii_error() -> None:
         assert "Invalid base64 content" in str(exc_info.value)
         assert exc_info.value.context["error_type"] == "Error"
         assert "Invalid base64 padding" in exc_info.value.context["error"]
-
-
-def test_extract_document_with_all_tesseract_params(tmp_path: Path) -> None:
-    test_file = tmp_path / "test.txt"
-    test_file.write_text("Test content")
-
-    with patch("kreuzberg._mcp.server.extract_file_sync") as mock_extract:
-        with patch("kreuzberg._mcp.server._create_config_with_overrides") as mock_config:
-            mock_result = ExtractionResult(
-                content="Test content",
-                mime_type="text/plain",
-                metadata={},
-                chunks=[],
-            )
-            mock_extract.return_value = mock_result
-
-            extract_document(
-                str(test_file),
-                force_ocr=True,
-                ocr_backend="tesseract",
-                tesseract_lang="deu+eng",
-                tesseract_psm=6,
-                tesseract_output_format="hocr",
-                enable_table_detection=True,
-            )
-
-            call_kwargs = mock_config.call_args[1]
-            assert call_kwargs["tesseract_lang"] == "deu+eng"
-            assert call_kwargs["tesseract_psm"] == 6
-            assert call_kwargs["tesseract_output_format"] == "hocr"
-            assert call_kwargs["enable_table_detection"] is True
-
-
-def test_extract_bytes_with_all_tesseract_params() -> None:
-    content = b"Test content"
-    content_base64 = base64.b64encode(content).decode("ascii")
-
-    with patch("kreuzberg._mcp.server.extract_bytes_sync") as mock_extract:
-        with patch("kreuzberg._mcp.server._create_config_with_overrides") as mock_config:
-            mock_result = ExtractionResult(
-                content="Test content",
-                mime_type="text/plain",
-                metadata={},
-                chunks=[],
-            )
-            mock_extract.return_value = mock_result
-
-            extract_bytes(
-                content_base64,
-                "text/plain",
-                ocr_backend="tesseract",
-                tesseract_lang="fra",
-                tesseract_psm=3,
-                tesseract_output_format="text",
-                enable_table_detection=True,
-            )
-
-            call_kwargs = mock_config.call_args[1]
-            assert call_kwargs["tesseract_lang"] == "fra"
-            assert call_kwargs["tesseract_psm"] == 3
-            assert call_kwargs["tesseract_output_format"] == "text"
-            assert call_kwargs["enable_table_detection"] is True

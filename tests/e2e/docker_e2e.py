@@ -13,6 +13,7 @@ from typing import Any
 DOCKER_IMAGES = {
     "base": "kreuzberg:base",
     "core": "kreuzberg:core",
+    "full": "kreuzberg:full",
 }
 
 OPTIONAL_IMAGES: set[str] = set()
@@ -26,7 +27,7 @@ SECURITY_CONFIG = {
 }
 
 TEST_DIR = Path(__file__).parent.parent
-TEST_FILES_DIR = TEST_DIR / "test_source_files"
+TEST_FILES_DIR = TEST_DIR.parent / "test_documents"
 
 test_results: dict[str, dict[str, Any]] = {}
 
@@ -134,9 +135,11 @@ def test_api_health(image_name: str) -> bool:
     if exit_code != 0:
         return False
 
-    import urllib.request
+    try:
+        time.sleep(5)
 
-    def _is_healthy() -> bool:
+        import urllib.request
+
         try:
             response = urllib.request.urlopen(f"http://localhost:{port}/health", timeout=5)
             data = json.loads(response.read().decode())
@@ -144,14 +147,6 @@ def test_api_health(image_name: str) -> bool:
             return response.status == 200 and status_ok
         except Exception:
             return False
-
-    try:
-        deadline = time.time() + 30
-        while time.time() < deadline:
-            if _is_healthy():
-                return True
-            time.sleep(1)
-        return False
     finally:
         run_command(["docker", "stop", container_name], timeout=10)
         run_command(["docker", "rm", container_name], timeout=10)
@@ -199,7 +194,7 @@ def test_file_extraction(image_name: str, test_file: str) -> bool:
 
 
 def test_ocr_extraction(image_name: str, image_variant: str) -> bool:
-    test_file = "ocr-image.jpg"
+    test_file = "images/ocr_image.jpg"
     test_file_path = TEST_FILES_DIR / test_file
 
     if not test_file_path.exists():
@@ -254,7 +249,7 @@ def test_api_extraction(image_name: str) -> bool:
         f"{port}:8000",
         image_name,
     ]
-    exit_code, _container_id, _stderr = run_command(cmd)
+    exit_code, _container_id, stderr = run_command(cmd)
     if exit_code != 0:
         return False
 
@@ -267,45 +262,25 @@ def test_api_extraction(image_name: str) -> bool:
             temp_file = f.name
 
         try:
-            deadline = time.time() + 30
-            last_stderr = ""
+            cmd = ["curl", "-s", "-X", "POST", f"http://localhost:{port}/extract", "-F", f"files=@{temp_file}"]
+            exit_code, stdout, stderr = run_command(cmd, timeout=30)
 
-            def _try_extract() -> bool:
-                nonlocal last_stderr
-                cmd = [
-                    "curl",
-                    "-s",
-                    "-X",
-                    "POST",
-                    f"http://localhost:{port}/extract",
-                    "-F",
-                    f"data=@{temp_file}",
-                ]
-                exit_code, stdout, stderr = run_command(cmd, timeout=15)
-                last_stderr = stderr
-
-                if exit_code != 0:
-                    return False
-
+            if exit_code == 0:
                 try:
                     response = json.loads(stdout)
+                    if isinstance(response, list) and len(response) > 0:
+                        content = response[0].get("content", "")
+                        success = test_content in content
+                    else:
+                        success = False
                 except json.JSONDecodeError:
-                    return False
+                    success = False
+            else:
+                success = False
 
-                if not isinstance(response, list) or not response:
-                    return False
-
-                content = response[0].get("content", "")
-                return test_content in content
-
-            while time.time() < deadline:
-                if _try_extract():
-                    return True
-                time.sleep(1)
-
-            if last_stderr:
+            if not success and stderr:
                 pass
-            return False
+            return success
 
         finally:
             Path(temp_file).unlink()
@@ -342,9 +317,10 @@ import asyncio
 from kreuzberg import extract_file, ExtractionConfig
 
 async def main():
+    from kreuzberg._types import TableExtractionConfig
     result = await extract_file(
         '/data/pdfs_with_tables/tiny.pdf',
-        config=ExtractionConfig(extract_tables=True)
+        config=ExtractionConfig(tables=TableExtractionConfig())
     )
     print(f"Tables found: {len(result.tables)}")
     return len(result.tables) > 0
@@ -422,6 +398,170 @@ def test_malicious_input_handling(image_name: str) -> bool:
         return exit_code != 0 or "passwd" not in stdout
 
 
+def test_libreoffice_extraction(image_name: str) -> bool:
+    test_file = "legacy_office/unit_test_lists.doc"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--memory",
+        "1g",
+        "--cpus",
+        "1.0",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=120)
+    success = exit_code == 0 and len(stdout) > 20
+
+    if not success and stderr:
+        pass
+    return success
+
+
+def test_chunking_extraction(image_name: str) -> bool:
+    test_file = "text/contract.txt"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+        "--chunk-content",
+        "--max-chars",
+        "500",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=60)
+    success = exit_code == 0 and len(stdout) > 10
+
+    if not success and stderr:
+        pass
+    return success
+
+
+def test_langdetect_extraction(image_name: str) -> bool:
+    test_file = "text/contract.txt"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+        "--auto-detect-language",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=60)
+    success = exit_code == 0 and len(stdout) > 10
+
+    if not success and stderr:
+        pass
+    return success
+
+
+def test_email_extraction(image_name: str) -> bool:
+    test_file = "email/html_only.eml"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=60)
+    success = exit_code == 0 and len(stdout) > 10
+
+    if not success and stderr:
+        pass
+    return success
+
+
+def test_entity_extraction(image_name: str) -> bool:
+    test_file = "text/contract.txt"
+    test_file_path = TEST_FILES_DIR / test_file
+
+    if not test_file_path.exists():
+        return False
+
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        f"{TEST_FILES_DIR}:/data:ro",
+        image_name,
+        "python",
+        "-m",
+        "kreuzberg",
+        "extract",
+        f"/data/{test_file}",
+        "--extract-entities",
+    ]
+
+    exit_code, stdout, stderr = run_command(cmd, timeout=120)
+    success = exit_code == 0 and len(stdout) > 10
+
+    if not success and stderr:
+        pass
+    return success
+
+
 def run_tests_for_image(image_variant: str, image_name: str) -> dict[str, bool]:
     results = {}
 
@@ -433,13 +573,22 @@ def run_tests_for_image(image_variant: str, image_name: str) -> dict[str, bool]:
     results["cli_version"] = test_cli_version(image_name)
     results["api_health"] = test_api_health(image_name)
 
-    results["extract_txt"] = test_file_extraction(image_name, "contract.txt")
-    results["extract_pdf"] = test_file_extraction(image_name, "searchable.pdf")
-    results["extract_docx"] = test_file_extraction(image_name, "document.docx")
+    results["extract_txt"] = test_file_extraction(image_name, "text/contract.txt")
+    results["extract_pdf"] = test_file_extraction(image_name, "pdfs/searchable.pdf")
+    results["extract_docx"] = test_file_extraction(image_name, "office/document.docx")
 
     results["ocr"] = test_ocr_extraction(image_name, image_variant)
 
     results["api_extract"] = test_api_extraction(image_name)
+
+    if image_variant in ("core", "full"):
+        results["chunking"] = test_chunking_extraction(image_name)
+        results["langdetect"] = test_langdetect_extraction(image_name)
+        results["email"] = test_email_extraction(image_name)
+
+    if image_variant == "full":
+        results["libreoffice"] = test_libreoffice_extraction(image_name)
+        results["entities"] = test_entity_extraction(image_name)
 
     results["volume_security"] = test_volume_security(image_name)
     results["resource_limits"] = test_resource_limits(image_name)
