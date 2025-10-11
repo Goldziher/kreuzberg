@@ -46,13 +46,6 @@ def submit_to_process_pool(func: Callable[..., T], *args: Any, **kwargs: Any) ->
 
 
 def get_optimal_worker_count(num_tasks: int, cpu_intensive: bool = True) -> int:
-    """Calculate optimal worker count based on workload.
-
-    Optimized based on benchmarking results:
-    - For 1 task: Use 1 worker (avoid overhead)
-    - For 2-3 tasks: Use num_tasks workers
-    - For 4+ tasks: Use all CPU cores for CPU-intensive work
-    """
     cpu_count = mp.cpu_count()
 
     if num_tasks == 1:
@@ -65,7 +58,6 @@ def get_optimal_worker_count(num_tasks: int, cpu_intensive: bool = True) -> int:
 
 
 def warmup_process_pool() -> None:
-    """Warm up the process pool to reduce initialization overhead."""
     with process_pool() as pool:
         futures = [pool.submit(lambda: None) for _ in range(_POOL_SIZE)]
         for future in futures:

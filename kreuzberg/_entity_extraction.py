@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, Any
 
 import anyio
 
-from kreuzberg._types import Entity, SpacyEntityExtractionConfig
+from kreuzberg._types import Entity, EntityExtractionConfig
+from kreuzberg._utils._model_cache import resolve_model_cache_dir
 from kreuzberg._utils._sync import run_sync
 from kreuzberg.exceptions import KreuzbergError, MissingDependencyError
 
@@ -19,32 +20,14 @@ if TYPE_CHECKING:
 
 
 def is_uv_available() -> bool:
-    """Check if uv is available in the environment."""
     return shutil.which("uv") is not None
 
 
 def get_spacy_model_url(model_name: str, version: str = "3.8.0") -> str:
-    """Get the direct download URL for a spaCy model.
-
-    Args:
-        model_name: Name of the spaCy model (e.g., 'en_core_web_sm')
-        version: Model version to download (default: 3.8.0)
-
-    Returns:
-        Direct download URL for the model
-    """
     return f"https://github.com/explosion/spacy-models/releases/download/{model_name}-{version}/{model_name}-{version}-py3-none-any.whl"
 
 
 async def install_spacy_model_with_uv(model_name: str) -> subprocess.CompletedProcess[str]:
-    """Install spaCy model using uv.
-
-    Args:
-        model_name: Name of the spaCy model to install
-
-    Returns:
-        Completed process result
-    """
     model_url = get_spacy_model_url(model_name)
     return await run_sync(
         subprocess.run,
@@ -56,16 +39,8 @@ async def install_spacy_model_with_uv(model_name: str) -> subprocess.CompletedPr
 
 
 async def install_spacy_model_with_spacy(model_name: str) -> bool:
-    """Install spaCy model using spacy download function.
-
-    Args:
-        model_name: Name of the spaCy model to install
-
-    Returns:
-        True if successful, False otherwise
-    """
     try:
-        import spacy.cli.download  # noqa: PLC0415
+        import spacy.cli  # noqa: PLC0415
 
         await run_sync(spacy.cli.download, model_name)  # type: ignore[attr-defined]
         return True
@@ -78,7 +53,7 @@ def extract_entities(
     entity_types: Sequence[str] = ("PERSON", "ORGANIZATION", "LOCATION", "DATE", "EMAIL", "PHONE"),
     custom_patterns: frozenset[tuple[str, str]] | None = None,
     languages: list[str] | None = None,
-    spacy_config: SpacyEntityExtractionConfig | None = None,
+    spacy_config: EntityExtractionConfig | None = None,
 ) -> list[Entity]:
     entities: list[Entity] = []
     if custom_patterns:
@@ -93,7 +68,7 @@ def extract_entities(
         )
 
     if spacy_config is None:
-        spacy_config = SpacyEntityExtractionConfig()
+        spacy_config = EntityExtractionConfig()
 
     try:
         import spacy  # noqa: F401, PLC0415
@@ -108,7 +83,10 @@ def extract_entities(
     if not model_name:
         return entities
 
-    nlp = load_spacy_model(model_name, spacy_config)
+    try:
+        nlp = load_spacy_model(model_name, spacy_config)
+    except OSError:
+        return entities
 
     if len(text) > spacy_config.max_doc_length:
         text = text[: spacy_config.max_doc_length]
@@ -132,21 +110,21 @@ def extract_entities(
 
 
 @lru_cache(maxsize=32)
-def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig) -> Any:
+def load_spacy_model(model_name: str, spacy_config: EntityExtractionConfig) -> Any:  # noqa: C901, PLR0915
     try:
         import spacy  # noqa: PLC0415
     except ImportError:
         return None
 
-    if spacy_config.model_cache_dir:
-        os.environ["SPACY_DATA"] = str(spacy_config.model_cache_dir)
+    cache_dir = resolve_model_cache_dir(spacy_config.model_cache_dir, env_prefix="SPACY")
+    if cache_dir:
+        os.environ["SPACY_DATA"] = cache_dir
 
     try:
         nlp = spacy.load(model_name)
     except OSError:
 
         async def install_model() -> tuple[bool, str | None]:
-            """Install model and return success status and error message."""
             try:
                 success = await install_spacy_model_with_spacy(model_name)
                 if success:
@@ -166,7 +144,22 @@ def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig)
             return False, spacy_error
 
         try:
-            success, error_details = anyio.run(install_model)
+            import sniffio  # noqa: PLC0415
+
+            try:
+                sniffio.current_async_library()
+                # OSError should bubble up as per error handling rules ~keep
+                raise
+            except sniffio.AsyncLibraryNotFoundError:
+                success, error_details = anyio.run(install_model)
+        except (ImportError, sniffio.AsyncLibraryNotFoundError):
+            try:
+                success, error_details = anyio.run(install_model)
+            except RuntimeError:
+                # Already in async context, OSError must bubble up ~keep
+                raise OSError(
+                    f"spaCy model '{model_name}' not found. Install it first with: uv pip install {get_spacy_model_url(model_name)}"
+                ) from None
         except SystemExit as e:
             success, error_details = False, f"spaCy CLI exit code: {e.code}"
 
@@ -208,7 +201,7 @@ def load_spacy_model(model_name: str, spacy_config: SpacyEntityExtractionConfig)
     return nlp
 
 
-def select_spacy_model(languages: list[str] | None, spacy_config: SpacyEntityExtractionConfig) -> str | None:
+def select_spacy_model(languages: list[str] | None, spacy_config: EntityExtractionConfig) -> str | None:
     if not languages:
         return spacy_config.get_model_for_language("en")
 

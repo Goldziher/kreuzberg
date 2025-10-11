@@ -1,5 +1,3 @@
-"""Type-safe error handling utilities for extraction pipeline."""
-
 from __future__ import annotations
 
 import traceback
@@ -13,15 +11,6 @@ from kreuzberg.exceptions import KreuzbergError, MissingDependencyError, Validat
 
 
 def should_exception_bubble_up(exception: Exception, context: ErrorContextType = "unknown") -> bool:
-    """Determine if an exception should bubble up or be handled gracefully.
-
-    Args:
-        exception: The exception to classify
-        context: The context where the exception occurred (e.g., "batch_processing", "single_extraction", "optional_feature")
-
-    Returns:
-        True if the exception should bubble up, False if it should be handled gracefully
-    """
     if isinstance(exception, (SystemExit, KeyboardInterrupt, MemoryError, OSError, RuntimeError)):
         return True
 
@@ -44,8 +33,6 @@ def should_exception_bubble_up(exception: Exception, context: ErrorContextType =
 
 
 class FeatureProcessingError:
-    """Type-safe processing error for extraction features."""
-
     def __init__(self, feature: str, error: Exception) -> None:
         self._feature = feature
         self._error = error
@@ -83,18 +70,6 @@ def safe_feature_execution(
     result: ExtractionResult,
     context: ErrorContextType = "optional_feature",
 ) -> Any:
-    """Safely execute a feature extraction function with proper error handling.
-
-    Args:
-        feature_name: Name of the feature being executed
-        execution_func: Function to execute that may raise exceptions
-        default_value: Default value to return if execution fails
-        result: ExtractionResult to update with error information
-        context: The context for exception handling decisions
-
-    Returns:
-        Either the successful result or the default value
-    """
     try:
         return execution_func()
     except Exception as e:
@@ -106,7 +81,6 @@ def safe_feature_execution(
 
 
 def _add_processing_error(result: ExtractionResult, error: FeatureProcessingError) -> None:
-    """Add a processing error to the result metadata in a type-safe way."""
     if result.metadata is None:
         result.metadata = {}
 
@@ -124,17 +98,6 @@ def preserve_result_with_errors(
     result: ExtractionResult,
     errors: list[FeatureProcessingError],
 ) -> ExtractionResult:
-    """Preserve a successful extraction result while adding error information.
-
-    This is used when core extraction succeeds but optional features fail.
-
-    Args:
-        result: The successful extraction result
-        errors: List of errors that occurred during optional processing
-
-    Returns:
-        The result with error information added to metadata
-    """
     for error in errors:
         _add_processing_error(result, error)
 
@@ -147,17 +110,6 @@ def create_error_result(
     errors: list[FeatureProcessingError],
     **metadata_kwargs: Any,
 ) -> ExtractionResult:
-    """Create an error result with proper type safety.
-
-    Args:
-        content: Error content to include
-        mime_type: MIME type of the result
-        errors: List of errors that occurred
-        **metadata_kwargs: Additional metadata to include
-
-    Returns:
-        An ExtractionResult with error information
-    """
     metadata: Metadata = {
         "error": f"Multiple processing errors occurred: {len(errors)} errors",
         "error_context": {
