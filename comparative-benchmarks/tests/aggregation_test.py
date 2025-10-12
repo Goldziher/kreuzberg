@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import msgspec
 import pytest
+
 from src.aggregate import ResultAggregator
 from src.cli import main as cli_main
 from src.types import (

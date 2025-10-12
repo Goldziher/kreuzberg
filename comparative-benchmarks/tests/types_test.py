@@ -1,4 +1,5 @@
 import msgspec
+
 from src.types import (
     AggregatedResults,
     BenchmarkConfig,

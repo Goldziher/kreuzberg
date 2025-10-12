@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 import msgspec
+
 from src.types import (
     BenchmarkResult,
     BenchmarkSummary,

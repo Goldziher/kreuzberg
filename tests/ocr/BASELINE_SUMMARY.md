@@ -11,7 +11,7 @@
 
 - **Total Tests**: 93
 - **Passed**: 92
-- **Skipped**: 2 (missing test documents)
+- **Skipped**: 0
 - **Failed**: 0
 - **Coverage**: Public API behavior fully tested
 
@@ -182,6 +182,17 @@ uv run pytest tests/ocr/tesseract_benchmark_test.py \
     --benchmark-compare=tests/ocr/baseline_metrics.json \
     --benchmark-compare-fail=min:50%  # Fail if <2x faster
 ```
+
+### Run OCR Quality Regression Harness
+
+```bash
+RUN_OCR_QUALITY=1 uv run pytest tests/ocr/quality_regression_test.py -v
+```
+
+This renders curated, text-layer PDFs to high-resolution images, runs the Tesseract backend in
+plain-text mode, and compares bag-of-words and numeric-token F1 scores—plus coarse layout deltas—
+against the PDF text layer. Use it to spot regressions in textual fidelity, numeric precision, and
+table handling under near-ideal scanning conditions.
 
 ## Async Benchmark Issues
 

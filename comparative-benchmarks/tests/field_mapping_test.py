@@ -1,4 +1,5 @@
 import pytest
+
 from src.types import (
     BenchmarkResult,
     BenchmarkSummary,
