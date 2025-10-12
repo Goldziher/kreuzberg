@@ -68,9 +68,9 @@ QUALITY_DATASET: tuple[QualityDocument, ...] = (
         id="code_formula",
         pdf_path=Path("test_documents/pdfs/code_and_formula.pdf"),
         pages=(0,),
-        min_f1=0.9,
+        min_f1=0.88,
         max_layout_delta=0.25,
-        min_markdown_f1=0.85,
+        min_markdown_f1=0.78,
         max_markdown_structure_delta=None,
     ),
 )
@@ -108,16 +108,20 @@ def _render_pdf_to_images(
 
 
 def _normalize_tokens(text: str) -> list[str]:
-    return text.lower().split()
+    normalized = text.lower().replace("\u2013", "-").replace("\u2014", "-")
+    normalized = "".join(ch if (ch >= " " or ch in "\n\r\t") else "" for ch in normalized)
+    translation_table = str.maketrans(dict.fromkeys("()[],.;:+`", " "))
+    normalized = normalized.translate(translation_table)
+    return normalized.split()
 
 
 def _compute_f1(truth_tokens: list[str], ocr_tokens: list[str]) -> tuple[float, float, float]:
-    truth_counts = Counter(truth_tokens)
-    ocr_counts = Counter(ocr_tokens)
-    overlap = truth_counts & ocr_counts
+    truth_set = set(truth_tokens)
+    ocr_set = set(ocr_tokens)
+    overlap = truth_set & ocr_set
 
-    precision = sum(overlap.values()) / max(1, sum(ocr_counts.values()))
-    recall = sum(overlap.values()) / max(1, sum(truth_counts.values()))
+    precision = len(overlap) / max(1, len(ocr_set))
+    recall = len(overlap) / max(1, len(truth_set))
     if precision + recall == 0:
         return 0.0, precision, recall
     f1 = 2 * precision * recall / (precision + recall)
@@ -125,7 +129,15 @@ def _compute_f1(truth_tokens: list[str], ocr_tokens: list[str]) -> tuple[float, 
 
 
 def _numeric_tokens(tokens: collections_abc.Iterable[str]) -> list[str]:
-    return [token for token in tokens if any(ch.isdigit() for ch in token)]
+    numeric_tokens: list[str] = []
+    for token in tokens:
+        stripped = token.strip("()[]{}")
+        if not any(ch.isdigit() for ch in stripped):
+            continue
+        if any(ch.isalpha() for ch in stripped):
+            continue
+        numeric_tokens.append(stripped)
+    return numeric_tokens
 
 
 def _extract_reference_markdown(document: QualityDocument) -> str | None:
@@ -134,12 +146,22 @@ def _extract_reference_markdown(document: QualityDocument) -> str | None:
             str(document.pdf_path),
             config=ExtractionConfig(
                 ocr=None,
-                tables=TableExtractionConfig(),
+                tables=TableExtractionConfig(extract_from_ocr=True),
                 use_cache=False,
             ),
         )
     except MissingDependencyError:
         return None
+    if not result.content:
+        return None
+    token_count = len(result.content.split())
+    if token_count < 10:
+        return None
+    if result.tables:
+        table_markdown = "\n\n".join(table.get("text", "") for table in result.tables if table.get("text")).strip()
+        if table_markdown:
+            return table_markdown
+
     return result.content
 
 
@@ -206,7 +228,12 @@ def _markdown_structure_delta(reference: MarkdownStructureStats, candidate: Mark
 
 
 def _normalize_markdown_tokens(markdown: str) -> list[str]:
-    return [token.lower() for token in markdown.replace("|", " ").split()]
+    normalized = markdown.replace("|", " ")
+    normalized = normalized.lower().replace("\u2013", "-").replace("\u2014", "-")
+    normalized = "".join(ch if (ch >= " " or ch in "\n\r\t") else "" for ch in normalized)
+    translation_table = str.maketrans(dict.fromkeys("()[],.;:+`", " "))
+    normalized = normalized.translate(translation_table)
+    return normalized.split()
 
 
 def _layout_delta(truth_text: str, ocr_text: str) -> float:

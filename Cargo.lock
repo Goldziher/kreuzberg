@@ -1223,12 +1223,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hashbrown"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5419bdc4f6a9207fbeba6d11b604d481addf78ecd10c11ad51e76c2f6482748d"
-
-[[package]]
 name = "hashify"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1283,9 +1277,7 @@ dependencies = [
 
 [[package]]
 name = "html-to-markdown-rs"
-version = "2.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4e33c481f04552bd09237524c4e8c46a6bc357a64edfe88ee2a5f8c4b1db2f6"
+version = "2.2.0"
 dependencies = [
  "ammonia",
  "base64",
@@ -1656,7 +1648,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b0f83760fb341a774ed326568e19f5a863af4a952def8c39f9ab92fd95b88e5"
 dependencies = [
  "equivalent",
- "hashbrown 0.16.0",
+ "hashbrown",
  "serde",
  "serde_core",
 ]
@@ -2473,7 +2465,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3daf8e3d4b712abe1d690838f6e29fb76b76ea19589c4afa39ec30e12f62af71"
 dependencies = [
  "array-init-cursor",
- "hashbrown 0.15.5",
+ "hashbrown",
 ]
 
 [[package]]
@@ -2523,7 +2515,7 @@ dependencies = [
  "ethnum",
  "getrandom 0.2.16",
  "getrandom 0.3.3",
- "hashbrown 0.15.5",
+ "hashbrown",
  "itoa",
  "lz4",
  "num-traits",
@@ -2560,7 +2552,7 @@ dependencies = [
  "chrono",
  "either",
  "fast-float2",
- "hashbrown 0.15.5",
+ "hashbrown",
  "itoa",
  "num-traits",
  "polars-arrow",
@@ -2587,7 +2579,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "either",
- "hashbrown 0.15.5",
+ "hashbrown",
  "indexmap",
  "itoa",
  "num-traits",
@@ -2617,7 +2609,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89c43d0ea57168be4546c4d8064479ed8b29a9c79c31a0c7c367ee734b9b7158"
 dependencies = [
  "boxcar",
- "hashbrown 0.15.5",
+ "hashbrown",
  "polars-arrow",
  "polars-error",
  "polars-utils",
@@ -2646,7 +2638,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "343931b818cf136349135ba11dbc18c27683b52c3477b1ba8ca606cf5ab1965c"
 dependencies = [
  "bitflags",
- "hashbrown 0.15.5",
+ "hashbrown",
  "num-traits",
  "polars-arrow",
  "polars-compute",
@@ -2676,7 +2668,7 @@ dependencies = [
  "fs4",
  "futures",
  "glob",
- "hashbrown 0.15.5",
+ "hashbrown",
  "home",
  "itoa",
  "memchr",
@@ -2759,7 +2751,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "either",
- "hashbrown 0.15.5",
+ "hashbrown",
  "hex",
  "indexmap",
  "libm",
@@ -2791,7 +2783,7 @@ dependencies = [
  "bytemuck",
  "ethnum",
  "futures",
- "hashbrown 0.15.5",
+ "hashbrown",
  "num-traits",
  "polars-arrow",
  "polars-compute",
@@ -2825,7 +2817,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "either",
- "hashbrown 0.15.5",
+ "hashbrown",
  "memmap2",
  "num-traits",
  "percent-encoding",
@@ -2968,7 +2960,7 @@ dependencies = [
  "either",
  "flate2",
  "foldhash",
- "hashbrown 0.15.5",
+ "hashbrown",
  "indexmap",
  "libc",
  "memmap2",

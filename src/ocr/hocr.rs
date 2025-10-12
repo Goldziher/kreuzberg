@@ -3,7 +3,16 @@ use html_to_markdown_rs::{ConversionOptions, convert};
 use super::error::OCRError;
 
 pub fn convert_hocr_to_markdown(hocr_html: &str, options: Option<ConversionOptions>) -> Result<String, OCRError> {
-    convert(hocr_html, options).map_err(|e| OCRError::ProcessingFailed(format!("hOCR conversion failed: {}", e)))
+    let use_default = options.is_none();
+    let mut opts = options.unwrap_or_default();
+
+    // Disable spatial table reconstruction and metadata frontmatter by default for OCR output.
+    if use_default {
+        opts.hocr_spatial_tables = false;
+        opts.extract_metadata = false;
+    }
+
+    convert(hocr_html, Some(opts)).map_err(|e| OCRError::ProcessingFailed(format!("hOCR conversion failed: {}", e)))
 }
 
 #[cfg(test)]

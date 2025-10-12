@@ -34,6 +34,7 @@ from kreuzberg._types import (
     ExtractionResult,
     KeywordExtractionConfig,
     PSMMode,
+    TableData,
     TableExtractionConfig,
     TesseractConfig,
 )
@@ -684,7 +685,14 @@ def test_extract_structured_basic(tmp_path: Path) -> None:
                 Entity(text="New York", type="LOCATION", start=10, end=18),
             ],
             keywords=[("document", 0.9), ("structured", 0.8)],
-            tables=[{"text": "table", "cropped_image": None, "df": None, "page_number": 1}],  # type: ignore[typeddict-item]
+            tables=[
+                TableData(
+                    cropped_image=None,
+                    df=None,
+                    page_number=1,
+                    text="table",
+                )
+            ],
         )
         mock_extract.return_value = mock_result
 

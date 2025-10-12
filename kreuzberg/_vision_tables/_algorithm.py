@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
+from dataclasses import dataclass
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import polars as pl
+
+from kreuzberg._ocr import get_ocr_backend
+from kreuzberg.exceptions import KreuzbergError, MissingDependencyError
 
 from ._base import BBox, rect_intersect
 from ._types import BboxPredictions, TablePredictions
@@ -13,9 +18,35 @@ from ._types import BboxPredictions, TablePredictions
 if TYPE_CHECKING:
     from PIL import Image
 
+    from kreuzberg._ocr._base import OCRBackend
     from kreuzberg._types import TableExtractionConfig
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class OCRWord:
+    left: int
+    top: int
+    width: int
+    height: int
+    text: str
+
+    @property
+    def right(self) -> int:
+        return self.left + self.width
+
+    @property
+    def bottom(self) -> int:
+        return self.top + self.height
+
+    @property
+    def x_center(self) -> float:
+        return self.left + self.width / 2.0
+
+    @property
+    def y_center(self) -> float:
+        return self.top + self.height / 2.0
 
 
 def extract_table_dataframe(
@@ -167,6 +198,8 @@ def _create_grid_dataframe(
     if num_rows == 0 or num_cols == 0:
         return pl.DataFrame()
 
+    ocr_cell_map = _extract_table_cells_with_tesseract(image, row_boxes, col_boxes)
+
     data = {}
     for col_idx in range(num_cols):
         column_data = []
@@ -184,7 +217,11 @@ def _create_grid_dataframe(
                     cell_bottom = min(row_box[3], col_box[3])
 
                     if cell_right > cell_left and cell_bottom > cell_top:
-                        cell_text = _extract_cell_text(image, (cell_left, cell_top, cell_right, cell_bottom))
+                        key = (row_idx, col_idx)
+                        if key in ocr_cell_map:
+                            cell_text = ocr_cell_map[key]
+                        else:
+                            cell_text = _extract_cell_text(image, (cell_left, cell_top, cell_right, cell_bottom))
                     else:
                         cell_text = ""
                 else:
@@ -207,11 +244,277 @@ def _extract_cell_text(image: Image.Image, cell_bbox: BBox) -> str:
     try:
         cell_image = image.crop(cell_bbox)
         width, height = cell_image.size
-        if width > 10 and height > 10:
-            return f"[{width}x{height}]"
-        return ""
+
+        if width <= 10 or height <= 10:
+            cell_image.close()
+            return ""
+
+        backend = _get_cell_ocr_backend()
+        if backend is None:
+            cell_image.close()
+            return ""
+
+        try:
+            ocr_result = backend.process_image_sync(
+                cell_image,
+                output_format="text",
+                enable_table_detection=False,
+                psm=6,
+            )
+        finally:
+            cell_image.close()
+
+        text = ocr_result.content.strip()
+        if not text:
+            return ""
+
+        return " ".join(ch for ch in text.replace("\n", " ").split() if ch)
     except (OSError, ValueError):
         return ""
+
+
+@lru_cache(maxsize=1)
+def _get_cell_ocr_backend() -> OCRBackend[Any] | None:
+    try:
+        return get_ocr_backend("tesseract")
+    except MissingDependencyError:
+        logger.warning("Tesseract backend unavailable for table cell OCR; falling back to empty cells")
+        return None
+    except (OSError, RuntimeError):
+        raise
+    except KreuzbergError as exc:  # pragma: no cover - defensive fallback
+        logger.debug("Failed to initialise Tesseract backend for table cell OCR: %s", exc)
+        return None
+
+
+def _extract_table_cells_with_tesseract(
+    image: Image.Image, row_boxes: list[BBox], col_boxes: list[BBox]
+) -> dict[tuple[int, int], str]:
+    backend = _get_cell_ocr_backend()
+    if backend is None:
+        return {}
+
+    words = _parse_tesseract_tsv(image, backend)
+    if not words:
+        return {}
+
+    cell_words: dict[tuple[int, int], list[tuple[int, str]]] = defaultdict(list)
+
+    for word in words:
+        row_idx = _locate_row_index(word.y_center, row_boxes)
+        col_idx = _locate_column_index(word.x_center, col_boxes)
+
+        if row_idx is None or col_idx is None:
+            continue
+
+        cell_words[(row_idx, col_idx)].append((word.left, word.text))
+
+    cell_text_map: dict[tuple[int, int], str] = {}
+    for key, cell_entries in cell_words.items():
+        cell_entries.sort(key=lambda item: item[0])
+        text = " ".join(word for _, word in cell_entries).strip()
+        if text:
+            cleaned = " ".join(text.replace("\n", " ").split())
+            cell_text_map[key] = cleaned
+
+    return cell_text_map
+
+
+def _locate_row_index(y_center: float, row_boxes: list[BBox]) -> int | None:
+    best_idx = None
+    best_distance = float("inf")
+
+    for idx, (_, y1, _, y2) in enumerate(row_boxes):
+        row_top = y1
+        row_bottom = y2
+        margin = max((row_bottom - row_top) * 0.2, 2.0)
+
+        if row_top - margin <= y_center <= row_bottom + margin:
+            distance = (
+                0.0 if row_top <= y_center <= row_bottom else min(abs(y_center - row_top), abs(y_center - row_bottom))
+            )
+            if distance < best_distance:
+                best_distance = distance
+                best_idx = idx
+
+    return best_idx
+
+
+def _locate_column_index(x_center: float, col_boxes: list[BBox]) -> int | None:
+    best_idx = None
+    best_distance = float("inf")
+
+    for idx, (x1, _, x2, _) in enumerate(col_boxes):
+        col_left = x1
+        col_right = x2
+        margin = max((col_right - col_left) * 0.2, 2.0)
+
+        if col_left - margin <= x_center <= col_right + margin:
+            distance = (
+                0.0 if col_left <= x_center <= col_right else min(abs(x_center - col_left), abs(x_center - col_right))
+            )
+            if distance < best_distance:
+                best_distance = distance
+                best_idx = idx
+
+    return best_idx
+
+
+def _parse_tesseract_tsv(image: Image.Image, backend: OCRBackend[Any]) -> list[OCRWord]:
+    try:
+        tsv_result = backend.process_image_sync(
+            image,
+            output_format="tsv",
+            enable_table_detection=False,
+            psm=6,
+        )
+    except (OSError, RuntimeError):
+        raise
+    except KreuzbergError as exc:  # pragma: no cover - defensive fallback
+        logger.debug("Failed to obtain TSV text for table OCR: %s", exc)
+        return []
+
+    lines = tsv_result.content.splitlines()
+    if not lines:
+        return []
+
+    words: list[OCRWord] = []
+    for line in lines[1:]:
+        parts = line.split("\t")
+        if len(parts) < 12 or parts[0] != "5":
+            continue
+
+        text = parts[11].strip()
+        if not text:
+            continue
+
+        try:
+            left = int(parts[6])
+            top = int(parts[7])
+            width = int(parts[8])
+            height = int(parts[9])
+        except ValueError:
+            continue
+
+        words.append(OCRWord(left=left, top=top, width=width, height=height, text=text))
+
+    return words
+
+
+def _detect_column_positions(words: list[OCRWord]) -> tuple[list[float], float]:
+    if not words:
+        return ([], 0.0)
+
+    widths = sorted(w.width for w in words if w.width > 0)
+    median_width = widths[len(widths) // 2] if widths else 40
+    threshold = float(max(int(median_width * 0.8), 20))
+
+    x_positions = sorted(float(w.left) for w in words)
+    columns = _group_positions(x_positions, threshold)
+    return (columns, threshold)
+
+
+def _detect_row_positions(words: list[OCRWord], ratio: float = 0.5) -> tuple[list[float], float]:
+    if not words:
+        return ([], 0.0)
+
+    heights = sorted(w.height for w in words if w.height > 0)
+    median_height = heights[len(heights) // 2] if heights else 20
+    threshold = float(max(int(median_height * ratio), 10))
+
+    y_centers = sorted(w.y_center for w in words)
+    rows = _group_positions(y_centers, threshold)
+    return (rows, threshold)
+
+
+def _group_positions(values: list[float], threshold: float) -> list[float]:
+    if not values:
+        return []
+
+    groups: list[list[float]] = []
+
+    for value in values:
+        placed = False
+        for group in groups:
+            if abs(value - group[0]) <= threshold:
+                group.append(value)
+                placed = True
+                break
+        if not placed:
+            groups.append([value])
+
+    medians = []
+    for group in groups:
+        group.sort()
+        medians.append(group[len(group) // 2])
+
+    medians.sort()
+    return medians
+
+
+def _nearest_index_with_tolerance(value: float, positions: list[float], tolerance: float) -> int | None:
+    best_idx = None
+    best_distance = tolerance
+
+    for idx, pos in enumerate(positions):
+        distance = abs(value - pos)
+        if distance <= tolerance and distance < best_distance:
+            best_idx = idx
+            best_distance = distance
+
+    return best_idx
+
+
+def _remove_empty_rows_columns(table: list[list[str]]) -> list[list[str]]:
+    if not table:
+        return []
+
+    non_empty_rows = [row for row in table if any(cell.strip() for cell in row)]
+    if not non_empty_rows:
+        return []
+
+    num_cols = len(non_empty_rows[0])
+    col_indices = [idx for idx in range(num_cols) if any(row[idx].strip() for row in non_empty_rows if idx < len(row))]
+
+    return [[row[idx] for idx in col_indices] for row in non_empty_rows]
+
+
+def _build_dataframe_from_ocr(image: Image.Image) -> pl.DataFrame:
+    backend = _get_cell_ocr_backend()
+    if backend is None:
+        return pl.DataFrame()
+
+    words = _parse_tesseract_tsv(image, backend)
+    if not words:
+        return pl.DataFrame()
+
+    column_positions, column_threshold = _detect_column_positions(words)
+    row_positions, row_threshold = _detect_row_positions(words)
+
+    if not column_positions or not row_positions:
+        return pl.DataFrame()
+
+    table_cells: list[list[list[str]]] = [[[] for _ in column_positions] for _ in row_positions]
+
+    for word in words:
+        row_idx = _nearest_index_with_tolerance(word.y_center, row_positions, row_threshold * 1.5)
+        col_idx = _nearest_index_with_tolerance(word.x_center, column_positions, column_threshold * 1.5)
+
+        if row_idx is None or col_idx is None:
+            continue
+
+        table_cells[row_idx][col_idx].append(word.text)
+
+    table = [[" ".join(cell_words).strip() for cell_words in row] for row in table_cells]
+
+    cleaned = _remove_empty_rows_columns(table)
+    if not cleaned:
+        return pl.DataFrame()
+
+    width = len(cleaned[0])
+    data = {f"Column_{idx}": [row[idx] if idx < len(row) else "" for row in cleaned] for idx in range(width)}
+
+    return pl.DataFrame(data)
 
 
 def _apply_non_maximum_suppression(boxes: list[BBox], scores: list[float], threshold: float = 0.5) -> list[int]:

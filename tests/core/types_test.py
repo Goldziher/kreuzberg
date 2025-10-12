@@ -208,7 +208,12 @@ def test_extraction_result_table_export_methods() -> None:
 
     df = pl.DataFrame({"name": ["Alice", "Bob"], "age": [25, 30]})
 
-    table = TableData(df=df, text="Test Table", page_number=1, cropped_image=None)  # type: ignore[typeddict-item]
+    table: TableData = {
+        "df": df,
+        "text": "Test Table",
+        "page_number": 1,
+        "cropped_image": None,
+    }
 
     result = ExtractionResult(content="Test content", mime_type="text/plain", metadata={}, tables=[table])
 
@@ -380,7 +385,7 @@ def test_normalize_metadata_function() -> None:
     result = normalize_metadata(metadata)
 
     assert result["title"] == "Test Document"
-    assert result["authors"] == "Test Author"  # type: ignore[comparison-overlap]
+    assert result["authors"] == "Test Author"
     assert result["subject"] == "Testing"
 
     assert "invalid_key" not in result
@@ -434,7 +439,7 @@ def test_extraction_result_to_dict_with_nested_config() -> None:
 
     config = TesseractConfig(language="eng", psm=PSMMode.SINGLE_BLOCK)
 
-    result = ExtractionResult(content="Test content", mime_type="text/plain", metadata={"ocr_config": config})  # type: ignore[typeddict-unknown-key]
+    result = ExtractionResult(content="Test content", mime_type="text/plain", metadata={"ocr_config": config})
 
     result_dict = result.to_dict(include_none=False)
 

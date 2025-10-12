@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 from unittest.mock import Mock, patch
 
 import click
@@ -21,6 +22,11 @@ from kreuzberg.cli import (
     handle_error,
 )
 from kreuzberg.exceptions import KreuzbergError, MissingDependencyError
+
+if TYPE_CHECKING:
+    import polars as pl
+
+    from kreuzberg._types import TableData
 
 
 def test_ocr_backend_param_type_none() -> None:
@@ -58,11 +64,18 @@ def test_ocr_backend_param_type_invalid() -> None:
 
 
 def test_format_extraction_result_text() -> None:
+    table_entry: TableData = {
+        "page_number": 1,
+        "text": "table text",
+        "cropped_image": None,
+        "df": None,
+    }
+
     result = ExtractionResult(
         content="Test content",
         mime_type="text/plain",
         metadata={"title": "Test Document"},
-        tables=[{"page_number": 1, "text": "table text", "cropped_image": None, "df": None}],  # type: ignore[typeddict-item]
+        tables=[table_entry],
         chunks=["chunk1", "chunk2"],
     )
 
@@ -79,11 +92,18 @@ def test_format_extraction_result_text() -> None:
 
 
 def test_format_extraction_result_json() -> None:
+    table_entry: TableData = {
+        "page_number": 1,
+        "text": "table text",
+        "cropped_image": None,
+        "df": None,
+    }
+
     result = ExtractionResult(
         content="Test content",
         mime_type="text/plain",
         metadata={"title": "Test Document"},
-        tables=[{"page_number": 1, "text": "table text", "cropped_image": None, "df": None}],  # type: ignore[typeddict-item]
+        tables=[table_entry],
         chunks=["chunk1", "chunk2"],
     )
 
@@ -103,11 +123,17 @@ def test_format_extraction_result_json() -> None:
 def test_format_extraction_result_json_with_dataframe() -> None:
     mock_df = Mock()
     mock_df.write_csv.return_value = "col1,col2\nval1,val2"
+    table_entry: TableData = {
+        "page_number": 1,
+        "text": "table",
+        "cropped_image": None,
+        "df": cast("pl.DataFrame", mock_df),
+    }
 
     result = ExtractionResult(
         content="Test",
         mime_type="text/plain",
-        tables=[{"page_number": 1, "text": "table", "cropped_image": None, "df": mock_df}],  # type: ignore[typeddict-item]
+        tables=[table_entry],
     )
 
     output = format_extraction_result(result, show_metadata=False, output_format="json")
@@ -119,11 +145,17 @@ def test_format_extraction_result_json_with_pandas_dataframe() -> None:
     mock_df = Mock()
     del mock_df.write_csv
     mock_df.to_csv.return_value = "col1,col2\nval1,val2"
+    table_entry: TableData = {
+        "page_number": 1,
+        "text": "table",
+        "cropped_image": None,
+        "df": cast("pl.DataFrame", mock_df),
+    }
 
     result = ExtractionResult(
         content="Test",
         mime_type="text/plain",
-        tables=[{"page_number": 1, "text": "table", "cropped_image": None, "df": mock_df}],  # type: ignore[typeddict-item]
+        tables=[table_entry],
     )
 
     output = format_extraction_result(result, show_metadata=False, output_format="json")

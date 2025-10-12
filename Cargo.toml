@@ -22,7 +22,7 @@ encoding_rs = "0.8.35"
 fast_image_resize = "5.3.0"
 hex = "0.4.3"
 html-escape = "0.2.13"
-html-to-markdown-rs = { version = "2.1.2", features = ["inline-images"] }
+html-to-markdown-rs = { path = "../html-to-markdown/crates/html-to-markdown", features = ["inline-images"] }
 image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"] }
 libc = "0.2"
 mail-parser = "0.11.1"

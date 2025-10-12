@@ -13,6 +13,19 @@ use super::table::{extract_words, reconstruct_table, table_to_markdown};
 use super::types::{BatchItemResult, ExtractionResultDTO, TableDTO, TesseractConfigDTO};
 use super::utils::compute_hash;
 
+fn strip_control_characters(text: &str) -> String {
+    if text
+        .chars()
+        .any(|c| matches!(c, '\u{0000}'..='\u{001F}' | '\u{007F}') && c != '\n' && c != '\r' && c != '\t')
+    {
+        text.chars()
+            .filter(|c| !matches!(c, '\u{0000}'..='\u{001F}' | '\u{007F}') || matches!(c, '\n' | '\r' | '\t'))
+            .collect()
+    } else {
+        text.to_string()
+    }
+}
+
 fn log_ci_debug<F>(enabled: bool, stage: &str, details: F)
 where
     F: FnOnce() -> String,
@@ -330,7 +343,7 @@ impl OCRProcessor {
             None
         };
 
-        let (content, mime_type) = match config.output_format.as_str() {
+        let (raw_content, mime_type) = match config.output_format.as_str() {
             "text" => {
                 let text = api
                     .get_utf8_text()
@@ -402,6 +415,8 @@ impl OCRProcessor {
                 }
             }
         }
+
+        let content = strip_control_characters(&raw_content);
 
         Ok(ExtractionResultDTO {
             content,

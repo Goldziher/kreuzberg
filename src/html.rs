@@ -99,10 +99,14 @@ fn parse_preprocessing_preset(value: &Bound<'_, PyAny>) -> PyResult<Preprocessin
 fn build_conversion_options(dict: Option<Bound<'_, PyDict>>) -> PyResult<ConversionOptions> {
     let mut options = ConversionOptions::default();
 
-    let Some(dict) = dict else {
+    if dict.is_none() {
+        options.hocr_spatial_tables = false;
+        options.extract_metadata = false;
         return Ok(options);
     };
-
+    let dict = dict.unwrap();
+    let mut saw_hocr_spatial_tables = false;
+    let mut saw_extract_metadata = false;
     if let Some(value) = dict.get_item("heading_style")? {
         options.heading_style = parse_heading_style(&value)?;
     }
@@ -142,11 +146,16 @@ fn build_conversion_options(dict: Option<Bound<'_, PyDict>>) -> PyResult<Convers
     if let Some(value) = dict.get_item("br_in_tables")? {
         options.br_in_tables = value.extract::<bool>()?;
     }
+    if let Some(value) = dict.get_item("hocr_spatial_tables")? {
+        options.hocr_spatial_tables = value.extract::<bool>()?;
+        saw_hocr_spatial_tables = true;
+    }
     if let Some(value) = dict.get_item("highlight_style")? {
         options.highlight_style = parse_highlight_style(&value)?;
     }
     if let Some(value) = dict.get_item("extract_metadata")? {
         options.extract_metadata = value.extract::<bool>()?;
+        saw_extract_metadata = true;
     }
     if let Some(value) = dict.get_item("whitespace_mode")? {
         options.whitespace_mode = parse_whitespace_mode(&value)?;
@@ -186,6 +195,13 @@ fn build_conversion_options(dict: Option<Bound<'_, PyDict>>) -> PyResult<Convers
     }
     if let Some(value) = dict.get_item("encoding")? {
         options.encoding = value.extract::<String>()?;
+    }
+
+    if !saw_hocr_spatial_tables {
+        options.hocr_spatial_tables = false;
+    }
+    if !saw_extract_metadata {
+        options.extract_metadata = false;
     }
 
     if let Some(value) = dict.get_item("preprocessing")? {

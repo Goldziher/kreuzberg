@@ -536,8 +536,8 @@ class ImagePreprocessingMetadata(NamedTuple):
 class Metadata(TypedDict, total=False):
     abstract: NotRequired[str]
     """Document abstract or summary."""
-    authors: NotRequired[list[str]]
-    """List of document authors."""
+    authors: NotRequired[str | list[str]]
+    """Document authors as a list or single string."""
     categories: NotRequired[list[str]]
     """Categories or classifications."""
     character_count: NotRequired[int]
@@ -598,6 +598,8 @@ class Metadata(TypedDict, total=False):
     """Names of sheets in spreadsheet."""
     title: NotRequired[str]
     """Document title."""
+    ocr_config: NotRequired[TesseractConfig | EasyOCRConfig | PaddleOCRConfig | dict[str, Any]]
+    """OCR configuration used during extraction."""
     total_cells: NotRequired[str]
     """Total number of cells in spreadsheet."""
     version: NotRequired[str]

@@ -15,10 +15,14 @@ from kreuzberg._utils._model_cache import (
 from kreuzberg._utils._resource_managers import image_resources, pdf_document_sync, pdf_resources_sync
 from kreuzberg._utils._sync import run_sync
 from kreuzberg._utils._table import enhance_table_markdown
+from kreuzberg.exceptions import MissingDependencyError
 
 if TYPE_CHECKING:
+    import polars as pl
+
     from kreuzberg._types import TableData
 
+from ._algorithm import _build_dataframe_from_ocr
 from ._base import Rect
 from ._detector import TableDetector
 from ._formatter import TableFormatter
@@ -36,6 +40,21 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+def _dataframe_has_content(df: pl.DataFrame) -> bool:
+    if df.is_empty():
+        return False
+
+    for row in df.iter_rows():
+        for value in row:
+            if isinstance(value, str):
+                if value.strip():
+                    return True
+            elif value is not None:
+                return True
+
+    return False
 
 
 @lru_cache(maxsize=2)
@@ -114,7 +133,9 @@ def extract_tables_sync(file_path: str | Path, config: TableExtractionConfig | N
         config = TableExtractionConfig()
 
     detector = _get_cached_detector(config.detection_model, config.detection_threshold, config.model_cache_dir)
-    formatter = _get_cached_formatter(config.structure_model, config.structure_threshold, config.model_cache_dir)
+    formatter: TableFormatter | None = None
+    if not config.extract_from_ocr:
+        formatter = _get_cached_formatter(config.structure_model, config.structure_threshold, config.model_cache_dir)
 
     tables = []
 
@@ -145,23 +166,52 @@ def extract_tables_sync(file_path: str | Path, config: TableExtractionConfig | N
                     table_image = page_image.crop((rect.xmin, rect.ymin, rect.xmax, rect.ymax))
 
                     with image_resources(table_image):
-                        formatted_table = formatter.format_table(cropped_table, table_image)
+                        temp_table_data: TableData
+                        table_data: TableData
 
-                        temp_table_data: TableData = {
-                            "cropped_image": table_image.copy(),
-                            "df": formatted_table.dataframe,
-                            "page_number": page_idx + 1,
-                            "text": "",
-                        }
+                        if config.extract_from_ocr:
+                            dataframe = _build_dataframe_from_ocr(table_image)
+                            temp_table_data = {
+                                "cropped_image": table_image.copy(),
+                                "df": dataframe if not dataframe.is_empty() else None,
+                                "page_number": page_idx + 1,
+                                "text": "",
+                            }
+                            table_text = enhance_table_markdown(temp_table_data) if not dataframe.is_empty() else ""
+                            table_data = {
+                                "cropped_image": table_image.copy(),
+                                "df": dataframe if not dataframe.is_empty() else None,
+                                "page_number": page_idx + 1,
+                                "text": table_text,
+                            }
+                        else:
+                            if formatter is None:
+                                raise MissingDependencyError(
+                                    "Table formatting requires 'transformers' and 'torch' packages. "
+                                    "Install with: pip install 'kreuzberg[vision-tables]'"
+                                )
 
-                        table_text = enhance_table_markdown(temp_table_data)
+                            formatted_table = formatter.format_table(cropped_table, table_image)
+                            dataframe = formatted_table.dataframe
 
-                        table_data: TableData = {
-                            "cropped_image": table_image.copy(),
-                            "df": formatted_table.dataframe,
-                            "page_number": page_idx + 1,
-                            "text": table_text,
-                        }
+                            if not _dataframe_has_content(dataframe):
+                                dataframe = _build_dataframe_from_ocr(table_image)
+
+                            temp_table_data = {
+                                "cropped_image": table_image.copy(),
+                                "df": dataframe if not dataframe.is_empty() else None,
+                                "page_number": page_idx + 1,
+                                "text": "",
+                            }
+
+                            table_text = enhance_table_markdown(temp_table_data) if not dataframe.is_empty() else ""
+
+                            table_data = {
+                                "cropped_image": table_image.copy(),
+                                "df": dataframe if not dataframe.is_empty() else None,
+                                "page_number": page_idx + 1,
+                                "text": table_text,
+                            }
 
                         tables.append(table_data)
 

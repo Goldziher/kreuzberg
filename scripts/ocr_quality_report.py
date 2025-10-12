@@ -7,9 +7,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import collections.abc as collections_abc
 import json
-from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -23,6 +21,8 @@ from kreuzberg._types import ExtractionConfig
 from kreuzberg.exceptions import MissingDependencyError
 
 if TYPE_CHECKING:
+    import collections.abc as collections_abc
+
     from kreuzberg._types import TableExtractionConfig as TableExtractionConfigClass
 else:  # pragma: no cover - optional dependency for older releases
     try:
@@ -64,20 +64,32 @@ def _load_text_layer(document: QualityDocument) -> str:
 
 
 def _tokenize(text: str) -> list[str]:
-    return text.lower().split()
+    normalized = text.lower().replace("\u2013", "-").replace("\u2014", "-")
+    normalized = "".join(ch if (ch >= " " or ch in "\n\r\t") else "" for ch in normalized)
+    translation_table = str.maketrans(dict.fromkeys("()[],.;:+`", " "))
+    normalized = normalized.translate(translation_table)
+    return normalized.split()
 
 
 def _numeric_tokens(tokens: collections_abc.Iterable[str]) -> list[str]:
-    return [token for token in tokens if any(ch.isdigit() for ch in token)]
+    numeric_tokens: list[str] = []
+    for token in tokens:
+        stripped = token.strip("()[]{}")
+        if not any(ch.isdigit() for ch in stripped):
+            continue
+        if any(ch.isalpha() for ch in stripped):
+            continue
+        numeric_tokens.append(stripped)
+    return numeric_tokens
 
 
 def _compute_f1(truth_tokens: list[str], ocr_tokens: list[str]) -> dict[str, float]:
-    truth_counts = Counter(truth_tokens)
-    ocr_counts = Counter(ocr_tokens)
-    overlap = truth_counts & ocr_counts
+    truth_set = set(truth_tokens)
+    ocr_set = set(ocr_tokens)
+    overlap = truth_set & ocr_set
 
-    precision = sum(overlap.values()) / max(1, sum(ocr_counts.values()))
-    recall = sum(overlap.values()) / max(1, sum(truth_counts.values()))
+    precision = len(overlap) / max(1, len(ocr_set))
+    recall = len(overlap) / max(1, len(truth_set))
     f1 = 0.0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
     return {"f1": f1, "precision": precision, "recall": recall}
 
@@ -85,7 +97,7 @@ def _compute_f1(truth_tokens: list[str], ocr_tokens: list[str]) -> dict[str, flo
 def _extract_reference_markdown(document: QualityDocument) -> str | None:
     tables_config: Any | None = None
     if TableExtractionConfigClass is not None:
-        tables_config = TableExtractionConfigClass()
+        tables_config = TableExtractionConfigClass(extract_from_ocr=True)
     try:
         result = extract_file_sync(
             str(document.pdf_path),
@@ -93,11 +105,26 @@ def _extract_reference_markdown(document: QualityDocument) -> str | None:
         )
     except (MissingDependencyError, ModuleNotFoundError, RuntimeError, ValueError):
         return None
+    if not result.content:
+        return None
+    token_count = len(result.content.split())
+    if token_count < 10:
+        return None
+    if result.tables:
+        table_markdown = "\n\n".join(table.get("text", "") for table in result.tables if table.get("text")).strip()
+        if table_markdown:
+            return table_markdown
+
     return result.content
 
 
 def _normalize_markdown(text: str) -> list[str]:
-    return text.replace("|", " ").lower().split()
+    normalized = text.replace("|", " ")
+    normalized = normalized.lower().replace("\u2013", "-").replace("\u2014", "-")
+    normalized = "".join(ch if (ch >= " " or ch in "\n\r\t") else "" for ch in normalized)
+    translation_table = str.maketrans(dict.fromkeys("()[],.;:+`", " "))
+    normalized = normalized.translate(translation_table)
+    return normalized.split()
 
 
 def evaluate_document(document: QualityDocument) -> dict[str, object]:
