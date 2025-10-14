@@ -1,0 +1,20 @@
+pub mod email;
+pub mod excel;
+pub mod html;
+pub mod libreoffice;
+pub mod pandoc;
+pub mod pptx;
+pub mod structured;
+pub mod table;
+pub mod text;
+pub mod xml;
+
+pub use email::{build_email_text_output, extract_email_content, parse_eml_content, parse_msg_content};
+pub use excel::{excel_to_markdown, read_excel_bytes, read_excel_file};
+pub use html::{convert_html_to_markdown, process_html};
+pub use libreoffice::{check_libreoffice_available, convert_doc_to_docx, convert_ppt_to_pptx};
+pub use pptx::{extract_pptx_from_bytes, extract_pptx_from_path};
+pub use structured::{JsonExtractionConfig, StructuredDataResult, parse_json, parse_toml, parse_yaml};
+pub use table::table_from_arrow_to_markdown;
+pub use text::parse_text;
+pub use xml::parse_xml;

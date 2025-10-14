@@ -155,13 +155,17 @@ python-source = "."
 module-name = "kreuzberg._internal_bindings"
 features = [ "pyo3/extension-module" ]
 compatibility = "manylinux2014"
+manifest-path = "crates/kreuzberg-py/Cargo.toml"
+# Include Pdfium library in the wheel
+include = [ "kreuzberg/_lib/*" ]
 
 [tool.uv]
 cache-keys = [
   { file = "pyproject.toml" },
   { file = "Cargo.toml" },
   { file = "Cargo.lock" },
-  { file = "src/**/*.rs" },
+  { file = "crates/**/*.rs" },
+  { file = "crates/**/Cargo.toml" },
 ]
 
 [tool.uv.workspace]

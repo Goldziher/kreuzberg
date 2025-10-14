@@ -1,32 +1,11 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use text_splitter::{Characters, ChunkCapacity, ChunkConfig, ChunkConfigError, MarkdownSplitter, TextSplitter};
-
-#[derive(Debug)]
-struct PyChunkConfigError(ChunkConfigError);
-
-impl From<ChunkConfigError> for PyChunkConfigError {
-    fn from(err: ChunkConfigError) -> Self {
-        Self(err)
-    }
-}
-
-impl From<PyChunkConfigError> for PyErr {
-    fn from(err: PyChunkConfigError) -> Self {
-        PyValueError::new_err(err.0.to_string())
-    }
-}
-
-fn build_config(capacity: usize, overlap: usize, trim: bool) -> Result<ChunkConfig<Characters>, PyChunkConfigError> {
-    let config = ChunkConfig::new(ChunkCapacity::new(capacity))
-        .with_overlap(overlap)?
-        .with_trim(trim);
-    Ok(config)
-}
 
 #[pyclass(module = "kreuzberg._internal_bindings", name = "TextSplitter", frozen)]
 pub struct PyTextSplitter {
-    splitter: TextSplitter<Characters>,
+    max_characters: usize,
+    overlap: usize,
+    trim: bool,
 }
 
 #[pymethods]
@@ -34,20 +13,44 @@ impl PyTextSplitter {
     #[new]
     #[pyo3(signature = (max_characters, overlap=0, trim=true))]
     fn new(max_characters: usize, overlap: usize, trim: bool) -> PyResult<Self> {
-        let config = build_config(max_characters, overlap, trim)?;
+        // Validate config early to match old behavior
+        let config = kreuzberg::chunking::ChunkingConfig {
+            max_characters,
+            overlap,
+            trim,
+            chunker_type: kreuzberg::chunking::ChunkerType::Text,
+        };
+
+        // Test the config by attempting to chunk empty string
+        kreuzberg::chunking::chunk_text("", &config).map_err(|e| PyValueError::new_err(e.to_string()))?;
+
         Ok(Self {
-            splitter: TextSplitter::new(config),
+            max_characters,
+            overlap,
+            trim,
         })
     }
 
-    fn chunks(&self, text: &str) -> Vec<String> {
-        self.splitter.chunks(text).map(|chunk| chunk.to_string()).collect()
+    fn chunks(&self, text: &str) -> PyResult<Vec<String>> {
+        let config = kreuzberg::chunking::ChunkingConfig {
+            max_characters: self.max_characters,
+            overlap: self.overlap,
+            trim: self.trim,
+            chunker_type: kreuzberg::chunking::ChunkerType::Text,
+        };
+
+        let result =
+            kreuzberg::chunking::chunk_text(text, &config).map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        Ok(result.chunks)
     }
 }
 
 #[pyclass(module = "kreuzberg._internal_bindings", name = "MarkdownSplitter", frozen)]
 pub struct PyMarkdownSplitter {
-    splitter: MarkdownSplitter<Characters>,
+    max_characters: usize,
+    overlap: usize,
+    trim: bool,
 }
 
 #[pymethods]
@@ -55,14 +58,36 @@ impl PyMarkdownSplitter {
     #[new]
     #[pyo3(signature = (max_characters, overlap=0, trim=true))]
     fn new(max_characters: usize, overlap: usize, trim: bool) -> PyResult<Self> {
-        let config = build_config(max_characters, overlap, trim)?;
+        // Validate config early to match old behavior
+        let config = kreuzberg::chunking::ChunkingConfig {
+            max_characters,
+            overlap,
+            trim,
+            chunker_type: kreuzberg::chunking::ChunkerType::Markdown,
+        };
+
+        // Test the config by attempting to chunk empty string
+        kreuzberg::chunking::chunk_text("", &config).map_err(|e| PyValueError::new_err(e.to_string()))?;
+
         Ok(Self {
-            splitter: MarkdownSplitter::new(config),
+            max_characters,
+            overlap,
+            trim,
         })
     }
 
-    fn chunks(&self, text: &str) -> Vec<String> {
-        self.splitter.chunks(text).map(|chunk| chunk.to_string()).collect()
+    fn chunks(&self, text: &str) -> PyResult<Vec<String>> {
+        let config = kreuzberg::chunking::ChunkingConfig {
+            max_characters: self.max_characters,
+            overlap: self.overlap,
+            trim: self.trim,
+            chunker_type: kreuzberg::chunking::ChunkerType::Markdown,
+        };
+
+        let result =
+            kreuzberg::chunking::chunk_text(text, &config).map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        Ok(result.chunks)
     }
 }
 
@@ -85,7 +110,7 @@ mod tests {
     fn text_splitter_produces_overlapping_chunks() {
         ensure_python();
         let splitter = PyTextSplitter::new(12, 2, true).expect("text splitter instantiation failed");
-        let chunks = splitter.chunks("0123456789ABCDEFGHIJ");
+        let chunks = splitter.chunks("0123456789ABCDEFGHIJ").unwrap();
         assert!(chunks.len() >= 2, "expected multiple chunks, got {:?}", chunks);
         assert!(chunks.iter().all(|chunk| chunk.len() <= 12));
         let overlap = &chunks[0][chunks[0].len().saturating_sub(2)..];
@@ -97,7 +122,7 @@ mod tests {
         ensure_python();
         let markdown = "# Title\n\nParagraph one with **bold** text.\n\n## Section\nMore text here.";
         let splitter = PyMarkdownSplitter::new(32, 4, true).expect("markdown splitter instantiation failed");
-        let chunks = splitter.chunks(markdown);
+        let chunks = splitter.chunks(markdown).unwrap();
         assert!(chunks.len() >= 2, "expected multiple markdown chunks");
         assert!(chunks[0].contains("# Title"));
         assert!(chunks.iter().all(|chunk| !chunk.is_empty()));
@@ -112,7 +137,7 @@ mod tests {
             .expect("expected overlap validation error");
         let message = err.to_string();
         assert!(
-            message.contains("overlap") || message.contains("must be"),
+            message.contains("overlap") || message.contains("must be") || message.contains("Invalid"),
             "unexpected error message: {message}"
         );
     }

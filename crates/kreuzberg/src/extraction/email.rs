@@ -1,0 +1,639 @@
+use crate::error::{KreuzbergError, Result};
+use crate::types::{EmailAttachment, EmailExtractionResult};
+use mail_parser::MimeHeaders;
+use regex::Regex;
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
+static HTML_TAG_RE: OnceLock<Regex> = OnceLock::new();
+static SCRIPT_RE: OnceLock<Regex> = OnceLock::new();
+static STYLE_RE: OnceLock<Regex> = OnceLock::new();
+static WHITESPACE_RE: OnceLock<Regex> = OnceLock::new();
+
+fn html_tag_regex() -> &'static Regex {
+    HTML_TAG_RE.get_or_init(|| Regex::new(r"<[^>]+>").unwrap())
+}
+
+fn script_regex() -> &'static Regex {
+    SCRIPT_RE.get_or_init(|| Regex::new(r"(?i)<script[^>]*>.*?</script>").unwrap())
+}
+
+fn style_regex() -> &'static Regex {
+    STYLE_RE.get_or_init(|| Regex::new(r"(?i)<style[^>]*>.*?</style>").unwrap())
+}
+
+fn whitespace_regex() -> &'static Regex {
+    WHITESPACE_RE.get_or_init(|| Regex::new(r"\s+").unwrap())
+}
+
+/// Parse .eml file content (RFC822 format)
+pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
+    let message = mail_parser::MessageParser::default()
+        .parse(data)
+        .ok_or_else(|| KreuzbergError::Parsing("Failed to parse EML file: invalid email format".to_string()))?;
+
+    // Extract basic fields
+    let subject = message.subject().map(|s| s.to_string());
+
+    let from_email = message
+        .from()
+        .and_then(|from| from.first())
+        .and_then(|addr| addr.address())
+        .map(|s| s.to_string());
+
+    let to_emails: Vec<String> = message
+        .to()
+        .map(|to| {
+            to.iter()
+                .filter_map(|addr| addr.address().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_else(Vec::new);
+
+    let cc_emails: Vec<String> = message
+        .cc()
+        .map(|cc| {
+            cc.iter()
+                .filter_map(|addr| addr.address().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_else(Vec::new);
+
+    let bcc_emails: Vec<String> = message
+        .bcc()
+        .map(|bcc| {
+            bcc.iter()
+                .filter_map(|addr| addr.address().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_else(Vec::new);
+
+    let date = message.date().map(|d| d.to_rfc3339());
+
+    let message_id = message.message_id().map(|id| id.to_string());
+
+    // Extract text content
+    let plain_text = message.body_text(0).map(|s| s.to_string());
+
+    let html_content = message.body_html(0).map(|s| s.to_string());
+
+    // Create cleaned text
+    let cleaned_text = if let Some(plain) = &plain_text {
+        plain.clone()
+    } else if let Some(html) = &html_content {
+        clean_html_content(html)
+    } else {
+        String::new()
+    };
+
+    // Extract attachments
+    let mut attachments = Vec::new();
+    for attachment in message.attachments() {
+        let filename = attachment.attachment_name().map(|s| s.to_string());
+
+        let mime_type = attachment
+            .content_type()
+            .map(|ct| {
+                let content_type_str = format!("{}/{}", ct.ctype(), ct.subtype().unwrap_or("octet-stream"));
+                parse_content_type(&content_type_str)
+            })
+            .unwrap_or_else(|| "application/octet-stream".to_string());
+
+        let data = attachment.contents();
+        let size = data.len();
+
+        let is_image = is_image_mime_type(&mime_type);
+
+        attachments.push(EmailAttachment {
+            name: filename.clone(),
+            filename,
+            mime_type: Some(mime_type),
+            size: Some(size),
+            is_image,
+            data: Some(data.to_vec()),
+        });
+    }
+
+    // Build metadata
+    let metadata = build_metadata(
+        &subject,
+        &from_email,
+        &to_emails,
+        &cc_emails,
+        &bcc_emails,
+        &date,
+        &message_id,
+        &attachments,
+    );
+
+    Ok(EmailExtractionResult {
+        subject,
+        from_email,
+        to_emails,
+        cc_emails,
+        bcc_emails,
+        date,
+        message_id,
+        plain_text,
+        html_content,
+        cleaned_text,
+        attachments,
+        metadata,
+    })
+}
+
+/// Parse .msg file content (Outlook format)
+pub fn parse_msg_content(data: &[u8]) -> Result<EmailExtractionResult> {
+    let outlook = msg_parser::Outlook::from_slice(data)
+        .map_err(|e| KreuzbergError::Parsing(format!("Failed to parse MSG file: {}", e)))?;
+
+    // Extract basic fields
+    let subject = Some(outlook.subject.clone());
+    let from_email = Some(outlook.sender.email.clone());
+
+    let to_emails = outlook
+        .to
+        .iter()
+        .map(|p| p.email.clone())
+        .filter(|e| !e.is_empty())
+        .collect::<Vec<String>>();
+
+    let cc_emails = outlook
+        .cc
+        .iter()
+        .map(|p| p.email.clone())
+        .filter(|e| !e.is_empty())
+        .collect::<Vec<String>>();
+
+    let bcc_emails = if !outlook.bcc.is_empty() {
+        vec![outlook.bcc.clone()]
+    } else {
+        vec![]
+    };
+
+    let date = if !outlook.headers.date.is_empty() {
+        Some(outlook.headers.date.clone())
+    } else {
+        None
+    };
+
+    let message_id = if !outlook.headers.message_id.is_empty() {
+        Some(outlook.headers.message_id.clone())
+    } else {
+        None
+    };
+
+    let plain_text = if !outlook.body.is_empty() {
+        Some(outlook.body.clone())
+    } else {
+        None
+    };
+
+    let html_content = None;
+    let cleaned_text = plain_text.clone().unwrap_or_default();
+
+    // Extract attachments
+    let attachments: Vec<EmailAttachment> = outlook
+        .attachments
+        .iter()
+        .map(|att| {
+            let filename = if !att.file_name.is_empty() {
+                Some(att.file_name.clone())
+            } else if !att.display_name.is_empty() {
+                Some(att.display_name.clone())
+            } else {
+                Some(format!("attachment{}", att.extension))
+            };
+
+            let mime_type = if !att.mime_tag.is_empty() {
+                Some(att.mime_tag.clone())
+            } else {
+                Some("application/octet-stream".to_string())
+            };
+
+            let data = if !att.payload.is_empty() {
+                hex::decode(&att.payload).ok()
+            } else {
+                None
+            };
+
+            let size = data.as_ref().map(|d| d.len());
+            let is_image = mime_type.as_ref().map(|m| is_image_mime_type(m)).unwrap_or(false);
+
+            EmailAttachment {
+                name: filename.clone(),
+                filename,
+                mime_type,
+                size,
+                is_image,
+                data,
+            }
+        })
+        .collect();
+
+    // Build metadata
+    let from_name = if !outlook.sender.name.is_empty() {
+        Some(outlook.sender.name.clone())
+    } else {
+        None
+    };
+
+    let mut metadata = HashMap::new();
+    if let Some(ref subj) = subject {
+        metadata.insert("subject".to_string(), subj.to_string());
+    }
+    if let Some(ref from) = from_email {
+        metadata.insert("email_from".to_string(), from.to_string());
+    }
+    if let Some(ref name) = from_name {
+        metadata.insert("from_name".to_string(), name.to_string());
+    }
+    if !to_emails.is_empty() {
+        metadata.insert("email_to".to_string(), to_emails.join(", "));
+    }
+    if !cc_emails.is_empty() {
+        metadata.insert("email_cc".to_string(), cc_emails.join(", "));
+    }
+    if !bcc_emails.is_empty() {
+        metadata.insert("email_bcc".to_string(), bcc_emails.join(", "));
+    }
+    if let Some(ref dt) = date {
+        metadata.insert("date".to_string(), dt.to_string());
+    }
+    if let Some(ref msg_id) = message_id {
+        metadata.insert("message_id".to_string(), msg_id.to_string());
+    }
+    if !attachments.is_empty() {
+        let attachment_names: Vec<String> = attachments
+            .iter()
+            .filter_map(|a| a.filename.as_ref())
+            .cloned()
+            .collect();
+        metadata.insert("attachments".to_string(), attachment_names.join(", "));
+    }
+
+    Ok(EmailExtractionResult {
+        subject,
+        from_email,
+        to_emails,
+        cc_emails,
+        bcc_emails,
+        date,
+        message_id,
+        plain_text,
+        html_content,
+        cleaned_text,
+        attachments,
+        metadata,
+    })
+}
+
+/// Extract email content from either .eml or .msg format
+pub fn extract_email_content(data: &[u8], mime_type: &str) -> Result<EmailExtractionResult> {
+    if data.is_empty() {
+        return Err(KreuzbergError::Validation("Email content is empty".to_string()));
+    }
+
+    match mime_type {
+        "message/rfc822" | "text/plain" => parse_eml_content(data),
+        "application/vnd.ms-outlook" => parse_msg_content(data),
+        _ => Err(KreuzbergError::Validation(format!(
+            "Unsupported email MIME type: {}",
+            mime_type
+        ))),
+    }
+}
+
+/// Build text output from email extraction result
+pub fn build_email_text_output(result: &EmailExtractionResult) -> String {
+    let mut text_parts = Vec::new();
+
+    if let Some(ref subject) = result.subject {
+        text_parts.push(format!("Subject: {}", subject));
+    }
+
+    if let Some(ref from) = result.from_email {
+        text_parts.push(format!("From: {}", from));
+    }
+
+    if !result.to_emails.is_empty() {
+        text_parts.push(format!("To: {}", result.to_emails.join(", ")));
+    }
+
+    if !result.cc_emails.is_empty() {
+        text_parts.push(format!("CC: {}", result.cc_emails.join(", ")));
+    }
+
+    if !result.bcc_emails.is_empty() {
+        text_parts.push(format!("BCC: {}", result.bcc_emails.join(", ")));
+    }
+
+    if let Some(ref date) = result.date {
+        text_parts.push(format!("Date: {}", date));
+    }
+
+    text_parts.push(result.cleaned_text.clone());
+
+    if !result.attachments.is_empty() {
+        let attachment_names: Vec<String> = result
+            .attachments
+            .iter()
+            .filter_map(|att| att.name.as_ref().or(att.filename.as_ref()))
+            .cloned()
+            .collect();
+        if !attachment_names.is_empty() {
+            text_parts.push(format!("Attachments: {}", attachment_names.join(", ")));
+        }
+    }
+
+    text_parts.join("\n")
+}
+
+// Helper functions
+
+fn clean_html_content(html: &str) -> String {
+    if html.is_empty() {
+        return String::new();
+    }
+
+    // Remove scripts and styles
+    let cleaned = script_regex().replace_all(html, "");
+    let cleaned = style_regex().replace_all(&cleaned, "");
+
+    // Remove HTML tags
+    let cleaned = html_tag_regex().replace_all(&cleaned, "");
+
+    // Normalize whitespace
+    let cleaned = whitespace_regex().replace_all(&cleaned, " ");
+
+    // Trim and return
+    cleaned.trim().to_string()
+}
+
+fn is_image_mime_type(mime_type: &str) -> bool {
+    mime_type.starts_with("image/")
+}
+
+fn parse_content_type(content_type: &str) -> String {
+    let trimmed = content_type.trim();
+    if trimmed.is_empty() {
+        return "application/octet-stream".to_string();
+    }
+    trimmed
+        .split(';')
+        .next()
+        .unwrap_or("application/octet-stream")
+        .trim()
+        .to_lowercase()
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_metadata(
+    subject: &Option<String>,
+    from_email: &Option<String>,
+    to_emails: &[String],
+    cc_emails: &[String],
+    bcc_emails: &[String],
+    date: &Option<String>,
+    message_id: &Option<String>,
+    attachments: &[EmailAttachment],
+) -> HashMap<String, String> {
+    let mut metadata = HashMap::new();
+
+    if let Some(subj) = subject {
+        metadata.insert("subject".to_string(), subj.clone());
+    }
+    if let Some(from) = from_email {
+        metadata.insert("email_from".to_string(), from.clone());
+    }
+    if !to_emails.is_empty() {
+        metadata.insert("email_to".to_string(), to_emails.join(", "));
+    }
+    if !cc_emails.is_empty() {
+        metadata.insert("email_cc".to_string(), cc_emails.join(", "));
+    }
+    if !bcc_emails.is_empty() {
+        metadata.insert("email_bcc".to_string(), bcc_emails.join(", "));
+    }
+    if let Some(dt) = date {
+        metadata.insert("date".to_string(), dt.clone());
+    }
+    if let Some(msg_id) = message_id {
+        metadata.insert("message_id".to_string(), msg_id.clone());
+    }
+
+    if !attachments.is_empty() {
+        let attachment_names: Vec<String> = attachments
+            .iter()
+            .filter_map(|att| att.name.as_ref().or(att.filename.as_ref()))
+            .cloned()
+            .collect();
+        if !attachment_names.is_empty() {
+            metadata.insert("attachments".to_string(), attachment_names.join(", "));
+        }
+    }
+
+    metadata
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clean_html_content() {
+        let html = "<p>Hello <b>World</b></p>";
+        let cleaned = clean_html_content(html);
+        assert_eq!(cleaned, "Hello World");
+    }
+
+    #[test]
+    fn test_clean_html_with_whitespace() {
+        let html = "<div>  Multiple   \n  spaces  </div>";
+        let cleaned = clean_html_content(html);
+        assert_eq!(cleaned, "Multiple spaces");
+    }
+
+    #[test]
+    fn test_clean_html_with_script_and_style() {
+        let html = r#"
+            <html>
+                <head><style>body { color: red; }</style></head>
+                <body>
+                    <script>alert('test');</script>
+                    <p>Hello World</p>
+                </body>
+            </html>
+        "#;
+        let cleaned = clean_html_content(html);
+        assert!(!cleaned.contains("<script>"));
+        assert!(!cleaned.contains("<style>"));
+        assert!(cleaned.contains("Hello World"));
+    }
+
+    #[test]
+    fn test_is_image_mime_type() {
+        assert!(is_image_mime_type("image/png"));
+        assert!(is_image_mime_type("image/jpeg"));
+        assert!(!is_image_mime_type("text/plain"));
+        assert!(!is_image_mime_type("application/pdf"));
+    }
+
+    #[test]
+    fn test_parse_content_type() {
+        assert_eq!(parse_content_type("text/plain"), "text/plain");
+        assert_eq!(parse_content_type("text/plain; charset=utf-8"), "text/plain");
+        assert_eq!(parse_content_type("image/jpeg; name=test.jpg"), "image/jpeg");
+        assert_eq!(parse_content_type(""), "application/octet-stream");
+    }
+
+    #[test]
+    fn test_extract_email_content_empty_data() {
+        let result = extract_email_content(b"", "message/rfc822");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), KreuzbergError::Validation(_)));
+    }
+
+    #[test]
+    fn test_extract_email_content_invalid_mime_type() {
+        let result = extract_email_content(b"test", "application/pdf");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), KreuzbergError::Validation(_)));
+    }
+
+    #[test]
+    fn test_parse_eml_content_invalid() {
+        // mail-parser is very permissive and will parse almost anything
+        // so we expect success even with minimal content
+        let result = parse_eml_content(b"not an email");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_msg_content_invalid() {
+        let result = parse_msg_content(b"not a msg file");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), KreuzbergError::Parsing(_)));
+    }
+
+    #[test]
+    fn test_simple_eml_parsing() {
+        let eml_content =
+            b"From: test@example.com\r\nTo: recipient@example.com\r\nSubject: Test Email\r\n\r\nThis is a test email body.";
+
+        let result = parse_eml_content(eml_content).unwrap();
+        assert_eq!(result.subject, Some("Test Email".to_string()));
+        assert_eq!(result.from_email, Some("test@example.com".to_string()));
+        assert_eq!(result.to_emails, vec!["recipient@example.com".to_string()]);
+        assert_eq!(result.cleaned_text, "This is a test email body.");
+    }
+
+    #[test]
+    fn test_build_email_text_output_minimal() {
+        let result = EmailExtractionResult {
+            subject: Some("Test".to_string()),
+            from_email: Some("sender@example.com".to_string()),
+            to_emails: vec!["recipient@example.com".to_string()],
+            cc_emails: vec![],
+            bcc_emails: vec![],
+            date: None,
+            message_id: None,
+            plain_text: None,
+            html_content: None,
+            cleaned_text: "Hello World".to_string(),
+            attachments: vec![],
+            metadata: HashMap::new(),
+        };
+
+        let output = build_email_text_output(&result);
+        assert!(output.contains("Subject: Test"));
+        assert!(output.contains("From: sender@example.com"));
+        assert!(output.contains("To: recipient@example.com"));
+        assert!(output.contains("Hello World"));
+    }
+
+    #[test]
+    fn test_build_email_text_output_with_attachments() {
+        let result = EmailExtractionResult {
+            subject: Some("Test".to_string()),
+            from_email: Some("sender@example.com".to_string()),
+            to_emails: vec!["recipient@example.com".to_string()],
+            cc_emails: vec![],
+            bcc_emails: vec![],
+            date: None,
+            message_id: None,
+            plain_text: None,
+            html_content: None,
+            cleaned_text: "Hello World".to_string(),
+            attachments: vec![EmailAttachment {
+                name: Some("file.txt".to_string()),
+                filename: Some("file.txt".to_string()),
+                mime_type: Some("text/plain".to_string()),
+                size: Some(1024),
+                is_image: false,
+                data: None,
+            }],
+            metadata: HashMap::new(),
+        };
+
+        let output = build_email_text_output(&result);
+        assert!(output.contains("Attachments: file.txt"));
+    }
+
+    #[test]
+    fn test_build_metadata() {
+        let subject = Some("Test Subject".to_string());
+        let from_email = Some("sender@example.com".to_string());
+        let to_emails = vec!["recipient@example.com".to_string()];
+        let cc_emails = vec!["cc@example.com".to_string()];
+        let bcc_emails = vec!["bcc@example.com".to_string()];
+        let date = Some("2024-01-01T12:00:00Z".to_string());
+        let message_id = Some("<abc123@example.com>".to_string());
+        let attachments = vec![];
+
+        let metadata = build_metadata(
+            &subject,
+            &from_email,
+            &to_emails,
+            &cc_emails,
+            &bcc_emails,
+            &date,
+            &message_id,
+            &attachments,
+        );
+
+        assert_eq!(metadata.get("subject"), Some(&"Test Subject".to_string()));
+        assert_eq!(metadata.get("email_from"), Some(&"sender@example.com".to_string()));
+        assert_eq!(metadata.get("email_to"), Some(&"recipient@example.com".to_string()));
+        assert_eq!(metadata.get("email_cc"), Some(&"cc@example.com".to_string()));
+        assert_eq!(metadata.get("email_bcc"), Some(&"bcc@example.com".to_string()));
+        assert_eq!(metadata.get("date"), Some(&"2024-01-01T12:00:00Z".to_string()));
+        assert_eq!(metadata.get("message_id"), Some(&"<abc123@example.com>".to_string()));
+    }
+
+    #[test]
+    fn test_build_metadata_with_attachments() {
+        let attachments = vec![
+            EmailAttachment {
+                name: Some("file1.pdf".to_string()),
+                filename: Some("file1.pdf".to_string()),
+                mime_type: Some("application/pdf".to_string()),
+                size: Some(1024),
+                is_image: false,
+                data: None,
+            },
+            EmailAttachment {
+                name: Some("image.png".to_string()),
+                filename: Some("image.png".to_string()),
+                mime_type: Some("image/png".to_string()),
+                size: Some(2048),
+                is_image: true,
+                data: None,
+            },
+        ];
+
+        let metadata = build_metadata(&None, &None, &[], &[], &[], &None, &None, &attachments);
+
+        assert_eq!(metadata.get("attachments"), Some(&"file1.pdf, image.png".to_string()));
+    }
+}

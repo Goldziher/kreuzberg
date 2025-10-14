@@ -1,0 +1,490 @@
+use crate::error::{KreuzbergError, Result};
+use html_to_markdown_rs::{
+    CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, InlineImage,
+    InlineImageConfig as RustInlineImageConfig, InlineImageFormat, ListIndentType, NewlineStyle, PreprocessingOptions,
+    PreprocessingPreset, WhitespaceMode, convert as convert_html, convert_with_inline_images,
+};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HtmlExtractionResult {
+    pub markdown: String,
+    pub images: Vec<ExtractedInlineImage>,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedInlineImage {
+    pub data: Vec<u8>,
+    pub format: String,
+    pub filename: Option<String>,
+    pub description: Option<String>,
+    pub dimensions: Option<(u32, u32)>,
+    pub attributes: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HtmlConversionConfig {
+    pub heading_style: Option<String>,
+    pub list_indent_type: Option<String>,
+    pub list_indent_width: Option<usize>,
+    pub bullets: Option<String>,
+    pub strong_em_symbol: Option<char>,
+    pub escape_asterisks: Option<bool>,
+    pub escape_underscores: Option<bool>,
+    pub escape_misc: Option<bool>,
+    pub escape_ascii: Option<bool>,
+    pub code_language: Option<String>,
+    pub autolinks: Option<bool>,
+    pub default_title: Option<bool>,
+    pub br_in_tables: Option<bool>,
+    pub hocr_spatial_tables: Option<bool>,
+    pub highlight_style: Option<String>,
+    pub extract_metadata: Option<bool>,
+    pub whitespace_mode: Option<String>,
+    pub strip_newlines: Option<bool>,
+    pub wrap: Option<bool>,
+    pub wrap_width: Option<usize>,
+    pub convert_as_inline: Option<bool>,
+    pub sub_symbol: Option<String>,
+    pub sup_symbol: Option<String>,
+    pub newline_style: Option<String>,
+    pub code_block_style: Option<String>,
+    pub keep_inline_images_in: Option<Vec<String>>,
+    pub debug: Option<bool>,
+    pub strip_tags: Option<Vec<String>>,
+    pub encoding: Option<String>,
+    pub preprocessing: Option<HtmlPreprocessingConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HtmlPreprocessingConfig {
+    pub enabled: Option<bool>,
+    pub preset: Option<String>,
+    pub remove_navigation: Option<bool>,
+    pub remove_forms: Option<bool>,
+}
+
+impl Default for HtmlConversionConfig {
+    fn default() -> Self {
+        Self {
+            heading_style: None,
+            list_indent_type: None,
+            list_indent_width: None,
+            bullets: None,
+            strong_em_symbol: None,
+            escape_asterisks: None,
+            escape_underscores: None,
+            escape_misc: None,
+            escape_ascii: None,
+            code_language: None,
+            autolinks: None,
+            default_title: None,
+            br_in_tables: None,
+            hocr_spatial_tables: Some(false),
+            highlight_style: None,
+            extract_metadata: Some(false),
+            whitespace_mode: None,
+            strip_newlines: None,
+            wrap: None,
+            wrap_width: None,
+            convert_as_inline: None,
+            sub_symbol: None,
+            sup_symbol: None,
+            newline_style: None,
+            code_block_style: None,
+            keep_inline_images_in: None,
+            debug: None,
+            strip_tags: None,
+            encoding: None,
+            preprocessing: None,
+        }
+    }
+}
+
+fn parse_heading_style(value: &str) -> Result<HeadingStyle> {
+    match value.to_lowercase().as_str() {
+        "underlined" => Ok(HeadingStyle::Underlined),
+        "atx" => Ok(HeadingStyle::Atx),
+        "atx_closed" => Ok(HeadingStyle::AtxClosed),
+        _ => Err(KreuzbergError::Validation(format!(
+            "Unsupported heading_style '{}'",
+            value
+        ))),
+    }
+}
+
+fn parse_list_indent_type(value: &str) -> Result<ListIndentType> {
+    match value.to_lowercase().as_str() {
+        "spaces" => Ok(ListIndentType::Spaces),
+        "tabs" => Ok(ListIndentType::Tabs),
+        _ => Err(KreuzbergError::Validation(format!(
+            "Unsupported list_indent_type '{}'",
+            value
+        ))),
+    }
+}
+
+fn parse_whitespace_mode(value: &str) -> Result<WhitespaceMode> {
+    match value.to_lowercase().as_str() {
+        "normalized" => Ok(WhitespaceMode::Normalized),
+        "strict" => Ok(WhitespaceMode::Strict),
+        _ => Err(KreuzbergError::Validation(format!(
+            "Unsupported whitespace_mode '{}'",
+            value
+        ))),
+    }
+}
+
+fn parse_newline_style(value: &str) -> Result<NewlineStyle> {
+    match value.to_lowercase().as_str() {
+        "spaces" => Ok(NewlineStyle::Spaces),
+        "backslash" => Ok(NewlineStyle::Backslash),
+        _ => Err(KreuzbergError::Validation(format!(
+            "Unsupported newline_style '{}'",
+            value
+        ))),
+    }
+}
+
+fn parse_code_block_style(value: &str) -> Result<CodeBlockStyle> {
+    match value.to_lowercase().as_str() {
+        "indented" => Ok(CodeBlockStyle::Indented),
+        "backticks" => Ok(CodeBlockStyle::Backticks),
+        "tildes" => Ok(CodeBlockStyle::Tildes),
+        _ => Err(KreuzbergError::Validation(format!(
+            "Unsupported code_block_style '{}'",
+            value
+        ))),
+    }
+}
+
+fn parse_highlight_style(value: &str) -> Result<HighlightStyle> {
+    match value.to_lowercase().as_str() {
+        "double-equal" => Ok(HighlightStyle::DoubleEqual),
+        "html" => Ok(HighlightStyle::Html),
+        "bold" => Ok(HighlightStyle::Bold),
+        "none" => Ok(HighlightStyle::None),
+        _ => Err(KreuzbergError::Validation(format!(
+            "Unsupported highlight_style '{}'",
+            value
+        ))),
+    }
+}
+
+fn parse_preprocessing_preset(value: &str) -> Result<PreprocessingPreset> {
+    match value.to_lowercase().as_str() {
+        "minimal" => Ok(PreprocessingPreset::Minimal),
+        "standard" => Ok(PreprocessingPreset::Standard),
+        "aggressive" => Ok(PreprocessingPreset::Aggressive),
+        _ => Err(KreuzbergError::Validation(format!(
+            "Unsupported preprocessing preset '{}'",
+            value
+        ))),
+    }
+}
+
+fn build_conversion_options(config: Option<HtmlConversionConfig>) -> Result<ConversionOptions> {
+    let mut options = ConversionOptions::default();
+
+    if config.is_none() {
+        options.hocr_spatial_tables = false;
+        options.extract_metadata = false;
+        return Ok(options);
+    }
+
+    let config = config.unwrap();
+
+    if let Some(value) = config.heading_style {
+        options.heading_style = parse_heading_style(&value)?;
+    }
+    if let Some(value) = config.list_indent_type {
+        options.list_indent_type = parse_list_indent_type(&value)?;
+    }
+    if let Some(value) = config.list_indent_width {
+        options.list_indent_width = value;
+    }
+    if let Some(value) = config.bullets {
+        options.bullets = value;
+    }
+    if let Some(value) = config.strong_em_symbol {
+        options.strong_em_symbol = value;
+    }
+    if let Some(value) = config.escape_asterisks {
+        options.escape_asterisks = value;
+    }
+    if let Some(value) = config.escape_underscores {
+        options.escape_underscores = value;
+    }
+    if let Some(value) = config.escape_misc {
+        options.escape_misc = value;
+    }
+    if let Some(value) = config.escape_ascii {
+        options.escape_ascii = value;
+    }
+    if let Some(value) = config.code_language {
+        options.code_language = value;
+    }
+    if let Some(value) = config.autolinks {
+        options.autolinks = value;
+    }
+    if let Some(value) = config.default_title {
+        options.default_title = value;
+    }
+    if let Some(value) = config.br_in_tables {
+        options.br_in_tables = value;
+    }
+    if let Some(value) = config.hocr_spatial_tables {
+        options.hocr_spatial_tables = value;
+    }
+    if let Some(value) = config.highlight_style {
+        options.highlight_style = parse_highlight_style(&value)?;
+    }
+    if let Some(value) = config.extract_metadata {
+        options.extract_metadata = value;
+    }
+    if let Some(value) = config.whitespace_mode {
+        options.whitespace_mode = parse_whitespace_mode(&value)?;
+    }
+    if let Some(value) = config.strip_newlines {
+        options.strip_newlines = value;
+    }
+    if let Some(value) = config.wrap {
+        options.wrap = value;
+    }
+    if let Some(value) = config.wrap_width {
+        options.wrap_width = value;
+    }
+    if let Some(value) = config.convert_as_inline {
+        options.convert_as_inline = value;
+    }
+    if let Some(value) = config.sub_symbol {
+        options.sub_symbol = value;
+    }
+    if let Some(value) = config.sup_symbol {
+        options.sup_symbol = value;
+    }
+    if let Some(value) = config.newline_style {
+        options.newline_style = parse_newline_style(&value)?;
+    }
+    if let Some(value) = config.code_block_style {
+        options.code_block_style = parse_code_block_style(&value)?;
+    }
+    if let Some(value) = config.keep_inline_images_in {
+        options.keep_inline_images_in = value;
+    }
+    if let Some(value) = config.debug {
+        options.debug = value;
+    }
+    if let Some(value) = config.strip_tags {
+        options.strip_tags = value;
+    }
+    if let Some(value) = config.encoding {
+        options.encoding = value;
+    }
+
+    if let Some(prep_config) = config.preprocessing {
+        let mut preprocessing = PreprocessingOptions::default();
+        if let Some(enabled) = prep_config.enabled {
+            preprocessing.enabled = enabled;
+        }
+        if let Some(preset) = prep_config.preset {
+            preprocessing.preset = parse_preprocessing_preset(&preset)?;
+        }
+        if let Some(remove_navigation) = prep_config.remove_navigation {
+            preprocessing.remove_navigation = remove_navigation;
+        }
+        if let Some(remove_forms) = prep_config.remove_forms {
+            preprocessing.remove_forms = remove_forms;
+        }
+        options.preprocessing = preprocessing;
+    }
+
+    Ok(options)
+}
+
+fn inline_image_format_to_str(format: &InlineImageFormat) -> String {
+    match format {
+        InlineImageFormat::Png => "png".to_string(),
+        InlineImageFormat::Jpeg => "jpeg".to_string(),
+        InlineImageFormat::Gif => "gif".to_string(),
+        InlineImageFormat::Bmp => "bmp".to_string(),
+        InlineImageFormat::Webp => "webp".to_string(),
+        InlineImageFormat::Svg => "svg".to_string(),
+        InlineImageFormat::Other(custom) => {
+            let trimmed = custom.trim();
+            if trimmed.is_empty() {
+                return "bin".to_string();
+            }
+
+            let lower = trimmed.to_ascii_lowercase();
+            if lower.starts_with("svg") {
+                return "svg".to_string();
+            }
+
+            let mut candidate = lower.as_str();
+
+            if let Some(idx) = candidate.find(['+', ';']) {
+                candidate = &candidate[..idx];
+            }
+
+            if let Some(idx) = candidate.rfind('.') {
+                candidate = &candidate[idx + 1..];
+            }
+
+            candidate = candidate.trim_start_matches("x-");
+
+            if candidate.is_empty() {
+                "bin".to_string()
+            } else {
+                candidate.to_string()
+            }
+        }
+    }
+}
+
+fn inline_image_to_extracted(image: InlineImage) -> ExtractedInlineImage {
+    ExtractedInlineImage {
+        data: image.data,
+        format: inline_image_format_to_str(&image.format),
+        filename: image.filename,
+        description: image.description,
+        dimensions: image.dimensions,
+        attributes: image.attributes.into_iter().collect(),
+    }
+}
+
+/// Convert HTML to markdown without extracting images
+pub fn convert_html_to_markdown(html: &str, config: Option<HtmlConversionConfig>) -> Result<String> {
+    let options = build_conversion_options(config)?;
+    convert_html(html, Some(options))
+        .map_err(|e| KreuzbergError::Parsing(format!("Failed to convert HTML to Markdown: {}", e)))
+}
+
+/// Process HTML with optional image extraction
+pub fn process_html(
+    html: &str,
+    config: Option<HtmlConversionConfig>,
+    extract_images: bool,
+    max_image_size: u64,
+) -> Result<HtmlExtractionResult> {
+    let options = build_conversion_options(config)?;
+
+    if extract_images {
+        let mut img_config = RustInlineImageConfig::new(max_image_size);
+        img_config.filename_prefix = Some("inline-image".to_string());
+
+        let extraction = convert_with_inline_images(html, Some(options), img_config)
+            .map_err(|e| KreuzbergError::Parsing(format!("Failed to convert HTML to Markdown with images: {}", e)))?;
+
+        let images = extraction
+            .inline_images
+            .into_iter()
+            .map(inline_image_to_extracted)
+            .collect();
+
+        let warnings = extraction.warnings.into_iter().map(|w| w.message).collect();
+
+        Ok(HtmlExtractionResult {
+            markdown: extraction.markdown,
+            images,
+            warnings,
+        })
+    } else {
+        let markdown = convert_html(html, Some(options))
+            .map_err(|e| KreuzbergError::Parsing(format!("Failed to convert HTML to Markdown: {}", e)))?;
+
+        Ok(HtmlExtractionResult {
+            markdown,
+            images: Vec::new(),
+            warnings: Vec::new(),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_convert_simple_html() {
+        let html = "<h1>Hello World</h1><p>This is a test.</p>";
+        let result = convert_html_to_markdown(html, None).unwrap();
+        assert!(result.contains("# Hello World"));
+        assert!(result.contains("This is a test."));
+    }
+
+    #[test]
+    fn test_process_html_without_images() {
+        let html = "<h1>Test</h1><p>Content</p>";
+        let result = process_html(html, None, false, 1024 * 1024).unwrap();
+        assert!(result.markdown.contains("# Test"));
+        assert!(result.markdown.contains("Content"));
+        assert!(result.images.is_empty());
+        assert!(result.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_html_with_inline_image() {
+        let html = r#"<p>Image: <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Test"></p>"#;
+        let result = process_html(html, None, true, 1024 * 1024).unwrap();
+        assert!(result.images.len() == 1);
+        assert_eq!(result.images[0].format, "png");
+    }
+
+    #[test]
+    fn test_html_config_heading_style() {
+        let html = "<h1>Heading</h1>";
+        let mut config = HtmlConversionConfig::default();
+        config.heading_style = Some("atx".to_string());
+        let result = convert_html_to_markdown(html, Some(config)).unwrap();
+        assert!(result.contains("# Heading"));
+    }
+
+    #[test]
+    fn test_invalid_heading_style() {
+        let mut config = HtmlConversionConfig::default();
+        config.heading_style = Some("invalid".to_string());
+        let result = build_conversion_options(Some(config));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_html_with_list() {
+        let html = "<ul><li>Item 1</li><li>Item 2</li></ul>";
+        let result = convert_html_to_markdown(html, None).unwrap();
+        assert!(result.contains("Item 1"));
+        assert!(result.contains("Item 2"));
+    }
+
+    #[test]
+    fn test_html_with_table() {
+        let html = "<table><tr><th>Header</th></tr><tr><td>Data</td></tr></table>";
+        let result = convert_html_to_markdown(html, None).unwrap();
+        assert!(result.contains("Header"));
+        assert!(result.contains("Data"));
+    }
+
+    #[test]
+    fn test_inline_image_format_conversion() {
+        assert_eq!(inline_image_format_to_str(&InlineImageFormat::Png), "png");
+        assert_eq!(inline_image_format_to_str(&InlineImageFormat::Jpeg), "jpeg");
+        assert_eq!(inline_image_format_to_str(&InlineImageFormat::Svg), "svg");
+    }
+
+    #[test]
+    fn test_preprocessing_config() {
+        let html = "<nav>Navigation</nav><p>Content</p>";
+        let mut config = HtmlConversionConfig::default();
+        config.preprocessing = Some(HtmlPreprocessingConfig {
+            enabled: Some(true),
+            preset: Some("standard".to_string()),
+            remove_navigation: Some(true),
+            remove_forms: None,
+        });
+        let result = convert_html_to_markdown(html, Some(config)).unwrap();
+        // Navigation should be removed
+        assert!(result.contains("Content"));
+    }
+}

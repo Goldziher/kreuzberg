@@ -29,7 +29,9 @@ class PlainTextExtractor(Extractor):
 
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         is_markdown = self.mime_type in {"text/markdown", "text/x-markdown"}
-        rust_result: TextExtractionResult = parse_text(content, is_markdown)
+
+        # Call Rust binding which returns native Python object
+        rust_result = parse_text(content, is_markdown)
 
         metadata = self._convert_rust_metadata_to_dict(rust_result, is_markdown)
 
