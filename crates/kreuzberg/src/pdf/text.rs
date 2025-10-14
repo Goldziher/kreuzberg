@@ -23,12 +23,10 @@ impl PdfTextExtractor {
     pub fn extract_text_with_password(&self, pdf_bytes: &[u8], password: Option<&str>) -> Result<String> {
         let document = self.pdfium.load_pdf_from_byte_slice(pdf_bytes, password).map_err(|e| {
             let err_msg = e.to_string();
-            if err_msg.contains("password") || err_msg.contains("Password") {
-                if password.is_some() {
-                    PdfError::InvalidPassword
-                } else {
-                    PdfError::PasswordRequired
-                }
+            if (err_msg.contains("password") || err_msg.contains("Password")) && password.is_some() {
+                PdfError::InvalidPassword
+            } else if err_msg.contains("password") || err_msg.contains("Password") {
+                PdfError::PasswordRequired
             } else {
                 PdfError::InvalidPdf(err_msg)
             }
@@ -133,8 +131,7 @@ mod tests {
         let encrypted_pdf = b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
         let result = extractor.extract_text(encrypted_pdf);
 
-        if result.is_err() {
-            let err = result.unwrap_err();
+        if let Err(err) = result {
             assert!(matches!(err, PdfError::PasswordRequired | PdfError::InvalidPdf(_)));
         }
     }

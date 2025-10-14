@@ -59,12 +59,10 @@ impl PdfRenderer {
     ) -> Result<DynamicImage> {
         let document = self.pdfium.load_pdf_from_byte_slice(pdf_bytes, password).map_err(|e| {
             let err_msg = e.to_string();
-            if err_msg.contains("password") || err_msg.contains("Password") {
-                if password.is_some() {
-                    PdfError::InvalidPassword
-                } else {
-                    PdfError::PasswordRequired
-                }
+            if (err_msg.contains("password") || err_msg.contains("Password")) && password.is_some() {
+                PdfError::InvalidPassword
+            } else if err_msg.contains("password") || err_msg.contains("Password") {
+                PdfError::PasswordRequired
             } else {
                 PdfError::InvalidPdf(err_msg)
             }
@@ -119,12 +117,10 @@ impl PdfRenderer {
     ) -> Result<Vec<DynamicImage>> {
         let document = self.pdfium.load_pdf_from_byte_slice(pdf_bytes, password).map_err(|e| {
             let err_msg = e.to_string();
-            if err_msg.contains("password") || err_msg.contains("Password") {
-                if password.is_some() {
-                    PdfError::InvalidPassword
-                } else {
-                    PdfError::PasswordRequired
-                }
+            if (err_msg.contains("password") || err_msg.contains("Password")) && password.is_some() {
+                PdfError::InvalidPassword
+            } else if err_msg.contains("password") || err_msg.contains("Password") {
+                PdfError::PasswordRequired
             } else {
                 PdfError::InvalidPdf(err_msg)
             }
@@ -153,6 +149,7 @@ pub fn render_page_to_image(pdf_bytes: &[u8], page_index: usize, options: &PageR
     renderer.render_page_to_image(pdf_bytes, page_index, options)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn calculate_optimal_dpi(
     page_width: f64,
     page_height: f64,
@@ -203,8 +200,7 @@ mod tests {
         let minimal_pdf = b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
         let result = renderer.render_page_to_image(minimal_pdf, 999, &options);
 
-        if result.is_err() {
-            let err = result.unwrap_err();
+        if let Err(err) = result {
             assert!(matches!(
                 err,
                 PdfError::PageNotFound(_) | PdfError::InvalidPdf(_) | PdfError::PasswordRequired
@@ -215,7 +211,7 @@ mod tests {
     #[test]
     fn test_calculate_optimal_dpi_within_limits() {
         let dpi = calculate_optimal_dpi(612.0, 792.0, 300, 65536, 72, 600);
-        assert!(dpi >= 72 && dpi <= 600);
+        assert!((72..=600).contains(&dpi));
     }
 
     #[test]

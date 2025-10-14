@@ -72,7 +72,7 @@ impl PdfImageExtractor {
         let pages = self.document.get_pages();
         let page_id = pages
             .get(&page_number)
-            .ok_or_else(|| PdfError::PageNotFound(page_number as usize))?;
+            .ok_or(PdfError::PageNotFound(page_number as usize))?;
 
         let images = self
             .document

@@ -86,14 +86,11 @@ pub async fn convert_office_doc(
         }
 
         // True system error - bubble up for user reporting ~keep
-        return Err(KreuzbergError::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!(
-                "LibreOffice process failed with return code {}: {}",
-                output.status.code().unwrap_or(-1),
-                if !stderr.is_empty() { stderr } else { stdout }
-            ),
-        )));
+        return Err(KreuzbergError::Io(std::io::Error::other(format!(
+            "LibreOffice process failed with return code {}: {}",
+            output.status.code().unwrap_or(-1),
+            if !stderr.is_empty() { stderr } else { stdout }
+        ))));
     }
 
     // Find output file
@@ -207,7 +204,7 @@ mod tests {
         let output_dir = temp_dir.join("test_convert_office_doc_missing_file");
         let non_existent = Path::new("/tmp/nonexistent.doc");
 
-        let result = convert_office_doc(&non_existent, &output_dir, "docx", 10).await;
+        let result = convert_office_doc(non_existent, &output_dir, "docx", 10).await;
 
         assert!(result.is_err());
         let _ = fs::remove_dir_all(&output_dir).await;

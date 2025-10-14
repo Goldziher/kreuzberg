@@ -22,24 +22,19 @@ pub fn parse_xml(xml_bytes: &[u8], preserve_whitespace: bool) -> Result<XmlExtra
                     unique_elements_set.insert(name.to_string());
                 }
             }
-            Ok(Event::Text(e)) => match e.unescape() {
-                Ok(text) => {
-                    let text_str = text.as_ref();
-                    if preserve_whitespace {
-                        content.push_str(text_str);
+            Ok(Event::Text(e)) => {
+                let text_str = e.as_ref();
+                if preserve_whitespace {
+                    content.push_str(std::str::from_utf8(text_str).unwrap_or(""));
+                    content.push(' ');
+                } else if let Ok(text) = std::str::from_utf8(text_str) {
+                    let trimmed = text.trim();
+                    if !trimmed.is_empty() {
+                        content.push_str(trimmed);
                         content.push(' ');
-                    } else {
-                        let trimmed = text_str.trim();
-                        if !trimmed.is_empty() {
-                            content.push_str(trimmed);
-                            content.push(' ');
-                        }
                     }
                 }
-                Err(e) => {
-                    return Err(KreuzbergError::Parsing(format!("Failed to unescape XML text: {}", e)));
-                }
-            },
+            }
             Ok(Event::CData(e)) => match std::str::from_utf8(&e) {
                 Ok(text) => {
                     content.push_str(text);

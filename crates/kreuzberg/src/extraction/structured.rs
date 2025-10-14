@@ -63,10 +63,10 @@ pub fn parse_json(data: &[u8], config: Option<JsonExtractionConfig>) -> Result<S
     let mut text_fields = Vec::new();
 
     // Extract schema if requested
-    if config.extract_schema {
-        if let Ok(schema_json) = serde_json::to_string(&extract_json_schema(&value, "", 0, &config)) {
-            metadata.insert("json_schema".to_string(), schema_json);
-        }
+    if config.extract_schema
+        && let Ok(schema_json) = serde_json::to_string(&extract_json_schema(&value, "", 0, &config))
+    {
+        metadata.insert("json_schema".to_string(), schema_json);
     }
 
     // Extract text content

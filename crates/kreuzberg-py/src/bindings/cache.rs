@@ -150,7 +150,7 @@ pub fn generate_cache_key(kwargs: Option<&Bound<'_, PyDict>>) -> String {
         }
     }
 
-    let parts_slice: Vec<(&str, &str)> = parts.iter().map(|(k, v)| (k.as_ref(), v.as_ref())).collect();
+    let parts_slice: Vec<(&str, &str)> = parts.iter().map(|(k, v)| (*k, v.as_ref())).collect();
     kreuzberg::cache::generate_cache_key(&parts_slice)
 }
 

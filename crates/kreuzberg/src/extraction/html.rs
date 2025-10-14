@@ -436,16 +436,20 @@ mod tests {
     #[test]
     fn test_html_config_heading_style() {
         let html = "<h1>Heading</h1>";
-        let mut config = HtmlConversionConfig::default();
-        config.heading_style = Some("atx".to_string());
+        let config = HtmlConversionConfig {
+            heading_style: Some("atx".to_string()),
+            ..Default::default()
+        };
         let result = convert_html_to_markdown(html, Some(config)).unwrap();
         assert!(result.contains("# Heading"));
     }
 
     #[test]
     fn test_invalid_heading_style() {
-        let mut config = HtmlConversionConfig::default();
-        config.heading_style = Some("invalid".to_string());
+        let config = HtmlConversionConfig {
+            heading_style: Some("invalid".to_string()),
+            ..Default::default()
+        };
         let result = build_conversion_options(Some(config));
         assert!(result.is_err());
     }
@@ -476,13 +480,15 @@ mod tests {
     #[test]
     fn test_preprocessing_config() {
         let html = "<nav>Navigation</nav><p>Content</p>";
-        let mut config = HtmlConversionConfig::default();
-        config.preprocessing = Some(HtmlPreprocessingConfig {
-            enabled: Some(true),
-            preset: Some("standard".to_string()),
-            remove_navigation: Some(true),
-            remove_forms: None,
-        });
+        let config = HtmlConversionConfig {
+            preprocessing: Some(HtmlPreprocessingConfig {
+                enabled: Some(true),
+                preset: Some("standard".to_string()),
+                remove_navigation: Some(true),
+                remove_forms: None,
+            }),
+            ..Default::default()
+        };
         let result = convert_html_to_markdown(html, Some(config)).unwrap();
         // Navigation should be removed
         assert!(result.contains("Content"));

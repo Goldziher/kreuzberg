@@ -69,7 +69,7 @@ impl PyEmailExtractionResult {
     }
 
     #[getter]
-    fn from_email(&self) -> Option<String> {
+    fn sender_email(&self) -> Option<String> {
         self.inner.from_email.clone()
     }
 

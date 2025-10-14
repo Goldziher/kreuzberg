@@ -483,15 +483,15 @@ fn parse_slide_xml(xml_data: &[u8]) -> Result<Vec<SlideElement>> {
 
     // Simple extraction - just get text elements for now
     for node in doc.descendants() {
-        if node.has_tag_name((DRAWINGML_NS, "t")) {
-            if let Some(text) = node.text() {
-                let run = Run {
-                    text: text.to_string(),
-                    formatting: Formatting::default(),
-                };
-                let text_elem = TextElement { runs: vec![run] };
-                elements.push(SlideElement::Text(text_elem, ElementPosition::default()));
-            }
+        if node.has_tag_name((DRAWINGML_NS, "t"))
+            && let Some(text) = node.text()
+        {
+            let run = Run {
+                text: text.to_string(),
+                formatting: Formatting::default(),
+            };
+            let text_elem = TextElement { runs: vec![run] };
+            elements.push(SlideElement::Text(text_elem, ElementPosition::default()));
         }
     }
 
@@ -508,17 +508,15 @@ fn parse_slide_rels(rels_data: &[u8]) -> Result<Vec<ImageReference>> {
     let mut images = Vec::new();
 
     for node in doc.descendants() {
-        if node.has_tag_name("Relationship") {
-            if let Some(rel_type) = node.attribute("Type") {
-                if rel_type.contains("image") {
-                    if let (Some(id), Some(target)) = (node.attribute("Id"), node.attribute("Target")) {
-                        images.push(ImageReference {
-                            id: id.to_string(),
-                            target: target.to_string(),
-                        });
-                    }
-                }
-            }
+        if node.has_tag_name("Relationship")
+            && let Some(rel_type) = node.attribute("Type")
+            && rel_type.contains("image")
+            && let (Some(id), Some(target)) = (node.attribute("Id"), node.attribute("Target"))
+        {
+            images.push(ImageReference {
+                id: id.to_string(),
+                target: target.to_string(),
+            });
         }
     }
 
@@ -535,14 +533,13 @@ fn parse_presentation_rels(rels_data: &[u8]) -> Result<Vec<String>> {
     let mut slide_paths = Vec::new();
 
     for node in doc.descendants() {
-        if node.has_tag_name("Relationship") {
-            if let Some(rel_type) = node.attribute("Type") {
-                if rel_type.contains("slide") && !rel_type.contains("slideMaster") {
-                    if let Some(target) = node.attribute("Target") {
-                        slide_paths.push(format!("ppt/{}", target));
-                    }
-                }
-            }
+        if node.has_tag_name("Relationship")
+            && let Some(rel_type) = node.attribute("Type")
+            && rel_type.contains("slide")
+            && !rel_type.contains("slideMaster")
+            && let Some(target) = node.attribute("Target")
+        {
+            slide_paths.push(format!("ppt/{}", target));
         }
     }
 
@@ -595,10 +592,10 @@ fn extract_all_notes(container: &mut PptxContainer) -> Result<HashMap<u32, Strin
 
     for (i, slide_path) in slide_paths.iter().enumerate() {
         let notes_path = slide_path.replace("slides/slide", "notesSlides/notesSlide");
-        if let Ok(notes_xml) = container.read_file(&notes_path) {
-            if let Ok(note_text) = extract_notes_text(&notes_xml) {
-                notes.insert((i + 1) as u32, note_text);
-            }
+        if let Ok(notes_xml) = container.read_file(&notes_path)
+            && let Ok(note_text) = extract_notes_text(&notes_xml)
+        {
+            notes.insert((i + 1) as u32, note_text);
         }
     }
 
@@ -616,10 +613,10 @@ fn extract_notes_text(notes_xml: &[u8]) -> Result<String> {
     const DRAWINGML_NS: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
 
     for node in doc.descendants() {
-        if node.has_tag_name((DRAWINGML_NS, "t")) {
-            if let Some(text) = node.text() {
-                text_parts.push(text);
-            }
+        if node.has_tag_name((DRAWINGML_NS, "t"))
+            && let Some(text) = node.text()
+        {
+            text_parts.push(text);
         }
     }
 
@@ -732,18 +729,18 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
             content_builder.add_notes(slide_notes);
         }
 
-        if config.extract_images {
-            if let Ok(image_data) = iterator.get_slide_images(&slide) {
-                for (_, data) in image_data {
-                    let format = detect_image_format(&data);
+        if config.extract_images
+            && let Ok(image_data) = iterator.get_slide_images(&slide)
+        {
+            for (_, data) in image_data {
+                let format = detect_image_format(&data);
 
-                    extracted_images.push(ExtractedImage {
-                        data,
-                        format,
-                        slide_number: Some(slide.slide_number as usize),
-                        filename: None,
-                    });
-                }
+                extracted_images.push(ExtractedImage {
+                    data,
+                    format,
+                    slide_number: Some(slide.slide_number as usize),
+                    filename: None,
+                });
             }
         }
 
@@ -856,7 +853,7 @@ mod tests {
 </p:sld>"#,
                     text
                 );
-                zip.start_file(&format!("ppt/slides/slide{}.xml", i + 1), options)
+                zip.start_file(format!("ppt/slides/slide{}.xml", i + 1), options)
                     .unwrap();
                 zip.write_all(slide_xml.as_bytes()).unwrap();
             }

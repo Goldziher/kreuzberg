@@ -2,7 +2,7 @@ use super::error::{PdfError, Result};
 use lopdf::{Document, Object};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PdfMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
@@ -34,27 +34,6 @@ pub struct PdfMetadata {
     pub summary: Option<String>,
 }
 
-impl Default for PdfMetadata {
-    fn default() -> Self {
-        Self {
-            title: None,
-            subject: None,
-            authors: None,
-            keywords: None,
-            created_at: None,
-            modified_at: None,
-            created_by: None,
-            producer: None,
-            page_count: None,
-            pdf_version: None,
-            is_encrypted: None,
-            width: None,
-            height: None,
-            summary: None,
-        }
-    }
-}
-
 pub fn extract_metadata(pdf_bytes: &[u8]) -> Result<PdfMetadata> {
     extract_metadata_with_password(pdf_bytes, None)
 }
@@ -71,22 +50,23 @@ pub fn extract_metadata_with_password(pdf_bytes: &[u8], password: Option<&str>) 
         }
     }
 
-    let mut metadata = PdfMetadata::default();
+    let mut metadata = PdfMetadata {
+        pdf_version: Some(doc.version.clone()),
+        is_encrypted: Some(doc.is_encrypted()),
+        page_count: Some(doc.get_pages().len()),
+        ..Default::default()
+    };
 
-    metadata.pdf_version = Some(doc.version.clone());
-    metadata.is_encrypted = Some(doc.is_encrypted());
-    metadata.page_count = Some(doc.get_pages().len());
-
-    if let Ok(info_ref) = doc.trailer.get(b"Info").and_then(Object::as_reference) {
-        if let Ok(info_dict) = doc.get_dictionary(info_ref) {
-            extract_info_dictionary(info_dict, &mut metadata);
-        }
+    if let Ok(info_ref) = doc.trailer.get(b"Info").and_then(Object::as_reference)
+        && let Ok(info_dict) = doc.get_dictionary(info_ref)
+    {
+        extract_info_dictionary(info_dict, &mut metadata);
     }
 
-    if let Some(page_id) = doc.get_pages().values().next() {
-        if let Ok(page_dict) = doc.get_dictionary(*page_id) {
-            extract_page_dimensions(page_dict, &mut metadata);
-        }
+    if let Some(page_id) = doc.get_pages().values().next()
+        && let Ok(page_dict) = doc.get_dictionary(*page_id)
+    {
+        extract_page_dimensions(page_dict, &mut metadata);
     }
 
     if metadata.summary.is_none() {
@@ -117,78 +97,78 @@ pub fn extract_metadata_with_passwords(pdf_bytes: &[u8], passwords: &[&str]) -> 
 }
 
 fn extract_info_dictionary(info_dict: &lopdf::Dictionary, metadata: &mut PdfMetadata) {
-    if let Ok(title) = info_dict.get(b"Title") {
-        if let Ok(title_str) = decode_pdf_string(title) {
-            metadata.title = Some(title_str);
+    if let Ok(title) = info_dict.get(b"Title")
+        && let Ok(title_str) = decode_pdf_string(title)
+    {
+        metadata.title = Some(title_str);
+    }
+
+    if let Ok(subject) = info_dict.get(b"Subject")
+        && let Ok(subject_str) = decode_pdf_string(subject)
+    {
+        metadata.subject = Some(subject_str);
+    }
+
+    if let Ok(author) = info_dict.get(b"Author")
+        && let Ok(author_str) = decode_pdf_string(author)
+    {
+        let authors = parse_authors(&author_str);
+        if !authors.is_empty() {
+            metadata.authors = Some(authors);
         }
     }
 
-    if let Ok(subject) = info_dict.get(b"Subject") {
-        if let Ok(subject_str) = decode_pdf_string(subject) {
-            metadata.subject = Some(subject_str);
+    if let Ok(keywords) = info_dict.get(b"Keywords")
+        && let Ok(keywords_str) = decode_pdf_string(keywords)
+    {
+        let kw_list = parse_keywords(&keywords_str);
+        if !kw_list.is_empty() {
+            metadata.keywords = Some(kw_list);
         }
     }
 
-    if let Ok(author) = info_dict.get(b"Author") {
-        if let Ok(author_str) = decode_pdf_string(author) {
-            let authors = parse_authors(&author_str);
-            if !authors.is_empty() {
-                metadata.authors = Some(authors);
-            }
-        }
+    if let Ok(created) = info_dict.get(b"CreationDate")
+        && let Ok(date_str) = decode_pdf_string(created)
+    {
+        metadata.created_at = Some(parse_pdf_date(&date_str));
     }
 
-    if let Ok(keywords) = info_dict.get(b"Keywords") {
-        if let Ok(keywords_str) = decode_pdf_string(keywords) {
-            let kw_list = parse_keywords(&keywords_str);
-            if !kw_list.is_empty() {
-                metadata.keywords = Some(kw_list);
-            }
-        }
+    if let Ok(modified) = info_dict.get(b"ModDate")
+        && let Ok(date_str) = decode_pdf_string(modified)
+    {
+        metadata.modified_at = Some(parse_pdf_date(&date_str));
     }
 
-    if let Ok(created) = info_dict.get(b"CreationDate") {
-        if let Ok(date_str) = decode_pdf_string(created) {
-            metadata.created_at = Some(parse_pdf_date(&date_str));
-        }
+    if let Ok(creator) = info_dict.get(b"Creator")
+        && let Ok(creator_str) = decode_pdf_string(creator)
+    {
+        metadata.created_by = Some(creator_str);
     }
 
-    if let Ok(modified) = info_dict.get(b"ModDate") {
-        if let Ok(date_str) = decode_pdf_string(modified) {
-            metadata.modified_at = Some(parse_pdf_date(&date_str));
-        }
-    }
-
-    if let Ok(creator) = info_dict.get(b"Creator") {
-        if let Ok(creator_str) = decode_pdf_string(creator) {
-            metadata.created_by = Some(creator_str);
-        }
-    }
-
-    if let Ok(producer) = info_dict.get(b"Producer") {
-        if let Ok(producer_str) = decode_pdf_string(producer) {
-            metadata.producer = Some(producer_str);
-        }
+    if let Ok(producer) = info_dict.get(b"Producer")
+        && let Ok(producer_str) = decode_pdf_string(producer)
+    {
+        metadata.producer = Some(producer_str);
     }
 }
 
 fn extract_page_dimensions(page_dict: &lopdf::Dictionary, metadata: &mut PdfMetadata) {
-    if let Ok(media_box) = page_dict.get(b"MediaBox").and_then(Object::as_array) {
-        if media_box.len() >= 4 {
-            let width = match &media_box[2] {
-                Object::Integer(i) => Some(*i),
-                Object::Real(f) => Some(*f as i64),
-                _ => None,
-            };
-            let height = match &media_box[3] {
-                Object::Integer(i) => Some(*i),
-                Object::Real(f) => Some(*f as i64),
-                _ => None,
-            };
-            if let (Some(w), Some(h)) = (width, height) {
-                metadata.width = Some(w);
-                metadata.height = Some(h);
-            }
+    if let Ok(media_box) = page_dict.get(b"MediaBox").and_then(Object::as_array)
+        && media_box.len() >= 4
+    {
+        let width = match &media_box[2] {
+            Object::Integer(i) => Some(*i),
+            Object::Real(f) => Some(*f as i64),
+            _ => None,
+        };
+        let height = match &media_box[3] {
+            Object::Integer(i) => Some(*i),
+            Object::Real(f) => Some(*f as i64),
+            _ => None,
+        };
+        if let (Some(w), Some(h)) = (width, height) {
+            metadata.width = Some(w);
+            metadata.height = Some(h);
         }
     }
 }
@@ -351,10 +331,12 @@ mod tests {
 
     #[test]
     fn test_generate_summary() {
-        let mut metadata = PdfMetadata::default();
-        metadata.page_count = Some(10);
-        metadata.pdf_version = Some("1.7".to_string());
-        metadata.is_encrypted = Some(false);
+        let metadata = PdfMetadata {
+            page_count: Some(10),
+            pdf_version: Some("1.7".to_string()),
+            is_encrypted: Some(false),
+            ..Default::default()
+        };
 
         let summary = generate_summary(&metadata);
         assert!(summary.contains("10 pages"));
@@ -364,8 +346,10 @@ mod tests {
 
     #[test]
     fn test_generate_summary_single_page() {
-        let mut metadata = PdfMetadata::default();
-        metadata.page_count = Some(1);
+        let metadata = PdfMetadata {
+            page_count: Some(1),
+            ..Default::default()
+        };
 
         let summary = generate_summary(&metadata);
         assert!(summary.contains("1 page."));

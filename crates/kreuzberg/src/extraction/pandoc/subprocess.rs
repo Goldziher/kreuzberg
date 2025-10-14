@@ -279,16 +279,13 @@ fn extract_meta_value(node: &Value) -> Option<Value> {
                 if let Some(blocks) = content.and_then(|c| c.as_array()) {
                     let mut texts = Vec::new();
                     for block in blocks {
-                        if let Some(block_obj) = block.as_object() {
-                            if block_obj.get("t")?.as_str()? == "Para" {
-                                if let Some(para_content) = block_obj.get("c").and_then(|c| c.as_array()) {
-                                    if let Some(text) = extract_inlines(para_content) {
-                                        if let Some(s) = text.as_str() {
-                                            texts.push(s.to_string());
-                                        }
-                                    }
-                                }
-                            }
+                        if let Some(block_obj) = block.as_object()
+                            && block_obj.get("t")?.as_str()? == "Para"
+                            && let Some(para_content) = block_obj.get("c").and_then(|c| c.as_array())
+                            && let Some(text) = extract_inlines(para_content)
+                            && let Some(s) = text.as_str()
+                        {
+                            texts.push(s.to_string());
                         }
                     }
                     if !texts.is_empty() {
@@ -353,48 +350,45 @@ fn extract_inline_text(node: &Value) -> Option<String> {
             }
             "Code" => {
                 // Code: [Attr, Text]
-                if let Some(arr) = obj.get("c").and_then(|c| c.as_array()) {
-                    if arr.len() == 2 {
-                        return arr[1].as_str().map(String::from);
-                    }
+                if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
+                    && arr.len() == 2
+                {
+                    return arr[1].as_str().map(String::from);
                 }
             }
             "Link" | "Image" => {
                 // Link/Image: [Attr, [Inline], Target]
-                if let Some(arr) = obj.get("c").and_then(|c| c.as_array()) {
-                    if arr.len() == 3 {
-                        if let Some(inlines) = arr[1].as_array() {
-                            return extract_inlines(inlines).and_then(|v| v.as_str().map(String::from));
-                        }
-                    }
+                if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
+                    && arr.len() == 3
+                    && let Some(inlines) = arr[1].as_array()
+                {
+                    return extract_inlines(inlines).and_then(|v| v.as_str().map(String::from));
                 }
             }
             "Quoted" => {
                 // Quoted: [QuoteType, [Inline]]
-                if let Some(arr) = obj.get("c").and_then(|c| c.as_array()) {
-                    if arr.len() == 2 {
-                        if let Some(inlines) = arr[1].as_array() {
-                            return extract_inlines(inlines).and_then(|v| v.as_str().map(String::from));
-                        }
-                    }
+                if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
+                    && arr.len() == 2
+                    && let Some(inlines) = arr[1].as_array()
+                {
+                    return extract_inlines(inlines).and_then(|v| v.as_str().map(String::from));
                 }
             }
             "Cite" => {
                 // Cite: [Citation], [Inline]
-                if let Some(arr) = obj.get("c").and_then(|c| c.as_array()) {
-                    if arr.len() == 2 {
-                        if let Some(inlines) = arr[1].as_array() {
-                            return extract_inlines(inlines).and_then(|v| v.as_str().map(String::from));
-                        }
-                    }
+                if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
+                    && arr.len() == 2
+                    && let Some(inlines) = arr[1].as_array()
+                {
+                    return extract_inlines(inlines).and_then(|v| v.as_str().map(String::from));
                 }
             }
             "Math" => {
                 // Math: [MathType, Text]
-                if let Some(arr) = obj.get("c").and_then(|c| c.as_array()) {
-                    if arr.len() == 2 {
-                        return arr[1].as_str().map(String::from);
-                    }
+                if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
+                    && arr.len() == 2
+                {
+                    return arr[1].as_str().map(String::from);
                 }
             }
             "LineBreak" | "SoftBreak" => {
@@ -414,14 +408,13 @@ fn extract_citations_from_blocks(blocks: &[Value], citations: &mut Vec<String>) 
             let block_type = obj.get("t").and_then(|t| t.as_str());
 
             // Check if this is a Cite block
-            if block_type == Some("Cite") {
-                if let Some(arr) = obj.get("c").and_then(|c| c.as_array()) {
-                    if let Some(cite_list) = arr.get(0).and_then(|c| c.as_array()) {
-                        for cite in cite_list {
-                            if let Some(cite_id) = cite.get("citationId").and_then(|id| id.as_str()) {
-                                citations.push(cite_id.to_string());
-                            }
-                        }
+            if block_type == Some("Cite")
+                && let Some(arr) = obj.get("c").and_then(|c| c.as_array())
+                && let Some(cite_list) = arr.first().and_then(|c| c.as_array())
+            {
+                for cite in cite_list {
+                    if let Some(cite_id) = cite.get("citationId").and_then(|id| id.as_str()) {
+                        citations.push(cite_id.to_string());
                     }
                 }
             }

@@ -31,7 +31,7 @@ fn dataframe_to_markdown(df: &DataFrame) -> Result<String> {
     markdown.push('\n');
 
     // Separator row
-    markdown.push_str("|");
+    markdown.push('|');
     for _ in 0..df.width() {
         markdown.push_str("------|");
     }

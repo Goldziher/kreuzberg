@@ -163,6 +163,7 @@ fn calculate_new_dimensions(
 }
 
 /// Create result when resize is skipped
+#[allow(clippy::too_many_arguments)]
 fn create_skip_result(
     rgb_data: Vec<u8>,
     width: usize,

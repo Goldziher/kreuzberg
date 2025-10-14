@@ -69,6 +69,7 @@ impl Default for TokenReductionConfig {
 }
 
 impl TokenReductionConfig {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         level: ReductionLevel,
         language_hint: Option<String>,

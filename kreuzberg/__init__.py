@@ -1,5 +1,7 @@
 from importlib.metadata import version
 
+from kreuzberg._lib import load_pdfium  # noqa: F401
+
 from ._registry import ExtractorRegistry
 from ._types import (
     ChunkingConfig,

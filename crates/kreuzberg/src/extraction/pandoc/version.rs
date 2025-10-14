@@ -64,14 +64,14 @@ fn extract_version(output: &str) -> Option<Version> {
     ];
 
     for pattern in &patterns {
-        if let Ok(re) = Regex::new(pattern) {
-            if let Some(caps) = re.captures(output) {
-                let major = caps.get(1)?.as_str().parse().ok()?;
-                let minor = caps.get(2)?.as_str().parse().ok()?;
-                let patch = caps.get(3).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
+        if let Ok(re) = Regex::new(pattern)
+            && let Some(caps) = re.captures(output)
+        {
+            let major = caps.get(1)?.as_str().parse().ok()?;
+            let minor = caps.get(2)?.as_str().parse().ok()?;
+            let patch = caps.get(3).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
 
-                return Some(Version { major, minor, patch });
-            }
+            return Some(Version { major, minor, patch });
         }
     }
 
@@ -89,11 +89,11 @@ fn extract_version(output: &str) -> Option<Version> {
 
 fn parse_version_token(token: &str) -> Option<Version> {
     let parts: Vec<&str> = token.split('.').collect();
-    if parts.len() >= 2 {
-        if let (Ok(major), Ok(minor)) = (parts[0].parse(), parts[1].parse()) {
-            let patch = parts.get(2).and_then(|p| p.parse().ok()).unwrap_or(0);
-            return Some(Version { major, minor, patch });
-        }
+    if parts.len() >= 2
+        && let (Ok(major), Ok(minor)) = (parts[0].parse(), parts[1].parse())
+    {
+        let patch = parts.get(2).and_then(|p| p.parse().ok()).unwrap_or(0);
+        return Some(Version { major, minor, patch });
     }
     None
 }
