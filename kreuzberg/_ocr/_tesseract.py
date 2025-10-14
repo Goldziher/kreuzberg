@@ -21,10 +21,146 @@ from kreuzberg.exceptions import ValidationError
 if TYPE_CHECKING:
     from PIL.Image import Image as PILImage
 
+_BULLET_CHARS = {
+    "*",
+    "+",
+    "\u2022",  # bullet
+    "\u25aa",  # black small square
+    "\u25e6",  # white bullet
+    "\u25cf",  # black circle
+    "\u2023",  # triangular bullet
+    "\u2043",  # hyphen bullet (U+2043)
+    "\u2219",  # bullet operator
+    "\u00b7",  # middle dot
+    "\u2027",  # hyphenation point
+    "\uf0b7",  # private use bullet
+}
+_DASH_BULLET_CHARS = {"-", "\u2013", "\u2014", "\u2212"}  # hyphen, en dash, em dash, minus sign
+_BULLET_MISREADS = {"e", "o", "0", "O"}
+
+
 try:  # pragma: no cover
     from typing import Unpack  # type: ignore[attr-defined]
 except ImportError:  # pragma: no cover
     from typing_extensions import Unpack
+
+
+def _bullet_body_from_line(line: str) -> str | None:
+    first_char = line[0]
+    if first_char in _DASH_BULLET_CHARS:
+        if len(line) >= 2 and line[1].isspace():
+            return line[2:].lstrip()
+        return None
+    if first_char in _BULLET_CHARS:
+        if len(line) == 1:
+            return ""
+        next_char = line[1]
+        if next_char.isspace() or not next_char.isalnum():
+            return line[1:].lstrip()
+        return None
+    if len(line) >= 3 and first_char in _BULLET_MISREADS and line[1].isspace():
+        candidate = line[2:].lstrip()
+        if candidate and (candidate[0].isupper() or candidate[0].isdigit()):
+            return candidate
+    return None
+
+
+def _merge_with_previous_bullet(normalized: list[str], line: str, pending_blank: bool) -> bool:
+    if not normalized or pending_blank:
+        return False
+    previous = normalized[-1]
+    if not previous.startswith("- "):
+        return False
+    if line.startswith(("- ", "* ")):
+        return False
+    normalized[-1] = f"{previous} {line}"
+    return True
+
+
+def _consume_short_fragment(normalized: list[str], line: str, pending_blank: bool) -> bool:
+    if len(line) > 3 or not normalized or pending_blank:
+        return False
+    has_alpha = any(ch.isalpha() for ch in line)
+    has_digit = any(ch.isdigit() for ch in line)
+    if has_alpha:
+        previous = normalized[-1].strip()
+        if previous.isdigit():
+            normalized.append(line)
+        else:
+            normalized[-1] = f"{normalized[-1]} {line}"
+        return True
+    if has_digit:
+        previous = normalized[-1].strip()
+        if len(line) <= 2 and len(previous) < 8:
+            return True
+        if previous.isdigit():
+            normalized.append(line)
+        elif len(previous) <= 6:
+            normalized[-1] = f"{normalized[-1]} {line}"
+        else:
+            normalized.append(line)
+        return True
+    # punctuation-only fragments are dropped
+    return True
+
+
+def _merge_dash_fragment(normalized: list[str], line: str) -> bool:
+    if normalized and line[0] in _DASH_BULLET_CHARS and len(line) > 1 and not line[1].isspace():
+        normalized[-1] = f"{normalized[-1]} {line}"
+        return True
+    return False
+
+
+def _is_duplicate_line(normalized: list[str], line: str) -> bool:
+    if not normalized:
+        return False
+    return normalized[-1].strip().casefold() == line.casefold()
+
+
+def _normalize_plain_text(content: str) -> str:
+    lines = content.splitlines()
+    normalized: list[str] = []
+    pending_blank = False
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if normalized:
+                pending_blank = True
+            continue
+
+        bullet_body = _bullet_body_from_line(stripped)
+        if bullet_body is not None:
+            if pending_blank and normalized and not normalized[-1].startswith("- "):
+                normalized.append("")
+            pending_blank = False
+            normalized.append(f"- {bullet_body}" if bullet_body else "-")
+            continue
+
+        if _merge_dash_fragment(normalized, stripped):
+            pending_blank = False
+            continue
+
+        if _merge_with_previous_bullet(normalized, stripped, pending_blank):
+            pending_blank = False
+            continue
+
+        if _consume_short_fragment(normalized, stripped, pending_blank):
+            pending_blank = False
+            continue
+
+        if pending_blank:
+            normalized.append("")
+            pending_blank = False
+
+        if _is_duplicate_line(normalized, stripped):
+            continue
+
+        normalized.append(stripped)
+
+    if pending_blank and normalized:
+        normalized.append("")
+    return "\n".join(normalized).strip("\n")
 
 
 class TesseractBackend(OCRBackend[TesseractConfig]):
@@ -108,8 +244,12 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
                 for table in dto.tables
             )
 
+        content = dto.content
+        if mime_type_str == PLAIN_TEXT_MIME_TYPE and content:
+            content = _normalize_plain_text(content)
+
         return ExtractionResult(
-            content=dto.content,
+            content=content,
             mime_type=mime_type_str,
             metadata=metadata_dict,  # type: ignore[arg-type]
             chunks=[],

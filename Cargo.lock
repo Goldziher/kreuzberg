@@ -1277,7 +1277,7 @@ dependencies = [
 
 [[package]]
 name = "html-to-markdown-rs"
-version = "2.2.0"
+version = "2.3.2"
 dependencies = [
  "ammonia",
  "base64",
