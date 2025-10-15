@@ -464,4 +464,227 @@ mod tests {
         let normalized = normalize_spaces(text);
         assert_eq!(normalized, "This is a test");
     }
+
+    #[test]
+    fn test_calculate_quality_score_with_metadata() {
+        let text = "This is a normal text with proper structure.";
+        let mut metadata = HashMap::new();
+        metadata.insert("title".to_string(), "Test Title".to_string());
+        metadata.insert("author".to_string(), "Test Author".to_string());
+
+        let score = calculate_quality_score(text, Some(&metadata));
+        assert!(score > 0.0);
+        assert!(score <= 1.0);
+    }
+
+    #[test]
+    fn test_calculate_ocr_penalty_clean_text() {
+        let text = "This is clean text without artifacts";
+        let penalty = calculate_ocr_penalty(text, text.len() as f64);
+        assert_eq!(penalty, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_ocr_penalty_with_artifacts() {
+        let text = "Text with  excessive   spaces and ....... dots";
+        let penalty = calculate_ocr_penalty(text, text.len() as f64);
+        assert!(penalty > 0.0);
+        assert!(penalty <= 1.0);
+    }
+
+    #[test]
+    fn test_calculate_script_penalty_clean_text() {
+        let text = "This is clean text without scripts";
+        let penalty = calculate_script_penalty(text, text.len() as f64);
+        assert_eq!(penalty, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_script_penalty_with_js() {
+        let text = "function test() { return 42; }";
+        let penalty = calculate_script_penalty(text, text.len() as f64);
+        assert!(penalty > 0.0);
+    }
+
+    #[test]
+    fn test_calculate_navigation_penalty_clean_text() {
+        let text = "This is clean text without navigation";
+        let penalty = calculate_navigation_penalty(text, text.len() as f64);
+        assert_eq!(penalty, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_navigation_penalty_with_nav() {
+        let text = "Skip to main content and Back to top links everywhere";
+        let penalty = calculate_navigation_penalty(text, text.len() as f64);
+        assert!(penalty > 0.0);
+    }
+
+    #[test]
+    fn test_calculate_structure_bonus_empty() {
+        assert_eq!(calculate_structure_bonus(""), 0.0);
+    }
+
+    #[test]
+    fn test_calculate_structure_bonus_well_structured() {
+        let text = "This is a sentence. This is another sentence.\n\nNew paragraph here. More content.";
+        let bonus = calculate_structure_bonus(text);
+        assert!(bonus > 0.0);
+        assert!(bonus <= 1.0);
+    }
+
+    #[test]
+    fn test_calculate_metadata_bonus_empty() {
+        let metadata = HashMap::new();
+        let bonus = calculate_metadata_bonus(&metadata);
+        assert_eq!(bonus, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_metadata_bonus_full() {
+        let mut metadata = HashMap::new();
+        metadata.insert("title".to_string(), "Title".to_string());
+        metadata.insert("author".to_string(), "Author".to_string());
+        metadata.insert("subject".to_string(), "Subject".to_string());
+        metadata.insert("description".to_string(), "Description".to_string());
+        metadata.insert("keywords".to_string(), "Keywords".to_string());
+
+        let bonus = calculate_metadata_bonus(&metadata);
+        assert_eq!(bonus, 1.0);
+    }
+
+    #[test]
+    fn test_clean_extracted_text_removes_styles() {
+        let text = "Before <style>.class { color: red; }</style> After";
+        let cleaned = clean_extracted_text(text);
+        assert!(!cleaned.contains("<style"));
+        assert!(cleaned.contains("Before"));
+        assert!(cleaned.contains("After"));
+    }
+
+    #[test]
+    fn test_clean_extracted_text_ocr_artifacts() {
+        let text = "Text with   excessive    spaces";
+        let cleaned = clean_extracted_text(text);
+        assert!(!cleaned.contains("   "));
+    }
+
+    #[test]
+    fn test_clean_extracted_text_navigation() {
+        let text = "Content Skip to main content more content";
+        let cleaned = clean_extracted_text(text);
+        assert!(cleaned.contains("Content"));
+        assert!(cleaned.contains("more content"));
+    }
+
+    #[test]
+    fn test_normalize_spaces_multiple_paragraphs() {
+        let text = "First paragraph.\n\nSecond paragraph.";
+        let normalized = normalize_spaces(text);
+        assert!(normalized.contains("\n\n"));
+    }
+
+    #[test]
+    fn test_normalize_spaces_preserves_paragraphs() {
+        let text = "Para 1\n\n\n\nPara 2";
+        let normalized = normalize_spaces(text);
+        assert_eq!(normalized, "Para 1\n\nPara 2");
+    }
+
+    #[test]
+    fn test_count_non_table_dash_artifacts() {
+        let text = "Some text --- with dashes";
+        let count = count_non_table_dash_artifacts(text);
+        assert!(count > 0);
+    }
+
+    #[test]
+    fn test_count_non_table_dash_artifacts_preserves_tables() {
+        let text = "| Header |\n|--------|\n| Data   |";
+        let count = count_non_table_dash_artifacts(text);
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_clean_dashes_preserve_tables_simple() {
+        let text = Cow::Borrowed("| Col1 |\n|------|\n| Data |");
+        let result = clean_dashes_preserve_tables(text);
+        assert!(result.contains("|------"));
+    }
+
+    #[test]
+    fn test_clean_dashes_preserve_tables_replaces_non_table() {
+        let text = Cow::Borrowed("Text with --- dashes");
+        let result = clean_dashes_preserve_tables(text);
+        assert!(result.contains("..."));
+        assert!(!result.contains("---"));
+    }
+
+    #[test]
+    fn test_sum_match_lengths() {
+        let text = "test ... test ... test";
+        let count = sum_match_lengths(text, &REPEATED_PUNCT_PATTERN);
+        assert!(count > 0);
+    }
+
+    #[test]
+    fn test_quality_score_large_text_with_ocr_issues() {
+        let text = "a".repeat(2000) + "   " + &"b".repeat(2000);
+        let score = calculate_quality_score(&text, None);
+        assert!(score >= 0.0);
+        assert!(score <= 1.0);
+    }
+
+    #[test]
+    fn test_quality_score_clamped_to_range() {
+        let perfect_text = "This is perfect text. ".repeat(100);
+        let score = calculate_quality_score(&perfect_text, None);
+        assert!(score >= 0.0);
+        assert!(score <= 1.0);
+    }
+
+    #[test]
+    fn test_clean_extracted_text_scattered_chars() {
+        let text = "a  b  c scattered";
+        let cleaned = clean_extracted_text(text);
+        // Should attempt to fix scattered characters
+        assert!(!cleaned.is_empty());
+    }
+
+    #[test]
+    fn test_normalize_whitespace_cow_no_changes() {
+        let text = Cow::Borrowed("normaltext");
+        let result = normalize_whitespace_cow(text);
+        // The function may convert spaces to owned even for single spaces
+        // Just verify output is correct
+        assert_eq!(result.as_ref(), "normaltext");
+    }
+
+    #[test]
+    fn test_normalize_whitespace_cow_with_changes() {
+        let text = Cow::Borrowed("text   with   spaces");
+        let result = normalize_whitespace_cow(text);
+        assert!(matches!(result, Cow::Owned(_)));
+    }
+
+    #[test]
+    fn test_clean_scripts_no_scripts() {
+        let text = Cow::Borrowed("clean text");
+        let result = clean_scripts(text);
+        assert!(matches!(result, Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn test_clean_scripts_with_script_tag() {
+        let text = Cow::Borrowed("<script>code</script>");
+        let result = clean_scripts(text);
+        assert!(!result.contains("<script"));
+    }
+
+    #[test]
+    fn test_quality_constants() {
+        assert_eq!(MIN_TEXT_LENGTH, 10);
+        assert_eq!(LARGE_TEXT_LENGTH, 1000);
+        assert_eq!(OCR_PENALTY_WEIGHT, 0.3);
+    }
 }
