@@ -493,4 +493,223 @@ mod tests {
         // Navigation should be removed
         assert!(result.contains("Content"));
     }
+
+    #[test]
+    fn test_parse_list_indent_type_valid() {
+        assert!(parse_list_indent_type("spaces").is_ok());
+        assert!(parse_list_indent_type("tabs").is_ok());
+        assert!(parse_list_indent_type("TABS").is_ok());
+    }
+
+    #[test]
+    fn test_parse_list_indent_type_invalid() {
+        let result = parse_list_indent_type("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_whitespace_mode_valid() {
+        assert!(parse_whitespace_mode("normalized").is_ok());
+        assert!(parse_whitespace_mode("strict").is_ok());
+        assert!(parse_whitespace_mode("STRICT").is_ok());
+    }
+
+    #[test]
+    fn test_parse_whitespace_mode_invalid() {
+        let result = parse_whitespace_mode("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_newline_style_valid() {
+        assert!(parse_newline_style("spaces").is_ok());
+        assert!(parse_newline_style("backslash").is_ok());
+    }
+
+    #[test]
+    fn test_parse_newline_style_invalid() {
+        let result = parse_newline_style("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_code_block_style_valid() {
+        assert!(parse_code_block_style("indented").is_ok());
+        assert!(parse_code_block_style("backticks").is_ok());
+        assert!(parse_code_block_style("tildes").is_ok());
+    }
+
+    #[test]
+    fn test_parse_code_block_style_invalid() {
+        let result = parse_code_block_style("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_highlight_style_valid() {
+        assert!(parse_highlight_style("double-equal").is_ok());
+        assert!(parse_highlight_style("html").is_ok());
+        assert!(parse_highlight_style("bold").is_ok());
+        assert!(parse_highlight_style("none").is_ok());
+    }
+
+    #[test]
+    fn test_parse_highlight_style_invalid() {
+        let result = parse_highlight_style("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_preprocessing_preset_valid() {
+        assert!(parse_preprocessing_preset("minimal").is_ok());
+        assert!(parse_preprocessing_preset("standard").is_ok());
+        assert!(parse_preprocessing_preset("aggressive").is_ok());
+    }
+
+    #[test]
+    fn test_parse_preprocessing_preset_invalid() {
+        let result = parse_preprocessing_preset("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_heading_style_valid() {
+        assert!(parse_heading_style("underlined").is_ok());
+        assert!(parse_heading_style("atx").is_ok());
+        assert!(parse_heading_style("atx_closed").is_ok());
+    }
+
+    #[test]
+    fn test_parse_heading_style_invalid() {
+        let result = parse_heading_style("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_inline_image_format_other_with_extension() {
+        let format = InlineImageFormat::Other("image/x-custom.jpg".to_string());
+        assert_eq!(inline_image_format_to_str(&format), "jpg");
+    }
+
+    #[test]
+    fn test_inline_image_format_other_with_plus() {
+        let format = InlineImageFormat::Other("image/svg+xml".to_string());
+        // The function detects "svg" in the string and returns it
+        let result = inline_image_format_to_str(&format);
+        assert!(result == "svg" || result == "image/svg"); // Either is acceptable
+    }
+
+    #[test]
+    fn test_inline_image_format_other_empty() {
+        let format = InlineImageFormat::Other("".to_string());
+        assert_eq!(inline_image_format_to_str(&format), "bin");
+    }
+
+    #[test]
+    fn test_inline_image_format_other_whitespace() {
+        let format = InlineImageFormat::Other("   ".to_string());
+        assert_eq!(inline_image_format_to_str(&format), "bin");
+    }
+
+    #[test]
+    fn test_inline_image_format_other_x_prefix() {
+        let format = InlineImageFormat::Other("x-custom".to_string());
+        assert_eq!(inline_image_format_to_str(&format), "custom");
+    }
+
+    #[test]
+    fn test_html_config_default_values() {
+        let config = HtmlConversionConfig::default();
+        assert_eq!(config.hocr_spatial_tables, Some(false));
+        assert_eq!(config.extract_metadata, Some(false));
+        assert!(config.heading_style.is_none());
+    }
+
+    #[test]
+    fn test_build_conversion_options_none() {
+        let options = build_conversion_options(None).unwrap();
+        assert!(!options.hocr_spatial_tables);
+        assert!(!options.extract_metadata);
+    }
+
+    #[test]
+    fn test_build_conversion_options_with_config() {
+        let config = HtmlConversionConfig {
+            heading_style: Some("atx".to_string()),
+            list_indent_width: Some(4),
+            escape_asterisks: Some(true),
+            ..Default::default()
+        };
+        let options = build_conversion_options(Some(config)).unwrap();
+        assert_eq!(options.list_indent_width, 4);
+        assert!(options.escape_asterisks);
+    }
+
+    #[test]
+    fn test_html_extraction_result_structure() {
+        let result = HtmlExtractionResult {
+            markdown: "test".to_string(),
+            images: vec![],
+            warnings: vec!["warning".to_string()],
+        };
+        assert_eq!(result.markdown, "test");
+        assert!(result.images.is_empty());
+        assert_eq!(result.warnings.len(), 1);
+    }
+
+    #[test]
+    fn test_extracted_inline_image_structure() {
+        let image = ExtractedInlineImage {
+            data: vec![1, 2, 3],
+            format: "png".to_string(),
+            filename: Some("test.png".to_string()),
+            description: Some("alt text".to_string()),
+            dimensions: Some((100, 200)),
+            attributes: HashMap::new(),
+        };
+        assert_eq!(image.data.len(), 3);
+        assert_eq!(image.format, "png");
+        assert_eq!(image.dimensions, Some((100, 200)));
+    }
+
+    #[test]
+    fn test_process_html_empty_string() {
+        let result = process_html("", None, false, 1024).unwrap();
+        assert!(result.markdown.is_empty() || result.markdown.trim().is_empty());
+        assert!(result.images.is_empty());
+    }
+
+    #[test]
+    fn test_convert_html_with_code_block() {
+        let html = "<pre><code>let x = 5;</code></pre>";
+        let result = convert_html_to_markdown(html, None).unwrap();
+        assert!(result.contains("let x = 5;"));
+    }
+
+    #[test]
+    fn test_html_with_multiple_paragraphs() {
+        let html = "<p>First paragraph.</p><p>Second paragraph.</p><p>Third paragraph.</p>";
+        let result = convert_html_to_markdown(html, None).unwrap();
+        assert!(result.contains("First paragraph"));
+        assert!(result.contains("Second paragraph"));
+        assert!(result.contains("Third paragraph"));
+    }
+
+    #[test]
+    fn test_html_with_nested_lists() {
+        let html = "<ul><li>Item 1<ul><li>Nested 1</li></ul></li></ul>";
+        let result = convert_html_to_markdown(html, None).unwrap();
+        assert!(result.contains("Item 1"));
+        assert!(result.contains("Nested 1"));
+    }
+
+    #[test]
+    fn test_inline_image_format_all_variants() {
+        assert_eq!(inline_image_format_to_str(&InlineImageFormat::Png), "png");
+        assert_eq!(inline_image_format_to_str(&InlineImageFormat::Jpeg), "jpeg");
+        assert_eq!(inline_image_format_to_str(&InlineImageFormat::Gif), "gif");
+        assert_eq!(inline_image_format_to_str(&InlineImageFormat::Bmp), "bmp");
+        assert_eq!(inline_image_format_to_str(&InlineImageFormat::Webp), "webp");
+        assert_eq!(inline_image_format_to_str(&InlineImageFormat::Svg), "svg");
+    }
 }
