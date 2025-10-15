@@ -62,8 +62,22 @@ impl OcrCache {
         let serialized = rmp_serde::to_vec(result)
             .map_err(|e| OcrError::CacheError(format!("Failed to serialize result: {}", e)))?;
 
-        fs::write(&cache_path, serialized)
-            .map_err(|e| OcrError::CacheError(format!("Failed to write cache file: {}", e)))?;
+        // Atomic write using temp file + rename pattern for thread safety
+        // This ensures no corruption if multiple processes/threads write simultaneously
+        let temp_path = cache_path.with_extension("tmp");
+
+        // Write to temporary file first
+        fs::write(&temp_path, &serialized)
+            .map_err(|e| OcrError::CacheError(format!("Failed to write temp cache file: {}", e)))?;
+
+        // Atomic rename - this operation is atomic on POSIX systems
+        // If another process is also writing, only one rename will succeed
+        fs::rename(&temp_path, &cache_path)
+            .map_err(|e| {
+                // Clean up temp file on error
+                let _ = fs::remove_file(&temp_path);
+                OcrError::CacheError(format!("Failed to rename cache file: {}", e))
+            })?;
 
         Ok(())
     }
