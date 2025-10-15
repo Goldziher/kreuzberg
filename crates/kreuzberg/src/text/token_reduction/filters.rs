@@ -632,4 +632,332 @@ mod tests {
         assert!(result.contains("`code`"));
         assert!(result.contains("```\ncode block\n```"));
     }
+
+    #[test]
+    fn test_apply_light_filters_removes_html_comments() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "Text before <!-- comment --> text after";
+        let result = pipeline.apply_light_filters(input);
+
+        assert!(!result.contains("<!-- comment -->"));
+        assert!(result.contains("Text before"));
+        assert!(result.contains("text after"));
+    }
+
+    #[test]
+    fn test_apply_light_filters_normalizes_whitespace() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "Text  with    multiple     spaces";
+        let result = pipeline.apply_light_filters(input);
+
+        assert!(!result.contains("  "));
+        assert!(result.contains("Text with multiple spaces"));
+    }
+
+    #[test]
+    fn test_apply_light_filters_reduces_newlines() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "Paragraph 1\n\n\n\n\nParagraph 2";
+        let result = pipeline.apply_light_filters(input);
+
+        assert!(!result.contains("\n\n\n"));
+        assert!(result.contains("Paragraph 1"));
+        assert!(result.contains("Paragraph 2"));
+    }
+
+    #[test]
+    fn test_stopword_removal_preserves_uppercase() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "The API is working WITH the SDK";
+        let result = pipeline.remove_stopwords(input);
+
+        assert!(result.contains("API"));
+        assert!(result.contains("SDK"));
+        assert!(result.contains("WITH"));
+        assert!(!result.contains("The "));
+        assert!(!result.contains(" is "));
+    }
+
+    #[test]
+    fn test_stopword_removal_preserves_numbers() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "The version is 3.14 and the count is 42";
+        let result = pipeline.remove_stopwords(input);
+
+        assert!(result.contains("3.14"));
+        assert!(result.contains("42"));
+        assert!(result.contains("version"));
+        assert!(result.contains("count"));
+    }
+
+    #[test]
+    fn test_stopword_removal_handles_punctuation() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "Hello, the world! This is great.";
+        let result = pipeline.remove_stopwords(input);
+
+        assert!(result.contains("Hello,"));
+        assert!(result.contains("world!"));
+        assert!(result.contains("great."));
+    }
+
+    #[test]
+    fn test_custom_stopwords() {
+        use std::collections::HashMap;
+
+        let mut custom_stopwords = HashMap::new();
+        custom_stopwords.insert("en".to_string(), vec!["custom".to_string(), "word".to_string()]);
+
+        let config = TokenReductionConfig {
+            custom_stopwords: Some(custom_stopwords),
+            ..Default::default()
+        };
+
+        let config = Arc::new(config);
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "This is a custom word test";
+        let result = pipeline.remove_stopwords(input);
+
+        assert!(!result.contains("custom"));
+        assert!(!result.contains("word"));
+        assert!(result.contains("test"));
+    }
+
+    #[test]
+    fn test_spanish_stopwords() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "es").unwrap();
+
+        let input = "El perro grande bonito tiene";
+        let result = pipeline.remove_stopwords(input);
+
+        // Check that Spanish stopwords are filtered and content words preserved
+        assert!(result.contains("perro"));
+        assert!(result.contains("grande"));
+        assert!(result.contains("bonito"));
+        // Verify some common Spanish stopwords are removed
+        let words: Vec<&str> = result.split_whitespace().collect();
+        assert!(!words.contains(&"el"));
+        assert!(!words.contains(&"El"));
+    }
+
+    #[test]
+    fn test_unknown_language_fallback() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "unknown").unwrap();
+
+        // Should fall back to English stopwords
+        let input = "The quick test with unknown language";
+        let result = pipeline.remove_stopwords(input);
+
+        assert!(!result.contains("The "));
+        assert!(result.contains("quick"));
+        assert!(result.contains("test"));
+    }
+
+    #[test]
+    fn test_markdown_header_preservation() {
+        let config = TokenReductionConfig {
+            preserve_markdown: true,
+            ..Default::default()
+        };
+
+        let config = Arc::new(config);
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "# Header 1\n## Header 2\n### Header 3\nRegular text";
+        let result = pipeline.remove_stopwords_preserving_markdown(input);
+
+        assert!(result.contains("# Header 1"));
+        assert!(result.contains("## Header 2"));
+        assert!(result.contains("### Header 3"));
+    }
+
+    #[test]
+    fn test_markdown_list_preservation() {
+        let config = TokenReductionConfig {
+            preserve_markdown: true,
+            ..Default::default()
+        };
+
+        let config = Arc::new(config);
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "- Item 1\n* Item 2\n+ Item 3";
+        let result = pipeline.remove_stopwords_preserving_markdown(input);
+
+        assert!(result.contains("- Item 1"));
+        assert!(result.contains("* Item 2"));
+        assert!(result.contains("+ Item 3"));
+    }
+
+    #[test]
+    fn test_markdown_table_preservation() {
+        let config = TokenReductionConfig {
+            preserve_markdown: true,
+            ..Default::default()
+        };
+
+        let config = Arc::new(config);
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "| Header 1 | Header 2 |\n|----------|----------|\n| Cell 1   | Cell 2   |";
+        let result = pipeline.remove_stopwords_preserving_markdown(input);
+
+        assert!(result.contains("| Header 1 | Header 2 |"));
+        assert!(result.contains("|----------|----------|"));
+    }
+
+    #[test]
+    fn test_code_block_preservation() {
+        let config = Arc::new(TokenReductionConfig {
+            preserve_code: true,
+            ..Default::default()
+        });
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let mut preserved = Vec::new();
+        let input = "Text before\n```rust\nfn main() {}\n```\nText after";
+        let result = pipeline.extract_and_preserve_code(input, &mut preserved);
+
+        assert_eq!(preserved.len(), 1);
+        assert!(preserved[0].contains("fn main()"));
+        assert!(result.contains("__CODE_BLOCK_0__"));
+    }
+
+    #[test]
+    fn test_inline_code_preservation() {
+        let config = Arc::new(TokenReductionConfig {
+            preserve_code: true,
+            ..Default::default()
+        });
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let mut preserved = Vec::new();
+        let input = "Use the `println!` macro";
+        let result = pipeline.extract_and_preserve_code(input, &mut preserved);
+
+        assert_eq!(preserved.len(), 1);
+        assert_eq!(preserved[0], "`println!`");
+        assert!(result.contains("__INLINE_CODE_0__"));
+    }
+
+    #[test]
+    fn test_restore_preserved_blocks() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let preserved = vec!["```code```".to_string(), "`inline`".to_string()];
+        let input = "Text __CODE_BLOCK_0__ and __INLINE_CODE_1__ here";
+        let result = pipeline.restore_preserved_blocks(input, &preserved);
+
+        assert!(result.contains("```code```"));
+        assert!(result.contains("`inline`"));
+        assert!(!result.contains("__CODE_BLOCK_0__"));
+        assert!(!result.contains("__INLINE_CODE_1__"));
+    }
+
+    #[test]
+    fn test_apply_moderate_filters_with_stopwords() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "The quick brown fox is jumping";
+        let result = pipeline.apply_moderate_filters(input);
+
+        assert!(!result.contains("The "));
+        assert!(!result.contains(" is "));
+        assert!(result.contains("quick"));
+        assert!(result.contains("brown"));
+    }
+
+    #[test]
+    fn test_invalid_regex_pattern() {
+        let config = TokenReductionConfig {
+            preserve_patterns: vec!["[invalid".to_string()],
+            ..Default::default()
+        };
+
+        let config = Arc::new(config);
+        let result = FilterPipeline::new(&config, "en");
+
+        assert!(result.is_err());
+        if let Err(err) = result {
+            assert!(matches!(err, KreuzbergError::Validation(_)));
+        }
+    }
+
+    #[test]
+    fn test_empty_input() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let result = pipeline.apply_light_filters("");
+        assert_eq!(result, "");
+
+        let result = pipeline.apply_moderate_filters("");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_stopword_removal_single_letter_words() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "I a x test";
+        let result = pipeline.remove_stopwords(input);
+
+        // Single letter words should be preserved
+        assert!(result.contains("I"));
+        assert!(result.contains("x"));
+    }
+
+    #[test]
+    fn test_stopword_removal_mixed_case() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "The Test Is Working";
+        let result = pipeline.remove_stopwords(input);
+
+        assert!(!result.contains("The"));
+        assert!(!result.contains("Is"));
+        assert!(result.contains("Test"));
+        assert!(result.contains("Working"));
+    }
+
+    #[test]
+    fn test_lazy_regex_initialization() {
+        // Access each lazy static to ensure they initialize without panic
+        let _ = &*HTML_COMMENT_REGEX;
+        let _ = &*EXCESSIVE_NEWLINES_REGEX;
+        let _ = &*MULTIPLE_SPACES_REGEX;
+        let _ = &*MARKDOWN_CODE_BLOCK_REGEX;
+        let _ = &*MARKDOWN_INLINE_CODE_REGEX;
+        let _ = &*MARKDOWN_HEADERS_REGEX;
+        let _ = &*MARKDOWN_LISTS_REGEX;
+    }
+
+    #[test]
+    fn test_stopwords_lazy_initialization() {
+        // Access stopwords to ensure it initializes
+        let stopwords = &*STOPWORDS;
+        assert!(stopwords.contains_key("en"));
+        assert!(stopwords.contains_key("es"));
+        assert!(!stopwords.get("en").unwrap().is_empty());
+        assert!(!stopwords.get("es").unwrap().is_empty());
+    }
 }
