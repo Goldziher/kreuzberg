@@ -252,9 +252,20 @@ struct PptxContainer {
 
 impl PptxContainer {
     fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let file = File::open(path).map_err(|e| KreuzbergError::Parsing(format!("Failed to open PPTX file: {}", e)))?;
-        let mut archive = ZipArchive::new(file)
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to read PPTX archive: {}", e)))?;
+        // IO errors must bubble up unchanged - file access issues need user reports ~keep
+        let file = File::open(path)?;
+
+        // Zip errors: check if it's format/parsing issue vs IO error
+        let mut archive = match ZipArchive::new(file) {
+            Ok(arc) => arc,
+            Err(zip::result::ZipError::Io(io_err)) => return Err(io_err.into()), // Bubble up IO errors ~keep
+            Err(e) => {
+                return Err(KreuzbergError::Parsing(format!(
+                    "Failed to read PPTX archive (invalid format): {}",
+                    e
+                )));
+            }
+        };
 
         let slide_paths = Self::find_slide_paths(&mut archive)?;
 
@@ -269,13 +280,14 @@ impl PptxContainer {
         match self.archive.by_name(path) {
             Ok(mut file) => {
                 let mut contents = Vec::new();
-                file.read_to_end(&mut contents)
-                    .map_err(|e| KreuzbergError::Parsing(format!("Failed to read file from archive: {}", e)))?;
+                // IO errors must bubble up - file read issues need user reports ~keep
+                file.read_to_end(&mut contents)?;
                 Ok(contents)
             }
             Err(zip::result::ZipError::FileNotFound) => {
                 Err(KreuzbergError::Parsing("File not found in archive".to_string()))
             }
+            Err(zip::result::ZipError::Io(io_err)) => Err(io_err.into()), // Bubble up IO errors ~keep
             Err(e) => Err(KreuzbergError::Parsing(format!("Zip error: {}", e))),
         }
     }
@@ -306,12 +318,19 @@ impl PptxContainer {
     }
 
     fn read_file_from_archive(archive: &mut ZipArchive<File>, path: &str) -> Result<Vec<u8>> {
-        let mut file = archive
-            .by_name(path)
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to read file from archive: {}", e)))?;
+        let mut file = match archive.by_name(path) {
+            Ok(f) => f,
+            Err(zip::result::ZipError::Io(io_err)) => return Err(io_err.into()), // Bubble up IO errors ~keep
+            Err(e) => {
+                return Err(KreuzbergError::Parsing(format!(
+                    "Failed to read file from archive: {}",
+                    e
+                )));
+            }
+        };
         let mut contents = Vec::new();
-        file.read_to_end(&mut contents)
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to read file contents: {}", e)))?;
+        // IO errors must bubble up - file read issues need user reports ~keep
+        file.read_to_end(&mut contents)?;
         Ok(contents)
     }
 }
@@ -765,8 +784,8 @@ pub fn extract_pptx_from_bytes(data: &[u8], extract_images: bool) -> Result<Pptx
     let unique_id = COUNTER.fetch_add(1, Ordering::SeqCst);
     let temp_path = std::env::temp_dir().join(format!("temp_pptx_{}_{}.pptx", std::process::id(), unique_id));
 
-    std::fs::write(&temp_path, data)
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to write temp PPTX file: {}", e)))?;
+    // IO errors must bubble up - temp file write issues need user reports ~keep
+    std::fs::write(&temp_path, data)?;
 
     let result = extract_pptx_from_path(temp_path.to_str().unwrap(), extract_images);
 

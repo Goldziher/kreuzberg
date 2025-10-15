@@ -28,15 +28,30 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
         .arg(&output_path);
 
     // Execute
-    let output = cmd
-        .output()
-        .await
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to execute pandoc: {}", e)))?;
+    let output = cmd.output().await.map_err(|e| {
+        // Failed to execute pandoc - this is an IO error (command not found, etc.) ~keep
+        std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to execute pandoc: {}", e))
+    })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let _ = fs::remove_file(&output_path).await;
-        return Err(KreuzbergError::Parsing(format!("Pandoc failed: {}", stderr)));
+
+        // Subprocess error analysis - wrap only if format/parsing error detected ~keep
+        let stderr_lower = stderr.to_lowercase();
+        if stderr_lower.contains("format")
+            || stderr_lower.contains("unsupported")
+            || stderr_lower.contains("error:")
+            || stderr_lower.contains("failed")
+        {
+            return Err(KreuzbergError::Parsing(format!(
+                "Pandoc format/parsing error: {}",
+                stderr
+            )));
+        }
+
+        // True system error - bubble up as IO error ~keep
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Pandoc system error: {}", stderr)).into());
     }
 
     // Read output
@@ -71,18 +86,34 @@ pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<
         .arg(&metadata_path);
 
     // Execute
-    let output = cmd
-        .output()
-        .await
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to execute pandoc: {}", e)))?;
+    let output = cmd.output().await.map_err(|e| {
+        // Failed to execute pandoc - this is an IO error (command not found, etc.) ~keep
+        std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to execute pandoc: {}", e))
+    })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let _ = fs::remove_file(&metadata_path).await;
-        return Err(KreuzbergError::Parsing(format!(
-            "Pandoc metadata extraction failed: {}",
-            stderr
-        )));
+
+        // Subprocess error analysis - wrap only if format/parsing error detected ~keep
+        let stderr_lower = stderr.to_lowercase();
+        if stderr_lower.contains("format")
+            || stderr_lower.contains("unsupported")
+            || stderr_lower.contains("error:")
+            || stderr_lower.contains("failed")
+        {
+            return Err(KreuzbergError::Parsing(format!(
+                "Pandoc metadata extraction format/parsing error: {}",
+                stderr
+            )));
+        }
+
+        // True system error - bubble up as IO error ~keep
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("Pandoc metadata extraction system error: {}", stderr),
+        )
+        .into());
     }
 
     // Read JSON

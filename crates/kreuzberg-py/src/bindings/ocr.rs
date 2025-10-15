@@ -404,8 +404,7 @@ impl OCRProcessor {
 
 #[pyfunction]
 pub fn validate_language_code(language: &str) -> PyResult<()> {
-    kreuzberg::ocr::validate_language_code(language)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    kreuzberg::ocr::validate_language_code(language).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
 }
 
 #[pyfunction]

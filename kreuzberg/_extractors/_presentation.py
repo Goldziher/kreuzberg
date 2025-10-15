@@ -40,11 +40,7 @@ class PresentationExtractor(Extractor):
             images = []
             if extract_images:
                 images = [
-                    ExtractedImage(
-                        data=bytes(img["data"]),
-                        format=img["format"],
-                        page_number=img.get("slide_number")
-                    )
+                    ExtractedImage(data=bytes(img["data"]), format=img["format"], page_number=img.get("slide_number"))
                     for img in extraction_result.get("images", [])
                 ]
 
@@ -75,11 +71,7 @@ class PresentationExtractor(Extractor):
             images = []
             if extract_images:
                 images = [
-                    ExtractedImage(
-                        data=bytes(img["data"]),
-                        format=img["format"],
-                        page_number=img.get("slide_number")
-                    )
+                    ExtractedImage(data=bytes(img["data"]), format=img["format"], page_number=img.get("slide_number"))
                     for img in extraction_result.get("images", [])
                 ]
 

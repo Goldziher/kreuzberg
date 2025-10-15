@@ -7,8 +7,7 @@ use crate::error::to_py_err;
 use async_trait::async_trait;
 use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
 use kreuzberg::plugins::{
-    DocumentExtractor, OcrBackend, OcrBackendType, Plugin, PostProcessor, ProcessingStage,
-    Validator,
+    DocumentExtractor, OcrBackend, OcrBackendType, Plugin, PostProcessor, ProcessingStage, Validator,
 };
 use kreuzberg::types::ExtractionResult;
 use kreuzberg::{KreuzbergError, Result};
@@ -55,18 +54,14 @@ impl Plugin for PyPlugin {
 
     fn initialize(&mut self) -> Result<()> {
         Python::with_gil(|py| {
-            self.py_instance
-                .call_method0(py, "initialize")
-                .map_err(to_py_err)?;
+            self.py_instance.call_method0(py, "initialize").map_err(to_py_err)?;
             Ok(())
         })
     }
 
     fn shutdown(&mut self) -> Result<()> {
         Python::with_gil(|py| {
-            self.py_instance
-                .call_method0(py, "shutdown")
-                .map_err(to_py_err)?;
+            self.py_instance.call_method0(py, "shutdown").map_err(to_py_err)?;
             Ok(())
         })
     }
@@ -304,10 +299,7 @@ impl PyPostProcessorWrapper {
                     "early" => Ok(ProcessingStage::Early),
                     "middle" => Ok(ProcessingStage::Middle),
                     "late" => Ok(ProcessingStage::Late),
-                    _ => Err(KreuzbergError::Validation(format!(
-                        "Invalid processing stage: {}",
-                        s
-                    ))),
+                    _ => Err(KreuzbergError::Validation(format!("Invalid processing stage: {}", s))),
                 })
         })?;
 
@@ -346,11 +338,7 @@ impl Plugin for PyPostProcessorWrapper {
 
 #[async_trait]
 impl PostProcessor for PyPostProcessorWrapper {
-    async fn process(
-        &self,
-        result: ExtractionResult,
-        config: &ExtractionConfig,
-    ) -> Result<ExtractionResult> {
+    async fn process(&self, result: ExtractionResult, config: &ExtractionConfig) -> Result<ExtractionResult> {
         let py_instance = self.base.py_instance.clone();
         let config = config.clone();
 
@@ -468,10 +456,8 @@ fn extraction_config_to_py_dict(py: Python, _config: &ExtractionConfig) -> Resul
 
 fn extraction_result_to_py_dict(py: Python, result: &ExtractionResult) -> Result<Py<PyDict>> {
     let dict = PyDict::new(py);
-    dict.set_item("content", &result.content)
-        .map_err(to_py_err)?;
-    dict.set_item("mime_type", &result.mime_type)
-        .map_err(to_py_err)?;
+    dict.set_item("content", &result.content).map_err(to_py_err)?;
+    dict.set_item("mime_type", &result.mime_type).map_err(to_py_err)?;
     // TODO: Add metadata and tables
     Ok(dict.into())
 }
@@ -504,11 +490,7 @@ fn py_dict_to_extraction_result(py: Python, obj: &Bound<'_, PyAny>) -> Result<Ex
 pub fn register_ocr_backend(py_instance: Py<PyAny>) -> PyResult<()> {
     let wrapper = Arc::new(PyOcrBackendWrapper::new(py_instance));
     let registry = kreuzberg::plugins::registry::get_ocr_backend_registry();
-    registry
-        .write()
-        .unwrap()
-        .register(wrapper)
-        .map_err(to_py_err)?;
+    registry.write().unwrap().register(wrapper).map_err(to_py_err)?;
     Ok(())
 }
 
@@ -517,11 +499,7 @@ pub fn register_ocr_backend(py_instance: Py<PyAny>) -> PyResult<()> {
 pub fn register_document_extractor(py_instance: Py<PyAny>) -> PyResult<()> {
     let wrapper = Arc::new(PyDocumentExtractorWrapper::new(py_instance).map_err(to_py_err)?);
     let registry = kreuzberg::plugins::registry::get_document_extractor_registry();
-    registry
-        .write()
-        .unwrap()
-        .register(wrapper)
-        .map_err(to_py_err)?;
+    registry.write().unwrap().register(wrapper).map_err(to_py_err)?;
     Ok(())
 }
 
@@ -543,11 +521,7 @@ pub fn register_post_processor(py_instance: Py<PyAny>, priority: i32) -> PyResul
 pub fn register_validator(py_instance: Py<PyAny>) -> PyResult<()> {
     let wrapper = Arc::new(PyValidatorWrapper::new(py_instance).map_err(to_py_err)?);
     let registry = kreuzberg::plugins::registry::get_validator_registry();
-    registry
-        .write()
-        .unwrap()
-        .register(wrapper)
-        .map_err(to_py_err)?;
+    registry.write().unwrap().register(wrapper).map_err(to_py_err)?;
     Ok(())
 }
 

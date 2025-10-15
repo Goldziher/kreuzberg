@@ -34,8 +34,5 @@ impl fmt::Display for OcrError {
 
 impl std::error::Error for OcrError {}
 
-impl From<std::io::Error> for OcrError {
-    fn from(err: std::io::Error) -> Self {
-        Self::IOError(err.to_string())
-    }
-}
+// NOTE: No From<std::io::Error> impl - IO errors must bubble up unchanged per error handling policy
+// IOError variant is only for wrapping errors from non-IO sources (e.g., cache operations)

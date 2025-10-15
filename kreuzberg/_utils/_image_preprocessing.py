@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 from PIL import Image
 
-from kreuzberg._internal_bindings import ExtractionConfigDTO, normalize_image_dpi as rust_normalize_image_dpi
+from kreuzberg._internal_bindings import ExtractionConfigDTO
+from kreuzberg._internal_bindings import normalize_image_dpi as rust_normalize_image_dpi
 from kreuzberg._types import ImagePreprocessingMetadata
 
 if TYPE_CHECKING:

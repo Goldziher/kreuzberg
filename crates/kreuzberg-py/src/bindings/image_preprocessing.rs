@@ -22,13 +22,7 @@ pub struct ExtractionConfigDTO {
 #[pymethods]
 impl ExtractionConfigDTO {
     #[new]
-    fn new(
-        target_dpi: i32,
-        max_image_dimension: i32,
-        auto_adjust_dpi: bool,
-        min_dpi: i32,
-        max_dpi: i32,
-    ) -> Self {
+    fn new(target_dpi: i32, max_image_dimension: i32, auto_adjust_dpi: bool, min_dpi: i32, max_dpi: i32) -> Self {
         Self {
             target_dpi,
             max_image_dimension,
@@ -218,8 +212,8 @@ pub fn normalize_image_dpi<'py>(
     });
 
     // Call pure Rust implementation
-    let result =
-        kreuzberg::image::normalize_image_dpi(&rgb_data, width, height, &rust_config, current_dpi).map_err(to_py_err)?;
+    let result = kreuzberg::image::normalize_image_dpi(&rgb_data, width, height, &rust_config, current_dpi)
+        .map_err(to_py_err)?;
 
     // Convert result back to numpy array
     let (result_width, result_height) = result.dimensions;
