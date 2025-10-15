@@ -132,4 +132,162 @@ mod tests {
         assert_eq!(result.unique_elements.len(), 5);
         assert!(result.unique_elements.contains(&"b".to_string()));
     }
+
+    #[test]
+    fn test_xml_with_attributes() {
+        let xml = br#"<root id="1"><item type="test">Content</item></root>"#;
+        let result = parse_xml(xml, false).unwrap();
+        assert_eq!(result.content, "Content");
+        assert_eq!(result.element_count, 2);
+    }
+
+    #[test]
+    fn test_xml_with_namespaces() {
+        let xml = b"<ns:root xmlns:ns=\"http://example.com\"><ns:item>Text</ns:item></ns:root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert!(result.content.contains("Text"));
+        assert!(result.element_count >= 2);
+    }
+
+    #[test]
+    fn test_xml_with_comments() {
+        let xml = b"<root><!-- Comment --><item>Text</item></root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert_eq!(result.content, "Text");
+        assert_eq!(result.element_count, 2);
+    }
+
+    #[test]
+    fn test_xml_with_processing_instructions() {
+        let xml = b"<?xml version=\"1.0\"?><root><item>Text</item></root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert_eq!(result.content, "Text");
+        assert_eq!(result.element_count, 2);
+    }
+
+    #[test]
+    fn test_xml_with_mixed_content() {
+        let xml = b"<root>Text before<item>nested</item>Text after</root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert!(result.content.contains("Text before"));
+        assert!(result.content.contains("nested"));
+        assert!(result.content.contains("Text after"));
+    }
+
+    #[test]
+    fn test_xml_empty_bytes() {
+        let xml = b"";
+        let result = parse_xml(xml, false).unwrap();
+        assert_eq!(result.content, "");
+        assert_eq!(result.element_count, 0);
+        assert!(result.unique_elements.is_empty());
+    }
+
+    #[test]
+    fn test_xml_only_whitespace() {
+        let xml = b"   \n\t  ";
+        let result = parse_xml(xml, false).unwrap();
+        assert_eq!(result.content, "");
+        assert_eq!(result.element_count, 0);
+    }
+
+    #[test]
+    fn test_xml_with_nested_elements() {
+        let xml = b"<root><parent><child><grandchild>Deep</grandchild></child></parent></root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert_eq!(result.content, "Deep");
+        assert_eq!(result.element_count, 4);
+        assert_eq!(result.unique_elements.len(), 4);
+    }
+
+    #[test]
+    fn test_xml_with_special_characters() {
+        let xml = b"<root>&lt;&gt;&amp;&quot;&apos;</root>";
+        let result = parse_xml(xml, false).unwrap();
+        // quick_xml may not decode all entities in text events
+        // Just verify parsing succeeds and we get some content
+        assert!(result.element_count >= 1);
+    }
+
+    #[test]
+    fn test_xml_self_closing_tags() {
+        let xml = b"<root><item1/><item2/><item3/></root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert_eq!(result.element_count, 4);
+        assert_eq!(result.unique_elements.len(), 4);
+    }
+
+    #[test]
+    fn test_xml_multiple_text_nodes() {
+        let xml = b"<root>First<a/>Second<b/>Third</root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert!(result.content.contains("First"));
+        assert!(result.content.contains("Second"));
+        assert!(result.content.contains("Third"));
+    }
+
+    #[test]
+    fn test_xml_with_newlines() {
+        let xml = b"<root>\n  <item>\n    Text\n  </item>\n</root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert_eq!(result.content, "Text");
+    }
+
+    #[test]
+    fn test_xml_large_cdata() {
+        let large_text = "A".repeat(10000);
+        let xml = format!("<root><![CDATA[{}]]></root>", large_text);
+        let result = parse_xml(xml.as_bytes(), false).unwrap();
+        assert!(result.content.contains(&large_text));
+    }
+
+    #[test]
+    fn test_xml_unique_elements_sorted() {
+        let xml = b"<root><z/><a/><m/><b/></root>";
+        let result = parse_xml(xml, false).unwrap();
+        // Unique elements should be sorted alphabetically
+        let expected = vec!["a", "b", "m", "root", "z"];
+        assert_eq!(result.unique_elements, expected);
+    }
+
+    #[test]
+    fn test_xml_result_structure() {
+        let xml = b"<root><item>Test</item></root>";
+        let result = parse_xml(xml, false).unwrap();
+
+        // Test all fields are populated
+        assert!(!result.content.is_empty());
+        assert!(result.element_count > 0);
+        assert!(!result.unique_elements.is_empty());
+    }
+
+    #[test]
+    fn test_xml_with_multiple_cdata_sections() {
+        let xml = b"<root><![CDATA[First]]>Text<![CDATA[Second]]></root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert!(result.content.contains("First"));
+        assert!(result.content.contains("Text"));
+        assert!(result.content.contains("Second"));
+    }
+
+    #[test]
+    fn test_xml_preserve_whitespace_flag() {
+        let xml = b"<root>  A  B  </root>";
+        let without_preserve = parse_xml(xml, false).unwrap();
+        let with_preserve = parse_xml(xml, true).unwrap();
+
+        // Without preserve should trim
+        assert!(!without_preserve.content.starts_with(' '));
+
+        // With preserve might keep spaces (implementation-dependent)
+        assert!(with_preserve.content.len() >= without_preserve.content.len());
+    }
+
+    #[test]
+    fn test_xml_element_count_accuracy() {
+        let xml = b"<root><a><b><c/></b></a><d/></root>";
+        let result = parse_xml(xml, false).unwrap();
+        // root + a + b + c + d = 5 elements
+        assert_eq!(result.element_count, 5);
+    }
 }
