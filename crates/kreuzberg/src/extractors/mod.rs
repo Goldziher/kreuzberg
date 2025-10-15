@@ -72,7 +72,9 @@ pub fn ensure_initialized() -> Result<()> {
 /// ```
 pub fn register_default_extractors() -> Result<()> {
     let registry = get_document_extractor_registry();
-    let mut registry = registry.write().unwrap();
+    let mut registry = registry
+        .write()
+        .map_err(|e| crate::KreuzbergError::Other(format!("Document extractor registry lock poisoned: {}", e)))?;
 
     // Register text extractors
     registry.register(Arc::new(PlainTextExtractor::new()))?;
@@ -122,7 +124,9 @@ mod tests {
         // Clear registry for clean test
         let registry = get_document_extractor_registry();
         {
-            let mut reg = registry.write().unwrap();
+            let mut reg = registry
+                .write()
+                .expect("Failed to acquire write lock on registry in test");
             *reg = crate::plugins::registry::DocumentExtractorRegistry::new();
         }
 
@@ -130,7 +134,9 @@ mod tests {
         register_default_extractors().expect("Failed to register extractors");
 
         // Verify all extractors are registered
-        let reg = registry.read().unwrap();
+        let reg = registry
+            .read()
+            .expect("Failed to acquire read lock on registry in test");
         let extractor_names = reg.list();
 
         // Should have 14 extractors: PlainText, Markdown, XML, PDF, Excel, PPTX, Email, HTML, Structured, Image, ZIP, TAR, 7Z, Pandoc

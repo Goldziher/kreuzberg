@@ -199,17 +199,26 @@ impl GenericCache {
     }
 
     pub fn is_processing(&self, cache_key: &str) -> bool {
-        let locks = self.processing_locks.lock().unwrap();
+        let locks = self
+            .processing_locks
+            .lock()
+            .expect("Processing locks mutex poisoned - another thread panicked while processing cache");
         locks.contains(cache_key)
     }
 
     pub fn mark_processing(&self, cache_key: String) {
-        let mut locks = self.processing_locks.lock().unwrap();
+        let mut locks = self
+            .processing_locks
+            .lock()
+            .expect("Processing locks mutex poisoned - another thread panicked while processing cache");
         locks.insert(cache_key);
     }
 
     pub fn mark_complete(&self, cache_key: &str) {
-        let mut locks = self.processing_locks.lock().unwrap();
+        let mut locks = self
+            .processing_locks
+            .lock()
+            .expect("Processing locks mutex poisoned - another thread panicked while processing cache");
         locks.remove(cache_key);
     }
 

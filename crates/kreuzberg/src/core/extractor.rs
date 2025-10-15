@@ -64,7 +64,9 @@ fn get_extractor_cached(mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
     // Cache miss - acquire registry lock
     let extractor = {
         let registry = crate::plugins::registry::get_document_extractor_registry();
-        let registry_read = registry.read().unwrap();
+        let registry_read = registry
+            .read()
+            .map_err(|e| crate::KreuzbergError::Other(format!("Document extractor registry lock poisoned: {}", e)))?;
         registry_read.get(mime_type)?
         // Lock released at end of scope
     };

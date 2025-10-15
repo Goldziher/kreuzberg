@@ -36,7 +36,9 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
     {
         let validator_registry = crate::plugins::registry::get_validator_registry();
         let validators = {
-            let registry = validator_registry.read().unwrap();
+            let registry = validator_registry
+                .read()
+                .map_err(|e| crate::KreuzbergError::Other(format!("Validator registry lock poisoned: {}", e)))?;
             registry.get_all()
         }; // Release lock
 
@@ -101,7 +103,9 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
 
     for stage in [ProcessingStage::Early, ProcessingStage::Middle, ProcessingStage::Late] {
         let processors = {
-            let registry = processor_registry.read().unwrap();
+            let registry = processor_registry
+                .read()
+                .map_err(|e| crate::KreuzbergError::Other(format!("Post-processor registry lock poisoned: {}", e)))?;
             registry.get_for_stage(stage)
         }; // Release lock
 
