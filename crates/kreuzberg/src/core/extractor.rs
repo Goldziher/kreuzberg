@@ -25,11 +25,19 @@ use std::sync::Arc;
 ///
 /// This runtime is lazily initialized on first use and shared across all sync wrappers.
 /// Using a global runtime instead of creating one per call provides 100x+ performance improvement.
+///
+/// # Safety
+///
+/// The `.expect()` here is justified because:
+/// 1. Runtime creation can only fail due to system resource exhaustion (OOM, thread limit)
+/// 2. If runtime creation fails, the process is already in a critical state
+/// 3. This is a one-time initialization - if it fails, nothing will work
+/// 4. Better to fail fast than return errors from every sync operation
 static GLOBAL_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
-        .expect("Failed to create global Tokio runtime")
+        .expect("Failed to create global Tokio runtime - system may be out of resources")
 });
 
 // Thread-local extractor cache to reduce registry lock contention.
@@ -295,7 +303,12 @@ pub async fn batch_extract_file(
         }
     }
 
-    // Unwrap all results (guaranteed to be Some at this point)
+    // SAFETY: Unwrap is safe here because all results are guaranteed to be Some.
+    // The loop above ensures that for every task:
+    // - Ok(_) case sets results[index] = Some(_)
+    // - Err(join_err) case returns early, never reaching this line
+    // Therefore, all Option<ExtractionResult> values are Some by this point.
+    #[allow(clippy::unwrap_used)]
     Ok(results.into_iter().map(|r| r.unwrap()).collect())
 }
 
@@ -379,7 +392,12 @@ pub async fn batch_extract_bytes(
         }
     }
 
-    // Unwrap all results (guaranteed to be Some at this point)
+    // SAFETY: Unwrap is safe here because all results are guaranteed to be Some.
+    // The loop above ensures that for every task:
+    // - Ok(_) case sets results[index] = Some(_)
+    // - Err(join_err) case returns early, never reaching this line
+    // Therefore, all Option<ExtractionResult> values are Some by this point.
+    #[allow(clippy::unwrap_used)]
     Ok(results.into_iter().map(|r| r.unwrap()).collect())
 }
 

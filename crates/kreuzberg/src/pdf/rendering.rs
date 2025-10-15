@@ -138,11 +138,8 @@ impl PdfRenderer {
     }
 }
 
-impl Default for PdfRenderer {
-    fn default() -> Self {
-        Self::new().expect("Failed to create PDF renderer")
-    }
-}
+// Note: No Default impl - PdfRenderer::new() can fail if Pdfium library is not found
+// Users should call PdfRenderer::new() explicitly to handle potential errors
 
 pub fn render_page_to_image(pdf_bytes: &[u8], page_index: usize, options: &PageRenderOptions) -> Result<DynamicImage> {
     let renderer = PdfRenderer::new()?;
@@ -244,9 +241,10 @@ mod tests {
     }
 
     #[test]
-    fn test_renderer_default() {
-        let renderer = PdfRenderer::default();
-        assert!(std::mem::size_of_val(&renderer) > 0);
+    fn test_renderer_size() {
+        // Test that PdfRenderer has reasonable size
+        // (cannot use default() as it was removed to prevent panic on initialization failure)
+        assert!(std::mem::size_of::<PdfRenderer>() > 0);
     }
 
     #[test]
