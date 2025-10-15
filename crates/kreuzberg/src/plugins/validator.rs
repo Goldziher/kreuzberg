@@ -366,4 +366,251 @@ mod tests {
         let validator = MockValidator { should_fail: false };
         assert_eq!(validator.priority(), 50);
     }
+
+    #[tokio::test]
+    async fn test_validator_plugin_interface() {
+        let mut validator = MockValidator { should_fail: false };
+
+        // Test Plugin trait methods
+        assert_eq!(validator.name(), "mock-validator");
+        assert_eq!(validator.version(), "1.0.0");
+        assert!(validator.initialize().is_ok());
+        assert!(validator.shutdown().is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validator_empty_content() {
+        let validator = MockValidator { should_fail: false };
+
+        let result = ExtractionResult {
+            content: String::new(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+
+        let config = ExtractionConfig::default();
+        assert!(validator.validate(&result, &config).await.is_ok());
+    }
+
+    #[test]
+    fn test_validator_should_validate_conditional() {
+        // Create a validator that only validates PDFs
+        struct PdfOnlyValidator;
+
+        impl Plugin for PdfOnlyValidator {
+            fn name(&self) -> &str {
+                "pdf-only"
+            }
+            fn version(&self) -> &str {
+                "1.0.0"
+            }
+            fn initialize(&mut self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&mut self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl Validator for PdfOnlyValidator {
+            async fn validate(&self, _result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                Ok(())
+            }
+
+            fn should_validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> bool {
+                result.mime_type == "application/pdf"
+            }
+        }
+
+        let validator = PdfOnlyValidator;
+        let config = ExtractionConfig::default();
+
+        let pdf_result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "application/pdf".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+
+        let txt_result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+
+        assert!(validator.should_validate(&pdf_result, &config));
+        assert!(!validator.should_validate(&txt_result, &config));
+    }
+
+    #[test]
+    fn test_validator_priority_ranges() {
+        // Test different priority ranges
+        struct HighPriorityValidator;
+        struct LowPriorityValidator;
+
+        impl Plugin for HighPriorityValidator {
+            fn name(&self) -> &str {
+                "high-priority"
+            }
+            fn version(&self) -> &str {
+                "1.0.0"
+            }
+            fn initialize(&mut self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&mut self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        impl Plugin for LowPriorityValidator {
+            fn name(&self) -> &str {
+                "low-priority"
+            }
+            fn version(&self) -> &str {
+                "1.0.0"
+            }
+            fn initialize(&mut self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&mut self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl Validator for HighPriorityValidator {
+            async fn validate(&self, _result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                Ok(())
+            }
+
+            fn priority(&self) -> i32 {
+                100
+            }
+        }
+
+        #[async_trait]
+        impl Validator for LowPriorityValidator {
+            async fn validate(&self, _result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                Ok(())
+            }
+
+            fn priority(&self) -> i32 {
+                10
+            }
+        }
+
+        let high = HighPriorityValidator;
+        let low = LowPriorityValidator;
+
+        assert_eq!(high.priority(), 100);
+        assert_eq!(low.priority(), 10);
+        assert!(high.priority() > low.priority());
+    }
+
+    #[tokio::test]
+    async fn test_validator_error_message() {
+        let validator = MockValidator { should_fail: true };
+
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+
+        let config = ExtractionConfig::default();
+        let err = validator.validate(&result, &config).await.unwrap_err();
+
+        match err {
+            KreuzbergError::Validation(msg) => {
+                assert_eq!(msg, "Validation failed");
+            }
+            _ => panic!("Expected Validation error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validator_with_metadata() {
+        let validator = MockValidator { should_fail: false };
+
+        let mut metadata = HashMap::new();
+        metadata.insert("quality_score".to_string(), serde_json::json!(0.95));
+
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata,
+            tables: vec![],
+        };
+
+        let config = ExtractionConfig::default();
+        assert!(validator.validate(&result, &config).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validator_with_tables() {
+        use crate::types::Table;
+
+        let validator = MockValidator { should_fail: false };
+
+        let table = Table {
+            cells: vec![vec!["A".to_string(), "B".to_string()]],
+            markdown: "| A | B |".to_string(),
+            page_number: 0,
+        };
+
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![table],
+        };
+
+        let config = ExtractionConfig::default();
+        assert!(validator.validate(&result, &config).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validator_different_mime_types() {
+        let validator = MockValidator { should_fail: false };
+        let config = ExtractionConfig::default();
+
+        let mime_types = vec![
+            "text/plain",
+            "application/pdf",
+            "application/json",
+            "text/html",
+            "image/png",
+        ];
+
+        for mime_type in mime_types {
+            let result = ExtractionResult {
+                content: "test".to_string(),
+                mime_type: mime_type.to_string(),
+                metadata: HashMap::new(),
+                tables: vec![],
+            };
+
+            assert!(validator.validate(&result, &config).await.is_ok());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validator_long_content() {
+        let validator = MockValidator { should_fail: false };
+
+        let result = ExtractionResult {
+            content: "test content ".repeat(10000),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+
+        let config = ExtractionConfig::default();
+        assert!(validator.validate(&result, &config).await.is_ok());
+    }
 }
