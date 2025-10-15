@@ -61,10 +61,10 @@ impl OcrProcessor {
 
         let config_str = self.hash_config(config);
 
-        if config.use_cache {
-            if let Some(cached_result) = self.cache.get_cached_result(&image_hash, "tesseract", &config_str)? {
-                return Ok(cached_result);
-            }
+        if config.use_cache
+            && let Some(cached_result) = self.cache.get_cached_result(&image_hash, "tesseract", &config_str)?
+        {
+            return Ok(cached_result);
         }
 
         let result = self.perform_ocr(image_bytes, config)?;

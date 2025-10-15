@@ -75,5 +75,7 @@ pub use core::mime::{
     validate_mime_type,
 };
 
-// Registry for advanced usage
-pub use core::registry::{DEFAULT_PRIORITY, ExtractorRegistry, get_registry};
+// Plugin registry for advanced usage
+pub use plugins::registry::{
+    get_document_extractor_registry, get_ocr_backend_registry, get_post_processor_registry, get_validator_registry,
+};

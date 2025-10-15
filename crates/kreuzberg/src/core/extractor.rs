@@ -77,23 +77,19 @@ pub async fn extract_file(
     //     }
     // }
 
-    // 4. TODO: Registry lookup and extraction (when extractors are migrated)
-    // let registry = registry::get_registry();
-    // let registry_read = registry.read().unwrap();
-    // let extractor_name = registry_read.get(&detected_mime)?;
-    // let mut result = extractor.extract_file(path, &detected_mime, config).await?;
+    // 4. Ensure built-in extractors are registered
+    crate::extractors::ensure_initialized()?;
 
-    // For now, return a placeholder result
-    use std::collections::HashMap;
-    let content = io::read_file_async(path).await?;
-    let content_str = String::from_utf8_lossy(&content).to_string();
-
-    let mut result = ExtractionResult {
-        content: content_str,
-        mime_type: detected_mime.clone(),
-        metadata: HashMap::new(),
-        tables: vec![],
+    // 5. Get extractor from plugin registry
+    let extractor = {
+        let registry = crate::plugins::registry::get_document_extractor_registry();
+        let registry_read = registry.read().unwrap();
+        registry_read.get(&detected_mime)?
+        // Lock released at end of scope
     };
+
+    // 6. Extract content
+    let mut result = extractor.extract_file(path, &detected_mime, config).await?;
 
     // 5. Run post-processing pipeline
     result = crate::core::pipeline::run_pipeline(result, config).await?;
@@ -143,22 +139,19 @@ pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionC
     // 1. Validate MIME type
     let validated_mime = mime::validate_mime_type(mime_type)?;
 
-    // 2. TODO: Registry lookup and extraction (when extractors are migrated)
-    // let registry = registry::get_registry();
-    // let registry_read = registry.read().unwrap();
-    // let extractor_name = registry_read.get(&validated_mime)?;
-    // let mut result = extractor.extract_bytes(content, &validated_mime, config).await?;
+    // 2. Ensure built-in extractors are registered
+    crate::extractors::ensure_initialized()?;
 
-    // For now, return a placeholder result
-    use std::collections::HashMap;
-    let content_str = String::from_utf8_lossy(content).to_string();
-
-    let mut result = ExtractionResult {
-        content: content_str,
-        mime_type: validated_mime.clone(),
-        metadata: HashMap::new(),
-        tables: vec![],
+    // 3. Get extractor from plugin registry
+    let extractor = {
+        let registry = crate::plugins::registry::get_document_extractor_registry();
+        let registry_read = registry.read().unwrap();
+        registry_read.get(&validated_mime)?
+        // Lock released at end of scope
     };
+
+    // 4. Extract content
+    let mut result = extractor.extract_bytes(content, &validated_mime, config).await?;
 
     // 3. Run post-processing pipeline
     result = crate::core::pipeline::run_pipeline(result, config).await?;

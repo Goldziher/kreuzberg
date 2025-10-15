@@ -22,7 +22,7 @@ use std::path::Path;
 /// - Provide fallback extractors (priority < 50)
 /// - Implement specialized extractors for specific use cases
 ///
-/// Default priority is 50 (defined in `core::registry::DEFAULT_PRIORITY`).
+/// Default priority is 50.
 ///
 /// # Thread Safety
 ///
@@ -293,7 +293,7 @@ pub trait DocumentExtractor: Plugin {
     /// # }
     /// ```
     fn priority(&self) -> i32 {
-        crate::core::registry::DEFAULT_PRIORITY
+        50 // Default priority for extractors
     }
 
     /// Optional: Check if this extractor can handle a specific file.

@@ -1,10 +1,10 @@
 //! XML extractor.
 
+use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extraction::xml::parse_xml;
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::ExtractionResult;
-use crate::Result;
 use async_trait::async_trait;
 
 /// XML extractor.
@@ -66,7 +66,10 @@ impl DocumentExtractor for XmlExtractor {
             mime_type: "application/xml".to_string(),
             metadata: std::collections::HashMap::from([
                 ("element_count".to_string(), serde_json::json!(xml_result.element_count)),
-                ("unique_elements".to_string(), serde_json::json!(xml_result.unique_elements)),
+                (
+                    "unique_elements".to_string(),
+                    serde_json::json!(xml_result.unique_elements),
+                ),
             ]),
             tables: vec![],
         })

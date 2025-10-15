@@ -33,9 +33,7 @@ pub mod extractor;
 pub mod io;
 pub mod mime;
 pub mod pipeline;
-pub mod registry;
 
 // Re-export commonly used items
 pub use config::ExtractionConfig;
 pub use extractor::{batch_extract_bytes, batch_extract_file, extract_bytes, extract_file};
-pub use registry::ExtractorRegistry;

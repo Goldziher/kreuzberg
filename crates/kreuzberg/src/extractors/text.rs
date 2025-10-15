@@ -1,10 +1,10 @@
 //! Plain text and Markdown extractors.
 
+use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extraction::text::parse_text;
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::ExtractionResult;
-use crate::Result;
 use async_trait::async_trait;
 
 /// Plain text extractor.
@@ -67,7 +67,10 @@ impl DocumentExtractor for PlainTextExtractor {
             metadata: std::collections::HashMap::from([
                 ("line_count".to_string(), serde_json::json!(text_result.line_count)),
                 ("word_count".to_string(), serde_json::json!(text_result.word_count)),
-                ("character_count".to_string(), serde_json::json!(text_result.character_count)),
+                (
+                    "character_count".to_string(),
+                    serde_json::json!(text_result.character_count),
+                ),
             ]),
             tables: vec![],
         })
@@ -140,7 +143,10 @@ impl DocumentExtractor for MarkdownExtractor {
         let mut metadata = std::collections::HashMap::from([
             ("line_count".to_string(), serde_json::json!(text_result.line_count)),
             ("word_count".to_string(), serde_json::json!(text_result.word_count)),
-            ("character_count".to_string(), serde_json::json!(text_result.character_count)),
+            (
+                "character_count".to_string(),
+                serde_json::json!(text_result.character_count),
+            ),
         ]);
 
         if let Some(headers) = text_result.headers {
@@ -191,10 +197,7 @@ mod tests {
         let content = b"Hello, World!\nThis is a test.";
         let config = ExtractionConfig::default();
 
-        let result = extractor
-            .extract_bytes(content, "text/plain", &config)
-            .await
-            .unwrap();
+        let result = extractor.extract_bytes(content, "text/plain", &config).await.unwrap();
 
         assert_eq!(result.mime_type, "text/plain");
         assert!(result.content.contains("Hello, World!"));

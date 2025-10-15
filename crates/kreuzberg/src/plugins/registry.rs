@@ -217,13 +217,12 @@ impl DocumentExtractorRegistry {
     /// The highest priority extractor, or an error if none found.
     pub fn get(&self, mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
         // Try exact match first
-        if let Some(priority_map) = self.extractors.get(mime_type) {
+        if let Some(priority_map) = self.extractors.get(mime_type)
             // Get highest priority (last in BTreeMap)
-            if let Some((_priority, extractors)) = priority_map.iter().next_back() {
-                if let Some((_name, extractor)) = extractors.iter().next() {
-                    return Ok(Arc::clone(extractor));
-                }
-            }
+            && let Some((_priority, extractors)) = priority_map.iter().next_back()
+            && let Some((_name, extractor)) = extractors.iter().next()
+        {
+            return Ok(Arc::clone(extractor));
         }
 
         // Try prefix match (e.g., "image/*")
@@ -232,17 +231,16 @@ impl DocumentExtractorRegistry {
         for (registered_mime, priority_map) in &self.extractors {
             if registered_mime.ends_with("/*") {
                 let prefix = &registered_mime[..registered_mime.len() - 1];
-                if mime_type.starts_with(prefix) {
-                    if let Some((_priority, extractors)) = priority_map.iter().next_back() {
-                        if let Some((_, extractor)) = extractors.iter().next() {
-                            let priority = extractor.priority();
-                            match &best_match {
-                                None => best_match = Some((priority, Arc::clone(extractor))),
-                                Some((current_priority, _)) => {
-                                    if priority > *current_priority {
-                                        best_match = Some((priority, Arc::clone(extractor)));
-                                    }
-                                }
+                if mime_type.starts_with(prefix)
+                    && let Some((_priority, extractors)) = priority_map.iter().next_back()
+                    && let Some((_, extractor)) = extractors.iter().next()
+                {
+                    let priority = extractor.priority();
+                    match &best_match {
+                        None => best_match = Some((priority, Arc::clone(extractor))),
+                        Some((current_priority, _)) => {
+                            if priority > *current_priority {
+                                best_match = Some((priority, Arc::clone(extractor)));
                             }
                         }
                     }
@@ -272,10 +270,10 @@ impl DocumentExtractorRegistry {
     pub fn remove(&mut self, name: &str) -> Result<()> {
         for priority_map in self.extractors.values_mut() {
             for extractors in priority_map.values_mut() {
-                if let Some(mut extractor) = extractors.remove(name) {
-                    if let Some(extractor_mut) = Arc::get_mut(&mut extractor) {
-                        extractor_mut.shutdown()?;
-                    }
+                if let Some(mut extractor) = extractors.remove(name)
+                    && let Some(extractor_mut) = Arc::get_mut(&mut extractor)
+                {
+                    extractor_mut.shutdown()?;
                 }
             }
         }
@@ -388,10 +386,10 @@ impl PostProcessorRegistry {
     pub fn remove(&mut self, name: &str) -> Result<()> {
         for priority_map in self.processors.values_mut() {
             for processors in priority_map.values_mut() {
-                if let Some(mut processor) = processors.remove(name) {
-                    if let Some(processor_mut) = Arc::get_mut(&mut processor) {
-                        processor_mut.shutdown()?;
-                    }
+                if let Some(mut processor) = processors.remove(name)
+                    && let Some(processor_mut) = Arc::get_mut(&mut processor)
+                {
+                    processor_mut.shutdown()?;
                 }
             }
         }
@@ -488,10 +486,10 @@ impl ValidatorRegistry {
     /// Remove a validator from the registry.
     pub fn remove(&mut self, name: &str) -> Result<()> {
         for validators in self.validators.values_mut() {
-            if let Some(mut validator) = validators.remove(name) {
-                if let Some(validator_mut) = Arc::get_mut(&mut validator) {
-                    validator_mut.shutdown()?;
-                }
+            if let Some(mut validator) = validators.remove(name)
+                && let Some(validator_mut) = Arc::get_mut(&mut validator)
+            {
+                validator_mut.shutdown()?;
             }
         }
 
