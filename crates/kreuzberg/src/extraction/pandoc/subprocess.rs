@@ -30,7 +30,7 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
     // Execute
     let output = cmd.output().await.map_err(|e| {
         // Failed to execute pandoc - this is an IO error (command not found, etc.) ~keep
-        std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to execute pandoc: {}", e))
+        std::io::Error::other(format!("Failed to execute pandoc: {}", e))
     })?;
 
     if !output.status.success() {
@@ -51,7 +51,7 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
         }
 
         // True system error - bubble up as IO error ~keep
-        return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Pandoc system error: {}", stderr)).into());
+        return Err(std::io::Error::other(format!("Pandoc system error: {}", stderr)).into());
     }
 
     // Read output
@@ -88,7 +88,7 @@ pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<
     // Execute
     let output = cmd.output().await.map_err(|e| {
         // Failed to execute pandoc - this is an IO error (command not found, etc.) ~keep
-        std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to execute pandoc: {}", e))
+        std::io::Error::other(format!("Failed to execute pandoc: {}", e))
     })?;
 
     if !output.status.success() {
@@ -109,8 +109,7 @@ pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<
         }
 
         // True system error - bubble up as IO error ~keep
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        return Err(std::io::Error::other(
             format!("Pandoc metadata extraction system error: {}", stderr),
         )
         .into());

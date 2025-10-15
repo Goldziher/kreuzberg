@@ -52,11 +52,19 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
     if config.enable_quality_processing {
         let quality_score = crate::text::quality::calculate_quality_score(
             &result.content,
-            Some(&result.metadata.iter().map(|(k, v)| (k.clone(), v.to_string())).collect()),
+            Some(
+                &result
+                    .metadata
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.to_string()))
+                    .collect(),
+            ),
         );
         result.metadata.insert(
             "quality_score".to_string(),
-            serde_json::Value::Number(serde_json::Number::from_f64(quality_score).unwrap_or(serde_json::Number::from(0))),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(quality_score).unwrap_or(serde_json::Number::from(0)),
+            ),
         );
     }
 
@@ -66,7 +74,7 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
         let chunk_config = crate::chunking::ChunkingConfig {
             max_characters: chunking_config.max_chars,
             overlap: chunking_config.max_overlap,
-            trim: true, // Default to trimming whitespace
+            trim: true,                                       // Default to trimming whitespace
             chunker_type: crate::chunking::ChunkerType::Text, // Default chunker type
         };
 
@@ -81,10 +89,9 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
             }
             Err(e) => {
                 // Record chunking error in metadata, continue with degraded result
-                result.metadata.insert(
-                    "chunking_error".to_string(),
-                    serde_json::Value::String(e.to_string()),
-                );
+                result
+                    .metadata
+                    .insert("chunking_error".to_string(), serde_json::Value::String(e.to_string()));
             }
         }
     }
@@ -106,7 +113,9 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                     Err(e) => {
                         // Record processor error in metadata, continue with original result
                         let error_key = format!("processing_error_{}", processor.name());
-                        result.metadata.insert(error_key, serde_json::Value::String(e.to_string()));
+                        result
+                            .metadata
+                            .insert(error_key, serde_json::Value::String(e.to_string()));
                     }
                 }
             }

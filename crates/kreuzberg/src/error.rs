@@ -61,3 +61,9 @@ impl From<rmp_serde::decode::Error> for KreuzbergError {
         KreuzbergError::Serialization(err.to_string())
     }
 }
+
+impl From<crate::pdf::error::PdfError> for KreuzbergError {
+    fn from(err: crate::pdf::error::PdfError) -> Self {
+        KreuzbergError::Parsing(err.to_string())
+    }
+}
