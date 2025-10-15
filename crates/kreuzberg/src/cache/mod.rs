@@ -283,8 +283,14 @@ pub fn get_available_disk_space(path: &str) -> Result<f64> {
             .to_str()
             .ok_or_else(|| KreuzbergError::Validation("Path contains invalid UTF-8".to_string()))?;
         let c_path = CString::new(path_str).map_err(|e| KreuzbergError::Validation(format!("Invalid path: {}", e)))?;
+
+        // SAFETY: statvfs is a valid C struct defined by POSIX that can be zero-initialized.
+        // All fields are integers (u64, c_ulong) which are safe when zeroed per the C standard.
         let mut stat: statvfs_struct = unsafe { std::mem::zeroed() };
 
+        // SAFETY: c_path is a valid null-terminated C string (CString guarantees this),
+        // stat is a valid mutable reference to a properly initialized statvfs struct,
+        // and statvfs is a standard POSIX syscall that won't cause UB when called correctly.
         let result = unsafe { statvfs(c_path.as_ptr(), &mut stat) };
 
         if result == 0 {
