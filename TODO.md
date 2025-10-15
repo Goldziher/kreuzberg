@@ -2,7 +2,7 @@
 
 **Status**: Phase 3 - Critical Complete, High Priority Complete ✅
 **Last Updated**: 2025-10-15
-**Test Status**: 789 tests passing (+301 new tests since Phase 3 start)
+**Test Status**: 805 tests passing (+317 new tests since Phase 3 start)
 **Coverage**: ~88-91% estimated (target: 95%)
 **Architecture**: See `V4_STRUCTURE.md`
 
@@ -18,8 +18,8 @@
 
 ### High Priority (2 of 3 Complete)
 
-4. ✅ **Add Extractor Cache** - Thread-local cache reduces lock contention by 80%+
-5. ✅ **Add Missing ExtractionConfig Fields** - All 4 new config sections implemented with tests
+1. ✅ **Add Extractor Cache** - Thread-local cache reduces lock contention by 80%+
+2. ✅ **Add Missing ExtractionConfig Fields** - All 4 new config sections implemented with tests
 
 ---
 
@@ -117,27 +117,38 @@ Batch 9 (22 tests):
 
 ## 🟢 Medium Priority
 
-### 7. Implement Missing Extractors
+### 7. ✅ Implement Missing Extractors - COMPLETED
 
 **Impact**: Feature completeness
-**Effort**: 1-2 hours
+**Effort**: 1 hour (completed)
+**Status**: 3 new extractors added (12 total, was 9)
 
-**Missing Extractors**:
+**Completed Extractors**:
 
-- [ ] Image extractors (`image/*` MIME types)
-    - Use `image` crate for metadata extraction
-    - Extract EXIF data, dimensions, format
-    - Optional OCR integration
-- [ ] Archive extractors (`.zip`, `.tar`, `.7z`, `.rar`)
-    - Use `zip`, `tar`, `sevenz-rust` crates
-    - Extract file list and contents
-    - Recursive extraction support
-- [ ] Pandoc wrappers for additional formats
-    - DOCX (via pandoc)
-    - ODT (via pandoc)
-    - EPUB (via pandoc)
-    - LaTeX (via pandoc)
-    - reStructuredText (via pandoc)
+- [x] **ImageExtractor** - Extracts dimensions and format from images
+    - Supports: PNG, JPEG, WebP, BMP, TIFF, GIF
+    - Uses `image` crate for metadata extraction
+    - Extracts: width, height, format
+    - Note: EXIF extraction deferred (would require kamadak-exif)
+- [x] **ZipExtractor** - Extracts file lists and text content from ZIP archives
+    - Uses `zip` crate (MIT license)
+    - Extracts: file list, directory structure, text content
+    - Auto-extracts common text files (.txt, .md, .json, etc.)
+- [x] **TarExtractor** - Extracts file lists and text content from TAR archives
+    - Uses `tar` crate (MIT OR Apache-2.0)
+    - Extracts: file list, directory structure, text content
+    - Auto-extracts common text files
+
+**Test Coverage**: 16 new tests added
+
+- All 805 tests passing
+- Archive: metadata extraction, text content, error handling
+- Image: format detection, dimensions, error handling
+
+**Not Implemented** (lower priority):
+
+- [ ] 7z/RAR extractors (would require sevenz-rust or similar)
+- [ ] Additional Pandoc format wrappers (DOCX, ODT, EPUB, LaTeX, RST)
 
 ---
 
@@ -245,10 +256,11 @@ Before moving to Phase 4 (Python Bindings):
 ---
 
 **Last Updated**: 2025-10-15
-**Phase 3**: Complete ✅ (Coverage: 88-91%, 789 tests)
+**Phase 3**: Complete ✅ (Coverage: 88-91%, 805 tests, 12 extractors)
 **Next Phase**: Phase 4 - Python Bindings
 **Next Steps**:
 
 - Begin Python binding updates for new Rust core
 - Ensure all extractors exposed via Python API
 - Maintain backwards compatibility where possible
+- Optional: Implement async OCR variants for better async integration
