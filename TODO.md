@@ -2,7 +2,8 @@
 
 **Status**: Phase 3 - Critical Complete, High Priority In Progress ✅
 **Last Updated**: 2025-10-15
-**Test Status**: 488 tests passing (+9 new config tests)
+**Test Status**: 524 tests passing (+36 new tests since last update)
+**Coverage**: 64.31% (target: 95%)
 **Architecture**: See `V4_STRUCTURE.md`
 
 ---
@@ -22,10 +23,11 @@
 
 ## 🟡 High Priority (Before Phase 4)
 
-### 6. Increase Test Coverage (Current → 95% Target)
+### 6. Increase Test Coverage (64.31% → 95% Target)
 **Impact**: Quality and reliability
-**Effort**: 2-3 hours
+**Effort**: 6-8 hours (remaining)
 **Priority**: Must complete before release
+**Progress**: 36 new tests added (error.rs, pdf/error.rs, pipeline.rs at ~95% coverage)
 
 **Current Coverage Gaps**:
 - `plugins/registry.rs` - Missing error path tests
