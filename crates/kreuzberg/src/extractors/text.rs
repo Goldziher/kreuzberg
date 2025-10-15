@@ -34,11 +34,11 @@ impl Plugin for PlainTextExtractor {
         "1.0.0"
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 
@@ -113,11 +113,11 @@ impl Plugin for MarkdownExtractor {
         "1.0.0"
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 

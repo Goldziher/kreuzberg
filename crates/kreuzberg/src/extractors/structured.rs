@@ -32,11 +32,11 @@ impl Plugin for StructuredExtractor {
         env!("CARGO_PKG_VERSION")
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 }

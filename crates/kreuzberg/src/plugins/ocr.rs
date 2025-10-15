@@ -47,8 +47,8 @@ pub enum OcrBackendType {
 /// impl Plugin for CustomOcrBackend {
 ///     fn name(&self) -> &str { "custom-ocr" }
 ///     fn version(&self) -> &str { "1.0.0" }
-///     fn initialize(&mut self) -> Result<()> { Ok(()) }
-///     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+///     fn initialize(&self) -> Result<()> { Ok(()) }
+///     fn shutdown(&self) -> Result<()> { Ok(()) }
 /// }
 ///
 /// #[async_trait]
@@ -107,8 +107,8 @@ pub trait OcrBackend: Plugin {
     /// # impl Plugin for MyOcr {
     /// #     fn name(&self) -> &str { "my-ocr" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # use kreuzberg::plugins::OcrBackendType;
     /// # #[async_trait]
@@ -179,8 +179,8 @@ pub trait OcrBackend: Plugin {
     /// # impl Plugin for MyOcr {
     /// #     fn name(&self) -> &str { "my-ocr" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # use kreuzberg::plugins::OcrBackendType;
     /// # use kreuzberg::{ExtractionResult, OcrConfig};
@@ -213,8 +213,8 @@ pub trait OcrBackend: Plugin {
     /// # impl Plugin for TesseractBackend {
     /// #     fn name(&self) -> &str { "tesseract" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # use kreuzberg::{ExtractionResult, OcrConfig};
     /// # #[async_trait]
@@ -262,11 +262,11 @@ mod tests {
             "1.0.0"
         }
 
-        fn initialize(&mut self) -> Result<()> {
+        fn initialize(&self) -> Result<()> {
             Ok(())
         }
 
-        fn shutdown(&mut self) -> Result<()> {
+        fn shutdown(&self) -> Result<()> {
             Ok(())
         }
     }

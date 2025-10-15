@@ -19,9 +19,10 @@ use crate::Result;
 /// ```rust
 /// use kreuzberg::plugins::Plugin;
 /// use kreuzberg::Result;
+/// use std::sync::atomic::{AtomicBool, Ordering};
 ///
 /// struct MyPlugin {
-///     initialized: bool,
+///     initialized: AtomicBool,
 /// }
 ///
 /// impl Plugin for MyPlugin {
@@ -33,14 +34,14 @@ use crate::Result;
 ///         "1.0.0"
 ///     }
 ///
-///     fn initialize(&mut self) -> Result<()> {
-///         self.initialized = true;
+///     fn initialize(&self) -> Result<()> {
+///         self.initialized.store(true, Ordering::Release);
 ///         println!("Plugin initialized!");
 ///         Ok(())
 ///     }
 ///
-///     fn shutdown(&mut self) -> Result<()> {
-///         self.initialized = false;
+///     fn shutdown(&self) -> Result<()> {
+///         self.initialized.store(false, Ordering::Release);
 ///         println!("Plugin shutdown!");
 ///         Ok(())
 ///     }
@@ -62,8 +63,8 @@ pub trait Plugin: Send + Sync {
     /// # struct MyPlugin;
     /// # impl Plugin for MyPlugin {
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// fn name(&self) -> &str {
     ///     "pdf-extractor"
     /// }
@@ -83,8 +84,8 @@ pub trait Plugin: Send + Sync {
     /// # struct MyPlugin;
     /// # impl Plugin for MyPlugin {
     /// #     fn name(&self) -> &str { "my-plugin" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// fn version(&self) -> &str {
     ///     "1.2.3"
     /// }
@@ -99,6 +100,12 @@ pub trait Plugin: Send + Sync {
     /// - Initialize resources (connections, caches, etc.)
     /// - Validate dependencies
     ///
+    /// # Thread Safety
+    ///
+    /// This method takes `&self` instead of `&mut self` to work with `Arc<dyn Plugin>`.
+    /// Plugins needing mutable state during initialization should use interior mutability
+    /// patterns (Mutex, RwLock, OnceCell, etc.).
+    ///
     /// # Errors
     ///
     /// Should return an error if initialization fails. The plugin will not be
@@ -109,14 +116,16 @@ pub trait Plugin: Send + Sync {
     /// ```rust
     /// # use kreuzberg::plugins::Plugin;
     /// # use kreuzberg::{Result, KreuzbergError};
-    /// # struct MyPlugin { config: Option<String> }
+    /// # use std::sync::Mutex;
+    /// # struct MyPlugin { config: Mutex<Option<String>> }
     /// # impl Plugin for MyPlugin {
     /// #     fn name(&self) -> &str { "my-plugin" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
-    /// fn initialize(&mut self) -> Result<()> {
-    ///     // Load configuration
-    ///     self.config = Some("loaded".to_string());
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
+    /// fn initialize(&self) -> Result<()> {
+    ///     // Load configuration using interior mutability
+    ///     let mut config = self.config.lock().unwrap();
+    ///     *config = Some("loaded".to_string());
     ///
     ///     // Validate dependencies
     ///     if !self.check_dependencies() {
@@ -130,7 +139,7 @@ pub trait Plugin: Send + Sync {
     /// # fn check_dependencies(&self) -> bool { true }
     /// # }
     /// ```
-    fn initialize(&mut self) -> Result<()>;
+    fn initialize(&self) -> Result<()>;
 
     /// Shutdown the plugin.
     ///
@@ -139,6 +148,12 @@ pub trait Plugin: Send + Sync {
     /// - Close connections
     /// - Flush caches
     /// - Release resources
+    ///
+    /// # Thread Safety
+    ///
+    /// This method takes `&self` instead of `&mut self` to work with `Arc<dyn Plugin>`.
+    /// Plugins needing mutable state during shutdown should use interior mutability
+    /// patterns (Mutex, RwLock, etc.).
     ///
     /// # Errors
     ///
@@ -149,25 +164,24 @@ pub trait Plugin: Send + Sync {
     /// ```rust
     /// # use kreuzberg::plugins::Plugin;
     /// # use kreuzberg::Result;
-    /// # struct MyPlugin { cache: Option<Vec<String>> }
+    /// # use std::sync::Mutex;
+    /// # struct MyPlugin { cache: Mutex<Option<Vec<String>>> }
     /// # impl Plugin for MyPlugin {
     /// #     fn name(&self) -> &str { "my-plugin" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// fn shutdown(&mut self) -> Result<()> {
-    ///     // Flush caches
-    ///     if let Some(cache) = &self.cache {
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// fn shutdown(&self) -> Result<()> {
+    ///     // Flush caches using interior mutability
+    ///     let mut cache = self.cache.lock().unwrap();
+    ///     if let Some(data) = cache.take() {
     ///         // Persist cache to disk
     ///     }
-    ///
-    ///     // Clear resources
-    ///     self.cache = None;
     ///
     ///     Ok(())
     /// }
     /// # }
     /// ```
-    fn shutdown(&mut self) -> Result<()>;
+    fn shutdown(&self) -> Result<()>;
 
     /// Optional plugin description for debugging and logging.
     ///
@@ -187,9 +201,10 @@ pub trait Plugin: Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     struct TestPlugin {
-        initialized: bool,
+        initialized: AtomicBool,
     }
 
     impl Plugin for TestPlugin {
@@ -201,13 +216,13 @@ mod tests {
             "1.0.0"
         }
 
-        fn initialize(&mut self) -> Result<()> {
-            self.initialized = true;
+        fn initialize(&self) -> Result<()> {
+            self.initialized.store(true, Ordering::Release);
             Ok(())
         }
 
-        fn shutdown(&mut self) -> Result<()> {
-            self.initialized = false;
+        fn shutdown(&self) -> Result<()> {
+            self.initialized.store(false, Ordering::Release);
             Ok(())
         }
 
@@ -222,7 +237,9 @@ mod tests {
 
     #[test]
     fn test_plugin_metadata() {
-        let plugin = TestPlugin { initialized: false };
+        let plugin = TestPlugin {
+            initialized: AtomicBool::new(false),
+        };
         assert_eq!(plugin.name(), "test-plugin");
         assert_eq!(plugin.version(), "1.0.0");
         assert_eq!(plugin.description(), "A test plugin");
@@ -231,14 +248,16 @@ mod tests {
 
     #[test]
     fn test_plugin_lifecycle() {
-        let mut plugin = TestPlugin { initialized: false };
+        let plugin = TestPlugin {
+            initialized: AtomicBool::new(false),
+        };
 
-        assert!(!plugin.initialized);
+        assert!(!plugin.initialized.load(Ordering::Acquire));
 
         plugin.initialize().unwrap();
-        assert!(plugin.initialized);
+        assert!(plugin.initialized.load(Ordering::Acquire));
 
         plugin.shutdown().unwrap();
-        assert!(!plugin.initialized);
+        assert!(!plugin.initialized.load(Ordering::Acquire));
     }
 }

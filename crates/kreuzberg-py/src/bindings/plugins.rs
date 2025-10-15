@@ -52,16 +52,26 @@ impl Plugin for PyPlugin {
         .leak()
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         Python::with_gil(|py| {
-            self.py_instance.call_method0(py, "initialize").map_err(to_py_err)?;
+            self.py_instance
+                .call_method0(py, "initialize")
+                .map_err(|e| KreuzbergError::Plugin {
+                    message: format!("Python plugin initialization failed: {}", e),
+                    plugin_name: self.name().to_string(),
+                })?;
             Ok(())
         })
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         Python::with_gil(|py| {
-            self.py_instance.call_method0(py, "shutdown").map_err(to_py_err)?;
+            self.py_instance
+                .call_method0(py, "shutdown")
+                .map_err(|e| KreuzbergError::Plugin {
+                    message: format!("Python plugin shutdown failed: {}", e),
+                    plugin_name: self.name().to_string(),
+                })?;
             Ok(())
         })
     }
@@ -112,11 +122,11 @@ impl Plugin for PyOcrBackendWrapper {
         self.base.version()
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         self.base.initialize()
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         self.base.shutdown()
     }
 
@@ -225,11 +235,11 @@ impl Plugin for PyDocumentExtractorWrapper {
         self.base.version()
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         self.base.initialize()
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         self.base.shutdown()
     }
 
@@ -319,11 +329,11 @@ impl Plugin for PyPostProcessorWrapper {
         self.base.version()
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         self.base.initialize()
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         self.base.shutdown()
     }
 
@@ -395,11 +405,11 @@ impl Plugin for PyValidatorWrapper {
         self.base.version()
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         self.base.initialize()
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         self.base.shutdown()
     }
 

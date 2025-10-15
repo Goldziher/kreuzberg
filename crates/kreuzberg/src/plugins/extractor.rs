@@ -43,8 +43,8 @@ use std::path::Path;
 /// impl Plugin for PremiumPdfExtractor {
 ///     fn name(&self) -> &str { "premium-pdf" }
 ///     fn version(&self) -> &str { "2.0.0" }
-///     fn initialize(&mut self) -> Result<()> { Ok(()) }
-///     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+///     fn initialize(&self) -> Result<()> { Ok(()) }
+///     fn shutdown(&self) -> Result<()> { Ok(()) }
 /// }
 ///
 /// #[async_trait]
@@ -109,8 +109,8 @@ pub trait DocumentExtractor: Plugin {
     /// # impl Plugin for MyExtractor {
     /// #     fn name(&self) -> &str { "my-extractor" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl DocumentExtractor for MyExtractor {
@@ -168,8 +168,8 @@ pub trait DocumentExtractor: Plugin {
     /// # impl Plugin for StreamingExtractor {
     /// #     fn name(&self) -> &str { "streaming" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl DocumentExtractor for StreamingExtractor {
@@ -228,8 +228,8 @@ pub trait DocumentExtractor: Plugin {
     /// # impl Plugin for MultiFormatExtractor {
     /// #     fn name(&self) -> &str { "multi-format" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # use kreuzberg::{ExtractionResult, ExtractionConfig};
     /// # #[async_trait]
@@ -278,8 +278,8 @@ pub trait DocumentExtractor: Plugin {
     /// # impl Plugin for FallbackExtractor {
     /// #     fn name(&self) -> &str { "fallback" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # use kreuzberg::{ExtractionResult, ExtractionConfig};
     /// # #[async_trait]
@@ -321,8 +321,8 @@ pub trait DocumentExtractor: Plugin {
     /// # impl Plugin for SmartExtractor {
     /// #     fn name(&self) -> &str { "smart" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # use kreuzberg::{ExtractionResult, ExtractionConfig};
     /// # #[async_trait]
@@ -368,11 +368,11 @@ mod tests {
             "1.0.0"
         }
 
-        fn initialize(&mut self) -> Result<()> {
+        fn initialize(&self) -> Result<()> {
             Ok(())
         }
 
-        fn shutdown(&mut self) -> Result<()> {
+        fn shutdown(&self) -> Result<()> {
             Ok(())
         }
     }
@@ -542,10 +542,10 @@ mod tests {
             fn version(&self) -> &str {
                 "1.0.0"
             }
-            fn initialize(&mut self) -> Result<()> {
+            fn initialize(&self) -> Result<()> {
                 Ok(())
             }
-            fn shutdown(&mut self) -> Result<()> {
+            fn shutdown(&self) -> Result<()> {
                 Ok(())
             }
         }

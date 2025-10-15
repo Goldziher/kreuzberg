@@ -83,8 +83,8 @@ pub enum ProcessingStage {
 /// impl Plugin for WordCountProcessor {
 ///     fn name(&self) -> &str { "word-count" }
 ///     fn version(&self) -> &str { "1.0.0" }
-///     fn initialize(&mut self) -> Result<()> { Ok(()) }
-///     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+///     fn initialize(&self) -> Result<()> { Ok(()) }
+///     fn shutdown(&self) -> Result<()> { Ok(()) }
 /// }
 ///
 /// #[async_trait]
@@ -141,8 +141,8 @@ pub trait PostProcessor: Plugin {
     /// # impl Plugin for LanguageDetector {
     /// #     fn name(&self) -> &str { "language-detector" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl PostProcessor for LanguageDetector {
@@ -174,8 +174,8 @@ pub trait PostProcessor: Plugin {
     /// # impl Plugin for TextCleaner {
     /// #     fn name(&self) -> &str { "text-cleaner" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl PostProcessor for TextCleaner {
@@ -216,8 +216,8 @@ pub trait PostProcessor: Plugin {
     /// # impl Plugin for MyProcessor {
     /// #     fn name(&self) -> &str { "my-processor" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl PostProcessor for MyProcessor {
@@ -253,8 +253,8 @@ pub trait PostProcessor: Plugin {
     /// # impl Plugin for PdfOnlyProcessor {
     /// #     fn name(&self) -> &str { "pdf-only" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl PostProcessor for PdfOnlyProcessor {
@@ -304,11 +304,11 @@ mod tests {
             "1.0.0"
         }
 
-        fn initialize(&mut self) -> Result<()> {
+        fn initialize(&self) -> Result<()> {
             Ok(())
         }
 
-        fn shutdown(&mut self) -> Result<()> {
+        fn shutdown(&self) -> Result<()> {
             Ok(())
         }
     }
@@ -516,10 +516,10 @@ mod tests {
             fn version(&self) -> &str {
                 "1.0.0"
             }
-            fn initialize(&mut self) -> Result<()> {
+            fn initialize(&self) -> Result<()> {
                 Ok(())
             }
-            fn shutdown(&mut self) -> Result<()> {
+            fn shutdown(&self) -> Result<()> {
                 Ok(())
             }
         }

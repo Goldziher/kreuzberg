@@ -61,16 +61,11 @@ impl OcrBackendRegistry {
     /// // registry.register(backend)?;
     /// # Ok::<(), kreuzberg::KreuzbergError>(())
     /// ```
-    pub fn register(&mut self, mut backend: Arc<dyn OcrBackend>) -> Result<()> {
+    pub fn register(&mut self, backend: Arc<dyn OcrBackend>) -> Result<()> {
         let name = backend.name().to_string();
 
         // Initialize the backend
-        Arc::get_mut(&mut backend)
-            .ok_or_else(|| KreuzbergError::Plugin {
-                message: "Cannot initialize backend with multiple references".to_string(),
-                plugin_name: name.clone(),
-            })?
-            .initialize()?;
+        backend.initialize()?;
 
         self.backends.insert(name, backend);
         Ok(())
@@ -123,11 +118,9 @@ impl OcrBackendRegistry {
     ///
     /// Calls `shutdown()` on the backend before removing.
     pub fn remove(&mut self, name: &str) -> Result<()> {
-        if let Some(mut backend) = self.backends.remove(name) {
+        if let Some(backend) = self.backends.remove(name) {
             // Shutdown the backend
-            if let Some(backend_mut) = Arc::get_mut(&mut backend) {
-                backend_mut.shutdown()?;
-            }
+            backend.shutdown()?;
         }
         Ok(())
     }
@@ -181,18 +174,13 @@ impl DocumentExtractorRegistry {
     ///
     /// - `Ok(())` if registration succeeded
     /// - `Err(...)` if initialization failed
-    pub fn register(&mut self, mut extractor: Arc<dyn DocumentExtractor>) -> Result<()> {
+    pub fn register(&mut self, extractor: Arc<dyn DocumentExtractor>) -> Result<()> {
         let name = extractor.name().to_string();
         let priority = extractor.priority();
         let mime_types: Vec<String> = extractor.supported_mime_types().iter().map(|s| s.to_string()).collect();
 
         // Initialize the extractor
-        Arc::get_mut(&mut extractor)
-            .ok_or_else(|| KreuzbergError::Plugin {
-                message: "Cannot initialize extractor with multiple references".to_string(),
-                plugin_name: name.clone(),
-            })?
-            .initialize()?;
+        extractor.initialize()?;
 
         for mime_type in mime_types {
             self.extractors
@@ -268,14 +256,22 @@ impl DocumentExtractorRegistry {
 
     /// Remove an extractor from the registry.
     pub fn remove(&mut self, name: &str) -> Result<()> {
+        let mut extractor_to_shutdown: Option<Arc<dyn DocumentExtractor>> = None;
+
         for priority_map in self.extractors.values_mut() {
             for extractors in priority_map.values_mut() {
-                if let Some(mut extractor) = extractors.remove(name)
-                    && let Some(extractor_mut) = Arc::get_mut(&mut extractor)
-                {
-                    extractor_mut.shutdown()?;
+                if let Some(extractor) = extractors.remove(name) {
+                    // Store first instance to shutdown (all are clones of same Arc)
+                    if extractor_to_shutdown.is_none() {
+                        extractor_to_shutdown = Some(extractor);
+                    }
                 }
             }
+        }
+
+        // Shutdown the extractor once
+        if let Some(extractor) = extractor_to_shutdown {
+            extractor.shutdown()?;
         }
 
         // Clean up empty maps
@@ -326,16 +322,11 @@ impl PostProcessorRegistry {
     ///
     /// * `processor` - The post-processor to register
     /// * `priority` - Execution priority (higher = runs first within stage)
-    pub fn register(&mut self, mut processor: Arc<dyn PostProcessor>, priority: i32) -> Result<()> {
+    pub fn register(&mut self, processor: Arc<dyn PostProcessor>, priority: i32) -> Result<()> {
         let name = processor.name().to_string();
         let stage = processor.processing_stage();
 
-        Arc::get_mut(&mut processor)
-            .ok_or_else(|| KreuzbergError::Plugin {
-                message: "Cannot initialize processor with multiple references".to_string(),
-                plugin_name: name.clone(),
-            })?
-            .initialize()?;
+        processor.initialize()?;
 
         self.processors
             .entry(stage)
@@ -384,14 +375,22 @@ impl PostProcessorRegistry {
 
     /// Remove a processor from the registry.
     pub fn remove(&mut self, name: &str) -> Result<()> {
+        let mut processor_to_shutdown: Option<Arc<dyn PostProcessor>> = None;
+
         for priority_map in self.processors.values_mut() {
             for processors in priority_map.values_mut() {
-                if let Some(mut processor) = processors.remove(name)
-                    && let Some(processor_mut) = Arc::get_mut(&mut processor)
-                {
-                    processor_mut.shutdown()?;
+                if let Some(processor) = processors.remove(name) {
+                    // Store first instance to shutdown
+                    if processor_to_shutdown.is_none() {
+                        processor_to_shutdown = Some(processor);
+                    }
                 }
             }
+        }
+
+        // Shutdown the processor once
+        if let Some(processor) = processor_to_shutdown {
+            processor.shutdown()?;
         }
 
         // Clean up empty maps
@@ -440,16 +439,11 @@ impl ValidatorRegistry {
     /// # Arguments
     ///
     /// * `validator` - The validator to register
-    pub fn register(&mut self, mut validator: Arc<dyn Validator>) -> Result<()> {
+    pub fn register(&mut self, validator: Arc<dyn Validator>) -> Result<()> {
         let name = validator.name().to_string();
         let priority = validator.priority();
 
-        Arc::get_mut(&mut validator)
-            .ok_or_else(|| KreuzbergError::Plugin {
-                message: "Cannot initialize validator with multiple references".to_string(),
-                plugin_name: name.clone(),
-            })?
-            .initialize()?;
+        validator.initialize()?;
 
         self.validators.entry(priority).or_default().insert(name, validator);
 
@@ -485,12 +479,20 @@ impl ValidatorRegistry {
 
     /// Remove a validator from the registry.
     pub fn remove(&mut self, name: &str) -> Result<()> {
+        let mut validator_to_shutdown: Option<Arc<dyn Validator>> = None;
+
         for validators in self.validators.values_mut() {
-            if let Some(mut validator) = validators.remove(name)
-                && let Some(validator_mut) = Arc::get_mut(&mut validator)
-            {
-                validator_mut.shutdown()?;
+            if let Some(validator) = validators.remove(name) {
+                // Store first instance to shutdown
+                if validator_to_shutdown.is_none() {
+                    validator_to_shutdown = Some(validator);
+                }
             }
+        }
+
+        // Shutdown the validator once
+        if let Some(validator) = validator_to_shutdown {
+            validator.shutdown()?;
         }
 
         // Clean up empty maps
@@ -573,10 +575,10 @@ mod tests {
         fn version(&self) -> &str {
             "1.0.0"
         }
-        fn initialize(&mut self) -> Result<()> {
+        fn initialize(&self) -> Result<()> {
             Ok(())
         }
-        fn shutdown(&mut self) -> Result<()> {
+        fn shutdown(&self) -> Result<()> {
             Ok(())
         }
     }
@@ -614,10 +616,10 @@ mod tests {
         fn version(&self) -> &str {
             "1.0.0"
         }
-        fn initialize(&mut self) -> Result<()> {
+        fn initialize(&self) -> Result<()> {
             Ok(())
         }
-        fn shutdown(&mut self) -> Result<()> {
+        fn shutdown(&self) -> Result<()> {
             Ok(())
         }
     }
@@ -654,10 +656,10 @@ mod tests {
         fn version(&self) -> &str {
             "1.0.0"
         }
-        fn initialize(&mut self) -> Result<()> {
+        fn initialize(&self) -> Result<()> {
             Ok(())
         }
-        fn shutdown(&mut self) -> Result<()> {
+        fn shutdown(&self) -> Result<()> {
             Ok(())
         }
     }
@@ -685,10 +687,10 @@ mod tests {
         fn version(&self) -> &str {
             "1.0.0"
         }
-        fn initialize(&mut self) -> Result<()> {
+        fn initialize(&self) -> Result<()> {
             Ok(())
         }
-        fn shutdown(&mut self) -> Result<()> {
+        fn shutdown(&self) -> Result<()> {
             Ok(())
         }
     }

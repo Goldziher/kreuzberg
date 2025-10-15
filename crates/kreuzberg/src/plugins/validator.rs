@@ -48,8 +48,8 @@ use async_trait::async_trait;
 /// impl Plugin for MinimumLengthValidator {
 ///     fn name(&self) -> &str { "min-length-validator" }
 ///     fn version(&self) -> &str { "1.0.0" }
-///     fn initialize(&mut self) -> Result<()> { Ok(()) }
-///     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+///     fn initialize(&self) -> Result<()> { Ok(()) }
+///     fn shutdown(&self) -> Result<()> { Ok(()) }
 /// }
 ///
 /// #[async_trait]
@@ -99,8 +99,8 @@ pub trait Validator: Plugin {
     /// # impl Plugin for ContentLengthValidator {
     /// #     fn name(&self) -> &str { "length-validator" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl Validator for ContentLengthValidator {
@@ -137,8 +137,8 @@ pub trait Validator: Plugin {
     /// # impl Plugin for QualityValidator {
     /// #     fn name(&self) -> &str { "quality-validator" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl Validator for QualityValidator {
@@ -172,8 +172,8 @@ pub trait Validator: Plugin {
     /// # impl Plugin for SecurityValidator {
     /// #     fn name(&self) -> &str { "security-validator" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl Validator for SecurityValidator {
@@ -219,8 +219,8 @@ pub trait Validator: Plugin {
     /// # impl Plugin for PdfValidator {
     /// #     fn name(&self) -> &str { "pdf-validator" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl Validator for PdfValidator {
@@ -256,8 +256,8 @@ pub trait Validator: Plugin {
     /// # impl Plugin for FastValidator {
     /// #     fn name(&self) -> &str { "fast-validator" }
     /// #     fn version(&self) -> &str { "1.0.0" }
-    /// #     fn initialize(&mut self) -> Result<()> { Ok(()) }
-    /// #     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+    /// #     fn initialize(&self) -> Result<()> { Ok(()) }
+    /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
     /// # #[async_trait]
     /// # impl Validator for FastValidator {
@@ -292,11 +292,11 @@ mod tests {
             "1.0.0"
         }
 
-        fn initialize(&mut self) -> Result<()> {
+        fn initialize(&self) -> Result<()> {
             Ok(())
         }
 
-        fn shutdown(&mut self) -> Result<()> {
+        fn shutdown(&self) -> Result<()> {
             Ok(())
         }
     }
@@ -405,10 +405,10 @@ mod tests {
             fn version(&self) -> &str {
                 "1.0.0"
             }
-            fn initialize(&mut self) -> Result<()> {
+            fn initialize(&self) -> Result<()> {
                 Ok(())
             }
-            fn shutdown(&mut self) -> Result<()> {
+            fn shutdown(&self) -> Result<()> {
                 Ok(())
             }
         }
@@ -458,10 +458,10 @@ mod tests {
             fn version(&self) -> &str {
                 "1.0.0"
             }
-            fn initialize(&mut self) -> Result<()> {
+            fn initialize(&self) -> Result<()> {
                 Ok(())
             }
-            fn shutdown(&mut self) -> Result<()> {
+            fn shutdown(&self) -> Result<()> {
                 Ok(())
             }
         }
@@ -473,10 +473,10 @@ mod tests {
             fn version(&self) -> &str {
                 "1.0.0"
             }
-            fn initialize(&mut self) -> Result<()> {
+            fn initialize(&self) -> Result<()> {
                 Ok(())
             }
-            fn shutdown(&mut self) -> Result<()> {
+            fn shutdown(&self) -> Result<()> {
                 Ok(())
             }
         }

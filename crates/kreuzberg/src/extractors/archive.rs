@@ -38,11 +38,11 @@ impl Plugin for ZipExtractor {
         "1.0.0"
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 
@@ -146,11 +146,11 @@ impl Plugin for TarExtractor {
         "1.0.0"
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 
@@ -259,11 +259,11 @@ impl Plugin for SevenZExtractor {
         "1.0.0"
     }
 
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&self) -> Result<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 

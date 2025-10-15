@@ -31,8 +31,8 @@
 //! impl Plugin for MyCustomExtractor {
 //!     fn name(&self) -> &str { "my-custom-extractor" }
 //!     fn version(&self) -> &str { "1.0.0" }
-//!     fn initialize(&mut self) -> Result<()> { Ok(()) }
-//!     fn shutdown(&mut self) -> Result<()> { Ok(()) }
+//!     fn initialize(&self) -> Result<()> { Ok(()) }
+//!     fn shutdown(&self) -> Result<()> { Ok(()) }
 //! }
 //!
 //! #[async_trait]
