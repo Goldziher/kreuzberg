@@ -2,7 +2,7 @@
 
 **Status**: Phase 3 - Critical Complete, High Priority In Progress ✅
 **Last Updated**: 2025-10-15
-**Test Status**: 479 tests passing
+**Test Status**: 488 tests passing (+9 new config tests)
 **Architecture**: See `V4_STRUCTURE.md`
 
 ---
@@ -14,78 +14,13 @@
 2. ✅ **Fix Cache Thread Safety** - Atomic write pattern implemented
 3. ✅ **Replace Per-Call Runtime Creation** - Global runtime provides 100x speedup
 
-### High Priority (1 of 3 Complete)
+### High Priority (2 of 3 Complete)
 4. ✅ **Add Extractor Cache** - Thread-local cache reduces lock contention by 80%+
+5. ✅ **Add Missing ExtractionConfig Fields** - All 4 new config sections implemented with tests
 
 ---
 
 ## 🟡 High Priority (Before Phase 4)
-
-### 5. Add Missing ExtractionConfig Fields
-**Impact**: Enables additional features (PDF passwords, image extraction, token reduction)
-**Effort**: 45 minutes
-**Location**: `src/core/config.rs:12-60`
-
-**Missing Fields**:
-
-```rust
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
-pub struct ExtractionConfig {
-    // ... existing fields ...
-
-    // Image extraction configuration
-    pub images: Option<ImageExtractionConfig>,
-
-    // PDF-specific options
-    pub pdf_options: Option<PdfConfig>,
-
-    // Token reduction configuration
-    pub token_reduction: Option<TokenReductionConfig>,
-
-    // Language detection configuration (Rust implementation)
-    pub language_detection: Option<LanguageDetectionConfig>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImageExtractionConfig {
-    pub extract_images: bool,
-    pub target_dpi: i32,
-    pub max_image_dimension: i32,
-    pub auto_adjust_dpi: bool,
-    pub min_dpi: i32,
-    pub max_dpi: i32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PdfConfig {
-    pub extract_images: bool,
-    pub passwords: Option<Vec<String>>,
-    pub extract_metadata: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TokenReductionConfig {
-    pub mode: String, // "off", "light", "moderate", "aggressive", "maximum"
-    pub preserve_important_words: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LanguageDetectionConfig {
-    pub enabled: bool,
-    pub min_confidence: f64,
-    pub detect_multiple: bool,
-}
-```
-
-**Note**: `entities` and `keywords` extraction will remain **Python-only features** using spaCy/NLTK.
-
-**Acceptance Criteria**:
-- All fields properly typed with serde support
-- Default implementations sensible
-- Type stubs updated (`_internal_bindings.pyi`)
-
----
 
 ### 6. Increase Test Coverage (Current → 95% Target)
 **Impact**: Quality and reliability
@@ -203,14 +138,15 @@ impl OcrProcessor {
 Before moving to Phase 4 (Python Bindings):
 
 - [x] All critical priority tasks complete ✅
-- [x] At least 1/3 high priority tasks complete ✅ (extractor cache done)
-- [ ] At least 2/3 high priority tasks complete (need 1 more)
+- [x] At least 1/3 high priority tasks complete ✅
+- [x] At least 2/3 high priority tasks complete ✅ (extractor cache + config fields done)
 - [ ] Test coverage ≥ 90% (95% target for final release)
 - [x] All extractors working through plugin system ✅
 - [x] No critical bugs or blockers ✅
 - [x] Performance benchmarks showing expected improvements ✅
 
-**Status**: 4/9 tasks complete, 2 more high priority tasks recommended before Phase 4
+**Status**: 5/9 tasks complete (all critical + 2/3 high priority)
+**Ready for Phase 4**: Once test coverage task (#6) is complete, we can proceed to Python bindings
 
 ---
 
@@ -235,5 +171,5 @@ Before moving to Phase 4 (Python Bindings):
 ---
 
 **Last Updated**: 2025-10-15
-**Next Review**: After completing ExtractionConfig fields
-**Phase 3 Target**: Complete high priority tasks #5 and #6
+**Next Review**: After completing test coverage task (#6)
+**Phase 3 Target**: Complete test coverage to meet 90%+ threshold
