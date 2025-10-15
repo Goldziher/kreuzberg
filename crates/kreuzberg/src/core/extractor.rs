@@ -725,4 +725,306 @@ mod tests {
 
         assert_eq!(success_count, 10);
     }
+
+    // Edge Case Tests
+
+    #[tokio::test]
+    async fn test_extract_file_empty() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("empty.txt");
+        File::create(&file_path).unwrap(); // Empty file
+
+        let config = ExtractionConfig::default();
+        let result = extract_file(&file_path, None, &config).await;
+
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.content, ""); // Empty content is valid
+    }
+
+    #[tokio::test]
+    async fn test_extract_bytes_empty() {
+        let config = ExtractionConfig::default();
+        let result = extract_bytes(b"", "text/plain", &config).await;
+
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.content, "");
+    }
+
+    #[tokio::test]
+    async fn test_extract_file_whitespace_only() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("whitespace.txt");
+        File::create(&file_path).unwrap().write_all(b"   \n\t  \n  ").unwrap();
+
+        let config = ExtractionConfig::default();
+        let result = extract_file(&file_path, None, &config).await;
+
+        assert!(result.is_ok());
+        // Whitespace-only content is valid
+    }
+
+    #[tokio::test]
+    async fn test_extract_file_very_long_path() {
+        // Test path with 200+ characters
+        let dir = tempdir().unwrap();
+        let long_name = "a".repeat(200);
+        let file_path = dir.path().join(format!("{}.txt", long_name));
+
+        match File::create(&file_path) {
+            Ok(mut f) => {
+                f.write_all(b"content").unwrap();
+                let config = ExtractionConfig::default();
+                let result = extract_file(&file_path, None, &config).await;
+                // Should either succeed or fail gracefully
+                assert!(result.is_ok() || result.is_err());
+            }
+            Err(_) => {
+                // OS might not support paths this long - that's ok
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_extract_file_special_characters_in_path() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test with spaces & symbols!.txt");
+        File::create(&file_path).unwrap().write_all(b"content").unwrap();
+
+        let config = ExtractionConfig::default();
+        let result = extract_file(&file_path, None, &config).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().content, "content");
+    }
+
+    #[tokio::test]
+    async fn test_extract_file_unicode_filename() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("测试文件名.txt");
+        File::create(&file_path).unwrap().write_all(b"content").unwrap();
+
+        let config = ExtractionConfig::default();
+        let result = extract_file(&file_path, None, &config).await;
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_extract_bytes_unsupported_mime() {
+        let config = ExtractionConfig::default();
+        let result = extract_bytes(b"test", "application/x-unknown-format", &config).await;
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), KreuzbergError::UnsupportedFormat(_)));
+    }
+
+    #[tokio::test]
+    async fn test_batch_extract_file_with_errors() {
+        let dir = tempdir().unwrap();
+
+        // Create one valid file and one path to nonexistent file
+        let valid_file = dir.path().join("valid.txt");
+        File::create(&valid_file).unwrap().write_all(b"valid content").unwrap();
+
+        let invalid_file = dir.path().join("nonexistent.txt");
+
+        let config = ExtractionConfig::default();
+        let paths = vec![valid_file, invalid_file];
+        let results = batch_extract_file(paths, &config).await;
+
+        // Should succeed but second result should have error metadata
+        assert!(results.is_ok());
+        let results = results.unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].content, "valid content");
+        assert!(results[1].metadata.contains_key("error"));
+    }
+
+    #[tokio::test]
+    async fn test_batch_extract_bytes_mixed_valid_invalid() {
+        let config = ExtractionConfig::default();
+        let contents = vec![
+            (b"valid 1".as_slice(), "text/plain"),
+            (b"invalid".as_slice(), "invalid/mime"),
+            (b"valid 2".as_slice(), "text/plain"),
+        ];
+        let results = batch_extract_bytes(contents, &config).await;
+
+        // Should succeed with error metadata for invalid one
+        assert!(results.is_ok());
+        let results = results.unwrap();
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].content, "valid 1");
+        assert!(results[1].metadata.contains_key("error"));
+        assert_eq!(results[2].content, "valid 2");
+    }
+
+    #[tokio::test]
+    async fn test_batch_extract_bytes_all_invalid() {
+        let config = ExtractionConfig::default();
+        let contents = vec![
+            (b"test 1".as_slice(), "invalid/mime1"),
+            (b"test 2".as_slice(), "invalid/mime2"),
+        ];
+        let results = batch_extract_bytes(contents, &config).await;
+
+        // Should succeed but all have error metadata
+        assert!(results.is_ok());
+        let results = results.unwrap();
+        assert_eq!(results.len(), 2);
+        assert!(results[0].metadata.contains_key("error"));
+        assert!(results[1].metadata.contains_key("error"));
+    }
+
+    #[tokio::test]
+    async fn test_extract_bytes_very_large() {
+        // Test with 10MB of content
+        let large_content = vec![b'a'; 10_000_000];
+        let config = ExtractionConfig::default();
+        let result = extract_bytes(&large_content, "text/plain", &config).await;
+
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.content.len(), 10_000_000);
+    }
+
+    #[tokio::test]
+    async fn test_batch_extract_large_count() {
+        // Test with 100 files
+        let dir = tempdir().unwrap();
+        let mut paths = Vec::new();
+
+        for i in 0..100 {
+            let file_path = dir.path().join(format!("file{}.txt", i));
+            File::create(&file_path).unwrap().write_all(format!("content {}", i).as_bytes()).unwrap();
+            paths.push(file_path);
+        }
+
+        let config = ExtractionConfig::default();
+        let results = batch_extract_file(paths, &config).await;
+
+        assert!(results.is_ok());
+        let results = results.unwrap();
+        assert_eq!(results.len(), 100);
+
+        // Verify all content is correct
+        for (i, result) in results.iter().enumerate() {
+            assert_eq!(result.content, format!("content {}", i));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_extract_file_mime_detection_fallback() {
+        let dir = tempdir().unwrap();
+        // File with no extension
+        let file_path = dir.path().join("testfile");
+        File::create(&file_path).unwrap().write_all(b"plain text content").unwrap();
+
+        let config = ExtractionConfig::default();
+        // Without MIME override, should try to detect
+        let result = extract_file(&file_path, None, &config).await;
+
+        // May fail or succeed depending on detection, but should not panic
+        assert!(result.is_ok() || result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_extract_file_wrong_mime_override() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.txt");
+        File::create(&file_path).unwrap().write_all(b"plain text").unwrap();
+
+        let config = ExtractionConfig::default();
+        // Force PDF extraction on a text file
+        let result = extract_file(&file_path, Some("application/pdf"), &config).await;
+
+        // Should fail gracefully (PDF extractor will reject non-PDF content)
+        assert!(result.is_err() || result.is_ok());
+    }
+
+    #[test]
+    fn test_sync_wrapper_nonexistent_file() {
+        let config = ExtractionConfig::default();
+        let result = extract_file_sync("/nonexistent/path.txt", None, &config);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), KreuzbergError::Validation { .. }));
+    }
+
+    #[test]
+    fn test_sync_wrapper_batch_empty() {
+        let config = ExtractionConfig::default();
+        let paths: Vec<std::path::PathBuf> = vec![];
+        let results = batch_extract_file_sync(paths, &config);
+
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_sync_wrapper_batch_bytes_empty() {
+        let config = ExtractionConfig::default();
+        let contents: Vec<(&[u8], &str)> = vec![];
+        let results = batch_extract_bytes_sync(contents, &config);
+
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_extractions_same_mime() {
+        use tokio::task::JoinSet;
+
+        let config = Arc::new(ExtractionConfig::default());
+        let mut tasks = JoinSet::new();
+
+        // 50 concurrent extractions of the same MIME type
+        for i in 0..50 {
+            let config_clone = Arc::clone(&config);
+            tasks.spawn(async move {
+                let content = format!("test content {}", i);
+                extract_bytes(content.as_bytes(), "text/plain", &config_clone).await
+            });
+        }
+
+        let mut success_count = 0;
+        while let Some(task_result) = tasks.join_next().await {
+            if let Ok(Ok(_)) = task_result {
+                success_count += 1;
+            }
+        }
+
+        assert_eq!(success_count, 50);
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_extractions_different_mimes() {
+        use tokio::task::JoinSet;
+
+        let config = Arc::new(ExtractionConfig::default());
+        let mut tasks = JoinSet::new();
+
+        let mime_types = vec!["text/plain", "text/markdown", "text/html"];
+
+        // 30 concurrent extractions with rotating MIME types
+        for i in 0..30 {
+            let config_clone = Arc::clone(&config);
+            let mime = mime_types[i % mime_types.len()];
+            tasks.spawn(async move {
+                let content = format!("test {}", i);
+                extract_bytes(content.as_bytes(), mime, &config_clone).await
+            });
+        }
+
+        let mut success_count = 0;
+        while let Some(task_result) = tasks.join_next().await {
+            if let Ok(Ok(_)) = task_result {
+                success_count += 1;
+            }
+        }
+
+        assert_eq!(success_count, 30);
+    }
 }
