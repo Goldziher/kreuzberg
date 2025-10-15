@@ -13,6 +13,7 @@ name = "_internal_bindings"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+async-trait = "0.1.87"
 kreuzberg = { path = "../kreuzberg" }
 pyo3 = { version = "0.26.0", features = ["abi3-py310"] }
 rmp-serde = "1.3"

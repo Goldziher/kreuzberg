@@ -5,7 +5,8 @@ mod error;
 mod types;
 
 use bindings::{
-    cache, email, excel, html, image_preprocessing, libreoffice, pandoc, pptx, structured, table, text, text_utils, xml,
+    cache, chunking, email, excel, html, image_preprocessing, libreoffice, ocr, pandoc, plugins, pptx, structured,
+    table, text, text_utils, xml,
 };
 use types::{
     PyEmailAttachment, PyEmailExtractionResult, PyExcelSheet, PyExcelWorkbook, PyExtractedInlineImage,
@@ -65,14 +66,22 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(libreoffice::convert_ppt_to_pptx_msgpack, m)?)?;
 
     // Image preprocessing
-    m.add_function(wrap_pyfunction!(image_preprocessing::normalize_image_dpi_msgpack, m)?)?;
-    m.add_function(wrap_pyfunction!(image_preprocessing::calculate_optimal_dpi, m)?)?;
+    image_preprocessing::register_image_preprocessing_functions(m)?;
 
     // Text utilities
     text_utils::register_text_utils_functions(m)?;
 
     // Cache utilities
     cache::register_cache_functions(m)?;
+
+    // OCR
+    ocr::register_ocr_functions(m)?;
+
+    // Chunking
+    chunking::register_chunking_functions(m)?;
+
+    // Plugin registration
+    plugins::register_plugin_functions(m)?;
 
     Ok(())
 }

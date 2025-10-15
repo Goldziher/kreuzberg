@@ -1,10 +1,13 @@
 pub mod cache;
+pub mod chunking;
 pub mod email;
 pub mod excel;
 pub mod html;
 pub mod image_preprocessing;
 pub mod libreoffice;
+pub mod ocr;
 pub mod pandoc;
+pub mod plugins;
 pub mod pptx;
 pub mod structured;
 pub mod table;
