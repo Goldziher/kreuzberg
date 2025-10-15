@@ -143,4 +143,153 @@ mod tests {
         let processed = run_pipeline(result, &config).await.unwrap();
         assert_eq!(processed.content, "test");
     }
+
+    #[tokio::test]
+    async fn test_pipeline_with_quality_processing() {
+        use std::collections::HashMap;
+        let result = ExtractionResult {
+            content: "This is a test document with some meaningful content.".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+        let mut config = ExtractionConfig::default();
+        config.enable_quality_processing = true;
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+        assert!(processed.metadata.contains_key("quality_score"));
+    }
+
+    #[tokio::test]
+    async fn test_pipeline_without_quality_processing() {
+        use std::collections::HashMap;
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+        let mut config = ExtractionConfig::default();
+        config.enable_quality_processing = false;
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+        assert!(!processed.metadata.contains_key("quality_score"));
+    }
+
+    #[tokio::test]
+    async fn test_pipeline_with_chunking() {
+        use std::collections::HashMap;
+        let result = ExtractionResult {
+            content: "This is a long text that should be chunked. ".repeat(100),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+        let mut config = ExtractionConfig::default();
+        config.chunking = Some(crate::ChunkingConfig {
+            max_chars: 500,
+            max_overlap: 50,
+        });
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+        assert!(processed.metadata.contains_key("chunk_count"));
+        let chunk_count = processed.metadata.get("chunk_count").unwrap();
+        assert!(chunk_count.as_u64().unwrap() > 1);
+    }
+
+    #[tokio::test]
+    async fn test_pipeline_without_chunking() {
+        use std::collections::HashMap;
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+        let mut config = ExtractionConfig::default();
+        config.chunking = None;
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+        assert!(!processed.metadata.contains_key("chunk_count"));
+    }
+
+    #[tokio::test]
+    async fn test_pipeline_preserves_metadata() {
+        use std::collections::HashMap;
+        let mut metadata = HashMap::new();
+        metadata.insert("source".to_string(), serde_json::json!("test"));
+        metadata.insert("page".to_string(), serde_json::json!(1));
+
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata,
+            tables: vec![],
+        };
+        let config = ExtractionConfig::default();
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+        assert_eq!(processed.metadata.get("source").unwrap(), &serde_json::json!("test"));
+        assert_eq!(processed.metadata.get("page").unwrap(), &serde_json::json!(1));
+    }
+
+    #[tokio::test]
+    async fn test_pipeline_preserves_tables() {
+        use std::collections::HashMap;
+        use crate::types::Table;
+
+        let table = Table {
+            cells: vec![vec!["A".to_string(), "B".to_string()]],
+            markdown: "| A | B |".to_string(),
+            page_number: 0,
+        };
+
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![table],
+        };
+        let config = ExtractionConfig::default();
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+        assert_eq!(processed.tables.len(), 1);
+        assert_eq!(processed.tables[0].cells.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_pipeline_empty_content() {
+        use std::collections::HashMap;
+        let result = ExtractionResult {
+            content: String::new(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+        let config = ExtractionConfig::default();
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+        assert_eq!(processed.content, "");
+    }
+
+    #[tokio::test]
+    async fn test_pipeline_with_all_features() {
+        use std::collections::HashMap;
+        let result = ExtractionResult {
+            content: "This is a comprehensive test document. ".repeat(50),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+        let mut config = ExtractionConfig::default();
+        config.enable_quality_processing = true;
+        config.chunking = Some(crate::ChunkingConfig {
+            max_chars: 500,
+            max_overlap: 50,
+        });
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+        assert!(processed.metadata.contains_key("quality_score"));
+        assert!(processed.metadata.contains_key("chunk_count"));
+    }
 }
