@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_email_extractor_plugin_interface() {
-        let mut extractor = EmailExtractor::new();
+        let extractor = EmailExtractor::new();
         assert_eq!(extractor.name(), "email-extractor");
         assert!(extractor.initialize().is_ok());
         assert!(extractor.shutdown().is_ok());

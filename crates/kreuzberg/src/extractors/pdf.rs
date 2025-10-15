@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_pdf_extractor_plugin_interface() {
-        let mut extractor = PdfExtractor::new();
+        let extractor = PdfExtractor::new();
         assert_eq!(extractor.name(), "pdf-extractor");
         assert!(extractor.initialize().is_ok());
         assert!(extractor.shutdown().is_ok());

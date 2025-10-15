@@ -369,7 +369,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validator_plugin_interface() {
-        let mut validator = MockValidator { should_fail: false };
+        let validator = MockValidator { should_fail: false };
 
         // Test Plugin trait methods
         assert_eq!(validator.name(), "mock-validator");

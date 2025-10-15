@@ -115,7 +115,7 @@ pub trait Plugin: Send + Sync {
     ///
     /// ```rust
     /// # use kreuzberg::plugins::Plugin;
-    /// # use kreuzberg::{Result, KreuzbergError};
+    /// # use kreuzberg::Result;
     /// # use std::sync::Mutex;
     /// # struct MyPlugin { config: Mutex<Option<String>> }
     /// # impl Plugin for MyPlugin {
@@ -127,16 +127,11 @@ pub trait Plugin: Send + Sync {
     ///     let mut config = self.config.lock().unwrap();
     ///     *config = Some("loaded".to_string());
     ///
-    ///     // Validate dependencies
-    ///     if !self.check_dependencies() {
-    ///         return Err(KreuzbergError::MissingDependency(
-    ///             "Required dependency not found".to_string()
-    ///         ));
-    ///     }
+    ///     // Perform any initialization work
+    ///     println!("Plugin initialized successfully");
     ///
     ///     Ok(())
     /// }
-    /// # fn check_dependencies(&self) -> bool { true }
     /// # }
     /// ```
     fn initialize(&self) -> Result<()>;

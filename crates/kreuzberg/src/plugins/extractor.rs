@@ -337,11 +337,11 @@ pub trait DocumentExtractor: Plugin {
     ///         return false;
     ///     }
     ///
-    ///     // Check if PDF has text layer
-    ///     // (simplified example)
-    ///     self.has_text_layer(path)
+    ///     // Check if PDF has text layer (simplified example)
+    ///     // In real implementation, analyze PDF structure here
+    ///     let _ = path; // Use path for PDF analysis
+    ///     true  // Simplified - always accept
     /// }
-    /// # fn has_text_layer(&self, _: &Path) -> bool { true }
     /// # }
     /// ```
     fn can_handle(&self, _path: &Path, _mime_type: &str) -> bool {
@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn test_document_extractor_plugin_interface() {
-        let mut extractor = MockExtractor {
+        let extractor = MockExtractor {
             mime_types: vec!["text/plain"],
             priority: 50,
         };

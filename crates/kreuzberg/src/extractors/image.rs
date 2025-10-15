@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_image_extractor_default() {
-        let extractor = ImageExtractor::default();
+        let extractor = ImageExtractor;
         assert_eq!(extractor.name(), "image-extractor");
     }
 }

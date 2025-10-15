@@ -57,8 +57,12 @@ static CACHE_GENERATION: AtomicU64 = AtomicU64::new(0);
 //
 // The cache includes a generation number for automatic invalidation when
 // the registry changes.
+
+/// Type alias for the thread-local cache entry: (generation, extractor map)
+type ExtractorCacheEntry = (u64, HashMap<String, Arc<dyn DocumentExtractor>>);
+
 thread_local! {
-    static EXTRACTOR_CACHE: RefCell<(u64, HashMap<String, Arc<dyn DocumentExtractor>>)> =
+    static EXTRACTOR_CACHE: RefCell<ExtractorCacheEntry> =
         RefCell::new((0, HashMap::new()));
 }
 
@@ -1006,7 +1010,7 @@ mod tests {
         let config = Arc::new(ExtractionConfig::default());
         let mut tasks = JoinSet::new();
 
-        let mime_types = vec!["text/plain", "text/markdown", "text/html"];
+        let mime_types = ["text/plain", "text/markdown", "text/html"];
 
         // 30 concurrent extractions with rotating MIME types
         for i in 0..30 {

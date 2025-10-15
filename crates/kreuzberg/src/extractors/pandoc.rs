@@ -196,13 +196,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_pandoc_extractor_default() {
-        let extractor = PandocExtractor::default();
+        let extractor = PandocExtractor;
         assert_eq!(extractor.name(), "pandoc-extractor");
     }
 
     #[tokio::test]
     async fn test_pandoc_extractor_initialize_shutdown() {
-        let mut extractor = PandocExtractor::new();
+        let extractor = PandocExtractor::new();
         assert!(extractor.initialize().is_ok());
         assert!(extractor.shutdown().is_ok());
     }

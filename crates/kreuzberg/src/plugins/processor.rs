@@ -139,7 +139,7 @@ pub trait PostProcessor: Plugin {
     ///
     /// # Example - Language Detection
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// # use kreuzberg::plugins::{Plugin, PostProcessor, ProcessingStage};
     /// # use kreuzberg::{Result, ExtractionResult, ExtractionConfig};
     /// # use async_trait::async_trait;
@@ -155,8 +155,8 @@ pub trait PostProcessor: Plugin {
     /// #     fn processing_stage(&self) -> ProcessingStage { ProcessingStage::Early }
     /// async fn process(&self, result: &mut ExtractionResult, config: &ExtractionConfig)
     ///     -> Result<()> {
-    ///     // Detect language
-    ///     let language = self.detect_language(&result.content);
+    ///     // Detect language (simplified - use real detection library in practice)
+    ///     let language = "en"; // Placeholder detection
     ///
     ///     // Add to metadata
     ///     result.metadata.insert(
@@ -166,13 +166,12 @@ pub trait PostProcessor: Plugin {
     ///
     ///     Ok(())
     /// }
-    /// # fn detect_language(&self, _: &str) -> String { "en".to_string() }
     /// # }
     /// ```
     ///
     /// # Example - Text Cleaning
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// # use kreuzberg::plugins::{Plugin, PostProcessor, ProcessingStage};
     /// # use kreuzberg::{Result, ExtractionResult, ExtractionConfig};
     /// # use async_trait::async_trait;
@@ -194,9 +193,9 @@ pub trait PostProcessor: Plugin {
     ///         .collect::<Vec<_>>()
     ///         .join(" ");
     ///
-    ///     // Normalize Unicode
-    ///     result.content = unicode_normalization::UnicodeNormalization::nfc(&result.content)
-    ///         .collect();
+    ///     // Normalize Unicode to NFC form
+    ///     use unicode_normalization::UnicodeNormalization;
+    ///     result.content = result.content.chars().nfc().collect();
     ///
     ///     Ok(())
     /// }
@@ -434,7 +433,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_post_processor_plugin_interface() {
-        let mut processor = MockPostProcessor {
+        let processor = MockPostProcessor {
             stage: ProcessingStage::Middle,
         };
 

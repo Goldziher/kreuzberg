@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_pptx_extractor_plugin_interface() {
-        let mut extractor = PptxExtractor::new();
+        let extractor = PptxExtractor::new();
         assert_eq!(extractor.name(), "pptx-extractor");
         assert!(extractor.initialize().is_ok());
         assert!(extractor.shutdown().is_ok());

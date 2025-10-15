@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_excel_extractor_plugin_interface() {
-        let mut extractor = ExcelExtractor::new();
+        let extractor = ExcelExtractor::new();
         assert_eq!(extractor.name(), "excel-extractor");
         assert!(extractor.initialize().is_ok());
         assert!(extractor.shutdown().is_ok());

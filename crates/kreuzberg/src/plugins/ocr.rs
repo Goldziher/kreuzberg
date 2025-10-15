@@ -98,11 +98,12 @@ pub trait OcrBackend: Plugin {
     ///
     /// # Example
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// # use kreuzberg::plugins::{Plugin, OcrBackend};
     /// # use kreuzberg::{Result, ExtractionResult, OcrConfig};
     /// # use async_trait::async_trait;
     /// # use std::path::Path;
+    /// # use std::collections::HashMap;
     /// # struct MyOcr;
     /// # impl Plugin for MyOcr {
     /// #     fn name(&self) -> &str { "my-ocr" }
@@ -119,22 +120,22 @@ pub trait OcrBackend: Plugin {
     /// async fn process_image(&self, image_bytes: &[u8], config: &OcrConfig) -> Result<ExtractionResult> {
     ///     // Validate image format
     ///     if image_bytes.is_empty() {
-    ///         return Err(kreuzberg::KreuzbergError::validation(
-    ///             "Empty image data".to_string()
-    ///         ));
+    ///         return Err(kreuzberg::KreuzbergError::Validation {
+    ///             message: "Empty image data".to_string(),
+    ///             source: None,
+    ///         });
     ///     }
     ///
-    ///     // Run OCR
-    ///     let text = self.run_ocr_engine(image_bytes, config).await?;
+    ///     // Perform OCR processing
+    ///     let text = format!("Extracted text in language: {}", config.language);
     ///
-    ///     Ok(kreuzberg::ExtractionResult {
+    ///     Ok(ExtractionResult {
     ///         content: text,
     ///         mime_type: "text/plain".to_string(),
-    ///         metadata: std::collections::HashMap::new(),
+    ///         metadata: HashMap::new(),
     ///         tables: vec![],
     ///     })
     /// }
-    /// # async fn run_ocr_engine(&self, _: &[u8], _: &OcrConfig) -> Result<String> { Ok(String::new()) }
     /// # }
     /// ```
     async fn process_image(&self, image_bytes: &[u8], config: &OcrConfig) -> Result<ExtractionResult>;
@@ -399,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_ocr_backend_plugin_interface() {
-        let mut backend = MockOcrBackend {
+        let backend = MockOcrBackend {
             languages: vec!["eng".to_string()],
         };
 

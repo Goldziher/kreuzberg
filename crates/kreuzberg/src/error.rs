@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn test_ocr_error_with_source() {
-        let source = std::io::Error::new(std::io::ErrorKind::Other, "tesseract failed");
+        let source = std::io::Error::other("tesseract failed");
         let err = KreuzbergError::ocr_with_source("OCR failed", source);
         assert_eq!(err.to_string(), "OCR error: OCR failed");
         assert!(std::error::Error::source(&err).is_some());

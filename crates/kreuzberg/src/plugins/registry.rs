@@ -973,45 +973,30 @@ mod tests {
 
     #[test]
     fn test_global_registry_access() {
+        // Test that global registries can be accessed without panicking
         let ocr_registry = get_ocr_backend_registry();
-        assert!(
-            ocr_registry
-                .read()
-                .expect("Failed to acquire read lock on OCR registry in test")
-                .list()
-                .len()
-                >= 0
-        );
+        let _ = ocr_registry
+            .read()
+            .expect("Failed to acquire read lock on OCR registry in test")
+            .list();
 
         let extractor_registry = get_document_extractor_registry();
-        assert!(
-            extractor_registry
-                .read()
-                .expect("Failed to acquire read lock on extractor registry in test")
-                .list()
-                .len()
-                >= 0
-        );
+        let _ = extractor_registry
+            .read()
+            .expect("Failed to acquire read lock on extractor registry in test")
+            .list();
 
         let processor_registry = get_post_processor_registry();
-        assert!(
-            processor_registry
-                .read()
-                .expect("Failed to acquire read lock on processor registry in test")
-                .list()
-                .len()
-                >= 0
-        );
+        let _ = processor_registry
+            .read()
+            .expect("Failed to acquire read lock on processor registry in test")
+            .list();
 
         let validator_registry = get_validator_registry();
-        assert!(
-            validator_registry
-                .read()
-                .expect("Failed to acquire read lock on validator registry in test")
-                .list()
-                .len()
-                >= 0
-        );
+        let _ = validator_registry
+            .read()
+            .expect("Failed to acquire read lock on validator registry in test")
+            .list();
     }
 
     #[test]

@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_structured_extractor_plugin_interface() {
-        let mut extractor = StructuredExtractor::new();
+        let extractor = StructuredExtractor::new();
         assert_eq!(extractor.name(), "structured-extractor");
         assert!(extractor.initialize().is_ok());
         assert!(extractor.shutdown().is_ok());
