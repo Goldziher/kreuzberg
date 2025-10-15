@@ -392,4 +392,200 @@ mod tests {
         // Default implementation always returns true
         assert!(processor.should_process(&result, &config));
     }
+
+    #[test]
+    fn test_processing_stage_equality() {
+        assert_eq!(ProcessingStage::Early, ProcessingStage::Early);
+        assert_ne!(ProcessingStage::Early, ProcessingStage::Middle);
+        assert_ne!(ProcessingStage::Middle, ProcessingStage::Late);
+    }
+
+    #[test]
+    fn test_processing_stage_clone() {
+        let stage = ProcessingStage::Middle;
+        let cloned = stage;
+        assert_eq!(stage, cloned);
+    }
+
+    #[test]
+    fn test_processing_stage_debug() {
+        let stage = ProcessingStage::Early;
+        let debug_str = format!("{:?}", stage);
+        assert!(debug_str.contains("Early"));
+    }
+
+    #[test]
+    fn test_processing_stage_hash() {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(ProcessingStage::Early);
+        set.insert(ProcessingStage::Middle);
+        set.insert(ProcessingStage::Late);
+
+        assert_eq!(set.len(), 3);
+        assert!(set.contains(&ProcessingStage::Early));
+    }
+
+    #[tokio::test]
+    async fn test_post_processor_plugin_interface() {
+        let mut processor = MockPostProcessor {
+            stage: ProcessingStage::Middle,
+        };
+
+        // Test Plugin trait methods
+        assert_eq!(processor.name(), "mock-processor");
+        assert_eq!(processor.version(), "1.0.0");
+        assert!(processor.initialize().is_ok());
+        assert!(processor.shutdown().is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_post_processor_empty_content() {
+        let processor = MockPostProcessor {
+            stage: ProcessingStage::Early,
+        };
+
+        let result = ExtractionResult {
+            content: String::new(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+
+        let config = ExtractionConfig::default();
+        let processed = processor.process(result, &config).await.unwrap();
+
+        assert_eq!(processed.content, "");
+        assert!(processed.metadata.contains_key("processed_by"));
+    }
+
+    #[tokio::test]
+    async fn test_post_processor_preserves_metadata() {
+        let processor = MockPostProcessor {
+            stage: ProcessingStage::Early,
+        };
+
+        let mut metadata = HashMap::new();
+        metadata.insert("existing_key".to_string(), serde_json::json!("existing_value"));
+
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata,
+            tables: vec![],
+        };
+
+        let config = ExtractionConfig::default();
+        let processed = processor.process(result, &config).await.unwrap();
+
+        // Should preserve existing metadata
+        assert_eq!(
+            processed.metadata.get("existing_key").unwrap(),
+            &serde_json::json!("existing_value")
+        );
+        // And add new metadata
+        assert!(processed.metadata.contains_key("processed_by"));
+    }
+
+    #[test]
+    fn test_post_processor_estimated_duration_default() {
+        let processor = MockPostProcessor {
+            stage: ProcessingStage::Early,
+        };
+
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+
+        // Default implementation returns 0
+        assert_eq!(processor.estimated_duration_ms(&result), 0);
+    }
+
+    #[test]
+    fn test_post_processor_should_process_conditional() {
+        // Create a processor that only processes PDFs
+        struct PdfOnlyProcessor;
+
+        impl Plugin for PdfOnlyProcessor {
+            fn name(&self) -> &str {
+                "pdf-only"
+            }
+            fn version(&self) -> &str {
+                "1.0.0"
+            }
+            fn initialize(&mut self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&mut self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl PostProcessor for PdfOnlyProcessor {
+            async fn process(&self, result: ExtractionResult, _config: &ExtractionConfig) -> Result<ExtractionResult> {
+                Ok(result)
+            }
+
+            fn processing_stage(&self) -> ProcessingStage {
+                ProcessingStage::Middle
+            }
+
+            fn should_process(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> bool {
+                result.mime_type == "application/pdf"
+            }
+        }
+
+        let processor = PdfOnlyProcessor;
+        let config = ExtractionConfig::default();
+
+        let pdf_result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "application/pdf".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+
+        let txt_result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![],
+        };
+
+        assert!(processor.should_process(&pdf_result, &config));
+        assert!(!processor.should_process(&txt_result, &config));
+    }
+
+    #[tokio::test]
+    async fn test_post_processor_preserves_tables() {
+        use crate::types::Table;
+
+        let processor = MockPostProcessor {
+            stage: ProcessingStage::Early,
+        };
+
+        let table = Table {
+            cells: vec![vec!["A".to_string(), "B".to_string()]],
+            markdown: "| A | B |".to_string(),
+            page_number: 0,
+        };
+
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: HashMap::new(),
+            tables: vec![table],
+        };
+
+        let config = ExtractionConfig::default();
+        let processed = processor.process(result, &config).await.unwrap();
+
+        // Should preserve tables
+        assert_eq!(processed.tables.len(), 1);
+        assert_eq!(processed.tables[0].cells.len(), 1);
+    }
 }
