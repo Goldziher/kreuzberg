@@ -242,4 +242,145 @@ mod tests {
         assert_eq!(options.min_dpi, 72);
         assert_eq!(options.max_dpi, 600);
     }
+
+    #[test]
+    fn test_renderer_default() {
+        let renderer = PdfRenderer::default();
+        assert!(std::mem::size_of_val(&renderer) > 0);
+    }
+
+    #[test]
+    fn test_render_all_pages_empty_pdf() {
+        let renderer = PdfRenderer::new().unwrap();
+        let options = PageRenderOptions::default();
+        let result = renderer.render_all_pages(b"not a pdf", &options);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_render_page_with_password_none() {
+        let renderer = PdfRenderer::new().unwrap();
+        let options = PageRenderOptions::default();
+        let result = renderer.render_page_to_image_with_password(b"not a pdf", 0, &options, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_render_all_pages_with_password_none() {
+        let renderer = PdfRenderer::new().unwrap();
+        let options = PageRenderOptions::default();
+        let result = renderer.render_all_pages_with_password(b"not a pdf", &options, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_render_page_to_image_function() {
+        let options = PageRenderOptions::default();
+        let result = render_page_to_image(b"not a pdf", 0, &options);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi_tall_page() {
+        // Test with a very tall page (height > width)
+        let dpi = calculate_optimal_dpi(612.0, 10000.0, 300, 4096, 72, 600);
+        assert!((72..=600).contains(&dpi));
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi_wide_page() {
+        // Test with a very wide page (width > height)
+        let dpi = calculate_optimal_dpi(10000.0, 612.0, 300, 4096, 72, 600);
+        assert!((72..=600).contains(&dpi));
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi_square_page() {
+        // Test with a square page
+        let dpi = calculate_optimal_dpi(1000.0, 1000.0, 300, 65536, 72, 600);
+        assert!((72..=600).contains(&dpi));
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi_tiny_page() {
+        // Test with a very small page
+        let dpi = calculate_optimal_dpi(72.0, 72.0, 300, 65536, 72, 600);
+        assert_eq!(dpi, 300);
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi_target_equals_max() {
+        // Test when target DPI equals max DPI
+        let dpi = calculate_optimal_dpi(612.0, 792.0, 600, 65536, 72, 600);
+        assert_eq!(dpi, 600);
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi_target_equals_min() {
+        // Test when target DPI equals min DPI
+        let dpi = calculate_optimal_dpi(612.0, 792.0, 72, 65536, 72, 600);
+        assert_eq!(dpi, 72);
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi_exactly_at_limit() {
+        // Test when dimensions exactly match the limit
+        let page_size = 65536.0 / 300.0 * PDF_POINTS_PER_INCH;
+        let dpi = calculate_optimal_dpi(page_size, page_size, 300, 65536, 72, 600);
+        assert!((72..=600).contains(&dpi));
+    }
+
+    #[test]
+    fn test_page_render_options_custom() {
+        let options = PageRenderOptions {
+            target_dpi: 150,
+            max_image_dimension: 8192,
+            auto_adjust_dpi: false,
+            min_dpi: 50,
+            max_dpi: 400,
+        };
+
+        assert_eq!(options.target_dpi, 150);
+        assert_eq!(options.max_image_dimension, 8192);
+        assert!(!options.auto_adjust_dpi);
+        assert_eq!(options.min_dpi, 50);
+        assert_eq!(options.max_dpi, 400);
+    }
+
+    #[test]
+    fn test_page_render_options_clone() {
+        let options1 = PageRenderOptions::default();
+        let options2 = options1.clone();
+
+        assert_eq!(options1.target_dpi, options2.target_dpi);
+        assert_eq!(options1.max_image_dimension, options2.max_image_dimension);
+        assert_eq!(options1.auto_adjust_dpi, options2.auto_adjust_dpi);
+    }
+
+    #[test]
+    fn test_pdf_points_per_inch_constant() {
+        assert_eq!(PDF_POINTS_PER_INCH, 72.0);
+    }
+
+    #[test]
+    fn test_render_empty_bytes() {
+        let renderer = PdfRenderer::new().unwrap();
+        let options = PageRenderOptions::default();
+        let result = renderer.render_page_to_image(&[], 0, &options);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi_zero_target() {
+        // Edge case: zero target DPI should clamp to min
+        let dpi = calculate_optimal_dpi(612.0, 792.0, 0, 65536, 72, 600);
+        assert_eq!(dpi, 72);
+    }
+
+    #[test]
+    fn test_calculate_optimal_dpi_negative_target() {
+        // Edge case: negative target DPI should clamp to min
+        let dpi = calculate_optimal_dpi(612.0, 792.0, -100, 65536, 72, 600);
+        assert_eq!(dpi, 72);
+    }
 }
