@@ -573,4 +573,244 @@ mod tests {
         let output = strip_control_characters(input_with_newlines);
         assert_eq!(output, "Hello\nWorld\rTest\t!");
     }
+
+    #[test]
+    fn test_strip_control_characters_all_control() {
+        let input = "\x00\x01\x02\x03";
+        let output = strip_control_characters(input);
+        assert_eq!(output, "");
+    }
+
+    #[test]
+    fn test_strip_control_characters_no_control() {
+        let input = "Hello World Test";
+        let output = strip_control_characters(input);
+        assert_eq!(output, "Hello World Test");
+    }
+
+    #[test]
+    fn test_strip_control_characters_delete_char() {
+        let input = "Hello\x7FWorld";
+        let output = strip_control_characters(input);
+        assert_eq!(output, "HelloWorld");
+    }
+
+    #[test]
+    fn test_process_files_batch_single_file() {
+        let temp_dir = tempdir().unwrap();
+        let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
+        let config = create_test_config();
+
+        let results = processor.process_files_batch(vec!["/nonexistent.png".to_string()], &config);
+        assert_eq!(results.len(), 1);
+        assert!(!results[0].success);
+        assert!(results[0].error.is_some());
+        assert!(results[0].result.is_none());
+    }
+
+    #[test]
+    fn test_process_files_batch_multiple_files() {
+        let temp_dir = tempdir().unwrap();
+        let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
+        let config = create_test_config();
+
+        let file_paths = vec![
+            "/nonexistent1.png".to_string(),
+            "/nonexistent2.png".to_string(),
+            "/nonexistent3.png".to_string(),
+        ];
+
+        let results = processor.process_files_batch(file_paths, &config);
+        assert_eq!(results.len(), 3);
+
+        // All should fail (files don't exist)
+        for result in &results {
+            assert!(!result.success);
+            assert!(result.error.is_some());
+            assert!(result.result.is_none());
+        }
+    }
+
+    #[test]
+    fn test_batch_item_result_structure() {
+        let success_result = BatchItemResult {
+            file_path: "test.png".to_string(),
+            success: true,
+            result: Some(OcrExtractionResult {
+                content: "test".to_string(),
+                mime_type: "text/plain".to_string(),
+                metadata: HashMap::new(),
+                tables: vec![],
+            }),
+            error: None,
+        };
+
+        assert!(success_result.success);
+        assert!(success_result.result.is_some());
+        assert!(success_result.error.is_none());
+
+        let error_result = BatchItemResult {
+            file_path: "error.png".to_string(),
+            success: false,
+            result: None,
+            error: Some("Test error".to_string()),
+        };
+
+        assert!(!error_result.success);
+        assert!(error_result.result.is_none());
+        assert!(error_result.error.is_some());
+    }
+
+    #[test]
+    fn test_hash_config_different_languages() {
+        let temp_dir = tempdir().unwrap();
+        let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let mut config1 = create_test_config();
+        config1.language = "eng".to_string();
+
+        let mut config2 = create_test_config();
+        config2.language = "fra".to_string();
+
+        let hash1 = processor.hash_config(&config1);
+        let hash2 = processor.hash_config(&config2);
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_hash_config_different_psm() {
+        let temp_dir = tempdir().unwrap();
+        let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let mut config1 = create_test_config();
+        config1.psm = 3;
+
+        let mut config2 = create_test_config();
+        config2.psm = 6;
+
+        let hash1 = processor.hash_config(&config1);
+        let hash2 = processor.hash_config(&config2);
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_hash_config_different_output_format() {
+        let temp_dir = tempdir().unwrap();
+        let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let mut config1 = create_test_config();
+        config1.output_format = "text".to_string();
+
+        let mut config2 = create_test_config();
+        config2.output_format = "markdown".to_string();
+
+        let hash1 = processor.hash_config(&config1);
+        let hash2 = processor.hash_config(&config2);
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_hash_config_table_detection_flag() {
+        let temp_dir = tempdir().unwrap();
+        let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let mut config1 = create_test_config();
+        config1.enable_table_detection = false;
+
+        let mut config2 = create_test_config();
+        config2.enable_table_detection = true;
+
+        let hash1 = processor.hash_config(&config1);
+        let hash2 = processor.hash_config(&config2);
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_hash_config_whitelist() {
+        let temp_dir = tempdir().unwrap();
+        let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let mut config1 = create_test_config();
+        config1.tessedit_char_whitelist = "".to_string();
+
+        let mut config2 = create_test_config();
+        config2.tessedit_char_whitelist = "0123456789".to_string();
+
+        let hash1 = processor.hash_config(&config1);
+        let hash2 = processor.hash_config(&config2);
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_process_image_with_cache_disabled() {
+        let temp_dir = tempdir().unwrap();
+        let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
+
+        let mut config = create_test_config();
+        config.use_cache = false;
+
+        // Invalid image should fail regardless of cache setting
+        let invalid_data = vec![0, 1, 2, 3];
+        let result = processor.process_image(&invalid_data, &config);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_process_files_batch_preserves_order() {
+        let temp_dir = tempdir().unwrap();
+        let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
+        let config = create_test_config();
+
+        let file_paths = vec![
+            "file1.png".to_string(),
+            "file2.png".to_string(),
+            "file3.png".to_string(),
+        ];
+
+        let results = processor.process_files_batch(file_paths.clone(), &config);
+
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].file_path, "file1.png");
+        assert_eq!(results[1].file_path, "file2.png");
+        assert_eq!(results[2].file_path, "file3.png");
+    }
+
+    #[test]
+    fn test_compute_image_hash_different_data() {
+        use ahash::AHasher;
+        use std::hash::{Hash, Hasher};
+
+        let image_bytes1 = vec![1, 2, 3, 4, 5];
+        let image_bytes2 = vec![5, 4, 3, 2, 1];
+
+        let mut hasher1 = AHasher::default();
+        image_bytes1.hash(&mut hasher1);
+        let hash1 = format!("{:016x}", hasher1.finish());
+
+        let mut hasher2 = AHasher::default();
+        image_bytes2.hash(&mut hasher2);
+        let hash2 = format!("{:016x}", hasher2.finish());
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_log_ci_debug_disabled() {
+        // Test that logging with disabled flag doesn't panic
+        log_ci_debug(false, "test_stage", || "test message".to_string());
+        // If we get here, no panic occurred
+    }
+
+    #[test]
+    fn test_log_ci_debug_enabled() {
+        // Test that logging with enabled flag doesn't panic
+        log_ci_debug(true, "test_stage", || "test message".to_string());
+        // If we get here, no panic occurred
+    }
 }
