@@ -1277,7 +1277,9 @@ dependencies = [
 
 [[package]]
 name = "html-to-markdown-rs"
-version = "2.3.2"
+version = "2.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d83bfa83b2b9c3d1667afd2ee26b7a0fc445038d7d0070720012280cbc7a35e5"
 dependencies = [
  "ammonia",
  "base64",
