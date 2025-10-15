@@ -4,9 +4,8 @@
 //! config loading, MIME detection, and batch processing.
 
 use kreuzberg::{
-    extract_file, extract_bytes, batch_extract_file, batch_extract_bytes,
-    extract_file_sync, extract_bytes_sync, batch_extract_file_sync, batch_extract_bytes_sync,
-    ExtractionConfig, detect_mime_type, validate_mime_type,
+    ExtractionConfig, batch_extract_bytes, batch_extract_bytes_sync, batch_extract_file, batch_extract_file_sync,
+    detect_mime_type, extract_bytes, extract_bytes_sync, extract_file, extract_file_sync, validate_mime_type,
 };
 use std::fs::{self, File};
 use std::io::Write;
@@ -204,9 +203,18 @@ fn test_mime_detection_comprehensive() {
         ("test.xml", "application/xml"),
         // Office documents
         ("test.pdf", "application/pdf"),
-        ("test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-        ("test.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-        ("test.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+        (
+            "test.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ),
+        (
+            "test.docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ),
+        (
+            "test.pptx",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ),
         // Images
         ("test.png", "image/png"),
         ("test.jpg", "image/jpeg"),
@@ -251,7 +259,10 @@ fn test_case_insensitive_extensions() {
         ("test.PDF", "application/pdf"),
         ("test.TXT", "text/plain"),
         ("test.Json", "application/json"),
-        ("test.XLSX", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        (
+            "test.XLSX",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ),
     ];
 
     for (filename, expected_mime) in test_cases {
@@ -270,7 +281,9 @@ fn test_config_loading() {
     let config_path = dir.path().join("kreuzberg.toml");
 
     // Write a V4 config
-    fs::write(&config_path, r#"
+    fs::write(
+        &config_path,
+        r#"
 use_cache = false
 enable_quality_processing = true
 force_ocr = false
@@ -282,7 +295,9 @@ language = "deu"
 [chunking]
 max_chars = 2000
 max_overlap = 300
-    "#).unwrap();
+    "#,
+    )
+    .unwrap();
 
     let config = ExtractionConfig::from_toml_file(&config_path).unwrap();
 
@@ -308,10 +323,14 @@ fn test_config_discovery() {
 
     // Create config in parent directory
     let config_path = dir.path().join("kreuzberg.toml");
-    fs::write(&config_path, r#"
+    fs::write(
+        &config_path,
+        r#"
 use_cache = false
 enable_quality_processing = true
-    "#).unwrap();
+    "#,
+    )
+    .unwrap();
 
     // Change to subdirectory
     let original_dir = std::env::current_dir().unwrap();
@@ -344,7 +363,10 @@ async fn test_unsupported_mime_type_error() {
     let result = extract_bytes(b"test", "video/mp4", &config).await;
 
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), kreuzberg::KreuzbergError::UnsupportedFormat(_)));
+    assert!(matches!(
+        result.unwrap_err(),
+        kreuzberg::KreuzbergError::UnsupportedFormat(_)
+    ));
 }
 
 /// Test pipeline execution (currently stub, will be expanded in Phase 2).

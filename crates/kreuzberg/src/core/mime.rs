@@ -4,9 +4,9 @@
 //! and validating them against supported types.
 
 use crate::{KreuzbergError, Result};
-use std::path::Path;
 use once_cell::sync::Lazy;
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 // MIME type constants (ported from Python _mime_types.py)
 pub const HTML_MIME_TYPE: &str = "text/html";
@@ -227,14 +227,14 @@ pub fn detect_mime_type(path: impl AsRef<Path>, check_exists: bool) -> Result<St
     let path = path.as_ref();
 
     if check_exists && !path.exists() {
-        return Err(KreuzbergError::Validation(format!("File does not exist: {}", path.display())));
+        return Err(KreuzbergError::Validation(format!(
+            "File does not exist: {}",
+            path.display()
+        )));
     }
 
     // Get file extension
-    let extension = path
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .map(|s| s.to_lowercase());
+    let extension = path.extension().and_then(|ext| ext.to_str()).map(|s| s.to_lowercase());
 
     if let Some(ext) = &extension {
         // Try our extension mapping first
@@ -251,12 +251,16 @@ pub fn detect_mime_type(path: impl AsRef<Path>, check_exists: bool) -> Result<St
 
     // No MIME type found
     if let Some(ext) = extension {
-        return Err(KreuzbergError::UnsupportedFormat(
-            format!("Unknown extension: .{}", ext),
-        ));
+        return Err(KreuzbergError::UnsupportedFormat(format!(
+            "Unknown extension: .{}",
+            ext
+        )));
     }
 
-    Err(KreuzbergError::Validation(format!("Could not determine MIME type from file path: {}", path.display())))
+    Err(KreuzbergError::Validation(format!(
+        "Could not determine MIME type from file path: {}",
+        path.display()
+    )))
 }
 
 /// Validate that a MIME type is supported.
@@ -306,7 +310,9 @@ pub fn detect_or_validate(path: Option<&Path>, mime_type: Option<&str>) -> Resul
         let detected = detect_mime_type(p, true)?;
         validate_mime_type(&detected)
     } else {
-        Err(KreuzbergError::Validation("Must provide either path or mime_type".to_string()))
+        Err(KreuzbergError::Validation(
+            "Must provide either path or mime_type".to_string(),
+        ))
     }
 }
 
@@ -413,10 +419,7 @@ mod tests {
     fn test_detect_mime_type_email() {
         let dir = tempdir().unwrap();
 
-        let test_cases = vec![
-            ("test.eml", EML_MIME_TYPE),
-            ("test.msg", MSG_MIME_TYPE),
-        ];
+        let test_cases = vec![("test.eml", EML_MIME_TYPE), ("test.msg", MSG_MIME_TYPE)];
 
         for (filename, expected_mime) in test_cases {
             let file_path = dir.path().join(filename);

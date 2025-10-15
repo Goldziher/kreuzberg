@@ -37,5 +37,5 @@ pub mod registry;
 
 // Re-export commonly used items
 pub use config::ExtractionConfig;
-pub use extractor::{extract_bytes, extract_file, batch_extract_bytes, batch_extract_file};
+pub use extractor::{batch_extract_bytes, batch_extract_file, extract_bytes, extract_file};
 pub use registry::ExtractorRegistry;

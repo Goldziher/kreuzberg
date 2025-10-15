@@ -20,9 +20,7 @@ use tokio::fs;
 ///
 /// Returns `KreuzbergError::Io` for I/O errors (these always bubble up).
 pub async fn read_file_async(path: impl AsRef<Path>) -> Result<Vec<u8>> {
-    fs::read(path.as_ref())
-        .await
-        .map_err(KreuzbergError::Io)
+    fs::read(path.as_ref()).await.map_err(KreuzbergError::Io)
 }
 
 /// Read a file synchronously.
@@ -39,8 +37,7 @@ pub async fn read_file_async(path: impl AsRef<Path>) -> Result<Vec<u8>> {
 ///
 /// Returns `KreuzbergError::Io` for I/O errors (these always bubble up).
 pub fn read_file_sync(path: impl AsRef<Path>) -> Result<Vec<u8>> {
-    std::fs::read(path.as_ref())
-        .map_err(KreuzbergError::Io)
+    std::fs::read(path.as_ref()).map_err(KreuzbergError::Io)
 }
 
 /// Check if a file exists.
@@ -67,7 +64,10 @@ pub fn file_exists(path: impl AsRef<Path>) -> bool {
 /// Returns `KreuzbergError::Validation` if file doesn't exist.
 pub fn validate_file_exists(path: impl AsRef<Path>) -> Result<()> {
     if !file_exists(&path) {
-        return Err(KreuzbergError::Validation(format!("File does not exist: {}", path.as_ref().display())));
+        return Err(KreuzbergError::Validation(format!(
+            "File does not exist: {}",
+            path.as_ref().display()
+        )));
     }
     Ok(())
 }
@@ -99,9 +99,10 @@ where
     let mut files = Vec::new();
 
     if !dir.is_dir() {
-        return Err(KreuzbergError::Validation(
-            format!("Path is not a directory: {}", dir.display())
-        ));
+        return Err(KreuzbergError::Validation(format!(
+            "Path is not a directory: {}",
+            dir.display()
+        )));
     }
 
     traverse_directory_impl(dir, recursive, &filter, &mut files)?;
@@ -117,8 +118,7 @@ fn traverse_directory_impl<F>(
 where
     F: Fn(&Path) -> bool,
 {
-    let entries = std::fs::read_dir(dir)
-        .map_err(KreuzbergError::Io)?;
+    let entries = std::fs::read_dir(dir).map_err(KreuzbergError::Io)?;
 
     for entry in entries {
         let entry = entry.map_err(KreuzbergError::Io)?;
@@ -164,12 +164,16 @@ pub fn find_files_by_extension(
     recursive: bool,
 ) -> Result<Vec<std::path::PathBuf>> {
     let ext = extension.to_lowercase();
-    traverse_directory(dir, recursive, Some(|path: &Path| {
-        path.extension()
-            .and_then(|e| e.to_str())
-            .map(|e| e.to_lowercase() == ext)
-            .unwrap_or(false)
-    }))
+    traverse_directory(
+        dir,
+        recursive,
+        Some(|path: &Path| {
+            path.extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_lowercase() == ext)
+                .unwrap_or(false)
+        }),
+    )
 }
 
 #[cfg(test)]
@@ -265,12 +269,17 @@ mod tests {
         File::create(dir.path().join("file3.txt")).unwrap();
 
         // Filter for .txt files only
-        let files = traverse_directory(dir.path(), false, Some(|path: &Path| {
-            path.extension()
-                .and_then(|e| e.to_str())
-                .map(|e| e == "txt")
-                .unwrap_or(false)
-        })).unwrap();
+        let files = traverse_directory(
+            dir.path(),
+            false,
+            Some(|path: &Path| {
+                path.extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e == "txt")
+                    .unwrap_or(false)
+            }),
+        )
+        .unwrap();
 
         assert_eq!(files.len(), 2);
         assert!(files.iter().all(|p| p.extension().unwrap() == "txt"));

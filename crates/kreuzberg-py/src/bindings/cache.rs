@@ -28,6 +28,24 @@ impl From<kreuzberg::cache::CacheStats> for CacheStatsDTO {
     }
 }
 
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct OCRCacheStats {
+    #[pyo3(get)]
+    pub total_files: usize,
+    #[pyo3(get)]
+    pub total_size_mb: f64,
+}
+
+impl From<kreuzberg::ocr::OcrCacheStats> for OCRCacheStats {
+    fn from(stats: kreuzberg::ocr::OcrCacheStats) -> Self {
+        Self {
+            total_files: stats.total_files,
+            total_size_mb: stats.total_size_mb,
+        }
+    }
+}
+
 #[pyclass(name = "GenericCache")]
 pub struct GenericCacheDTO {
     inner: kreuzberg::cache::GenericCache,

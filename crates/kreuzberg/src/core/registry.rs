@@ -8,9 +8,9 @@
 //! - Thread-safe registration and lookup
 
 use crate::{KreuzbergError, Result};
+use once_cell::sync::Lazy;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};
-use once_cell::sync::Lazy;
 
 /// Default priority for extractors when not specified.
 pub const DEFAULT_PRIORITY: i32 = 50;
@@ -18,9 +18,8 @@ pub const DEFAULT_PRIORITY: i32 = 50;
 /// Global extractor registry singleton.
 ///
 /// This is initialized lazily and provides thread-safe access to the extractor registry.
-pub static REGISTRY: Lazy<Arc<RwLock<ExtractorRegistry>>> = Lazy::new(|| {
-    Arc::new(RwLock::new(ExtractorRegistry::new()))
-});
+pub static REGISTRY: Lazy<Arc<RwLock<ExtractorRegistry>>> =
+    Lazy::new(|| Arc::new(RwLock::new(ExtractorRegistry::new())));
 
 /// Registry for document extractors.
 ///

@@ -1879,6 +1879,7 @@ dependencies = [
 name = "kreuzberg-py"
 version = "4.0.0"
 dependencies = [
+ "async-trait",
  "kreuzberg",
  "numpy",
  "pyo3",
