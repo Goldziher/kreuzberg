@@ -40,6 +40,7 @@ pub mod extraction;
 pub mod image;
 pub mod ocr;
 pub mod pdf;
+pub mod plugins;
 pub mod text;
 pub mod types;
 
@@ -48,40 +49,30 @@ pub use error::{KreuzbergError, Result};
 pub use types::*;
 
 // Main extraction API - async versions
-pub use core::extractor::{
-    extract_file,
-    extract_bytes,
-    batch_extract_file,
-    batch_extract_bytes,
-};
+pub use core::extractor::{batch_extract_bytes, batch_extract_file, extract_bytes, extract_file};
 
 // Main extraction API - sync versions
-pub use core::extractor::{
-    extract_file_sync,
-    extract_bytes_sync,
-    batch_extract_file_sync,
-    batch_extract_bytes_sync,
-};
+pub use core::extractor::{batch_extract_bytes_sync, batch_extract_file_sync, extract_bytes_sync, extract_file_sync};
 
 // Configuration
-pub use core::config::{ExtractionConfig, OcrConfig, ChunkingConfig};
+pub use core::config::{ChunkingConfig, ExtractionConfig, OcrConfig};
 
 // MIME detection utilities
 pub use core::mime::{
-    detect_mime_type,
-    validate_mime_type,
-    detect_or_validate,
+    DOCX_MIME_TYPE,
+    EXCEL_MIME_TYPE,
+    HTML_MIME_TYPE,
+    JSON_MIME_TYPE,
+    MARKDOWN_MIME_TYPE,
     // MIME type constants
     PDF_MIME_TYPE,
-    HTML_MIME_TYPE,
-    MARKDOWN_MIME_TYPE,
     PLAIN_TEXT_MIME_TYPE,
-    JSON_MIME_TYPE,
-    XML_MIME_TYPE,
-    EXCEL_MIME_TYPE,
     POWER_POINT_MIME_TYPE,
-    DOCX_MIME_TYPE,
+    XML_MIME_TYPE,
+    detect_mime_type,
+    detect_or_validate,
+    validate_mime_type,
 };
 
 // Registry for advanced usage
-pub use core::registry::{ExtractorRegistry, get_registry, DEFAULT_PRIORITY};
+pub use core::registry::{DEFAULT_PRIORITY, ExtractorRegistry, get_registry};
