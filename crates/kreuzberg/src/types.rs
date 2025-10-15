@@ -1,6 +1,25 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// General extraction result used by the core extraction API.
+///
+/// This is the main result type returned by all extraction functions.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractionResult {
+    pub content: String,
+    pub mime_type: String,
+    pub metadata: HashMap<String, serde_json::Value>,
+    pub tables: Vec<Table>,
+}
+
+/// Extracted table structure.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Table {
+    pub cells: Vec<Vec<String>>,
+    pub markdown: String,
+    pub page_number: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExcelWorkbook {
     pub sheets: Vec<ExcelSheet>,
