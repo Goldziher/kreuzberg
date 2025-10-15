@@ -2,10 +2,10 @@
 //!
 //! This module defines the trait for implementing custom validation logic.
 
+use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::Plugin;
 use crate::types::ExtractionResult;
-use crate::{KreuzbergError, Result};
 use async_trait::async_trait;
 
 /// Trait for validator plugins.
@@ -276,6 +276,7 @@ pub trait Validator: Plugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::KreuzbergError;
     use std::collections::HashMap;
 
     struct MockValidator {
@@ -340,8 +341,7 @@ mod tests {
         let config = ExtractionConfig::default();
         let validation_result = validator.validate(&result, &config).await;
 
-        assert!(validation_result.is_err());
-        assert!(matches!(validation_result.unwrap_err(), KreuzbergError::Validation(_)));
+        assert!(matches!(validation_result, Err(KreuzbergError::Validation(_))));
     }
 
     #[test]

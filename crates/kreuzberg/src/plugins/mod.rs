@@ -60,11 +60,12 @@
 mod extractor;
 mod ocr;
 mod processor;
+pub mod registry;
 mod traits;
 mod validator;
 
 pub use extractor::DocumentExtractor;
-pub use ocr::OcrBackend;
+pub use ocr::{OcrBackend, OcrBackendType};
 pub use processor::{PostProcessor, ProcessingStage};
 pub use traits::Plugin;
 pub use validator::Validator;

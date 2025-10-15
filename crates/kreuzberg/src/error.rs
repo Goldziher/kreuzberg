@@ -28,6 +28,9 @@ pub enum KreuzbergError {
     #[error("Missing dependency: {0}")]
     MissingDependency(String),
 
+    #[error("Plugin error in '{plugin_name}': {message}")]
+    Plugin { message: String, plugin_name: String },
+
     #[error("Unsupported format: {0}")]
     UnsupportedFormat(String),
 
