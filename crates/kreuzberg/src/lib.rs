@@ -37,6 +37,7 @@ pub mod chunking;
 pub mod core;
 pub mod error;
 pub mod extraction;
+pub mod extractors;
 pub mod image;
 pub mod ocr;
 pub mod pdf;
