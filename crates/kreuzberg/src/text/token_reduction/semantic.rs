@@ -353,4 +353,273 @@ mod tests {
         assert!(important_token.importance_score > the_token.importance_score);
         assert!(analysis_token.importance_score > the_token.importance_score);
     }
+
+    #[test]
+    fn test_semantic_filtering_empty_text() {
+        let analyzer = SemanticAnalyzer::new("en");
+        let result = analyzer.apply_semantic_filtering("", 0.5);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_semantic_filtering_high_threshold() {
+        let analyzer = SemanticAnalyzer::new("en");
+        let input = "The quick brown fox";
+        let result = analyzer.apply_semantic_filtering(input, 0.9);
+        // High threshold should filter most words
+        assert!(result.len() <= input.len());
+    }
+
+    #[test]
+    fn test_hypernym_compression_without_target() {
+        let analyzer = SemanticAnalyzer::new("en");
+        let input = "The car drove past the dog";
+        let result = analyzer.apply_hypernym_compression(input, None);
+        // Should replace low-importance words with hypernyms
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_technical_term_detection() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        assert!(analyzer.is_technical_term("implementation"));
+        assert!(analyzer.is_technical_term("optimization"));
+        assert!(analyzer.is_technical_term("processing"));
+        assert!(analyzer.is_technical_term("HTTP_SERVER"));
+        assert!(!analyzer.is_technical_term("cat"));
+        assert!(!analyzer.is_technical_term("dog"));
+    }
+
+    #[test]
+    fn test_clean_word() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        assert_eq!(analyzer.clean_word("Hello!"), "hello");
+        assert_eq!(analyzer.clean_word("test123"), "test123");
+        assert_eq!(analyzer.clean_word("word,"), "word");
+        assert_eq!(analyzer.clean_word("(test)"), "test");
+    }
+
+    #[test]
+    fn test_calculate_base_importance() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        // High importance words
+        let result_score = analyzer.calculate_base_importance("result");
+        let conclusion_score = analyzer.calculate_base_importance("conclusion");
+
+        assert!(result_score > 0.5);
+        assert!(conclusion_score > 0.5);
+
+        // Medium importance
+        let process_score = analyzer.calculate_base_importance("process");
+        assert!(process_score >= 0.4);
+
+        // Regular words
+        let regular_score = analyzer.calculate_base_importance("cat");
+        assert!(regular_score < result_score);
+    }
+
+    #[test]
+    fn test_calculate_base_importance_uppercase() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        let uppercase_score = analyzer.calculate_base_importance("Test");
+        let lowercase_score = analyzer.calculate_base_importance("test");
+
+        assert!(uppercase_score > lowercase_score);
+    }
+
+    #[test]
+    fn test_calculate_base_importance_with_numbers() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        let with_number = analyzer.calculate_base_importance("test123");
+        let without_number = analyzer.calculate_base_importance("test");
+
+        assert!(with_number > without_number);
+    }
+
+    #[test]
+    fn test_calculate_base_importance_length_bonus() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        let long_word = analyzer.calculate_base_importance("verylongword");
+        let short_word = analyzer.calculate_base_importance("cat");
+
+        assert!(long_word > short_word);
+    }
+
+    #[test]
+    fn test_get_hypernym() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        assert_eq!(analyzer.get_hypernym("car"), Some("vehicle".to_string()));
+        assert_eq!(analyzer.get_hypernym("dog"), Some("animal".to_string()));
+        assert_eq!(analyzer.get_hypernym("apple"), Some("fruit".to_string()));
+        assert_eq!(analyzer.get_hypernym("unknown"), None);
+    }
+
+    #[test]
+    fn test_get_hypernym_case_insensitive() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        assert_eq!(analyzer.get_hypernym("CAR"), Some("vehicle".to_string()));
+        assert_eq!(analyzer.get_hypernym("Dog"), Some("animal".to_string()));
+    }
+
+    #[test]
+    fn test_tokenize_and_score_positions() {
+        let analyzer = SemanticAnalyzer::new("en");
+        let tokens = analyzer.tokenize_and_score("first middle last");
+
+        assert_eq!(tokens[0].position, 0);
+        assert_eq!(tokens[1].position, 1);
+        assert_eq!(tokens[2].position, 2);
+    }
+
+    #[test]
+    fn test_context_boost_for_edge_positions() {
+        let analyzer = SemanticAnalyzer::new("en");
+        let tokens = analyzer.tokenize_and_score("first middle last");
+
+        // First and last positions should get boost
+        assert!(tokens[0].importance_score > 0.0);
+        assert!(tokens[2].importance_score > 0.0);
+    }
+
+    #[test]
+    fn test_frequency_score() {
+        let analyzer = SemanticAnalyzer::new("en");
+        let tokens = analyzer.tokenize_and_score("test test test other");
+
+        let test_token = tokens.iter().find(|t| t.token == "test").unwrap();
+        let other_token = tokens.iter().find(|t| t.token == "other").unwrap();
+
+        // "test" appears 3 times, should have higher frequency score
+        assert!(test_token.frequency_score > other_token.frequency_score);
+    }
+
+    #[test]
+    fn test_scored_token_ordering() {
+        let token1 = ScoredToken {
+            token: "a".to_string(),
+            position: 0,
+            importance_score: 0.5,
+            context_boost: 0.0,
+            frequency_score: 0.0,
+        };
+
+        let token2 = ScoredToken {
+            token: "b".to_string(),
+            position: 1,
+            importance_score: 0.7,
+            context_boost: 0.0,
+            frequency_score: 0.0,
+        };
+
+        assert!(token2 > token1);
+        assert_eq!(token1, token1.clone());
+    }
+
+    #[test]
+    fn test_reconstruct_text() {
+        let analyzer = SemanticAnalyzer::new("en");
+        let tokens = vec![
+            ScoredToken {
+                token: "Hello".to_string(),
+                position: 0,
+                importance_score: 0.5,
+                context_boost: 0.0,
+                frequency_score: 0.0,
+            },
+            ScoredToken {
+                token: "world".to_string(),
+                position: 1,
+                importance_score: 0.5,
+                context_boost: 0.0,
+                frequency_score: 0.0,
+            },
+        ];
+
+        let result = analyzer.reconstruct_text(tokens);
+        assert_eq!(result, "Hello world");
+    }
+
+    #[test]
+    fn test_compress_with_hypernyms_respects_target() {
+        let analyzer = SemanticAnalyzer::new("en");
+        let tokens = vec![
+            ScoredToken {
+                token: "car".to_string(),
+                position: 0,
+                importance_score: 0.3,
+                context_boost: 0.0,
+                frequency_score: 0.0,
+            },
+            ScoredToken {
+                token: "dog".to_string(),
+                position: 1,
+                importance_score: 0.3,
+                context_boost: 0.0,
+                frequency_score: 0.0,
+            },
+            ScoredToken {
+                token: "test".to_string(),
+                position: 2,
+                importance_score: 0.8,
+                context_boost: 0.0,
+                frequency_score: 0.0,
+            },
+        ];
+
+        let result = analyzer.compress_with_hypernyms(tokens, Some(0.5));
+        assert!(result.len() <= 2);
+    }
+
+    #[test]
+    fn test_initialize_importance_weights() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        assert!(analyzer.importance_weights.contains_key("result"));
+        assert!(analyzer.importance_weights.contains_key("conclusion"));
+        assert!(analyzer.importance_weights.contains_key("important"));
+        assert!(analyzer.importance_weights.contains_key("process"));
+    }
+
+    #[test]
+    fn test_initialize_hypernyms() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        assert!(analyzer.hypernyms.contains_key("car"));
+        assert!(analyzer.hypernyms.contains_key("dog"));
+        assert!(analyzer.hypernyms.contains_key("apple"));
+    }
+
+    #[test]
+    fn test_initialize_semantic_clusters() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        assert!(analyzer.semantic_clusters.contains_key("computing"));
+        assert!(analyzer.semantic_clusters.contains_key("analysis"));
+        assert!(analyzer.semantic_clusters.contains_key("performance"));
+    }
+
+    #[test]
+    fn test_contextual_weight_technical_terms() {
+        let analyzer = SemanticAnalyzer::new("en");
+
+        let weight = analyzer.calculate_contextual_weight("implementation", "optimization");
+        assert!(weight > 0.0);
+    }
+
+    #[test]
+    fn test_hypernym_compression_zero_target() {
+        let analyzer = SemanticAnalyzer::new("en");
+        let input = "The car drove fast";
+        let result = analyzer.apply_hypernym_compression(input, Some(0.0));
+        // Should return at least 1 word
+        assert!(!result.is_empty());
+    }
 }
