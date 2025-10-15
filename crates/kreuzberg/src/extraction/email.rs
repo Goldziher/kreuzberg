@@ -636,4 +636,214 @@ mod tests {
 
         assert_eq!(metadata.get("attachments"), Some(&"file1.pdf, image.png".to_string()));
     }
+
+    #[test]
+    fn test_clean_html_content_empty() {
+        let cleaned = clean_html_content("");
+        assert_eq!(cleaned, "");
+    }
+
+    #[test]
+    fn test_clean_html_content_only_tags() {
+        let html = "<div><span><p></p></span></div>";
+        let cleaned = clean_html_content(html);
+        assert_eq!(cleaned, "");
+    }
+
+    #[test]
+    fn test_clean_html_content_nested_tags() {
+        let html = "<div><p>Outer <span>Inner <b>Bold</b></span> Text</p></div>";
+        let cleaned = clean_html_content(html);
+        assert_eq!(cleaned, "Outer Inner Bold Text");
+    }
+
+    #[test]
+    fn test_clean_html_content_multiple_scripts() {
+        let html = r#"
+            <script>function a() {}</script>
+            <p>Content</p>
+            <script>function b() {}</script>
+        "#;
+        let cleaned = clean_html_content(html);
+        assert!(!cleaned.contains("function"));
+        assert!(cleaned.contains("Content"));
+    }
+
+    #[test]
+    fn test_is_image_mime_type_variants() {
+        assert!(is_image_mime_type("image/gif"));
+        assert!(is_image_mime_type("image/webp"));
+        assert!(is_image_mime_type("image/svg+xml"));
+        assert!(!is_image_mime_type("video/mp4"));
+        assert!(!is_image_mime_type("audio/mp3"));
+    }
+
+    #[test]
+    fn test_parse_content_type_with_parameters() {
+        assert_eq!(parse_content_type("multipart/mixed; boundary=xyz"), "multipart/mixed");
+        assert_eq!(parse_content_type("text/html; charset=UTF-8"), "text/html");
+    }
+
+    #[test]
+    fn test_parse_content_type_whitespace() {
+        assert_eq!(parse_content_type("  text/plain  "), "text/plain");
+        assert_eq!(parse_content_type(" text/plain ; charset=utf-8 "), "text/plain");
+    }
+
+    #[test]
+    fn test_parse_content_type_case_insensitive() {
+        assert_eq!(parse_content_type("TEXT/PLAIN"), "text/plain");
+        assert_eq!(parse_content_type("Image/JPEG"), "image/jpeg");
+    }
+
+    #[test]
+    fn test_extract_email_content_mime_variants() {
+        let eml_content = b"From: test@example.com\r\n\r\nBody";
+
+        // Test both message/rfc822 and text/plain (both should work for EML)
+        assert!(extract_email_content(eml_content, "message/rfc822").is_ok());
+        assert!(extract_email_content(eml_content, "text/plain").is_ok());
+    }
+
+    #[test]
+    fn test_simple_eml_with_multiple_recipients() {
+        let eml_content = b"From: sender@example.com\r\nTo: r1@example.com, r2@example.com\r\nCc: cc@example.com\r\nBcc: bcc@example.com\r\nSubject: Multi-recipient\r\n\r\nBody";
+
+        let result = parse_eml_content(eml_content).unwrap();
+        assert_eq!(result.to_emails.len(), 2);
+        assert!(result.to_emails.contains(&"r1@example.com".to_string()));
+        assert!(result.to_emails.contains(&"r2@example.com".to_string()));
+    }
+
+    #[test]
+    fn test_simple_eml_with_html_body() {
+        let eml_content = b"From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: HTML Email\r\nContent-Type: text/html\r\n\r\n<html><body><p>HTML Body</p></body></html>";
+
+        let result = parse_eml_content(eml_content).unwrap();
+        // mail-parser may extract the HTML content
+        assert!(!result.cleaned_text.is_empty());
+    }
+
+    #[test]
+    fn test_build_email_text_output_with_all_fields() {
+        let result = EmailExtractionResult {
+            subject: Some("Complete Email".to_string()),
+            from_email: Some("sender@example.com".to_string()),
+            to_emails: vec!["recipient@example.com".to_string()],
+            cc_emails: vec!["cc@example.com".to_string()],
+            bcc_emails: vec!["bcc@example.com".to_string()],
+            date: Some("2024-01-01T12:00:00Z".to_string()),
+            message_id: Some("<msg123@example.com>".to_string()),
+            plain_text: Some("Plain text body".to_string()),
+            html_content: Some("<html><body>HTML body</body></html>".to_string()),
+            cleaned_text: "Cleaned body text".to_string(),
+            attachments: vec![],
+            metadata: HashMap::new(),
+        };
+
+        let output = build_email_text_output(&result);
+        assert!(output.contains("Subject: Complete Email"));
+        assert!(output.contains("From: sender@example.com"));
+        assert!(output.contains("To: recipient@example.com"));
+        assert!(output.contains("CC: cc@example.com"));
+        assert!(output.contains("BCC: bcc@example.com"));
+        assert!(output.contains("Date: 2024-01-01T12:00:00Z"));
+        assert!(output.contains("Cleaned body text"));
+    }
+
+    #[test]
+    fn test_build_email_text_output_empty_attachments() {
+        let result = EmailExtractionResult {
+            subject: Some("Test".to_string()),
+            from_email: Some("sender@example.com".to_string()),
+            to_emails: vec!["recipient@example.com".to_string()],
+            cc_emails: vec![],
+            bcc_emails: vec![],
+            date: None,
+            message_id: None,
+            plain_text: None,
+            html_content: None,
+            cleaned_text: "Body".to_string(),
+            attachments: vec![EmailAttachment {
+                name: None,
+                filename: None,
+                mime_type: Some("application/octet-stream".to_string()),
+                size: Some(100),
+                is_image: false,
+                data: None,
+            }],
+            metadata: HashMap::new(),
+        };
+
+        let output = build_email_text_output(&result);
+        // Should not crash, but might not include attachment info if no names
+        assert!(output.contains("Body"));
+    }
+
+    #[test]
+    fn test_build_metadata_empty_fields() {
+        let metadata = build_metadata(&None, &None, &[], &[], &[], &None, &None, &[]);
+        assert!(metadata.is_empty());
+    }
+
+    #[test]
+    fn test_build_metadata_partial_fields() {
+        let subject = Some("Test".to_string());
+        let date = Some("2024-01-01".to_string());
+
+        let metadata = build_metadata(&subject, &None, &[], &[], &[], &date, &None, &[]);
+
+        assert_eq!(metadata.get("subject"), Some(&"Test".to_string()));
+        assert_eq!(metadata.get("date"), Some(&"2024-01-01".to_string()));
+        assert_eq!(metadata.len(), 2);
+    }
+
+    #[test]
+    fn test_clean_html_content_case_insensitive_tags() {
+        let html = "<SCRIPT>code</SCRIPT><STYLE>css</STYLE><P>Text</P>";
+        let cleaned = clean_html_content(html);
+        assert!(!cleaned.contains("code"));
+        assert!(!cleaned.contains("css"));
+        assert!(cleaned.contains("Text"));
+    }
+
+    #[test]
+    fn test_simple_eml_with_date() {
+        let eml_content = b"From: sender@example.com\r\nTo: recipient@example.com\r\nDate: Mon, 1 Jan 2024 12:00:00 +0000\r\nSubject: Test\r\n\r\nBody";
+
+        let result = parse_eml_content(eml_content).unwrap();
+        assert!(result.date.is_some());
+    }
+
+    #[test]
+    fn test_simple_eml_with_message_id() {
+        let eml_content = b"From: sender@example.com\r\nTo: recipient@example.com\r\nMessage-ID: <unique@example.com>\r\nSubject: Test\r\n\r\nBody";
+
+        let result = parse_eml_content(eml_content).unwrap();
+        assert!(result.message_id.is_some());
+    }
+
+    #[test]
+    fn test_simple_eml_minimal() {
+        let eml_content = b"From: sender@example.com\r\n\r\nMinimal body";
+
+        let result = parse_eml_content(eml_content).unwrap();
+        assert_eq!(result.from_email, Some("sender@example.com".to_string()));
+        assert_eq!(result.cleaned_text, "Minimal body");
+    }
+
+    #[test]
+    fn test_regex_initialization() {
+        // Test that regex patterns are initialized properly
+        let _ = html_tag_regex();
+        let _ = script_regex();
+        let _ = style_regex();
+        let _ = whitespace_regex();
+
+        // Call again to test OnceLock reuse
+        let _ = html_tag_regex();
+        let _ = script_regex();
+        let _ = style_regex();
+        let _ = whitespace_regex();
+    }
 }
