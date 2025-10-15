@@ -13,17 +13,19 @@ pub mod email;
 pub mod excel;
 pub mod html;
 pub mod image;
+pub mod pandoc;
 pub mod pdf;
 pub mod pptx;
 pub mod structured;
 pub mod text;
 pub mod xml;
 
-pub use archive::{TarExtractor, ZipExtractor};
+pub use archive::{SevenZExtractor, TarExtractor, ZipExtractor};
 pub use email::EmailExtractor;
 pub use excel::ExcelExtractor;
 pub use html::HtmlExtractor;
 pub use image::ImageExtractor;
+pub use pandoc::PandocExtractor;
 pub use pdf::PdfExtractor;
 pub use pptx::PptxExtractor;
 pub use structured::StructuredExtractor;
@@ -103,6 +105,10 @@ pub fn register_default_extractors() -> Result<()> {
     // Register Archive extractors
     registry.register(Arc::new(ZipExtractor::new()))?;
     registry.register(Arc::new(TarExtractor::new()))?;
+    registry.register(Arc::new(SevenZExtractor::new()))?;
+
+    // Register Pandoc extractor (for DOCX, ODT, EPUB, LaTeX, RST, etc.)
+    registry.register(Arc::new(PandocExtractor::new()))?;
 
     Ok(())
 }
@@ -127,8 +133,8 @@ mod tests {
         let reg = registry.read().unwrap();
         let extractor_names = reg.list();
 
-        // Should have 12 extractors: PlainText, Markdown, XML, PDF, Excel, PPTX, Email, HTML, Structured, Image, ZIP, TAR
-        assert_eq!(extractor_names.len(), 12, "Expected 12 extractors to be registered");
+        // Should have 14 extractors: PlainText, Markdown, XML, PDF, Excel, PPTX, Email, HTML, Structured, Image, ZIP, TAR, 7Z, Pandoc
+        assert_eq!(extractor_names.len(), 14, "Expected 14 extractors to be registered");
 
         // Verify each extractor by name
         assert!(extractor_names.contains(&"plain-text-extractor".to_string()));
@@ -143,6 +149,8 @@ mod tests {
         assert!(extractor_names.contains(&"image-extractor".to_string()));
         assert!(extractor_names.contains(&"zip-extractor".to_string()));
         assert!(extractor_names.contains(&"tar-extractor".to_string()));
+        assert!(extractor_names.contains(&"7z-extractor".to_string()));
+        assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
     }
 
     #[test]

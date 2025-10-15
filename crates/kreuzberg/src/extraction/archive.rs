@@ -3,6 +3,7 @@
 //! This module provides functions for extracting file lists and contents from archives.
 
 use crate::error::{KreuzbergError, Result};
+use sevenz_rust::SevenZReader;
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
 use tar::Archive as TarArchive;
@@ -173,6 +174,70 @@ pub fn extract_tar_text_content(bytes: &[u8]) -> Result<HashMap<String, String>>
             }
         }
     }
+
+    Ok(contents)
+}
+
+/// Extract metadata from a 7z archive.
+pub fn extract_7z_metadata(bytes: &[u8]) -> Result<ArchiveMetadata> {
+    let cursor = Cursor::new(bytes);
+    let archive = SevenZReader::new(cursor, bytes.len() as u64, "".into())
+        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read 7z archive: {}", e)))?;
+
+    let mut file_list = Vec::new();
+    let mut total_size = 0u64;
+
+    for entry in &archive.archive().files {
+        let path = entry.name().to_string();
+        let size = entry.size();
+        let is_dir = entry.is_directory();
+
+        if !is_dir {
+            total_size += size;
+        }
+
+        file_list.push(ArchiveEntry { path, size, is_dir });
+    }
+
+    let file_count = file_list.len();
+
+    Ok(ArchiveMetadata {
+        format: "7Z".to_string(),
+        file_list,
+        file_count,
+        total_size,
+    })
+}
+
+/// Extract text content from files within a 7z archive.
+///
+/// Only extracts files with common text extensions: .txt, .md, .json, .xml, .html, .csv, .log
+pub fn extract_7z_text_content(bytes: &[u8]) -> Result<HashMap<String, String>> {
+    let cursor = Cursor::new(bytes);
+    let mut archive = SevenZReader::new(cursor, bytes.len() as u64, "".into())
+        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read 7z archive: {}", e)))?;
+
+    let mut contents = HashMap::new();
+    let text_extensions = [
+        ".txt", ".md", ".json", ".xml", ".html", ".csv", ".log", ".yaml", ".yml", ".toml",
+    ];
+
+    archive
+        .for_each_entries(|entry, reader| {
+            let path = entry.name().to_string();
+
+            // Only extract text files
+            if !entry.is_directory() && text_extensions.iter().any(|ext| path.to_lowercase().ends_with(ext)) {
+                let mut content = Vec::new();
+                if let Ok(_) = reader.read_to_end(&mut content)
+                    && let Ok(text) = String::from_utf8(content)
+                {
+                    contents.insert(path, text);
+                }
+            }
+            Ok(true)
+        })
+        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read 7z entries: {}", e)))?;
 
     Ok(contents)
 }

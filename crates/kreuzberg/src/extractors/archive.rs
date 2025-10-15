@@ -1,9 +1,10 @@
-//! Archive extractors for ZIP and TAR formats.
+//! Archive extractors for ZIP, TAR, and 7z formats.
 
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extraction::archive::{
-    extract_tar_metadata, extract_tar_text_content, extract_zip_metadata, extract_zip_text_content,
+    extract_7z_metadata, extract_7z_text_content, extract_tar_metadata, extract_tar_text_content, extract_zip_metadata,
+    extract_zip_text_content,
 };
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::ExtractionResult;
@@ -224,6 +225,114 @@ impl DocumentExtractor for TarExtractor {
             "application/x-gtar",
             "application/x-ustar",
         ]
+    }
+
+    fn priority(&self) -> i32 {
+        50
+    }
+}
+
+/// 7z archive extractor.
+///
+/// Extracts file lists and text content from 7z archives.
+pub struct SevenZExtractor;
+
+impl SevenZExtractor {
+    /// Create a new 7z extractor.
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for SevenZExtractor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Plugin for SevenZExtractor {
+    fn name(&self) -> &str {
+        "7z-extractor"
+    }
+
+    fn version(&self) -> &str {
+        "1.0.0"
+    }
+
+    fn initialize(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    fn shutdown(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    fn description(&self) -> &str {
+        "Extracts file lists and text content from 7z archives"
+    }
+
+    fn author(&self) -> &str {
+        "Kreuzberg Team"
+    }
+}
+
+#[async_trait]
+impl DocumentExtractor for SevenZExtractor {
+    async fn extract_bytes(
+        &self,
+        content: &[u8],
+        mime_type: &str,
+        _config: &ExtractionConfig,
+    ) -> Result<ExtractionResult> {
+        let metadata = extract_7z_metadata(content)?;
+        let text_contents = extract_7z_text_content(content)?;
+
+        let mut result_metadata = HashMap::new();
+        result_metadata.insert("format".to_string(), serde_json::json!("7Z"));
+        result_metadata.insert("file_count".to_string(), serde_json::json!(metadata.file_count));
+        result_metadata.insert("total_size".to_string(), serde_json::json!(metadata.total_size));
+
+        // Add file list
+        let file_list: Vec<serde_json::Value> = metadata
+            .file_list
+            .iter()
+            .map(|entry| {
+                serde_json::json!({
+                    "path": entry.path,
+                    "size": entry.size,
+                    "is_dir": entry.is_dir,
+                })
+            })
+            .collect();
+        result_metadata.insert("files".to_string(), serde_json::json!(file_list));
+
+        // Build text output
+        let mut output = format!(
+            "7Z Archive ({} files, {} bytes)\n\n",
+            metadata.file_count, metadata.total_size
+        );
+        output.push_str("Files:\n");
+        for entry in &metadata.file_list {
+            output.push_str(&format!("- {} ({} bytes)\n", entry.path, entry.size));
+        }
+
+        if !text_contents.is_empty() {
+            output.push_str("\n\nText File Contents:\n\n");
+            for (path, content) in text_contents {
+                output.push_str(&format!("=== {} ===\n{}\n\n", path, content));
+            }
+        }
+
+        Ok(ExtractionResult {
+            content: output,
+            mime_type: mime_type.to_string(),
+            metadata: result_metadata,
+            tables: vec![],
+        })
+    }
+
+    fn supported_mime_types(&self) -> &[&str] {
+        &["application/x-7z-compressed"]
     }
 
     fn priority(&self) -> i32 {

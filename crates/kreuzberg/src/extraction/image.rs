@@ -3,7 +3,9 @@
 //! This module provides functions for extracting metadata and EXIF data from images.
 
 use crate::error::{KreuzbergError, Result};
+use exif::{In, Reader, Tag};
 use image::ImageReader;
+use std::collections::HashMap;
 use std::io::Cursor;
 
 /// Image metadata extracted from an image file.
@@ -15,11 +17,13 @@ pub struct ImageMetadata {
     pub height: u32,
     /// Image format (e.g., "PNG", "JPEG")
     pub format: String,
+    /// EXIF data if available
+    pub exif_data: HashMap<String, String>,
 }
 
 /// Extract metadata from image bytes.
 ///
-/// Extracts dimensions and format from the image.
+/// Extracts dimensions, format, and EXIF data from the image.
 pub fn extract_image_metadata(bytes: &[u8]) -> Result<ImageMetadata> {
     // Load image to get dimensions and format
     let reader = ImageReader::new(Cursor::new(bytes))
@@ -38,11 +42,60 @@ pub fn extract_image_metadata(bytes: &[u8]) -> Result<ImageMetadata> {
     let height = image.height();
     let format_str = format!("{:?}", format);
 
+    // Extract EXIF data
+    let exif_data = extract_exif_data(bytes);
+
     Ok(ImageMetadata {
         width,
         height,
         format: format_str,
+        exif_data,
     })
+}
+
+/// Extract EXIF data from image bytes.
+///
+/// Returns a HashMap of EXIF tags and their values.
+/// If EXIF data is not available or cannot be parsed, returns an empty HashMap.
+fn extract_exif_data(bytes: &[u8]) -> HashMap<String, String> {
+    let mut exif_map = HashMap::new();
+
+    // Try to parse EXIF data
+    let exif_reader = match Reader::new().read_from_container(&mut Cursor::new(bytes)) {
+        Ok(reader) => reader,
+        Err(_) => return exif_map, // No EXIF data or parsing failed
+    };
+
+    // Extract common EXIF fields
+    let common_tags = [
+        (Tag::Make, "Make"),
+        (Tag::Model, "Model"),
+        (Tag::DateTime, "DateTime"),
+        (Tag::DateTimeOriginal, "DateTimeOriginal"),
+        (Tag::DateTimeDigitized, "DateTimeDigitized"),
+        (Tag::Software, "Software"),
+        (Tag::Orientation, "Orientation"),
+        (Tag::XResolution, "XResolution"),
+        (Tag::YResolution, "YResolution"),
+        (Tag::ResolutionUnit, "ResolutionUnit"),
+        (Tag::ExposureTime, "ExposureTime"),
+        (Tag::FNumber, "FNumber"),
+        (Tag::PhotographicSensitivity, "ISO"),
+        (Tag::FocalLength, "FocalLength"),
+        (Tag::Flash, "Flash"),
+        (Tag::WhiteBalance, "WhiteBalance"),
+        (Tag::GPSLatitude, "GPSLatitude"),
+        (Tag::GPSLongitude, "GPSLongitude"),
+        (Tag::GPSAltitude, "GPSAltitude"),
+    ];
+
+    for (tag, field_name) in common_tags {
+        if let Some(field) = exif_reader.get_field(tag, In::PRIMARY) {
+            exif_map.insert(field_name.to_string(), field.display_value().to_string());
+        }
+    }
+
+    exif_map
 }
 
 #[cfg(test)]

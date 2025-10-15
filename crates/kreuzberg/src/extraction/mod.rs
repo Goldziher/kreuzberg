@@ -12,8 +12,8 @@ pub mod text;
 pub mod xml;
 
 pub use archive::{
-    ArchiveEntry, ArchiveMetadata, extract_tar_metadata, extract_tar_text_content, extract_zip_metadata,
-    extract_zip_text_content,
+    ArchiveEntry, ArchiveMetadata, extract_7z_metadata, extract_7z_text_content, extract_tar_metadata,
+    extract_tar_text_content, extract_zip_metadata, extract_zip_text_content,
 };
 pub use email::{build_email_text_output, extract_email_content, parse_eml_content, parse_msg_content};
 pub use excel::{excel_to_markdown, read_excel_bytes, read_excel_file};

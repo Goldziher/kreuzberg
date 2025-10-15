@@ -27,6 +27,7 @@ hex = "0.4.3"
 html-escape = "0.2.13"
 html-to-markdown-rs = { path = "../../../html-to-markdown/crates/html-to-markdown", features = ["inline-images"] }
 image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"] }
+kamadak-exif = "0.6.1"
 lazy_static = "1.5.0"
 libc = "0.2"
 lopdf = "0.38.0"
@@ -45,6 +46,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 serde_yaml = "0.9"
 saphyr = "0.0.6"
+sevenz-rust = "0.6.1"
 tar = "0.4.44"
 toml = "0.9.8"
 mime_guess = "2.0"

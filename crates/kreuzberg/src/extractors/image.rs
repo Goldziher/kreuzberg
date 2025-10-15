@@ -11,7 +11,7 @@ use std::collections::HashMap;
 /// Image extractor for various image formats.
 ///
 /// Supports: PNG, JPEG, WebP, BMP, TIFF, GIF.
-/// Extracts dimensions and format metadata.
+/// Extracts dimensions, format, and EXIF metadata.
 pub struct ImageExtractor;
 
 impl ImageExtractor {
@@ -45,7 +45,7 @@ impl Plugin for ImageExtractor {
     }
 
     fn description(&self) -> &str {
-        "Extracts dimensions and format from images (PNG, JPEG, WebP, BMP, TIFF, GIF)"
+        "Extracts dimensions, format, and EXIF data from images (PNG, JPEG, WebP, BMP, TIFF, GIF)"
     }
 
     fn author(&self) -> &str {
@@ -67,6 +67,11 @@ impl DocumentExtractor for ImageExtractor {
         metadata.insert("width".to_string(), serde_json::json!(image_metadata.width));
         metadata.insert("height".to_string(), serde_json::json!(image_metadata.height));
         metadata.insert("format".to_string(), serde_json::json!(image_metadata.format));
+
+        // Add EXIF data if present
+        if !image_metadata.exif_data.is_empty() {
+            metadata.insert("exif".to_string(), serde_json::json!(image_metadata.exif_data));
+        }
 
         // Generate text description
         let content_text = format!(
