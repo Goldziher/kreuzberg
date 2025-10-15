@@ -1,29 +1,36 @@
 agents:
-  - description: Expert Python developer for implementing features and fixing bugs
+  - description: Expert Python engineer for bindings, extensions, and Python-specific features
     id: python-engineer
     name: python-engineer
     priority: critical
     system_prompt: |
-      You are an expert Python engineer specializing in the Kreuzberg text extraction library.
+      You are an expert Python engineer specializing in the Kreuzberg document intelligence framework.
+
+      **Framework Architecture**:
+      - **Rust Core** (crates/kreuzberg): High-performance extraction engine (standalone library)
+      - **Python Bindings** (crates/kreuzberg-py): PyO3 bindings exposing Rust core to Python
+      - **Python Package** (kreuzberg/): Python API, OCR backends (EasyOCR, PaddleOCR), utilities
 
       Your expertise includes:
       - **Async/await patterns**: Primary async implementation with sync wrappers
       - **Type hints**: Comprehensive typing with msgspec and dataclasses
-      - **Registry pattern**: ExtractorRegistry for pluggable extractors
+      - **PyO3 integration**: Understanding Rust-Python FFI boundary
       - **Configuration**: ExtractionConfig and backend-specific configs
       - **Error handling**: Exception-based with KreuzbergError hierarchy
+      - **OCR backends**: Python-based OCR implementations (EasyOCR, PaddleOCR, etc.)
 
       Key architectural knowledge:
-      - Entry point: extraction.py with extract_file, extract_bytes functions
-      - All extractors inherit from BaseExtractor in _extractors/_base.py
-      - OCR backends implement BaseOCR interface in _ocr/_base.py
-      - Use _utils/_sync.py for async/sync compatibility
+      - Python package proxies to Rust core for extraction
+      - Python-specific features: EasyOCR, PaddleOCR, API server (Litestar), CLI
+      - Use kreuzberg/ for Python code, crates/kreuzberg-py for PyO3 bindings
+      - Rust core handles: extraction, MIME detection, caching, pipeline orchestration
 
       Development commands:
-      - Install deps: uv sync or uv sync --all-extras
+      - Install deps: uv sync or uv sync --all-extras --all-packages
       - Format: ruff format
       - Lint: ruff check --fix
       - Type check: mypy
+      - Test: pytest
 
       IMPORTANT: Follow these principles strictly:
       - Do only what has been asked; nothing more, nothing less
@@ -31,41 +38,71 @@ agents:
       - ALWAYS prefer editing existing files
       - All builtin imports at top level (except cyclical/optional)
       - Maintain 95% test coverage requirement
+      - Understand when to work in Python vs when feature belongs in Rust core
     targets:
       - CLAUDE.md
       - .claude/**/*.md
-  - description: Writes comprehensive tests for kreuzberg functionality
+  - description: Writes comprehensive tests for Rust and Python components
     id: test-engineer
     name: test-engineer
     priority: high
     system_prompt: |
-      You are a test automation expert for the Kreuzberg text extraction library.
+      You are a test automation expert for the Kreuzberg document intelligence framework.
 
-      Testing patterns you must follow:
-      - **Dual variants**: Write both sync and async test variants
+      **Framework Architecture**:
+      - **Rust Core** (crates/kreuzberg): Test with cargo test
+      - **Python Package** (kreuzberg/): Test with pytest
+      - **Integration**: Test Rust-Python interaction through Python tests
+
+      **Rust Testing Patterns**:
+      - **Test organization**: Use `#[cfg(test)]` modules in same file or tests/ directory
+      - **Async tests**: Use `#[tokio::test]` for async functions
+      - **Test naming**: `test_<function>_<scenario>_<expected_outcome>`
+      - **Error cases**: Test all Result::Err paths comprehensively
+      - **Edge cases**: Empty inputs, large files, malformed data, concurrent access
+      - **Resource cleanup**: Use Drop or RAII patterns, test with tempfile crate
+      - **Mocking**: Use test doubles sparingly, prefer real objects when possible
+      - **Doctest**: Include examples in doc comments that compile and run
+      - **Coverage**: Aim for 95% minimum (use cargo-tarpaulin or cargo-llvm-cov)
+
+      **Python Testing Patterns**:
+      - **CRITICAL: Only function-based tests** - NEVER use class-based test methods
+      - **Dual variants**: Write both sync and async test variants where applicable
       - **Mock OCR**: Use mock responses for predictable OCR testing
       - **Test resources**: Use files in tests/test_source_files/
       - **Error coverage**: Test all exception cases comprehensively
       - **CI resilience**: Mark OCR tests as xfail in CI environments
       - **Integration tests**: Use timeouts and retry logic
 
-      Test structure:
-      - Core tests: tests/extraction_test.py, config_test.py, registry_test.py
-      - Extractor tests: tests/extractors/ for each extractor type
-      - OCR tests: tests/ocr/ for each backend
-      - Multiprocessing: tests/multiprocessing/ for concurrent ops
-      - Utils: tests/utils/ for helper functions
+      **Rust Test Structure**:
+      - crates/kreuzberg/src/: Inline tests with `#[cfg(test)]`
+      - crates/kreuzberg/tests/: Integration tests
+      - Test all plugin traits and registries
+      - Test extraction flow end-to-end
+      - Test error propagation and context
 
-      Commands:
-      - Run all: pytest
-      - Specific file: pytest tests/extraction_test.py
-      - With coverage: pytest --cov
-      - Coverage requirement: 95% minimum
+      **Python Test Structure**:
+      - tests/core/: Core functionality (extraction, config, types)
+      - tests/extractors/: File format extractors
+      - tests/ocr/: OCR backend tests
+      - tests/integration/: Integration tests (API, real file processing)
+      - tests/interfaces/: User interfaces (CLI, MCP)
+      - tests/utils/: Utility function tests
 
-      Test naming conventions:
-      - test_<function>_<scenario>
-      - test_<function>_raises_<exception>_when_<condition>
+      **Commands**:
+      - Rust: cargo test --release (from crates/kreuzberg)
+      - Rust with output: cargo test -- --nocapture
+      - Python: pytest
+      - Python specific: pytest tests/extraction_test.py
+      - Python with coverage: pytest --cov
+      - Coverage requirement: 95% minimum for both Rust and Python
+
+      **Test naming conventions**:
+      - Rust: `test_<function>_<scenario>_<expected_outcome>`
+      - Python: `test_<function>_<scenario>` or `test_<function>_raises_<exception>_when_<condition>`
       - Use descriptive names that explain what's being tested
+      - ❌ `test_basic_extraction()` (too vague)
+      - ✅ `test_extract_pdf_with_ocr_returns_text()` (clear and specific)
 
       Always ensure tests are isolated, repeatable, and fast.
     targets:
@@ -202,49 +239,78 @@ agents:
     targets:
       - CLAUDE.md
       - .claude/**/*.md
-  - description: Expert Rust developer for high-performance system components
+  - description: Expert Rust developer for the core document intelligence library
     id: rust-engineer
     name: rust-engineer
     priority: critical
     system_prompt: |
-      You are an expert Rust engineer specializing in the Kreuzberg text extraction library.
+      You are an expert Rust engineer specializing in the Kreuzberg document intelligence framework.
+
+      **Framework Architecture**:
+      - **Core Library** (crates/kreuzberg): Standalone Rust library for document extraction
+      - **Python Bindings** (crates/kreuzberg-py): PyO3 bindings exposing core to Python
+      - **Multi-language vision**: Core library designed for use in Rust, Python, TypeScript, and more
 
       Your expertise includes:
-      - **PyO3 integration**: Python bindings with abi3-py310 for stable API
-      - **Performance optimization**: SIMD, parallelism, zero-copy operations
-      - **Text processing**: Regex, string manipulation, character encoding
-      - **File parsing**: Binary formats, structured data, streaming
-      - **Memory management**: Efficient allocation, resource cleanup
-      - **Error handling**: Result types, proper error propagation
+      - **Async/await**: Tokio runtime, async trait patterns, concurrent processing
+      - **Plugin system**: Trait-based extensibility (DocumentExtractor, OcrBackend, PostProcessor, Validator)
+      - **Performance optimization**: SIMD, parallelism, zero-copy operations, streaming
+      - **Text processing**: Regex, string manipulation, character encoding, Unicode normalization
+      - **File parsing**: Binary formats, structured data, streaming parsers (XML, text, markdown)
+      - **Document extraction**: PDF (pdfium), Excel (calamine), email (mail-parser), HTML, images
+      - **OCR integration**: Tesseract (native Rust), plugin bridge for Python OCR backends
+      - **Memory management**: Efficient allocation, resource cleanup, Arc-based sharing
+      - **Error handling**: thiserror, Result types, proper error propagation with context
+      - **FFI/PyO3**: Cross-language plugin communication (when working on bindings)
 
-      Key architectural knowledge:
-      - Rust code in src/ with Python bindings
-      - PyO3 macros for Python function exports
-      - Edition 2024 with let-chains and modern features
-      - Maturin for building Python extensions
-      - Integration with existing Python codebase
+      Key architectural knowledge (see V4_STRUCTURE.md and TODO.md):
+      - Rust core in crates/kreuzberg/ (standalone library, edition 2024)
+      - Plugin-based architecture: traits in plugins/, implementations in extraction/
+      - Core orchestration: core/extractor.rs (extract_file, extract_bytes), core/pipeline.rs
+      - Registry pattern: plugins/registry.rs for MIME type → extractor mapping
+      - All extractors implement DocumentExtractor trait
+      - Phase 4: PyO3 bindings redesign and Python library rewrite in progress
+
+      Rust core structure:
+      - crates/kreuzberg/src/core/: Extraction orchestration, MIME detection, config, pipeline
+      - crates/kreuzberg/src/plugins/: Plugin trait system and registries
+      - crates/kreuzberg/src/extraction/: Built-in extractors (PDF, Excel, email, HTML, etc.)
+      - crates/kreuzberg/src/ocr/: OCR subsystem (Tesseract native, plugin bridge)
+      - crates/kreuzberg/src/pdf/: PDF utilities (text, images, metadata, rendering)
+      - crates/kreuzberg/src/image/: Image preprocessing and conversion
+      - crates/kreuzberg/src/text/: Text encoding, quality, normalization
+      - crates/kreuzberg/src/cache/: Document caching system
 
       Development commands:
-      - Build: maturin develop --release
-      - Test: cargo test --release
+      - Build: cargo build --release (from crates/kreuzberg)
+      - Test: cargo test --release or RUST_BACKTRACE=1 cargo test
       - Format: cargo fmt
-      - Lint: cargo clippy -- -D warnings
+      - Lint: cargo clippy -- -D warnings (all clippy warnings must be fixed)
       - Check: cargo check
+      - PyO3 bindings: maturin develop --release (from crates/kreuzberg-py)
+      - Docs: cargo doc --no-deps --open
 
       IMPORTANT: Follow these principles strictly:
       - Zero-cost abstractions where possible
-      - Proper error handling with Result types
+      - Proper error handling with Result<T, KreuzbergError>
       - Memory safety without performance penalty
-      - Clear, documented public APIs
-      - Comprehensive test coverage
-      - Integration with existing Python patterns
+      - Clear, documented public APIs (doc comments for all public items)
+      - Comprehensive test coverage (95% target)
+      - NEVER use .unwrap() in production code (use ? or proper error handling)
+      - All unsafe code must have SAFETY comments explaining invariants
+      - Lock poisoning must be handled (never .unwrap() on Mutex/RwLock)
+      - OSError/RuntimeError equivalents (KreuzbergError::Io) always bubble up
+      - Add ~keep comments when bubbling up system errors
+      - Edition 2024 features: let-chains, gen blocks, if/match guards
 
       Focus on:
-      - High-performance text and data processing
-      - Efficient binary format parsing
-      - Optimized algorithms and data structures
-      - Safe concurrent operations
-      - Clear Python integration points
+      - High-performance text and data processing (10-50x speedups over Python)
+      - Efficient binary format parsing with streaming where appropriate
+      - Optimized algorithms and data structures (use ahash for HashMaps)
+      - Safe concurrent operations (Arc, RwLock, async/await)
+      - Clean public API for Rust users (this is a library, not just bindings)
+      - Plugin trait design for cross-language extensibility
+      - Integration points for language-specific features (Python OCR, etc.)
     targets:
       - CLAUDE.md
       - .claude/**/*.md
@@ -300,122 +366,37 @@ agents:
       - CLAUDE.md
       - .claude/**/*.md
 metadata:
-  description: A text extraction library supporting PDFs, images, office documents and more
+  description: "A multi-language document intelligence framework with a high-performance Rust core library (crates/kreuzberg - standalone, usable directly in Rust), Python bindings and extensions (kreuzberg/ package + crates/kreuzberg-py PyO3 bindings), and planned TypeScript/Node.js support. Supports PDFs, images, office documents, and more."
   name: Kreuzberg
   version: 4.0.0
-outputs:
-  - path: CLAUDE.md
-    template:
-      type: inline
-      value: |
-        # CLAUDE.md
-
-        This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-        ## Project Overview
-
-        {{ .Description }}
-
-        {{ range .Rules }}
-        ## {{ .Name }}
-        {{ .Content }}
-        {{ end }}
-
-        {{ range .Sections }}
-        ## {{ .Name }}
-        {{ .Content }}
-        {{ end }}
-  - path: GEMINI.md
-    template:
-      type: inline
-      value: |
-        # GEMINI.md
-
-        This file provides guidance to Gemini when working with code in this repository.
-
-        ## Project Overview
-
-        {{ .Description }}
-
-        {{ range .Rules }}
-        ## {{ .Name }}
-        {{ .Content }}
-        {{ end }}
-
-        {{ range .Sections }}
-        ## {{ .Name }}
-        {{ .Content }}
-        {{ end }}
-  - path: .cursorrules
-    template:
-      type: inline
-      value: |
-        # Kreuzberg
-        A text extraction library supporting PDFs, images, office documents and more
-
-        {{ range .Rules }}
-        ## {{ .Name }}
-        {{ .Content }}
-        {{ end }}
-
-        {{ range .Sections }}
-        ## {{ .Name }}
-        {{ .Content }}
-        {{ end }}
-  - path: .windsurfrules
-    template:
-      type: inline
-      value: |
-        # Kreuzberg
-        A text extraction library supporting PDFs, images, office documents and more
-
-        {{ range .Rules }}
-        ## {{ .Name }}
-        {{ .Content }}
-        {{ end }}
-
-        {{ range .Sections }}
-        ## {{ .Name }}
-        {{ .Content }}
-        {{ end }}
-  - path: AGENTS.md
-  - naming_scheme: "{priority:02d}-{name}.md"
-    path: .claude/agents/
-    template:
-      type: inline
-      value: |
-        # Agent: {{ .Name }}
-
-        **Description**: {{ .Description }}
-        **Priority**: {{ .Priority }}
-
-        ## Tools Available
-        {{ range .Tools }}
-        - {{ . }}
-        {{ end }}
-
-        ## System Prompt
-        {{ .SystemPrompt }}
-    type: agent
+presets: ["claude", "codex"]
 rules:
   - content: |
-      ### Dependencies
+      ### Python Commands
       - Install dependencies: `uv sync`
-      - Install with all optional dependencies: `uv sync --all-extras`
-
-      ### Testing
-      - Run all tests: `pytest`
+      - Install with all optional dependencies: `uv sync --all-extras --all-packages`
+      - Run Python tests: `pytest`
       - Run specific test file: `pytest tests/extraction_test.py`
       - Run with coverage: `pytest --cov`
-      - Coverage must be at least 95%
-
-      ### Code Quality
       - Format code: `ruff format`
       - Lint code: `ruff check`
       - Fix linting issues: `ruff check --fix`
       - Type check: `mypy`
 
-      ### Prek
+      ### Rust Commands (from crates/kreuzberg)
+      - Build: `cargo build --release`
+      - Test: `cargo test --release` or `RUST_BACKTRACE=1 cargo test`
+      - Test with output: `cargo test -- --nocapture`
+      - Format: `cargo fmt`
+      - Lint: `cargo clippy -- -D warnings`
+      - Check: `cargo check`
+      - Docs: `cargo doc --no-deps --open`
+
+      ### PyO3 Bindings (from crates/kreuzberg-py)
+      - Build Python bindings: `maturin develop --release`
+      - Build for distribution: `maturin build --release`
+
+      ### Pre-commit Hooks
       - Install prek: `uv tool install prek`
       - Install hooks: `prek install && prek install --hook-type commit-msg`
       - Run manually: `prek run --all-files`
@@ -424,6 +405,10 @@ rules:
       - Build docs: `uv run mkdocs build --clean --strict`
       - Serve docs locally: `uv run mkdocs serve`
       - Install doc dependencies: `uv sync --group doc`
+
+      ### Coverage Requirements
+      - Python: 95% minimum
+      - Rust: 95% minimum target
     name: Development Commands
     priority: critical
   - content: |
@@ -432,15 +417,18 @@ rules:
       - ALWAYS prefer editing an existing file to creating a new one
       - NEVER proactively create documentation files (*.md) or README files
       - Only create documentation files if explicitly requested by the User
-      - All builtin imports should be at the top level (except for cyclical or optional dependencies)
-      - All config dataclasses must be hashable, frozen, and use slots: `@dataclass(unsafe_hash=True, frozen=True, slots=True)`
+      - **Python**: All builtin imports should be at the top level (except for cyclical or optional dependencies)
+      - **Python**: All config dataclasses must be hashable, frozen, and use slots: `@dataclass(unsafe_hash=True, frozen=True, slots=True)`
+      - **Python**: NEVER use class-based tests - Only function-based tests are allowed
+      - **Rust**: NEVER use `.unwrap()` in production code - Use `?` or proper error handling
+      - **Rust**: All unsafe code must have SAFETY comments explaining invariants
+      - **Rust**: Lock poisoning must be handled - never `.unwrap()` on Mutex/RwLock
       - When committing, always use the format specified in the CLAUDE.md
-      - **CRITICAL: OSError and RuntimeError must ALWAYS bubble up** - Never suppress these system errors
-      - **CRITICAL: NEVER use class-based tests** - Only function-based tests are allowed
+      - **CRITICAL: OSError and RuntimeError must ALWAYS bubble up** - Never suppress these system errors (applies to both Python and Rust)
     name: Important Instructions
     priority: critical
   - content: |
-      ### Docstrings and Comments Guidelines
+      ### Python Docstrings and Comments
       - **NO docstrings in private functions** (functions starting with `_`)
       - **NO docstrings in private files** (files starting with `_`)
       - **NO docstrings in private folders** (folders starting with `_`)
@@ -449,33 +437,83 @@ rules:
       - **NO redundant comments** - code should be self-documenting
       - **Comments only when necessary** to explain complex logic or non-obvious decisions
       - **Prefer clear variable/function names** over comments
+
+      ### Rust Documentation
+      - **ALL public items must have doc comments** (`///` for items, `//!` for modules)
+      - **Doc comments use Markdown** - Include examples with ```` ```rust ```` code blocks
+      - **Include examples in doc comments** - They compile and run as doctests
+      - **Module-level docs** - Describe module purpose and key types/functions
+      - **Safety comments** - ALL `unsafe` blocks must have preceding `// SAFETY:` comments
+      - **Keep comments** - Use `~keep` suffix for error handling explanations (e.g., `// OSError must bubble up ~keep`)
+      - **Private items** - Doc comments optional but encouraged for complex logic
+      - **No redundant comments** - Code should be self-documenting, comments explain "why" not "what"
     name: Documentation Standards
     priority: critical
   - content: |
-      ### Core Extraction Flow
-      1. **Entry Point**: `extraction.py` provides main functions (`extract_file`, `extract_bytes`, etc.)
-      2. **Registry Pattern**: `ExtractorRegistry` selects appropriate extractor based on MIME type
-      3. **Extractor Interface**: All extractors inherit from `BaseExtractor` in `_extractors/_base.py`
-      4. **OCR Integration**: OCR backends (Tesseract, EasyOCR, PaddleOCR) implement `BaseOCR` interface
-      5. **Configuration**: `ExtractionConfig` dataclass controls all extraction behavior
+      ### Rust Core Library Structure (crates/kreuzberg)
+      - **Core Module** (src/core/): Extraction orchestration, MIME detection, config, pipeline
+        - `extractor.rs`: Main API - `extract_file()`, `extract_bytes()`, `batch_extract_*()`
+        - `registry.rs`: Maps MIME types to extractors, manages plugin registration
+        - `mime.rs`: MIME detection and validation (118+ file extensions)
+        - `pipeline.rs`: Post-processing pipeline orchestration
+        - `config.rs`: Configuration loading (TOML/YAML/JSON discovery)
+        - `io.rs`: File I/O utilities
 
-      ### Key Components
-      - **Extractors**: Specialized classes for each file type (PDF, image, HTML, XML, plain text, etc.)
-      - **OCR Backends**: Pluggable OCR engines with separate configuration classes
-      - **Vision-Based Table Extraction**: Vision-based table extraction using vendored models (vision-tables package)
-      - **Chunking**: Text splitting functionality in `_chunker.py`
-      - **Language Detection**: Automatic language detection using fast-langdetect
-      - **Async/Sync**: Primary async implementation with sync wrappers in `_utils/_sync.py`
-      - **API Server**: REST API using Litestar framework in `_api/main.py`
-      - **CLI**: Command-line interface for batch processing and automation
-      - **Rust Streaming Parsers**: Memory-efficient parsers for XML (`src/xml.rs`) and plain text/markdown (`src/text.rs`)
-      - **LibreOffice Integration**: Optional legacy Office format support via LibreOffice conversion
+      - **Plugin System** (src/plugins/): Trait-based extensibility
+        - `traits.rs`: Base `Plugin` trait
+        - `extractor.rs`: `DocumentExtractor` trait for format extractors
+        - `ocr.rs`: `OcrBackend` trait for OCR engines
+        - `processor.rs`: `PostProcessor` trait for pipeline processors
+        - `validator.rs`: `Validator` trait for validation hooks
+        - `registry.rs`: Plugin registries (4 types: extractor, OCR, processor, validator)
+
+      - **Extractors** (src/extraction/): Built-in format extractors
+        - `pdf.rs`: PDF extraction (pdfium-render)
+        - `excel.rs`: Excel/spreadsheets (calamine)
+        - `email.rs`: Email extraction (mail-parser)
+        - `html.rs`: HTML to markdown (html-to-markdown-rs)
+        - `xml.rs`: XML streaming parser (quick-xml)
+        - `text.rs`: Plain text/markdown streaming parser
+        - `image.rs`: Image extraction
+        - `structured.rs`: JSON/YAML/TOML parsing
+        - `pandoc.rs`: Pandoc integration (subprocess)
+        - `libreoffice.rs`: LibreOffice conversion (subprocess)
+
+      - **OCR** (src/ocr/): OCR subsystem
+        - `processor.rs`: OCR orchestration
+        - `tesseract.rs`: Native Tesseract backend (tesseract-rs)
+        - `cache.rs`: OCR result caching
+        - `types.rs`: OCR-specific types
+        - `table/`: Table detection and reconstruction
+
+      - **Utilities**: PDF (src/pdf/), image (src/image/), text (src/text/), cache (src/cache/)
+
+      ### Python Package Structure
+      - **Python API** (kreuzberg/): Thin proxy to Rust core, Python-specific features
+        - Entry point: `extraction.py` proxies to Rust via `_internal_bindings`
+        - Python OCR backends: EasyOCR, PaddleOCR (registered with Rust core as plugins)
+        - API server: Litestar framework in `_api/main.py`
+        - CLI: Click-based command-line interface
+
+      - **PyO3 Bindings** (crates/kreuzberg-py/): Rust-Python FFI bridge
+        - Exposes Rust core functions to Python
+        - Handles type conversion between Rust and Python
+        - Plugin registration bridge for Python-based plugins
+
+      ### Key Architectural Concepts
+      - **Rust-first design**: Core extraction logic in Rust for performance
+      - **Plugin-based extensibility**: Traits allow cross-language plugins
+      - **Async throughout**: Tokio runtime, full async/await support
+      - **Registry pattern**: MIME type → extractor mapping with priority support
+      - **Multi-language**: Rust core usable standalone, Python/TypeScript via bindings
+      - **Thin bindings**: Python/Node packages are minimal wrappers around Rust core
+      - **Zero-copy where possible**: Efficient data passing across FFI boundaries
 
       ### Adding New Features
-      - New extractors: Inherit from `BaseExtractor` and register with `ExtractorRegistry`
-      - New OCR backends: Implement `BaseOCR` interface
-      - Configuration options: Extend `ExtractionConfig` or create backend-specific configs
-      - Hooks: Use `pre_validate_hook` and `post_extraction_hook` for custom processing
+      - **Rust extractors**: Implement `DocumentExtractor` trait, register with `ExtractorRegistry`
+      - **Python OCR backends**: Implement Python OCR interface, register via `_internal_bindings`
+      - **Configuration**: Extend `ExtractionConfig` struct in Rust core
+      - **Validators/Processors**: Implement respective traits, register with appropriate registry
     name: Architecture
     priority: high
   - content: |
@@ -639,6 +677,111 @@ rules:
     name: CI/CD and Deployment
     priority: minimal
   - content: |
+      ### Code Style and Formatting
+      - **Edition**: Rust 2024 (use let-chains, gen blocks, if/match guards)
+      - **Formatting**: Use `cargo fmt` (follows rustfmt defaults)
+      - **Naming conventions**:
+        - Types: `PascalCase` (structs, enums, traits)
+        - Functions/variables: `snake_case`
+        - Constants: `SCREAMING_SNAKE_CASE`
+        - Modules: `snake_case`
+        - File names: `snake_case.rs`
+
+      ### Error Handling
+      - **Return Result<T, KreuzbergError>** for all fallible operations
+      - **NEVER use `.unwrap()` or `.expect()` in production code** (tests are OK)
+      - **Use `?` operator** for error propagation
+      - **thiserror for error types** - All errors derive from `KreuzbergError`
+      - **Include context** - Error messages should include relevant context (file path, MIME type, etc.)
+      - **#[source] attribute** - Preserve error chains for debugging
+      - **Lock poisoning** - Handle Mutex/RwLock poisoning explicitly, return `KreuzbergError::Plugin` or similar
+      - **OSError equivalents** - `KreuzbergError::Io` must ALWAYS bubble up unchanged
+      - **Add ~keep comments** when bubbling up system errors:
+        ```rust
+        // OSError/RuntimeError must bubble up - system errors need user reports ~keep
+        if matches!(e, KreuzbergError::Io(_)) {
+            return Err(e);
+        }
+        ```
+
+      ### Safety and Unsafe Code
+      - **Minimize unsafe** - Use safe abstractions whenever possible
+      - **SAFETY comments required** - Every `unsafe` block must have a preceding `// SAFETY:` comment
+      - **SAFETY comment format**:
+        ```rust
+        // SAFETY: [Explain the invariant being upheld]
+        // - [List specific safety requirements]
+        // - [Explain why they are met in this context]
+        let x = unsafe { some_operation() };
+        ```
+      - **Prefer safe alternatives** - Use `Vec`, `String`, `Arc` over raw pointers
+      - **FFI safety** - Extra care with PyO3 FFI boundaries, validate all inputs
+
+      ### Async/Await Patterns
+      - **Use async throughout** - All I/O operations should be async
+      - **Tokio runtime** - Use `tokio::main` and `tokio::test` attributes
+      - **async-trait** - Use `#[async_trait]` for trait methods returning futures
+      - **Sync wrappers** - Provide `_sync` variants using `tokio::runtime::Runtime::block_on()`
+      - **Avoid blocking** - Never use `std::thread::sleep` in async code, use `tokio::time::sleep`
+      - **Cancellation** - Design for graceful cancellation (future work)
+
+      ### Memory Management
+      - **Use Arc for shared ownership** - Plugin registries use `Arc<dyn Trait>`
+      - **Interior mutability** - Use `Mutex` or `RwLock` when `&mut self` isn't possible
+      - **Avoid cloning large data** - Use references or `Cow` for large strings/buffers
+      - **RAII patterns** - Use Drop for cleanup, temporary files, locks
+      - **Streaming for large files** - XML/text parsers stream instead of loading into memory
+
+      ### Performance
+      - **Use ahash for HashMaps** - `use ahash::AHashMap;` instead of `std::collections::HashMap`
+      - **Lazy static** - Use `lazy_static!` or `once_cell::sync::Lazy` for expensive initialization
+      - **SIMD where appropriate** - Use SIMD for text processing hot paths
+      - **Profile before optimizing** - Use `cargo bench` and profilers
+      - **Zero-copy where possible** - Use `&str` and `&[u8]` instead of `String` and `Vec<u8>`
+
+      ### Plugin System
+      - **Traits for plugins** - `DocumentExtractor`, `OcrBackend`, `PostProcessor`, `Validator`
+      - **Plugin trait signature** - Methods use `&self` not `&mut self` (interior mutability pattern)
+      - **Arc storage** - Plugins stored as `Arc<dyn PluginTrait>`
+      - **Thread safety** - All plugins must be `Send + Sync`
+      - **Registration** - Use registry pattern with `RwLock<HashMap<String, Arc<dyn Trait>>>`
+      - **Priority support** - Extractors have priority for overlapping MIME types
+
+      ### Testing
+      - **Test organization** - Use `#[cfg(test)]` modules or `tests/` directory
+      - **Async tests** - Use `#[tokio::test]` for async test functions
+      - **Test naming** - `test_<function>_<scenario>_<expected_outcome>`
+      - **Test resources** - Use `tempfile` crate for temporary files
+      - **Edge cases** - Test empty inputs, large files, malformed data, concurrent access
+      - **Doctests** - Include examples in doc comments (they run as tests)
+      - **Coverage** - Target 95% coverage (use `cargo-tarpaulin` or `cargo-llvm-cov`)
+
+      ### Dependencies
+      - **Minimize dependencies** - Only add deps when necessary
+      - **Prefer stable crates** - Use well-maintained crates with recent updates
+      - **Feature flags** - Use workspace features for optional dependencies
+      - **Version pinning** - Use specific versions in Cargo.toml
+
+      ### Clippy and Linting
+      - **Zero clippy warnings** - Run `cargo clippy -- -D warnings`
+      - **Fix all warnings** - No warnings allowed in production code
+      - **Disable with justification** - Only use `#[allow(clippy::...)]` with a comment explaining why
+
+      ### Module Organization
+      - **lib.rs** - Public API exports, module declarations, crate-level docs
+      - **mod.rs** - Module root, re-exports, module-level docs
+      - **Private modules** - Start with `_` if needed, but prefer `pub(crate)` instead
+      - **Flat module hierarchy** - Avoid deep nesting, prefer `src/plugins/` over `src/core/plugins/`
+
+      ### Common Patterns
+      - **Builder pattern** - For complex configuration structs
+      - **Registry pattern** - For plugin management (MIME type → extractor)
+      - **Newtype pattern** - For type safety (e.g., `struct MimeType(String)`)
+      - **Error context** - Use `map_err` or `context` to add context to errors
+      - **Copy-on-write** - Use `Cow<str>` for optional modifications
+    name: Rust Conventions and Standards
+    priority: critical
+  - content: |
       ### Workspace Configuration
       The project uses a uv workspace with multiple members:
       - **Root Package** (`.`): The main kreuzberg library (v4.x)
@@ -725,6 +868,85 @@ rules:
     name: Package Management
     priority: minimal
 sections:
+  - content: |
+      ### Using the Rust Core Library
+      The Kreuzberg Rust core (crates/kreuzberg) is a standalone library that can be used directly in Rust projects.
+
+      **Adding to your project**:
+      ```toml
+      [dependencies]
+      kreuzberg = "4.0"
+      tokio = { version = "1", features = ["rt", "macros"] }
+      ```
+
+      **Basic usage**:
+      ```rust
+      use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+      fn main() -> kreuzberg::Result<()> {
+          let config = ExtractionConfig::default();
+          let result = extract_file_sync("document.pdf", None, &config)?;
+          println!("Extracted text: {}", result.content);
+          Ok(())
+      }
+      ```
+
+      **Async usage**:
+      ```rust
+      use kreuzberg::{extract_file, ExtractionConfig};
+
+      #[tokio::main]
+      async fn main() -> kreuzberg::Result<()> {
+          let config = ExtractionConfig::default();
+          let result = extract_file("document.pdf", None, &config).await?;
+          println!("Extracted text: {}", result.content);
+          Ok(())
+      }
+      ```
+
+      **Batch processing**:
+      ```rust
+      use kreuzberg::{batch_extract_file, ExtractionConfig};
+
+      #[tokio::main]
+      async fn main() -> kreuzberg::Result<()> {
+          let config = ExtractionConfig::default();
+          let files = vec!["doc1.pdf", "doc2.pdf", "doc3.pdf"];
+          let results = batch_extract_file(&files, None, &config).await?;
+          for result in results {
+              println!("Extracted: {}", result.content);
+          }
+          Ok(())
+      }
+      ```
+
+      **With OCR enabled**:
+      ```rust
+      use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig};
+
+      fn main() -> kreuzberg::Result<()> {
+          let config = ExtractionConfig {
+              ocr: Some(OcrConfig::default()),
+              force_ocr: false,
+              ..Default::default()
+          };
+          let result = extract_file_sync("scanned.pdf", None, &config)?;
+          println!("Extracted: {}", result.content);
+          Ok(())
+      }
+      ```
+
+      **Custom plugin registration** (advanced):
+      ```rust
+      use kreuzberg::plugins::registry::get_document_extractor_registry;
+      use std::sync::Arc;
+
+      // Register custom extractor
+      let registry = get_document_extractor_registry();
+      registry.register("custom", Arc::new(MyCustomExtractor))?;
+      ```
+    id: rust-core-usage
+    name: Using the Rust Core Library
   - content: |
       ### XML Extraction (v4.0)
       - **Implementation**: Rust streaming parser using `quick-xml` in `src/xml.rs`
