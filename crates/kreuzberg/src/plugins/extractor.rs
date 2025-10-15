@@ -462,4 +462,186 @@ mod tests {
         assert!(extractor.can_handle(&path, "text/plain"));
         assert!(extractor.can_handle(&path, "application/pdf")); // Even for unsupported types
     }
+
+    #[tokio::test]
+    async fn test_document_extractor_extract_file_default_impl() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let extractor = MockExtractor {
+            mime_types: vec!["text/plain"],
+            priority: 50,
+        };
+
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(b"file content").unwrap();
+        let path = temp_file.path();
+
+        let config = ExtractionConfig::default();
+        let result = extractor.extract_file(path, "text/plain", &config).await.unwrap();
+
+        assert_eq!(result.content, "file content");
+        assert_eq!(result.mime_type, "text/plain");
+    }
+
+    #[tokio::test]
+    async fn test_document_extractor_empty_content() {
+        let extractor = MockExtractor {
+            mime_types: vec!["text/plain"],
+            priority: 50,
+        };
+
+        let config = ExtractionConfig::default();
+        let result = extractor.extract_bytes(b"", "text/plain", &config).await.unwrap();
+
+        assert_eq!(result.content, "");
+        assert_eq!(result.mime_type, "text/plain");
+    }
+
+    #[tokio::test]
+    async fn test_document_extractor_non_utf8_content() {
+        let extractor = MockExtractor {
+            mime_types: vec!["text/plain"],
+            priority: 50,
+        };
+
+        let invalid_utf8 = vec![0xFF, 0xFE, 0xFD];
+        let config = ExtractionConfig::default();
+        let result = extractor
+            .extract_bytes(&invalid_utf8, "text/plain", &config)
+            .await
+            .unwrap();
+
+        // Should handle non-UTF8 gracefully using lossy conversion
+        assert!(!result.content.is_empty());
+    }
+
+    #[test]
+    fn test_document_extractor_plugin_interface() {
+        let mut extractor = MockExtractor {
+            mime_types: vec!["text/plain"],
+            priority: 50,
+        };
+
+        // Test Plugin trait methods
+        assert_eq!(extractor.name(), "mock-extractor");
+        assert_eq!(extractor.version(), "1.0.0");
+        assert!(extractor.initialize().is_ok());
+        assert!(extractor.shutdown().is_ok());
+    }
+
+    #[test]
+    fn test_document_extractor_default_priority() {
+        // Create a minimal extractor that uses default priority
+        struct DefaultPriorityExtractor;
+
+        impl Plugin for DefaultPriorityExtractor {
+            fn name(&self) -> &str {
+                "default"
+            }
+            fn version(&self) -> &str {
+                "1.0.0"
+            }
+            fn initialize(&mut self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&mut self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl DocumentExtractor for DefaultPriorityExtractor {
+            async fn extract_bytes(
+                &self,
+                _content: &[u8],
+                _mime_type: &str,
+                _config: &ExtractionConfig,
+            ) -> Result<ExtractionResult> {
+                Ok(ExtractionResult {
+                    content: String::new(),
+                    mime_type: String::new(),
+                    metadata: HashMap::new(),
+                    tables: vec![],
+                })
+            }
+
+            fn supported_mime_types(&self) -> &[&str] {
+                &["text/plain"]
+            }
+            // Uses default priority() implementation
+        }
+
+        let extractor = DefaultPriorityExtractor;
+        assert_eq!(extractor.priority(), 50);
+    }
+
+    #[test]
+    fn test_document_extractor_empty_mime_types() {
+        let extractor = MockExtractor {
+            mime_types: vec![],
+            priority: 50,
+        };
+
+        assert_eq!(extractor.supported_mime_types().len(), 0);
+    }
+
+    #[test]
+    fn test_document_extractor_wildcard_mime_types() {
+        let extractor = MockExtractor {
+            mime_types: vec!["text/*", "image/*"],
+            priority: 50,
+        };
+
+        let supported = extractor.supported_mime_types();
+        assert_eq!(supported.len(), 2);
+        assert!(supported.contains(&"text/*"));
+        assert!(supported.contains(&"image/*"));
+    }
+
+    #[test]
+    fn test_document_extractor_priority_ranges() {
+        // Test different priority ranges
+        let fallback = MockExtractor {
+            mime_types: vec!["text/plain"],
+            priority: 10,
+        };
+        let alternative = MockExtractor {
+            mime_types: vec!["text/plain"],
+            priority: 40,
+        };
+        let default = MockExtractor {
+            mime_types: vec!["text/plain"],
+            priority: 50,
+        };
+        let premium = MockExtractor {
+            mime_types: vec!["text/plain"],
+            priority: 75,
+        };
+        let specialized = MockExtractor {
+            mime_types: vec!["text/plain"],
+            priority: 100,
+        };
+
+        assert!(fallback.priority() < alternative.priority());
+        assert!(alternative.priority() < default.priority());
+        assert!(default.priority() < premium.priority());
+        assert!(premium.priority() < specialized.priority());
+    }
+
+    #[tokio::test]
+    async fn test_document_extractor_preserves_mime_type() {
+        let extractor = MockExtractor {
+            mime_types: vec!["application/json"],
+            priority: 50,
+        };
+
+        let config = ExtractionConfig::default();
+        let result = extractor
+            .extract_bytes(b"{\"key\":\"value\"}", "application/json", &config)
+            .await
+            .unwrap();
+
+        assert_eq!(result.mime_type, "application/json");
+    }
 }
