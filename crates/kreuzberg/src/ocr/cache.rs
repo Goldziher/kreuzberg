@@ -72,12 +72,11 @@ impl OcrCache {
 
         // Atomic rename - this operation is atomic on POSIX systems
         // If another process is also writing, only one rename will succeed
-        fs::rename(&temp_path, &cache_path)
-            .map_err(|e| {
-                // Clean up temp file on error
-                let _ = fs::remove_file(&temp_path);
-                OcrError::CacheError(format!("Failed to rename cache file: {}", e))
-            })?;
+        fs::rename(&temp_path, &cache_path).map_err(|e| {
+            // Clean up temp file on error
+            let _ = fs::remove_file(&temp_path);
+            OcrError::CacheError(format!("Failed to rename cache file: {}", e))
+        })?;
 
         Ok(())
     }

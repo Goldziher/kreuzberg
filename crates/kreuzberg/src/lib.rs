@@ -56,7 +56,10 @@ pub use core::extractor::{batch_extract_bytes, batch_extract_file, extract_bytes
 pub use core::extractor::{batch_extract_bytes_sync, batch_extract_file_sync, extract_bytes_sync, extract_file_sync};
 
 // Configuration
-pub use core::config::{ChunkingConfig, ExtractionConfig, OcrConfig};
+pub use core::config::{
+    ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, PdfConfig,
+    TokenReductionConfig,
+};
 
 // MIME detection utilities
 pub use core::mime::{

@@ -32,11 +32,11 @@ static GLOBAL_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
         .expect("Failed to create global Tokio runtime")
 });
 
-/// Thread-local extractor cache to reduce registry lock contention.
-///
-/// This cache stores extractors per MIME type on a per-thread basis, providing
-/// 10-30% performance improvement for batch operations by avoiding repeated
-/// registry read lock acquisitions.
+// Thread-local extractor cache to reduce registry lock contention.
+//
+// This cache stores extractors per MIME type on a per-thread basis, providing
+// 10-30% performance improvement for batch operations by avoiding repeated
+// registry read lock acquisitions.
 thread_local! {
     static EXTRACTOR_CACHE: RefCell<HashMap<String, Arc<dyn DocumentExtractor>>> =
         RefCell::new(HashMap::new());

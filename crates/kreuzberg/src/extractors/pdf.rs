@@ -61,16 +61,18 @@ impl DocumentExtractor for PdfExtractor {
             metadata.insert("title".to_string(), serde_json::json!(title));
         }
         if let Some(authors) = pdf_metadata.authors
-            && !authors.is_empty() {
-                metadata.insert("authors".to_string(), serde_json::json!(authors));
-            }
+            && !authors.is_empty()
+        {
+            metadata.insert("authors".to_string(), serde_json::json!(authors));
+        }
         if let Some(subject) = pdf_metadata.subject {
             metadata.insert("subject".to_string(), serde_json::json!(subject));
         }
         if let Some(keywords) = pdf_metadata.keywords
-            && !keywords.is_empty() {
-                metadata.insert("keywords".to_string(), serde_json::json!(keywords));
-            }
+            && !keywords.is_empty()
+        {
+            metadata.insert("keywords".to_string(), serde_json::json!(keywords));
+        }
         metadata.insert("page_count".to_string(), serde_json::json!(pdf_metadata.page_count));
 
         Ok(ExtractionResult {

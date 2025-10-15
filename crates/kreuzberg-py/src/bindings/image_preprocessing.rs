@@ -33,9 +33,9 @@ impl ExtractionConfigDTO {
     }
 }
 
-impl From<&ExtractionConfigDTO> for kreuzberg::ExtractionConfig {
+impl From<&ExtractionConfigDTO> for kreuzberg::types::ExtractionConfig {
     fn from(dto: &ExtractionConfigDTO) -> Self {
-        kreuzberg::ExtractionConfig {
+        kreuzberg::types::ExtractionConfig {
             target_dpi: dto.target_dpi,
             max_image_dimension: dto.max_image_dimension,
             auto_adjust_dpi: dto.auto_adjust_dpi,
@@ -127,7 +127,8 @@ pub fn normalize_image_dpi_msgpack<'py>(
     }
 
     // Deserialize config from MessagePack
-    let config: kreuzberg::ExtractionConfig = rmp_serde::from_slice(config_msgpack).map_err(|e| to_py_err(e.into()))?;
+    let config: kreuzberg::types::ExtractionConfig =
+        rmp_serde::from_slice(config_msgpack).map_err(|e| to_py_err(e.into()))?;
 
     // Extract DPI from dict if provided
     let current_dpi = dpi_info.and_then(|dpi_dict| {
@@ -200,7 +201,7 @@ pub fn normalize_image_dpi<'py>(
     }
 
     // Convert config
-    let rust_config: kreuzberg::ExtractionConfig = config.into();
+    let rust_config: kreuzberg::types::ExtractionConfig = config.into();
 
     // Extract DPI from dict if provided
     let current_dpi = dpi_info.and_then(|dpi_dict| {

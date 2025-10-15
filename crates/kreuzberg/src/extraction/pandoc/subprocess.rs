@@ -109,10 +109,7 @@ pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<
         }
 
         // True system error - bubble up as IO error ~keep
-        return Err(std::io::Error::other(
-            format!("Pandoc metadata extraction system error: {}", stderr),
-        )
-        .into());
+        return Err(std::io::Error::other(format!("Pandoc metadata extraction system error: {}", stderr)).into());
     }
 
     // Read JSON

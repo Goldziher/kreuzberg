@@ -35,5 +35,8 @@ pub mod mime;
 pub mod pipeline;
 
 // Re-export commonly used items
-pub use config::ExtractionConfig;
+pub use config::{
+    ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, PdfConfig,
+    TokenReductionConfig,
+};
 pub use extractor::{batch_extract_bytes, batch_extract_file, extract_bytes, extract_file};
