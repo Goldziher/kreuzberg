@@ -977,4 +977,179 @@ mod tests {
         let validator_registry = get_validator_registry();
         assert!(validator_registry.read().unwrap().list().len() >= 0);
     }
+
+    #[test]
+    fn test_ocr_backend_registry_shutdown_all() {
+        let mut registry = OcrBackendRegistry::new();
+
+        let backend1 = Arc::new(MockOcrBackend {
+            name: "backend1".to_string(),
+            languages: vec!["eng".to_string()],
+        });
+
+        let backend2 = Arc::new(MockOcrBackend {
+            name: "backend2".to_string(),
+            languages: vec!["deu".to_string()],
+        });
+
+        registry.register(backend1).unwrap();
+        registry.register(backend2).unwrap();
+
+        assert_eq!(registry.list().len(), 2);
+
+        registry.shutdown_all().unwrap();
+        assert_eq!(registry.list().len(), 0);
+    }
+
+    #[test]
+    fn test_post_processor_registry_shutdown_all() {
+        let mut registry = PostProcessorRegistry::new();
+
+        let early = Arc::new(MockPostProcessor {
+            name: "early".to_string(),
+            stage: ProcessingStage::Early,
+        });
+
+        let late = Arc::new(MockPostProcessor {
+            name: "late".to_string(),
+            stage: ProcessingStage::Late,
+        });
+
+        registry.register(early, 100).unwrap();
+        registry.register(late, 50).unwrap();
+
+        assert_eq!(registry.list().len(), 2);
+
+        registry.shutdown_all().unwrap();
+        assert_eq!(registry.list().len(), 0);
+    }
+
+    #[test]
+    fn test_validator_registry_shutdown_all() {
+        let mut registry = ValidatorRegistry::new();
+
+        let validator1 = Arc::new(MockValidator {
+            name: "validator1".to_string(),
+            priority: 100,
+        });
+
+        let validator2 = Arc::new(MockValidator {
+            name: "validator2".to_string(),
+            priority: 50,
+        });
+
+        registry.register(validator1).unwrap();
+        registry.register(validator2).unwrap();
+
+        assert_eq!(registry.get_all().len(), 2);
+
+        registry.shutdown_all().unwrap();
+        assert_eq!(registry.get_all().len(), 0);
+    }
+
+    #[test]
+    fn test_document_extractor_registry_multiple_mime_types() {
+        let mut registry = DocumentExtractorRegistry::new();
+
+        let multi_extractor = Arc::new(MockExtractor {
+            name: "multi-extractor".to_string(),
+            mime_types: &["text/plain", "text/markdown", "text/html"],
+            priority: 50,
+        });
+
+        registry.register(multi_extractor).unwrap();
+
+        // All MIME types should work
+        assert_eq!(registry.get("text/plain").unwrap().name(), "multi-extractor");
+        assert_eq!(registry.get("text/markdown").unwrap().name(), "multi-extractor");
+        assert_eq!(registry.get("text/html").unwrap().name(), "multi-extractor");
+    }
+
+    #[test]
+    fn test_post_processor_registry_priority_order() {
+        let mut registry = PostProcessorRegistry::new();
+
+        let low = Arc::new(MockPostProcessor {
+            name: "low-priority".to_string(),
+            stage: ProcessingStage::Early,
+        });
+
+        let high = Arc::new(MockPostProcessor {
+            name: "high-priority".to_string(),
+            stage: ProcessingStage::Early,
+        });
+
+        // Register in reverse order
+        registry.register(low, 10).unwrap();
+        registry.register(high, 100).unwrap();
+
+        // Should return in priority order (highest first)
+        let processors = registry.get_for_stage(ProcessingStage::Early);
+        assert_eq!(processors.len(), 2);
+        assert_eq!(processors[0].name(), "high-priority");
+        assert_eq!(processors[1].name(), "low-priority");
+    }
+
+    #[test]
+    fn test_post_processor_registry_empty_stage() {
+        let registry = PostProcessorRegistry::new();
+
+        // No processors for this stage
+        let processors = registry.get_for_stage(ProcessingStage::Late);
+        assert_eq!(processors.len(), 0);
+    }
+
+    #[test]
+    fn test_ocr_backend_registry_default() {
+        let registry = OcrBackendRegistry::default();
+        assert_eq!(registry.list().len(), 0);
+    }
+
+    #[test]
+    fn test_document_extractor_registry_default() {
+        let registry = DocumentExtractorRegistry::default();
+        assert_eq!(registry.list().len(), 0);
+    }
+
+    #[test]
+    fn test_post_processor_registry_default() {
+        let registry = PostProcessorRegistry::default();
+        assert_eq!(registry.list().len(), 0);
+    }
+
+    #[test]
+    fn test_validator_registry_default() {
+        let registry = ValidatorRegistry::default();
+        assert_eq!(registry.get_all().len(), 0);
+    }
+
+    #[test]
+    fn test_document_extractor_registry_exact_over_prefix() {
+        let mut registry = DocumentExtractorRegistry::new();
+
+        // Register prefix matcher
+        let prefix_extractor = Arc::new(MockExtractor {
+            name: "prefix-extractor".to_string(),
+            mime_types: &["image/*"],
+            priority: 100,
+        });
+
+        // Register exact matcher with lower priority
+        let exact_extractor = Arc::new(MockExtractor {
+            name: "exact-extractor".to_string(),
+            mime_types: &["image/png"],
+            priority: 50,
+        });
+
+        registry.register(prefix_extractor).unwrap();
+        registry.register(exact_extractor).unwrap();
+
+        // Exact match should be preferred over prefix match
+        let retrieved = registry.get("image/png").unwrap();
+        assert_eq!(retrieved.name(), "exact-extractor");
+
+        // Other image types should use prefix match
+        let retrieved_jpg = registry.get("image/jpeg").unwrap();
+        assert_eq!(retrieved_jpg.name(), "prefix-extractor");
+    }
 }
