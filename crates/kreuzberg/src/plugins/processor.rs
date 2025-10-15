@@ -89,8 +89,8 @@ pub enum ProcessingStage {
 ///
 /// #[async_trait]
 /// impl PostProcessor for WordCountProcessor {
-///     async fn process(&self, mut result: ExtractionResult, config: &ExtractionConfig)
-///         -> Result<ExtractionResult> {
+///     async fn process(&self, result: &mut ExtractionResult, config: &ExtractionConfig)
+///         -> Result<()> {
 ///         // Count words
 ///         let word_count = result.content.split_whitespace().count();
 ///
@@ -100,7 +100,7 @@ pub enum ProcessingStage {
 ///             serde_json::json!(word_count),
 ///         );
 ///
-///         Ok(result)
+///         Ok(())
 ///     }
 ///
 ///     fn processing_stage(&self) -> ProcessingStage {
@@ -119,17 +119,23 @@ pub trait PostProcessor: Plugin {
     ///
     /// # Arguments
     ///
-    /// * `result` - The extraction result to process
+    /// * `result` - Mutable reference to the extraction result to process
     /// * `config` - Extraction configuration
     ///
     /// # Returns
     ///
-    /// The processed extraction result.
+    /// `Ok(())` if processing succeeded, `Err(...)` for fatal failures.
     ///
     /// # Errors
     ///
     /// Return errors for fatal processing failures. Non-fatal errors should be
-    /// captured in metadata and the original result returned.
+    /// captured in metadata directly on the result.
+    ///
+    /// # Performance
+    ///
+    /// This signature avoids unnecessary cloning of large extraction results by
+    /// taking a mutable reference instead of ownership. Processors modify the
+    /// result in place.
     ///
     /// # Example - Language Detection
     ///
@@ -147,8 +153,8 @@ pub trait PostProcessor: Plugin {
     /// # #[async_trait]
     /// # impl PostProcessor for LanguageDetector {
     /// #     fn processing_stage(&self) -> ProcessingStage { ProcessingStage::Early }
-    /// async fn process(&self, mut result: ExtractionResult, config: &ExtractionConfig)
-    ///     -> Result<ExtractionResult> {
+    /// async fn process(&self, result: &mut ExtractionResult, config: &ExtractionConfig)
+    ///     -> Result<()> {
     ///     // Detect language
     ///     let language = self.detect_language(&result.content);
     ///
@@ -158,7 +164,7 @@ pub trait PostProcessor: Plugin {
     ///         serde_json::json!(language),
     ///     );
     ///
-    ///     Ok(result)
+    ///     Ok(())
     /// }
     /// # fn detect_language(&self, _: &str) -> String { "en".to_string() }
     /// # }
@@ -180,8 +186,8 @@ pub trait PostProcessor: Plugin {
     /// # #[async_trait]
     /// # impl PostProcessor for TextCleaner {
     /// #     fn processing_stage(&self) -> ProcessingStage { ProcessingStage::Middle }
-    /// async fn process(&self, mut result: ExtractionResult, config: &ExtractionConfig)
-    ///     -> Result<ExtractionResult> {
+    /// async fn process(&self, result: &mut ExtractionResult, config: &ExtractionConfig)
+    ///     -> Result<()> {
     ///     // Remove excessive whitespace
     ///     result.content = result.content
     ///         .split_whitespace()
@@ -192,11 +198,11 @@ pub trait PostProcessor: Plugin {
     ///     result.content = unicode_normalization::UnicodeNormalization::nfc(&result.content)
     ///         .collect();
     ///
-    ///     Ok(result)
+    ///     Ok(())
     /// }
     /// # }
     /// ```
-    async fn process(&self, result: ExtractionResult, config: &ExtractionConfig) -> Result<ExtractionResult>;
+    async fn process(&self, result: &mut ExtractionResult, config: &ExtractionConfig) -> Result<()>;
 
     /// Get the processing stage for this post-processor.
     ///
@@ -221,7 +227,7 @@ pub trait PostProcessor: Plugin {
     /// # }
     /// # #[async_trait]
     /// # impl PostProcessor for MyProcessor {
-    /// #     async fn process(&self, result: ExtractionResult, _: &ExtractionConfig) -> Result<ExtractionResult> { Ok(result) }
+    /// #     async fn process(&self, result: &mut ExtractionResult, _: &ExtractionConfig) -> Result<()> { Ok(()) }
     /// fn processing_stage(&self) -> ProcessingStage {
     ///     ProcessingStage::Early  // Run before other processors
     /// }
@@ -259,7 +265,7 @@ pub trait PostProcessor: Plugin {
     /// # #[async_trait]
     /// # impl PostProcessor for PdfOnlyProcessor {
     /// #     fn processing_stage(&self) -> ProcessingStage { ProcessingStage::Middle }
-    /// #     async fn process(&self, result: ExtractionResult, _: &ExtractionConfig) -> Result<ExtractionResult> { Ok(result) }
+    /// #     async fn process(&self, result: &mut ExtractionResult, _: &ExtractionConfig) -> Result<()> { Ok(()) }
     /// /// Only process PDF documents
     /// fn should_process(&self, result: &ExtractionResult, config: &ExtractionConfig) -> bool {
     ///     result.mime_type == "application/pdf"
@@ -315,12 +321,12 @@ mod tests {
 
     #[async_trait]
     impl PostProcessor for MockPostProcessor {
-        async fn process(&self, mut result: ExtractionResult, _config: &ExtractionConfig) -> Result<ExtractionResult> {
+        async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
             // Add processing metadata
             result
                 .metadata
                 .insert("processed_by".to_string(), serde_json::json!(self.name()));
-            Ok(result)
+            Ok(())
         }
 
         fn processing_stage(&self) -> ProcessingStage {
@@ -334,7 +340,7 @@ mod tests {
             stage: ProcessingStage::Early,
         };
 
-        let result = ExtractionResult {
+        let mut result = ExtractionResult {
             content: "test content".to_string(),
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
@@ -342,11 +348,11 @@ mod tests {
         };
 
         let config = ExtractionConfig::default();
-        let processed = processor.process(result, &config).await.unwrap();
+        processor.process(&mut result, &config).await.unwrap();
 
-        assert_eq!(processed.content, "test content");
+        assert_eq!(result.content, "test content");
         assert_eq!(
-            processed.metadata.get("processed_by").unwrap(),
+            result.metadata.get("processed_by").unwrap(),
             &serde_json::json!("mock-processor")
         );
     }
@@ -445,7 +451,7 @@ mod tests {
             stage: ProcessingStage::Early,
         };
 
-        let result = ExtractionResult {
+        let mut result = ExtractionResult {
             content: String::new(),
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
@@ -453,10 +459,10 @@ mod tests {
         };
 
         let config = ExtractionConfig::default();
-        let processed = processor.process(result, &config).await.unwrap();
+        processor.process(&mut result, &config).await.unwrap();
 
-        assert_eq!(processed.content, "");
-        assert!(processed.metadata.contains_key("processed_by"));
+        assert_eq!(result.content, "");
+        assert!(result.metadata.contains_key("processed_by"));
     }
 
     #[tokio::test]
@@ -468,7 +474,7 @@ mod tests {
         let mut metadata = HashMap::new();
         metadata.insert("existing_key".to_string(), serde_json::json!("existing_value"));
 
-        let result = ExtractionResult {
+        let mut result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
             metadata,
@@ -476,15 +482,15 @@ mod tests {
         };
 
         let config = ExtractionConfig::default();
-        let processed = processor.process(result, &config).await.unwrap();
+        processor.process(&mut result, &config).await.unwrap();
 
         // Should preserve existing metadata
         assert_eq!(
-            processed.metadata.get("existing_key").unwrap(),
+            result.metadata.get("existing_key").unwrap(),
             &serde_json::json!("existing_value")
         );
         // And add new metadata
-        assert!(processed.metadata.contains_key("processed_by"));
+        assert!(result.metadata.contains_key("processed_by"));
     }
 
     #[test]
@@ -526,8 +532,8 @@ mod tests {
 
         #[async_trait]
         impl PostProcessor for PdfOnlyProcessor {
-            async fn process(&self, result: ExtractionResult, _config: &ExtractionConfig) -> Result<ExtractionResult> {
-                Ok(result)
+            async fn process(&self, _result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                Ok(())
             }
 
             fn processing_stage(&self) -> ProcessingStage {
@@ -574,7 +580,7 @@ mod tests {
             page_number: 0,
         };
 
-        let result = ExtractionResult {
+        let mut result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
@@ -582,10 +588,10 @@ mod tests {
         };
 
         let config = ExtractionConfig::default();
-        let processed = processor.process(result, &config).await.unwrap();
+        processor.process(&mut result, &config).await.unwrap();
 
         // Should preserve tables
-        assert_eq!(processed.tables.len(), 1);
-        assert_eq!(processed.tables[0].cells.len(), 1);
+        assert_eq!(result.tables.len(), 1);
+        assert_eq!(result.tables[0].cells.len(), 1);
     }
 }

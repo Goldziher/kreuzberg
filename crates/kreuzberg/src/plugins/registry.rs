@@ -672,8 +672,8 @@ mod tests {
 
     #[async_trait]
     impl PostProcessor for MockPostProcessor {
-        async fn process(&self, result: ExtractionResult, _: &ExtractionConfig) -> Result<ExtractionResult> {
-            Ok(result)
+        async fn process(&self, _result: &mut ExtractionResult, _: &ExtractionConfig) -> Result<()> {
+            Ok(())
         }
 
         fn processing_stage(&self) -> ProcessingStage {

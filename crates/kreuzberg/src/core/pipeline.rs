@@ -112,15 +112,15 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
         for processor in processors {
             // Check if processor should process this result
             if processor.should_process(&result, config) {
-                match processor.process(result.clone(), config).await {
-                    Ok(processed) => result = processed,
-                    Err(e) => {
-                        // Record processor error in metadata, continue with original result
-                        let error_key = format!("processing_error_{}", processor.name());
-                        result
-                            .metadata
-                            .insert(error_key, serde_json::Value::String(e.to_string()));
-                    }
+                // Processors now take &mut ExtractionResult and return Result<()>,
+                // which avoids unnecessary cloning of potentially large results.
+                // On error, the original result is preserved (not modified).
+                if let Err(e) = processor.process(&mut result, config).await {
+                    // Record processor error in metadata, continue with current result
+                    let error_key = format!("processing_error_{}", processor.name());
+                    result
+                        .metadata
+                        .insert(error_key, serde_json::Value::String(e.to_string()));
                 }
             }
         }
