@@ -1,6 +1,8 @@
+pub mod archive;
 pub mod email;
 pub mod excel;
 pub mod html;
+pub mod image;
 pub mod libreoffice;
 pub mod pandoc;
 pub mod pptx;
@@ -9,9 +11,14 @@ pub mod table;
 pub mod text;
 pub mod xml;
 
+pub use archive::{
+    ArchiveEntry, ArchiveMetadata, extract_tar_metadata, extract_tar_text_content, extract_zip_metadata,
+    extract_zip_text_content,
+};
 pub use email::{build_email_text_output, extract_email_content, parse_eml_content, parse_msg_content};
 pub use excel::{excel_to_markdown, read_excel_bytes, read_excel_file};
 pub use html::{convert_html_to_markdown, process_html};
+pub use image::{ImageMetadata, extract_image_metadata};
 pub use libreoffice::{check_libreoffice_available, convert_doc_to_docx, convert_ppt_to_pptx};
 pub use pptx::{extract_pptx_from_bytes, extract_pptx_from_path};
 pub use structured::{JsonExtractionConfig, StructuredDataResult, parse_json, parse_toml, parse_yaml};

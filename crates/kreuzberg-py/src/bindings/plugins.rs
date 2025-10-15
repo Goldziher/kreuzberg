@@ -456,8 +456,10 @@ fn extraction_config_to_py_dict(py: Python, _config: &ExtractionConfig) -> Resul
 
 fn extraction_result_to_py_dict(py: Python, result: &ExtractionResult) -> Result<Py<PyDict>> {
     let dict = PyDict::new(py);
-    dict.set_item("content", &result.content).map_err(to_py_err)?;
-    dict.set_item("mime_type", &result.mime_type).map_err(to_py_err)?;
+    dict.set_item("content", &result.content)
+        .map_err(|e| KreuzbergError::Other(e.to_string()))?;
+    dict.set_item("mime_type", &result.mime_type)
+        .map_err(|e| KreuzbergError::Other(e.to_string()))?;
     // TODO: Add metadata and tables
     Ok(dict.into())
 }
@@ -465,17 +467,17 @@ fn extraction_result_to_py_dict(py: Python, result: &ExtractionResult) -> Result
 fn py_dict_to_extraction_result(py: Python, obj: &Bound<'_, PyAny>) -> Result<ExtractionResult> {
     let content = obj
         .get_item("content")
-        .map_err(to_py_err)?
+        .map_err(|e| KreuzbergError::Other(e.to_string()))?
         .ok_or_else(|| KreuzbergError::Parsing("Missing 'content' field".to_string()))?
         .extract::<String>()
-        .map_err(to_py_err)?;
+        .map_err(|e| KreuzbergError::Other(e.to_string()))?;
 
     let mime_type = obj
         .get_item("mime_type")
-        .map_err(to_py_err)?
+        .map_err(|e| KreuzbergError::Other(e.to_string()))?
         .ok_or_else(|| KreuzbergError::Parsing("Missing 'mime_type' field".to_string()))?
         .extract::<String>()
-        .map_err(to_py_err)?;
+        .map_err(|e| KreuzbergError::Other(e.to_string()))?;
 
     Ok(ExtractionResult {
         content,

@@ -8,18 +8,22 @@ use crate::plugins::registry::get_document_extractor_registry;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 
+pub mod archive;
 pub mod email;
 pub mod excel;
 pub mod html;
+pub mod image;
 pub mod pdf;
 pub mod pptx;
 pub mod structured;
 pub mod text;
 pub mod xml;
 
+pub use archive::{TarExtractor, ZipExtractor};
 pub use email::EmailExtractor;
 pub use excel::ExcelExtractor;
 pub use html::HtmlExtractor;
+pub use image::ImageExtractor;
 pub use pdf::PdfExtractor;
 pub use pptx::PptxExtractor;
 pub use structured::StructuredExtractor;
@@ -93,6 +97,13 @@ pub fn register_default_extractors() -> Result<()> {
     // Register structured data extractor (JSON, YAML, TOML)
     registry.register(Arc::new(StructuredExtractor::new()))?;
 
+    // Register Image extractor
+    registry.register(Arc::new(ImageExtractor::new()))?;
+
+    // Register Archive extractors
+    registry.register(Arc::new(ZipExtractor::new()))?;
+    registry.register(Arc::new(TarExtractor::new()))?;
+
     Ok(())
 }
 
@@ -116,8 +127,8 @@ mod tests {
         let reg = registry.read().unwrap();
         let extractor_names = reg.list();
 
-        // Should have 9 extractors: PlainText, Markdown, XML, PDF, Excel, PPTX, Email, HTML, Structured
-        assert_eq!(extractor_names.len(), 9, "Expected 9 extractors to be registered");
+        // Should have 12 extractors: PlainText, Markdown, XML, PDF, Excel, PPTX, Email, HTML, Structured, Image, ZIP, TAR
+        assert_eq!(extractor_names.len(), 12, "Expected 12 extractors to be registered");
 
         // Verify each extractor by name
         assert!(extractor_names.contains(&"plain-text-extractor".to_string()));
@@ -129,6 +140,9 @@ mod tests {
         assert!(extractor_names.contains(&"email-extractor".to_string()));
         assert!(extractor_names.contains(&"html-extractor".to_string()));
         assert!(extractor_names.contains(&"structured-extractor".to_string()));
+        assert!(extractor_names.contains(&"image-extractor".to_string()));
+        assert!(extractor_names.contains(&"zip-extractor".to_string()));
+        assert!(extractor_names.contains(&"tar-extractor".to_string()));
     }
 
     #[test]
