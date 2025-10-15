@@ -343,4 +343,94 @@ mod tests {
         assert!(supported.contains(&"deu".to_string()));
         assert!(supported.contains(&"fra".to_string()));
     }
+
+    #[test]
+    fn test_ocr_backend_type_variants() {
+        assert_eq!(OcrBackendType::Tesseract, OcrBackendType::Tesseract);
+        assert_ne!(OcrBackendType::Tesseract, OcrBackendType::EasyOCR);
+        assert_ne!(OcrBackendType::EasyOCR, OcrBackendType::PaddleOCR);
+        assert_ne!(OcrBackendType::PaddleOCR, OcrBackendType::Custom);
+    }
+
+    #[test]
+    fn test_ocr_backend_type_debug() {
+        let backend_type = OcrBackendType::Tesseract;
+        let debug_str = format!("{:?}", backend_type);
+        assert!(debug_str.contains("Tesseract"));
+    }
+
+    #[test]
+    fn test_ocr_backend_type_clone() {
+        let backend_type = OcrBackendType::EasyOCR;
+        let cloned = backend_type;
+        assert_eq!(backend_type, cloned);
+    }
+
+    #[test]
+    fn test_ocr_backend_default_table_detection() {
+        let backend = MockOcrBackend {
+            languages: vec!["eng".to_string()],
+        };
+        // Default implementation should return false
+        assert!(!backend.supports_table_detection());
+    }
+
+    #[tokio::test]
+    async fn test_ocr_backend_process_file_default_impl() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let backend = MockOcrBackend {
+            languages: vec!["eng".to_string()],
+        };
+
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(b"fake image data").unwrap();
+        let path = temp_file.path();
+
+        let config = OcrConfig {
+            backend: "mock".to_string(),
+            language: "eng".to_string(),
+        };
+
+        let result = backend.process_file(path, &config).await.unwrap();
+        assert_eq!(result.content, "Mocked OCR text");
+    }
+
+    #[test]
+    fn test_ocr_backend_plugin_interface() {
+        let mut backend = MockOcrBackend {
+            languages: vec!["eng".to_string()],
+        };
+
+        assert_eq!(backend.name(), "mock-ocr");
+        assert_eq!(backend.version(), "1.0.0");
+        assert!(backend.initialize().is_ok());
+        assert!(backend.shutdown().is_ok());
+    }
+
+    #[test]
+    fn test_ocr_backend_empty_languages() {
+        let backend = MockOcrBackend { languages: vec![] };
+
+        let supported = backend.supported_languages();
+        assert_eq!(supported.len(), 0);
+        assert!(!backend.supports_language("eng"));
+    }
+
+    #[tokio::test]
+    async fn test_ocr_backend_with_empty_image() {
+        let backend = MockOcrBackend {
+            languages: vec!["eng".to_string()],
+        };
+
+        let config = OcrConfig {
+            backend: "mock".to_string(),
+            language: "eng".to_string(),
+        };
+
+        // Mock backend doesn't validate, but real backends should
+        let result = backend.process_image(b"", &config).await;
+        assert!(result.is_ok());
+    }
 }

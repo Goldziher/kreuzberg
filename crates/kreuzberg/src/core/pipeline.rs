@@ -235,8 +235,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_pipeline_preserves_tables() {
-        use std::collections::HashMap;
         use crate::types::Table;
+        use std::collections::HashMap;
 
         let table = Table {
             cells: vec![vec!["A".to_string(), "B".to_string()]],
