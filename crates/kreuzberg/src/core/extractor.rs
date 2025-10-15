@@ -325,7 +325,7 @@ pub async fn batch_extract_file(
                 results[index] = Some(result);
             }
             Ok((index, Err(e))) => {
-                // System errors bubble up
+                // OSError/RuntimeError must bubble up - system errors need user reports ~keep
                 if matches!(e, KreuzbergError::Io(_)) {
                     return Err(e);
                 }
@@ -414,7 +414,7 @@ pub async fn batch_extract_bytes(
                 results[index] = Some(result);
             }
             Ok((index, Err(e))) => {
-                // System errors bubble up
+                // OSError/RuntimeError must bubble up - system errors need user reports ~keep
                 if matches!(e, KreuzbergError::Io(_)) {
                     return Err(e);
                 }
