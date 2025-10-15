@@ -191,6 +191,9 @@ impl DocumentExtractorRegistry {
                 .insert(name.clone(), Arc::clone(&extractor));
         }
 
+        // Invalidate thread-local caches since registry changed
+        crate::core::extractor::invalidate_extractor_cache();
+
         Ok(())
     }
 
@@ -272,6 +275,9 @@ impl DocumentExtractorRegistry {
         // Shutdown the extractor once
         if let Some(extractor) = extractor_to_shutdown {
             extractor.shutdown()?;
+
+            // Invalidate thread-local caches since registry changed
+            crate::core::extractor::invalidate_extractor_cache();
         }
 
         // Clean up empty maps

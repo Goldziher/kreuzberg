@@ -19,6 +19,7 @@ use once_cell::sync::Lazy;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 /// Global Tokio runtime for synchronous operations.
@@ -40,14 +41,47 @@ static GLOBAL_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
         .expect("Failed to create global Tokio runtime - system may be out of resources")
 });
 
+/// Global cache generation counter for invalidation.
+///
+/// This counter is incremented whenever the extractor registry changes
+/// (register/unregister operations). Each thread-local cache stores the
+/// generation it was populated with and invalidates itself if the global
+/// generation has changed.
+static CACHE_GENERATION: AtomicU64 = AtomicU64::new(0);
+
 // Thread-local extractor cache to reduce registry lock contention.
 //
 // This cache stores extractors per MIME type on a per-thread basis, providing
 // 10-30% performance improvement for batch operations by avoiding repeated
 // registry read lock acquisitions.
+//
+// The cache includes a generation number for automatic invalidation when
+// the registry changes.
 thread_local! {
-    static EXTRACTOR_CACHE: RefCell<HashMap<String, Arc<dyn DocumentExtractor>>> =
-        RefCell::new(HashMap::new());
+    static EXTRACTOR_CACHE: RefCell<(u64, HashMap<String, Arc<dyn DocumentExtractor>>)> =
+        RefCell::new((0, HashMap::new()));
+}
+
+/// Invalidate the thread-local extractor cache.
+///
+/// This function increments the global cache generation counter, which causes
+/// all thread-local caches to invalidate themselves on their next access.
+///
+/// This should be called whenever the extractor registry changes (register/unregister
+/// operations).
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads concurrently. Uses atomic operations for
+/// lock-free synchronization.
+///
+/// # Performance
+///
+/// - O(1) operation (single atomic increment)
+/// - No locks acquired
+/// - Lazy invalidation (caches clear on next access, not immediately)
+pub fn invalidate_extractor_cache() {
+    CACHE_GENERATION.fetch_add(1, Ordering::Release);
 }
 
 /// Get an extractor from the cache or registry.
@@ -56,14 +90,30 @@ thread_local! {
 /// cached, it acquires the registry lock, retrieves the extractor, caches it,
 /// and returns it.
 ///
+/// The cache automatically invalidates when the registry changes (register/unregister)
+/// by tracking a global generation counter.
+///
 /// # Performance
 ///
 /// - Cache hit: No locking overhead
 /// - Cache miss: One-time registry lock acquisition per thread per MIME type
 /// - Reduces lock contention by 80%+ in batch operations
+/// - Automatic invalidation prevents stale extractor usage
 fn get_extractor_cached(mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
-    // Try cache first
-    let cached = EXTRACTOR_CACHE.with(|cache| cache.borrow().get(mime_type).cloned());
+    let current_generation = CACHE_GENERATION.load(Ordering::Acquire);
+
+    // Try cache first, checking generation
+    let cached = EXTRACTOR_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+
+        // Invalidate cache if generation changed
+        if cache.0 != current_generation {
+            cache.1.clear();
+            cache.0 = current_generation;
+        }
+
+        cache.1.get(mime_type).cloned()
+    });
 
     if let Some(extractor) = cached {
         return Ok(extractor);
@@ -81,7 +131,8 @@ fn get_extractor_cached(mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
 
     // Store in cache for this thread
     EXTRACTOR_CACHE.with(|cache| {
-        cache.borrow_mut().insert(mime_type.to_string(), Arc::clone(&extractor));
+        let mut cache = cache.borrow_mut();
+        cache.1.insert(mime_type.to_string(), Arc::clone(&extractor));
     });
 
     Ok(extractor)
@@ -593,5 +644,88 @@ mod tests {
         // Call with different MIME type - should work
         let result3 = extract_bytes(b"# test 3", "text/markdown", &config).await;
         assert!(result3.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_extractor_cache_invalidation() {
+        let config = ExtractionConfig::default();
+
+        // Ensure built-in extractors are registered
+        crate::extractors::ensure_initialized().unwrap();
+
+        // First extraction - should populate cache for text/plain
+        let result1 = extract_bytes(b"first", "text/plain", &config).await;
+        assert!(result1.is_ok());
+        assert_eq!(result1.unwrap().content, "first");
+
+        // Manually invalidate cache (simulating registry change)
+        invalidate_extractor_cache();
+
+        // Next extraction should work (cache will repopulate)
+        let result2 = extract_bytes(b"second", "text/plain", &config).await;
+        assert!(result2.is_ok());
+        assert_eq!(result2.unwrap().content, "second");
+
+        // Verify multiple MIME types work after invalidation
+        invalidate_extractor_cache();
+
+        let result3 = extract_bytes(b"# markdown", "text/markdown", &config).await;
+        assert!(result3.is_ok());
+
+        let result4 = extract_bytes(b"plain text", "text/plain", &config).await;
+        assert!(result4.is_ok());
+        assert_eq!(result4.unwrap().content, "plain text");
+    }
+
+    #[tokio::test]
+    async fn test_invalidate_extractor_cache_function() {
+        let config = ExtractionConfig::default();
+
+        // Populate cache
+        let _ = extract_bytes(b"test", "text/plain", &config).await;
+
+        // Manually invalidate
+        invalidate_extractor_cache();
+
+        // Next call should work (cache will repopulate)
+        let result = extract_bytes(b"after invalidation", "text/plain", &config).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().content, "after invalidation");
+    }
+
+    #[tokio::test]
+    async fn test_cache_invalidation_concurrent() {
+        use tokio::task::JoinSet;
+
+        let config = Arc::new(ExtractionConfig::default());
+
+        // Spawn multiple concurrent tasks
+        let mut tasks = JoinSet::new();
+
+        for i in 0..10 {
+            let config_clone = Arc::clone(&config);
+            tasks.spawn(async move {
+                // Each task does extraction and invalidation
+                let content = format!("test {}", i);
+                let result = extract_bytes(content.as_bytes(), "text/plain", &config_clone).await;
+
+                // Randomly invalidate
+                if i % 3 == 0 {
+                    invalidate_extractor_cache();
+                }
+
+                result
+            });
+        }
+
+        // All tasks should complete successfully
+        let mut success_count = 0;
+        while let Some(task_result) = tasks.join_next().await {
+            if task_result.is_ok() && task_result.unwrap().is_ok() {
+                success_count += 1;
+            }
+        }
+
+        assert_eq!(success_count, 10);
     }
 }
