@@ -192,12 +192,12 @@ pub async fn extract_file(
     // 2. MIME detection/validation
     let detected_mime = mime::detect_or_validate(Some(path), mime_type)?;
 
-    // 3. TODO: Cache check (when cache module is ready)
-    // if config.use_cache {
-    //     if let Some(cached) = cache::get(path, config).await? {
-    //         return Ok(cached);
-    //     }
-    // }
+    // 3. Cache module exists but integration deferred to v4.1
+    //    See: https://github.com/Goldziher/kreuzberg/issues/TBD
+    //    The cache module in src/cache/ is functional but needs:
+    //    - Configuration plumbing through ExtractionConfig
+    //    - Performance benchmarking
+    //    - Cache invalidation strategy
 
     // 4. Ensure built-in extractors are registered
     crate::extractors::ensure_initialized()?;
@@ -211,10 +211,7 @@ pub async fn extract_file(
     // 5. Run post-processing pipeline
     result = crate::core::pipeline::run_pipeline(result, config).await?;
 
-    // 6. TODO: Cache write (when cache module is ready)
-    // if config.use_cache {
-    //     cache::set(path, config, &result).await?;
-    // }
+    // 6. Cache integration deferred to v4.1 (see comment at step 3)
 
     Ok(result)
 }
