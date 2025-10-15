@@ -2,8 +2,8 @@
 
 **Status**: Phase 3 - Critical Complete, High Priority In Progress ✅
 **Last Updated**: 2025-10-15
-**Test Status**: 649 tests passing (+161 new tests since Phase 3 start)
-**Coverage**: ~75-80% estimated (target: 95%)
+**Test Status**: 696 tests passing (+208 new tests since Phase 3 start)
+**Coverage**: ~80-83% estimated (target: 95%)
 **Architecture**: See `V4_STRUCTURE.md`
 
 ---
@@ -28,9 +28,9 @@
 ### 6. Increase Test Coverage (~65-70% → 95% Target)
 
 **Impact**: Quality and reliability
-**Effort**: 1-2 hours (remaining)
+**Effort**: <1 hour (remaining)
 **Priority**: Must complete before release
-**Progress**: 161 new tests added (3 batches completed)
+**Progress**: 208 new tests added (5 batches completed)
 
 **Tests Added (Session Summary)**:
 
@@ -52,11 +52,17 @@ Batch 3 (34 tests):
 - ✅ ocr/processor.rs: 16 tests (10 → 26 total)
 - ✅ pdf/rendering.rs: 17 tests (9 → 26 total)
 
+Batch 4 (29 tests):
+- ✅ extraction/html.rs: 29 tests (9 → 38 total)
+
+Batch 5 (18 tests):
+- ✅ extraction/xml.rs: 18 tests (7 → 25 total)
+
 **Remaining Coverage Gaps**:
 
-- Additional extraction modules (HTML, XML, text parsers)
-- Edge case testing for complex configurations
-- Concurrency stress tests
+- Text/email extraction modules
+- Complex integration scenarios
+- Performance/stress testing
 
 **Required Test Types**:
 
