@@ -673,4 +673,296 @@ mod tests {
         assert!(!metadata.contains_key("invalid_field"));
         assert!(!metadata.contains_key("random_key"));
     }
+
+    #[test]
+    fn test_extract_meta_value_meta_blocks() {
+        let node = json!({
+            "t": "MetaBlocks",
+            "c": [
+                {
+                    "t": "Para",
+                    "c": [
+                        {"t": "Str", "c": "First"},
+                        {"t": "Space"},
+                        {"t": "Str", "c": "paragraph"}
+                    ]
+                },
+                {
+                    "t": "Para",
+                    "c": [
+                        {"t": "Str", "c": "Second"},
+                        {"t": "Space"},
+                        {"t": "Str", "c": "paragraph"}
+                    ]
+                }
+            ]
+        });
+
+        let result = extract_meta_value(&node).unwrap();
+        assert_eq!(result, Value::String("First paragraph Second paragraph".to_string()));
+    }
+
+    #[test]
+    fn test_extract_meta_value_meta_map() {
+        let node = json!({
+            "t": "MetaMap",
+            "c": {
+                "key1": {"t": "MetaString", "c": "value1"},
+                "key2": {"t": "MetaString", "c": "value2"}
+            }
+        });
+
+        let result = extract_meta_value(&node).unwrap();
+        let obj = result.as_object().unwrap();
+        assert_eq!(obj.get("key1").unwrap(), &Value::String("value1".to_string()));
+        assert_eq!(obj.get("key2").unwrap(), &Value::String("value2".to_string()));
+    }
+
+    #[test]
+    fn test_extract_inline_text_strong() {
+        let node = json!({
+            "t": "Strong",
+            "c": [
+                {"t": "Str", "c": "bold"}
+            ]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "bold");
+    }
+
+    #[test]
+    fn test_extract_inline_text_link() {
+        let node = json!({
+            "t": "Link",
+            "c": [
+                ["", [], []],
+                [{"t": "Str", "c": "link text"}],
+                ["https://example.com", ""]
+            ]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "link text");
+    }
+
+    #[test]
+    fn test_extract_inline_text_image() {
+        let node = json!({
+            "t": "Image",
+            "c": [
+                ["", [], []],
+                [{"t": "Str", "c": "alt text"}],
+                ["image.png", ""]
+            ]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "alt text");
+    }
+
+    #[test]
+    fn test_extract_inline_text_quoted() {
+        let node = json!({
+            "t": "Quoted",
+            "c": [
+                {"t": "DoubleQuote"},
+                [{"t": "Str", "c": "quoted text"}]
+            ]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "quoted text");
+    }
+
+    #[test]
+    fn test_extract_inline_text_cite() {
+        let node = json!({
+            "t": "Cite",
+            "c": [
+                [{"citationId": "cite1"}],
+                [{"t": "Str", "c": "citation text"}]
+            ]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "citation text");
+    }
+
+    #[test]
+    fn test_extract_inline_text_math() {
+        let node = json!({
+            "t": "Math",
+            "c": [
+                {"t": "InlineMath"},
+                "x^2 + y^2"
+            ]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "x^2 + y^2");
+    }
+
+    #[test]
+    fn test_extract_inline_text_linebreak() {
+        let node = json!({"t": "LineBreak"});
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "\n");
+    }
+
+    #[test]
+    fn test_extract_inline_text_softbreak() {
+        let node = json!({"t": "SoftBreak"});
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "\n");
+    }
+
+    #[test]
+    fn test_extract_inline_text_strikeout() {
+        let node = json!({
+            "t": "Strikeout",
+            "c": [{"t": "Str", "c": "deleted"}]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "deleted");
+    }
+
+    #[test]
+    fn test_extract_inline_text_superscript() {
+        let node = json!({
+            "t": "Superscript",
+            "c": [{"t": "Str", "c": "2"}]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "2");
+    }
+
+    #[test]
+    fn test_extract_inline_text_subscript() {
+        let node = json!({
+            "t": "Subscript",
+            "c": [{"t": "Str", "c": "i"}]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "i");
+    }
+
+    #[test]
+    fn test_extract_inline_text_smallcaps() {
+        let node = json!({
+            "t": "SmallCaps",
+            "c": [{"t": "Str", "c": "small"}]
+        });
+        let result = extract_inline_text(&node).unwrap();
+        assert_eq!(result, "small");
+    }
+
+    #[test]
+    fn test_extract_inline_text_unknown_type() {
+        let node = json!({
+            "t": "UnknownType",
+            "c": "should be ignored"
+        });
+        let result = extract_inline_text(&node);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_citations_from_nested_blocks() {
+        // Test extraction from blocks with nested structure
+        let blocks = vec![json!({
+            "t": "BulletList",
+            "c": [
+                [
+                    {
+                        "t": "Plain",
+                        "c": [
+                            {"t": "Str", "c": "text"}
+                        ]
+                    }
+                ]
+            ]
+        })];
+
+        let mut citations = Vec::new();
+        extract_citations_from_blocks(&blocks, &mut citations);
+
+        // No citations in this structure
+        assert!(citations.is_empty());
+    }
+
+    #[test]
+    fn test_extract_metadata_from_json_with_citations() {
+        let json = json!({
+            "meta": {
+                "title": {"t": "MetaString", "c": "Paper"}
+            },
+            "citations": [
+                {"citationId": "cite1"},
+                {"citationId": "cite2"}
+            ],
+            "blocks": []
+        });
+
+        let metadata = extract_metadata_from_json(&json).unwrap();
+
+        assert!(metadata.contains_key("citations"));
+        let citations = metadata.get("citations").unwrap().as_array().unwrap();
+        assert_eq!(citations.len(), 2);
+        assert_eq!(citations[0], Value::String("cite1".to_string()));
+        assert_eq!(citations[1], Value::String("cite2".to_string()));
+    }
+
+    #[test]
+    fn test_extract_metadata_from_json_empty_meta() {
+        let json = json!({
+            "meta": {},
+            "blocks": []
+        });
+
+        let metadata = extract_metadata_from_json(&json).unwrap();
+        assert!(metadata.is_empty());
+    }
+
+    #[test]
+    fn test_extract_meta_value_empty_list() {
+        let node = json!({
+            "t": "MetaList",
+            "c": []
+        });
+
+        let result = extract_meta_value(&node);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_meta_value_empty_map() {
+        let node = json!({
+            "t": "MetaMap",
+            "c": {}
+        });
+
+        let result = extract_meta_value(&node);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_inlines_empty() {
+        let inlines = vec![];
+        let result = extract_inlines(&inlines);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_valid_metadata_keys_contains_standard_fields() {
+        // Verify key metadata fields are in the list
+        assert!(VALID_METADATA_KEYS.contains(&"title"));
+        assert!(VALID_METADATA_KEYS.contains(&"authors"));
+        assert!(VALID_METADATA_KEYS.contains(&"date"));
+        assert!(VALID_METADATA_KEYS.contains(&"keywords"));
+        assert!(VALID_METADATA_KEYS.contains(&"abstract"));
+        assert!(VALID_METADATA_KEYS.contains(&"citations"));
+    }
+
+    #[test]
+    fn test_get_pandoc_key_unmapped() {
+        // Keys without special mapping should be returned as-is
+        assert_eq!(get_pandoc_key("title"), "title");
+        assert_eq!(get_pandoc_key("keywords"), "keywords");
+        assert_eq!(get_pandoc_key("custom_field"), "custom_field");
+    }
 }
