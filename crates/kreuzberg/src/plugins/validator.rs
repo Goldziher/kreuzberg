@@ -57,7 +57,7 @@ use async_trait::async_trait;
 ///     async fn validate(&self, result: &ExtractionResult, config: &ExtractionConfig)
 ///         -> Result<()> {
 ///         if result.content.len() < self.min_length {
-///             return Err(KreuzbergError::Validation(format!(
+///             return Err(KreuzbergError::validation(format!(
 ///                 "Content too short: {} < {} characters",
 ///                 result.content.len(),
 ///                 self.min_length
@@ -109,14 +109,14 @@ pub trait Validator: Plugin {
     ///     let length = result.content.len();
     ///
     ///     if length < self.min {
-    ///         return Err(KreuzbergError::Validation(format!(
+    ///         return Err(KreuzbergError::validation(format!(
     ///             "Content too short: {} < {} characters",
     ///             length, self.min
     ///         )));
     ///     }
     ///
     ///     if length > self.max {
-    ///         return Err(KreuzbergError::Validation(format!(
+    ///         return Err(KreuzbergError::validation(format!(
     ///             "Content too long: {} > {} characters",
     ///             length, self.max
     ///         )));
@@ -151,7 +151,7 @@ pub trait Validator: Plugin {
     ///         .unwrap_or(0.0);
     ///
     ///     if score < self.min_score {
-    ///         return Err(KreuzbergError::Validation(format!(
+    ///         return Err(KreuzbergError::validation(format!(
     ///             "Quality score too low: {} < {}",
     ///             score, self.min_score
     ///         )));
@@ -182,7 +182,7 @@ pub trait Validator: Plugin {
     ///     // Check for blocked patterns
     ///     for pattern in &self.blocked_patterns {
     ///         if result.content.contains(pattern) {
-    ///             return Err(KreuzbergError::Validation(format!(
+    ///             return Err(KreuzbergError::validation(format!(
     ///                 "Content contains blocked pattern: {}",
     ///                 pattern
     ///             )));
@@ -305,7 +305,7 @@ mod tests {
     impl Validator for MockValidator {
         async fn validate(&self, _result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
             if self.should_fail {
-                Err(KreuzbergError::Validation("Validation failed".to_string()))
+                Err(KreuzbergError::validation("Validation failed".to_string()))
             } else {
                 Ok(())
             }
@@ -341,7 +341,7 @@ mod tests {
         let config = ExtractionConfig::default();
         let validation_result = validator.validate(&result, &config).await;
 
-        assert!(matches!(validation_result, Err(KreuzbergError::Validation(_))));
+        assert!(matches!(validation_result, Err(KreuzbergError::Validation { .. })));
     }
 
     #[test]
@@ -526,7 +526,7 @@ mod tests {
         let err = validator.validate(&result, &config).await.unwrap_err();
 
         match err {
-            KreuzbergError::Validation(msg) => {
+            KreuzbergError::Validation { message: msg, .. } => {
                 assert_eq!(msg, "Validation failed");
             }
             _ => panic!("Expected Validation error"),

@@ -22,7 +22,7 @@ pub fn get_pandoc_format_from_mime(mime_type: &str) -> Result<String> {
         }
     }
 
-    Err(KreuzbergError::Validation(format!(
+    Err(KreuzbergError::validation(format!(
         "Unsupported MIME type: {}",
         mime_type
     )))
@@ -35,7 +35,7 @@ pub fn get_extension_from_mime(mime_type: &str) -> Result<String> {
     mappings
         .get(mime_type)
         .map(|s| s.to_string())
-        .ok_or_else(|| KreuzbergError::Validation(format!("No file extension mapping for MIME type: {}", mime_type)))
+        .ok_or_else(|| KreuzbergError::validation(format!("No file extension mapping for MIME type: {}", mime_type)))
 }
 
 fn get_mime_to_pandoc_mapping() -> HashMap<&'static str, &'static str> {

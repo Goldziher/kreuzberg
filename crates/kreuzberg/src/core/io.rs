@@ -64,7 +64,7 @@ pub fn file_exists(path: impl AsRef<Path>) -> bool {
 /// Returns `KreuzbergError::Validation` if file doesn't exist.
 pub fn validate_file_exists(path: impl AsRef<Path>) -> Result<()> {
     if !file_exists(&path) {
-        return Err(KreuzbergError::Validation(format!(
+        return Err(KreuzbergError::validation(format!(
             "File does not exist: {}",
             path.as_ref().display()
         )));
@@ -99,7 +99,7 @@ where
     let mut files = Vec::new();
 
     if !dir.is_dir() {
-        return Err(KreuzbergError::Validation(format!(
+        return Err(KreuzbergError::validation(format!(
             "Path is not a directory: {}",
             dir.display()
         )));

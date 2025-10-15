@@ -28,15 +28,15 @@ pub fn extract_image_metadata(bytes: &[u8]) -> Result<ImageMetadata> {
     // Load image to get dimensions and format
     let reader = ImageReader::new(Cursor::new(bytes))
         .with_guessed_format()
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read image format: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to read image format: {}", e)))?;
 
     let format = reader
         .format()
-        .ok_or_else(|| KreuzbergError::Parsing("Could not determine image format".to_string()))?;
+        .ok_or_else(|| KreuzbergError::parsing("Could not determine image format".to_string()))?;
 
     let image = reader
         .decode()
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to decode image: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to decode image: {}", e)))?;
 
     let width = image.width();
     let height = image.height();

@@ -41,12 +41,12 @@ pub fn parse_xml(xml_bytes: &[u8], preserve_whitespace: bool) -> Result<XmlExtra
                     content.push(' ');
                 }
                 Err(e) => {
-                    return Err(KreuzbergError::Parsing(format!("Invalid UTF-8 in CDATA: {}", e)));
+                    return Err(KreuzbergError::parsing(format!("Invalid UTF-8 in CDATA: {}", e)));
                 }
             },
             Ok(Event::Eof) => break,
             Err(e) => {
-                return Err(KreuzbergError::Parsing(format!(
+                return Err(KreuzbergError::parsing(format!(
                     "XML parsing error at position {}: {}",
                     reader.buffer_position(),
                     e

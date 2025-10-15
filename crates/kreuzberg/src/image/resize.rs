@@ -8,7 +8,7 @@ pub fn resize_image(image: &DynamicImage, new_width: u32, new_height: u32, scale
     let (width, height) = rgb_image.dimensions();
 
     let src_image = FirImage::from_vec_u8(width, height, rgb_image.into_raw(), PixelType::U8x3)
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to create source image: {e:?}")))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to create source image: {e:?}")))?;
 
     let mut dst_image = FirImage::new(new_width, new_height, PixelType::U8x3);
 
@@ -24,11 +24,11 @@ pub fn resize_image(image: &DynamicImage, new_width: u32, new_height: u32, scale
     let mut resizer = Resizer::new();
     resizer
         .resize(&src_image, &mut dst_image, &ResizeOptions::new().resize_alg(algorithm))
-        .map_err(|e| KreuzbergError::Parsing(format!("Resize failed: {e:?}")))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Resize failed: {e:?}")))?;
 
     let buffer = dst_image.into_vec();
     let img_buffer = ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(new_width, new_height, buffer)
-        .ok_or_else(|| KreuzbergError::Parsing("Failed to create image buffer".to_string()))?;
+        .ok_or_else(|| KreuzbergError::parsing("Failed to create image buffer".to_string()))?;
 
     Ok(DynamicImage::ImageRgb8(img_buffer))
 }

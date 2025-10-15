@@ -8,7 +8,7 @@ pub fn table_from_arrow_to_markdown(arrow_bytes: &[u8]) -> Result<String> {
     let cursor = Cursor::new(arrow_bytes);
     let df = IpcReader::new(cursor)
         .finish()
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read Arrow IPC data: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to read Arrow IPC data: {}", e)))?;
 
     // Convert DataFrame to markdown
     dataframe_to_markdown(&df)
@@ -65,10 +65,10 @@ fn format_cell_value(series: &Series, idx: usize) -> Result<String> {
             // Cast all integer types to i64 for consistent handling
             let casted = series
                 .cast(&DataType::Int64)
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to cast to i64: {}", e)))?;
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to cast to i64: {}", e)))?;
             casted
                 .i64()
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to get i64 value: {}", e)))?
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to get i64 value: {}", e)))?
                 .get(idx)
                 .map(|v| v.to_string())
                 .unwrap_or_default()
@@ -77,10 +77,10 @@ fn format_cell_value(series: &Series, idx: usize) -> Result<String> {
             // Cast all unsigned integer types to u64 for consistent handling
             let casted = series
                 .cast(&DataType::UInt64)
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to cast to u64: {}", e)))?;
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to cast to u64: {}", e)))?;
             casted
                 .u64()
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to get u64 value: {}", e)))?
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to get u64 value: {}", e)))?
                 .get(idx)
                 .map(|v| v.to_string())
                 .unwrap_or_default()
@@ -89,23 +89,23 @@ fn format_cell_value(series: &Series, idx: usize) -> Result<String> {
             // Cast all float types to f64 for consistent handling
             let casted = series
                 .cast(&DataType::Float64)
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to cast to f64: {}", e)))?;
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to cast to f64: {}", e)))?;
             casted
                 .f64()
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to get f64 value: {}", e)))?
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to get f64 value: {}", e)))?
                 .get(idx)
                 .map(|v| format!("{:.2}", v))
                 .unwrap_or_default()
         }
         DataType::Boolean => series
             .bool()
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to get bool value: {}", e)))?
+            .map_err(|e| KreuzbergError::parsing(format!("Failed to get bool value: {}", e)))?
             .get(idx)
             .map(|v| v.to_string())
             .unwrap_or_default(),
         DataType::String => series
             .str()
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to get string value: {}", e)))?
+            .map_err(|e| KreuzbergError::parsing(format!("Failed to get string value: {}", e)))?
             .get(idx)
             .map(|v| v.to_string())
             .unwrap_or_default(),

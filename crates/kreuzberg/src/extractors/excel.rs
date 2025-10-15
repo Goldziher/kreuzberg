@@ -88,7 +88,7 @@ impl DocumentExtractor for ExcelExtractor {
         // Use file-based extraction for better performance
         let path_str = path
             .to_str()
-            .ok_or_else(|| crate::KreuzbergError::Validation("Invalid file path".to_string()))?;
+            .ok_or_else(|| crate::KreuzbergError::validation("Invalid file path".to_string()))?;
 
         let workbook = crate::extraction::excel::read_excel_file(path_str)?;
         let markdown = crate::extraction::excel::excel_to_markdown(&workbook);

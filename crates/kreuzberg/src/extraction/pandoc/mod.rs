@@ -96,7 +96,7 @@ pub async fn extract_images(path: &Path, from_format: &str) -> Result<Vec<Extrac
         .output()
         .await
         .map_err(|e| {
-            crate::error::KreuzbergError::Parsing(format!("Failed to execute pandoc for image extraction: {}", e))
+            crate::error::KreuzbergError::parsing(format!("Failed to execute pandoc for image extraction: {}", e))
         })?;
 
     if !output.status.success() {

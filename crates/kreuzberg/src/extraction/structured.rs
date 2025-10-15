@@ -57,7 +57,7 @@ pub fn parse_json(data: &[u8], config: Option<JsonExtractionConfig>) -> Result<S
     let config = config.unwrap_or_default();
 
     let value: serde_json::Value =
-        serde_json::from_slice(data).map_err(|e| KreuzbergError::Parsing(format!("Failed to parse JSON: {}", e)))?;
+        serde_json::from_slice(data).map_err(|e| KreuzbergError::parsing(format!("Failed to parse JSON: {}", e)))?;
 
     let mut metadata = HashMap::new();
     let mut text_fields = Vec::new();
@@ -229,11 +229,11 @@ pub fn parse_yaml(data: &[u8]) -> Result<StructuredDataResult> {
 
     // Decode bytes to string
     let yaml_str =
-        std::str::from_utf8(data).map_err(|e| KreuzbergError::Parsing(format!("Invalid UTF-8 in YAML: {}", e)))?;
+        std::str::from_utf8(data).map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in YAML: {}", e)))?;
 
     // Parse YAML using saphyr
     let docs = saphyr::Yaml::load_from_str(yaml_str)
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to parse YAML: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to parse YAML: {}", e)))?;
 
     if docs.is_empty() {
         return Ok(StructuredDataResult {
@@ -330,11 +330,11 @@ fn extract_from_yaml(
 pub fn parse_toml(data: &[u8]) -> Result<StructuredDataResult> {
     // Decode bytes to string
     let toml_str =
-        std::str::from_utf8(data).map_err(|e| KreuzbergError::Parsing(format!("Invalid UTF-8 in TOML: {}", e)))?;
+        std::str::from_utf8(data).map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in TOML: {}", e)))?;
 
     // Parse TOML
     let value: toml::Value =
-        toml::from_str(toml_str).map_err(|e| KreuzbergError::Parsing(format!("Failed to parse TOML: {}", e)))?;
+        toml::from_str(toml_str).map_err(|e| KreuzbergError::parsing(format!("Failed to parse TOML: {}", e)))?;
 
     let mut metadata = HashMap::new();
     let mut text_fields = Vec::new();

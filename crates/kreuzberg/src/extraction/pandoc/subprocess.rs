@@ -44,7 +44,7 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
             || stderr_lower.contains("error:")
             || stderr_lower.contains("failed")
         {
-            return Err(KreuzbergError::Parsing(format!(
+            return Err(KreuzbergError::parsing(format!(
                 "Pandoc format/parsing error: {}",
                 stderr
             )));
@@ -57,7 +57,7 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
     // Read output
     let content = fs::read_to_string(&output_path)
         .await
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read pandoc output: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to read pandoc output: {}", e)))?;
 
     // Cleanup
     let _ = fs::remove_file(&output_path).await;
@@ -102,7 +102,7 @@ pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<
             || stderr_lower.contains("error:")
             || stderr_lower.contains("failed")
         {
-            return Err(KreuzbergError::Parsing(format!(
+            return Err(KreuzbergError::parsing(format!(
                 "Pandoc metadata extraction format/parsing error: {}",
                 stderr
             )));
@@ -115,14 +115,14 @@ pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<
     // Read JSON
     let json_content = fs::read_to_string(&metadata_path)
         .await
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read pandoc JSON output: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to read pandoc JSON output: {}", e)))?;
 
     // Cleanup
     let _ = fs::remove_file(&metadata_path).await;
 
     // Parse JSON
     let json_data: Value = serde_json::from_str(&json_content)
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to parse pandoc JSON: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to parse pandoc JSON: {}", e)))?;
 
     // Extract metadata
     extract_metadata_from_json(&json_data)

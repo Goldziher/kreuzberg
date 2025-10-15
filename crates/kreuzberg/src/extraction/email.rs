@@ -30,7 +30,7 @@ fn whitespace_regex() -> &'static Regex {
 pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
     let message = mail_parser::MessageParser::default()
         .parse(data)
-        .ok_or_else(|| KreuzbergError::Parsing("Failed to parse EML file: invalid email format".to_string()))?;
+        .ok_or_else(|| KreuzbergError::parsing("Failed to parse EML file: invalid email format".to_string()))?;
 
     // Extract basic fields
     let subject = message.subject().map(|s| s.to_string());
@@ -145,7 +145,7 @@ pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
 /// Parse .msg file content (Outlook format)
 pub fn parse_msg_content(data: &[u8]) -> Result<EmailExtractionResult> {
     let outlook = msg_parser::Outlook::from_slice(data)
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to parse MSG file: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to parse MSG file: {}", e)))?;
 
     // Extract basic fields
     let subject = Some(outlook.subject.clone());
@@ -291,13 +291,13 @@ pub fn parse_msg_content(data: &[u8]) -> Result<EmailExtractionResult> {
 /// Extract email content from either .eml or .msg format
 pub fn extract_email_content(data: &[u8], mime_type: &str) -> Result<EmailExtractionResult> {
     if data.is_empty() {
-        return Err(KreuzbergError::Validation("Email content is empty".to_string()));
+        return Err(KreuzbergError::validation("Email content is empty".to_string()));
     }
 
     match mime_type {
         "message/rfc822" | "text/plain" => parse_eml_content(data),
         "application/vnd.ms-outlook" => parse_msg_content(data),
-        _ => Err(KreuzbergError::Validation(format!(
+        _ => Err(KreuzbergError::validation(format!(
             "Unsupported email MIME type: {}",
             mime_type
         ))),
@@ -491,14 +491,14 @@ mod tests {
     fn test_extract_email_content_empty_data() {
         let result = extract_email_content(b"", "message/rfc822");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), KreuzbergError::Validation(_)));
+        assert!(matches!(result.unwrap_err(), KreuzbergError::Validation { .. }));
     }
 
     #[test]
     fn test_extract_email_content_invalid_mime_type() {
         let result = extract_email_content(b"test", "application/pdf");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), KreuzbergError::Validation(_)));
+        assert!(matches!(result.unwrap_err(), KreuzbergError::Validation { .. }));
     }
 
     #[test]
@@ -513,7 +513,7 @@ mod tests {
     fn test_parse_msg_content_invalid() {
         let result = parse_msg_content(b"not a msg file");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), KreuzbergError::Parsing(_)));
+        assert!(matches!(result.unwrap_err(), KreuzbergError::Parsing { .. }));
     }
 
     #[test]

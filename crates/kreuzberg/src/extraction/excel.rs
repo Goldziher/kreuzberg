@@ -15,7 +15,7 @@ pub fn read_excel_file(file_path: &str) -> Result<ExcelWorkbook> {
         Err(calamine::Error::Io(io_err)) => {
             // Check if it's a format detection error (InvalidData) vs real IO error
             if io_err.kind() == std::io::ErrorKind::InvalidData {
-                return Err(KreuzbergError::Parsing(format!(
+                return Err(KreuzbergError::parsing(format!(
                     "Cannot detect Excel file format: {}",
                     io_err
                 )));
@@ -23,7 +23,7 @@ pub fn read_excel_file(file_path: &str) -> Result<ExcelWorkbook> {
             // Real IO error - bubble up unchanged ~keep
             return Err(io_err.into());
         }
-        Err(e) => return Err(KreuzbergError::Parsing(format!("Failed to parse Excel file: {}", e))),
+        Err(e) => return Err(KreuzbergError::parsing(format!("Failed to parse Excel file: {}", e))),
     };
 
     process_workbook(workbook)
@@ -35,25 +35,25 @@ pub fn read_excel_bytes(data: &[u8], file_extension: &str) -> Result<ExcelWorkbo
     match file_extension.to_lowercase().as_str() {
         ".xlsx" | ".xlsm" | ".xlam" | ".xltm" => {
             let workbook = calamine::Xlsx::new(cursor)
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to parse XLSX: {}", e)))?;
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to parse XLSX: {}", e)))?;
             process_workbook(workbook)
         }
         ".xls" | ".xla" => {
             let workbook = calamine::Xls::new(cursor)
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to parse XLS: {}", e)))?;
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to parse XLS: {}", e)))?;
             process_workbook(workbook)
         }
         ".xlsb" => {
             let workbook = calamine::Xlsb::new(cursor)
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to parse XLSB: {}", e)))?;
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to parse XLSB: {}", e)))?;
             process_workbook(workbook)
         }
         ".ods" => {
             let workbook = calamine::Ods::new(cursor)
-                .map_err(|e| KreuzbergError::Parsing(format!("Failed to parse ODS: {}", e)))?;
+                .map_err(|e| KreuzbergError::parsing(format!("Failed to parse ODS: {}", e)))?;
             process_workbook(workbook)
         }
-        _ => Err(KreuzbergError::Parsing(format!(
+        _ => Err(KreuzbergError::parsing(format!(
             "Unsupported file extension: {}",
             file_extension
         ))),

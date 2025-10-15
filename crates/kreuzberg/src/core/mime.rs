@@ -227,7 +227,7 @@ pub fn detect_mime_type(path: impl AsRef<Path>, check_exists: bool) -> Result<St
     let path = path.as_ref();
 
     if check_exists && !path.exists() {
-        return Err(KreuzbergError::Validation(format!(
+        return Err(KreuzbergError::validation(format!(
             "File does not exist: {}",
             path.display()
         )));
@@ -257,7 +257,7 @@ pub fn detect_mime_type(path: impl AsRef<Path>, check_exists: bool) -> Result<St
         )));
     }
 
-    Err(KreuzbergError::Validation(format!(
+    Err(KreuzbergError::validation(format!(
         "Could not determine MIME type from file path: {}",
         path.display()
     )))
@@ -310,7 +310,7 @@ pub fn detect_or_validate(path: Option<&Path>, mime_type: Option<&str>) -> Resul
         let detected = detect_mime_type(p, true)?;
         validate_mime_type(&detected)
     } else {
-        Err(KreuzbergError::Validation(
+        Err(KreuzbergError::validation(
             "Must provide either path or mime_type".to_string(),
         ))
     }

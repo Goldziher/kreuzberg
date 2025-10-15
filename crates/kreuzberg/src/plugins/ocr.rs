@@ -119,7 +119,7 @@ pub trait OcrBackend: Plugin {
     /// async fn process_image(&self, image_bytes: &[u8], config: &OcrConfig) -> Result<ExtractionResult> {
     ///     // Validate image format
     ///     if image_bytes.is_empty() {
-    ///         return Err(kreuzberg::KreuzbergError::Validation(
+    ///         return Err(kreuzberg::KreuzbergError::validation(
     ///             "Empty image data".to_string()
     ///         ));
     ///     }

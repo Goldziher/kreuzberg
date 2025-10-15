@@ -37,7 +37,7 @@ pub fn normalize_image_dpi(
 ) -> Result<NormalizeResult> {
     // Validate dimensions
     if width > 65536 || height > 65536 {
-        return Err(KreuzbergError::Validation(format!(
+        return Err(KreuzbergError::validation(format!(
             "Image dimensions {}x{} exceed maximum 65536x65536",
             width, height
         )));
@@ -46,7 +46,7 @@ pub fn normalize_image_dpi(
     // Validate data size
     let expected_size = height * width * 3;
     if rgb_data.len() != expected_size {
-        return Err(KreuzbergError::Validation(format!(
+        return Err(KreuzbergError::validation(format!(
             "RGB data size {} does not match expected size {} for {}x{} image",
             rgb_data.len(),
             expected_size,
@@ -214,7 +214,7 @@ fn perform_resize(
     // Convert flat RGB data to DynamicImage
     let img_buffer = ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(original_width, original_height, rgb_data.to_vec())
         .ok_or_else(|| {
-            KreuzbergError::Parsing(format!(
+            KreuzbergError::parsing(format!(
                 "Failed to create image buffer from {}x{} RGB data",
                 original_width, original_height
             ))

@@ -88,7 +88,7 @@ impl DocumentExtractor for PptxExtractor {
     async fn extract_file(&self, path: &Path, mime_type: &str, _config: &ExtractionConfig) -> Result<ExtractionResult> {
         let path_str = path
             .to_str()
-            .ok_or_else(|| crate::KreuzbergError::Validation("Invalid file path".to_string()))?;
+            .ok_or_else(|| crate::KreuzbergError::validation("Invalid file path".to_string()))?;
 
         let extract_images = false; // TODO: Get from config
 

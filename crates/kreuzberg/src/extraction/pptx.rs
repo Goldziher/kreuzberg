@@ -260,7 +260,7 @@ impl PptxContainer {
             Ok(arc) => arc,
             Err(zip::result::ZipError::Io(io_err)) => return Err(io_err.into()), // Bubble up IO errors ~keep
             Err(e) => {
-                return Err(KreuzbergError::Parsing(format!(
+                return Err(KreuzbergError::parsing(format!(
                     "Failed to read PPTX archive (invalid format): {}",
                     e
                 )));
@@ -285,10 +285,10 @@ impl PptxContainer {
                 Ok(contents)
             }
             Err(zip::result::ZipError::FileNotFound) => {
-                Err(KreuzbergError::Parsing("File not found in archive".to_string()))
+                Err(KreuzbergError::parsing("File not found in archive".to_string()))
             }
             Err(zip::result::ZipError::Io(io_err)) => Err(io_err.into()), // Bubble up IO errors ~keep
-            Err(e) => Err(KreuzbergError::Parsing(format!("Zip error: {}", e))),
+            Err(e) => Err(KreuzbergError::parsing(format!("Zip error: {}", e))),
         }
     }
 
@@ -322,7 +322,7 @@ impl PptxContainer {
             Ok(f) => f,
             Err(zip::result::ZipError::Io(io_err)) => return Err(io_err.into()), // Bubble up IO errors ~keep
             Err(e) => {
-                return Err(KreuzbergError::Parsing(format!(
+                return Err(KreuzbergError::parsing(format!(
                     "Failed to read file from archive: {}",
                     e
                 )));
@@ -492,10 +492,10 @@ use roxmltree::Document;
 
 fn parse_slide_xml(xml_data: &[u8]) -> Result<Vec<SlideElement>> {
     let xml_str = std::str::from_utf8(xml_data)
-        .map_err(|e| KreuzbergError::Parsing(format!("Invalid UTF-8 in slide XML: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in slide XML: {}", e)))?;
 
     let doc =
-        Document::parse(xml_str).map_err(|e| KreuzbergError::Parsing(format!("Failed to parse slide XML: {}", e)))?;
+        Document::parse(xml_str).map_err(|e| KreuzbergError::parsing(format!("Failed to parse slide XML: {}", e)))?;
 
     let mut elements = Vec::new();
     const DRAWINGML_NS: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -519,10 +519,10 @@ fn parse_slide_xml(xml_data: &[u8]) -> Result<Vec<SlideElement>> {
 
 fn parse_slide_rels(rels_data: &[u8]) -> Result<Vec<ImageReference>> {
     let xml_str = std::str::from_utf8(rels_data)
-        .map_err(|e| KreuzbergError::Parsing(format!("Invalid UTF-8 in rels XML: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in rels XML: {}", e)))?;
 
     let doc =
-        Document::parse(xml_str).map_err(|e| KreuzbergError::Parsing(format!("Failed to parse rels XML: {}", e)))?;
+        Document::parse(xml_str).map_err(|e| KreuzbergError::parsing(format!("Failed to parse rels XML: {}", e)))?;
 
     let mut images = Vec::new();
 
@@ -544,10 +544,10 @@ fn parse_slide_rels(rels_data: &[u8]) -> Result<Vec<ImageReference>> {
 
 fn parse_presentation_rels(rels_data: &[u8]) -> Result<Vec<String>> {
     let xml_str = std::str::from_utf8(rels_data)
-        .map_err(|e| KreuzbergError::Parsing(format!("Invalid UTF-8 in presentation rels: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in presentation rels: {}", e)))?;
 
     let doc = Document::parse(xml_str)
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to parse presentation rels: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to parse presentation rels: {}", e)))?;
 
     let mut slide_paths = Vec::new();
 
@@ -571,10 +571,10 @@ fn parse_presentation_rels(rels_data: &[u8]) -> Result<Vec<String>> {
 
 fn extract_metadata(core_xml: &[u8]) -> Result<PptxMetadata> {
     let xml_str = std::str::from_utf8(core_xml)
-        .map_err(|e| KreuzbergError::Parsing(format!("Invalid UTF-8 in core.xml: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in core.xml: {}", e)))?;
 
     let doc =
-        Document::parse(xml_str).map_err(|e| KreuzbergError::Parsing(format!("Failed to parse core.xml: {}", e)))?;
+        Document::parse(xml_str).map_err(|e| KreuzbergError::parsing(format!("Failed to parse core.xml: {}", e)))?;
 
     let mut metadata = PptxMetadata {
         title: None,
@@ -623,10 +623,10 @@ fn extract_all_notes(container: &mut PptxContainer) -> Result<HashMap<u32, Strin
 
 fn extract_notes_text(notes_xml: &[u8]) -> Result<String> {
     let xml_str = std::str::from_utf8(notes_xml)
-        .map_err(|e| KreuzbergError::Parsing(format!("Invalid UTF-8 in notes XML: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in notes XML: {}", e)))?;
 
     let doc =
-        Document::parse(xml_str).map_err(|e| KreuzbergError::Parsing(format!("Failed to parse notes XML: {}", e)))?;
+        Document::parse(xml_str).map_err(|e| KreuzbergError::parsing(format!("Failed to parse notes XML: {}", e)))?;
 
     let mut text_parts = Vec::new();
     const DRAWINGML_NS: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -950,7 +950,7 @@ mod tests {
         let result = extract_pptx_from_bytes(invalid_bytes, false);
 
         assert!(result.is_err());
-        if let Err(KreuzbergError::Parsing(msg)) = result {
+        if let Err(KreuzbergError::Parsing { message: msg, .. }) = result {
             assert!(msg.contains("Failed to read PPTX archive") || msg.contains("Failed to write temp PPTX file"));
         } else {
             panic!("Expected ParsingError");
@@ -1283,7 +1283,7 @@ mod tests {
         let invalid_utf8 = vec![0xFF, 0xFE, 0xFF];
         let result = parse_slide_xml(&invalid_utf8);
         assert!(result.is_err());
-        if let Err(KreuzbergError::Parsing(msg)) = result {
+        if let Err(KreuzbergError::Parsing { message: msg, .. }) = result {
             assert!(msg.contains("Invalid UTF-8"));
         }
     }

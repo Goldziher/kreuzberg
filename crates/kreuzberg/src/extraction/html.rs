@@ -108,7 +108,7 @@ fn parse_heading_style(value: &str) -> Result<HeadingStyle> {
         "underlined" => Ok(HeadingStyle::Underlined),
         "atx" => Ok(HeadingStyle::Atx),
         "atx_closed" => Ok(HeadingStyle::AtxClosed),
-        _ => Err(KreuzbergError::Validation(format!(
+        _ => Err(KreuzbergError::validation(format!(
             "Unsupported heading_style '{}'",
             value
         ))),
@@ -119,7 +119,7 @@ fn parse_list_indent_type(value: &str) -> Result<ListIndentType> {
     match value.to_lowercase().as_str() {
         "spaces" => Ok(ListIndentType::Spaces),
         "tabs" => Ok(ListIndentType::Tabs),
-        _ => Err(KreuzbergError::Validation(format!(
+        _ => Err(KreuzbergError::validation(format!(
             "Unsupported list_indent_type '{}'",
             value
         ))),
@@ -130,7 +130,7 @@ fn parse_whitespace_mode(value: &str) -> Result<WhitespaceMode> {
     match value.to_lowercase().as_str() {
         "normalized" => Ok(WhitespaceMode::Normalized),
         "strict" => Ok(WhitespaceMode::Strict),
-        _ => Err(KreuzbergError::Validation(format!(
+        _ => Err(KreuzbergError::validation(format!(
             "Unsupported whitespace_mode '{}'",
             value
         ))),
@@ -141,7 +141,7 @@ fn parse_newline_style(value: &str) -> Result<NewlineStyle> {
     match value.to_lowercase().as_str() {
         "spaces" => Ok(NewlineStyle::Spaces),
         "backslash" => Ok(NewlineStyle::Backslash),
-        _ => Err(KreuzbergError::Validation(format!(
+        _ => Err(KreuzbergError::validation(format!(
             "Unsupported newline_style '{}'",
             value
         ))),
@@ -153,7 +153,7 @@ fn parse_code_block_style(value: &str) -> Result<CodeBlockStyle> {
         "indented" => Ok(CodeBlockStyle::Indented),
         "backticks" => Ok(CodeBlockStyle::Backticks),
         "tildes" => Ok(CodeBlockStyle::Tildes),
-        _ => Err(KreuzbergError::Validation(format!(
+        _ => Err(KreuzbergError::validation(format!(
             "Unsupported code_block_style '{}'",
             value
         ))),
@@ -166,7 +166,7 @@ fn parse_highlight_style(value: &str) -> Result<HighlightStyle> {
         "html" => Ok(HighlightStyle::Html),
         "bold" => Ok(HighlightStyle::Bold),
         "none" => Ok(HighlightStyle::None),
-        _ => Err(KreuzbergError::Validation(format!(
+        _ => Err(KreuzbergError::validation(format!(
             "Unsupported highlight_style '{}'",
             value
         ))),
@@ -178,7 +178,7 @@ fn parse_preprocessing_preset(value: &str) -> Result<PreprocessingPreset> {
         "minimal" => Ok(PreprocessingPreset::Minimal),
         "standard" => Ok(PreprocessingPreset::Standard),
         "aggressive" => Ok(PreprocessingPreset::Aggressive),
-        _ => Err(KreuzbergError::Validation(format!(
+        _ => Err(KreuzbergError::validation(format!(
             "Unsupported preprocessing preset '{}'",
             value
         ))),
@@ -359,7 +359,7 @@ fn inline_image_to_extracted(image: InlineImage) -> ExtractedInlineImage {
 pub fn convert_html_to_markdown(html: &str, config: Option<HtmlConversionConfig>) -> Result<String> {
     let options = build_conversion_options(config)?;
     convert_html(html, Some(options))
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to convert HTML to Markdown: {}", e)))
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown: {}", e)))
 }
 
 /// Process HTML with optional image extraction
@@ -376,7 +376,7 @@ pub fn process_html(
         img_config.filename_prefix = Some("inline-image".to_string());
 
         let extraction = convert_with_inline_images(html, Some(options), img_config)
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to convert HTML to Markdown with images: {}", e)))?;
+            .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown with images: {}", e)))?;
 
         let images = extraction
             .inline_images
@@ -393,7 +393,7 @@ pub fn process_html(
         })
     } else {
         let markdown = convert_html(html, Some(options))
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to convert HTML to Markdown: {}", e)))?;
+            .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown: {}", e)))?;
 
         Ok(HtmlExtractionResult {
             markdown,

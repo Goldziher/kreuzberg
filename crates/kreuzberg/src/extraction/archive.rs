@@ -37,7 +37,7 @@ pub struct ArchiveEntry {
 pub fn extract_zip_metadata(bytes: &[u8]) -> Result<ArchiveMetadata> {
     let cursor = Cursor::new(bytes);
     let mut archive =
-        ZipArchive::new(cursor).map_err(|e| KreuzbergError::Parsing(format!("Failed to read ZIP archive: {}", e)))?;
+        ZipArchive::new(cursor).map_err(|e| KreuzbergError::parsing(format!("Failed to read ZIP archive: {}", e)))?;
 
     let mut file_list = Vec::new();
     let mut total_size = 0u64;
@@ -45,7 +45,7 @@ pub fn extract_zip_metadata(bytes: &[u8]) -> Result<ArchiveMetadata> {
     for i in 0..archive.len() {
         let file = archive
             .by_index(i)
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to read ZIP entry: {}", e)))?;
+            .map_err(|e| KreuzbergError::parsing(format!("Failed to read ZIP entry: {}", e)))?;
 
         let path = file.name().to_string();
         let size = file.size();
@@ -77,14 +77,14 @@ pub fn extract_tar_metadata(bytes: &[u8]) -> Result<ArchiveMetadata> {
 
     let entries = archive
         .entries()
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read TAR archive: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to read TAR archive: {}", e)))?;
 
     for entry_result in entries {
-        let entry = entry_result.map_err(|e| KreuzbergError::Parsing(format!("Failed to read TAR entry: {}", e)))?;
+        let entry = entry_result.map_err(|e| KreuzbergError::parsing(format!("Failed to read TAR entry: {}", e)))?;
 
         let path = entry
             .path()
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to read TAR entry path: {}", e)))?
+            .map_err(|e| KreuzbergError::parsing(format!("Failed to read TAR entry path: {}", e)))?
             .to_string_lossy()
             .to_string();
 
@@ -113,7 +113,7 @@ pub fn extract_tar_metadata(bytes: &[u8]) -> Result<ArchiveMetadata> {
 pub fn extract_zip_text_content(bytes: &[u8]) -> Result<HashMap<String, String>> {
     let cursor = Cursor::new(bytes);
     let mut archive =
-        ZipArchive::new(cursor).map_err(|e| KreuzbergError::Parsing(format!("Failed to read ZIP archive: {}", e)))?;
+        ZipArchive::new(cursor).map_err(|e| KreuzbergError::parsing(format!("Failed to read ZIP archive: {}", e)))?;
 
     let mut contents = HashMap::new();
     let text_extensions = [
@@ -123,7 +123,7 @@ pub fn extract_zip_text_content(bytes: &[u8]) -> Result<HashMap<String, String>>
     for i in 0..archive.len() {
         let mut file = archive
             .by_index(i)
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to read ZIP entry: {}", e)))?;
+            .map_err(|e| KreuzbergError::parsing(format!("Failed to read ZIP entry: {}", e)))?;
 
         let path = file.name().to_string();
 
@@ -153,15 +153,15 @@ pub fn extract_tar_text_content(bytes: &[u8]) -> Result<HashMap<String, String>>
 
     let entries = archive
         .entries()
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read TAR archive: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to read TAR archive: {}", e)))?;
 
     for entry_result in entries {
         let mut entry =
-            entry_result.map_err(|e| KreuzbergError::Parsing(format!("Failed to read TAR entry: {}", e)))?;
+            entry_result.map_err(|e| KreuzbergError::parsing(format!("Failed to read TAR entry: {}", e)))?;
 
         let path = entry
             .path()
-            .map_err(|e| KreuzbergError::Parsing(format!("Failed to read TAR entry path: {}", e)))?
+            .map_err(|e| KreuzbergError::parsing(format!("Failed to read TAR entry path: {}", e)))?
             .to_string_lossy()
             .to_string();
 
@@ -182,7 +182,7 @@ pub fn extract_tar_text_content(bytes: &[u8]) -> Result<HashMap<String, String>>
 pub fn extract_7z_metadata(bytes: &[u8]) -> Result<ArchiveMetadata> {
     let cursor = Cursor::new(bytes);
     let archive = SevenZReader::new(cursor, bytes.len() as u64, "".into())
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read 7z archive: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to read 7z archive: {}", e)))?;
 
     let mut file_list = Vec::new();
     let mut total_size = 0u64;
@@ -215,7 +215,7 @@ pub fn extract_7z_metadata(bytes: &[u8]) -> Result<ArchiveMetadata> {
 pub fn extract_7z_text_content(bytes: &[u8]) -> Result<HashMap<String, String>> {
     let cursor = Cursor::new(bytes);
     let mut archive = SevenZReader::new(cursor, bytes.len() as u64, "".into())
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read 7z archive: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to read 7z archive: {}", e)))?;
 
     let mut contents = HashMap::new();
     let text_extensions = [
@@ -237,7 +237,7 @@ pub fn extract_7z_text_content(bytes: &[u8]) -> Result<HashMap<String, String>> 
             }
             Ok(true)
         })
-        .map_err(|e| KreuzbergError::Parsing(format!("Failed to read 7z entries: {}", e)))?;
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to read 7z entries: {}", e)))?;
 
     Ok(contents)
 }

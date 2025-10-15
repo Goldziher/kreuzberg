@@ -348,7 +348,7 @@ impl FilterPipeline {
             .collect();
 
         let preserve_patterns =
-            preserve_patterns.map_err(|e| KreuzbergError::Validation(format!("Invalid regex pattern: {}", e)))?;
+            preserve_patterns.map_err(|e| KreuzbergError::validation(format!("Invalid regex pattern: {}", e)))?;
 
         Ok(Self {
             config: Arc::clone(config),
@@ -896,7 +896,7 @@ mod tests {
 
         assert!(result.is_err());
         if let Err(err) = result {
-            assert!(matches!(err, KreuzbergError::Validation(_)));
+            assert!(matches!(err, KreuzbergError::Validation { .. }));
         }
     }
 

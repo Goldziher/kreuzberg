@@ -36,7 +36,7 @@ fn build_chunk_config(max_characters: usize, overlap: usize, trim: bool) -> Resu
     ChunkConfig::new(ChunkCapacity::new(max_characters))
         .with_overlap(overlap)
         .map(|config| config.with_trim(trim))
-        .map_err(|e| KreuzbergError::Validation(format!("Invalid chunking configuration: {}", e)))
+        .map_err(|e| KreuzbergError::validation(format!("Invalid chunking configuration: {}", e)))
 }
 
 pub fn chunk_text(text: &str, config: &ChunkingConfig) -> Result<ChunkingResult> {
@@ -234,7 +234,7 @@ mod tests {
         let result = chunk_text("Some text", &config);
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(matches!(err, KreuzbergError::Validation(_)));
+        assert!(matches!(err, KreuzbergError::Validation { .. }));
     }
 
     #[test]

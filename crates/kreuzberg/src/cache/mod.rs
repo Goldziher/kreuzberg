@@ -56,7 +56,7 @@ impl GenericCache {
         };
 
         fs::create_dir_all(&cache_dir_path)
-            .map_err(|e| KreuzbergError::Cache(format!("Failed to create cache directory: {}", e)))?;
+            .map_err(|e| KreuzbergError::cache(format!("Failed to create cache directory: {}", e)))?;
 
         Ok(Self {
             cache_dir: cache_dir_path,
@@ -180,7 +180,7 @@ impl GenericCache {
         let cache_path = self.get_cache_path(cache_key);
 
         fs::write(&cache_path, data)
-            .map_err(|e| KreuzbergError::Cache(format!("Failed to write cache file: {}", e)))?;
+            .map_err(|e| KreuzbergError::cache(format!("Failed to write cache file: {}", e)))?;
 
         self.save_metadata(cache_key, source_file);
 
@@ -281,8 +281,8 @@ pub fn get_available_disk_space(path: &str) -> Result<f64> {
 
         let path_str = check_path
             .to_str()
-            .ok_or_else(|| KreuzbergError::Validation("Path contains invalid UTF-8".to_string()))?;
-        let c_path = CString::new(path_str).map_err(|e| KreuzbergError::Validation(format!("Invalid path: {}", e)))?;
+            .ok_or_else(|| KreuzbergError::validation("Path contains invalid UTF-8".to_string()))?;
+        let c_path = CString::new(path_str).map_err(|e| KreuzbergError::validation(format!("Invalid path: {}", e)))?;
 
         // SAFETY: statvfs is a valid C struct defined by POSIX that can be zero-initialized.
         // All fields are integers (u64, c_ulong) which are safe when zeroed per the C standard.
@@ -332,7 +332,7 @@ fn scan_cache_directory(cache_dir: &str) -> Result<CacheScanResult> {
         .as_secs() as f64;
 
     let read_dir =
-        fs::read_dir(dir_path).map_err(|e| KreuzbergError::Cache(format!("Failed to read cache directory: {}", e)))?;
+        fs::read_dir(dir_path).map_err(|e| KreuzbergError::cache(format!("Failed to read cache directory: {}", e)))?;
 
     let mut total_size = 0u64;
     let mut oldest_age = 0.0f64;
@@ -559,7 +559,7 @@ pub fn clear_cache_directory(cache_dir: &str) -> Result<(usize, f64)> {
     let mut removed_size = 0.0;
 
     let read_dir =
-        fs::read_dir(dir_path).map_err(|e| KreuzbergError::Cache(format!("Failed to read cache directory: {}", e)))?;
+        fs::read_dir(dir_path).map_err(|e| KreuzbergError::cache(format!("Failed to read cache directory: {}", e)))?;
 
     for entry in read_dir {
         let entry = match entry {

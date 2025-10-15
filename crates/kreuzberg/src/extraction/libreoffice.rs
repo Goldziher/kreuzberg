@@ -56,9 +56,9 @@ pub async fn convert_office_doc(
     // Execute with timeout
     let output = match timeout(Duration::from_secs(timeout_seconds), command).await {
         Ok(Ok(output)) => output,
-        Ok(Err(e)) => return Err(KreuzbergError::Parsing(format!("Failed to execute LibreOffice: {}", e))),
+        Ok(Err(e)) => return Err(KreuzbergError::parsing(format!("Failed to execute LibreOffice: {}", e))),
         Err(_) => {
-            return Err(KreuzbergError::Parsing(format!(
+            return Err(KreuzbergError::parsing(format!(
                 "LibreOffice conversion timed out after {} seconds",
                 timeout_seconds
             )));
@@ -79,7 +79,7 @@ pub async fn convert_office_doc(
             .iter()
             .any(|k| stderr_lower.contains(k) || stdout_lower.contains(k))
         {
-            return Err(KreuzbergError::Parsing(format!(
+            return Err(KreuzbergError::parsing(format!(
                 "LibreOffice conversion failed: {}",
                 if !stderr.is_empty() { &stderr } else { &stdout }
             )));
@@ -96,13 +96,13 @@ pub async fn convert_office_doc(
     // Find output file
     let input_stem = input_path
         .file_stem()
-        .ok_or_else(|| KreuzbergError::Parsing("Invalid input file name".to_string()))?;
+        .ok_or_else(|| KreuzbergError::parsing("Invalid input file name".to_string()))?;
 
     let expected_output = output_dir.join(format!("{}.{}", input_stem.to_string_lossy(), target_format));
 
     // Read converted file
     let converted_bytes = fs::read(&expected_output).await.map_err(|e| {
-        KreuzbergError::Parsing(format!(
+        KreuzbergError::parsing(format!(
             "LibreOffice conversion completed but output file not found: {}",
             e
         ))
@@ -110,7 +110,7 @@ pub async fn convert_office_doc(
 
     // Check file is not empty
     if converted_bytes.is_empty() {
-        return Err(KreuzbergError::Parsing(
+        return Err(KreuzbergError::parsing(
             "LibreOffice conversion produced empty file".to_string(),
         ));
     }

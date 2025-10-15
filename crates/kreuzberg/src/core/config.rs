@@ -217,31 +217,31 @@ impl ExtractionConfig {
     /// Returns `KreuzbergError::Validation` if file doesn't exist or is invalid TOML.
     pub fn from_toml_file(path: impl AsRef<Path>) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref()).map_err(|e| {
-            KreuzbergError::Validation(format!("Failed to read config file {}: {}", path.as_ref().display(), e))
+            KreuzbergError::validation(format!("Failed to read config file {}: {}", path.as_ref().display(), e))
         })?;
 
         toml::from_str(&content)
-            .map_err(|e| KreuzbergError::Validation(format!("Invalid TOML in {}: {}", path.as_ref().display(), e)))
+            .map_err(|e| KreuzbergError::validation(format!("Invalid TOML in {}: {}", path.as_ref().display(), e)))
     }
 
     /// Load configuration from a YAML file.
     pub fn from_yaml_file(path: impl AsRef<Path>) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref()).map_err(|e| {
-            KreuzbergError::Validation(format!("Failed to read config file {}: {}", path.as_ref().display(), e))
+            KreuzbergError::validation(format!("Failed to read config file {}: {}", path.as_ref().display(), e))
         })?;
 
         serde_yaml::from_str(&content)
-            .map_err(|e| KreuzbergError::Validation(format!("Invalid YAML in {}: {}", path.as_ref().display(), e)))
+            .map_err(|e| KreuzbergError::validation(format!("Invalid YAML in {}: {}", path.as_ref().display(), e)))
     }
 
     /// Load configuration from a JSON file.
     pub fn from_json_file(path: impl AsRef<Path>) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref()).map_err(|e| {
-            KreuzbergError::Validation(format!("Failed to read config file {}: {}", path.as_ref().display(), e))
+            KreuzbergError::validation(format!("Failed to read config file {}: {}", path.as_ref().display(), e))
         })?;
 
         serde_json::from_str(&content)
-            .map_err(|e| KreuzbergError::Validation(format!("Invalid JSON in {}: {}", path.as_ref().display(), e)))
+            .map_err(|e| KreuzbergError::validation(format!("Invalid JSON in {}: {}", path.as_ref().display(), e)))
     }
 
     /// Discover configuration file in parent directories.
