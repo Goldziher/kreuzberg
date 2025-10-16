@@ -1,0 +1,19 @@
+[package]
+name = "kreuzberg-cli"
+version.workspace = true
+edition.workspace = true
+description = "Command-line interface for Kreuzberg document intelligence"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+kreuzberg = { path = "../kreuzberg", version = "4.0.0" }
+clap = { version = "4.5", features = ["derive", "color", "suggestions"] }
+tokio = { version = "1.48", features = ["rt-multi-thread", "macros"] }
+anyhow = "1.0"
+serde_json = "1.0"
+
+[[bin]]
+name = "kreuzberg"
+path = "src/main.rs"

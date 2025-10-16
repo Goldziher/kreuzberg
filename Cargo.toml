@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/kreuzberg", "crates/kreuzberg-py"]
+members = ["crates/kreuzberg", "crates/kreuzberg-py", "crates/kreuzberg-cli"]
 resolver = "2"
 
 [workspace.package]
