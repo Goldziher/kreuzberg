@@ -60,6 +60,7 @@ impl DocumentExtractor for HtmlExtractor {
             mime_type: mime_type.to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         })
     }
 

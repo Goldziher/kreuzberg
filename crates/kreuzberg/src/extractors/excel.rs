@@ -81,6 +81,7 @@ impl DocumentExtractor for ExcelExtractor {
             mime_type: mime_type.to_string(),
             metadata,
             tables: vec![],
+            detected_languages: None,
         })
     }
 
@@ -103,6 +104,7 @@ impl DocumentExtractor for ExcelExtractor {
             mime_type: mime_type.to_string(),
             metadata,
             tables: vec![],
+            detected_languages: None,
         })
     }
 

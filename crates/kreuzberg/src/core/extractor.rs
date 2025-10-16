@@ -347,6 +347,7 @@ pub async fn batch_extract_file(
                     mime_type: "text/plain".to_string(),
                     metadata,
                     tables: vec![],
+                    detected_languages: None,
                 });
             }
             Err(join_err) => {
@@ -436,6 +437,7 @@ pub async fn batch_extract_bytes(
                     mime_type: "text/plain".to_string(),
                     metadata,
                     tables: vec![],
+                    detected_languages: None,
                 });
             }
             Err(join_err) => {

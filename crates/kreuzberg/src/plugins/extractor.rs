@@ -390,6 +390,7 @@ mod tests {
                 mime_type: mime_type.to_string(),
                 metadata: HashMap::new(),
                 tables: vec![],
+                detected_languages: None,
             })
         }
 
@@ -563,6 +564,7 @@ mod tests {
                     mime_type: String::new(),
                     metadata: HashMap::new(),
                     tables: vec![],
+                    detected_languages: None,
                 })
             }
 

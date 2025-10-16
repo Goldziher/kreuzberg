@@ -73,6 +73,7 @@ impl DocumentExtractor for PlainTextExtractor {
                 ),
             ]),
             tables: vec![],
+            detected_languages: None,
         })
     }
 
@@ -175,6 +176,7 @@ impl DocumentExtractor for MarkdownExtractor {
             mime_type: "text/markdown".to_string(),
             metadata,
             tables: vec![],
+            detected_languages: None,
         })
     }
 

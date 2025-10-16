@@ -98,7 +98,23 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
         }
     }
 
-    // 4. Post-processors by stage (Early, Middle, Late)
+    // 4. Language detection
+    if let Some(ref lang_config) = config.language_detection {
+        match crate::language_detection::detect_languages(&result.content, lang_config) {
+            Ok(detected) => {
+                result.detected_languages = detected;
+            }
+            Err(e) => {
+                // Record language detection error in metadata, continue with degraded result
+                result.metadata.insert(
+                    "language_detection_error".to_string(),
+                    serde_json::Value::String(e.to_string()),
+                );
+            }
+        }
+    }
+
+    // 5. Post-processors by stage (Early, Middle, Late)
     let processor_registry = crate::plugins::registry::get_post_processor_registry();
 
     for stage in [ProcessingStage::Early, ProcessingStage::Middle, ProcessingStage::Late] {
@@ -141,6 +157,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
         let config = ExtractionConfig::default();
 
@@ -156,6 +173,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
         let mut config = ExtractionConfig::default();
         config.enable_quality_processing = true;
@@ -172,6 +190,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
         let mut config = ExtractionConfig::default();
         config.enable_quality_processing = false;
@@ -188,6 +207,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
         let mut config = ExtractionConfig::default();
         config.chunking = Some(crate::ChunkingConfig {
@@ -209,6 +229,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
         let mut config = ExtractionConfig::default();
         config.chunking = None;
@@ -229,6 +250,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata,
             tables: vec![],
+            detected_languages: None,
         };
         let config = ExtractionConfig::default();
 
@@ -253,6 +275,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![table],
+            detected_languages: None,
         };
         let config = ExtractionConfig::default();
 
@@ -269,6 +292,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
         let config = ExtractionConfig::default();
 
@@ -284,6 +308,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
         let mut config = ExtractionConfig::default();
         config.enable_quality_processing = true;

@@ -39,6 +39,7 @@ pub mod error;
 pub mod extraction;
 pub mod extractors;
 pub mod image;
+pub mod language_detection;
 pub mod ocr;
 pub mod pdf;
 pub mod plugins;

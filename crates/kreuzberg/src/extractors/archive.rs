@@ -107,6 +107,7 @@ impl DocumentExtractor for ZipExtractor {
             mime_type: mime_type.to_string(),
             metadata: result_metadata,
             tables: vec![],
+            detected_languages: None,
         })
     }
 
@@ -215,6 +216,7 @@ impl DocumentExtractor for TarExtractor {
             mime_type: mime_type.to_string(),
             metadata: result_metadata,
             tables: vec![],
+            detected_languages: None,
         })
     }
 
@@ -328,6 +330,7 @@ impl DocumentExtractor for SevenZExtractor {
             mime_type: mime_type.to_string(),
             metadata: result_metadata,
             tables: vec![],
+            detected_languages: None,
         })
     }
 

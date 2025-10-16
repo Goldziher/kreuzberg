@@ -10,6 +10,8 @@ pub struct ExtractionResult {
     pub mime_type: String,
     pub metadata: HashMap<String, serde_json::Value>,
     pub tables: Vec<Table>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detected_languages: Option<Vec<String>>,
 }
 
 /// Extracted table structure.

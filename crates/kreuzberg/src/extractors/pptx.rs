@@ -82,6 +82,7 @@ impl DocumentExtractor for PptxExtractor {
             mime_type: mime_type.to_string(),
             metadata,
             tables: vec![],
+            detected_languages: None,
         })
     }
 
@@ -120,6 +121,7 @@ impl DocumentExtractor for PptxExtractor {
             mime_type: mime_type.to_string(),
             metadata,
             tables: vec![],
+            detected_languages: None,
         })
     }
 

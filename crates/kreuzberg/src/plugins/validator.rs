@@ -321,6 +321,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -336,6 +337,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -353,6 +355,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -387,6 +390,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -432,6 +436,7 @@ mod tests {
             mime_type: "application/pdf".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
 
         let txt_result = ExtractionResult {
@@ -439,6 +444,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
 
         assert!(validator.should_validate(&pdf_result, &config));
@@ -520,6 +526,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -545,6 +552,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata,
             tables: vec![],
+            detected_languages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -568,6 +576,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![table],
+            detected_languages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -593,6 +602,7 @@ mod tests {
                 mime_type: mime_type.to_string(),
                 metadata: HashMap::new(),
                 tables: vec![],
+                detected_languages: None,
             };
 
             assert!(validator.validate(&result, &config).await.is_ok());
@@ -608,6 +618,7 @@ mod tests {
             mime_type: "text/plain".to_string(),
             metadata: HashMap::new(),
             tables: vec![],
+            detected_languages: None,
         };
 
         let config = ExtractionConfig::default();

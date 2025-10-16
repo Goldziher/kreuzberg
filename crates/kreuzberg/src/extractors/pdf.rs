@@ -80,6 +80,7 @@ impl DocumentExtractor for PdfExtractor {
             mime_type: mime_type.to_string(),
             metadata,
             tables: vec![],
+            detected_languages: None,
         })
     }
 
