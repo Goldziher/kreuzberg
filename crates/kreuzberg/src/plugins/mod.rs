@@ -43,6 +43,7 @@
 //! #             mime_type: String::new(),
 //! #             metadata: std::collections::HashMap::new(),
 //! #             tables: vec![],
+//! #             detected_languages: None,
 //! #         })
 //! #     }
 //! #     async fn extract_file(&self, _: &std::path::Path, _: &str, _: &kreuzberg::ExtractionConfig)
@@ -52,6 +53,7 @@
 //! #             mime_type: String::new(),
 //! #             metadata: std::collections::HashMap::new(),
 //! #             tables: vec![],
+//! #             detected_languages: None,
 //! #         })
 //! #     }
 //! #     fn supported_mime_types(&self) -> &[&str] { &[] }
@@ -107,6 +109,7 @@
 //!             mime_type: "application/json".to_string(),
 //!             metadata: HashMap::new(),
 //!             tables: vec![],
+//!             detected_languages: None,
 //!         })
 //!     }
 //!

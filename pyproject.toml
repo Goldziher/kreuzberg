@@ -1,127 +1,3 @@
-[build-system]
-build-backend = "maturin"
-
-requires = [ "maturin>=1.9.6,<2.0" ]
-
-[project]
-name = "kreuzberg"
-version = "4.0.0"
-description = "High-performance document intelligence framework for Python - Extract text, metadata, and structured data from diverse file formats with Rust-powered speed"
-readme = "README.md"
-keywords = [
-  "aarch64",
-  "arm64",
-  "async",
-  "document-analysis",
-  "document-classification",
-  "document-intelligence",
-  "document-processing",
-  "email-extraction",
-  "excel",
-  "extensible",
-  "html",
-  "information-extraction",
-  "markdown",
-  "mcp",
-  "metadata-extraction",
-  "model-context-protocol",
-  "ocr",
-  "office-documents",
-  "pandoc",
-  "pdf-extraction",
-  "pdfium",
-  "plugin-architecture",
-  "rag",
-  "retrieval-augmented-generation",
-  "rust",
-  "structured-data",
-  "table-extraction",
-  "tesseract",
-  "text-extraction",
-  "xml",
-]
-license = { text = "MIT" }
-authors = [ { name = "Na'aman Hirschfeld", email = "nhirschfed@gmail.com" } ]
-requires-python = ">=3.10"
-classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Intended Audience :: Developers",
-  "Intended Audience :: Information Technology",
-  "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
-  "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Rust",
-  "Topic :: Database",
-  "Topic :: Multimedia :: Graphics :: Capture :: Scanners",
-  "Topic :: Office/Business :: Office Suites",
-  "Topic :: Scientific/Engineering :: Artificial Intelligence",
-  "Topic :: Scientific/Engineering :: Information Analysis",
-  "Topic :: Software Development :: Libraries :: Python Modules",
-  "Topic :: Text Processing :: General",
-  "Typing :: Typed",
-]
-
-dependencies = [
-  "anyio>=4.10.0",
-  "exceptiongroup>=1.2.2; python_version<'3.11'",
-  "langcodes>=3.5.0",
-  "mcp>=1.16.0",
-  "msgspec>=0.18.0",
-  "numpy>=2.0.0",
-  "pillow>=11.3.0",
-  "playa-pdf>=0.7.0",
-  "polars>=1.34.0",
-  "psutil>=7.1.0",
-  "pypdfium2==4.30.0",
-  "typing-extensions>=4.15.0; python_version<'3.12'",
-]
-
-optional-dependencies.additional-extensions = [
-  "mailparse>=1.0.15",
-  "tomli>=2.0.0; python_version<'3.11'",
-]
-optional-dependencies.all = [
-  "kreuzberg[additional-extensions,api,cli,crypto,document-classification,easyocr,entity-extraction,langdetect,paddleocr,vision-tables]",
-]
-optional-dependencies.api = [
-  "litestar[opentelemetry,standard,structlog]>=2.18.0",
-]
-optional-dependencies.cli = [
-  "click>=8.3.0",
-  "rich>=14.2.0",
-  "tomli>=2.0.0; python_version<'3.11'",
-]
-optional-dependencies.crypto = [ "playa-pdf[crypto]>=0.7.0" ]
-optional-dependencies.dev = [ "numpy>=2.0.0" ]
-optional-dependencies.document-classification = [ "deep-translator>=1.11.4" ]
-optional-dependencies.easyocr = [ "easyocr>=1.7.2; python_version<'3.14'" ]
-optional-dependencies.entity-extraction = [
-  "keybert>=0.9.0; python_version<'3.14'",
-  "spacy>=3.8.7; python_version<'3.14'",
-]
-optional-dependencies.langdetect = [ "fast-langdetect>=1.0.0" ]
-optional-dependencies.paddleocr = [
-  "paddleocr>=3.2.0; python_version<'3.14'",
-  "paddlepaddle>=3.2.0; python_version<'3.14'",
-  "setuptools>=80.9.0",
-]
-optional-dependencies.vision-tables = [
-  "torch>=2.8.0; python_version<'3.14'",
-  "transformers>=4.57.0; python_version<'3.14'",
-]
-urls.documentation = "https://kreuzberg.dev"
-
-urls.homepage = "https://github.com/Goldziher/kreuzberg"
-scripts.kreuzberg = "kreuzberg.cli:cli"
-scripts.kreuzberg-mcp = "kreuzberg._mcp.server:main"
-
 [dependency-groups]
 dev = [
   "covdefaults>=2.3.0",
@@ -150,15 +26,6 @@ doc = [
   "mkdocstrings[python]>=0.29.0",
 ]
 
-[tool.maturin]
-python-source = "."
-module-name = "kreuzberg._internal_bindings"
-features = [ "pyo3/extension-module" ]
-compatibility = "manylinux2014"
-manifest-path = "crates/kreuzberg-py/Cargo.toml"
-# Include Pdfium library in the wheel
-include = [ "kreuzberg/_lib/*" ]
-
 [tool.uv]
 cache-keys = [
   { file = "pyproject.toml" },
@@ -169,7 +36,7 @@ cache-keys = [
 ]
 
 [tool.uv.workspace]
-members = [ ".", "comparative-benchmarks" ]
+members = [ "comparative-benchmarks", "packages/python" ]
 
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
@@ -177,7 +44,7 @@ uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
 [tool.ruff]
 target-version = "py310"
 line-length = 120
-src = [ "kreuzberg", "tests" ]
+src = [ "kreuzberg/_legacy", "packages/python/kreuzberg", "packages/python/tests" ]
 format.docstring-code-line-length = 120
 format.docstring-code-format = true
 lint.select = [ "ALL" ]
@@ -240,10 +107,10 @@ lint.per-file-ignores."benchmarks/**/*.*" = [
   "S110",    # Try-except-pass (acceptable in benchmarks)
   "SLF001",  # Private member access (needed for benchmark configuration)
 ]
-lint.per-file-ignores."tests/e2e/*_test.py" = [
+lint.per-file-ignores."packages/python/tests/e2e/*_test.py" = [
   "T201", # print statements are needed for test output
 ]
-lint.isort.known-first-party = [ "kreuzberg", "tests" ]
+lint.isort.known-first-party = [ "kreuzberg" ]
 lint.mccabe.max-complexity = 15
 lint.pydocstyle.convention = "google"
 lint.pylint.max-args = 10
@@ -260,7 +127,7 @@ max_supported_python = "3.14"
 
 [tool.pytest.ini_options]
 timeout = 300
-testpaths = [ "tests" ]
+testpaths = [ "packages/python/tests" ]
 norecursedirs = [
   "dist",
   "build",
@@ -284,9 +151,10 @@ omit = [
   "tests/*",
   "scripts/*",
   "benchmarks/*",
+  "kreuzberg/_legacy/*",
 ]
 plugins = [ "covdefaults" ]
-source = [ "kreuzberg" ]
+source = [ "packages/python/kreuzberg" ]
 
 [tool.coverage.report]
 fail_under = 85
@@ -303,8 +171,9 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-packages = [ "kreuzberg", "tests" ]
-exclude = [ "comparative-benchmarks" ]
+packages = [ "kreuzberg" ]
+mypy_path = "packages/python"
+exclude = [ "comparative-benchmarks", "kreuzberg/_legacy" ]
 python_version = "3.10"
 implicit_reexport = false
 show_error_codes = true

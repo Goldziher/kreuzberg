@@ -50,7 +50,8 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
         }
     }
 
-    // 2. Quality processing
+    // 2. Quality processing (feature-gated)
+    #[cfg(feature = "quality")]
     if config.enable_quality_processing {
         let quality_score = crate::text::quality::calculate_quality_score(
             &result.content,
@@ -70,7 +71,17 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
         );
     }
 
-    // 3. Chunking
+    #[cfg(not(feature = "quality"))]
+    if config.enable_quality_processing {
+        // Quality processing requested but feature not enabled
+        result.metadata.insert(
+            "quality_processing_error".to_string(),
+            serde_json::Value::String("Quality processing feature not enabled".to_string()),
+        );
+    }
+
+    // 3. Chunking (feature-gated)
+    #[cfg(feature = "chunking")]
     if let Some(ref chunking_config) = config.chunking {
         // Convert config to chunking module's config type
         let chunk_config = crate::chunking::ChunkingConfig {
@@ -98,7 +109,17 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
         }
     }
 
-    // 4. Language detection
+    #[cfg(not(feature = "chunking"))]
+    if config.chunking.is_some() {
+        // Chunking requested but feature not enabled
+        result.metadata.insert(
+            "chunking_error".to_string(),
+            serde_json::Value::String("Chunking feature not enabled".to_string()),
+        );
+    }
+
+    // 4. Language detection (feature-gated)
+    #[cfg(feature = "language-detection")]
     if let Some(ref lang_config) = config.language_detection {
         match crate::language_detection::detect_languages(&result.content, lang_config) {
             Ok(detected) => {
@@ -112,6 +133,15 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                 );
             }
         }
+    }
+
+    #[cfg(not(feature = "language-detection"))]
+    if config.language_detection.is_some() {
+        // Language detection requested but feature not enabled
+        result.metadata.insert(
+            "language_detection_error".to_string(),
+            serde_json::Value::String("Language detection feature not enabled".to_string()),
+        );
     }
 
     // 5. Post-processors by stage (Early, Middle, Late)
@@ -166,6 +196,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "quality")]
     async fn test_pipeline_with_quality_processing() {
         use std::collections::HashMap;
         let result = ExtractionResult {
@@ -200,6 +231,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "chunking")]
     async fn test_pipeline_with_chunking() {
         use std::collections::HashMap;
         let result = ExtractionResult {
@@ -301,6 +333,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "chunking")]
     async fn test_pipeline_with_all_features() {
         use std::collections::HashMap;
         let result = ExtractionResult {

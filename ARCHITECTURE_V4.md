@@ -17,7 +17,7 @@ ______________________________________________________________________
 
 ## Package Structure
 
-```
+```text
 kreuzberg/
 ├── __init__.py                    # Public API - re-exports from core + features
 ├── __main__.py                    # CLI entry point
@@ -89,7 +89,7 @@ ______________________________________________________________________
 
 **Current Issue**:
 
-```python
+```text
 # Python side
 config = ExtractionConfig(target_dpi=150, max_image_dimension=25000, ...)
 
@@ -98,7 +98,7 @@ config_msgpack = msgpack.encode(config)  # Serialize all 30+ fields
 rust_function(config_msgpack)
 
 # Rust side (BAD - full deserialization)
-let config = msgpack::decode(bytes)?;  # Deserialize all 30+ fields, use only 5
+let config = msgpack::decode(bytes)?;  // Deserialize all 30+ fields, use only 5
 ```
 
 ### Solution 1: Direct Kwargs (Preferred for Simple Cases)
@@ -273,11 +273,11 @@ class ExtractionConfig:
 def _extract_image_kwargs(config: ExtractionConfig) -> dict:
     """Extract image-related kwargs for Rust bindings"""
     return {
-        'target_dpi': config.target_dpi,
-        'max_image_dimension': config.max_image_dimension,
-        'auto_adjust_dpi': config.auto_adjust_dpi,
-        'min_dpi': config.min_dpi,
-        'max_dpi': config.max_dpi,
+        "target_dpi": config.target_dpi,
+        "max_image_dimension": config.max_image_dimension,
+        "auto_adjust_dpi": config.auto_adjust_dpi,
+        "min_dpi": config.min_dpi,
+        "max_dpi": config.max_dpi,
     }
 
 def _extract_tesseract_config(config: ExtractionConfig) -> PyTesseractConfig | None:
@@ -287,7 +287,7 @@ def _extract_tesseract_config(config: ExtractionConfig) -> PyTesseractConfig | N
 
     return PyTesseractConfig(
         language=config.ocr.language,
-        psm=config.ocr.psm.value if hasattr(config.ocr.psm, 'value') else config.ocr.psm,
+        psm=config.ocr.psm.value if hasattr(config.ocr.psm, "value") else config.ocr.psm,
         output_format=config.ocr.output_format,
         # ...
     )
@@ -301,11 +301,7 @@ class ImageExtractor(BaseExtractor):
     def extract_bytes_sync(self, content: bytes) -> ExtractionResult:
         # Normalize DPI using kwargs
         image_kwargs = _extract_image_kwargs(self.config)
-        normalized_image, metadata = normalize_image_dpi(
-            image_array,
-            **image_kwargs,
-            dpi_info=dpi_info
-        )
+        normalized_image, metadata = normalize_image_dpi(image_array, **image_kwargs, dpi_info=dpi_info)
 
         # OCR using PyO3 config
         if tesseract_config := _extract_tesseract_config(self.config):
@@ -482,6 +478,7 @@ ______________________________________________________________________
 
 ```python
 """Core extraction functions - thin wrappers around Rust bindings"""
+
 from pathlib import Path
 from typing import AsyncIterator
 
@@ -541,16 +538,19 @@ async def _apply_features(
     # Language detection (Python - fast-langdetect)
     if config.language_detection:
         from kreuzberg.features.language_detection import detect_language
+
         result.detected_languages = await detect_language(result.content, config.language_detection)
 
     # Entity extraction (Python - spaCy/transformers)
     if config.entities:
         from kreuzberg.features.entity_extraction import extract_entities
+
         result.entities = await extract_entities(result.content, config.entities)
 
     # Post-processing hooks (Python)
     if config.post_processing_hooks:
         from kreuzberg.features.hooks import apply_hooks
+
         result = await apply_hooks(result, config.post_processing_hooks)
 
     return result
@@ -652,6 +652,7 @@ ______________________________________________________________________
 
 ```python
 """Text chunking - Rust-backed via text-splitter crate"""
+
 from dataclasses import dataclass
 
 from kreuzberg._internal_bindings import TextSplitter, MarkdownSplitter
@@ -659,6 +660,7 @@ from kreuzberg._internal_bindings import TextSplitter, MarkdownSplitter
 @dataclass(frozen=True, kw_only=True)
 class ChunkingConfig:
     """Configuration for text chunking"""
+
     max_chars: int = 2000
     overlap: int = 100
     trim: bool = True
@@ -694,6 +696,7 @@ ______________________________________________________________________
 
 ```python
 """REST API using Litestar - delegates to core.extraction"""
+
 from litestar import Litestar, post, get
 from litestar.datastructures import UploadFile
 
@@ -722,6 +725,7 @@ ______________________________________________________________________
 
 ```python
 """Language detection using fast-langdetect"""
+
 from dataclasses import dataclass
 from fast_langdetect import detect_multilingual
 

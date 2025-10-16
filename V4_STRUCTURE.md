@@ -20,7 +20,7 @@ ______________________________________________________________________
 
 ## 1. Rust Core Library Structure
 
-```
+```text
 crates/kreuzberg/src/
 ├── lib.rs                    # Public Rust API
 ├── error.rs                  # Unified error types (KreuzbergError hierarchy)

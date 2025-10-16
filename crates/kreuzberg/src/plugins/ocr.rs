@@ -60,6 +60,7 @@ pub enum OcrBackendType {
 ///             mime_type: "text/plain".to_string(),
 ///             metadata: HashMap::new(),
 ///             tables: vec![],
+///             detected_languages: None,
 ///         })
 ///     }
 ///
@@ -134,6 +135,7 @@ pub trait OcrBackend: Plugin {
     ///         mime_type: "text/plain".to_string(),
     ///         metadata: HashMap::new(),
     ///         tables: vec![],
+    ///         detected_languages: None,
     ///     })
     /// }
     /// # }

@@ -23,7 +23,11 @@ use whatlang::{Lang, detect_lang};
 /// use kreuzberg::core::config::LanguageDetectionConfig;
 ///
 /// let text = "Hello world! This is English text.";
-/// let config = LanguageDetectionConfig::default();
+/// let config = LanguageDetectionConfig {
+///     enabled: true,
+///     min_confidence: 0.8,
+///     detect_multiple: false,
+/// };
 /// let languages = detect_languages(text, &config).unwrap();
 /// assert!(languages.is_some());
 /// ```

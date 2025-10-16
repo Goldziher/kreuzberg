@@ -10,7 +10,7 @@
 **🎉 ALL P0 AND P1 ISSUES RESOLVED!**
 **🎉 P2 ISSUES #10 AND #11 COMPLETE!**
 
----
+______________________________________________________________________
 
 ## 🚀 Next Phase: Complete Rewrite
 
@@ -26,7 +26,7 @@
 - Clean architecture leveraging Rust core
 - Maintain backward compatibility where possible
 
----
+______________________________________________________________________
 
 ## ✅ Critical Priority (P0) - **COMPLETED**
 
@@ -79,7 +79,7 @@ fn test_registry_poison_recovery() {
 }
 ```
 
----
+______________________________________________________________________
 
 ### ✅ 2. Resolve Plugin Lifecycle Design Flaw - **COMPLETED**
 
@@ -180,7 +180,7 @@ pub trait Plugin: Send + Sync {
 - `src/plugins/ocr.rs`, `extractor.rs`, `processor.rs`, `validator.rs`: Update plugin impls
 - All built-in plugins: Add interior mutability if needed
 
----
+______________________________________________________________________
 
 ### ✅ 3. Audit and Fix Production .unwrap() Calls - **COMPLETED**
 
@@ -213,7 +213,7 @@ rg "unwrap\(\)|expect\(" crates/kreuzberg/src --type rust | grep -v "tests::"
 - ✅ Add `#[allow(clippy::unwrap_used)]` with justification comments for unavoidable cases
 - ✅ Consider adding `#![warn(clippy::unwrap_used)]` to lib.rs
 
----
+______________________________________________________________________
 
 ## ✅ High Priority (P1) - **COMPLETED**
 
@@ -276,7 +276,7 @@ pub fn invalidate_extractor_cache() {
 - ✅ Performance remains optimal (cache hit rate > 90%)
 - ✅ Tests for cache invalidation scenarios
 
----
+______________________________________________________________________
 
 ### ✅ 5. Optimize Pipeline ExtractionResult Cloning - **COMPLETED**
 
@@ -330,7 +330,7 @@ match processor.process(&result, config).await {
 - `src/plugins/processor.rs`: Update `Processor` trait
 - All processor implementations
 
----
+______________________________________________________________________
 
 ### ✅ 6. Improve Error Context Throughout System - **COMPLETED**
 
@@ -363,7 +363,7 @@ pub enum KreuzbergError {
 }
 ```
 
-2. **OCR errors lack context** (`src/ocr/processor.rs`):
+1. **OCR errors lack context** (`src/ocr/processor.rs`):
 
 ```rust
 // CURRENT - NO CONTEXT
@@ -387,7 +387,7 @@ OcrError::TesseractInitializationFailed(format!(
 - ✅ Registry errors include plugin name, version
 - ✅ Error messages actionable for debugging
 
----
+______________________________________________________________________
 
 ### ✅ 7. Add Missing OSError Bubble-Up Comments - **COMPLETED**
 
@@ -415,7 +415,7 @@ if matches!(e, KreuzbergError::Io(_)) {
 - ✅ All OSError bubble-up sites have `~keep` comments
 - ✅ Grep confirms no missing comments: `rg "KreuzbergError::Io" --type rust`
 
----
+______________________________________________________________________
 
 ### ✅ 8. Complete Cache Integration or Remove TODOs - **COMPLETED**
 
@@ -467,7 +467,7 @@ if config.use_cache {
 - ✅ Clear path forward for cache integration
 - ✅ Cache module remains available for future use
 
----
+______________________________________________________________________
 
 ### ✅ 9. Document All Unsafe Code with SAFETY Comments - **COMPLETED**
 
@@ -498,7 +498,7 @@ let result = unsafe { statvfs(c_path.as_ptr(), &mut stat) };
 - ✅ SAFETY comments explain invariants being upheld
 - ✅ Grep confirms all unsafe documented: `rg "unsafe \{" --type rust`
 
----
+______________________________________________________________________
 
 ## 🟢 Medium Priority (P2) - Quality Improvements
 
@@ -525,7 +525,7 @@ async fn test_extract_pdf_no_text_layer() { /* ... */ }
 async fn test_extract_corrupted_but_parseable_pdf() { /* ... */ }
 ```
 
-2. **Concurrent Access**:
+1. **Concurrent Access**:
 
 ```rust
 #[tokio::test]
@@ -534,7 +534,7 @@ async fn test_concurrent_extractor_access() {
 }
 ```
 
-3. **Resource Exhaustion**:
+1. **Resource Exhaustion**:
 
 ```rust
 #[tokio::test]
@@ -550,7 +550,7 @@ async fn test_large_document_memory_usage() {
 - ✅ Edge cases documented and tested
 - ✅ Concurrent access patterns tested
 
----
+______________________________________________________________________
 
 ### ✅ 11. Improve Plugin Documentation - **COMPLETED**
 
@@ -561,7 +561,7 @@ async fn test_large_document_memory_usage() {
 
 1. **Missing safety documentation** (`src/plugins/traits.rs`):
 
-```rust
+````rust
 /// # Safety and Threading
 ///
 /// Plugins must be `Send + Sync` and are typically stored in `Arc` for shared access.
@@ -574,9 +574,9 @@ async fn test_large_document_memory_usage() {
 /// let arc_plugin = Arc::new(plugin);
 /// ```
 pub trait Plugin: Send + Sync { /* ... */ }
-```
+````
 
-2. **Incomplete examples** (`src/plugins/mod.rs` lines 43, 49):
+1. **Incomplete examples** (`src/plugins/mod.rs` lines 43, 49):
 
 - Replace `todo!()` with compilable placeholders
 
@@ -587,9 +587,9 @@ pub trait Plugin: Send + Sync { /* ... */ }
 - ✅ Safety requirements clearly stated
 - ✅ Lifecycle patterns documented
 
----
+______________________________________________________________________
 
----
+______________________________________________________________________
 
 ## 🔮 Future Work (v4.1)
 
@@ -603,7 +603,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 
 **Proposed Solution**: Add optional `CancellationToken` parameter to extraction functions for graceful cancellation.
 
----
+______________________________________________________________________
 
 ### 13. Add Progress Reporting for Batch Operations
 
@@ -613,7 +613,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 
 **Proposed Solution**: Add optional progress callback to `batch_extract_file` for reporting completion status.
 
----
+______________________________________________________________________
 
 ## 📋 Code Quality Checklist - **10/10 TARGET ACHIEVED** ✅
 
@@ -665,7 +665,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 - [x] No TODO comments in production (Issue #8) ✅
 - [x] Error context preserved throughout (Issue #6) ✅
 
----
+______________________________________________________________________
 
 ## 📊 Completion Summary
 
@@ -700,7 +700,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 - Code Quality: 10/10 ✅
 - Clippy Warnings: 0 ✅
 
----
+______________________________________________________________________
 
 ## 🎯 Phase 4: Complete Redesign - Zero Legacy
 
@@ -719,13 +719,13 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 - **Clean slate**: No backward compatibility, no legacy patterns
 - **Reassess later**: Vision-based features may migrate to Rust in v4.1+
 
----
+______________________________________________________________________
 
 ## Phase 4A: PyO3 Bindings Redesign (3-4 days)
 
 ### Architecture
 
-```
+```text
 crates/kreuzberg-py/
 ├── src/
 │   ├── lib.rs          # Module registration (30 LOC)
@@ -798,13 +798,13 @@ crates/kreuzberg-py/
 - ✅ All tests pass
 - ✅ Zero clippy warnings
 
----
+______________________________________________________________________
 
 ## Phase 4B: Python Library Rewrite (2-3 days)
 
 ### Architecture
 
-```
+```text
 kreuzberg/
 ├── __init__.py          # Direct re-exports from _internal_bindings
 ├── ocr/
@@ -871,9 +871,9 @@ kreuzberg/
     - Vision features (tables, entities, categories, keywords)
     - Infrastructure (API, CLI proxy)
 - ✅ All tests pass (Python + integration)
-- ✅ Benchmarks show <5% FFI overhead
+- ✅ Benchmarks show \<5% FFI overhead
 
----
+______________________________________________________________________
 
 ## Phase 4C: Rust CLI & Language Detection (2-3 days)
 
@@ -918,7 +918,7 @@ kreuzberg/
 - ✅ Language detection exposed to Python
 - ✅ All tests pass
 
----
+______________________________________________________________________
 
 ## Phase 4D: Documentation & Release (1-2 days)
 
@@ -956,7 +956,7 @@ kreuzberg/
 - ✅ Benchmarks show expected performance
 - ✅ v4.0.0 released
 
----
+______________________________________________________________________
 
 ## 📊 Progress Tracking
 
@@ -1004,7 +1004,7 @@ kreuzberg/
 
 **Overall Progress**: 0/22 (0%)
 
----
+______________________________________________________________________
 
 ## v4.1 Roadmap (Post-Release)
 
@@ -1024,3 +1024,398 @@ kreuzberg/
     - Keyword extraction → Rust text analysis?
 - Performance optimizations
 - Structured extraction (vision models)
+
+
+______________________________________________________________________
+
+## 🎯 Phase 4E: Feature Flags & Optional Features (3-4 days)
+
+**Status**: NEXT PHASE
+**Goal**: Implement optional feature flags for Rust crate to reduce binary size and improve modularity
+**Duration**: 3-4 days estimated
+**Reference**: See `RUST_FEATURES_ASSESSMENT.md` for full analysis
+
+### Philosophy
+
+- **Minimal default** - Core extractors only (~10MB binary)
+- **Format-based features** - Users enable formats they need
+- **Optional features** - API, MCP, OCR, lang-detect are opt-in
+- **Dependency-aligned** - Each feature maps to specific dependencies
+
+______________________________________________________________________
+
+### Tasks
+
+#### 1. Update Core Cargo.toml with Feature Flags
+
+**File**: `crates/kreuzberg/Cargo.toml`
+
+- [ ] Define feature structure:
+  ```toml
+  [features]
+  default = ["core-extractors"]
+
+  # Format extractors
+  pdf = ["pdfium-render", "lopdf"]
+  excel = ["calamine", "polars"]
+  office = ["roxmltree", "zip"]
+  email = ["mail-parser", "msg_parser"]
+  html = ["html-to-markdown-rs", "html-escape"]
+  xml = ["quick-xml", "roxmltree"]
+  archives = ["zip", "tar", "sevenz-rust"]
+
+  # Processing features
+  ocr = ["tesseract-rs", "image", "fast_image_resize", "ndarray"]
+  language-detection = ["whatlang"]
+  chunking = ["text-splitter"]
+  quality = ["unicode-normalization", "chardetng", "encoding_rs"]
+
+  # Server features
+  api = ["axum", "tower", "tower-http"]
+  mcp = ["jsonrpc-core"]
+
+  # Convenience bundles
+  full = ["pdf", "excel", "office", "email", "html", "xml", "archives",
+          "ocr", "language-detection", "chunking", "quality", "api", "mcp"]
+  server = ["pdf", "excel", "html", "ocr", "api"]
+  cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking"]
+  ```
+
+- [ ] Mark all dependencies as optional:
+  ```toml
+  pdfium-render = { version = "0.8.35", optional = true }
+  calamine = { version = "0.31", optional = true }
+  whatlang = { version = "0.16", optional = true }
+  axum = { version = "0.8", optional = true }
+  # ... etc
+  ```
+
+**Effort**: 1-2 hours
+
+#### 2. Add Feature Gates Throughout Codebase
+
+- [ ] **lib.rs** - Conditional module exports:
+  ```rust
+  #[cfg(feature = "pdf")]
+  pub mod pdf;
+
+  #[cfg(feature = "excel")]
+  pub mod extractors {
+      pub mod excel;
+  }
+
+  #[cfg(feature = "language-detection")]
+  pub mod language_detection;
+
+  #[cfg(feature = "api")]
+  pub mod api;
+
+  #[cfg(feature = "mcp")]
+  pub mod mcp;
+  ```
+
+- [ ] **core/registry.rs** - Conditional extractor registration:
+  ```rust
+  pub fn initialize_registry() -> Result<ExtractorRegistry> {
+      let mut registry = ExtractorRegistry::new();
+
+      // Core extractors (always available)
+      registry.register("text/plain", TextExtractor::new())?;
+      registry.register("application/json", JsonExtractor::new())?;
+
+      // Optional extractors
+      #[cfg(feature = "pdf")]
+      registry.register("application/pdf", PdfExtractor::new())?;
+
+      #[cfg(feature = "excel")]
+      registry.register("application/vnd.ms-excel", ExcelExtractor::new())?;
+
+      Ok(registry)
+  }
+  ```
+
+**Effort**: 4-6 hours
+
+#### 3. Move Language Detection Behind Feature Gate
+
+**Current**: `src/language_detection.rs` is always compiled
+
+**Required**:
+- [ ] Add `#[cfg(feature = "language-detection")]` to module
+- [ ] Update imports in `lib.rs`
+- [ ] Make `detected_languages` field in `ExtractionResult` conditional or always present but empty when feature disabled
+- [ ] Update pipeline to skip language detection when feature disabled
+- [ ] Update tests with `#[cfg(feature = "language-detection")]`
+
+**Effort**: 2-3 hours
+
+#### 4. Create API Module with Axum Backend
+
+**Location**: `crates/kreuzberg/src/api/`
+
+**Files to create**:
+- [ ] `mod.rs` - Public API exports
+- [ ] `server.rs` - Axum server setup
+- [ ] `handlers.rs` - Request handlers (extract, health, info)
+- [ ] `error.rs` - API-specific error types
+- [ ] `types.rs` - API request/response types
+
+**Implementation**:
+```rust
+// src/api/server.rs
+use axum::{Router, routing::{get, post}};
+
+pub async fn serve(addr: impl Into<SocketAddr>) -> Result<()> {
+    let app = Router::new()
+        .route("/extract", post(handlers::extract))
+        .route("/batch", post(handlers::batch_extract))
+        .route("/health", get(handlers::health))
+        .route("/info", get(handlers::info));
+
+    let listener = tokio::net::TcpListener::bind(addr.into()).await?;
+    axum::serve(listener, app).await?;
+    Ok(())
+}
+```
+
+**Dependencies to add**:
+```toml
+axum = { version = "0.8", optional = true }
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", features = ["cors", "trace"], optional = true }
+```
+
+**Effort**: 1 day
+
+#### 5. Create MCP Module for Model Context Protocol
+
+**Location**: `crates/kreuzberg/src/mcp/`
+
+**Files to create**:
+- [ ] `mod.rs` - Public MCP API
+- [ ] `server.rs` - JSON-RPC server over stdio
+- [ ] `tools.rs` - MCP tool definitions
+- [ ] `resources.rs` - MCP resource definitions
+- [ ] `types.rs` - MCP-specific types
+
+**Implementation**:
+```rust
+// src/mcp/server.rs
+use jsonrpc_core::{IoHandler, Params};
+
+pub async fn serve_mcp() -> Result<()> {
+    let mut io = IoHandler::new();
+
+    io.add_method("tools/list", |_params: Params| async {
+        Ok(json!({
+            "tools": [
+                {
+                    "name": "extract",
+                    "description": "Extract text from document",
+                    "inputSchema": { /* ... */ }
+                }
+            ]
+        }))
+    });
+
+    io.add_method("tools/extract", |params: Params| async {
+        // Extract implementation
+    });
+
+    // Run JSON-RPC server on stdin/stdout
+    let (stdin, stdout) = (tokio::io::stdin(), tokio::io::stdout());
+    run_server(io, stdin, stdout).await
+}
+```
+
+**Dependencies to add**:
+```toml
+jsonrpc-core = { version = "18.0", optional = true }
+# OR
+async-jsonrpc-client = { version = "1.0", optional = true }
+```
+
+**Effort**: 1-1.5 days
+
+#### 6. Update kreuzberg-cli with Feature Selection
+
+- [ ] Update `crates/kreuzberg-cli/Cargo.toml`:
+  ```toml
+  [dependencies]
+  kreuzberg = { path = "../kreuzberg", features = ["cli"] }
+  ```
+
+- [ ] Document feature compilation:
+  ```bash
+  # Minimal binary
+  cargo build --release
+
+  # Full-featured binary
+  cargo build --release --features full
+
+  # Server binary
+  cargo build --release --features server
+  ```
+
+**Effort**: 1 hour
+
+#### 7. Update kreuzberg-py with Full Features
+
+- [ ] Update `crates/kreuzberg-py/Cargo.toml`:
+  ```toml
+  [dependencies]
+  kreuzberg = { path = "../kreuzberg", features = ["full"] }
+  ```
+
+- [ ] Python package always gets all features (users expect it)
+
+**Effort**: 30 minutes
+
+#### 8. Add Feature Compilation Tests
+
+- [ ] Create CI workflow to test feature combinations:
+  ```yaml
+  test-features:
+    strategy:
+      matrix:
+        features:
+          - default
+          - full
+          - pdf
+          - excel,html
+          - api
+          - mcp
+          - server
+          - cli
+    runs-on: ubuntu-latest
+    steps:
+      - run: cargo test --no-default-features --features ${{ matrix.features }}
+  ```
+
+- [ ] Add feature documentation tests:
+  ```rust
+  #[test]
+  #[cfg(feature = "pdf")]
+  fn test_pdf_extraction_available() { /* ... */ }
+
+  #[test]
+  #[cfg(not(feature = "pdf"))]
+  fn test_pdf_extraction_unavailable() {
+      // Ensure proper error when PDF feature not enabled
+  }
+  ```
+
+**Effort**: 2-3 hours
+
+#### 9. Update Documentation
+
+- [ ] Create feature matrix in README.md
+- [ ] Document feature flags in Rust docs
+- [ ] Add compilation examples
+- [ ] Update V4_STRUCTURE.md with feature design
+
+**Effort**: 2-3 hours
+
+______________________________________________________________________
+
+### Acceptance Criteria
+
+- ✅ Default build is ~10-12MB (vs ~50MB current)
+- ✅ Each feature compiles independently
+- ✅ All feature combinations tested in CI
+- ✅ Language detection is optional feature
+- ✅ API server works with Axum (no uvicorn needed)
+- ✅ MCP server works over stdio
+- ✅ Python package always has full features
+- ✅ CLI can be compiled with any feature set
+- ✅ Documentation clearly explains features
+- ✅ Zero clippy warnings in all feature combinations
+
+______________________________________________________________________
+
+### Binary Size Estimates
+
+| Configuration | Binary Size | Use Case |
+|---------------|-------------|----------|
+| `default` | ~10MB | Text/JSON/YAML only |
+| `pdf` | ~35MB | PDF extraction |
+| `pdf,excel,html` | ~38MB | Common formats |
+| `server` | ~40MB | API deployment |
+| `cli` | ~42MB | CLI usage |
+| `full` | ~55MB | All features |
+
+______________________________________________________________________
+
+### Migration Impact
+
+**For Rust users:**
+- **Breaking change** if they rely on default features
+- Migration: Add explicit features to Cargo.toml
+- Benefit: Smaller binaries, faster compilation
+
+**For Python users:**
+- **Zero impact** - Python package always has full features
+- Benefit: None (Python always gets everything)
+
+**For CLI users:**
+- Can choose minimal or full featured binary
+- Default CLI build has common features
+
+______________________________________________________________________
+
+### Progress Tracking
+
+**Phase 4E: Feature Flags**
+
+- [ ] Core Cargo.toml updated with features
+- [ ] Feature gates added throughout codebase
+- [ ] Language detection behind feature gate
+- [ ] API module created (Axum)
+- [ ] MCP module created (JSON-RPC)
+- [ ] CLI updated with feature selection
+- [ ] Python bindings use full features
+- [ ] Feature compilation tests added
+- [ ] Documentation updated
+
+**Progress**: 0/9 (0%)
+
+______________________________________________________________________
+
+### Dependencies to Add
+
+```toml
+# API feature
+axum = { version = "0.8", features = ["macros", "json"], optional = true }
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", features = ["cors", "trace", "limit"], optional = true }
+serde = { version = "1.0", features = ["derive"] }  # Already present
+
+# MCP feature
+jsonrpc-core = { version = "18.0", optional = true }
+# OR better:
+jsonrpsee = { version = "0.24", features = ["server"], optional = true }
+```
+
+______________________________________________________________________
+
+## Phase 4 Updated Timeline
+
+### Phase 4A: PyO3 Bindings Redesign (3-4 days)
+**Status**: Not Started
+
+### Phase 4B: Python Library Rewrite (2-3 days)
+**Status**: Not Started
+
+### Phase 4C: Rust CLI & Language Detection (2-3 days)
+**Status**: Not Started
+
+### Phase 4D: Documentation & Release (1-2 days)
+**Status**: Not Started
+
+### Phase 4E: Feature Flags & Optional Features (3-4 days) ✨ NEW
+**Status**: Not Started
+
+**Total Duration**: 11-16 days (was 7-10 days)
+**New Total**: 14-19 days estimated
+
+______________________________________________________________________

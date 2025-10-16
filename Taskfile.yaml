@@ -26,12 +26,12 @@ tasks:
   test:python:
     desc: "Run Python tests with pytest"
     cmds:
-      - uv run pytest
+      - uv run pytest packages/python/tests/ -v
 
   test:cov:
     desc: "Run Python tests with coverage"
     cmds:
-      - uv run pytest --cov
+      - uv run pytest packages/python/tests/ --cov=packages/python/kreuzberg --cov-report=term
 
   test:rust:
     desc: "Run Rust tests"
@@ -48,7 +48,7 @@ tasks:
   cov:python:
     desc: "Generate Python code coverage report"
     cmds:
-      - uv run pytest --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term
+      - uv run pytest packages/python/tests/ --cov=packages/python/kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term
       - echo "Python coverage report generated at coverage.lcov"
 
   cov:all:

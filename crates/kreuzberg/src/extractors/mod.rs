@@ -8,28 +8,70 @@ use crate::plugins::registry::get_document_extractor_registry;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 
-pub mod archive;
-pub mod email;
-pub mod excel;
-pub mod html;
-pub mod image;
-pub mod pandoc;
-pub mod pdf;
-pub mod pptx;
+// Core extractors (always available)
 pub mod structured;
 pub mod text;
+
+// Image extractor (requires image crate, part of OCR feature)
+#[cfg(feature = "ocr")]
+pub mod image;
+
+// Optional extractors (feature-gated)
+#[cfg(feature = "archives")]
+pub mod archive;
+
+#[cfg(feature = "email")]
+pub mod email;
+
+#[cfg(feature = "excel")]
+pub mod excel;
+
+#[cfg(feature = "html")]
+pub mod html;
+
+#[cfg(feature = "office")]
+pub mod pandoc;
+
+#[cfg(feature = "pdf")]
+pub mod pdf;
+
+#[cfg(feature = "office")]
+pub mod pptx;
+
+#[cfg(feature = "xml")]
 pub mod xml;
 
-pub use archive::{SevenZExtractor, TarExtractor, ZipExtractor};
-pub use email::EmailExtractor;
-pub use excel::ExcelExtractor;
-pub use html::HtmlExtractor;
-pub use image::ImageExtractor;
-pub use pandoc::PandocExtractor;
-pub use pdf::PdfExtractor;
-pub use pptx::PptxExtractor;
+// Core exports
 pub use structured::StructuredExtractor;
 pub use text::{MarkdownExtractor, PlainTextExtractor};
+
+// Image extractor (feature-gated)
+#[cfg(feature = "ocr")]
+pub use image::ImageExtractor;
+
+// Optional exports
+#[cfg(feature = "archives")]
+pub use archive::{SevenZExtractor, TarExtractor, ZipExtractor};
+
+#[cfg(feature = "email")]
+pub use email::EmailExtractor;
+
+#[cfg(feature = "excel")]
+pub use excel::ExcelExtractor;
+
+#[cfg(feature = "html")]
+pub use html::HtmlExtractor;
+
+#[cfg(feature = "office")]
+pub use pandoc::PandocExtractor;
+
+#[cfg(feature = "pdf")]
+pub use pdf::PdfExtractor;
+
+#[cfg(feature = "office")]
+pub use pptx::PptxExtractor;
+
+#[cfg(feature = "xml")]
 pub use xml::XmlExtractor;
 
 /// Lazy-initialized flag that ensures extractors are registered exactly once.
@@ -76,41 +118,43 @@ pub fn register_default_extractors() -> Result<()> {
         .write()
         .map_err(|e| crate::KreuzbergError::Other(format!("Document extractor registry lock poisoned: {}", e)))?;
 
-    // Register text extractors
+    // Core extractors (always available)
     registry.register(Arc::new(PlainTextExtractor::new()))?;
     registry.register(Arc::new(MarkdownExtractor::new()))?;
-
-    // Register XML extractor
-    registry.register(Arc::new(XmlExtractor::new()))?;
-
-    // Register PDF extractor
-    registry.register(Arc::new(PdfExtractor::new()))?;
-
-    // Register Excel extractor
-    registry.register(Arc::new(ExcelExtractor::new()))?;
-
-    // Register PowerPoint extractor
-    registry.register(Arc::new(PptxExtractor::new()))?;
-
-    // Register Email extractor
-    registry.register(Arc::new(EmailExtractor::new()))?;
-
-    // Register HTML extractor
-    registry.register(Arc::new(HtmlExtractor::new()))?;
-
-    // Register structured data extractor (JSON, YAML, TOML)
     registry.register(Arc::new(StructuredExtractor::new()))?;
 
-    // Register Image extractor
+    // Image extractor (requires OCR feature)
+    #[cfg(feature = "ocr")]
     registry.register(Arc::new(ImageExtractor::new()))?;
 
-    // Register Archive extractors
-    registry.register(Arc::new(ZipExtractor::new()))?;
-    registry.register(Arc::new(TarExtractor::new()))?;
-    registry.register(Arc::new(SevenZExtractor::new()))?;
+    // Optional extractors (feature-gated)
+    #[cfg(feature = "xml")]
+    registry.register(Arc::new(XmlExtractor::new()))?;
 
-    // Register Pandoc extractor (for DOCX, ODT, EPUB, LaTeX, RST, etc.)
-    registry.register(Arc::new(PandocExtractor::new()))?;
+    #[cfg(feature = "pdf")]
+    registry.register(Arc::new(PdfExtractor::new()))?;
+
+    #[cfg(feature = "excel")]
+    registry.register(Arc::new(ExcelExtractor::new()))?;
+
+    #[cfg(feature = "office")]
+    {
+        registry.register(Arc::new(PptxExtractor::new()))?;
+        registry.register(Arc::new(PandocExtractor::new()))?;
+    }
+
+    #[cfg(feature = "email")]
+    registry.register(Arc::new(EmailExtractor::new()))?;
+
+    #[cfg(feature = "html")]
+    registry.register(Arc::new(HtmlExtractor::new()))?;
+
+    #[cfg(feature = "archives")]
+    {
+        registry.register(Arc::new(ZipExtractor::new()))?;
+        registry.register(Arc::new(TarExtractor::new()))?;
+        registry.register(Arc::new(SevenZExtractor::new()))?;
+    }
 
     Ok(())
 }
@@ -139,24 +183,71 @@ mod tests {
             .expect("Failed to acquire read lock on registry in test");
         let extractor_names = reg.list();
 
-        // Should have 14 extractors: PlainText, Markdown, XML, PDF, Excel, PPTX, Email, HTML, Structured, Image, ZIP, TAR, 7Z, Pandoc
-        assert_eq!(extractor_names.len(), 14, "Expected 14 extractors to be registered");
-
-        // Verify each extractor by name
+        // Core extractors (always present)
+        let mut expected_count = 3; // PlainText, Markdown, Structured
         assert!(extractor_names.contains(&"plain-text-extractor".to_string()));
         assert!(extractor_names.contains(&"markdown-extractor".to_string()));
-        assert!(extractor_names.contains(&"xml-extractor".to_string()));
-        assert!(extractor_names.contains(&"pdf-extractor".to_string()));
-        assert!(extractor_names.contains(&"excel-extractor".to_string()));
-        assert!(extractor_names.contains(&"pptx-extractor".to_string()));
-        assert!(extractor_names.contains(&"email-extractor".to_string()));
-        assert!(extractor_names.contains(&"html-extractor".to_string()));
         assert!(extractor_names.contains(&"structured-extractor".to_string()));
-        assert!(extractor_names.contains(&"image-extractor".to_string()));
-        assert!(extractor_names.contains(&"zip-extractor".to_string()));
-        assert!(extractor_names.contains(&"tar-extractor".to_string()));
-        assert!(extractor_names.contains(&"7z-extractor".to_string()));
-        assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
+
+        // Image extractor (optional)
+        #[cfg(feature = "ocr")]
+        {
+            expected_count += 1;
+            assert!(extractor_names.contains(&"image-extractor".to_string()));
+        }
+
+        // Optional extractors (feature-gated)
+        #[cfg(feature = "xml")]
+        {
+            expected_count += 1;
+            assert!(extractor_names.contains(&"xml-extractor".to_string()));
+        }
+
+        #[cfg(feature = "pdf")]
+        {
+            expected_count += 1;
+            assert!(extractor_names.contains(&"pdf-extractor".to_string()));
+        }
+
+        #[cfg(feature = "excel")]
+        {
+            expected_count += 1;
+            assert!(extractor_names.contains(&"excel-extractor".to_string()));
+        }
+
+        #[cfg(feature = "office")]
+        {
+            expected_count += 2; // PPTX, Pandoc
+            assert!(extractor_names.contains(&"pptx-extractor".to_string()));
+            assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
+        }
+
+        #[cfg(feature = "email")]
+        {
+            expected_count += 1;
+            assert!(extractor_names.contains(&"email-extractor".to_string()));
+        }
+
+        #[cfg(feature = "html")]
+        {
+            expected_count += 1;
+            assert!(extractor_names.contains(&"html-extractor".to_string()));
+        }
+
+        #[cfg(feature = "archives")]
+        {
+            expected_count += 3; // ZIP, TAR, 7Z
+            assert!(extractor_names.contains(&"zip-extractor".to_string()));
+            assert!(extractor_names.contains(&"tar-extractor".to_string()));
+            assert!(extractor_names.contains(&"7z-extractor".to_string()));
+        }
+
+        assert_eq!(
+            extractor_names.len(),
+            expected_count,
+            "Expected {} extractors based on enabled features",
+            expected_count
+        );
     }
 
     #[test]

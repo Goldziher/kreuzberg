@@ -33,18 +33,29 @@
 //! - Cross-language plugin support (Python, Node.js planned)
 
 pub mod cache;
-pub mod chunking;
 pub mod core;
 pub mod error;
 pub mod extraction;
 pub mod extractors;
-pub mod image;
-pub mod language_detection;
-pub mod ocr;
-pub mod pdf;
 pub mod plugins;
 pub mod text;
 pub mod types;
+
+// Optional modules (feature-gated)
+#[cfg(feature = "chunking")]
+pub mod chunking;
+
+#[cfg(feature = "ocr")]
+pub mod image;
+
+#[cfg(feature = "language-detection")]
+pub mod language_detection;
+
+#[cfg(feature = "ocr")]
+pub mod ocr;
+
+#[cfg(feature = "pdf")]
+pub mod pdf;
 
 // Core exports
 pub use error::{KreuzbergError, Result};

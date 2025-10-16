@@ -62,6 +62,7 @@ pub enum KreuzbergError {
     Other(String),
 }
 
+#[cfg(feature = "excel")]
 impl From<calamine::Error> for KreuzbergError {
     fn from(err: calamine::Error) -> Self {
         KreuzbergError::Parsing {
@@ -98,6 +99,7 @@ impl From<rmp_serde::decode::Error> for KreuzbergError {
     }
 }
 
+#[cfg(feature = "pdf")]
 impl From<crate::pdf::error::PdfError> for KreuzbergError {
     fn from(err: crate::pdf::error::PdfError) -> Self {
         KreuzbergError::Parsing {
@@ -290,6 +292,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "excel")]
     fn test_calamine_error_conversion() {
         let cal_err = calamine::Error::Msg("invalid Excel file");
         let krz_err: KreuzbergError = cal_err.into();
@@ -329,6 +332,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "pdf")]
     fn test_pdf_error_conversion() {
         let pdf_err = crate::pdf::error::PdfError::InvalidPdf("corrupt PDF".to_string());
         let krz_err: KreuzbergError = pdf_err.into();

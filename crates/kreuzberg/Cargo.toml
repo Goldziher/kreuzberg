@@ -11,54 +11,95 @@ homepage = "https://goldziher.github.io/kreuzberg/"
 [lib]
 crate-type = ["rlib"]
 
+[features]
+default = []
+
+# Format extractors
+pdf = ["dep:pdfium-render", "dep:lopdf"]
+excel = ["dep:calamine", "dep:polars"]
+office = ["dep:roxmltree", "dep:zip"]
+email = ["dep:mail-parser", "dep:msg_parser"]
+html = ["dep:html-to-markdown-rs", "dep:html-escape"]
+xml = ["dep:quick-xml", "dep:roxmltree"]
+archives = ["dep:zip", "dep:tar", "dep:sevenz-rust"]
+
+# Processing features
+ocr = ["dep:tesseract-rs", "dep:image", "dep:fast_image_resize", "dep:ndarray", "dep:kamadak-exif"]
+language-detection = ["dep:whatlang"]
+chunking = ["dep:text-splitter"]
+quality = ["dep:unicode-normalization", "dep:chardetng", "dep:encoding_rs"]
+
+# Server features (to be implemented)
+api = ["dep:axum", "dep:tower", "dep:tower-http"]
+mcp = ["dep:jsonrpsee"]
+
+# Convenience bundles
+full = [
+    "pdf", "excel", "office", "email", "html", "xml", "archives",
+    "ocr", "language-detection", "chunking", "quality"
+]
+server = ["pdf", "excel", "html", "ocr", "api"]
+cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking"]
+
 [build-dependencies]
 # No external dependencies needed - using std::process::Command for curl/tar
 
 [dependencies]
+# Core dependencies (always included)
 ahash = "0.8.12"
 async-trait = "0.1.89"
 base64 = "0.22.1"
-calamine = { version = "0.31.0", features = ["dates"] }
-chardetng = "0.1.17"
 chrono = { version = "0.4.42", default-features = false, features = ["clock", "std", "serde"] }
-encoding_rs = "0.8.35"
-fast_image_resize = "5.3.0"
 hex = "0.4.3"
-html-escape = "0.2.13"
-html-to-markdown-rs = { path = "../../../html-to-markdown/crates/html-to-markdown", features = ["inline-images"] }
-image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"] }
-kamadak-exif = "0.6.1"
 lazy_static = "1.5.0"
 libc = "0.2"
-lopdf = "0.38.0"
-mail-parser = "0.11.1"
-pdfium-render = { version = "0.8.35", features = ["thread_safe", "image"] }
 memchr = "2.7.6"
-msg_parser = "0.1.1"
-ndarray = "0.17.0"
 once_cell = "1.21.3"
-polars = { version = "0.51.0", default-features = false, features = ["ipc"] }
-quick-xml = "0.38.3"
 rayon = "1.11.0"
 regex = "1.12.2"
-roxmltree = "0.21.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 serde_yaml = "0.9"
 saphyr = "0.0.6"
-sevenz-rust = "0.6.1"
-tar = "0.4.44"
 toml = "0.9.8"
 mime_guess = "2.0"
 rmp-serde = "1.3"
-tesseract-rs = "0.1.20"
 thiserror = "2.0.17"
-text-splitter = { version = "0.28.0", features = ["markdown"] }
 tokio = { version = "1.48.0", features = ["process", "fs", "rt", "rt-multi-thread", "macros", "time"] }
-unicode-normalization = "0.1.24"
 uuid = { version = "1.18.1", features = ["v4"] }
-whatlang = "0.16.4"
-zip = "6.0.0"
+
+# Format extractors (optional)
+pdfium-render = { version = "0.8.35", features = ["thread_safe", "image"], optional = true }
+lopdf = { version = "0.38.0", optional = true }
+calamine = { version = "0.31.0", features = ["dates"], optional = true }
+polars = { version = "0.51.0", default-features = false, features = ["ipc"], optional = true }
+roxmltree = { version = "0.21.1", optional = true }
+zip = { version = "6.0.0", optional = true }
+mail-parser = { version = "0.11.1", optional = true }
+msg_parser = { version = "0.1.1", optional = true }
+html-to-markdown-rs = { path = "../../../html-to-markdown/crates/html-to-markdown", features = ["inline-images"], optional = true }
+html-escape = { version = "0.2.13", optional = true }
+quick-xml = { version = "0.38.3", optional = true }
+tar = { version = "0.4.44", optional = true }
+sevenz-rust = { version = "0.6.1", optional = true }
+
+# Processing features (optional)
+tesseract-rs = { version = "0.1.20", optional = true }
+image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"], optional = true }
+fast_image_resize = { version = "5.3.0", optional = true }
+ndarray = { version = "0.16.1", optional = true }
+kamadak-exif = { version = "0.6.1", optional = true }
+whatlang = { version = "0.16.4", optional = true }
+text-splitter = { version = "0.28.0", features = ["markdown"], optional = true }
+unicode-normalization = { version = "0.1.24", optional = true }
+chardetng = { version = "0.1.17", optional = true }
+encoding_rs = { version = "0.8.35", optional = true }
+
+# Server features (optional - to be implemented)
+axum = { version = "0.8", features = ["macros", "json"], optional = true }
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", features = ["cors", "trace", "limit"], optional = true }
+jsonrpsee = { version = "0.26", features = ["server"], optional = true }
 
 [dev-dependencies]
 tempfile = "3.23.0"
