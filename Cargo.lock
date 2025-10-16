@@ -1788,6 +1788,7 @@ dependencies = [
  "tesseract-rs",
  "text-splitter",
  "thiserror 2.0.17",
+ "tl",
  "unicode-normalization",
  "zip 5.1.1",
 ]
