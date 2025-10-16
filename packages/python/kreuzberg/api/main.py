@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 import msgspec
 
 if TYPE_CHECKING:
-    from litestar import Request, Response
+    from litestar import Request
     from litestar.datastructures import UploadFile
     from litestar.enums import RequestEncodingType
     from litestar.params import Body
@@ -31,6 +31,8 @@ try:
 except ImportError as e:
     msg = "API dependencies not installed. Install with: pip install 'kreuzberg[api]'"
     raise ImportError(msg) from e
+
+from litestar import Response
 
 from kreuzberg import (
     ExtractionConfig,

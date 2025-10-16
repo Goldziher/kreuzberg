@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 from PIL import Image
 
-from kreuzberg import extract_file
-from kreuzberg import ExtractionConfig, TesseractConfig
+from kreuzberg import ExtractionConfig, TesseractConfig, extract_file
 
 if TYPE_CHECKING:
     from pathlib import Path

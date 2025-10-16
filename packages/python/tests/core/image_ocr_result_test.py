@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from kreuzberg import ExtractionResult
-from kreuzberg import ExtractedImage, ImageOCRResult
+from kreuzberg import ExtractedImage, ExtractionResult, ImageOCRResult
 
 
 def test_image_ocr_result_not_hashable() -> None:

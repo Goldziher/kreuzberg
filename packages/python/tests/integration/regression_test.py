@@ -5,9 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from kreuzberg import batch_extract_file, extract_file
-from kreuzberg import ExtractionConfig, PSMMode, TesseractConfig
-from kreuzberg import extract_file_sync
+from kreuzberg import ExtractionConfig, PSMMode, TesseractConfig, batch_extract_file, extract_file, extract_file_sync
 
 TEST_DATA_DIR = Path(__file__).parent.parent / "test_documents"
 

@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kreuzberg import ExtractionConfig, ImageExtractionConfig
-from kreuzberg import extract_file
+from kreuzberg import ExtractionConfig, ImageExtractionConfig, extract_file
 
 if TYPE_CHECKING:
     from pathlib import Path

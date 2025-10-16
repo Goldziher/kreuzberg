@@ -4,7 +4,7 @@ Multi-language document intelligence framework with Rust core and Python binding
 
 This package provides Python bindings to the high-performance Rust core library.
 
-For full documentation, visit: https://kreuzberg.dev
+For full documentation, visit: <https://kreuzberg.dev>
 
 ## Installation
 

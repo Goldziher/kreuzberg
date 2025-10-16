@@ -39,7 +39,7 @@ full = [
     "ocr", "language-detection", "chunking", "quality"
 ]
 server = ["pdf", "excel", "html", "ocr", "api"]
-cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking"]
+cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking", "quality"]
 
 [build-dependencies]
 # No external dependencies needed - using std::process::Command for curl/tar

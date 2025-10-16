@@ -21,32 +21,32 @@ from importlib.metadata import version
 from kreuzberg._internal_bindings import (
     # Configuration types
     ChunkingConfig,
+    ExtractedTable,
     ExtractionConfig,
+    # Result types
+    ExtractionResult,
     ImageExtractionConfig,
     LanguageDetectionConfig,
     OcrConfig,
     PdfConfig,
     TokenReductionConfig,
-    # Result types
-    ExtractionResult,
-    ExtractedTable,
-    # Core extraction functions (sync)
-    extract_file_sync,
-    extract_bytes_sync,
-    batch_extract_files_sync,
-    batch_extract_bytes_sync,
-    # Core extraction functions (async)
-    extract_file,
-    extract_bytes,
-    batch_extract_files,
     batch_extract_bytes,
+    batch_extract_bytes_sync,
+    batch_extract_files,
+    batch_extract_files_sync,
     # MIME utilities
     detect_mime_type,
-    validate_mime_type,
+    extract_bytes,
+    extract_bytes_sync,
+    # Core extraction functions (async)
+    extract_file,
+    # Core extraction functions (sync)
+    extract_file_sync,
+    list_ocr_backends,
     # Plugin functions
     register_ocr_backend,
-    list_ocr_backends,
     unregister_ocr_backend,
+    validate_mime_type,
 )
 
 __version__ = version("kreuzberg")

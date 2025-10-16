@@ -13,7 +13,7 @@ name = "_internal_bindings"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-kreuzberg = { path = "../kreuzberg" }
+kreuzberg = { path = "../kreuzberg", features = ["full"] }
 pyo3 = { version = "0.26.0", features = ["abi3-py310"] }
 pyo3-async-runtimes = { version = "0.26", features = ["tokio-runtime"] }
 serde_json = "1.0.145"

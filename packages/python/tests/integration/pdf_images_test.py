@@ -4,8 +4,7 @@ from typing import Any
 
 import pytest
 
-from kreuzberg import ExtractionConfig, ImageExtractionConfig
-from kreuzberg import extract_file
+from kreuzberg import ExtractionConfig, ImageExtractionConfig, extract_file
 
 
 @pytest.mark.anyio

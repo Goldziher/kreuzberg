@@ -7,8 +7,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from kreuzberg import ExtractionConfig, ExtractionResult
 from kreuzberg import (
+    ExtractionConfig,
+    ExtractionResult,
     batch_extract_bytes,
     batch_extract_bytes_sync,
     batch_extract_file,

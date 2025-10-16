@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from kreuzberg._api.main import exception_handler
 from kreuzberg.exceptions import OCRError, ParsingError, ValidationError
 

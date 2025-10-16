@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 import click
 import pytest
 from click.testing import CliRunner
+from kreuzberg.exceptions import KreuzbergError, MissingDependencyError
 
 from kreuzberg import ExtractionConfig, ExtractionResult
 from kreuzberg.cli import (
@@ -21,7 +22,6 @@ from kreuzberg.cli import (
     format_extraction_result,
     handle_error,
 )
-from kreuzberg.exceptions import KreuzbergError, MissingDependencyError
 
 if TYPE_CHECKING:
     import polars as pl

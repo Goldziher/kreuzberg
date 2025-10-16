@@ -4,9 +4,16 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from kreuzberg.exceptions import ValidationError
 
-from kreuzberg import ExtractionConfig
 from kreuzberg import (
+    ChunkingConfig,
+    EntityExtractionConfig,
+    ExtractionConfig,
+    KeywordExtractionConfig,
+    LanguageDetectionConfig,
+    TableExtractionConfig,
+    TesseractConfig,
     build_extraction_config_from_dict,
     discover_and_load_config,
     discover_config,
@@ -16,15 +23,6 @@ from kreuzberg import (
     load_config_from_path,
     load_default_config,
 )
-from kreuzberg import (
-    ChunkingConfig,
-    EntityExtractionConfig,
-    KeywordExtractionConfig,
-    LanguageDetectionConfig,
-    TableExtractionConfig,
-    TesseractConfig,
-)
-from kreuzberg.exceptions import ValidationError
 
 
 def test_load_config_from_file_kreuzberg_toml(tmp_path: Path) -> None:

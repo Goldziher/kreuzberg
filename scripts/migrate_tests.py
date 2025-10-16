@@ -53,9 +53,7 @@ def should_skip_file(path: Path) -> bool:
         return True
     if path.name == "__pycache__":
         return True
-    if path.suffix not in (".py", ""):
-        return True
-    return False
+    return path.suffix not in (".py", "")
 
 
 def should_skip_test_file(content: str) -> tuple[bool, list[str]]:
@@ -132,7 +130,6 @@ def migrate_tests(*, dry_run: bool = True) -> list[MigrationResult]:
     dest_dir = root / "packages" / "python" / "tests"
 
     if not source_dir.exists():
-        print(f"Source directory not found: {source_dir}")
         return []
 
     results = []
@@ -156,59 +153,37 @@ def migrate_tests(*, dry_run: bool = True) -> list[MigrationResult]:
         if source_path.suffix == ".py":
             result = migrate_file(source_path, dest_path, dry_run=dry_run)
             results.append(result)
-        else:
-            # Copy non-Python files as-is
-            if not dry_run:
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source_path, dest_path)
+        # Copy non-Python files as-is
+        elif not dry_run:
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, dest_path)
 
     return results
 
 
 def print_report(results: list[MigrationResult], *, dry_run: bool = True) -> None:
     """Print migration report."""
-    mode = "DRY RUN" if dry_run else "MIGRATION"
-    print(f"\n{'='*80}")
-    print(f" {mode} REPORT")
-    print(f"{'='*80}\n")
-
-    print(f"Total files processed: {len(results)}")
-
     # Count skipped files
     skipped = [r for r in results if r.skipped]
-    print(f"Files SKIPPED (test private functionality): {len(skipped)}")
 
     # Count migrated files
     migrated = [r for r in results if not r.skipped]
-    print(f"Files MIGRATED (test public API): {len(migrated)}")
 
     # Count files with changes
-    changed = [r for r in migrated if r.changes_made]
-    print(f"  - With import changes: {len(changed)}")
-    print(f"  - No changes needed: {len(migrated) - len(changed)}")
+    [r for r in migrated if r.changes_made]
 
     # Print skipped files
     if skipped:
-        print(f"\n{'-'*80}")
-        print("SKIPPED FILES (test private/internal functionality - will be removed):")
-        print(f"{'-'*80}\n")
-        for result in skipped:
-            print(f"  {result.source_path.relative_to(Path.cwd())}")
+        for _result in skipped:
+            pass
 
     # Print migrated files summary
     if migrated:
-        print(f"\n{'-'*80}")
-        print("MIGRATED FILES (test public API - will be kept):")
-        print(f"{'-'*80}\n")
-        for result in migrated:
-            status = "modified" if result.changes_made else "copied"
-            print(f"  [{status}] {result.source_path.relative_to(Path.cwd())}")
+        for _result in migrated:
+            pass
 
     if dry_run:
-        print(f"\n{'='*80}")
-        print(" This was a DRY RUN. No files were modified.")
-        print(" Run with --execute to perform the migration.")
-        print(f"{'='*80}\n")
+        pass
 
 
 def review_remaining_files() -> None:
@@ -217,7 +192,6 @@ def review_remaining_files() -> None:
     tests_dir = root / "tests"
 
     if not tests_dir.exists():
-        print("\n./tests directory no longer exists - all files migrated or removed!")
         return
 
     # Find all remaining Python files
@@ -225,23 +199,10 @@ def review_remaining_files() -> None:
     remaining_files = [f for f in remaining_files if not should_skip_file(f)]
 
     if not remaining_files:
-        print("\nNo Python test files remain in ./tests")
         return
 
-    print(f"\n{'='*80}")
-    print(" FILES REMAINING IN ./tests (skipped - test private functionality)")
-    print(f"{'='*80}\n")
-    print(f"Total: {len(remaining_files)} files\n")
-
     for file_path in sorted(remaining_files):
-        rel_path = file_path.relative_to(tests_dir)
-        print(f"  {rel_path}")
-
-    print(f"\n{'='*80}")
-    print(" These files were SKIPPED because they test internal/private functionality.")
-    print(" They will NOT be migrated to packages/python/tests.")
-    print(" Review and decide which (if any) should be reimplemented as public API tests.")
-    print(f"{'='*80}\n")
+        file_path.relative_to(tests_dir)
 
 
 def main() -> None:
@@ -250,14 +211,11 @@ def main() -> None:
 
     dry_run = "--execute" not in sys.argv
 
-    print("Starting test migration...")
-    print(f"Mode: {'DRY RUN' if dry_run else 'EXECUTE'}")
-
     results = migrate_tests(dry_run=dry_run)
     print_report(results, dry_run=dry_run)
 
     if dry_run:
-        print("\nTo execute the migration, run: python scripts/migrate_tests.py --execute")
+        pass
     else:
         # After migration, review what remains
         review_remaining_files()

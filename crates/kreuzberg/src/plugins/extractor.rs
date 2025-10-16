@@ -132,7 +132,7 @@ pub trait DocumentExtractor: Plugin {
     ///         mime_type: mime_type.to_string(),
     ///         metadata,
     ///         tables: vec![],
-///             detected_languages: None,
+    ///             detected_languages: None,
     ///     })
     /// }
     /// # }
@@ -199,7 +199,7 @@ pub trait DocumentExtractor: Plugin {
     ///         mime_type: mime_type.to_string(),
     ///         metadata: std::collections::HashMap::new(),
     ///         tables: vec![],
-///             detected_languages: None,
+    ///             detected_languages: None,
     ///     })
     /// }
     /// # }

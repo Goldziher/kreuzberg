@@ -27,6 +27,8 @@ from kreuzberg._mcp.server import (
     get_supported_formats,
     main,
 )
+from kreuzberg.exceptions import ValidationError
+
 from kreuzberg import (
     ChunkingConfig,
     EasyOCRConfig,
@@ -38,7 +40,6 @@ from kreuzberg import (
     TableExtractionConfig,
     TesseractConfig,
 )
-from kreuzberg.exceptions import ValidationError
 
 
 def test_batch_extract_document_single_file(tmp_path: Path) -> None:

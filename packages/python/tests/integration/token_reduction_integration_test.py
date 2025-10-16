@@ -4,13 +4,13 @@ from typing import Literal
 
 import pytest
 
-from kreuzberg import extract_bytes_sync
 from kreuzberg import (
     ChunkingConfig,
     EntityExtractionConfig,
     ExtractionConfig,
     LanguageDetectionConfig,
     TokenReductionConfig,
+    extract_bytes_sync,
 )
 
 

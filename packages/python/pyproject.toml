@@ -1,71 +1,68 @@
+[build-system]
+build-backend = "maturin"
+requires = [ "maturin>=1,<2" ]
+
 [project]
 name = "kreuzberg"
 version = "4.0.0"
 description = "Multi-language document intelligence framework with Rust core"
-authors = [{ name = "Na'aman Hirschfeld", email = "nhirschfeld@gmail.com" }]
 readme = "README.md"
 license = { text = "MIT" }
+authors = [ { name = "Na'aman Hirschfeld", email = "nhirschfeld@gmail.com" } ]
 requires-python = ">=3.10"
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Rust",
-    "Topic :: Text Processing",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Rust",
+  "Topic :: Text Processing",
 ]
 
 dependencies = [
-    # Core dependencies (minimal)
-    "msgspec>=0.19.0",
+  # Core dependencies (minimal)
+  "msgspec>=0.19",
 ]
 
-[project.optional-dependencies]
-api = [
-    "litestar[standard,structlog,opentelemetry]>=2.1.6",
+optional-dependencies.all = [
+  "kreuzberg[api,cli,mcp,nlp,ocr,vision]",
 ]
-cli = [
-    "click>=8.2.1",
-    "rich>=14.0.0",
+optional-dependencies.api = [
+  "litestar[opentelemetry,standard,structlog]>=2.1.6",
 ]
-ocr = [
-    # OCR backends - Python-specific
-    "easyocr>=1.7.2",
-    "paddleocr>=3.1.0",
-    "paddlepaddle>=3.1.0",
+optional-dependencies.cli = [
+  "click>=8.2.1",
+  "rich>=14",
 ]
-vision = [
-    # Vision-based features - may migrate to Rust in v4.1+
-    "torch>=2.8.0",
-    "transformers>=4.56.2",
+optional-dependencies.mcp = [
+  # Model Context Protocol server
+  "mcp>=0.1",
 ]
-nlp = [
-    # NLP features - may migrate to Rust in v4.1+
-    "spacy>=3.0.0",
+optional-dependencies.nlp = [
+  # NLP features - may migrate to Rust in v4.1+
+  "spacy>=3",
 ]
-mcp = [
-    # Model Context Protocol server
-    "mcp>=0.1.0",
+optional-dependencies.ocr = [
+  # OCR backends - Python-specific
+  "easyocr>=1.7.2",
+  "paddleocr>=3.1",
+  "paddlepaddle>=3.1",
 ]
-all = [
-    "kreuzberg[api,cli,ocr,vision,nlp,mcp]",
+optional-dependencies.vision = [
+  # Vision-based features - may migrate to Rust in v4.1+
+  "torch>=2.8",
+  "transformers>=4.56.2",
 ]
-
-[project.scripts]
-kreuzberg = "kreuzberg.cli:main"
-
-[project.urls]
-Homepage = "https://github.com/Goldziher/kreuzberg"
-Documentation = "https://kreuzberg.readthedocs.io"
-Repository = "https://github.com/Goldziher/kreuzberg"
-Issues = "https://github.com/Goldziher/kreuzberg/issues"
-
-[build-system]
-requires = ["maturin>=1.0,<2.0"]
-build-backend = "maturin"
+urls.Documentation = "https://kreuzberg.readthedocs.io"
+urls.Homepage = "https://github.com/Goldziher/kreuzberg"
+urls.Issues = "https://github.com/Goldziher/kreuzberg/issues"
+urls.Repository = "https://github.com/Goldziher/kreuzberg"
+scripts.kreuzberg = "kreuzberg.cli:main"
 
 [tool.maturin]
 module-name = "kreuzberg._internal_bindings"
@@ -74,27 +71,26 @@ manifest-path = "../../crates/kreuzberg-py/Cargo.toml"
 
 [tool.uv]
 dev-dependencies = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-cov>=6.0.0",
-    "mypy>=1.14.0",
-    "ruff>=0.8.0",
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.24.0",
+  "pytest-cov>=6.0.0",
+  "mypy>=1.14.0",
+  "ruff>=0.8.0",
 ]
 
 [tool.ruff]
-line-length = 120
 target-version = "py310"
 
-[tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "TCH"]
-ignore = ["E501"]
+line-length = 120
+lint.select = [ "B", "C4", "E", "F", "I", "N", "SIM", "TCH", "UP", "W" ]
+lint.ignore = [ "E501" ]
+
+[tool.pytest.ini_options]
+testpaths = [ "tests" ]
+asyncio_mode = "auto"
 
 [tool.mypy]
 python_version = "3.10"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-asyncio_mode = "auto"

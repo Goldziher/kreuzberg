@@ -4,12 +4,16 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
-from kreuzberg import ExtractionConfig, ExtractionResult, LanguageDetectionConfig
-from kreuzberg import ChunkingConfig, EntityExtractionConfig, KeywordExtractionConfig
 from kreuzberg.exceptions import ValidationError
+
 from kreuzberg import (
     DEFAULT_CONFIG,
+    ChunkingConfig,
+    EntityExtractionConfig,
+    ExtractionConfig,
+    ExtractionResult,
+    KeywordExtractionConfig,
+    LanguageDetectionConfig,
     _handle_chunk_content,
     _validate_and_post_process_async,
     _validate_and_post_process_helper,

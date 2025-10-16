@@ -167,6 +167,142 @@ curl -X POST -F "files=@document.pdf" http://localhost:8000/extract
 
 📖 **[Installation Guide](https://kreuzberg.dev/getting-started/installation/)** • **[CLI Documentation](https://kreuzberg.dev/cli/)** • **[API Reference](https://kreuzberg.dev/api-reference/)**
 
+## Using the Rust Crate
+
+The Kreuzberg Rust core (`crates/kreuzberg`) is a standalone library that can be used directly in Rust projects with optional feature flags for minimal binary sizes.
+
+### Installation
+
+Add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+# Minimal installation (text, JSON, YAML, TOML only) - ~10MB binary
+kreuzberg = "4.0"
+
+# With specific features
+kreuzberg = { version = "4.0", features = ["pdf", "excel", "ocr"] }
+
+# Full-featured installation - ~55MB binary
+kreuzberg = { version = "4.0", features = ["full"] }
+```
+
+### Feature Flags
+
+| Feature               | Dependencies                                                  | Use Case                   | Binary Size |
+| --------------------- | ------------------------------------------------------------- | -------------------------- | ----------- |
+| `pdf`                 | pdfium-render, lopdf                                          | PDF extraction             | +25MB       |
+| `excel`               | calamine, polars                                              | Excel/spreadsheet parsing  | +3MB        |
+| `office`              | roxmltree, zip                                                | DOCX, PPTX extraction      | +1MB        |
+| `email`               | mail-parser, msg_parser                                       | EML, MSG extraction        | +500KB      |
+| `html`                | html-to-markdown-rs, html-escape                              | HTML to markdown           | +1MB        |
+| `xml`                 | quick-xml, roxmltree                                          | XML streaming parser       | +500KB      |
+| `archives`            | zip, tar, sevenz-rust                                         | Archive extraction         | +2MB        |
+| `ocr`                 | tesseract-rs, image, fast_image_resize, ndarray, kamadak-exif | OCR processing             | +5MB        |
+| `language-detection`  | whatlang                                                      | Language detection         | +100KB      |
+| `chunking`            | text-splitter                                                 | Text chunking              | +200KB      |
+| `quality`             | unicode-normalization, chardetng, encoding_rs                 | Text quality & normalization | +500KB    |
+
+### Feature Bundles
+
+Convenience bundles for common use cases:
+
+```toml
+# Full features (everything)
+kreuzberg = { version = "4.0", features = ["full"] }
+
+# Server deployment (PDF, Excel, HTML, OCR, API)
+kreuzberg = { version = "4.0", features = ["server"] }
+
+# CLI usage (PDF, Excel, Office, HTML, OCR, language detection, chunking, quality)
+kreuzberg = { version = "4.0", features = ["cli"] }
+```
+
+### Basic Usage
+
+**Async extraction:**
+
+```rust
+use kreuzberg::{extract_file, ExtractionConfig};
+
+#[tokio::main]
+async fn main() -> kreuzberg::Result<()> {
+    let config = ExtractionConfig::default();
+    let result = extract_file("document.pdf", None, &config).await?;
+    println!("Extracted text: {}", result.content);
+    Ok(())
+}
+```
+
+**Sync extraction:**
+
+```rust
+use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+fn main() -> kreuzberg::Result<()> {
+    let config = ExtractionConfig::default();
+    let result = extract_file_sync("document.pdf", None, &config)?;
+    println!("Extracted text: {}", result.content);
+    Ok(())
+}
+```
+
+**Batch processing:**
+
+```rust
+use kreuzberg::{batch_extract_file, ExtractionConfig};
+
+#[tokio::main]
+async fn main() -> kreuzberg::Result<()> {
+    let config = ExtractionConfig::default();
+    let files = vec!["doc1.pdf", "doc2.pdf", "doc3.pdf"];
+    let results = batch_extract_file(&files, None, &config).await?;
+    for result in results {
+        println!("Extracted: {}", result.content);
+    }
+    Ok(())
+}
+```
+
+**With OCR enabled:**
+
+```rust
+use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig};
+
+fn main() -> kreuzberg::Result<()> {
+    let config = ExtractionConfig {
+        ocr: Some(OcrConfig::default()),
+        force_ocr: false,
+        ..Default::default()
+    };
+    let result = extract_file_sync("scanned.pdf", None, &config)?;
+    println!("Extracted: {}", result.content);
+    Ok(())
+}
+```
+
+**Compilation examples:**
+
+```bash
+# Minimal binary (~10MB)
+cargo build --release
+
+# PDF extraction only (~35MB)
+cargo build --release --features pdf
+
+# Common formats (~38MB)
+cargo build --release --features pdf,excel,html
+
+# Server deployment (~40MB)
+cargo build --release --features server
+
+# CLI with all common features (~42MB)
+cargo build --release --features cli
+
+# Everything (~55MB)
+cargo build --release --features full
+```
+
 ### System Dependencies
 
 #### LibreOffice (Optional - for legacy Office formats)
