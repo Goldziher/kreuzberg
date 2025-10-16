@@ -353,7 +353,10 @@ async fn test_nonexistent_file_error() {
 
     assert!(result.is_err());
     // Should be a validation error, not IO error (file existence check happens first)
-    assert!(matches!(result.unwrap_err(), kreuzberg::KreuzbergError::Validation { .. }));
+    assert!(matches!(
+        result.unwrap_err(),
+        kreuzberg::KreuzbergError::Validation { .. }
+    ));
 }
 
 /// Test error handling for unsupported MIME types.

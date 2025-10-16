@@ -15,11 +15,13 @@
 ## 🚀 Next Phase: Complete Rewrite
 
 ### Phase 4A: PyO3 Bindings Redesign
+
 - Complete redesign of `kreuzberg-py` crate
 - Modern PyO3 patterns and best practices
 - Direct type conversion, minimal FFI overhead
 
 ### Phase 4B: Python Library Rewrite
+
 - Complete rewrite of Python code to use new bindings
 - Clean architecture leveraging Rust core
 - Maintain backward compatibility where possible
@@ -616,6 +618,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 ## 📋 Code Quality Checklist - **10/10 TARGET ACHIEVED** ✅
 
 ### Architecture & Design ✅
+
 - [x] Plugin system well-designed and extensible
 - [x] Plugin lifecycle compatible with Arc (Issue #2) ✅
 - [x] Async/await properly used throughout
@@ -623,6 +626,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 - [x] Comprehensive error hierarchy
 
 ### Reliability & Safety ✅
+
 - [x] No lock poisoning vulnerabilities (Issue #1) ✅
 - [x] No production unwrap() calls (Issue #3) ✅
 - [x] All unsafe code documented (Issue #9) ✅
@@ -630,6 +634,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 - [x] Thread-local caches properly invalidated (Issue #4) ✅
 
 ### Performance ✅
+
 - [x] No unnecessary allocations in hot paths
 - [x] Pipeline doesn't clone large results (Issue #5) ✅
 - [x] Efficient string operations
@@ -637,6 +642,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 - [x] Benchmarks show expected performance
 
 ### Testing ✅
+
 - [x] ~92-94% test coverage (839 tests passing)
 - [x] All error paths tested
 - [x] Integration tests comprehensive
@@ -644,6 +650,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 - [x] Edge cases fully covered (Issue #10) ✅
 
 ### Documentation ✅
+
 - [x] Public API fully documented
 - [x] Plugin trait safety documented (Issue #11) ✅
 - [x] All unsafe blocks have SAFETY comments (Issue #9) ✅
@@ -651,6 +658,7 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 - [x] Architecture documented (V4_STRUCTURE.md)
 
 ### Code Quality ✅
+
 - [x] No clippy warnings ✅
 - [x] Consistent code style
 - [x] Clear naming conventions
@@ -664,11 +672,13 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 ### Phase 3 Complete ✅
 
 **P0 (Critical)**: ✅ 100% Complete (9 hours)
+
 - Lock poisoning ✅
 - Plugin lifecycle ✅
 - unwrap() audit ✅
 
 **P1 (High Priority)**: ✅ 100% Complete
+
 - Cache invalidation ✅
 - Pipeline optimization ✅
 - Error context ✅
@@ -677,12 +687,14 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 - Unsafe documentation ✅
 
 **P2 (Medium Priority)**: ✅ 50% Complete
+
 - Edge case tests ✅
 - Plugin documentation ✅
 - Cancellation support → v4.1
 - Progress reporting → v4.1
 
 **Metrics**:
+
 - Test Status: 839 tests passing
 - Coverage: ~92-94% (target 95% for v4.0)
 - Code Quality: 10/10 ✅
@@ -690,17 +702,325 @@ These features were postponed to focus on PyO3 bindings redesign and Python libr
 
 ---
 
-## 🎯 Next Steps
+## 🎯 Phase 4: Complete Redesign - Zero Legacy
 
-### Immediate: Phase 4 Launch
-1. Complete PyO3 bindings redesign (`kreuzberg-py` crate)
-2. Complete Python library rewrite
-3. Verify all tests and benchmarks
-4. Update documentation
-5. Prepare v4.0 release
+**Status**: ACTIVE
+**Goal**: Complete redesign of PyO3 bindings and Python library with zero legacy code
+**Duration**: 7-10 days estimated
 
-### v4.1 Roadmap
+### Philosophy
+
+- **Rust-first**: All core functionality in Rust
+- **Zero duplication**: No extraction logic in Python
+- **Python-specific only**: Python keeps only:
+    - OCR backends: EasyOCR, PaddleOCR
+    - Vision-based features: Vision tables, entity extraction, category detection, keyword extraction
+    - Infrastructure: API server, CLI proxy
+- **Clean slate**: No backward compatibility, no legacy patterns
+- **Reassess later**: Vision-based features may migrate to Rust in v4.1+
+
+---
+
+## Phase 4A: PyO3 Bindings Redesign (3-4 days)
+
+### Architecture
+
+```
+crates/kreuzberg-py/
+├── src/
+│   ├── lib.rs          # Module registration (30 LOC)
+│   ├── core.rs         # 8 extraction functions (sync + async)
+│   ├── config.rs       # 7 configuration types
+│   ├── types.rs        # 2 result types
+│   ├── error.rs        # Error conversion
+│   ├── mime.rs         # MIME utilities + constants
+│   └── plugins.rs      # Python OCR backend registration
+└── Cargo.toml          # Minimal dependencies
+```
+
+### Tasks
+
+#### 1. ✅ Design Architecture
+
+- [x] Complete redesign document
+- [x] Identify files to delete
+- [x] Define clean API surface
+
+#### 2. Update Dependencies
+
+- [ ] Add `pyo3-async-runtimes = { version = "0.26", features = ["tokio-runtime"] }`
+- [ ] Remove unnecessary deps: `rmp-serde`, `numpy`, `async-trait`
+- [ ] Keep only: `pyo3`, `pyo3-async-runtimes`, `tokio`, `serde_json`, `kreuzberg`
+
+#### 3. Create Core Modules (order matters)
+
+- [ ] **error.rs** - Error conversion (`to_py_err` function)
+- [ ] **config.rs** - 7 configuration types with `From` impls
+    - `ExtractionConfig`, `OcrConfig`, `PdfConfig`, `ChunkingConfig`
+    - `LanguageDetectionConfig`, `TokenReductionConfig`, `ImageExtractionConfig`
+- [ ] **types.rs** - 2 result types
+    - `ExtractionResult` (with metadata dict, tables list)
+    - `ExtractedTable` (with data as nested lists)
+- [ ] **mime.rs** - MIME detection + constants
+    - `detect_mime_type()`, `validate_mime_type()`
+    - All MIME constants (PDF, DOCX, Excel, etc.)
+- [ ] **core.rs** - 8 extraction functions
+    - Async: `extract_file`, `extract_bytes`, `batch_extract_file`, `batch_extract_bytes`
+    - Sync: `extract_file_sync`, `extract_bytes_sync`, `batch_extract_file_sync`, `batch_extract_bytes_sync`
+- [ ] **plugins.rs** - Plugin registration bridge
+    - `register_ocr_backend()` (stub for Phase 4B)
+    - `unregister_ocr_backend()`
+
+#### 4. Update Module Registration
+
+- [ ] **lib.rs** - Clean registration of all functions, classes, constants
+- [ ] Total exposed API: 8 functions + 7 config classes + 2 result classes + 2 MIME functions + constants + 2 plugin functions
+
+#### 5. Cleanup Legacy Code
+
+- [ ] Delete `src/bindings/` directory (16 files)
+- [ ] Delete `src/types/` directory (6 files)
+- [ ] Delete old `src/error.rs`
+
+#### 6. Testing
+
+- [ ] Write Rust unit tests for all bindings
+- [ ] Test type conversions (Rust ↔ Python)
+- [ ] Test error conversion
+- [ ] Test config serialization
+
+**Acceptance Criteria**:
+
+- ✅ Zero legacy code in `kreuzberg-py`
+- ✅ All 8 core functions exposed (sync + async)
+- ✅ All 7 config types with proper Python API
+- ✅ Proper error conversion to Python exceptions
+- ✅ All tests pass
+- ✅ Zero clippy warnings
+
+---
+
+## Phase 4B: Python Library Rewrite (2-3 days)
+
+### Architecture
+
+```
+kreuzberg/
+├── __init__.py          # Direct re-exports from _internal_bindings
+├── ocr/
+│   ├── _easyocr.py     # EasyOCR backend (Python-specific)
+│   └── _paddleocr.py   # PaddleOCR backend (Python-specific)
+├── _vision/            # Vision-based features (Python-specific for now)
+│   ├── _tables.py      # Vision table extraction
+│   ├── _entities.py    # Entity extraction
+│   ├── _categories.py  # Category detection
+│   └── _keywords.py    # Keyword extraction
+├── _api/               # Litestar API server (thin wrapper)
+└── _cli/               # Click CLI (proxy to Rust binary)
+```
+
+### Tasks
+
+#### 1. Core Library Rewrite
+
+- [ ] **kreuzberg/**init**.py** - Direct re-exports only
+    - Import all functions, types, constants from `_internal_bindings`
+    - No wrapper functions, no logic
+    - Clean `__all__` export list
+
+#### 2. Python OCR Backends
+
+- [ ] Implement OCR backend registration bridge in Rust (`plugins.rs`)
+- [ ] Update `kreuzberg/ocr/_easyocr.py` to register with Rust core
+- [ ] Update `kreuzberg/ocr/_paddleocr.py` to register with Rust core
+- [ ] Delete all other OCR utilities (now in Rust)
+
+#### 3. API Server
+
+- [ ] Update `kreuzberg/_api/main.py` to use Rust functions directly
+- [ ] Remove all Python extraction logic
+- [ ] Keep only Litestar routes as thin wrappers
+
+#### 4. Python CLI Proxy
+
+- [ ] **Wait for kreuzberg-cli binary first**
+- [ ] Update `kreuzberg/_cli/` to proxy to Rust binary
+- [ ] Keep only Python-specific commands (if any)
+
+#### 5. Cleanup Legacy Python Code
+
+- [ ] Delete `kreuzberg/_extractors/` directory (all extractors now in Rust)
+- [ ] Delete `kreuzberg/_utils/` directory (all utilities now in Rust)
+- [ ] Delete any duplicate core logic
+
+#### 6. Testing
+
+- [ ] Test sync extraction from Python
+- [ ] Test async extraction from Python with asyncio
+- [ ] Test batch operations
+- [ ] Test configuration objects
+- [ ] Test error handling
+- [ ] Test OCR backend registration
+
+**Acceptance Criteria**:
+
+- ✅ Python library is thin wrapper only
+- ✅ All core extraction logic in Rust
+- ✅ Python keeps only:
+    - OCR backends (EasyOCR, PaddleOCR)
+    - Vision features (tables, entities, categories, keywords)
+    - Infrastructure (API, CLI proxy)
+- ✅ All tests pass (Python + integration)
+- ✅ Benchmarks show <5% FFI overhead
+
+---
+
+## Phase 4C: Rust CLI & Language Detection (2-3 days)
+
+### Tasks
+
+#### 1. Create kreuzberg-cli Crate
+
+- [ ] Create `crates/kreuzberg-cli/` workspace member
+- [ ] **Cargo.toml** - Binary crate with `clap` for CLI
+- [ ] **main.rs** - CLI entry point
+- [ ] Implement commands:
+    - `extract` - Extract single file
+    - `batch` - Extract multiple files
+    - `detect` - MIME type detection
+    - `config` - Show/validate configuration
+    - `version` - Show version info
+- [ ] Add to workspace `Cargo.toml`
+- [ ] Build and test binary: `cargo build --release --bin kreuzberg-cli`
+
+#### 2. Implement Language Detection in Rust
+
+- [ ] Add `whatlang` or `whichlang` crate to `crates/kreuzberg/Cargo.toml`
+- [ ] Create `crates/kreuzberg/src/text/language.rs`
+- [ ] Implement `detect_language(text: &str) -> Vec<(String, f32)>`
+- [ ] Integrate with `ExtractionResult` (populate `detected_languages` field)
+- [ ] Add `LanguageDetectionConfig` support
+- [ ] Write tests for language detection
+- [ ] Update PyO3 bindings to expose language detection results
+
+#### 3. Update Python CLI Proxy
+
+- [ ] Update `kreuzberg/_cli/` to call Rust binary via subprocess
+- [ ] Pass through all arguments except Python-specific commands
+- [ ] Handle stdin/stdout properly
+- [ ] Add fallback if Rust binary not found (show helpful error)
+
+**Acceptance Criteria**:
+
+- ✅ `kreuzberg-cli` binary works standalone
+- ✅ Python CLI proxies to Rust binary
+- ✅ Language detection works in Rust
+- ✅ Language detection exposed to Python
+- ✅ All tests pass
+
+---
+
+## Phase 4D: Documentation & Release (1-2 days)
+
+### Tasks
+
+#### 1. Update Documentation
+
+- [ ] Update `README.md` with v4.0 changes
+- [ ] Update `V4_STRUCTURE.md` with final architecture
+- [ ] Update API documentation
+- [ ] Update Python docstrings
+- [ ] Update Rust doc comments
+- [ ] Add migration guide (v3 → v4)
+
+#### 2. Final Testing
+
+- [ ] Run full test suite (Rust + Python)
+- [ ] Run benchmarks vs v3
+- [ ] Test in Docker containers
+- [ ] Test on different platforms (Linux, macOS, Windows)
+- [ ] Manual testing of edge cases
+
+#### 3. Prepare Release
+
+- [ ] Update version to 4.0.0 in all `Cargo.toml` and `pyproject.toml`
+- [ ] Update `CHANGELOG.md`
+- [ ] Tag release: `git tag v4.0.0`
+- [ ] Build and publish to PyPI
+- [ ] Update documentation site
+
+**Acceptance Criteria**:
+
+- ✅ All documentation updated
+- ✅ All tests pass on all platforms
+- ✅ Benchmarks show expected performance
+- ✅ v4.0.0 released
+
+---
+
+## 📊 Progress Tracking
+
+### Phase 4A: PyO3 Bindings
+
+- [ ] Dependencies updated
+- [ ] error.rs created
+- [ ] config.rs created (7 types)
+- [ ] types.rs created (2 types)
+- [ ] mime.rs created
+- [ ] core.rs created (8 functions)
+- [ ] plugins.rs created
+- [ ] lib.rs updated
+- [ ] Legacy files deleted
+- [ ] Tests written
+
+**Progress**: 0/10 (0%)
+
+### Phase 4B: Python Library
+
+- [ ] **init**.py rewritten
+- [ ] OCR backends updated
+- [ ] API server updated
+- [ ] Legacy Python code deleted
+- [ ] Tests written
+
+**Progress**: 0/5 (0%)
+
+### Phase 4C: CLI & Language Detection
+
+- [ ] kreuzberg-cli crate created
+- [ ] CLI commands implemented
+- [ ] Language detection in Rust
+- [ ] Python CLI proxy updated
+
+**Progress**: 0/4 (0%)
+
+### Phase 4D: Documentation & Release
+
+- [ ] Documentation updated
+- [ ] Final testing complete
+- [ ] Release prepared
+
+**Progress**: 0/3 (0%)
+
+**Overall Progress**: 0/22 (0%)
+
+---
+
+## v4.1 Roadmap (Post-Release)
+
+### Priority Features
+
 - Cancellation support (Issue #12)
 - Progress reporting (Issue #13)
 - Reach 95% test coverage
 - Additional format extractors
+
+### Future Considerations
+
+- **Reassess Python-only features for Rust migration**:
+    - Vision table extraction → Rust with PyTorch/Candle?
+    - Entity extraction → Rust NER library?
+    - Category detection → Rust ML?
+    - Keyword extraction → Rust text analysis?
+- Performance optimizations
+- Structured extraction (vision models)

@@ -19,8 +19,8 @@ use once_cell::sync::Lazy;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Global Tokio runtime for synchronous operations.
 ///
@@ -902,7 +902,10 @@ mod tests {
 
         for i in 0..100 {
             let file_path = dir.path().join(format!("file{}.txt", i));
-            File::create(&file_path).unwrap().write_all(format!("content {}", i).as_bytes()).unwrap();
+            File::create(&file_path)
+                .unwrap()
+                .write_all(format!("content {}", i).as_bytes())
+                .unwrap();
             paths.push(file_path);
         }
 
@@ -924,7 +927,10 @@ mod tests {
         let dir = tempdir().unwrap();
         // File with no extension
         let file_path = dir.path().join("testfile");
-        File::create(&file_path).unwrap().write_all(b"plain text content").unwrap();
+        File::create(&file_path)
+            .unwrap()
+            .write_all(b"plain text content")
+            .unwrap();
 
         let config = ExtractionConfig::default();
         // Without MIME override, should try to detect

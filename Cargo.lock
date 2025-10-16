@@ -1887,7 +1887,7 @@ dependencies = [
  "memchr",
  "mime_guess",
  "msg_parser",
- "ndarray 0.17.0",
+ "ndarray",
  "once_cell",
  "pdfium-render",
  "polars",
@@ -1917,12 +1917,9 @@ dependencies = [
 name = "kreuzberg-py"
 version = "4.0.0"
 dependencies = [
- "async-trait",
  "kreuzberg",
- "numpy",
  "pyo3",
- "rmp-serde",
- "serde",
+ "pyo3-async-runtimes",
  "serde_json",
  "tokio",
 ]
@@ -2325,21 +2322,6 @@ dependencies = [
 
 [[package]]
 name = "ndarray"
-version = "0.16.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "882ed72dce9365842bf196bdeedf5055305f11fc8c03dee7bb0194a6cad34841"
-dependencies = [
- "matrixmultiply",
- "num-complex",
- "num-integer",
- "num-traits",
- "portable-atomic",
- "portable-atomic-util",
- "rawpointer",
-]
-
-[[package]]
-name = "ndarray"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "132ea8ac1939bcf6c6e291dbf904dd19b998e2cfa7b9ac3bc7ab2e8577207a3f"
@@ -2478,22 +2460,6 @@ checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
  "libm",
-]
-
-[[package]]
-name = "numpy"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b2dba356160b54f5371b550575b78130a54718b4c6e46b3f33a6da74a27e78b"
-dependencies = [
- "libc",
- "ndarray 0.16.1",
- "num-complex",
- "num-integer",
- "num-traits",
- "pyo3",
- "pyo3-build-config",
- "rustc-hash",
 ]
 
 [[package]]
@@ -3407,6 +3373,19 @@ dependencies = [
  "pyo3-ffi",
  "pyo3-macros",
  "unindent",
+]
+
+[[package]]
+name = "pyo3-async-runtimes"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6ee6d4cb3e8d5b925f5cdb38da183e0ff18122eb2048d4041c9e7034d026e23"
+dependencies = [
+ "futures",
+ "once_cell",
+ "pin-project-lite",
+ "pyo3",
+ "tokio",
 ]
 
 [[package]]

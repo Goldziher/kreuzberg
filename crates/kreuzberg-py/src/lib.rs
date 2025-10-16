@@ -1,87 +1,61 @@
+//! Kreuzberg PyO3 Bindings v4
+//!
+//! This module exposes the Rust core extraction API to Python with both
+//! synchronous and asynchronous variants.
+//!
+//! # Architecture
+//!
+//! - All extraction logic is in the Rust core (crates/kreuzberg)
+//! - Python is a thin wrapper that adds language-specific features
+//! - Zero duplication of core functionality
+//! - Modern PyO3 0.26 patterns throughout
+
 use pyo3::prelude::*;
 
-mod bindings;
+mod config;
+mod core;
 mod error;
+mod mime;
+mod plugins;
 mod types;
 
-use bindings::{
-    cache, chunking, email, excel, html, image_preprocessing, libreoffice, ocr, pandoc, plugins, pptx, structured,
-    table, text, text_utils, xml,
-};
-use types::{
-    PyEmailAttachment, PyEmailExtractionResult, PyExcelSheet, PyExcelWorkbook, PyExtractedInlineImage,
-    PyHtmlExtractionResult, PyTextExtractionResult, PyXmlExtractionResult,
-};
-
+/// Internal bindings module for Kreuzberg
 #[pymodule]
 fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Email extraction
-    m.add_function(wrap_pyfunction!(email::extract_email_content, m)?)?;
-    m.add_function(wrap_pyfunction!(email::parse_eml_content, m)?)?;
-    m.add_function(wrap_pyfunction!(email::parse_msg_content, m)?)?;
-    m.add_function(wrap_pyfunction!(email::build_email_text_output, m)?)?;
-    m.add_class::<PyEmailExtractionResult>()?;
-    m.add_class::<PyEmailAttachment>()?;
+    // Configuration types (7 types)
+    m.add_class::<config::ExtractionConfig>()?;
+    m.add_class::<config::OcrConfig>()?;
+    m.add_class::<config::PdfConfig>()?;
+    m.add_class::<config::ChunkingConfig>()?;
+    m.add_class::<config::LanguageDetectionConfig>()?;
+    m.add_class::<config::TokenReductionConfig>()?;
+    m.add_class::<config::ImageExtractionConfig>()?;
 
-    // Excel extraction
-    m.add_function(wrap_pyfunction!(excel::read_excel_bytes, m)?)?;
-    m.add_function(wrap_pyfunction!(excel::read_excel_file, m)?)?;
-    m.add_class::<PyExcelWorkbook>()?;
-    m.add_class::<PyExcelSheet>()?;
+    // Result types (2 types)
+    m.add_class::<types::ExtractionResult>()?;
+    m.add_class::<types::ExtractedTable>()?;
 
-    // HTML extraction
-    m.add_function(wrap_pyfunction!(html::convert_html_to_markdown, m)?)?;
-    m.add_function(wrap_pyfunction!(html::process_html, m)?)?;
-    m.add_class::<PyHtmlExtractionResult>()?;
-    m.add_class::<PyExtractedInlineImage>()?;
+    // Extraction functions (8 functions: 4 sync + 4 async)
+    m.add_function(wrap_pyfunction!(core::extract_file_sync, m)?)?;
+    m.add_function(wrap_pyfunction!(core::extract_bytes_sync, m)?)?;
+    m.add_function(wrap_pyfunction!(core::batch_extract_files_sync, m)?)?;
+    m.add_function(wrap_pyfunction!(core::batch_extract_bytes_sync, m)?)?;
+    m.add_function(wrap_pyfunction!(core::extract_file, m)?)?;
+    m.add_function(wrap_pyfunction!(core::extract_bytes, m)?)?;
+    m.add_function(wrap_pyfunction!(core::batch_extract_files, m)?)?;
+    m.add_function(wrap_pyfunction!(core::batch_extract_bytes, m)?)?;
 
-    // PPTX extraction
-    m.add_function(wrap_pyfunction!(pptx::extract_pptx_from_path_msgpack, m)?)?;
-    m.add_function(wrap_pyfunction!(pptx::extract_pptx_from_bytes_msgpack, m)?)?;
+    // MIME utilities (2 functions)
+    m.add_function(wrap_pyfunction!(mime::detect_mime_type, m)?)?;
+    m.add_function(wrap_pyfunction!(mime::validate_mime_type, m)?)?;
 
-    // Structured data extraction
-    m.add_function(wrap_pyfunction!(structured::parse_json_msgpack, m)?)?;
-    m.add_function(wrap_pyfunction!(structured::parse_yaml_msgpack, m)?)?;
-    m.add_function(wrap_pyfunction!(structured::parse_toml_msgpack, m)?)?;
+    // MIME constants
+    mime::register_constants(m)?;
 
-    // Text extraction
-    m.add_function(wrap_pyfunction!(text::parse_text, m)?)?;
-    m.add_class::<PyTextExtractionResult>()?;
-
-    // XML extraction
-    m.add_function(wrap_pyfunction!(xml::parse_xml, m)?)?;
-    m.add_class::<PyXmlExtractionResult>()?;
-
-    // Table utilities
-    m.add_function(wrap_pyfunction!(table::table_from_arrow_to_markdown, m)?)?;
-
-    // Pandoc extraction
-    m.add_function(wrap_pyfunction!(pandoc::extract_with_pandoc_msgpack, m)?)?;
-    m.add_function(wrap_pyfunction!(pandoc::extract_with_pandoc_from_bytes_msgpack, m)?)?;
-    m.add_function(wrap_pyfunction!(pandoc::validate_pandoc_version, m)?)?;
-
-    // LibreOffice conversion
-    m.add_function(wrap_pyfunction!(libreoffice::check_libreoffice_available, m)?)?;
-    m.add_function(wrap_pyfunction!(libreoffice::convert_doc_to_docx_msgpack, m)?)?;
-    m.add_function(wrap_pyfunction!(libreoffice::convert_ppt_to_pptx_msgpack, m)?)?;
-
-    // Image preprocessing
-    image_preprocessing::register_image_preprocessing_functions(m)?;
-
-    // Text utilities
-    text_utils::register_text_utils_functions(m)?;
-
-    // Cache utilities
-    cache::register_cache_functions(m)?;
-
-    // OCR
-    ocr::register_ocr_functions(m)?;
-
-    // Chunking
-    chunking::register_chunking_functions(m)?;
-
-    // Plugin registration
-    plugins::register_plugin_functions(m)?;
+    // Plugin functions (3 functions - stubs for v4.1)
+    m.add_function(wrap_pyfunction!(plugins::register_ocr_backend, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::list_ocr_backends, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::unregister_ocr_backend, m)?)?;
 
     Ok(())
 }

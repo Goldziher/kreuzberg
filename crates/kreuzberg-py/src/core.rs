@@ -1,0 +1,360 @@
+//! Core extraction functions
+//!
+//! Provides both synchronous and asynchronous extraction functions for Python.
+
+use crate::config::ExtractionConfig;
+use crate::error::to_py_err;
+use crate::types::ExtractionResult;
+use pyo3::prelude::*;
+use pyo3::types::PyList;
+
+// ============================================================================
+// Synchronous Functions
+// ============================================================================
+
+/// Extract content from a file (synchronous).
+///
+/// Args:
+///     path: Path to the file to extract
+///     mime_type: Optional MIME type hint (auto-detected if None)
+///     config: Extraction configuration
+///
+/// Returns:
+///     ExtractionResult with content, metadata, and tables
+///
+/// Raises:
+///     ValueError: Invalid configuration or unsupported format
+///     IOError: File access errors
+///     RuntimeError: Extraction failures
+///
+/// Example:
+///     >>> from kreuzberg import extract_file_sync, ExtractionConfig
+///     >>> result = extract_file_sync("document.pdf", None, ExtractionConfig())
+///     >>> print(result.content)
+#[pyfunction]
+#[pyo3(signature = (path, mime_type=None, config=ExtractionConfig::default()))]
+pub fn extract_file_sync(
+    py: Python,
+    path: String,
+    mime_type: Option<String>,
+    config: ExtractionConfig,
+) -> PyResult<ExtractionResult> {
+    let rust_config = config.into();
+    let result = kreuzberg::extract_file_sync(&path, mime_type.as_deref(), &rust_config).map_err(to_py_err)?;
+    ExtractionResult::from_rust(result, py)
+}
+
+/// Extract content from bytes (synchronous).
+///
+/// Args:
+///     data: Bytes to extract (bytes or bytearray)
+///     mime_type: MIME type of the data
+///     config: Extraction configuration
+///
+/// Returns:
+///     ExtractionResult with content, metadata, and tables
+///
+/// Raises:
+///     ValueError: Invalid configuration or unsupported format
+///     RuntimeError: Extraction failures
+///
+/// Example:
+///     >>> from kreuzberg import extract_bytes_sync, ExtractionConfig
+///     >>> with open("document.pdf", "rb") as f:
+///     ...     data = f.read()
+///     >>> result = extract_bytes_sync(data, "application/pdf", ExtractionConfig())
+///     >>> print(result.content)
+#[pyfunction]
+#[pyo3(signature = (data, mime_type, config=ExtractionConfig::default()))]
+pub fn extract_bytes_sync(
+    py: Python,
+    data: Vec<u8>,
+    mime_type: String,
+    config: ExtractionConfig,
+) -> PyResult<ExtractionResult> {
+    let rust_config = config.into();
+    let result = kreuzberg::extract_bytes_sync(&data, &mime_type, &rust_config).map_err(to_py_err)?;
+    ExtractionResult::from_rust(result, py)
+}
+
+/// Batch extract content from multiple files (synchronous).
+///
+/// MIME types are auto-detected for each file.
+///
+/// Args:
+///     paths: List of file paths to extract
+///     config: Extraction configuration
+///
+/// Returns:
+///     List of ExtractionResult objects (one per file)
+///
+/// Raises:
+///     ValueError: Invalid configuration
+///     IOError: File access errors
+///     RuntimeError: Extraction failures
+///
+/// Example:
+///     >>> from kreuzberg import batch_extract_files_sync, ExtractionConfig
+///     >>> paths = ["doc1.pdf", "doc2.docx"]
+///     >>> results = batch_extract_files_sync(paths, ExtractionConfig())
+///     >>> for result in results:
+///     ...     print(result.content)
+#[pyfunction]
+#[pyo3(signature = (paths, config=ExtractionConfig::default()))]
+pub fn batch_extract_files_sync(py: Python, paths: Vec<String>, config: ExtractionConfig) -> PyResult<Py<PyList>> {
+    let rust_config = config.into();
+    let results = kreuzberg::batch_extract_file_sync(paths, &rust_config).map_err(to_py_err)?;
+
+    let list = PyList::empty(py);
+    for result in results {
+        list.append(ExtractionResult::from_rust(result, py)?)?;
+    }
+    Ok(list.unbind())
+}
+
+/// Batch extract content from multiple byte arrays (synchronous).
+///
+/// Args:
+///     data_list: List of bytes objects to extract
+///     mime_types: List of MIME types (one per data object)
+///     config: Extraction configuration
+///
+/// Returns:
+///     List of ExtractionResult objects (one per data object)
+///
+/// Raises:
+///     ValueError: Invalid configuration or list length mismatch
+///     RuntimeError: Extraction failures
+///
+/// Example:
+///     >>> from kreuzberg import batch_extract_bytes_sync, ExtractionConfig
+///     >>> data_list = [open("doc1.pdf", "rb").read(), open("doc2.pdf", "rb").read()]
+///     >>> mime_types = ["application/pdf", "application/pdf"]
+///     >>> results = batch_extract_bytes_sync(data_list, mime_types, ExtractionConfig())
+#[pyfunction]
+#[pyo3(signature = (data_list, mime_types, config=ExtractionConfig::default()))]
+pub fn batch_extract_bytes_sync(
+    py: Python,
+    data_list: Vec<Vec<u8>>,
+    mime_types: Vec<String>,
+    config: ExtractionConfig,
+) -> PyResult<Py<PyList>> {
+    // Validate list lengths match
+    if data_list.len() != mime_types.len() {
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "data_list and mime_types must have the same length (got {} and {})",
+            data_list.len(),
+            mime_types.len()
+        )));
+    }
+
+    let rust_config = config.into();
+
+    // Zip data and MIME types into Vec<(&[u8], &str)>
+    let contents: Vec<(&[u8], &str)> = data_list
+        .iter()
+        .zip(mime_types.iter())
+        .map(|(data, mime)| (data.as_slice(), mime.as_str()))
+        .collect();
+
+    let results = kreuzberg::batch_extract_bytes_sync(contents, &rust_config).map_err(to_py_err)?;
+
+    let list = PyList::empty(py);
+    for result in results {
+        list.append(ExtractionResult::from_rust(result, py)?)?;
+    }
+    Ok(list.unbind())
+}
+
+// ============================================================================
+// Asynchronous Functions
+// ============================================================================
+
+/// Extract content from a file (asynchronous).
+///
+/// Args:
+///     path: Path to the file to extract
+///     mime_type: Optional MIME type hint (auto-detected if None)
+///     config: Extraction configuration
+///
+/// Returns:
+///     ExtractionResult with content, metadata, and tables
+///
+/// Raises:
+///     ValueError: Invalid configuration or unsupported format
+///     IOError: File access errors
+///     RuntimeError: Extraction failures
+///
+/// Example:
+///     >>> import asyncio
+///     >>> from kreuzberg import extract_file, ExtractionConfig
+///     >>> async def main():
+///     ...     result = await extract_file("document.pdf", None, ExtractionConfig())
+///     ...     print(result.content)
+///     >>> asyncio.run(main())
+#[pyfunction]
+#[pyo3(signature = (path, mime_type=None, config=ExtractionConfig::default()))]
+pub fn extract_file<'py>(
+    py: Python<'py>,
+    path: String,
+    mime_type: Option<String>,
+    config: ExtractionConfig,
+) -> PyResult<Bound<'py, PyAny>> {
+    let rust_config: kreuzberg::ExtractionConfig = config.into();
+    pyo3_async_runtimes::tokio::future_into_py(py, async move {
+        let result = kreuzberg::extract_file(&path, mime_type.as_deref(), &rust_config)
+            .await
+            .map_err(to_py_err)?;
+        Python::attach(|py| ExtractionResult::from_rust(result, py))
+    })
+}
+
+/// Extract content from bytes (asynchronous).
+///
+/// Args:
+///     data: Bytes to extract (bytes or bytearray)
+///     mime_type: MIME type of the data
+///     config: Extraction configuration
+///
+/// Returns:
+///     ExtractionResult with content, metadata, and tables
+///
+/// Raises:
+///     ValueError: Invalid configuration or unsupported format
+///     RuntimeError: Extraction failures
+///
+/// Example:
+///     >>> import asyncio
+///     >>> from kreuzberg import extract_bytes, ExtractionConfig
+///     >>> async def main():
+///     ...     with open("document.pdf", "rb") as f:
+///     ...         data = f.read()
+///     ...     result = await extract_bytes(data, "application/pdf", ExtractionConfig())
+///     ...     print(result.content)
+///     >>> asyncio.run(main())
+#[pyfunction]
+#[pyo3(signature = (data, mime_type, config=ExtractionConfig::default()))]
+pub fn extract_bytes<'py>(
+    py: Python<'py>,
+    data: Vec<u8>,
+    mime_type: String,
+    config: ExtractionConfig,
+) -> PyResult<Bound<'py, PyAny>> {
+    let rust_config: kreuzberg::ExtractionConfig = config.into();
+    pyo3_async_runtimes::tokio::future_into_py(py, async move {
+        let result = kreuzberg::extract_bytes(&data, &mime_type, &rust_config)
+            .await
+            .map_err(to_py_err)?;
+        Python::attach(|py| ExtractionResult::from_rust(result, py))
+    })
+}
+
+/// Batch extract content from multiple files (asynchronous).
+///
+/// MIME types are auto-detected for each file.
+///
+/// Args:
+///     paths: List of file paths to extract
+///     config: Extraction configuration
+///
+/// Returns:
+///     List of ExtractionResult objects (one per file)
+///
+/// Raises:
+///     ValueError: Invalid configuration
+///     IOError: File access errors
+///     RuntimeError: Extraction failures
+///
+/// Example:
+///     >>> import asyncio
+///     >>> from kreuzberg import batch_extract_files, ExtractionConfig
+///     >>> async def main():
+///     ...     paths = ["doc1.pdf", "doc2.docx"]
+///     ...     results = await batch_extract_files(paths, ExtractionConfig())
+///     ...     for result in results:
+///     ...         print(result.content)
+///     >>> asyncio.run(main())
+#[pyfunction]
+#[pyo3(signature = (paths, config=ExtractionConfig::default()))]
+pub fn batch_extract_files<'py>(
+    py: Python<'py>,
+    paths: Vec<String>,
+    config: ExtractionConfig,
+) -> PyResult<Bound<'py, PyAny>> {
+    let rust_config: kreuzberg::ExtractionConfig = config.into();
+    pyo3_async_runtimes::tokio::future_into_py(py, async move {
+        let results = kreuzberg::batch_extract_file(paths, &rust_config)
+            .await
+            .map_err(to_py_err)?;
+
+        Python::attach(|py| {
+            let list = PyList::empty(py);
+            for result in results {
+                list.append(ExtractionResult::from_rust(result, py)?)?;
+            }
+            Ok(list.unbind())
+        })
+    })
+}
+
+/// Batch extract content from multiple byte arrays (asynchronous).
+///
+/// Args:
+///     data_list: List of bytes objects to extract
+///     mime_types: List of MIME types (one per data object)
+///     config: Extraction configuration
+///
+/// Returns:
+///     List of ExtractionResult objects (one per data object)
+///
+/// Raises:
+///     ValueError: Invalid configuration or list length mismatch
+///     RuntimeError: Extraction failures
+///
+/// Example:
+///     >>> import asyncio
+///     >>> from kreuzberg import batch_extract_bytes, ExtractionConfig
+///     >>> async def main():
+///     ...     data_list = [open("doc1.pdf", "rb").read(), open("doc2.pdf", "rb").read()]
+///     ...     mime_types = ["application/pdf", "application/pdf"]
+///     ...     results = await batch_extract_bytes(data_list, mime_types, ExtractionConfig())
+///     >>> asyncio.run(main())
+#[pyfunction]
+#[pyo3(signature = (data_list, mime_types, config=ExtractionConfig::default()))]
+pub fn batch_extract_bytes<'py>(
+    py: Python<'py>,
+    data_list: Vec<Vec<u8>>,
+    mime_types: Vec<String>,
+    config: ExtractionConfig,
+) -> PyResult<Bound<'py, PyAny>> {
+    // Validate list lengths match
+    if data_list.len() != mime_types.len() {
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "data_list and mime_types must have the same length (got {} and {})",
+            data_list.len(),
+            mime_types.len()
+        )));
+    }
+
+    let rust_config: kreuzberg::ExtractionConfig = config.into();
+    pyo3_async_runtimes::tokio::future_into_py(py, async move {
+        // Zip data and MIME types into Vec<(&[u8], &str)>
+        let contents: Vec<(&[u8], &str)> = data_list
+            .iter()
+            .zip(mime_types.iter())
+            .map(|(data, mime)| (data.as_slice(), mime.as_str()))
+            .collect();
+
+        let results = kreuzberg::batch_extract_bytes(contents, &rust_config)
+            .await
+            .map_err(to_py_err)?;
+
+        Python::attach(|py| {
+            let list = PyList::empty(py);
+            for result in results {
+                list.append(ExtractionResult::from_rust(result, py)?)?;
+            }
+            Ok(list.unbind())
+        })
+    })
+}
