@@ -2,7 +2,8 @@ from importlib.metadata import version
 
 from kreuzberg._lib import load_pdfium  # noqa: F401
 
-from ._registry import ExtractorRegistry
+# Note: ExtractorRegistry removed in v4 - all extraction now handled by Rust core
+# from ._registry import ExtractorRegistry
 from ._types import (
     ChunkingConfig,
     EasyOCRConfig,
@@ -54,7 +55,7 @@ __all__ = [
     "ExtractedImage",
     "ExtractionConfig",
     "ExtractionResult",
-    "ExtractorRegistry",
+    # "ExtractorRegistry",  # Removed in v4 - extraction handled by Rust core
     "HTMLToMarkdownConfig",
     "ImageExtractionConfig",
     "ImageOCRResult",

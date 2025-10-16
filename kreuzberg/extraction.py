@@ -1,29 +1,32 @@
+"""Extraction API - thin wrapper around Rust core with Python-specific features.
+
+This module provides the main extraction API for kreuzberg. The core extraction
+logic is implemented in Rust for performance, with Python handling additional
+features like entity extraction, keyword extraction, and custom hooks.
+"""
+
 from __future__ import annotations
 
-import multiprocessing as mp
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Final
 
-import anyio
-
-from kreuzberg._chunker import get_chunker
+from kreuzberg import _internal_bindings as rust
 from kreuzberg._document_classification import auto_detect_document_type
 from kreuzberg._entity_extraction import extract_entities, extract_keywords
-from kreuzberg._error_handling import safe_feature_execution, should_exception_bubble_up
-from kreuzberg._internal_bindings import safe_decode
-from kreuzberg._language_detection import detect_languages
-from kreuzberg._mime_types import (
-    validate_mime_type,
-)
-from kreuzberg._registry import ExtractorRegistry
+from kreuzberg._error_handling import safe_feature_execution
 from kreuzberg._token_reduction import get_reduction_stats, reduce_tokens
-from kreuzberg._types import ChunkingConfig, ExtractionConfig, ExtractionResult
-from kreuzberg._utils._document_cache import get_document_cache
-from kreuzberg._utils._errors import create_error_context
-from kreuzberg._utils._sync import run_maybe_sync, run_sync_only
-from kreuzberg.exceptions import KreuzbergError, ValidationError
+from kreuzberg._types import (
+    ChunkingConfig as PyChunkingConfig,
+    EasyOCRConfig,
+    ExtractionConfig,
+    ExtractionResult,
+    LanguageDetectionConfig as PyLanguageDetectionConfig,
+    PaddleOCRConfig,
+    TesseractConfig,
+    TokenReductionConfig as PyTokenReductionConfig,
+)
+from kreuzberg.exceptions import KreuzbergError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -33,41 +36,118 @@ if TYPE_CHECKING:
 DEFAULT_CONFIG: Final[ExtractionConfig] = ExtractionConfig()
 
 
-async def _handle_cache_async(path: Path, config: ExtractionConfig) -> ExtractionResult | None:
-    cache = get_document_cache()
+def _convert_config_to_rust(py_config: ExtractionConfig) -> rust.ExtractionConfig:
+    """Convert Python ExtractionConfig to Rust ExtractionConfig.
 
-    cached_result = cache.get(path, config)
-    if cached_result is not None:
-        return cached_result
+    Python config has many more fields (validators, hooks, entities, etc.)
+    Rust config only handles core extraction features.
 
-    if cache.is_processing(path, config):
-        event = cache.mark_processing(path, config)  # pragma: no cover
-        await anyio.to_thread.run_sync(event.wait)  # pragma: no cover
+    Args:
+        py_config: Python configuration with all features
 
-        return cache.get(path, config)  # pragma: no cover
+    Returns:
+        Rust configuration with only Rust-supported features
+    """
+    # Convert OCR config
+    rust_ocr = None
+    if py_config.ocr is not None:
+        if isinstance(py_config.ocr, TesseractConfig):
+            # Rust uses simple OcrConfig with backend + language
+            rust_ocr = rust.OcrConfig(backend="tesseract", language=py_config.ocr.language)
+        elif isinstance(py_config.ocr, EasyOCRConfig):
+            # EasyOCR will be registered as Python plugin later
+            rust_ocr = rust.OcrConfig(backend="easyocr", language=py_config.ocr.language or "en")
+        elif isinstance(py_config.ocr, PaddleOCRConfig):
+            # PaddleOCR will be registered as Python plugin later
+            rust_ocr = rust.OcrConfig(backend="paddleocr", language=py_config.ocr.language or "en")
 
-    return None
+    # Convert chunking config
+    rust_chunking = None
+    if py_config.chunking is not None:
+        rust_chunking = rust.ChunkingConfig(
+            max_chars=py_config.chunking.max_chars, max_overlap=py_config.chunking.max_overlap
+        )
+
+    # Convert language detection config
+    rust_lang_detect = None
+    if py_config.language_detection is not None:
+        rust_lang_detect = rust.LanguageDetectionConfig(
+            enabled=py_config.language_detection.enabled,
+            min_confidence=py_config.language_detection.min_confidence,
+            detect_multiple=py_config.language_detection.detect_multiple,
+        )
+
+    # Convert token reduction config
+    rust_token_reduction = None
+    if py_config.token_reduction is not None:
+        # Python token reduction handled in Python layer, but pass config to Rust for metadata
+        rust_token_reduction = rust.TokenReductionConfig(
+            mode=py_config.token_reduction.mode,
+            preserve_important_words=py_config.token_reduction.preserve_important_words,
+        )
+
+    # Convert image extraction config (if needed in future)
+    rust_images = None
+    if py_config.images is not None:
+        rust_images = rust.ImageExtractionConfig(
+            extract_images=py_config.images.extract_images,
+            target_dpi=py_config.target_dpi,
+            max_image_dimension=py_config.max_image_dimension,
+            auto_adjust_dpi=py_config.auto_adjust_dpi,
+            min_dpi=py_config.min_dpi,
+            max_dpi=py_config.max_dpi,
+        )
+
+    # Convert PDF options
+    rust_pdf = None
+    if py_config.pdf_password:
+        passwords = [py_config.pdf_password] if isinstance(py_config.pdf_password, str) else list(py_config.pdf_password)
+        rust_pdf = rust.PdfConfig(extract_images=False, passwords=passwords, extract_metadata=True)
+
+    return rust.ExtractionConfig(
+        use_cache=py_config.use_cache,
+        enable_quality_processing=py_config.enable_quality_processing,
+        ocr=rust_ocr,
+        force_ocr=py_config.force_ocr,
+        chunking=rust_chunking,
+        images=rust_images,
+        pdf_options=rust_pdf,
+        token_reduction=rust_token_reduction,
+        language_detection=rust_lang_detect,
+    )
 
 
-def _validate_and_post_process_helper(
-    result: ExtractionResult, config: ExtractionConfig, file_path: Path | None = None
+def _apply_python_post_processing(
+    result: ExtractionResult,
+    config: ExtractionConfig,
+    file_path: Path | None = None,
 ) -> ExtractionResult:
+    """Apply Python-specific post-processing features.
+
+    The Rust core already handles:
+    - Quality processing
+    - Chunking
+    - Language detection
+    - Post-processor plugins
+
+    Python adds:
+    - Entity extraction
+    - Keyword extraction
+    - Document type detection
+    - Token reduction
+
+    Args:
+        result: The extraction result from Rust
+        config: Extraction configuration
+        file_path: Optional file path for document type detection
+
+    Returns:
+        The processed extraction result
+    """
     if result.metadata is None:
         result.metadata = {}
 
-    if config.chunking is not None:
-        chunking_config = config.chunking
-        result.chunks = safe_feature_execution(
-            feature_name="chunking",
-            execution_func=lambda: _handle_chunk_content(
-                mime_type=result.mime_type,
-                chunking_config=chunking_config,
-                content=result.content,
-            ),
-            default_value=[],
-            result=result,
-        )
-
+    # Entity extraction (Python-specific, uses spacy)
     if config.entities is not None:
         result.entities = safe_feature_execution(
             feature_name="entity_extraction",
@@ -80,6 +160,7 @@ def _validate_and_post_process_helper(
             result=result,
         )
 
+    # Keyword extraction (Python-specific)
     if config.keywords is not None:
         keywords_config = config.keywords
         result.keywords = safe_feature_execution(
@@ -92,14 +173,7 @@ def _validate_and_post_process_helper(
             result=result,
         )
 
-    if config.language_detection is not None:
-        result.detected_languages = safe_feature_execution(
-            feature_name="language_detection",
-            execution_func=lambda: detect_languages(result.content, config=config.language_detection) or [],
-            default_value=[],
-            result=result,
-        )
-
+    # Document type detection (Python-specific)
     if config.auto_detect_document_type:
         result = safe_feature_execution(
             feature_name="document_type_detection",
@@ -108,6 +182,7 @@ def _validate_and_post_process_helper(
             result=result,
         )
 
+    # Token reduction (Python-specific, Rust TODO for v4.1)
     if config.token_reduction is not None and config.token_reduction.mode != "off":
 
         def _apply_token_reduction() -> str:
@@ -150,18 +225,31 @@ def _validate_and_post_process_helper(
     return result
 
 
-async def _validate_and_post_process_async(
-    result: ExtractionResult, config: ExtractionConfig, file_path: Path | None = None
-) -> ExtractionResult:
-    for validator in config.validators or []:
-        await run_maybe_sync(validator, result)
+def _run_python_validators_sync(result: ExtractionResult, config: ExtractionConfig) -> None:
+    """Run Python-specific validators (synchronous)."""
+    if config.validators:
+        for validator in config.validators:
+            validator(result)
 
-    result = _validate_and_post_process_helper(result, config, file_path)
 
-    for i, post_processor in enumerate(config.post_processing_hooks or []):
+async def _run_python_validators_async(result: ExtractionResult, config: ExtractionConfig) -> None:
+    """Run Python-specific validators (asynchronous)."""
+    from kreuzberg._utils._sync import run_maybe_sync
+
+    if config.validators:
+        for validator in config.validators:
+            await run_maybe_sync(validator, result)
+
+
+def _run_python_hooks_sync(result: ExtractionResult, config: ExtractionConfig) -> ExtractionResult:
+    """Run Python-specific post-processing hooks (synchronous)."""
+    if not config.post_processing_hooks:
+        return result
+
+    for i, post_processor in enumerate(config.post_processing_hooks):
         try:
-            result = await run_maybe_sync(post_processor, result)
-        except (KreuzbergError, ValueError, RuntimeError, TypeError) as e:  # noqa: PERF203
+            result = post_processor(result)
+        except (KreuzbergError, ValueError, RuntimeError, TypeError) as e:
             if result.metadata is None:
                 result.metadata = {}
             error_list = result.metadata.setdefault("processing_errors", [])
@@ -178,319 +266,43 @@ async def _validate_and_post_process_async(
     return result
 
 
-def _validate_and_post_process_sync(
-    result: ExtractionResult, config: ExtractionConfig, file_path: Path | None = None
-) -> ExtractionResult:
-    for validator in config.validators or []:
-        run_sync_only(validator, result)
+async def _run_python_hooks_async(result: ExtractionResult, config: ExtractionConfig) -> ExtractionResult:
+    """Run Python-specific post-processing hooks (asynchronous)."""
+    from kreuzberg._utils._sync import run_maybe_sync
 
-    result = _validate_and_post_process_helper(result, config, file_path)
+    if not config.post_processing_hooks:
+        return result
 
-    for post_processor in config.post_processing_hooks or []:
-        result = run_sync_only(post_processor, result)
+    for i, post_processor in enumerate(config.post_processing_hooks):
+        try:
+            result = await run_maybe_sync(post_processor, result)
+        except (KreuzbergError, ValueError, RuntimeError, TypeError) as e:
+            if result.metadata is None:
+                result.metadata = {}
+            error_list = result.metadata.setdefault("processing_errors", [])
+            if isinstance(error_list, list):
+                error_list.append(
+                    {
+                        "feature": f"post_processing_hook_{i}",
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                        "traceback": traceback.format_exc(),
+                    }
+                )
 
     return result
 
 
-def _handle_chunk_content(
-    mime_type: str,
-    chunking_config: ChunkingConfig,
-    content: str,
-) -> list[str]:
-    chunker = get_chunker(
-        mime_type=mime_type,
-        max_characters=chunking_config.max_chars,
-        overlap_characters=chunking_config.max_overlap,
-    )
-    return list(chunker.chunks(content))
-
-
-async def extract_bytes(content: bytes, mime_type: str, config: ExtractionConfig = DEFAULT_CONFIG) -> ExtractionResult:
-    """Extract the textual content from a given byte string representing a file's contents.
-
-    Args:
-        content: The content to extract.
-        mime_type: The mime type of the content.
-        config: Extraction options object, defaults to the default object.
-
-
-    Returns:
-        The extracted content and the mime type of the content.
-    """
-    mime_type = validate_mime_type(mime_type=mime_type)
-    if extractor := ExtractorRegistry.get_extractor(mime_type=mime_type, config=config):
-        result = await extractor.extract_bytes_async(content)
-    else:
-        result = ExtractionResult(
-            content=safe_decode(content),
-            chunks=[],
-            mime_type=mime_type,
-            metadata={},
-        )
-
-    return await _validate_and_post_process_async(result=result, config=config)
-
-
-async def extract_file(
-    file_path: PathLike[str] | str, mime_type: str | None = None, config: ExtractionConfig = DEFAULT_CONFIG
-) -> ExtractionResult:
-    """Extract the textual content from a given file.
-
-    Args:
-        file_path: The path to the file.
-        mime_type: The mime type of the content.
-        config: Extraction options object, defaults to the default object.
-
-    Returns:
-        The extracted content and the mime type of the content.
-
-    Raises:
-        ValidationError: If the file path or configuration is invalid.
-    """
-    cache = get_document_cache()
-    path = Path(file_path)
-
-    if config.use_cache:
-        cached_result = await _handle_cache_async(path, config)
-        if cached_result is not None:
-            return cached_result
-        cache.mark_processing(path, config)
-
-    try:
-        if not path.exists():
-            raise ValidationError("The file does not exist", context={"file_path": str(path)})
-
-        mime_type = validate_mime_type(file_path=file_path, mime_type=mime_type)
-        if extractor := ExtractorRegistry.get_extractor(mime_type=mime_type, config=config):
-            result = await extractor.extract_path_async(Path(file_path))
-        else:
-            result = ExtractionResult(
-                content=safe_decode(await anyio.Path(file_path).read_bytes()),
-                chunks=[],
-                mime_type=mime_type,
-                metadata={},
-            )
-
-        result = await _validate_and_post_process_async(result=result, config=config, file_path=path)
-
-        if config.use_cache:
-            cache.set(path, config, result)
-
-        return result
-    finally:
-        if config.use_cache:
-            cache.mark_complete(path, config)
-
-
-async def batch_extract_file(
-    file_paths: Sequence[PathLike[str] | str], config: ExtractionConfig = DEFAULT_CONFIG
-) -> list[ExtractionResult]:
-    """Extract text from multiple files concurrently with optimizations.
-
-    Args:
-        file_paths: A sequence of paths to files to extract text from.
-        config: Extraction options object, defaults to the default object.
-
-    Returns:
-        A list of extraction results in the same order as the input paths.
-    """
-    if not file_paths:
-        return []
-
-    max_concurrency = min(len(file_paths), mp.cpu_count() * 2)
-    semaphore = anyio.Semaphore(max_concurrency)
-
-    results = cast("list[ExtractionResult]", ([None] * len(file_paths)))
-
-    async def _extract_file(path: PathLike[str] | str, index: int) -> None:
-        async with semaphore:
-            try:
-                result = await extract_file(
-                    path,
-                    None,
-                    config,
-                )
-                results[index] = result
-            except Exception as e:
-                if should_exception_bubble_up(e, "batch_processing"):
-                    raise
-
-                basic_result = _attempt_basic_extraction(
-                    None,
-                    None,
-                    e,
-                    index,
-                    file_path=str(path),
-                )
-                results[index] = basic_result
-
-    async with anyio.create_task_group() as tg:
-        for i, path in enumerate(file_paths):
-            tg.start_soon(_extract_file, path, i)
-
-    return results
-
-
-async def batch_extract_bytes(
-    contents: Sequence[tuple[bytes, str]], config: ExtractionConfig = DEFAULT_CONFIG
-) -> list[ExtractionResult]:
-    """Extract text from multiple byte contents concurrently with optimizations.
-
-    Args:
-        contents: A sequence of tuples containing (content, mime_type) pairs.
-        config: Extraction options object, defaults to the default object.
-
-    Returns:
-        A list of extraction results in the same order as the input contents.
-    """
-    if not contents:
-        return []
-
-    max_concurrency = min(len(contents), mp.cpu_count() * 2)
-    semaphore = anyio.Semaphore(max_concurrency)
-
-    results = cast("list[ExtractionResult]", [None] * len(contents))
-
-    async def _extract_bytes(content: bytes, mime_type: str, index: int) -> None:
-        async with semaphore:
-            try:
-                result = await extract_bytes(content, mime_type, config)
-                results[index] = result
-            except Exception as e:
-                if should_exception_bubble_up(e, "batch_processing"):
-                    raise
-
-                basic_result = _attempt_basic_extraction(content, mime_type, e, index)
-                results[index] = basic_result
-
-    async with anyio.create_task_group() as tg:
-        for i, (content, mime_type) in enumerate(contents):
-            tg.start_soon(_extract_bytes, content, mime_type, i)
-
-    return results
-
-
-def _attempt_basic_extraction(
-    content: bytes | None, mime_type: str | None, original_error: Exception, index: int, *, file_path: str | None = None
-) -> ExtractionResult:
-    """Attempt basic extraction when full extraction fails, preserving as much as possible.
-
-    This function tries to extract at least basic text content even when advanced
-    features like OCR, entity extraction, etc. fail.
-
-    Args:
-        content: The raw content bytes (None for file extractions)
-        mime_type: The MIME type of the content (None if unknown)
-        original_error: The exception that caused the main extraction to fail
-        index: Index of this content in the batch
-        file_path: Optional file path for file-based extractions
-
-    Returns:
-        A basic ExtractionResult with whatever could be extracted
-    """
-    if (
-        isinstance(original_error, (ValueError, TypeError, ValidationError))
-        or "mock" in str(type(original_error)).lower()
-    ):
-        return ExtractionResult(
-            content=f"Error: {type(original_error).__name__}: {original_error!s}",
-            mime_type="text/plain",
-            metadata={
-                "error": f"{type(original_error).__name__}: {original_error!s}",
-                "error_context": create_error_context(
-                    operation="batch_extract_file" if file_path else "batch_extract_bytes",
-                    error=original_error,
-                    index=index,
-                    mime_type=mime_type,
-                    content_size=len(content) if content else 0,
-                    file_path=file_path,
-                ),
-            },
-            chunks=[],
-            entities=[],
-            keywords=[],
-            detected_languages=[],
-            tables=[],
-            images=[],
-            image_ocr_results=[],
-        )
-
-    try:
-        if content is None:
-            return ExtractionResult(
-                content=f"Error: {type(original_error).__name__}: {original_error!s}",
-                mime_type="text/plain",
-                metadata={
-                    "error": f"{type(original_error).__name__}: {original_error!s}",
-                    "error_context": create_error_context(
-                        operation="batch_extract_file",
-                        error=original_error,
-                        index=index,
-                        file_path=file_path,
-                    ),
-                },
-                chunks=[],
-                entities=[],
-                keywords=[],
-                detected_languages=[],
-                tables=[],
-                images=[],
-                image_ocr_results=[],
-            )
-
-        mime_type = validate_mime_type(mime_type=mime_type)
-        if extractor := ExtractorRegistry.get_extractor(mime_type=mime_type, config=ExtractionConfig()):
-            basic_result = extractor.extract_bytes_sync(content)
-
-            if basic_result.metadata is None:
-                basic_result.metadata = {}
-
-            basic_result.metadata["extraction_error"] = {
-                "error_type": type(original_error).__name__,
-                "error_message": str(original_error),
-                "traceback": traceback.format_exc(),
-                "context": create_error_context(
-                    operation="batch_extract_file" if file_path else "batch_extract_bytes",
-                    error=original_error,
-                    index=index,
-                    mime_type=mime_type,
-                    content_size=len(content),
-                    file_path=file_path,
-                ),
-                "recovery_mode": "basic_extraction",
-            }
-
-            return basic_result
-
-    except (KreuzbergError, ValueError, RuntimeError, TypeError):
-        pass
-
-    return ExtractionResult(
-        content=f"Error: {type(original_error).__name__}: {original_error!s}",
-        mime_type="text/plain",
-        metadata={
-            "error": f"{type(original_error).__name__}: {original_error!s}",
-            "error_context": create_error_context(
-                operation="batch_extract_file" if file_path else "batch_extract_bytes",
-                error=original_error,
-                index=index,
-                mime_type=mime_type,
-                content_size=len(content) if content else 0,
-                file_path=file_path,
-            ),
-        },
-        chunks=[],
-        entities=[],
-        keywords=[],
-        detected_languages=[],
-        tables=[],
-        images=[],
-        image_ocr_results=[],
-    )
+# ============================================================================
+# Synchronous API
+# ============================================================================
 
 
 def extract_bytes_sync(content: bytes, mime_type: str, config: ExtractionConfig = DEFAULT_CONFIG) -> ExtractionResult:
-    """Synchronous version of extract_bytes.
+    """Extract the textual content from a given byte string representing a file's contents.
+
+    This is a thin wrapper around the Rust core extraction with Python-specific
+    post-processing.
 
     Args:
         content: The content to extract.
@@ -500,24 +312,31 @@ def extract_bytes_sync(content: bytes, mime_type: str, config: ExtractionConfig 
     Returns:
         The extracted content and the mime type of the content.
     """
-    mime_type = validate_mime_type(mime_type=mime_type)
-    if extractor := ExtractorRegistry.get_extractor(mime_type=mime_type, config=config):
-        result = extractor.extract_bytes_sync(content)
-    else:
-        result = ExtractionResult(
-            content=safe_decode(content),
-            chunks=[],
-            mime_type=mime_type,
-            metadata={},
-        )
+    # Convert Python config to Rust config
+    rust_config = _convert_config_to_rust(config)
 
-    return _validate_and_post_process_sync(result=result, config=config)
+    # Call Rust core extraction (handles quality, chunking, language detection)
+    result = rust.extract_bytes_sync(content, mime_type, rust_config)
+
+    # Apply Python-specific post-processing
+    result = _apply_python_post_processing(result, config)
+
+    # Run Python validators
+    _run_python_validators_sync(result, config)
+
+    # Run Python post-processing hooks
+    result = _run_python_hooks_sync(result, config)
+
+    return result
 
 
 def extract_file_sync(
-    file_path: Path | str, mime_type: str | None = None, config: ExtractionConfig = DEFAULT_CONFIG
+    file_path: PathLike[str] | str, mime_type: str | None = None, config: ExtractionConfig = DEFAULT_CONFIG
 ) -> ExtractionResult:
     """Synchronous version of extract_file.
+
+    This is a thin wrapper around the Rust core extraction with Python-specific
+    post-processing.
 
     Args:
         file_path: The path to the file.
@@ -530,49 +349,24 @@ def extract_file_sync(
     Raises:
         ValidationError: If the file path or configuration is invalid.
     """
-    cache = get_document_cache()
     path = Path(file_path)
 
-    if config.use_cache:
-        cached_result = cache.get(path, config)
-        if cached_result is not None:
-            return cached_result
+    # Convert Python config to Rust config
+    rust_config = _convert_config_to_rust(config)
 
-        if cache.is_processing(path, config):
-            event = cache.mark_processing(path, config)  # pragma: no cover
-            event.wait()  # pragma: no cover
+    # Call Rust core extraction (handles quality, chunking, language detection)
+    result = rust.extract_file_sync(str(path), mime_type, rust_config)
 
-            # Try cache again after waiting for other process to complete  # ~keep
-            cached_result = cache.get(path, config)  # pragma: no cover
-            if cached_result is not None:  # pragma: no cover
-                return cached_result
+    # Apply Python-specific post-processing
+    result = _apply_python_post_processing(result, config, file_path=path)
 
-        cache.mark_processing(path, config)
+    # Run Python validators
+    _run_python_validators_sync(result, config)
 
-    try:
-        if not path.exists():
-            raise ValidationError("The file does not exist", context={"file_path": str(path)})
+    # Run Python post-processing hooks
+    result = _run_python_hooks_sync(result, config)
 
-        mime_type = validate_mime_type(file_path=file_path, mime_type=mime_type)
-        if extractor := ExtractorRegistry.get_extractor(mime_type=mime_type, config=config):
-            result = extractor.extract_path_sync(Path(file_path))
-        else:
-            result = ExtractionResult(
-                content=Path(file_path).read_text(encoding="utf-8"),
-                chunks=[],
-                mime_type=mime_type,
-                metadata={},
-            )
-
-        result = _validate_and_post_process_sync(result=result, config=config, file_path=path)
-
-        if config.use_cache:
-            cache.set(path, config, result)
-
-        return result
-    finally:
-        if config.use_cache:
-            cache.mark_complete(path, config)
+    return result
 
 
 def batch_extract_file_sync(
@@ -580,6 +374,9 @@ def batch_extract_file_sync(
 ) -> list[ExtractionResult]:
     """Synchronous version of batch_extract_file with parallel processing.
 
+    This is a thin wrapper around the Rust core extraction with Python-specific
+    post-processing applied to each result.
+
     Args:
         file_paths: A sequence of paths to files to extract text from.
         config: Extraction options object, defaults to the default object.
@@ -587,46 +384,33 @@ def batch_extract_file_sync(
     Returns:
         A list of extraction results in the same order as the input paths.
     """
-    if len(file_paths) <= 1:
-        return [extract_file_sync(file_path=Path(file_path), mime_type=None, config=config) for file_path in file_paths]
+    # Convert paths to strings
+    paths_str = [str(Path(p)) for p in file_paths]
 
-    max_workers = min(len(file_paths), mp.cpu_count())
+    # Convert Python config to Rust config
+    rust_config = _convert_config_to_rust(config)
 
-    def extract_single(index: int, file_path: PathLike[str] | str) -> tuple[int, ExtractionResult]:
-        """Extract single file with index for ordering."""
-        try:
-            return (
-                index,
-                extract_file_sync(file_path=Path(file_path), mime_type=None, config=config),
-            )
-        except Exception as e:
-            if should_exception_bubble_up(e, "batch_processing"):
-                raise
+    # Call Rust core batch extraction
+    results = rust.batch_extract_files_sync(paths_str, rust_config)
 
-            basic_result = _attempt_basic_extraction(
-                None,
-                None,
-                e,
-                index,
-                file_path=str(file_path),
-            )
-            return (index, basic_result)
+    # Apply Python-specific post-processing to each result
+    processed_results = []
+    for result, file_path in zip(results, file_paths, strict=True):
+        result = _apply_python_post_processing(result, config, file_path=Path(file_path))
+        _run_python_validators_sync(result, config)
+        result = _run_python_hooks_sync(result, config)
+        processed_results.append(result)
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_index = {executor.submit(extract_single, i, fp): i for i, fp in enumerate(file_paths)}
-
-        results: list[ExtractionResult | None] = [None] * len(file_paths)
-        for future in as_completed(future_to_index):
-            index, result = future.result()
-            results[index] = result
-
-    return cast("list[ExtractionResult]", results)
+    return processed_results
 
 
 def batch_extract_bytes_sync(
     contents: Sequence[tuple[bytes, str]], config: ExtractionConfig = DEFAULT_CONFIG
 ) -> list[ExtractionResult]:
     """Synchronous version of batch_extract_bytes with parallel processing.
+
+    This is a thin wrapper around the Rust core extraction with Python-specific
+    post-processing applied to each result.
 
     Args:
         contents: A sequence of tuples containing (content, mime_type) pairs.
@@ -635,32 +419,169 @@ def batch_extract_bytes_sync(
     Returns:
         A list of extraction results in the same order as the input contents.
     """
-    if len(contents) <= 1:
-        return [
-            extract_bytes_sync(content=content, mime_type=mime_type, config=config) for content, mime_type in contents
-        ]
+    # Separate contents and mime_types for Rust API
+    data_list = [content for content, _ in contents]
+    mime_types = [mime_type for _, mime_type in contents]
 
-    max_workers = min(len(contents), mp.cpu_count())
+    # Convert Python config to Rust config
+    rust_config = _convert_config_to_rust(config)
 
-    def extract_single(index: int, content: bytes, mime_type: str) -> tuple[int, ExtractionResult]:
-        """Extract single content with index for ordering."""
-        try:
-            return (index, extract_bytes_sync(content=content, mime_type=mime_type, config=config))
-        except Exception as e:
-            if should_exception_bubble_up(e, "batch_processing"):
-                raise
+    # Call Rust core batch extraction
+    results = rust.batch_extract_bytes_sync(data_list, mime_types, rust_config)
 
-            basic_result = _attempt_basic_extraction(content, mime_type, e, index)
-            return (index, basic_result)
+    # Apply Python-specific post-processing to each result
+    processed_results = []
+    for result in results:
+        result = _apply_python_post_processing(result, config)
+        _run_python_validators_sync(result, config)
+        result = _run_python_hooks_sync(result, config)
+        processed_results.append(result)
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_index = {
-            executor.submit(extract_single, i, content, mime_type): i for i, (content, mime_type) in enumerate(contents)
-        }
+    return processed_results
 
-        results: list[ExtractionResult | None] = [None] * len(contents)
-        for future in as_completed(future_to_index):
-            index, result = future.result()
-            results[index] = result
 
-    return cast("list[ExtractionResult]", results)
+# ============================================================================
+# Asynchronous API
+# ============================================================================
+
+
+async def extract_bytes(content: bytes, mime_type: str, config: ExtractionConfig = DEFAULT_CONFIG) -> ExtractionResult:
+    """Extract the textual content from a given byte string representing a file's contents.
+
+    This is a thin wrapper around the Rust core extraction with Python-specific
+    post-processing.
+
+    Args:
+        content: The content to extract.
+        mime_type: The mime type of the content.
+        config: Extraction options object, defaults to the default object.
+
+    Returns:
+        The extracted content and the mime type of the content.
+    """
+    # Convert Python config to Rust config
+    rust_config = _convert_config_to_rust(config)
+
+    # Call Rust core extraction (handles quality, chunking, language detection)
+    result = await rust.extract_bytes(content, mime_type, rust_config)
+
+    # Apply Python-specific post-processing
+    result = _apply_python_post_processing(result, config)
+
+    # Run Python validators
+    await _run_python_validators_async(result, config)
+
+    # Run Python post-processing hooks
+    result = await _run_python_hooks_async(result, config)
+
+    return result
+
+
+async def extract_file(
+    file_path: PathLike[str] | str, mime_type: str | None = None, config: ExtractionConfig = DEFAULT_CONFIG
+) -> ExtractionResult:
+    """Extract the textual content from a given file.
+
+    This is a thin wrapper around the Rust core extraction with Python-specific
+    post-processing.
+
+    Args:
+        file_path: The path to the file.
+        mime_type: The mime type of the content.
+        config: Extraction options object, defaults to the default object.
+
+    Returns:
+        The extracted content and the mime type of the content.
+
+    Raises:
+        ValidationError: If the file path or configuration is invalid.
+    """
+    path = Path(file_path)
+
+    # Convert Python config to Rust config
+    rust_config = _convert_config_to_rust(config)
+
+    # Call Rust core extraction (handles quality, chunking, language detection)
+    result = await rust.extract_file(str(path), mime_type, rust_config)
+
+    # Apply Python-specific post-processing
+    result = _apply_python_post_processing(result, config, file_path=path)
+
+    # Run Python validators
+    await _run_python_validators_async(result, config)
+
+    # Run Python post-processing hooks
+    result = await _run_python_hooks_async(result, config)
+
+    return result
+
+
+async def batch_extract_file(
+    file_paths: Sequence[PathLike[str] | str], config: ExtractionConfig = DEFAULT_CONFIG
+) -> list[ExtractionResult]:
+    """Extract text from multiple files concurrently with optimizations.
+
+    This is a thin wrapper around the Rust core extraction with Python-specific
+    post-processing applied to each result.
+
+    Args:
+        file_paths: A sequence of paths to files to extract text from.
+        config: Extraction options object, defaults to the default object.
+
+    Returns:
+        A list of extraction results in the same order as the input paths.
+    """
+    # Convert paths to strings
+    paths_str = [str(Path(p)) for p in file_paths]
+
+    # Convert Python config to Rust config
+    rust_config = _convert_config_to_rust(config)
+
+    # Call Rust core batch extraction
+    results = await rust.batch_extract_files(paths_str, rust_config)
+
+    # Apply Python-specific post-processing to each result
+    processed_results = []
+    for result, file_path in zip(results, file_paths, strict=True):
+        result = _apply_python_post_processing(result, config, file_path=Path(file_path))
+        await _run_python_validators_async(result, config)
+        result = await _run_python_hooks_async(result, config)
+        processed_results.append(result)
+
+    return processed_results
+
+
+async def batch_extract_bytes(
+    contents: Sequence[tuple[bytes, str]], config: ExtractionConfig = DEFAULT_CONFIG
+) -> list[ExtractionResult]:
+    """Extract text from multiple byte contents concurrently with optimizations.
+
+    This is a thin wrapper around the Rust core extraction with Python-specific
+    post-processing applied to each result.
+
+    Args:
+        contents: A sequence of tuples containing (content, mime_type) pairs.
+        config: Extraction options object, defaults to the default object.
+
+    Returns:
+        A list of extraction results in the same order as the input contents.
+    """
+    # Separate contents and mime_types for Rust API
+    data_list = [content for content, _ in contents]
+    mime_types = [mime_type for _, mime_type in contents]
+
+    # Convert Python config to Rust config
+    rust_config = _convert_config_to_rust(config)
+
+    # Call Rust core batch extraction
+    results = await rust.batch_extract_bytes(data_list, mime_types, rust_config)
+
+    # Apply Python-specific post-processing to each result
+    processed_results = []
+    for result in results:
+        result = _apply_python_post_processing(result, config)
+        await _run_python_validators_async(result, config)
+        result = await _run_python_hooks_async(result, config)
+        processed_results.append(result)
+
+    return processed_results
