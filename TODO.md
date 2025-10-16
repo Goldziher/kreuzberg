@@ -1148,7 +1148,7 @@ ______________________________________________________________________
 
 - [x] Add `#[cfg(feature = "langdetect")]` to module
 - [x] Update imports in `lib.rs`
-- [x] `detected_languages` field in `ExtractionResult` always present (Option<Vec<String>>)
+- [x] `detected_languages` field in `ExtractionResult` always present (Option\<Vec<String>>)
 - [x] Update pipeline to skip language detection when feature disabled
 - [x] All doctests passing
 
@@ -1384,7 +1384,7 @@ ______________________________________________________________________
 
 ### Progress Tracking
 
-**Phase 4E: Feature Flags**
+#### Phase 4E: Feature Flags
 
 - [x] Core Cargo.toml updated with features ✅
 - [x] Feature gates added throughout codebase ✅

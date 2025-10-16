@@ -29,9 +29,10 @@ language-detection = ["dep:whatlang"]
 chunking = ["dep:text-splitter"]
 quality = ["dep:unicode-normalization", "dep:chardetng", "dep:encoding_rs"]
 
-# Server features (to be implemented)
-api = ["dep:axum", "dep:tower", "dep:tower-http"]
-mcp = ["dep:jsonrpsee"]
+# Server features
+api = ["dep:axum", "dep:tower", "dep:tower-http", "dep:tracing"]
+# TODO: MCP feature requires unreleased features from rmcp or official Rust MCP SDK
+# mcp = ["dep:rmcp"]
 
 # Convenience bundles
 full = [
@@ -95,11 +96,13 @@ unicode-normalization = { version = "0.1.24", optional = true }
 chardetng = { version = "0.1.17", optional = true }
 encoding_rs = { version = "0.8.35", optional = true }
 
-# Server features (optional - to be implemented)
-axum = { version = "0.8", features = ["macros", "json"], optional = true }
+# Server features (optional)
+axum = { version = "0.8", features = ["macros", "json", "multipart"], optional = true }
 tower = { version = "0.5", optional = true }
 tower-http = { version = "0.6", features = ["cors", "trace", "limit"], optional = true }
-jsonrpsee = { version = "0.26", features = ["server"], optional = true }
+tracing = { version = "0.1", optional = true }
+# TODO: Re-enable when using official Rust MCP SDK or unreleased rmcp version
+# rmcp = { version = "0.8.1", features = ["server", "macros", "base64", "transport-io"], optional = true }
 
 [dev-dependencies]
 tempfile = "3.23.0"

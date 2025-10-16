@@ -42,6 +42,13 @@ pub mod text;
 pub mod types;
 
 // Optional modules (feature-gated)
+#[cfg(feature = "api")]
+pub mod api;
+
+// TODO: MCP module requires unreleased features from rmcp or official Rust MCP SDK
+// #[cfg(feature = "mcp")]
+// pub mod mcp;
+
 #[cfg(feature = "chunking")]
 pub mod chunking;
 

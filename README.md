@@ -189,19 +189,19 @@ kreuzberg = { version = "4.0", features = ["full"] }
 
 ### Feature Flags
 
-| Feature               | Dependencies                                                  | Use Case                   | Binary Size |
-| --------------------- | ------------------------------------------------------------- | -------------------------- | ----------- |
-| `pdf`                 | pdfium-render, lopdf                                          | PDF extraction             | +25MB       |
-| `excel`               | calamine, polars                                              | Excel/spreadsheet parsing  | +3MB        |
-| `office`              | roxmltree, zip                                                | DOCX, PPTX extraction      | +1MB        |
-| `email`               | mail-parser, msg_parser                                       | EML, MSG extraction        | +500KB      |
-| `html`                | html-to-markdown-rs, html-escape                              | HTML to markdown           | +1MB        |
-| `xml`                 | quick-xml, roxmltree                                          | XML streaming parser       | +500KB      |
-| `archives`            | zip, tar, sevenz-rust                                         | Archive extraction         | +2MB        |
-| `ocr`                 | tesseract-rs, image, fast_image_resize, ndarray, kamadak-exif | OCR processing             | +5MB        |
-| `language-detection`  | whatlang                                                      | Language detection         | +100KB      |
-| `chunking`            | text-splitter                                                 | Text chunking              | +200KB      |
-| `quality`             | unicode-normalization, chardetng, encoding_rs                 | Text quality & normalization | +500KB    |
+| Feature              | Dependencies                                                  | Use Case                     | Binary Size |
+| -------------------- | ------------------------------------------------------------- | ---------------------------- | ----------- |
+| `pdf`                | pdfium-render, lopdf                                          | PDF extraction               | +25MB       |
+| `excel`              | calamine, polars                                              | Excel/spreadsheet parsing    | +3MB        |
+| `office`             | roxmltree, zip                                                | DOCX, PPTX extraction        | +1MB        |
+| `email`              | mail-parser, msg_parser                                       | EML, MSG extraction          | +500KB      |
+| `html`               | html-to-markdown-rs, html-escape                              | HTML to markdown             | +1MB        |
+| `xml`                | quick-xml, roxmltree                                          | XML streaming parser         | +500KB      |
+| `archives`           | zip, tar, sevenz-rust                                         | Archive extraction           | +2MB        |
+| `ocr`                | tesseract-rs, image, fast_image_resize, ndarray, kamadak-exif | OCR processing               | +5MB        |
+| `language-detection` | whatlang                                                      | Language detection           | +100KB      |
+| `chunking`           | text-splitter                                                 | Text chunking                | +200KB      |
+| `quality`            | unicode-normalization, chardetng, encoding_rs                 | Text quality & normalization | +500KB      |
 
 ### Feature Bundles
 
