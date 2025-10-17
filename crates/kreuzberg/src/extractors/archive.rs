@@ -7,9 +7,8 @@ use crate::extraction::archive::{
     extract_zip_text_content,
 };
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::ExtractionResult;
+use crate::types::{ArchiveMetadata, ExtractionResult, Metadata};
 use async_trait::async_trait;
-use std::collections::HashMap;
 
 /// ZIP archive extractor.
 ///
@@ -63,16 +62,27 @@ impl DocumentExtractor for ZipExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        let metadata = extract_zip_metadata(content)?;
+        let extraction_metadata = extract_zip_metadata(content)?;
         let text_contents = extract_zip_text_content(content)?;
 
-        let mut result_metadata = HashMap::new();
-        result_metadata.insert("format".to_string(), serde_json::json!("ZIP"));
-        result_metadata.insert("file_count".to_string(), serde_json::json!(metadata.file_count));
-        result_metadata.insert("total_size".to_string(), serde_json::json!(metadata.total_size));
+        // Build typed metadata
+        let file_names: Vec<String> = extraction_metadata
+            .file_list
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
 
-        // Add file list
-        let file_list: Vec<serde_json::Value> = metadata
+        let archive_metadata = ArchiveMetadata {
+            format: "ZIP".to_string(),
+            file_count: extraction_metadata.file_count,
+            file_list: file_names,
+            total_size: extraction_metadata.total_size as usize,
+            compressed_size: None,
+        };
+
+        // Put detailed file info in additional metadata
+        let mut additional = std::collections::HashMap::new();
+        let file_details: Vec<serde_json::Value> = extraction_metadata
             .file_list
             .iter()
             .map(|entry| {
@@ -83,15 +93,15 @@ impl DocumentExtractor for ZipExtractor {
                 })
             })
             .collect();
-        result_metadata.insert("files".to_string(), serde_json::json!(file_list));
+        additional.insert("files".to_string(), serde_json::json!(file_details));
 
         // Build text output
         let mut output = format!(
             "ZIP Archive ({} files, {} bytes)\n\n",
-            metadata.file_count, metadata.total_size
+            extraction_metadata.file_count, extraction_metadata.total_size
         );
         output.push_str("Files:\n");
-        for entry in &metadata.file_list {
+        for entry in &extraction_metadata.file_list {
             output.push_str(&format!("- {} ({} bytes)\n", entry.path, entry.size));
         }
 
@@ -105,7 +115,12 @@ impl DocumentExtractor for ZipExtractor {
         Ok(ExtractionResult {
             content: output,
             mime_type: mime_type.to_string(),
-            metadata: result_metadata,
+            metadata: Metadata {
+                archive: Some(archive_metadata),
+                format: Some("ZIP".to_string()),
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })
@@ -172,16 +187,27 @@ impl DocumentExtractor for TarExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        let metadata = extract_tar_metadata(content)?;
+        let extraction_metadata = extract_tar_metadata(content)?;
         let text_contents = extract_tar_text_content(content)?;
 
-        let mut result_metadata = HashMap::new();
-        result_metadata.insert("format".to_string(), serde_json::json!("TAR"));
-        result_metadata.insert("file_count".to_string(), serde_json::json!(metadata.file_count));
-        result_metadata.insert("total_size".to_string(), serde_json::json!(metadata.total_size));
+        // Build typed metadata
+        let file_names: Vec<String> = extraction_metadata
+            .file_list
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
 
-        // Add file list
-        let file_list: Vec<serde_json::Value> = metadata
+        let archive_metadata = ArchiveMetadata {
+            format: "TAR".to_string(),
+            file_count: extraction_metadata.file_count,
+            file_list: file_names,
+            total_size: extraction_metadata.total_size as usize,
+            compressed_size: None,
+        };
+
+        // Put detailed file info in additional metadata
+        let mut additional = std::collections::HashMap::new();
+        let file_details: Vec<serde_json::Value> = extraction_metadata
             .file_list
             .iter()
             .map(|entry| {
@@ -192,15 +218,15 @@ impl DocumentExtractor for TarExtractor {
                 })
             })
             .collect();
-        result_metadata.insert("files".to_string(), serde_json::json!(file_list));
+        additional.insert("files".to_string(), serde_json::json!(file_details));
 
         // Build text output
         let mut output = format!(
             "TAR Archive ({} files, {} bytes)\n\n",
-            metadata.file_count, metadata.total_size
+            extraction_metadata.file_count, extraction_metadata.total_size
         );
         output.push_str("Files:\n");
-        for entry in &metadata.file_list {
+        for entry in &extraction_metadata.file_list {
             output.push_str(&format!("- {} ({} bytes)\n", entry.path, entry.size));
         }
 
@@ -214,7 +240,12 @@ impl DocumentExtractor for TarExtractor {
         Ok(ExtractionResult {
             content: output,
             mime_type: mime_type.to_string(),
-            metadata: result_metadata,
+            metadata: Metadata {
+                archive: Some(archive_metadata),
+                format: Some("TAR".to_string()),
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })
@@ -286,16 +317,27 @@ impl DocumentExtractor for SevenZExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        let metadata = extract_7z_metadata(content)?;
+        let extraction_metadata = extract_7z_metadata(content)?;
         let text_contents = extract_7z_text_content(content)?;
 
-        let mut result_metadata = HashMap::new();
-        result_metadata.insert("format".to_string(), serde_json::json!("7Z"));
-        result_metadata.insert("file_count".to_string(), serde_json::json!(metadata.file_count));
-        result_metadata.insert("total_size".to_string(), serde_json::json!(metadata.total_size));
+        // Build typed metadata
+        let file_names: Vec<String> = extraction_metadata
+            .file_list
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
 
-        // Add file list
-        let file_list: Vec<serde_json::Value> = metadata
+        let archive_metadata = ArchiveMetadata {
+            format: "7Z".to_string(),
+            file_count: extraction_metadata.file_count,
+            file_list: file_names,
+            total_size: extraction_metadata.total_size as usize,
+            compressed_size: None,
+        };
+
+        // Put detailed file info in additional metadata
+        let mut additional = std::collections::HashMap::new();
+        let file_details: Vec<serde_json::Value> = extraction_metadata
             .file_list
             .iter()
             .map(|entry| {
@@ -306,15 +348,15 @@ impl DocumentExtractor for SevenZExtractor {
                 })
             })
             .collect();
-        result_metadata.insert("files".to_string(), serde_json::json!(file_list));
+        additional.insert("files".to_string(), serde_json::json!(file_details));
 
         // Build text output
         let mut output = format!(
             "7Z Archive ({} files, {} bytes)\n\n",
-            metadata.file_count, metadata.total_size
+            extraction_metadata.file_count, extraction_metadata.total_size
         );
         output.push_str("Files:\n");
-        for entry in &metadata.file_list {
+        for entry in &extraction_metadata.file_list {
             output.push_str(&format!("- {} ({} bytes)\n", entry.path, entry.size));
         }
 
@@ -328,7 +370,12 @@ impl DocumentExtractor for SevenZExtractor {
         Ok(ExtractionResult {
             content: output,
             mime_type: mime_type.to_string(),
-            metadata: result_metadata,
+            metadata: Metadata {
+                archive: Some(archive_metadata),
+                format: Some("7Z".to_string()),
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })
@@ -378,8 +425,10 @@ mod tests {
         assert!(result.content.contains("ZIP Archive"));
         assert!(result.content.contains("test.txt"));
         assert!(result.content.contains("Hello, World!"));
-        assert_eq!(result.metadata.get("format").unwrap(), &serde_json::json!("ZIP"));
-        assert_eq!(result.metadata.get("file_count").unwrap(), &serde_json::json!(1));
+        assert!(result.metadata.archive.is_some());
+        let archive_meta = result.metadata.archive.unwrap();
+        assert_eq!(archive_meta.format, "ZIP");
+        assert_eq!(archive_meta.file_count, 1);
     }
 
     #[tokio::test]
@@ -413,8 +462,10 @@ mod tests {
         assert!(result.content.contains("TAR Archive"));
         assert!(result.content.contains("test.txt"));
         assert!(result.content.contains("Hello, World!"));
-        assert_eq!(result.metadata.get("format").unwrap(), &serde_json::json!("TAR"));
-        assert_eq!(result.metadata.get("file_count").unwrap(), &serde_json::json!(1));
+        assert!(result.metadata.archive.is_some());
+        let archive_meta = result.metadata.archive.unwrap();
+        assert_eq!(archive_meta.format, "TAR");
+        assert_eq!(archive_meta.file_count, 1);
     }
 
     #[tokio::test]

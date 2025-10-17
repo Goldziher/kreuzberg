@@ -332,15 +332,14 @@ pub async fn batch_extract_file(
                 }
 
                 // Other errors: create error result
-                use std::collections::HashMap;
-                let mut metadata = HashMap::new();
-                metadata.insert(
-                    "error".to_string(),
-                    serde_json::json!({
-                        "type": format!("{:?}", e),
-                        "message": e.to_string(),
+                use crate::types::{ErrorMetadata, Metadata};
+                let metadata = Metadata {
+                    error: Some(ErrorMetadata {
+                        error_type: format!("{:?}", e),
+                        message: e.to_string(),
                     }),
-                );
+                    ..Default::default()
+                };
 
                 results[index] = Some(ExtractionResult {
                     content: format!("Error: {}", e),
@@ -422,15 +421,14 @@ pub async fn batch_extract_bytes(
                 }
 
                 // Other errors: create error result
-                use std::collections::HashMap;
-                let mut metadata = HashMap::new();
-                metadata.insert(
-                    "error".to_string(),
-                    serde_json::json!({
-                        "type": format!("{:?}", e),
-                        "message": e.to_string(),
+                use crate::types::{ErrorMetadata, Metadata};
+                let metadata = Metadata {
+                    error: Some(ErrorMetadata {
+                        error_type: format!("{:?}", e),
+                        message: e.to_string(),
                     }),
-                );
+                    ..Default::default()
+                };
 
                 results[index] = Some(ExtractionResult {
                     content: format!("Error: {}", e),

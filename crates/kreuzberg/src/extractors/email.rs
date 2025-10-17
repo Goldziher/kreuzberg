@@ -3,9 +3,8 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::ExtractionResult;
+use crate::types::{EmailMetadata, ExtractionResult, Metadata};
 use async_trait::async_trait;
-use std::collections::HashMap;
 use std::path::Path;
 
 /// Email message extractor.
@@ -57,16 +56,39 @@ impl DocumentExtractor for EmailExtractor {
         // Build text output
         let text = crate::extraction::email::build_email_text_output(&email_result);
 
-        // Convert metadata
-        let mut metadata = HashMap::new();
+        // Build typed metadata
+        let attachment_names: Vec<String> = email_result
+            .attachments
+            .iter()
+            .filter_map(|att| att.filename.clone().or_else(|| att.name.clone()))
+            .collect();
+
+        let email_metadata = EmailMetadata {
+            from_email: email_result.from_email.clone(),
+            from_name: None, // Not available in EmailExtractionResult
+            to_emails: email_result.to_emails.clone(),
+            cc_emails: email_result.cc_emails.clone(),
+            bcc_emails: email_result.bcc_emails.clone(),
+            message_id: email_result.message_id.clone(),
+            attachments: attachment_names,
+        };
+
+        // Any additional metadata fields go into additional HashMap
+        let mut additional = std::collections::HashMap::new();
         for (key, value) in &email_result.metadata {
-            metadata.insert(key.clone(), serde_json::json!(value));
+            additional.insert(key.clone(), serde_json::json!(value));
         }
 
         Ok(ExtractionResult {
             content: text,
             mime_type: mime_type.to_string(),
-            metadata,
+            metadata: Metadata {
+                email: Some(email_metadata),
+                subject: email_result.subject.clone(),
+                date: email_result.date.clone(),
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })

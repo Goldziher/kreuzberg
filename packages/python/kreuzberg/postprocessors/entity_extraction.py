@@ -31,12 +31,13 @@ class EntityExtractionProcessor:
     Example:
         >>> processor = EntityExtractionProcessor(
         ...     model="en_core_web_sm",
-        ...     model_path="/path/to/custom/model"  # Optional
+        ...     model_path="/path/to/custom/model",  # Optional
         ... )
         >>> result = {"content": "John Doe works at Microsoft in Seattle.", "metadata": {}}
         >>> processed = processor.process(result)
         >>> print(processed["metadata"]["entities"])
         {"PERSON": ["John Doe"], "ORG": ["Microsoft"], "GPE": ["Seattle"]}
+
     """
 
     def __init__(
@@ -47,7 +48,7 @@ class EntityExtractionProcessor:
         max_entities: int = 50,
         min_confidence: float = 0.0,
         **model_kwargs: Any,
-    ):
+    ) -> None:
         self.model_name = model
         self.model_path = str(model_path) if model_path else None
         self.entity_types = entity_types
@@ -121,13 +122,15 @@ class EntityExtractionProcessor:
 
         Raises:
             RuntimeError: If the spaCy model fails to initialize.
+
         """
         # Lazy load model if not yet initialized
         if self._nlp is None:
             self.initialize()
 
         if self._nlp is None:
-            raise RuntimeError("spaCy model failed to initialize")
+            msg = "spaCy model failed to initialize"
+            raise RuntimeError(msg)
 
         content = result.content
         if not content or not isinstance(content, str):

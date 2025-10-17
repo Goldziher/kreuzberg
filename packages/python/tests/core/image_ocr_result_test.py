@@ -10,7 +10,8 @@ def test_image_ocr_result_not_hashable() -> None:
 
     try:
         hash(res)
-        raise AssertionError("ImageOCRResult should not be hashable")
+        msg = "ImageOCRResult should not be hashable"
+        raise AssertionError(msg)
     except TypeError as e:
         assert "unhashable" in str(e)
 

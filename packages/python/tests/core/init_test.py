@@ -36,8 +36,8 @@ def test_exports() -> None:
         "ValidationError",
         "batch_extract_bytes",
         "batch_extract_bytes_sync",
-        "batch_extract_file",
-        "batch_extract_file_sync",
+        "batch_extract_files",
+        "batch_extract_files_sync",
         "extract_bytes",
         "extract_bytes_sync",
         "extract_file",
@@ -80,7 +80,7 @@ def test_extraction_functions_exist() -> None:
     assert callable(kreuzberg.extract_file_sync)
     assert callable(kreuzberg.extract_bytes)
     assert callable(kreuzberg.extract_bytes_sync)
-    assert callable(kreuzberg.batch_extract_file)
-    assert callable(kreuzberg.batch_extract_file_sync)
+    assert callable(kreuzberg.batch_extract_files)
+    assert callable(kreuzberg.batch_extract_files_sync)
     assert callable(kreuzberg.batch_extract_bytes)
     assert callable(kreuzberg.batch_extract_bytes_sync)

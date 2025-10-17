@@ -24,6 +24,7 @@ class PostProcessorProtocol(Protocol):
 
         Returns:
             str: Processor name (e.g., "entity_extraction", "keyword_extraction")
+
         """
         ...
 
@@ -48,6 +49,7 @@ class PostProcessorProtocol(Protocol):
             ...     entities = extract_entities(text)
             ...     result.metadata["entities"] = entities
             ...     return result
+
         """
         ...
 
@@ -64,6 +66,7 @@ class PostProcessorProtocol(Protocol):
             - Early: Runs first (e.g., language detection)
             - Middle: Runs in the middle (default, e.g., entity extraction)
             - Late: Runs last (e.g., final formatting)
+
         """
         ...
 
@@ -86,5 +89,6 @@ class PostProcessorProtocol(Protocol):
 
         Returns:
             str: Version string (default: "1.0.0")
+
         """
         ...

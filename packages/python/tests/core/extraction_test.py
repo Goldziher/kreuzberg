@@ -193,7 +193,7 @@ async def test_extract_bytes_with_postprocessor_config() -> None:
         postprocessor=PostProcessorConfig(
             enabled=True,
             enabled_processors=["entity_extraction", "keyword_extraction"],
-        )
+        ),
     )
 
     result = await extract_bytes(content, mime_type, config)
@@ -211,7 +211,7 @@ def test_extract_bytes_sync_with_postprocessor_config() -> None:
     config = ExtractionConfig(
         postprocessor=PostProcessorConfig(
             enabled=False,  # Disable all postprocessing
-        )
+        ),
     )
 
     result = extract_bytes_sync(content, mime_type, config)

@@ -63,8 +63,8 @@ def test_kreuzberg_error_complex_nested_context() -> None:
                 "bytes_data": b"nested bytes",
                 "list_data": [b"item1", "item2"],
                 "error": RuntimeError("nested error"),
-            }
-        }
+            },
+        },
     }
     error = KreuzbergError("Complex error", context=context)
 
@@ -105,7 +105,9 @@ def test_ocr_error() -> None:
 
 def test_missing_dependency_error_create_for_package() -> None:
     error = MissingDependencyError.create_for_package(
-        dependency_group="ocr", functionality="OCR processing", package_name="pytesseract"
+        dependency_group="ocr",
+        functionality="OCR processing",
+        package_name="pytesseract",
     )
 
     assert isinstance(error, MissingDependencyError)

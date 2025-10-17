@@ -64,14 +64,17 @@ impl DocumentExtractor for PlainTextExtractor {
         Ok(ExtractionResult {
             content: text_result.content,
             mime_type: "text/plain".to_string(),
-            metadata: std::collections::HashMap::from([
-                ("line_count".to_string(), serde_json::json!(text_result.line_count)),
-                ("word_count".to_string(), serde_json::json!(text_result.word_count)),
-                (
-                    "character_count".to_string(),
-                    serde_json::json!(text_result.character_count),
-                ),
-            ]),
+            metadata: crate::types::Metadata {
+                text: Some(crate::types::TextMetadata {
+                    line_count: text_result.line_count,
+                    word_count: text_result.word_count,
+                    character_count: text_result.character_count,
+                    headers: None,
+                    links: None,
+                    code_blocks: None,
+                }),
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })
@@ -141,40 +144,20 @@ impl DocumentExtractor for MarkdownExtractor {
     ) -> Result<ExtractionResult> {
         let text_result = parse_text(content, true)?;
 
-        let mut metadata = std::collections::HashMap::from([
-            ("line_count".to_string(), serde_json::json!(text_result.line_count)),
-            ("word_count".to_string(), serde_json::json!(text_result.word_count)),
-            (
-                "character_count".to_string(),
-                serde_json::json!(text_result.character_count),
-            ),
-        ]);
-
-        if let Some(headers) = text_result.headers {
-            metadata.insert("headers".to_string(), serde_json::json!(headers));
-        }
-
-        if let Some(links) = text_result.links {
-            metadata.insert("links".to_string(), serde_json::json!(links));
-        }
-
-        if let Some(code_blocks) = text_result.code_blocks {
-            let blocks: Vec<serde_json::Value> = code_blocks
-                .into_iter()
-                .map(|(lang, code)| {
-                    serde_json::json!({
-                        "language": lang,
-                        "code": code,
-                    })
-                })
-                .collect();
-            metadata.insert("code_blocks".to_string(), serde_json::json!(blocks));
-        }
-
         Ok(ExtractionResult {
             content: text_result.content,
             mime_type: "text/markdown".to_string(),
-            metadata,
+            metadata: crate::types::Metadata {
+                text: Some(crate::types::TextMetadata {
+                    line_count: text_result.line_count,
+                    word_count: text_result.word_count,
+                    character_count: text_result.character_count,
+                    headers: text_result.headers,
+                    links: text_result.links,
+                    code_blocks: text_result.code_blocks,
+                }),
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })

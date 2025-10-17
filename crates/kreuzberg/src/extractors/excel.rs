@@ -3,9 +3,8 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::ExtractionResult;
+use crate::types::{ExcelMetadata, ExtractionResult, Metadata};
 use async_trait::async_trait;
-use std::collections::HashMap;
 use std::path::Path;
 
 /// Excel spreadsheet extractor using calamine.
@@ -70,16 +69,30 @@ impl DocumentExtractor for ExcelExtractor {
         // Convert to markdown
         let markdown = crate::extraction::excel::excel_to_markdown(&workbook);
 
-        // Build metadata
-        let mut metadata = HashMap::new();
+        // Build typed metadata
+        let sheet_names: Vec<String> = workbook.sheets.iter().map(|s| s.name.clone()).collect();
+        let excel_metadata = ExcelMetadata {
+            sheet_count: workbook.sheets.len(),
+            sheet_names,
+        };
+
+        // Any additional metadata fields go into additional HashMap
+        let mut additional = std::collections::HashMap::new();
         for (key, value) in &workbook.metadata {
-            metadata.insert(key.clone(), serde_json::json!(value));
+            // Skip the fields we've already extracted into typed metadata
+            if key != "sheet_count" && key != "sheet_names" {
+                additional.insert(key.clone(), serde_json::json!(value));
+            }
         }
 
         Ok(ExtractionResult {
             content: markdown,
             mime_type: mime_type.to_string(),
-            metadata,
+            metadata: Metadata {
+                excel: Some(excel_metadata),
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })
@@ -94,15 +107,30 @@ impl DocumentExtractor for ExcelExtractor {
         let workbook = crate::extraction::excel::read_excel_file(path_str)?;
         let markdown = crate::extraction::excel::excel_to_markdown(&workbook);
 
-        let mut metadata = HashMap::new();
+        // Build typed metadata
+        let sheet_names: Vec<String> = workbook.sheets.iter().map(|s| s.name.clone()).collect();
+        let excel_metadata = ExcelMetadata {
+            sheet_count: workbook.sheets.len(),
+            sheet_names,
+        };
+
+        // Any additional metadata fields go into additional HashMap
+        let mut additional = std::collections::HashMap::new();
         for (key, value) in &workbook.metadata {
-            metadata.insert(key.clone(), serde_json::json!(value));
+            // Skip the fields we've already extracted into typed metadata
+            if key != "sheet_count" && key != "sheet_names" {
+                additional.insert(key.clone(), serde_json::json!(value));
+            }
         }
 
         Ok(ExtractionResult {
             content: markdown,
             mime_type: mime_type.to_string(),
-            metadata,
+            metadata: Metadata {
+                excel: Some(excel_metadata),
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })

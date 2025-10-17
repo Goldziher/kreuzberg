@@ -80,50 +80,50 @@ from kreuzberg.extraction import (  # noqa: E402
 __version__ = version("kreuzberg")
 
 __all__ = [
-    # Version
-    "__version__",
     # Configuration
     "ChunkingConfig",
+    "ExtractedTable",
     "ExtractionConfig",
+    # Results
+    "ExtractionResult",
     "ImageExtractionConfig",
+    # Exceptions
+    "KreuzbergError",
     "LanguageDetectionConfig",
+    "MissingDependencyError",
+    "OCRError",
     "OcrConfig",
+    "ParsingError",
     "PdfConfig",
     "PostProcessorConfig",
     "TokenReductionConfig",
-    # Results
-    "ExtractionResult",
-    "ExtractedTable",
-    # Sync functions
-    "extract_file_sync",
-    "extract_bytes_sync",
-    "batch_extract_files_sync",
-    "batch_extract_bytes_sync",
-    # Async functions
-    "extract_file",
-    "extract_bytes",
-    "batch_extract_files",
+    "ValidationError",
+    # Version
+    "__version__",
     "batch_extract_bytes",
+    "batch_extract_bytes_sync",
+    "batch_extract_files",
+    "batch_extract_files_sync",
     # MIME utilities
     "detect_mime_type",
-    "validate_mime_type",
+    "extract_bytes",
+    "extract_bytes_sync",
+    # Async functions
+    "extract_file",
+    # Sync functions
+    "extract_file_sync",
+    "list_ocr_backends",
+    "list_post_processors",
     # OCR backend plugin functions
     "register_ocr_backend",
-    "list_ocr_backends",
-    "unregister_ocr_backend",
     # PostProcessor plugin functions
     "register_post_processor",
-    "list_post_processors",
-    "unregister_post_processor",
     # Servers (MCP and API)
     "start_api_server",
     "start_mcp_server",
-    # Exceptions
-    "KreuzbergError",
-    "ValidationError",
-    "ParsingError",
-    "OCRError",
-    "MissingDependencyError",
+    "unregister_ocr_backend",
+    "unregister_post_processor",
+    "validate_mime_type",
 ]
 
 # Auto-register Python postprocessors (if dependencies are installed)
@@ -142,7 +142,7 @@ except Exception:
 
 # Try to auto-register EasyOCR (optional dependency group: easyocr)
 try:
-    from kreuzberg.ocr.easyocr import EasyOCRBackend  # noqa: F401, PLC0415
+    from kreuzberg.ocr.easyocr import EasyOCRBackend
 
     _easyocr_backend = EasyOCRBackend()
     register_ocr_backend(_easyocr_backend)
@@ -155,7 +155,7 @@ except Exception:
 
 # Try to auto-register PaddleOCR (optional dependency group: paddleocr)
 try:
-    from kreuzberg.ocr.paddleocr import PaddleOCRBackend  # noqa: F401, PLC0415
+    from kreuzberg.ocr.paddleocr import PaddleOCRBackend
 
     _paddleocr_backend = PaddleOCRBackend()
     register_ocr_backend(_paddleocr_backend)

@@ -40,12 +40,12 @@ class OcrBackendProtocol(Protocol):
         ...         return {
         ...             "content": "extracted text",
         ...             "metadata": {"confidence": 0.95, "width": 800, "height": 600},
-        ...             "tables": []
+        ...             "tables": [],
         ...         }
-        ...
         >>> from kreuzberg import register_ocr_backend
         >>> backend = MyOcrBackend()
         >>> register_ocr_backend(backend)
+
     """
 
     def name(self) -> str:
@@ -56,6 +56,7 @@ class OcrBackendProtocol(Protocol):
 
         Returns:
             Backend name as lowercase string with no spaces
+
         """
         ...
 
@@ -67,6 +68,7 @@ class OcrBackendProtocol(Protocol):
 
         Returns:
             List of supported language code strings
+
         """
         ...
 
@@ -93,6 +95,7 @@ class OcrBackendProtocol(Protocol):
                 },
                 "tables": []                # Optional: extracted tables
             }
+
         """
         ...
 
@@ -110,6 +113,7 @@ class OcrBackendProtocol(Protocol):
 
         Returns:
             Same format as process_image()
+
         """
         ...
 
@@ -146,5 +150,6 @@ class OcrBackendProtocol(Protocol):
 
         Returns:
             Version string (e.g., '2.1.0')
+
         """
         ...

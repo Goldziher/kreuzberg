@@ -10,7 +10,7 @@ Each backend has a separate optional dependency group:
 
 from __future__ import annotations
 
-__all__ = ["OcrBackendProtocol", "EasyOCRBackend", "PaddleOCRBackend"]
+__all__ = ["EasyOCRBackend", "OcrBackendProtocol", "PaddleOCRBackend"]
 
 from kreuzberg.ocr.protocol import OcrBackendProtocol
 

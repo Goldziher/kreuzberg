@@ -20,12 +20,12 @@ from kreuzberg._internal_bindings import (
 
 __all__ = [
     "PostProcessorConfig",
-    "extract_file",
-    "extract_file_sync",
-    "extract_bytes",
-    "extract_bytes_sync",
-    "batch_extract_files",
-    "batch_extract_files_sync",
     "batch_extract_bytes",
     "batch_extract_bytes_sync",
+    "batch_extract_files",
+    "batch_extract_files_sync",
+    "extract_bytes",
+    "extract_bytes_sync",
+    "extract_file",
+    "extract_file_sync",
 ]

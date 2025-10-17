@@ -19,6 +19,7 @@ Example:
     >>> print(result.metadata.get("entities"))
     >>> print(result.metadata.get("keywords"))
     >>> print(result.metadata.get("category"))
+
 """
 
 from __future__ import annotations
@@ -27,10 +28,10 @@ import logging
 
 # Make processors available for import
 __all__ = [
-    "PostProcessorProtocol",
+    "CategoryExtractionProcessor",
     "EntityExtractionProcessor",
     "KeywordExtractionProcessor",
-    "CategoryExtractionProcessor",
+    "PostProcessorProtocol",
 ]
 
 from .protocol import PostProcessorProtocol

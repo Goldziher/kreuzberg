@@ -165,5 +165,5 @@ def test_max_entities_limit() -> None:
     entities = processed.metadata["entities"]
 
     # Each entity type should have at most 2 entities
-    for _entity_type, entity_list in entities.items():
+    for entity_list in entities.values():
         assert len(entity_list) <= 2

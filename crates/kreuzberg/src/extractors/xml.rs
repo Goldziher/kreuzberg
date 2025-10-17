@@ -64,13 +64,13 @@ impl DocumentExtractor for XmlExtractor {
         Ok(ExtractionResult {
             content: xml_result.content,
             mime_type: "application/xml".to_string(),
-            metadata: std::collections::HashMap::from([
-                ("element_count".to_string(), serde_json::json!(xml_result.element_count)),
-                (
-                    "unique_elements".to_string(),
-                    serde_json::json!(xml_result.unique_elements),
-                ),
-            ]),
+            metadata: crate::types::Metadata {
+                xml: Some(crate::types::XmlMetadata {
+                    element_count: xml_result.element_count,
+                    unique_elements: xml_result.unique_elements,
+                }),
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })
@@ -102,8 +102,11 @@ mod tests {
 
         assert_eq!(result.mime_type, "application/xml");
         assert_eq!(result.content, "Hello World");
-        assert!(result.metadata.contains_key("element_count"));
-        assert!(result.metadata.contains_key("unique_elements"));
+        assert!(result.metadata.xml.is_some());
+        let xml_meta = result.metadata.xml.unwrap();
+        assert_eq!(xml_meta.element_count, 3); // root, item, item
+        assert!(xml_meta.unique_elements.contains(&"root".to_string()));
+        assert!(xml_meta.unique_elements.contains(&"item".to_string()));
     }
 
     #[test]

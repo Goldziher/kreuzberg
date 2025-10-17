@@ -28,11 +28,7 @@ class KeywordExtractionProcessor:
         **model_kwargs: Additional kwargs passed to sentence-transformers model initialization
 
     Example:
-        >>> processor = KeywordExtractionProcessor(
-        ...     model="all-MiniLM-L6-v2",
-        ...     model_cache_dir="/path/to/cache",
-        ...     top_n=5
-        ... )
+        >>> processor = KeywordExtractionProcessor(model="all-MiniLM-L6-v2", model_cache_dir="/path/to/cache", top_n=5)
         >>> result = {"content": "Machine learning and AI are transforming document processing.", "metadata": {}}
         >>> processed = processor.process(result)
         >>> print(processed["metadata"]["keywords"])
@@ -41,6 +37,7 @@ class KeywordExtractionProcessor:
             {"keyword": "document processing", "score": 0.87},
             {"keyword": "AI", "score": 0.82}
         ]
+
     """
 
     def __init__(
@@ -51,7 +48,7 @@ class KeywordExtractionProcessor:
         ngram_range: tuple[int, int] = (1, 2),
         min_score: float = 0.0,
         **model_kwargs: Any,
-    ):
+    ) -> None:
         self.model_name = model
         self.model_cache_dir = str(model_cache_dir) if model_cache_dir else None
         self.top_n = top_n
@@ -122,13 +119,15 @@ class KeywordExtractionProcessor:
 
         Raises:
             RuntimeError: If the KeyBERT extractor fails to initialize.
+
         """
         # Lazy load extractor if not yet initialized
         if self._extractor is None:
             self.initialize()
 
         if self._extractor is None:
-            raise RuntimeError("KeyBERT extractor failed to initialize")
+            msg = "KeyBERT extractor failed to initialize"
+            raise RuntimeError(msg)
 
         content = result.content
         if not content or not isinstance(content, str):

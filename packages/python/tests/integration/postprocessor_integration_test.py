@@ -200,7 +200,9 @@ def test_extract_bytes_sync_with_postprocessors_disabled(sample_text_content: st
     # Extract from bytes with postprocessors disabled
     config = PostProcessorConfig(enabled=False)
     result = extract_bytes_sync(
-        sample_text_content.encode("utf-8"), mime_type="text/plain", postprocessor_config=config
+        sample_text_content.encode("utf-8"),
+        mime_type="text/plain",
+        postprocessor_config=config,
     )
 
     # Should have content

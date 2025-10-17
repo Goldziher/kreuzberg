@@ -22,10 +22,8 @@ class KreuzbergError(Exception):
         context: Optional dictionary with debugging context (file paths, config, etc.)
 
     Example:
-        >>> raise KreuzbergError(
-        ...     "Failed to parse document",
-        ...     context={"file": "document.pdf", "page": 5}
-        ... )
+        >>> raise KreuzbergError("Failed to parse document", context={"file": "document.pdf", "page": 5})
+
     """
 
     def __init__(self, message: str, *, context: dict[str, Any] | None = None) -> None:
@@ -84,10 +82,8 @@ class ValidationError(KreuzbergError):
     data validation errors.
 
     Example:
-        >>> raise ValidationError(
-        ...     "Invalid language code",
-        ...     context={"language": "xyz", "supported": ["en", "de"]}
-        ... )
+        >>> raise ValidationError("Invalid language code", context={"language": "xyz", "supported": ["en", "de"]})
+
     """
 
 
@@ -98,10 +94,8 @@ class ParsingError(KreuzbergError):
     (corrupt files, unsupported features, etc.).
 
     Example:
-        >>> raise ParsingError(
-        ...     "Failed to parse PDF",
-        ...     context={"file": "document.pdf", "extractor": "pdf"}
-        ... )
+        >>> raise ParsingError("Failed to parse PDF", context={"file": "document.pdf", "extractor": "pdf"})
+
     """
 
 
@@ -111,10 +105,8 @@ class OCRError(KreuzbergError):
     This includes errors from OCR backends during text extraction from images.
 
     Example:
-        >>> raise OCRError(
-        ...     "OCR processing failed",
-        ...     context={"backend": "tesseract", "language": "en"}
-        ... )
+        >>> raise OCRError("OCR processing failed", context={"backend": "tesseract", "language": "en"})
+
     """
 
 
@@ -126,14 +118,18 @@ class MissingDependencyError(KreuzbergError):
 
     Example:
         >>> raise MissingDependencyError(
-        ...     "EasyOCR not installed",
-        ...     context={"package": "easyocr", "install_command": "pip install kreuzberg[easyocr]"}
+        ...     "EasyOCR not installed", context={"package": "easyocr", "install_command": "pip install kreuzberg[easyocr]"}
         ... )
+
     """
 
     @classmethod
     def create_for_package(
-        cls, *, dependency_group: str, functionality: str, package_name: str
+        cls,
+        *,
+        dependency_group: str,
+        functionality: str,
+        package_name: str,
     ) -> MissingDependencyError:
         """Create a MissingDependencyError for a missing package.
 
@@ -150,11 +146,10 @@ class MissingDependencyError(KreuzbergError):
 
         Example:
             >>> error = MissingDependencyError.create_for_package(
-            ...     dependency_group="easyocr",
-            ...     functionality="EasyOCR backend",
-            ...     package_name="easyocr"
+            ...     dependency_group="easyocr", functionality="EasyOCR backend", package_name="easyocr"
             ... )
             >>> raise error
+
         """
         message = (
             f"Missing required dependency '{package_name}' for {functionality}. "

@@ -40,10 +40,7 @@ class CategoryExtractionProcessor:
 
     Example:
         >>> categories = ["invoice", "contract", "resume", "report"]
-        >>> processor = CategoryExtractionProcessor(
-        ...     categories=categories,
-        ...     model_cache_dir="/path/to/cache"
-        ... )
+        >>> processor = CategoryExtractionProcessor(categories=categories, model_cache_dir="/path/to/cache")
         >>> result = {"content": "Invoice #12345 for services rendered...", "metadata": {}}
         >>> processed = processor.process(result)
         >>> print(processed["metadata"]["category"])
@@ -57,6 +54,7 @@ class CategoryExtractionProcessor:
             },
             "confidence": 0.95
         }
+
     """
 
     # Predefined category sets for common use cases
@@ -98,7 +96,7 @@ class CategoryExtractionProcessor:
         max_categories: int = 3,
         device: int = -1,
         **pipeline_kwargs: Any,
-    ):
+    ) -> None:
         if categories is None:
             categories = self.DOCUMENT_TYPES  # Default to document types
 
@@ -202,13 +200,15 @@ class CategoryExtractionProcessor:
 
         Raises:
             RuntimeError: If the zero-shot classifier fails to initialize.
+
         """
         # Lazy load classifier if not yet initialized
         if self._classifier is None:
             self.initialize()
 
         if self._classifier is None:
-            raise RuntimeError("Classifier failed to initialize")
+            msg = "Classifier failed to initialize"
+            raise RuntimeError(msg)
 
         content = result.content
         if not content or not isinstance(content, str):

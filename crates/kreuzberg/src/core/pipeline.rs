@@ -58,12 +58,13 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
             Some(
                 &result
                     .metadata
+                    .additional
                     .iter()
                     .map(|(k, v)| (k.clone(), v.to_string()))
                     .collect(),
             ),
         );
-        result.metadata.insert(
+        result.metadata.additional.insert(
             "quality_score".to_string(),
             serde_json::Value::Number(
                 serde_json::Number::from_f64(quality_score).unwrap_or(serde_json::Number::from(0)),
@@ -74,7 +75,7 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
     #[cfg(not(feature = "quality"))]
     if config.enable_quality_processing {
         // Quality processing requested but feature not enabled
-        result.metadata.insert(
+        result.metadata.additional.insert(
             "quality_processing_error".to_string(),
             serde_json::Value::String("Quality processing feature not enabled".to_string()),
         );
@@ -95,7 +96,7 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
             Ok(chunking_result) => {
                 // Convert ChunkingResult to ExtractionResult chunks (currently empty, will be populated when chunks field is added)
                 // For now, store chunk count in metadata
-                result.metadata.insert(
+                result.metadata.additional.insert(
                     "chunk_count".to_string(),
                     serde_json::Value::Number(serde_json::Number::from(chunking_result.chunks.len())),
                 );
@@ -127,7 +128,7 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
             }
             Err(e) => {
                 // Record language detection error in metadata, continue with degraded result
-                result.metadata.insert(
+                result.metadata.additional.insert(
                     "language_detection_error".to_string(),
                     serde_json::Value::String(e.to_string()),
                 );
@@ -205,11 +206,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_pipeline_basic() {
-        use std::collections::HashMap;
+        use crate::types::Metadata;
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -226,7 +227,7 @@ mod tests {
         let result = ExtractionResult {
             content: "This is a test document with some meaningful content.".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -245,7 +246,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -265,7 +266,7 @@ mod tests {
         let result = ExtractionResult {
             content: "This is a long text that should be chunked. ".repeat(100),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -289,7 +290,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -304,23 +305,33 @@ mod tests {
 
     #[tokio::test]
     async fn test_pipeline_preserves_metadata() {
+        use crate::types::Metadata;
         use std::collections::HashMap;
-        let mut metadata = HashMap::new();
-        metadata.insert("source".to_string(), serde_json::json!("test"));
-        metadata.insert("page".to_string(), serde_json::json!(1));
+        let mut additional = HashMap::new();
+        additional.insert("source".to_string(), serde_json::json!("test"));
+        additional.insert("page".to_string(), serde_json::json!(1));
 
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata,
+            metadata: Metadata {
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         };
         let config = ExtractionConfig::default();
 
         let processed = run_pipeline(result, &config).await.unwrap();
-        assert_eq!(processed.metadata.get("source").unwrap(), &serde_json::json!("test"));
-        assert_eq!(processed.metadata.get("page").unwrap(), &serde_json::json!(1));
+        assert_eq!(
+            processed.metadata.additional.get("source").unwrap(),
+            &serde_json::json!("test")
+        );
+        assert_eq!(
+            processed.metadata.additional.get("page").unwrap(),
+            &serde_json::json!(1)
+        );
     }
 
     #[tokio::test]
@@ -337,7 +348,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: Metadata::default(),
             tables: vec![table],
             detected_languages: None,
         };
@@ -354,7 +365,7 @@ mod tests {
         let result = ExtractionResult {
             content: String::new(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -371,7 +382,7 @@ mod tests {
         let result = ExtractionResult {
             content: "This is a comprehensive test document. ".repeat(50),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };

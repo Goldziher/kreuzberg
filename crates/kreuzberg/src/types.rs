@@ -1,6 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[cfg(feature = "pdf")]
+use crate::pdf::metadata::PdfMetadata;
+
+// ============================================================================
+// Extraction Result
+// ============================================================================
+
 /// General extraction result used by the core extraction API.
 ///
 /// This is the main result type returned by all extraction functions.
@@ -8,10 +15,178 @@ use std::collections::HashMap;
 pub struct ExtractionResult {
     pub content: String,
     pub mime_type: String,
-    pub metadata: HashMap<String, serde_json::Value>,
+    pub metadata: Metadata,
     pub tables: Vec<Table>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub detected_languages: Option<Vec<String>>,
+}
+
+// ============================================================================
+// Metadata Types
+// ============================================================================
+
+/// Strongly-typed metadata for extraction results.
+///
+/// This struct provides compile-time type safety for metadata fields
+/// while remaining flexible through the `additional` HashMap for
+/// custom fields (e.g., from Python postprocessors).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Metadata {
+    // Common fields (used across multiple formats)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+
+    // Format-specific metadata
+    #[cfg(feature = "pdf")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pdf: Option<PdfMetadata>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub excel: Option<ExcelMetadata>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<EmailMetadata>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pptx: Option<PptxMetadata>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub archive: Option<ArchiveMetadata>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<ImageMetadata>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xml: Option<XmlMetadata>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<TextMetadata>,
+
+    // Processing metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ocr: Option<OcrMetadata>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_preprocessing: Option<ImagePreprocessingMetadata>,
+
+    // Structured data metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub json_schema: Option<serde_json::Value>,
+
+    // Error metadata (for batch operations)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<ErrorMetadata>,
+
+    /// Additional custom fields.
+    ///
+    /// This flattened HashMap allows Python postprocessors (entity extraction,
+    /// keyword extraction, etc.) to add arbitrary fields. Fields in this map
+    /// are merged at the root level during serialization.
+    #[serde(flatten)]
+    pub additional: HashMap<String, serde_json::Value>,
+}
+
+/// Excel/spreadsheet metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExcelMetadata {
+    pub sheet_count: usize,
+    pub sheet_names: Vec<String>,
+}
+
+/// Email metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmailMetadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from_email: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from_name: Option<String>,
+
+    pub to_emails: Vec<String>,
+    pub cc_emails: Vec<String>,
+    pub bcc_emails: Vec<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message_id: Option<String>,
+
+    pub attachments: Vec<String>,
+}
+
+/// Archive (ZIP/TAR) metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArchiveMetadata {
+    pub format: String,
+    pub file_count: usize,
+    pub file_list: Vec<String>,
+    pub total_size: usize,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub compressed_size: Option<usize>,
+}
+
+/// Image metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageMetadata {
+    pub width: u32,
+    pub height: u32,
+    pub format: String,
+    pub exif: HashMap<String, String>,
+}
+
+/// XML metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct XmlMetadata {
+    pub element_count: usize,
+    pub unique_elements: Vec<String>,
+}
+
+/// Text/Markdown metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextMetadata {
+    pub line_count: usize,
+    pub word_count: usize,
+    pub character_count: usize,
+
+    // Markdown-specific fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub links: Option<Vec<(String, String)>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code_blocks: Option<Vec<(String, String)>>,
+}
+
+/// OCR processing metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OcrMetadata {
+    pub language: String,
+    pub psm: i32,
+    pub output_format: String,
+    pub table_count: usize,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub table_rows: Option<usize>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub table_cols: Option<usize>,
+}
+
+/// Error metadata (for batch operations).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorMetadata {
+    pub error_type: String,
+    pub message: String,
 }
 
 /// Extracted table structure.

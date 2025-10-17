@@ -12,7 +12,6 @@ import click
 @click.version_option()
 def main() -> None:
     """Kreuzberg - Multi-language document intelligence framework."""
-    pass
 
 
 @main.command()

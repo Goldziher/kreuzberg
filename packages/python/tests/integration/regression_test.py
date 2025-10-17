@@ -5,17 +5,26 @@ from pathlib import Path
 
 import pytest
 
-from kreuzberg import ExtractionConfig, PSMMode, TesseractConfig, batch_extract_file, extract_file, extract_file_sync
+from kreuzberg import (
+    ExtractionConfig,
+    PSMMode,
+    TesseractConfig,
+    batch_extract_files,
+    extract_file,
+    extract_file_sync,
+)
 
 TEST_DATA_DIR = Path(__file__).parent.parent / "test_documents"
 
 
 @pytest.mark.parametrize(
-    "pdf_fixture,expected_content",
+    ("pdf_fixture", "expected_content"),
     [
         ("google_doc_pdf", "Example document"),
         pytest.param(
-            "xerox_pdf", "UNIVERSITIES" if os.environ.get("CI") == "true" else "AltaLink", id="xerox_pdf-AltaLink"
+            "xerox_pdf",
+            "UNIVERSITIES" if os.environ.get("CI") == "true" else "AltaLink",
+            id="xerox_pdf-AltaLink",
         ),
     ],
 )
@@ -55,7 +64,10 @@ async def test_pdf_extraction_regression(
 @pytest.mark.parametrize("config_type", ["default", "user_config"])
 @pytest.mark.anyio
 async def test_xls_extraction_regression(
-    test_mode: str, config_type: str, test_xls: Path, user_config: ExtractionConfig
+    test_mode: str,
+    config_type: str,
+    test_xls: Path,
+    user_config: ExtractionConfig,
 ) -> None:
     config = user_config if config_type == "user_config" else None
 
@@ -82,14 +94,17 @@ async def test_xls_extraction_regression(
 @pytest.mark.parametrize("config_type", ["default", "user_config"])
 @pytest.mark.anyio
 async def test_batch_extraction_regression(
-    config_type: str, google_doc_pdf: Path, xerox_pdf: Path, user_config: ExtractionConfig
+    config_type: str,
+    google_doc_pdf: Path,
+    xerox_pdf: Path,
+    user_config: ExtractionConfig,
 ) -> None:
     config = user_config if config_type == "user_config" else None
 
     if config:
-        results = await batch_extract_file(file_paths=[str(google_doc_pdf), str(xerox_pdf)], config=config)
+        results = await batch_extract_files([str(google_doc_pdf), str(xerox_pdf)], config=config)
     else:
-        results = await batch_extract_file(file_paths=[str(google_doc_pdf), str(xerox_pdf)])
+        results = await batch_extract_files([str(google_doc_pdf), str(xerox_pdf)])
 
     assert len(results) == 2
     for result in results:

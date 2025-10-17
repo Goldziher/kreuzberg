@@ -71,8 +71,9 @@ class PaddleOCRBackend:
         if lang not in SUPPORTED_LANGUAGES:
             from kreuzberg.exceptions import ValidationError
 
+            msg = f"Unsupported PaddleOCR language code: {lang}"
             raise ValidationError(
-                f"Unsupported PaddleOCR language code: {lang}",
+                msg,
                 context={
                     "language": lang,
                     "supported_languages": sorted(SUPPORTED_LANGUAGES),
@@ -117,8 +118,9 @@ class PaddleOCRBackend:
         try:
             from paddleocr import PaddleOCR  # noqa: PLC0415
         except ImportError as e:
+            msg = "PaddleOCR backend requires paddleocr package"
             raise MissingDependencyError(
-                "PaddleOCR backend requires paddleocr package",
+                msg,
                 context={
                     "install_command": 'pip install "kreuzberg[paddleocr]"',
                     "package": "paddleocr",
@@ -141,7 +143,8 @@ class PaddleOCRBackend:
 
             logger.info("PaddleOCR initialized successfully")
         except Exception as e:
-            raise OCRError(f"Failed to initialize PaddleOCR: {e}") from e
+            msg = f"Failed to initialize PaddleOCR: {e}"
+            raise OCRError(msg) from e
 
     def shutdown(self) -> None:
         """Shutdown backend and cleanup resources."""
@@ -171,20 +174,23 @@ class PaddleOCRBackend:
             ValidationError: If the supplied language is not supported.
             RuntimeError: If PaddleOCR fails to initialize.
             OCRError: If OCR processing fails.
+
         """
         # Ensure OCR is initialized
         if self._ocr is None:
             self.initialize()
 
         if self._ocr is None:
-            raise RuntimeError("PaddleOCR failed to initialize")
+            msg = "PaddleOCR failed to initialize"
+            raise RuntimeError(msg)
 
         # Validate language
         if language not in SUPPORTED_LANGUAGES:
             from kreuzberg.exceptions import ValidationError
 
+            msg = f"Language '{language}' not supported by PaddleOCR"
             raise ValidationError(
-                f"Language '{language}' not supported by PaddleOCR",
+                msg,
                 context={"language": language, "supported_languages": sorted(SUPPORTED_LANGUAGES)},
             )
 
@@ -219,7 +225,8 @@ class PaddleOCRBackend:
             }
 
         except Exception as e:
-            raise OCRError(f"PaddleOCR processing failed: {e}") from e
+            msg = f"PaddleOCR processing failed: {e}"
+            raise OCRError(msg) from e
 
     def process_file(self, path: str, language: str) -> dict[str, Any]:
         """Process image file using PaddleOCR.
@@ -234,13 +241,15 @@ class PaddleOCRBackend:
         Raises:
             RuntimeError: If PaddleOCR fails to initialize.
             OCRError: If OCR processing fails.
+
         """
         # PaddleOCR can process files directly
         if self._ocr is None:
             self.initialize()
 
         if self._ocr is None:
-            raise RuntimeError("PaddleOCR failed to initialize")
+            msg = "PaddleOCR failed to initialize"
+            raise RuntimeError(msg)
 
         try:
             from PIL import Image  # noqa: PLC0415
@@ -266,7 +275,8 @@ class PaddleOCRBackend:
             }
 
         except Exception as e:
-            raise OCRError(f"PaddleOCR file processing failed: {e}") from e
+            msg = f"PaddleOCR file processing failed: {e}"
+            raise OCRError(msg) from e
 
     @staticmethod
     def _process_paddleocr_result(result: list[Any] | None) -> tuple[str, float, int]:
@@ -277,6 +287,7 @@ class PaddleOCRBackend:
 
         Returns:
             Tuple of (content, average_confidence, text_region_count)
+
         """
         if not result or result[0] is None:
             return "", 0.0, 0

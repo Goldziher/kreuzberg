@@ -24,32 +24,26 @@ classifiers = [
   "Topic :: Text Processing",
 ]
 
-dependencies = [
-  # Core dependencies (minimal)
-  "msgspec>=0.19",
-]
+dependencies = [  ]
 
 optional-dependencies.all = [
-  "kreuzberg[cli,nlp,ocr,vision]",
+  "kreuzberg[cli,nlp,ocr]",
 ]
 optional-dependencies.cli = [
   "click>=8.2.1",
-  "rich>=14",
 ]
 optional-dependencies.nlp = [
-  # NLP features - may migrate to Rust in v4.1+
+  "keybert>=0.8.5",
+  "sentence-transformers>=3",
   "spacy>=3",
+  "torch>=2.8",
+  "transformers>=4.56.2",
 ]
 optional-dependencies.ocr = [
-  # OCR backends - Python-specific
   "easyocr>=1.7.2",
   "paddleocr>=3.1",
   "paddlepaddle>=3.1",
-]
-optional-dependencies.vision = [
-  # Vision-based features - may migrate to Rust in v4.1+
-  "torch>=2.8",
-  "transformers>=4.56.2",
+  "setuptools>=65",
 ]
 urls.Documentation = "https://kreuzberg.readthedocs.io"
 urls.Homepage = "https://github.com/Goldziher/kreuzberg"
@@ -57,37 +51,7 @@ urls.Issues = "https://github.com/Goldziher/kreuzberg/issues"
 urls.Repository = "https://github.com/Goldziher/kreuzberg"
 scripts.kreuzberg = "kreuzberg.cli:main"
 
-[dependency-groups]
-dev = [
-  "en-core-web-sm",
-  "mypy>=1.14",
-  "pytest>=8",
-  "pytest-asyncio>=0.24",
-  "pytest-cov>=6",
-  "ruff>=0.8",
-]
-
 [tool.maturin]
 module-name = "kreuzberg._internal_bindings"
 # Point to the PyO3 bindings crate
 manifest-path = "../../crates/kreuzberg-py/Cargo.toml"
-
-[tool.uv.sources]
-en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
-
-[tool.ruff]
-target-version = "py310"
-
-line-length = 120
-lint.select = [ "B", "C4", "E", "F", "I", "N", "SIM", "TCH", "UP", "W" ]
-lint.ignore = [ "E501" ]
-
-[tool.pytest.ini_options]
-testpaths = [ "tests" ]
-asyncio_mode = "auto"
-
-[tool.mypy]
-python_version = "3.10"
-strict = true
-warn_return_any = true
-warn_unused_configs = true

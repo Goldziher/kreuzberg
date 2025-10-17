@@ -22,7 +22,9 @@ def validate_extraction_result(result: ExtractionResult, min_content_length: int
 
 
 def validate_metadata_completeness(
-    metadata: Metadata, required_fields: list[str] | None = None, optional_fields: list[str] | None = None
+    metadata: Metadata,
+    required_fields: list[str] | None = None,
+    optional_fields: list[str] | None = None,
 ) -> None:
     if required_fields:
         for field in required_fields:
@@ -122,7 +124,9 @@ def validate_table_extraction(content: str, expected_rows: int | None = None, ex
 
 
 def validate_math_extraction(
-    content: str, inline_math: list[str] | None = None, display_math: list[str] | None = None
+    content: str,
+    inline_math: list[str] | None = None,
+    display_math: list[str] | None = None,
 ) -> None:
     if inline_math:
         for formula in inline_math:
@@ -140,7 +144,9 @@ def compare_extraction_methods(sync_result: ExtractionResult, async_result: Extr
 
 
 def validate_error_handling(
-    extractor_func: Any, invalid_input: Path | bytes, expected_exception_type: type[Exception]
+    extractor_func: Any,
+    invalid_input: Path | bytes,
+    expected_exception_type: type[Exception],
 ) -> None:
     import pytest
 

@@ -125,6 +125,7 @@ class EasyOCRBackend:
         >>>
         >>> backend = EasyOCRBackend(languages=["en"], use_gpu=True)
         >>> register_ocr_backend(backend)
+
     """
 
     def __init__(
@@ -144,8 +145,9 @@ class EasyOCRBackend:
         if unsupported:
             from kreuzberg.exceptions import ValidationError
 
+            msg = f"Unsupported EasyOCR language codes: {', '.join(unsupported)}"
             raise ValidationError(
-                f"Unsupported EasyOCR language codes: {', '.join(unsupported)}",
+                msg,
                 context={
                     "unsupported_languages": unsupported,
                     "supported_languages": sorted(SUPPORTED_LANGUAGES),
@@ -187,8 +189,9 @@ class EasyOCRBackend:
         try:
             import easyocr  # noqa: PLC0415
         except ImportError as e:
+            msg = "EasyOCR backend requires easyocr package"
             raise MissingDependencyError(
-                "EasyOCR backend requires easyocr package",
+                msg,
                 context={
                     "install_command": 'pip install "kreuzberg[easyocr]"',
                     "package": "easyocr",
@@ -211,7 +214,8 @@ class EasyOCRBackend:
 
             logger.info("EasyOCR reader initialized successfully")
         except Exception as e:
-            raise OCRError(f"Failed to initialize EasyOCR: {e}") from e
+            msg = f"Failed to initialize EasyOCR: {e}"
+            raise OCRError(msg) from e
 
     def shutdown(self) -> None:
         """Shutdown backend and cleanup resources."""
@@ -241,20 +245,23 @@ class EasyOCRBackend:
             ValidationError: If the supplied language is not supported.
             RuntimeError: If EasyOCR fails to initialize.
             OCRError: If OCR processing fails.
+
         """
         # Ensure reader is initialized
         if self._reader is None:
             self.initialize()
 
         if self._reader is None:
-            raise RuntimeError("EasyOCR reader failed to initialize")
+            msg = "EasyOCR reader failed to initialize"
+            raise RuntimeError(msg)
 
         # Validate language
         if language not in SUPPORTED_LANGUAGES:
             from kreuzberg.exceptions import ValidationError
 
+            msg = f"Language '{language}' not supported by EasyOCR"
             raise ValidationError(
-                f"Language '{language}' not supported by EasyOCR",
+                msg,
                 context={"language": language, "supported_languages": sorted(SUPPORTED_LANGUAGES)},
             )
 
@@ -292,7 +299,8 @@ class EasyOCRBackend:
             }
 
         except Exception as e:
-            raise OCRError(f"EasyOCR processing failed: {e}") from e
+            msg = f"EasyOCR processing failed: {e}"
+            raise OCRError(msg) from e
 
     def process_file(self, path: str, language: str) -> dict[str, Any]:
         """Process image file using EasyOCR.
@@ -306,6 +314,7 @@ class EasyOCRBackend:
 
         Note:
             Exceptions from :meth:`process_image` propagate unchanged.
+
         """
         # Read file and call process_image
         with open(path, "rb") as f:
@@ -322,6 +331,7 @@ class EasyOCRBackend:
 
         Returns:
             Tuple of (content, average_confidence, text_region_count)
+
         """
         if not result:
             return "", 0.0, 0

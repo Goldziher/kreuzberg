@@ -100,7 +100,7 @@ def function():
 def test_token_reduction_integration_with_custom_stopwords() -> None:
     content = b"The custom word should be removed but other words remain."
     config = ExtractionConfig(
-        token_reduction=TokenReductionConfig(mode="moderate", custom_stopwords={"en": ["custom", "should"]})
+        token_reduction=TokenReductionConfig(mode="moderate", custom_stopwords={"en": ["custom", "should"]}),
     )
 
     result = extract_bytes_sync(content, "text/plain", config)

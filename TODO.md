@@ -103,6 +103,87 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## 🏗️ Architecture Refactoring
+
+### HIGH-5: Strongly-Typed Metadata Architecture (3-4 hours)
+
+**Priority**: P0 - Critical architectural issue
+
+**Problem**:
+
+- `ExtractionResult.metadata` is currently `HashMap<String, serde_json::Value>`
+- No compile-time type safety for metadata fields
+- Python TypedDict is a workaround, not derived from Rust types
+- Metadata is core to the library but defined loosely
+
+**Solution**: Create strongly-typed `Metadata` struct in Rust with format-specific nested fields
+
+**Tasks**:
+
+1. **Define metadata type structs in `types.rs`** (30 min)
+
+    - `Metadata` - Main struct with common + format-specific fields
+    - `ExcelMetadata` - sheet_count, sheet_names
+    - `EmailMetadata` - from/to/cc/bcc emails, message_id, attachments
+    - `ArchiveMetadata` - format, file_count, file_list, sizes
+    - `ImageMetadata` - width, height, format, exif HashMap
+    - `XmlMetadata` - element_count, unique_elements
+    - `TextMetadata` - line/word/char counts, headers, links, code_blocks
+    - `OcrMetadata` - language, psm, output_format, table info
+    - `ErrorMetadata` - error_type, message (for batch operations)
+    - Keep existing `PdfMetadata`, `PptxMetadata`, `ImagePreprocessingMetadata`
+
+1. **Update `ExtractionResult` in `types.rs`** (10 min)
+
+    - Change `metadata: HashMap<String, serde_json::Value>` → `metadata: Metadata`
+
+1. **Update all extractors to populate typed metadata** (60 min)
+
+    - `extraction/excel.rs` - populate `metadata.excel`
+    - `extraction/email.rs` - populate `metadata.email`
+    - `extraction/archive.rs` - populate `metadata.archive`
+    - `extraction/image.rs` - populate `metadata.image`
+    - `extraction/xml.rs` - populate `metadata.xml`
+    - `extraction/text.rs` - populate `metadata.text`
+    - `extraction/structured.rs` - populate `metadata.json_schema`
+    - `extraction/pandoc/*.rs` - use `metadata.additional` for Pandoc fields
+    - `pdf/*.rs` - already has `PdfMetadata`, update to use `metadata.pdf`
+    - `ocr/*.rs` - populate `metadata.ocr`
+    - `core/extractor.rs` - batch error handling populates `metadata.error`
+
+1. **Update PyO3 bindings** (20 min)
+
+    - `crates/kreuzberg-py/src/types.rs` - Metadata serialization via pythonize
+    - Verify `Metadata` struct serializes correctly with nested Option fields
+
+1. **Create Python TypedDict** (20 min)
+
+    - New file: `packages/python/kreuzberg/_metadata.py`
+    - Define `Metadata` TypedDict with all Rust fields
+    - Export from `__init__.py`
+    - Document that it mirrors Rust `Metadata` struct
+
+1. **Update tests** (40 min)
+
+    - Update all extractor tests to verify typed metadata fields
+    - Update Python integration tests to use new metadata structure
+    - Verify mypy type checking works with new TypedDict
+
+1. **Run full test suite** (10 min)
+
+    - `cargo test` - Rust tests
+    - `pytest` - Python tests
+    - Verify no regressions
+
+**Expected Results**:
+
+- Compile-time type safety for all metadata fields
+- Python gets proper TypedDict derived from Rust types
+- IDE autocomplete for metadata fields in both Rust and Python
+- `metadata.additional` HashMap preserves extensibility for Python postprocessors
+
+______________________________________________________________________
+
 ## 📦 Missing Features
 
 ### ✅ Completed: FEATURE-3 - Config File Support to CLI/API/MCP
