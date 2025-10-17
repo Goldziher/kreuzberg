@@ -38,6 +38,15 @@ class PaddleOCRBackend:
     This backend uses PaddleOCR for text extraction from images. It supports
     80+ languages and can run on CPU or GPU (CUDA).
 
+    Args:
+        lang: Language code (default: "en").
+        use_gpu: Whether to force GPU usage. If ``None``, CUDA availability is auto-detected.
+        use_angle_cls: Whether to enable angle classification for rotated text.
+        show_log: Whether to emit PaddleOCR logs.
+
+    Raises:
+        ValidationError: If an unsupported language code is provided.
+
     Installation:
         pip install "kreuzberg[paddleocr]"
 
@@ -48,11 +57,6 @@ class PaddleOCRBackend:
         >>> backend = PaddleOCRBackend(lang="en", use_gpu=True)
         >>> register_ocr_backend(backend)
 
-    Attributes:
-        lang: Language code to use (default: "en")
-        use_gpu: Whether to use GPU acceleration (default: True if available)
-        use_angle_cls: Whether to use angle classification (default: True)
-        show_log: Whether to show PaddleOCR logs (default: False)
     """
 
     def __init__(
@@ -63,18 +67,6 @@ class PaddleOCRBackend:
         use_angle_cls: bool = True,
         show_log: bool = False,
     ) -> None:
-        """Initialize PaddleOCR backend.
-
-        Args:
-            lang: Language code (default: "en")
-            use_gpu: Use GPU if available (default: auto-detect)
-            use_angle_cls: Enable angle classification for rotated text
-            show_log: Show PaddleOCR internal logs
-
-        Raises:
-            MissingDependencyError: If paddleocr is not installed
-            ValidationError: If unsupported language code is provided
-        """
         # Validate language
         if lang not in SUPPORTED_LANGUAGES:
             from kreuzberg.exceptions import ValidationError
@@ -160,13 +152,13 @@ class PaddleOCRBackend:
         """Process image bytes and extract text using PaddleOCR.
 
         Args:
-            image_bytes: Raw image data
-            language: Language code (must be in supported_languages())
+            image_bytes: Raw image data.
+            language: Language code (must be in ``supported_languages()``).
 
         Returns:
-            Dict with format:
+            Dictionary with the structure:
             {
-                "content": "extracted text",
+                "content": "extracted text",  # Concatenated text content.
                 "metadata": {
                     "width": 800,
                     "height": 600,
@@ -176,8 +168,9 @@ class PaddleOCRBackend:
             }
 
         Raises:
-            OCRError: If OCR processing fails
-            ValidationError: If language is not supported
+            ValidationError: If the supplied language is not supported.
+            RuntimeError: If PaddleOCR fails to initialize.
+            OCRError: If OCR processing fails.
         """
         # Ensure OCR is initialized
         if self._ocr is None:
@@ -232,11 +225,15 @@ class PaddleOCRBackend:
         """Process image file using PaddleOCR.
 
         Args:
-            path: Path to image file
-            language: Language code
+            path: Path to the image file.
+            language: Language code (must be in ``supported_languages()``).
 
         Returns:
-            Same format as process_image()
+            Dictionary in the same format as ``process_image()``.
+
+        Raises:
+            RuntimeError: If PaddleOCR fails to initialize.
+            OCRError: If OCR processing fails.
         """
         # PaddleOCR can process files directly
         if self._ocr is None:

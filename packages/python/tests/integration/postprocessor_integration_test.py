@@ -6,6 +6,17 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from kreuzberg import (
+    PostProcessorConfig,
+    batch_extract_files,
+    batch_extract_files_sync,
+    extract_bytes,
+    extract_bytes_sync,
+    extract_file,
+    extract_file_sync,
+    list_post_processors,
+)
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -23,11 +34,6 @@ def sample_text_content() -> str:
 @pytest.mark.asyncio
 async def test_extract_with_postprocessors_enabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test that extraction with postprocessors adds enriched metadata."""
-    try:
-        from kreuzberg import extract_file
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Create test file
     test_file = tmp_path / "test.txt"
     test_file.write_text(sample_text_content)
@@ -47,11 +53,6 @@ async def test_extract_with_postprocessors_enabled(tmp_path: Path, sample_text_c
 @pytest.mark.asyncio
 async def test_extract_with_postprocessors_disabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test that extraction with postprocessors disabled returns base metadata only."""
-    try:
-        from kreuzberg import PostProcessorConfig, extract_file
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Create test file
     test_file = tmp_path / "test.txt"
     test_file.write_text(sample_text_content)
@@ -74,11 +75,6 @@ async def test_extract_with_postprocessors_disabled(tmp_path: Path, sample_text_
 
 def test_extract_sync_with_postprocessors_enabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test sync extraction with postprocessors enabled."""
-    try:
-        from kreuzberg import extract_file_sync
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Create test file
     test_file = tmp_path / "test.txt"
     test_file.write_text(sample_text_content)
@@ -93,11 +89,6 @@ def test_extract_sync_with_postprocessors_enabled(tmp_path: Path, sample_text_co
 
 def test_extract_sync_with_postprocessors_disabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test sync extraction with postprocessors disabled."""
-    try:
-        from kreuzberg import PostProcessorConfig, extract_file_sync
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Create test file
     test_file = tmp_path / "test.txt"
     test_file.write_text(sample_text_content)
@@ -114,11 +105,6 @@ def test_extract_sync_with_postprocessors_disabled(tmp_path: Path, sample_text_c
 @pytest.mark.asyncio
 async def test_extract_with_processor_whitelist(tmp_path: Path, sample_text_content: str) -> None:
     """Test extraction with enabled_processors whitelist."""
-    try:
-        from kreuzberg import PostProcessorConfig, extract_file, list_post_processors
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Get list of available processors
     processors = list_post_processors()
     if not processors:
@@ -140,11 +126,6 @@ async def test_extract_with_processor_whitelist(tmp_path: Path, sample_text_cont
 @pytest.mark.asyncio
 async def test_extract_with_processor_blacklist(tmp_path: Path, sample_text_content: str) -> None:
     """Test extraction with disabled_processors blacklist."""
-    try:
-        from kreuzberg import PostProcessorConfig, extract_file, list_post_processors
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Get list of available processors
     processors = list_post_processors()
     if not processors:
@@ -166,11 +147,6 @@ async def test_extract_with_processor_blacklist(tmp_path: Path, sample_text_cont
 @pytest.mark.asyncio
 async def test_batch_extract_with_postprocessors(tmp_path: Path, sample_text_content: str) -> None:
     """Test batch extraction with postprocessors."""
-    try:
-        from kreuzberg import batch_extract_files
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Create multiple test files
     test_file1 = tmp_path / "test1.txt"
     test_file1.write_text(sample_text_content)
@@ -190,11 +166,6 @@ async def test_batch_extract_with_postprocessors(tmp_path: Path, sample_text_con
 
 def test_batch_extract_sync_with_postprocessors_disabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test sync batch extraction with postprocessors disabled."""
-    try:
-        from kreuzberg import PostProcessorConfig, batch_extract_files_sync
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Create multiple test files
     test_file1 = tmp_path / "test1.txt"
     test_file1.write_text(sample_text_content)
@@ -216,11 +187,6 @@ def test_batch_extract_sync_with_postprocessors_disabled(tmp_path: Path, sample_
 @pytest.mark.asyncio
 async def test_extract_bytes_with_postprocessors(sample_text_content: str) -> None:
     """Test byte extraction with postprocessors."""
-    try:
-        from kreuzberg import extract_bytes
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Extract from bytes with postprocessors enabled
     result = await extract_bytes(sample_text_content.encode("utf-8"), mime_type="text/plain")
 
@@ -231,11 +197,6 @@ async def test_extract_bytes_with_postprocessors(sample_text_content: str) -> No
 
 def test_extract_bytes_sync_with_postprocessors_disabled(sample_text_content: str) -> None:
     """Test sync byte extraction with postprocessors disabled."""
-    try:
-        from kreuzberg import PostProcessorConfig, extract_bytes_sync
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Extract from bytes with postprocessors disabled
     config = PostProcessorConfig(enabled=False)
     result = extract_bytes_sync(
@@ -250,11 +211,6 @@ def test_extract_bytes_sync_with_postprocessors_disabled(sample_text_content: st
 @pytest.mark.asyncio
 async def test_postprocessor_config_immutability() -> None:
     """Test that PostProcessorConfig is immutable (frozen)."""
-    try:
-        from kreuzberg import PostProcessorConfig
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     config = PostProcessorConfig(enabled=True)
 
     # Should not be able to modify frozen dataclass
@@ -265,11 +221,6 @@ async def test_postprocessor_config_immutability() -> None:
 @pytest.mark.asyncio
 async def test_postprocessor_enrichment_with_all_processors(tmp_path: Path, sample_text_content: str) -> None:
     """Test that postprocessors enrich metadata when dependencies are available."""
-    try:
-        from kreuzberg import extract_file, list_post_processors
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Check if PostProcessor dependencies are installed
     try:
         import keybert  # noqa: F401
@@ -302,11 +253,6 @@ async def test_postprocessor_enrichment_with_all_processors(tmp_path: Path, samp
 @pytest.mark.asyncio
 async def test_processor_ordering_by_stage(tmp_path: Path, sample_text_content: str) -> None:
     """Test that processors run in correct stage order (early → middle → late)."""
-    try:
-        from kreuzberg import extract_file, list_post_processors
-    except ImportError:
-        pytest.skip("Kreuzberg not available")
-
     # Check if spaCy is installed
     try:
         import spacy  # noqa: F401

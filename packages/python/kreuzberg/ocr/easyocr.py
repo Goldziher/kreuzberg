@@ -107,6 +107,15 @@ class EasyOCRBackend:
     This backend uses EasyOCR for text extraction from images. It supports
     80+ languages and can run on both CPU and GPU (CUDA).
 
+    Args:
+        languages: Language codes to enable (default: ``["en"]``).
+        use_gpu: Whether to force GPU usage. If ``None``, CUDA availability is auto-detected.
+        model_storage_directory: Directory used for EasyOCR model cache.
+        beam_width: Beam width for recognition (higher values are slower but more accurate).
+
+    Raises:
+        ValidationError: If any supplied language code is not supported.
+
     Installation:
         pip install "kreuzberg[easyocr]"
 
@@ -116,12 +125,6 @@ class EasyOCRBackend:
         >>>
         >>> backend = EasyOCRBackend(languages=["en"], use_gpu=True)
         >>> register_ocr_backend(backend)
-
-    Attributes:
-        languages: List of language codes to enable (default: ["en"])
-        use_gpu: Whether to use GPU acceleration (default: True if available)
-        model_storage_directory: Directory to cache downloaded models
-        beam_width: Beam width for text recognition (higher = more accurate but slower)
     """
 
     def __init__(
@@ -132,18 +135,6 @@ class EasyOCRBackend:
         model_storage_directory: str | None = None,
         beam_width: int = 5,
     ) -> None:
-        """Initialize EasyOCR backend.
-
-        Args:
-            languages: List of language codes (default: ["en"])
-            use_gpu: Use GPU if available (default: auto-detect)
-            model_storage_directory: Directory to cache models
-            beam_width: Beam width for recognition (default: 5)
-
-        Raises:
-            MissingDependencyError: If easyocr is not installed
-            ValidationError: If unsupported language codes are provided
-        """
         self.languages = languages or ["en"]
         self.beam_width = beam_width
         self.model_storage_directory = model_storage_directory
@@ -231,11 +222,11 @@ class EasyOCRBackend:
         """Process image bytes and extract text using EasyOCR.
 
         Args:
-            image_bytes: Raw image data
-            language: Language code (must be in supported_languages())
+            image_bytes: Raw image data.
+            language: Language code (must be in ``supported_languages()``).
 
         Returns:
-            Dict with format:
+            Dictionary with the format:
             {
                 "content": "extracted text",
                 "metadata": {
@@ -247,8 +238,9 @@ class EasyOCRBackend:
             }
 
         Raises:
-            OCRError: If OCR processing fails
-            ValidationError: If language is not supported
+            ValidationError: If the supplied language is not supported.
+            RuntimeError: If EasyOCR fails to initialize.
+            OCRError: If OCR processing fails.
         """
         # Ensure reader is initialized
         if self._reader is None:
@@ -306,11 +298,14 @@ class EasyOCRBackend:
         """Process image file using EasyOCR.
 
         Args:
-            path: Path to image file
-            language: Language code
+            path: Path to the image file.
+            language: Language code (must be in ``supported_languages()``).
 
         Returns:
-            Same format as process_image()
+            Dictionary in the same format as ``process_image()``.
+
+        Note:
+            Exceptions from :meth:`process_image` propagate unchanged.
         """
         # Read file and call process_image
         with open(path, "rb") as f:

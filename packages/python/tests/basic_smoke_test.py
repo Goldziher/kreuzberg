@@ -1,14 +1,14 @@
 """Basic smoke tests to verify package structure and imports work."""
 
 
-def test_import_kreuzberg():
+def test_import_kreuzberg() -> None:
     """Test that kreuzberg can be imported."""
     import kreuzberg
 
     assert kreuzberg.__version__ is not None
 
 
-def test_public_api_exports():
+def test_public_api_exports() -> None:
     """Test that all documented exports are available."""
     import kreuzberg
 

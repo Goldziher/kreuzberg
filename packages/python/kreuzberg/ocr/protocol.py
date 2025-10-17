@@ -93,11 +93,6 @@ class OcrBackendProtocol(Protocol):
                 },
                 "tables": []                # Optional: extracted tables
             }
-
-        Raises:
-            OCRError: If OCR processing fails
-            ValidationError: If language is not supported
-            MissingDependencyError: If required dependencies are missing
         """
         ...
 

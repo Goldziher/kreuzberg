@@ -48,7 +48,6 @@ class EntityExtractionProcessor:
         min_confidence: float = 0.0,
         **model_kwargs: Any,
     ):
-        """Initialize entity extraction processor."""
         self.model_name = model
         self.model_path = str(model_path) if model_path else None
         self.entity_types = entity_types
@@ -119,6 +118,9 @@ class EntityExtractionProcessor:
                 "DATE": ["2025-10-16", "January 2025"],
                 ...
             }
+
+        Raises:
+            RuntimeError: If the spaCy model fails to initialize.
         """
         # Lazy load model if not yet initialized
         if self._nlp is None:

@@ -30,6 +30,14 @@ class CategoryExtractionProcessor:
         device: Device to run model on (-1 for CPU, 0+ for GPU, default: -1)
         **pipeline_kwargs: Additional kwargs passed to transformers.pipeline()
 
+    Raises:
+        ValueError: If no categories are provided during initialization.
+
+    Attributes:
+        DOCUMENT_TYPES: Default category set used when no custom categories are supplied.
+        SUBJECT_AREAS: Example category set for subject area classification.
+        SENTIMENT: Example category set for sentiment analysis.
+
     Example:
         >>> categories = ["invoice", "contract", "resume", "report"]
         >>> processor = CategoryExtractionProcessor(
@@ -91,7 +99,6 @@ class CategoryExtractionProcessor:
         device: int = -1,
         **pipeline_kwargs: Any,
     ):
-        """Initialize category extraction processor."""
         if categories is None:
             categories = self.DOCUMENT_TYPES  # Default to document types
 
@@ -192,6 +199,9 @@ class CategoryExtractionProcessor:
                 },
                 "confidence": 0.92
             }
+
+        Raises:
+            RuntimeError: If the zero-shot classifier fails to initialize.
         """
         # Lazy load classifier if not yet initialized
         if self._classifier is None:

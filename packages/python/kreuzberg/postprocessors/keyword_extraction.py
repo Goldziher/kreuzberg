@@ -52,7 +52,6 @@ class KeywordExtractionProcessor:
         min_score: float = 0.0,
         **model_kwargs: Any,
     ):
-        """Initialize keyword extraction processor."""
         self.model_name = model
         self.model_cache_dir = str(model_cache_dir) if model_cache_dir else None
         self.top_n = top_n
@@ -120,6 +119,9 @@ class KeywordExtractionProcessor:
                 {"keyword": "document processing", "score": 0.87},
                 {"keyword": "OCR", "score": 0.82}
             ]
+
+        Raises:
+            RuntimeError: If the KeyBERT extractor fails to initialize.
         """
         # Lazy load extractor if not yet initialized
         if self._extractor is None:
