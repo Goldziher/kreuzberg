@@ -36,7 +36,6 @@ dev = [
     { name = "pytest-timeout", specifier = ">=2.4.0" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "ruff", specifier = ">=0.14.1" },
-    { name = "tabulate", specifier = ">=0.9.0" },
     { name = "trio", specifier = ">=0.31.0" },
     { name = "types-psutil", specifier = ">=7.0.0.20251001" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },

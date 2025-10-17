@@ -26,7 +26,7 @@ from kreuzberg import _setup_lib_path  # noqa: F401
 logger = logging.getLogger(__name__)
 
 # Direct re-exports from Rust bindings
-from kreuzberg._internal_bindings import (
+from kreuzberg._internal_bindings import (  # noqa: E402  # type: ignore[import-untyped]
     # Configuration types
     ChunkingConfig,
     ExtractedTable,
@@ -56,7 +56,7 @@ from kreuzberg._internal_bindings import (
 )
 
 # Exception classes
-from kreuzberg.exceptions import (
+from kreuzberg.exceptions import (  # noqa: E402
     KreuzbergError,
     MissingDependencyError,
     OCRError,
@@ -65,7 +65,7 @@ from kreuzberg.exceptions import (
 )
 
 # Extraction functions from Python wrapper (with postprocessor support)
-from kreuzberg.extraction import (
+from kreuzberg.extraction import (  # noqa: E402
     PostProcessorConfig,
     batch_extract_bytes,
     batch_extract_bytes_sync,

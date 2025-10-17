@@ -10,7 +10,7 @@ import click
 
 @click.group()
 @click.version_option()
-def main():
+def main() -> None:
     """Kreuzberg - Multi-language document intelligence framework."""
     pass
 
@@ -21,7 +21,7 @@ def main():
 @click.option("--output", "-o", type=click.Path(), help="Output file path")
 @click.option("--ocr/--no-ocr", default=False, help="Enable OCR for scanned documents")
 @click.option("--force-ocr", is_flag=True, help="Force OCR even if text extraction succeeds")
-def extract(file_path: str, mime_type: str | None, output: str | None, ocr: bool, force_ocr: bool):
+def extract(file_path: str, mime_type: str | None, output: str | None, ocr: bool, force_ocr: bool) -> None:
     """Extract content from a file."""
     from kreuzberg import ExtractionConfig, OcrConfig, extract_file_sync
 
@@ -49,7 +49,7 @@ def extract(file_path: str, mime_type: str | None, output: str | None, ocr: bool
 @main.command()
 @click.option("--host", default="0.0.0.0", help="Host to bind to")
 @click.option("--port", default=8000, type=int, help="Port to bind to")
-def serve(host: str, port: int):
+def serve(host: str, port: int) -> None:
     """Start the API server."""
     from kreuzberg import start_api_server
 
@@ -65,7 +65,7 @@ def serve(host: str, port: int):
 
 @main.command()
 @click.option("--transport", type=click.Choice(["stdio"]), default="stdio", help="Transport type")
-def mcp(transport: str):
+def mcp(transport: str) -> None:
     """Start the MCP (Model Context Protocol) server.
 
     Uses the Rust MCP server implementation from the bindings.
