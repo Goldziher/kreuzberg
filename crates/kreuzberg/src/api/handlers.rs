@@ -5,11 +5,11 @@ use axum::{
     extract::{Multipart, State},
 };
 
-use crate::{batch_extract_bytes, extract_bytes};
+use crate::{batch_extract_bytes, cache, extract_bytes};
 
 use super::{
     error::ApiError,
-    types::{ApiState, ExtractResponse, HealthResponse, InfoResponse},
+    types::{ApiState, CacheClearResponse, CacheStatsResponse, ExtractResponse, HealthResponse, InfoResponse},
 };
 
 /// Extract endpoint handler.
@@ -121,4 +121,42 @@ pub async fn info_handler() -> Json<InfoResponse> {
         version: env!("CARGO_PKG_VERSION").to_string(),
         rust_backend: true,
     })
+}
+
+/// Cache stats endpoint handler.
+///
+/// GET /cache/stats
+pub async fn cache_stats_handler() -> Result<Json<CacheStatsResponse>, ApiError> {
+    let cache_dir = std::env::current_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .join(".kreuzberg");
+
+    let stats = cache::get_cache_metadata(cache_dir.to_str().unwrap_or(".")).map_err(ApiError::internal)?;
+
+    Ok(Json(CacheStatsResponse {
+        directory: cache_dir.to_string_lossy().to_string(),
+        total_files: stats.total_files,
+        total_size_mb: stats.total_size_mb,
+        available_space_mb: stats.available_space_mb,
+        oldest_file_age_days: stats.oldest_file_age_days,
+        newest_file_age_days: stats.newest_file_age_days,
+    }))
+}
+
+/// Cache clear endpoint handler.
+///
+/// DELETE /cache/clear
+pub async fn cache_clear_handler() -> Result<Json<CacheClearResponse>, ApiError> {
+    let cache_dir = std::env::current_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .join(".kreuzberg");
+
+    let (removed_files, freed_mb) =
+        cache::clear_cache_directory(cache_dir.to_str().unwrap_or(".")).map_err(ApiError::internal)?;
+
+    Ok(Json(CacheClearResponse {
+        directory: cache_dir.to_string_lossy().to_string(),
+        removed_files,
+        freed_mb,
+    }))
 }

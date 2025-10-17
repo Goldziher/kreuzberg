@@ -124,6 +124,37 @@ enum Commands {
         #[arg(short, long, default_value = "text")]
         format: OutputFormat,
     },
+
+    /// Cache management operations
+    Cache {
+        #[command(subcommand)]
+        command: CacheCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum CacheCommands {
+    /// Show cache statistics
+    Stats {
+        /// Cache directory (default: .kreuzberg in current directory)
+        #[arg(short, long)]
+        cache_dir: Option<PathBuf>,
+
+        /// Output format (text or json)
+        #[arg(short, long, default_value = "text")]
+        format: OutputFormat,
+    },
+
+    /// Clear the cache
+    Clear {
+        /// Cache directory (default: .kreuzberg in current directory)
+        #[arg(short, long)]
+        cache_dir: Option<PathBuf>,
+
+        /// Output format (text or json)
+        #[arg(short, long, default_value = "text")]
+        format: OutputFormat,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -354,6 +385,72 @@ async fn main() -> Result<()> {
                         "version": version,
                     });
                     println!("{}", serde_json::to_string_pretty(&output)?);
+                }
+            }
+        }
+
+        Commands::Cache { command } => {
+            use kreuzberg::cache;
+
+            let default_cache_dir = std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(".kreuzberg");
+
+            match command {
+                CacheCommands::Stats { cache_dir, format } => {
+                    let cache_path = cache_dir.unwrap_or(default_cache_dir);
+                    let cache_dir_str = cache_path.to_string_lossy();
+
+                    let stats = cache::get_cache_metadata(&cache_dir_str).context("Failed to get cache stats")?;
+
+                    match format {
+                        OutputFormat::Text => {
+                            println!("Cache Statistics");
+                            println!("================");
+                            println!("Directory: {}", cache_dir_str);
+                            println!("Total files: {}", stats.total_files);
+                            println!("Total size: {:.2} MB", stats.total_size_mb);
+                            println!("Available space: {:.2} MB", stats.available_space_mb);
+                            println!("Oldest file age: {:.2} days", stats.oldest_file_age_days);
+                            println!("Newest file age: {:.2} days", stats.newest_file_age_days);
+                        }
+                        OutputFormat::Json => {
+                            let output = json!({
+                                "directory": cache_dir_str,
+                                "total_files": stats.total_files,
+                                "total_size_mb": stats.total_size_mb,
+                                "available_space_mb": stats.available_space_mb,
+                                "oldest_file_age_days": stats.oldest_file_age_days,
+                                "newest_file_age_days": stats.newest_file_age_days,
+                            });
+                            println!("{}", serde_json::to_string_pretty(&output)?);
+                        }
+                    }
+                }
+
+                CacheCommands::Clear { cache_dir, format } => {
+                    let cache_path = cache_dir.unwrap_or(default_cache_dir);
+                    let cache_dir_str = cache_path.to_string_lossy();
+
+                    let (removed_files, freed_mb) =
+                        cache::clear_cache_directory(&cache_dir_str).context("Failed to clear cache")?;
+
+                    match format {
+                        OutputFormat::Text => {
+                            println!("Cache cleared successfully");
+                            println!("Directory: {}", cache_dir_str);
+                            println!("Removed files: {}", removed_files);
+                            println!("Freed space: {:.2} MB", freed_mb);
+                        }
+                        OutputFormat::Json => {
+                            let output = json!({
+                                "directory": cache_dir_str,
+                                "removed_files": removed_files,
+                                "freed_mb": freed_mb,
+                            });
+                            println!("{}", serde_json::to_string_pretty(&output)?);
+                        }
+                    }
                 }
             }
         }

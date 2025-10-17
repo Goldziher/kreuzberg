@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: "v9.23.0"
+    rev: v9.23.0
     hooks:
       - id: commitlint
         stages: [commit-msg]
@@ -22,7 +22,7 @@ repos:
     hooks:
       - id: validate-pyproject
   - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.22
+    rev: 1.0.0
     hooks:
       - id: mdformat
         exclude: ^test_documents
@@ -42,16 +42,16 @@ repos:
         additional_dependencies:
           - black==25.1.0
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: "v3.6.2"
+    rev: v3.6.2
     hooks:
       - id: prettier
         exclude: ^tests|^.idea|^migrations|^.git|^docs|\.md$
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: "v2.10.0"
+    rev: v2.11.0
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+    rev: v0.14.1
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]

@@ -49,3 +49,31 @@ pub struct ApiState {
     /// Default extraction configuration
     pub default_config: Arc<ExtractionConfig>,
 }
+
+/// Cache statistics response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheStatsResponse {
+    /// Cache directory path
+    pub directory: String,
+    /// Total number of cache files
+    pub total_files: usize,
+    /// Total cache size in MB
+    pub total_size_mb: f64,
+    /// Available disk space in MB
+    pub available_space_mb: f64,
+    /// Age of oldest file in days
+    pub oldest_file_age_days: f64,
+    /// Age of newest file in days
+    pub newest_file_age_days: f64,
+}
+
+/// Cache clear response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheClearResponse {
+    /// Cache directory path
+    pub directory: String,
+    /// Number of files removed
+    pub removed_files: usize,
+    /// Space freed in MB
+    pub freed_mb: f64,
+}

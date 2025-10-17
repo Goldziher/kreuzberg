@@ -13,7 +13,7 @@ use rmcp::{
 };
 
 use crate::{
-    ExtractionConfig, ExtractionResult as KreuzbergResult, batch_extract_file, batch_extract_file_sync,
+    ExtractionConfig, ExtractionResult as KreuzbergResult, batch_extract_file, batch_extract_file_sync, cache,
     detect_mime_type, extract_bytes, extract_bytes_sync, extract_file, extract_file_sync,
 };
 
@@ -232,6 +232,63 @@ impl KreuzbergMcp {
 
         Ok(CallToolResult::success(vec![Content::text(mime_type)]))
     }
+
+    /// Get cache statistics.
+    ///
+    /// This tool returns statistics about the cache including total files, size, and disk space.
+    #[tool(description = "Get cache statistics including total files, size, and available disk space.")]
+    fn cache_stats(&self, Parameters(_): Parameters<()>) -> Result<CallToolResult, McpError> {
+        let cache_dir = std::env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .join(".kreuzberg");
+
+        let stats = cache::get_cache_metadata(cache_dir.to_str().unwrap_or("."))
+            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+
+        let response = format!(
+            "Cache Statistics\n\
+             ================\n\
+             Directory: {}\n\
+             Total files: {}\n\
+             Total size: {:.2} MB\n\
+             Available space: {:.2} MB\n\
+             Oldest file age: {:.2} days\n\
+             Newest file age: {:.2} days",
+            cache_dir.to_string_lossy(),
+            stats.total_files,
+            stats.total_size_mb,
+            stats.available_space_mb,
+            stats.oldest_file_age_days,
+            stats.newest_file_age_days
+        );
+
+        Ok(CallToolResult::success(vec![Content::text(response)]))
+    }
+
+    /// Clear the cache.
+    ///
+    /// This tool removes all cached files and returns the number of files removed and space freed.
+    #[tool(description = "Clear all cached files. Returns the number of files removed and space freed in MB.")]
+    fn cache_clear(&self, Parameters(_): Parameters<()>) -> Result<CallToolResult, McpError> {
+        let cache_dir = std::env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .join(".kreuzberg");
+
+        let (removed_files, freed_mb) = cache::clear_cache_directory(cache_dir.to_str().unwrap_or("."))
+            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+
+        let response = format!(
+            "Cache cleared successfully\n\
+             Directory: {}\n\
+             Removed files: {}\n\
+             Freed space: {:.2} MB",
+            cache_dir.to_string_lossy(),
+            removed_files,
+            freed_mb
+        );
+
+        Ok(CallToolResult::success(vec![Content::text(response)]))
+    }
 }
 
 #[tool_handler]
@@ -249,8 +306,9 @@ impl ServerHandler for KreuzbergMcp {
             },
             instructions: Some(
                 "Kreuzberg document intelligence MCP server. \
-                 Tools: extract_file, extract_bytes, batch_extract_files, detect_mime_type. \
-                 Extracts text, metadata, and tables from PDFs, Office docs, images (OCR), emails, and more."
+                 Tools: extract_file, extract_bytes, batch_extract_files, detect_mime_type, cache_stats, cache_clear. \
+                 Extracts text, metadata, and tables from PDFs, Office docs, images (OCR), emails, and more. \
+                 Includes cache management for performance optimization."
                     .to_string(),
             ),
         }
@@ -357,9 +415,11 @@ mod tests {
         assert!(router.has_route("extract_bytes"));
         assert!(router.has_route("batch_extract_files"));
         assert!(router.has_route("detect_mime_type"));
+        assert!(router.has_route("cache_stats"));
+        assert!(router.has_route("cache_clear"));
 
         let tools = router.list_all();
-        assert_eq!(tools.len(), 4);
+        assert_eq!(tools.len(), 6);
     }
 
     #[test]

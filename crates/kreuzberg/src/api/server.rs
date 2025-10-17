@@ -7,7 +7,7 @@ use std::{
 
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -17,7 +17,7 @@ use tower_http::{
 use crate::{ExtractionConfig, Result};
 
 use super::{
-    handlers::{extract_handler, health_handler, info_handler},
+    handlers::{cache_clear_handler, cache_stats_handler, extract_handler, health_handler, info_handler},
     types::ApiState,
 };
 
@@ -37,6 +37,8 @@ pub fn create_router(config: ExtractionConfig) -> Router {
         .route("/extract", post(extract_handler))
         .route("/health", get(health_handler))
         .route("/info", get(info_handler))
+        .route("/cache/stats", get(cache_stats_handler))
+        .route("/cache/clear", delete(cache_clear_handler))
         .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any))
         .layer(TraceLayer::new_for_http())
         .with_state(state)

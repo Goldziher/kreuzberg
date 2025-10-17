@@ -71,4 +71,6 @@ mod types;
 
 pub use error::ApiError;
 pub use server::{create_router, serve, serve_default, serve_with_config};
-pub use types::{ApiState, ErrorResponse, ExtractResponse, HealthResponse, InfoResponse};
+pub use types::{
+    ApiState, CacheClearResponse, CacheStatsResponse, ErrorResponse, ExtractResponse, HealthResponse, InfoResponse,
+};
