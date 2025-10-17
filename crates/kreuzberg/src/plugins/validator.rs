@@ -47,7 +47,7 @@ use async_trait::async_trait;
 ///
 /// impl Plugin for MinimumLengthValidator {
 ///     fn name(&self) -> &str { "min-length-validator" }
-///     fn version(&self) -> &str { "1.0.0" }
+///     fn version(&self) -> String { "1.0.0".to_string() }
 ///     fn initialize(&self) -> Result<()> { Ok(()) }
 ///     fn shutdown(&self) -> Result<()> { Ok(()) }
 /// }
@@ -98,7 +98,7 @@ pub trait Validator: Plugin {
     /// # struct ContentLengthValidator { min: usize, max: usize }
     /// # impl Plugin for ContentLengthValidator {
     /// #     fn name(&self) -> &str { "length-validator" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -136,7 +136,7 @@ pub trait Validator: Plugin {
     /// # struct QualityValidator { min_score: f64 }
     /// # impl Plugin for QualityValidator {
     /// #     fn name(&self) -> &str { "quality-validator" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -171,7 +171,7 @@ pub trait Validator: Plugin {
     /// # struct SecurityValidator { blocked_patterns: Vec<String> }
     /// # impl Plugin for SecurityValidator {
     /// #     fn name(&self) -> &str { "security-validator" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -218,7 +218,7 @@ pub trait Validator: Plugin {
     /// # struct PdfValidator;
     /// # impl Plugin for PdfValidator {
     /// #     fn name(&self) -> &str { "pdf-validator" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -255,7 +255,7 @@ pub trait Validator: Plugin {
     /// # struct FastValidator;
     /// # impl Plugin for FastValidator {
     /// #     fn name(&self) -> &str { "fast-validator" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -288,8 +288,8 @@ mod tests {
             "mock-validator"
         }
 
-        fn version(&self) -> &str {
-            "1.0.0"
+        fn version(&self) -> String {
+            "1.0.0".to_string()
         }
 
         fn initialize(&self) -> Result<()> {
@@ -406,8 +406,8 @@ mod tests {
             fn name(&self) -> &str {
                 "pdf-only"
             }
-            fn version(&self) -> &str {
-                "1.0.0"
+            fn version(&self) -> String {
+                "1.0.0".to_string()
             }
             fn initialize(&self) -> Result<()> {
                 Ok(())
@@ -461,8 +461,8 @@ mod tests {
             fn name(&self) -> &str {
                 "high-priority"
             }
-            fn version(&self) -> &str {
-                "1.0.0"
+            fn version(&self) -> String {
+                "1.0.0".to_string()
             }
             fn initialize(&self) -> Result<()> {
                 Ok(())
@@ -476,8 +476,8 @@ mod tests {
             fn name(&self) -> &str {
                 "low-priority"
             }
-            fn version(&self) -> &str {
-                "1.0.0"
+            fn version(&self) -> String {
+                "1.0.0".to_string()
             }
             fn initialize(&self) -> Result<()> {
                 Ok(())

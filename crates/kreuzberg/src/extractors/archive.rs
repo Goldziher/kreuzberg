@@ -34,8 +34,8 @@ impl Plugin for ZipExtractor {
         "zip-extractor"
     }
 
-    fn version(&self) -> &str {
-        "1.0.0"
+    fn version(&self) -> String {
+        "1.0.0".to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -143,8 +143,8 @@ impl Plugin for TarExtractor {
         "tar-extractor"
     }
 
-    fn version(&self) -> &str {
-        "1.0.0"
+    fn version(&self) -> String {
+        "1.0.0".to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -257,8 +257,8 @@ impl Plugin for SevenZExtractor {
         "7z-extractor"
     }
 
-    fn version(&self) -> &str {
-        "1.0.0"
+    fn version(&self) -> String {
+        "1.0.0".to_string()
     }
 
     fn initialize(&self) -> Result<()> {

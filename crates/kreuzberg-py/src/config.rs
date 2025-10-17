@@ -38,7 +38,8 @@ impl ExtractionConfig {
         images=None,
         pdf_options=None,
         token_reduction=None,
-        language_detection=None
+        language_detection=None,
+        postprocessor=None
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -51,6 +52,7 @@ impl ExtractionConfig {
         pdf_options: Option<PdfConfig>,
         token_reduction: Option<TokenReductionConfig>,
         language_detection: Option<LanguageDetectionConfig>,
+        postprocessor: Option<PostProcessorConfig>,
     ) -> Self {
         Self {
             inner: kreuzberg::ExtractionConfig {
@@ -63,6 +65,7 @@ impl ExtractionConfig {
                 pdf_options: pdf_options.map(Into::into),
                 token_reduction: token_reduction.map(Into::into),
                 language_detection: language_detection.map(Into::into),
+                postprocessor: postprocessor.map(Into::into),
             },
         }
     }
@@ -155,6 +158,16 @@ impl ExtractionConfig {
     #[setter]
     fn set_language_detection(&mut self, value: Option<LanguageDetectionConfig>) {
         self.inner.language_detection = value.map(Into::into);
+    }
+
+    #[getter]
+    fn postprocessor(&self) -> Option<PostProcessorConfig> {
+        self.inner.postprocessor.clone().map(Into::into)
+    }
+
+    #[setter]
+    fn set_postprocessor(&mut self, value: Option<PostProcessorConfig>) {
+        self.inner.postprocessor = value.map(Into::into);
     }
 
     fn __repr__(&self) -> String {
@@ -670,6 +683,89 @@ impl From<LanguageDetectionConfig> for kreuzberg::LanguageDetectionConfig {
 
 impl From<kreuzberg::LanguageDetectionConfig> for LanguageDetectionConfig {
     fn from(config: kreuzberg::LanguageDetectionConfig) -> Self {
+        Self { inner: config }
+    }
+}
+
+// ============================================================================
+// PostProcessorConfig
+// ============================================================================
+
+/// Post-processor configuration.
+///
+/// Example:
+///     >>> from kreuzberg import PostProcessorConfig
+///     >>> config = PostProcessorConfig(enabled=True, enabled_processors=["entity_extraction"])
+#[pyclass(name = "PostProcessorConfig", module = "kreuzberg")]
+#[derive(Clone)]
+pub struct PostProcessorConfig {
+    inner: kreuzberg::PostProcessorConfig,
+}
+
+#[pymethods]
+impl PostProcessorConfig {
+    #[new]
+    #[pyo3(signature = (enabled=None, enabled_processors=None, disabled_processors=None))]
+    fn new(
+        enabled: Option<bool>,
+        enabled_processors: Option<Vec<String>>,
+        disabled_processors: Option<Vec<String>>,
+    ) -> Self {
+        Self {
+            inner: kreuzberg::PostProcessorConfig {
+                enabled: enabled.unwrap_or(true),
+                enabled_processors,
+                disabled_processors,
+            },
+        }
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.enabled
+    }
+
+    #[setter]
+    fn set_enabled(&mut self, value: bool) {
+        self.inner.enabled = value;
+    }
+
+    #[getter]
+    fn enabled_processors(&self) -> Option<Vec<String>> {
+        self.inner.enabled_processors.clone()
+    }
+
+    #[setter]
+    fn set_enabled_processors(&mut self, value: Option<Vec<String>>) {
+        self.inner.enabled_processors = value;
+    }
+
+    #[getter]
+    fn disabled_processors(&self) -> Option<Vec<String>> {
+        self.inner.disabled_processors.clone()
+    }
+
+    #[setter]
+    fn set_disabled_processors(&mut self, value: Option<Vec<String>>) {
+        self.inner.disabled_processors = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "PostProcessorConfig(enabled={}, enabled_processors={:?}, disabled_processors={:?})",
+            self.inner.enabled, self.inner.enabled_processors, self.inner.disabled_processors
+        )
+    }
+}
+
+impl From<PostProcessorConfig> for kreuzberg::PostProcessorConfig {
+    fn from(config: PostProcessorConfig) -> Self {
+        config.inner
+    }
+}
+
+impl From<kreuzberg::PostProcessorConfig> for PostProcessorConfig {
+    fn from(config: kreuzberg::PostProcessorConfig) -> Self {
         Self { inner: config }
     }
 }

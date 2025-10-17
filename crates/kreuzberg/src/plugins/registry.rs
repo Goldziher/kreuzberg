@@ -578,8 +578,8 @@ mod tests {
         fn name(&self) -> &str {
             &self.name
         }
-        fn version(&self) -> &str {
-            "1.0.0"
+        fn version(&self) -> String {
+            "1.0.0".to_string()
         }
         fn initialize(&self) -> Result<()> {
             Ok(())
@@ -620,8 +620,8 @@ mod tests {
         fn name(&self) -> &str {
             &self.name
         }
-        fn version(&self) -> &str {
-            "1.0.0"
+        fn version(&self) -> String {
+            "1.0.0".to_string()
         }
         fn initialize(&self) -> Result<()> {
             Ok(())
@@ -661,8 +661,8 @@ mod tests {
         fn name(&self) -> &str {
             &self.name
         }
-        fn version(&self) -> &str {
-            "1.0.0"
+        fn version(&self) -> String {
+            "1.0.0".to_string()
         }
         fn initialize(&self) -> Result<()> {
             Ok(())
@@ -692,8 +692,8 @@ mod tests {
         fn name(&self) -> &str {
             &self.name
         }
-        fn version(&self) -> &str {
-            "1.0.0"
+        fn version(&self) -> String {
+            "1.0.0".to_string()
         }
         fn initialize(&self) -> Result<()> {
             Ok(())

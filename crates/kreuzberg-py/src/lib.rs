@@ -19,12 +19,13 @@ mod core;
 mod error;
 mod mime;
 mod plugins;
+mod servers;
 mod types;
 
 /// Internal bindings module for Kreuzberg
 #[pymodule]
 fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Configuration types (7 types)
+    // Configuration types (8 types)
     m.add_class::<config::ExtractionConfig>()?;
     m.add_class::<config::OcrConfig>()?;
     m.add_class::<config::PdfConfig>()?;
@@ -32,6 +33,7 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<config::LanguageDetectionConfig>()?;
     m.add_class::<config::TokenReductionConfig>()?;
     m.add_class::<config::ImageExtractionConfig>()?;
+    m.add_class::<config::PostProcessorConfig>()?;
 
     // Result types (2 types)
     m.add_class::<types::ExtractionResult>()?;
@@ -63,6 +65,10 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(plugins::register_post_processor, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::list_post_processors, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::unregister_post_processor, m)?)?;
+
+    // Servers (2 functions: MCP and API)
+    m.add_function(wrap_pyfunction!(servers::start_mcp_server, m)?)?;
+    m.add_function(wrap_pyfunction!(servers::start_api_server, m)?)?;
 
     Ok(())
 }

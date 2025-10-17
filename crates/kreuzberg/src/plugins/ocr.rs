@@ -46,7 +46,7 @@ pub enum OcrBackendType {
 ///
 /// impl Plugin for CustomOcrBackend {
 ///     fn name(&self) -> &str { "custom-ocr" }
-///     fn version(&self) -> &str { "1.0.0" }
+///     fn version(&self) -> String { "1.0.0".to_string() }
 ///     fn initialize(&self) -> Result<()> { Ok(()) }
 ///     fn shutdown(&self) -> Result<()> { Ok(()) }
 /// }
@@ -108,7 +108,7 @@ pub trait OcrBackend: Plugin {
     /// # struct MyOcr;
     /// # impl Plugin for MyOcr {
     /// #     fn name(&self) -> &str { "my-ocr" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -181,7 +181,7 @@ pub trait OcrBackend: Plugin {
     /// # struct MyOcr { languages: Vec<String> }
     /// # impl Plugin for MyOcr {
     /// #     fn name(&self) -> &str { "my-ocr" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -215,7 +215,7 @@ pub trait OcrBackend: Plugin {
     /// # struct TesseractBackend;
     /// # impl Plugin for TesseractBackend {
     /// #     fn name(&self) -> &str { "tesseract" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -261,8 +261,8 @@ mod tests {
             "mock-ocr"
         }
 
-        fn version(&self) -> &str {
-            "1.0.0"
+        fn version(&self) -> String {
+            "1.0.0".to_string()
         }
 
         fn initialize(&self) -> Result<()> {

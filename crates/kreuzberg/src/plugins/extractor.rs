@@ -42,7 +42,7 @@ use std::path::Path;
 ///
 /// impl Plugin for PremiumPdfExtractor {
 ///     fn name(&self) -> &str { "premium-pdf" }
-///     fn version(&self) -> &str { "2.0.0" }
+///     fn version(&self) -> String { "2.0.0".to_string() }
 ///     fn initialize(&self) -> Result<()> { Ok(()) }
 ///     fn shutdown(&self) -> Result<()> { Ok(()) }
 /// }
@@ -109,7 +109,7 @@ pub trait DocumentExtractor: Plugin {
     /// # struct MyExtractor;
     /// # impl Plugin for MyExtractor {
     /// #     fn name(&self) -> &str { "my-extractor" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -169,7 +169,7 @@ pub trait DocumentExtractor: Plugin {
     /// # struct StreamingExtractor;
     /// # impl Plugin for StreamingExtractor {
     /// #     fn name(&self) -> &str { "streaming" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -230,7 +230,7 @@ pub trait DocumentExtractor: Plugin {
     /// # struct MultiFormatExtractor;
     /// # impl Plugin for MultiFormatExtractor {
     /// #     fn name(&self) -> &str { "multi-format" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -280,7 +280,7 @@ pub trait DocumentExtractor: Plugin {
     /// # struct FallbackExtractor;
     /// # impl Plugin for FallbackExtractor {
     /// #     fn name(&self) -> &str { "fallback" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -323,7 +323,7 @@ pub trait DocumentExtractor: Plugin {
     /// # struct SmartExtractor;
     /// # impl Plugin for SmartExtractor {
     /// #     fn name(&self) -> &str { "smart" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -367,8 +367,8 @@ mod tests {
             "mock-extractor"
         }
 
-        fn version(&self) -> &str {
-            "1.0.0"
+        fn version(&self) -> String {
+            "1.0.0".to_string()
         }
 
         fn initialize(&self) -> Result<()> {
@@ -543,8 +543,8 @@ mod tests {
             fn name(&self) -> &str {
                 "default"
             }
-            fn version(&self) -> &str {
-                "1.0.0"
+            fn version(&self) -> String {
+                "1.0.0".to_string()
             }
             fn initialize(&self) -> Result<()> {
                 Ok(())

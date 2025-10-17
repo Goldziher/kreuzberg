@@ -30,8 +30,8 @@ use crate::Result;
 ///         "my-plugin"
 ///     }
 ///
-///     fn version(&self) -> &str {
-///         "1.0.0"
+///     fn version(&self) -> String {
+///         "1.0.0".to_string()
 ///     }
 ///
 ///     fn initialize(&self) -> Result<()> {
@@ -62,7 +62,7 @@ pub trait Plugin: Send + Sync {
     /// # use kreuzberg::Result;
     /// # struct MyPlugin;
     /// # impl Plugin for MyPlugin {
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// fn name(&self) -> &str {
@@ -86,12 +86,12 @@ pub trait Plugin: Send + Sync {
     /// #     fn name(&self) -> &str { "my-plugin" }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
-    /// fn version(&self) -> &str {
-    ///     "1.2.3"
+    /// fn version(&self) -> String {
+    ///     "1.2.3".to_string()
     /// }
     /// # }
     /// ```
-    fn version(&self) -> &str;
+    fn version(&self) -> String;
 
     /// Initialize the plugin.
     ///
@@ -120,7 +120,7 @@ pub trait Plugin: Send + Sync {
     /// # struct MyPlugin { config: Mutex<Option<String>> }
     /// # impl Plugin for MyPlugin {
     /// #     fn name(&self) -> &str { "my-plugin" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// fn initialize(&self) -> Result<()> {
     ///     // Load configuration using interior mutability
@@ -163,7 +163,7 @@ pub trait Plugin: Send + Sync {
     /// # struct MyPlugin { cache: Mutex<Option<Vec<String>>> }
     /// # impl Plugin for MyPlugin {
     /// #     fn name(&self) -> &str { "my-plugin" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// fn shutdown(&self) -> Result<()> {
     ///     // Flush caches using interior mutability
@@ -207,8 +207,8 @@ mod tests {
             "test-plugin"
         }
 
-        fn version(&self) -> &str {
-            "1.0.0"
+        fn version(&self) -> String {
+            "1.0.0".to_string()
         }
 
         fn initialize(&self) -> Result<()> {

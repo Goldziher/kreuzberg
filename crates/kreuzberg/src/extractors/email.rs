@@ -30,8 +30,8 @@ impl Plugin for EmailExtractor {
         "email-extractor"
     }
 
-    fn version(&self) -> &str {
-        env!("CARGO_PKG_VERSION")
+    fn version(&self) -> String {
+        env!("CARGO_PKG_VERSION").to_string()
     }
 
     fn initialize(&self) -> Result<()> {

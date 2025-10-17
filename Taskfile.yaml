@@ -10,7 +10,19 @@ tasks:
     cmds:
       - uv sync --all-extras --all-packages --all-groups
       - uv pip install maturin
-      - maturin develop --release
+      - cd crates/kreuzberg-py && maturin develop --release
+      - |
+        # Fix pdfium library path on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          SO_FILE="packages/python/kreuzberg/_internal_bindings.abi3.so"
+          if [ -f "$SO_FILE" ]; then
+            if otool -L "$SO_FILE" | grep -q "./libpdfium.dylib"; then
+              echo "Fixing pdfium library path..."
+              install_name_tool -change ./libpdfium.dylib @loader_path/libpdfium.dylib "$SO_FILE"
+              echo "✅ Fixed pdfium library path"
+            fi
+          fi
+        fi
       - prek install && prek install --hook-type commit-msg
 
   update:
@@ -20,7 +32,19 @@ tasks:
       - cd benchmarks && uv run uv-bump && cd ..
       - cargo upgrade --incompatible
       - uv sync --all-extras --all-packages --all-groups --upgrade
-      - maturin develop --release
+      - cd crates/kreuzberg-py && maturin develop --release
+      - |
+        # Fix pdfium library path on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          SO_FILE="packages/python/kreuzberg/_internal_bindings.abi3.so"
+          if [ -f "$SO_FILE" ]; then
+            if otool -L "$SO_FILE" | grep -q "./libpdfium.dylib"; then
+              echo "Fixing pdfium library path..."
+              install_name_tool -change ./libpdfium.dylib @loader_path/libpdfium.dylib "$SO_FILE"
+              echo "✅ Fixed pdfium library path"
+            fi
+          fi
+        fi
       - prek autoupdate
 
   test:python:
@@ -77,12 +101,36 @@ tasks:
   build:
     desc: "Build Rust components for development"
     cmds:
-      - maturin develop --release
+      - cd crates/kreuzberg-py && maturin develop --release
+      - |
+        # Fix pdfium library path on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          SO_FILE="packages/python/kreuzberg/_internal_bindings.abi3.so"
+          if [ -f "$SO_FILE" ]; then
+            if otool -L "$SO_FILE" | grep -q "./libpdfium.dylib"; then
+              echo "Fixing pdfium library path..."
+              install_name_tool -change ./libpdfium.dylib @loader_path/libpdfium.dylib "$SO_FILE"
+              echo "✅ Fixed pdfium library path"
+            fi
+          fi
+        fi
 
   build:debug:
     desc: "Build Rust components in debug mode"
     cmds:
-      - maturin develop
+      - cd crates/kreuzberg-py && maturin develop
+      - |
+        # Fix pdfium library path on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          SO_FILE="packages/python/kreuzberg/_internal_bindings.abi3.so"
+          if [ -f "$SO_FILE" ]; then
+            if otool -L "$SO_FILE" | grep -q "./libpdfium.dylib"; then
+              echo "Fixing pdfium library path..."
+              install_name_tool -change ./libpdfium.dylib @loader_path/libpdfium.dylib "$SO_FILE"
+              echo "✅ Fixed pdfium library path"
+            fi
+          fi
+        fi
 
   docs:build:
     desc: "Build documentation"

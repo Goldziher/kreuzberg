@@ -1,34 +1,11 @@
 """Command-line interface for Kreuzberg.
 
-This CLI proxies to the Rust binary for core extraction operations
-and handles Python-specific commands (API server, MCP server, etc.).
+All commands use the Rust core via Python bindings for maximum performance.
 """
 
-import subprocess
 import sys
-from pathlib import Path
 
 import click
-
-
-def find_rust_binary() -> Path | None:
-    """Find the kreuzberg Rust binary.
-
-    Returns:
-        Path to binary if found, None otherwise
-    """
-    # Check in PATH
-    from shutil import which
-
-    if binary := which("kreuzberg"):
-        return Path(binary)
-
-    # Check in workspace target directory (development)
-    workspace_binary = Path(__file__).parent.parent.parent.parent.parent / "target" / "release" / "kreuzberg"
-    if workspace_binary.exists():
-        return workspace_binary
-
-    return None
 
 
 @click.group()
@@ -42,48 +19,67 @@ def main():
 @click.argument("file_path", type=click.Path(exists=True))
 @click.option("--mime-type", help="MIME type of the file")
 @click.option("--output", "-o", type=click.Path(), help="Output file path")
-def extract(file_path: str, mime_type: str | None, output: str | None):
-    """Extract content from a file.
+@click.option("--ocr/--no-ocr", default=False, help="Enable OCR for scanned documents")
+@click.option("--force-ocr", is_flag=True, help="Force OCR even if text extraction succeeds")
+def extract(file_path: str, mime_type: str | None, output: str | None, ocr: bool, force_ocr: bool):
+    """Extract content from a file."""
+    from kreuzberg import ExtractionConfig, OcrConfig, extract_file_sync
 
-    Proxies to Rust binary for maximum performance.
-    """
-    binary = find_rust_binary()
-    if not binary:
-        click.echo("Error: kreuzberg Rust binary not found", err=True)
-        click.echo("Please install the Rust binary or build it with: cargo build --release", err=True)
+    # Build config
+    config = ExtractionConfig(
+        ocr=OcrConfig(backend="tesseract", language="eng") if ocr else None,
+        force_ocr=force_ocr,
+    )
+
+    try:
+        result = extract_file_sync(file_path, mime_type, config)
+
+        # Output to file or stdout
+        if output:
+            with open(output, "w", encoding="utf-8") as f:
+                f.write(result.content)
+            click.echo(f"Extracted content written to {output}")
+        else:
+            click.echo(result.content)
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
         sys.exit(1)
-
-    # Build command
-    cmd = [str(binary), "extract", file_path]
-    if mime_type:
-        cmd.extend(["--mime-type", mime_type])
-    if output:
-        cmd.extend(["--output", output])
-
-    # Run Rust binary
-    result = subprocess.run(cmd, capture_output=False)
-    sys.exit(result.returncode)
 
 
 @main.command()
 @click.option("--host", default="0.0.0.0", help="Host to bind to")
 @click.option("--port", default=8000, type=int, help="Port to bind to")
 def serve(host: str, port: int):
-    """Start the API server.
+    """Start the API server."""
+    from kreuzberg import start_api_server
 
-    Python-specific command (not proxied to Rust).
-    """
+    click.echo(f"Starting Kreuzberg API server on http://{host}:{port}")
     try:
-        from kreuzberg.api.main import app
-    except ImportError:
-        click.echo("Error: API dependencies not installed", err=True)
-        click.echo("Install with: pip install 'kreuzberg[api]'", err=True)
+        start_api_server(host, port)
+    except KeyboardInterrupt:
+        click.echo("\nAPI server stopped")
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-    import uvicorn
 
-    click.echo(f"Starting Kreuzberg API server on {host}:{port}")
-    uvicorn.run(app, host=host, port=port)
+@main.command()
+@click.option("--transport", type=click.Choice(["stdio"]), default="stdio", help="Transport type")
+def mcp(transport: str):
+    """Start the MCP (Model Context Protocol) server.
+
+    Uses the Rust MCP server implementation from the bindings.
+    """
+    from kreuzberg import start_mcp_server
+
+    click.echo(f"Starting Kreuzberg MCP server (transport: {transport})")
+    try:
+        start_mcp_server()
+    except KeyboardInterrupt:
+        click.echo("\nMCP server stopped")
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -30,18 +30,11 @@ dependencies = [
 ]
 
 optional-dependencies.all = [
-  "kreuzberg[api,cli,mcp,nlp,ocr,vision]",
-]
-optional-dependencies.api = [
-  "litestar[opentelemetry,standard,structlog]>=2.1.6",
+  "kreuzberg[cli,nlp,ocr,vision]",
 ]
 optional-dependencies.cli = [
   "click>=8.2.1",
   "rich>=14",
-]
-optional-dependencies.mcp = [
-  # Model Context Protocol server
-  "mcp>=0.1",
 ]
 optional-dependencies.nlp = [
   # NLP features - may migrate to Rust in v4.1+

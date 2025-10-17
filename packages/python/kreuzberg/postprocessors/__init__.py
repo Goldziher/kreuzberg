@@ -40,12 +40,15 @@ def _register_processors() -> None:
     This function tries to import and register each processor. If the required
     dependencies are not installed, it silently skips that processor.
 
-    Processors are registered with the global PostProcessor registry in the
-    Rust core via the FFI bridge.
+    Processors are registered both with:
+    1. The Rust core PostProcessor registry (via FFI bridge)
+    2. The Python-side registry (for use in Python extraction wrapper)
     """
-    # Import the registration function from Rust bindings
+    # Import the registration functions
     try:
-        from _internal_bindings import register_post_processor
+        from _internal_bindings import register_post_processor as register_rust
+
+        from kreuzberg.extraction import register_python_postprocessor
     except ImportError:
         # Bindings not available (shouldn't happen in normal usage)
         return
@@ -55,7 +58,8 @@ def _register_processors() -> None:
         from .entity_extraction import EntityExtractionProcessor
 
         processor = EntityExtractionProcessor()
-        register_post_processor(processor)
+        register_rust(processor)  # Register with Rust
+        register_python_postprocessor(processor)  # Register with Python
     except ImportError:
         # spaCy not installed - skip entity extraction
         pass
@@ -69,7 +73,8 @@ def _register_processors() -> None:
         from .keyword_extraction import KeywordExtractionProcessor
 
         processor = KeywordExtractionProcessor(top_n=10)
-        register_post_processor(processor)
+        register_rust(processor)  # Register with Rust
+        register_python_postprocessor(processor)  # Register with Python
     except ImportError:
         # KeyBERT not installed - skip
         pass
@@ -83,7 +88,8 @@ def _register_processors() -> None:
 
         # Use default document type categories
         processor = CategoryExtractionProcessor(categories=CategoryExtractionProcessor.DOCUMENT_TYPES)
-        register_post_processor(processor)
+        register_rust(processor)  # Register with Rust
+        register_python_postprocessor(processor)  # Register with Python
     except ImportError:
         # transformers not installed - skip
         pass

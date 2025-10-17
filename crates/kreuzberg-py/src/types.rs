@@ -18,6 +18,7 @@ use pyo3::types::{PyDict, PyList};
 ///     mime_type (str): MIME type of the extracted document
 ///     metadata (dict): Document metadata as key-value pairs
 ///     tables (list[ExtractedTable]): Extracted tables
+///     detected_languages (list[dict] | None): Detected languages with confidence scores
 ///
 /// Example:
 ///     >>> from kreuzberg import extract_file_sync, ExtractionConfig
@@ -25,6 +26,8 @@ use pyo3::types::{PyDict, PyList};
 ///     >>> print(result.content)
 ///     >>> print(result.metadata)
 ///     >>> print(len(result.tables))
+///     >>> if result.detected_languages:
+///     ...     print(result.detected_languages)
 #[pyclass(name = "ExtractionResult", module = "kreuzberg")]
 pub struct ExtractionResult {
     #[pyo3(get)]
@@ -35,6 +38,9 @@ pub struct ExtractionResult {
 
     metadata: Py<PyDict>,
     tables: Py<PyList>,
+
+    #[pyo3(get)]
+    pub detected_languages: Option<Py<PyList>>,
 }
 
 #[pymethods]
@@ -42,6 +48,12 @@ impl ExtractionResult {
     #[getter]
     fn metadata<'py>(&self, py: Python<'py>) -> Bound<'py, PyDict> {
         self.metadata.bind(py).clone()
+    }
+
+    #[setter]
+    fn set_metadata(&mut self, _py: Python<'_>, value: Bound<'_, PyDict>) -> PyResult<()> {
+        self.metadata = value.unbind();
+        Ok(())
     }
 
     #[getter]
@@ -71,6 +83,7 @@ impl ExtractionResult {
     /// This performs efficient conversion of:
     /// - metadata HashMap -> PyDict
     /// - tables Vec -> PyList
+    /// - detected_languages Vec -> PyList of dicts
     /// - serde_json::Value -> Python objects
     pub fn from_rust(result: kreuzberg::ExtractionResult, py: Python) -> PyResult<Self> {
         // Convert metadata HashMap -> PyDict
@@ -87,11 +100,20 @@ impl ExtractionResult {
             tables.append(ExtractedTable::from_rust(table, py)?)?;
         }
 
+        // Convert detected_languages Option<Vec<String>> -> Option<PyList>
+        let detected_languages = if let Some(langs) = result.detected_languages {
+            let lang_list = PyList::new(py, langs)?;
+            Some(lang_list.unbind())
+        } else {
+            None
+        };
+
         Ok(Self {
             content: result.content,
             mime_type: result.mime_type,
             metadata: metadata.unbind(),
             tables: tables.unbind(),
+            detected_languages,
         })
     }
 }

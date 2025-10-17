@@ -30,8 +30,8 @@ impl Plugin for XmlExtractor {
         "xml-extractor"
     }
 
-    fn version(&self) -> &str {
-        "1.0.0"
+    fn version(&self) -> String {
+        "1.0.0".to_string()
     }
 
     fn initialize(&self) -> Result<()> {

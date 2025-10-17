@@ -16,7 +16,11 @@ Architecture:
 - Python adds: OCR backends, postprocessors, API, CLI, optional NLP features
 """
 
+# CRITICAL: This must be imported FIRST before any Rust bindings
+# It sets up dynamic library paths for bundled native libraries (pdfium, etc.)
 from importlib.metadata import version
+
+from kreuzberg import _setup_lib_path  # noqa: F401
 
 # Direct re-exports from Rust bindings
 from kreuzberg._internal_bindings import (
@@ -31,28 +35,43 @@ from kreuzberg._internal_bindings import (
     OcrConfig,
     PdfConfig,
     TokenReductionConfig,
-    batch_extract_bytes,
-    batch_extract_bytes_sync,
-    batch_extract_files,
-    batch_extract_files_sync,
     # MIME utilities
     detect_mime_type,
-    extract_bytes,
-    extract_bytes_sync,
-    # Core extraction functions (async)
-    extract_file,
-    # Core extraction functions (sync)
-    extract_file_sync,
     # OCR backend plugin functions
     list_ocr_backends,
     # PostProcessor plugin functions
     list_post_processors,
     register_ocr_backend,
     register_post_processor,
+    # Servers (MCP and API)
+    start_api_server,
+    start_mcp_server,
     unregister_ocr_backend,
     unregister_post_processor,
     # MIME validation
     validate_mime_type,
+)
+
+# Exception classes
+from kreuzberg.exceptions import (
+    KreuzbergError,
+    MissingDependencyError,
+    OCRError,
+    ParsingError,
+    ValidationError,
+)
+
+# Extraction functions from Python wrapper (with postprocessor support)
+from kreuzberg.extraction import (
+    PostProcessorConfig,
+    batch_extract_bytes,
+    batch_extract_bytes_sync,
+    batch_extract_files,
+    batch_extract_files_sync,
+    extract_bytes,
+    extract_bytes_sync,
+    extract_file,
+    extract_file_sync,
 )
 
 __version__ = version("kreuzberg")
@@ -67,6 +86,7 @@ __all__ = [
     "LanguageDetectionConfig",
     "OcrConfig",
     "PdfConfig",
+    "PostProcessorConfig",
     "TokenReductionConfig",
     # Results
     "ExtractionResult",
@@ -92,6 +112,15 @@ __all__ = [
     "register_post_processor",
     "list_post_processors",
     "unregister_post_processor",
+    # Servers (MCP and API)
+    "start_api_server",
+    "start_mcp_server",
+    # Exceptions
+    "KreuzbergError",
+    "ValidationError",
+    "ParsingError",
+    "OCRError",
+    "MissingDependencyError",
 ]
 
 # Auto-register Python postprocessors (if dependencies are installed)
@@ -100,4 +129,33 @@ try:
     from . import postprocessors  # noqa: F401
 except ImportError:
     # Optional postprocessor dependencies not installed
+    pass
+
+# Auto-register Python OCR backends (if dependencies are installed)
+# Each backend is tried independently since they have separate dependency groups
+
+# Try to auto-register EasyOCR (optional dependency group: easyocr)
+try:
+    from kreuzberg.ocr.easyocr import EasyOCRBackend  # noqa: F401, PLC0415
+
+    _easyocr_backend = EasyOCRBackend()
+    register_ocr_backend(_easyocr_backend)
+except ImportError:
+    # EasyOCR dependencies not installed
+    pass
+except Exception:
+    # Registration failed - silently skip
+    pass
+
+# Try to auto-register PaddleOCR (optional dependency group: paddleocr)
+try:
+    from kreuzberg.ocr.paddleocr import PaddleOCRBackend  # noqa: F401, PLC0415
+
+    _paddleocr_backend = PaddleOCRBackend()
+    register_ocr_backend(_paddleocr_backend)
+except ImportError:
+    # PaddleOCR dependencies not installed
+    pass
+except Exception:
+    # Registration failed - silently skip
     pass

@@ -100,9 +100,9 @@ impl Plugin for PythonOcrBackend {
         &self.name
     }
 
-    fn version(&self) -> &str {
+    fn version(&self) -> String {
         // Try to get version from Python, fallback to default
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             self.python_obj
                 .bind(py)
                 .getattr("version")
@@ -110,11 +110,10 @@ impl Plugin for PythonOcrBackend {
                 .and_then(|v| v.extract::<String>())
                 .unwrap_or_else(|_| "1.0.0".to_string())
         })
-        .leak()
     }
 
     fn initialize(&self) -> Result<()> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("initialize")? {
                 obj.call_method0("initialize")?;
@@ -128,7 +127,7 @@ impl Plugin for PythonOcrBackend {
     }
 
     fn shutdown(&self) -> Result<()> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("shutdown")? {
                 obj.call_method0("shutdown")?;
@@ -150,11 +149,11 @@ impl OcrBackend for PythonOcrBackend {
         let backend_name = self.name.clone();
 
         // Clone the Python object reference with GIL
-        let python_obj = Python::with_gil(|py| self.python_obj.clone_ref(py));
+        let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
         // Use spawn_blocking to avoid blocking the async runtime with Python/GIL
         tokio::task::spawn_blocking(move || {
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 let obj = python_obj.bind(py);
 
                 // Convert Rust types → Python
@@ -184,7 +183,7 @@ impl OcrBackend for PythonOcrBackend {
 
     async fn process_file(&self, path: &Path, config: &OcrConfig) -> Result<ExtractionResult> {
         // Check if Python backend has custom process_file implementation
-        let has_process_file = Python::with_gil(|py| self.python_obj.bind(py).hasattr("process_file").unwrap_or(false));
+        let has_process_file = Python::attach(|py| self.python_obj.bind(py).hasattr("process_file").unwrap_or(false));
 
         if has_process_file {
             let path_str = path.to_string_lossy().to_string();
@@ -192,10 +191,10 @@ impl OcrBackend for PythonOcrBackend {
             let backend_name = self.name.clone();
 
             // Clone the Python object reference with GIL
-            let python_obj = Python::with_gil(|py| self.python_obj.clone_ref(py));
+            let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
             tokio::task::spawn_blocking(move || {
-                Python::with_gil(|py| {
+                Python::attach(|py| {
                     let obj = python_obj.bind(py);
                     let py_path = PyString::new(py, &path_str);
 
@@ -437,7 +436,7 @@ pub fn register_ocr_backend(py: Python<'_>, backend: Py<PyAny>) -> PyResult<()> 
     let arc_backend: Arc<dyn OcrBackend> = Arc::new(rust_backend);
 
     // Register with global registry (release GIL before locking registry)
-    py.allow_threads(|| {
+    py.detach(|| {
         let registry = get_ocr_backend_registry();
         let mut registry = registry.write().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to acquire write lock on OCR registry: {}", e))
@@ -474,7 +473,7 @@ pub fn register_ocr_backend(py: Python<'_>, backend: Py<PyAny>) -> PyResult<()> 
 /// ```
 #[pyfunction]
 pub fn list_ocr_backends(py: Python) -> PyResult<Py<PyList>> {
-    let backend_names = py.allow_threads(|| {
+    let backend_names = py.detach(|| {
         let registry = get_ocr_backend_registry();
         let registry = registry.read().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to acquire read lock on OCR registry: {}", e))
@@ -513,7 +512,7 @@ pub fn list_ocr_backends(py: Python) -> PyResult<Py<PyList>> {
 /// Returns an error if the backend is not found or shutdown fails.
 #[pyfunction]
 pub fn unregister_ocr_backend(py: Python<'_>, name: String) -> PyResult<()> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let registry = get_ocr_backend_registry();
         let mut registry = registry.write().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to acquire write lock on OCR registry: {}", e))
@@ -611,9 +610,9 @@ impl Plugin for PythonPostProcessor {
         &self.name
     }
 
-    fn version(&self) -> &str {
+    fn version(&self) -> String {
         // Try to get version from Python, fallback to default
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             self.python_obj
                 .bind(py)
                 .getattr("version")
@@ -621,11 +620,10 @@ impl Plugin for PythonPostProcessor {
                 .and_then(|v| v.extract::<String>())
                 .unwrap_or_else(|_| "1.0.0".to_string())
         })
-        .leak()
     }
 
     fn initialize(&self) -> Result<()> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("initialize")? {
                 obj.call_method0("initialize")?;
@@ -639,7 +637,7 @@ impl Plugin for PythonPostProcessor {
     }
 
     fn shutdown(&self) -> Result<()> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("shutdown")? {
                 obj.call_method0("shutdown")?;
@@ -659,18 +657,18 @@ impl PostProcessor for PythonPostProcessor {
         let processor_name = self.name.clone();
 
         // Clone Python object reference with GIL
-        let python_obj = Python::with_gil(|py| self.python_obj.clone_ref(py));
+        let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
         // Convert ExtractionResult to Python dict (need to clone for thread safety)
         let result_dict =
-            Python::with_gil(|py| extraction_result_to_dict(py, result)).map_err(|e| KreuzbergError::Plugin {
+            Python::attach(|py| extraction_result_to_dict(py, result)).map_err(|e| KreuzbergError::Plugin {
                 message: format!("Failed to convert ExtractionResult to Python dict: {}", e),
                 plugin_name: self.name.clone(),
             })?;
 
         // Use spawn_blocking to avoid blocking async runtime
         let processed_dict = tokio::task::spawn_blocking(move || {
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 let obj = python_obj.bind(py);
 
                 // Convert Rust dict → Python
@@ -698,7 +696,7 @@ impl PostProcessor for PythonPostProcessor {
         })??;
 
         // Merge the processed result back into the original result
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let dict = processed_dict.bind(py);
             merge_dict_to_extraction_result(py, dict, result)
         })?;
@@ -755,7 +753,7 @@ fn extraction_result_to_dict(py: Python<'_>, result: &ExtractionResult) -> PyRes
 /// This updates the result in place, preserving existing fields and only
 /// merging new metadata fields. Does not overwrite existing metadata keys.
 fn merge_dict_to_extraction_result(
-    py: Python<'_>,
+    _py: Python<'_>,
     dict: &Bound<'_, PyDict>,
     result: &mut ExtractionResult,
 ) -> Result<()> {
@@ -903,7 +901,7 @@ pub fn register_post_processor(py: Python<'_>, processor: Py<PyAny>) -> PyResult
     let arc_processor: Arc<dyn PostProcessor> = Arc::new(rust_processor);
 
     // Register with global registry (release GIL before locking registry)
-    py.allow_threads(|| {
+    py.detach(|| {
         let registry = get_post_processor_registry();
         let mut registry = registry.write().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!(
@@ -944,7 +942,7 @@ pub fn register_post_processor(py: Python<'_>, processor: Py<PyAny>) -> PyResult
 /// ```
 #[pyfunction]
 pub fn list_post_processors(py: Python) -> PyResult<Py<PyList>> {
-    let processor_names = py.allow_threads(|| {
+    let processor_names = py.detach(|| {
         let registry = get_post_processor_registry();
         let registry = registry.read().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!(
@@ -986,7 +984,7 @@ pub fn list_post_processors(py: Python) -> PyResult<Py<PyList>> {
 /// Returns an error if the processor is not found or shutdown fails.
 #[pyfunction]
 pub fn unregister_post_processor(py: Python<'_>, name: String) -> PyResult<()> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let registry = get_post_processor_registry();
         let mut registry = registry.write().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!(

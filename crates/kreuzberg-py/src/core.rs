@@ -9,13 +9,51 @@ use pyo3::prelude::*;
 use pyo3::types::PyList;
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Extract a path string from Python input (str, pathlib.Path, or bytes).
+///
+/// Supports:
+/// - `str`: Direct string paths
+/// - `pathlib.Path`: Extracts via `__fspath__()` protocol
+/// - `bytes`: UTF-8 decoded path bytes (Unix paths)
+fn extract_path_string(path: &Bound<'_, PyAny>) -> PyResult<String> {
+    // Try as string first (most common case)
+    if let Ok(s) = path.extract::<String>() {
+        return Ok(s);
+    }
+
+    // Try as pathlib.Path via __fspath__() protocol
+    if let Ok(fspath) = path.call_method0("__fspath__") {
+        if let Ok(s) = fspath.extract::<String>() {
+            return Ok(s);
+        }
+    }
+
+    // Try as bytes (for Unix path bytes)
+    if let Ok(b) = path.extract::<Vec<u8>>() {
+        if let Ok(s) = String::from_utf8(b) {
+            return Ok(s);
+        }
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "Path bytes must be valid UTF-8",
+        ));
+    }
+
+    Err(pyo3::exceptions::PyTypeError::new_err(
+        "Path must be a string, pathlib.Path, or bytes",
+    ))
+}
+
+// ============================================================================
 // Synchronous Functions
 // ============================================================================
 
 /// Extract content from a file (synchronous).
 ///
 /// Args:
-///     path: Path to the file to extract
+///     path: Path to the file to extract (str or pathlib.Path)
 ///     mime_type: Optional MIME type hint (auto-detected if None)
 ///     config: Extraction configuration
 ///
@@ -31,16 +69,20 @@ use pyo3::types::PyList;
 ///     >>> from kreuzberg import extract_file_sync, ExtractionConfig
 ///     >>> result = extract_file_sync("document.pdf", None, ExtractionConfig())
 ///     >>> print(result.content)
+///     >>> # Also works with pathlib.Path
+///     >>> from pathlib import Path
+///     >>> result = extract_file_sync(Path("document.pdf"), None, ExtractionConfig())
 #[pyfunction]
 #[pyo3(signature = (path, mime_type=None, config=ExtractionConfig::default()))]
 pub fn extract_file_sync(
     py: Python,
-    path: String,
+    path: &Bound<'_, PyAny>,
     mime_type: Option<String>,
     config: ExtractionConfig,
 ) -> PyResult<ExtractionResult> {
+    let path_str = extract_path_string(path)?;
     let rust_config = config.into();
-    let result = kreuzberg::extract_file_sync(&path, mime_type.as_deref(), &rust_config).map_err(to_py_err)?;
+    let result = kreuzberg::extract_file_sync(&path_str, mime_type.as_deref(), &rust_config).map_err(to_py_err)?;
     ExtractionResult::from_rust(result, py)
 }
 
@@ -82,7 +124,7 @@ pub fn extract_bytes_sync(
 /// MIME types are auto-detected for each file.
 ///
 /// Args:
-///     paths: List of file paths to extract
+///     paths: List of file paths to extract (str, pathlib.Path, or bytes)
 ///     config: Extraction configuration
 ///
 /// Returns:
@@ -99,11 +141,23 @@ pub fn extract_bytes_sync(
 ///     >>> results = batch_extract_files_sync(paths, ExtractionConfig())
 ///     >>> for result in results:
 ///     ...     print(result.content)
+///     >>> # Also works with pathlib.Path
+///     >>> from pathlib import Path
+///     >>> paths = [Path("doc1.pdf"), Path("doc2.docx")]
+///     >>> results = batch_extract_files_sync(paths, ExtractionConfig())
 #[pyfunction]
 #[pyo3(signature = (paths, config=ExtractionConfig::default()))]
-pub fn batch_extract_files_sync(py: Python, paths: Vec<String>, config: ExtractionConfig) -> PyResult<Py<PyList>> {
+pub fn batch_extract_files_sync(
+    py: Python,
+    paths: &Bound<'_, PyList>,
+    config: ExtractionConfig,
+) -> PyResult<Py<PyList>> {
+    // Extract all paths as strings
+    let path_strings: PyResult<Vec<String>> = paths.iter().map(|p| extract_path_string(&p)).collect();
+    let path_strings = path_strings?;
+
     let rust_config = config.into();
-    let results = kreuzberg::batch_extract_file_sync(paths, &rust_config).map_err(to_py_err)?;
+    let results = kreuzberg::batch_extract_file_sync(path_strings, &rust_config).map_err(to_py_err)?;
 
     let list = PyList::empty(py);
     for result in results {
@@ -173,7 +227,7 @@ pub fn batch_extract_bytes_sync(
 /// Extract content from a file (asynchronous).
 ///
 /// Args:
-///     path: Path to the file to extract
+///     path: Path to the file to extract (str or pathlib.Path)
 ///     mime_type: Optional MIME type hint (auto-detected if None)
 ///     config: Extraction configuration
 ///
@@ -192,17 +246,22 @@ pub fn batch_extract_bytes_sync(
 ///     ...     result = await extract_file("document.pdf", None, ExtractionConfig())
 ///     ...     print(result.content)
 ///     >>> asyncio.run(main())
+///     >>> # Also works with pathlib.Path
+///     >>> from pathlib import Path
+///     >>> async def main():
+///     ...     result = await extract_file(Path("document.pdf"))
 #[pyfunction]
 #[pyo3(signature = (path, mime_type=None, config=ExtractionConfig::default()))]
 pub fn extract_file<'py>(
     py: Python<'py>,
-    path: String,
+    path: &Bound<'py, PyAny>,
     mime_type: Option<String>,
     config: ExtractionConfig,
 ) -> PyResult<Bound<'py, PyAny>> {
+    let path_str = extract_path_string(path)?;
     let rust_config: kreuzberg::ExtractionConfig = config.into();
     pyo3_async_runtimes::tokio::future_into_py(py, async move {
-        let result = kreuzberg::extract_file(&path, mime_type.as_deref(), &rust_config)
+        let result = kreuzberg::extract_file(&path_str, mime_type.as_deref(), &rust_config)
             .await
             .map_err(to_py_err)?;
         Python::attach(|py| ExtractionResult::from_rust(result, py))
@@ -254,7 +313,7 @@ pub fn extract_bytes<'py>(
 /// MIME types are auto-detected for each file.
 ///
 /// Args:
-///     paths: List of file paths to extract
+///     paths: List of file paths to extract (str, pathlib.Path, or bytes)
 ///     config: Extraction configuration
 ///
 /// Returns:
@@ -274,16 +333,25 @@ pub fn extract_bytes<'py>(
 ///     ...     for result in results:
 ///     ...         print(result.content)
 ///     >>> asyncio.run(main())
+///     >>> # Also works with pathlib.Path
+///     >>> from pathlib import Path
+///     >>> async def main():
+///     ...     paths = [Path("doc1.pdf"), Path("doc2.docx")]
+///     ...     results = await batch_extract_files(paths, ExtractionConfig())
 #[pyfunction]
 #[pyo3(signature = (paths, config=ExtractionConfig::default()))]
 pub fn batch_extract_files<'py>(
     py: Python<'py>,
-    paths: Vec<String>,
+    paths: &Bound<'py, PyList>,
     config: ExtractionConfig,
 ) -> PyResult<Bound<'py, PyAny>> {
+    // Extract all paths as strings
+    let path_strings: PyResult<Vec<String>> = paths.iter().map(|p| extract_path_string(&p)).collect();
+    let path_strings = path_strings?;
+
     let rust_config: kreuzberg::ExtractionConfig = config.into();
     pyo3_async_runtimes::tokio::future_into_py(py, async move {
-        let results = kreuzberg::batch_extract_file(paths, &rust_config)
+        let results = kreuzberg::batch_extract_file(path_strings, &rust_config)
             .await
             .map_err(to_py_err)?;
 

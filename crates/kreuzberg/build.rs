@@ -23,6 +23,18 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
     println!("cargo:rustc-link-lib=dylib={}", lib_name);
 
+    // Set rpath so the library can be found relative to the binary/library
+    // This allows the Python extension to find libpdfium.dylib in the same directory
+    if target.contains("darwin") {
+        // macOS: Use @loader_path to search relative to the loading binary
+        println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path");
+        println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path/.");
+    } else if target.contains("linux") {
+        // Linux: Use $ORIGIN to search relative to the loading binary
+        println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN");
+        println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN/.");
+    }
+
     // Copy library to Python package location for maturin to include in wheel
     copy_lib_to_package(&pdfium_dir, &target);
 
@@ -151,21 +163,30 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
     let lib_filename = format!("libpdfium.{}", lib_ext);
     let src_lib = pdfium_dir.join("lib").join(&lib_filename);
 
-    // Copy to Python package directory (relative to workspace root)
-    let workspace_root = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let workspace_root = PathBuf::from(workspace_root)
-        .parent()
+    // Copy to Python package directory
+    // Path: crates/kreuzberg -> crates -> workspace_root -> packages/python/kreuzberg
+    let crate_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let workspace_root = crate_dir
+        .parent()  // crates/kreuzberg -> crates
         .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf();
-    let dest_dir = workspace_root.join("kreuzberg").join("_lib");
+        .parent()  // crates -> workspace_root
+        .unwrap();
 
-    fs::create_dir_all(&dest_dir).ok();
+    let dest_dir = workspace_root.join("packages").join("python").join("kreuzberg");
+
+    // Only copy if destination directory exists (we're in the monorepo)
+    if !dest_dir.exists() {
+        println!("cargo:warning=Python package directory not found, skipping library copy");
+        return;
+    }
 
     let dest_lib = dest_dir.join(&lib_filename);
     if src_lib.exists() {
-        fs::copy(&src_lib, &dest_lib).ok();
-        println!("cargo:warning=Copied {} to {}", src_lib.display(), dest_lib.display());
+        match fs::copy(&src_lib, &dest_lib) {
+            Ok(_) => println!("cargo:warning=Copied {} to {}", src_lib.display(), dest_lib.display()),
+            Err(e) => println!("cargo:warning=Failed to copy library: {}", e),
+        }
+    } else {
+        println!("cargo:warning=Source library not found: {}", src_lib.display());
     }
 }

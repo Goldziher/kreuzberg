@@ -82,7 +82,7 @@ pub enum ProcessingStage {
 ///
 /// impl Plugin for WordCountProcessor {
 ///     fn name(&self) -> &str { "word-count" }
-///     fn version(&self) -> &str { "1.0.0" }
+///     fn version(&self) -> String { "1.0.0".to_string() }
 ///     fn initialize(&self) -> Result<()> { Ok(()) }
 ///     fn shutdown(&self) -> Result<()> { Ok(()) }
 /// }
@@ -146,7 +146,7 @@ pub trait PostProcessor: Plugin {
     /// # struct LanguageDetector;
     /// # impl Plugin for LanguageDetector {
     /// #     fn name(&self) -> &str { "language-detector" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -178,7 +178,7 @@ pub trait PostProcessor: Plugin {
     /// # struct TextCleaner;
     /// # impl Plugin for TextCleaner {
     /// #     fn name(&self) -> &str { "text-cleaner" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -220,7 +220,7 @@ pub trait PostProcessor: Plugin {
     /// # struct MyProcessor;
     /// # impl Plugin for MyProcessor {
     /// #     fn name(&self) -> &str { "my-processor" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -257,7 +257,7 @@ pub trait PostProcessor: Plugin {
     /// # struct PdfOnlyProcessor;
     /// # impl Plugin for PdfOnlyProcessor {
     /// #     fn name(&self) -> &str { "pdf-only" }
-    /// #     fn version(&self) -> &str { "1.0.0" }
+    /// #     fn version(&self) -> String { "1.0.0".to_string() }
     /// #     fn initialize(&self) -> Result<()> { Ok(()) }
     /// #     fn shutdown(&self) -> Result<()> { Ok(()) }
     /// # }
@@ -305,8 +305,8 @@ mod tests {
             "mock-processor"
         }
 
-        fn version(&self) -> &str {
-            "1.0.0"
+        fn version(&self) -> String {
+            "1.0.0".to_string()
         }
 
         fn initialize(&self) -> Result<()> {
@@ -523,8 +523,8 @@ mod tests {
             fn name(&self) -> &str {
                 "pdf-only"
             }
-            fn version(&self) -> &str {
-                "1.0.0"
+            fn version(&self) -> String {
+                "1.0.0".to_string()
             }
             fn initialize(&self) -> Result<()> {
                 Ok(())

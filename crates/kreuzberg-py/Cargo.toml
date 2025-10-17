@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 async-trait = "0.1.89"
-kreuzberg = { path = "../kreuzberg", features = ["full"] }
+kreuzberg = { path = "../kreuzberg", features = ["full", "api", "mcp"] }
 pyo3 = { version = "0.26.0", features = ["abi3-py310"] }
 pyo3-async-runtimes = { version = "0.26", features = ["tokio-runtime"] }
 serde_json = "1.0.145"

@@ -358,6 +358,7 @@ impl ConfigBuilder {
             } else {
                 None
             },
+            postprocessor: None,
         }
     }
 }

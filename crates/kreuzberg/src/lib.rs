@@ -78,7 +78,7 @@ pub use core::extractor::{batch_extract_bytes_sync, batch_extract_file_sync, ext
 // Configuration
 pub use core::config::{
     ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, PdfConfig,
-    TokenReductionConfig,
+    PostProcessorConfig, TokenReductionConfig,
 };
 
 // MIME detection utilities

@@ -60,6 +60,26 @@ pub struct ExtractionConfig {
     /// Language detection configuration (None = no language detection)
     #[serde(default)]
     pub language_detection: Option<LanguageDetectionConfig>,
+
+    /// Post-processor configuration (None = use defaults)
+    #[serde(default)]
+    pub postprocessor: Option<PostProcessorConfig>,
+}
+
+/// Post-processor configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PostProcessorConfig {
+    /// Enable post-processors
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+
+    /// Whitelist of processor names to run (None = all enabled)
+    #[serde(default)]
+    pub enabled_processors: Option<Vec<String>>,
+
+    /// Blacklist of processor names to skip (None = none disabled)
+    #[serde(default)]
+    pub disabled_processors: Option<Vec<String>>,
 }
 
 /// OCR configuration.
@@ -201,6 +221,17 @@ impl Default for ExtractionConfig {
             pdf_options: None,
             token_reduction: None,
             language_detection: None,
+            postprocessor: None,
+        }
+    }
+}
+
+impl Default for PostProcessorConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            enabled_processors: None,
+            disabled_processors: None,
         }
     }
 }
@@ -617,5 +648,96 @@ enabled = true
         assert!(!pdf.extract_images);
         assert!(pdf.extract_metadata);
         assert!(pdf.passwords.is_none());
+    }
+
+    #[test]
+    fn test_config_with_postprocessor() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg.toml");
+
+        fs::write(
+            &config_path,
+            r#"
+use_cache = true
+
+[postprocessor]
+enabled = true
+enabled_processors = ["entity_extraction", "keyword_extraction"]
+        "#,
+        )
+        .unwrap();
+
+        let config = ExtractionConfig::from_toml_file(&config_path).unwrap();
+        assert!(config.postprocessor.is_some());
+        let pp = config.postprocessor.unwrap();
+        assert!(pp.enabled);
+        assert!(pp.enabled_processors.is_some());
+        let enabled = pp.enabled_processors.unwrap();
+        assert_eq!(enabled.len(), 2);
+        assert_eq!(enabled[0], "entity_extraction");
+        assert_eq!(enabled[1], "keyword_extraction");
+        assert!(pp.disabled_processors.is_none());
+    }
+
+    #[test]
+    fn test_postprocessor_config_defaults() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg.toml");
+
+        fs::write(
+            &config_path,
+            r#"
+[postprocessor]
+        "#,
+        )
+        .unwrap();
+
+        let config = ExtractionConfig::from_toml_file(&config_path).unwrap();
+        let pp = config.postprocessor.unwrap();
+        assert!(pp.enabled);
+        assert!(pp.enabled_processors.is_none());
+        assert!(pp.disabled_processors.is_none());
+    }
+
+    #[test]
+    fn test_postprocessor_config_disabled() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg.toml");
+
+        fs::write(
+            &config_path,
+            r#"
+[postprocessor]
+enabled = false
+        "#,
+        )
+        .unwrap();
+
+        let config = ExtractionConfig::from_toml_file(&config_path).unwrap();
+        let pp = config.postprocessor.unwrap();
+        assert!(!pp.enabled);
+    }
+
+    #[test]
+    fn test_postprocessor_config_blacklist() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg.toml");
+
+        fs::write(
+            &config_path,
+            r#"
+[postprocessor]
+disabled_processors = ["category_extraction"]
+        "#,
+        )
+        .unwrap();
+
+        let config = ExtractionConfig::from_toml_file(&config_path).unwrap();
+        let pp = config.postprocessor.unwrap();
+        assert!(pp.enabled);
+        assert!(pp.disabled_processors.is_some());
+        let disabled = pp.disabled_processors.unwrap();
+        assert_eq!(disabled.len(), 1);
+        assert_eq!(disabled[0], "category_extraction");
     }
 }

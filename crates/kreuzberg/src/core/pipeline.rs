@@ -145,28 +145,52 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
     }
 
     // 5. Post-processors by stage (Early, Middle, Late)
-    let processor_registry = crate::plugins::registry::get_post_processor_registry();
+    // Check if postprocessing is enabled
+    let pp_config = config.postprocessor.as_ref();
+    let postprocessing_enabled = pp_config.map_or(true, |c| c.enabled);
 
-    for stage in [ProcessingStage::Early, ProcessingStage::Middle, ProcessingStage::Late] {
-        let processors = {
-            let registry = processor_registry
-                .read()
-                .map_err(|e| crate::KreuzbergError::Other(format!("Post-processor registry lock poisoned: {}", e)))?;
-            registry.get_for_stage(stage)
-        }; // Release lock
+    if postprocessing_enabled {
+        let processor_registry = crate::plugins::registry::get_post_processor_registry();
 
-        for processor in processors {
-            // Check if processor should process this result
-            if processor.should_process(&result, config) {
-                // Processors now take &mut ExtractionResult and return Result<()>,
-                // which avoids unnecessary cloning of potentially large results.
-                // On error, the original result is preserved (not modified).
-                if let Err(e) = processor.process(&mut result, config).await {
-                    // Record processor error in metadata, continue with current result
-                    let error_key = format!("processing_error_{}", processor.name());
-                    result
-                        .metadata
-                        .insert(error_key, serde_json::Value::String(e.to_string()));
+        for stage in [ProcessingStage::Early, ProcessingStage::Middle, ProcessingStage::Late] {
+            let processors = {
+                let registry = processor_registry.read().map_err(|e| {
+                    crate::KreuzbergError::Other(format!("Post-processor registry lock poisoned: {}", e))
+                })?;
+                registry.get_for_stage(stage)
+            }; // Release lock
+
+            for processor in processors {
+                let processor_name = processor.name();
+
+                // Filter based on postprocessor config
+                let should_run = if let Some(config) = pp_config {
+                    if let Some(ref enabled) = config.enabled_processors {
+                        // Whitelist mode: only run if in enabled list
+                        enabled.iter().any(|name| name == processor_name)
+                    } else if let Some(ref disabled) = config.disabled_processors {
+                        // Blacklist mode: run unless in disabled list
+                        !disabled.iter().any(|name| name == processor_name)
+                    } else {
+                        // No filtering: run all
+                        true
+                    }
+                } else {
+                    // No config: run all
+                    true
+                };
+
+                if should_run && processor.should_process(&result, config) {
+                    // Processors now take &mut ExtractionResult and return Result<()>,
+                    // which avoids unnecessary cloning of potentially large results.
+                    // On error, the original result is preserved (not modified).
+                    if let Err(e) = processor.process(&mut result, config).await {
+                        // Record processor error in metadata, continue with current result
+                        let error_key = format!("processing_error_{}", processor_name);
+                        result
+                            .metadata
+                            .insert(error_key, serde_json::Value::String(e.to_string()));
+                    }
                 }
             }
         }
