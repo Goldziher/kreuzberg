@@ -379,8 +379,10 @@ async fn test_pipeline_execution() {
     let file_path = dir.path().join("pipeline_test.txt");
     fs::write(&file_path, "pipeline content").unwrap();
 
-    let mut config = ExtractionConfig::default();
-    config.enable_quality_processing = true;
+    let config = ExtractionConfig {
+        enable_quality_processing: true,
+        ..Default::default()
+    };
 
     let result = extract_file(&file_path, None, &config).await;
     assert!(result.is_ok());
@@ -397,12 +399,14 @@ async fn test_extraction_with_ocr_config() {
     let file_path = dir.path().join("ocr_test.txt");
     fs::write(&file_path, "ocr content").unwrap();
 
-    let mut config = ExtractionConfig::default();
-    config.ocr = Some(kreuzberg::OcrConfig {
-        backend: "tesseract".to_string(),
-        language: "eng".to_string(),
-    });
-    config.force_ocr = true;
+    let config = ExtractionConfig {
+        ocr: Some(kreuzberg::OcrConfig {
+            backend: "tesseract".to_string(),
+            language: "eng".to_string(),
+        }),
+        force_ocr: true,
+        ..Default::default()
+    };
 
     // Should not error even with OCR config (will be used in Phase 3)
     let result = extract_file(&file_path, None, &config).await;
@@ -416,11 +420,13 @@ async fn test_extraction_with_chunking_config() {
     let file_path = dir.path().join("chunking_test.txt");
     fs::write(&file_path, "content for chunking").unwrap();
 
-    let mut config = ExtractionConfig::default();
-    config.chunking = Some(kreuzberg::ChunkingConfig {
-        max_chars: 1000,
-        max_overlap: 200,
-    });
+    let config = ExtractionConfig {
+        chunking: Some(kreuzberg::ChunkingConfig {
+            max_chars: 1000,
+            max_overlap: 200,
+        }),
+        ..Default::default()
+    };
 
     // Should not error even with chunking config (will be used in Phase 2)
     let result = extract_file(&file_path, None, &config).await;

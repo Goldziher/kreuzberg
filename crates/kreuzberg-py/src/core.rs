@@ -25,10 +25,10 @@ fn extract_path_string(path: &Bound<'_, PyAny>) -> PyResult<String> {
     }
 
     // Try as pathlib.Path via __fspath__() protocol
-    if let Ok(fspath) = path.call_method0("__fspath__") {
-        if let Ok(s) = fspath.extract::<String>() {
-            return Ok(s);
-        }
+    if let Ok(fspath) = path.call_method0("__fspath__")
+        && let Ok(s) = fspath.extract::<String>()
+    {
+        return Ok(s);
     }
 
     // Try as bytes (for Unix path bytes)

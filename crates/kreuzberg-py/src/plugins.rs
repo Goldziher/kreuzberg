@@ -102,6 +102,7 @@ impl Plugin for PythonOcrBackend {
 
     fn version(&self) -> String {
         // Try to get version from Python, fallback to default
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             self.python_obj
                 .bind(py)
@@ -113,6 +114,7 @@ impl Plugin for PythonOcrBackend {
     }
 
     fn initialize(&self) -> Result<()> {
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("initialize")? {
@@ -127,6 +129,7 @@ impl Plugin for PythonOcrBackend {
     }
 
     fn shutdown(&self) -> Result<()> {
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("shutdown")? {
@@ -149,10 +152,12 @@ impl OcrBackend for PythonOcrBackend {
         let backend_name = self.name.clone();
 
         // Clone the Python object reference with GIL
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) before passing to spawn_blocking
         let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
         // Use spawn_blocking to avoid blocking the async runtime with Python/GIL
         tokio::task::spawn_blocking(move || {
+            // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) in blocking task
             Python::attach(|py| {
                 let obj = python_obj.bind(py);
 
@@ -183,6 +188,7 @@ impl OcrBackend for PythonOcrBackend {
 
     async fn process_file(&self, path: &Path, config: &OcrConfig) -> Result<ExtractionResult> {
         // Check if Python backend has custom process_file implementation
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         let has_process_file = Python::attach(|py| self.python_obj.bind(py).hasattr("process_file").unwrap_or(false));
 
         if has_process_file {
@@ -191,9 +197,11 @@ impl OcrBackend for PythonOcrBackend {
             let backend_name = self.name.clone();
 
             // Clone the Python object reference with GIL
+            // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) before passing to spawn_blocking
             let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
             tokio::task::spawn_blocking(move || {
+                // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) in blocking task
                 Python::attach(|py| {
                     let obj = python_obj.bind(py);
                     let py_path = PyString::new(py, &path_str);
@@ -612,6 +620,7 @@ impl Plugin for PythonPostProcessor {
 
     fn version(&self) -> String {
         // Try to get version from Python, fallback to default
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             self.python_obj
                 .bind(py)
@@ -623,6 +632,7 @@ impl Plugin for PythonPostProcessor {
     }
 
     fn initialize(&self) -> Result<()> {
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("initialize")? {
@@ -637,6 +647,7 @@ impl Plugin for PythonPostProcessor {
     }
 
     fn shutdown(&self) -> Result<()> {
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("shutdown")? {
@@ -657,9 +668,11 @@ impl PostProcessor for PythonPostProcessor {
         let processor_name = self.name.clone();
 
         // Clone Python object reference with GIL
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) before passing to spawn_blocking
         let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
         // Convert ExtractionResult to Python dict (need to clone for thread safety)
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) before passing to spawn_blocking
         let result_dict =
             Python::attach(|py| extraction_result_to_dict(py, result)).map_err(|e| KreuzbergError::Plugin {
                 message: format!("Failed to convert ExtractionResult to Python dict: {}", e),
@@ -668,6 +681,7 @@ impl PostProcessor for PythonPostProcessor {
 
         // Use spawn_blocking to avoid blocking async runtime
         let processed_dict = tokio::task::spawn_blocking(move || {
+            // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) in blocking task
             Python::attach(|py| {
                 let obj = python_obj.bind(py);
 
@@ -683,10 +697,10 @@ impl PostProcessor for PythonPostProcessor {
                     })?;
 
                 // Return the processed dict as Py<PyDict>
-                Ok::<Py<PyDict>, KreuzbergError>(processed.extract().map_err(|e| KreuzbergError::Plugin {
+                processed.extract::<Py<PyDict>>().map_err(|e| KreuzbergError::Plugin {
                     message: format!("Failed to extract Python dict from process result: {}", e),
                     plugin_name: processor_name.clone(),
-                })?)
+                })
             })
         })
         .await
@@ -696,6 +710,7 @@ impl PostProcessor for PythonPostProcessor {
         })??;
 
         // Merge the processed result back into the original result
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) after spawn_blocking completes
         Python::attach(|py| {
             let dict = processed_dict.bind(py);
             merge_dict_to_extraction_result(py, dict, result)
@@ -761,34 +776,32 @@ fn merge_dict_to_extraction_result(
     if let Some(val) = dict.get_item("content").map_err(|e| KreuzbergError::Plugin {
         message: format!("Failed to get 'content' from result dict: {}", e),
         plugin_name: "python".to_string(),
-    })? {
-        if !val.is_none() {
-            result.content = val.extract().map_err(|e| KreuzbergError::Plugin {
-                message: format!("PostProcessor returned invalid 'content': {}", e),
-                plugin_name: "python".to_string(),
-            })?;
-        }
+    })? && !val.is_none()
+    {
+        result.content = val.extract().map_err(|e| KreuzbergError::Plugin {
+            message: format!("PostProcessor returned invalid 'content': {}", e),
+            plugin_name: "python".to_string(),
+        })?;
     }
 
     // Merge metadata (don't overwrite existing keys)
     if let Some(m) = dict.get_item("metadata").map_err(|e| KreuzbergError::Plugin {
         message: format!("Failed to get 'metadata' from result dict: {}", e),
         plugin_name: "python".to_string(),
-    })? {
-        if !m.is_none() {
-            if let Ok(meta_dict) = m.downcast::<PyDict>() {
-                for (key, value) in meta_dict.iter() {
-                    let key_str: String = key.extract().map_err(|_| KreuzbergError::Plugin {
-                        message: "Metadata keys must be strings".to_string(),
-                        plugin_name: "python".to_string(),
-                    })?;
+    })? && !m.is_none()
+        && let Ok(meta_dict) = m.downcast::<PyDict>()
+    {
+        for (key, value) in meta_dict.iter() {
+            let key_str: String = key.extract().map_err(|_| KreuzbergError::Plugin {
+                message: "Metadata keys must be strings".to_string(),
+                plugin_name: "python".to_string(),
+            })?;
 
-                    // Only add if key doesn't exist (don't overwrite)
-                    if !result.metadata.contains_key(&key_str) {
-                        let json_value = python_to_json(&value)?;
-                        result.metadata.insert(key_str, json_value);
-                    }
-                }
+            // Only add if key doesn't exist (don't overwrite)
+            use std::collections::hash_map::Entry;
+            if let Entry::Vacant(e) = result.metadata.entry(key_str) {
+                let json_value = python_to_json(&value)?;
+                e.insert(json_value);
             }
         }
     }

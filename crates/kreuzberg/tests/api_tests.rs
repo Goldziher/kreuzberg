@@ -135,11 +135,7 @@ async fn test_extract_with_config() {
          \r\n\
          {}\r\n\
          --{}--\r\n",
-        boundary,
-        file_content,
-        boundary,
-        config.to_string(),
-        boundary
+        boundary, file_content, boundary, config, boundary
     );
 
     let response = app

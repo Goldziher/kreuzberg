@@ -187,16 +187,20 @@ mod tests {
         let valid_formats = ["text", "markdown", "hocr", "tsv"];
 
         for format in valid_formats {
-            let mut config = TesseractConfig::default();
-            config.output_format = format.to_string();
+            let config = TesseractConfig {
+                output_format: format.to_string(),
+                ..Default::default()
+            };
             assert!(config.validate().is_ok());
         }
     }
 
     #[test]
     fn test_tesseract_config_validate_invalid() {
-        let mut config = TesseractConfig::default();
-        config.output_format = "invalid".to_string();
+        let config = TesseractConfig {
+            output_format: "invalid".to_string(),
+            ..Default::default()
+        };
 
         let result = config.validate();
         assert!(result.is_err());

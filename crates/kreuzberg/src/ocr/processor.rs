@@ -457,6 +457,7 @@ mod tests {
         }
     }
 
+    #[allow(dead_code)]
     fn create_simple_test_image() -> Vec<u8> {
         use image::{ImageBuffer, Rgb};
 

@@ -147,7 +147,7 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
     // 5. Post-processors by stage (Early, Middle, Late)
     // Check if postprocessing is enabled
     let pp_config = config.postprocessor.as_ref();
-    let postprocessing_enabled = pp_config.map_or(true, |c| c.enabled);
+    let postprocessing_enabled = pp_config.is_none_or(|c| c.enabled);
 
     if postprocessing_enabled {
         let processor_registry = crate::plugins::registry::get_post_processor_registry();
@@ -230,8 +230,10 @@ mod tests {
             tables: vec![],
             detected_languages: None,
         };
-        let mut config = ExtractionConfig::default();
-        config.enable_quality_processing = true;
+        let config = ExtractionConfig {
+            enable_quality_processing: true,
+            ..Default::default()
+        };
 
         let processed = run_pipeline(result, &config).await.unwrap();
         assert!(processed.metadata.contains_key("quality_score"));
@@ -247,8 +249,10 @@ mod tests {
             tables: vec![],
             detected_languages: None,
         };
-        let mut config = ExtractionConfig::default();
-        config.enable_quality_processing = false;
+        let config = ExtractionConfig {
+            enable_quality_processing: false,
+            ..Default::default()
+        };
 
         let processed = run_pipeline(result, &config).await.unwrap();
         assert!(!processed.metadata.contains_key("quality_score"));
@@ -265,11 +269,13 @@ mod tests {
             tables: vec![],
             detected_languages: None,
         };
-        let mut config = ExtractionConfig::default();
-        config.chunking = Some(crate::ChunkingConfig {
-            max_chars: 500,
-            max_overlap: 50,
-        });
+        let config = ExtractionConfig {
+            chunking: Some(crate::ChunkingConfig {
+                max_chars: 500,
+                max_overlap: 50,
+            }),
+            ..Default::default()
+        };
 
         let processed = run_pipeline(result, &config).await.unwrap();
         assert!(processed.metadata.contains_key("chunk_count"));
@@ -287,8 +293,10 @@ mod tests {
             tables: vec![],
             detected_languages: None,
         };
-        let mut config = ExtractionConfig::default();
-        config.chunking = None;
+        let config = ExtractionConfig {
+            chunking: None,
+            ..Default::default()
+        };
 
         let processed = run_pipeline(result, &config).await.unwrap();
         assert!(!processed.metadata.contains_key("chunk_count"));
@@ -367,12 +375,14 @@ mod tests {
             tables: vec![],
             detected_languages: None,
         };
-        let mut config = ExtractionConfig::default();
-        config.enable_quality_processing = true;
-        config.chunking = Some(crate::ChunkingConfig {
-            max_chars: 500,
-            max_overlap: 50,
-        });
+        let config = ExtractionConfig {
+            enable_quality_processing: true,
+            chunking: Some(crate::ChunkingConfig {
+                max_chars: 500,
+                max_overlap: 50,
+            }),
+            ..Default::default()
+        };
 
         let processed = run_pipeline(result, &config).await.unwrap();
         assert!(processed.metadata.contains_key("quality_score"));
