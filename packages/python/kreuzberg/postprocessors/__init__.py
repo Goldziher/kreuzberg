@@ -23,6 +23,8 @@ Example:
 
 from __future__ import annotations
 
+import logging
+
 # Make processors available for import
 __all__ = [
     "PostProcessorProtocol",
@@ -32,6 +34,8 @@ __all__ = [
 ]
 
 from .protocol import PostProcessorProtocol
+
+logger = logging.getLogger(__name__)
 
 
 def _register_processors() -> None:
@@ -64,9 +68,8 @@ def _register_processors() -> None:
         # spaCy not installed - skip entity extraction
         pass
     except Exception:
-        # Other error during registration - silently skip
-        # Users can manually register if needed
-        pass
+        # Other error during registration
+        logger.warning("Failed to register EntityExtractionProcessor", exc_info=True)
 
     # Try to register Keyword Extraction with KeyBERT (requires keybert + sentence-transformers)
     try:
@@ -79,8 +82,8 @@ def _register_processors() -> None:
         # KeyBERT not installed - skip
         pass
     except Exception:
-        # Other error - silently skip
-        pass
+        # Other error during registration
+        logger.warning("Failed to register KeywordExtractionProcessor", exc_info=True)
 
     # Try to register Category Extraction (requires transformers)
     try:
@@ -94,8 +97,8 @@ def _register_processors() -> None:
         # transformers not installed - skip
         pass
     except Exception:
-        # Other error - silently skip
-        pass
+        # Other error during registration
+        logger.warning("Failed to register CategoryExtractionProcessor", exc_info=True)
 
 
 # Auto-register processors when module is imported

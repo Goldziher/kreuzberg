@@ -18,9 +18,12 @@ Architecture:
 
 # CRITICAL: This must be imported FIRST before any Rust bindings
 # It sets up dynamic library paths for bundled native libraries (pdfium, etc.)
+import logging
 from importlib.metadata import version
 
 from kreuzberg import _setup_lib_path  # noqa: F401
+
+logger = logging.getLogger(__name__)
 
 # Direct re-exports from Rust bindings
 from kreuzberg._internal_bindings import (
@@ -130,6 +133,9 @@ try:
 except ImportError:
     # Optional postprocessor dependencies not installed
     pass
+except Exception:
+    # Unexpected error during postprocessor registration
+    logger.warning("Failed to register postprocessors", exc_info=True)
 
 # Auto-register Python OCR backends (if dependencies are installed)
 # Each backend is tried independently since they have separate dependency groups
@@ -144,8 +150,8 @@ except ImportError:
     # EasyOCR dependencies not installed
     pass
 except Exception:
-    # Registration failed - silently skip
-    pass
+    # Unexpected error during EasyOCR registration
+    logger.warning("Failed to register EasyOCR backend", exc_info=True)
 
 # Try to auto-register PaddleOCR (optional dependency group: paddleocr)
 try:
@@ -157,5 +163,5 @@ except ImportError:
     # PaddleOCR dependencies not installed
     pass
 except Exception:
-    # Registration failed - silently skip
-    pass
+    # Unexpected error during PaddleOCR registration
+    logger.warning("Failed to register PaddleOCR backend", exc_info=True)
