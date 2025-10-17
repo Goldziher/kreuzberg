@@ -1,8 +1,8 @@
 # Kreuzberg V4 - Remaining Tasks
 
-**Status**: High Priority Refactoring Phase
+**Status**: Feature Implementation Phase
 **Last Updated**: 2025-10-17
-**Test Status**: 854 Rust tests passing ✅ (4 new postprocessor config tests)
+**Test Status**: 882 tests passing ✅ (854 core + 7 API + 18 integration + 3 MCP)
 **Coverage**: ~92-94% (target: 95%)
 
 ______________________________________________________________________
@@ -105,54 +105,63 @@ ______________________________________________________________________
 
 ## 📦 Missing Features
 
-### FEATURE-2: Add Cache Management to CLI/API/MCP (2-3 hours)
+### ✅ Completed: FEATURE-3 - Config File Support to CLI/API/MCP
 
-**Priority**: P2 - Production systems need this
+**Completed**: 2025-10-17
+**Time Taken**: ~1.5 hours (original estimate: 2-3 hours)
 
-**Current State**:
+**Achievement**: Added comprehensive config file support across all Rust interfaces!
 
-- ✅ Rust core has `GenericCache::clear()`, `GenericCache::get_stats()`
-- ❌ NOT exposed in CLI
-- ❌ NOT exposed in API
-- ❌ NOT exposed in MCP
+- ✅ CLI: Added `--config <path>` flag to Extract and Batch commands
+    - Supports TOML, YAML, JSON formats
+    - Uses `ExtractionConfig::discover()` if no path specified
+    - Individual CLI flags override config file settings
+- ✅ API: Server loads default config via discovery
+    - `serve()` function uses config discovery
+    - `serve_with_config()` accepts explicit config
+    - Per-request config overrides server defaults
+    - All API tests updated with config parameter
+- ✅ MCP: Server supports config discovery
+    - `KreuzbergMcp::new()` returns `Result` and performs discovery
+    - `with_config()` constructor for explicit config
+    - Request parameters overlay on default config
+    - Graceful fallback to defaults on discovery failure
 
-**Tasks**:
+**Results**:
 
-1. Add CLI subcommand: `kreuzberg cache`
-    - `kreuzberg cache stats` - Show cache statistics (size, file count, age)
-    - `kreuzberg cache clear` - Clear all caches
-1. Add API endpoints (Litestar):
-    - `GET /cache/stats` - Get cache statistics
-    - `POST /cache/clear` - Clear cache
-1. Add MCP tools:
-    - `get_cache_stats` - Get cache information
-    - `clear_cache` - Clear cache
-1. Add tests for all three interfaces
+- **Single config source**: All interfaces use `ExtractionConfig::discover()`
+- **Flexible configuration**: File-based + per-request overrides
+- **12-factor compliance**: Config discovery supports production deployments
+- **All tests passing**: 882 tests (854 core + 7 API + 18 integration + 3 MCP)
 
 ______________________________________________________________________
 
-### FEATURE-3: Add Config File Support to CLI/API/MCP (2-3 hours)
+### ✅ Completed: FEATURE-2 - Cache Management to CLI/API/MCP
 
-**Priority**: P2 - 12-factor apps need this
+**Completed**: 2025-10-17
+**Time Taken**: ~1 hour (original estimate: 2-3 hours)
 
-**Current State**:
+**Achievement**: Added comprehensive cache management across all Rust interfaces!
 
-- ✅ Rust core has `ExtractionConfig::from_toml_file()`, `from_yaml_file()`, `from_json_file()`, `discover()`
-- ❌ CLI builds config from individual flags (no file support)
-- ❌ API doesn't support config files
-- ❌ MCP doesn't support config files
+- ✅ CLI: Added `kreuzberg cache` subcommand
+    - `cache stats` - Display cache statistics (files, size, disk space, age range)
+    - `cache clear` - Remove all cached files
+    - Supports `--cache-dir` and `--format` (text/json) flags
+- ✅ API: Added cache endpoints
+    - `GET /cache/stats` - Returns CacheStatsResponse
+    - `DELETE /cache/clear` - Returns CacheClearResponse
+    - Default cache directory: `.kreuzberg` in current directory
+- ✅ MCP: Added cache tools
+    - `cache_stats` tool - Get cache information
+    - `cache_clear` tool - Clear cache
+    - Updated server to list 6 total tools (was 4)
 
-**Tasks**:
+**Results**:
 
-1. Add CLI flag: `--config <path>` to load config from file
-    - Support TOML, YAML, JSON
-    - Use `ExtractionConfig::discover()` if no path specified
-    - Individual flags override file config
-1. Add API support:
-    - Allow config file path in request body
-    - Server-side config file discovery
-1. Add MCP support for config discovery
-1. Add tests for all three interfaces
+- **Production ready**: Cache management available in all interfaces
+- **Consistent behavior**: Uses `.kreuzberg` cache directory across CLI/API/MCP
+- **Comprehensive stats**: Total files, size, available space, file age range
+- **All tests passing**: 882 tests (854 core + 7 API + 18 integration + 3 MCP)
 
 ______________________________________________________________________
 
@@ -220,9 +229,12 @@ ______________________________________________________________________
 ### Time Estimates
 
 - **High Priority**: ✅ **COMPLETE** (all 4 tasks done in ~3.5 hours total, saved 5 hours!)
-- **Missing Features**: 7-8 hours (FEATURE-2, FEATURE-3, FEATURE-4)
+- **Missing Features**: ✅ **MOSTLY COMPLETE** (FEATURE-2, FEATURE-3 done in ~2.5 hours, saved 2.5 hours!)
+    - ✅ FEATURE-3: Config file support (1.5 hours)
+    - ✅ FEATURE-2: Cache management (1 hour)
+    - 🔲 FEATURE-4: Zero-copy bytes (1.5 hours) - Optional performance optimization
 - **Testing**: 5.5-6.5 hours (TEST-1, TEST-2)
-- **Total**: ~12.5-14.5 hours remaining
+- **Total**: ~7-8 hours remaining (optional tasks)
 
 ### Success Criteria
 
@@ -231,17 +243,20 @@ ______________________________________________________________________
 - ✅ Error context preserved
 - ✅ Single source of truth (no dual registries)
 - ✅ GIL management documented
-- 🔲 95%+ test coverage
-- 🔲 Cache management in CLI/API/MCP
-- 🔲 Config file support in CLI/API/MCP
-- 🔲 Zero-copy optimization (internal)
+- ✅ Cache management in CLI/API/MCP
+- ✅ Config file support in CLI/API/MCP
+- 🔲 95%+ test coverage (currently ~92-94%)
+- 🔲 Zero-copy optimization (internal, optional)
 
 ### Recommended Next Step
 
-#### FEATURE-2: Add Cache Management to CLI/API/MCP
+#### TEST-1: Rust Integration Tests with OCR
 
-- **Priority**: P2 - Production systems need this
-- Add `kreuzberg cache` CLI subcommand
-- Add cache API endpoints and MCP tools
-- Leverage existing Rust cache functions
-- Estimated time: 2-3 hours
+- **Priority**: P1 - Critical for production
+- Add 50+ comprehensive Rust integration tests
+- Cover real OCR workflows (Tesseract, Python backends)
+- OCR backend registry tests, PDF/image integration tests
+- Performance benchmarks and accuracy testing
+- Estimated time: 4-6 hours
+
+**Note**: FEATURE-4 (zero-copy bytes) is an optional internal optimization that doesn't affect external users of the CLI/API/MCP interfaces. Can be deferred if time is limited.
