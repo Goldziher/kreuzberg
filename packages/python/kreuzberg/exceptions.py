@@ -59,23 +59,23 @@ class KreuzbergError(Exception):
             if isinstance(value, bytes):
                 # Decode bytes to string
                 return value.decode("utf-8", errors="replace")
-            elif isinstance(value, Exception):
+            if isinstance(value, Exception):
                 # Convert exception to dict
                 return {"type": type(value).__name__, "message": str(value)}
-            elif isinstance(value, tuple):
+            if isinstance(value, tuple):
                 # Convert tuple to list
                 return [serialize_value(item) for item in value]
-            elif isinstance(value, list):
+            if isinstance(value, list):
                 # Recursively serialize list items
                 return [serialize_value(item) for item in value]
-            elif isinstance(value, dict):
+            if isinstance(value, dict):
                 # Recursively serialize dict values
                 return {k: serialize_value(v) for k, v in value.items()}
-            else:
-                # Return as-is for JSON-compatible types
-                return value
+            # Return as-is for JSON-compatible types
+            return value
 
-        return serialize_value(context)
+        serialized: dict[str, Any] = serialize_value(context)
+        return serialized
 
 
 class ValidationError(KreuzbergError):

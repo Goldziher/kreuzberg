@@ -183,6 +183,9 @@ class PaddleOCRBackend:
         if self._ocr is None:
             self.initialize()
 
+        if self._ocr is None:
+            raise RuntimeError("PaddleOCR failed to initialize")
+
         # Validate language
         if language not in SUPPORTED_LANGUAGES:
             from kreuzberg.exceptions import ValidationError
@@ -238,6 +241,9 @@ class PaddleOCRBackend:
         # PaddleOCR can process files directly
         if self._ocr is None:
             self.initialize()
+
+        if self._ocr is None:
+            raise RuntimeError("PaddleOCR failed to initialize")
 
         try:
             from PIL import Image  # noqa: PLC0415

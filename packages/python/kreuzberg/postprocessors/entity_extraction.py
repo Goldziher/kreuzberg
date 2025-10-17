@@ -3,8 +3,14 @@
 This module provides Named Entity Recognition (NER) using spaCy models.
 """
 
-from pathlib import Path
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from kreuzberg._internal_bindings import ExtractionResult
 
 
 class EntityExtractionProcessor:
@@ -79,7 +85,7 @@ class EntityExtractionProcessor:
             model_to_load = self.model_path if self.model_path else self.model_name
 
             # Pass through any additional kwargs to spacy.load()
-            self._nlp = spacy.load(model_to_load, **self.model_kwargs)
+            self._nlp = spacy.load(model_to_load, **self.model_kwargs)  # type: ignore[assignment]
         except OSError as e:
             if self.model_path:
                 msg = f"Failed to load spaCy model from path '{self.model_path}': {e}"
@@ -96,16 +102,16 @@ class EntityExtractionProcessor:
             # spaCy models don't require explicit cleanup
             self._nlp = None
 
-    def process(self, result: dict) -> dict:
+    def process(self, result: ExtractionResult) -> ExtractionResult:
         """Extract entities from the content.
 
         Args:
-            result: Extraction result dict with "content" and "metadata"
+            result: ExtractionResult with content and metadata
 
         Returns:
-            dict: Result with entities added to metadata["entities"]
+            ExtractionResult: Result with entities added to metadata["entities"]
 
-        Example result["metadata"]["entities"]:
+        Example result.metadata["entities"]:
             {
                 "PERSON": ["John Doe", "Jane Smith"],
                 "ORG": ["Microsoft", "Google"],
@@ -118,7 +124,10 @@ class EntityExtractionProcessor:
         if self._nlp is None:
             self.initialize()
 
-        content = result.get("content", "")
+        if self._nlp is None:
+            raise RuntimeError("spaCy model failed to initialize")
+
+        content = result.content
         if not content or not isinstance(content, str):
             return result
 
@@ -145,20 +154,19 @@ class EntityExtractionProcessor:
                 entities_by_type[entity_type] = []
 
             # Avoid duplicates and respect max_entities limit
-            if entity_text not in entities_by_type[entity_type]:
-                if len(entities_by_type[entity_type]) < self.max_entities:
-                    entities_by_type[entity_type].append(entity_text)
+            if (
+                entity_text not in entities_by_type[entity_type]
+                and len(entities_by_type[entity_type]) < self.max_entities
+            ):
+                entities_by_type[entity_type].append(entity_text)
 
         # Add entities to metadata (don't overwrite if key exists)
-        if "metadata" not in result:
-            result["metadata"] = {}
-
-        if "entities" not in result["metadata"]:
-            result["metadata"]["entities"] = entities_by_type
+        if "entities" not in result.metadata:
+            result.metadata["entities"] = entities_by_type
 
         # Add entity count for convenience
         total_entities = sum(len(ents) for ents in entities_by_type.values())
-        if "entity_count" not in result["metadata"]:
-            result["metadata"]["entity_count"] = total_entities
+        if "entity_count" not in result.metadata:
+            result.metadata["entity_count"] = total_entities
 
         return result

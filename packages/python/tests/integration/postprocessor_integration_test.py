@@ -1,10 +1,17 @@
 """Integration tests for postprocessor pipeline."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
-def sample_text_content():
+def sample_text_content() -> str:
     """Sample text content for testing."""
     return (
         "Apple Inc. is a technology company founded by Steve Jobs in Cupertino, California. "
@@ -14,10 +21,10 @@ def sample_text_content():
 
 
 @pytest.mark.asyncio
-async def test_extract_with_postprocessors_enabled(tmp_path, sample_text_content):
+async def test_extract_with_postprocessors_enabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test that extraction with postprocessors adds enriched metadata."""
     try:
-        from kreuzberg import PostProcessorConfig, extract_file
+        from kreuzberg import extract_file
     except ImportError:
         pytest.skip("Kreuzberg not available")
 
@@ -38,7 +45,7 @@ async def test_extract_with_postprocessors_enabled(tmp_path, sample_text_content
 
 
 @pytest.mark.asyncio
-async def test_extract_with_postprocessors_disabled(tmp_path, sample_text_content):
+async def test_extract_with_postprocessors_disabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test that extraction with postprocessors disabled returns base metadata only."""
     try:
         from kreuzberg import PostProcessorConfig, extract_file
@@ -65,10 +72,10 @@ async def test_extract_with_postprocessors_disabled(tmp_path, sample_text_conten
         assert "category" not in result.metadata
 
 
-def test_extract_sync_with_postprocessors_enabled(tmp_path, sample_text_content):
+def test_extract_sync_with_postprocessors_enabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test sync extraction with postprocessors enabled."""
     try:
-        from kreuzberg import PostProcessorConfig, extract_file_sync
+        from kreuzberg import extract_file_sync
     except ImportError:
         pytest.skip("Kreuzberg not available")
 
@@ -84,7 +91,7 @@ def test_extract_sync_with_postprocessors_enabled(tmp_path, sample_text_content)
     assert "Apple Inc." in result.content
 
 
-def test_extract_sync_with_postprocessors_disabled(tmp_path, sample_text_content):
+def test_extract_sync_with_postprocessors_disabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test sync extraction with postprocessors disabled."""
     try:
         from kreuzberg import PostProcessorConfig, extract_file_sync
@@ -105,7 +112,7 @@ def test_extract_sync_with_postprocessors_disabled(tmp_path, sample_text_content
 
 
 @pytest.mark.asyncio
-async def test_extract_with_processor_whitelist(tmp_path, sample_text_content):
+async def test_extract_with_processor_whitelist(tmp_path: Path, sample_text_content: str) -> None:
     """Test extraction with enabled_processors whitelist."""
     try:
         from kreuzberg import PostProcessorConfig, extract_file, list_post_processors
@@ -131,7 +138,7 @@ async def test_extract_with_processor_whitelist(tmp_path, sample_text_content):
 
 
 @pytest.mark.asyncio
-async def test_extract_with_processor_blacklist(tmp_path, sample_text_content):
+async def test_extract_with_processor_blacklist(tmp_path: Path, sample_text_content: str) -> None:
     """Test extraction with disabled_processors blacklist."""
     try:
         from kreuzberg import PostProcessorConfig, extract_file, list_post_processors
@@ -157,10 +164,10 @@ async def test_extract_with_processor_blacklist(tmp_path, sample_text_content):
 
 
 @pytest.mark.asyncio
-async def test_batch_extract_with_postprocessors(tmp_path, sample_text_content):
+async def test_batch_extract_with_postprocessors(tmp_path: Path, sample_text_content: str) -> None:
     """Test batch extraction with postprocessors."""
     try:
-        from kreuzberg import PostProcessorConfig, batch_extract_files
+        from kreuzberg import batch_extract_files
     except ImportError:
         pytest.skip("Kreuzberg not available")
 
@@ -181,7 +188,7 @@ async def test_batch_extract_with_postprocessors(tmp_path, sample_text_content):
     assert results[1].content
 
 
-def test_batch_extract_sync_with_postprocessors_disabled(tmp_path, sample_text_content):
+def test_batch_extract_sync_with_postprocessors_disabled(tmp_path: Path, sample_text_content: str) -> None:
     """Test sync batch extraction with postprocessors disabled."""
     try:
         from kreuzberg import PostProcessorConfig, batch_extract_files_sync
@@ -207,7 +214,7 @@ def test_batch_extract_sync_with_postprocessors_disabled(tmp_path, sample_text_c
 
 
 @pytest.mark.asyncio
-async def test_extract_bytes_with_postprocessors(sample_text_content):
+async def test_extract_bytes_with_postprocessors(sample_text_content: str) -> None:
     """Test byte extraction with postprocessors."""
     try:
         from kreuzberg import extract_bytes
@@ -222,7 +229,7 @@ async def test_extract_bytes_with_postprocessors(sample_text_content):
     assert "Apple Inc." in result.content
 
 
-def test_extract_bytes_sync_with_postprocessors_disabled(sample_text_content):
+def test_extract_bytes_sync_with_postprocessors_disabled(sample_text_content: str) -> None:
     """Test sync byte extraction with postprocessors disabled."""
     try:
         from kreuzberg import PostProcessorConfig, extract_bytes_sync
@@ -241,7 +248,7 @@ def test_extract_bytes_sync_with_postprocessors_disabled(sample_text_content):
 
 
 @pytest.mark.asyncio
-async def test_postprocessor_config_immutability():
+async def test_postprocessor_config_immutability() -> None:
     """Test that PostProcessorConfig is immutable (frozen)."""
     try:
         from kreuzberg import PostProcessorConfig
@@ -256,7 +263,7 @@ async def test_postprocessor_config_immutability():
 
 
 @pytest.mark.asyncio
-async def test_postprocessor_enrichment_with_all_processors(tmp_path, sample_text_content):
+async def test_postprocessor_enrichment_with_all_processors(tmp_path: Path, sample_text_content: str) -> None:
     """Test that postprocessors enrich metadata when dependencies are available."""
     try:
         from kreuzberg import extract_file, list_post_processors
@@ -293,7 +300,7 @@ async def test_postprocessor_enrichment_with_all_processors(tmp_path, sample_tex
 
 
 @pytest.mark.asyncio
-async def test_processor_ordering_by_stage(tmp_path, sample_text_content):
+async def test_processor_ordering_by_stage(tmp_path: Path, sample_text_content: str) -> None:
     """Test that processors run in correct stage order (early → middle → late)."""
     try:
         from kreuzberg import extract_file, list_post_processors

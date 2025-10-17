@@ -106,7 +106,9 @@ When `preserve_markdown=True` (default), the reducer maintains document structur
 from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig
 
 config = ExtractionConfig(
-    token_reduction=TokenReductionConfig(mode="moderate", preserve_markdown=True)  # Preserves headers, lists, tables, code blocks
+    token_reduction=TokenReductionConfig(
+        mode="moderate", preserve_markdown=True
+    )  # Preserves headers, lists, tables, code blocks
 )
 result = await extract_file("structured_document.md", config=config)
 ```
@@ -205,7 +207,9 @@ from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig
 
 # Reduce content for search indexing
 config = ExtractionConfig(
-    token_reduction=TokenReductionConfig(mode="moderate", preserve_markdown=False)  # Remove structure for pure text search
+    token_reduction=TokenReductionConfig(
+        mode="moderate", preserve_markdown=False
+    )  # Remove structure for pure text search
 )
 
 result = await extract_file("document.pdf", config=config)

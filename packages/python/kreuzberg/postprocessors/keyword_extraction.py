@@ -3,8 +3,14 @@
 This module provides keyword extraction using KeyBERT with sentence-transformers.
 """
 
-from pathlib import Path
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from kreuzberg._internal_bindings import ExtractionResult
 
 
 class KeywordExtractionProcessor:
@@ -99,16 +105,16 @@ class KeywordExtractionProcessor:
         """Release resources."""
         self._extractor = None
 
-    def process(self, result: dict) -> dict:
+    def process(self, result: ExtractionResult) -> ExtractionResult:
         """Extract keywords from the content.
 
         Args:
-            result: Extraction result dict with "content" and "metadata"
+            result: ExtractionResult with content and metadata
 
         Returns:
-            dict: Result with keywords added to metadata["keywords"]
+            ExtractionResult: Result with keywords added to metadata["keywords"]
 
-        Example result["metadata"]["keywords"]:
+        Example result.metadata["keywords"]:
             [
                 {"keyword": "machine learning", "score": 0.95},
                 {"keyword": "document processing", "score": 0.87},
@@ -119,7 +125,10 @@ class KeywordExtractionProcessor:
         if self._extractor is None:
             self.initialize()
 
-        content = result.get("content", "")
+        if self._extractor is None:
+            raise RuntimeError("KeyBERT extractor failed to initialize")
+
+        content = result.content
         if not content or not isinstance(content, str):
             return result
 
@@ -143,10 +152,7 @@ class KeywordExtractionProcessor:
             keywords = []
 
         # Add keywords to metadata
-        if "metadata" not in result:
-            result["metadata"] = {}
-
-        if "keywords" not in result["metadata"]:
-            result["metadata"]["keywords"] = keywords
+        if "keywords" not in result.metadata:
+            result.metadata["keywords"] = keywords
 
         return result

@@ -3,8 +3,14 @@
 This module provides document classification using transformer-based zero-shot learning.
 """
 
-from pathlib import Path
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from kreuzberg._internal_bindings import ExtractionResult
 
 
 class CategoryExtractionProcessor:
@@ -125,7 +131,7 @@ class CategoryExtractionProcessor:
 
         try:
             # Build pipeline kwargs
-            init_kwargs = {
+            init_kwargs: dict[str, Any] = {
                 "model": self.model_name,
                 "device": self.device,
             }
@@ -142,7 +148,7 @@ class CategoryExtractionProcessor:
             init_kwargs.update(self.pipeline_kwargs)
 
             # Initialize the pipeline
-            self._classifier = pipeline(
+            self._classifier = pipeline(  # type: ignore[assignment]
                 "zero-shot-classification",
                 **init_kwargs,
             )
@@ -154,16 +160,16 @@ class CategoryExtractionProcessor:
         """Release resources."""
         self._classifier = None
 
-    def process(self, result: dict) -> dict:
+    def process(self, result: ExtractionResult) -> ExtractionResult:
         """Classify the content into categories.
 
         Args:
-            result: Extraction result dict with "content" and "metadata"
+            result: ExtractionResult with content and metadata
 
         Returns:
-            dict: Result with category added to metadata["category"]
+            ExtractionResult: Result with category added to metadata["category"]
 
-        Example result["metadata"]["category"] (single-label):
+        Example result.metadata["category"] (single-label):
             {
                 "primary": "invoice",
                 "scores": {
@@ -175,7 +181,7 @@ class CategoryExtractionProcessor:
                 "confidence": 0.95
             }
 
-        Example result["metadata"]["category"] (multi-label):
+        Example result.metadata["category"] (multi-label):
             {
                 "primary": "financial",
                 "labels": ["financial", "legal"],
@@ -191,7 +197,10 @@ class CategoryExtractionProcessor:
         if self._classifier is None:
             self.initialize()
 
-        content = result.get("content", "")
+        if self._classifier is None:
+            raise RuntimeError("Classifier failed to initialize")
+
+        content = result.content
         if not content or not isinstance(content, str):
             return result
 
@@ -205,14 +214,14 @@ class CategoryExtractionProcessor:
 
         # Perform zero-shot classification
         try:
-            classification = self._classifier(
+            classification: dict[str, Any] = self._classifier(
                 content,
                 self.categories,
                 multi_label=self.multi_label,
             )
 
             # Build category result
-            category_result = {
+            category_result: dict[str, Any] = {
                 "scores": {},
             }
 
@@ -221,8 +230,8 @@ class CategoryExtractionProcessor:
                 category_result["scores"][label] = float(score)
 
             # Determine primary category (highest score)
-            primary_label = classification["labels"][0]
-            primary_score = classification["scores"][0]
+            primary_label: str = classification["labels"][0]
+            primary_score: float = classification["scores"][0]
             category_result["primary"] = primary_label
             category_result["confidence"] = float(primary_score)
 
@@ -245,10 +254,7 @@ class CategoryExtractionProcessor:
             }
 
         # Add category to metadata
-        if "metadata" not in result:
-            result["metadata"] = {}
-
-        if "category" not in result["metadata"]:
-            result["metadata"]["category"] = category_result
+        if "category" not in result.metadata:
+            result.metadata["category"] = category_result
 
         return result

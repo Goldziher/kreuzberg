@@ -4,7 +4,12 @@ This module defines the protocol that all Python postprocessors must implement
 to be registered with the Rust core via the FFI bridge.
 """
 
-from typing import Protocol
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from kreuzberg._internal_bindings import ExtractionResult
 
 
 class PostProcessorProtocol(Protocol):
@@ -22,30 +27,26 @@ class PostProcessorProtocol(Protocol):
         """
         ...
 
-    def process(self, result: dict) -> dict:
+    def process(self, result: ExtractionResult) -> ExtractionResult:
         """Process and enrich an extraction result.
 
         Args:
-            result: Dictionary with extraction result containing:
-                - content (str): Extracted text
-                - mime_type (str): MIME type of source
-                - metadata (dict): Existing metadata
-                - tables (list): Extracted tables (optional)
+            result: ExtractionResult with extracted content, metadata, and tables
 
         Returns:
-            dict: Modified result with enriched metadata.
+            ExtractionResult: Modified result with enriched metadata.
                   New metadata keys are added, existing keys are preserved.
 
         Note:
-            The processor should add its results to result["metadata"] and
-            return the modified dict. Existing metadata keys will not be
+            The processor should add its results to result.metadata and
+            return the modified ExtractionResult. Existing metadata keys will not be
             overwritten by the FFI bridge.
 
         Example:
-            >>> def process(self, result: dict) -> dict:
-            ...     text = result["content"]
+            >>> def process(self, result: ExtractionResult) -> ExtractionResult:
+            ...     text = result.content
             ...     entities = extract_entities(text)
-            ...     result["metadata"]["entities"] = entities
+            ...     result.metadata["entities"] = entities
             ...     return result
         """
         ...

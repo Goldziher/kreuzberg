@@ -22,7 +22,9 @@ class CustomExtractor(Extractor):
         # Implement your extraction logic here
         extracted_text = self._process_content(content)
 
-        return ExtractionResult(content=extracted_text, mime_type=self.mime_type, metadata={"extractor": "CustomExtractor"})
+        return ExtractionResult(
+            content=extracted_text, mime_type=self.mime_type, metadata={"extractor": "CustomExtractor"}
+        )
 
     async def extract_path_async(self, path: Path) -> ExtractionResult:
         """Asynchronously extract content from a file path."""
@@ -35,7 +37,9 @@ class CustomExtractor(Extractor):
         # Implement your extraction logic here
         extracted_text = self._process_content(content)
 
-        return ExtractionResult(content=extracted_text, mime_type=self.mime_type, metadata={"extractor": "CustomExtractor"})
+        return ExtractionResult(
+            content=extracted_text, mime_type=self.mime_type, metadata={"extractor": "CustomExtractor"}
+        )
 
     def extract_path_sync(self, path: Path) -> ExtractionResult:
         """Synchronously extract content from a file path."""
@@ -126,7 +130,9 @@ class CustomImageExtractor(Extractor):
         # Implement the rest of your extraction logic
         # ...
 
-        return ExtractionResult(content="Extracted text", mime_type=self.mime_type, metadata={"ocr_engine": "tesseract"})
+        return ExtractionResult(
+            content="Extracted text", mime_type=self.mime_type, metadata={"ocr_engine": "tesseract"}
+        )
     # Implement other required methods...
 ```
 

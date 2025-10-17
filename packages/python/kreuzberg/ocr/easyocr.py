@@ -254,6 +254,9 @@ class EasyOCRBackend:
         if self._reader is None:
             self.initialize()
 
+        if self._reader is None:
+            raise RuntimeError("EasyOCR reader failed to initialize")
+
         # Validate language
         if language not in SUPPORTED_LANGUAGES:
             from kreuzberg.exceptions import ValidationError

@@ -44,26 +44,18 @@ def _register_processors() -> None:
     This function tries to import and register each processor. If the required
     dependencies are not installed, it silently skips that processor.
 
-    Processors are registered both with:
-    1. The Rust core PostProcessor registry (via FFI bridge)
-    2. The Python-side registry (for use in Python extraction wrapper)
+    Processors are registered with the Rust core PostProcessor registry via FFI bridge.
     """
-    # Import the registration functions
-    try:
-        from _internal_bindings import register_post_processor as register_rust
-
-        from kreuzberg.extraction import register_python_postprocessor
-    except ImportError:
-        # Bindings not available (shouldn't happen in normal usage)
-        return
+    # Import the registration function from our bindings
+    # This should always succeed - if it doesn't, that's a critical error
+    from kreuzberg._internal_bindings import register_post_processor
 
     # Try to register Entity Extraction (requires spaCy)
     try:
         from .entity_extraction import EntityExtractionProcessor
 
-        processor = EntityExtractionProcessor()
-        register_rust(processor)  # Register with Rust
-        register_python_postprocessor(processor)  # Register with Python
+        entity_processor = EntityExtractionProcessor()
+        register_post_processor(entity_processor)
     except ImportError:
         # spaCy not installed - skip entity extraction
         pass
@@ -75,9 +67,8 @@ def _register_processors() -> None:
     try:
         from .keyword_extraction import KeywordExtractionProcessor
 
-        processor = KeywordExtractionProcessor(top_n=10)
-        register_rust(processor)  # Register with Rust
-        register_python_postprocessor(processor)  # Register with Python
+        keyword_processor = KeywordExtractionProcessor(top_n=10)
+        register_post_processor(keyword_processor)
     except ImportError:
         # KeyBERT not installed - skip
         pass
@@ -90,9 +81,8 @@ def _register_processors() -> None:
         from .category_extraction import CategoryExtractionProcessor
 
         # Use default document type categories
-        processor = CategoryExtractionProcessor(categories=CategoryExtractionProcessor.DOCUMENT_TYPES)
-        register_rust(processor)  # Register with Rust
-        register_python_postprocessor(processor)  # Register with Python
+        category_processor = CategoryExtractionProcessor(categories=CategoryExtractionProcessor.DOCUMENT_TYPES)
+        register_post_processor(category_processor)
     except ImportError:
         # transformers not installed - skip
         pass

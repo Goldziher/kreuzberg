@@ -11,6 +11,7 @@ using install_name_tool, ensuring @loader_path is used for relative references.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import platform
 import subprocess
@@ -71,7 +72,9 @@ def _fix_macos_install_names(package_dir: Path) -> None:
 
         # If library reference is wrong (./libpdfium.dylib), fix it
         if "./libpdfium.dylib" in result.stdout:
-            try:
+            # install_name_tool might fail if not installed or no write permissions
+            # Fall back to setting DYLD_LIBRARY_PATH
+            with contextlib.suppress(subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
                 subprocess.run(
                     [
                         "install_name_tool",
@@ -84,14 +87,8 @@ def _fix_macos_install_names(package_dir: Path) -> None:
                     timeout=5,
                     capture_output=True,
                 )
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
-                # install_name_tool failed - user might not have it installed
-                # or might not have write permissions
-                # Fall back to setting DYLD_LIBRARY_PATH
-                pass
+    # otool might not be available - continue with path-based approach
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
-        # otool failed - not available or other error
-        # Continue with path-based approach
         pass
 
 
@@ -135,14 +132,11 @@ def _setup_linux_paths(package_dir: Path) -> None:
         import ctypes.util
 
         # Try to pre-load libpdfium.so
+        # Library load might fail, but LD_LIBRARY_PATH is set so pdfium-render should still find it
         lib_path = package_dir / "libpdfium.so"
         if lib_path.exists():
-            try:
+            with contextlib.suppress(OSError):
                 ctypes.CDLL(str(lib_path))
-            except OSError:
-                # Library load failed, but we've set LD_LIBRARY_PATH
-                # so pdfium-render should still find it
-                pass
     except (ImportError, AttributeError):
         # ctypes not available or CDLL doesn't work
         pass
@@ -161,24 +155,20 @@ def _setup_windows_paths(package_dir: Path) -> None:
             os.environ["PATH"] = package_str
 
     # Use Windows-specific DLL search path API (Python 3.8+)
+    # Might fail to add DLL directory, but PATH is set as fallback
     if sys.version_info >= (3, 8) and hasattr(os, "add_dll_directory"):
-        try:
+        with contextlib.suppress(OSError, AttributeError):
             os.add_dll_directory(str(package_dir))
-        except (OSError, AttributeError):
-            # Failed to add DLL directory, but PATH is set
-            pass
 
     # Try to pre-load pdfium.dll
+    # Library load might fail, but PATH is set as fallback
     try:
         import ctypes
 
         lib_path = package_dir / "pdfium.dll"
         if lib_path.exists():
-            try:
+            with contextlib.suppress(OSError):
                 ctypes.CDLL(str(lib_path))
-            except OSError:
-                # Library load failed, but we've set PATH
-                pass
     except (ImportError, AttributeError):
         pass
 
