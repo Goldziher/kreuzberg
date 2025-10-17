@@ -88,17 +88,47 @@ fn default_use_content() -> bool {
 /// Kreuzberg MCP server.
 ///
 /// Provides document extraction capabilities via MCP tools.
+///
+/// The server loads a default extraction configuration from kreuzberg.toml/yaml/json
+/// via discovery. Per-request OCR settings override the defaults.
 #[derive(Clone)]
 pub struct KreuzbergMcp {
     tool_router: ToolRouter<KreuzbergMcp>,
+    /// Default extraction configuration loaded from config file via discovery
+    default_config: std::sync::Arc<ExtractionConfig>,
 }
 
 #[tool_router]
 impl KreuzbergMcp {
-    /// Create a new Kreuzberg MCP server instance.
-    pub fn new() -> Self {
+    /// Create a new Kreuzberg MCP server instance with default config.
+    ///
+    /// Uses `ExtractionConfig::discover()` to search for kreuzberg.toml/yaml/json
+    /// in current and parent directories. Falls back to default configuration if
+    /// no config file is found.
+    pub fn new() -> crate::Result<Self> {
+        let config = match ExtractionConfig::discover()? {
+            Some(config) => {
+                tracing::info!("Loaded extraction config from discovered file");
+                config
+            }
+            None => {
+                tracing::info!("No config file found, using default configuration");
+                ExtractionConfig::default()
+            }
+        };
+
+        Ok(Self::with_config(config))
+    }
+
+    /// Create a new Kreuzberg MCP server instance with explicit config.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Default extraction configuration for all tool calls
+    pub fn with_config(config: ExtractionConfig) -> Self {
         Self {
             tool_router: Self::tool_router(),
+            default_config: std::sync::Arc::new(config),
         }
     }
 
@@ -113,7 +143,7 @@ impl KreuzbergMcp {
         &self,
         Parameters(params): Parameters<ExtractFileParams>,
     ) -> Result<CallToolResult, McpError> {
-        let config = build_config(params.enable_ocr, params.force_ocr);
+        let config = build_config(&self.default_config, params.enable_ocr, params.force_ocr);
 
         let result = if params.r#async {
             extract_file(&params.path, params.mime_type.as_deref(), &config)
@@ -143,7 +173,7 @@ impl KreuzbergMcp {
             .decode(&params.data)
             .map_err(|e| McpError::invalid_params(format!("Invalid base64: {}", e), None))?;
 
-        let config = build_config(params.enable_ocr, params.force_ocr);
+        let config = build_config(&self.default_config, params.enable_ocr, params.force_ocr);
 
         // extract_bytes requires a MIME type, use empty string as default for auto-detection
         let mime_type = params.mime_type.as_deref().unwrap_or("");
@@ -168,7 +198,7 @@ impl KreuzbergMcp {
         &self,
         Parameters(params): Parameters<BatchExtractFilesParams>,
     ) -> Result<CallToolResult, McpError> {
-        let config = build_config(params.enable_ocr, params.force_ocr);
+        let config = build_config(&self.default_config, params.enable_ocr, params.force_ocr);
 
         let results = if params.r#async {
             batch_extract_file(params.paths.clone(), &config)
@@ -229,7 +259,10 @@ impl ServerHandler for KreuzbergMcp {
 
 impl Default for KreuzbergMcp {
     fn default() -> Self {
-        Self::new()
+        Self::new().unwrap_or_else(|e| {
+            tracing::warn!("Failed to discover config, using default: {}", e);
+            Self::with_config(ExtractionConfig::default())
+        })
     }
 }
 
@@ -254,7 +287,7 @@ impl Default for KreuzbergMcp {
 /// }
 /// ```
 pub async fn start_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
-    let service = KreuzbergMcp::new().serve(stdio()).await?;
+    let service = KreuzbergMcp::new()?.serve(stdio()).await?;
 
     service.waiting().await?;
     Ok(())
@@ -265,19 +298,23 @@ pub async fn start_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
 // ============================================================================
 
 /// Build extraction config from MCP parameters.
-fn build_config(enable_ocr: bool, force_ocr: bool) -> ExtractionConfig {
-    ExtractionConfig {
-        ocr: if enable_ocr {
-            Some(crate::OcrConfig {
-                backend: "tesseract".to_string(),
-                language: "eng".to_string(),
-            })
-        } else {
-            None
-        },
-        force_ocr,
-        ..Default::default()
-    }
+///
+/// Starts with the default config and overlays OCR settings from request parameters.
+fn build_config(default_config: &ExtractionConfig, enable_ocr: bool, force_ocr: bool) -> ExtractionConfig {
+    let mut config = default_config.clone();
+
+    // Override OCR settings from request parameters
+    config.ocr = if enable_ocr {
+        Some(crate::OcrConfig {
+            backend: "tesseract".to_string(),
+            language: "eng".to_string(),
+        })
+    } else {
+        None
+    };
+    config.force_ocr = force_ocr;
+
+    config
 }
 
 /// Format extraction result as human-readable text.
@@ -327,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_server_info() {
-        let server = KreuzbergMcp::new();
+        let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let info = server.get_info();
 
         assert_eq!(info.server_info.name, "kreuzberg-mcp");
@@ -337,15 +374,17 @@ mod tests {
 
     #[test]
     fn test_build_config() {
-        let config = build_config(false, false);
+        let default_config = ExtractionConfig::default();
+
+        let config = build_config(&default_config, false, false);
         assert!(config.ocr.is_none());
         assert!(!config.force_ocr);
 
-        let config = build_config(true, false);
+        let config = build_config(&default_config, true, false);
         assert!(config.ocr.is_some());
         assert!(!config.force_ocr);
 
-        let config = build_config(true, true);
+        let config = build_config(&default_config, true, true);
         assert!(config.ocr.is_some());
         assert!(config.force_ocr);
     }

@@ -1,8 +1,9 @@
 //! API request and response types.
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-use crate::types::ExtractionResult;
+use crate::{ExtractionConfig, types::ExtractionResult};
 
 /// Health check response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,4 +38,14 @@ pub struct ErrorResponse {
     pub traceback: Option<String>,
     /// HTTP status code
     pub status_code: u16,
+}
+
+/// API server state.
+///
+/// Holds the default extraction configuration loaded from config file
+/// (via discovery or explicit path). Per-request configs override these defaults.
+#[derive(Debug, Clone)]
+pub struct ApiState {
+    /// Default extraction configuration
+    pub default_config: Arc<ExtractionConfig>,
 }

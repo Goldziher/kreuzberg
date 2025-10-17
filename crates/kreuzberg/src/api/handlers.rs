@@ -1,12 +1,15 @@
 //! API request handlers.
 
-use axum::{Json, extract::Multipart};
+use axum::{
+    Json,
+    extract::{Multipart, State},
+};
 
-use crate::{ExtractionConfig, batch_extract_bytes, extract_bytes};
+use crate::{batch_extract_bytes, extract_bytes};
 
 use super::{
     error::ApiError,
-    types::{ExtractResponse, HealthResponse, InfoResponse},
+    types::{ApiState, ExtractResponse, HealthResponse, InfoResponse},
 };
 
 /// Extract endpoint handler.
@@ -15,12 +18,19 @@ use super::{
 ///
 /// Accepts multipart form data with:
 /// - `files`: One or more files to extract
-/// - `config` (optional): JSON extraction configuration
+/// - `config` (optional): JSON extraction configuration (overrides server defaults)
 ///
 /// Returns a list of extraction results, one per file.
-pub async fn extract_handler(mut multipart: Multipart) -> Result<Json<ExtractResponse>, ApiError> {
+///
+/// The server's default config (loaded from kreuzberg.toml/yaml/json via discovery)
+/// is used as the base, and any per-request config overrides those defaults.
+pub async fn extract_handler(
+    State(state): State<ApiState>,
+    mut multipart: Multipart,
+) -> Result<Json<ExtractResponse>, ApiError> {
     let mut files = Vec::new();
-    let mut config = ExtractionConfig::default();
+    // Start with server default config (loaded from config file via discovery)
+    let mut config = (*state.default_config).clone();
 
     // Parse multipart form data
     while let Some(field) = multipart

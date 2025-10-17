@@ -9,12 +9,15 @@ use axum::{
 use serde_json::json;
 use tower::ServiceExt; // for `oneshot`
 
-use kreuzberg::api::{HealthResponse, InfoResponse, create_router};
+use kreuzberg::{
+    ExtractionConfig,
+    api::{HealthResponse, InfoResponse, create_router},
+};
 
 /// Test the health check endpoint.
 #[tokio::test]
 async fn test_health_endpoint() {
-    let app = create_router();
+    let app = create_router(ExtractionConfig::default());
 
     let response = app
         .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
@@ -33,7 +36,7 @@ async fn test_health_endpoint() {
 /// Test the info endpoint.
 #[tokio::test]
 async fn test_info_endpoint() {
-    let app = create_router();
+    let app = create_router(ExtractionConfig::default());
 
     let response = app
         .oneshot(Request::builder().uri("/info").body(Body::empty()).unwrap())
@@ -52,7 +55,7 @@ async fn test_info_endpoint() {
 /// Test extract endpoint with no files returns 400.
 #[tokio::test]
 async fn test_extract_no_files() {
-    let app = create_router();
+    let app = create_router(ExtractionConfig::default());
 
     // Create an empty multipart body
     let boundary = "----boundary";
@@ -76,7 +79,7 @@ async fn test_extract_no_files() {
 /// Test extract endpoint with a simple text file.
 #[tokio::test]
 async fn test_extract_text_file() {
-    let app = create_router();
+    let app = create_router(ExtractionConfig::default());
 
     let boundary = "----boundary";
     let file_content = "Hello, world!";
@@ -116,7 +119,7 @@ async fn test_extract_text_file() {
 /// Test extract endpoint with JSON config.
 #[tokio::test]
 async fn test_extract_with_config() {
-    let app = create_router();
+    let app = create_router(ExtractionConfig::default());
 
     let boundary = "----boundary";
     let file_content = "Hello, world!";
@@ -156,7 +159,7 @@ async fn test_extract_with_config() {
 /// Test extract endpoint with invalid config returns 400.
 #[tokio::test]
 async fn test_extract_invalid_config() {
-    let app = create_router();
+    let app = create_router(ExtractionConfig::default());
 
     let boundary = "----boundary";
     let file_content = "Hello, world!";
@@ -194,7 +197,7 @@ async fn test_extract_invalid_config() {
 /// Test extract endpoint with multiple files.
 #[tokio::test]
 async fn test_extract_multiple_files() {
-    let app = create_router();
+    let app = create_router(ExtractionConfig::default());
 
     let boundary = "----boundary";
     let file1_content = "First file content";

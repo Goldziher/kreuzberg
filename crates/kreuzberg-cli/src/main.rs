@@ -3,9 +3,8 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use kreuzberg::{
-    ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, PdfConfig,
-    TokenReductionConfig, batch_extract_file, batch_extract_file_sync, detect_mime_type, extract_file,
-    extract_file_sync,
+    ChunkingConfig, ExtractionConfig, LanguageDetectionConfig, OcrConfig, batch_extract_file, batch_extract_file_sync,
+    detect_mime_type, extract_file, extract_file_sync,
 };
 use serde_json::json;
 use std::path::PathBuf;
@@ -26,6 +25,10 @@ enum Commands {
         /// Path to the document
         path: PathBuf,
 
+        /// Path to config file (TOML, YAML, or JSON). If not specified, searches for kreuzberg.toml/yaml/json in current and parent directories.
+        #[arg(short, long)]
+        config: Option<PathBuf>,
+
         /// MIME type hint (auto-detected if not provided)
         #[arg(short, long)]
         mime_type: Option<String>,
@@ -34,37 +37,37 @@ enum Commands {
         #[arg(short, long, default_value = "text")]
         format: OutputFormat,
 
-        /// Enable OCR
+        /// Enable OCR (overrides config file)
         #[arg(long)]
-        ocr: bool,
+        ocr: Option<bool>,
 
-        /// Force OCR even if text extraction succeeds
+        /// Force OCR even if text extraction succeeds (overrides config file)
         #[arg(long)]
-        force_ocr: bool,
+        force_ocr: Option<bool>,
 
-        /// Disable caching
+        /// Disable caching (overrides config file)
         #[arg(long)]
-        no_cache: bool,
+        no_cache: Option<bool>,
 
-        /// Enable chunking
+        /// Enable chunking (overrides config file)
         #[arg(long)]
-        chunk: bool,
+        chunk: Option<bool>,
 
-        /// Chunk size in characters
-        #[arg(long, default_value = "1000")]
-        chunk_size: usize,
-
-        /// Chunk overlap in characters
-        #[arg(long, default_value = "200")]
-        chunk_overlap: usize,
-
-        /// Enable quality processing
+        /// Chunk size in characters (overrides config file)
         #[arg(long)]
-        quality: bool,
+        chunk_size: Option<usize>,
 
-        /// Enable language detection
+        /// Chunk overlap in characters (overrides config file)
         #[arg(long)]
-        detect_language: bool,
+        chunk_overlap: Option<usize>,
+
+        /// Enable quality processing (overrides config file)
+        #[arg(long)]
+        quality: Option<bool>,
+
+        /// Enable language detection (overrides config file)
+        #[arg(long)]
+        detect_language: Option<bool>,
 
         /// Use async extraction
         #[arg(long)]
@@ -76,25 +79,29 @@ enum Commands {
         /// Paths to documents
         paths: Vec<PathBuf>,
 
+        /// Path to config file (TOML, YAML, or JSON). If not specified, searches for kreuzberg.toml/yaml/json in current and parent directories.
+        #[arg(short, long)]
+        config: Option<PathBuf>,
+
         /// Output format (text or json)
         #[arg(short, long, default_value = "json")]
         format: OutputFormat,
 
-        /// Enable OCR
+        /// Enable OCR (overrides config file)
         #[arg(long)]
-        ocr: bool,
+        ocr: Option<bool>,
 
-        /// Force OCR even if text extraction succeeds
+        /// Force OCR even if text extraction succeeds (overrides config file)
         #[arg(long)]
-        force_ocr: bool,
+        force_ocr: Option<bool>,
 
-        /// Disable caching
+        /// Disable caching (overrides config file)
         #[arg(long)]
-        no_cache: bool,
+        no_cache: Option<bool>,
 
-        /// Enable quality processing
+        /// Enable quality processing (overrides config file)
         #[arg(long)]
-        quality: bool,
+        quality: Option<bool>,
 
         /// Use async extraction
         #[arg(long)]
@@ -144,6 +151,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Extract {
             path,
+            config: config_path,
             mime_type,
             format,
             ocr,
@@ -156,17 +164,59 @@ async fn main() -> Result<()> {
             detect_language,
             r#async,
         } => {
-            let config = ConfigBuilder {
-                ocr,
-                force_ocr,
-                use_cache: !no_cache,
-                chunk,
-                chunk_size,
-                chunk_overlap,
-                quality,
-                detect_language,
+            // Load config from file or discover
+            let mut config = load_config(config_path)?;
+
+            // Apply CLI overrides
+            if let Some(ocr_flag) = ocr {
+                if ocr_flag {
+                    config.ocr = Some(OcrConfig {
+                        backend: "tesseract".to_string(),
+                        language: "eng".to_string(),
+                    });
+                } else {
+                    config.ocr = None;
+                }
             }
-            .build();
+            if let Some(force_ocr_flag) = force_ocr {
+                config.force_ocr = force_ocr_flag;
+            }
+            if let Some(no_cache_flag) = no_cache {
+                config.use_cache = !no_cache_flag;
+            }
+            if let Some(chunk_flag) = chunk {
+                if chunk_flag {
+                    let max_chars = chunk_size.unwrap_or(1000);
+                    let max_overlap = chunk_overlap.unwrap_or(200);
+                    config.chunking = Some(ChunkingConfig { max_chars, max_overlap });
+                } else {
+                    config.chunking = None;
+                }
+            } else {
+                // Override chunk size/overlap if chunking is already enabled
+                if config.chunking.is_some() {
+                    if let Some(max_chars) = chunk_size {
+                        config.chunking.as_mut().unwrap().max_chars = max_chars;
+                    }
+                    if let Some(max_overlap) = chunk_overlap {
+                        config.chunking.as_mut().unwrap().max_overlap = max_overlap;
+                    }
+                }
+            }
+            if let Some(quality_flag) = quality {
+                config.enable_quality_processing = quality_flag;
+            }
+            if let Some(detect_language_flag) = detect_language {
+                if detect_language_flag {
+                    config.language_detection = Some(LanguageDetectionConfig {
+                        enabled: true,
+                        min_confidence: 0.8,
+                        detect_multiple: false,
+                    });
+                } else {
+                    config.language_detection = None;
+                }
+            }
 
             let path_str = path.to_string_lossy().to_string();
 
@@ -200,6 +250,7 @@ async fn main() -> Result<()> {
 
         Commands::Batch {
             paths,
+            config: config_path,
             format,
             ocr,
             force_ocr,
@@ -207,17 +258,29 @@ async fn main() -> Result<()> {
             quality,
             r#async,
         } => {
-            let config = ConfigBuilder {
-                ocr,
-                force_ocr,
-                use_cache: !no_cache,
-                chunk: false,
-                chunk_size: 1000,
-                chunk_overlap: 200,
-                quality,
-                detect_language: false,
+            // Load config from file or discover
+            let mut config = load_config(config_path)?;
+
+            // Apply CLI overrides
+            if let Some(ocr_flag) = ocr {
+                if ocr_flag {
+                    config.ocr = Some(OcrConfig {
+                        backend: "tesseract".to_string(),
+                        language: "eng".to_string(),
+                    });
+                } else {
+                    config.ocr = None;
+                }
             }
-            .build();
+            if let Some(force_ocr_flag) = force_ocr {
+                config.force_ocr = force_ocr_flag;
+            }
+            if let Some(no_cache_flag) = no_cache {
+                config.use_cache = !no_cache_flag;
+            }
+            if let Some(quality_flag) = quality {
+                config.enable_quality_processing = quality_flag;
+            }
 
             let path_strs: Vec<String> = paths.iter().map(|p| p.to_string_lossy().to_string()).collect();
 
@@ -299,66 +362,34 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-struct ConfigBuilder {
-    ocr: bool,
-    force_ocr: bool,
-    use_cache: bool,
-    chunk: bool,
-    chunk_size: usize,
-    chunk_overlap: usize,
-    quality: bool,
-    detect_language: bool,
-}
-
-impl ConfigBuilder {
-    fn build(self) -> ExtractionConfig {
-        ExtractionConfig {
-            use_cache: self.use_cache,
-            enable_quality_processing: self.quality,
-            ocr: if self.ocr {
-                Some(OcrConfig {
-                    backend: "tesseract".to_string(),
-                    language: "eng".to_string(),
-                })
-            } else {
-                None
-            },
-            force_ocr: self.force_ocr,
-            chunking: if self.chunk {
-                Some(ChunkingConfig {
-                    max_chars: self.chunk_size,
-                    max_overlap: self.chunk_overlap,
-                })
-            } else {
-                None
-            },
-            images: Some(ImageExtractionConfig {
-                extract_images: true,
-                target_dpi: 300,
-                max_image_dimension: 4096,
-                auto_adjust_dpi: true,
-                min_dpi: 72,
-                max_dpi: 600,
-            }),
-            pdf_options: Some(PdfConfig {
-                extract_images: false,
-                passwords: None,
-                extract_metadata: true,
-            }),
-            token_reduction: Some(TokenReductionConfig {
-                mode: "off".to_string(),
-                preserve_important_words: true,
-            }),
-            language_detection: if self.detect_language {
-                Some(LanguageDetectionConfig {
-                    enabled: true,
-                    min_confidence: 0.8,
-                    detect_multiple: false,
-                })
-            } else {
-                None
-            },
-            postprocessor: None,
+/// Load configuration from file or discover in current/parent directories.
+///
+/// If `config_path` is provided, loads from that file (supports TOML, YAML, JSON).
+/// Otherwise, uses `ExtractionConfig::discover()` to find config in current/parent directories.
+/// If no config is found, returns default configuration.
+fn load_config(config_path: Option<PathBuf>) -> Result<ExtractionConfig> {
+    if let Some(path) = config_path {
+        // Load from specified path
+        let path_str = path.to_string_lossy();
+        let config = if path_str.ends_with(".toml") {
+            ExtractionConfig::from_toml_file(&path)
+        } else if path_str.ends_with(".yaml") || path_str.ends_with(".yml") {
+            ExtractionConfig::from_yaml_file(&path)
+        } else if path_str.ends_with(".json") {
+            ExtractionConfig::from_json_file(&path)
+        } else {
+            anyhow::bail!("Config file must have .toml, .yaml, .yml, or .json extension");
+        };
+        config.context("Failed to load config file")
+    } else {
+        // Discover config in current/parent directories
+        match ExtractionConfig::discover() {
+            Ok(Some(config)) => Ok(config),
+            Ok(None) => {
+                // No config found, use default
+                Ok(ExtractionConfig::default())
+            }
+            Err(e) => Err(e).context("Failed to discover config file"),
         }
     }
 }

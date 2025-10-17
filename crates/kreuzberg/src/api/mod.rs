@@ -27,12 +27,14 @@
 //! ## Embedding the router in your app
 //!
 //! ```no_run
-//! use kreuzberg::api::create_router;
+//! use kreuzberg::{ExtractionConfig, api::create_router};
 //! use axum::Router;
 //!
 //! #[tokio::main]
 //! async fn main() -> kreuzberg::Result<()> {
-//!     let kreuzberg_router = create_router();
+//!     // Load config (from file or use default)
+//!     let config = ExtractionConfig::default();
+//!     let kreuzberg_router = create_router(config);
 //!
 //!     // Nest under /api prefix
 //!     let app = Router::new().nest("/api", kreuzberg_router);
@@ -68,5 +70,5 @@ mod server;
 mod types;
 
 pub use error::ApiError;
-pub use server::{create_router, serve, serve_default};
-pub use types::{ErrorResponse, ExtractResponse, HealthResponse, InfoResponse};
+pub use server::{create_router, serve, serve_default, serve_with_config};
+pub use types::{ApiState, ErrorResponse, ExtractResponse, HealthResponse, InfoResponse};
