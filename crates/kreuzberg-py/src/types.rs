@@ -255,9 +255,9 @@ mod tests {
             assert_eq!(py_int.extract::<i64>(py).unwrap(), 42);
 
             // Test number (float)
-            let float_val = serde_json::json!(3.14);
+            let float_val = serde_json::json!(2.5);
             let py_float = serde_json_to_py(&float_val, py).unwrap();
-            assert!((py_float.extract::<f64>(py).unwrap() - 3.14).abs() < 0.001);
+            assert!((py_float.extract::<f64>(py).unwrap() - 2.5).abs() < 0.001);
 
             // Test string
             let str_val = serde_json::json!("test");

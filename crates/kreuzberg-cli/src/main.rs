@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use kreuzberg::{

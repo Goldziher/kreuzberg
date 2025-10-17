@@ -264,6 +264,7 @@ pub fn generate_cache_key(parts: &[(&str, &str)]) -> String {
     format!("{:032x}", hash)
 }
 
+#[allow(unsafe_code)]
 pub fn get_available_disk_space(path: &str) -> Result<f64> {
     #[cfg(unix)]
     {

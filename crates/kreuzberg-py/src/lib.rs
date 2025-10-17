@@ -10,6 +10,8 @@
 //! - Zero duplication of core functionality
 //! - Modern PyO3 0.26 patterns throughout
 
+#![deny(unsafe_code)]
+
 use pyo3::prelude::*;
 
 mod config;
@@ -52,10 +54,15 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // MIME constants
     mime::register_constants(m)?;
 
-    // Plugin functions (3 functions - stubs for v4.1)
+    // OCR Backend Plugin functions (3 functions)
     m.add_function(wrap_pyfunction!(plugins::register_ocr_backend, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::list_ocr_backends, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::unregister_ocr_backend, m)?)?;
+
+    // PostProcessor Plugin functions (3 functions)
+    m.add_function(wrap_pyfunction!(plugins::register_post_processor, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::list_post_processors, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::unregister_post_processor, m)?)?;
 
     Ok(())
 }

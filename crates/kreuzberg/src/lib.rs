@@ -32,6 +32,8 @@
 //! - Configurable caching and quality processing
 //! - Cross-language plugin support (Python, Node.js planned)
 
+#![deny(unsafe_code)]
+
 pub mod cache;
 pub mod core;
 pub mod error;
@@ -45,9 +47,8 @@ pub mod types;
 #[cfg(feature = "api")]
 pub mod api;
 
-// TODO: MCP module requires unreleased features from rmcp or official Rust MCP SDK
-// #[cfg(feature = "mcp")]
-// pub mod mcp;
+#[cfg(feature = "mcp")]
+pub mod mcp;
 
 #[cfg(feature = "chunking")]
 pub mod chunking;

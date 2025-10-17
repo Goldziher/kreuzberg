@@ -6,13 +6,14 @@ are implemented in Rust for maximum performance.
 
 Python-specific features:
 - OCR backends: EasyOCR, PaddleOCR
+- PostProcessors: Entity extraction, keyword extraction, category detection
 - API server: Litestar REST API
 - CLI: Command-line interface (proxies to Rust binary)
 - MCP: Model Context Protocol server
 
 Architecture:
 - Rust handles: Extraction, parsing, chunking, quality, language detection
-- Python adds: OCR backends, API, CLI, optional NLP features
+- Python adds: OCR backends, postprocessors, API, CLI, optional NLP features
 """
 
 from importlib.metadata import version
@@ -42,10 +43,15 @@ from kreuzberg._internal_bindings import (
     extract_file,
     # Core extraction functions (sync)
     extract_file_sync,
+    # OCR backend plugin functions
     list_ocr_backends,
-    # Plugin functions
+    # PostProcessor plugin functions
+    list_post_processors,
     register_ocr_backend,
+    register_post_processor,
     unregister_ocr_backend,
+    unregister_post_processor,
+    # MIME validation
     validate_mime_type,
 )
 
@@ -78,8 +84,20 @@ __all__ = [
     # MIME utilities
     "detect_mime_type",
     "validate_mime_type",
-    # Plugin functions
+    # OCR backend plugin functions
     "register_ocr_backend",
     "list_ocr_backends",
     "unregister_ocr_backend",
+    # PostProcessor plugin functions
+    "register_post_processor",
+    "list_post_processors",
+    "unregister_post_processor",
 ]
+
+# Auto-register Python postprocessors (if dependencies are installed)
+# This triggers registration of entity extraction, keyword extraction, etc.
+try:
+    from . import postprocessors  # noqa: F401
+except ImportError:
+    # Optional postprocessor dependencies not installed
+    pass

@@ -64,19 +64,23 @@ urls.Issues = "https://github.com/Goldziher/kreuzberg/issues"
 urls.Repository = "https://github.com/Goldziher/kreuzberg"
 scripts.kreuzberg = "kreuzberg.cli:main"
 
+[dependency-groups]
+dev = [
+  "en-core-web-sm",
+  "mypy>=1.14",
+  "pytest>=8",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=6",
+  "ruff>=0.8",
+]
+
 [tool.maturin]
 module-name = "kreuzberg._internal_bindings"
 # Point to the PyO3 bindings crate
 manifest-path = "../../crates/kreuzberg-py/Cargo.toml"
 
-[tool.uv]
-dev-dependencies = [
-  "pytest>=8.0.0",
-  "pytest-asyncio>=0.24.0",
-  "pytest-cov>=6.0.0",
-  "mypy>=1.14.0",
-  "ruff>=0.8.0",
-]
+[tool.uv.sources]
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
 
 [tool.ruff]
 target-version = "py310"

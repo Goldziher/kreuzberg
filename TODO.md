@@ -1,1445 +1,838 @@
-# Kreuzberg V4 Rust-First Migration - Code Quality Excellence
+# Kreuzberg V4 - Concrete Development Tasks
 
-**Status**: Phase 4: PyO3 Bindings Redesign & Python Library Rewrite
-**Last Updated**: 2025-10-15 21:30
-**Test Status**: 839 tests passing
-**Coverage**: ~92-94% estimated (target: 95% for v4.0 release)
-**Code Quality Goal**: 10/10 (Production-Ready Excellence)
-**Architecture**: See `V4_STRUCTURE.md`
+**Status**: Phase 4 - FFI Bridge & Integration Testing
+**Last Updated**: 2025-10-16 (Evening)
+**Test Status**: 839 Rust tests + 56/71 Python tests passing
+**Coverage**: ~92-94% (target: 95%)
+**Code Quality**: 10/10 ✅
 
-**🎉 ALL P0 AND P1 ISSUES RESOLVED!**
-**🎉 P2 ISSUES #10 AND #11 COMPLETE!**
+## 📋 Active Task Queue (In Priority Order)
 
-______________________________________________________________________
+### Task 1: Fix Failing PostProcessor Tests (30-60 minutes) ⭐ NEXT
 
-## 🚀 Next Phase: Complete Rewrite
+**Status**: 12/71 tests failing (minor edge cases)
+**Priority**: P0 - Blocks postprocessor completion
+**Files**: `packages/python/tests/postprocessors/`
 
-### Phase 4A: PyO3 Bindings Redesign
+#### Subtasks
 
-- Complete redesign of `kreuzberg-py` crate
-- Modern PyO3 patterns and best practices
-- Direct type conversion, minimal FFI overhead
+1. **Fix ImportError Mock Tests (3 tests)**
 
-### Phase 4B: Python Library Rewrite
+    - **Files**:
+        - `test_entity_extraction.py:234` - `test_initialize_without_spacy`
+        - `test_keyword_extraction.py:231` - `test_initialize_without_keybert`
+        - `test_category_extraction.py:350` - `test_initialize_without_transformers`
+    - **Issue**: Tests mock missing dependencies but deps are installed
+    - **Solution**: Skip these tests or use better mocking that actually hides the modules
+    - **Acceptance**: All 3 tests either pass or are properly skipped
 
-- Complete rewrite of Python code to use new bindings
-- Clean architecture leveraging Rust core
-- Maintain backward compatibility where possible
+1. **Fix Entity Extraction Tests (5 tests)**
 
-______________________________________________________________________
+    - **Files**: `test_entity_extraction.py`
+        - Line 80: `test_process_empty_content`
+        - Line 96: `test_process_missing_content`
+        - Line 113: `test_process_non_string_content`
+        - Line 276: `test_metadata_not_overwritten`
+    - **Issue**: Tests fail because spaCy model `en_core_web_sm` not downloaded
+    - **Solution**:
+        - Add `pytest.mark.skipif` decorator checking if model is available
+        - Use `spacy.util.is_package("en_core_web_sm")` check
+    - **Acceptance**: Tests either pass with model or skip gracefully
 
-## ✅ Critical Priority (P0) - **COMPLETED**
+1. **Fix Auto-Registration Test (1 test)**
 
-All P0 blocking issues have been resolved! The codebase is now production-ready from a reliability standpoint.
+    - **File**: `test_auto_registration.py:29` - `test_entity_extraction_registration_with_spacy`
+    - **Issue**: Entity extraction not registered (spaCy model missing)
+    - **Solution**: Skip if spaCy model not available
+    - **Acceptance**: Test passes or skips based on model availability
 
-### ✅ 1. Fix Registry Lock Poisoning - **COMPLETED**
+1. **Fix FFI Bridge Error Handling Tests (2 tests)**
 
-**Impact**: System-wide failure mode
-**Effort**: 2-3 hours (ACTUAL: 2 hours)
-**Location**: `src/plugins/registry.rs`
-**Severity**: Critical - Production Outage Risk
-**Status**: ✅ RESOLVED (2025-10-15)
+    - **Files**: `test_ffi_bridge.py`
+        - Line 225: `test_unregister_nonexistent_processor`
+        - Line 236: `test_register_duplicate_processor_name`
+    - **Issue**: Tests expect RuntimeError but registry doesn't raise on these cases
+    - **Solution**:
+        - Check Rust `unregister_post_processor` and `register_post_processor` implementations
+        - Verify they raise PyRuntimeError for these cases
+        - If not, update tests to match actual behavior or fix Rust implementation
+    - **Acceptance**: Tests match actual Rust FFI behavior
 
-**Problem**: All registry operations use `.unwrap()` on RwLock reads/writes. If any thread panics while holding a lock, the RwLock becomes poisoned and ALL subsequent operations panic, cascading failures across the entire system.
+1. **Fix Processor Failure Handling Tests (2 tests)**
 
-```rust
-// CURRENT - DANGEROUS (lines 39, 68, 104, etc.)
-let registry_read = registry.read().unwrap();  // ❌ Panics if poisoned
+    - **Files**:
+        - `test_keyword_extraction.py:295` - `test_extraction_failure_handling`
+        - `test_category_extraction.py:418` - `test_classification_failure_handling`
+    - **Issue**: Tests set `_extractor = None` but processor still returns results
+    - **Solution**: Update processors to handle `None` models gracefully (return empty results)
+    - **Acceptance**: Processors return minimal/empty results when model is None
 
-// REQUIRED
-let registry_read = registry.read()
-    .map_err(|e| KreuzbergError::Other(format!("Registry lock poisoned: {}", e)))?;
-```
+**Completion Criteria**:
 
-**Files to Fix**:
+- ✅ 68-71/71 tests passing
+- ✅ All failures either fixed or have clear skip conditions
+- ✅ No flaky tests
 
-- `src/plugins/registry.rs`: All `.unwrap()` on RwLock operations
-- `src/cache/mod.rs:202-208`: All `.unwrap()` on Mutex operations
-- `src/core/extractor.rs`: Thread-local cache `.unwrap()` calls
-
-**Acceptance Criteria**:
-
-- ✅ Zero `.unwrap()` calls on lock operations in production code
-- ✅ All lock poisoning returns proper `KreuzbergError`
-- ✅ Add lock poisoning recovery tests
-- ✅ Document recovery behavior
-
-**Test Coverage Required**:
-
-```rust
-#[test]
-#[should_panic]
-fn test_registry_panic_during_init() {
-    // Test that panics during initialization don't poison registry permanently
-}
-
-#[test]
-fn test_registry_poison_recovery() {
-    // Test that poisoned locks return proper errors
-}
-```
+**Estimated Time**: 30-60 minutes
 
 ______________________________________________________________________
 
-### ✅ 2. Resolve Plugin Lifecycle Design Flaw - **COMPLETED**
+### Task 2: Integration with Extraction Pipeline (1-2 hours)
 
-**Impact**: Core design issue affecting all plugins
-**Effort**: 1-2 days (ACTUAL: 4 hours)
-**Location**: `src/plugins/traits.rs`, all registry files
-**Severity**: High - Registration fails unpredictably
-**Status**: ✅ RESOLVED (2025-10-15)
-**Solution**: Chose **Option A (Interior Mutability)** - Changed trait to use `&self`
+**Status**: Not started
+**Priority**: P1 - Core feature completion
+**Goal**: Make postprocessors run automatically during extraction
 
-**Problem**: The `Plugin` trait requires `&mut self` for `initialize()` and `shutdown()`, but plugins are `Send + Sync` and stored in `Arc`. This creates an impossible situation where `Arc::get_mut()` fails if there are multiple references.
+#### Approach Decision
 
-```rust
-// CURRENT - INCOMPATIBLE DESIGN
-pub trait Plugin: Send + Sync {
-    fn initialize(&mut self) -> Result<()>;  // ❌ Can't call on Arc<dyn Plugin>
-    fn shutdown(&mut self) -> Result<()>;
-}
+**Recommended**: Option B (Python-layer postprocessing)
 
-// Current workaround fails unpredictably:
-Arc::get_mut(&mut backend)
-    .ok_or_else(|| KreuzbergError::Plugin { /* ... */ })?
-    .initialize()?;
-```
+- Keep Rust extraction pure and fast
+- Python wrapper adds optional enrichment
+- Easier to debug and test
+- Better separation of concerns
 
-**Solution Options** (Choose ONE):
+#### Subtasks
 
-#### Option A: Interior Mutability (RECOMMENDED)
+1. **Create Python Extraction Wrapper (30 min)**
 
-```rust
-pub trait Plugin: Send + Sync {
-    fn initialize(&self) -> Result<()>;  // ✅ Works with Arc
-    fn shutdown(&self) -> Result<()>;
-}
+    - **File**: `packages/python/kreuzberg/extraction.py` (new file)
+    - **Implementation**:
 
-// Plugins manage their own state via Mutex/RwLock internally
-impl Plugin for MyPlugin {
-    fn initialize(&self) -> Result<()> {
-        let mut state = self.state.lock().unwrap();
-        state.initialized = true;
-        Ok(())
-    }
-}
-```
+        ```python
+        from typing import Optional
+        from kreuzberg._internal_bindings import (
+            extract_file as _extract_file_rust,
+            extract_bytes as _extract_bytes_rust,
+            ExtractionConfig,
+        )
+        from kreuzberg import list_post_processors
 
-**Pros**: Works with Arc, thread-safe, minimal changes to registration
-**Cons**: Plugins need interior mutability
+        async def extract_file(
+            path: str, mime_type: Optional[str] = None, config: Optional[ExtractionConfig] = None, enable_postprocessors: bool = True
+        ):
+            # Call Rust extraction
+            result = await _extract_file_rust(path, mime_type, config)
 
-#### Option B: Pre-Initialized Pattern
+            # Apply postprocessors if enabled
+            if enable_postprocessors:
+                result = await _apply_postprocessors(result, config)
 
-```rust
-pub trait Plugin: Send + Sync {
-    // No initialize/shutdown in trait
-}
+            return result
 
-pub trait PluginBuilder {
-    fn build(self) -> Result<Arc<dyn Plugin>>;
-}
+        async def _apply_postprocessors(result, config):
+            # Get registered processors
+            # Call each in order (early → middle → late)
+            # Return enriched result
+            ...
+        ```
 
-// Usage:
-let plugin = MyPluginBuilder::new().build()?;
-registry.register(plugin)?;
-```
+    - **Acceptance**: Wrapper functions work, call Rust + processors
 
-**Pros**: Clear separation of lifecycle
-**Cons**: Requires builder for every plugin
+1. **Add Configuration Support (20 min)**
 
-#### Option C: Stateless Plugins (SIMPLEST)
+    - **File**: Extend `ExtractionConfig` or create `PostProcessorConfig`
+    - **Options**:
+        - `enable_postprocessors: bool = True`
+        - `enabled_processors: Optional[list[str]] = None` (whitelist)
+        - `disabled_processors: Optional[list[str]] = None` (blacklist)
+    - **Acceptance**: Config controls which processors run
 
-```rust
-// Remove initialize/shutdown from trait entirely
-pub trait Plugin: Send + Sync {
-    fn name(&self) -> &str;
-    fn version(&self) -> &str;
-    // No lifecycle methods
-}
+1. **Implement Processor Ordering (20 min)**
 
-// Plugins are constructed in their final state
-```
+    - **Logic**: Call processors in stages (early → middle → late)
+    - **Files**:
+        - `packages/python/kreuzberg/extraction.py`
+    - **Implementation**:
 
-**Pros**: Simplest, no lifecycle management needed
-**Cons**: Can't handle late initialization
+        ```python
+        from kreuzberg._internal_bindings import list_post_processors
 
-**Recommendation**: **Option A (Interior Mutability)** - Most flexible, works with current architecture
+        # Group processors by stage
+        early = []  # entity extraction
+        middle = []  # keywords, categories
+        late = []  # custom user processors
 
-**Acceptance Criteria**:
+        # Call in order, passing result through pipeline
+        ```
 
-- ✅ Plugin trait compatible with `Arc` storage
-- ✅ No `Arc::get_mut()` workarounds
-- ✅ All existing plugins updated
-- ✅ Registration never fails due to reference counting
-- ✅ Clear documentation of plugin lifecycle
+    - **Acceptance**: Processors execute in correct order
 
-**Files to Update**:
+1. **Update `__init__.py` Exports (10 min)**
 
-- `src/plugins/traits.rs`: Update `Plugin` trait
-- `src/plugins/registry.rs`: Update all registries (4 types)
-- `src/plugins/ocr.rs`, `extractor.rs`, `processor.rs`, `validator.rs`: Update plugin impls
-- All built-in plugins: Add interior mutability if needed
+    - **File**: `packages/python/kreuzberg/__init__.py`
+    - **Changes**:
+        - Export new wrapper functions alongside Rust functions
+        - Add deprecation notice for direct Rust function usage (optional)
+    - **Acceptance**: Users can import wrapper functions
 
-______________________________________________________________________
+1. **Add Tests (20 min)**
 
-### ✅ 3. Audit and Fix Production .unwrap() Calls - **COMPLETED**
+    - **File**: `packages/python/tests/test_extraction_pipeline.py` (new)
+    - **Tests**:
+        - Test extraction with postprocessors enabled
+        - Test extraction with postprocessors disabled
+        - Test selective processor enabling
+        - Test processor ordering
+        - Verify metadata enrichment
+    - **Acceptance**: 10+ integration tests passing
 
-**Impact**: Potential panics in production
-**Effort**: 3-4 hours (ACTUAL: 3 hours)
-**Severity**: High - Reliability
-**Status**: ✅ RESOLVED (2025-10-15)
+**Completion Criteria**:
 
-**Problem**: 44 files contain `.unwrap()` or `.expect()` calls. While many are in tests (acceptable), several are in production code paths.
+- ✅ Python wrapper functions available
+- ✅ Postprocessors run automatically on extraction
+- ✅ Configuration controls processor execution
+- ✅ Tests verify end-to-end pipeline
+- ✅ Documentation updated
 
-**Audit Results Needed**:
-
-```bash
-# Run this to find production unwrap calls:
-rg "unwrap\(\)|expect\(" crates/kreuzberg/src --type rust | grep -v "tests::"
-```
-
-**Known Production unwrap() Locations**:
-
-- ✅ `src/plugins/registry.rs` - RwLock unwraps (covered by #1)
-- ✅ `src/cache/mod.rs:202-208` - Mutex unwraps (covered by #1)
-- ⚠️ `src/extraction/libreoffice.rs` - Process output unwraps
-- ⚠️ `src/pdf/rendering.rs` - Pdfium unwraps
-- ⚠️ `src/ocr/processor.rs` - Tesseract unwraps
-
-**Acceptance Criteria**:
-
-- ✅ Complete audit of all `.unwrap()` and `.expect()` in production code
-- ✅ Replace with proper error handling or document why safe
-- ✅ Add `#[allow(clippy::unwrap_used)]` with justification comments for unavoidable cases
-- ✅ Consider adding `#![warn(clippy::unwrap_used)]` to lib.rs
+**Estimated Time**: 1-2 hours
 
 ______________________________________________________________________
 
-## ✅ High Priority (P1) - **COMPLETED**
+### Task 3: Migrate OCR Backends from Legacy (3-4 hours)
 
-All P1 issues have been resolved! Pre-release quality standards met.
+**Status**: FFI bridge 100% complete, migration 0%
+**Priority**: P1 - Unblock Python OCR functionality
+**Goal**: Migrate EasyOCR and PaddleOCR from `_legacy/_ocr/` to new FFI bridge
 
-### ✅ 4. Fix Thread-Local Cache Invalidation - **COMPLETED**
+#### Subtasks
 
-**Impact**: Memory leak + stale extractor usage
-**Effort**: 3-4 hours
-**Location**: `src/core/extractor.rs` (lines 40-78)
+1. **Create OCR Protocol Interface (15 min)**
 
-**Problem**: Thread-local extractor cache never clears. If extractors are unregistered or replaced, stale references persist forever in thread-local storage.
+    - **File**: `packages/python/kreuzberg/ocr/protocol.py` (new)
+    - **Content**:
 
-```rust
-// CURRENT - NO INVALIDATION
-thread_local! {
-    static EXTRACTOR_CACHE: RefCell<HashMap<String, Arc<dyn DocumentExtractor>>> =
-        RefCell::new(HashMap::new());  // ❌ Never cleared
-}
-```
+        ```python
+        from typing import Protocol
 
-**Solution**: Add generation-based cache invalidation:
+        class OcrBackendProtocol(Protocol):
+            """Protocol for OCR backends compatible with Rust FFI bridge."""
 
-```rust
-use std::sync::atomic::{AtomicU64, Ordering};
+            def name(self) -> str:
+                """Return backend name (e.g., 'easyocr', 'paddleocr')."""
+                ...
 
-static CACHE_GENERATION: AtomicU64 = AtomicU64::new(0);
+            def supported_languages(self) -> list[str]:
+                """Return list of supported language codes."""
+                ...
 
-thread_local! {
-    static EXTRACTOR_CACHE: RefCell<(u64, HashMap<String, Arc<dyn DocumentExtractor>>)> =
-        RefCell::new((0, HashMap::new()));
-}
+            def process_image(self, image_bytes: bytes, language: str) -> dict:
+                """Process image bytes and return extraction result dict.
 
-fn get_extractor_cached(mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
-    let current_gen = CACHE_GENERATION.load(Ordering::Acquire);
+                Args:
+                    image_bytes: Raw image data (PNG, JPEG, etc.)
+                    language: Language code (e.g., 'eng', 'chi_sim')
 
-    EXTRACTOR_CACHE.with(|cache| {
-        let mut cache = cache.borrow_mut();
+                Returns:
+                    {
+                        "content": "extracted text",
+                        "metadata": {"confidence": 0.95, ...},
+                        "tables": []  # optional
+                    }
+                """
+                ...
+            # Optional lifecycle methods
+            def initialize(self) -> None: ...
+            def shutdown(self) -> None: ...
+            def version(self) -> str: ...
+        ```
 
-        // Invalidate cache if generation changed
-        if cache.0 != current_gen {
-            cache.1.clear();
-            cache.0 = current_gen;
+    - **Acceptance**: Protocol defined, type-checked
+
+1. **Migrate EasyOCR Backend (1.5 hours)**
+
+    - **Source**: `/kreuzberg/_legacy/_ocr/_easyocr.py` (504 lines)
+    - **Target**: `packages/python/kreuzberg/ocr/easyocr.py` (new)
+    - **Steps**:
+        a. Copy legacy EasyOCRBackend class
+        b. Adapt to protocol interface:
+        - Implement `name()` → return `"easyocr"`
+        - Implement `supported_languages()` → return language list
+        - Implement `process_image(bytes, lang)`:
+            - Convert bytes → PIL Image
+            - Call internal OCR method
+            - Convert result → dict format
+                c. Keep all features:
+        - Device selection (CPU/GPU)
+        - Language model loading
+        - Result caching (if present)
+        - Confidence scores
+            d. Add proper error handling
+            e. Add docstrings
+    - **Acceptance**:
+        - EasyOCRBackend class implements protocol
+        - All legacy functionality preserved
+        - Can be registered with `register_ocr_backend()`
+
+1. **Migrate PaddleOCR Backend (1.5 hours)**
+
+    - **Source**: `/kreuzberg/_legacy/_ocr/_paddleocr.py` (417 lines)
+    - **Target**: `packages/python/kreuzberg/ocr/paddleocr.py` (new)
+    - **Steps**: (same as EasyOCR)
+        a. Copy legacy PaddleBackend class
+        b. Adapt to protocol interface
+        c. Keep all features (device, caching, etc.)
+        d. Add error handling and docs
+    - **Acceptance**: PaddleOCRBackend implements protocol
+
+1. **Create Auto-Registration Module (20 min)**
+
+    - **File**: `packages/python/kreuzberg/ocr/__init__.py` (new)
+    - **Content**:
+
+        ```python
+        """Python OCR backends that register with Rust core."""
+
+        from kreuzberg import register_ocr_backend
+
+        # Track what's been registered
+        __all__ = []
+        __registered = set()
+
+        def _register_backends():
+            """Auto-register available OCR backends."""
+
+            # Try EasyOCR
+            try:
+                from .easyocr import EasyOCRBackend
+
+                backend = EasyOCRBackend()
+                register_ocr_backend(backend)
+                __all__.append("EasyOCRBackend")
+                __registered.add("easyocr")
+            except ImportError:
+                pass  # easyocr not installed
+
+            # Try PaddleOCR
+            try:
+                from .paddleocr import PaddleOCRBackend
+
+                backend = PaddleOCRBackend()
+                register_ocr_backend(backend)
+                __all__.append("PaddleOCRBackend")
+                __registered.add("paddleocr")
+            except ImportError:
+                pass  # paddleocr not installed
+
+        # Auto-register on import
+        _register_backends()
+        ```
+
+    - **Acceptance**: Import triggers registration
+
+1. **Update Main Package Init (5 min)**
+
+    - **File**: `packages/python/kreuzberg/__init__.py`
+    - **Add**:
+
+        ```python
+        # Auto-register Python OCR backends (if installed)
+        try:
+            from . import ocr  # Triggers registration
+        except ImportError:
+            pass  # Optional OCR backends not available
+        ```
+
+    - **Acceptance**: Importing `kreuzberg` auto-registers OCR backends
+
+1. **Add Integration Tests (30 min)**
+
+    - **File**: `packages/python/tests/ocr/test_easyocr_integration.py` (new)
+    - **File**: `packages/python/tests/ocr/test_paddleocr_integration.py` (new)
+    - **Tests**:
+        - Test backend registration
+        - Test appears in `list_ocr_backends()`
+        - Test extraction with OCR backend via Rust API
+        - Test unregistration
+        - Test error handling
+    - **Acceptance**: 10+ tests per backend
+
+**Completion Criteria**:
+
+- ✅ EasyOCR and PaddleOCR migrated and working
+- ✅ Backends auto-register on import
+- ✅ Can be used via Rust extraction functions
+- ✅ All legacy functionality preserved
+- ✅ Integration tests passing
+- ✅ Legacy `_ocr/` directory can be deleted
+
+**Estimated Time**: 3-4 hours
+
+______________________________________________________________________
+
+### Task 4: Add MCP and API CLI Commands (2-3 hours)
+
+**Status**: Not started
+**Priority**: P2 - Nice to have for v4.0
+**Goal**: Expose Rust MCP and API servers via CLI commands
+
+#### Subtasks
+
+1. **Add MCP Command to Python CLI (30 min)**
+
+    - **File**: `packages/python/kreuzberg/cli.py`
+    - **Implementation**:
+
+        ```python
+        @click.command()
+        @click.option("--transport", type=click.Choice(["stdio"]), default="stdio")
+        def mcp(transport: str):
+            """Start the MCP (Model Context Protocol) server."""
+            import subprocess
+            import shutil
+
+            # Check if rust binary has MCP support
+            rust_binary = shutil.which("kreuzberg")
+            if not rust_binary:
+                click.echo("Error: Rust binary 'kreuzberg' not found in PATH")
+                return 1
+
+            # Try to start MCP server
+            try:
+                result = subprocess.run([rust_binary, "mcp", "--transport", transport], check=True)
+                return result.returncode
+            except FileNotFoundError:
+                click.echo("Error: MCP feature not available")
+                click.echo("Rebuild Rust binary with: cargo build --features mcp")
+                return 1
+        ```
+
+    - **Acceptance**: Python CLI can start Rust MCP server
+
+1. **Add MCP Command to Rust CLI (1 hour)**
+
+    - **File**: `crates/kreuzberg-cli/src/main.rs`
+    - **Changes**:
+
+        ```rust
+        #[derive(Subcommand)]
+        enum Commands {
+            // ... existing commands ...
+
+            /// Start MCP (Model Context Protocol) server
+            #[cfg(feature = "mcp")]
+            Mcp {
+                /// Transport type (stdio only for now)
+                #[arg(long, default_value = "stdio")]
+                transport: String,
+            },
         }
 
-        // Rest of caching logic...
-    })
-}
-
-// Call when registry changes
-pub fn invalidate_extractor_cache() {
-    CACHE_GENERATION.fetch_add(1, Ordering::Release);
-}
-```
-
-**Acceptance Criteria**:
-
-- ✅ Cache invalidates when extractors registered/unregistered
-- ✅ No memory leaks from stale cache entries
-- ✅ Performance remains optimal (cache hit rate > 90%)
-- ✅ Tests for cache invalidation scenarios
-
-______________________________________________________________________
-
-### ✅ 5. Optimize Pipeline ExtractionResult Cloning - **COMPLETED**
-
-**Impact**: High memory usage for large documents
-**Effort**: 4-6 hours (trait change affects all processors)
-**Location**: `src/core/pipeline.rs` (line 111)
-
-**Problem**: For every processor in the pipeline, the entire `ExtractionResult` is cloned. For a 10MB PDF with 5 processors, this clones 50MB+ of data.
-
-```rust
-// CURRENT - CLONES EVERYTHING
-match processor.process(result.clone(), config).await {  // ❌ Clones MB+ of text
-    Ok(processed) => result = processed,
-    Err(e) => { /* fallback */ }
-}
-```
-
-**Solution**: Change processor trait to use copy-on-write pattern:
-
-```rust
-// Option 1: Return Option<ExtractionResult> (only if modified)
-pub trait Processor: Plugin {
-    async fn process(
-        &self,
-        result: &ExtractionResult,
-        config: &ExtractionConfig
-    ) -> Result<Option<ExtractionResult>>;
-}
-
-// In pipeline:
-match processor.process(&result, config).await {
-    Ok(Some(modified)) => result = modified,  // Only clone if changed
-    Ok(None) => { /* no changes, reuse existing */ }
-    Err(e) => { /* error handling */ }
-}
-
-// Option 2: Use Cow<ExtractionResult>
-// Option 3: Use &mut ExtractionResult (requires ownership changes)
-```
-
-**Acceptance Criteria**:
-
-- ✅ Pipeline no longer clones result for every processor
-- ✅ Memory usage reduced for large documents (benchmark: 50MB→10MB for 10MB input)
-- ✅ All processors updated to new trait
-- ✅ Performance tests confirm improvement
-
-**Affected Files**:
-
-- `src/core/pipeline.rs`: Update pipeline logic
-- `src/plugins/processor.rs`: Update `Processor` trait
-- All processor implementations
-
-______________________________________________________________________
-
-### ✅ 6. Improve Error Context Throughout System - **COMPLETED**
-
-**Impact**: Better debugging and error reporting
-**Effort**: 4-5 hours
-**Location**: Multiple files
-
-**Problem**: Many error conversions lose context information, making production debugging difficult.
-
-**Issues**:
-
-1. **Error conversions lose source** (`src/error.rs`):
-
-```rust
-// CURRENT - LOSES CONTEXT
-impl From<calamine::Error> for KreuzbergError {
-    fn from(err: calamine::Error) -> Self {
-        KreuzbergError::Parsing(err.to_string())  // Lost original error
-    }
-}
-
-// BETTER - PRESERVE SOURCE
-#[derive(Debug, Error)]
-pub enum KreuzbergError {
-    #[error("Parsing error: {message}")]
-    Parsing {
-        message: String,
-        #[source] source: Option<Box<dyn std::error::Error + Send + Sync>>
-    },
-}
-```
-
-1. **OCR errors lack context** (`src/ocr/processor.rs`):
-
-```rust
-// CURRENT - NO CONTEXT
-OcrError::TesseractInitializationFailed(format!(
-    "Failed to initialize language '{}': {}",
-    config.language, e
-))
-
-// BETTER - FULL CONTEXT
-OcrError::TesseractInitializationFailed(format!(
-    "Failed to init language '{}' (image_hash: {}, tessdata: '{}'): {}",
-    config.language, image_hash, tessdata_path, e
-))
-```
-
-**Acceptance Criteria**:
-
-- ✅ All `From<T>` implementations preserve source errors using `#[source]`
-- ✅ OCR errors include image hash, configuration details
-- ✅ Extraction errors include file path, MIME type
-- ✅ Registry errors include plugin name, version
-- ✅ Error messages actionable for debugging
-
-______________________________________________________________________
-
-### ✅ 7. Add Missing OSError Bubble-Up Comments - **COMPLETED**
-
-**Impact**: Consistency with error handling policy
-**Effort**: 30 minutes
-**Location**: `src/core/extractor.rs` (lines 268, 352)
-
-**Problem**: Code correctly bubbles up `KreuzbergError::Io` but lacks required `~keep` comment per project error handling rules.
-
-```rust
-// CURRENT - MISSING COMMENT
-if matches!(e, KreuzbergError::Io(_)) {
-    return Err(e);  // Missing ~keep comment!
-}
-
-// REQUIRED
-// OSError/RuntimeError must bubble up - system errors need user reports ~keep
-if matches!(e, KreuzbergError::Io(_)) {
-    return Err(e);
-}
-```
-
-**Acceptance Criteria**:
-
-- ✅ All OSError bubble-up sites have `~keep` comments
-- ✅ Grep confirms no missing comments: `rg "KreuzbergError::Io" --type rust`
-
-______________________________________________________________________
-
-### ✅ 8. Complete Cache Integration or Remove TODOs - **COMPLETED**
-
-**Impact**: Feature completeness / code cleanliness
-**Effort**: 2-3 hours (integration) OR 15 minutes (removal)
-**Location**: `src/core/extractor.rs` (lines 134-138, 153-156)
-
-**Problem**: Cache module exists but is disabled with TODO comments:
-
-```rust
-// TODO: Cache check (when cache module is ready)
-// if config.use_cache {
-//     if let Some(cached) = cache::get(path, config).await? {
-//         return Ok(cached);
-//     }
-// }
-```
-
-**Options**:
-
-**A. Complete Integration** (2-3 hours):
-
-- Wire up cache to extractors
-- Test cache hit/miss scenarios
-- Document cache behavior
-
-**B. Remove TODOs** (15 minutes):
-
-- Remove commented code
-- Create GitHub issue #XXX for cache integration
-- Add note: "Cache integration tracked in #XXX"
-
-**C. Feature Flag** (1 hour):
-
-```rust
-#[cfg(feature = "cache")]
-if config.use_cache {
-    if let Some(cached) = cache::get(path, config).await? {
-        return Ok(cached);
-    }
-}
-```
-
-**Recommendation**: **Option B** for now, complete in v4.1
-
-**Acceptance Criteria**:
-
-- ✅ No TODO comments in production code
-- ✅ Clear path forward for cache integration
-- ✅ Cache module remains available for future use
-
-______________________________________________________________________
-
-### ✅ 9. Document All Unsafe Code with SAFETY Comments - **COMPLETED**
-
-**Impact**: Code safety and audit trail
-**Effort**: 1 hour
-**Location**: `src/cache/mod.rs` (lines 277, 279)
-
-**Problem**: Unsafe code in cache module lacks SAFETY documentation explaining why it's correct.
-
-```rust
-// CURRENT - NO SAFETY COMMENT
-let mut stat: statvfs_struct = unsafe { std::mem::zeroed() };
-let result = unsafe { statvfs(c_path.as_ptr(), &mut stat) };
-
-// REQUIRED
-// SAFETY: statvfs is a valid C struct that can be zero-initialized per POSIX spec.
-// All fields are integers or pointers that are safe when zeroed.
-let mut stat: statvfs_struct = unsafe { std::mem::zeroed() };
-
-// SAFETY: c_path is a valid null-terminated C string, and stat is a valid
-// mutable reference. statvfs is a standard POSIX syscall.
-let result = unsafe { statvfs(c_path.as_ptr(), &mut stat) };
-```
-
-**Acceptance Criteria**:
-
-- ✅ All `unsafe` blocks have preceding `// SAFETY:` comments
-- ✅ SAFETY comments explain invariants being upheld
-- ✅ Grep confirms all unsafe documented: `rg "unsafe \{" --type rust`
-
-______________________________________________________________________
-
-## 🟢 Medium Priority (P2) - Quality Improvements
-
-P2 Issues #10 and #11 completed. Issues #12 and #13 postponed to v4.1.
-
-### ✅ 10. Add Comprehensive Test Coverage for Edge Cases - **COMPLETED**
-
-**Impact**: Robustness and reliability
-**Effort**: 2-3 hours
-**Current Coverage**: 88-91% (target: 95%)
-
-**Missing Test Scenarios**:
-
-1. **Empty/Malformed Inputs**:
-
-```rust
-#[tokio::test]
-async fn test_extract_empty_pdf() { /* ... */ }
-
-#[tokio::test]
-async fn test_extract_pdf_no_text_layer() { /* ... */ }
-
-#[tokio::test]
-async fn test_extract_corrupted_but_parseable_pdf() { /* ... */ }
-```
-
-1. **Concurrent Access**:
-
-```rust
-#[tokio::test]
-async fn test_concurrent_extractor_access() {
-    // Test thread safety under concurrent load
-}
-```
-
-1. **Resource Exhaustion**:
-
-```rust
-#[tokio::test]
-async fn test_large_document_memory_usage() {
-    // Ensure 100MB+ documents don't OOM
-}
-```
-
-**Acceptance Criteria**:
-
-- ✅ Coverage reaches 95%+
-- ✅ All error paths tested
-- ✅ Edge cases documented and tested
-- ✅ Concurrent access patterns tested
-
-______________________________________________________________________
-
-### ✅ 11. Improve Plugin Documentation - **COMPLETED**
-
-**Impact**: Developer experience
-**Effort**: 2 hours
-
-**Issues**:
-
-1. **Missing safety documentation** (`src/plugins/traits.rs`):
-
-````rust
-/// # Safety and Threading
-///
-/// Plugins must be `Send + Sync` and are typically stored in `Arc` for shared access.
-/// The `initialize()` method must be idempotent and thread-safe.
-///
-/// **Lifecycle Pattern**:
-/// ```rust
-/// let mut plugin = MyPlugin::new();
-/// plugin.initialize()?;  // Before wrapping in Arc
-/// let arc_plugin = Arc::new(plugin);
-/// ```
-pub trait Plugin: Send + Sync { /* ... */ }
-````
-
-1. **Incomplete examples** (`src/plugins/mod.rs` lines 43, 49):
-
-- Replace `todo!()` with compilable placeholders
-
-**Acceptance Criteria**:
-
-- ✅ All public traits fully documented
-- ✅ Examples compile and run
-- ✅ Safety requirements clearly stated
-- ✅ Lifecycle patterns documented
-
-______________________________________________________________________
-
-______________________________________________________________________
-
-## 🔮 Future Work (v4.1)
-
-These features were postponed to focus on PyO3 bindings redesign and Python library rewrite.
-
-### 12. Add Cancellation Support for Long Operations
-
-**Impact**: User experience for long-running operations
-**Effort**: 3-4 hours
-**Status**: Postponed to v4.1
-
-**Proposed Solution**: Add optional `CancellationToken` parameter to extraction functions for graceful cancellation.
-
-______________________________________________________________________
-
-### 13. Add Progress Reporting for Batch Operations
-
-**Impact**: User experience (nice-to-have)
-**Effort**: 2 hours
-**Status**: Postponed to v4.1
-
-**Proposed Solution**: Add optional progress callback to `batch_extract_file` for reporting completion status.
-
-______________________________________________________________________
-
-## 📋 Code Quality Checklist - **10/10 TARGET ACHIEVED** ✅
-
-### Architecture & Design ✅
-
-- [x] Plugin system well-designed and extensible
-- [x] Plugin lifecycle compatible with Arc (Issue #2) ✅
-- [x] Async/await properly used throughout
-- [x] Clear separation of concerns
-- [x] Comprehensive error hierarchy
-
-### Reliability & Safety ✅
-
-- [x] No lock poisoning vulnerabilities (Issue #1) ✅
-- [x] No production unwrap() calls (Issue #3) ✅
-- [x] All unsafe code documented (Issue #9) ✅
-- [x] Error handling consistent throughout
-- [x] Thread-local caches properly invalidated (Issue #4) ✅
-
-### Performance ✅
-
-- [x] No unnecessary allocations in hot paths
-- [x] Pipeline doesn't clone large results (Issue #5) ✅
-- [x] Efficient string operations
-- [x] SIMD where beneficial
-- [x] Benchmarks show expected performance
-
-### Testing ✅
-
-- [x] ~92-94% test coverage (839 tests passing)
-- [x] All error paths tested
-- [x] Integration tests comprehensive
-- [x] Lock poisoning scenarios tested (Issue #1) ✅
-- [x] Edge cases fully covered (Issue #10) ✅
-
-### Documentation ✅
-
-- [x] Public API fully documented
-- [x] Plugin trait safety documented (Issue #11) ✅
-- [x] All unsafe blocks have SAFETY comments (Issue #9) ✅
-- [x] Examples compile and run
-- [x] Architecture documented (V4_STRUCTURE.md)
-
-### Code Quality ✅
-
-- [x] No clippy warnings ✅
-- [x] Consistent code style
-- [x] Clear naming conventions
-- [x] No TODO comments in production (Issue #8) ✅
-- [x] Error context preserved throughout (Issue #6) ✅
-
-______________________________________________________________________
-
-## 📊 Completion Summary
-
-### Phase 3 Complete ✅
-
-**P0 (Critical)**: ✅ 100% Complete (9 hours)
-
-- Lock poisoning ✅
-- Plugin lifecycle ✅
-- unwrap() audit ✅
-
-**P1 (High Priority)**: ✅ 100% Complete
-
-- Cache invalidation ✅
-- Pipeline optimization ✅
-- Error context ✅
-- OSError comments ✅
-- Cache TODOs ✅
-- Unsafe documentation ✅
-
-**P2 (Medium Priority)**: ✅ 50% Complete
-
-- Edge case tests ✅
-- Plugin documentation ✅
-- Cancellation support → v4.1
-- Progress reporting → v4.1
-
-**Metrics**:
-
-- Test Status: 839 tests passing
-- Coverage: ~92-94% (target 95% for v4.0)
-- Code Quality: 10/10 ✅
-- Clippy Warnings: 0 ✅
-
-______________________________________________________________________
-
-## 🎯 Phase 4: Complete Redesign - Zero Legacy
-
-**Status**: ACTIVE
-**Goal**: Complete redesign of PyO3 bindings and Python library with zero legacy code
-**Duration**: 7-10 days estimated
-
-### Philosophy
-
-- **Rust-first**: All core functionality in Rust
-- **Zero duplication**: No extraction logic in Python
-- **Python-specific only**: Python keeps only:
-    - OCR backends: EasyOCR, PaddleOCR
-    - Vision-based features: Vision tables, entity extraction, category detection, keyword extraction
-    - Infrastructure: API server, CLI proxy
-- **Clean slate**: No backward compatibility, no legacy patterns
-- **Reassess later**: Vision-based features may migrate to Rust in v4.1+
-
-______________________________________________________________________
-
-## Phase 4A: PyO3 Bindings Redesign (3-4 days)
-
-### Architecture
-
-```text
-crates/kreuzberg-py/
-├── src/
-│   ├── lib.rs          # Module registration (30 LOC)
-│   ├── core.rs         # 8 extraction functions (sync + async)
-│   ├── config.rs       # 7 configuration types
-│   ├── types.rs        # 2 result types
-│   ├── error.rs        # Error conversion
-│   ├── mime.rs         # MIME utilities + constants
-│   └── plugins.rs      # Python OCR backend registration
-└── Cargo.toml          # Minimal dependencies
-```
-
-### Tasks
-
-#### 1. ✅ Design Architecture
-
-- [x] Complete redesign document
-- [x] Identify files to delete
-- [x] Define clean API surface
-
-#### 2. Update Dependencies
-
-- [ ] Add `pyo3-async-runtimes = { version = "0.26", features = ["tokio-runtime"] }`
-- [ ] Remove unnecessary deps: `rmp-serde`, `numpy`, `async-trait`
-- [ ] Keep only: `pyo3`, `pyo3-async-runtimes`, `tokio`, `serde_json`, `kreuzberg`
-
-#### 3. Create Core Modules (order matters)
-
-- [ ] **error.rs** - Error conversion (`to_py_err` function)
-- [ ] **config.rs** - 7 configuration types with `From` impls
-    - `ExtractionConfig`, `OcrConfig`, `PdfConfig`, `ChunkingConfig`
-    - `LanguageDetectionConfig`, `TokenReductionConfig`, `ImageExtractionConfig`
-- [ ] **types.rs** - 2 result types
-    - `ExtractionResult` (with metadata dict, tables list)
-    - `ExtractedTable` (with data as nested lists)
-- [ ] **mime.rs** - MIME detection + constants
-    - `detect_mime_type()`, `validate_mime_type()`
-    - All MIME constants (PDF, DOCX, Excel, etc.)
-- [ ] **core.rs** - 8 extraction functions
-    - Async: `extract_file`, `extract_bytes`, `batch_extract_file`, `batch_extract_bytes`
-    - Sync: `extract_file_sync`, `extract_bytes_sync`, `batch_extract_file_sync`, `batch_extract_bytes_sync`
-- [ ] **plugins.rs** - Plugin registration bridge
-    - `register_ocr_backend()` (stub for Phase 4B)
-    - `unregister_ocr_backend()`
-
-#### 4. Update Module Registration
-
-- [ ] **lib.rs** - Clean registration of all functions, classes, constants
-- [ ] Total exposed API: 8 functions + 7 config classes + 2 result classes + 2 MIME functions + constants + 2 plugin functions
-
-#### 5. Cleanup Legacy Code
-
-- [ ] Delete `src/bindings/` directory (16 files)
-- [ ] Delete `src/types/` directory (6 files)
-- [ ] Delete old `src/error.rs`
-
-#### 6. Testing
-
-- [ ] Write Rust unit tests for all bindings
-- [ ] Test type conversions (Rust ↔ Python)
-- [ ] Test error conversion
-- [ ] Test config serialization
-
-**Acceptance Criteria**:
-
-- ✅ Zero legacy code in `kreuzberg-py`
-- ✅ All 8 core functions exposed (sync + async)
-- ✅ All 7 config types with proper Python API
-- ✅ Proper error conversion to Python exceptions
-- ✅ All tests pass
-- ✅ Zero clippy warnings
-
-______________________________________________________________________
-
-## Phase 4B: Python Library Rewrite (2-3 days)
-
-### Architecture
-
-```text
-kreuzberg/
-├── __init__.py          # Direct re-exports from _internal_bindings
-├── ocr/
-│   ├── _easyocr.py     # EasyOCR backend (Python-specific)
-│   └── _paddleocr.py   # PaddleOCR backend (Python-specific)
-├── _vision/            # Vision-based features (Python-specific for now)
-│   ├── _tables.py      # Vision table extraction
-│   ├── _entities.py    # Entity extraction
-│   ├── _categories.py  # Category detection
-│   └── _keywords.py    # Keyword extraction
-├── _api/               # Litestar API server (thin wrapper)
-└── _cli/               # Click CLI (proxy to Rust binary)
-```
-
-### Tasks
-
-#### 1. Core Library Rewrite
-
-- [ ] **kreuzberg/**init**.py** - Direct re-exports only
-    - Import all functions, types, constants from `_internal_bindings`
-    - No wrapper functions, no logic
-    - Clean `__all__` export list
-
-#### 2. Python OCR Backends
-
-- [ ] Implement OCR backend registration bridge in Rust (`plugins.rs`)
-- [ ] Update `kreuzberg/ocr/_easyocr.py` to register with Rust core
-- [ ] Update `kreuzberg/ocr/_paddleocr.py` to register with Rust core
-- [ ] Delete all other OCR utilities (now in Rust)
-
-#### 3. API Server
-
-- [ ] Update `kreuzberg/_api/main.py` to use Rust functions directly
-- [ ] Remove all Python extraction logic
-- [ ] Keep only Litestar routes as thin wrappers
-
-#### 4. Python CLI Proxy
-
-- [ ] **Wait for kreuzberg-cli binary first**
-- [ ] Update `kreuzberg/_cli/` to proxy to Rust binary
-- [ ] Keep only Python-specific commands (if any)
-
-#### 5. Cleanup Legacy Python Code
-
-- [ ] Delete `kreuzberg/_extractors/` directory (all extractors now in Rust)
-- [ ] Delete `kreuzberg/_utils/` directory (all utilities now in Rust)
-- [ ] Delete any duplicate core logic
-
-#### 6. Testing
-
-- [ ] Test sync extraction from Python
-- [ ] Test async extraction from Python with asyncio
-- [ ] Test batch operations
-- [ ] Test configuration objects
-- [ ] Test error handling
-- [ ] Test OCR backend registration
-
-**Acceptance Criteria**:
-
-- ✅ Python library is thin wrapper only
-- ✅ All core extraction logic in Rust
-- ✅ Python keeps only:
-    - OCR backends (EasyOCR, PaddleOCR)
-    - Vision features (tables, entities, categories, keywords)
-    - Infrastructure (API, CLI proxy)
-- ✅ All tests pass (Python + integration)
-- ✅ Benchmarks show \<5% FFI overhead
-
-______________________________________________________________________
-
-## Phase 4C: Rust CLI & Language Detection (2-3 days)
-
-### Tasks
-
-#### 1. Create kreuzberg-cli Crate
-
-- [ ] Create `crates/kreuzberg-cli/` workspace member
-- [ ] **Cargo.toml** - Binary crate with `clap` for CLI
-- [ ] **main.rs** - CLI entry point
-- [ ] Implement commands:
-    - `extract` - Extract single file
-    - `batch` - Extract multiple files
-    - `detect` - MIME type detection
-    - `config` - Show/validate configuration
-    - `version` - Show version info
-- [ ] Add to workspace `Cargo.toml`
-- [ ] Build and test binary: `cargo build --release --bin kreuzberg-cli`
-
-#### 2. Implement Language Detection in Rust
-
-- [ ] Add `whatlang` or `whichlang` crate to `crates/kreuzberg/Cargo.toml`
-- [ ] Create `crates/kreuzberg/src/text/language.rs`
-- [ ] Implement `detect_language(text: &str) -> Vec<(String, f32)>`
-- [ ] Integrate with `ExtractionResult` (populate `detected_languages` field)
-- [ ] Add `LanguageDetectionConfig` support
-- [ ] Write tests for language detection
-- [ ] Update PyO3 bindings to expose language detection results
-
-#### 3. Update Python CLI Proxy
-
-- [ ] Update `kreuzberg/_cli/` to call Rust binary via subprocess
-- [ ] Pass through all arguments except Python-specific commands
-- [ ] Handle stdin/stdout properly
-- [ ] Add fallback if Rust binary not found (show helpful error)
-
-**Acceptance Criteria**:
-
-- ✅ `kreuzberg-cli` binary works standalone
-- ✅ Python CLI proxies to Rust binary
-- ✅ Language detection works in Rust
-- ✅ Language detection exposed to Python
-- ✅ All tests pass
-
-______________________________________________________________________
-
-## Phase 4D: Documentation & Release (1-2 days)
-
-### Tasks
-
-#### 1. Update Documentation
-
-- [ ] Update `README.md` with v4.0 changes
-- [ ] Update `V4_STRUCTURE.md` with final architecture
-- [ ] Update API documentation
-- [ ] Update Python docstrings
-- [ ] Update Rust doc comments
-- [ ] Add migration guide (v3 → v4)
-
-#### 2. Final Testing
-
-- [ ] Run full test suite (Rust + Python)
-- [ ] Run benchmarks vs v3
-- [ ] Test in Docker containers
-- [ ] Test on different platforms (Linux, macOS, Windows)
-- [ ] Manual testing of edge cases
-
-#### 3. Prepare Release
-
-- [ ] Update version to 4.0.0 in all `Cargo.toml` and `pyproject.toml`
-- [ ] Update `CHANGELOG.md`
-- [ ] Tag release: `git tag v4.0.0`
-- [ ] Build and publish to PyPI
-- [ ] Update documentation site
-
-**Acceptance Criteria**:
-
-- ✅ All documentation updated
-- ✅ All tests pass on all platforms
-- ✅ Benchmarks show expected performance
-- ✅ v4.0.0 released
-
-______________________________________________________________________
-
-## 📊 Progress Tracking
-
-### Phase 4A: PyO3 Bindings
-
-- [ ] Dependencies updated
-- [ ] error.rs created
-- [ ] config.rs created (7 types)
-- [ ] types.rs created (2 types)
-- [ ] mime.rs created
-- [ ] core.rs created (8 functions)
-- [ ] plugins.rs created
-- [ ] lib.rs updated
-- [ ] Legacy files deleted
-- [ ] Tests written
-
-**Progress**: 0/10 (0%)
-
-### Phase 4B: Python Library
-
-- [ ] **init**.py rewritten
-- [ ] OCR backends updated
-- [ ] API server updated
-- [ ] Legacy Python code deleted
-- [ ] Tests written
-
-**Progress**: 0/5 (0%)
-
-### Phase 4C: CLI & Language Detection
-
-- [ ] kreuzberg-cli crate created
-- [ ] CLI commands implemented
-- [ ] Language detection in Rust
-- [ ] Python CLI proxy updated
-
-**Progress**: 0/4 (0%)
-
-### Phase 4D: Documentation & Release
-
-- [ ] Documentation updated
-- [ ] Final testing complete
-- [ ] Release prepared
-
-**Progress**: 0/3 (0%)
-
-**Overall Progress**: 0/22 (0%)
-
-______________________________________________________________________
-
-## v4.1 Roadmap (Post-Release)
-
-### Priority Features
-
-- Cancellation support (Issue #12)
-- Progress reporting (Issue #13)
-- Reach 95% test coverage
-- Additional format extractors
-
-### Future Considerations
-
-- **Reassess Python-only features for Rust migration**:
-    - Vision table extraction → Rust with PyTorch/Candle?
-    - Entity extraction → Rust NER library?
-    - Category detection → Rust ML?
-    - Keyword extraction → Rust text analysis?
-- Performance optimizations
-- Structured extraction (vision models)
-
-______________________________________________________________________
-
-## 🎯 Phase 4E: Feature Flags & Optional Features (3-4 days)
-
-**Status**: ✅ COMPLETE (100%)
-**Goal**: Implement optional feature flags for Rust crate to reduce binary size and improve modularity
-**Duration**: 3-4 days estimated
-**Reference**: See `RUST_FEATURES_ASSESSMENT.md` for full analysis
-**Completed**: 2025-10-16 (Tasks 1-3, 5-7, 9)
-
-### Philosophy
-
-- **Minimal default** - Core extractors only (~10MB binary)
-- **Format-based features** - Users enable formats they need
-- **Optional features** - API, MCP, OCR, lang-detect are opt-in
-- **Dependency-aligned** - Each feature maps to specific dependencies
-
-______________________________________________________________________
-
-### Tasks
-
-#### 1. ✅ Update Core Cargo.toml with Feature Flags - **COMPLETED**
-
-**File**: `crates/kreuzberg/Cargo.toml`
-
-- [x] Define feature structure:
-
-    ```toml
-    [features]
-    default = ["core-extractors"]
-
-    # Format extractors
-    pdf = ["pdfium-render", "lopdf"]
-    excel = ["calamine", "polars"]
-    office = ["roxmltree", "zip"]
-    email = ["mail-parser", "msg_parser"]
-    html = ["html-to-markdown-rs", "html-escape"]
-    xml = ["quick-xml", "roxmltree"]
-    archives = ["zip", "tar", "sevenz-rust"]
-
-    # Processing features
-    ocr = ["tesseract-rs", "image", "fast_image_resize", "ndarray"]
-    language-detection = ["whatlang"]
-    chunking = ["text-splitter"]
-    quality = ["unicode-normalization", "chardetng", "encoding_rs"]
-
-    # Server features
-    api = ["axum", "tower", "tower-http"]
-    mcp = ["jsonrpc-core"]
-
-    # Convenience bundles
-    full = ["pdf", "excel", "office", "email", "html", "xml", "archives",
-            "ocr", "language-detection", "chunking", "quality", "api", "mcp"]
-    server = ["pdf", "excel", "html", "ocr", "api"]
-    cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking"]
-    ```
-
-- [x] Mark all dependencies as optional:
-
-    ```toml
-    pdfium-render = { version = "0.8.35", optional = true }
-    calamine = { version = "0.31", optional = true }
-    whatlang = { version = "0.16", optional = true }
-    axum = { version = "0.8", optional = true }
-    # ... etc
-    ```
-
-**Effort**: 1-2 hours ✅ COMPLETED
-
-#### 2. ✅ Add Feature Gates Throughout Codebase - **COMPLETED**
-
-- [x] **lib.rs** - Conditional module exports:
-
-    ```rust
-    #[cfg(feature = "pdf")]
-    pub mod pdf;
-
-    #[cfg(feature = "excel")]
-    pub mod extractors {
-        pub mod excel;
-    }
-
-    #[cfg(feature = "language-detection")]
-    pub mod language_detection;
-
-    #[cfg(feature = "api")]
-    pub mod api;
-
-    #[cfg(feature = "mcp")]
-    pub mod mcp;
-    ```
-
-- [x] **extractors/mod.rs** - Conditional extractor registration:
-
-    ```rust
-    pub fn initialize_registry() -> Result<ExtractorRegistry> {
-        let mut registry = ExtractorRegistry::new();
-
-        // Core extractors (always available)
-        registry.register("text/plain", TextExtractor::new())?;
-        registry.register("application/json", JsonExtractor::new())?;
-
-        // Optional extractors
-        #[cfg(feature = "pdf")]
-        registry.register("application/pdf", PdfExtractor::new())?;
-
-        #[cfg(feature = "excel")]
-        registry.register("application/vnd.ms-excel", ExcelExtractor::new())?;
-
-        Ok(registry)
-    }
-    ```
-
-**Effort**: 4-6 hours ✅ COMPLETED
-
-#### 3. ✅ Move Language Detection Behind Feature Gate - **COMPLETED**
-
-**Current**: `src/language_detection.rs` is behind feature gate ✅
-
-**Completed**:
-
-- [x] Add `#[cfg(feature = "langdetect")]` to module
-- [x] Update imports in `lib.rs`
-- [x] `detected_languages` field in `ExtractionResult` always present (Option\<Vec<String>>)
-- [x] Update pipeline to skip language detection when feature disabled
-- [x] All doctests passing
-
-**Effort**: 2-3 hours ✅ COMPLETED
-
-#### 4. Create API Module with Axum Backend
-
-**Location**: `crates/kreuzberg/src/api/`
-
-**Files to create**:
-
-- [ ] `mod.rs` - Public API exports
-- [ ] `server.rs` - Axum server setup
-- [ ] `handlers.rs` - Request handlers (extract, health, info)
-- [ ] `error.rs` - API-specific error types
-- [ ] `types.rs` - API request/response types
-
-**Implementation**:
-
-```rust
-// src/api/server.rs
-use axum::{Router, routing::{get, post}};
-
-pub async fn serve(addr: impl Into<SocketAddr>) -> Result<()> {
-    let app = Router::new()
-        .route("/extract", post(handlers::extract))
-        .route("/batch", post(handlers::batch_extract))
-        .route("/health", get(handlers::health))
-        .route("/info", get(handlers::info));
-
-    let listener = tokio::net::TcpListener::bind(addr.into()).await?;
-    axum::serve(listener, app).await?;
-    Ok(())
-}
-```
-
-**Dependencies to add**:
-
-```toml
-axum = { version = "0.8", optional = true }
-tower = { version = "0.5", optional = true }
-tower-http = { version = "0.6", features = ["cors", "trace"], optional = true }
-```
-
-**Effort**: 1 day
-
-#### 5. Create MCP Module for Model Context Protocol
-
-**Location**: `crates/kreuzberg/src/mcp/`
-
-**Files to create**:
-
-- [ ] `mod.rs` - Public MCP API
-- [ ] `server.rs` - JSON-RPC server over stdio
-- [ ] `tools.rs` - MCP tool definitions
-- [ ] `resources.rs` - MCP resource definitions
-- [ ] `types.rs` - MCP-specific types
-
-**Implementation**:
-
-```rust
-// src/mcp/server.rs
-use jsonrpc_core::{IoHandler, Params};
-
-pub async fn serve_mcp() -> Result<()> {
-    let mut io = IoHandler::new();
-
-    io.add_method("tools/list", |_params: Params| async {
-        Ok(json!({
-            "tools": [
-                {
-                    "name": "extract",
-                    "description": "Extract text from document",
-                    "inputSchema": { /* ... */ }
+        async fn main() -> Result<()> {
+            match cli.command {
+                // ... existing handlers ...
+
+                #[cfg(feature = "mcp")]
+                Commands::Mcp { transport } => {
+                    if transport != "stdio" {
+                        eprintln!("Only stdio transport is currently supported");
+                        std::process::exit(1);
+                    }
+
+                    // Start MCP server
+                    kreuzberg::mcp::start_server().await?;
                 }
-            ]
-        }))
-    });
+            }
+        }
+        ```
 
-    io.add_method("tools/extract", |params: Params| async {
-        // Extract implementation
-    });
+    - **Acceptance**: `kreuzberg mcp` starts MCP server
 
-    // Run JSON-RPC server on stdin/stdout
-    let (stdin, stdout) = (tokio::io::stdin(), tokio::io::stdout());
-    run_server(io, stdin, stdout).await
-}
+1. **Add Serve Command to Rust CLI (1 hour)**
+
+    - **File**: `crates/kreuzberg-cli/src/main.rs`
+    - **Changes**:
+
+        ```rust
+        #[derive(Subcommand)]
+        enum Commands {
+            // ... existing commands ...
+
+            /// Start HTTP API server
+            #[cfg(feature = "api")]
+            Serve {
+                /// Host to bind to
+                #[arg(long, default_value = "127.0.0.1")]
+                host: String,
+
+                /// Port to listen on
+                #[arg(long, default_value = "3000")]
+                port: u16,
+            },
+        }
+
+        async fn main() -> Result<()> {
+            match cli.command {
+                // ... existing handlers ...
+
+                #[cfg(feature = "api")]
+                Commands::Serve { host, port } => {
+                    println!("Starting API server on {}:{}", host, port);
+                    kreuzberg::api::start_server(&host, port).await?;
+                }
+            }
+        }
+        ```
+
+    - **Acceptance**: `kreuzberg serve` starts API server
+
+1. **Update CLI Documentation (20 min)**
+
+    - **Files**:
+        - Update help text in CLI
+        - Add examples to README
+        - Document feature flags needed
+    - **Acceptance**: Users can discover and use new commands
+
+1. **Add CLI Tests (10 min)**
+
+    - **File**: `crates/kreuzberg-cli/tests/cli_tests.rs`
+    - **Tests**:
+        - Test `kreuzberg mcp --help`
+        - Test `kreuzberg serve --help`
+        - Test invalid options
+    - **Acceptance**: Help text shows correctly
+
+**Completion Criteria**:
+
+- ✅ Python CLI can proxy to Rust MCP server
+- ✅ Rust CLI has `mcp` command (with feature gate)
+- ✅ Rust CLI has `serve` command (with feature gate)
+- ✅ Documentation updated
+- ✅ Help text clear and accurate
+
+**Estimated Time**: 2-3 hours
+
+______________________________________________________________________
+
+### Task 5: Comprehensive Rust Integration Tests with Extensive OCR (4-6 hours) 🔥
+
+**Status**: Not started
+**Priority**: P1 - Critical for production readiness
+**Goal**: Add extensive integration tests to Rust crate covering real OCR workflows
+
+#### Context
+
+Current state:
+
+- 839 Rust unit tests passing
+- OCR backend registry working
+- Python OCR FFI bridge complete
+- **Missing**: Real-world integration tests with actual OCR backends
+
+#### Subtasks
+
+1. **Set Up Test Infrastructure (30 min)**
+
+    - **File**: `crates/kreuzberg/tests/common/mod.rs` (new)
+    - **Setup**:
+        - Test fixtures for sample images (PNG, JPEG, TIFF)
+        - OCR result validation helpers
+        - Mock OCR backend for testing
+        - Test image generation utilities
+    - **Test Images Needed**:
+        - Simple text (single line)
+        - Multi-line text
+        - Mixed languages (English, Chinese, Arabic)
+        - Low quality scans
+        - Rotated text
+        - Tables with text
+        - Handwritten text
+    - **Acceptance**: Test infrastructure ready
+
+1. **OCR Backend Registry Tests (45 min)**
+
+    - **File**: `crates/kreuzberg/tests/ocr_registry_tests.rs` (new)
+    - **Tests**:
+        - Test backend registration
+        - Test duplicate registration error
+        - Test backend listing
+        - Test backend removal
+        - Test thread-safe concurrent access
+        - Test plugin lifecycle (initialize/shutdown)
+        - Test backend selection by name
+        - Test language support queries
+    - **Acceptance**: 10+ tests covering registry operations
+
+1. **Tesseract OCR Integration Tests (1 hour)**
+
+    - **File**: `crates/kreuzberg/tests/tesseract_integration_tests.rs` (new)
+    - **Prerequisites**: Tesseract must be installed on system
+    - **Tests**:
+        - **Basic text extraction**:
+            - Test single-line text extraction
+            - Test multi-line paragraph extraction
+            - Verify text accuracy (>95% for clean images)
+        - **Language support**:
+            - Test English text
+            - Test multiple languages (if language packs installed)
+            - Test language auto-detection
+        - **Image quality handling**:
+            - Test high-quality scans
+            - Test low-quality scans
+            - Test rotated images
+            - Test skewed images
+        - **Configuration options**:
+            - Test different PSM (Page Segmentation Modes)
+            - Test OCR confidence scores
+            - Test bounding box extraction
+        - **Error handling**:
+            - Test with invalid image data
+            - Test with unsupported formats
+            - Test with corrupted images
+            - Test timeout handling
+    - **Acceptance**: 15+ comprehensive Tesseract tests
+
+1. **Python OCR Backend Integration Tests (1.5 hours)**
+
+    - **File**: `crates/kreuzberg/tests/python_ocr_integration_tests.rs` (new)
+    - **Prerequisites**:
+        - Python interpreter available
+        - PyO3 bindings built
+        - Mock Python OCR backend for testing
+    - **Tests**:
+        - **FFI Bridge Tests**:
+            - Test Python backend registration from Rust
+            - Test calling Python backend from Rust
+            - Test GIL management (no deadlocks)
+            - Test async execution via spawn_blocking
+            - Test error propagation (Python exceptions → Rust)
+        - **Mock Backend Tests**:
+            - Create mock Python OCR backend in test
+            - Register with Rust core
+            - Extract with Rust API using Python backend
+            - Verify results passed correctly
+        - **Real Backend Tests** (if EasyOCR/PaddleOCR available):
+            - Test EasyOCR via FFI bridge
+            - Test PaddleOCR via FFI bridge
+            - Compare results with Tesseract
+            - Test language selection
+        - **Concurrent Tests**:
+            - Register multiple Python backends
+            - Test parallel extraction calls
+            - Verify no GIL contention issues
+    - **Acceptance**: 12+ Python FFI integration tests
+
+1. **PDF OCR Integration Tests (1 hour)**
+
+    - **File**: `crates/kreuzberg/tests/pdf_ocr_integration_tests.rs` (new)
+    - **Test Scenarios**:
+        - **Text PDFs**:
+            - Extract from native text PDF (no OCR needed)
+            - Verify OCR skipped when text available
+        - **Image PDFs**:
+            - Extract from scanned PDF (OCR required)
+            - Test multi-page scanned PDFs
+            - Verify all pages processed
+        - **Mixed PDFs**:
+            - Extract from PDF with both text and images
+            - Verify text extracted directly, images via OCR
+        - **Configuration**:
+            - Test `force_ocr` flag
+            - Test OCR backend selection
+            - Test language configuration
+        - **Performance**:
+            - Test batch processing of PDF pages
+            - Measure OCR overhead
+    - **Acceptance**: 10+ PDF OCR integration tests
+
+1. **Image OCR Integration Tests (45 min)**
+
+    - **File**: `crates/kreuzberg/tests/image_ocr_integration_tests.rs` (new)
+    - **Test Formats**:
+        - PNG images
+        - JPEG images
+        - TIFF images
+        - WebP images (if supported)
+    - **Test Scenarios**:
+        - Extract from single images
+        - Extract from image collections
+        - Test different image sizes (small, large, huge)
+        - Test different DPI settings
+        - Test color vs grayscale images
+    - **Acceptance**: 8+ image OCR tests
+
+1. **OCR Performance and Benchmarks (1 hour)**
+
+    - **File**: `crates/kreuzberg/benches/ocr_benchmarks.rs` (new)
+    - **Benchmarks**:
+        - Tesseract extraction speed (various image sizes)
+        - Python OCR backend overhead (FFI + GIL)
+        - Multi-page PDF OCR throughput
+        - Concurrent OCR requests
+        - Memory usage during OCR
+    - **Metrics**:
+        - Time per page
+        - Throughput (pages/second)
+        - Memory consumption
+        - GIL contention impact
+    - **Acceptance**: Performance baseline established
+
+1. **OCR Accuracy Testing (30 min)**
+
+    - **File**: `crates/kreuzberg/tests/ocr_accuracy_tests.rs` (new)
+    - **Setup**:
+        - Ground truth text files
+        - Corresponding test images
+        - Character-level accuracy calculation
+    - **Tests**:
+        - Measure Tesseract accuracy on clean text
+        - Measure accuracy on degraded images
+        - Compare different backends
+        - Test edge cases (very small text, unusual fonts)
+    - **Acceptance**: Accuracy metrics tracked
+
+1. **End-to-End OCR Workflows (45 min)**
+
+    - **File**: `crates/kreuzberg/tests/e2e_ocr_workflows.rs` (new)
+    - **Workflows**:
+        - **Invoice Processing**:
+            - Extract scanned invoice
+            - Verify key fields extracted
+            - Test with multiple invoice formats
+        - **Document Digitization**:
+            - Process multi-page scanned document
+            - Verify page order preserved
+            - Test with different document types
+        - **Table Extraction**:
+            - Extract tables from images
+            - Verify table structure preserved
+            - Test with complex tables
+    - **Acceptance**: 5+ real-world workflow tests
+
+**Completion Criteria**:
+
+- ✅ 50+ new Rust integration tests
+- ✅ All OCR backends tested (Tesseract + Python FFI)
+- ✅ Real image processing tested extensively
+- ✅ Performance benchmarks established
+- ✅ Accuracy metrics tracked
+- ✅ End-to-end workflows validated
+- ✅ Documentation of test coverage
+- ✅ CI/CD integration (tests run on every commit)
+
+**Estimated Time**: 4-6 hours
+
+______________________________________________________________________
+
+## 📊 Overall Progress Tracking
+
+**Estimated Total Time**: 11-16 hours
+
+- [ ] **Task 1**: Fix PostProcessor Tests (30-60 min)
+- [ ] **Task 2**: Extraction Pipeline Integration (1-2 hours)
+- [ ] **Task 3**: OCR Backend Migration (3-4 hours)
+- [ ] **Task 4**: MCP/API CLI Commands (2-3 hours)
+- [ ] **Task 5**: Rust Integration Tests + OCR (4-6 hours)
+
+**Current Completion**: ~85%
+**Target**: 100% (production-ready v4.0)
+
+______________________________________________________________________
+
+## 🎯 Success Criteria for v4.0 Release
+
+- ✅ Rust core: 839 tests passing
+- ✅ Python PostProcessors: Implemented and tested
+- ✅ Python OCR FFI: Bridge complete
+- 🔲 Python tests: 71/71 passing (currently 56/71)
+- 🔲 OCR backends: Migrated and working
+- 🔲 Integration tests: 50+ Rust tests with real OCR
+- 🔲 CLI commands: MCP and API exposed
+- 🔲 Documentation: Complete and accurate
+- 🔲 Coverage: ≥95% (currently ~92-94%)
+
+______________________________________________________________________
+
+## 📝 Notes
+
+### Build Configuration
+
+**Python Bindings**:
+
+```bash
+cd packages/python
+maturin develop --release
 ```
 
-**Dependencies to add**:
+**Rust CLI**:
 
-```toml
-jsonrpc-core = { version = "18.0", optional = true }
-# OR
-async-jsonrpc-client = { version = "1.0", optional = true }
+```bash
+# Basic build
+cargo build --release
+
+# With MCP
+cargo build --release --features mcp
+
+# With API
+cargo build --release --features api
+
+# With all features
+cargo build --release --all-features
 ```
 
-**Effort**: 1-1.5 days
+### Testing
 
-#### 6. Update kreuzberg-cli with Feature Selection
+**Python Tests**:
 
-- [ ] Update `crates/kreuzberg-cli/Cargo.toml`:
-
-    ```toml
-    [dependencies]
-    kreuzberg = { path = "../kreuzberg", features = ["cli"] }
-    ```
-
-- [ ] Document feature compilation:
-
-    ```bash
-    # Minimal binary
-    cargo build --release
-
-    # Full-featured binary
-    cargo build --release --features full
-
-    # Server binary
-    cargo build --release --features server
-    ```
-
-**Effort**: 1 hour
-
-#### 7. Update kreuzberg-py with Full Features
-
-- [ ] Update `crates/kreuzberg-py/Cargo.toml`:
-
-    ```toml
-    [dependencies]
-    kreuzberg = { path = "../kreuzberg", features = ["full"] }
-    ```
-
-- [ ] Python package always gets all features (users expect it)
-
-**Effort**: 30 minutes
-
-#### 8. Add Feature Compilation Tests
-
-- [ ] Create CI workflow to test feature combinations:
-
-    ```yaml
-    test-features:
-      strategy:
-        matrix:
-          features:
-            - default
-            - full
-            - pdf
-            - excel,html
-            - api
-            - mcp
-            - server
-            - cli
-      runs-on: ubuntu-latest
-      steps:
-        - run: cargo test --no-default-features --features ${{ matrix.features }}
-    ```
-
-- [ ] Add feature documentation tests:
-
-    ```rust
-    #[test]
-    #[cfg(feature = "pdf")]
-    fn test_pdf_extraction_available() { /* ... */ }
-
-    #[test]
-    #[cfg(not(feature = "pdf"))]
-    fn test_pdf_extraction_unavailable() {
-        // Ensure proper error when PDF feature not enabled
-    }
-    ```
-
-**Effort**: 2-3 hours
-
-#### 9. Update Documentation
-
-- [ ] Create feature matrix in README.md
-- [ ] Document feature flags in Rust docs
-- [ ] Add compilation examples
-- [ ] Update V4_STRUCTURE.md with feature design
-
-**Effort**: 2-3 hours
-
-______________________________________________________________________
-
-### Acceptance Criteria
-
-- ✅ Default build is ~10-12MB (vs ~50MB current)
-- ✅ Each feature compiles independently
-- ✅ All feature combinations tested in CI
-- ✅ Language detection is optional feature
-- ✅ API server works with Axum (no uvicorn needed)
-- ✅ MCP server works over stdio
-- ✅ Python package always has full features
-- ✅ CLI can be compiled with any feature set
-- ✅ Documentation clearly explains features
-- ✅ Zero clippy warnings in all feature combinations
-
-______________________________________________________________________
-
-### Binary Size Estimates
-
-| Configuration    | Binary Size | Use Case            |
-| ---------------- | ----------- | ------------------- |
-| `default`        | ~10MB       | Text/JSON/YAML only |
-| `pdf`            | ~35MB       | PDF extraction      |
-| `pdf,excel,html` | ~38MB       | Common formats      |
-| `server`         | ~40MB       | API deployment      |
-| `cli`            | ~42MB       | CLI usage           |
-| `full`           | ~55MB       | All features        |
-
-______________________________________________________________________
-
-### Migration Impact
-
-**For Rust users:**
-
-- **Breaking change** if they rely on default features
-- Migration: Add explicit features to Cargo.toml
-- Benefit: Smaller binaries, faster compilation
-
-**For Python users:**
-
-- **Zero impact** - Python package always has full features
-- Benefit: None (Python always gets everything)
-
-**For CLI users:**
-
-- Can choose minimal or full featured binary
-- Default CLI build has common features
-
-______________________________________________________________________
-
-### Progress Tracking
-
-#### Phase 4E: Feature Flags
-
-- [x] Core Cargo.toml updated with features ✅
-- [x] Feature gates added throughout codebase ✅
-- [x] Language detection behind feature gate ✅
-- [ ] API module created (Axum) - NOT NEEDED (Python has API)
-- [ ] MCP module created (JSON-RPC) - SKIP FOR NOW
-- [x] CLI updated with feature selection ✅
-- [x] Python bindings use full features ✅
-- [ ] Feature compilation tests added - DEFERRED (CI improvement)
-- [x] Documentation updated ✅
-
-**Progress**: 3/9 (33%) → Revised: 3/6 (50%) → Updated: 6/6 (100%) ✅ COMPLETE
-
-______________________________________________________________________
-
-### Dependencies to Add
-
-```toml
-# API feature
-axum = { version = "0.8", features = ["macros", "json"], optional = true }
-tower = { version = "0.5", optional = true }
-tower-http = { version = "0.6", features = ["cors", "trace", "limit"], optional = true }
-serde = { version = "1.0", features = ["derive"] }  # Already present
-
-# MCP feature
-jsonrpc-core = { version = "18.0", optional = true }
-# OR better:
-jsonrpsee = { version = "0.24", features = ["server"], optional = true }
+```bash
+cd packages/python
+uv run pytest tests/postprocessors/ -v
 ```
 
+**Rust Tests**:
+
+```bash
+cd crates/kreuzberg
+cargo test --release
+cargo test --release --features ocr  # Include OCR tests
+```
+
+**Integration Tests**:
+
+```bash
+cargo test --release --test '*' --all-features
+```
+
+### Dependencies for Testing
+
+**OCR Testing Requirements**:
+
+- Tesseract: `brew install tesseract` (macOS) or `apt-get install tesseract-ocr` (Linux)
+- Language packs: `brew install tesseract-lang` (optional, for multilingual tests)
+- Test images: Located in `crates/kreuzberg/tests/fixtures/images/`
+
+**Python OCR Backends** (optional):
+
+- EasyOCR: `pip install easyocr`
+- PaddleOCR: `pip install paddleocr paddlepaddle`
+
 ______________________________________________________________________
 
-## Phase 4 Updated Timeline
+## 🔧 Troubleshooting
 
-### Phase 4A: PyO3 Bindings Redesign (3-4 days)
+### Common Issues
 
-**Status**: Not Started
+1. **Bindings not updating after Rust changes**
 
-### Phase 4B: Python Library Rewrite (2-3 days)
+    - Solution: Run `maturin develop --release` from `packages/python/`
 
-**Status**: Not Started
+1. **Tests can't find \_internal_bindings**
 
-### Phase 4C: Rust CLI & Language Detection (2-3 days)
+    - Solution: Ensure `module-name = "kreuzberg._internal_bindings"` in pyproject.toml
+    - Rebuild with maturin from correct directory
 
-**Status**: Not Started
+1. **OCR tests failing**
 
-### Phase 4D: Documentation & Release (1-2 days)
+    - Check Tesseract installed: `which tesseract`
+    - Check language packs: `tesseract --list-langs`
+    - Verify test images exist in fixtures directory
 
-**Status**: Not Started
+1. **Python tests failing with spaCy model errors**
 
-### Phase 4E: Feature Flags & Optional Features (3-4 days) ✨ NEW
-
-**Status**: Not Started
-
-**Total Duration**: 11-16 days (was 7-10 days)
-**New Total**: 14-19 days estimated
+    - Download model: `python -m spacy download en_core_web_sm`
+    - Or skip tests: Tests should auto-skip if model missing
 
 ______________________________________________________________________
+
+**Next Action**: Start with Task 1 (Fix PostProcessor Tests)

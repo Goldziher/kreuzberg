@@ -31,15 +31,14 @@ quality = ["dep:unicode-normalization", "dep:chardetng", "dep:encoding_rs"]
 
 # Server features
 api = ["dep:axum", "dep:tower", "dep:tower-http", "dep:tracing"]
-# TODO: MCP feature requires unreleased features from rmcp or official Rust MCP SDK
-# mcp = ["dep:rmcp"]
+mcp = ["dep:rmcp"]
 
 # Convenience bundles
 full = [
     "pdf", "excel", "office", "email", "html", "xml", "archives",
     "ocr", "language-detection", "chunking", "quality"
 ]
-server = ["pdf", "excel", "html", "ocr", "api"]
+server = ["pdf", "excel", "html", "ocr", "api", "mcp"]
 cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking", "quality"]
 
 [build-dependencies]
@@ -101,8 +100,7 @@ axum = { version = "0.8", features = ["macros", "json", "multipart"], optional =
 tower = { version = "0.5", optional = true }
 tower-http = { version = "0.6", features = ["cors", "trace", "limit"], optional = true }
 tracing = { version = "0.1", optional = true }
-# TODO: Re-enable when using official Rust MCP SDK or unreleased rmcp version
-# rmcp = { version = "0.8.1", features = ["server", "macros", "base64", "transport-io"], optional = true }
+rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", features = ["server", "macros", "base64", "transport-io"], optional = true }
 
 [dev-dependencies]
 tempfile = "3.23.0"
