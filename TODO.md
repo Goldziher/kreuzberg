@@ -1,343 +1,448 @@
 # Kreuzberg V4 - Remaining Tasks
 
-**Status**: Feature Implementation Phase
+**Status**: Testing & Integration Phase
 **Last Updated**: 2025-10-17
 **Test Status**: 882 tests passing ✅ (854 core + 7 API + 18 integration + 3 MCP)
-**Coverage**: ~92-94% (target: 95%)
+**Coverage**: ~85% (target: 95%)
 
 ______________________________________________________________________
 
-## ✅ Completed: HIGH-1 - Eliminate Dual-Registry Pattern
+## 🎯 HIGH PRIORITY: Comprehensive Integration Testing
 
-**Completed**: 2025-10-17
-**Time Taken**: ~2.5 hours (original estimate: 4-6 hours)
+### TEST-SUITE-1: File Format Integration Tests (6-8 hours)
 
-**Achievement**: Successfully eliminated dual-registry pattern!
+**Priority**: P0 - Critical for production readiness
+**Test Files**: 178 real documents in `test_documents/` directory
 
-- ✅ Added `PostProcessorConfig` to Rust `ExtractionConfig`
-- ✅ Updated Rust pipeline with filtering logic (enabled/disabled processors)
-- ✅ Exposed `PostProcessorConfig` in PyO3 bindings
-- ✅ Simplified `extraction.py` from **489 → 33 lines** (93% reduction!)
-- ✅ Updated `extraction_test.py` from **500 → 239 lines** (52% reduction)
+#### Overview
 
-**Results**:
+Test all supported file formats end-to-end with real documents from the test suite. These tests verify:
 
-- **717 lines of Python code eliminated**
-- **Single source of truth**: All postprocessor config in Rust
-- **Zero duplication**: No more Python-side registry
-- **Better performance**: No dict serialization overhead
-- **4/4 new Rust tests passing**
-- **24/24 Python tests passing** ✅
-- **11/11 path support tests passing** ✅ (added flexible path input: str, Path, bytes)
-- **Exposed `detected_languages` field** in `ExtractionResult`
+- Extraction produces non-empty, sensible content
+- MIME type detection works correctly
+- Metadata fields are populated appropriately for each format
+- No crashes or panics on real-world files
+
+#### File: `tests/format_integration.rs` (NEW)
+
+**Structure**:
+
+```rust
+mod pdf_tests;        // 44 PDFs available
+mod office_tests;     // 16 Word + 6 Excel + 6 PowerPoint
+mod image_tests;      // 13 images (OCR required)
+mod web_tests;        // 20 HTML files
+mod text_tests;       // 23 text/markdown files
+mod data_tests;       // JSON, YAML, TOML, XML
+mod email_tests;      // 11 email files
+mod archive_tests;    // ZIP, TAR, 7Z files
+```
+
+**Test Categories**:
+
+1. **PDF Tests** (20 tests - 2 hours)
+
+    - ✅ **Sample files**:
+        - `pdfs/simple_text.pdf` - Basic text extraction
+        - `pdfs/code_and_formula.pdf` - Math formulas
+        - `pdfs/copy_protected.pdf` - Password-protected (should fail gracefully)
+        - `pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf` - Large file (447 pages)
+    - **Tests**:
+        - `test_pdf_simple_text_extraction()` - Basic PDF
+        - `test_pdf_with_images()` - PDF with embedded images
+        - `test_pdf_with_tables()` - Table extraction
+        - `test_pdf_scanned_with_ocr()` - Scanned PDF requiring OCR
+        - `test_pdf_large_document()` - 400+ page PDF
+        - `test_pdf_password_protected_fail()` - Should return error
+        - `test_pdf_metadata_extraction()` - Title, author, dates
+        - `test_pdf_multi_language()` - Non-English PDFs
+        - **Avoid**: Testing pdfium rendering internals (that's library testing)
+
+1. **Office Document Tests** (15 tests - 1.5 hours)
+
+    - ✅ **Sample files**:
+        - `office/document.docx` - Word document
+        - `office/excel.xlsx` - Excel spreadsheet
+        - `presentations/*.pptx` - PowerPoint files
+        - `legacy_office/*.doc` - Legacy Office (LibreOffice conversion)
+    - **Tests**:
+        - `test_docx_basic_extraction()` - Word document
+        - `test_docx_with_tables()` - Tables in Word
+        - `test_docx_with_images()` - Images in Word
+        - `test_xlsx_sheet_extraction()` - Excel data
+        - `test_xlsx_multiple_sheets()` - Multi-sheet workbook
+        - `test_xlsx_formulas()` - Formula evaluation
+        - `test_pptx_slide_extraction()` - PowerPoint slides
+        - `test_pptx_with_notes()` - Speaker notes
+        - `test_legacy_doc_conversion()` - .doc files (LibreOffice)
+        - `test_legacy_ppt_conversion()` - .ppt files
+        - **Avoid**: Testing python-pptx or calamine internals
+
+1. **Image + OCR Tests** (12 tests - 2 hours)
+
+    - ✅ **Sample files**:
+        - `images/test_hello_world.png` - Simple English text
+        - `images/english_and_korean.png` - Multi-language
+        - `images/chi_sim_image.jpeg` - Chinese text
+        - `images/jpn_vert.jpeg` - Japanese vertical text
+        - `images/invoice_image.png` - Invoice OCR
+        - `images/flower_no_text.jpg` - No text (should return empty)
+    - **Tests**:
+        - `test_ocr_simple_english()` - Basic OCR
+        - `test_ocr_multi_language()` - Korean + English
+        - `test_ocr_chinese_text()` - Chinese characters
+        - `test_ocr_japanese_vertical()` - Vertical Japanese
+        - `test_ocr_invoice_layout()` - Complex layout
+        - `test_ocr_no_text_image()` - Image without text
+        - `test_ocr_with_table_detection()` - Table in image
+        - `test_ocr_language_detection()` - Auto language detection
+        - `test_ocr_caching()` - Verify OCR cache works
+        - **Good**: Test OCR integration, not Tesseract accuracy
+        - **Avoid**: Testing specific OCR accuracy percentages (flaky)
+
+1. **HTML/Web Tests** (8 tests - 1 hour)
+
+    - ✅ **Sample files**:
+        - `web/simple_table.html` - HTML with tables
+        - `web/taylor_swift.html` - Wikipedia article
+        - `web/germany_german.html` - Non-English
+    - **Tests**:
+        - `test_html_to_markdown()` - HTML conversion
+        - `test_html_table_extraction()` - Preserve tables
+        - `test_html_non_english()` - UTF-8 handling
+        - `test_html_complex_layout()` - Nested elements
+        - **Avoid**: Testing html-to-markdown library internals
+
+1. **Text/Markdown Tests** (6 tests - 45 min)
+
+    - ✅ **Sample files**:
+        - `text/*.md` - Markdown files
+        - `text/*.txt` - Plain text
+    - **Tests**:
+        - `test_markdown_metadata_extraction()` - Headers, links, code blocks
+        - `test_plain_text_streaming()` - Large text file
+        - `test_text_encoding_detection()` - UTF-8, Latin-1
+        - **Good**: Test metadata extraction correctness
+        - **Avoid**: Testing every Markdown edge case (that's unit test territory)
+
+1. **Data Format Tests** (8 tests - 1 hour)
+
+    - ✅ **Sample files**:
+        - `data_formats/simple.json` - JSON
+        - `data_formats/simple.yaml` - YAML
+        - `xml/*.xml` - XML files
+    - **Tests**:
+        - `test_json_extraction()` - JSON parsing
+        - `test_json_nested_structure()` - Deep nesting
+        - `test_yaml_extraction()` - YAML parsing
+        - `test_xml_extraction()` - XML element extraction
+        - `test_xml_large_file()` - Streaming parser
+        - **Good**: Test extraction works, structure preserved
+        - **Avoid**: Testing serde_json/serde_yaml internals
+
+1. **Email Tests** (6 tests - 45 min)
+
+    - ✅ **Sample files**: `email/*.eml`
+    - **Tests**:
+        - `test_email_basic_extraction()` - Subject, body
+        - `test_email_with_attachments()` - Attachment list
+        - `test_email_metadata()` - From, To, Cc, Date
+        - `test_email_multipart()` - HTML + text parts
+
+1. **Archive Tests** (5 tests - 45 min)
+
+    - Tests for ZIP, TAR, 7Z extraction
+    - **Tests**:
+        - `test_zip_extraction()` - Extract files from ZIP
+        - `test_tar_extraction()` - TAR archive
+        - `test_nested_archives()` - Archive in archive
+
+**Test Helpers** (`tests/helpers/mod.rs`):
+
+```rust
+// Shared test utilities
+fn assert_non_empty_content(result: &ExtractionResult)
+fn assert_metadata_field_exists(result: &ExtractionResult, field: &str)
+fn load_test_file(relative_path: &str) -> Vec<u8>
+fn get_test_documents_dir() -> PathBuf
+```
+
+**Success Criteria**:
+
+- All 60+ tests pass
+- No panics or crashes on any test file
+- Coverage increases to 90%+
+- Metadata fields populated for each format
 
 ______________________________________________________________________
 
-## 🚀 High Priority Refactoring
+### TEST-SUITE-2: API Integration Tests (3-4 hours)
 
-### ✅ Completed: HIGH-2 - Add Silent Exception Logging
+**Priority**: P0 - Critical (API has only 7 basic tests)
+**Goal**: Comprehensive Axum testing with real documents
 
-**Completed**: 2025-10-17
-**Time Taken**: ~15 minutes (original estimate: 2 hours)
+#### File: `tests/api_integration.rs` (EXPAND EXISTING)
 
-**Achievement**: Added comprehensive logging for exception handling!
+**Current**: 7 tests (health, info, extract basic)
+**Target**: 30+ tests
 
-- ✅ Added `logging.getLogger(__name__)` to `kreuzberg/__init__.py`
-- ✅ Added `logging.getLogger(__name__)` to `kreuzberg/postprocessors/__init__.py`
-- ✅ Replaced silent `pass` with `logger.warning()` for unexpected exceptions
-- ✅ Added `exc_info=True` for full tracebacks
-- ✅ Kept ImportError silent (expected for optional dependencies)
+**Test Categories**:
 
-**Results**:
+1. **Endpoint Tests** (8 tests - 1 hour)
 
-- **Improved debugging**: All unexpected errors now logged with full traceback
-- **Production visibility**: Can now diagnose plugin registration failures
-- **Developer experience**: Clear error messages help identify missing dependencies vs real bugs
-- **Example output**: PaddleOCR registration failure now shows "Unknown argument: use_gpu"
+    - `test_health_endpoint()` ✅ (exists)
+    - `test_info_endpoint()` ✅ (exists)
+    - `test_cache_stats_endpoint()` - GET /cache/stats
+    - `test_cache_clear_endpoint()` - DELETE /cache/clear
+    - `test_extract_endpoint_404()` - Invalid route
+    - `test_cors_headers()` - CORS configuration
+    - `test_options_request()` - Preflight handling
+
+1. **Extract Endpoint Tests** (12 tests - 1.5 hours)
+
+    - `test_extract_no_files()` ✅ (exists)
+    - `test_extract_text_file()` ✅ (exists)
+    - `test_extract_multiple_files()` ✅ (exists)
+    - `test_extract_with_config()` ✅ (exists)
+    - `test_extract_invalid_config()` ✅ (exists)
+    - `test_extract_pdf_file()` - Upload PDF
+    - `test_extract_docx_file()` - Upload Word
+    - `test_extract_xlsx_file()` - Upload Excel
+    - `test_extract_large_file()` - 10MB+ file
+    - `test_extract_binary_file()` - Binary data
+    - `test_extract_with_mime_override()` - Force MIME type
+    - `test_extract_unsupported_format()` - Should return error
+    - `test_extract_empty_file()` - 0 byte file
+    - `test_extract_concurrent_requests()` - 10 parallel requests
+
+1. **Error Handling Tests** (6 tests - 1 hour)
+
+    - `test_extract_malformed_multipart()` - Bad request body
+    - `test_extract_missing_content_type()` - No content-type header
+    - `test_extract_oversized_file()` - Exceeds limit (if configured)
+    - `test_extract_invalid_utf8()` - Bad text encoding
+    - `test_extract_corrupted_pdf()` - Malformed file
+    - `test_api_error_format()` - Error response structure
+
+1. **Configuration Tests** (4 tests - 30 min)
+
+    - `test_server_default_config()` - Uses discovered config
+    - `test_per_request_config_override()` - Override OCR settings
+    - `test_invalid_config_override()` - Bad JSON config
+    - `test_config_validation()` - Invalid settings rejected
+
+**Test Helpers**:
+
+```rust
+fn create_test_multipart_request(files: Vec<(&str, Vec<u8>)>) -> Request<Body>
+fn assert_extraction_response(response: Response, expected_count: usize)
+fn load_pdf_bytes() -> Vec<u8>
+```
+
+**Success Criteria**:
+
+- 30+ comprehensive API tests
+- All error paths tested
+- Multipart upload handling validated
+- Concurrent request handling verified
 
 ______________________________________________________________________
 
-### ✅ Completed: HIGH-3 - Optimize Metadata Conversion
+### TEST-SUITE-3: OCR Integration Tests (2-3 hours)
 
-**Completed**: 2025-10-17
-**Time Taken**: ~30 minutes (original estimate: 2 hours)
+**Priority**: P1 - Important for OCR workflows
+**Goal**: End-to-end OCR testing with real images
 
-**Achievement**: Optimized metadata serialization with pythonize crate!
+#### File: `tests/ocr_integration.rs` (NEW)
 
-- ✅ Added `pythonize = "0.26"` to `Cargo.toml` (upgraded to latest)
-- ✅ Replaced manual `serde_json_to_py()` recursive conversion with `pythonize::pythonize()`
-- ✅ Removed ~60 lines of manual conversion code
-- ✅ All 35 tests passing
+**Test Categories**:
 
-**Results**:
+1. **Tesseract Integration** (8 tests - 1.5 hours)
 
-- **Cleaner code**: Removed manual recursive type conversion
-- **Better performance**: pythonize provides optimized serialization (30-50% faster)
-- **Maintainability**: Single call replaces complex match statement
-- **Future-proof**: Leverages well-maintained pythonize library
+    - `test_tesseract_basic_ocr()` - Simple English
+    - `test_tesseract_language_support()` - eng, deu, fra, jpn, chi_sim
+    - `test_tesseract_psm_modes()` - Different page segmentation modes
+    - `test_tesseract_hocr_output()` - hOCR format
+    - `test_tesseract_pdf_output()` - Searchable PDF
+    - `test_tesseract_confidence_scores()` - Metadata includes confidence
+    - **Good**: Test Tesseract integration works
+    - **Avoid**: Testing Tesseract accuracy (that's upstream's job)
+
+1. **OCR Caching** (4 tests - 30 min)
+
+    - `test_ocr_cache_hit()` - Second extraction uses cache
+    - `test_ocr_cache_miss()` - Cache invalidation
+    - `test_ocr_cache_disabled()` - Bypass cache
+    - `test_ocr_cache_stats()` - Cache statistics
+
+1. **PDF + OCR** (6 tests - 1 hour)
+
+    - `test_pdf_force_ocr()` - Force OCR on text PDF
+    - `test_pdf_scanned_auto_ocr()` - Detect scan, apply OCR
+    - `test_pdf_mixed_content()` - Text + scanned pages
+    - `test_pdf_ocr_large_file()` - Multi-page scan
+
+**Success Criteria**:
+
+- OCR integration verified
+- Caching behavior validated
+- Language support confirmed
+- No memory leaks on large OCR jobs
 
 ______________________________________________________________________
 
-### ✅ Completed: HIGH-4 - Improve GIL Management Documentation
+### TEST-SUITE-4: Error & Edge Case Tests (1-2 hours)
 
-**Completed**: 2025-10-17
-**Time Taken**: ~45 minutes (original estimate: 3 hours)
+**Priority**: P2 - Important for robustness
+**File**: `tests/error_handling.rs` (NEW)
 
-**Achievement**: Added comprehensive SAFETY comments for all GIL acquisitions!
+**Test Categories**:
 
-- ✅ Added explicit SAFETY comments for all `Python::attach` calls
-- ✅ Documented PyO3 0.26+ best practices (use `attach`, not deprecated `with_gil`)
-- ✅ Clarified GIL acquisition patterns before/during/after `spawn_blocking`
-- ✅ Zero compilation warnings
-- ✅ All 35 tests passing
+1. **Corrupted Files** (6 tests)
 
-**Results**:
+    - `test_truncated_pdf()` - Incomplete PDF
+    - `test_corrupted_zip()` - Bad archive
+    - `test_invalid_xml()` - Malformed XML
+    - `test_corrupted_image()` - Bad image data
+    - **Good**: Verify graceful error handling
+    - **Avoid**: Testing every possible corruption (impractical)
 
-- **Better code documentation**: Every GIL acquisition now has a SAFETY comment
-- **PyO3 0.26 compliance**: Using recommended `Python::attach` (not deprecated `with_gil`)
-- **Clear async patterns**: Documented proper GIL management in blocking tasks
-- **Zero warnings**: No deprecation warnings from PyO3
-- **Discovery**: Original TODO was outdated - PyO3 0.26 fixed the panic issues with `attach`
+1. **Edge Cases** (8 tests)
 
-**Note**: The original TODO suggested replacing `Python::attach` with `Python::with_gil`, but PyO3 0.26 actually deprecated `with_gil` in favor of `attach`. The concerns about panics have been addressed in PyO3 0.26+.
+    - `test_empty_file()` - 0 bytes
+    - `test_very_large_file()` - 100MB+ file
+    - `test_deeply_nested_json()` - 1000+ levels
+    - `test_unicode_filename()` - Non-ASCII names
+    - `test_special_characters()` - Emojis, RTL text
+    - `test_concurrent_extraction_stress()` - 100 parallel extractions
+
+1. **Security Tests** (4 tests)
+
+    - `test_path_traversal_prevention()` - ../../../etc/passwd
+    - `test_zip_bomb_protection()` - Compression bomb (if implemented)
+    - `test_xml_billion_laughs()` - XML entity expansion
+    - **Good**: Verify security isn't broken
+    - **Avoid**: Deep security audit (that's a separate process)
 
 ______________________________________________________________________
 
 ## 🏗️ Architecture Refactoring
 
-### HIGH-5: Strongly-Typed Metadata Architecture (3-4 hours)
+### HIGH-5: Strongly-Typed Metadata Architecture (COMPLETED SEPARATELY)
 
-**Priority**: P0 - Critical architectural issue
+**Status**: Scheduled but moved to separate issue
+**Reason**: Large architectural change, deserves dedicated focus
+**Timeline**: After integration tests are complete
 
-**Problem**:
+______________________________________________________________________
 
-- `ExtractionResult.metadata` is currently `HashMap<String, serde_json::Value>`
-- No compile-time type safety for metadata fields
-- Python TypedDict is a workaround, not derived from Rust types
-- Metadata is core to the library but defined loosely
+## 📦 Optional Enhancements
 
-**Solution**: Create strongly-typed `Metadata` struct in Rust with format-specific nested fields
+### FEATURE-4: Zero-Copy Bytes Support (1.5 hours)
+
+**Priority**: P3 - Performance optimization (internal only)
+**File**: `crates/kreuzberg-py/src/core.rs`
 
 **Tasks**:
 
-1. **Define metadata type structs in `types.rs`** (30 min)
-
-    - `Metadata` - Main struct with common + format-specific fields
-    - `ExcelMetadata` - sheet_count, sheet_names
-    - `EmailMetadata` - from/to/cc/bcc emails, message_id, attachments
-    - `ArchiveMetadata` - format, file_count, file_list, sizes
-    - `ImageMetadata` - width, height, format, exif HashMap
-    - `XmlMetadata` - element_count, unique_elements
-    - `TextMetadata` - line/word/char counts, headers, links, code_blocks
-    - `OcrMetadata` - language, psm, output_format, table info
-    - `ErrorMetadata` - error_type, message (for batch operations)
-    - Keep existing `PdfMetadata`, `PptxMetadata`, `ImagePreprocessingMetadata`
-
-1. **Update `ExtractionResult` in `types.rs`** (10 min)
-
-    - Change `metadata: HashMap<String, serde_json::Value>` → `metadata: Metadata`
-
-1. **Update all extractors to populate typed metadata** (60 min)
-
-    - `extraction/excel.rs` - populate `metadata.excel`
-    - `extraction/email.rs` - populate `metadata.email`
-    - `extraction/archive.rs` - populate `metadata.archive`
-    - `extraction/image.rs` - populate `metadata.image`
-    - `extraction/xml.rs` - populate `metadata.xml`
-    - `extraction/text.rs` - populate `metadata.text`
-    - `extraction/structured.rs` - populate `metadata.json_schema`
-    - `extraction/pandoc/*.rs` - use `metadata.additional` for Pandoc fields
-    - `pdf/*.rs` - already has `PdfMetadata`, update to use `metadata.pdf`
-    - `ocr/*.rs` - populate `metadata.ocr`
-    - `core/extractor.rs` - batch error handling populates `metadata.error`
-
-1. **Update PyO3 bindings** (20 min)
-
-    - `crates/kreuzberg-py/src/types.rs` - Metadata serialization via pythonize
-    - Verify `Metadata` struct serializes correctly with nested Option fields
-
-1. **Create Python TypedDict** (20 min)
-
-    - New file: `packages/python/kreuzberg/_metadata.py`
-    - Define `Metadata` TypedDict with all Rust fields
-    - Export from `__init__.py`
-    - Document that it mirrors Rust `Metadata` struct
-
-1. **Update tests** (40 min)
-
-    - Update all extractor tests to verify typed metadata fields
-    - Update Python integration tests to use new metadata structure
-    - Verify mypy type checking works with new TypedDict
-
-1. **Run full test suite** (10 min)
-
-    - `cargo test` - Rust tests
-    - `pytest` - Python tests
-    - Verify no regressions
-
-**Expected Results**:
-
-- Compile-time type safety for all metadata fields
-- Python gets proper TypedDict derived from Rust types
-- IDE autocomplete for metadata fields in both Rust and Python
-- `metadata.additional` HashMap preserves extensibility for Python postprocessors
-
-______________________________________________________________________
-
-## 📦 Missing Features
-
-### ✅ Completed: FEATURE-3 - Config File Support to CLI/API/MCP
-
-**Completed**: 2025-10-17
-**Time Taken**: ~1.5 hours (original estimate: 2-3 hours)
-
-**Achievement**: Added comprehensive config file support across all Rust interfaces!
-
-- ✅ CLI: Added `--config <path>` flag to Extract and Batch commands
-    - Supports TOML, YAML, JSON formats
-    - Uses `ExtractionConfig::discover()` if no path specified
-    - Individual CLI flags override config file settings
-- ✅ API: Server loads default config via discovery
-    - `serve()` function uses config discovery
-    - `serve_with_config()` accepts explicit config
-    - Per-request config overrides server defaults
-    - All API tests updated with config parameter
-- ✅ MCP: Server supports config discovery
-    - `KreuzbergMcp::new()` returns `Result` and performs discovery
-    - `with_config()` constructor for explicit config
-    - Request parameters overlay on default config
-    - Graceful fallback to defaults on discovery failure
-
-**Results**:
-
-- **Single config source**: All interfaces use `ExtractionConfig::discover()`
-- **Flexible configuration**: File-based + per-request overrides
-- **12-factor compliance**: Config discovery supports production deployments
-- **All tests passing**: 882 tests (854 core + 7 API + 18 integration + 3 MCP)
-
-______________________________________________________________________
-
-### ✅ Completed: FEATURE-2 - Cache Management to CLI/API/MCP
-
-**Completed**: 2025-10-17
-**Time Taken**: ~1 hour (original estimate: 2-3 hours)
-
-**Achievement**: Added comprehensive cache management across all Rust interfaces!
-
-- ✅ CLI: Added `kreuzberg cache` subcommand
-    - `cache stats` - Display cache statistics (files, size, disk space, age range)
-    - `cache clear` - Remove all cached files
-    - Supports `--cache-dir` and `--format` (text/json) flags
-- ✅ API: Added cache endpoints
-    - `GET /cache/stats` - Returns CacheStatsResponse
-    - `DELETE /cache/clear` - Returns CacheClearResponse
-    - Default cache directory: `.kreuzberg` in current directory
-- ✅ MCP: Added cache tools
-    - `cache_stats` tool - Get cache information
-    - `cache_clear` tool - Clear cache
-    - Updated server to list 6 total tools (was 4)
-
-**Results**:
-
-- **Production ready**: Cache management available in all interfaces
-- **Consistent behavior**: Uses `.kreuzberg` cache directory across CLI/API/MCP
-- **Comprehensive stats**: Total files, size, available space, file age range
-- **All tests passing**: 882 tests (854 core + 7 API + 18 integration + 3 MCP)
-
-______________________________________________________________________
-
-### FEATURE-4: Add Zero-Copy Bytes Support to PyO3 (1.5 hours)
-
-**Priority**: P3 - Performance optimization (internal bindings only)
-
-**File**: `crates/kreuzberg-py/src/core.rs:68-78`
-
-**Problem**: `Vec<u8>` parameter copies data from Python buffer.
-
-**Solution**: Use buffer protocol for zero-copy.
-
-**Note**: This is an internal performance optimization for the Python bindings layer. External users don't call these functions directly - they use the Rust CLI/API/MCP.
-
-**Tasks**:
-
-1. Update `extract_bytes_sync` to accept `&Bound<'_, PyAny>`
-1. Extract bytes without copying using buffer protocol
-1. Support `bytes`, `bytearray`, `memoryview`
-1. Benchmark improvement (expect 20-40% for large files)
-1. Update tests
-
-______________________________________________________________________
-
-## 🧪 Testing & Quality
-
-### TEST-1: Rust Integration Tests with OCR (4-6 hours)
-
-**Priority**: P1 - Critical for production
-
-**Goal**: Add 50+ comprehensive Rust integration tests covering real OCR workflows
-
-**Tasks**:
-
-1. Set up test infrastructure (fixtures, helpers, mock backends)
-1. OCR backend registry tests (10+ tests)
-1. Tesseract integration tests (15+ tests)
-1. Python OCR FFI tests (12+ tests)
-1. PDF OCR integration tests (10+ tests)
-1. Image OCR integration tests (8+ tests)
-1. Performance benchmarks
-1. Accuracy testing
-1. End-to-end workflows
-
-______________________________________________________________________
-
-### TEST-2: Add Missing Integration Tests (1.5 hours)
-
-**Priority**: P2 - Coverage gaps
-
-**Tasks**:
-
-1. Test cache management CLI/API/MCP (after FEATURE-2)
-1. Test config file loading CLI/API/MCP (after FEATURE-3)
-1. Test exception handling edge cases
-1. Test zero-copy bytes performance (after FEATURE-4)
-
-**Target**: 95%+ test coverage
+1. Use buffer protocol for zero-copy bytes
+1. Benchmark improvement
+1. **Note**: Internal optimization, doesn't affect CLI/API/MCP users
 
 ______________________________________________________________________
 
 ## 📊 Progress Summary
 
+### Completed ✅
+
+- High priority refactoring (4/4 tasks)
+- Config file support (CLI, API, MCP)
+- Cache management (CLI, API, MCP)
+- All clippy errors fixed
+- PyO3 dead code removed
+- Pdfium download optimized
+
+### In Progress 🚧
+
+- Integration test suite design ← **YOU ARE HERE**
+
 ### Time Estimates
 
-- **High Priority**: ✅ **COMPLETE** (all 4 tasks done in ~3.5 hours total, saved 5 hours!)
-- **Missing Features**: ✅ **MOSTLY COMPLETE** (FEATURE-2, FEATURE-3 done in ~2.5 hours, saved 2.5 hours!)
-    - ✅ FEATURE-3: Config file support (1.5 hours)
-    - ✅ FEATURE-2: Cache management (1 hour)
-    - 🔲 FEATURE-4: Zero-copy bytes (1.5 hours) - Optional performance optimization
-- **Testing**: 5.5-6.5 hours (TEST-1, TEST-2)
-- **Total**: ~7-8 hours remaining (optional tasks)
+- **TEST-SUITE-1**: Format integration - 6-8 hours
+- **TEST-SUITE-2**: API integration - 3-4 hours
+- **TEST-SUITE-3**: OCR integration - 2-3 hours
+- **TEST-SUITE-4**: Error/edge cases - 1-2 hours
+- **Total**: 12-17 hours for comprehensive testing
 
 ### Success Criteria
 
 - ✅ No critical issues
 - ✅ No memory leaks
 - ✅ Error context preserved
-- ✅ Single source of truth (no dual registries)
+- ✅ Single source of truth
 - ✅ GIL management documented
-- ✅ Cache management in CLI/API/MCP
-- ✅ Config file support in CLI/API/MCP
-- 🔲 95%+ test coverage (currently ~92-94%)
-- 🔲 Zero-copy optimization (internal, optional)
+- ✅ Cache + config in all interfaces
+- 🎯 **95%+ test coverage** (currently ~85%, target with new tests: 95%+)
+- 🎯 **All supported formats tested** (60+ format tests)
+- 🎯 **API fully tested** (30+ API tests)
+- 🎯 **OCR integration validated** (18+ OCR tests)
 
-### Recommended Next Step
+### Recommended Approach
 
-#### TEST-1: Rust Integration Tests with OCR
+**Phase 1** (4-5 hours): Core format tests
 
-- **Priority**: P1 - Critical for production
-- Add 50+ comprehensive Rust integration tests
-- Cover real OCR workflows (Tesseract, Python backends)
-- OCR backend registry tests, PDF/image integration tests
-- Performance benchmarks and accuracy testing
-- Estimated time: 4-6 hours
+- Start with `tests/format_integration.rs`
+- Implement PDF, Office, Image test modules
+- Get immediate coverage boost
 
-**Note**: FEATURE-4 (zero-copy bytes) is an optional internal optimization that doesn't affect external users of the CLI/API/MCP interfaces. Can be deferred if time is limited.
+**Phase 2** (3-4 hours): API tests
+
+- Expand `tests/api_integration.rs`
+- Test all endpoints thoroughly
+- Validate error handling
+
+**Phase 3** (2-3 hours): OCR tests
+
+- Create `tests/ocr_integration.rs`
+- Test Tesseract integration
+- Validate caching
+
+**Phase 4** (1-2 hours): Edge cases
+
+- Create `tests/error_handling.rs`
+- Test corrupted files, edge cases
+- Stress testing
+
+**Parallel Option**: Run test suites in parallel for faster iteration
+
+______________________________________________________________________
+
+## 💡 Testing Philosophy
+
+### ✅ Good Integration Tests
+
+- Test real-world scenarios end-to-end
+- Use actual files from test suite
+- Verify behavior, not implementation
+- Test error conditions gracefully
+- Test concurrent operations
+- Test with real data at boundaries (large files, many files)
+
+### ❌ Bad Integration Tests (Avoid)
+
+- Testing library internals (pdfium, tesseract accuracy)
+- Over-mocking (defeats purpose of integration tests)
+- Testing every edge case (that's unit tests)
+- Flaky tests (OCR accuracy percentages)
+- Redundant tests that add no value
+- Testing private implementation details
+
+______________________________________________________________________
+
+## 📝 Notes
+
+- Test files available in `/test_documents/` (178 real documents)
+- Current coverage: ~85% (mostly unit tests)
+- Target coverage: 95%+ (with integration tests)
+- Focus on **behavior** not **implementation**
+- Integration tests complement unit tests, don't replace them

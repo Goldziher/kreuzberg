@@ -3,9 +3,8 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::ExtractionResult;
+use crate::types::{ExtractionResult, Metadata};
 use async_trait::async_trait;
-use std::collections::HashMap;
 use std::path::Path;
 
 /// PowerPoint presentation extractor.
@@ -56,31 +55,20 @@ impl DocumentExtractor for PptxExtractor {
 
         let pptx_result = crate::extraction::pptx::extract_pptx_from_bytes(content, extract_images)?;
 
-        // Build metadata from PptxMetadata struct
-        let mut metadata = HashMap::new();
-        if let Some(title) = pptx_result.metadata.title {
-            metadata.insert("title".to_string(), serde_json::json!(title));
-        }
-        if let Some(author) = pptx_result.metadata.author {
-            metadata.insert("author".to_string(), serde_json::json!(author));
-        }
-        if let Some(description) = pptx_result.metadata.description {
-            metadata.insert("description".to_string(), serde_json::json!(description));
-        }
-        if let Some(summary) = pptx_result.metadata.summary {
-            metadata.insert("summary".to_string(), serde_json::json!(summary));
-        }
-        if !pptx_result.metadata.fonts.is_empty() {
-            metadata.insert("fonts".to_string(), serde_json::json!(pptx_result.metadata.fonts));
-        }
-        metadata.insert("slide_count".to_string(), serde_json::json!(pptx_result.slide_count));
-        metadata.insert("image_count".to_string(), serde_json::json!(pptx_result.image_count));
-        metadata.insert("table_count".to_string(), serde_json::json!(pptx_result.table_count));
+        // Use PptxMetadata directly, put counts in additional metadata
+        let mut additional = std::collections::HashMap::new();
+        additional.insert("slide_count".to_string(), serde_json::json!(pptx_result.slide_count));
+        additional.insert("image_count".to_string(), serde_json::json!(pptx_result.image_count));
+        additional.insert("table_count".to_string(), serde_json::json!(pptx_result.table_count));
 
         Ok(ExtractionResult {
             content: pptx_result.content,
             mime_type: mime_type.to_string(),
-            metadata,
+            metadata: Metadata {
+                pptx: Some(pptx_result.metadata),
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })
@@ -95,31 +83,20 @@ impl DocumentExtractor for PptxExtractor {
 
         let pptx_result = crate::extraction::pptx::extract_pptx_from_path(path_str, extract_images)?;
 
-        // Build metadata from PptxMetadata struct
-        let mut metadata = HashMap::new();
-        if let Some(title) = pptx_result.metadata.title {
-            metadata.insert("title".to_string(), serde_json::json!(title));
-        }
-        if let Some(author) = pptx_result.metadata.author {
-            metadata.insert("author".to_string(), serde_json::json!(author));
-        }
-        if let Some(description) = pptx_result.metadata.description {
-            metadata.insert("description".to_string(), serde_json::json!(description));
-        }
-        if let Some(summary) = pptx_result.metadata.summary {
-            metadata.insert("summary".to_string(), serde_json::json!(summary));
-        }
-        if !pptx_result.metadata.fonts.is_empty() {
-            metadata.insert("fonts".to_string(), serde_json::json!(pptx_result.metadata.fonts));
-        }
-        metadata.insert("slide_count".to_string(), serde_json::json!(pptx_result.slide_count));
-        metadata.insert("image_count".to_string(), serde_json::json!(pptx_result.image_count));
-        metadata.insert("table_count".to_string(), serde_json::json!(pptx_result.table_count));
+        // Use PptxMetadata directly, put counts in additional metadata
+        let mut additional = std::collections::HashMap::new();
+        additional.insert("slide_count".to_string(), serde_json::json!(pptx_result.slide_count));
+        additional.insert("image_count".to_string(), serde_json::json!(pptx_result.image_count));
+        additional.insert("table_count".to_string(), serde_json::json!(pptx_result.table_count));
 
         Ok(ExtractionResult {
             content: pptx_result.content,
             mime_type: mime_type.to_string(),
-            metadata,
+            metadata: Metadata {
+                pptx: Some(pptx_result.metadata),
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })

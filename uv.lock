@@ -1739,7 +1739,6 @@ source = { editable = "packages/python" }
 
 [package.optional-dependencies]
 all = [
-    { name = "click" },
     { name = "easyocr" },
     { name = "keybert" },
     { name = "paddleocr" },
@@ -1750,8 +1749,9 @@ all = [
     { name = "torch" },
     { name = "transformers" },
 ]
-cli = [
-    { name = "click" },
+easyocr = [
+    { name = "easyocr" },
+    { name = "torch" },
 ]
 nlp = [
     { name = "keybert" },
@@ -1760,8 +1760,7 @@ nlp = [
     { name = "torch" },
     { name = "transformers" },
 ]
-ocr = [
-    { name = "easyocr" },
+paddleocr = [
     { name = "paddleocr" },
     { name = "paddlepaddle" },
     { name = "setuptools" },
@@ -1769,19 +1768,19 @@ ocr = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", marker = "extra == 'cli'", specifier = ">=8.2.1" },
-    { name = "easyocr", marker = "extra == 'ocr'", specifier = ">=1.7.2" },
+    { name = "easyocr", marker = "extra == 'easyocr'", specifier = ">=1.7.2" },
     { name = "keybert", marker = "extra == 'nlp'", specifier = ">=0.8.5" },
-    { name = "kreuzberg", extras = ["cli", "nlp", "ocr"], marker = "extra == 'all'" },
-    { name = "paddleocr", marker = "extra == 'ocr'", specifier = ">=3.1" },
-    { name = "paddlepaddle", marker = "extra == 'ocr'", specifier = ">=3.1" },
+    { name = "kreuzberg", extras = ["easyocr", "nlp", "paddleocr"], marker = "extra == 'all'" },
+    { name = "paddleocr", marker = "extra == 'paddleocr'", specifier = ">=3.1" },
+    { name = "paddlepaddle", marker = "extra == 'paddleocr'", specifier = ">=3.1" },
     { name = "sentence-transformers", marker = "extra == 'nlp'", specifier = ">=3" },
-    { name = "setuptools", marker = "extra == 'ocr'", specifier = ">=65" },
+    { name = "setuptools", marker = "extra == 'paddleocr'", specifier = ">=65" },
     { name = "spacy", marker = "extra == 'nlp'", specifier = ">=3" },
+    { name = "torch", marker = "extra == 'easyocr'", specifier = ">=2.8" },
     { name = "torch", marker = "extra == 'nlp'", specifier = ">=2.8" },
     { name = "transformers", marker = "extra == 'nlp'", specifier = ">=4.56.2" },
 ]
-provides-extras = ["all", "cli", "nlp", "ocr"]
+provides-extras = ["all", "easyocr", "nlp", "paddleocr"]
 
 [[package]]
 name = "langcodes"

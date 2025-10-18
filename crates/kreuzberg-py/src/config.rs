@@ -211,12 +211,13 @@ pub struct OcrConfig {
 #[pymethods]
 impl OcrConfig {
     #[new]
-    #[pyo3(signature = (backend=None, language=None))]
-    fn new(backend: Option<String>, language: Option<String>) -> Self {
+    #[pyo3(signature = (backend=None, language=None, tesseract_config=None))]
+    fn new(backend: Option<String>, language: Option<String>, tesseract_config: Option<TesseractConfig>) -> Self {
         Self {
             inner: kreuzberg::OcrConfig {
                 backend: backend.unwrap_or_else(|| "tesseract".to_string()),
                 language: language.unwrap_or_else(|| "eng".to_string()),
+                tesseract_config: tesseract_config.map(Into::into),
             },
         }
     }
@@ -241,10 +242,26 @@ impl OcrConfig {
         self.inner.language = value;
     }
 
+    #[getter]
+    fn tesseract_config(&self) -> Option<TesseractConfig> {
+        self.inner.tesseract_config.clone().map(Into::into)
+    }
+
+    #[setter]
+    fn set_tesseract_config(&mut self, value: Option<TesseractConfig>) {
+        self.inner.tesseract_config = value.map(Into::into);
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "OcrConfig(backend='{}', language='{}')",
-            self.inner.backend, self.inner.language
+            "OcrConfig(backend='{}', language='{}', tesseract_config={})",
+            self.inner.backend,
+            self.inner.language,
+            if self.inner.tesseract_config.is_some() {
+                "Some(...)"
+            } else {
+                "None"
+            }
         )
     }
 }
@@ -766,6 +783,284 @@ impl From<PostProcessorConfig> for kreuzberg::PostProcessorConfig {
 
 impl From<kreuzberg::PostProcessorConfig> for PostProcessorConfig {
     fn from(config: kreuzberg::PostProcessorConfig) -> Self {
+        Self { inner: config }
+    }
+}
+
+// ============================================================================
+// TesseractConfig
+// ============================================================================
+
+/// Tesseract OCR configuration.
+///
+/// Provides fine-grained control over Tesseract OCR behavior including
+/// page segmentation mode, table detection, and various Tesseract-specific options.
+///
+/// Example:
+///     >>> from kreuzberg import TesseractConfig
+///     >>> config = TesseractConfig(
+///     ...     language="eng",
+///     ...     psm=6,
+///     ...     enable_table_detection=True,
+///     ...     tessedit_char_whitelist="0123456789"
+///     ... )
+#[pyclass(name = "TesseractConfig", module = "kreuzberg")]
+#[derive(Clone)]
+pub struct TesseractConfig {
+    inner: kreuzberg::types::TesseractConfig,
+}
+
+#[pymethods]
+impl TesseractConfig {
+    #[new]
+    #[pyo3(signature = (
+        language=None,
+        psm=None,
+        output_format=None,
+        enable_table_detection=None,
+        table_min_confidence=None,
+        table_column_threshold=None,
+        table_row_threshold_ratio=None,
+        use_cache=None,
+        classify_use_pre_adapted_templates=None,
+        language_model_ngram_on=None,
+        tessedit_dont_blkrej_good_wds=None,
+        tessedit_dont_rowrej_good_wds=None,
+        tessedit_enable_dict_correction=None,
+        tessedit_char_whitelist=None,
+        tessedit_use_primary_params_model=None,
+        textord_space_size_is_variable=None,
+        thresholding_method=None
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        language: Option<String>,
+        psm: Option<i32>,
+        output_format: Option<String>,
+        enable_table_detection: Option<bool>,
+        table_min_confidence: Option<f64>,
+        table_column_threshold: Option<i32>,
+        table_row_threshold_ratio: Option<f64>,
+        use_cache: Option<bool>,
+        classify_use_pre_adapted_templates: Option<bool>,
+        language_model_ngram_on: Option<bool>,
+        tessedit_dont_blkrej_good_wds: Option<bool>,
+        tessedit_dont_rowrej_good_wds: Option<bool>,
+        tessedit_enable_dict_correction: Option<bool>,
+        tessedit_char_whitelist: Option<String>,
+        tessedit_use_primary_params_model: Option<bool>,
+        textord_space_size_is_variable: Option<bool>,
+        thresholding_method: Option<bool>,
+    ) -> Self {
+        Self {
+            inner: kreuzberg::types::TesseractConfig {
+                language: language.unwrap_or_else(|| "eng".to_string()),
+                psm: psm.unwrap_or(3),
+                output_format: output_format.unwrap_or_else(|| "markdown".to_string()),
+                enable_table_detection: enable_table_detection.unwrap_or(true),
+                table_min_confidence: table_min_confidence.unwrap_or(0.0),
+                table_column_threshold: table_column_threshold.unwrap_or(50),
+                table_row_threshold_ratio: table_row_threshold_ratio.unwrap_or(0.5),
+                use_cache: use_cache.unwrap_or(true),
+                classify_use_pre_adapted_templates: classify_use_pre_adapted_templates.unwrap_or(true),
+                language_model_ngram_on: language_model_ngram_on.unwrap_or(false),
+                tessedit_dont_blkrej_good_wds: tessedit_dont_blkrej_good_wds.unwrap_or(true),
+                tessedit_dont_rowrej_good_wds: tessedit_dont_rowrej_good_wds.unwrap_or(true),
+                tessedit_enable_dict_correction: tessedit_enable_dict_correction.unwrap_or(true),
+                tessedit_char_whitelist: tessedit_char_whitelist.unwrap_or_default(),
+                tessedit_use_primary_params_model: tessedit_use_primary_params_model.unwrap_or(true),
+                textord_space_size_is_variable: textord_space_size_is_variable.unwrap_or(true),
+                thresholding_method: thresholding_method.unwrap_or(false),
+            },
+        }
+    }
+
+    #[getter]
+    fn language(&self) -> String {
+        self.inner.language.clone()
+    }
+
+    #[setter]
+    fn set_language(&mut self, value: String) {
+        self.inner.language = value;
+    }
+
+    #[getter]
+    fn psm(&self) -> i32 {
+        self.inner.psm
+    }
+
+    #[setter]
+    fn set_psm(&mut self, value: i32) {
+        self.inner.psm = value;
+    }
+
+    #[getter]
+    fn output_format(&self) -> String {
+        self.inner.output_format.clone()
+    }
+
+    #[setter]
+    fn set_output_format(&mut self, value: String) {
+        self.inner.output_format = value;
+    }
+
+    #[getter]
+    fn enable_table_detection(&self) -> bool {
+        self.inner.enable_table_detection
+    }
+
+    #[setter]
+    fn set_enable_table_detection(&mut self, value: bool) {
+        self.inner.enable_table_detection = value;
+    }
+
+    #[getter]
+    fn table_min_confidence(&self) -> f64 {
+        self.inner.table_min_confidence
+    }
+
+    #[setter]
+    fn set_table_min_confidence(&mut self, value: f64) {
+        self.inner.table_min_confidence = value;
+    }
+
+    #[getter]
+    fn table_column_threshold(&self) -> i32 {
+        self.inner.table_column_threshold
+    }
+
+    #[setter]
+    fn set_table_column_threshold(&mut self, value: i32) {
+        self.inner.table_column_threshold = value;
+    }
+
+    #[getter]
+    fn table_row_threshold_ratio(&self) -> f64 {
+        self.inner.table_row_threshold_ratio
+    }
+
+    #[setter]
+    fn set_table_row_threshold_ratio(&mut self, value: f64) {
+        self.inner.table_row_threshold_ratio = value;
+    }
+
+    #[getter]
+    fn use_cache(&self) -> bool {
+        self.inner.use_cache
+    }
+
+    #[setter]
+    fn set_use_cache(&mut self, value: bool) {
+        self.inner.use_cache = value;
+    }
+
+    #[getter]
+    fn classify_use_pre_adapted_templates(&self) -> bool {
+        self.inner.classify_use_pre_adapted_templates
+    }
+
+    #[setter]
+    fn set_classify_use_pre_adapted_templates(&mut self, value: bool) {
+        self.inner.classify_use_pre_adapted_templates = value;
+    }
+
+    #[getter]
+    fn language_model_ngram_on(&self) -> bool {
+        self.inner.language_model_ngram_on
+    }
+
+    #[setter]
+    fn set_language_model_ngram_on(&mut self, value: bool) {
+        self.inner.language_model_ngram_on = value;
+    }
+
+    #[getter]
+    fn tessedit_dont_blkrej_good_wds(&self) -> bool {
+        self.inner.tessedit_dont_blkrej_good_wds
+    }
+
+    #[setter]
+    fn set_tessedit_dont_blkrej_good_wds(&mut self, value: bool) {
+        self.inner.tessedit_dont_blkrej_good_wds = value;
+    }
+
+    #[getter]
+    fn tessedit_dont_rowrej_good_wds(&self) -> bool {
+        self.inner.tessedit_dont_rowrej_good_wds
+    }
+
+    #[setter]
+    fn set_tessedit_dont_rowrej_good_wds(&mut self, value: bool) {
+        self.inner.tessedit_dont_rowrej_good_wds = value;
+    }
+
+    #[getter]
+    fn tessedit_enable_dict_correction(&self) -> bool {
+        self.inner.tessedit_enable_dict_correction
+    }
+
+    #[setter]
+    fn set_tessedit_enable_dict_correction(&mut self, value: bool) {
+        self.inner.tessedit_enable_dict_correction = value;
+    }
+
+    #[getter]
+    fn tessedit_char_whitelist(&self) -> String {
+        self.inner.tessedit_char_whitelist.clone()
+    }
+
+    #[setter]
+    fn set_tessedit_char_whitelist(&mut self, value: String) {
+        self.inner.tessedit_char_whitelist = value;
+    }
+
+    #[getter]
+    fn tessedit_use_primary_params_model(&self) -> bool {
+        self.inner.tessedit_use_primary_params_model
+    }
+
+    #[setter]
+    fn set_tessedit_use_primary_params_model(&mut self, value: bool) {
+        self.inner.tessedit_use_primary_params_model = value;
+    }
+
+    #[getter]
+    fn textord_space_size_is_variable(&self) -> bool {
+        self.inner.textord_space_size_is_variable
+    }
+
+    #[setter]
+    fn set_textord_space_size_is_variable(&mut self, value: bool) {
+        self.inner.textord_space_size_is_variable = value;
+    }
+
+    #[getter]
+    fn thresholding_method(&self) -> bool {
+        self.inner.thresholding_method
+    }
+
+    #[setter]
+    fn set_thresholding_method(&mut self, value: bool) {
+        self.inner.thresholding_method = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "TesseractConfig(language='{}', psm={}, output_format='{}', enable_table_detection={})",
+            self.inner.language, self.inner.psm, self.inner.output_format, self.inner.enable_table_detection
+        )
+    }
+}
+
+impl From<TesseractConfig> for kreuzberg::types::TesseractConfig {
+    fn from(config: TesseractConfig) -> Self {
+        config.inner
+    }
+}
+
+impl From<kreuzberg::types::TesseractConfig> for TesseractConfig {
+    fn from(config: kreuzberg::types::TesseractConfig) -> Self {
         Self { inner: config }
     }
 }

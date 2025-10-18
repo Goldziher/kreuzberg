@@ -843,7 +843,7 @@ mod tests {
         let results = results.unwrap();
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].content, "valid content");
-        assert!(results[1].metadata.contains_key("error"));
+        assert!(results[1].metadata.error.is_some());
     }
 
     #[tokio::test]
@@ -861,7 +861,7 @@ mod tests {
         let results = results.unwrap();
         assert_eq!(results.len(), 3);
         assert_eq!(results[0].content, "valid 1");
-        assert!(results[1].metadata.contains_key("error"));
+        assert!(results[1].metadata.error.is_some());
         assert_eq!(results[2].content, "valid 2");
     }
 
@@ -878,8 +878,8 @@ mod tests {
         assert!(results.is_ok());
         let results = results.unwrap();
         assert_eq!(results.len(), 2);
-        assert!(results[0].metadata.contains_key("error"));
-        assert!(results[1].metadata.contains_key("error"));
+        assert!(results[0].metadata.error.is_some());
+        assert!(results[1].metadata.error.is_some());
     }
 
     #[tokio::test]
@@ -1016,7 +1016,8 @@ mod tests {
         let config = Arc::new(ExtractionConfig::default());
         let mut tasks = JoinSet::new();
 
-        let mime_types = ["text/plain", "text/markdown", "text/html"];
+        // Use only always-available MIME types that work with plain text content
+        let mime_types = ["text/plain", "text/markdown"];
 
         // 30 concurrent extractions with rotating MIME types
         for i in 0..30 {

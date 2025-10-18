@@ -91,6 +91,10 @@ pub struct OcrConfig {
     /// Language code (e.g., "eng", "deu")
     #[serde(default = "default_eng")]
     pub language: String,
+
+    /// Tesseract-specific configuration (optional)
+    #[serde(default)]
+    pub tesseract_config: Option<crate::types::TesseractConfig>,
 }
 
 /// Chunking configuration.
@@ -739,5 +743,87 @@ disabled_processors = ["category_extraction"]
         let disabled = pp.disabled_processors.unwrap();
         assert_eq!(disabled.len(), 1);
         assert_eq!(disabled[0], "category_extraction");
+    }
+
+    #[test]
+    fn test_config_with_tesseract_config() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg.toml");
+
+        fs::write(
+            &config_path,
+            r#"
+use_cache = true
+
+[ocr]
+backend = "tesseract"
+language = "eng"
+
+[ocr.tesseract_config]
+psm = 6
+output_format = "text"
+enable_table_detection = false
+tessedit_char_whitelist = "0123456789"
+        "#,
+        )
+        .unwrap();
+
+        let config = ExtractionConfig::from_toml_file(&config_path).unwrap();
+        assert!(config.ocr.is_some());
+        let ocr = config.ocr.unwrap();
+        assert_eq!(ocr.backend, "tesseract");
+        assert_eq!(ocr.language, "eng");
+        assert!(ocr.tesseract_config.is_some());
+
+        let tess = ocr.tesseract_config.unwrap();
+        assert_eq!(tess.psm, 6);
+        assert_eq!(tess.output_format, "text");
+        assert!(!tess.enable_table_detection);
+        assert_eq!(tess.tessedit_char_whitelist, "0123456789");
+    }
+
+    #[test]
+    fn test_ocr_config_without_tesseract_config() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg.toml");
+
+        fs::write(
+            &config_path,
+            r#"
+[ocr]
+backend = "easyocr"
+language = "eng"
+        "#,
+        )
+        .unwrap();
+
+        let config = ExtractionConfig::from_toml_file(&config_path).unwrap();
+        assert!(config.ocr.is_some());
+        let ocr = config.ocr.unwrap();
+        assert_eq!(ocr.backend, "easyocr");
+        assert_eq!(ocr.language, "eng");
+        assert!(ocr.tesseract_config.is_none());
+    }
+
+    #[test]
+    fn test_tesseract_config_defaults() {
+        let tess = crate::types::TesseractConfig::default();
+        assert_eq!(tess.language, "eng");
+        assert_eq!(tess.psm, 3);
+        assert_eq!(tess.output_format, "markdown");
+        assert!(tess.enable_table_detection);
+        assert_eq!(tess.table_min_confidence, 0.0);
+        assert_eq!(tess.table_column_threshold, 50);
+        assert_eq!(tess.table_row_threshold_ratio, 0.5);
+        assert!(tess.use_cache);
+        assert!(tess.classify_use_pre_adapted_templates);
+        assert!(!tess.language_model_ngram_on);
+        assert!(tess.tessedit_dont_blkrej_good_wds);
+        assert!(tess.tessedit_dont_rowrej_good_wds);
+        assert!(tess.tessedit_enable_dict_correction);
+        assert_eq!(tess.tessedit_char_whitelist, "");
+        assert!(tess.tessedit_use_primary_params_model);
+        assert!(tess.textord_space_size_is_variable);
+        assert!(!tess.thresholding_method);
     }
 }

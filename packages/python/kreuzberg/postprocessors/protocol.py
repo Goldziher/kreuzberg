@@ -6,7 +6,7 @@ to be registered with the Rust core via the FFI bridge.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 
 if TYPE_CHECKING:
     from kreuzberg._internal_bindings import ExtractionResult
@@ -55,7 +55,7 @@ class PostProcessorProtocol(Protocol):
 
     # Optional methods
 
-    def processing_stage(self) -> str:
+    def processing_stage(self) -> Literal["early", "middle", "late"]:
         """Return the processing stage for this processor.
 
         Returns:
@@ -81,14 +81,5 @@ class PostProcessorProtocol(Protocol):
         """Shutdown the processor and release resources.
 
         Called when the processor is unregistered.
-        """
-        ...
-
-    def version(self) -> str:
-        """Return the processor version.
-
-        Returns:
-            str: Version string (default: "1.0.0")
-
         """
         ...

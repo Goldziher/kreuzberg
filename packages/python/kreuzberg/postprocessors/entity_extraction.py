@@ -5,7 +5,7 @@ This module provides Named Entity Recognition (NER) using spaCy models.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -28,11 +28,12 @@ class EntityExtractionProcessor:
         min_confidence: Minimum confidence score for entity (default: 0.0, no filtering)
         **model_kwargs: Additional kwargs passed to spacy.load()
 
+    Note:
+        All parameters are keyword-only. Python will raise TypeError if invalid
+        parameters are passed, providing automatic validation.
+
     Example:
-        >>> processor = EntityExtractionProcessor(
-        ...     model="en_core_web_sm",
-        ...     model_path="/path/to/custom/model",  # Optional
-        ... )
+        >>> processor = EntityExtractionProcessor(model="en_core_web_sm", entity_types=["PERSON", "ORG"], max_entities=20)
         >>> result = {"content": "John Doe works at Microsoft in Seattle.", "metadata": {}}
         >>> processed = processor.process(result)
         >>> print(processed["metadata"]["entities"])
@@ -49,6 +50,14 @@ class EntityExtractionProcessor:
         min_confidence: float = 0.0,
         **model_kwargs: Any,
     ) -> None:
+        try:
+            import spacy as spacy_module  # noqa: PLC0415
+        except ImportError as e:
+            msg = "Entity extraction requires the 'spacy' package. Install with: pip install \"kreuzberg[nlp]\""
+            raise ImportError(msg) from e
+
+        self._spacy_module = spacy_module
+
         self.model_name = model
         self.model_path = str(model_path) if model_path else None
         self.entity_types = entity_types
@@ -61,31 +70,17 @@ class EntityExtractionProcessor:
         """Return processor name."""
         return "entity_extraction"
 
-    def processing_stage(self) -> str:
+    def processing_stage(self) -> Literal["early"]:
         """Run in early stage (before other processors)."""
         return "early"
-
-    def version(self) -> str:
-        """Return processor version."""
-        return "1.0.0"
 
     def initialize(self) -> None:
         """Load spaCy model."""
         try:
-            import spacy
-        except ImportError as e:
-            msg = (
-                "spaCy is required for entity extraction. "
-                "Install with: pip install spacy && python -m spacy download en_core_web_sm"
-            )
-            raise ImportError(msg) from e
-
-        try:
             # Load from custom path if provided, otherwise use model name
             model_to_load = self.model_path if self.model_path else self.model_name
 
-            # Pass through any additional kwargs to spacy.load()
-            self._nlp = spacy.load(model_to_load, **self.model_kwargs)  # type: ignore[assignment]
+            self._nlp = self._spacy_module.load(model_to_load, **self.model_kwargs)  # type: ignore[assignment]
         except OSError as e:
             if self.model_path:
                 msg = f"Failed to load spaCy model from path '{self.model_path}': {e}"
@@ -98,9 +93,7 @@ class EntityExtractionProcessor:
 
     def shutdown(self) -> None:
         """Release resources."""
-        if self._nlp is not None:
-            # spaCy models don't require explicit cleanup
-            self._nlp = None
+        self._nlp = None
 
     def process(self, result: ExtractionResult) -> ExtractionResult:
         """Extract entities from the content.

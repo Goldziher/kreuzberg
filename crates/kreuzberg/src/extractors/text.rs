@@ -186,8 +186,10 @@ mod tests {
 
         assert_eq!(result.mime_type, "text/plain");
         assert!(result.content.contains("Hello, World!"));
-        assert_eq!(result.metadata.get("line_count").unwrap(), &serde_json::json!(2));
-        assert_eq!(result.metadata.get("word_count").unwrap(), &serde_json::json!(6));
+        assert!(result.metadata.text.is_some());
+        let text_meta = result.metadata.text.unwrap();
+        assert_eq!(text_meta.line_count, 2);
+        assert_eq!(text_meta.word_count, 6);
     }
 
     #[tokio::test]
@@ -203,9 +205,11 @@ mod tests {
 
         assert_eq!(result.mime_type, "text/markdown");
         assert!(result.content.contains("# Header"));
-        assert!(result.metadata.contains_key("headers"));
-        assert!(result.metadata.contains_key("links"));
-        assert!(result.metadata.contains_key("code_blocks"));
+        assert!(result.metadata.text.is_some());
+        let text_meta = result.metadata.text.unwrap();
+        assert!(text_meta.headers.is_some());
+        assert!(text_meta.links.is_some());
+        assert!(text_meta.code_blocks.is_some());
     }
 
     #[test]

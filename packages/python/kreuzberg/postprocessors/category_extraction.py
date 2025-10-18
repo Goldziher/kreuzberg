@@ -12,13 +12,25 @@ if TYPE_CHECKING:
 
     from kreuzberg._internal_bindings import ExtractionResult
 
+DOCUMENT_TYPES = [
+    "invoice",
+    "contract",
+    "resume",
+    "report",
+    "email",
+    "letter",
+    "memo",
+    "presentation",
+    "spreadsheet",
+    "form",
+]
+
 
 class CategoryExtractionProcessor:
     """Classify documents into categories using zero-shot classification.
 
     This processor uses transformer models to classify documents into predefined
-    categories without requiring training data. It's particularly useful for
-    document type detection, subject area classification, and sentiment analysis.
+    categories without requiring training data.
 
     Args:
         categories: List of category labels to classify into
@@ -32,11 +44,6 @@ class CategoryExtractionProcessor:
 
     Raises:
         ValueError: If no categories are provided during initialization.
-
-    Attributes:
-        DOCUMENT_TYPES: Default category set used when no custom categories are supplied.
-        SUBJECT_AREAS: Example category set for subject area classification.
-        SENTIMENT: Example category set for sentiment analysis.
 
     Example:
         >>> categories = ["invoice", "contract", "resume", "report"]
@@ -57,35 +64,6 @@ class CategoryExtractionProcessor:
 
     """
 
-    # Predefined category sets for common use cases
-    DOCUMENT_TYPES = [
-        "invoice",
-        "contract",
-        "resume",
-        "report",
-        "email",
-        "letter",
-        "memo",
-        "presentation",
-        "spreadsheet",
-        "form",
-    ]
-
-    SUBJECT_AREAS = [
-        "legal",
-        "financial",
-        "technical",
-        "medical",
-        "marketing",
-        "hr",
-        "sales",
-        "support",
-        "research",
-        "operations",
-    ]
-
-    SENTIMENT = ["positive", "negative", "neutral"]
-
     def __init__(
         self,
         categories: list[str] | None = None,
@@ -97,8 +75,18 @@ class CategoryExtractionProcessor:
         device: int = -1,
         **pipeline_kwargs: Any,
     ) -> None:
+        try:
+            from transformers import pipeline as pipeline_factory  # noqa: PLC0415
+        except ImportError as e:
+            msg = (
+                "Category extraction requires the 'transformers' package. Install with: pip install \"kreuzberg[nlp]\""
+            )
+            raise ImportError(msg) from e
+
+        self._pipeline_factory = pipeline_factory
+
         if categories is None:
-            categories = self.DOCUMENT_TYPES  # Default to document types
+            categories = DOCUMENT_TYPES  # Default to document types
 
         if not categories:
             msg = "At least one category must be provided"
@@ -129,12 +117,6 @@ class CategoryExtractionProcessor:
     def initialize(self) -> None:
         """Load zero-shot classification model."""
         try:
-            from transformers import pipeline
-        except ImportError as e:
-            msg = "Transformers is required for category extraction. Install with: pip install transformers torch"
-            raise ImportError(msg) from e
-
-        try:
             # Build pipeline kwargs
             init_kwargs: dict[str, Any] = {
                 "model": self.model_name,
@@ -145,7 +127,7 @@ class CategoryExtractionProcessor:
             # transformers uses TRANSFORMERS_CACHE environment variable
             # or model_kwargs={"cache_dir": ...}
             if self.model_cache_dir:
-                import os
+                import os  # noqa: PLC0415
 
                 os.environ["TRANSFORMERS_CACHE"] = self.model_cache_dir
 
@@ -153,7 +135,7 @@ class CategoryExtractionProcessor:
             init_kwargs.update(self.pipeline_kwargs)
 
             # Initialize the pipeline
-            self._classifier = pipeline(  # type: ignore[assignment]
+            self._classifier = self._pipeline_factory(  # type: ignore[assignment]
                 "zero-shot-classification",
                 **init_kwargs,
             )
@@ -255,8 +237,8 @@ class CategoryExtractionProcessor:
                 # Limit to max_categories
                 category_result["labels"] = labels[: self.max_categories]
 
-        except Exception:
-            # If classification fails, return minimal result
+        except Exception:  # noqa: BLE001
+            # If classification fails, return minimal result - defensive programming to prevent pipeline failures
             category_result = {
                 "primary": None,
                 "scores": {},

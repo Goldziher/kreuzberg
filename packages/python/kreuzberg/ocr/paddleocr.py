@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from kreuzberg.exceptions import MissingDependencyError, OCRError
+from kreuzberg.exceptions import OCRError, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -47,15 +47,18 @@ class PaddleOCRBackend:
     Raises:
         ValidationError: If an unsupported language code is provided.
 
+    Note:
+        All parameters are keyword-only. Python will raise TypeError if invalid
+        parameters are passed, providing automatic validation.
+
     Installation:
         pip install "kreuzberg[paddleocr]"
 
     Example:
-        >>> from kreuzberg import register_ocr_backend
-        >>> from kreuzberg.ocr.paddleocr import PaddleOCRBackend
-        >>>
-        >>> backend = PaddleOCRBackend(lang="en", use_gpu=True)
-        >>> register_ocr_backend(backend)
+        >>> from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
+        >>> # Register backend with custom options via extraction API
+        >>> config = ExtractionConfig(ocr=OcrConfig(backend="paddleocr", language="ch"))
+        >>> result = extract_file_sync("scanned.pdf", config=config, paddleocr_kwargs={"use_gpu": True, "use_angle_cls": True})
 
     """
 
@@ -69,8 +72,6 @@ class PaddleOCRBackend:
     ) -> None:
         # Validate language
         if lang not in SUPPORTED_LANGUAGES:
-            from kreuzberg.exceptions import ValidationError
-
             msg = f"Unsupported PaddleOCR language code: {lang}"
             raise ValidationError(
                 msg,
@@ -79,6 +80,16 @@ class PaddleOCRBackend:
                     "supported_languages": sorted(SUPPORTED_LANGUAGES),
                 },
             )
+
+        try:
+            from paddleocr import PaddleOCR as PaddleOCRClass  # noqa: PLC0415
+        except ImportError as e:
+            msg = (
+                "PaddleOCR support requires the 'paddleocr' package. Install with: pip install \"kreuzberg[paddleocr]\""
+            )
+            raise ImportError(msg) from e
+
+        self._paddleocr_cls = PaddleOCRClass
 
         self.lang = lang
         self.use_angle_cls = use_angle_cls
@@ -97,15 +108,6 @@ class PaddleOCRBackend:
         """Return backend name."""
         return "paddleocr"
 
-    def version(self) -> str:
-        """Return backend version."""
-        try:
-            import paddleocr
-
-            return getattr(paddleocr, "__version__", "unknown")
-        except ImportError:
-            return "unknown"
-
     def supported_languages(self) -> list[str]:
         """Return list of all supported language codes."""
         return sorted(SUPPORTED_LANGUAGES)
@@ -116,25 +118,13 @@ class PaddleOCRBackend:
             return
 
         try:
-            from paddleocr import PaddleOCR  # noqa: PLC0415
-        except ImportError as e:
-            msg = "PaddleOCR backend requires paddleocr package"
-            raise MissingDependencyError(
-                msg,
-                context={
-                    "install_command": 'pip install "kreuzberg[paddleocr]"',
-                    "package": "paddleocr",
-                },
-            ) from e
-
-        try:
             logger.info(
                 "Initializing PaddleOCR with lang=%s, GPU=%s",
                 self.lang,
                 self.use_gpu,
             )
 
-            self._ocr = PaddleOCR(
+            self._ocr = self._paddleocr_cls(
                 lang=self.lang,
                 use_gpu=self.use_gpu,
                 use_angle_cls=self.use_angle_cls,
@@ -186,8 +176,6 @@ class PaddleOCRBackend:
 
         # Validate language
         if language not in SUPPORTED_LANGUAGES:
-            from kreuzberg.exceptions import ValidationError
-
             msg = f"Language '{language}' not supported by PaddleOCR"
             raise ValidationError(
                 msg,
@@ -228,12 +216,12 @@ class PaddleOCRBackend:
             msg = f"PaddleOCR processing failed: {e}"
             raise OCRError(msg) from e
 
-    def process_file(self, path: str, language: str) -> dict[str, Any]:
+    def process_file(self, path: str, _language: str) -> dict[str, Any]:
         """Process image file using PaddleOCR.
 
         Args:
             path: Path to the image file.
-            language: Language code (must be in ``supported_languages()``).
+            _language: Language code (unused - PaddleOCR uses language from initialization).
 
         Returns:
             Dictionary in the same format as ``process_image()``.

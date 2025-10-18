@@ -304,6 +304,7 @@ pub struct OcrTable {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct TesseractConfig {
     pub language: String,
     pub psm: i32,

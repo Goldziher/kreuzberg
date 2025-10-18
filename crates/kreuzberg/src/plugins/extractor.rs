@@ -355,7 +355,6 @@ pub trait DocumentExtractor: Plugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
 
     struct MockExtractor {
         mime_types: Vec<&'static str>,
@@ -391,7 +390,7 @@ mod tests {
             Ok(ExtractionResult {
                 content: String::from_utf8_lossy(content).to_string(),
                 mime_type: mime_type.to_string(),
-                metadata: HashMap::new(),
+                metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
             })
@@ -565,7 +564,7 @@ mod tests {
                 Ok(ExtractionResult {
                     content: String::new(),
                     mime_type: String::new(),
-                    metadata: HashMap::new(),
+                    metadata: crate::types::Metadata::default(),
                     tables: vec![],
                     detected_languages: None,
                 })

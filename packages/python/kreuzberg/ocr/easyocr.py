@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from kreuzberg.exceptions import MissingDependencyError, OCRError
+from kreuzberg.exceptions import OCRError
 
 logger = logging.getLogger(__name__)
 
@@ -116,15 +116,18 @@ class EasyOCRBackend:
     Raises:
         ValidationError: If any supplied language code is not supported.
 
+    Note:
+        All parameters are keyword-only. Python will raise TypeError if invalid
+        parameters are passed, providing automatic validation.
+
     Installation:
         pip install "kreuzberg[easyocr]"
 
     Example:
-        >>> from kreuzberg import register_ocr_backend
-        >>> from kreuzberg.ocr.easyocr import EasyOCRBackend
-        >>>
-        >>> backend = EasyOCRBackend(languages=["en"], use_gpu=True)
-        >>> register_ocr_backend(backend)
+        >>> from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
+        >>> # Register backend with custom options via extraction API
+        >>> config = ExtractionConfig(ocr=OcrConfig(backend="easyocr", language="en"))
+        >>> result = extract_file_sync("scanned.pdf", config=config, easyocr_kwargs={"use_gpu": True, "beam_width": 10})
 
     """
 
@@ -136,6 +139,14 @@ class EasyOCRBackend:
         model_storage_directory: str | None = None,
         beam_width: int = 5,
     ) -> None:
+        try:
+            import easyocr as easyocr_module  # noqa: PLC0415
+        except ImportError as e:
+            msg = "EasyOCR support requires the 'easyocr' package. Install with: pip install \"kreuzberg[easyocr]\""
+            raise ImportError(msg) from e
+
+        self._easyocr_module = easyocr_module
+
         self.languages = languages or ["en"]
         self.beam_width = beam_width
         self.model_storage_directory = model_storage_directory
@@ -143,7 +154,7 @@ class EasyOCRBackend:
         # Validate languages
         unsupported = [lang for lang in self.languages if lang not in SUPPORTED_LANGUAGES]
         if unsupported:
-            from kreuzberg.exceptions import ValidationError
+            from kreuzberg.exceptions import ValidationError  # noqa: PLC0415
 
             msg = f"Unsupported EasyOCR language codes: {', '.join(unsupported)}"
             raise ValidationError(
@@ -168,15 +179,6 @@ class EasyOCRBackend:
         """Return backend name."""
         return "easyocr"
 
-    def version(self) -> str:
-        """Return backend version."""
-        try:
-            import easyocr
-
-            return getattr(easyocr, "__version__", "unknown")
-        except ImportError:
-            return "unknown"
-
     def supported_languages(self) -> list[str]:
         """Return list of all supported language codes."""
         return sorted(SUPPORTED_LANGUAGES)
@@ -187,25 +189,13 @@ class EasyOCRBackend:
             return
 
         try:
-            import easyocr  # noqa: PLC0415
-        except ImportError as e:
-            msg = "EasyOCR backend requires easyocr package"
-            raise MissingDependencyError(
-                msg,
-                context={
-                    "install_command": 'pip install "kreuzberg[easyocr]"',
-                    "package": "easyocr",
-                },
-            ) from e
-
-        try:
             logger.info(
                 "Initializing EasyOCR reader with languages=%s, GPU=%s",
                 self.languages,
                 self.use_gpu,
             )
 
-            self._reader = easyocr.Reader(
+            self._reader = self._easyocr_module.Reader(
                 self.languages,
                 gpu=self.use_gpu,
                 verbose=False,
@@ -257,7 +247,7 @@ class EasyOCRBackend:
 
         # Validate language
         if language not in SUPPORTED_LANGUAGES:
-            from kreuzberg.exceptions import ValidationError
+            from kreuzberg.exceptions import ValidationError  # noqa: PLC0415
 
             msg = f"Language '{language}' not supported by EasyOCR"
             raise ValidationError(
@@ -317,7 +307,9 @@ class EasyOCRBackend:
 
         """
         # Read file and call process_image
-        with open(path, "rb") as f:
+        from pathlib import Path  # noqa: PLC0415
+
+        with Path(path).open("rb") as f:
             image_bytes = f.read()
 
         return self.process_image(image_bytes, language)

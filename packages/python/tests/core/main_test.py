@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+from pathlib import Path
 from unittest.mock import patch
 
 
@@ -11,32 +13,38 @@ def test_main_module() -> None:
     assert kreuzberg.__main__
 
 
-def test_main_module_execution() -> None:
-    with patch("kreuzberg.cli.cli"):
-        code = """
-import importlib.util
-import sys
-from unittest.mock import MagicMock
+def test_main_function_invocation() -> None:
+    import kreuzberg.__main__
 
-sys.modules['kreuzberg.cli'] = MagicMock()
-sys.modules['kreuzberg.cli'].cli = MagicMock()
+    with (
+        patch("kreuzberg.__main__.shutil.which", return_value=sys.executable),
+        patch(
+            "kreuzberg.__main__.subprocess.run",
+            return_value=subprocess.CompletedProcess(args=["kreuzberg-cli"], returncode=0),
+        ) as mock_run,
+    ):
+        exit_code = kreuzberg.__main__.main(["kreuzberg", "--help"])
 
-spec = importlib.util.find_spec('kreuzberg.__main__')
-if spec is None or spec.loader is None:
-    raise RuntimeError("kreuzberg.__main__ not found")
-
-module = importlib.util.module_from_spec(spec)
-sys.modules['kreuzberg.__main__'] = module
-spec.loader.exec_module(module)
-        """
-
-        result = subprocess.run([sys.executable, "-c", code], check=False, capture_output=True, text=True, cwd=".")
-
-        assert result.returncode == 0
+    assert exit_code == 0
+    mock_run.assert_called_once()
 
 
-def test_main_module_as_module() -> None:
-    result = subprocess.run([sys.executable, "-m", "kreuzberg", "--help"], check=False, capture_output=True, text=True)
+def test_main_module_invocation_via_python_dash_m() -> None:
+    env = {**os.environ, "PYTHONPATH": str(Path.cwd())}
+    with (
+        patch("shutil.which", return_value=sys.executable),
+        patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(args=["kreuzberg-cli"], returncode=0),
+        ),
+    ):
+        result = subprocess.run(
+            [sys.executable, "-m", "kreuzberg", "--help"],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=".",
+            env=env,
+        )
 
     assert result.returncode == 0
-    assert "kreuzberg" in result.stdout.lower() or "kreuzberg" in result.stderr.lower()

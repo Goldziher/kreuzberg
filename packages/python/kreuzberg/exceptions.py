@@ -151,14 +151,12 @@ class MissingDependencyError(KreuzbergError):
             >>> raise error
 
         """
-        message = (
-            f"Missing required dependency '{package_name}' for {functionality}. "
-            f"Install with: pip install kreuzberg['{dependency_group}']"
-        )
+        install_cmd = f"pip install kreuzberg[{dependency_group}]"
+        message = f"Missing required dependency '{package_name}' for {functionality}. Install with: {install_cmd}"
         context = {
             "package": package_name,
             "dependency_group": dependency_group,
             "functionality": functionality,
-            "install_command": f"pip install kreuzberg['{dependency_group}']",
+            "install_command": install_cmd,
         }
         return cls(message, context=context)

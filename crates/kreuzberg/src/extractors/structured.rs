@@ -3,9 +3,8 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::ExtractionResult;
+use crate::types::{ExtractionResult, Metadata};
 use async_trait::async_trait;
-use std::collections::HashMap;
 use std::path::Path;
 
 /// Structured data extractor supporting JSON, YAML, and TOML.
@@ -57,23 +56,26 @@ impl DocumentExtractor for StructuredExtractor {
             _ => return Err(crate::KreuzbergError::UnsupportedFormat(mime_type.to_string())),
         };
 
-        // Convert metadata
-        let mut metadata = HashMap::new();
-        metadata.insert("format".to_string(), serde_json::json!(structured_result.format));
-        metadata.insert(
+        // Build metadata with format in common field, everything else in additional
+        let mut additional = std::collections::HashMap::new();
+        additional.insert(
             "field_count".to_string(),
             serde_json::json!(structured_result.text_fields.len()),
         );
 
         // Include the existing metadata from structured result
         for (key, value) in structured_result.metadata {
-            metadata.insert(key, serde_json::json!(value));
+            additional.insert(key, serde_json::json!(value));
         }
 
         Ok(ExtractionResult {
             content: structured_result.content,
             mime_type: mime_type.to_string(),
-            metadata,
+            metadata: Metadata {
+                format: Some(structured_result.format),
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -105,8 +105,8 @@ def test_extract_file_with_config_and_path(tmp_path: Path) -> None:
 
 def test_invalid_path_type() -> None:
     """Test that invalid path types raise TypeError."""
-    with pytest.raises(TypeError, match="Path must be a string, pathlib.Path, or bytes"):
-        extract_file_sync(12345)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=r"Path must be a string, pathlib\.Path, or bytes"):
+        extract_file_sync(cast("Any", 12345))
 
-    with pytest.raises(TypeError, match="Path must be a string, pathlib.Path, or bytes"):
-        extract_file_sync(None)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=r"Path must be a string, pathlib\.Path, or bytes"):
+        extract_file_sync(cast("Any", None))

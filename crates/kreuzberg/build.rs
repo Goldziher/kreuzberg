@@ -9,13 +9,27 @@ fn main() {
     // Determine which pdfium binary to download based on target
     let (download_url, lib_name) = get_pdfium_url_and_lib(&target);
 
-    println!("cargo:warning=Downloading Pdfium for target: {}", target);
-    println!("cargo:warning=URL: {}", download_url);
-
     // Download and extract pdfium binary
     let pdfium_dir = out_dir.join("pdfium");
-    if !pdfium_dir.exists() {
+    let lib_dir = pdfium_dir.join("lib");
+
+    // Determine library file name
+    let lib_ext = if target.contains("darwin") {
+        "dylib"
+    } else if target.contains("windows") {
+        "dll"
+    } else {
+        "so"
+    };
+    let lib_file = lib_dir.join(format!("libpdfium.{}", lib_ext));
+
+    // Only download if library doesn't exist
+    if !lib_file.exists() {
+        eprintln!("Pdfium library not found, downloading for target: {}", target);
+        eprintln!("Download URL: {}", download_url);
         download_and_extract_pdfium(&download_url, &pdfium_dir);
+    } else {
+        eprintln!("Pdfium library already present at {}", lib_file.display());
     }
 
     // Set up linking
@@ -121,7 +135,7 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &PathBuf) {
     let archive_path = dest_dir.join("pdfium.tar.gz");
 
     // Download using curl (available on all platforms)
-    println!("cargo:warning=Downloading Pdfium from {}", url);
+    eprintln!("Downloading Pdfium archive...");
     let status = Command::new("curl")
         .args(["-L", "-o", archive_path.to_str().unwrap(), url])
         .status()
@@ -132,7 +146,7 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &PathBuf) {
     }
 
     // Extract using tar (available on all platforms)
-    println!("cargo:warning=Extracting Pdfium archive");
+    eprintln!("Extracting Pdfium archive...");
     let status = Command::new("tar")
         .args(["-xzf", archive_path.to_str().unwrap(), "-C", dest_dir.to_str().unwrap()])
         .status()
@@ -145,7 +159,7 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &PathBuf) {
     // Clean up archive
     fs::remove_file(&archive_path).ok();
 
-    println!("cargo:warning=Pdfium downloaded and extracted successfully");
+    eprintln!("Pdfium downloaded and extracted successfully");
 }
 
 fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
@@ -176,17 +190,31 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
 
     // Only copy if destination directory exists (we're in the monorepo)
     if !dest_dir.exists() {
-        println!("cargo:warning=Python package directory not found, skipping library copy");
+        eprintln!("Python package directory not found, skipping library copy");
         return;
     }
 
     let dest_lib = dest_dir.join(&lib_filename);
     if src_lib.exists() {
-        match fs::copy(&src_lib, &dest_lib) {
-            Ok(_) => println!("cargo:warning=Copied {} to {}", src_lib.display(), dest_lib.display()),
-            Err(e) => println!("cargo:warning=Failed to copy library: {}", e),
+        // Only copy if source is newer or dest doesn't exist
+        let should_copy = if dest_lib.exists() {
+            let src_metadata = fs::metadata(&src_lib).ok();
+            let dest_metadata = fs::metadata(&dest_lib).ok();
+            match (src_metadata, dest_metadata) {
+                (Some(src), Some(dest)) => src.modified().ok() > dest.modified().ok(),
+                _ => true,
+            }
+        } else {
+            true
+        };
+
+        if should_copy {
+            match fs::copy(&src_lib, &dest_lib) {
+                Ok(_) => eprintln!("Copied {} to {}", src_lib.display(), dest_lib.display()),
+                Err(e) => eprintln!("Failed to copy library: {}", e),
+            }
         }
     } else {
-        println!("cargo:warning=Source library not found: {}", src_lib.display());
+        eprintln!("Source library not found: {}", src_lib.display());
     }
 }

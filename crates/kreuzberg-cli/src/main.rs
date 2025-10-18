@@ -204,6 +204,7 @@ async fn main() -> Result<()> {
                     config.ocr = Some(OcrConfig {
                         backend: "tesseract".to_string(),
                         language: "eng".to_string(),
+                        tesseract_config: None,
                     });
                 } else {
                     config.ocr = None;
@@ -298,6 +299,7 @@ async fn main() -> Result<()> {
                     config.ocr = Some(OcrConfig {
                         backend: "tesseract".to_string(),
                         language: "eng".to_string(),
+                        tesseract_config: None,
                     });
                 } else {
                     config.ocr = None;

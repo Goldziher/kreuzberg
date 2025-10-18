@@ -285,7 +285,7 @@ fn dict_to_extraction_result(_py: Python<'_>, dict: &Bound<'_, PyAny>) -> Result
     };
 
     // Extract metadata (optional, default to empty)
-    let metadata = match dict.get_item("metadata") {
+    let additional = match dict.get_item("metadata") {
         Ok(m) if !m.is_none() => extract_metadata(&m).unwrap_or_default(),
         _ => HashMap::new(),
     };
@@ -299,7 +299,10 @@ fn dict_to_extraction_result(_py: Python<'_>, dict: &Bound<'_, PyAny>) -> Result
     Ok(ExtractionResult {
         content,
         mime_type: "text/plain".to_string(),
-        metadata,
+        metadata: kreuzberg::types::Metadata {
+            additional,
+            ..Default::default()
+        },
         tables,
         detected_languages: None,
     })
@@ -455,79 +458,6 @@ pub fn register_ocr_backend(py: Python<'_>, backend: Py<PyAny>) -> PyResult<()> 
                 "Failed to register OCR backend '{}': {}",
                 backend_name, e
             ))
-        })
-    })?;
-
-    Ok(())
-}
-
-/// List all registered OCR backends.
-///
-/// Returns a list of backend names currently registered in the global
-/// OCR backend registry. This includes both native Rust backends
-/// (like Tesseract) and Python backends registered via `register_ocr_backend()`.
-///
-/// # Returns
-///
-/// List of backend names as strings.
-///
-/// # Example
-///
-/// ```python
-/// from kreuzberg import list_ocr_backends
-///
-/// backends = list_ocr_backends()
-/// print(backends)  # ['tesseract', 'easyocr', 'paddleocr']
-/// ```
-#[pyfunction]
-pub fn list_ocr_backends(py: Python) -> PyResult<Py<PyList>> {
-    let backend_names = py.detach(|| {
-        let registry = get_ocr_backend_registry();
-        let registry = registry.read().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to acquire read lock on OCR registry: {}", e))
-        })?;
-
-        Ok::<Vec<String>, PyErr>(registry.list())
-    })?;
-
-    let list = PyList::empty(py);
-    for name in backend_names {
-        list.append(name)?;
-    }
-    Ok(list.unbind())
-}
-
-/// Unregister an OCR backend.
-///
-/// Removes a backend from the global OCR backend registry and calls
-/// its `shutdown()` method if available. After unregistering, the
-/// backend can no longer be used for OCR processing.
-///
-/// # Arguments
-///
-/// * `name` - Name of the backend to unregister
-///
-/// # Example
-///
-/// ```python
-/// from kreuzberg import unregister_ocr_backend
-///
-/// unregister_ocr_backend("easyocr")
-/// ```
-///
-/// # Errors
-///
-/// Returns an error if the backend is not found or shutdown fails.
-#[pyfunction]
-pub fn unregister_ocr_backend(py: Python<'_>, name: String) -> PyResult<()> {
-    py.detach(|| {
-        let registry = get_ocr_backend_registry();
-        let mut registry = registry.write().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to acquire write lock on OCR registry: {}", e))
-        })?;
-
-        registry.remove(&name).map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to unregister OCR backend '{}': {}", name, e))
         })
     })?;
 
@@ -748,14 +678,11 @@ fn extraction_result_to_dict(py: Python<'_>, result: &ExtractionResult) -> PyRes
     // Add mime_type
     dict.set_item("mime_type", &result.mime_type)?;
 
-    // Add metadata
-    let metadata_dict = PyDict::new(py);
-    for (key, value) in &result.metadata {
-        // Convert serde_json::Value to Python
-        let py_value = json_to_python(py, value)?;
-        metadata_dict.set_item(key, py_value)?;
-    }
-    dict.set_item("metadata", metadata_dict)?;
+    // Add metadata - serialize the entire Metadata struct to Python using pythonize
+    let metadata_py = pythonize::pythonize(py, &result.metadata).map_err(|e| {
+        pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to serialize metadata to Python: {}", e))
+    })?;
+    dict.set_item("metadata", metadata_py)?;
 
     // Add tables (simplified - just empty list for now)
     dict.set_item("tables", PyList::empty(py))?;
@@ -799,7 +726,7 @@ fn merge_dict_to_extraction_result(
 
             // Only add if key doesn't exist (don't overwrite)
             use std::collections::hash_map::Entry;
-            if let Entry::Vacant(e) = result.metadata.entry(key_str) {
+            if let Entry::Vacant(e) = result.metadata.additional.entry(key_str) {
                 let json_value = python_to_json(&value)?;
                 e.insert(json_value);
             }
@@ -807,46 +734,6 @@ fn merge_dict_to_extraction_result(
     }
 
     Ok(())
-}
-
-/// Convert serde_json::Value to Python object.
-fn json_to_python<'a>(py: Python<'a>, value: &'a serde_json::Value) -> PyResult<Bound<'a, PyAny>> {
-    match value {
-        serde_json::Value::Null => Ok(py.None().into_bound(py)),
-        serde_json::Value::Bool(b) => {
-            use pyo3::types::PyBool;
-            Ok(PyBool::new(py, *b).as_any().clone())
-        }
-        serde_json::Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                use pyo3::types::PyInt;
-                Ok(PyInt::new(py, i).as_any().clone())
-            } else if let Some(f) = n.as_f64() {
-                use pyo3::types::PyFloat;
-                Ok(PyFloat::new(py, f).as_any().clone())
-            } else {
-                Ok(py.None().into_bound(py))
-            }
-        }
-        serde_json::Value::String(s) => {
-            use pyo3::types::PyString;
-            Ok(PyString::new(py, s).as_any().clone())
-        }
-        serde_json::Value::Array(arr) => {
-            let list = PyList::empty(py);
-            for item in arr {
-                list.append(json_to_python(py, item)?)?;
-            }
-            Ok(list.into_any())
-        }
-        serde_json::Value::Object(obj) => {
-            let dict = PyDict::new(py);
-            for (key, val) in obj {
-                dict.set_item(key, json_to_python(py, val)?)?;
-            }
-            Ok(dict.into_any())
-        }
-    }
 }
 
 // ============================================================================
@@ -929,85 +816,6 @@ pub fn register_post_processor(py: Python<'_>, processor: Py<PyAny>) -> PyResult
                 "Failed to register PostProcessor '{}': {}",
                 processor_name, e
             ))
-        })
-    })?;
-
-    Ok(())
-}
-
-/// List all registered PostProcessors.
-///
-/// Returns a list of processor names currently registered in the global
-/// PostProcessor registry. This includes both native Rust processors
-/// and Python processors registered via `register_post_processor()`.
-///
-/// # Returns
-///
-/// List of processor names as strings.
-///
-/// # Example
-///
-/// ```python
-/// from kreuzberg import list_post_processors
-///
-/// processors = list_post_processors()
-/// print(processors)  # ['entity_extraction', 'keyword_extraction', 'category_extraction']
-/// ```
-#[pyfunction]
-pub fn list_post_processors(py: Python) -> PyResult<Py<PyList>> {
-    let processor_names = py.detach(|| {
-        let registry = get_post_processor_registry();
-        let registry = registry.read().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!(
-                "Failed to acquire read lock on PostProcessor registry: {}",
-                e
-            ))
-        })?;
-
-        Ok::<Vec<String>, PyErr>(registry.list())
-    })?;
-
-    let list = PyList::empty(py);
-    for name in processor_names {
-        list.append(name)?;
-    }
-    Ok(list.unbind())
-}
-
-/// Unregister a PostProcessor.
-///
-/// Removes a processor from the global PostProcessor registry and calls
-/// its `shutdown()` method if available. After unregistering, the
-/// processor will no longer be called during extraction.
-///
-/// # Arguments
-///
-/// * `name` - Name of the processor to unregister
-///
-/// # Example
-///
-/// ```python
-/// from kreuzberg import unregister_post_processor
-///
-/// unregister_post_processor("entity_extraction")
-/// ```
-///
-/// # Errors
-///
-/// Returns an error if the processor is not found or shutdown fails.
-#[pyfunction]
-pub fn unregister_post_processor(py: Python<'_>, name: String) -> PyResult<()> {
-    py.detach(|| {
-        let registry = get_post_processor_registry();
-        let mut registry = registry.write().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!(
-                "Failed to acquire write lock on PostProcessor registry: {}",
-                e
-            ))
-        })?;
-
-        registry.remove(&name).map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to unregister PostProcessor '{}': {}", name, e))
         })
     })?;
 

@@ -144,12 +144,3 @@ class OcrBackendProtocol(Protocol):
         `unregister_ocr_backend()` or when the program exits.
         """
         ...
-
-    def version(self) -> str:
-        """Return backend version (optional, defaults to '1.0.0').
-
-        Returns:
-            Version string (e.g., '2.1.0')
-
-        """
-        ...

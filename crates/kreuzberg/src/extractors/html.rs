@@ -3,9 +3,8 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::ExtractionResult;
+use crate::types::{ExtractionResult, Metadata};
 use async_trait::async_trait;
-use std::collections::HashMap;
 use std::path::Path;
 
 /// HTML document extractor using html-to-markdown.
@@ -58,7 +57,7 @@ impl DocumentExtractor for HtmlExtractor {
         Ok(ExtractionResult {
             content: markdown,
             mime_type: mime_type.to_string(),
-            metadata: HashMap::new(),
+            metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
         })

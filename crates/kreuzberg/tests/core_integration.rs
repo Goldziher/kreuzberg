@@ -51,12 +51,17 @@ async fn test_extract_multiple_file_types() {
     let config = ExtractionConfig::default();
 
     // Create test files of different types
-    let test_files: Vec<(&str, &[u8], &str)> = vec![
+    let mut test_files: Vec<(&str, &[u8], &str)> = vec![
         ("test.txt", b"text content", "text/plain"),
         ("test.json", b"{\"key\": \"value\"}", "application/json"),
-        ("test.xml", b"<root>data</root>", "application/xml"),
-        ("test.html", b"<html><body>test</body></html>", "text/html"),
     ];
+
+    // Feature-gated file types
+    #[cfg(feature = "xml")]
+    test_files.push(("test.xml", b"<root>data</root>", "application/xml"));
+
+    #[cfg(feature = "html")]
+    test_files.push(("test.html", b"<html><body>test</body></html>", "text/html"));
 
     for (filename, content, expected_mime) in test_files {
         let file_path = dir.path().join(filename);
@@ -73,11 +78,14 @@ async fn test_extract_multiple_file_types() {
 async fn test_extract_bytes_various_mime_types() {
     let config = ExtractionConfig::default();
 
-    let test_cases: Vec<(&[u8], &str)> = vec![
+    let mut test_cases: Vec<(&[u8], &str)> = vec![
         (b"text content", "text/plain"),
         (b"{\"key\": \"value\"}", "application/json"),
-        (b"<root>data</root>", "application/xml"),
     ];
+
+    // XML is feature-gated
+    #[cfg(feature = "xml")]
+    test_cases.push((b"<root>data</root>", "application/xml"));
 
     for (content, mime_type) in test_cases {
         let result = extract_bytes(content, mime_type, &config).await;
@@ -401,6 +409,7 @@ async fn test_extraction_with_ocr_config() {
 
     let config = ExtractionConfig {
         ocr: Some(kreuzberg::OcrConfig {
+            tesseract_config: None,
             backend: "tesseract".to_string(),
             language: "eng".to_string(),
         }),

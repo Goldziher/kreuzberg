@@ -4,9 +4,8 @@ use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extraction::image::extract_image_metadata;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::ExtractionResult;
+use crate::types::{ExtractionResult, Metadata};
 use async_trait::async_trait;
-use std::collections::HashMap;
 
 /// Image extractor for various image formats.
 ///
@@ -61,28 +60,30 @@ impl DocumentExtractor for ImageExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        let image_metadata = extract_image_metadata(content)?;
+        let extraction_metadata = extract_image_metadata(content)?;
 
-        let mut metadata = HashMap::new();
-        metadata.insert("width".to_string(), serde_json::json!(image_metadata.width));
-        metadata.insert("height".to_string(), serde_json::json!(image_metadata.height));
-        metadata.insert("format".to_string(), serde_json::json!(image_metadata.format));
-
-        // Add EXIF data if present
-        if !image_metadata.exif_data.is_empty() {
-            metadata.insert("exif".to_string(), serde_json::json!(image_metadata.exif_data));
-        }
+        // Build typed metadata - keep the exif_data as-is from extraction module
+        let image_metadata = crate::types::ImageMetadata {
+            width: extraction_metadata.width,
+            height: extraction_metadata.height,
+            format: extraction_metadata.format.clone(),
+            exif: extraction_metadata.exif_data,
+        };
 
         // Generate text description
         let content_text = format!(
             "Image: {} {}x{}",
-            image_metadata.format, image_metadata.width, image_metadata.height
+            extraction_metadata.format, extraction_metadata.width, extraction_metadata.height
         );
 
         Ok(ExtractionResult {
             content: content_text,
             mime_type: mime_type.to_string(),
-            metadata,
+            metadata: Metadata {
+                image: Some(image_metadata),
+                format: Some(extraction_metadata.format),
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })

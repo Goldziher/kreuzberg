@@ -19,16 +19,20 @@ class KeywordExtractionProcessor:
     This processor uses KeyBERT with sentence-transformers for semantic keyword extraction.
 
     Args:
-        model: Model name or path to use (default: "all-MiniLM-L6-v2")
+        model: Model name or path to use (default: "paraphrase-multilingual-MiniLM-L12-v2")
         model_cache_dir: Directory to cache downloaded models (optional)
         top_n: Number of keywords to extract (default: 10)
         ngram_range: Range of n-grams to consider as keywords (default: (1, 2))
                     E.g., (1, 2) extracts single words and two-word phrases
-        min_score: Minimum score threshold for keywords (default: 0.0)
+        min_score: Minimum score threshold for keywords (default: 0.5)
         **model_kwargs: Additional kwargs passed to sentence-transformers model initialization
 
+    Note:
+        Named parameters use keyword-only arguments. Python will raise TypeError if
+        invalid named parameters are passed, providing automatic validation.
+
     Example:
-        >>> processor = KeywordExtractionProcessor(model="all-MiniLM-L6-v2", model_cache_dir="/path/to/cache", top_n=5)
+        >>> processor = KeywordExtractionProcessor(model="all-MiniLM-L6-v2", top_n=5, min_score=0.7)
         >>> result = {"content": "Machine learning and AI are transforming document processing.", "metadata": {}}
         >>> processed = processor.process(result)
         >>> print(processed["metadata"]["keywords"])
@@ -42,13 +46,21 @@ class KeywordExtractionProcessor:
 
     def __init__(
         self,
-        model: str = "all-MiniLM-L6-v2",
+        model: str = "paraphrase-multilingual-MiniLM-L12-v2",
         model_cache_dir: str | Path | None = None,
         top_n: int = 10,
         ngram_range: tuple[int, int] = (1, 2),
-        min_score: float = 0.0,
+        min_score: float = 0.5,
         **model_kwargs: Any,
     ) -> None:
+        try:
+            from keybert import KeyBERT as KeyBERTClass  # noqa: PLC0415
+        except ImportError as e:
+            msg = "Keyword extraction requires the 'keybert' package. Install with: pip install \"kreuzberg[nlp]\""
+            raise ImportError(msg) from e
+
+        self._keybert_cls = KeyBERTClass
+
         self.model_name = model
         self.model_cache_dir = str(model_cache_dir) if model_cache_dir else None
         self.top_n = top_n
@@ -71,12 +83,6 @@ class KeywordExtractionProcessor:
 
     def initialize(self) -> None:
         """Load KeyBERT extractor."""
-        try:
-            from keybert import KeyBERT
-        except ImportError as e:
-            msg = "KeyBERT is required for keyword extraction. Install with: pip install keybert"
-            raise ImportError(msg) from e
-
         # Build model initialization kwargs
         model_init_kwargs = {}
         if self.model_cache_dir:
@@ -87,12 +93,12 @@ class KeywordExtractionProcessor:
 
         # Initialize KeyBERT with model
         # KeyBERT will internally load the sentence-transformer model
-        self._extractor = KeyBERT(model=self.model_name)
+        self._extractor = self._keybert_cls(model=self.model_name)
 
         # If cache_folder was specified, we need to pass it to the underlying model
         # This is a bit tricky with KeyBERT's API, so we'll handle it via environment variable
         if self.model_cache_dir:
-            import os
+            import os  # noqa: PLC0415
 
             # sentence-transformers respects SENTENCE_TRANSFORMERS_HOME
             os.environ["SENTENCE_TRANSFORMERS_HOME"] = self.model_cache_dir
@@ -148,8 +154,8 @@ class KeywordExtractionProcessor:
             if self.min_score > 0:
                 keywords = [kw for kw in keywords if kw["score"] >= self.min_score]
 
-        except Exception:
-            # If extraction fails, return empty list instead of crashing
+        except Exception:  # noqa: BLE001
+            # If extraction fails, return empty list - defensive programming to prevent pipeline failures
             keywords = []
 
         # Add keywords to metadata

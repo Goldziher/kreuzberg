@@ -105,6 +105,7 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                 // Record chunking error in metadata, continue with degraded result
                 result
                     .metadata
+                    .additional
                     .insert("chunking_error".to_string(), serde_json::Value::String(e.to_string()));
             }
         }
@@ -113,7 +114,7 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
     #[cfg(not(feature = "chunking"))]
     if config.chunking.is_some() {
         // Chunking requested but feature not enabled
-        result.metadata.insert(
+        result.metadata.additional.insert(
             "chunking_error".to_string(),
             serde_json::Value::String("Chunking feature not enabled".to_string()),
         );
@@ -139,7 +140,7 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
     #[cfg(not(feature = "language-detection"))]
     if config.language_detection.is_some() {
         // Language detection requested but feature not enabled
-        result.metadata.insert(
+        result.metadata.additional.insert(
             "language_detection_error".to_string(),
             serde_json::Value::String("Language detection feature not enabled".to_string()),
         );
@@ -190,6 +191,7 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                         let error_key = format!("processing_error_{}", processor_name);
                         result
                             .metadata
+                            .additional
                             .insert(error_key, serde_json::Value::String(e.to_string()));
                     }
                 }
@@ -203,10 +205,10 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::Metadata;
 
     #[tokio::test]
     async fn test_run_pipeline_basic() {
-        use crate::types::Metadata;
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
@@ -223,7 +225,6 @@ mod tests {
     #[tokio::test]
     #[cfg(feature = "quality")]
     async fn test_pipeline_with_quality_processing() {
-        use std::collections::HashMap;
         let result = ExtractionResult {
             content: "This is a test document with some meaningful content.".to_string(),
             mime_type: "text/plain".to_string(),
@@ -237,12 +238,11 @@ mod tests {
         };
 
         let processed = run_pipeline(result, &config).await.unwrap();
-        assert!(processed.metadata.contains_key("quality_score"));
+        assert!(processed.metadata.additional.contains_key("quality_score"));
     }
 
     #[tokio::test]
     async fn test_pipeline_without_quality_processing() {
-        use std::collections::HashMap;
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
@@ -256,13 +256,12 @@ mod tests {
         };
 
         let processed = run_pipeline(result, &config).await.unwrap();
-        assert!(!processed.metadata.contains_key("quality_score"));
+        assert!(!processed.metadata.additional.contains_key("quality_score"));
     }
 
     #[tokio::test]
     #[cfg(feature = "chunking")]
     async fn test_pipeline_with_chunking() {
-        use std::collections::HashMap;
         let result = ExtractionResult {
             content: "This is a long text that should be chunked. ".repeat(100),
             mime_type: "text/plain".to_string(),
@@ -279,14 +278,13 @@ mod tests {
         };
 
         let processed = run_pipeline(result, &config).await.unwrap();
-        assert!(processed.metadata.contains_key("chunk_count"));
-        let chunk_count = processed.metadata.get("chunk_count").unwrap();
+        assert!(processed.metadata.additional.contains_key("chunk_count"));
+        let chunk_count = processed.metadata.additional.get("chunk_count").unwrap();
         assert!(chunk_count.as_u64().unwrap() > 1);
     }
 
     #[tokio::test]
     async fn test_pipeline_without_chunking() {
-        use std::collections::HashMap;
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
@@ -300,12 +298,11 @@ mod tests {
         };
 
         let processed = run_pipeline(result, &config).await.unwrap();
-        assert!(!processed.metadata.contains_key("chunk_count"));
+        assert!(!processed.metadata.additional.contains_key("chunk_count"));
     }
 
     #[tokio::test]
     async fn test_pipeline_preserves_metadata() {
-        use crate::types::Metadata;
         use std::collections::HashMap;
         let mut additional = HashMap::new();
         additional.insert("source".to_string(), serde_json::json!("test"));
@@ -337,7 +334,6 @@ mod tests {
     #[tokio::test]
     async fn test_pipeline_preserves_tables() {
         use crate::types::Table;
-        use std::collections::HashMap;
 
         let table = Table {
             cells: vec![vec!["A".to_string(), "B".to_string()]],
@@ -361,7 +357,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_pipeline_empty_content() {
-        use std::collections::HashMap;
         let result = ExtractionResult {
             content: String::new(),
             mime_type: "text/plain".to_string(),
@@ -378,7 +373,6 @@ mod tests {
     #[tokio::test]
     #[cfg(feature = "chunking")]
     async fn test_pipeline_with_all_features() {
-        use std::collections::HashMap;
         let result = ExtractionResult {
             content: "This is a comprehensive test document. ".repeat(50),
             mime_type: "text/plain".to_string(),
@@ -396,7 +390,7 @@ mod tests {
         };
 
         let processed = run_pipeline(result, &config).await.unwrap();
-        assert!(processed.metadata.contains_key("quality_score"));
-        assert!(processed.metadata.contains_key("chunk_count"));
+        assert!(processed.metadata.additional.contains_key("quality_score"));
+        assert!(processed.metadata.additional.contains_key("chunk_count"));
     }
 }

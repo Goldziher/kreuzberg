@@ -324,6 +324,7 @@ mod tests {
             // Add processing metadata
             result
                 .metadata
+                .additional
                 .insert("processed_by".to_string(), serde_json::json!(self.name()));
             Ok(())
         }
@@ -342,7 +343,7 @@ mod tests {
         let mut result = ExtractionResult {
             content: "test content".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -352,7 +353,7 @@ mod tests {
 
         assert_eq!(result.content, "test content");
         assert_eq!(
-            result.metadata.get("processed_by").unwrap(),
+            result.metadata.additional.get("processed_by").unwrap(),
             &serde_json::json!("mock-processor")
         );
     }
@@ -389,7 +390,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -455,7 +456,7 @@ mod tests {
         let mut result = ExtractionResult {
             content: String::new(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -464,7 +465,7 @@ mod tests {
         processor.process(&mut result, &config).await.unwrap();
 
         assert_eq!(result.content, "");
-        assert!(result.metadata.contains_key("processed_by"));
+        assert!(result.metadata.additional.contains_key("processed_by"));
     }
 
     #[tokio::test]
@@ -473,13 +474,16 @@ mod tests {
             stage: ProcessingStage::Early,
         };
 
-        let mut metadata = HashMap::new();
-        metadata.insert("existing_key".to_string(), serde_json::json!("existing_value"));
+        let mut additional = HashMap::new();
+        additional.insert("existing_key".to_string(), serde_json::json!("existing_value"));
 
         let mut result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata,
+            metadata: crate::types::Metadata {
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         };
@@ -489,11 +493,11 @@ mod tests {
 
         // Should preserve existing metadata
         assert_eq!(
-            result.metadata.get("existing_key").unwrap(),
+            result.metadata.additional.get("existing_key").unwrap(),
             &serde_json::json!("existing_value")
         );
         // And add new metadata
-        assert!(result.metadata.contains_key("processed_by"));
+        assert!(result.metadata.additional.contains_key("processed_by"));
     }
 
     #[test]
@@ -505,7 +509,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -555,7 +559,7 @@ mod tests {
         let pdf_result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "application/pdf".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -563,7 +567,7 @@ mod tests {
         let txt_result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -589,7 +593,7 @@ mod tests {
         let mut result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![table],
             detected_languages: None,
         };

@@ -117,7 +117,7 @@ def test_missing_dependency_error_create_for_package() -> None:
     assert "MissingDependencyError" in error_str
     assert "pytesseract" in error_str
     assert "OCR processing" in error_str
-    assert "kreuzberg['ocr']" in error_str
+    assert "kreuzberg[ocr]" in error_str
 
 
 def test_missing_dependency_error_direct() -> None:

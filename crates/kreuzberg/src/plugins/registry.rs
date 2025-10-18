@@ -566,7 +566,6 @@ mod tests {
     use crate::plugins::{Plugin, PostProcessor, ProcessingStage, Validator};
     use crate::types::ExtractionResult;
     use async_trait::async_trait;
-    use std::collections::HashMap;
 
     // Mock implementations for testing
     struct MockOcrBackend {
@@ -595,7 +594,7 @@ mod tests {
             Ok(ExtractionResult {
                 content: "test".to_string(),
                 mime_type: "text/plain".to_string(),
-                metadata: HashMap::new(),
+                metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
             })
@@ -637,7 +636,7 @@ mod tests {
             Ok(ExtractionResult {
                 content: "test".to_string(),
                 mime_type: "text/plain".to_string(),
-                metadata: HashMap::new(),
+                metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
             })

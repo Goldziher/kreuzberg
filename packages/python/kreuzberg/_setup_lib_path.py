@@ -59,7 +59,7 @@ def _fix_macos_install_names(package_dir: Path) -> None:
     # Check if fix is needed by examining current install name
     try:
         result = subprocess.run(
-            ["otool", "-L", str(so_file)],
+            ["otool", "-L", str(so_file)],  # noqa: S607
             capture_output=True,
             text=True,
             check=True,
@@ -76,7 +76,7 @@ def _fix_macos_install_names(package_dir: Path) -> None:
             # Fall back to setting DYLD_LIBRARY_PATH
             with contextlib.suppress(subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
                 subprocess.run(
-                    [
+                    [  # noqa: S607
                         "install_name_tool",
                         "-change",
                         "./libpdfium.dylib",
@@ -128,8 +128,8 @@ def _setup_linux_paths(package_dir: Path) -> None:
 
     # Try to use ctypes to add search path (Python 3.8+)
     try:
-        import ctypes
-        import ctypes.util
+        import ctypes  # noqa: PLC0415
+        import ctypes.util  # noqa: PLC0415
 
         # Try to pre-load libpdfium.so
         # Library load might fail, but LD_LIBRARY_PATH is set so pdfium-render should still find it
@@ -163,7 +163,7 @@ def _setup_windows_paths(package_dir: Path) -> None:
     # Try to pre-load pdfium.dll
     # Library load might fail, but PATH is set as fallback
     try:
-        import ctypes
+        import ctypes  # noqa: PLC0415
 
         lib_path = package_dir / "pdfium.dll"
         if lib_path.exists():

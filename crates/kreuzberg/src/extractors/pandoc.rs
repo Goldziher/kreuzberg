@@ -6,9 +6,8 @@ use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extraction::pandoc::extract_bytes_from_mime;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::ExtractionResult;
+use crate::types::{ExtractionResult, Metadata};
 use async_trait::async_trait;
-use std::collections::HashMap;
 
 /// Generic Pandoc extractor for all Pandoc-supported formats.
 ///
@@ -72,16 +71,19 @@ impl DocumentExtractor for PandocExtractor {
         // Use Pandoc to extract
         let pandoc_result = extract_bytes_from_mime(content, mime_type).await?;
 
-        // Convert metadata to HashMap
-        let mut metadata = HashMap::new();
+        // Put all Pandoc metadata in additional (Pandoc supports many formats with different metadata)
+        let mut additional = std::collections::HashMap::new();
         for (key, value) in pandoc_result.metadata {
-            metadata.insert(key, value);
+            additional.insert(key, value);
         }
 
         Ok(ExtractionResult {
             content: pandoc_result.content,
             mime_type: mime_type.to_string(),
-            metadata,
+            metadata: Metadata {
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         })

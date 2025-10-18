@@ -17,15 +17,13 @@ use pyo3::prelude::*;
 mod config;
 mod core;
 mod error;
-mod mime;
 mod plugins;
-mod servers;
 mod types;
 
 /// Internal bindings module for Kreuzberg
 #[pymodule]
 fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Configuration types (8 types)
+    // Configuration types (9 types)
     m.add_class::<config::ExtractionConfig>()?;
     m.add_class::<config::OcrConfig>()?;
     m.add_class::<config::PdfConfig>()?;
@@ -34,6 +32,7 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<config::TokenReductionConfig>()?;
     m.add_class::<config::ImageExtractionConfig>()?;
     m.add_class::<config::PostProcessorConfig>()?;
+    m.add_class::<config::TesseractConfig>()?;
 
     // Result types (2 types)
     m.add_class::<types::ExtractionResult>()?;
@@ -49,26 +48,9 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(core::batch_extract_files, m)?)?;
     m.add_function(wrap_pyfunction!(core::batch_extract_bytes, m)?)?;
 
-    // MIME utilities (2 functions)
-    m.add_function(wrap_pyfunction!(mime::detect_mime_type, m)?)?;
-    m.add_function(wrap_pyfunction!(mime::validate_mime_type, m)?)?;
-
-    // MIME constants
-    mime::register_constants(m)?;
-
-    // OCR Backend Plugin functions (3 functions)
+    // Plugin registration functions (2 functions)
     m.add_function(wrap_pyfunction!(plugins::register_ocr_backend, m)?)?;
-    m.add_function(wrap_pyfunction!(plugins::list_ocr_backends, m)?)?;
-    m.add_function(wrap_pyfunction!(plugins::unregister_ocr_backend, m)?)?;
-
-    // PostProcessor Plugin functions (3 functions)
     m.add_function(wrap_pyfunction!(plugins::register_post_processor, m)?)?;
-    m.add_function(wrap_pyfunction!(plugins::list_post_processors, m)?)?;
-    m.add_function(wrap_pyfunction!(plugins::unregister_post_processor, m)?)?;
-
-    // Servers (2 functions: MCP and API)
-    m.add_function(wrap_pyfunction!(servers::start_mcp_server, m)?)?;
-    m.add_function(wrap_pyfunction!(servers::start_api_server, m)?)?;
 
     Ok(())
 }

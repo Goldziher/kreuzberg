@@ -366,6 +366,7 @@ fn build_config(default_config: &ExtractionConfig, enable_ocr: bool, force_ocr: 
         Some(crate::OcrConfig {
             backend: "tesseract".to_string(),
             language: "eng".to_string(),
+            tesseract_config: None,
         })
     } else {
         None
@@ -384,12 +385,10 @@ fn format_extraction_result(result: &KreuzbergResult) -> String {
     response.push_str(&result.content);
     response.push_str("\n\n");
 
-    // Metadata
-    if !result.metadata.is_empty() {
-        response.push_str("Metadata:\n");
-        response.push_str(&serde_json::to_string_pretty(&result.metadata).unwrap_or_default());
-        response.push_str("\n\n");
-    }
+    // Metadata (always include, will be empty object if no data)
+    response.push_str("Metadata:\n");
+    response.push_str(&serde_json::to_string_pretty(&result.metadata).unwrap_or_default());
+    response.push_str("\n\n");
 
     // Tables
     if !result.tables.is_empty() {

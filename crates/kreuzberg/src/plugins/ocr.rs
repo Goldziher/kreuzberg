@@ -250,7 +250,6 @@ pub trait OcrBackend: Plugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
 
     struct MockOcrBackend {
         languages: Vec<String>,
@@ -280,7 +279,7 @@ mod tests {
             Ok(ExtractionResult {
                 content: "Mocked OCR text".to_string(),
                 mime_type: "text/plain".to_string(),
-                metadata: HashMap::new(),
+                metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
             })
@@ -308,6 +307,7 @@ mod tests {
         let config = OcrConfig {
             backend: "mock".to_string(),
             language: "eng".to_string(),
+            tesseract_config: None,
         };
 
         let result = backend.process_image(b"fake image data", &config).await.unwrap();
@@ -395,6 +395,7 @@ mod tests {
         let config = OcrConfig {
             backend: "mock".to_string(),
             language: "eng".to_string(),
+            tesseract_config: None,
         };
 
         let result = backend.process_file(path, &config).await.unwrap();
@@ -431,6 +432,7 @@ mod tests {
         let config = OcrConfig {
             backend: "mock".to_string(),
             language: "eng".to_string(),
+            tesseract_config: None,
         };
 
         // Mock backend doesn't validate, but real backends should

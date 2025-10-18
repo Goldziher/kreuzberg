@@ -27,10 +27,11 @@ classifiers = [
 dependencies = [  ]
 
 optional-dependencies.all = [
-  "kreuzberg[cli,nlp,ocr]",
+  "kreuzberg[easyocr,nlp,paddleocr]",
 ]
-optional-dependencies.cli = [
-  "click>=8.2.1",
+optional-dependencies.easyocr = [
+  "easyocr>=1.7.2",
+  "torch>=2.8",
 ]
 optional-dependencies.nlp = [
   "keybert>=0.8.5",
@@ -39,8 +40,7 @@ optional-dependencies.nlp = [
   "torch>=2.8",
   "transformers>=4.56.2",
 ]
-optional-dependencies.ocr = [
-  "easyocr>=1.7.2",
+optional-dependencies.paddleocr = [
   "paddleocr>=3.1",
   "paddlepaddle>=3.1",
   "setuptools>=65",
@@ -49,7 +49,7 @@ urls.Documentation = "https://kreuzberg.readthedocs.io"
 urls.Homepage = "https://github.com/Goldziher/kreuzberg"
 urls.Issues = "https://github.com/Goldziher/kreuzberg/issues"
 urls.Repository = "https://github.com/Goldziher/kreuzberg"
-scripts.kreuzberg = "kreuzberg.cli:main"
+scripts.kreuzberg = "kreuzberg.__main__:main"
 
 [tool.maturin]
 module-name = "kreuzberg._internal_bindings"

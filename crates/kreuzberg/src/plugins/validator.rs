@@ -319,7 +319,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test content".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -335,7 +335,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test content".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -353,7 +353,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -388,7 +388,7 @@ mod tests {
         let result = ExtractionResult {
             content: String::new(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -434,7 +434,7 @@ mod tests {
         let pdf_result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "application/pdf".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -442,7 +442,7 @@ mod tests {
         let txt_result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -524,7 +524,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
@@ -544,13 +544,16 @@ mod tests {
     async fn test_validator_with_metadata() {
         let validator = MockValidator { should_fail: false };
 
-        let mut metadata = HashMap::new();
-        metadata.insert("quality_score".to_string(), serde_json::json!(0.95));
+        let mut additional = HashMap::new();
+        additional.insert("quality_score".to_string(), serde_json::json!(0.95));
 
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata,
+            metadata: crate::types::Metadata {
+                additional,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
         };
@@ -574,7 +577,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![table],
             detected_languages: None,
         };
@@ -600,7 +603,7 @@ mod tests {
             let result = ExtractionResult {
                 content: "test".to_string(),
                 mime_type: mime_type.to_string(),
-                metadata: HashMap::new(),
+                metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
             };
@@ -616,7 +619,7 @@ mod tests {
         let result = ExtractionResult {
             content: "test content ".repeat(10000),
             mime_type: "text/plain".to_string(),
-            metadata: HashMap::new(),
+            metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
         };
