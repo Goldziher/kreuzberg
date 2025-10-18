@@ -85,11 +85,7 @@ async fn test_invalid_xml() {
                 extraction.chunks.is_none(),
                 "Chunks should be None without chunking config"
             );
-            // Content may be partial or empty
-            assert!(
-                extraction.content.len() >= 0,
-                "Extracted content should be valid (possibly empty)"
-            );
+            // Content may be partial or empty (always valid for String)
         }
         Err(error) => {
             // Parser detected errors and failed
@@ -126,10 +122,7 @@ async fn test_corrupted_image() {
                 extraction.chunks.is_none(),
                 "Chunks should be None without chunking config"
             );
-            assert!(
-                extraction.content.is_empty() || extraction.content.len() >= 0,
-                "Content should be empty or valid for corrupted image"
-            );
+            // Content is always valid for String (may be empty)
         }
         Err(error) => {
             // Image parsing failed

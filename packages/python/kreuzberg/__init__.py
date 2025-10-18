@@ -5,15 +5,28 @@ All extraction logic, chunking, quality processing, and language detection
 are implemented in Rust for maximum performance.
 
 Python-specific features:
-- OCR backends: EasyOCR, PaddleOCR
-- PostProcessors: Entity extraction, keyword extraction, category detection
-- API server: Litestar REST API
-- CLI: Command-line interface (proxies to Rust binary)
-- MCP: Model Context Protocol server
+- OCR backends: EasyOCR, PaddleOCR (Python-based OCR engines)
+- Custom PostProcessors: Register your own Python processing logic
 
 Architecture:
-- Rust handles: Extraction, parsing, chunking, quality, language detection
-- Python adds: OCR backends, postprocessors, API, CLI, optional NLP features
+- Rust handles: Extraction, parsing, chunking, quality, language detection, NLP (keyword extraction), API server, MCP server, CLI
+- Python adds: OCR backends (EasyOCR, PaddleOCR), custom postprocessors
+
+Creating Custom PostProcessors:
+    >>> from kreuzberg import PostProcessorProtocol, register_post_processor, ExtractionResult
+    >>>
+    >>> class MyProcessor:
+    ...     def name(self) -> str:
+    ...         return "my_processor"
+    ...
+    ...     def process(self, result: ExtractionResult) -> ExtractionResult:
+    ...         result.metadata["custom_field"] = "custom_value"
+    ...         return result
+    ...
+    ...     def processing_stage(self) -> str:
+    ...         return "middle"
+    >>>
+    >>> register_post_processor(MyProcessor())
 """
 
 from __future__ import annotations
@@ -40,8 +53,10 @@ from kreuzberg._internal_bindings import (
     PostProcessorConfig,
     TesseractConfig,
     TokenReductionConfig,
+    clear_post_processors,
     register_ocr_backend,
     register_post_processor,
+    unregister_post_processor,
 )
 from kreuzberg._internal_bindings import (
     batch_extract_bytes as batch_extract_bytes_impl,
@@ -67,16 +82,14 @@ from kreuzberg._internal_bindings import (
 from kreuzberg._internal_bindings import (
     extract_file_sync as extract_file_sync_impl,
 )
-from kreuzberg.exceptions import MissingDependencyError, ValidationError
+from kreuzberg.exceptions import MissingDependencyError
+from kreuzberg.postprocessors.protocol import PostProcessorProtocol
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from kreuzberg.ocr.easyocr import EasyOCRBackend  # noqa: F401
     from kreuzberg.ocr.paddleocr import PaddleOCRBackend  # noqa: F401
-    from kreuzberg.postprocessors.category_extraction import CategoryExtractionProcessor  # noqa: F401
-    from kreuzberg.postprocessors.entity_extraction import EntityExtractionProcessor  # noqa: F401
-    from kreuzberg.postprocessors.keyword_extraction import KeywordExtractionProcessor  # noqa: F401
 
 __version__ = version("kreuzberg")
 
@@ -96,6 +109,8 @@ __all__ = [
     "OcrConfig",
     "PdfConfig",
     "PostProcessorConfig",
+    # Plugin system
+    "PostProcessorProtocol",
     "TesseractConfig",
     "TokenReductionConfig",
     # Version
@@ -105,10 +120,13 @@ __all__ = [
     "batch_extract_bytes_sync",
     "batch_extract_files",
     "batch_extract_files_sync",
+    "clear_post_processors",
     "extract_bytes",
     "extract_bytes_sync",
     "extract_file",
     "extract_file_sync",
+    "register_post_processor",
+    "unregister_post_processor",
 ]
 
 # ============================================================================
@@ -118,33 +136,15 @@ __all__ = [
 # Cache registered plugins to avoid re-instantiation with same kwargs
 # Key: (plugin_name, kwargs_hash) -> plugin instance
 _REGISTERED_OCR_BACKENDS: dict[tuple[str, str], Any] = {}
-_REGISTERED_POSTPROCESSORS: dict[tuple[str, str], Any] = {}
 
-# Thread safety locks for cache operations
+# Thread safety lock for cache operations
 _OCR_CACHE_LOCK = threading.Lock()
-_PROCESSOR_CACHE_LOCK = threading.Lock()
 
 # Maximum cache size to prevent memory leaks in long-running processes
 _MAX_CACHE_SIZE = 10
 
 
 def _hash_kwargs(kwargs: dict[str, Any]) -> str:
-    """Hash kwargs dict for stable cache key.
-
-    Uses MD5 for process-stable hashing (unlike built-in hash() which varies
-    per process). Allows cache invalidation when kwargs change.
-
-    Args:
-        kwargs: Dictionary of keyword arguments to hash
-
-    Returns:
-        MD5 hex digest of JSON-serialized kwargs
-
-    Note:
-        Non-serializable objects are converted to their repr() string.
-        If serialization fails completely, returns a unique fallback hash.
-        MD5 is used for cache keys, not cryptography.
-    """
     try:
         serialized = json.dumps(kwargs, sort_keys=True, default=str)
         return hashlib.md5(serialized.encode()).hexdigest()  # noqa: S324
@@ -159,25 +159,6 @@ def _ensure_ocr_backend_registered(
     easyocr_kwargs: dict[str, Any] | None,
     paddleocr_kwargs: dict[str, Any] | None,
 ) -> None:
-    """Lazily register OCR backend with caching.
-
-    Thread-safe registration with LRU eviction to prevent memory leaks.
-    Raises MissingDependencyError if backend explicitly configured but not installed.
-
-    Args:
-        config: Extraction configuration with OCR settings
-        easyocr_kwargs: EasyOCR-specific initialization options (optional)
-        paddleocr_kwargs: PaddleOCR-specific initialization options (optional)
-
-    Raises:
-        MissingDependencyError: If OCR backend is configured but required package not installed
-
-    Note:
-        Language parameter precedence:
-        1. If 'languages'/'lang' in kwargs, kwargs takes precedence
-        2. Otherwise, uses config.ocr.language
-        This allows per-call language override while respecting config defaults.
-    """
     if config.ocr is None:
         return
 
@@ -248,128 +229,6 @@ def _ensure_ocr_backend_registered(
         _REGISTERED_OCR_BACKENDS[cache_key] = backend
 
 
-def _ensure_postprocessors_registered(
-    config: ExtractionConfig,
-    entity_extraction_kwargs: dict[str, Any] | None,
-    keyword_extraction_kwargs: dict[str, Any] | None,
-    category_extraction_kwargs: dict[str, Any] | None,
-) -> None:
-    """Lazily register postprocessors with caching.
-
-    Only registers processors if kwargs are explicitly provided (not None).
-    Checks PostProcessorConfig whitelist/blacklist for enablement.
-    """
-    if config.postprocessor is None or not config.postprocessor.enabled:
-        return
-
-    # Entity extraction
-    if entity_extraction_kwargs is not None:
-        _register_processor_cached(
-            "entity_extraction",
-            entity_extraction_kwargs,
-            "kreuzberg.postprocessors.entity_extraction",
-            "EntityExtractionProcessor",
-            config,
-        )
-
-    # Keyword extraction
-    if keyword_extraction_kwargs is not None:
-        _register_processor_cached(
-            "keyword_extraction",
-            keyword_extraction_kwargs,
-            "kreuzberg.postprocessors.keyword_extraction",
-            "KeywordExtractionProcessor",
-            config,
-        )
-
-    # Category extraction
-    if category_extraction_kwargs is not None:
-        _register_processor_cached(
-            "category_extraction",
-            category_extraction_kwargs,
-            "kreuzberg.postprocessors.category_extraction",
-            "CategoryExtractionProcessor",
-            config,
-        )
-
-
-def _register_processor_cached(
-    name: str,
-    kwargs: dict[str, Any],
-    module_path: str,
-    class_name: str,
-    config: ExtractionConfig,
-) -> None:
-    """Register a postprocessor with caching.
-
-    Thread-safe registration with LRU eviction to prevent memory leaks.
-
-    Args:
-        name: Processor name (for cache key and whitelist/blacklist checking)
-        kwargs: Initialization kwargs
-        module_path: Python module path for lazy import
-        class_name: Class name to instantiate
-        config: Extraction config (for whitelist/blacklist checking)
-
-    Raises:
-        ValidationError: If processor explicitly requested via kwargs but blacklisted
-        MissingDependencyError: If processor dependencies not installed
-    """
-    # Check whitelist/blacklist
-    if config.postprocessor:
-        if config.postprocessor.enabled_processors and name not in config.postprocessor.enabled_processors:
-            msg = (
-                f"Postprocessor '{name}' not in enabled_processors whitelist. Remove '{name}_kwargs' or update config."
-            )
-            raise ValidationError(
-                msg,
-                context={
-                    "processor": name,
-                    "enabled_processors": config.postprocessor.enabled_processors,
-                },
-            )
-        if config.postprocessor.disabled_processors and name in config.postprocessor.disabled_processors:
-            msg = (
-                f"Postprocessor '{name}' is in disabled_processors blacklist. Remove '{name}_kwargs' or update config."
-            )
-            raise ValidationError(
-                msg,
-                context={
-                    "processor": name,
-                    "disabled_processors": config.postprocessor.disabled_processors,
-                },
-            )
-
-    # Thread-safe cache check and registration
-    with _PROCESSOR_CACHE_LOCK:
-        cache_key = (name, _hash_kwargs(kwargs))
-
-        # Check cache again inside lock (double-checked locking pattern)
-        if cache_key in _REGISTERED_POSTPROCESSORS:
-            return  # Already registered
-
-        # Evict oldest entry if cache is full (simple FIFO eviction)
-        if len(_REGISTERED_POSTPROCESSORS) >= _MAX_CACHE_SIZE:
-            oldest_key = next(iter(_REGISTERED_POSTPROCESSORS))
-            del _REGISTERED_POSTPROCESSORS[oldest_key]
-
-        # Lazy import
-        try:
-            import importlib  # noqa: PLC0415
-
-            module = importlib.import_module(module_path)
-            processor_class = getattr(module, class_name)
-            processor = processor_class(**kwargs)
-            register_post_processor(processor)
-            _REGISTERED_POSTPROCESSORS[cache_key] = processor
-        except ImportError as e:
-            raise MissingDependencyError.create_for_package(
-                dependency_group="nlp",
-                functionality=f"{name} postprocessor",
-                package_name="keybert" if "keyword" in name else "spacy",
-            ) from e
-
-
 # ============================================================================
 # Synchronous Extraction Functions
 # ============================================================================
@@ -382,9 +241,6 @@ def extract_file_sync(
     *,
     easyocr_kwargs: dict[str, Any] | None = None,
     paddleocr_kwargs: dict[str, Any] | None = None,
-    entity_extraction_kwargs: dict[str, Any] | None = None,
-    keyword_extraction_kwargs: dict[str, Any] | None = None,
-    category_extraction_kwargs: dict[str, Any] | None = None,
 ) -> ExtractionResult:
     """Extract content from a file (synchronous).
 
@@ -394,9 +250,6 @@ def extract_file_sync(
         config: Extraction configuration (uses defaults if None)
         easyocr_kwargs: EasyOCR initialization options (languages, use_gpu, beam_width, etc.)
         paddleocr_kwargs: PaddleOCR initialization options (lang, use_angle_cls, show_log, etc.)
-        entity_extraction_kwargs: Entity extraction options (model, entity_types, etc.)
-        keyword_extraction_kwargs: Keyword extraction options
-        category_extraction_kwargs: Category extraction options
 
     Returns:
         ExtractionResult with content, metadata, and tables
@@ -427,14 +280,8 @@ def extract_file_sync(
     if config is None:
         config = ExtractionConfig()
 
-    # Lazy register plugins with caching
+    # Lazy register OCR backend with caching
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
-    _ensure_postprocessors_registered(
-        config,
-        entity_extraction_kwargs,
-        keyword_extraction_kwargs,
-        category_extraction_kwargs,
-    )
 
     return extract_file_sync_impl(str(file_path), mime_type, config)
 
@@ -446,9 +293,6 @@ def extract_bytes_sync(
     *,
     easyocr_kwargs: dict[str, Any] | None = None,
     paddleocr_kwargs: dict[str, Any] | None = None,
-    entity_extraction_kwargs: dict[str, Any] | None = None,
-    keyword_extraction_kwargs: dict[str, Any] | None = None,
-    category_extraction_kwargs: dict[str, Any] | None = None,
 ) -> ExtractionResult:
     """Extract content from bytes (synchronous).
 
@@ -458,9 +302,6 @@ def extract_bytes_sync(
         config: Extraction configuration (uses defaults if None)
         easyocr_kwargs: EasyOCR initialization options
         paddleocr_kwargs: PaddleOCR initialization options
-        entity_extraction_kwargs: Entity extraction options
-        keyword_extraction_kwargs: Keyword extraction options
-        category_extraction_kwargs: Category extraction options
 
     Returns:
         ExtractionResult with content, metadata, and tables
@@ -469,12 +310,6 @@ def extract_bytes_sync(
         config = ExtractionConfig()
 
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
-    _ensure_postprocessors_registered(
-        config,
-        entity_extraction_kwargs,
-        keyword_extraction_kwargs,
-        category_extraction_kwargs,
-    )
 
     return extract_bytes_sync_impl(bytes(data), mime_type, config)
 
@@ -485,9 +320,6 @@ def batch_extract_files_sync(
     *,
     easyocr_kwargs: dict[str, Any] | None = None,
     paddleocr_kwargs: dict[str, Any] | None = None,
-    entity_extraction_kwargs: dict[str, Any] | None = None,
-    keyword_extraction_kwargs: dict[str, Any] | None = None,
-    category_extraction_kwargs: dict[str, Any] | None = None,
 ) -> list[ExtractionResult]:
     """Extract content from multiple files in parallel (synchronous).
 
@@ -496,9 +328,6 @@ def batch_extract_files_sync(
         config: Extraction configuration (uses defaults if None)
         easyocr_kwargs: EasyOCR initialization options
         paddleocr_kwargs: PaddleOCR initialization options
-        entity_extraction_kwargs: Entity extraction options
-        keyword_extraction_kwargs: Keyword extraction options
-        category_extraction_kwargs: Category extraction options
 
     Returns:
         List of ExtractionResults (one per file)
@@ -507,12 +336,6 @@ def batch_extract_files_sync(
         config = ExtractionConfig()
 
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
-    _ensure_postprocessors_registered(
-        config,
-        entity_extraction_kwargs,
-        keyword_extraction_kwargs,
-        category_extraction_kwargs,
-    )
 
     return batch_extract_files_sync_impl([str(p) for p in paths], config)
 
@@ -524,9 +347,6 @@ def batch_extract_bytes_sync(
     *,
     easyocr_kwargs: dict[str, Any] | None = None,
     paddleocr_kwargs: dict[str, Any] | None = None,
-    entity_extraction_kwargs: dict[str, Any] | None = None,
-    keyword_extraction_kwargs: dict[str, Any] | None = None,
-    category_extraction_kwargs: dict[str, Any] | None = None,
 ) -> list[ExtractionResult]:
     """Extract content from multiple byte arrays in parallel (synchronous).
 
@@ -536,9 +356,6 @@ def batch_extract_bytes_sync(
         config: Extraction configuration (uses defaults if None)
         easyocr_kwargs: EasyOCR initialization options
         paddleocr_kwargs: PaddleOCR initialization options
-        entity_extraction_kwargs: Entity extraction options
-        keyword_extraction_kwargs: Keyword extraction options
-        category_extraction_kwargs: Category extraction options
 
     Returns:
         List of ExtractionResults (one per data item)
@@ -547,12 +364,6 @@ def batch_extract_bytes_sync(
         config = ExtractionConfig()
 
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
-    _ensure_postprocessors_registered(
-        config,
-        entity_extraction_kwargs,
-        keyword_extraction_kwargs,
-        category_extraction_kwargs,
-    )
 
     return batch_extract_bytes_sync_impl([bytes(d) for d in data_list], mime_types, config)
 
@@ -569,9 +380,6 @@ async def extract_file(
     *,
     easyocr_kwargs: dict[str, Any] | None = None,
     paddleocr_kwargs: dict[str, Any] | None = None,
-    entity_extraction_kwargs: dict[str, Any] | None = None,
-    keyword_extraction_kwargs: dict[str, Any] | None = None,
-    category_extraction_kwargs: dict[str, Any] | None = None,
 ) -> ExtractionResult:
     """Extract content from a file (asynchronous).
 
@@ -581,9 +389,6 @@ async def extract_file(
         config: Extraction configuration (uses defaults if None)
         easyocr_kwargs: EasyOCR initialization options
         paddleocr_kwargs: PaddleOCR initialization options
-        entity_extraction_kwargs: Entity extraction options
-        keyword_extraction_kwargs: Keyword extraction options
-        category_extraction_kwargs: Category extraction options
 
     Returns:
         ExtractionResult with content, metadata, and tables
@@ -592,12 +397,6 @@ async def extract_file(
         config = ExtractionConfig()
 
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
-    _ensure_postprocessors_registered(
-        config,
-        entity_extraction_kwargs,
-        keyword_extraction_kwargs,
-        category_extraction_kwargs,
-    )
 
     return await extract_file_impl(str(file_path), mime_type, config)
 
@@ -609,9 +408,6 @@ async def extract_bytes(
     *,
     easyocr_kwargs: dict[str, Any] | None = None,
     paddleocr_kwargs: dict[str, Any] | None = None,
-    entity_extraction_kwargs: dict[str, Any] | None = None,
-    keyword_extraction_kwargs: dict[str, Any] | None = None,
-    category_extraction_kwargs: dict[str, Any] | None = None,
 ) -> ExtractionResult:
     """Extract content from bytes (asynchronous).
 
@@ -621,9 +417,6 @@ async def extract_bytes(
         config: Extraction configuration (uses defaults if None)
         easyocr_kwargs: EasyOCR initialization options
         paddleocr_kwargs: PaddleOCR initialization options
-        entity_extraction_kwargs: Entity extraction options
-        keyword_extraction_kwargs: Keyword extraction options
-        category_extraction_kwargs: Category extraction options
 
     Returns:
         ExtractionResult with content, metadata, and tables
@@ -632,12 +425,6 @@ async def extract_bytes(
         config = ExtractionConfig()
 
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
-    _ensure_postprocessors_registered(
-        config,
-        entity_extraction_kwargs,
-        keyword_extraction_kwargs,
-        category_extraction_kwargs,
-    )
 
     return await extract_bytes_impl(bytes(data), mime_type, config)
 
@@ -648,9 +435,6 @@ async def batch_extract_files(
     *,
     easyocr_kwargs: dict[str, Any] | None = None,
     paddleocr_kwargs: dict[str, Any] | None = None,
-    entity_extraction_kwargs: dict[str, Any] | None = None,
-    keyword_extraction_kwargs: dict[str, Any] | None = None,
-    category_extraction_kwargs: dict[str, Any] | None = None,
 ) -> list[ExtractionResult]:
     """Extract content from multiple files in parallel (asynchronous).
 
@@ -659,9 +443,6 @@ async def batch_extract_files(
         config: Extraction configuration (uses defaults if None)
         easyocr_kwargs: EasyOCR initialization options
         paddleocr_kwargs: PaddleOCR initialization options
-        entity_extraction_kwargs: Entity extraction options
-        keyword_extraction_kwargs: Keyword extraction options
-        category_extraction_kwargs: Category extraction options
 
     Returns:
         List of ExtractionResults (one per file)
@@ -670,12 +451,6 @@ async def batch_extract_files(
         config = ExtractionConfig()
 
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
-    _ensure_postprocessors_registered(
-        config,
-        entity_extraction_kwargs,
-        keyword_extraction_kwargs,
-        category_extraction_kwargs,
-    )
 
     return await batch_extract_files_impl([str(p) for p in paths], config)
 
@@ -687,9 +462,6 @@ async def batch_extract_bytes(
     *,
     easyocr_kwargs: dict[str, Any] | None = None,
     paddleocr_kwargs: dict[str, Any] | None = None,
-    entity_extraction_kwargs: dict[str, Any] | None = None,
-    keyword_extraction_kwargs: dict[str, Any] | None = None,
-    category_extraction_kwargs: dict[str, Any] | None = None,
 ) -> list[ExtractionResult]:
     """Extract content from multiple byte arrays in parallel (asynchronous).
 
@@ -699,9 +471,6 @@ async def batch_extract_bytes(
         config: Extraction configuration (uses defaults if None)
         easyocr_kwargs: EasyOCR initialization options
         paddleocr_kwargs: PaddleOCR initialization options
-        entity_extraction_kwargs: Entity extraction options
-        keyword_extraction_kwargs: Keyword extraction options
-        category_extraction_kwargs: Category extraction options
 
     Returns:
         List of ExtractionResults (one per data item)
@@ -710,11 +479,5 @@ async def batch_extract_bytes(
         config = ExtractionConfig()
 
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
-    _ensure_postprocessors_registered(
-        config,
-        entity_extraction_kwargs,
-        keyword_extraction_kwargs,
-        category_extraction_kwargs,
-    )
 
     return await batch_extract_bytes_impl([bytes(d) for d in data_list], mime_types, config)

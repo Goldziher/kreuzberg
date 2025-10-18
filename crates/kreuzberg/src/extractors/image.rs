@@ -44,30 +44,8 @@ impl ImageExtractor {
 
             let proc = OcrProcessor::new(cache_dir)?;
 
-            // Convert TesseractConfig to ocr::types::TesseractConfig
-            let ocr_tess_config = crate::ocr::types::TesseractConfig {
-                psm: tess_config_clone.psm as u8,
-                language: tess_config_clone.language.clone(),
-                output_format: tess_config_clone.output_format.clone(),
-                oem: tess_config_clone.oem as u8,
-                min_confidence: tess_config_clone.min_confidence,
-                preprocessing: tess_config_clone.preprocessing.clone(),
-                enable_table_detection: tess_config_clone.enable_table_detection,
-                table_min_confidence: tess_config_clone.table_min_confidence,
-                table_column_threshold: tess_config_clone.table_column_threshold as u32,
-                table_row_threshold_ratio: tess_config_clone.table_row_threshold_ratio,
-                use_cache: tess_config_clone.use_cache,
-                classify_use_pre_adapted_templates: tess_config_clone.classify_use_pre_adapted_templates,
-                language_model_ngram_on: tess_config_clone.language_model_ngram_on,
-                tessedit_dont_blkrej_good_wds: tess_config_clone.tessedit_dont_blkrej_good_wds,
-                tessedit_dont_rowrej_good_wds: tess_config_clone.tessedit_dont_rowrej_good_wds,
-                tessedit_enable_dict_correction: tess_config_clone.tessedit_enable_dict_correction,
-                tessedit_char_whitelist: tess_config_clone.tessedit_char_whitelist.clone(),
-                tessedit_char_blacklist: tess_config_clone.tessedit_char_blacklist.clone(),
-                tessedit_use_primary_params_model: tess_config_clone.tessedit_use_primary_params_model,
-                textord_space_size_is_variable: tess_config_clone.textord_space_size_is_variable,
-                thresholding_method: tess_config_clone.thresholding_method,
-            };
+            // Convert TesseractConfig using From trait
+            let ocr_tess_config: crate::ocr::types::TesseractConfig = (&tess_config_clone).into();
 
             proc.process_image(&image_data, &ocr_tess_config)
         })
@@ -97,7 +75,7 @@ impl Plugin for ImageExtractor {
     }
 
     fn version(&self) -> String {
-        "1.0.0".to_string()
+        env!("CARGO_PKG_VERSION").to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -207,7 +185,7 @@ mod tests {
     fn test_image_plugin_interface() {
         let extractor = ImageExtractor::new();
         assert_eq!(extractor.name(), "image-extractor");
-        assert_eq!(extractor.version(), "1.0.0");
+        assert_eq!(extractor.version(), env!("CARGO_PKG_VERSION"));
         assert!(extractor.supported_mime_types().contains(&"image/png"));
         assert!(extractor.supported_mime_types().contains(&"image/jpeg"));
         assert!(extractor.supported_mime_types().contains(&"image/webp"));

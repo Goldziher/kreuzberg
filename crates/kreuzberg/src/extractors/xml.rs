@@ -31,7 +31,7 @@ impl Plugin for XmlExtractor {
     }
 
     fn version(&self) -> String {
-        "1.0.0".to_string()
+        env!("CARGO_PKG_VERSION").to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -56,14 +56,14 @@ impl DocumentExtractor for XmlExtractor {
     async fn extract_bytes(
         &self,
         content: &[u8],
-        _mime_type: &str,
+        mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let xml_result = parse_xml(content, false)?;
 
         Ok(ExtractionResult {
             content: xml_result.content,
-            mime_type: "application/xml".to_string(),
+            mime_type: mime_type.to_string(),
             metadata: crate::types::Metadata {
                 xml: Some(crate::types::XmlMetadata {
                     element_count: xml_result.element_count,
@@ -114,7 +114,7 @@ mod tests {
     fn test_xml_plugin_interface() {
         let extractor = XmlExtractor::new();
         assert_eq!(extractor.name(), "xml-extractor");
-        assert_eq!(extractor.version(), "1.0.0");
+        assert_eq!(extractor.version(), env!("CARGO_PKG_VERSION"));
         assert_eq!(
             extractor.supported_mime_types(),
             &["application/xml", "text/xml", "image/svg+xml"]

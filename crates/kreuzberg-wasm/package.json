@@ -1,0 +1,33 @@
+{
+  "name": "kreuzberg-wasm",
+  "version": "4.0.0",
+  "description": "Kreuzberg document intelligence - WebAssembly bindings",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": "https://github.com/Goldziher/kreuzberg",
+  "license": "MIT",
+  "keywords": [
+    "document",
+    "extraction",
+    "ocr",
+    "pdf",
+    "rust",
+    "wasm",
+    "webassembly"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --target bundler --out-dir dist",
+    "build:nodejs": "wasm-pack build --target nodejs --out-dir dist-node",
+    "build:web": "wasm-pack build --target web --out-dir dist-web",
+    "build:all": "pnpm run build && pnpm run build:nodejs && pnpm run build:web",
+    "test": "wasm-pack test --headless --chrome"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  }
+}

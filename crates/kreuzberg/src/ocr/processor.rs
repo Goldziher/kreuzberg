@@ -92,18 +92,24 @@ impl OcrProcessor {
         self.process_image(&image_bytes, config)
     }
 
+    /// Process multiple image files in parallel using Rayon.
+    ///
+    /// This method processes OCR operations in parallel across CPU cores for improved throughput.
+    /// Results are returned in the same order as the input file paths.
     pub fn process_files_batch(&self, file_paths: Vec<String>, config: &TesseractConfig) -> Vec<BatchItemResult> {
+        use rayon::prelude::*;
+
         file_paths
-            .into_iter()
-            .map(|path| match self.process_file(&path, config) {
+            .par_iter()
+            .map(|path| match self.process_file(path, config) {
                 Ok(result) => BatchItemResult {
-                    file_path: path,
+                    file_path: path.clone(),
                     success: true,
                     result: Some(result),
                     error: None,
                 },
                 Err(e) => BatchItemResult {
-                    file_path: path,
+                    file_path: path.clone(),
                     success: false,
                     result: None,
                     error: Some(e.to_string()),

@@ -275,7 +275,9 @@ pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionC
 /// Extract content from multiple files concurrently.
 ///
 /// This function processes multiple files in parallel, automatically managing
-/// concurrency based on CPU count.
+/// concurrency to prevent resource exhaustion. The concurrency limit can be
+/// configured via `ExtractionConfig::max_concurrent_extractions` or defaults
+/// to `num_cpus * 2`.
 ///
 /// # Arguments
 ///
@@ -295,6 +297,7 @@ pub async fn batch_extract_file(
     config: &ExtractionConfig,
 ) -> Result<Vec<ExtractionResult>> {
     use std::sync::Arc;
+    use tokio::sync::Semaphore;
     use tokio::task::JoinSet;
 
     if paths.is_empty() {
@@ -304,15 +307,23 @@ pub async fn batch_extract_file(
     // Share config across tasks
     let config = Arc::new(config.clone());
 
+    // Create semaphore for concurrency limiting
+    let max_concurrent = config.max_concurrent_extractions.unwrap_or_else(|| num_cpus::get() * 2);
+    let semaphore = Arc::new(Semaphore::new(max_concurrent));
+
     // Create task set for concurrent execution
     let mut tasks = JoinSet::new();
 
     for (index, path) in paths.into_iter().enumerate() {
         let path_buf = path.as_ref().to_path_buf();
         let config_clone = Arc::clone(&config);
+        let semaphore_clone = Arc::clone(&semaphore);
 
         tasks.spawn(async move {
+            // Acquire semaphore permit (blocks if limit reached)
+            let _permit = semaphore_clone.acquire().await.unwrap();
             let result = extract_file(&path_buf, None, &config_clone).await;
+            // Permit released automatically when _permit drops
             (index, result)
         });
     }
@@ -367,6 +378,11 @@ pub async fn batch_extract_file(
 
 /// Extract content from multiple byte arrays concurrently.
 ///
+/// This function processes multiple byte arrays in parallel, automatically managing
+/// concurrency to prevent resource exhaustion. The concurrency limit can be
+/// configured via `ExtractionConfig::max_concurrent_extractions` or defaults
+/// to `num_cpus * 2`.
+///
 /// # Arguments
 ///
 /// * `contents` - Vector of (bytes, mime_type) tuples
@@ -380,6 +396,7 @@ pub async fn batch_extract_bytes(
     config: &ExtractionConfig,
 ) -> Result<Vec<ExtractionResult>> {
     use std::sync::Arc;
+    use tokio::sync::Semaphore;
     use tokio::task::JoinSet;
 
     if contents.is_empty() {
@@ -388,6 +405,10 @@ pub async fn batch_extract_bytes(
 
     // Share config across tasks
     let config = Arc::new(config.clone());
+
+    // Create semaphore for concurrency limiting
+    let max_concurrent = config.max_concurrent_extractions.unwrap_or_else(|| num_cpus::get() * 2);
+    let semaphore = Arc::new(Semaphore::new(max_concurrent));
 
     // Convert to owned data for tasks
     let owned_contents: Vec<(Vec<u8>, String)> = contents
@@ -400,9 +421,13 @@ pub async fn batch_extract_bytes(
 
     for (index, (bytes, mime_type)) in owned_contents.into_iter().enumerate() {
         let config_clone = Arc::clone(&config);
+        let semaphore_clone = Arc::clone(&semaphore);
 
         tasks.spawn(async move {
+            // Acquire semaphore permit (blocks if limit reached)
+            let _permit = semaphore_clone.acquire().await.unwrap();
             let result = extract_bytes(&bytes, &mime_type, &config_clone).await;
+            // Permit released automatically when _permit drops
             (index, result)
         });
     }

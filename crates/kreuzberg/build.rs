@@ -163,8 +163,6 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &PathBuf) {
 }
 
 fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
-    use std::fs;
-
     // Determine library file extension
     let lib_ext = if target.contains("darwin") {
         "dylib"
@@ -177,8 +175,12 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
     let lib_filename = format!("libpdfium.{}", lib_ext);
     let src_lib = pdfium_dir.join("lib").join(&lib_filename);
 
-    // Copy to Python package directory
-    // Path: crates/kreuzberg -> crates -> workspace_root -> packages/python/kreuzberg
+    if !src_lib.exists() {
+        eprintln!("Source library not found: {}", src_lib.display());
+        return;
+    }
+
+    // Path: crates/kreuzberg -> crates -> workspace_root
     let crate_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let workspace_root = crate_dir
         .parent()  // crates/kreuzberg -> crates
@@ -186,35 +188,42 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
         .parent()  // crates -> workspace_root
         .unwrap();
 
-    let dest_dir = workspace_root.join("packages").join("python").join("kreuzberg");
-
-    // Only copy if destination directory exists (we're in the monorepo)
-    if !dest_dir.exists() {
-        eprintln!("Python package directory not found, skipping library copy");
-        return;
+    // Copy to Python package directory
+    let python_dest_dir = workspace_root.join("packages").join("python").join("kreuzberg");
+    if python_dest_dir.exists() {
+        copy_lib_if_needed(&src_lib, &python_dest_dir.join(&lib_filename), "Python package");
+    } else {
+        eprintln!("Python package directory not found, skipping Python library copy");
     }
 
-    let dest_lib = dest_dir.join(&lib_filename);
-    if src_lib.exists() {
-        // Only copy if source is newer or dest doesn't exist
-        let should_copy = if dest_lib.exists() {
-            let src_metadata = fs::metadata(&src_lib).ok();
-            let dest_metadata = fs::metadata(&dest_lib).ok();
-            match (src_metadata, dest_metadata) {
-                (Some(src), Some(dest)) => src.modified().ok() > dest.modified().ok(),
-                _ => true,
-            }
-        } else {
-            true
-        };
+    // Copy to Node.js package directory (kreuzberg-node crate)
+    let node_dest_dir = workspace_root.join("crates").join("kreuzberg-node");
+    if node_dest_dir.exists() {
+        copy_lib_if_needed(&src_lib, &node_dest_dir.join(&lib_filename), "Node.js package");
+    } else {
+        eprintln!("Node.js package directory not found, skipping Node library copy");
+    }
+}
 
-        if should_copy {
-            match fs::copy(&src_lib, &dest_lib) {
-                Ok(_) => eprintln!("Copied {} to {}", src_lib.display(), dest_lib.display()),
-                Err(e) => eprintln!("Failed to copy library: {}", e),
-            }
+fn copy_lib_if_needed(src: &Path, dest: &Path, package_name: &str) {
+    use std::fs;
+
+    // Only copy if source is newer or dest doesn't exist
+    let should_copy = if dest.exists() {
+        let src_metadata = fs::metadata(src).ok();
+        let dest_metadata = fs::metadata(dest).ok();
+        match (src_metadata, dest_metadata) {
+            (Some(src), Some(dest)) => src.modified().ok() > dest.modified().ok(),
+            _ => true,
         }
     } else {
-        eprintln!("Source library not found: {}", src_lib.display());
+        true
+    };
+
+    if should_copy {
+        match fs::copy(src, dest) {
+            Ok(_) => eprintln!("Copied {} to {} ({})", src.display(), dest.display(), package_name),
+            Err(e) => eprintln!("Failed to copy library to {}: {}", package_name, e),
+        }
     }
 }

@@ -259,7 +259,7 @@ async fn test_batch_extract_concurrent() {
 
     // Verify actual content from at least first result (all should be identical)
     assert!(
-        results[0].content.len() > 0,
+        !results[0].content.is_empty(),
         "Should have extracted actual text content"
     );
 

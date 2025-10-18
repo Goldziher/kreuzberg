@@ -41,10 +41,10 @@ class PaddleOCRBackend:
     Args:
         lang: Language code (default: "en").
         use_gpu: Whether to force GPU usage. If ``None``, CUDA availability is auto-detected.
-        use_angle_cls: Whether to enable angle classification for rotated text.
-        show_log: Whether to emit PaddleOCR logs.
+        use_textline_orientation: Whether to enable orientation classification for rotated text.
 
     Raises:
+        ImportError: If the paddleocr package is not installed.
         ValidationError: If an unsupported language code is provided.
 
     Note:
@@ -58,7 +58,7 @@ class PaddleOCRBackend:
         >>> from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
         >>> # Register backend with custom options via extraction API
         >>> config = ExtractionConfig(ocr=OcrConfig(backend="paddleocr", language="ch"))
-        >>> result = extract_file_sync("scanned.pdf", config=config, paddleocr_kwargs={"use_gpu": True, "use_angle_cls": True})
+        >>> result = extract_file_sync("scanned.pdf", config=config, paddleocr_kwargs={"use_gpu": True})
 
     """
 
@@ -67,8 +67,7 @@ class PaddleOCRBackend:
         *,
         lang: str = "en",
         use_gpu: bool | None = None,
-        use_angle_cls: bool = True,
-        show_log: bool = False,
+        use_textline_orientation: bool = True,
     ) -> None:
         # Validate language
         if lang not in SUPPORTED_LANGUAGES:
@@ -92,14 +91,13 @@ class PaddleOCRBackend:
         self._paddleocr_cls = PaddleOCRClass
 
         self.lang = lang
-        self.use_angle_cls = use_angle_cls
-        self.show_log = show_log
+        self.use_textline_orientation = use_textline_orientation
 
-        # Determine GPU usage
+        # Determine device (PaddleOCR v3+ uses 'device' instead of 'use_gpu')
         if use_gpu is None:
-            self.use_gpu = self._is_cuda_available()
+            self.device = "gpu" if self._is_cuda_available() else "cpu"
         else:
-            self.use_gpu = use_gpu
+            self.device = "gpu" if use_gpu else "cpu"
 
         # OCR instance (lazy loaded)
         self._ocr: Any | None = None
@@ -119,16 +117,15 @@ class PaddleOCRBackend:
 
         try:
             logger.info(
-                "Initializing PaddleOCR with lang=%s, GPU=%s",
+                "Initializing PaddleOCR with lang=%s, device=%s",
                 self.lang,
-                self.use_gpu,
+                self.device,
             )
 
             self._ocr = self._paddleocr_cls(
                 lang=self.lang,
-                use_gpu=self.use_gpu,
-                use_angle_cls=self.use_angle_cls,
-                show_log=self.show_log,
+                device=self.device,
+                use_textline_orientation=self.use_textline_orientation,
             )
 
             logger.info("PaddleOCR initialized successfully")
@@ -196,8 +193,8 @@ class PaddleOCRBackend:
             # Convert to numpy array for PaddleOCR
             image_array = np.array(image)
 
-            # Perform OCR
-            result = self._ocr.ocr(image_array, cls=self.use_angle_cls)
+            # Perform OCR (use predict for PaddleOCR v3+)
+            result = self._ocr.predict(image_array)
 
             # Process results
             content, confidence, text_regions = self._process_paddleocr_result(result)
@@ -246,8 +243,8 @@ class PaddleOCRBackend:
             image = Image.open(path)
             width, height = image.size
 
-            # Perform OCR directly on file
-            result = self._ocr.ocr(path, cls=self.use_angle_cls)
+            # Perform OCR directly on file (use predict for PaddleOCR v3+)
+            result = self._ocr.predict(path)
 
             # Process results
             content, confidence, text_regions = self._process_paddleocr_result(result)
@@ -268,15 +265,6 @@ class PaddleOCRBackend:
 
     @staticmethod
     def _process_paddleocr_result(result: list[Any] | None) -> tuple[str, float, int]:
-        """Process PaddleOCR result and extract text content.
-
-        Args:
-            result: PaddleOCR result list
-
-        Returns:
-            Tuple of (content, average_confidence, text_region_count)
-
-        """
         if not result or result[0] is None:
             return "", 0.0, 0
 
@@ -304,7 +292,6 @@ class PaddleOCRBackend:
 
     @staticmethod
     def _is_cuda_available() -> bool:
-        """Check if CUDA is available for GPU acceleration."""
         try:
             import paddle  # noqa: PLC0415
 

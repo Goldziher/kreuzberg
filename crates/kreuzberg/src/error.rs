@@ -55,6 +55,9 @@ pub enum KreuzbergError {
     #[error("Plugin error in '{plugin_name}': {message}")]
     Plugin { message: String, plugin_name: String },
 
+    #[error("Lock poisoned: {0}")]
+    LockPoisoned(String),
+
     #[error("Unsupported format: {0}")]
     UnsupportedFormat(String),
 
@@ -175,6 +178,17 @@ impl KreuzbergError {
         }
     }
 
+    /// Create a Cache error with a source
+    pub fn cache_with_source<S: Into<String>, E: std::error::Error + Send + Sync + 'static>(
+        message: S,
+        source: E,
+    ) -> Self {
+        Self::Cache {
+            message: message.into(),
+            source: Some(Box::new(source)),
+        }
+    }
+
     /// Create an ImageProcessing error without a source
     pub fn image_processing<S: Into<String>>(message: S) -> Self {
         Self::ImageProcessing {
@@ -183,11 +197,33 @@ impl KreuzbergError {
         }
     }
 
+    /// Create an ImageProcessing error with a source
+    pub fn image_processing_with_source<S: Into<String>, E: std::error::Error + Send + Sync + 'static>(
+        message: S,
+        source: E,
+    ) -> Self {
+        Self::ImageProcessing {
+            message: message.into(),
+            source: Some(Box::new(source)),
+        }
+    }
+
     /// Create a Serialization error without a source
     pub fn serialization<S: Into<String>>(message: S) -> Self {
         Self::Serialization {
             message: message.into(),
             source: None,
+        }
+    }
+
+    /// Create a Serialization error with a source
+    pub fn serialization_with_source<S: Into<String>, E: std::error::Error + Send + Sync + 'static>(
+        message: S,
+        source: E,
+    ) -> Self {
+        Self::Serialization {
+            message: message.into(),
+            source: Some(Box::new(source)),
         }
     }
 }
@@ -253,15 +289,39 @@ mod tests {
     }
 
     #[test]
+    fn test_cache_error_with_source() {
+        let source = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "cannot write");
+        let err = KreuzbergError::cache_with_source("cache write failed", source);
+        assert_eq!(err.to_string(), "Cache error: cache write failed");
+        assert!(std::error::Error::source(&err).is_some());
+    }
+
+    #[test]
     fn test_image_processing_error() {
         let err = KreuzbergError::image_processing("resize failed");
         assert_eq!(err.to_string(), "Image processing error: resize failed");
     }
 
     #[test]
+    fn test_image_processing_error_with_source() {
+        let source = std::io::Error::other("image decode failed");
+        let err = KreuzbergError::image_processing_with_source("resize failed", source);
+        assert_eq!(err.to_string(), "Image processing error: resize failed");
+        assert!(std::error::Error::source(&err).is_some());
+    }
+
+    #[test]
     fn test_serialization_error() {
         let err = KreuzbergError::serialization("JSON parse error");
         assert_eq!(err.to_string(), "Serialization error: JSON parse error");
+    }
+
+    #[test]
+    fn test_serialization_error_with_source() {
+        let source = std::io::Error::new(std::io::ErrorKind::InvalidData, "bad format");
+        let err = KreuzbergError::serialization_with_source("JSON parse error", source);
+        assert_eq!(err.to_string(), "Serialization error: JSON parse error");
+        assert!(std::error::Error::source(&err).is_some());
     }
 
     #[test]
@@ -344,5 +404,11 @@ mod tests {
         let err = KreuzbergError::validation("test");
         let debug_str = format!("{:?}", err);
         assert!(debug_str.contains("Validation"));
+    }
+
+    #[test]
+    fn test_lock_poisoned_error() {
+        let err = KreuzbergError::LockPoisoned("Registry lock poisoned".to_string());
+        assert_eq!(err.to_string(), "Lock poisoned: Registry lock poisoned");
     }
 }

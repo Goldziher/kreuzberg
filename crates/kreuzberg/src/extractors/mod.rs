@@ -184,7 +184,8 @@ mod tests {
         let extractor_names = reg.list();
 
         // Core extractors (always present)
-        let expected_count = 3; // PlainText, Markdown, Structured
+        #[allow(unused_mut)] // May be unused if no optional features are enabled
+        let mut expected_count = 3; // PlainText, Markdown, Structured
         assert!(extractor_names.contains(&"plain-text-extractor".to_string()));
         assert!(extractor_names.contains(&"markdown-extractor".to_string()));
         assert!(extractor_names.contains(&"structured-extractor".to_string()));

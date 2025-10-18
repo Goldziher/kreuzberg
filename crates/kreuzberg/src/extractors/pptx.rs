@@ -48,10 +48,10 @@ impl DocumentExtractor for PptxExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        _config: &ExtractionConfig,
+        config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         // Extract images based on config
-        let extract_images = false; // TODO: Get from config when images field is added
+        let extract_images = config.images.as_ref().is_some_and(|img| img.extract_images);
 
         let pptx_result = crate::extraction::pptx::extract_pptx_from_bytes(content, extract_images)?;
 
@@ -75,12 +75,12 @@ impl DocumentExtractor for PptxExtractor {
         })
     }
 
-    async fn extract_file(&self, path: &Path, mime_type: &str, _config: &ExtractionConfig) -> Result<ExtractionResult> {
+    async fn extract_file(&self, path: &Path, mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
         let path_str = path
             .to_str()
             .ok_or_else(|| crate::KreuzbergError::validation("Invalid file path".to_string()))?;
 
-        let extract_images = false; // TODO: Get from config
+        let extract_images = config.images.as_ref().is_some_and(|img| img.extract_images);
 
         let pptx_result = crate::extraction::pptx::extract_pptx_from_path(path_str, extract_images)?;
 

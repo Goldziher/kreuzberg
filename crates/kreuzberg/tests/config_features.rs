@@ -117,7 +117,7 @@ async fn test_chunking_custom_sizes() {
     // Verify custom chunking settings applied
     assert!(result.chunks.is_some(), "Chunks should be present");
     let chunks = result.chunks.unwrap();
-    assert!(chunks.len() >= 1, "Should have at least 1 chunk");
+    assert!(!chunks.is_empty(), "Should have at least 1 chunk");
 
     // Verify chunk_count metadata
     assert!(result.metadata.additional.contains_key("chunk_count"));
@@ -453,7 +453,7 @@ async fn test_quality_processing_enabled() {
     // Verify quality score is present
     if let Some(score) = result.metadata.additional.get("quality_score") {
         let score_value = score.as_f64().unwrap();
-        assert!(score_value >= 0.0 && score_value <= 1.0);
+        assert!((0.0..=1.0).contains(&score_value));
     }
 
     assert!(!result.content.is_empty());
@@ -505,8 +505,8 @@ async fn test_quality_threshold_filtering() {
         .unwrap();
 
     // Verify scores are in valid range
-    assert!(score_high >= 0.0 && score_high <= 1.0);
-    assert!(score_low >= 0.0 && score_low <= 1.0);
+    assert!((0.0..=1.0).contains(&score_high));
+    assert!((0.0..=1.0).contains(&score_low));
 
     // High quality should generally score higher than low quality (though not always guaranteed for short text)
     // The important thing is that quality processing is working

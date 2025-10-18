@@ -123,6 +123,39 @@ impl TesseractConfig {
     }
 }
 
+/// Convert from public API TesseractConfig to internal OCR TesseractConfig.
+///
+/// This conversion handles type differences (i32 → u8/u32) and clones
+/// necessary fields. The public API uses i32 for PyO3 compatibility,
+/// while the internal representation uses more efficient types.
+impl From<&crate::types::TesseractConfig> for TesseractConfig {
+    fn from(config: &crate::types::TesseractConfig) -> Self {
+        Self {
+            psm: config.psm as u8,
+            language: config.language.clone(),
+            output_format: config.output_format.clone(),
+            oem: config.oem as u8,
+            min_confidence: config.min_confidence,
+            preprocessing: config.preprocessing.clone(),
+            enable_table_detection: config.enable_table_detection,
+            table_min_confidence: config.table_min_confidence,
+            table_column_threshold: config.table_column_threshold as u32,
+            table_row_threshold_ratio: config.table_row_threshold_ratio,
+            use_cache: config.use_cache,
+            classify_use_pre_adapted_templates: config.classify_use_pre_adapted_templates,
+            language_model_ngram_on: config.language_model_ngram_on,
+            tessedit_dont_blkrej_good_wds: config.tessedit_dont_blkrej_good_wds,
+            tessedit_dont_rowrej_good_wds: config.tessedit_dont_rowrej_good_wds,
+            tessedit_enable_dict_correction: config.tessedit_enable_dict_correction,
+            tessedit_char_whitelist: config.tessedit_char_whitelist.clone(),
+            tessedit_char_blacklist: config.tessedit_char_blacklist.clone(),
+            tessedit_use_primary_params_model: config.tessedit_use_primary_params_model,
+            textord_space_size_is_variable: config.textord_space_size_is_variable,
+            thresholding_method: config.thresholding_method,
+        }
+    }
+}
+
 /// OCR extraction result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtractionResult {
@@ -312,5 +345,57 @@ mod tests {
         assert!(!batch_result.success);
         assert!(batch_result.result.is_none());
         assert_eq!(batch_result.error.as_ref().unwrap(), "File not found");
+    }
+
+    #[test]
+    fn test_tesseract_config_from_public_api() {
+        let public_config = crate::types::TesseractConfig {
+            language: "deu".to_string(),
+            psm: 6, // i32 in public API
+            output_format: "text".to_string(),
+            oem: 1, // i32 in public API
+            min_confidence: 70.0,
+            preprocessing: Some(crate::types::ImagePreprocessingConfig::default()),
+            enable_table_detection: false,
+            table_min_confidence: 50.0,
+            table_column_threshold: 100, // i32 in public API
+            table_row_threshold_ratio: 0.8,
+            use_cache: false,
+            classify_use_pre_adapted_templates: false,
+            language_model_ngram_on: true,
+            tessedit_dont_blkrej_good_wds: false,
+            tessedit_dont_rowrej_good_wds: false,
+            tessedit_enable_dict_correction: false,
+            tessedit_char_whitelist: "0123456789".to_string(),
+            tessedit_char_blacklist: "!@#$".to_string(),
+            tessedit_use_primary_params_model: false,
+            textord_space_size_is_variable: false,
+            thresholding_method: true,
+        };
+
+        let internal_config: TesseractConfig = (&public_config).into();
+
+        // Verify all fields converted correctly
+        assert_eq!(internal_config.language, "deu");
+        assert_eq!(internal_config.psm, 6); // Converted to u8
+        assert_eq!(internal_config.output_format, "text");
+        assert_eq!(internal_config.oem, 1); // Converted to u8
+        assert_eq!(internal_config.min_confidence, 70.0);
+        assert!(internal_config.preprocessing.is_some());
+        assert!(!internal_config.enable_table_detection);
+        assert_eq!(internal_config.table_min_confidence, 50.0);
+        assert_eq!(internal_config.table_column_threshold, 100); // Converted to u32
+        assert_eq!(internal_config.table_row_threshold_ratio, 0.8);
+        assert!(!internal_config.use_cache);
+        assert!(!internal_config.classify_use_pre_adapted_templates);
+        assert!(internal_config.language_model_ngram_on);
+        assert!(!internal_config.tessedit_dont_blkrej_good_wds);
+        assert!(!internal_config.tessedit_dont_rowrej_good_wds);
+        assert!(!internal_config.tessedit_enable_dict_correction);
+        assert_eq!(internal_config.tessedit_char_whitelist, "0123456789");
+        assert_eq!(internal_config.tessedit_char_blacklist, "!@#$");
+        assert!(!internal_config.tessedit_use_primary_params_model);
+        assert!(!internal_config.textord_space_size_is_variable);
+        assert!(internal_config.thresholding_method);
     }
 }

@@ -3,12 +3,85 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extraction::archive::{
-    extract_7z_metadata, extract_7z_text_content, extract_tar_metadata, extract_tar_text_content, extract_zip_metadata,
-    extract_zip_text_content,
+    ArchiveMetadata as ExtractedMetadata, extract_7z_metadata, extract_7z_text_content, extract_tar_metadata,
+    extract_tar_text_content, extract_zip_metadata, extract_zip_text_content,
 };
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{ArchiveMetadata, ExtractionResult, Metadata};
 use async_trait::async_trait;
+use std::collections::HashMap;
+
+/// Build an ExtractionResult from archive metadata and text contents.
+///
+/// This helper function eliminates duplication across ZIP/TAR/7Z extractors by centralizing
+/// the logic for transforming extracted metadata into the final result structure.
+fn build_archive_result(
+    extraction_metadata: ExtractedMetadata,
+    text_contents: HashMap<String, String>,
+    format_name: &str,
+    mime_type: &str,
+) -> ExtractionResult {
+    // Build typed metadata
+    let file_names: Vec<String> = extraction_metadata
+        .file_list
+        .iter()
+        .map(|entry| entry.path.clone())
+        .collect();
+
+    let archive_metadata = ArchiveMetadata {
+        format: format_name.to_string(),
+        file_count: extraction_metadata.file_count,
+        file_list: file_names,
+        total_size: extraction_metadata.total_size as usize,
+        compressed_size: None,
+    };
+
+    // Put detailed file info in additional metadata
+    let mut additional = std::collections::HashMap::new();
+    let file_details: Vec<serde_json::Value> = extraction_metadata
+        .file_list
+        .iter()
+        .map(|entry| {
+            serde_json::json!({
+                "path": entry.path,
+                "size": entry.size,
+                "is_dir": entry.is_dir,
+            })
+        })
+        .collect();
+    additional.insert("files".to_string(), serde_json::json!(file_details));
+
+    // Build text output
+    let mut output = format!(
+        "{} Archive ({} files, {} bytes)\n\n",
+        format_name, extraction_metadata.file_count, extraction_metadata.total_size
+    );
+    output.push_str("Files:\n");
+    for entry in &extraction_metadata.file_list {
+        output.push_str(&format!("- {} ({} bytes)\n", entry.path, entry.size));
+    }
+
+    if !text_contents.is_empty() {
+        output.push_str("\n\nText File Contents:\n\n");
+        for (path, content) in text_contents {
+            output.push_str(&format!("=== {} ===\n{}\n\n", path, content));
+        }
+    }
+
+    ExtractionResult {
+        content: output,
+        mime_type: mime_type.to_string(),
+        metadata: Metadata {
+            archive: Some(archive_metadata),
+            format: Some(format_name.to_string()),
+            additional,
+            ..Default::default()
+        },
+        tables: vec![],
+        detected_languages: None,
+        chunks: None,
+    }
+}
 
 /// ZIP archive extractor.
 ///
@@ -34,7 +107,7 @@ impl Plugin for ZipExtractor {
     }
 
     fn version(&self) -> String {
-        "1.0.0".to_string()
+        env!("CARGO_PKG_VERSION").to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -64,67 +137,12 @@ impl DocumentExtractor for ZipExtractor {
     ) -> Result<ExtractionResult> {
         let extraction_metadata = extract_zip_metadata(content)?;
         let text_contents = extract_zip_text_content(content)?;
-
-        // Build typed metadata
-        let file_names: Vec<String> = extraction_metadata
-            .file_list
-            .iter()
-            .map(|entry| entry.path.clone())
-            .collect();
-
-        let archive_metadata = ArchiveMetadata {
-            format: "ZIP".to_string(),
-            file_count: extraction_metadata.file_count,
-            file_list: file_names,
-            total_size: extraction_metadata.total_size as usize,
-            compressed_size: None,
-        };
-
-        // Put detailed file info in additional metadata
-        let mut additional = std::collections::HashMap::new();
-        let file_details: Vec<serde_json::Value> = extraction_metadata
-            .file_list
-            .iter()
-            .map(|entry| {
-                serde_json::json!({
-                    "path": entry.path,
-                    "size": entry.size,
-                    "is_dir": entry.is_dir,
-                })
-            })
-            .collect();
-        additional.insert("files".to_string(), serde_json::json!(file_details));
-
-        // Build text output
-        let mut output = format!(
-            "ZIP Archive ({} files, {} bytes)\n\n",
-            extraction_metadata.file_count, extraction_metadata.total_size
-        );
-        output.push_str("Files:\n");
-        for entry in &extraction_metadata.file_list {
-            output.push_str(&format!("- {} ({} bytes)\n", entry.path, entry.size));
-        }
-
-        if !text_contents.is_empty() {
-            output.push_str("\n\nText File Contents:\n\n");
-            for (path, content) in text_contents {
-                output.push_str(&format!("=== {} ===\n{}\n\n", path, content));
-            }
-        }
-
-        Ok(ExtractionResult {
-            content: output,
-            mime_type: mime_type.to_string(),
-            metadata: Metadata {
-                archive: Some(archive_metadata),
-                format: Some("ZIP".to_string()),
-                additional,
-                ..Default::default()
-            },
-            tables: vec![],
-            detected_languages: None,
-            chunks: None,
-        })
+        Ok(build_archive_result(
+            extraction_metadata,
+            text_contents,
+            "ZIP",
+            mime_type,
+        ))
     }
 
     fn supported_mime_types(&self) -> &[&str] {
@@ -160,7 +178,7 @@ impl Plugin for TarExtractor {
     }
 
     fn version(&self) -> String {
-        "1.0.0".to_string()
+        env!("CARGO_PKG_VERSION").to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -190,67 +208,12 @@ impl DocumentExtractor for TarExtractor {
     ) -> Result<ExtractionResult> {
         let extraction_metadata = extract_tar_metadata(content)?;
         let text_contents = extract_tar_text_content(content)?;
-
-        // Build typed metadata
-        let file_names: Vec<String> = extraction_metadata
-            .file_list
-            .iter()
-            .map(|entry| entry.path.clone())
-            .collect();
-
-        let archive_metadata = ArchiveMetadata {
-            format: "TAR".to_string(),
-            file_count: extraction_metadata.file_count,
-            file_list: file_names,
-            total_size: extraction_metadata.total_size as usize,
-            compressed_size: None,
-        };
-
-        // Put detailed file info in additional metadata
-        let mut additional = std::collections::HashMap::new();
-        let file_details: Vec<serde_json::Value> = extraction_metadata
-            .file_list
-            .iter()
-            .map(|entry| {
-                serde_json::json!({
-                    "path": entry.path,
-                    "size": entry.size,
-                    "is_dir": entry.is_dir,
-                })
-            })
-            .collect();
-        additional.insert("files".to_string(), serde_json::json!(file_details));
-
-        // Build text output
-        let mut output = format!(
-            "TAR Archive ({} files, {} bytes)\n\n",
-            extraction_metadata.file_count, extraction_metadata.total_size
-        );
-        output.push_str("Files:\n");
-        for entry in &extraction_metadata.file_list {
-            output.push_str(&format!("- {} ({} bytes)\n", entry.path, entry.size));
-        }
-
-        if !text_contents.is_empty() {
-            output.push_str("\n\nText File Contents:\n\n");
-            for (path, content) in text_contents {
-                output.push_str(&format!("=== {} ===\n{}\n\n", path, content));
-            }
-        }
-
-        Ok(ExtractionResult {
-            content: output,
-            mime_type: mime_type.to_string(),
-            metadata: Metadata {
-                archive: Some(archive_metadata),
-                format: Some("TAR".to_string()),
-                additional,
-                ..Default::default()
-            },
-            tables: vec![],
-            detected_languages: None,
-            chunks: None,
-        })
+        Ok(build_archive_result(
+            extraction_metadata,
+            text_contents,
+            "TAR",
+            mime_type,
+        ))
     }
 
     fn supported_mime_types(&self) -> &[&str] {
@@ -291,7 +254,7 @@ impl Plugin for SevenZExtractor {
     }
 
     fn version(&self) -> String {
-        "1.0.0".to_string()
+        env!("CARGO_PKG_VERSION").to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -321,67 +284,12 @@ impl DocumentExtractor for SevenZExtractor {
     ) -> Result<ExtractionResult> {
         let extraction_metadata = extract_7z_metadata(content)?;
         let text_contents = extract_7z_text_content(content)?;
-
-        // Build typed metadata
-        let file_names: Vec<String> = extraction_metadata
-            .file_list
-            .iter()
-            .map(|entry| entry.path.clone())
-            .collect();
-
-        let archive_metadata = ArchiveMetadata {
-            format: "7Z".to_string(),
-            file_count: extraction_metadata.file_count,
-            file_list: file_names,
-            total_size: extraction_metadata.total_size as usize,
-            compressed_size: None,
-        };
-
-        // Put detailed file info in additional metadata
-        let mut additional = std::collections::HashMap::new();
-        let file_details: Vec<serde_json::Value> = extraction_metadata
-            .file_list
-            .iter()
-            .map(|entry| {
-                serde_json::json!({
-                    "path": entry.path,
-                    "size": entry.size,
-                    "is_dir": entry.is_dir,
-                })
-            })
-            .collect();
-        additional.insert("files".to_string(), serde_json::json!(file_details));
-
-        // Build text output
-        let mut output = format!(
-            "7Z Archive ({} files, {} bytes)\n\n",
-            extraction_metadata.file_count, extraction_metadata.total_size
-        );
-        output.push_str("Files:\n");
-        for entry in &extraction_metadata.file_list {
-            output.push_str(&format!("- {} ({} bytes)\n", entry.path, entry.size));
-        }
-
-        if !text_contents.is_empty() {
-            output.push_str("\n\nText File Contents:\n\n");
-            for (path, content) in text_contents {
-                output.push_str(&format!("=== {} ===\n{}\n\n", path, content));
-            }
-        }
-
-        Ok(ExtractionResult {
-            content: output,
-            mime_type: mime_type.to_string(),
-            metadata: Metadata {
-                archive: Some(archive_metadata),
-                format: Some("7Z".to_string()),
-                additional,
-                ..Default::default()
-            },
-            tables: vec![],
-            detected_languages: None,
-            chunks: None,
-        })
+        Ok(build_archive_result(
+            extraction_metadata,
+            text_contents,
+            "7Z",
+            mime_type,
+        ))
     }
 
     fn supported_mime_types(&self) -> &[&str] {
@@ -499,7 +407,7 @@ mod tests {
     fn test_zip_plugin_interface() {
         let extractor = ZipExtractor::new();
         assert_eq!(extractor.name(), "zip-extractor");
-        assert_eq!(extractor.version(), "1.0.0");
+        assert_eq!(extractor.version(), env!("CARGO_PKG_VERSION"));
         assert!(extractor.supported_mime_types().contains(&"application/zip"));
         assert_eq!(extractor.priority(), 50);
     }
@@ -508,7 +416,7 @@ mod tests {
     fn test_tar_plugin_interface() {
         let extractor = TarExtractor::new();
         assert_eq!(extractor.name(), "tar-extractor");
-        assert_eq!(extractor.version(), "1.0.0");
+        assert_eq!(extractor.version(), env!("CARGO_PKG_VERSION"));
         assert!(extractor.supported_mime_types().contains(&"application/x-tar"));
         assert!(extractor.supported_mime_types().contains(&"application/tar"));
         assert_eq!(extractor.priority(), 50);

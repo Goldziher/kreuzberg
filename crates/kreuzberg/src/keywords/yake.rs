@@ -39,7 +39,13 @@ pub fn extract_keywords_yake(text: &str, config: &KeywordConfig) -> Result<Vec<K
 
     // Get stopwords for language filtering
     let stopwords = if let Some(ref lang) = config.language {
-        StopWords::predefined(lang).unwrap_or_else(StopWords::default)
+        StopWords::predefined(lang).unwrap_or_else(|| {
+            eprintln!(
+                "WARNING: Stopwords not available for language '{}', using default English stopwords",
+                lang
+            );
+            StopWords::default()
+        })
     } else {
         StopWords::default()
     };
@@ -162,11 +168,7 @@ mod tests {
     fn test_yake_extraction_with_custom_params() {
         let text = "Natural language processing enables computers to understand human language.";
 
-        let params = YakeParams {
-            window_size: 3,
-            deduplicate: true,
-            dedup_threshold: 0.8,
-        };
+        let params = YakeParams { window_size: 3 };
 
         let config = KeywordConfig::yake().with_yake_params(params);
 

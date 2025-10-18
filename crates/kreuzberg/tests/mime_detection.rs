@@ -19,6 +19,8 @@ mod helpers;
 /// This is the primary MIME detection method (extension-first approach).
 #[tokio::test]
 async fn test_mime_detection_by_extension() {
+    use tempfile::TempDir;
+
     // Test common file extensions across all supported formats
     // Each (filename, expected_mime) pair verifies correct MIME mapping
     let test_cases = vec![
@@ -49,31 +51,26 @@ async fn test_mime_detection_by_extension() {
     ];
 
     for (filename, expected_mime) in test_cases {
-        // Create temp file
-        let mut temp_file = NamedTempFile::new().expect("Should create temp file");
-        let temp_path = temp_file.path().parent().unwrap().join(filename);
+        // Use unique temp directory per iteration to avoid collisions on case-insensitive filesystems
+        let temp_dir = TempDir::new().expect("Should create temp dir");
+        let temp_path = temp_dir.path().join(filename);
 
         // Write some content (doesn't matter what for extension-based detection)
-        temp_file.write_all(b"test content").unwrap();
-        temp_file.flush().unwrap();
-
-        // Rename to target filename
-        std::fs::copy(temp_file.path(), &temp_path).unwrap();
+        std::fs::write(&temp_path, b"test content").unwrap();
 
         // Detect MIME type
         let detected = detect_mime_type(&temp_path, true);
 
         assert!(detected.is_ok(), "Should detect MIME type for {}", filename);
         assert_eq!(detected.unwrap(), expected_mime, "MIME type mismatch for {}", filename);
-
-        // Cleanup
-        let _ = std::fs::remove_file(&temp_path);
     }
 }
 
 /// Test case-insensitive extension detection.
 #[tokio::test]
 async fn test_mime_detection_case_insensitive() {
+    use tempfile::TempDir;
+
     let test_cases = vec![
         ("test.PDF", "application/pdf"),
         (
@@ -85,18 +82,15 @@ async fn test_mime_detection_case_insensitive() {
     ];
 
     for (filename, expected_mime) in test_cases {
-        let mut temp_file = NamedTempFile::new().expect("Should create temp file");
-        let temp_path = temp_file.path().parent().unwrap().join(filename);
+        // Use unique temp directory per iteration to avoid collisions on case-insensitive filesystems
+        let temp_dir = TempDir::new().expect("Should create temp dir");
+        let temp_path = temp_dir.path().join(filename);
 
-        temp_file.write_all(b"test").unwrap();
-        temp_file.flush().unwrap();
-        std::fs::copy(temp_file.path(), &temp_path).unwrap();
+        std::fs::write(&temp_path, b"test").unwrap();
 
         let detected = detect_mime_type(&temp_path, true);
         assert!(detected.is_ok(), "Should handle {} (case insensitive)", filename);
         assert_eq!(detected.unwrap(), expected_mime);
-
-        let _ = std::fs::remove_file(&temp_path);
     }
 }
 

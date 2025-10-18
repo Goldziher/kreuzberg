@@ -117,6 +117,9 @@ static EXT_TO_MIME: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     m.insert("bib", "application/x-bibtex");
     m.insert("ipynb", "application/x-ipynb+json");
     m.insert("tex", "application/x-latex");
+    m.insert("latex", "application/x-latex");
+    m.insert("typst", "application/x-typst");
+    m.insert("commonmark", "text/x-commonmark");
 
     m
 });

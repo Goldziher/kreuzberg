@@ -46,8 +46,8 @@ pub fn extract_keywords_rake(text: &str, config: &KeywordConfig) -> Result<Vec<K
     // Extract keywords
     let results = rake.run(text);
 
-    // Convert to our Keyword type and apply filters
-    let mut keywords = results
+    // First pass: collect filtered results with raw scores
+    let filtered_results: Vec<_> = results
         .into_iter()
         .filter_map(|keyword_score| {
             let keyword = keyword_score.keyword.clone();
@@ -68,13 +68,32 @@ pub fn extract_keywords_rake(text: &str, config: &KeywordConfig) -> Result<Vec<K
                 return None;
             }
 
-            // Normalize score (RAKE scores are typically in range 1-20+)
-            // We normalize to 0.0-1.0 range for consistency
-            let normalized_score = (keyword_score.score / 20.0).clamp(0.0, 1.0);
-
-            Some(Keyword::new(keyword, normalized_score as f32, KeywordAlgorithm::Rake))
+            Some((keyword, keyword_score.score))
         })
-        .collect::<Vec<_>>();
+        .collect();
+
+    // Find min and max scores for normalization
+    let min_score = filtered_results.iter().map(|(_, s)| *s).fold(f64::INFINITY, f64::min);
+    let max_score = filtered_results
+        .iter()
+        .map(|(_, s)| *s)
+        .fold(f64::NEG_INFINITY, f64::max);
+
+    // Normalize scores using min-max scaling to 0.0-1.0 range
+    let mut keywords: Vec<_> = filtered_results
+        .into_iter()
+        .map(|(keyword, raw_score)| {
+            let normalized_score = if max_score > min_score {
+                // Min-max normalization: (score - min) / (max - min)
+                ((raw_score - min_score) / (max_score - min_score)).clamp(0.0, 1.0)
+            } else {
+                // All scores are the same, assign 1.0
+                1.0
+            };
+
+            Keyword::new(keyword, normalized_score as f32, KeywordAlgorithm::Rake)
+        })
+        .collect();
 
     // Filter by minimum score
     if config.min_score > 0.0 {
@@ -222,5 +241,45 @@ mod tests {
             !keywords.is_empty(),
             "Should fall back to English stopwords and extract keywords"
         );
+    }
+
+    #[test]
+    fn test_rake_score_normalization() {
+        let text = "Rust is a systems programming language that provides memory safety and \
+                    thread safety without garbage collection. Rust uses a ownership system \
+                    with rules that the compiler checks at compile time.";
+
+        let config = KeywordConfig::rake();
+        let keywords = extract_keywords_rake(text, &config).unwrap();
+
+        assert!(!keywords.is_empty(), "Should extract keywords");
+
+        // Verify all scores are in 0.0-1.0 range
+        for keyword in &keywords {
+            assert!(
+                keyword.score >= 0.0 && keyword.score <= 1.0,
+                "Keyword '{}' score {} should be in range [0.0, 1.0]",
+                keyword.text,
+                keyword.score
+            );
+        }
+
+        // Verify highest score is 1.0 (due to min-max normalization)
+        if !keywords.is_empty() {
+            let max_score = keywords.iter().map(|k| k.score).fold(0.0f32, f32::max);
+            assert!(
+                (max_score - 1.0).abs() < 0.001,
+                "Max score should be 1.0, got {}",
+                max_score
+            );
+        }
+
+        // Verify scores are sorted (highest first)
+        for i in 1..keywords.len() {
+            assert!(
+                keywords[i - 1].score >= keywords[i].score,
+                "Keywords should be sorted by score"
+            );
+        }
     }
 }

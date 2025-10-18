@@ -281,6 +281,7 @@ mod tests {
             metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
         let config = ExtractionConfig {
             chunking: Some(crate::ChunkingConfig {

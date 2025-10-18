@@ -31,7 +31,7 @@ impl Plugin for PlainTextExtractor {
     }
 
     fn version(&self) -> String {
-        "1.0.0".to_string()
+        env!("CARGO_PKG_VERSION").to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -56,14 +56,14 @@ impl DocumentExtractor for PlainTextExtractor {
     async fn extract_bytes(
         &self,
         content: &[u8],
-        _mime_type: &str,
+        mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let text_result = parse_text(content, false)?;
 
         Ok(ExtractionResult {
             content: text_result.content,
-            mime_type: "text/plain".to_string(),
+            mime_type: mime_type.to_string(),
             metadata: crate::types::Metadata {
                 text: Some(crate::types::TextMetadata {
                     line_count: text_result.line_count,
@@ -115,7 +115,7 @@ impl Plugin for MarkdownExtractor {
     }
 
     fn version(&self) -> String {
-        "1.0.0".to_string()
+        env!("CARGO_PKG_VERSION").to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -140,14 +140,14 @@ impl DocumentExtractor for MarkdownExtractor {
     async fn extract_bytes(
         &self,
         content: &[u8],
-        _mime_type: &str,
+        mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let text_result = parse_text(content, true)?;
 
         Ok(ExtractionResult {
             content: text_result.content,
-            mime_type: "text/markdown".to_string(),
+            mime_type: mime_type.to_string(),
             metadata: crate::types::Metadata {
                 text: Some(crate::types::TextMetadata {
                     line_count: text_result.line_count,
@@ -218,7 +218,7 @@ mod tests {
     fn test_plain_text_plugin_interface() {
         let extractor = PlainTextExtractor::new();
         assert_eq!(extractor.name(), "plain-text-extractor");
-        assert_eq!(extractor.version(), "1.0.0");
+        assert_eq!(extractor.version(), env!("CARGO_PKG_VERSION"));
         assert_eq!(extractor.supported_mime_types(), &["text/plain"]);
         assert_eq!(extractor.priority(), 50);
     }
@@ -227,7 +227,7 @@ mod tests {
     fn test_markdown_plugin_interface() {
         let extractor = MarkdownExtractor::new();
         assert_eq!(extractor.name(), "markdown-extractor");
-        assert_eq!(extractor.version(), "1.0.0");
+        assert_eq!(extractor.version(), env!("CARGO_PKG_VERSION"));
         assert_eq!(extractor.supported_mime_types(), &["text/markdown", "text/x-markdown"]);
         assert_eq!(extractor.priority(), 50);
     }

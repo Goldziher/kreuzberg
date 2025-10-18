@@ -53,16 +53,29 @@ benchmark_results.json
 benchmarks/results/
 build/
 CLAUDE.md
+
+# Coverage
+coverage/
 coverage.lcov
 coverage.xml
+rust-coverage.lcov
+coverage.info
+# TypeScript / Build artifacts
 dist/
+*.tsbuildinfo
+*.node
+temp-test-*
+
 docker-compose.yaml
 docs/_build/
 docs/build/
 GEMINI.md
 htmlcov/
+# Node.js / pnpm
 node_modules/
 npm-debug.log*
+pnpm-debug.log*
+.pnpm-store/
 output.txt
 prompt_template.egg-info/
 reports/
@@ -82,5 +95,3 @@ visualizations/
 wheels/
 yarn-debug.log*
 yarn-error.log*
-rust-coverage.lcov
-coverage.info

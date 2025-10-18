@@ -23,7 +23,7 @@ mod types;
 /// Internal bindings module for Kreuzberg
 #[pymodule]
 fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Configuration types (10 types)
+    // Configuration types (10 types + keyword types)
     m.add_class::<config::ExtractionConfig>()?;
     m.add_class::<config::OcrConfig>()?;
     m.add_class::<config::PdfConfig>()?;
@@ -34,6 +34,17 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<config::PostProcessorConfig>()?;
     m.add_class::<config::TesseractConfig>()?;
     m.add_class::<config::ImagePreprocessingConfig>()?;
+
+    // Keyword extraction types (conditional on features)
+    #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+    {
+        m.add_class::<config::KeywordAlgorithm>()?;
+        m.add_class::<config::KeywordConfig>()?;
+    }
+    #[cfg(feature = "keywords-yake")]
+    m.add_class::<config::YakeParams>()?;
+    #[cfg(feature = "keywords-rake")]
+    m.add_class::<config::RakeParams>()?;
 
     // Result types (2 types)
     m.add_class::<types::ExtractionResult>()?;
@@ -49,9 +60,11 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(core::batch_extract_files, m)?)?;
     m.add_function(wrap_pyfunction!(core::batch_extract_bytes, m)?)?;
 
-    // Plugin registration functions (2 functions)
+    // Plugin registration functions (4 functions)
     m.add_function(wrap_pyfunction!(plugins::register_ocr_backend, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::register_post_processor, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::unregister_post_processor, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::clear_post_processors, m)?)?;
 
     Ok(())
 }

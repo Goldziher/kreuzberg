@@ -44,11 +44,6 @@ def setup_library_paths() -> None:
 
 
 def _fix_macos_install_names(package_dir: Path) -> None:
-    """Fix library install names on macOS to use @loader_path.
-
-    This ensures the Python extension can find libpdfium.dylib in the same
-    directory without requiring DYLD_LIBRARY_PATH to be set.
-    """
     so_file = package_dir / "_internal_bindings.abi3.so"
     pdfium_lib = package_dir / "libpdfium.dylib"
 
@@ -93,7 +88,6 @@ def _fix_macos_install_names(package_dir: Path) -> None:
 
 
 def _setup_macos_paths(package_dir: Path) -> None:
-    """Set up library paths for macOS."""
     # Add to DYLD_LIBRARY_PATH
     current_path = os.environ.get("DYLD_LIBRARY_PATH", "")
     package_str = str(package_dir)
@@ -115,7 +109,6 @@ def _setup_macos_paths(package_dir: Path) -> None:
 
 
 def _setup_linux_paths(package_dir: Path) -> None:
-    """Set up library paths for Linux."""
     # Add to LD_LIBRARY_PATH
     current_path = os.environ.get("LD_LIBRARY_PATH", "")
     package_str = str(package_dir)
@@ -143,7 +136,6 @@ def _setup_linux_paths(package_dir: Path) -> None:
 
 
 def _setup_windows_paths(package_dir: Path) -> None:
-    """Set up library paths for Windows."""
     package_str = str(package_dir)
 
     # Add to PATH

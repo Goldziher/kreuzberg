@@ -40,7 +40,7 @@ impl Plugin for PandocExtractor {
     }
 
     fn version(&self) -> String {
-        "1.0.0".to_string()
+        env!("CARGO_PKG_VERSION").to_string()
     }
 
     fn initialize(&self) -> Result<()> {
@@ -137,7 +137,7 @@ mod tests {
     async fn test_pandoc_extractor_plugin_interface() {
         let extractor = PandocExtractor::new();
         assert_eq!(extractor.name(), "pandoc-extractor");
-        assert_eq!(extractor.version(), "1.0.0");
+        assert_eq!(extractor.version(), env!("CARGO_PKG_VERSION"));
         assert_eq!(extractor.priority(), 40);
         assert!(!extractor.supported_mime_types().is_empty());
     }

@@ -10,6 +10,35 @@ use once_cell::sync::Lazy;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};
 
+/// Validate a plugin name before registration.
+///
+/// # Rules
+///
+/// - Name cannot be empty
+/// - Name cannot contain whitespace
+/// - Name should follow kebab-case convention (lowercase with hyphens)
+///
+/// # Errors
+///
+/// Returns `ValidationError` if the name is invalid.
+fn validate_plugin_name(name: &str) -> Result<()> {
+    if name.is_empty() {
+        return Err(KreuzbergError::Validation {
+            message: "Plugin name cannot be empty".to_string(),
+            source: None,
+        });
+    }
+
+    if name.contains(char::is_whitespace) {
+        return Err(KreuzbergError::Validation {
+            message: format!("Plugin name '{}' cannot contain whitespace", name),
+            source: None,
+        });
+    }
+
+    Ok(())
+}
+
 /// Registry for OCR backend plugins.
 ///
 /// Manages OCR backends with backend type and language-based selection.
@@ -63,6 +92,9 @@ impl OcrBackendRegistry {
     /// ```
     pub fn register(&mut self, backend: Arc<dyn OcrBackend>) -> Result<()> {
         let name = backend.name().to_string();
+
+        // Validate plugin name
+        validate_plugin_name(&name)?;
 
         // Initialize the backend
         backend.initialize()?;
@@ -178,6 +210,9 @@ impl DocumentExtractorRegistry {
         let name = extractor.name().to_string();
         let priority = extractor.priority();
         let mime_types: Vec<String> = extractor.supported_mime_types().iter().map(|s| s.to_string()).collect();
+
+        // Validate plugin name
+        validate_plugin_name(&name)?;
 
         // Initialize the extractor
         extractor.initialize()?;
@@ -332,6 +367,9 @@ impl PostProcessorRegistry {
         let name = processor.name().to_string();
         let stage = processor.processing_stage();
 
+        // Validate plugin name
+        validate_plugin_name(&name)?;
+
         processor.initialize()?;
 
         self.processors
@@ -448,6 +486,9 @@ impl ValidatorRegistry {
     pub fn register(&mut self, validator: Arc<dyn Validator>) -> Result<()> {
         let name = validator.name().to_string();
         let priority = validator.priority();
+
+        // Validate plugin name
+        validate_plugin_name(&name)?;
 
         validator.initialize()?;
 
@@ -1175,5 +1216,113 @@ mod tests {
         // Other image types should use prefix match
         let retrieved_jpg = registry.get("image/jpeg").unwrap();
         assert_eq!(retrieved_jpg.name(), "prefix-extractor");
+    }
+
+    // Plugin name validation tests
+
+    #[test]
+    fn test_ocr_backend_registry_invalid_name_empty() {
+        let mut registry = OcrBackendRegistry::new();
+
+        let backend = Arc::new(MockOcrBackend {
+            name: "".to_string(),
+            languages: vec!["eng".to_string()],
+        });
+
+        let result = registry.register(backend);
+        assert!(matches!(result, Err(KreuzbergError::Validation { .. })));
+    }
+
+    #[test]
+    fn test_ocr_backend_registry_invalid_name_whitespace() {
+        let mut registry = OcrBackendRegistry::new();
+
+        let backend = Arc::new(MockOcrBackend {
+            name: "my ocr backend".to_string(),
+            languages: vec!["eng".to_string()],
+        });
+
+        let result = registry.register(backend);
+        assert!(matches!(result, Err(KreuzbergError::Validation { .. })));
+    }
+
+    #[test]
+    fn test_document_extractor_registry_invalid_name_empty() {
+        let mut registry = DocumentExtractorRegistry::new();
+
+        let extractor = Arc::new(MockExtractor {
+            name: "".to_string(),
+            mime_types: &["text/plain"],
+            priority: 50,
+        });
+
+        let result = registry.register(extractor);
+        assert!(matches!(result, Err(KreuzbergError::Validation { .. })));
+    }
+
+    #[test]
+    fn test_document_extractor_registry_invalid_name_whitespace() {
+        let mut registry = DocumentExtractorRegistry::new();
+
+        let extractor = Arc::new(MockExtractor {
+            name: "my extractor".to_string(),
+            mime_types: &["text/plain"],
+            priority: 50,
+        });
+
+        let result = registry.register(extractor);
+        assert!(matches!(result, Err(KreuzbergError::Validation { .. })));
+    }
+
+    #[test]
+    fn test_post_processor_registry_invalid_name_empty() {
+        let mut registry = PostProcessorRegistry::new();
+
+        let processor = Arc::new(MockPostProcessor {
+            name: "".to_string(),
+            stage: ProcessingStage::Early,
+        });
+
+        let result = registry.register(processor, 50);
+        assert!(matches!(result, Err(KreuzbergError::Validation { .. })));
+    }
+
+    #[test]
+    fn test_post_processor_registry_invalid_name_whitespace() {
+        let mut registry = PostProcessorRegistry::new();
+
+        let processor = Arc::new(MockPostProcessor {
+            name: "my processor".to_string(),
+            stage: ProcessingStage::Early,
+        });
+
+        let result = registry.register(processor, 50);
+        assert!(matches!(result, Err(KreuzbergError::Validation { .. })));
+    }
+
+    #[test]
+    fn test_validator_registry_invalid_name_empty() {
+        let mut registry = ValidatorRegistry::new();
+
+        let validator = Arc::new(MockValidator {
+            name: "".to_string(),
+            priority: 50,
+        });
+
+        let result = registry.register(validator);
+        assert!(matches!(result, Err(KreuzbergError::Validation { .. })));
+    }
+
+    #[test]
+    fn test_validator_registry_invalid_name_whitespace() {
+        let mut registry = ValidatorRegistry::new();
+
+        let validator = Arc::new(MockValidator {
+            name: "my validator".to_string(),
+            priority: 50,
+        });
+
+        let result = registry.register(validator);
+        assert!(matches!(result, Err(KreuzbergError::Validation { .. })));
     }
 }

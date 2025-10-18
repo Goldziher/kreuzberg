@@ -8,23 +8,16 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct YakeParams {
     /// Window size for co-occurrence analysis (default: 2).
+    ///
+    /// Controls the context window for computing co-occurrence statistics.
     pub window_size: usize,
-
-    /// Deduplicate keywords with similar text (default: false).
-    pub deduplicate: bool,
-
-    /// Similarity threshold for deduplication (0.0-1.0, default: 0.9).
-    pub dedup_threshold: f32,
+    // Note: Deduplication is handled automatically by YAKE's algorithm
 }
 
 #[cfg(feature = "keywords-yake")]
 impl Default for YakeParams {
     fn default() -> Self {
-        Self {
-            window_size: 2,
-            deduplicate: false,
-            dedup_threshold: 0.9,
-        }
+        Self { window_size: 2 }
     }
 }
 

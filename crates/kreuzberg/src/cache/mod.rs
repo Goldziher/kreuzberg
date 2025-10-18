@@ -36,6 +36,8 @@ pub struct GenericCache {
     max_cache_size_mb: f64,
     min_free_space_mb: f64,
     processing_locks: Arc<Mutex<HashSet<String>>>,
+    /// Tracks cache keys being deleted to prevent read-during-delete race conditions
+    deleting_files: Arc<Mutex<HashSet<PathBuf>>>,
 }
 
 impl GenericCache {
@@ -65,6 +67,7 @@ impl GenericCache {
             max_cache_size_mb,
             min_free_space_mb,
             processing_locks: Arc::new(Mutex::new(HashSet::new())),
+            deleting_files: Arc::new(Mutex::new(HashSet::new())),
         })
     }
 
@@ -162,6 +165,17 @@ impl GenericCache {
     pub fn get(&self, cache_key: &str, source_file: Option<&str>) -> Result<Option<Vec<u8>>> {
         let cache_path = self.get_cache_path(cache_key);
 
+        // Check if file is being deleted (tombstone check)
+        {
+            let deleting = self
+                .deleting_files
+                .lock()
+                .map_err(|e| KreuzbergError::LockPoisoned(format!("Deleting files mutex poisoned: {}", e)))?;
+            if deleting.contains(&cache_path) {
+                return Ok(None);
+            }
+        }
+
         if !self.is_valid(&cache_path, source_file) {
             return Ok(None);
         }
@@ -198,32 +212,108 @@ impl GenericCache {
         Ok(())
     }
 
-    pub fn is_processing(&self, cache_key: &str) -> bool {
+    pub fn is_processing(&self, cache_key: &str) -> Result<bool> {
+        // OSError/RuntimeError must bubble up - system errors need user reports ~keep
         let locks = self
             .processing_locks
             .lock()
-            .expect("Processing locks mutex poisoned - another thread panicked while processing cache");
-        locks.contains(cache_key)
+            .map_err(|e| KreuzbergError::LockPoisoned(format!("Processing locks mutex poisoned: {}", e)))?;
+        Ok(locks.contains(cache_key))
     }
 
-    pub fn mark_processing(&self, cache_key: String) {
+    pub fn mark_processing(&self, cache_key: String) -> Result<()> {
+        // OSError/RuntimeError must bubble up - system errors need user reports ~keep
         let mut locks = self
             .processing_locks
             .lock()
-            .expect("Processing locks mutex poisoned - another thread panicked while processing cache");
+            .map_err(|e| KreuzbergError::LockPoisoned(format!("Processing locks mutex poisoned: {}", e)))?;
         locks.insert(cache_key);
+        Ok(())
     }
 
-    pub fn mark_complete(&self, cache_key: &str) {
+    pub fn mark_complete(&self, cache_key: &str) -> Result<()> {
+        // OSError/RuntimeError must bubble up - system errors need user reports ~keep
         let mut locks = self
             .processing_locks
             .lock()
-            .expect("Processing locks mutex poisoned - another thread panicked while processing cache");
+            .map_err(|e| KreuzbergError::LockPoisoned(format!("Processing locks mutex poisoned: {}", e)))?;
         locks.remove(cache_key);
+        Ok(())
+    }
+
+    /// Mark a file path as being deleted to prevent concurrent reads
+    fn mark_for_deletion(&self, path: &Path) -> Result<()> {
+        let mut deleting = self
+            .deleting_files
+            .lock()
+            .map_err(|e| KreuzbergError::LockPoisoned(format!("Deleting files mutex poisoned: {}", e)))?;
+        deleting.insert(path.to_path_buf());
+        Ok(())
+    }
+
+    /// Remove a file path from the deletion set
+    fn unmark_deletion(&self, path: &Path) -> Result<()> {
+        let mut deleting = self
+            .deleting_files
+            .lock()
+            .map_err(|e| KreuzbergError::LockPoisoned(format!("Deleting files mutex poisoned: {}", e)))?;
+        deleting.remove(&path.to_path_buf());
+        Ok(())
     }
 
     pub fn clear(&self) -> Result<(usize, f64)> {
-        clear_cache_directory(self.cache_dir.to_str().unwrap_or("."))
+        let dir_path = &self.cache_dir;
+
+        if !dir_path.exists() {
+            return Ok((0, 0.0));
+        }
+
+        let mut removed_count = 0;
+        let mut removed_size = 0.0;
+
+        let read_dir = fs::read_dir(dir_path)
+            .map_err(|e| KreuzbergError::cache(format!("Failed to read cache directory: {}", e)))?;
+
+        for entry in read_dir {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(e) => {
+                    eprintln!("Error reading entry: {}", e);
+                    continue;
+                }
+            };
+
+            let metadata = match entry.metadata() {
+                Ok(m) if m.is_file() => m,
+                _ => continue,
+            };
+
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("msgpack") {
+                continue;
+            }
+
+            let size_mb = metadata.len() as f64 / (1024.0 * 1024.0);
+
+            // Mark file as being deleted before actual deletion
+            let _ = self.mark_for_deletion(&path);
+
+            match fs::remove_file(&path) {
+                Ok(_) => {
+                    removed_count += 1;
+                    removed_size += size_mb;
+                    // Remove from deletion set after successful deletion
+                    let _ = self.unmark_deletion(&path);
+                }
+                Err(e) => {
+                    eprintln!("Failed to remove {:?}: {}", path, e);
+                    // Unmark on failure so it can be retried
+                    let _ = self.unmark_deletion(&path);
+                }
+            }
+        }
+
+        Ok((removed_count, removed_size))
     }
 
     pub fn get_stats(&self) -> Result<CacheStats> {
@@ -837,13 +927,13 @@ mod tests {
 
         let cache_key = "test_key";
 
-        assert!(!cache.is_processing(cache_key));
+        assert!(!cache.is_processing(cache_key).unwrap());
 
-        cache.mark_processing(cache_key.to_string());
-        assert!(cache.is_processing(cache_key));
+        cache.mark_processing(cache_key.to_string()).unwrap();
+        assert!(cache.is_processing(cache_key).unwrap());
 
-        cache.mark_complete(cache_key);
-        assert!(!cache.is_processing(cache_key));
+        cache.mark_complete(cache_key).unwrap();
+        assert!(!cache.is_processing(cache_key).unwrap());
     }
 
     #[test]

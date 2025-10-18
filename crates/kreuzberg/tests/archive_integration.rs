@@ -23,8 +23,13 @@ async fn test_zip_basic_extraction() {
         .await
         .expect("Should extract ZIP successfully");
 
-    // Verify extraction
+    // Verify ExtractionResult structure
     assert_eq!(result.mime_type, "application/zip");
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
+
+    // Verify extraction
     assert!(result.content.contains("ZIP Archive"));
     assert!(result.content.contains("test.txt"));
     assert!(result.content.contains("Hello from ZIP!"));
@@ -65,6 +70,11 @@ async fn test_zip_multiple_files() {
     let result = extract_bytes(&zip_bytes, "application/zip", &config)
         .await
         .expect("Should extract multi-file ZIP");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
 
     // Verify all files are listed
     assert!(result.content.contains("file1.txt"));
@@ -113,6 +123,11 @@ async fn test_zip_nested_directories() {
         .await
         .expect("Should extract nested ZIP");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
+
     // Verify directory structure is preserved
     assert!(result.content.contains("dir1/"));
     assert!(result.content.contains("dir1/file.txt"));
@@ -149,8 +164,13 @@ async fn test_tar_extraction() {
         .await
         .expect("Should extract TAR successfully");
 
-    // Verify extraction
+    // Verify ExtractionResult structure
     assert_eq!(result.mime_type, "application/x-tar");
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
+
+    // Verify extraction
     assert!(result.content.contains("TAR Archive"));
     assert!(result.content.contains("test.txt"));
     assert!(result.content.contains("Hello from TAR!"));
@@ -178,6 +198,11 @@ async fn test_tar_gz_extraction() {
         .await
         .expect("Should extract TAR");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
+
     assert!(result.content.contains("TAR Archive"));
     assert!(result.content.contains("test.txt"));
 
@@ -190,6 +215,14 @@ async fn test_tar_gz_extraction() {
     let result2 = extract_bytes(&tar_bytes, "application/tar", &config)
         .await
         .expect("Should extract with alternative MIME type");
+
+    // Verify ExtractionResult structure for second extraction
+    assert!(
+        result2.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(result2.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result2.tables.is_empty(), "Archive should not have tables");
 
     assert!(result2.content.contains("TAR Archive"));
     assert!(result2.metadata.archive.is_some());
@@ -231,6 +264,11 @@ async fn test_nested_archive() {
     let result = extract_bytes(&outer_zip_bytes, "application/zip", &config)
         .await
         .expect("Should extract nested ZIP");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
 
     // Verify outer archive lists inner.zip
     assert!(result.content.contains("inner.zip"));
@@ -281,6 +319,11 @@ async fn test_archive_mixed_formats() {
     let result = extract_bytes(&zip_bytes, "application/zip", &config)
         .await
         .expect("Should extract mixed-format ZIP");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
 
     // Verify all files are listed
     assert!(result.content.contains("document.txt"));
@@ -372,6 +415,11 @@ async fn test_large_archive() {
         .await
         .expect("Should extract large ZIP");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
+
     // Verify file count and file_list
     let archive_meta = result.metadata.archive.unwrap();
     assert_eq!(archive_meta.file_count, 100, "Should have 100 files");
@@ -419,6 +467,11 @@ async fn test_archive_with_special_characters() {
         .await
         .expect("Should extract ZIP with special characters");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
+
     // Verify files are listed (exact string matching may vary with Unicode)
     assert!(result.content.contains("测试文件.txt") || result.content.contains("txt"));
     assert!(result.content.contains("file with spaces.txt"));
@@ -451,6 +504,11 @@ async fn test_empty_archive() {
         .await
         .expect("Should extract empty ZIP");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
+
     // Verify metadata
     assert!(result.content.contains("ZIP Archive"));
     let archive_meta = result.metadata.archive.unwrap();
@@ -466,6 +524,11 @@ fn test_archive_extraction_sync() {
 
     let zip_bytes = create_simple_zip();
     let result = extract_bytes_sync(&zip_bytes, "application/zip", &config).expect("Should extract ZIP synchronously");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Archive should not have tables");
 
     // Verify content and metadata
     assert!(result.content.contains("ZIP Archive"));

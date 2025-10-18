@@ -30,8 +30,17 @@ async fn test_csv_basic_extraction() {
 
     let extraction = result.unwrap();
 
-    // Verify MIME type
+    // Verify ExtractionResult structure
     assert_eq!(extraction.mime_type, "text/csv");
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
 
     // Content should contain the data (Pandoc converts CSV to markdown table)
     // Verify all headers are present
@@ -65,6 +74,17 @@ async fn test_csv_with_headers() {
     }
 
     let extraction = result.unwrap();
+
+    // Verify ExtractionResult structure
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
 
     // Pandoc should recognize headers and convert to markdown table
     // Verify all headers
@@ -114,6 +134,17 @@ async fn test_csv_custom_delimiter() {
 
     let extraction = result.unwrap();
 
+    // Verify ExtractionResult structure
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
+
     // Content should be extracted (Pandoc auto-detects delimiters)
     assert!(!extraction.content.is_empty(), "Content should be extracted");
 
@@ -140,8 +171,17 @@ async fn test_tsv_file() {
 
     let extraction = result.unwrap();
 
-    // Verify MIME type
+    // Verify ExtractionResult structure
     assert_eq!(extraction.mime_type, "text/tab-separated-values");
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
 
     // Content should be extracted - verify all data
     assert!(extraction.content.contains("Name"), "Should contain Name header");
@@ -175,6 +215,17 @@ async fn test_csv_quoted_fields() {
 
     let extraction = result.unwrap();
 
+    // Verify ExtractionResult structure
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
+
     // Quoted fields should be handled correctly
     // Verify that commas inside quotes didn't split the field
     assert!(extraction.content.contains("Smith"), "Should contain Smith");
@@ -206,6 +257,17 @@ async fn test_csv_special_characters() {
     }
 
     let extraction = result.unwrap();
+
+    // Verify ExtractionResult structure
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
 
     // Unicode characters should be preserved
     assert!(!extraction.content.is_empty(), "Special characters should be handled");
@@ -244,6 +306,17 @@ async fn test_csv_large_file() {
     }
 
     let extraction = result.unwrap();
+
+    // Verify ExtractionResult structure
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
 
     // Large file should be processed successfully
     assert!(!extraction.content.is_empty(), "Large CSV should be processed");
@@ -324,6 +397,17 @@ async fn test_csv_headers_only() {
 
     let extraction = result.unwrap();
 
+    // Verify ExtractionResult structure
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
+
     // Headers-only CSV should be extracted
     assert!(
         extraction.content.contains("Name") || !extraction.content.is_empty(),
@@ -348,6 +432,17 @@ async fn test_csv_blank_lines() {
 
     let extraction = result.unwrap();
 
+    // Verify ExtractionResult structure
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
+
     // Blank lines should be handled
     assert!(extraction.content.contains("Alice") || extraction.content.contains("Bob"));
 }
@@ -368,6 +463,17 @@ async fn test_csv_numeric_data() {
     }
 
     let extraction = result.unwrap();
+
+    // Verify ExtractionResult structure
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "CSV should not have table structures");
 
     // Numeric data should be preserved - verify all rows
     assert!(extraction.content.contains("Price"), "Should contain Price header");

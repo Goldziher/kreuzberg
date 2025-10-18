@@ -42,17 +42,7 @@ class KreuzbergError(Exception):
 
     @staticmethod
     def _serialize_context(context: dict[str, Any]) -> dict[str, Any]:
-        """Serialize context to JSON-compatible dict.
-
-        Handles special types:
-        - bytes → decode to string
-        - exceptions → dict with type and message
-        - tuples → convert to lists
-        - nested structures → recursively serialize
-        """
-
         def serialize_value(value: Any) -> Any:
-            """Recursively serialize a value to JSON-compatible type."""
             if isinstance(value, bytes):
                 # Decode bytes to string
                 return value.decode("utf-8", errors="replace")

@@ -19,6 +19,7 @@ use std::collections::HashSet;
 
 /// Ground truth keywords for ML document.
 /// These are the terms a machine learning expert would identify as key concepts.
+#[allow(dead_code)]
 fn get_ml_ground_truth() -> HashSet<&'static str> {
     [
         // Core concepts
@@ -48,6 +49,7 @@ fn get_ml_ground_truth() -> HashSet<&'static str> {
 }
 
 /// Ground truth keywords for climate change document.
+#[allow(dead_code)]
 fn get_climate_ground_truth() -> HashSet<&'static str> {
     [
         // Core concepts
@@ -80,6 +82,7 @@ fn get_climate_ground_truth() -> HashSet<&'static str> {
 // ============================================================================
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct KeywordQualityScores {
     precision: f64,
     recall: f64,
@@ -130,6 +133,7 @@ impl KeywordQualityScores {
 /// Supports both exact matches and partial matches:
 /// - Exact: "machine learning" == "machine learning"
 /// - Partial: "machine" matches "machine learning" (subset)
+#[allow(dead_code)]
 fn evaluate_keyword_quality(extracted: &[&str], ground_truth: &HashSet<&str>) -> KeywordQualityScores {
     let extracted_lower: Vec<String> = extracted.iter().map(|s| s.to_lowercase()).collect();
     let ground_truth_lower: HashSet<String> = ground_truth.iter().map(|s| s.to_lowercase()).collect();
@@ -149,13 +153,11 @@ fn evaluate_keyword_quality(extracted: &[&str], ground_truth: &HashSet<&str>) ->
         // Check for partial match (extracted keyword is substring of ground truth)
         let mut found_partial = false;
         for gt_kw in &ground_truth_lower {
-            if gt_kw.contains(extracted_kw) || extracted_kw.contains(gt_kw) {
-                if !matched_ground_truth.contains(gt_kw) {
-                    partial_matches += 1;
-                    matched_ground_truth.insert(gt_kw.clone());
-                    found_partial = true;
-                    break;
-                }
+            if (gt_kw.contains(extracted_kw) || extracted_kw.contains(gt_kw)) && !matched_ground_truth.contains(gt_kw) {
+                partial_matches += 1;
+                matched_ground_truth.insert(gt_kw.clone());
+                found_partial = true;
+                break;
             }
         }
 
@@ -167,12 +169,10 @@ fn evaluate_keyword_quality(extracted: &[&str], ground_truth: &HashSet<&str>) ->
 
                 // If extracted keyword contains significant overlap with ground truth
                 let overlap = gt_words.iter().filter(|w| ex_words.contains(*w)).count();
-                if overlap >= gt_words.len() / 2 && overlap > 0 {
-                    if !matched_ground_truth.contains(gt_kw) {
-                        partial_matches += 1;
-                        matched_ground_truth.insert(gt_kw.clone());
-                        break;
-                    }
+                if overlap >= gt_words.len() / 2 && overlap > 0 && !matched_ground_truth.contains(gt_kw) {
+                    partial_matches += 1;
+                    matched_ground_truth.insert(gt_kw.clone());
+                    break;
                 }
             }
         }
@@ -187,6 +187,7 @@ fn evaluate_keyword_quality(extracted: &[&str], ground_truth: &HashSet<&str>) ->
 }
 
 /// ML document text (subset for testing).
+#[allow(dead_code)]
 const ML_DOC_SAMPLE: &str = r#"
 Machine learning is a branch of artificial intelligence and computer science which focuses on the use of data and algorithms to imitate the way that humans learn.
 Machine learning algorithms build a model based on sample data, known as training data, to make predictions or decisions without being explicitly programmed to do so.
@@ -196,6 +197,7 @@ Natural language processing is a subfield of linguistics, computer science, and 
 "#;
 
 /// Climate document text (subset for testing).
+#[allow(dead_code)]
 const CLIMATE_DOC_SAMPLE: &str = r#"
 Climate change refers to long-term shifts in temperatures and weather patterns. These shifts may be natural, such as through variations in the solar cycle.
 But since the 1800s, human activities have been the main driver of climate change, primarily due to burning fossil fuels like coal, oil, and gas.

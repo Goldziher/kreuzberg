@@ -202,16 +202,19 @@ async fn test_odt_extraction() {
 
     let result = extract_bytes(invalid_odt, "application/vnd.oasis.opendocument.text", &config).await;
 
-    // Should fail with parsing error (invalid ODT), not panic
-    assert!(result.is_err(), "Invalid ODT should fail gracefully with parsing error");
+    // Should fail gracefully (invalid ODT), not panic
+    assert!(result.is_err(), "Invalid ODT should fail gracefully");
 
-    // Verify error type - should be Parsing error
+    // Verify error type - should be Parsing or Io error (Pandoc is an external tool)
     let error = result.unwrap_err();
     match error {
         kreuzberg::KreuzbergError::Parsing { .. } => {
             // Expected error type for invalid format
         }
-        other => panic!("Expected Parsing error, got: {:?}", other),
+        kreuzberg::KreuzbergError::Io(_) => {
+            // Also acceptable - Pandoc is an external system tool, Io errors are valid
+        }
+        other => panic!("Expected Parsing or Io error, got: {:?}", other),
     }
 }
 
@@ -343,16 +346,19 @@ async fn test_epub_extraction() {
 
     let result = extract_bytes(invalid_epub, "application/epub+zip", &config).await;
 
-    // Should fail with parsing error, not panic
+    // Should fail gracefully, not panic
     assert!(result.is_err(), "Invalid EPUB should fail gracefully");
 
-    // Verify error type - should be Parsing error
+    // Verify error type - should be Parsing or Io error (Pandoc is an external tool)
     let error = result.unwrap_err();
     match error {
         kreuzberg::KreuzbergError::Parsing { .. } => {
             // Expected error type for invalid EPUB
         }
-        other => panic!("Expected Parsing error for invalid EPUB, got: {:?}", other),
+        kreuzberg::KreuzbergError::Io(_) => {
+            // Also acceptable - Pandoc is an external system tool, Io errors are valid
+        }
+        other => panic!("Expected Parsing or Io error for invalid EPUB, got: {:?}", other),
     }
 }
 
@@ -393,6 +399,10 @@ This is a paragraph in Org mode.
     assert!(
         extraction.detected_languages.is_none(),
         "Language detection not enabled"
+    );
+    assert!(
+        extraction.tables.is_empty(),
+        "Org mode should not extract tables in this test"
     );
 
     // Verify content extraction
@@ -474,6 +484,10 @@ This is a paragraph in CommonMark.
     assert!(
         extraction.detected_languages.is_none(),
         "Language detection not enabled"
+    );
+    assert!(
+        extraction.tables.is_empty(),
+        "CommonMark should not extract tables in this test"
     );
 
     // Verify content extraction
@@ -558,6 +572,10 @@ Emoji: 🎉 ✅ 🚀"
     assert!(
         extraction.detected_languages.is_none(),
         "Language detection not enabled"
+    );
+    assert!(
+        extraction.tables.is_empty(),
+        "RST should not extract tables in this test"
     );
 
     // Unicode should be preserved or handled gracefully

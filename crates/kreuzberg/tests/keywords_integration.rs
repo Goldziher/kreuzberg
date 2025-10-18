@@ -7,6 +7,7 @@
 use kreuzberg::keywords::{KeywordAlgorithm, KeywordConfig, extract_keywords};
 
 /// Sample document about machine learning for testing.
+#[allow(dead_code)]
 const ML_DOCUMENT: &str = r#"
 Machine learning is a branch of artificial intelligence and computer science which focuses on the use of data and algorithms to imitate the way that humans learn.
 Machine learning algorithms build a model based on sample data, known as training data, to make predictions or decisions without being explicitly programmed to do so.
@@ -16,6 +17,7 @@ Natural language processing is a subfield of linguistics, computer science, and 
 "#;
 
 /// Sample document about climate change for testing.
+#[allow(dead_code)]
 const CLIMATE_DOCUMENT: &str = r#"
 Climate change refers to long-term shifts in temperatures and weather patterns. These shifts may be natural, such as through variations in the solar cycle.
 But since the 1800s, human activities have been the main driver of climate change, primarily due to burning fossil fuels like coal, oil, and gas.
@@ -25,6 +27,7 @@ Global warming is the long-term heating of Earth's climate system. Climate scien
 "#;
 
 /// Sample Spanish document for multilingual testing.
+#[allow(dead_code)]
 const SPANISH_DOCUMENT: &str = r#"
 El aprendizaje automático es una rama de la inteligencia artificial. Los algoritmos de aprendizaje automático construyen modelos basados en datos de entrenamiento.
 Las redes neuronales artificiales son sistemas inspirados en las redes neuronales biológicas del cerebro humano. El aprendizaje profundo utiliza redes neuronales multicapa.

@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from kreuzberg.exceptions import OCRError
+from kreuzberg.exceptions import OCRError, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +114,7 @@ class EasyOCRBackend:
         beam_width: Beam width for recognition (higher values are slower but more accurate).
 
     Raises:
+        ImportError: If the easyocr package is not installed.
         ValidationError: If any supplied language code is not supported.
 
     Note:
@@ -154,8 +155,6 @@ class EasyOCRBackend:
         # Validate languages
         unsupported = [lang for lang in self.languages if lang not in SUPPORTED_LANGUAGES]
         if unsupported:
-            from kreuzberg.exceptions import ValidationError  # noqa: PLC0415
-
             msg = f"Unsupported EasyOCR language codes: {', '.join(unsupported)}"
             raise ValidationError(
                 msg,
@@ -247,8 +246,6 @@ class EasyOCRBackend:
 
         # Validate language
         if language not in SUPPORTED_LANGUAGES:
-            from kreuzberg.exceptions import ValidationError  # noqa: PLC0415
-
             msg = f"Language '{language}' not supported by EasyOCR"
             raise ValidationError(
                 msg,
@@ -316,15 +313,6 @@ class EasyOCRBackend:
 
     @staticmethod
     def _process_easyocr_result(result: list[Any]) -> tuple[str, float, int]:
-        """Process EasyOCR result and extract text content.
-
-        Args:
-            result: EasyOCR result list
-
-        Returns:
-            Tuple of (content, average_confidence, text_region_count)
-
-        """
         if not result:
             return "", 0.0, 0
 
@@ -396,7 +384,6 @@ class EasyOCRBackend:
 
     @staticmethod
     def _is_cuda_available() -> bool:
-        """Check if CUDA is available for GPU acceleration."""
         try:
             import torch  # noqa: PLC0415
 

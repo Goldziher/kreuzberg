@@ -598,56 +598,37 @@ impl PostProcessor for PythonPostProcessor {
     async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
         let processor_name = self.name.clone();
 
-        // Clone Python object reference with GIL
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) before passing to spawn_blocking
-        let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
+        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
+        // Process in a single GIL acquisition to avoid deadlocks
+        Python::attach(|py| {
+            let obj = self.python_obj.bind(py);
 
-        // Convert ExtractionResult to Python dict (need to clone for thread safety)
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) before passing to spawn_blocking
-        let result_dict =
-            Python::attach(|py| extraction_result_to_dict(py, result)).map_err(|e| KreuzbergError::Plugin {
+            // Convert ExtractionResult to Python dict
+            let result_dict = extraction_result_to_dict(py, result).map_err(|e| KreuzbergError::Plugin {
                 message: format!("Failed to convert ExtractionResult to Python dict: {}", e),
-                plugin_name: self.name.clone(),
+                plugin_name: processor_name.clone(),
             })?;
 
-        // Use spawn_blocking to avoid blocking async runtime
-        let processed_dict = tokio::task::spawn_blocking(move || {
-            // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) in blocking task
-            Python::attach(|py| {
-                let obj = python_obj.bind(py);
-
-                // Convert Rust dict → Python
-                let py_result = result_dict.bind(py);
-
-                // Call Python method: process(result: dict) -> dict
-                let processed = obj
-                    .call_method1("process", (py_result,))
-                    .map_err(|e| KreuzbergError::Plugin {
-                        message: format!("Python PostProcessor '{}' failed during process: {}", processor_name, e),
-                        plugin_name: processor_name.clone(),
-                    })?;
-
-                // Return the processed dict as Py<PyDict>
-                processed.extract::<Py<PyDict>>().map_err(|e| KreuzbergError::Plugin {
-                    message: format!("Failed to extract Python dict from process result: {}", e),
+            // Call Python method: process(result: dict) -> dict
+            let py_result = result_dict.bind(py);
+            let processed = obj
+                .call_method1("process", (py_result,))
+                .map_err(|e| KreuzbergError::Plugin {
+                    message: format!("Python PostProcessor '{}' failed during process: {}", processor_name, e),
                     plugin_name: processor_name.clone(),
-                })
-            })
+                })?;
+
+            // Extract the processed dict
+            let processed_dict = processed.downcast::<PyDict>().map_err(|e| KreuzbergError::Plugin {
+                message: format!("PostProcessor did not return a dict: {}", e),
+                plugin_name: processor_name.clone(),
+            })?;
+
+            // Merge the processed result back into the original result
+            merge_dict_to_extraction_result(py, processed_dict, result)?;
+
+            Ok(())
         })
-        .await
-        .map_err(|e| KreuzbergError::Plugin {
-            message: format!("Failed to spawn blocking task for Python PostProcessor: {}", e),
-            plugin_name: self.name.clone(),
-        })??;
-
-        // Merge the processed result back into the original result
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) after spawn_blocking completes
-        Python::attach(|py| {
-            let dict = processed_dict.bind(py);
-            merge_dict_to_extraction_result(py, dict, result)
-        })?;
-
-        Ok(())
     }
 
     fn processing_stage(&self) -> ProcessingStage {
@@ -712,7 +693,7 @@ fn merge_dict_to_extraction_result(
         })?;
     }
 
-    // Merge metadata (don't overwrite existing keys)
+    // Merge metadata (allow processors to update existing keys)
     if let Some(m) = dict.get_item("metadata").map_err(|e| KreuzbergError::Plugin {
         message: format!("Failed to get 'metadata' from result dict: {}", e),
         plugin_name: "python".to_string(),
@@ -725,12 +706,9 @@ fn merge_dict_to_extraction_result(
                 plugin_name: "python".to_string(),
             })?;
 
-            // Only add if key doesn't exist (don't overwrite)
-            use std::collections::hash_map::Entry;
-            if let Entry::Vacant(e) = result.metadata.additional.entry(key_str) {
-                let json_value = python_to_json(&value)?;
-                e.insert(json_value);
-            }
+            // Allow processors to update existing keys
+            let json_value = python_to_json(&value)?;
+            result.metadata.additional.insert(key_str, json_value);
         }
     }
 
@@ -817,6 +795,82 @@ pub fn register_post_processor(py: Python<'_>, processor: Py<PyAny>) -> PyResult
                 "Failed to register PostProcessor '{}': {}",
                 processor_name, e
             ))
+        })
+    })?;
+
+    Ok(())
+}
+
+/// Unregister a PostProcessor by name.
+///
+/// Removes a previously registered processor from the global registry and
+/// calls its `shutdown()` method to release resources.
+///
+/// # Arguments
+///
+/// * `name` - Processor name to unregister
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import register_post_processor, unregister_post_processor
+///
+/// class MyProcessor:
+///     def name(self) -> str:
+///         return "my_processor"
+///
+///     def process(self, result: dict) -> dict:
+///         return result
+///
+/// register_post_processor(MyProcessor())
+/// # ... use processor ...
+/// unregister_post_processor("my_processor")
+/// ```
+#[pyfunction]
+pub fn unregister_post_processor(py: Python<'_>, name: &str) -> PyResult<()> {
+    py.detach(|| {
+        let registry = get_post_processor_registry();
+        let mut registry = registry.write().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "Failed to acquire write lock on PostProcessor registry: {}",
+                e
+            ))
+        })?;
+
+        registry.remove(name).map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to unregister PostProcessor '{}': {}", name, e))
+        })
+    })?;
+
+    Ok(())
+}
+
+/// Clear all registered PostProcessors.
+///
+/// Removes all processors from the global registry and calls their `shutdown()`
+/// methods. Useful for test cleanup or resetting state.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import clear_post_processors
+///
+/// # In pytest fixture or test cleanup
+/// clear_post_processors()
+/// ```
+#[pyfunction]
+pub fn clear_post_processors(py: Python<'_>) -> PyResult<()> {
+    py.detach(|| {
+        let registry = get_post_processor_registry();
+        let mut registry = registry.write().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "Failed to acquire write lock on PostProcessor registry: {}",
+                e
+            ))
+        })?;
+
+        registry.shutdown_all().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to clear PostProcessor registry: {}", e))
         })
     })?;
 

@@ -69,6 +69,13 @@ pub struct ExtractionConfig {
     /// Post-processor configuration (None = use defaults)
     #[serde(default)]
     pub postprocessor: Option<PostProcessorConfig>,
+
+    /// Maximum concurrent extractions in batch operations (None = num_cpus * 2).
+    ///
+    /// Limits parallelism to prevent resource exhaustion when processing
+    /// large batches. Defaults to twice the number of CPU cores.
+    #[serde(default)]
+    pub max_concurrent_extractions: Option<usize>,
 }
 
 /// Post-processor configuration.
@@ -233,6 +240,7 @@ impl Default for ExtractionConfig {
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             keywords: None,
             postprocessor: None,
+            max_concurrent_extractions: None,
         }
     }
 }

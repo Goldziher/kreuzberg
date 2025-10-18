@@ -32,6 +32,7 @@ impl ApiError {
             KreuzbergError::Serialization { .. } => "SerializationError",
             KreuzbergError::MissingDependency(_) => "MissingDependencyError",
             KreuzbergError::Plugin { .. } => "PluginError",
+            KreuzbergError::LockPoisoned(_) => "LockPoisonedError",
             KreuzbergError::UnsupportedFormat(_) => "UnsupportedFormatError",
             KreuzbergError::Other(_) => "Error",
         };

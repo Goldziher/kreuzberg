@@ -2,6 +2,7 @@ use crate::error::{KreuzbergError, Result};
 use crate::types::XmlExtractionResult;
 use quick_xml::Reader;
 use quick_xml::events::Event;
+use std::borrow::Cow;
 use std::collections::HashSet;
 
 pub fn parse_xml(xml_bytes: &[u8], preserve_whitespace: bool) -> Result<XmlExtractionResult> {
@@ -17,33 +18,33 @@ pub fn parse_xml(xml_bytes: &[u8], preserve_whitespace: bool) -> Result<XmlExtra
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
-                if let Ok(name) = std::str::from_utf8(e.name().as_ref()) {
-                    element_count += 1;
-                    unique_elements_set.insert(name.to_string());
-                }
+                // Use lossy conversion for element names - XML spec requires UTF-8 but we handle legacy files
+                // Convert to owned bytes to avoid lifetime issues
+                let name_bytes = e.name().as_ref().to_vec();
+                let name: Cow<str> = String::from_utf8_lossy(&name_bytes);
+                element_count += 1;
+                unique_elements_set.insert(name.into_owned());
             }
             Ok(Event::Text(e)) => {
-                let text_str = e.as_ref();
+                // Consistent lossy UTF-8 conversion for all text content
+                let text_cow: Cow<str> = String::from_utf8_lossy(e.as_ref());
                 if preserve_whitespace {
-                    content.push_str(std::str::from_utf8(text_str).unwrap_or(""));
+                    content.push_str(&text_cow);
                     content.push(' ');
-                } else if let Ok(text) = std::str::from_utf8(text_str) {
-                    let trimmed = text.trim();
+                } else {
+                    let trimmed = text_cow.trim();
                     if !trimmed.is_empty() {
                         content.push_str(trimmed);
                         content.push(' ');
                     }
                 }
             }
-            Ok(Event::CData(e)) => match std::str::from_utf8(&e) {
-                Ok(text) => {
-                    content.push_str(text);
-                    content.push(' ');
-                }
-                Err(e) => {
-                    return Err(KreuzbergError::parsing(format!("Invalid UTF-8 in CDATA: {}", e)));
-                }
-            },
+            Ok(Event::CData(e)) => {
+                // Consistent lossy UTF-8 conversion for CDATA sections
+                let text_cow: Cow<str> = String::from_utf8_lossy(&e);
+                content.push_str(&text_cow);
+                content.push(' ');
+            }
             Ok(Event::Eof) => break,
             Err(e) => {
                 return Err(KreuzbergError::parsing(format!(
@@ -289,5 +290,35 @@ mod tests {
         let result = parse_xml(xml, false).unwrap();
         // root + a + b + c + d = 5 elements
         assert_eq!(result.element_count, 5);
+    }
+
+    #[test]
+    fn test_xml_with_invalid_utf8() {
+        // XML with invalid UTF-8 bytes (0xFF is not valid UTF-8)
+        let xml = b"<root><item>Valid text \xFF invalid</item></root>";
+        let result = parse_xml(xml, false).unwrap();
+        // Should succeed with lossy conversion (invalid bytes become replacement character)
+        assert!(result.content.contains("Valid text"));
+        assert_eq!(result.element_count, 2);
+    }
+
+    #[test]
+    fn test_xml_cdata_with_invalid_utf8() {
+        // CDATA with invalid UTF-8 should now succeed with lossy conversion
+        let xml = b"<root><![CDATA[Text \xFF more text]]></root>";
+        let result = parse_xml(xml, false).unwrap();
+        assert!(result.content.contains("Text"));
+        assert!(result.content.contains("more text"));
+        assert_eq!(result.element_count, 1);
+    }
+
+    #[test]
+    fn test_xml_element_name_with_invalid_utf8() {
+        // Element name with invalid UTF-8 should be handled gracefully
+        let xml = b"<root><item\xFF>Content</item\xFF></root>";
+        // Parser may fail on invalid element names, but shouldn't panic
+        let result = parse_xml(xml, false);
+        // Just verify it doesn't panic - may succeed or fail depending on quick_xml behavior
+        let _ = result;
     }
 }

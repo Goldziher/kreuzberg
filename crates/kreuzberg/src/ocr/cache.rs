@@ -62,11 +62,21 @@ impl OcrCache {
         let serialized = rmp_serde::to_vec(result)
             .map_err(|e| OcrError::CacheError(format!("Failed to serialize result: {}", e)))?;
 
-        // Atomic write using temp file + rename pattern for thread safety
+        // Atomic write using unique temp file + rename pattern for thread safety
         // This ensures no corruption if multiple processes/threads write simultaneously
-        let temp_path = cache_path.with_extension("tmp");
 
-        // Write to temporary file first
+        // Generate unique temp file name using process ID, thread ID, and timestamp
+        // This prevents race conditions when multiple writers target the same cache entry
+        let pid = std::process::id();
+        let thread_id = std::thread::current().id();
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let temp_name = format!("{}.tmp.{}.{:?}.{}", cache_key, pid, thread_id, timestamp);
+        let temp_path = self.cache_dir.join(temp_name);
+
+        // Write to unique temporary file
         fs::write(&temp_path, &serialized)
             .map_err(|e| OcrError::CacheError(format!("Failed to write temp cache file: {}", e)))?;
 

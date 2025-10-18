@@ -27,6 +27,7 @@ fn format_error_with_source(message: String, source: Option<Box<dyn std::error::
 /// - `Io` → `IOError`
 /// - `Ocr` → `RuntimeError`
 /// - `Plugin` → `RuntimeError`
+/// - `LockPoisoned` → `RuntimeError`
 /// - `Cache` → `RuntimeError`
 /// - `ImageProcessing` → `RuntimeError`
 /// - `Serialization` → `RuntimeError`
@@ -50,6 +51,7 @@ pub fn to_py_err(error: kreuzberg::KreuzbergError) -> PyErr {
         KreuzbergError::Plugin { message, plugin_name } => {
             PyRuntimeError::new_err(format!("Plugin error in '{}': {}", plugin_name, message))
         }
+        KreuzbergError::LockPoisoned(msg) => PyRuntimeError::new_err(format!("Lock poisoned: {}", msg)),
         KreuzbergError::Cache { message, source } => PyRuntimeError::new_err(format_error_with_source(message, source)),
         KreuzbergError::ImageProcessing { message, source } => {
             PyRuntimeError::new_err(format_error_with_source(message, source))
@@ -240,5 +242,15 @@ mod tests {
     fn test_format_error_without_source_helper() {
         let formatted = format_error_with_source("Failed to open file".to_string(), None);
         assert_eq!(formatted, "Failed to open file");
+    }
+
+    #[test]
+    fn test_lock_poisoned_error() {
+        let error = KreuzbergError::LockPoisoned("Registry lock poisoned".to_string());
+        let py_err = to_py_err(error);
+
+        let err_msg = format!("{}", py_err);
+        assert!(err_msg.contains("Lock poisoned: Registry lock poisoned"));
+        assert!(err_msg.contains("RuntimeError"));
     }
 }
