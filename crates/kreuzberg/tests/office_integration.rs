@@ -30,7 +30,10 @@ fn test_docx_simple_text() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract simple DOCX successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 20);
 }
@@ -45,7 +48,10 @@ fn test_docx_with_tables() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract DOCX with tables successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
     assert_non_empty_content(&result);
 
     // Table extraction is optional - just verify we got content
@@ -62,7 +68,10 @@ fn test_docx_with_headers() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract DOCX with headers successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
     assert_non_empty_content(&result);
 }
 
@@ -76,7 +85,10 @@ fn test_docx_with_lists() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract DOCX with lists successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
     assert_non_empty_content(&result);
 }
 
@@ -90,7 +102,10 @@ fn test_docx_with_formatting() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract formatted DOCX successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
     assert_non_empty_content(&result);
 }
 
@@ -104,7 +119,10 @@ fn test_docx_with_equations() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract DOCX with equations successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
     assert_non_empty_content(&result);
 }
 
@@ -122,7 +140,10 @@ fn test_xlsx_simple_spreadsheet() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract simple XLSX successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
     assert_non_empty_content(&result);
 }
 
@@ -136,7 +157,10 @@ fn test_xlsx_multi_sheet() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract multi-sheet XLSX successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
     assert_non_empty_content(&result);
 
     // Multi-sheet workbook should have substantial content
@@ -153,7 +177,10 @@ fn test_xlsx_with_data() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract data-heavy XLSX successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 100);
 }
@@ -186,7 +213,10 @@ fn test_pptx_simple_presentation() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract simple PPTX successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    );
     assert_non_empty_content(&result);
 }
 
@@ -200,7 +230,10 @@ fn test_pptx_with_images() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract PPTX with images successfully");
 
-    assert_mime_type(&result, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+    assert_mime_type(
+        &result,
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    );
     assert_non_empty_content(&result);
 }
 
@@ -217,7 +250,10 @@ fn test_pptx_pitch_deck() {
     // If extraction fails due to archive issues, this is expected behavior
     match result {
         Ok(extraction_result) => {
-            assert_mime_type(&extraction_result, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+            assert_mime_type(
+                &extraction_result,
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            );
             assert_non_empty_content(&extraction_result);
             assert_min_content_length(&extraction_result, 100);
         }

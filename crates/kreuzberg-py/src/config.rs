@@ -788,6 +788,151 @@ impl From<kreuzberg::PostProcessorConfig> for PostProcessorConfig {
 }
 
 // ============================================================================
+// ImagePreprocessingConfig
+// ============================================================================
+
+/// Image preprocessing configuration for OCR.
+///
+/// Controls how images are preprocessed before OCR to improve text recognition.
+///
+/// Example:
+///     >>> from kreuzberg import ImagePreprocessingConfig
+///     >>> config = ImagePreprocessingConfig(
+///     ...     target_dpi=600,
+///     ...     denoise=True,
+///     ...     contrast_enhance=True
+///     ... )
+#[pyclass(name = "ImagePreprocessingConfig", module = "kreuzberg")]
+#[derive(Clone)]
+pub struct ImagePreprocessingConfig {
+    inner: kreuzberg::types::ImagePreprocessingConfig,
+}
+
+#[pymethods]
+impl ImagePreprocessingConfig {
+    #[new]
+    #[pyo3(signature = (
+        target_dpi=None,
+        auto_rotate=None,
+        deskew=None,
+        denoise=None,
+        contrast_enhance=None,
+        binarization_method=None,
+        invert_colors=None
+    ))]
+    fn new(
+        target_dpi: Option<i32>,
+        auto_rotate: Option<bool>,
+        deskew: Option<bool>,
+        denoise: Option<bool>,
+        contrast_enhance: Option<bool>,
+        binarization_method: Option<String>,
+        invert_colors: Option<bool>,
+    ) -> Self {
+        Self {
+            inner: kreuzberg::types::ImagePreprocessingConfig {
+                target_dpi: target_dpi.unwrap_or(300),
+                auto_rotate: auto_rotate.unwrap_or(true),
+                deskew: deskew.unwrap_or(true),
+                denoise: denoise.unwrap_or(false),
+                contrast_enhance: contrast_enhance.unwrap_or(false),
+                binarization_method: binarization_method.unwrap_or_else(|| "otsu".to_string()),
+                invert_colors: invert_colors.unwrap_or(false),
+            },
+        }
+    }
+
+    #[getter]
+    fn target_dpi(&self) -> i32 {
+        self.inner.target_dpi
+    }
+
+    #[setter]
+    fn set_target_dpi(&mut self, value: i32) {
+        self.inner.target_dpi = value;
+    }
+
+    #[getter]
+    fn auto_rotate(&self) -> bool {
+        self.inner.auto_rotate
+    }
+
+    #[setter]
+    fn set_auto_rotate(&mut self, value: bool) {
+        self.inner.auto_rotate = value;
+    }
+
+    #[getter]
+    fn deskew(&self) -> bool {
+        self.inner.deskew
+    }
+
+    #[setter]
+    fn set_deskew(&mut self, value: bool) {
+        self.inner.deskew = value;
+    }
+
+    #[getter]
+    fn denoise(&self) -> bool {
+        self.inner.denoise
+    }
+
+    #[setter]
+    fn set_denoise(&mut self, value: bool) {
+        self.inner.denoise = value;
+    }
+
+    #[getter]
+    fn contrast_enhance(&self) -> bool {
+        self.inner.contrast_enhance
+    }
+
+    #[setter]
+    fn set_contrast_enhance(&mut self, value: bool) {
+        self.inner.contrast_enhance = value;
+    }
+
+    #[getter]
+    fn binarization_method(&self) -> String {
+        self.inner.binarization_method.clone()
+    }
+
+    #[setter]
+    fn set_binarization_method(&mut self, value: String) {
+        self.inner.binarization_method = value;
+    }
+
+    #[getter]
+    fn invert_colors(&self) -> bool {
+        self.inner.invert_colors
+    }
+
+    #[setter]
+    fn set_invert_colors(&mut self, value: bool) {
+        self.inner.invert_colors = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ImagePreprocessingConfig(target_dpi={}, auto_rotate={}, deskew={}, denoise={})",
+            self.inner.target_dpi, self.inner.auto_rotate, self.inner.deskew, self.inner.denoise
+        )
+    }
+}
+
+impl From<ImagePreprocessingConfig> for kreuzberg::types::ImagePreprocessingConfig {
+    fn from(config: ImagePreprocessingConfig) -> Self {
+        config.inner
+    }
+}
+
+impl From<kreuzberg::types::ImagePreprocessingConfig> for ImagePreprocessingConfig {
+    fn from(config: kreuzberg::types::ImagePreprocessingConfig) -> Self {
+        Self { inner: config }
+    }
+}
+
+// ============================================================================
 // TesseractConfig
 // ============================================================================
 
@@ -817,6 +962,9 @@ impl TesseractConfig {
         language=None,
         psm=None,
         output_format=None,
+        oem=None,
+        min_confidence=None,
+        preprocessing=None,
         enable_table_detection=None,
         table_min_confidence=None,
         table_column_threshold=None,
@@ -828,6 +976,7 @@ impl TesseractConfig {
         tessedit_dont_rowrej_good_wds=None,
         tessedit_enable_dict_correction=None,
         tessedit_char_whitelist=None,
+        tessedit_char_blacklist=None,
         tessedit_use_primary_params_model=None,
         textord_space_size_is_variable=None,
         thresholding_method=None
@@ -837,6 +986,9 @@ impl TesseractConfig {
         language: Option<String>,
         psm: Option<i32>,
         output_format: Option<String>,
+        oem: Option<i32>,
+        min_confidence: Option<f64>,
+        preprocessing: Option<ImagePreprocessingConfig>,
         enable_table_detection: Option<bool>,
         table_min_confidence: Option<f64>,
         table_column_threshold: Option<i32>,
@@ -848,6 +1000,7 @@ impl TesseractConfig {
         tessedit_dont_rowrej_good_wds: Option<bool>,
         tessedit_enable_dict_correction: Option<bool>,
         tessedit_char_whitelist: Option<String>,
+        tessedit_char_blacklist: Option<String>,
         tessedit_use_primary_params_model: Option<bool>,
         textord_space_size_is_variable: Option<bool>,
         thresholding_method: Option<bool>,
@@ -857,6 +1010,9 @@ impl TesseractConfig {
                 language: language.unwrap_or_else(|| "eng".to_string()),
                 psm: psm.unwrap_or(3),
                 output_format: output_format.unwrap_or_else(|| "markdown".to_string()),
+                oem: oem.unwrap_or(3),
+                min_confidence: min_confidence.unwrap_or(0.0),
+                preprocessing: preprocessing.map(Into::into),
                 enable_table_detection: enable_table_detection.unwrap_or(true),
                 table_min_confidence: table_min_confidence.unwrap_or(0.0),
                 table_column_threshold: table_column_threshold.unwrap_or(50),
@@ -868,6 +1024,7 @@ impl TesseractConfig {
                 tessedit_dont_rowrej_good_wds: tessedit_dont_rowrej_good_wds.unwrap_or(true),
                 tessedit_enable_dict_correction: tessedit_enable_dict_correction.unwrap_or(true),
                 tessedit_char_whitelist: tessedit_char_whitelist.unwrap_or_default(),
+                tessedit_char_blacklist: tessedit_char_blacklist.unwrap_or_default(),
                 tessedit_use_primary_params_model: tessedit_use_primary_params_model.unwrap_or(true),
                 textord_space_size_is_variable: textord_space_size_is_variable.unwrap_or(true),
                 thresholding_method: thresholding_method.unwrap_or(false),
@@ -903,6 +1060,36 @@ impl TesseractConfig {
     #[setter]
     fn set_output_format(&mut self, value: String) {
         self.inner.output_format = value;
+    }
+
+    #[getter]
+    fn oem(&self) -> i32 {
+        self.inner.oem
+    }
+
+    #[setter]
+    fn set_oem(&mut self, value: i32) {
+        self.inner.oem = value;
+    }
+
+    #[getter]
+    fn min_confidence(&self) -> f64 {
+        self.inner.min_confidence
+    }
+
+    #[setter]
+    fn set_min_confidence(&mut self, value: f64) {
+        self.inner.min_confidence = value;
+    }
+
+    #[getter]
+    fn preprocessing(&self) -> Option<ImagePreprocessingConfig> {
+        self.inner.preprocessing.clone().map(Into::into)
+    }
+
+    #[setter]
+    fn set_preprocessing(&mut self, value: Option<ImagePreprocessingConfig>) {
+        self.inner.preprocessing = value.map(Into::into);
     }
 
     #[getter]
@@ -1013,6 +1200,16 @@ impl TesseractConfig {
     #[setter]
     fn set_tessedit_char_whitelist(&mut self, value: String) {
         self.inner.tessedit_char_whitelist = value;
+    }
+
+    #[getter]
+    fn tessedit_char_blacklist(&self) -> String {
+        self.inner.tessedit_char_blacklist.clone()
+    }
+
+    #[setter]
+    fn set_tessedit_char_blacklist(&mut self, value: String) {
+        self.inner.tessedit_char_blacklist = value;
     }
 
     #[getter]

@@ -36,7 +36,7 @@ def test_extract_xml_via_file_sync() -> None:
     assert result.metadata["element_count"] == 5
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_extract_xml_via_bytes_async() -> None:
     from kreuzberg import extract_bytes
 
@@ -52,7 +52,7 @@ async def test_extract_xml_via_bytes_async() -> None:
     assert "Content 2" in result.content
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_extract_xml_via_file_async() -> None:
     from kreuzberg import extract_file
 

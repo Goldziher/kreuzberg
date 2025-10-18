@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_docx_image_extraction_smoke(docx_document: Any) -> None:
     cfg = ExtractionConfig(images=ImageExtractionConfig())
     result = await extract_file(str(docx_document), config=cfg)
@@ -18,7 +18,7 @@ async def test_docx_image_extraction_smoke(docx_document: Any) -> None:
     assert isinstance(result.images, list)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_epub_odt_image_extraction_smoke(tmp_path: Path) -> None:  # pragma: no cover - smoke
     odt = tmp_path / "sample.odt"
     odt.write_bytes(b"ODT")

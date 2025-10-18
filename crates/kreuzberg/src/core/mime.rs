@@ -102,6 +102,13 @@ static EXT_TO_MIME: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     m.insert("eml", EML_MIME_TYPE);
     m.insert("msg", MSG_MIME_TYPE);
 
+    // Archives
+    m.insert("zip", "application/zip");
+    m.insert("tar", "application/x-tar");
+    m.insert("gz", "application/gzip");
+    m.insert("tgz", "application/x-tar");
+    m.insert("7z", "application/x-7z-compressed");
+
     // Other document formats
     m.insert("rst", "text/x-rst");
     m.insert("org", "text/x-org");
@@ -201,6 +208,15 @@ static SUPPORTED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     set.insert(XML_MIME_TYPE);
     set.insert(XML_TEXT_MIME_TYPE);
     set.insert(SVG_MIME_TYPE);
+
+    // Archive formats
+    set.insert("application/zip");
+    set.insert("application/x-zip-compressed");
+    set.insert("application/x-tar");
+    set.insert("application/tar");
+    set.insert("application/x-gtar");
+    set.insert("application/x-ustar");
+    set.insert("application/x-7z-compressed");
 
     set
 });

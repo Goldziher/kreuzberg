@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+// Re-export ImagePreprocessingConfig from public types (same struct used internally)
+pub use crate::types::ImagePreprocessingConfig;
+
 /// Page Segmentation Mode for Tesseract OCR
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PSMMode {
@@ -40,16 +43,33 @@ impl PSMMode {
     }
 }
 
-/// Configuration for Tesseract OCR
+/// Configuration for Tesseract OCR (internal, efficient types).
+///
+/// This is the internal representation used by the OCR processor.
+/// Public API uses i32 for PyO3 compatibility, converted to u8 here for efficiency.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TesseractConfig {
+    // Basic settings
     pub language: String,
     pub psm: u8,
     pub output_format: String,
+
+    // NEW: OCR Engine Mode (0-3)
+    pub oem: u8,
+
+    // NEW: Minimum confidence threshold
+    pub min_confidence: f64,
+
+    // NEW: Image preprocessing
+    pub preprocessing: Option<ImagePreprocessingConfig>,
+
+    // Table detection
     pub enable_table_detection: bool,
     pub table_min_confidence: f64,
     pub table_column_threshold: u32,
     pub table_row_threshold_ratio: f64,
+
+    // Tesseract engine tweaks
     pub use_cache: bool,
     pub classify_use_pre_adapted_templates: bool,
     pub language_model_ngram_on: bool,
@@ -57,6 +77,7 @@ pub struct TesseractConfig {
     pub tessedit_dont_rowrej_good_wds: bool,
     pub tessedit_enable_dict_correction: bool,
     pub tessedit_char_whitelist: String,
+    pub tessedit_char_blacklist: String,
     pub tessedit_use_primary_params_model: bool,
     pub textord_space_size_is_variable: bool,
     pub thresholding_method: bool,
@@ -68,6 +89,9 @@ impl Default for TesseractConfig {
             language: "eng".to_string(),
             psm: 3,
             output_format: "markdown".to_string(),
+            oem: 3, // Default (auto-select)
+            min_confidence: 0.0,
+            preprocessing: None,
             enable_table_detection: true,
             table_min_confidence: 0.0,
             table_column_threshold: 50,
@@ -79,6 +103,7 @@ impl Default for TesseractConfig {
             tessedit_dont_rowrej_good_wds: true,
             tessedit_enable_dict_correction: true,
             tessedit_char_whitelist: String::new(),
+            tessedit_char_blacklist: String::new(),
             tessedit_use_primary_params_model: true,
             textord_space_size_is_variable: true,
             thresholding_method: false,

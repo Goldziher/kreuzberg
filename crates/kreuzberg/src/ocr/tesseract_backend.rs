@@ -59,6 +59,9 @@ impl TesseractBackend {
             language: public_config.language.clone(),
             psm: public_config.psm as u8,
             output_format: public_config.output_format.clone(),
+            oem: public_config.oem as u8,
+            min_confidence: public_config.min_confidence,
+            preprocessing: public_config.preprocessing.clone(),
             enable_table_detection: public_config.enable_table_detection,
             table_min_confidence: public_config.table_min_confidence,
             table_column_threshold: public_config.table_column_threshold as u32,
@@ -70,6 +73,7 @@ impl TesseractBackend {
             tessedit_dont_rowrej_good_wds: public_config.tessedit_dont_rowrej_good_wds,
             tessedit_enable_dict_correction: public_config.tessedit_enable_dict_correction,
             tessedit_char_whitelist: public_config.tessedit_char_whitelist.clone(),
+            tessedit_char_blacklist: public_config.tessedit_char_blacklist.clone(),
             tessedit_use_primary_params_model: public_config.tessedit_use_primary_params_model,
             textord_space_size_is_variable: public_config.textord_space_size_is_variable,
             thresholding_method: public_config.thresholding_method,
@@ -393,5 +397,75 @@ mod tests {
     fn test_tesseract_backend_default() {
         let backend = TesseractBackend::default();
         assert_eq!(backend.name(), "tesseract");
+    }
+
+    #[test]
+    fn test_config_conversion_with_new_fields() {
+        let backend = TesseractBackend::new().unwrap();
+
+        // Test with preprocessing config
+        let preprocessing = crate::types::ImagePreprocessingConfig {
+            target_dpi: 600,
+            auto_rotate: false,
+            deskew: true,
+            denoise: true,
+            contrast_enhance: true,
+            binarization_method: "adaptive".to_string(),
+            invert_colors: false,
+        };
+
+        let custom_tess_config = crate::types::TesseractConfig {
+            language: "eng".to_string(),
+            psm: 6,
+            output_format: "markdown".to_string(),
+            oem: 1, // LSTM only
+            min_confidence: 80.0,
+            preprocessing: Some(preprocessing.clone()),
+            tessedit_char_blacklist: "!@#$".to_string(),
+            ..Default::default()
+        };
+
+        let ocr_config = OcrConfig {
+            backend: "tesseract".to_string(),
+            language: "eng".to_string(),
+            tesseract_config: Some(custom_tess_config),
+        };
+
+        let tess_config = backend.config_to_tesseract(&ocr_config);
+
+        // Verify new fields are properly converted
+        assert_eq!(tess_config.oem, 1);
+        assert_eq!(tess_config.min_confidence, 80.0);
+        assert_eq!(tess_config.tessedit_char_blacklist, "!@#$");
+
+        // Verify preprocessing config
+        assert!(tess_config.preprocessing.is_some());
+        let preproc = tess_config.preprocessing.unwrap();
+        assert_eq!(preproc.target_dpi, 600);
+        assert!(!preproc.auto_rotate);
+        assert!(preproc.deskew);
+        assert!(preproc.denoise);
+        assert!(preproc.contrast_enhance);
+        assert_eq!(preproc.binarization_method, "adaptive");
+        assert!(!preproc.invert_colors);
+    }
+
+    #[test]
+    fn test_convert_config_type_conversions() {
+        // Test i32 to u8 conversions for oem and psm
+        let public_config = crate::types::TesseractConfig {
+            language: "eng".to_string(),
+            psm: 6,                      // i32
+            oem: 3,                      // i32
+            table_column_threshold: 100, // i32
+            ..Default::default()
+        };
+
+        let internal_config = TesseractBackend::convert_config(&public_config);
+
+        // Verify type conversions
+        assert_eq!(internal_config.psm, 6u8);
+        assert_eq!(internal_config.oem, 3u8);
+        assert_eq!(internal_config.table_column_threshold, 100u32);
     }
 }

@@ -7,7 +7,7 @@ import pytest
 from kreuzberg import ExtractionConfig, ImageExtractionConfig, extract_file
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_extract_images_from_pptx_smoke(pptx_document: Any) -> None:
     cfg = ExtractionConfig(images=ImageExtractionConfig())
     result = await extract_file(str(pptx_document), config=cfg)

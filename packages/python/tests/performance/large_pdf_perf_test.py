@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 @pytest.mark.skipif(os.getenv("RUN_PERF_TESTS") != "1", reason="Set RUN_PERF_TESTS=1 to run performance tests")
 async def test_large_pdf_image_extraction_performance(test_files_path: Path) -> None:
     candidate = None

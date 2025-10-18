@@ -31,40 +31,32 @@ impl PdfExtractor {
     /// Renders all pages to images and processes them with OCR.
     #[cfg(feature = "ocr")]
     async fn extract_with_ocr(&self, content: &[u8], config: &ExtractionConfig) -> Result<String> {
-        use image::codecs::png::PngEncoder;
         use image::ImageEncoder;
+        use image::codecs::png::PngEncoder;
         use std::io::Cursor;
 
-        let ocr_config = config.ocr.as_ref().ok_or_else(|| {
-            crate::KreuzbergError::Parsing {
-                message: "OCR config required for force_ocr".to_string(),
-                source: None,
-            }
+        let ocr_config = config.ocr.as_ref().ok_or_else(|| crate::KreuzbergError::Parsing {
+            message: "OCR config required for force_ocr".to_string(),
+            source: None,
         })?;
 
         // Get TesseractConfig from OcrConfig
-        let tess_config = ocr_config
-            .tesseract_config
-            .as_ref()
-            .cloned()
-            .unwrap_or_default();
+        let tess_config = ocr_config.tesseract_config.as_ref().cloned().unwrap_or_default();
 
         // Render all PDF pages to images (synchronous, drops renderer before async processing)
         let images = {
             let render_options = PageRenderOptions::default();
-            let renderer = PdfRenderer::new().map_err(|e| {
-                crate::KreuzbergError::Parsing {
-                    message: format!("Failed to initialize PDF renderer: {}", e),
-                    source: None,
-                }
+            let renderer = PdfRenderer::new().map_err(|e| crate::KreuzbergError::Parsing {
+                message: format!("Failed to initialize PDF renderer: {}", e),
+                source: None,
             })?;
 
-            renderer.render_all_pages(content, &render_options).map_err(|e| {
-                crate::KreuzbergError::Parsing {
+            renderer
+                .render_all_pages(content, &render_options)
+                .map_err(|e| crate::KreuzbergError::Parsing {
                     message: format!("Failed to render PDF pages: {}", e),
                     source: None,
-                }
-            })?
+                })?
             // renderer is dropped here, before async processing
         };
 
@@ -91,9 +83,7 @@ impl PdfExtractor {
             // Run OCR on this page in blocking task
             let ocr_result = tokio::task::spawn_blocking(move || {
                 // Use cache directory from environment or default
-                let cache_dir = std::env::var("KREUZBERG_CACHE_DIR")
-                    .ok()
-                    .map(std::path::PathBuf::from);
+                let cache_dir = std::env::var("KREUZBERG_CACHE_DIR").ok().map(std::path::PathBuf::from);
 
                 let proc = OcrProcessor::new(cache_dir)?;
 
@@ -102,6 +92,9 @@ impl PdfExtractor {
                     psm: tess_config_clone.psm as u8,
                     language: tess_config_clone.language.clone(),
                     output_format: tess_config_clone.output_format.clone(),
+                    oem: tess_config_clone.oem as u8,
+                    min_confidence: tess_config_clone.min_confidence,
+                    preprocessing: tess_config_clone.preprocessing.clone(),
                     enable_table_detection: tess_config_clone.enable_table_detection,
                     table_min_confidence: tess_config_clone.table_min_confidence,
                     table_column_threshold: tess_config_clone.table_column_threshold as u32,
@@ -113,6 +106,7 @@ impl PdfExtractor {
                     tessedit_dont_rowrej_good_wds: tess_config_clone.tessedit_dont_rowrej_good_wds,
                     tessedit_enable_dict_correction: tess_config_clone.tessedit_enable_dict_correction,
                     tessedit_char_whitelist: tess_config_clone.tessedit_char_whitelist.clone(),
+                    tessedit_char_blacklist: tess_config_clone.tessedit_char_blacklist.clone(),
                     tessedit_use_primary_params_model: tess_config_clone.tessedit_use_primary_params_model,
                     textord_space_size_is_variable: tess_config_clone.textord_space_size_is_variable,
                     thresholding_method: tess_config_clone.thresholding_method,

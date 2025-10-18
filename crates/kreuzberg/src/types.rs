@@ -303,16 +303,90 @@ pub struct OcrTable {
     pub page_number: usize,
 }
 
+/// Image preprocessing configuration for OCR.
+///
+/// These settings control how images are preprocessed before OCR to improve
+/// text recognition quality. Different preprocessing strategies work better
+/// for different document types.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ImagePreprocessingConfig {
+    /// Target DPI for the image (300 is standard, 600 for small text).
+    pub target_dpi: i32,
+
+    /// Auto-detect and correct image rotation.
+    pub auto_rotate: bool,
+
+    /// Correct skew (tilted images).
+    pub deskew: bool,
+
+    /// Remove noise from the image.
+    pub denoise: bool,
+
+    /// Enhance contrast for better text visibility.
+    pub contrast_enhance: bool,
+
+    /// Binarization method: "otsu", "sauvola", "adaptive".
+    pub binarization_method: String,
+
+    /// Invert colors (white text on black → black on white).
+    pub invert_colors: bool,
+}
+
+impl Default for ImagePreprocessingConfig {
+    fn default() -> Self {
+        Self {
+            target_dpi: 300,
+            auto_rotate: true,
+            deskew: true,
+            denoise: false,
+            contrast_enhance: false,
+            binarization_method: "otsu".to_string(),
+            invert_colors: false,
+        }
+    }
+}
+
+/// Tesseract OCR configuration.
+///
+/// Provides fine-grained control over Tesseract OCR engine parameters.
+/// Most users can use the defaults, but these settings allow optimization
+/// for specific document types (invoices, handwriting, etc.).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TesseractConfig {
+    // Basic OCR settings
     pub language: String,
     pub psm: i32,
     pub output_format: String,
+
+    /// OCR Engine Mode (0-3).
+    ///
+    /// - 0: Legacy engine only
+    /// - 1: Neural nets (LSTM) only (usually best)
+    /// - 2: Legacy + LSTM
+    /// - 3: Default (based on what's available)
+    pub oem: i32,
+
+    /// Minimum confidence threshold (0.0-100.0).
+    ///
+    /// Words with confidence below this threshold may be rejected or flagged.
+    pub min_confidence: f64,
+
+    /// Image preprocessing configuration.
+    ///
+    /// Controls how images are preprocessed before OCR. Can significantly
+    /// improve quality for scanned documents or low-quality images.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preprocessing: Option<ImagePreprocessingConfig>,
+
+    // Table detection settings
     pub enable_table_detection: bool,
     pub table_min_confidence: f64,
     pub table_column_threshold: i32,
     pub table_row_threshold_ratio: f64,
+
+    // Tesseract engine tweaks
     pub use_cache: bool,
     pub classify_use_pre_adapted_templates: bool,
     pub language_model_ngram_on: bool,
@@ -320,6 +394,7 @@ pub struct TesseractConfig {
     pub tessedit_dont_rowrej_good_wds: bool,
     pub tessedit_enable_dict_correction: bool,
     pub tessedit_char_whitelist: String,
+    pub tessedit_char_blacklist: String,
     pub tessedit_use_primary_params_model: bool,
     pub textord_space_size_is_variable: bool,
     pub thresholding_method: bool,
@@ -331,6 +406,9 @@ impl Default for TesseractConfig {
             language: "eng".to_string(),
             psm: 3,
             output_format: "markdown".to_string(),
+            oem: 3, // Default (auto-select based on available)
+            min_confidence: 0.0,
+            preprocessing: None, // No preprocessing by default
             enable_table_detection: true,
             table_min_confidence: 0.0,
             table_column_threshold: 50,
@@ -342,6 +420,7 @@ impl Default for TesseractConfig {
             tessedit_dont_rowrej_good_wds: true,
             tessedit_enable_dict_correction: true,
             tessedit_char_whitelist: String::new(),
+            tessedit_char_blacklist: String::new(),
             tessedit_use_primary_params_model: true,
             textord_space_size_is_variable: true,
             thresholding_method: false,

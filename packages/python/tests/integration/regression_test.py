@@ -30,7 +30,7 @@ TEST_DATA_DIR = Path(__file__).parent.parent / "test_documents"
 )
 @pytest.mark.parametrize("test_mode", ["async", "sync"])
 @pytest.mark.parametrize("config_type", ["default", "user_config"])
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_pdf_extraction_regression(
     pdf_fixture: str,
     expected_content: str,
@@ -62,7 +62,7 @@ async def test_pdf_extraction_regression(
 
 @pytest.mark.parametrize("test_mode", ["async", "sync", "bytes"])
 @pytest.mark.parametrize("config_type", ["default", "user_config"])
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_xls_extraction_regression(
     test_mode: str,
     config_type: str,
@@ -92,7 +92,7 @@ async def test_xls_extraction_regression(
 
 
 @pytest.mark.parametrize("config_type", ["default", "user_config"])
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_batch_extraction_regression(
     config_type: str,
     google_doc_pdf: Path,
@@ -112,7 +112,7 @@ async def test_batch_extraction_regression(
         assert len(result.content) > 0
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_psm_mode_4_specifically(google_doc_pdf: Path) -> None:
     config = ExtractionConfig(
         ocr=TesseractConfig(psm=PSMMode.SINGLE_COLUMN),
@@ -123,7 +123,7 @@ async def test_psm_mode_4_specifically(google_doc_pdf: Path) -> None:
     assert len(result.content) > 0
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_batch_extract_bytes_regression(google_doc_pdf: Path, test_xls: Path) -> None:
     from kreuzberg import batch_extract_bytes
 
@@ -144,7 +144,7 @@ async def test_batch_extract_bytes_regression(google_doc_pdf: Path, test_xls: Pa
 
 
 @pytest.mark.parametrize("test_mode", ["async", "sync"])
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_issue_149_windows_tesseract_hocr_regression(test_mode: str, german_image_pdf: Path) -> None:
     import re
 

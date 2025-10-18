@@ -66,13 +66,7 @@ fn tokenize_text(text: &str) -> HashMap<String, usize> {
     // Remove punctuation
     let normalized = normalized
         .chars()
-        .map(|ch| {
-            if "()[],.;:+`".contains(ch) {
-                ' '
-            } else {
-                ch
-            }
-        })
+        .map(|ch| if "()[],.;:+`".contains(ch) { ' ' } else { ch })
         .collect::<String>();
 
     let mut tokens: HashMap<String, usize> = HashMap::new();
@@ -171,8 +165,8 @@ fn test_ocr_quality_simple_text_high_accuracy() {
     let file_path = get_test_file_path("pdfs/fake_memo.pdf");
 
     // Extract native text (ground truth)
-    let truth_result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
-        .expect("Should extract ground truth text");
+    let truth_result =
+        extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
@@ -185,14 +179,19 @@ fn test_ocr_quality_simple_text_high_accuracy() {
         ..Default::default()
     };
 
-    let ocr_result = extract_file_sync(&file_path, None, &ocr_config)
-        .expect("Should extract with OCR");
+    let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
     // Debug: Check if force_ocr actually ran
     println!("Truth content length: {}", truth_result.content.len());
     println!("OCR content length: {}", ocr_result.content.len());
-    println!("Truth first 100 chars: {:?}", &truth_result.content.chars().take(100).collect::<String>());
-    println!("OCR first 100 chars: {:?}", &ocr_result.content.chars().take(100).collect::<String>());
+    println!(
+        "Truth first 100 chars: {:?}",
+        &truth_result.content.chars().take(100).collect::<String>()
+    );
+    println!(
+        "OCR first 100 chars: {:?}",
+        &ocr_result.content.chars().take(100).collect::<String>()
+    );
 
     // Tokenize and score
     let truth_tokens = tokenize_text(&truth_result.content);
@@ -227,8 +226,8 @@ fn test_ocr_quality_numeric_accuracy() {
     let file_path = get_test_file_path("pdfs/embedded_images_tables.pdf");
 
     // Extract native text (ground truth)
-    let truth_result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
-        .expect("Should extract ground truth text");
+    let truth_result =
+        extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
@@ -241,8 +240,7 @@ fn test_ocr_quality_numeric_accuracy() {
         ..Default::default()
     };
 
-    let ocr_result = extract_file_sync(&file_path, None, &ocr_config)
-        .expect("Should extract with OCR");
+    let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
     // Extract numeric tokens only
     let truth_tokens = tokenize_text(&truth_result.content);
@@ -280,8 +278,8 @@ fn test_ocr_quality_layout_preservation() {
     let file_path = get_test_file_path("pdfs/fake_memo.pdf");
 
     // Extract native text (ground truth)
-    let truth_result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
-        .expect("Should extract ground truth text");
+    let truth_result =
+        extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
@@ -294,8 +292,7 @@ fn test_ocr_quality_layout_preservation() {
         ..Default::default()
     };
 
-    let ocr_result = extract_file_sync(&file_path, None, &ocr_config)
-        .expect("Should extract with OCR");
+    let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
     // Count lines
     let truth_lines = count_lines(&truth_result.content);
@@ -326,8 +323,8 @@ fn test_ocr_quality_technical_document() {
     let file_path = get_test_file_path("pdfs/code_and_formula.pdf");
 
     // Extract native text (ground truth)
-    let truth_result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
-        .expect("Should extract ground truth text");
+    let truth_result =
+        extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
@@ -340,8 +337,7 @@ fn test_ocr_quality_technical_document() {
         ..Default::default()
     };
 
-    let ocr_result = extract_file_sync(&file_path, None, &ocr_config)
-        .expect("Should extract with OCR");
+    let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
     // Overall quality
     let truth_tokens = tokenize_text(&truth_result.content);
@@ -384,12 +380,9 @@ fn test_ocr_consistency_across_runs() {
     };
 
     // Run OCR 3 times
-    let result1 = extract_file_sync(&file_path, None, &ocr_config)
-        .expect("First OCR run should succeed");
-    let result2 = extract_file_sync(&file_path, None, &ocr_config)
-        .expect("Second OCR run should succeed");
-    let result3 = extract_file_sync(&file_path, None, &ocr_config)
-        .expect("Third OCR run should succeed");
+    let result1 = extract_file_sync(&file_path, None, &ocr_config).expect("First OCR run should succeed");
+    let result2 = extract_file_sync(&file_path, None, &ocr_config).expect("Second OCR run should succeed");
+    let result3 = extract_file_sync(&file_path, None, &ocr_config).expect("Third OCR run should succeed");
 
     // Tokenize all runs
     let tokens1 = tokenize_text(&result1.content);
@@ -453,10 +446,8 @@ fn test_ocr_consistency_with_different_psm() {
         ..Default::default()
     };
 
-    let result_psm3 = extract_file_sync(&file_path, None, &config_psm3)
-        .expect("PSM 3 extraction should succeed");
-    let result_psm6 = extract_file_sync(&file_path, None, &config_psm6)
-        .expect("PSM 6 extraction should succeed");
+    let result_psm3 = extract_file_sync(&file_path, None, &config_psm3).expect("PSM 3 extraction should succeed");
+    let result_psm6 = extract_file_sync(&file_path, None, &config_psm6).expect("PSM 6 extraction should succeed");
 
     let tokens_psm3 = tokenize_text(&result_psm3.content);
     let tokens_psm6 = tokenize_text(&result_psm6.content);
@@ -487,8 +478,8 @@ fn test_ocr_quality_multi_page_consistency() {
     let file_path = get_test_file_path("pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf");
 
     // Extract native text (ground truth) - limited pages for performance
-    let truth_result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
-        .expect("Should extract ground truth text");
+    let truth_result =
+        extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
@@ -501,8 +492,7 @@ fn test_ocr_quality_multi_page_consistency() {
         ..Default::default()
     };
 
-    let ocr_result = extract_file_sync(&file_path, None, &ocr_config)
-        .expect("Should extract with OCR");
+    let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
     // For large documents, just verify OCR produces reasonable output
     let truth_tokens = tokenize_text(&truth_result.content);
@@ -547,13 +537,15 @@ fn test_ocr_quality_with_tables() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &ocr_config)
-        .expect("Should extract with table detection");
+    let result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with table detection");
 
     println!("Table extraction quality:");
     println!("  Tables found: {}", result.tables.len());
     println!("  Content length: {}", result.content.len());
 
     // Verify OCR ran and produced content
-    assert!(!result.content.trim().is_empty(), "OCR with tables should produce content");
+    assert!(
+        !result.content.trim().is_empty(),
+        "OCR with tables should produce content"
+    );
 }

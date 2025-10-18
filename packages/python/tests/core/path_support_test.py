@@ -48,7 +48,7 @@ def test_extract_file_sync_with_bytes(tmp_path: Path) -> None:
     assert result.mime_type == "text/plain"
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_extract_file_async_with_str(tmp_path: Path) -> None:
     """Test that extract_file (async) accepts str paths."""
     test_file = tmp_path / "test.txt"
@@ -61,7 +61,7 @@ async def test_extract_file_async_with_str(tmp_path: Path) -> None:
     assert result.mime_type == "text/plain"
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_extract_file_async_with_path(tmp_path: Path) -> None:
     """Test that extract_file (async) accepts pathlib.Path objects."""
     test_file = tmp_path / "test.txt"
@@ -74,7 +74,7 @@ async def test_extract_file_async_with_path(tmp_path: Path) -> None:
     assert result.mime_type == "text/plain"
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_extract_file_async_with_bytes(tmp_path: Path) -> None:
     """Test that extract_file (async) accepts bytes paths (Unix)."""
     test_file = tmp_path / "test.txt"

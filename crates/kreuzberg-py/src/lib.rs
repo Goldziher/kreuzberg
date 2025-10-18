@@ -23,7 +23,7 @@ mod types;
 /// Internal bindings module for Kreuzberg
 #[pymodule]
 fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Configuration types (9 types)
+    // Configuration types (10 types)
     m.add_class::<config::ExtractionConfig>()?;
     m.add_class::<config::OcrConfig>()?;
     m.add_class::<config::PdfConfig>()?;
@@ -33,6 +33,7 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<config::ImageExtractionConfig>()?;
     m.add_class::<config::PostProcessorConfig>()?;
     m.add_class::<config::TesseractConfig>()?;
+    m.add_class::<config::ImagePreprocessingConfig>()?;
 
     // Result types (2 types)
     m.add_class::<types::ExtractionResult>()?;

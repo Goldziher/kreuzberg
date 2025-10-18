@@ -10,6 +10,7 @@ __all__ = [
     # Result types
     "ExtractionResult",
     "ImageExtractionConfig",
+    "ImagePreprocessingConfig",
     "LanguageDetectionConfig",
     "OcrBackendProtocol",
     "OcrConfig",
@@ -175,10 +176,34 @@ class PostProcessorConfig:
         disabled_processors: list[str] | None = None,
     ) -> None: ...
 
+class ImagePreprocessingConfig:
+    target_dpi: int
+    auto_rotate: bool
+    deskew: bool
+    denoise: bool
+    contrast_enhance: bool
+    binarization_method: str
+    invert_colors: bool
+
+    def __init__(
+        self,
+        *,
+        target_dpi: int | None = None,
+        auto_rotate: bool | None = None,
+        deskew: bool | None = None,
+        denoise: bool | None = None,
+        contrast_enhance: bool | None = None,
+        binarization_method: str | None = None,
+        invert_colors: bool | None = None,
+    ) -> None: ...
+
 class TesseractConfig:
     language: str
     psm: int
     output_format: str
+    oem: int
+    min_confidence: float
+    preprocessing: ImagePreprocessingConfig | None
     enable_table_detection: bool
     table_min_confidence: float
     table_column_threshold: int
@@ -190,6 +215,7 @@ class TesseractConfig:
     tessedit_dont_rowrej_good_wds: bool
     tessedit_enable_dict_correction: bool
     tessedit_char_whitelist: str
+    tessedit_char_blacklist: str
     tessedit_use_primary_params_model: bool
     textord_space_size_is_variable: bool
     thresholding_method: bool
@@ -200,6 +226,9 @@ class TesseractConfig:
         language: str | None = None,
         psm: int | None = None,
         output_format: str | None = None,
+        oem: int | None = None,
+        min_confidence: float | None = None,
+        preprocessing: ImagePreprocessingConfig | None = None,
         enable_table_detection: bool | None = None,
         table_min_confidence: float | None = None,
         table_column_threshold: int | None = None,
@@ -211,6 +240,7 @@ class TesseractConfig:
         tessedit_dont_rowrej_good_wds: bool | None = None,
         tessedit_enable_dict_correction: bool | None = None,
         tessedit_char_whitelist: str | None = None,
+        tessedit_char_blacklist: str | None = None,
         tessedit_use_primary_params_model: bool | None = None,
         textord_space_size_is_variable: bool | None = None,
         thresholding_method: bool | None = None,

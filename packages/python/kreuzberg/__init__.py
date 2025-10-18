@@ -29,8 +29,17 @@ from typing import TYPE_CHECKING, Any
 
 from kreuzberg import _setup_lib_path  # noqa: F401
 from kreuzberg._internal_bindings import (
+    ChunkingConfig,
     ExtractionConfig,
     ExtractionResult,
+    ImageExtractionConfig,
+    ImagePreprocessingConfig,
+    LanguageDetectionConfig,
+    OcrConfig,
+    PdfConfig,
+    PostProcessorConfig,
+    TesseractConfig,
+    TokenReductionConfig,
     register_ocr_backend,
     register_post_processor,
 )
@@ -76,20 +85,29 @@ __version__ = version("kreuzberg")
 # ============================================================================
 
 __all__ = [
-    # Configuration and results
+    # Configuration classes
+    "ChunkingConfig",
     "ExtractionConfig",
+    # Result types
     "ExtractionResult",
+    "ImageExtractionConfig",
+    "ImagePreprocessingConfig",
+    "LanguageDetectionConfig",
+    "OcrConfig",
+    "PdfConfig",
+    "PostProcessorConfig",
+    "TesseractConfig",
+    "TokenReductionConfig",
     # Version
     "__version__",
+    # Extraction functions
     "batch_extract_bytes",
     "batch_extract_bytes_sync",
     "batch_extract_files",
     "batch_extract_files_sync",
     "extract_bytes",
     "extract_bytes_sync",
-    # Asynchronous extraction
     "extract_file",
-    # Synchronous extraction
     "extract_file_sync",
 ]
 

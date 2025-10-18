@@ -31,19 +31,19 @@ optional-dependencies.all = [
 ]
 optional-dependencies.easyocr = [
   "easyocr>=1.7.2",
-  "torch>=2.8",
+  "torch>=2.9",
 ]
 optional-dependencies.nlp = [
-  "keybert>=0.8.5",
-  "sentence-transformers>=3",
-  "spacy>=3",
-  "torch>=2.8",
-  "transformers>=4.56.2",
+  "keybert>=0.9",
+  "sentence-transformers>=5.1.1",
+  "spacy>=3.8.7",
+  "torch>=2.9",
+  "transformers>=4.57.1",
 ]
 optional-dependencies.paddleocr = [
-  "paddleocr>=3.1",
-  "paddlepaddle>=3.1",
-  "setuptools>=65",
+  "paddleocr>=3.3",
+  "paddlepaddle>=3.2",
+  "setuptools>=80.9",
 ]
 urls.Documentation = "https://kreuzberg.readthedocs.io"
 urls.Homepage = "https://github.com/Goldziher/kreuzberg"

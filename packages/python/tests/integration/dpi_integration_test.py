@@ -70,7 +70,7 @@ def small_test_image(tmp_path: Path) -> Path:
     return image_path
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_large_image_dpi_adjustment(large_test_image: Path) -> None:
     """Test that large images get DPI adjusted for OCR processing."""
     config = ExtractionConfig(
@@ -94,7 +94,7 @@ async def test_large_image_dpi_adjustment(large_test_image: Path) -> None:
     assert preprocessing.auto_adjusted or preprocessing.scale_factor != 1.0
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_small_image_no_adjustment(small_test_image: Path) -> None:
     """Test that small images don't get excessive upscaling."""
     config = ExtractionConfig(
@@ -115,7 +115,7 @@ async def test_small_image_no_adjustment(small_test_image: Path) -> None:
         assert 0.3 <= scale_factor <= 3.0
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_dpi_disabled_auto_adjust(large_test_image: Path) -> None:
     """Test that disabling auto-adjust prevents DPI changes."""
     config = ExtractionConfig(
@@ -135,7 +135,7 @@ async def test_dpi_disabled_auto_adjust(large_test_image: Path) -> None:
         assert not preprocessing.auto_adjusted
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_different_dpi_targets(small_test_image: Path) -> None:
     """Test extraction with different target DPI values."""
     low_dpi_config = ExtractionConfig(
@@ -159,7 +159,7 @@ async def test_different_dpi_targets(small_test_image: Path) -> None:
     assert high_result.content is not None
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_pdf_dpi_integration(google_doc_pdf: Path) -> None:
     """Test DPI handling when forcing OCR on PDFs."""
     config = ExtractionConfig(
@@ -180,7 +180,7 @@ async def test_pdf_dpi_integration(google_doc_pdf: Path) -> None:
     assert any(word in content_lower for word in ["page", "web", "guide", "the", "and"])
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_extreme_dpi_values(small_test_image: Path) -> None:
     """Test handling of extreme DPI constraints."""
     very_low_config = ExtractionConfig(
@@ -197,7 +197,7 @@ async def test_extreme_dpi_values(small_test_image: Path) -> None:
     assert result.content is not None
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_metadata_preservation(small_test_image: Path) -> None:
     """Test that preprocessing metadata is preserved in results."""
     config = ExtractionConfig(

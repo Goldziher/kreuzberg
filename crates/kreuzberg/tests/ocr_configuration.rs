@@ -15,8 +15,8 @@ mod helpers;
 
 use helpers::*;
 use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
-use kreuzberg::types::TesseractConfig;
 use kreuzberg::extract_file_sync;
+use kreuzberg::types::TesseractConfig;
 
 // ============================================================================
 // Language Configuration Tests
@@ -39,8 +39,7 @@ fn test_ocr_language_english() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with English OCR");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract with English OCR");
 
     assert_mime_type(&result, "image/png");
     // English text should be extracted
@@ -132,8 +131,7 @@ fn test_ocr_psm_auto() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with PSM 3 (auto)");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract with PSM 3 (auto)");
 
     assert_mime_type(&result, "image/jpeg");
 }
@@ -158,8 +156,7 @@ fn test_ocr_psm_single_block() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with PSM 6 (single block)");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract with PSM 6 (single block)");
 
     assert_mime_type(&result, "image/jpeg");
 }
@@ -184,8 +181,7 @@ fn test_ocr_psm_single_line() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with PSM 7 (single line)");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract with PSM 7 (single line)");
 
     assert_mime_type(&result, "image/png");
 }
@@ -211,8 +207,7 @@ fn test_force_ocr_on_text_pdf() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with force_ocr enabled");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract with force_ocr enabled");
 
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
@@ -235,8 +230,7 @@ fn test_force_ocr_disabled() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract without forcing OCR");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract without forcing OCR");
 
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
@@ -269,8 +263,7 @@ fn test_table_detection_enabled() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with table detection enabled");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract with table detection enabled");
 
     assert_mime_type(&result, "image/png");
     // Table detection may or may not find tables depending on image quality
@@ -296,8 +289,7 @@ fn test_table_detection_disabled() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with table detection disabled");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract with table detection disabled");
 
     assert_mime_type(&result, "image/png");
 }
@@ -326,8 +318,8 @@ fn test_language_model_ngram_configuration() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with ngram language model enabled");
+    let result =
+        extract_file_sync(&file_path, None, &config).expect("Should extract with ngram language model enabled");
 
     assert_mime_type(&result, "image/jpeg");
 }
@@ -352,8 +344,8 @@ fn test_dictionary_correction_enabled() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with dictionary correction enabled");
+    let result =
+        extract_file_sync(&file_path, None, &config).expect("Should extract with dictionary correction enabled");
 
     assert_mime_type(&result, "image/jpeg");
 }
@@ -378,8 +370,7 @@ fn test_character_whitelist() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with character whitelist");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract with character whitelist");
 
     assert_mime_type(&result, "image/png");
     // Output should only contain whitelisted characters
@@ -411,10 +402,8 @@ fn test_ocr_cache_enabled() {
     };
 
     // Extract twice to test caching
-    let result1 = extract_file_sync(&file_path, None, &config)
-        .expect("First extraction should succeed");
-    let result2 = extract_file_sync(&file_path, None, &config)
-        .expect("Second extraction should succeed (cached)");
+    let result1 = extract_file_sync(&file_path, None, &config).expect("First extraction should succeed");
+    let result2 = extract_file_sync(&file_path, None, &config).expect("Second extraction should succeed (cached)");
 
     assert_mime_type(&result1, "image/jpeg");
     assert_mime_type(&result2, "image/jpeg");
@@ -442,8 +431,7 @@ fn test_ocr_cache_disabled() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract without caching");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract without caching");
 
     assert_mime_type(&result, "image/jpeg");
 }
@@ -478,8 +466,7 @@ fn test_complex_configuration_combination() {
         ..Default::default()
     };
 
-    let result = extract_file_sync(&file_path, None, &config)
-        .expect("Should extract with complex configuration");
+    let result = extract_file_sync(&file_path, None, &config).expect("Should extract with complex configuration");
 
     assert_mime_type(&result, "image/jpeg");
     assert_non_empty_content(&result);
