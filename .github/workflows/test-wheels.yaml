@@ -44,7 +44,7 @@ jobs:
         run: python -m pip install cibuildwheel==3.2.0
 
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: python -m cibuildwheel packages/python --output-dir wheelhouse
         env:
           CIBW_BUILD: cp310-*
 

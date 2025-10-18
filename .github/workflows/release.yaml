@@ -32,7 +32,7 @@ jobs:
         run: pip install maturin
 
       - name: Build sdist
-        run: maturin sdist
+        run: maturin sdist --manifest-path crates/kreuzberg-py/Cargo.toml
 
       - name: Upload sdist
         uses: actions/upload-artifact@v4
@@ -67,7 +67,7 @@ jobs:
         run: python -m pip install cibuildwheel==3.2.0
 
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: python -m cibuildwheel packages/python --output-dir wheelhouse
         env:
           CIBW_BUILD: cp310-*
 
