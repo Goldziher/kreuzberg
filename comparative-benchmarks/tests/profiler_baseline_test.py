@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+
 from src.profiler import (
     AsyncPerformanceProfiler,
     ResourceMonitor,

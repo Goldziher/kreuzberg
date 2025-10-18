@@ -1,0 +1,25 @@
+[package]
+name = "kreuzberg-node"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+description = "Kreuzberg document intelligence - Node.js native bindings"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+kreuzberg = { path = "../kreuzberg", features = ["full"] }
+napi = { version = "3.3", default-features = false, features = ["napi8", "async"] }
+napi-derive = "3.2"
+tokio = { version = "1.48.0", features = ["rt", "macros"] }
+serde_json = "1.0"
+
+[build-dependencies]
+napi-build = "2.2"
+
+[target.'cfg(all(any(windows, unix), target_arch = "x86_64", not(target_env = "musl")))'.dependencies]
+mimalloc-rust = "0.2"

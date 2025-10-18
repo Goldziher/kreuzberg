@@ -1,0 +1,50 @@
+[build-system]
+build-backend = "maturin"
+requires = [ "maturin>=1,<2" ]
+
+[project]
+name = "kreuzberg"
+version = "4.0.0"
+description = "Multi-language document intelligence framework with Rust core"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [ { name = "Na'aman Hirschfeld", email = "nhirschfeld@gmail.com" } ]
+requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Rust",
+  "Topic :: Text Processing",
+]
+
+dependencies = [  ]
+
+optional-dependencies.all = [
+  "kreuzberg[easyocr,paddleocr]",
+]
+optional-dependencies.easyocr = [
+  "easyocr>=1.7.2",
+  "torch>=2.9",
+]
+optional-dependencies.paddleocr = [
+  "paddleocr>=3.3",
+  "paddlepaddle>=3.2",
+  "setuptools>=80.9",
+]
+urls.Documentation = "https://kreuzberg.readthedocs.io"
+urls.Homepage = "https://github.com/Goldziher/kreuzberg"
+urls.Issues = "https://github.com/Goldziher/kreuzberg/issues"
+urls.Repository = "https://github.com/Goldziher/kreuzberg"
+scripts.kreuzberg = "kreuzberg.__main__:main"
+
+[tool.maturin]
+module-name = "kreuzberg._internal_bindings"
+# Point to the PyO3 bindings crate
+manifest-path = "../../crates/kreuzberg-py/Cargo.toml"

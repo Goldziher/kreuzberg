@@ -1,0 +1,26 @@
+[workspace]
+members = [
+    "crates/kreuzberg",
+    "crates/kreuzberg-py",
+    "crates/kreuzberg-cli",
+    "crates/kreuzberg-node",
+    "crates/kreuzberg-wasm",
+]
+resolver = "2"
+
+[workspace.package]
+version = "4.0.0"
+edition = "2024"
+authors = ["Na'aman Hirschfeld <nhirschfed@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Goldziher/kreuzberg"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true

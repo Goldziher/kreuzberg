@@ -92,7 +92,8 @@ def normalize_text(result: ExtractionResult) -> ExtractionResult:
 # Use multiple hooks
 async def extract_with_multiple_hooks():
     config = ExtractionConfig(
-        validators=[validate_content_length, validate_has_text], post_processing_hooks=[clean_whitespace, normalize_text]
+        validators=[validate_content_length, validate_has_text],
+        post_processing_hooks=[clean_whitespace, normalize_text],
     )
 
     result = await extract_file("document.pdf", config=config)

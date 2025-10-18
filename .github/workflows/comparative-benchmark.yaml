@@ -23,8 +23,10 @@ jobs:
       fail-fast: false
       matrix:
         framework:
-          - kreuzberg_sync
-          - kreuzberg_async
+          - kreuzberg_v3_sync
+          - kreuzberg_v3_async
+          - kreuzberg_v4_sync
+          - kreuzberg_v4_async
           - docling
           - markitdown
           - unstructured
@@ -35,7 +37,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: |
@@ -46,6 +48,11 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
 
       - name: Cache uv dependencies
         uses: actions/cache@v4
@@ -71,10 +78,10 @@ jobs:
           max_attempts: 3
           retry_wait_seconds: 30
           command: |
-            echo "Installing core workspace packages..."
-            uv sync
-            echo "Installing comparative-benchmarks extras..."
-            uv sync --package comparative-benchmarks --all-extras
+            echo "Installing entire workspace with all packages and extras..."
+            # Install everything for benchmarks - all extras, all packages, all groups
+            uv sync --all-extras --all-packages --all-groups
+            uv pip install --editable .
           shell: bash
 
       - name: Clear Kreuzberg Cache
@@ -118,8 +125,6 @@ jobs:
           retention-days: 90
 
   aggregate-results:
-    # Always run aggregation, even if some frameworks fail
-    # This allows partial results to be collected and analyzed
     if: ${{ always() && github.event_name == 'workflow_dispatch' }}
     needs: framework-benchmark
     runs-on: ubuntu-latest
@@ -129,7 +134,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
 
@@ -138,9 +143,15 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
       - name: Install Dependencies
         run: |
-          uv sync --all-packages
+          uv sync --all-extras --all-packages --all-groups
+          uv pip install --editable .
 
       - name: Download All Framework Results
         uses: actions/download-artifact@v5
@@ -165,9 +176,7 @@ jobs:
           # Run aggregation using ResultAggregator
           uv run python -c "
           from pathlib import Path
-          import msgspec
           from src.aggregate import ResultAggregator
-          from src.types import BenchmarkResult
 
           # Collect all framework result directories
           result_dirs = []
@@ -184,9 +193,7 @@ jobs:
 
           if not result_dirs:
               print('WARNING: No benchmark_results.json files found in individual-results/')
-              # Create an empty list for raw results
-              raw_results = []
-              # Create empty aggregated results
+              print('Creating empty aggregated results')
               from src.types import AggregatedResults
               aggregated = AggregatedResults(
                   total_runs=0,
@@ -203,26 +210,11 @@ jobs:
           else:
               print(f'Aggregating results from {len(result_dirs)} frameworks...')
               aggregator = ResultAggregator()
-              # Get all raw results
-              all_results = []
-              for result_dir in result_dirs:
-                  results_file = result_dir / 'benchmark_results.json'
-                  if results_file.exists():
-                      with results_file.open('rb') as f:
-                          data = f.read()
-                          if data:
-                              all_results.extend(msgspec.json.decode(data, type=list[BenchmarkResult]))
-              raw_results = all_results
               aggregated = aggregator.aggregate_results(result_dirs)
 
-          # Save raw results
+          # Save aggregated results
           output_dir = Path('aggregated-results')
           output_dir.mkdir(parents=True, exist_ok=True)
-          raw_results_path = output_dir / 'raw_results.json'
-          with raw_results_path.open('wb') as f:
-              f.write(msgspec.json.encode(raw_results))
-
-          # Save aggregated results
           aggregator = ResultAggregator()
           aggregator.save_results(aggregated, output_dir, 'aggregated_results.json')
 
@@ -236,10 +228,10 @@ jobs:
           echo "=== Generating Visualizations ==="
           mkdir -p docs/comparative-benchmarks/charts
 
-          if [ -f "comparative-benchmarks/aggregated-results/raw_results.json" ]; then
+          if [ -f "comparative-benchmarks/aggregated-results/aggregated_results.json" ]; then
             cd comparative-benchmarks
             uv run python -m src.cli visualize \
-              --input aggregated-results/raw_results.json \
+              --input aggregated-results/aggregated_results.json \
               --output-dir ../docs/comparative-benchmarks/charts
 
             echo "✅ Visualizations generated successfully"
@@ -252,10 +244,10 @@ jobs:
         run: |
           echo "=== Generating Benchmark Documentation ==="
 
-          if [ -f "comparative-benchmarks/aggregated-results/raw_results.json" ]; then
+          if [ -f "comparative-benchmarks/aggregated-results/aggregated_results.json" ]; then
             cd comparative-benchmarks
             uv run python -m src.cli generate-docs \
-              --input aggregated-results/raw_results.json \
+              --input aggregated-results/aggregated_results.json \
               --output-dir ../docs/comparative-benchmarks \
               --charts-dir ../docs/comparative-benchmarks/charts
 

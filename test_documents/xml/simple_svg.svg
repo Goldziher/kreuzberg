@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <title>Simple SVG Example</title>
+  <desc>A simple SVG file with basic shapes</desc>
+  <rect x="10" y="10" width="80" height="80" fill="blue" />
+  <circle cx="150" cy="50" r="40" fill="red" />
+  <text x="100" y="150" font-family="Arial" font-size="20" text-anchor="middle">Hello SVG</text>
+</svg>

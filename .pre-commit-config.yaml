@@ -1,10 +1,13 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
 repos:
-  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: "v9.23.0"
+  - repo: https://github.com/Goldziher/gitfluff
+    rev: v0.3.1
     hooks:
-      - id: commitlint
+      - id: gitfluff-write
         stages: [commit-msg]
-        additional_dependencies: ["@commitlint/config-conventional"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -22,7 +25,7 @@ repos:
     hooks:
       - id: validate-pyproject
   - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.22
+    rev: 1.0.0
     hooks:
       - id: mdformat
         exclude: ^test_documents
@@ -37,32 +40,19 @@ repos:
     rev: 1.20.0
     hooks:
       - id: blacken-docs
-        args: ["--pyi", "--line-length", "130"]
-        exclude: tests/features/token_reduction_test.py
+        args: ["--pyi", "--line-length", "120"]
         additional_dependencies:
           - black==25.1.0
-  - repo: https://github.com/rbubley/mirrors-prettier
-    rev: "v3.6.2"
-    hooks:
-      - id: prettier
-        exclude: ^tests|^.idea|^migrations|^.git|README.md|^docs
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: "v2.10.0"
+    rev: v2.11.0
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+    rev: v0.14.1
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
       - id: ruff-format
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
-    hooks:
-      - id: codespell
-        exclude: ^tests|^scripts|^kreuzberg/_tesseract|^kreuzberg/_mime_types|^test_documents
-        additional_dependencies:
-          - tomli==2.2.1
   - repo: https://github.com/jsh9/pydoclint
     rev: 0.7.3
     hooks:
@@ -73,7 +63,13 @@ repos:
             --check-return-types=False,
             --arg-type-hints-in-docstring=False,
           ]
-        exclude: ^benchmarks/|^kreuzberg/_|^tests/|^scripts/|^run_benchmarks\.py
+        exclude: ^comparative-benchmarks/|^tests/|^scripts/
+  - repo: https://github.com/FeryET/pre-commit-rust
+    rev: v1.2.1
+    hooks:
+      - id: fmt
+      - id: cargo-check
+      - id: clippy
   - repo: local
     hooks:
       - id: mypy

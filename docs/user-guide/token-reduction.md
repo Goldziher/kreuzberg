@@ -106,7 +106,9 @@ When `preserve_markdown=True` (default), the reducer maintains document structur
 from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig
 
 config = ExtractionConfig(
-    token_reduction=TokenReductionConfig(mode="moderate", preserve_markdown=True)  # Preserves headers, lists, tables, code blocks
+    token_reduction=TokenReductionConfig(
+        mode="moderate", preserve_markdown=True
+    )  # Preserves headers, lists, tables, code blocks
 )
 result = await extract_file("structured_document.md", config=config)
 ```
@@ -162,11 +164,12 @@ Based on comprehensive testing across different text types:
 Reduce token costs and fit more content within model limits:
 
 ```python
-from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig
+from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig, ChunkingConfig
 
 # Optimize for LLM processing
 config = ExtractionConfig(
-    token_reduction=TokenReductionConfig(mode="moderate"), chunk_content=True, max_chars=3000  # Smaller chunks after reduction
+    token_reduction=TokenReductionConfig(mode="moderate"),
+    chunking=ChunkingConfig(max_chars=3000),  # Smaller chunks after reduction
 )
 
 result = await extract_file("large_report.pdf", config=config)
@@ -204,7 +207,9 @@ from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig
 
 # Reduce content for search indexing
 config = ExtractionConfig(
-    token_reduction=TokenReductionConfig(mode="moderate", preserve_markdown=False)  # Remove structure for pure text search
+    token_reduction=TokenReductionConfig(
+        mode="moderate", preserve_markdown=False
+    )  # Remove structure for pure text search
 )
 
 result = await extract_file("document.pdf", config=config)
