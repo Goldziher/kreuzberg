@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    timeout-minutes: 45
+    timeout-minutes: 60  # Increased for integration tests with system deps
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -60,44 +60,34 @@ jobs:
       - name: Install Python dependencies for Rust tests
         run: python -m pip install --upgrade pip numpy
 
-      - name: Inspect tessdata directories (Unix)
-        if: matrix.os != 'windows-latest'
-        run: |
-          echo "Inspecting common tessdata directories..."
-          for path in /usr/share/tessdata /usr/local/share/tessdata /usr/local/opt/tesseract/share/tessdata /opt/homebrew/share/tessdata /opt/homebrew/opt/tesseract/share/tessdata; do
-            if [ -d "$path" ]; then
-              echo "  FOUND: $path"
-              ls "$path" 2>/dev/null | head -n 10 || true
-            else
-              echo "  MISSING: $path"
-            fi
-          done
-        shell: bash
+      - name: Cache Rust build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target/
+          key: rust-build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-build-${{ runner.os }}-
 
-      - name: Inspect tessdata directories (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Write-Host "Inspecting common tessdata directories..."
-          $paths = @(
-            "C:\Program Files\Tesseract-OCR\tessdata",
-            "C:\ProgramData\Tesseract-OCR\tessdata"
-          )
-          foreach ($path in $paths) {
-            if (Test-Path $path) {
-              Write-Host "  FOUND: $path"
-              Get-ChildItem -Name $path | Select-Object -First 10 | ForEach-Object { Write-Host "    $_" }
-            } else {
-              Write-Host "  MISSING: $path"
-            }
-          }
+      - name: Install system dependencies for integration tests
+        uses: ./.github/actions/install-system-deps
 
-      - name: Run Rust Tests
+      - name: Run Rust Unit Tests (no default features)
         env:
-          RUST_BACKTRACE: full
+          RUST_BACKTRACE: 1
         run: |
-          echo "Running Rust tests with full debugging..."
-          cargo test --release --no-default-features -vv -- --nocapture --test-threads=1
+          echo "Running Rust unit tests (core functionality)..."
+          cargo test --release --no-default-features --lib --bins
+
+      - name: Run Rust Integration Tests (with features)
+        env:
+          RUST_BACKTRACE: 1
+        run: |
+          echo "Running Rust integration tests (with office feature for Pandoc)..."
+          cargo test --release --features office --tests
 
       - name: Check Rust Formatting
         if: matrix.os == 'ubuntu-latest'
@@ -131,6 +121,17 @@ jobs:
         with:
           components: rustfmt, clippy, llvm-tools-preview
 
+      - name: Cache Rust build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target/
+          key: rust-build-validate-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-build-validate-${{ runner.os }}-
 
       - name: Install Dependencies
         uses: nick-fields/retry@v3
@@ -149,8 +150,12 @@ jobs:
 
       - name: Run Rust Checks
         run: |
+          echo "Running Rust formatting check..."
           cargo fmt --check
-          cargo clippy -- -D warnings
+          echo "Running Rust clippy (no default features)..."
+          cargo clippy --no-default-features -- -D warnings
+          echo "Running Rust clippy (with office feature)..."
+          cargo clippy --features office -- -D warnings
 
       - name: Install prek
         run: |
@@ -194,6 +199,18 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Cache Rust build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target/
+          key: rust-build-coverage-${{ matrix.os }}-${{ matrix.python }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-build-coverage-${{ matrix.os }}-${{ matrix.python }}-
 
       - name: Sync dependencies
         uses: ./.github/actions/uv-sync
@@ -252,8 +269,22 @@ jobs:
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
 
-      - name: Generate Rust coverage
-        run: cargo llvm-cov --no-default-features --lcov --output-path rust-coverage.lcov
+      - name: Generate Rust coverage (unit tests)
+        run: cargo llvm-cov --no-default-features --lib --bins --lcov --output-path rust-coverage-unit.lcov
+
+      - name: Generate Rust coverage (integration tests with features)
+        if: matrix.python != '3.14'
+        run: cargo llvm-cov --features office --tests --lcov --output-path rust-coverage-integration.lcov
+
+      - name: Merge Rust coverage reports
+        shell: bash
+        run: |
+          # Merge coverage files
+          if [ -f rust-coverage-integration.lcov ]; then
+            cat rust-coverage-unit.lcov rust-coverage-integration.lcov > rust-coverage.lcov
+          else
+            cp rust-coverage-unit.lcov rust-coverage.lcov
+          fi
 
       - name: Upload coverage to DeepSource
         if: always() && env.DEEPSOURCE_DSN != ''
@@ -271,6 +302,8 @@ jobs:
           path: |
             coverage.lcov
             rust-coverage.lcov
+            rust-coverage-unit.lcov
+            rust-coverage-integration.lcov
             .coverage
           retention-days: 7
 
@@ -319,6 +352,18 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Cache Rust build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target/
+          key: rust-build-pytests-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.test-category.name }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-build-pytests-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.test-category.name }}-
 
       - name: Sync dependencies
         uses: ./.github/actions/uv-sync

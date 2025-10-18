@@ -1,232 +1,390 @@
-# Kreuzberg V4 - Integration Testing TODO
+# Kreuzberg V4 - Production Readiness TODO
 
-**Status**: Non-OCR Integration Testing Phase
+**Branch**: v4-dev
 **Last Updated**: 2025-10-18
-**Test Status**: 1088+ tests passing ✅ (866 lib + 24 core + 207 integration)
-**Coverage**: ~95%+ (target: 95%) ✅ **TARGET ACHIEVED**
+**Phase**: Pre-Release - CI/CD and Production Validation
+**Test Status**: 1,088+ tests passing ✅ (866 lib + 24 core + 207 integration)
+**Coverage**: ~95%+ ✅
 
 ______________________________________________________________________
 
-## ✅ Completed
+## 🚀 HIGH PRIORITY: CI/CD Validation & Updates
 
-### OCR & Format Integration (106 tests)
+### 1. Rust Integration Tests in CI ⏳
 
-- ✅ PDF integration tests (20 tests) - `pdf_integration.rs`
-- ✅ Office document tests (17 tests) - `office_integration.rs`
-- ✅ Image/OCR tests (15 tests) - `image_integration.rs`
-- ✅ OCR configuration tests (18 tests) - `ocr_configuration.rs`
-- ✅ OCR quality tests (10 tests) - `ocr_quality.rs`
-- ✅ Format integration tests (26 tests) - `format_integration.rs`
-    - HTML/Web (3 tests)
-    - Text/Markdown (2 tests)
-    - Data formats (3 tests)
-    - Email (1 test)
-    - Mixed formats (17 tests)
+**Goal**: Ensure all 207 Rust integration tests run in CI across all platforms
 
-### Batch Processing (9 tests)
+**Tasks**:
 
-- ✅ `test_batch_extract_file_multiple_formats()` - PDF, DOCX, TXT in one batch
-- ✅ `test_batch_extract_file_sync_variant()` - Sync version
-- ✅ `test_batch_extract_bytes_multiple()` - Batch from bytes
-- ✅ `test_batch_extract_bytes_sync_variant()` - Sync bytes variant
-- ✅ `test_batch_extract_empty_list()` - Empty file list
-- ✅ `test_batch_extract_one_file_fails()` - Error handling (one fails, others succeed)
-- ✅ `test_batch_extract_all_fail()` - All files fail
-- ✅ `test_batch_extract_concurrent()` - Parallel processing verification
-- ✅ `test_batch_extract_large_batch()` - 50+ files
+- [ ] Update `.github/workflows/ci.yaml` rust-tests job to run integration tests
+    - Current: Only runs `cargo test --release --no-default-features`
+    - Needed: Add integration test runs with features enabled
+    - Add: `cargo test --release --features office --test '*_integration'`
+- [ ] Configure Rust integration tests with proper feature flags
+    - `office` feature for Pandoc tests
+    - Handle optional dependencies (Tesseract, Pandoc, LibreOffice)
+- [ ] Add integration test timeout configuration (currently 45min for rust-tests)
+- [ ] Verify integration tests pass on all platforms (Ubuntu, macOS, Windows)
 
-### Archive Extraction (14 tests)
+**Acceptance Criteria**:
 
-- ✅ `test_zip_basic_extraction()` - Simple ZIP file
-- ✅ `test_zip_multiple_files()` - ZIP with multiple documents
-- ✅ `test_zip_nested_directories()` - Directory structure
-- ✅ `test_tar_extraction()` - TAR archive
-- ✅ `test_tar_gz_extraction()` - TAR.GZ archive (verifies TAR handling)
-- ✅ `test_7z_extraction()` - 7Z archive support check
-- ✅ `test_nested_archive()` - ZIP inside ZIP
-- ✅ `test_archive_mixed_formats()` - PDF + DOCX + images in archive
-- ✅ `test_password_protected_archive()` - Encrypted archive (fails gracefully)
-- ✅ `test_corrupted_archive()` - Malformed archive handling
-- ✅ `test_large_archive()` - 100+ files
-- ✅ `test_archive_with_special_characters()` - Unicode filenames
-- ✅ `test_empty_archive()` - Zero files
-- ✅ `test_archive_extraction_sync()` - Sync variant
-
-### Configuration Features (18 tests)
-
-- ✅ `test_chunking_enabled()` - Text split into chunks
-- ✅ `test_chunking_with_overlap()` - Overlap preserved
-- ✅ `test_chunking_custom_sizes()` - Custom chunk size/overlap
-- ✅ `test_chunking_disabled()` - No chunking when disabled
-- ✅ `test_language_detection_single()` - Detect single language
-- ✅ `test_language_detection_multiple()` - Multi-language document
-- ✅ `test_language_detection_confidence()` - Confidence thresholds
-- ✅ `test_language_detection_disabled()` - Feature disabled
-- ✅ `test_cache_hit_behavior()` - Second extraction from cache
-- ✅ `test_cache_miss_invalidation()` - Cache invalidation
-- ✅ `test_custom_cache_directory()` - Non-default cache location
-- ✅ `test_cache_disabled()` - Bypass cache
-- ✅ `test_token_reduction_aggressive()` - Aggressive mode
-- ✅ `test_token_reduction_conservative()` - Conservative mode
-- ✅ `test_token_reduction_disabled()` - Feature off
-- ✅ `test_quality_processing_enabled()` - Quality scoring
-- ✅ `test_quality_threshold_filtering()` - Quality score calculation
-- ✅ `test_quality_processing_disabled()` - Feature off
-
-### Email Extraction (10 tests)
-
-- ✅ `test_eml_basic_extraction()` - Subject, from, to, body
-- ✅ `test_eml_with_attachments()` - Attachment metadata
-- ✅ `test_eml_html_body()` - HTML email
-- ✅ `test_eml_plain_text_body()` - Plain text email
-- ✅ `test_eml_multipart()` - HTML + plain text parts
-- ✅ `test_msg_file_extraction()` - Outlook .msg error handling
-- ✅ `test_email_thread()` - Email with quoted replies
-- ✅ `test_email_encodings()` - UTF-8 and special characters
-- ✅ `test_email_large_attachments()` - Multiple recipients (To, CC, BCC)
-- ✅ `test_malformed_email()` - Invalid email structure handling
-
-### Error Handling & Edge Cases (12 tests)
-
-- ✅ `test_truncated_pdf()` - Incomplete PDF
-- ✅ `test_corrupted_zip()` - Malformed archive
-- ✅ `test_invalid_xml()` - Bad XML syntax
-- ✅ `test_corrupted_image()` - Invalid image data
-- ✅ `test_empty_file()` - 0 bytes
-- ✅ `test_very_large_file()` - Large content (10MB)
-- ✅ `test_unicode_filenames()` - Non-ASCII paths
-- ✅ `test_special_characters_content()` - Emojis, RTL text, CJK
-- ✅ `test_nonexistent_file()` - File not found
-- ✅ `test_unsupported_format()` - Unknown file type
-- ✅ `test_permission_denied()` - No read access (Unix)
-- ✅ `test_file_extension_mismatch()` - MIME type mismatch
-
-### CSV & Spreadsheet Tests (13 tests)
-
-- ✅ `test_csv_basic_extraction()` - Simple CSV
-- ✅ `test_csv_with_headers()` - First row as headers
-- ✅ `test_csv_custom_delimiter()` - Semicolon delimiters
-- ✅ `test_csv_quoted_fields()` - Fields with commas
-- ✅ `test_csv_special_characters()` - Unicode characters
-- ✅ `test_csv_large_file()` - 10,000 rows (streaming)
-- ✅ `test_csv_malformed()` - Inconsistent columns
-- ✅ `test_tsv_file()` - Tab-separated values
-- ✅ `test_csv_empty()` - Empty CSV file
-- ✅ `test_csv_headers_only()` - Only headers
-- ✅ `test_csv_blank_lines()` - Blank lines between data
-- ✅ `test_csv_numeric_data()` - Numeric formats
-
-### Pandoc Integration Tests (12 tests)
-
-- ✅ `test_rst_extraction()` - reStructuredText
-- ✅ `test_latex_extraction()` - LaTeX files
-- ✅ `test_odt_extraction()` - OpenDocument text (error handling)
-- ✅ `test_rtf_extraction()` - Rich Text Format
-- ✅ `test_pandoc_not_installed()` - Graceful degradation
-- ✅ `test_pandoc_conversion_error()` - Error handling
-- ✅ `test_epub_extraction()` - EPUB ebooks
-- ✅ `test_org_mode_extraction()` - Org mode
-- ✅ `test_typst_extraction()` - Typst format
-- ✅ `test_commonmark_extraction()` - CommonMark
-- ✅ `test_pandoc_empty_content()` - Empty content
-- ✅ `test_pandoc_unicode_content()` - Unicode handling
-
-### MIME Type Detection Tests (13 tests)
-
-- ✅ `test_mime_detection_by_extension()` - Extension-based detection (15 formats)
-- ✅ `test_mime_detection_case_insensitive()` - Case-insensitive extensions
-- ✅ `test_mime_detection_by_content()` - Content-based detection (magic bytes)
-- ✅ `test_mime_type_validation()` - Supported MIME type validation
-- ✅ `test_mime_type_image_prefix_validation()` - Image/\* prefix matching
-- ✅ `test_unknown_mime_type()` - Unsupported format error handling
-- ✅ `test_mime_mismatch_warning()` - Extension vs content mismatch
-- ✅ `test_extension_content_mismatch()` - Content type mismatch handling
-- ✅ `test_no_extension()` - Files without extensions
-- ✅ `test_mime_detection_nonexistent_file()` - Nonexistent file error
-- ✅ `test_mime_detection_skip_existence_check()` - Optional existence check
-- ✅ `test_filename_multiple_dots()` - Multiple dots in filename
-- ✅ `test_filename_special_characters()` - Unicode/special char filenames
-
-### Infrastructure
-
-- ✅ Test helpers module - `tests/helpers/mod.rs`
-- ✅ force_ocr implementation for PDF extractor
-- ✅ TesseractBackend plugin
-- ✅ Comprehensive test documentation
-- ✅ Archive MIME types added to core/mime.rs
+- All 207 integration tests run in CI
+- Tests pass on Ubuntu, macOS, Windows
+- Proper feature flag configuration
+- No flaky tests
 
 ______________________________________________________________________
 
-## 🎯 HIGH PRIORITY: Non-OCR Integration Testing ✅ **ALL COMPLETED**
+### 2. Rust Coverage Validation ⏳
 
-### 1. ~~Batch Processing Tests~~ ✅ COMPLETED
+**Goal**: Validate Rust core achieves 95%+ coverage target in CI
 
-### 2. ~~Archive Extraction Tests~~ ✅ COMPLETED
+**Tasks**:
 
-### 3. ~~Configuration Features Tests~~ ✅ COMPLETED
+- [ ] Review `cargo llvm-cov` output in coverage job (line 255-256)
 
-### 4. ~~Email Extraction Tests~~ ✅ COMPLETED
+    - Current: Runs with `--no-default-features`
+    - Needed: Run with all features to include integration tests
 
-### 5. ~~Error Handling & Edge Cases~~ ✅ COMPLETED
+- [ ] Update coverage job to test with features:
 
-### 6. ~~CSV & Spreadsheet Tests~~ ✅ COMPLETED
+    ```bash
+    cargo llvm-cov --features office --lcov --output-path rust-coverage.lcov
+    ```
 
-### 7. ~~Pandoc Integration Tests~~ ✅ COMPLETED
+- [ ] Add coverage thresholds to CI (fail if < 95%)
 
-### 8. ~~MIME Type Detection Tests~~ ✅ COMPLETED
+- [ ] Generate coverage report showing breakdown by module
+
+- [ ] Upload Rust coverage to DeepSource (already configured, line 263)
+
+**Acceptance Criteria**:
+
+- Rust coverage ≥ 95% in CI
+- Coverage includes integration tests
+- Coverage report uploaded to DeepSource
+- CI fails if coverage drops below threshold
 
 ______________________________________________________________________
 
-## 📊 Summary
+### 3. Update CI for v4 Architecture ⏳
+
+**Goal**: Optimize CI for hybrid Rust core + Python bindings architecture
+
+**Tasks**:
+
+- [ ] Review and optimize rust-tests job:
+    - Remove redundant tessdata inspection (lines 63-93)
+    - Add Rust-specific caching (target/ directory)
+    - Optimize test execution (parallel where possible)
+- [ ] Update python-tests job categories:
+    - Verify test categorization still matches v4 structure
+    - Consider splitting Rust core tests vs Python binding tests
+- [ ] Review coverage job matrix:
+    - Currently tests Python 3.10, 3.13, 3.14 on all platforms
+    - Verify Python 3.14 skips are correct (torch/paddle not available)
+- [ ] Optimize caching strategy:
+    - Add Rust target/ cache
+    - Review Python dependency cache effectiveness
+    - Add cargo registry cache
+- [ ] Update validate job:
+    - Ensure prek runs both Rust and Python checks
+    - Add explicit Rust fmt/clippy with proper exit codes
+
+**Acceptance Criteria**:
+
+- CI runs efficiently (\<60min total)
+- Proper caching reduces redundant work
+- Clear separation of Rust vs Python test runs
+- All checks enforce quality standards
+
+______________________________________________________________________
+
+### 4. Performance Benchmarks (v3 vs v4) ⏳
+
+**Goal**: Demonstrate v4 performance improvements over v3
+
+**Tasks**:
+
+- [ ] Review existing benchmarks in `benchmarks/` directory
+- [ ] Add v4-specific benchmarks:
+    - Rust core extraction speed
+    - Memory usage comparison (v3 vs v4)
+    - Large file handling (10MB+, 100MB+ documents)
+    - Batch processing throughput
+- [ ] Update benchmark workflows:
+    - `.github/workflows/kreuzberg-benchmarks.yaml`
+    - `.github/workflows/comparative-benchmark.yaml`
+- [ ] Create benchmark report showing:
+    - Speed improvements (expected: 10-50x for text processing)
+    - Memory efficiency gains
+    - Throughput improvements for batch operations
+- [ ] Document benchmarks in `benchmarks/README.md`
+
+**Acceptance Criteria**:
+
+- Benchmarks show measurable v4 improvements
+- Automated benchmark runs in CI
+- Results documented and shareable
+- No performance regressions vs v3
+
+______________________________________________________________________
+
+## 📚 MEDIUM PRIORITY: Documentation & Release Prep
+
+### 5. Update Documentation for v4 Architecture ⏳
+
+**Goal**: Ensure docs reflect v4 Rust core architecture
+
+**Tasks**:
+
+- [ ] Review `docs/` directory structure
+- [ ] Update architecture documentation:
+    - Document Rust core modules (extraction/, core/, plugins/)
+    - Explain PyO3 bindings (crates/kreuzberg-py)
+    - Document plugin system (traits, registration)
+- [ ] Update API documentation:
+    - Rust API docs (`cargo doc`)
+    - Python API docs (existing)
+    - Migration guide (v3 → v4)
+- [ ] Update installation docs:
+    - Add Rust usage examples
+    - Update Python installation (now includes Rust compilation)
+    - Document feature flags (`office`, etc.)
+- [ ] Update examples:
+    - Add Rust usage examples
+    - Update Python examples for v4 API
+    - Add plugin development examples
+- [ ] Review and update `CLAUDE.md`:
+    - Ensure Rust conventions are accurate
+    - Update architecture section
+    - Add v4-specific patterns
+
+**Acceptance Criteria**:
+
+- Docs accurately reflect v4 architecture
+- Clear migration path from v3
+- Rust and Python examples work
+- Docs build without warnings
+
+______________________________________________________________________
+
+### 6. Release Preparation (v4.0.0) ⏳
+
+**Goal**: Prepare for v4.0.0 stable release
+
+**Tasks**:
+
+- [ ] Review and update `CHANGELOG.md`:
+    - Document all v4 changes
+    - List breaking changes vs v3
+    - Highlight new features (Rust core, performance, plugins)
+- [ ] Update version numbers:
+    - `pyproject.toml` → 4.0.0
+    - `Cargo.toml` (workspace + kreuzberg crate) → 4.0.0
+    - `crates/kreuzberg-py/Cargo.toml` → 4.0.0
+- [ ] Review `.github/workflows/release.yaml`:
+    - Ensure wheel building works for v4 (Rust compilation)
+    - Test sdist includes Rust source
+    - Verify cibuildwheel config for Rust + Python
+- [ ] Test release process on test.pypi.org:
+    - Build wheels locally
+    - Test installation on all platforms
+    - Verify Rust bindings work
+- [ ] Create release checklist:
+    - All tests pass ✅
+    - Coverage ≥ 95% ✅
+    - Benchmarks show improvements ⏳
+    - Docs updated ⏳
+    - CHANGELOG complete ⏳
+    - Version numbers updated ⏳
+
+**Acceptance Criteria**:
+
+- Release workflow tested and working
+- All platforms build successfully
+- Test installation works
+- Ready for PyPI publish
+
+______________________________________________________________________
+
+### 7. Docker Images Update ⏳
+
+**Goal**: Ensure Docker images work with v4 Rust architecture
+
+**Tasks**:
+
+- [ ] Review `.github/workflows/publish-docker.yaml`
+- [ ] Test Docker builds locally:
+    - Core variant (API + Tesseract)
+    - EasyOCR variant
+    - PaddleOCR variant
+    - Vision-tables variant
+    - All variant
+- [ ] Update Dockerfile(s) if needed:
+    - Ensure Rust toolchain installed
+    - Optimize layer caching
+    - Verify all features build correctly
+- [ ] Test Docker images:
+    - Run extraction tests in containers
+    - Verify system dependencies (Tesseract, Pandoc, LibreOffice)
+    - Check image sizes (should be reasonable)
+- [ ] Update Docker documentation
+
+**Acceptance Criteria**:
+
+- All Docker variants build successfully
+- Images tested and working
+- Reasonable image sizes
+- Documentation updated
+
+______________________________________________________________________
+
+## 🔍 LOW PRIORITY: Nice-to-Have Improvements
+
+### 8. Additional Testing ⏳
+
+**Goal**: Further increase test coverage and robustness
+
+**Tasks**:
+
+- [ ] Add property-based tests (hypothesis):
+    - Text extraction invariants
+    - MIME detection properties
+    - Configuration validation
+- [ ] Add fuzzing tests for parsers:
+    - PDF parser
+    - XML parser
+    - Email parser
+- [ ] Add stress tests:
+    - Memory limits
+    - Large file handling (1GB+)
+    - Concurrent extraction limits
+- [ ] Add integration tests for:
+    - Python plugin registration
+    - Cross-language plugin calls
+    - Error propagation across FFI boundary
+
+**Acceptance Criteria**:
+
+- Additional test coverage
+- No crashes on fuzzed inputs
+- Documented stress test limits
+
+______________________________________________________________________
+
+### 9. Performance Profiling ⏳
+
+**Goal**: Identify and document performance characteristics
+
+**Tasks**:
+
+- [ ] Profile Rust core with `cargo flamegraph`:
+    - PDF extraction
+    - XML streaming
+    - Text processing
+- [ ] Profile Python bindings overhead:
+    - FFI call costs
+    - Type conversion overhead
+    - GIL impact
+- [ ] Create performance guidelines:
+    - When to use batch processing
+    - Memory usage patterns
+    - Optimal chunk sizes
+- [ ] Document performance tips in docs
+
+**Acceptance Criteria**:
+
+- Flame graphs generated and analyzed
+- Performance bottlenecks identified
+- Guidelines documented
+
+______________________________________________________________________
+
+### 10. Security Audit ⏳
+
+**Goal**: Ensure v4 is production-ready from security perspective
+
+**Tasks**:
+
+- [ ] Run `cargo audit` on Rust dependencies
+- [ ] Review unsafe code blocks:
+    - Verify all SAFETY comments are accurate
+    - Consider eliminating unsafe where possible
+- [ ] Test malicious inputs:
+    - Zip bombs
+    - XML billion laughs attack
+    - PDF exploit attempts
+    - Path traversal in archives
+- [ ] Review error handling:
+    - No panic on invalid input
+    - No sensitive data in error messages
+    - Proper sanitization of file paths
+- [ ] Add security documentation:
+    - Known limitations
+    - Security best practices
+    - Reporting vulnerabilities
+
+**Acceptance Criteria**:
+
+- No critical security issues
+- Malicious inputs handled gracefully
+- Security documentation complete
+
+______________________________________________________________________
+
+## 📊 Progress Summary
 
 ### Current Status
 
-- ✅ **Completed**: 207 integration tests (106 OCR/formats + 9 batch + 14 archive + 18 config + 10 email + 12 errors + 13 CSV + 12 Pandoc + 13 MIME)
-- 🎯 **Target**: 207 integration tests ✅ **100% COMPLETE**
-- 📈 **Coverage Goal**: ~95%+ ✅ **TARGET ACHIEVED**
-- 🎉 **Progress**: **100% complete (207/207)** 🎊
+- ✅ **Integration Tests**: 207/207 complete (100%)
+- ✅ **Test Coverage**: 95%+ achieved
+- ✅ **Rust Core**: Complete and functional
+- ⏳ **CI/CD**: Needs updates for v4
+- ⏳ **Documentation**: Needs v4 updates
+- ⏳ **Release Prep**: Not started
 
-### Implementation Order
+### Priority Order
 
-1. ~~**Batch Processing** (9 tests)~~ ✅ **COMPLETED**
-1. ~~**Archive Extraction** (14 tests)~~ ✅ **COMPLETED**
-1. ~~**Config Features** (18 tests)~~ ✅ **COMPLETED**
-1. ~~**Email Extraction** (10 tests)~~ ✅ **COMPLETED**
-1. ~~**Error Handling** (12 tests)~~ ✅ **COMPLETED**
-1. ~~**CSV/Spreadsheet** (13 tests)~~ ✅ **COMPLETED**
-1. ~~**Pandoc Integration** (12 tests)~~ ✅ **COMPLETED**
-1. ~~**MIME Detection** (13 tests)~~ ✅ **COMPLETED**
+1. **Rust Integration Tests in CI** (HIGH) - Validate tests run correctly
+1. **Rust Coverage Validation** (HIGH) - Ensure 95% maintained in CI
+1. **Update CI for v4 Architecture** (HIGH) - Optimize CI workflows
+1. **Performance Benchmarks** (HIGH) - Demonstrate improvements
+1. **Update Documentation** (MEDIUM) - Reflect v4 changes
+1. **Release Preparation** (MEDIUM) - Prepare for v4.0.0
+1. **Docker Images Update** (MEDIUM) - Ensure containers work
+1. **Additional Testing** (LOW) - Further hardening
+1. **Performance Profiling** (LOW) - Optimization insights
+1. **Security Audit** (LOW) - Production readiness
 
-### Time Estimates
+### Estimated Timeline
 
-- **Total Time**: ~11.5 hours
-- **Tests Created**: 101 new integration tests (106 OCR tests were pre-existing)
-- **Average**: ~6.8 minutes per test
-- **Files Created**: 6 new test files
+- **High Priority Tasks**: 2-3 days
+- **Medium Priority Tasks**: 2-3 days
+- **Low Priority Tasks**: 2-4 days
+- **Total**: ~6-10 days to v4.0.0 release
 
 ______________________________________________________________________
 
-## 🎯 Success Criteria ✅ **ALL ACHIEVED**
+## 🎯 Success Criteria for v4.0.0 Release
 
-- ✅ **All core features tested end-to-end** ← DONE (207 integration tests covering all features)
-- ✅ **Error handling comprehensive** ← DONE (corrupted files, edge cases, missing files, no panics)
-- ✅ **No panics on edge cases** ← DONE (empty files, large files, unicode, special chars)
-- ✅ **Batch processing validated** ← DONE (9 tests: concurrent, large batches, error handling)
-- ✅ **All archive formats supported** ← DONE (ZIP, TAR, 7Z - 14 tests)
-- ✅ **Configuration features work correctly** ← DONE (chunking, language detection, caching, token reduction, quality - 18 tests)
-- ✅ **Email extraction comprehensive** ← DONE (EML, metadata, HTML/plain text, multipart, encodings - 10 tests)
-- ✅ **CSV extraction validated** ← DONE (CSV, TSV, delimiters, quoted fields, large files, malformed - 13 tests)
-- ✅ **Pandoc integration tested** ← DONE (RST, LaTeX, RTF, ODT, EPUB, Org, Typst, CommonMark, Unicode - 12 tests)
-- ✅ **MIME detection accurate** ← DONE (Extension-based, content-based, mismatch handling, validation - 13 tests)
-- ✅ **95%+ test coverage achieved** ← DONE (currently ~95%+)
-- ⏳ All tests pass in CI/CD (final validation pending)
+- ✅ All tests pass (1,088+ tests)
+- ✅ Coverage ≥ 95% (both Rust and Python)
+- ⏳ CI validates all platforms
+- ⏳ Benchmarks show performance improvements
+- ⏳ Documentation updated and accurate
+- ⏳ Docker images tested and published
+- ⏳ CHANGELOG complete
+- ⏳ Release tested on test.pypi.org
+- ⏳ No critical security issues
+- ⏳ Migration guide available
 
 ______________________________________________________________________
 
 ## 📝 Notes
 
-- Test files available in `test_documents/` (178+ real documents)
-- Focus on **behavior** not **implementation**
-- Use real documents, avoid mocking
-- Test error paths as thoroughly as success paths
-- Integration tests complement unit tests
+- Focus on HIGH priority tasks first - CI/CD validation is critical
+- Documentation and release prep can happen in parallel
+- Low priority tasks can be deferred to v4.1.0
+- Keep an eye on CI execution time - optimize if > 60 minutes
+- Test early and often on all platforms (Ubuntu, macOS, Windows)
