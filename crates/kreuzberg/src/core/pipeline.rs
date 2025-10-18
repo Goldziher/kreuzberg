@@ -94,12 +94,16 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
 
         match crate::chunking::chunk_text(&result.content, &chunk_config) {
             Ok(chunking_result) => {
-                // Convert ChunkingResult to ExtractionResult chunks (currently empty, will be populated when chunks field is added)
-                // For now, store chunk count in metadata
-                result.metadata.additional.insert(
-                    "chunk_count".to_string(),
-                    serde_json::Value::Number(serde_json::Number::from(chunking_result.chunks.len())),
-                );
+                // Store chunks as first-class field
+                result.chunks = Some(chunking_result.chunks);
+
+                // Store chunk count in metadata for backward compatibility
+                if let Some(ref chunks) = result.chunks {
+                    result.metadata.additional.insert(
+                        "chunk_count".to_string(),
+                        serde_json::Value::Number(serde_json::Number::from(chunks.len())),
+                    );
+                }
             }
             Err(e) => {
                 // Record chunking error in metadata, continue with degraded result
@@ -152,6 +156,12 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
     let postprocessing_enabled = pp_config.is_none_or(|c| c.enabled);
 
     if postprocessing_enabled {
+        // Ensure keyword processor is registered if feature is enabled
+        #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+        {
+            let _ = crate::keywords::ensure_initialized();
+        }
+
         let processor_registry = crate::plugins::registry::get_post_processor_registry();
 
         for stage in [ProcessingStage::Early, ProcessingStage::Middle, ProcessingStage::Late] {
@@ -215,6 +225,7 @@ mod tests {
             metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
         let config = ExtractionConfig::default();
 
@@ -231,6 +242,7 @@ mod tests {
             metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
         let config = ExtractionConfig {
             enable_quality_processing: true,
@@ -249,6 +261,7 @@ mod tests {
             metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
         let config = ExtractionConfig {
             enable_quality_processing: false,
@@ -291,6 +304,7 @@ mod tests {
             metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
         let config = ExtractionConfig {
             chunking: None,
@@ -317,6 +331,7 @@ mod tests {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
         let config = ExtractionConfig::default();
 
@@ -347,6 +362,7 @@ mod tests {
             metadata: Metadata::default(),
             tables: vec![table],
             detected_languages: None,
+            chunks: None,
         };
         let config = ExtractionConfig::default();
 
@@ -363,6 +379,7 @@ mod tests {
             metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
         let config = ExtractionConfig::default();
 
@@ -379,6 +396,7 @@ mod tests {
             metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
         let config = ExtractionConfig {
             enable_quality_processing: true,
@@ -392,5 +410,105 @@ mod tests {
         let processed = run_pipeline(result, &config).await.unwrap();
         assert!(processed.metadata.additional.contains_key("quality_score"));
         assert!(processed.metadata.additional.contains_key("chunk_count"));
+    }
+
+    #[tokio::test]
+    #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+    async fn test_pipeline_with_keyword_extraction() {
+        let result = ExtractionResult {
+            content: r#"
+Machine learning is a branch of artificial intelligence that focuses on
+building systems that can learn from data. Deep learning is a subset of
+machine learning that uses neural networks with multiple layers.
+Natural language processing enables computers to understand human language.
+            "#
+            .to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: Metadata::default(),
+            tables: vec![],
+            detected_languages: None,
+            chunks: None,
+        };
+
+        #[cfg(feature = "keywords-yake")]
+        let keyword_config = crate::keywords::KeywordConfig::yake();
+
+        #[cfg(all(feature = "keywords-rake", not(feature = "keywords-yake")))]
+        let keyword_config = crate::keywords::KeywordConfig::rake();
+
+        let config = ExtractionConfig {
+            keywords: Some(keyword_config),
+            ..Default::default()
+        };
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+
+        // Should have extracted keywords and stored in metadata
+        assert!(processed.metadata.additional.contains_key("keywords"));
+
+        let keywords_value = processed.metadata.additional.get("keywords").unwrap();
+        assert!(keywords_value.is_array());
+
+        let keywords = keywords_value.as_array().unwrap();
+        assert!(!keywords.is_empty(), "Should have extracted keywords");
+
+        // Verify keyword structure
+        let first_keyword = &keywords[0];
+        assert!(first_keyword.is_object());
+        assert!(first_keyword.get("text").is_some());
+        assert!(first_keyword.get("score").is_some());
+        assert!(first_keyword.get("algorithm").is_some());
+    }
+
+    #[tokio::test]
+    #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+    async fn test_pipeline_without_keyword_config() {
+        let result = ExtractionResult {
+            content: "Machine learning and artificial intelligence.".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: Metadata::default(),
+            tables: vec![],
+            detected_languages: None,
+            chunks: None,
+        };
+
+        let config = ExtractionConfig {
+            keywords: None, // No keyword extraction configured
+            ..Default::default()
+        };
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+
+        // Should NOT have extracted keywords
+        assert!(!processed.metadata.additional.contains_key("keywords"));
+    }
+
+    #[tokio::test]
+    #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+    async fn test_pipeline_keyword_extraction_short_content() {
+        let result = ExtractionResult {
+            content: "Short text".to_string(), // Less than 10 words
+            mime_type: "text/plain".to_string(),
+            metadata: Metadata::default(),
+            tables: vec![],
+            detected_languages: None,
+            chunks: None,
+        };
+
+        #[cfg(feature = "keywords-yake")]
+        let keyword_config = crate::keywords::KeywordConfig::yake();
+
+        #[cfg(all(feature = "keywords-rake", not(feature = "keywords-yake")))]
+        let keyword_config = crate::keywords::KeywordConfig::rake();
+
+        let config = ExtractionConfig {
+            keywords: Some(keyword_config),
+            ..Default::default()
+        };
+
+        let processed = run_pipeline(result, &config).await.unwrap();
+
+        // Should NOT have extracted keywords from very short text
+        assert!(!processed.metadata.additional.contains_key("keywords"));
     }
 }

@@ -61,6 +61,11 @@ pub struct ExtractionConfig {
     #[serde(default)]
     pub language_detection: Option<LanguageDetectionConfig>,
 
+    /// Keyword extraction configuration (None = no keyword extraction)
+    #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+    #[serde(default)]
+    pub keywords: Option<crate::keywords::KeywordConfig>,
+
     /// Post-processor configuration (None = use defaults)
     #[serde(default)]
     pub postprocessor: Option<PostProcessorConfig>,
@@ -225,6 +230,8 @@ impl Default for ExtractionConfig {
             pdf_options: None,
             token_reduction: None,
             language_detection: None,
+            #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+            keywords: None,
             postprocessor: None,
         }
     }

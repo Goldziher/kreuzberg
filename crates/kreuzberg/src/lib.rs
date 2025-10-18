@@ -59,6 +59,12 @@ pub mod image;
 #[cfg(feature = "language-detection")]
 pub mod language_detection;
 
+#[cfg(feature = "stopwords")]
+pub mod stopwords;
+
+#[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+pub mod keywords;
+
 #[cfg(feature = "ocr")]
 pub mod ocr;
 

@@ -168,6 +168,7 @@ impl DocumentExtractor for ImageExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 

@@ -78,7 +78,11 @@ async fn test_zip_multiple_files() {
 
     // Verify metadata
     let archive_meta = result.metadata.archive.unwrap();
-    assert_eq!(archive_meta.file_count, 3);
+    assert_eq!(archive_meta.file_count, 3, "Should have 3 files");
+    assert_eq!(archive_meta.file_list.len(), 3, "file_list should contain 3 entries");
+    assert!(archive_meta.file_list.contains(&"file1.txt".to_string()));
+    assert!(archive_meta.file_list.contains(&"file2.md".to_string()));
+    assert!(archive_meta.file_list.contains(&"file3.json".to_string()));
 }
 
 /// Test ZIP with nested directory structure.
@@ -117,6 +121,20 @@ async fn test_zip_nested_directories() {
     // Verify content extraction
     assert!(result.content.contains("File in dir1"));
     assert!(result.content.contains("Nested file"));
+
+    // Verify metadata includes directories and files
+    let archive_meta = result.metadata.archive.unwrap();
+    assert!(
+        archive_meta.file_count >= 2,
+        "Should have at least 2 files (excluding empty dirs)"
+    );
+    assert!(archive_meta.file_list.iter().any(|f| f.contains("dir1/file.txt")));
+    assert!(
+        archive_meta
+            .file_list
+            .iter()
+            .any(|f| f.contains("dir1/subdir/nested.txt"))
+    );
 }
 
 /// Test TAR extraction.
@@ -163,12 +181,18 @@ async fn test_tar_gz_extraction() {
     assert!(result.content.contains("TAR Archive"));
     assert!(result.content.contains("test.txt"));
 
+    // Verify metadata
+    let archive_meta = result.metadata.archive.as_ref().unwrap();
+    assert_eq!(archive_meta.format, "TAR");
+    assert_eq!(archive_meta.file_count, 1);
+
     // Verify TAR-specific MIME type handling
     let result2 = extract_bytes(&tar_bytes, "application/tar", &config)
         .await
         .expect("Should extract with alternative MIME type");
 
     assert!(result2.content.contains("TAR Archive"));
+    assert!(result2.metadata.archive.is_some());
 }
 
 /// Test 7z extraction.
@@ -212,6 +236,12 @@ async fn test_nested_archive() {
     assert!(result.content.contains("inner.zip"));
     assert!(result.content.contains("readme.txt"));
     assert!(result.content.contains("This archive contains another archive"));
+
+    // Verify metadata
+    let archive_meta = result.metadata.archive.unwrap();
+    assert_eq!(archive_meta.file_count, 2, "Should have 2 files in outer archive");
+    assert!(archive_meta.file_list.contains(&"inner.zip".to_string()));
+    assert!(archive_meta.file_list.contains(&"readme.txt".to_string()));
 
     // Note: Nested extraction (extracting the inner ZIP) would require
     // recursive extraction logic, which is not currently implemented
@@ -264,7 +294,12 @@ async fn test_archive_mixed_formats() {
 
     // Verify metadata
     let archive_meta = result.metadata.archive.unwrap();
-    assert_eq!(archive_meta.file_count, 4);
+    assert_eq!(archive_meta.file_count, 4, "Should have 4 files");
+    assert_eq!(archive_meta.file_list.len(), 4, "file_list should contain 4 entries");
+    assert!(archive_meta.file_list.contains(&"document.txt".to_string()));
+    assert!(archive_meta.file_list.contains(&"readme.md".to_string()));
+    assert!(archive_meta.file_list.contains(&"image.png".to_string()));
+    assert!(archive_meta.file_list.contains(&"document.pdf".to_string()));
 }
 
 /// Test password-protected archive (should fail gracefully).
@@ -337,13 +372,21 @@ async fn test_large_archive() {
         .await
         .expect("Should extract large ZIP");
 
-    // Verify file count
+    // Verify file count and file_list
     let archive_meta = result.metadata.archive.unwrap();
-    assert_eq!(archive_meta.file_count, 100);
+    assert_eq!(archive_meta.file_count, 100, "Should have 100 files");
+    assert_eq!(
+        archive_meta.file_list.len(),
+        100,
+        "file_list should contain 100 entries"
+    );
 
     // Verify some files are listed
     assert!(result.content.contains("file_0.txt"));
     assert!(result.content.contains("file_99.txt"));
+    assert!(archive_meta.file_list.contains(&"file_0.txt".to_string()));
+    assert!(archive_meta.file_list.contains(&"file_50.txt".to_string()));
+    assert!(archive_meta.file_list.contains(&"file_99.txt".to_string()));
 }
 
 /// Test archive with special characters and Unicode filenames.
@@ -383,7 +426,12 @@ async fn test_archive_with_special_characters() {
 
     // Verify metadata
     let archive_meta = result.metadata.archive.unwrap();
-    assert_eq!(archive_meta.file_count, 3);
+    assert_eq!(archive_meta.file_count, 3, "Should have 3 files");
+    assert_eq!(archive_meta.file_list.len(), 3, "file_list should contain 3 entries");
+    // Verify specific files (Unicode filename may have encoding variations)
+    assert!(archive_meta.file_list.iter().any(|f| f.contains("txt")));
+    assert!(archive_meta.file_list.contains(&"file with spaces.txt".to_string()));
+    assert!(archive_meta.file_list.contains(&"file-with-dashes.txt".to_string()));
 }
 
 /// Test empty archive.
@@ -406,8 +454,9 @@ async fn test_empty_archive() {
     // Verify metadata
     assert!(result.content.contains("ZIP Archive"));
     let archive_meta = result.metadata.archive.unwrap();
-    assert_eq!(archive_meta.file_count, 0);
-    assert_eq!(archive_meta.total_size, 0);
+    assert_eq!(archive_meta.file_count, 0, "Empty archive should have 0 files");
+    assert_eq!(archive_meta.total_size, 0, "Empty archive should have 0 total size");
+    assert!(archive_meta.file_list.is_empty(), "file_list should be empty");
 }
 
 /// Test synchronous archive extraction.
@@ -418,8 +467,17 @@ fn test_archive_extraction_sync() {
     let zip_bytes = create_simple_zip();
     let result = extract_bytes_sync(&zip_bytes, "application/zip", &config).expect("Should extract ZIP synchronously");
 
+    // Verify content and metadata
     assert!(result.content.contains("ZIP Archive"));
-    assert!(result.metadata.archive.is_some());
+    assert!(result.content.contains("test.txt"));
+    assert!(result.content.contains("Hello from ZIP!"));
+
+    assert!(result.metadata.archive.is_some(), "Should have archive metadata");
+    let archive_meta = result.metadata.archive.unwrap();
+    assert_eq!(archive_meta.format, "ZIP");
+    assert_eq!(archive_meta.file_count, 1);
+    assert_eq!(archive_meta.file_list.len(), 1);
+    assert_eq!(archive_meta.file_list[0], "test.txt");
 }
 
 // Helper functions

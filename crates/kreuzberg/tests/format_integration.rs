@@ -34,6 +34,10 @@ async fn test_pdf_simple_text_extraction() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // PDFs should have strongly-typed PDF metadata
     #[cfg(feature = "pdf")]
     assert!(
@@ -61,12 +65,19 @@ async fn test_pdf_large_document() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Large document should have substantial content
     assert!(
         result.content.len() > 10000,
         "Large PDF should extract substantial content, got {} bytes",
         result.content.len()
     );
+
+    #[cfg(feature = "pdf")]
+    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
 
 /// Test PDF with password protection (should fail gracefully).
@@ -93,10 +104,13 @@ async fn test_pdf_password_protected() {
             // Good - we detected the password protection
             eprintln!("Password protection detected (expected): {}", e);
         }
-        Ok(_res) => {
+        Ok(res) => {
             // Acceptable - some PDFs can be read despite protection
             eprintln!("Protected PDF extracted (some protection can be bypassed)");
-            // Just verify it doesn't crash
+
+            // Verify ExtractionResult structure
+            assert!(res.chunks.is_none(), "Chunks should be None without chunking config");
+            assert!(res.detected_languages.is_none(), "Language detection not enabled");
         }
     }
 }
@@ -119,6 +133,10 @@ async fn test_pdf_metadata_extraction() {
     let result = extract_file(&path, None, &config).await.unwrap();
 
     assert_mime_type(&result, "application/pdf");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     // PDFs should have strongly-typed PDF metadata
     #[cfg(feature = "pdf")]
@@ -154,11 +172,22 @@ async fn test_pdf_with_tables() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Table extraction is optional - just verify we got content
     // If tables are extracted, they'll be in result.tables
     if !result.tables.is_empty() {
         eprintln!("Tables extracted: {}", result.tables.len());
+        // Verify table structure
+        for table in &result.tables {
+            assert!(!table.cells.is_empty(), "Table should have cells");
+        }
     }
+
+    #[cfg(feature = "pdf")]
+    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
 
 /// Test sync wrapper for PDF extraction.
@@ -178,6 +207,13 @@ fn test_pdf_extraction_sync() {
 
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "pdf")]
+    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
 
 // ============================================================================
@@ -205,6 +241,16 @@ async fn test_docx_basic_extraction() {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "office")]
+    assert!(
+        !result.metadata.additional.is_empty(),
+        "Office document should have metadata"
+    );
 }
 
 /// Test basic XLSX extraction.
@@ -232,6 +278,10 @@ async fn test_xlsx_basic_extraction() {
     );
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Excel files should have sheet information in metadata
     // Check if sheet metadata exists
     let has_sheet_info = result.metadata.additional.contains_key("sheet_count")
@@ -240,6 +290,9 @@ async fn test_xlsx_basic_extraction() {
     if has_sheet_info {
         eprintln!("Sheet metadata found (good!)");
     }
+
+    #[cfg(feature = "excel")]
+    assert!(!result.metadata.additional.is_empty(), "Excel should have metadata");
 }
 
 /// Test PPTX extraction.
@@ -263,6 +316,17 @@ async fn test_pptx_basic_extraction() {
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",
             );
             assert_non_empty_content(&result);
+
+            // Verify ExtractionResult structure
+            assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+            assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+            #[cfg(feature = "office")]
+            assert!(
+                !result.metadata.additional.is_empty(),
+                "PowerPoint should have metadata"
+            );
+
             return;
         }
     }
@@ -287,9 +351,13 @@ async fn test_legacy_doc_extraction() {
     let result = extract_file(&path, None, &config).await;
 
     match result {
-        Ok(_res) => {
-            assert_mime_type(&_res, "application/msword");
-            assert_non_empty_content(&_res);
+        Ok(res) => {
+            assert_mime_type(&res, "application/msword");
+            assert_non_empty_content(&res);
+
+            // Verify ExtractionResult structure
+            assert!(res.chunks.is_none(), "Chunks should be None without chunking config");
+            assert!(res.detected_languages.is_none(), "Language detection not enabled");
         }
         Err(e) => {
             // LibreOffice might not be installed in CI
@@ -334,6 +402,10 @@ async fn test_ocr_simple_english() {
         Ok(res) => {
             assert_mime_type(&res, "image/png");
             assert_non_empty_content(&res);
+
+            // Verify ExtractionResult structure
+            assert!(res.chunks.is_none(), "Chunks should be None without chunking config");
+            assert!(res.detected_languages.is_none(), "Language detection not enabled");
 
             // Should contain "hello" or "world" (case insensitive)
             let content_lower = res.content.to_lowercase();
@@ -381,6 +453,11 @@ async fn test_ocr_no_text_image() {
     match result {
         Ok(res) => {
             assert_mime_type(&res, "image/jpeg");
+
+            // Verify ExtractionResult structure
+            assert!(res.chunks.is_none(), "Chunks should be None without chunking config");
+            assert!(res.detected_languages.is_none(), "Language detection not enabled");
+
             // Should have empty or very minimal content (OCR noise)
             let content_len = res.content.trim().len();
             assert!(
@@ -417,6 +494,10 @@ async fn test_image_without_ocr() {
 
     assert_mime_type(&result, "image/jpeg");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Without OCR, we should still get image metadata (width, height, format)
     let has_image_metadata = result.metadata.additional.contains_key("width")
         || result.metadata.additional.contains_key("height")
@@ -450,6 +531,10 @@ async fn test_html_to_markdown() {
     assert_mime_type(&result, "text/html");
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // HTML should be converted to markdown
     // Check for common markdown patterns
     let has_markdown_patterns = result.content.contains("##") ||  // Headers
@@ -460,6 +545,9 @@ async fn test_html_to_markdown() {
     if has_markdown_patterns {
         eprintln!("HTML successfully converted to Markdown");
     }
+
+    #[cfg(feature = "html")]
+    assert!(!result.content.is_empty(), "HTML extraction should produce content");
 }
 
 /// Test HTML with complex layout (Wikipedia article).
@@ -499,11 +587,18 @@ async fn test_html_complex_layout() {
     assert_mime_type(&result, "text/html");
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Should extract substantial content from Wikipedia article
     assert!(
         result.content.len() > 1000,
         "Wikipedia article should extract substantial content"
     );
+
+    #[cfg(feature = "html")]
+    assert!(!result.content.is_empty(), "HTML extraction should produce content");
 }
 
 /// Test HTML with non-English content (UTF-8).
@@ -544,8 +639,14 @@ async fn test_html_non_english() {
     assert_mime_type(&result, "text/html");
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Should handle UTF-8 properly (German umlauts)
     // Just verify it doesn't crash and extracts something
+    #[cfg(feature = "html")]
+    assert!(!result.content.is_empty(), "HTML extraction should produce content");
 }
 
 // ============================================================================
@@ -570,6 +671,10 @@ async fn test_markdown_metadata_extraction() {
 
     assert_mime_type(&result, "text/markdown");
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     // Markdown extraction should populate metadata fields
     // (headers, links, code blocks, word count, etc.)
@@ -601,6 +706,11 @@ async fn test_plain_text_extraction() {
 
             assert_mime_type(&result, "text/plain");
             assert_non_empty_content(&result);
+
+            // Verify ExtractionResult structure
+            assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+            assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
             return;
         }
     }
@@ -634,6 +744,10 @@ async fn test_json_extraction() {
     assert_mime_type(&result, "application/json");
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // JSON should be pretty-printed or formatted
     assert!(result.content.contains("{") || result.content.contains("["));
 }
@@ -659,6 +773,10 @@ async fn test_yaml_extraction() {
 
     assert_mime_type(&result, "application/x-yaml");
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 /// Test XML extraction.
@@ -694,6 +812,10 @@ async fn test_xml_extraction() {
     assert_mime_type(&result, "application/xml");
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // XML extraction should have metadata
     let has_xml_metadata = result.metadata.additional.contains_key("element_count")
         || result.metadata.additional.contains_key("unique_elements");
@@ -701,6 +823,9 @@ async fn test_xml_extraction() {
     if has_xml_metadata {
         eprintln!("XML metadata successfully extracted");
     }
+
+    #[cfg(feature = "xml")]
+    assert!(!result.content.is_empty(), "XML extraction should produce content");
 }
 
 // ============================================================================
@@ -739,6 +864,10 @@ async fn test_email_extraction() {
     assert_mime_type(&result, "message/rfc822");
     assert_non_empty_content(&result);
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Email extraction should have metadata (from, to, subject, etc.)
     let has_email_metadata = result.metadata.additional.contains_key("from")
         || result.metadata.additional.contains_key("to")
@@ -747,6 +876,9 @@ async fn test_email_extraction() {
     if has_email_metadata {
         eprintln!("Email metadata successfully extracted");
     }
+
+    #[cfg(feature = "email")]
+    assert!(!result.content.is_empty(), "Email extraction should produce content");
 }
 
 #[cfg(test)]

@@ -95,6 +95,7 @@ impl DocumentExtractor for ExcelExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 
@@ -133,6 +134,7 @@ impl DocumentExtractor for ExcelExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 

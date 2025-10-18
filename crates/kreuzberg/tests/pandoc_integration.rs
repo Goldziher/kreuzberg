@@ -59,11 +59,46 @@ Section Heading
     // Verify MIME type
     assert_eq!(extraction.mime_type, "text/x-rst");
 
-    // Verify content extraction
+    // Verify ExtractionResult structure
+    assert!(!extraction.content.is_empty(), "Content should not be empty");
     assert!(
-        extraction.content.contains("Title") || extraction.content.contains("paragraph"),
-        "RST content should be extracted"
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
     );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "RST should not extract tables");
+
+    // Verify comprehensive content extraction
+    assert!(extraction.content.contains("Title"), "Should extract title");
+    assert!(
+        extraction.content.contains("paragraph"),
+        "Should extract paragraph text"
+    );
+    assert!(
+        extraction.content.contains("Section Heading"),
+        "Should extract section heading"
+    );
+
+    // Verify bullet points extracted
+    assert!(
+        extraction.content.contains("Bullet point 1") || extraction.content.contains("point 1"),
+        "Should extract bullet points"
+    );
+
+    // Verify text content (bold/italic may be stripped or preserved)
+    assert!(
+        extraction.content.contains("Bold text") || extraction.content.contains("italic text"),
+        "Should extract formatted text content"
+    );
+
+    // Verify content quality - should capture all key text elements
+    let content_lower = extraction.content.to_lowercase();
+    assert!(content_lower.contains("title"), "Should extract title");
+    assert!(content_lower.contains("section"), "Should extract section heading");
+    assert!(content_lower.contains("bullet"), "Should extract bullet list");
 }
 
 /// Test LaTeX extraction.
@@ -102,12 +137,52 @@ Some content in a subsection.
     // Verify MIME type
     assert_eq!(extraction.mime_type, "application/x-latex");
 
-    // Verify content extraction (Pandoc extracts text content, not LaTeX commands)
+    // Verify ExtractionResult structure
+    assert!(!extraction.content.is_empty(), "Content should not be empty");
     assert!(
-        extraction.content.contains("Test Document")
-            || extraction.content.contains("Introduction")
-            || extraction.content.contains("test LaTeX"),
-        "LaTeX content should be extracted"
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(
+        extraction.tables.is_empty(),
+        "LaTeX should not extract tables in this test"
+    );
+
+    // Verify content extraction (Pandoc extracts text content, not LaTeX commands)
+    // Verify title and author
+    assert!(
+        extraction.content.contains("Test Document"),
+        "Should extract document title"
+    );
+    assert!(
+        extraction.content.contains("Test Author") || extraction.content.contains("Author"),
+        "Should extract author"
+    );
+
+    // Verify section headings
+    assert!(
+        extraction.content.contains("Introduction"),
+        "Should extract section heading"
+    );
+    assert!(
+        extraction.content.contains("Subsection"),
+        "Should extract subsection heading"
+    );
+
+    // Verify paragraph content
+    assert!(
+        extraction.content.contains("test LaTeX document"),
+        "Should extract paragraph text"
+    );
+
+    // Verify content quality - LaTeX commands should be stripped
+    assert!(
+        !extraction.content.contains("\\textbf") && !extraction.content.contains("\\section"),
+        "LaTeX commands should be stripped, not included in output"
     );
 }
 
@@ -129,6 +204,15 @@ async fn test_odt_extraction() {
 
     // Should fail with parsing error (invalid ODT), not panic
     assert!(result.is_err(), "Invalid ODT should fail gracefully with parsing error");
+
+    // Verify error type - should be Parsing error
+    let error = result.unwrap_err();
+    match error {
+        kreuzberg::KreuzbergError::Parsing { .. } => {
+            // Expected error type for invalid format
+        }
+        other => panic!("Expected Parsing error, got: {:?}", other),
+    }
 }
 
 /// Test Rich Text Format (RTF) extraction.
@@ -156,10 +240,39 @@ async fn test_rtf_extraction() {
     // Verify MIME type
     assert_eq!(extraction.mime_type, "application/rtf");
 
-    // Verify content extraction
+    // Verify ExtractionResult structure
+    assert!(!extraction.content.is_empty(), "Content should not be empty");
     assert!(
-        extraction.content.contains("test RTF") || extraction.content.contains("Bold"),
-        "RTF content should be extracted"
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(
+        extraction.tables.is_empty(),
+        "RTF should not extract tables in this test"
+    );
+
+    // Verify content extraction - check all text elements
+    assert!(
+        extraction.content.contains("test RTF document"),
+        "Should extract main paragraph"
+    );
+    assert!(
+        extraction.content.contains("Bold text") || extraction.content.contains("Bold"),
+        "Should extract bold text"
+    );
+    assert!(
+        extraction.content.contains("italic text") || extraction.content.contains("italic"),
+        "Should extract italic text"
+    );
+
+    // Verify RTF control codes are stripped
+    assert!(
+        !extraction.content.contains("\\rtf") && !extraction.content.contains("\\par"),
+        "RTF control codes should be stripped from output"
     );
 }
 
@@ -232,6 +345,15 @@ async fn test_epub_extraction() {
 
     // Should fail with parsing error, not panic
     assert!(result.is_err(), "Invalid EPUB should fail gracefully");
+
+    // Verify error type - should be Parsing error
+    let error = result.unwrap_err();
+    match error {
+        kreuzberg::KreuzbergError::Parsing { .. } => {
+            // Expected error type for invalid EPUB
+        }
+        other => panic!("Expected Parsing error for invalid EPUB, got: {:?}", other),
+    }
 }
 
 /// Test Org mode extraction.
@@ -262,10 +384,28 @@ This is a paragraph in Org mode.
     assert!(result.is_ok(), "Org mode extraction should succeed");
     let extraction = result.unwrap();
 
+    // Verify ExtractionResult structure
+    assert!(!extraction.content.is_empty(), "Content should not be empty");
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
     // Verify content extraction
     assert!(
         extraction.content.contains("Top Level") || extraction.content.contains("paragraph"),
         "Org mode content should be extracted"
+    );
+
+    // Verify Org mode syntax is stripped (*, /, etc. for formatting)
+    // Note: Some Org mode markers might be preserved depending on Pandoc version
+    assert!(
+        extraction.content.contains("paragraph") || extraction.content.contains("Heading"),
+        "Text content should be present"
     );
 }
 
@@ -325,9 +465,32 @@ This is a paragraph in CommonMark.
     assert!(result.is_ok(), "CommonMark extraction should succeed");
     let extraction = result.unwrap();
 
+    // Verify ExtractionResult structure
+    assert!(!extraction.content.is_empty(), "Content should not be empty");
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
+    // Verify content extraction
     assert!(
         extraction.content.contains("Heading") || extraction.content.contains("paragraph"),
         "CommonMark content should be extracted"
+    );
+
+    // Verify comprehensive extraction
+    let content_lower = extraction.content.to_lowercase();
+    assert!(
+        content_lower.contains("heading") || content_lower.contains("paragraph"),
+        "Should extract text"
+    );
+    assert!(
+        content_lower.contains("list") || content_lower.contains("item"),
+        "Should extract list items"
     );
 }
 
@@ -386,6 +549,21 @@ Emoji: 🎉 ✅ 🚀"
     assert!(result.is_ok(), "Unicode content should be handled");
     let extraction = result.unwrap();
 
-    // Unicode should be preserved or handled gracefully
+    // Verify ExtractionResult structure
     assert!(!extraction.content.is_empty(), "Content should be extracted");
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
+    // Unicode should be preserved or handled gracefully
+    // Note: Some Unicode might be transcoded or normalized by Pandoc
+    assert!(
+        extraction.content.len() > 20,
+        "Should have substantial extracted content"
+    );
 }

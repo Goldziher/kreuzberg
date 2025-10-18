@@ -61,6 +61,7 @@ pub enum OcrBackendType {
 ///             metadata: HashMap::new(),
 ///             tables: vec![],
 ///             detected_languages: None,
+///             chunks: None,
 ///         })
 ///     }
 ///
@@ -136,6 +137,7 @@ pub trait OcrBackend: Plugin {
     ///         metadata: HashMap::new(),
     ///         tables: vec![],
     ///         detected_languages: None,
+    ///             chunks: None,
     ///     })
     /// }
     /// # }
@@ -282,6 +284,7 @@ mod tests {
                 metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
+                chunks: None,
             })
         }
 

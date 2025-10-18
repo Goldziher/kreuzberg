@@ -347,6 +347,7 @@ pub async fn batch_extract_file(
                     metadata,
                     tables: vec![],
                     detected_languages: None,
+                    chunks: None,
                 });
             }
             Err(join_err) => {
@@ -436,6 +437,7 @@ pub async fn batch_extract_bytes(
                     metadata,
                     tables: vec![],
                     detected_languages: None,
+                    chunks: None,
                 });
             }
             Err(join_err) => {

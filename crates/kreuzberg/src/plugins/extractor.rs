@@ -58,6 +58,7 @@ use std::path::Path;
 ///             metadata: HashMap::new(),
 ///             tables: vec![],
 ///             detected_languages: None,
+///             chunks: None,
 ///         })
 ///     }
 ///
@@ -133,6 +134,7 @@ pub trait DocumentExtractor: Plugin {
     ///         metadata,
     ///         tables: vec![],
     ///             detected_languages: None,
+    ///             chunks: None,
     ///     })
     /// }
     /// # }
@@ -200,6 +202,7 @@ pub trait DocumentExtractor: Plugin {
     ///         metadata: std::collections::HashMap::new(),
     ///         tables: vec![],
     ///             detected_languages: None,
+    ///             chunks: None,
     ///     })
     /// }
     /// # }
@@ -393,6 +396,7 @@ mod tests {
                 metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
+                chunks: None,
             })
         }
 
@@ -567,6 +571,7 @@ mod tests {
                     metadata: crate::types::Metadata::default(),
                     tables: vec![],
                     detected_languages: None,
+                    chunks: None,
                 })
             }
 

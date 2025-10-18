@@ -73,6 +73,7 @@ impl DocumentExtractor for XmlExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 

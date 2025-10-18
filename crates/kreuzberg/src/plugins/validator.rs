@@ -322,6 +322,7 @@ mod tests {
             metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
 
         let config = ExtractionConfig::default();
@@ -338,6 +339,7 @@ mod tests {
             metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
 
         let config = ExtractionConfig::default();
@@ -356,6 +358,7 @@ mod tests {
             metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
 
         let config = ExtractionConfig::default();
@@ -391,6 +394,7 @@ mod tests {
             metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
 
         let config = ExtractionConfig::default();
@@ -437,6 +441,7 @@ mod tests {
             metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
 
         let txt_result = ExtractionResult {
@@ -445,6 +450,7 @@ mod tests {
             metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
 
         assert!(validator.should_validate(&pdf_result, &config));
@@ -527,6 +533,7 @@ mod tests {
             metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
 
         let config = ExtractionConfig::default();
@@ -556,6 +563,7 @@ mod tests {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
 
         let config = ExtractionConfig::default();
@@ -580,6 +588,7 @@ mod tests {
             metadata: crate::types::Metadata::default(),
             tables: vec![table],
             detected_languages: None,
+            chunks: None,
         };
 
         let config = ExtractionConfig::default();
@@ -606,6 +615,7 @@ mod tests {
                 metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
+                chunks: None,
             };
 
             assert!(validator.validate(&result, &config).await.is_ok());
@@ -622,6 +632,7 @@ mod tests {
             metadata: crate::types::Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         };
 
         let config = ExtractionConfig::default();

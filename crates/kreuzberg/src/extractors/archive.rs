@@ -123,6 +123,7 @@ impl DocumentExtractor for ZipExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 
@@ -248,6 +249,7 @@ impl DocumentExtractor for TarExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 
@@ -378,6 +380,7 @@ impl DocumentExtractor for SevenZExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 

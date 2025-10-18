@@ -19,6 +19,14 @@ pub struct ExtractionResult {
     pub tables: Vec<Table>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub detected_languages: Option<Vec<String>>,
+
+    /// Text chunks when chunking is enabled.
+    ///
+    /// When chunking configuration is provided, the content is split into
+    /// overlapping chunks for efficient processing. Each chunk is guaranteed
+    /// to respect the max_chars limit with configured overlap.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chunks: Option<Vec<String>>,
 }
 
 // ============================================================================

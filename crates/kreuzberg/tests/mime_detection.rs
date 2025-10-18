@@ -14,9 +14,13 @@ mod helpers;
 // ============================================================================
 
 /// Test MIME detection by file extension.
+///
+/// Validates that file extensions are correctly mapped to MIME types.
+/// This is the primary MIME detection method (extension-first approach).
 #[tokio::test]
 async fn test_mime_detection_by_extension() {
-    // Create temporary files with various extensions
+    // Test common file extensions across all supported formats
+    // Each (filename, expected_mime) pair verifies correct MIME mapping
     let test_cases = vec![
         ("test.pdf", "application/pdf"),
         (
@@ -148,12 +152,28 @@ async fn test_mime_detection_by_content() {
         // Our MIME detection primarily uses extension, but mime_guess crate can detect by content
         let detected = detect_mime_type(&temp_path, true);
 
-        // Should either detect correctly or fail gracefully (no extension)
-        assert!(
-            detected.is_ok() || detected.is_err(),
-            "Should handle content-based detection for {}",
-            test_case.filename
-        );
+        // Without extension, mime_guess should fallback to content detection
+        // For files without extension, we expect failure or fallback to content detection
+        if let Some(expected) = test_case.expected_fallback {
+            // If expected fallback is provided, verify it's detected or error is reasonable
+            if let Ok(mime) = &detected {
+                // Content detection might work for some formats
+                assert!(
+                    mime == expected || mime.starts_with("application/") || mime.starts_with("image/"),
+                    "For {}, expected {} or reasonable fallback, got {}",
+                    test_case.filename,
+                    expected,
+                    mime
+                );
+            } else {
+                // No extension detection failed - acceptable
+                assert!(
+                    detected.is_err(),
+                    "Should fail gracefully for {} without extension",
+                    test_case.filename
+                );
+            }
+        }
 
         let _ = std::fs::remove_file(&temp_path);
     }
@@ -164,9 +184,12 @@ async fn test_mime_detection_by_content() {
 // ============================================================================
 
 /// Test validation of supported MIME types.
+///
+/// Validates that all documented supported MIME types pass validation.
+/// This ensures the MIME type registry is correctly configured.
 #[tokio::test]
 async fn test_mime_type_validation() {
-    // Supported MIME types
+    // Core supported MIME types across all extractors
     let supported = vec![
         "application/pdf",
         "text/plain",
@@ -306,11 +329,29 @@ async fn test_no_extension() {
 
     let detected = detect_mime_type(&temp_path, true);
 
-    // Should fail or fallback to mime_guess
-    assert!(
-        detected.is_ok() || detected.is_err(),
-        "Should handle files without extension"
-    );
+    // Without extension, detection should either:
+    // 1. Fail with a Validation error (no extension to detect from)
+    // 2. Fallback to content detection (mime_guess crate behavior)
+    if detected.is_err() {
+        // Acceptable - no extension means we can't reliably detect
+        let error = detected.unwrap_err();
+        assert!(
+            matches!(
+                error,
+                kreuzberg::KreuzbergError::Validation { .. } | kreuzberg::KreuzbergError::UnsupportedFormat(_)
+            ),
+            "Should return appropriate error for file without extension"
+        );
+    } else {
+        // If it succeeds, mime_guess fell back to content detection
+        // Verify it's at least a valid MIME type string
+        let mime = detected.unwrap();
+        assert!(
+            mime.contains('/'),
+            "Detected MIME type should be valid format: {}",
+            mime
+        );
+    }
 
     let _ = std::fs::remove_file(&temp_path);
 }
@@ -379,4 +420,75 @@ async fn test_filename_special_characters() {
     assert_eq!(detected.unwrap(), "application/pdf");
 
     let _ = std::fs::remove_file(&temp_path);
+}
+
+// ============================================================================
+// Comprehensive Format Coverage Tests
+// ============================================================================
+
+/// Test MIME detection for all Pandoc-supported formats.
+///
+/// Validates that all document formats supported by Pandoc extractor
+/// are correctly detected and mapped to their MIME types.
+#[cfg(feature = "office")]
+#[tokio::test]
+async fn test_pandoc_formats_mime_detection() {
+    let pandoc_formats = vec![
+        ("test.rst", "text/x-rst"),
+        ("test.tex", "application/x-latex"),
+        ("test.latex", "application/x-latex"),
+        ("test.rtf", "application/rtf"),
+        ("test.odt", "application/vnd.oasis.opendocument.text"),
+        ("test.epub", "application/epub+zip"),
+        ("test.org", "text/x-org"),
+        ("test.typst", "application/x-typst"),
+        ("test.commonmark", "text/x-commonmark"),
+    ];
+
+    for (filename, expected_mime) in pandoc_formats {
+        let mut temp_file = NamedTempFile::new().expect("Should create temp file");
+        let temp_path = temp_file.path().parent().unwrap().join(filename);
+
+        temp_file.write_all(b"test content").unwrap();
+        temp_file.flush().unwrap();
+        std::fs::copy(temp_file.path(), &temp_path).unwrap();
+
+        let detected = detect_mime_type(&temp_path, true);
+
+        assert!(
+            detected.is_ok(),
+            "Should detect MIME type for Pandoc format: {}",
+            filename
+        );
+        assert_eq!(
+            detected.unwrap(),
+            expected_mime,
+            "MIME type mismatch for Pandoc format: {}",
+            filename
+        );
+
+        let _ = std::fs::remove_file(&temp_path);
+    }
+}
+
+/// Test MIME validation for all Pandoc formats.
+#[cfg(feature = "office")]
+#[tokio::test]
+async fn test_pandoc_mime_validation() {
+    let pandoc_mimes = vec![
+        "text/x-rst",
+        "application/x-latex",
+        "application/rtf",
+        "application/vnd.oasis.opendocument.text",
+        "application/epub+zip",
+        "text/x-org",
+        "application/x-typst",
+        "text/x-commonmark",
+    ];
+
+    for mime_type in pandoc_mimes {
+        let result = validate_mime_type(mime_type);
+        assert!(result.is_ok(), "Pandoc MIME type should be supported: {}", mime_type);
+        assert_eq!(result.unwrap(), mime_type);
+    }
 }

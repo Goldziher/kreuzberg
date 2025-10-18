@@ -65,6 +65,8 @@ impl ExtractionConfig {
                 pdf_options: pdf_options.map(Into::into),
                 token_reduction: token_reduction.map(Into::into),
                 language_detection: language_detection.map(Into::into),
+                #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+                keywords: None,
                 postprocessor: postprocessor.map(Into::into),
             },
         }

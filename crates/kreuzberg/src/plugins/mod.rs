@@ -44,6 +44,7 @@
 //! #             metadata: std::collections::HashMap::new(),
 //! #             tables: vec![],
 //! #             detected_languages: None,
+//! #             chunks: None,
 //! #         })
 //! #     }
 //! #     async fn extract_file(&self, _: &std::path::Path, _: &str, _: &kreuzberg::ExtractionConfig)
@@ -54,6 +55,7 @@
 //! #             metadata: std::collections::HashMap::new(),
 //! #             tables: vec![],
 //! #             detected_languages: None,
+//! #             chunks: None,
 //! #         })
 //! #     }
 //! #     fn supported_mime_types(&self) -> &[&str] { &[] }
@@ -110,6 +112,7 @@
 //!             metadata: HashMap::new(),
 //!             tables: vec![],
 //!             detected_languages: None,
+//!             chunks: None,
 //!         })
 //!     }
 //!

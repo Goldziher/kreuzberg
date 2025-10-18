@@ -78,6 +78,7 @@ impl DocumentExtractor for StructuredExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 

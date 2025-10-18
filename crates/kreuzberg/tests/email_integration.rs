@@ -36,11 +36,18 @@ This is the email body content.";
     // Verify subject metadata
     assert_eq!(result.metadata.subject, Some("Test Email Subject".to_string()));
 
-    // Verify email metadata
+    // Verify email metadata - check ALL fields
     assert!(result.metadata.email.is_some());
     let email_meta = result.metadata.email.unwrap();
+
+    // Verify sender
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
+    // from_name may be None if not specified in email
+
+    // Verify recipients
     assert_eq!(email_meta.to_emails, vec!["recipient@example.com".to_string()]);
+    assert!(email_meta.cc_emails.is_empty(), "CC should be empty");
+    assert!(email_meta.bcc_emails.is_empty(), "BCC should be empty");
 
     // Message ID may or may not include angle brackets depending on parser
     assert!(email_meta.message_id.is_some());
@@ -49,6 +56,9 @@ This is the email body content.";
         msg_id.contains("unique123@example.com"),
         "Message ID should contain unique123@example.com"
     );
+
+    // Verify no attachments
+    assert!(email_meta.attachments.is_empty(), "Should have no attachments");
 
     // Verify date
     assert!(result.metadata.date.is_some());
@@ -129,6 +139,13 @@ Content-Type: text/html; charset=utf-8\r\n\
 
     // Text content should be extracted
     assert!(result.content.contains("HTML Heading") || result.content.contains("bold"));
+
+    // Verify basic email metadata
+    assert!(result.metadata.email.is_some());
+    let email_meta = result.metadata.email.unwrap();
+    assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
+    assert_eq!(email_meta.to_emails, vec!["recipient@example.com".to_string()]);
+    assert_eq!(result.metadata.subject, Some("HTML Email".to_string()));
 }
 
 /// Test EML with plain text body.
@@ -153,6 +170,13 @@ And preserves formatting.";
     assert!(result.content.contains("This is a plain text email"));
     assert!(result.content.contains("multiple lines"));
     assert!(result.content.contains("preserves formatting"));
+
+    // Verify basic email metadata
+    assert!(result.metadata.email.is_some());
+    let email_meta = result.metadata.email.unwrap();
+    assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
+    assert_eq!(email_meta.to_emails, vec!["recipient@example.com".to_string()]);
+    assert_eq!(result.metadata.subject, Some("Plain Text Email".to_string()));
 }
 
 /// Test EML multipart (HTML + plain text).
@@ -184,6 +208,13 @@ Content-Type: text/html\r\n\
         result.content.contains("Plain text version") || result.content.contains("HTML version"),
         "Should extract either plain text or HTML content"
     );
+
+    // Verify basic email metadata
+    assert!(result.metadata.email.is_some());
+    let email_meta = result.metadata.email.unwrap();
+    assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
+    assert_eq!(email_meta.to_emails, vec!["recipient@example.com".to_string()]);
+    assert_eq!(result.metadata.subject, Some("Multipart Email".to_string()));
 }
 
 /// Test MSG file extraction (Outlook format).
@@ -275,23 +306,33 @@ Email to multiple recipients.";
         .await
         .expect("Should extract email with multiple recipients");
 
-    // Verify email metadata
+    // Verify email metadata - check ALL fields
     assert!(result.metadata.email.is_some());
     let email_meta = result.metadata.email.unwrap();
 
+    // Verify sender
+    assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
+
     // Verify To recipients
-    assert_eq!(email_meta.to_emails.len(), 3);
+    assert_eq!(email_meta.to_emails.len(), 3, "Should have 3 To recipients");
     assert!(email_meta.to_emails.contains(&"r1@example.com".to_string()));
     assert!(email_meta.to_emails.contains(&"r2@example.com".to_string()));
     assert!(email_meta.to_emails.contains(&"r3@example.com".to_string()));
 
     // Verify CC recipients
-    assert_eq!(email_meta.cc_emails.len(), 2);
+    assert_eq!(email_meta.cc_emails.len(), 2, "Should have 2 CC recipients");
     assert!(email_meta.cc_emails.contains(&"cc1@example.com".to_string()));
     assert!(email_meta.cc_emails.contains(&"cc2@example.com".to_string()));
 
     // BCC is often not included in message headers (privacy)
-    // So we don't assert on it
+    // BCC may be empty even if specified in headers
+    // Note: We don't assert on BCC as it's typically stripped
+
+    // Verify subject
+    assert_eq!(result.metadata.subject, Some("Multiple Recipients".to_string()));
+
+    // Verify no attachments
+    assert!(email_meta.attachments.is_empty(), "Should have no attachments");
 }
 
 /// Test malformed email structure.

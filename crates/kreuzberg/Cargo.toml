@@ -15,7 +15,7 @@ crate-type = ["rlib"]
 default = []
 
 # Format extractors
-pdf = ["dep:pdfium-render", "dep:lopdf"]
+pdf = ["dep:pdfium-render", "dep:lopdf", "dep:image"]
 excel = ["dep:calamine", "dep:polars"]
 office = ["dep:roxmltree", "dep:zip"]
 email = ["dep:mail-parser", "dep:msg_parser"]
@@ -27,7 +27,13 @@ archives = ["dep:zip", "dep:tar", "dep:sevenz-rust"]
 ocr = ["dep:tesseract-rs", "dep:image", "dep:fast_image_resize", "dep:ndarray", "dep:kamadak-exif"]
 language-detection = ["dep:whatlang"]
 chunking = ["dep:text-splitter"]
-quality = ["dep:unicode-normalization", "dep:chardetng", "dep:encoding_rs"]
+stopwords = []  # Stopwords for keyword extraction and token reduction
+quality = ["dep:unicode-normalization", "dep:chardetng", "dep:encoding_rs", "stopwords"]
+
+# Keyword extraction (requires stopwords)
+keywords-yake = ["dep:yake-rust", "stopwords"]
+keywords-rake = ["dep:rake", "stopwords"]
+keywords = ["keywords-yake", "keywords-rake"]
 
 # Server features
 api = ["dep:axum", "dep:tower", "dep:tower-http", "dep:tracing"]
@@ -36,7 +42,7 @@ mcp = ["dep:rmcp"]
 # Convenience bundles
 full = [
     "pdf", "excel", "office", "email", "html", "xml", "archives",
-    "ocr", "language-detection", "chunking", "quality"
+    "ocr", "language-detection", "chunking", "quality", "keywords"
 ]
 server = ["pdf", "excel", "html", "ocr", "api", "mcp"]
 cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking", "quality"]
@@ -94,6 +100,8 @@ text-splitter = { version = "0.28.0", features = ["markdown"], optional = true }
 unicode-normalization = { version = "0.1.24", optional = true }
 chardetng = { version = "0.1.17", optional = true }
 encoding_rs = { version = "0.8.35", optional = true }
+yake-rust = { version = "1.0.3", optional = true }
+rake = { version = "0.3.6", optional = true }
 
 # Server features (optional)
 axum = { version = "0.8", features = ["macros", "json", "multipart"], optional = true }
@@ -105,3 +113,5 @@ rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", features = ["
 [dev-dependencies]
 tempfile = "3.23.0"
 filetime = "0.2"
+tar = "0.4.44"
+zip = "6.0.0"

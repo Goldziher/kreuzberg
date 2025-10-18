@@ -1,4 +1,5 @@
 use crate::error::{KreuzbergError, Result};
+#[cfg(feature = "quality")]
 use crate::text::normalize_spaces;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -62,7 +63,15 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
     // Cleanup
     let _ = fs::remove_file(&output_path).await;
 
-    Ok(normalize_spaces(&content))
+    // Normalize spaces if quality feature is enabled
+    #[cfg(feature = "quality")]
+    {
+        Ok(normalize_spaces(&content))
+    }
+    #[cfg(not(feature = "quality"))]
+    {
+        Ok(content)
+    }
 }
 
 /// Extract metadata from file using Pandoc JSON output

@@ -60,6 +60,7 @@ impl DocumentExtractor for HtmlExtractor {
             metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 

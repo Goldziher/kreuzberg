@@ -42,6 +42,11 @@ fn test_ocr_language_english() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract with English OCR");
 
     assert_mime_type(&result, "image/png");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // English text should be extracted
 }
 
@@ -69,6 +74,16 @@ fn test_ocr_language_german() {
     match result {
         Ok(extraction_result) => {
             assert_mime_type(&extraction_result, "image/png");
+
+            // Verify ExtractionResult structure
+            assert!(
+                extraction_result.chunks.is_none(),
+                "Chunks should be None without chunking config"
+            );
+            assert!(
+                extraction_result.detected_languages.is_none(),
+                "Language detection not enabled"
+            );
         }
         Err(e) => {
             // If German language pack not installed, this is expected
@@ -100,6 +115,16 @@ fn test_ocr_language_multiple() {
     match result {
         Ok(extraction_result) => {
             assert_mime_type(&extraction_result, "image/png");
+
+            // Verify ExtractionResult structure
+            assert!(
+                extraction_result.chunks.is_none(),
+                "Chunks should be None without chunking config"
+            );
+            assert!(
+                extraction_result.detected_languages.is_none(),
+                "Language detection not enabled"
+            );
         }
         Err(e) => {
             eprintln!("Multi-language OCR failed (language pack may not be installed): {}", e);
@@ -134,6 +159,10 @@ fn test_ocr_psm_auto() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract with PSM 3 (auto)");
 
     assert_mime_type(&result, "image/jpeg");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 #[test]
@@ -159,6 +188,10 @@ fn test_ocr_psm_single_block() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract with PSM 6 (single block)");
 
     assert_mime_type(&result, "image/jpeg");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 #[test]
@@ -184,6 +217,10 @@ fn test_ocr_psm_single_line() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract with PSM 7 (single line)");
 
     assert_mime_type(&result, "image/png");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 // ============================================================================
@@ -211,6 +248,13 @@ fn test_force_ocr_on_text_pdf() {
 
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "pdf")]
+    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -234,6 +278,13 @@ fn test_force_ocr_disabled() {
 
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "pdf")]
+    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
 
 // ============================================================================
@@ -266,6 +317,11 @@ fn test_table_detection_enabled() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract with table detection enabled");
 
     assert_mime_type(&result, "image/png");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Table detection may or may not find tables depending on image quality
 }
 
@@ -292,6 +348,10 @@ fn test_table_detection_disabled() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract with table detection disabled");
 
     assert_mime_type(&result, "image/png");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 // ============================================================================
@@ -322,6 +382,10 @@ fn test_language_model_ngram_configuration() {
         extract_file_sync(&file_path, None, &config).expect("Should extract with ngram language model enabled");
 
     assert_mime_type(&result, "image/jpeg");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 #[test]
@@ -348,6 +412,10 @@ fn test_dictionary_correction_enabled() {
         extract_file_sync(&file_path, None, &config).expect("Should extract with dictionary correction enabled");
 
     assert_mime_type(&result, "image/jpeg");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 #[test]
@@ -373,6 +441,11 @@ fn test_character_whitelist() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract with character whitelist");
 
     assert_mime_type(&result, "image/png");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Output should only contain whitelisted characters
 }
 
@@ -407,6 +480,19 @@ fn test_ocr_cache_enabled() {
 
     assert_mime_type(&result1, "image/jpeg");
     assert_mime_type(&result2, "image/jpeg");
+
+    // Verify ExtractionResult structure for both
+    assert!(
+        result1.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(result1.detected_languages.is_none(), "Language detection not enabled");
+    assert!(
+        result2.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(result2.detected_languages.is_none(), "Language detection not enabled");
+
     // Second extraction should be faster due to caching
 }
 
@@ -434,6 +520,10 @@ fn test_ocr_cache_disabled() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract without caching");
 
     assert_mime_type(&result, "image/jpeg");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 // ============================================================================
@@ -470,4 +560,8 @@ fn test_complex_configuration_combination() {
 
     assert_mime_type(&result, "image/jpeg");
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }

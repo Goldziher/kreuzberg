@@ -183,6 +183,7 @@ impl OcrBackend for TesseractBackend {
                 })
                 .collect(),
             detected_languages: None,
+            chunks: None,
         })
     }
 
@@ -237,6 +238,7 @@ impl OcrBackend for TesseractBackend {
                 })
                 .collect(),
             detected_languages: None,
+            chunks: None,
         })
     }
 

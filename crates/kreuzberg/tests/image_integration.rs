@@ -32,6 +32,11 @@ fn test_jpg_image_metadata() {
         .expect("Should extract JPG image successfully");
 
     assert_mime_type(&result, "image/jpeg");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Image without OCR may have minimal content
 }
 
@@ -46,6 +51,10 @@ fn test_png_image_metadata() {
         .expect("Should extract PNG image successfully");
 
     assert_mime_type(&result, "image/png");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 #[test]
@@ -59,6 +68,10 @@ fn test_bmp_image_format() {
         .expect("Should extract BMP image successfully");
 
     assert_mime_type(&result, "image/bmp");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 // ============================================================================
@@ -77,6 +90,10 @@ fn test_ocr_simple_text() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract text from image with OCR");
 
     assert_mime_type(&result, "image/png");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     // OCR should extract some text
     // Note: We don't assert exact text since OCR accuracy varies
@@ -98,6 +115,10 @@ fn test_ocr_document_image() {
 
     assert_mime_type(&result, "image/jpeg");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Document image should have text content
     if !result.content.trim().is_empty() {
         assert_min_content_length(&result, 10);
@@ -117,6 +138,10 @@ fn test_ocr_layout_parser() {
 
     assert_mime_type(&result, "image/jpeg");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Layout parser images typically have substantial text
     if !result.content.trim().is_empty() {
         assert_min_content_length(&result, 20);
@@ -135,6 +160,10 @@ fn test_ocr_invoice_image() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should extract text from invoice image");
 
     assert_mime_type(&result, "image/png");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     // Invoice images should have text content
     if !result.content.trim().is_empty() {
@@ -159,6 +188,10 @@ fn test_table_image_simple() {
 
     assert_mime_type(&result, "image/png");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Table images should extract text
     // Table detection may or may not be triggered depending on implementation
 }
@@ -176,6 +209,10 @@ fn test_table_image_complex() {
         extract_file_sync(&file_path, None, &config).expect("Should extract complex document image successfully");
 
     assert_mime_type(&result, "image/png");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 // ============================================================================
@@ -195,6 +232,10 @@ fn test_ocr_multilang_english_korean() {
 
     assert_mime_type(&result, "image/png");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Mixed language text - OCR may extract some content
     // English OCR should at least extract English portions
 }
@@ -212,6 +253,10 @@ fn test_ocr_chinese_simplified() {
 
     assert_mime_type(&result, "image/jpeg");
 
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
     // Chinese text with English OCR may not extract well
     // This tests that OCR doesn't crash on non-English scripts
 }
@@ -228,6 +273,10 @@ fn test_ocr_japanese_vertical() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should process Japanese vertical text image");
 
     assert_mime_type(&result, "image/jpeg");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     // Japanese vertical text with English OCR may not extract well
     // This tests that OCR handles different text orientations gracefully
@@ -249,6 +298,10 @@ fn test_image_no_text() {
     let result = extract_file_sync(&file_path, None, &config).expect("Should process image without text");
 
     assert_mime_type(&result, "image/jpeg");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     // Images without text should extract successfully but have minimal/no content
     // This is expected behavior - not an error

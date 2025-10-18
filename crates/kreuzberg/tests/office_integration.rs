@@ -36,6 +36,16 @@ fn test_docx_simple_text() {
     );
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 20);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "office")]
+    assert!(
+        !result.metadata.additional.is_empty(),
+        "Office document should have metadata"
+    );
 }
 
 #[test]
@@ -53,6 +63,16 @@ fn test_docx_with_tables() {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "office")]
+    assert!(
+        !result.metadata.additional.is_empty(),
+        "Office document should have metadata"
+    );
 
     // Table extraction is optional - just verify we got content
     // If tables are extracted, they'll be in result.tables
@@ -73,6 +93,16 @@ fn test_docx_with_headers() {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "office")]
+    assert!(
+        !result.metadata.additional.is_empty(),
+        "Office document should have metadata"
+    );
 }
 
 #[test]
@@ -90,6 +120,16 @@ fn test_docx_with_lists() {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "office")]
+    assert!(
+        !result.metadata.additional.is_empty(),
+        "Office document should have metadata"
+    );
 }
 
 #[test]
@@ -107,6 +147,16 @@ fn test_docx_with_formatting() {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "office")]
+    assert!(
+        !result.metadata.additional.is_empty(),
+        "Office document should have metadata"
+    );
 }
 
 #[test]
@@ -124,6 +174,16 @@ fn test_docx_with_equations() {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "office")]
+    assert!(
+        !result.metadata.additional.is_empty(),
+        "Office document should have metadata"
+    );
 }
 
 // ============================================================================
@@ -145,6 +205,13 @@ fn test_xlsx_simple_spreadsheet() {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "excel")]
+    assert!(!result.metadata.additional.is_empty(), "Excel should have metadata");
 }
 
 #[test]
@@ -162,6 +229,13 @@ fn test_xlsx_multi_sheet() {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "excel")]
+    assert!(!result.metadata.additional.is_empty(), "Excel should have metadata");
 
     // Multi-sheet workbook should have substantial content
     assert_min_content_length(&result, 50);
@@ -183,6 +257,13 @@ fn test_xlsx_with_data() {
     );
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 100);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "excel")]
+    assert!(!result.metadata.additional.is_empty(), "Excel should have metadata");
 }
 
 #[test]
@@ -197,6 +278,13 @@ fn test_xls_legacy_format() {
 
     assert_mime_type(&result, "application/vnd.ms-excel");
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "excel")]
+    assert!(!result.metadata.additional.is_empty(), "Excel should have metadata");
 }
 
 // ============================================================================
@@ -218,6 +306,16 @@ fn test_pptx_simple_presentation() {
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "office")]
+    assert!(
+        !result.metadata.additional.is_empty(),
+        "PowerPoint should have metadata"
+    );
 }
 
 #[test]
@@ -235,6 +333,16 @@ fn test_pptx_with_images() {
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     );
     assert_non_empty_content(&result);
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+
+    #[cfg(feature = "office")]
+    assert!(
+        !result.metadata.additional.is_empty(),
+        "PowerPoint should have metadata"
+    );
 }
 
 #[test]
@@ -256,6 +364,22 @@ fn test_pptx_pitch_deck() {
             );
             assert_non_empty_content(&extraction_result);
             assert_min_content_length(&extraction_result, 100);
+
+            // Verify ExtractionResult structure
+            assert!(
+                extraction_result.chunks.is_none(),
+                "Chunks should be None without chunking config"
+            );
+            assert!(
+                extraction_result.detected_languages.is_none(),
+                "Language detection not enabled"
+            );
+
+            #[cfg(feature = "office")]
+            assert!(
+                !extraction_result.metadata.additional.is_empty(),
+                "PowerPoint should have metadata"
+            );
         }
         Err(e) => {
             // File has unusual structure that causes parsing errors
@@ -283,6 +407,16 @@ fn test_doc_legacy_word() {
         Ok(extraction_result) => {
             assert_mime_type(&extraction_result, "application/msword");
             assert_non_empty_content(&extraction_result);
+
+            // Verify ExtractionResult structure
+            assert!(
+                extraction_result.chunks.is_none(),
+                "Chunks should be None without chunking config"
+            );
+            assert!(
+                extraction_result.detected_languages.is_none(),
+                "Language detection not enabled"
+            );
         }
         Err(e) => {
             // If LibreOffice is not installed, this is expected
@@ -306,6 +440,16 @@ fn test_ppt_legacy_powerpoint() {
         Ok(extraction_result) => {
             assert_mime_type(&extraction_result, "application/vnd.ms-powerpoint");
             assert_non_empty_content(&extraction_result);
+
+            // Verify ExtractionResult structure
+            assert!(
+                extraction_result.chunks.is_none(),
+                "Chunks should be None without chunking config"
+            );
+            assert!(
+                extraction_result.detected_languages.is_none(),
+                "Language detection not enabled"
+            );
         }
         Err(e) => {
             // If LibreOffice is not installed, this is expected

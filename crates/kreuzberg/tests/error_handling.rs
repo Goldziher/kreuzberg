@@ -26,6 +26,14 @@ async fn test_truncated_pdf() {
 
     // Should fail gracefully with parsing error, not panic
     assert!(result.is_err(), "Truncated PDF should fail gracefully");
+
+    // Verify error type - should be Parsing error
+    let error = result.unwrap_err();
+    assert!(
+        matches!(error, kreuzberg::KreuzbergError::Parsing { .. }),
+        "Truncated PDF should produce Parsing error, got: {:?}",
+        error
+    );
 }
 
 /// Test corrupted ZIP - malformed archive.
@@ -44,6 +52,14 @@ async fn test_corrupted_zip() {
 
     // Should fail gracefully with parsing error
     assert!(result.is_err(), "Corrupted ZIP should fail gracefully");
+
+    // Verify error type - should be Parsing error
+    let error = result.unwrap_err();
+    assert!(
+        matches!(error, kreuzberg::KreuzbergError::Parsing { .. }),
+        "Corrupted ZIP should produce Parsing error, got: {:?}",
+        error
+    );
 }
 
 /// Test invalid XML - bad XML syntax.
@@ -60,11 +76,30 @@ async fn test_invalid_xml() {
 
     let result = extract_bytes(invalid_xml, "application/xml", &config).await;
 
-    // XML parser may be permissive, but should not panic
-    assert!(
-        result.is_ok() || result.is_err(),
-        "Invalid XML should handle gracefully"
-    );
+    // XML parser is streaming and permissive - may succeed with partial content
+    // or fail with parsing error. Important: must not panic.
+    match result {
+        Ok(extraction) => {
+            // Parser extracted partial content before hitting errors
+            assert!(
+                extraction.chunks.is_none(),
+                "Chunks should be None without chunking config"
+            );
+            // Content may be partial or empty
+            assert!(
+                extraction.content.len() >= 0,
+                "Extracted content should be valid (possibly empty)"
+            );
+        }
+        Err(error) => {
+            // Parser detected errors and failed
+            assert!(
+                matches!(error, kreuzberg::KreuzbergError::Parsing { .. }),
+                "Invalid XML error should be Parsing type, got: {:?}",
+                error
+            );
+        }
+    }
 }
 
 /// Test corrupted image - invalid image data.
@@ -80,12 +115,32 @@ async fn test_corrupted_image() {
 
     let result = extract_bytes(&corrupted_png, "image/png", &config).await;
 
-    // Image extraction may fail or succeed with empty content
-    // Important: should not panic
-    assert!(
-        result.is_ok() || result.is_err(),
-        "Corrupted image should handle gracefully"
-    );
+    // Image extraction behavior depends on whether OCR is enabled
+    // Without OCR: Fail with parsing error or succeed with empty content
+    // With OCR: May fail during OCR processing
+    // Important: must not panic
+    match result {
+        Ok(extraction) => {
+            // Image accepted but may have no text content
+            assert!(
+                extraction.chunks.is_none(),
+                "Chunks should be None without chunking config"
+            );
+            assert!(
+                extraction.content.is_empty() || extraction.content.len() >= 0,
+                "Content should be empty or valid for corrupted image"
+            );
+        }
+        Err(error) => {
+            // Image parsing failed
+            assert!(
+                matches!(error, kreuzberg::KreuzbergError::Parsing { .. })
+                    || matches!(error, kreuzberg::KreuzbergError::Ocr { .. }),
+                "Corrupted image error should be Parsing or OCR type, got: {:?}",
+                error
+            );
+        }
+    }
 }
 
 // ============================================================================
@@ -104,20 +159,64 @@ async fn test_empty_file() {
     let result_text = extract_bytes(empty_data, "text/plain", &config).await;
     let result_xml = extract_bytes(empty_data, "application/xml", &config).await;
 
-    // Empty files should fail with validation errors or succeed with empty content
-    // Important: should not panic
-    assert!(
-        result_pdf.is_err() || result_pdf.unwrap().content.is_empty(),
-        "Empty PDF should handle gracefully"
-    );
-    assert!(
-        result_text.is_ok() || result_text.is_err(),
-        "Empty text should handle gracefully"
-    );
-    assert!(
-        result_xml.is_err() || result_xml.unwrap().content.is_empty(),
-        "Empty XML should handle gracefully"
-    );
+    // Empty files behavior varies by format:
+    // - PDF: Should fail (invalid PDF structure)
+    // - Text: Should succeed with empty content
+    // - XML: Should fail (no root element) or succeed with empty content
+    // Important: must not panic
+
+    // PDF: Should fail
+    match result_pdf {
+        Ok(extraction) => {
+            assert!(
+                extraction.content.is_empty(),
+                "Empty PDF should have empty content if it succeeds"
+            );
+            assert!(extraction.chunks.is_none(), "Chunks should be None");
+        }
+        Err(error) => {
+            assert!(
+                matches!(
+                    error,
+                    kreuzberg::KreuzbergError::Parsing { .. } | kreuzberg::KreuzbergError::Validation { .. }
+                ),
+                "Empty PDF should produce Parsing or Validation error, got: {:?}",
+                error
+            );
+        }
+    }
+
+    // Text: Should succeed with empty content
+    match result_text {
+        Ok(extraction) => {
+            assert!(
+                extraction.content.is_empty(),
+                "Empty text file should have empty content"
+            );
+            assert!(extraction.chunks.is_none(), "Chunks should be None");
+        }
+        Err(error) => {
+            panic!("Empty text file should not fail, got error: {:?}", error);
+        }
+    }
+
+    // XML: May fail or succeed with empty content
+    match result_xml {
+        Ok(extraction) => {
+            assert!(
+                extraction.content.is_empty(),
+                "Empty XML should have empty content if it succeeds"
+            );
+            assert!(extraction.chunks.is_none(), "Chunks should be None");
+        }
+        Err(error) => {
+            assert!(
+                matches!(error, kreuzberg::KreuzbergError::Parsing { .. }),
+                "Empty XML error should be Parsing type, got: {:?}",
+                error
+            );
+        }
+    }
 }
 
 /// Test very large file - stress test with large content.
@@ -135,9 +234,24 @@ async fn test_very_large_file() {
     assert!(result.is_ok(), "Large file should be processed successfully");
     let extraction = result.unwrap();
 
-    // Content should be extracted
+    // Verify ExtractionResult structure
     assert!(!extraction.content.is_empty(), "Large file content should not be empty");
     assert!(extraction.content.len() > 1_000_000, "Content should be large");
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(extraction.tables.is_empty(), "Text file should not have tables");
+
+    // Verify content integrity - should contain repeated text
+    assert!(
+        extraction.content.contains("This is a line of text"),
+        "Content should preserve original text"
+    );
 }
 
 /// Test unicode filenames - non-ASCII paths.
@@ -153,7 +267,21 @@ async fn test_unicode_filenames() {
 
     // Should handle Unicode paths gracefully
     assert!(result.is_ok(), "Unicode filename should be handled");
-    assert!(result.unwrap().content.contains("Test content"));
+    let extraction = result.unwrap();
+
+    // Verify content and structure
+    assert!(
+        extraction.content.contains("Test content"),
+        "Content should be extracted"
+    );
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
 }
 
 /// Test special characters in content - emojis, RTL text.
@@ -174,10 +302,26 @@ Math symbols: ∑ ∫ √ ≈ ∞";
     assert!(result.is_ok(), "Special characters should be handled");
     let extraction = result.unwrap();
 
-    // Content should preserve special characters
-    assert!(!extraction.content.is_empty());
-    // At least some content should be extracted
-    assert!(extraction.content.len() > 10);
+    // Verify ExtractionResult structure
+    assert!(!extraction.content.is_empty(), "Content should not be empty");
+    assert!(extraction.content.len() > 10, "Should have substantial content");
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        extraction.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
+    // Verify special characters are preserved (at least some of them)
+    // Note: Some characters might be normalized or transcoded
+    assert!(
+        extraction.content.contains("Emojis")
+            || extraction.content.contains("Arabic")
+            || extraction.content.contains("Chinese"),
+        "Should preserve at least some special character text"
+    );
 }
 
 // ============================================================================
@@ -289,6 +433,20 @@ async fn test_null_bytes_in_content() {
 
     // Should handle null bytes gracefully
     assert!(result.is_ok(), "Null bytes should be handled");
+    let extraction = result.unwrap();
+
+    // Verify ExtractionResult structure
+    assert!(!extraction.content.is_empty(), "Content should not be empty");
+    assert!(
+        extraction.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+
+    // Verify null bytes are handled (either preserved or stripped)
+    assert!(
+        extraction.content.contains("Text before") || extraction.content.contains("after"),
+        "Should preserve at least some of the text content"
+    );
 }
 
 /// Test concurrent extractions of same file.
@@ -306,9 +464,21 @@ async fn test_concurrent_extractions() {
         })
         .collect();
 
-    // Wait for all to complete
+    // Wait for all to complete and verify results
     for handle in handles {
         let result = handle.await.expect("Task should complete");
         assert!(result.is_ok(), "Concurrent extraction should succeed");
+
+        let extraction = result.unwrap();
+        // Verify each extraction produces correct results
+        assert!(
+            extraction.content.contains("Concurrent extraction"),
+            "Content should be extracted correctly"
+        );
+        assert!(extraction.chunks.is_none(), "Chunks should be None");
+        assert!(
+            extraction.detected_languages.is_none(),
+            "Language detection not enabled"
+        );
     }
 }

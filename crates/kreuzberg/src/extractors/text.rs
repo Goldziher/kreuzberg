@@ -77,6 +77,7 @@ impl DocumentExtractor for PlainTextExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 
@@ -160,6 +161,7 @@ impl DocumentExtractor for MarkdownExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 

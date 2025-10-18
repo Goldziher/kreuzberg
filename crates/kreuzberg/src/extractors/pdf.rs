@@ -204,6 +204,7 @@ impl DocumentExtractor for PdfExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 

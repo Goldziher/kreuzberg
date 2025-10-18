@@ -597,6 +597,7 @@ mod tests {
                 metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
+                chunks: None,
             })
         }
 
@@ -639,6 +640,7 @@ mod tests {
                 metadata: crate::types::Metadata::default(),
                 tables: vec![],
                 detected_languages: None,
+                chunks: None,
             })
         }
 

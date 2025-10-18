@@ -22,10 +22,15 @@ async fn test_extract_file_basic() {
     let config = ExtractionConfig::default();
     let result = extract_file(&file_path, None, &config).await;
 
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "Basic file extraction should succeed");
     let result = result.unwrap();
+
+    // Verify ExtractionResult structure
     assert_eq!(result.content, "Hello, Kreuzberg!");
     assert_eq!(result.mime_type, "text/plain");
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
+    assert!(result.tables.is_empty(), "Text file should not have tables");
 }
 
 /// Test extraction with explicit MIME type override.
@@ -39,9 +44,13 @@ async fn test_extract_file_with_mime_override() {
     let config = ExtractionConfig::default();
     let result = extract_file(&file_path, Some("text/plain"), &config).await;
 
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "MIME override should work");
     let result = result.unwrap();
+
+    // Verify MIME type was overridden
     assert_eq!(result.mime_type, "text/plain");
+    assert!(!result.content.is_empty(), "Should extract content");
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
 }
 
 /// Test extraction of multiple file types.
@@ -51,25 +60,34 @@ async fn test_extract_multiple_file_types() {
     let config = ExtractionConfig::default();
 
     // Create test files of different types
-    let mut test_files: Vec<(&str, &[u8], &str)> = vec![
+    let test_files: Vec<(&str, &[u8], &str)> = vec![
         ("test.txt", b"text content", "text/plain"),
         ("test.json", b"{\"key\": \"value\"}", "application/json"),
+        #[cfg(feature = "xml")]
+        ("test.xml", b"<root>data</root>", "application/xml"),
+        #[cfg(feature = "html")]
+        ("test.html", b"<html><body>test</body></html>", "text/html"),
     ];
-
-    // Feature-gated file types
-    #[cfg(feature = "xml")]
-    test_files.push(("test.xml", b"<root>data</root>", "application/xml"));
-
-    #[cfg(feature = "html")]
-    test_files.push(("test.html", b"<html><body>test</body></html>", "text/html"));
 
     for (filename, content, expected_mime) in test_files {
         let file_path = dir.path().join(filename);
         fs::write(&file_path, content).unwrap();
 
         let result = extract_file(&file_path, None, &config).await.unwrap();
-        assert_eq!(result.mime_type, expected_mime, "Failed for {}", filename);
-        assert!(!result.content.is_empty());
+
+        // Verify ExtractionResult structure
+        assert_eq!(result.mime_type, expected_mime, "MIME type mismatch for {}", filename);
+        assert!(
+            !result.content.is_empty(),
+            "Content should not be empty for {}",
+            filename
+        );
+        assert!(result.chunks.is_none(), "Chunks should be None for {}", filename);
+        assert!(
+            result.detected_languages.is_none(),
+            "Language detection not enabled for {}",
+            filename
+        );
     }
 }
 
@@ -78,20 +96,28 @@ async fn test_extract_multiple_file_types() {
 async fn test_extract_bytes_various_mime_types() {
     let config = ExtractionConfig::default();
 
-    let mut test_cases: Vec<(&[u8], &str)> = vec![
+    let test_cases: Vec<(&[u8], &str)> = vec![
         (b"text content", "text/plain"),
         (b"{\"key\": \"value\"}", "application/json"),
+        #[cfg(feature = "xml")]
+        (b"<root>data</root>", "application/xml"),
     ];
-
-    // XML is feature-gated
-    #[cfg(feature = "xml")]
-    test_cases.push((b"<root>data</root>", "application/xml"));
 
     for (content, mime_type) in test_cases {
         let result = extract_bytes(content, mime_type, &config).await;
-        assert!(result.is_ok(), "Failed for MIME type: {}", mime_type);
+        assert!(result.is_ok(), "Extract bytes failed for MIME type: {}", mime_type);
+
         let result = result.unwrap();
-        assert_eq!(result.mime_type, mime_type);
+
+        // Verify ExtractionResult structure
+        assert_eq!(result.mime_type, mime_type, "MIME type mismatch");
+        assert!(
+            !result.content.is_empty(),
+            "Content should not be empty for {}",
+            mime_type
+        );
+        assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+        assert!(result.detected_languages.is_none(), "Language detection not enabled");
     }
 }
 
@@ -118,10 +144,16 @@ async fn test_batch_extract_file_concurrency() {
     let results = results.unwrap();
     assert_eq!(results.len(), num_files);
 
-    // Verify results are in correct order
+    // Verify results are in correct order and have proper structure
     for (i, result) in results.iter().enumerate() {
-        assert!(result.content.contains(&i.to_string()));
-        assert_eq!(result.mime_type, "text/plain");
+        assert!(
+            result.content.contains(&i.to_string()),
+            "Content should contain file number"
+        );
+        assert_eq!(result.mime_type, "text/plain", "MIME type should be text/plain");
+        assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+        assert!(result.detected_languages.is_none(), "Language detection not enabled");
+        assert!(result.metadata.error.is_none(), "Should not have errors");
     }
 }
 
@@ -155,10 +187,14 @@ async fn test_batch_extract_bytes_concurrency() {
     let results = results.unwrap();
     assert_eq!(results.len(), 5);
 
-    // Verify results are in correct order
+    // Verify results are in correct order and have proper structure
     for (i, result) in results.iter().enumerate() {
         let expected_content = format!("content {}", i + 1);
-        assert_eq!(result.content, expected_content);
+        assert_eq!(result.content, expected_content, "Content mismatch for item {}", i);
+        assert_eq!(result.mime_type, "text/plain", "MIME type should be text/plain");
+        assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+        assert!(result.detected_languages.is_none(), "Language detection not enabled");
+        assert!(result.metadata.error.is_none(), "Should not have errors");
     }
 }
 
@@ -173,25 +209,35 @@ fn test_sync_wrappers() {
 
     // Test sync file extraction
     let result = extract_file_sync(&file_path, None, &config);
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap().content, "sync content");
+    assert!(result.is_ok(), "Sync file extraction should succeed");
+    let extraction = result.unwrap();
+    assert_eq!(extraction.content, "sync content");
+    assert!(extraction.chunks.is_none(), "Chunks should be None");
 
     // Test sync bytes extraction
     let result = extract_bytes_sync(b"test bytes", "text/plain", &config);
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap().content, "test bytes");
+    assert!(result.is_ok(), "Sync bytes extraction should succeed");
+    let extraction = result.unwrap();
+    assert_eq!(extraction.content, "test bytes");
+    assert!(extraction.chunks.is_none(), "Chunks should be None");
 
-    // Test batch sync
+    // Test batch sync file
     let paths = vec![file_path];
     let results = batch_extract_file_sync(paths, &config);
-    assert!(results.is_ok());
-    assert_eq!(results.unwrap().len(), 1);
+    assert!(results.is_ok(), "Batch sync file should succeed");
+    let results = results.unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].content, "sync content");
+    assert!(results[0].chunks.is_none(), "Chunks should be None");
 
     // Test batch bytes sync
     let contents = vec![(b"test".as_slice(), "text/plain")];
     let results = batch_extract_bytes_sync(contents, &config);
-    assert!(results.is_ok());
-    assert_eq!(results.unwrap().len(), 1);
+    assert!(results.is_ok(), "Batch bytes sync should succeed");
+    let results = results.unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].content, "test");
+    assert!(results[0].chunks.is_none(), "Chunks should be None");
 }
 
 /// Test MIME type detection for various extensions.
@@ -393,11 +439,14 @@ async fn test_pipeline_execution() {
     };
 
     let result = extract_file(&file_path, None, &config).await;
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "Pipeline execution should succeed");
 
-    // Pipeline is currently a pass-through, but should not error
+    // Verify pipeline processing
     let result = result.unwrap();
     assert_eq!(result.content, "pipeline content");
+    assert_eq!(result.mime_type, "text/plain");
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
 
 /// Test extraction with OCR config (placeholder test for Phase 2).
@@ -422,22 +471,54 @@ async fn test_extraction_with_ocr_config() {
     assert!(result.is_ok());
 }
 
-/// Test extraction with chunking config (placeholder test for Phase 2).
+/// Test extraction with chunking config.
+#[cfg(feature = "chunking")]
 #[tokio::test]
 async fn test_extraction_with_chunking_config() {
     let dir = tempdir().unwrap();
     let file_path = dir.path().join("chunking_test.txt");
-    fs::write(&file_path, "content for chunking").unwrap();
+
+    // Create content long enough to be chunked
+    let long_content = "content for chunking. ".repeat(100);
+    fs::write(&file_path, &long_content).unwrap();
 
     let config = ExtractionConfig {
         chunking: Some(kreuzberg::ChunkingConfig {
-            max_chars: 1000,
-            max_overlap: 200,
+            max_chars: 100,
+            max_overlap: 20,
         }),
         ..Default::default()
     };
 
-    // Should not error even with chunking config (will be used in Phase 2)
     let result = extract_file(&file_path, None, &config).await;
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "Extraction with chunking should succeed");
+
+    let result = result.unwrap();
+
+    // Verify chunking was applied
+    assert!(
+        result.chunks.is_some(),
+        "Chunks should be populated when chunking enabled"
+    );
+
+    let chunks = result.chunks.unwrap();
+    assert!(chunks.len() > 1, "Should have multiple chunks for long content");
+
+    // Verify chunk_count metadata
+    assert!(result.metadata.additional.contains_key("chunk_count"));
+    let chunk_count = result.metadata.additional.get("chunk_count").unwrap();
+    assert_eq!(
+        chunks.len(),
+        chunk_count.as_u64().unwrap() as usize,
+        "chunk_count should match chunks length"
+    );
+
+    // Verify each chunk respects max_chars
+    for chunk in &chunks {
+        assert!(
+            chunk.len() <= 100 + 20, // max_chars + overlap tolerance
+            "Chunk length {} exceeds max_chars + overlap",
+            chunk.len()
+        );
+    }
 }

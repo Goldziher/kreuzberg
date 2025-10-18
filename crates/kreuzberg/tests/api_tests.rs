@@ -114,6 +114,18 @@ async fn test_extract_text_file() {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0]["mime_type"], "text/plain");
     assert!(results[0]["content"].as_str().unwrap().contains("Hello, world!"));
+
+    // Verify ExtractionResult structure in JSON response
+    assert!(
+        results[0]["chunks"].is_null(),
+        "Chunks should be null without chunking config"
+    );
+    assert!(
+        results[0]["detected_languages"].is_null(),
+        "Language detection not enabled"
+    );
+    assert!(results[0]["tables"].is_array(), "Tables field should be present");
+    assert!(results[0]["metadata"].is_object(), "Metadata field should be present");
 }
 
 /// Test extract endpoint with JSON config.
@@ -154,6 +166,25 @@ async fn test_extract_with_config() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let results: Vec<serde_json::Value> = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0]["mime_type"], "text/plain");
+    assert!(results[0]["content"].as_str().unwrap().contains("Hello, world!"));
+
+    // Verify ExtractionResult structure in JSON response
+    assert!(
+        results[0]["chunks"].is_null(),
+        "Chunks should be null without chunking config"
+    );
+    assert!(
+        results[0]["detected_languages"].is_null(),
+        "Language detection not enabled"
+    );
+    assert!(results[0]["tables"].is_array(), "Tables field should be present");
+    assert!(results[0]["metadata"].is_object(), "Metadata field should be present");
 }
 
 /// Test extract endpoint with invalid config returns 400.
@@ -238,4 +269,16 @@ async fn test_extract_multiple_files() {
     assert_eq!(results.len(), 2);
     assert!(results[0]["content"].as_str().unwrap().contains("First file"));
     assert!(results[1]["content"].as_str().unwrap().contains("Second file"));
+
+    // Verify ExtractionResult structure for both files
+    for result in &results {
+        assert!(
+            result["chunks"].is_null(),
+            "Chunks should be null without chunking config"
+        );
+        assert!(result["detected_languages"].is_null(), "Language detection not enabled");
+        assert!(result["tables"].is_array(), "Tables field should be present");
+        assert!(result["metadata"].is_object(), "Metadata field should be present");
+        assert_eq!(result["mime_type"], "text/plain");
+    }
 }

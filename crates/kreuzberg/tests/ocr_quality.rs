@@ -168,6 +168,16 @@ fn test_ocr_quality_simple_text_high_accuracy() {
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
+    // Verify ExtractionResult structure for ground truth
+    assert!(
+        truth_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        truth_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
@@ -180,6 +190,16 @@ fn test_ocr_quality_simple_text_high_accuracy() {
     };
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
+
+    // Verify ExtractionResult structure for OCR result
+    assert!(
+        ocr_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        ocr_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
 
     // Debug: Check if force_ocr actually ran
     println!("Truth content length: {}", truth_result.content.len());
@@ -229,6 +249,16 @@ fn test_ocr_quality_numeric_accuracy() {
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
+    // Verify ExtractionResult structure for ground truth
+    assert!(
+        truth_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        truth_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
@@ -241,6 +271,16 @@ fn test_ocr_quality_numeric_accuracy() {
     };
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
+
+    // Verify ExtractionResult structure for OCR result
+    assert!(
+        ocr_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        ocr_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
 
     // Extract numeric tokens only
     let truth_tokens = tokenize_text(&truth_result.content);
@@ -281,6 +321,16 @@ fn test_ocr_quality_layout_preservation() {
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
+    // Verify ExtractionResult structure for ground truth
+    assert!(
+        truth_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        truth_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
@@ -293,6 +343,16 @@ fn test_ocr_quality_layout_preservation() {
     };
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
+
+    // Verify ExtractionResult structure for OCR result
+    assert!(
+        ocr_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        ocr_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
 
     // Count lines
     let truth_lines = count_lines(&truth_result.content);
@@ -326,6 +386,16 @@ fn test_ocr_quality_technical_document() {
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
+    // Verify ExtractionResult structure for ground truth
+    assert!(
+        truth_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        truth_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
@@ -338,6 +408,16 @@ fn test_ocr_quality_technical_document() {
     };
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
+
+    // Verify ExtractionResult structure for OCR result
+    assert!(
+        ocr_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        ocr_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
 
     // Overall quality
     let truth_tokens = tokenize_text(&truth_result.content);
@@ -383,6 +463,23 @@ fn test_ocr_consistency_across_runs() {
     let result1 = extract_file_sync(&file_path, None, &ocr_config).expect("First OCR run should succeed");
     let result2 = extract_file_sync(&file_path, None, &ocr_config).expect("Second OCR run should succeed");
     let result3 = extract_file_sync(&file_path, None, &ocr_config).expect("Third OCR run should succeed");
+
+    // Verify ExtractionResult structure for all runs
+    assert!(
+        result1.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(result1.detected_languages.is_none(), "Language detection not enabled");
+    assert!(
+        result2.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(result2.detected_languages.is_none(), "Language detection not enabled");
+    assert!(
+        result3.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(result3.detected_languages.is_none(), "Language detection not enabled");
 
     // Tokenize all runs
     let tokens1 = tokenize_text(&result1.content);
@@ -449,6 +546,24 @@ fn test_ocr_consistency_with_different_psm() {
     let result_psm3 = extract_file_sync(&file_path, None, &config_psm3).expect("PSM 3 extraction should succeed");
     let result_psm6 = extract_file_sync(&file_path, None, &config_psm6).expect("PSM 6 extraction should succeed");
 
+    // Verify ExtractionResult structure for both PSM modes
+    assert!(
+        result_psm3.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        result_psm3.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+    assert!(
+        result_psm6.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        result_psm6.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
     let tokens_psm3 = tokenize_text(&result_psm3.content);
     let tokens_psm6 = tokenize_text(&result_psm6.content);
 
@@ -481,6 +596,16 @@ fn test_ocr_quality_multi_page_consistency() {
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
+    // Verify ExtractionResult structure for ground truth
+    assert!(
+        truth_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        truth_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
+
     // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
@@ -493,6 +618,16 @@ fn test_ocr_quality_multi_page_consistency() {
     };
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
+
+    // Verify ExtractionResult structure for OCR result
+    assert!(
+        ocr_result.chunks.is_none(),
+        "Chunks should be None without chunking config"
+    );
+    assert!(
+        ocr_result.detected_languages.is_none(),
+        "Language detection not enabled"
+    );
 
     // For large documents, just verify OCR produces reasonable output
     let truth_tokens = tokenize_text(&truth_result.content);
@@ -538,6 +673,10 @@ fn test_ocr_quality_with_tables() {
     };
 
     let result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with table detection");
+
+    // Verify ExtractionResult structure
+    assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
+    assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     println!("Table extraction quality:");
     println!("  Tables found: {}", result.tables.len());

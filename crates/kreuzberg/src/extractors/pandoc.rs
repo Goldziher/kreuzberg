@@ -86,6 +86,7 @@ impl DocumentExtractor for PandocExtractor {
             },
             tables: vec![],
             detected_languages: None,
+            chunks: None,
         })
     }
 

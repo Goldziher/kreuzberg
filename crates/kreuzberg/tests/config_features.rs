@@ -31,10 +31,29 @@ async fn test_chunking_enabled() {
         .await
         .expect("Should extract successfully");
 
-    // Verify chunking occurred
+    // Verify chunks field is populated
+    assert!(result.chunks.is_some(), "Chunks should be present");
+    let chunks = result.chunks.unwrap();
+    assert!(chunks.len() > 1, "Should have multiple chunks");
+
+    // Verify chunk_count metadata for backward compatibility
     assert!(result.metadata.additional.contains_key("chunk_count"));
     let chunk_count = result.metadata.additional.get("chunk_count").unwrap();
-    assert!(chunk_count.as_u64().unwrap() > 1, "Should have multiple chunks");
+    assert_eq!(
+        chunks.len(),
+        chunk_count.as_u64().unwrap() as usize,
+        "Chunks length should match chunk_count metadata"
+    );
+
+    // Verify each chunk respects max_chars
+    for chunk in &chunks {
+        assert!(!chunk.is_empty(), "Chunk should not be empty");
+        assert!(
+            chunk.len() <= 50 + 10, // max_chars + some tolerance for overlap
+            "Chunk length {} exceeds max_chars + overlap",
+            chunk.len()
+        );
+    }
 }
 
 /// Test chunking with overlap - overlap preserved between chunks.
@@ -55,10 +74,26 @@ async fn test_chunking_with_overlap() {
         .await
         .expect("Should extract successfully");
 
-    // Verify chunking with overlap
+    // Verify chunks field with overlap
+    assert!(result.chunks.is_some(), "Chunks should be present");
+    let chunks = result.chunks.unwrap();
+    assert!(chunks.len() >= 2, "Should have at least 2 chunks");
+
+    // Verify chunk_count metadata
     assert!(result.metadata.additional.contains_key("chunk_count"));
-    let chunk_count = result.metadata.additional.get("chunk_count").unwrap();
-    assert!(chunk_count.as_u64().unwrap() >= 2, "Should have at least 2 chunks");
+
+    // Verify overlap exists between consecutive chunks
+    if chunks.len() >= 2 {
+        let chunk1 = &chunks[0];
+        let chunk2 = &chunks[1];
+
+        // Check that chunk2 starts with some content from the end of chunk1 (overlap)
+        let chunk1_end = &chunk1[chunk1.len().saturating_sub(20)..];
+        assert!(
+            chunk2.starts_with(chunk1_end) || chunk1_end.starts_with(&chunk2[..chunk1_end.len().min(chunk2.len())]),
+            "Chunks should have overlap"
+        );
+    }
 }
 
 /// Test chunking with custom sizes - custom chunk size and overlap.
@@ -72,7 +107,7 @@ async fn test_chunking_custom_sizes() {
         ..Default::default()
     };
 
-    let text = "Custom chunk test. ".repeat(50);
+    let text = "Custom chunk test. ".repeat(50); // ~950 characters
     let text_bytes = text.as_bytes();
 
     let result = extract_bytes(text_bytes, "text/plain", &config)
@@ -80,7 +115,21 @@ async fn test_chunking_custom_sizes() {
         .expect("Should extract successfully");
 
     // Verify custom chunking settings applied
+    assert!(result.chunks.is_some(), "Chunks should be present");
+    let chunks = result.chunks.unwrap();
+    assert!(chunks.len() >= 1, "Should have at least 1 chunk");
+
+    // Verify chunk_count metadata
     assert!(result.metadata.additional.contains_key("chunk_count"));
+
+    // Verify each chunk respects the custom max_chars (200)
+    for chunk in &chunks {
+        assert!(
+            chunk.len() <= 200 + 50, // max_chars + overlap tolerance
+            "Chunk length {} exceeds custom max_chars + overlap",
+            chunk.len()
+        );
+    }
 }
 
 /// Test chunking disabled - no chunking when disabled.
@@ -99,7 +148,15 @@ async fn test_chunking_disabled() {
         .expect("Should extract successfully");
 
     // Verify no chunking occurred
-    assert!(!result.metadata.additional.contains_key("chunk_count"));
+    assert!(result.chunks.is_none(), "Should not have chunks when chunking disabled");
+    assert!(
+        !result.metadata.additional.contains_key("chunk_count"),
+        "Should not have chunk_count when chunking disabled"
+    );
+
+    // Content should still be extracted normally
+    assert!(!result.content.is_empty(), "Content should be extracted");
+    assert!(result.content.contains("long text"), "Should contain original text");
 }
 
 // ============================================================================

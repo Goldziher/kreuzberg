@@ -88,8 +88,22 @@ fn test_batch_extract_file_sync_variant() {
     let results = results.unwrap();
 
     assert_eq!(results.len(), 2);
-    assert!(!results[0].content.is_empty());
-    assert!(!results[1].content.is_empty());
+
+    // Verify PDF extraction
+    assert!(!results[0].content.is_empty(), "PDF content should not be empty");
+    assert_eq!(
+        results[0].mime_type, "application/pdf",
+        "PDF MIME type should be correct"
+    );
+    assert!(results[0].metadata.error.is_none(), "PDF should extract without errors");
+
+    // Verify text extraction
+    assert!(!results[1].content.is_empty(), "Text content should not be empty");
+    assert_eq!(results[1].mime_type, "text/plain", "Text MIME type should be correct");
+    assert!(
+        results[1].metadata.error.is_none(),
+        "Text should extract without errors"
+    );
 }
 
 /// Test batch extraction from bytes.
@@ -238,9 +252,16 @@ async fn test_batch_extract_concurrent() {
 
     // Verify all succeeded
     for result in &results {
-        assert!(result.metadata.error.is_none());
-        assert!(!result.content.is_empty());
+        assert!(result.metadata.error.is_none(), "Result should not have errors");
+        assert!(!result.content.is_empty(), "Result content should not be empty");
+        assert_eq!(result.mime_type, "text/plain", "MIME type should be text/plain");
     }
+
+    // Verify actual content from at least first result (all should be identical)
+    assert!(
+        results[0].content.len() > 0,
+        "Should have extracted actual text content"
+    );
 
     // Concurrent processing should be faster than sequential
     // (This is a heuristic - 20 files in < 5 seconds is reasonable for text files)
