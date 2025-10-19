@@ -48,3 +48,7 @@ scripts.kreuzberg = "kreuzberg.__main__:main"
 module-name = "kreuzberg._internal_bindings"
 # Point to the PyO3 bindings crate
 manifest-path = "../../crates/kreuzberg-py/Cargo.toml"
+# Include pdfium.dll on Windows (if present)
+include = [
+  { path = "kreuzberg/pdfium.dll", format = "wheel" },
+]

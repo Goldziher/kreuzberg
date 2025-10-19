@@ -55,60 +55,8 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==3.2.0
-
       - name: Build wheels
-        run: python -m cibuildwheel packages/python --output-dir wheelhouse
-        env:
-          CIBW_BUILD: cp310-*
-
-          CIBW_ARCHS_LINUX: x86_64 aarch64
-          CIBW_ARCHS_MACOS: x86_64 arm64
-          CIBW_ARCHS_WINDOWS: AMD64
-
-          CIBW_BUILD_FRONTEND: "build"
-          CIBW_BUILD_VERBOSITY: 1
-
-          CIBW_BEFORE_ALL_LINUX: >
-            yum install -y openssl-devel pkgconfig &&
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
-            source ~/.cargo/env
-          CIBW_BEFORE_ALL_MACOS: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
-          CIBW_BEFORE_ALL_WINDOWS: >
-            curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
-            refreshenv
-
-          CIBW_BEFORE_BUILD: pip install --upgrade pip maturin build
-
-          CIBW_ENVIRONMENT: MATURIN_BUILD_ARGS="--compatibility linux"
-          CIBW_ENVIRONMENT_WINDOWS: MATURIN_BUILD_ARGS=""
-          CIBW_ENVIRONMENT_MACOS: MATURIN_BUILD_ARGS=""
-
-          CIBW_SKIP: "*-musllinux* *-win32 *-manylinux_i686"
-
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
-
-          # Disable wheel repair for testing
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
-          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
-          retention-days: 1
+        uses: ./.github/actions/build-wheels
 
   publish:
     name: Publish to PyPI
@@ -126,22 +74,22 @@ jobs:
           name: sdist
           path: dist/
 
-      - name: Download wheels (Ubuntu)
+      - name: Download wheels (Linux)
         uses: actions/download-artifact@v4
         with:
-          name: wheels-ubuntu-latest
+          name: wheels-Linux
           path: dist/
 
       - name: Download wheels (Windows)
         uses: actions/download-artifact@v4
         with:
-          name: wheels-windows-latest
+          name: wheels-Windows
           path: dist/
 
       - name: Download wheels (macOS)
         uses: actions/download-artifact@v4
         with:
-          name: wheels-macos-latest
+          name: wheels-macOS
           path: dist/
 
       - name: List distribution files
