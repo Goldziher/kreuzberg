@@ -1,20 +1,38 @@
 """Prepare Python wheel by downloading and bundling pdfium library for Windows."""
 
+import json
 import platform
 import shutil
-import sys
+import tarfile
 import urllib.request
-import zipfile
 from pathlib import Path
 
-# pdfium-binaries version to download
-PDFIUM_VERSION = "6721"
 PDFIUM_BASE_URL = "https://github.com/bblanchon/pdfium-binaries/releases/download"
+PDFIUM_RELEASES_API = "https://api.github.com/repos/bblanchon/pdfium-binaries/releases/latest"
+
+
+def get_latest_pdfium_version() -> str:
+    """Fetch the latest pdfium version from GitHub releases."""
+    try:
+        with urllib.request.urlopen(PDFIUM_RELEASES_API) as response:
+            data = json.loads(response.read().decode())
+            # Tag format is "chromium/7469" - extract just the number
+            tag = data["tag_name"]
+            version = tag.split("/")[-1]
+            print(f"Latest pdfium version: {version}")
+            return version
+    except Exception as e:
+        # Fallback to known working version
+        print(f"Warning: Could not fetch latest version ({e}), using fallback version 7469")
+        return "7469"
 
 
 def download_pdfium_windows() -> None:
     """Download pdfium.dll for Windows and place it in the package."""
     print("Downloading pdfium binaries for Windows...")
+
+    # Get latest version
+    version = get_latest_pdfium_version()
 
     # Determine architecture
     if platform.machine() == "AMD64":
@@ -26,21 +44,21 @@ def download_pdfium_windows() -> None:
         return
 
     # Download URL
-    filename = f"pdfium-win-{arch}.zip"
-    url = f"{PDFIUM_BASE_URL}/chromium%2F{PDFIUM_VERSION}/{filename}"
+    filename = f"pdfium-win-{arch}.tgz"
+    url = f"{PDFIUM_BASE_URL}/chromium/{version}/{filename}"
 
     print(f"Downloading from: {url}")
 
     # Download to temp location
-    temp_zip = Path("pdfium_temp.zip")
-    urllib.request.urlretrieve(url, temp_zip)
+    temp_tgz = Path("pdfium_temp.tgz")
+    urllib.request.urlretrieve(url, temp_tgz)
 
     # Extract
     temp_dir = Path("pdfium_temp")
     temp_dir.mkdir(exist_ok=True)
 
-    with zipfile.ZipFile(temp_zip, "r") as zip_ref:
-        zip_ref.extractall(temp_dir)
+    with tarfile.open(temp_tgz, "r:gz") as tar_ref:
+        tar_ref.extractall(temp_dir)
 
     # Find the DLL
     dll_path = temp_dir / "bin" / "pdfium.dll"
@@ -73,7 +91,7 @@ def download_pdfium_windows() -> None:
 
     # Cleanup
     shutil.rmtree(temp_dir)
-    temp_zip.unlink()
+    temp_tgz.unlink()
 
     print("✓ pdfium.dll downloaded and bundled successfully")
 
