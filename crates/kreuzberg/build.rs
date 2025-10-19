@@ -72,19 +72,51 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 }
 
-fn get_pdfium_url_and_lib(target: &str) -> (String, String) {
-    // Pdfium versions (latest from both repos)
-    const PDFIUM_VERSION_BBLANCHON: &str = "7469";
-    const PDFIUM_VERSION_PAULOCOUTINHOX: &str = "7442b";
+fn get_latest_version(repo: &str) -> String {
+    use std::process::Command;
 
+    let api_url = format!("https://api.github.com/repos/{}/releases/latest", repo);
+
+    // Try to fetch latest version via curl + jq
+    let output = Command::new("curl")
+        .args(["-s", &api_url])
+        .output();
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            let json = String::from_utf8_lossy(&output.stdout);
+            // Simple JSON parsing - extract tag_name
+            if let Some(start) = json.find("\"tag_name\":") {
+                if let Some(quote_start) = json[start..].find('"').and_then(|i| json[start + i + 1..].find('"')) {
+                    let tag_start = start + json[start..].find('"').unwrap() + 1;
+                    let tag = &json[tag_start..tag_start + quote_start];
+                    // Extract version from tag (e.g., "chromium/7469" -> "7469" or "7442b" -> "7442b")
+                    return tag.split('/').last().unwrap_or(tag).to_string();
+                }
+            }
+        }
+    }
+
+    // Fallback versions if API fetch fails
+    if repo.contains("bblanchon") {
+        "7469".to_string()
+    } else {
+        "7442b".to_string()
+    }
+}
+
+fn get_pdfium_url_and_lib(target: &str) -> (String, String) {
     // Determine platform and architecture
     if target.contains("wasm") {
         // WASM build - use paulocoutinhox/pdfium-lib
+        let version = get_latest_version("paulocoutinhox/pdfium-lib");
+        eprintln!("Using pdfium-lib version: {}", version);
+
         let wasm_arch = if target.contains("wasm32") { "wasm32" } else { "wasm64" };
         return (
             format!(
                 "https://github.com/paulocoutinhox/pdfium-lib/releases/download/{}/pdfium-{}.tar.gz",
-                PDFIUM_VERSION_PAULOCOUTINHOX, wasm_arch
+                version, wasm_arch
             ),
             "pdfium".to_string(),
         );
@@ -119,9 +151,12 @@ fn get_pdfium_url_and_lib(target: &str) -> (String, String) {
     };
 
     // Use bblanchon/pdfium-binaries for native platforms
+    let version = get_latest_version("bblanchon/pdfium-binaries");
+    eprintln!("Using pdfium-binaries version: {}", version);
+
     let url = format!(
-        "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F{}/pdfium-{}-{}.tgz",
-        PDFIUM_VERSION_BBLANCHON, platform, arch
+        "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/{}/pdfium-{}-{}.tgz",
+        version, platform, arch
     );
 
     (url, "pdfium".to_string())
