@@ -107,4 +107,3 @@ jobs:
             echo "Some wheel builds or tests failed." >> $GITHUB_STEP_SUMMARY
             echo "Check job details for more information." >> $GITHUB_STEP_SUMMARY
           fi
-# Test
