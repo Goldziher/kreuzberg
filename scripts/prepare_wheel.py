@@ -49,12 +49,22 @@ def download_pdfium_windows() -> None:
         return
 
     # Copy to kreuzberg package directory
-    package_dir = Path("packages/python/kreuzberg")
-    if not package_dir.exists():
-        package_dir = Path("kreuzberg")  # When running from packages/python
+    # cibuildwheel runs from packages/python, so check both locations
+    possible_paths = [
+        Path("kreuzberg"),  # When running from packages/python (cibuildwheel context)
+        Path("packages/python/kreuzberg"),  # When running from root
+    ]
 
-    if not package_dir.exists():
+    package_dir = None
+    for path in possible_paths:
+        if path.exists() and path.is_dir():
+            package_dir = path
+            break
+
+    if package_dir is None:
         print(f"Error: Could not find kreuzberg package directory")
+        print(f"Tried: {[str(p) for p in possible_paths]}")
+        print(f"Current directory: {Path.cwd()}")
         return
 
     dest_dll = package_dir / "pdfium.dll"
