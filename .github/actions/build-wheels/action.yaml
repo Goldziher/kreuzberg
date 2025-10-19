@@ -54,7 +54,9 @@ runs:
 
         CIBW_BEFORE_BUILD_LINUX: pip install --upgrade pip maturin build
         CIBW_BEFORE_BUILD_MACOS: pip install --upgrade pip maturin build
-        CIBW_BEFORE_BUILD_WINDOWS: pip install --upgrade pip maturin build
+        CIBW_BEFORE_BUILD_WINDOWS: >
+          pip install --upgrade pip maturin build &&
+          python {project}/../../scripts/prepare_wheel.py
 
         CIBW_ENVIRONMENT: MATURIN_BUILD_ARGS="--compatibility linux"
         CIBW_ENVIRONMENT_WINDOWS: MATURIN_BUILD_ARGS=""
