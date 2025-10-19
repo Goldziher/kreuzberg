@@ -52,17 +52,17 @@
     "which": "^5.0.0"
   },
   "optionalDependencies": {
-    "@gutenye/ocr-node": "^0.3.0"
+    "@gutenye/ocr-node": "^1.4.8"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.5",
-    "@types/node": "^22.10.5",
+    "@biomejs/biome": "^2.2.6",
+    "@types/node": "^24.8.1",
     "@types/which": "^3.0.4",
-    "@vitest/coverage-v8": "^2.1.8",
-    "oxlint": "^0.18.0",
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "@vitest/coverage-v8": "^3.2.4",
+    "oxlint": "^1.23.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=18"

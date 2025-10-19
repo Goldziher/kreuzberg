@@ -576,6 +576,7 @@ if (!nativeBinding) {
 
 module.exports = nativeBinding
 module.exports.batchExtractBytes = nativeBinding.batchExtractBytes
+module.exports.batchExtractBytesSync = nativeBinding.batchExtractBytesSync
 module.exports.batchExtractFiles = nativeBinding.batchExtractFiles
 module.exports.batchExtractFilesSync = nativeBinding.batchExtractFilesSync
 module.exports.extractBytes = nativeBinding.extractBytes

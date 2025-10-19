@@ -337,6 +337,30 @@ pub async fn batch_extract_files(
         .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))
 }
 
+/// Batch extract from multiple byte arrays (synchronous)
+#[napi]
+pub fn batch_extract_bytes_sync(
+    data_list: Vec<Buffer>,
+    mime_types: Vec<String>,
+    config: Option<JsExtractionConfig>,
+) -> Result<Vec<JsExtractionResult>> {
+    let rust_config = config.map(Into::into).unwrap_or_default();
+
+    // Copy all Buffers to owned Vec<u8> to avoid V8 GC lifetime issues
+    let owned_data: Vec<Vec<u8>> = data_list.iter().map(|b| b.to_vec()).collect();
+
+    // Create Vec<(&[u8], &str)> from owned data
+    let contents: Vec<(&[u8], &str)> = owned_data
+        .iter()
+        .zip(mime_types.iter())
+        .map(|(data, mime)| (data.as_slice(), mime.as_str()))
+        .collect();
+
+    kreuzberg::batch_extract_bytes_sync(contents, &rust_config)
+        .map(|results| results.into_iter().map(Into::into).collect())
+        .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))
+}
+
 /// Batch extract from multiple byte arrays (asynchronous)
 #[napi]
 pub async fn batch_extract_bytes(

@@ -4,7 +4,6 @@ members = [
     "crates/kreuzberg-py",
     "crates/kreuzberg-cli",
     "crates/kreuzberg-node",
-    "crates/kreuzberg-wasm",
 ]
 resolver = "2"
 

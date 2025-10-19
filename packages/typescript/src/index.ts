@@ -5,11 +5,44 @@
  * All extraction logic, chunking, quality processing, and language detection
  * are implemented in Rust for maximum performance.
  *
- * TypeScript-specific features:
- * - Runtime detection: Automatically uses NAPI (Node.js) or WASM (browsers/Deno)
- * - OCR backends: @gutenye/ocr (TypeScript-based OCR engine)
- * - Custom PostProcessors: Register your own TypeScript processing logic
- * - CLI proxy: Execute kreuzberg-cli binary for API and MCP server
+ * ## API Usage Recommendations
+ *
+ * **For processing multiple documents**, prefer batch APIs:
+ * - Use `batchExtractFiles()` / `batchExtractFilesSync()` for multiple files
+ * - Use `batchExtractBytes()` / `batchExtractBytesSync()` for multiple byte arrays
+ *
+ * **Batch APIs provide**:
+ * - Better performance (parallel processing in Rust)
+ * - More reliable memory management
+ * - Recommended for all multi-document workflows
+ *
+ * **Single extraction APIs** (`extractFile`, `extractBytes`) are suitable for:
+ * - One-off document processing
+ * - Interactive applications processing documents on-demand
+ * - Avoid calling these in tight loops - use batch APIs instead
+ *
+ * ## Supported Formats
+ *
+ * - **Documents**: PDF, DOCX, PPTX, XLSX, DOC, PPT (with LibreOffice)
+ * - **Text**: Markdown, Plain Text, XML
+ * - **Web**: HTML (converted to Markdown)
+ * - **Data**: JSON, YAML, TOML
+ * - **Email**: EML, MSG
+ * - **Images**: PNG, JPEG, TIFF (with OCR support)
+ *
+ * @example
+ * ```typescript
+ * import { extractFile, batchExtractFiles } from 'kreuzberg';
+ *
+ * // Single file extraction
+ * const result = await extractFile('document.pdf');
+ * console.log(result.content);
+ *
+ * // Multiple files (recommended approach)
+ * const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
+ * const results = await batchExtractFiles(files);
+ * results.forEach(r => console.log(r.content));
+ * ```
  */
 
 import type {
@@ -25,9 +58,11 @@ export * from "./types.js";
 // Runtime Detection
 // ============================================================================
 
+// biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
 let binding: any = null;
 let bindingInitialized = false;
 
+// biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
 function getBinding(): any {
 	if (bindingInitialized) {
 		return binding;
@@ -65,6 +100,7 @@ function getBinding(): any {
 // Helper Functions
 // ============================================================================
 
+// biome-ignore lint/suspicious/noExplicitAny: JSON.parse returns any
 function parseMetadata(metadataStr: string): any {
 	try {
 		return JSON.parse(metadataStr);
@@ -73,6 +109,7 @@ function parseMetadata(metadataStr: string): any {
 	}
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: Raw NAPI result is untyped
 function convertResult(rawResult: any): ExtractionResult {
 	return {
 		content: rawResult.content,
@@ -92,7 +129,10 @@ function convertResult(rawResult: any): ExtractionResult {
 // ============================================================================
 
 /**
- * Extract content from a file (synchronous).
+ * Extract content from a single file (synchronous).
+ *
+ * **Usage Note**: For processing multiple files, prefer `batchExtractFilesSync()` which
+ * provides better performance and memory management.
  *
  * @param filePath - Path to the file (string)
  * @param mimeType - Optional MIME type hint (auto-detected if null)
@@ -105,8 +145,9 @@ function convertResult(rawResult: any): ExtractionResult {
  *
  * // Basic usage
  * const result = extractFileSync('document.pdf');
+ * console.log(result.content);
  *
- * // With Tesseract configuration
+ * // With OCR configuration
  * const config = {
  *   ocr: {
  *     backend: 'tesseract',
@@ -114,11 +155,10 @@ function convertResult(rawResult: any): ExtractionResult {
  *     tesseractConfig: {
  *       psm: 6,
  *       enableTableDetection: true,
- *       tesseditCharWhitelist: '0123456789',
  *     },
  *   },
  * };
- * const result2 = extractFileSync('invoice.pdf', null, config);
+ * const result2 = extractFileSync('scanned.pdf', null, config);
  * ```
  */
 export function extractFileSync(
@@ -131,12 +171,34 @@ export function extractFileSync(
 }
 
 /**
- * Extract content from a file (asynchronous).
+ * Extract content from a single file (asynchronous).
+ *
+ * **Usage Note**: For processing multiple files, prefer `batchExtractFiles()` which
+ * provides better performance and memory management.
  *
  * @param filePath - Path to the file (string)
  * @param mimeType - Optional MIME type hint (auto-detected if null)
  * @param config - Extraction configuration (uses defaults if null)
  * @returns Promise<ExtractionResult> with content, metadata, and tables
+ *
+ * @example
+ * ```typescript
+ * import { extractFile } from 'kreuzberg';
+ *
+ * // Basic usage
+ * const result = await extractFile('document.pdf');
+ * console.log(result.content);
+ *
+ * // With chunking enabled
+ * const config = {
+ *   chunking: {
+ *     maxChars: 1000,
+ *     maxOverlap: 200,
+ *   },
+ * };
+ * const result2 = await extractFile('long_document.pdf', null, config);
+ * console.log(result2.chunks); // Array of text chunks
+ * ```
  */
 export async function extractFile(
 	filePath: string,
@@ -148,12 +210,25 @@ export async function extractFile(
 }
 
 /**
- * Extract content from bytes (synchronous).
+ * Extract content from raw bytes (synchronous).
+ *
+ * **Usage Note**: For processing multiple byte arrays, prefer `batchExtractBytesSync()`
+ * which provides better performance and memory management.
  *
  * @param data - File content as Uint8Array
  * @param mimeType - MIME type of the data (required for format detection)
  * @param config - Extraction configuration (uses defaults if null)
  * @returns ExtractionResult with content, metadata, and tables
+ *
+ * @example
+ * ```typescript
+ * import { extractBytesSync } from 'kreuzberg';
+ * import { readFileSync } from 'fs';
+ *
+ * const data = readFileSync('document.pdf');
+ * const result = extractBytesSync(data, 'application/pdf');
+ * console.log(result.content);
+ * ```
  */
 export function extractBytesSync(
 	data: Uint8Array,
@@ -169,12 +244,25 @@ export function extractBytesSync(
 }
 
 /**
- * Extract content from bytes (asynchronous).
+ * Extract content from raw bytes (asynchronous).
+ *
+ * **Usage Note**: For processing multiple byte arrays, prefer `batchExtractBytes()`
+ * which provides better performance and memory management.
  *
  * @param data - File content as Uint8Array
  * @param mimeType - MIME type of the data (required for format detection)
  * @param config - Extraction configuration (uses defaults if null)
  * @returns Promise<ExtractionResult> with content, metadata, and tables
+ *
+ * @example
+ * ```typescript
+ * import { extractBytes } from 'kreuzberg';
+ * import { readFile } from 'fs/promises';
+ *
+ * const data = await readFile('document.pdf');
+ * const result = await extractBytes(data, 'application/pdf');
+ * console.log(result.content);
+ * ```
  */
 export async function extractBytes(
 	data: Uint8Array,
@@ -192,9 +280,29 @@ export async function extractBytes(
 /**
  * Extract content from multiple files in parallel (synchronous).
  *
- * @param paths - List of file paths
+ * **Recommended for**: Processing multiple documents efficiently with better
+ * performance and memory management compared to individual `extractFileSync()` calls.
+ *
+ * **Benefits**:
+ * - Parallel processing in Rust for maximum performance
+ * - Optimized memory usage across all extractions
+ * - More reliable for batch document processing
+ *
+ * @param paths - List of file paths to extract
  * @param config - Extraction configuration (uses defaults if null)
- * @returns List of ExtractionResults (one per file)
+ * @returns Array of ExtractionResults (one per file, in same order as input)
+ *
+ * @example
+ * ```typescript
+ * import { batchExtractFilesSync } from 'kreuzberg';
+ *
+ * const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
+ * const results = batchExtractFilesSync(files);
+ *
+ * results.forEach((result, i) => {
+ *   console.log(`File ${files[i]}: ${result.content.substring(0, 100)}...`);
+ * });
+ * ```
  */
 export function batchExtractFilesSync(
 	paths: string[],
@@ -207,9 +315,32 @@ export function batchExtractFilesSync(
 /**
  * Extract content from multiple files in parallel (asynchronous).
  *
- * @param paths - List of file paths
+ * **Recommended for**: Processing multiple documents efficiently with better
+ * performance and memory management compared to individual `extractFile()` calls.
+ *
+ * **Benefits**:
+ * - Parallel processing in Rust for maximum performance
+ * - Optimized memory usage across all extractions
+ * - More reliable for batch document processing
+ *
+ * @param paths - List of file paths to extract
  * @param config - Extraction configuration (uses defaults if null)
- * @returns Promise<ExtractionResult[]> (one per file)
+ * @returns Promise resolving to array of ExtractionResults (one per file, in same order as input)
+ *
+ * @example
+ * ```typescript
+ * import { batchExtractFiles } from 'kreuzberg';
+ *
+ * const files = ['invoice1.pdf', 'invoice2.pdf', 'invoice3.pdf'];
+ * const results = await batchExtractFiles(files, {
+ *   ocr: { backend: 'tesseract', language: 'eng' }
+ * });
+ *
+ * // Process all results
+ * const totalAmount = results
+ *   .map(r => extractAmount(r.content))
+ *   .reduce((a, b) => a + b, 0);
+ * ```
  */
 export async function batchExtractFiles(
 	paths: string[],
@@ -220,12 +351,84 @@ export async function batchExtractFiles(
 }
 
 /**
- * Extract content from multiple byte arrays in parallel (asynchronous).
+ * Extract content from multiple byte arrays in parallel (synchronous).
+ *
+ * **Recommended for**: Processing multiple documents from memory efficiently with better
+ * performance and memory management compared to individual `extractBytesSync()` calls.
+ *
+ * **Benefits**:
+ * - Parallel processing in Rust for maximum performance
+ * - Optimized memory usage across all extractions
+ * - More reliable for batch document processing
  *
  * @param dataList - List of file contents as Uint8Arrays
- * @param mimeTypes - List of MIME types (one per data item)
+ * @param mimeTypes - List of MIME types (one per data item, required for format detection)
  * @param config - Extraction configuration (uses defaults if null)
- * @returns Promise<ExtractionResult[]> (one per data item)
+ * @returns Array of ExtractionResults (one per data item, in same order as input)
+ *
+ * @example
+ * ```typescript
+ * import { batchExtractBytesSync } from 'kreuzberg';
+ * import { readFileSync } from 'fs';
+ *
+ * const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
+ * const dataList = files.map(f => readFileSync(f));
+ * const mimeTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+ *
+ * const results = batchExtractBytesSync(dataList, mimeTypes);
+ * results.forEach((result, i) => {
+ *   console.log(`File ${files[i]}: ${result.content.substring(0, 100)}...`);
+ * });
+ * ```
+ */
+export function batchExtractBytesSync(
+	dataList: Uint8Array[],
+	mimeTypes: string[],
+	config: ExtractionConfig | null = null,
+): ExtractionResult[] {
+	const buffers = dataList.map((data) => Buffer.from(data));
+	const rawResults = getBinding().batchExtractBytesSync(
+		buffers,
+		mimeTypes,
+		config,
+	);
+	return rawResults.map(convertResult);
+}
+
+/**
+ * Extract content from multiple byte arrays in parallel (asynchronous).
+ *
+ * **Recommended for**: Processing multiple documents from memory efficiently with better
+ * performance and memory management compared to individual `extractBytes()` calls.
+ *
+ * **Benefits**:
+ * - Parallel processing in Rust for maximum performance
+ * - Optimized memory usage across all extractions
+ * - More reliable for batch document processing
+ *
+ * @param dataList - List of file contents as Uint8Arrays
+ * @param mimeTypes - List of MIME types (one per data item, required for format detection)
+ * @param config - Extraction configuration (uses defaults if null)
+ * @returns Promise resolving to array of ExtractionResults (one per data item, in same order as input)
+ *
+ * @example
+ * ```typescript
+ * import { batchExtractBytes } from 'kreuzberg';
+ * import { readFile } from 'fs/promises';
+ *
+ * const files = ['invoice1.pdf', 'invoice2.pdf', 'invoice3.pdf'];
+ * const dataList = await Promise.all(files.map(f => readFile(f)));
+ * const mimeTypes = files.map(() => 'application/pdf');
+ *
+ * const results = await batchExtractBytes(dataList, mimeTypes, {
+ *   ocr: { backend: 'tesseract', language: 'eng' }
+ * });
+ *
+ * // Process all results
+ * const totalAmount = results
+ *   .map(r => extractAmount(r.content))
+ *   .reduce((a, b) => a + b, 0);
+ * ```
  */
 export async function batchExtractBytes(
 	dataList: Uint8Array[],
@@ -247,6 +450,8 @@ export async function batchExtractBytes(
 
 /**
  * Register a custom postprocessor.
+ *
+ * **Status**: Not yet implemented. This functionality is planned for a future release.
  *
  * @param processor - PostProcessorProtocol implementation
  *
@@ -280,6 +485,8 @@ export function registerPostProcessor(_processor: PostProcessorProtocol): void {
 /**
  * Unregister a postprocessor by name.
  *
+ * **Status**: Not yet implemented. This functionality is planned for a future release.
+ *
  * @param name - Name of the processor to unregister
  */
 export function unregisterPostProcessor(_name: string): void {
@@ -289,6 +496,8 @@ export function unregisterPostProcessor(_name: string): void {
 
 /**
  * Clear all registered postprocessors.
+ *
+ * **Status**: Not yet implemented. This functionality is planned for a future release.
  */
 export function clearPostProcessors(): void {
 	// TODO: Implement FFI bridge to Rust core
@@ -297,6 +506,8 @@ export function clearPostProcessors(): void {
 
 /**
  * Register a custom OCR backend.
+ *
+ * **Status**: Not yet implemented. This functionality is planned for a future release.
  *
  * @param backend - OcrBackendProtocol implementation
  */

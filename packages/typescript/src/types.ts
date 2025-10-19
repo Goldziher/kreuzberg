@@ -197,12 +197,14 @@ export interface Metadata {
 	imagePreprocessing?: ImagePreprocessingMetadata | null;
 
 	// Structured data
+	// biome-ignore lint/suspicious/noExplicitAny: JSON schema can be any valid JSON structure
 	jsonSchema?: any | null;
 
 	// Error metadata
 	error?: ErrorMetadata | null;
 
 	// Custom fields from postprocessors
+	// biome-ignore lint/suspicious/noExplicitAny: Postprocessors can add arbitrary metadata fields
 	[key: string]: any;
 }
 

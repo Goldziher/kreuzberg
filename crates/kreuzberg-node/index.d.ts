@@ -3,6 +3,9 @@
 /** Batch extract from multiple byte arrays (asynchronous) */
 export declare function batchExtractBytes(dataList: Array<Buffer>, mimeTypes: Array<string>, config?: JsExtractionConfig | undefined | null): Promise<Array<JsExtractionResult>>
 
+/** Batch extract from multiple byte arrays (synchronous) */
+export declare function batchExtractBytesSync(dataList: Array<Buffer>, mimeTypes: Array<string>, config?: JsExtractionConfig | undefined | null): Array<JsExtractionResult>
+
 /** Batch extract from multiple files (asynchronous) */
 export declare function batchExtractFiles(paths: Array<string>, config?: JsExtractionConfig | undefined | null): Promise<Array<JsExtractionResult>>
 
