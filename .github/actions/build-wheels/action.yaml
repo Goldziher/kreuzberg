@@ -54,9 +54,7 @@ runs:
 
         CIBW_BEFORE_BUILD_LINUX: pip install --upgrade pip maturin build
         CIBW_BEFORE_BUILD_MACOS: pip install --upgrade pip maturin build
-        CIBW_BEFORE_BUILD_WINDOWS: >
-          pip install --upgrade pip maturin build &&
-          python ../../scripts/prepare_wheel.py
+        CIBW_BEFORE_BUILD_WINDOWS: pip install --upgrade pip maturin build
 
         CIBW_ENVIRONMENT: MATURIN_BUILD_ARGS="--compatibility linux"
         CIBW_ENVIRONMENT_WINDOWS: MATURIN_BUILD_ARGS=""
@@ -66,6 +64,11 @@ runs:
 
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+
+        # Disable wheel repair - pdfium is dynamically linked and not bundled
+        CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
+        CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
+        CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
 
     - name: Upload wheels
       uses: actions/upload-artifact@v4
