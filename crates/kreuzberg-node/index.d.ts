@@ -12,6 +12,9 @@ export declare function batchExtractFiles(paths: Array<string>, config?: JsExtra
 /** Batch extract from multiple files (synchronous) */
 export declare function batchExtractFilesSync(paths: Array<string>, config?: JsExtractionConfig | undefined | null): Array<JsExtractionResult>
 
+/** Clear all registered postprocessors */
+export declare function clearPostProcessors(): void
+
 /** Extract content from bytes (asynchronous) */
 export declare function extractBytes(data: Buffer, mimeType: string, config?: JsExtractionConfig | undefined | null): Promise<JsExtractionResult>
 
@@ -101,3 +104,22 @@ export interface JsTokenReductionConfig {
   mode?: string
   preserveImportantWords?: boolean
 }
+
+/**
+ * Register a custom OCR backend
+ *
+ * **Note**: Full implementation requires JavaScript callback support.
+ * Currently throws an error - implementation in progress.
+ */
+export declare function registerOcrBackend(backend: object): void
+
+/**
+ * Register a custom postprocessor
+ *
+ * **Note**: Full implementation requires JavaScript callback support.
+ * Currently throws an error - implementation in progress.
+ */
+export declare function registerPostProcessor(processor: object): void
+
+/** Unregister a postprocessor by name */
+export declare function unregisterPostProcessor(name: string): void

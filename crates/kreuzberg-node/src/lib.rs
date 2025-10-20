@@ -6,12 +6,9 @@ use kreuzberg::{
     OcrConfig as RustOcrConfig, PdfConfig as RustPdfConfig, PostProcessorConfig as RustPostProcessorConfig,
     TesseractConfig as RustTesseractConfig, TokenReductionConfig as RustTokenReductionConfig,
 };
+use kreuzberg::plugins::registry::get_post_processor_registry;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-
-// ============================================================================
-// Configuration Types
-// ============================================================================
 
 #[napi(object)]
 pub struct JsOcrConfig {
@@ -184,16 +181,12 @@ impl From<JsExtractionConfig> for ExtractionConfig {
             pdf_options: val.pdf_options.map(Into::into),
             token_reduction: val.token_reduction.map(Into::into),
             language_detection: val.language_detection.map(Into::into),
-            keywords: None, // Keywords extraction config not exposed to TypeScript yet
+            keywords: None,
             postprocessor: val.postprocessor.map(Into::into),
             max_concurrent_extractions: val.max_concurrent_extractions.map(|v| v as usize),
         }
     }
 }
-
-// ============================================================================
-// Result Types
-// ============================================================================
 
 #[napi(object)]
 pub struct JsTable {
@@ -214,7 +207,6 @@ pub struct JsExtractionResult {
 
 impl From<RustExtractionResult> for JsExtractionResult {
     fn from(val: RustExtractionResult) -> Self {
-        // Serialize metadata to JSON string for JavaScript compatibility
         let metadata = serde_json::to_string(&val.metadata).unwrap_or_else(|_| "{}".to_string());
 
         JsExtractionResult {
@@ -235,10 +227,6 @@ impl From<RustExtractionResult> for JsExtractionResult {
         }
     }
 }
-
-// ============================================================================
-// Extraction Functions
-// ============================================================================
 
 /// Extract content from a file (synchronous)
 #[napi]
@@ -263,7 +251,6 @@ pub async fn extract_file(
 ) -> Result<JsExtractionResult> {
     let rust_config = config.map(Into::into).unwrap_or_default();
 
-    // Use sync wrapper to avoid async runtime conflicts with NAPI-RS
     tokio::task::spawn_blocking(move || kreuzberg::extract_file_sync(&file_path, mime_type.as_deref(), &rust_config))
         .await
         .map_err(|e| Error::new(Status::GenericFailure, format!("Task join error: {}", e)))?
@@ -280,7 +267,6 @@ pub fn extract_bytes_sync(
 ) -> Result<JsExtractionResult> {
     let rust_config = config.map(Into::into).unwrap_or_default();
 
-    // Copy Buffer to owned Vec<u8> to avoid V8 GC lifetime issues
     let owned_data = data.to_vec();
 
     kreuzberg::extract_bytes_sync(&owned_data, &mime_type, &rust_config)
@@ -297,10 +283,8 @@ pub async fn extract_bytes(
 ) -> Result<JsExtractionResult> {
     let rust_config = config.map(Into::into).unwrap_or_default();
 
-    // Copy Buffer to owned Vec<u8> to avoid V8 GC lifetime issues
     let owned_data = data.to_vec();
 
-    // Use sync wrapper to avoid async runtime conflicts with NAPI-RS
     tokio::task::spawn_blocking(move || kreuzberg::extract_bytes_sync(&owned_data, &mime_type, &rust_config))
         .await
         .map_err(|e| Error::new(Status::GenericFailure, format!("Task join error: {}", e)))?
@@ -329,7 +313,6 @@ pub async fn batch_extract_files(
 ) -> Result<Vec<JsExtractionResult>> {
     let rust_config = config.map(Into::into).unwrap_or_default();
 
-    // Use sync wrapper to avoid async runtime conflicts with NAPI-RS
     tokio::task::spawn_blocking(move || kreuzberg::batch_extract_file_sync(paths, &rust_config))
         .await
         .map_err(|e| Error::new(Status::GenericFailure, format!("Task join error: {}", e)))?
@@ -346,10 +329,8 @@ pub fn batch_extract_bytes_sync(
 ) -> Result<Vec<JsExtractionResult>> {
     let rust_config = config.map(Into::into).unwrap_or_default();
 
-    // Copy all Buffers to owned Vec<u8> to avoid V8 GC lifetime issues
     let owned_data: Vec<Vec<u8>> = data_list.iter().map(|b| b.to_vec()).collect();
 
-    // Create Vec<(&[u8], &str)> from owned data
     let contents: Vec<(&[u8], &str)> = owned_data
         .iter()
         .zip(mime_types.iter())
@@ -370,12 +351,9 @@ pub async fn batch_extract_bytes(
 ) -> Result<Vec<JsExtractionResult>> {
     let rust_config = config.map(Into::into).unwrap_or_default();
 
-    // Copy all Buffers to owned Vec<u8> to avoid V8 GC lifetime issues
     let owned_data: Vec<Vec<u8>> = data_list.iter().map(|b| b.to_vec()).collect();
 
-    // Use sync wrapper to avoid async runtime conflicts with NAPI-RS
     tokio::task::spawn_blocking(move || {
-        // Create Vec<(&[u8], &str)> from owned data
         let contents: Vec<(&[u8], &str)> = owned_data
             .iter()
             .zip(mime_types.iter())
@@ -390,12 +368,63 @@ pub async fn batch_extract_bytes(
     .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))
 }
 
-// Mimalloc disabled - potential conflict with V8's allocator causing SIGILL crashes
+/// Register a custom postprocessor
+///
+/// **Note**: Full implementation requires JavaScript callback support.
+/// Currently throws an error - implementation in progress.
+#[napi]
+pub fn register_post_processor(_processor: Object) -> Result<()> {
+    Err(Error::new(
+        Status::GenericFailure,
+        "PostProcessor registration not yet fully implemented for Node.js. \
+        JavaScript-to-Rust callback support is in development.".to_string(),
+    ))
+}
+
+/// Unregister a postprocessor by name
+#[napi]
+pub fn unregister_post_processor(name: String) -> Result<()> {
+    let registry = get_post_processor_registry();
+    let mut registry = registry.write().map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to acquire write lock on PostProcessor registry: {}", e),
+        )
+    })?;
+
+    // Remove processor from the internal HashMap
+    let _ = registry.remove(&name);
+    Ok(())
+}
+
+/// Clear all registered postprocessors
+#[napi]
+pub fn clear_post_processors() -> Result<()> {
+    let registry = get_post_processor_registry();
+    let mut registry = registry.write().map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to acquire write lock on PostProcessor registry: {}", e),
+        )
+    })?;
+
+    // Clear all processors from the internal HashMap
+    *registry = Default::default();
+    Ok(())
+}
+
+/// Register a custom OCR backend
+///
+/// **Note**: Full implementation requires JavaScript callback support.
+/// Currently throws an error - implementation in progress.
+#[napi]
+pub fn register_ocr_backend(_backend: Object) -> Result<()> {
+    Err(Error::new(
+        Status::GenericFailure,
+        "OCR backend registration not yet fully implemented for Node.js. \
+        JavaScript-to-Rust callback support is in development.".to_string(),
+    ))
+}
+
 // #[cfg(all(
-//     any(windows, unix),
-//     target_arch = "x86_64",
-//     not(target_env = "musl"),
-//     not(debug_assertions)
-// ))]
 // #[global_allocator]
-// static ALLOC: mimalloc_rust::GlobalMiMalloc = mimalloc_rust::GlobalMiMalloc;

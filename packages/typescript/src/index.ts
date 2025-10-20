@@ -429,7 +429,8 @@ export async function batchExtractBytes(
 /**
  * Register a custom postprocessor.
  *
- * **Status**: Not yet implemented. This functionality is planned for a future release.
+ * **Status**: Partially implemented. JavaScript callback support is in development.
+ * This function currently throws an error explaining the limitation.
  *
  * @param processor - PostProcessorProtocol implementation
  *
@@ -455,43 +456,76 @@ export async function batchExtractBytes(
  * registerPostProcessor(new MyProcessor());
  * ```
  */
-export function registerPostProcessor(_processor: PostProcessorProtocol): void {
-	// TODO: Implement FFI bridge to Rust core
-	throw new Error("registerPostProcessor not yet implemented");
+export function registerPostProcessor(processor: PostProcessorProtocol): void {
+	const binding = getBinding();
+	binding.registerPostProcessor(processor);
 }
 
 /**
  * Unregister a postprocessor by name.
  *
- * **Status**: Not yet implemented. This functionality is planned for a future release.
+ * Removes a previously registered postprocessor from the registry.
  *
  * @param name - Name of the processor to unregister
+ *
+ * @example
+ * ```typescript
+ * import { unregisterPostProcessor } from 'kreuzberg';
+ *
+ * unregisterPostProcessor('my_processor');
+ * ```
  */
-export function unregisterPostProcessor(_name: string): void {
-	// TODO: Implement FFI bridge to Rust core
-	throw new Error("unregisterPostProcessor not yet implemented");
+export function unregisterPostProcessor(name: string): void {
+	const binding = getBinding();
+	binding.unregisterPostProcessor(name);
 }
 
 /**
  * Clear all registered postprocessors.
  *
- * **Status**: Not yet implemented. This functionality is planned for a future release.
+ * Removes all postprocessors from the registry.
+ *
+ * @example
+ * ```typescript
+ * import { clearPostProcessors } from 'kreuzberg';
+ *
+ * clearPostProcessors();
+ * ```
  */
 export function clearPostProcessors(): void {
-	// TODO: Implement FFI bridge to Rust core
-	throw new Error("clearPostProcessors not yet implemented");
+	const binding = getBinding();
+	binding.clearPostProcessors();
 }
 
 /**
  * Register a custom OCR backend.
  *
- * **Status**: Not yet implemented. This functionality is planned for a future release.
+ * **Status**: Partially implemented. JavaScript callback support is in development.
+ * This function currently throws an error explaining the limitation.
  *
  * @param backend - OcrBackendProtocol implementation
+ *
+ * @example
+ * ```typescript
+ * import { registerOcrBackend } from 'kreuzberg';
+ *
+ * class MyOcrBackend implements OcrBackendProtocol {
+ *   name(): string {
+ *     return 'my_ocr';
+ *   }
+ *
+ *   async extractText(imageBytes: Uint8Array, language: string): Promise<string> {
+ *     // Custom OCR logic
+ *     return 'extracted text';
+ *   }
+ * }
+ *
+ * registerOcrBackend(new MyOcrBackend());
+ * ```
  */
-export function registerOcrBackend(_backend: OcrBackendProtocol): void {
-	// TODO: Implement FFI bridge to Rust core
-	throw new Error("registerOcrBackend not yet implemented");
+export function registerOcrBackend(backend: OcrBackendProtocol): void {
+	const binding = getBinding();
+	binding.registerOcrBackend(backend);
 }
 
 export const __version__ = "4.0.0";
