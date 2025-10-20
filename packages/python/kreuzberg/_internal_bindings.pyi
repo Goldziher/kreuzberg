@@ -5,9 +5,7 @@ from typing import Any, Literal, Protocol, overload
 __all__ = [
     "ChunkingConfig",
     "ExtractedTable",
-    # Configuration classes
     "ExtractionConfig",
-    # Result types
     "ExtractionResult",
     "ImageExtractionConfig",
     "ImagePreprocessingConfig",
@@ -16,7 +14,6 @@ __all__ = [
     "OcrConfig",
     "PdfConfig",
     "PostProcessorConfig",
-    # Protocols
     "PostProcessorProtocol",
     "TesseractConfig",
     "TokenReductionConfig",
@@ -24,21 +21,15 @@ __all__ = [
     "batch_extract_bytes_sync",
     "batch_extract_files",
     "batch_extract_files_sync",
+    "clear_post_processors",
     "extract_bytes",
     "extract_bytes_sync",
-    # Extraction functions (async)
     "extract_file",
-    # Extraction functions (sync)
     "extract_file_sync",
-    # OCR backend plugins
     "register_ocr_backend",
-    # Post-processor plugins
     "register_post_processor",
+    "unregister_post_processor",
 ]
-
-# ============================================================================
-# Protocol Definitions
-# ============================================================================
 
 class OcrBackendProtocol(Protocol):
     def name(self) -> str: ...
@@ -55,11 +46,6 @@ class PostProcessorProtocol(Protocol):
     def processing_stage(self) -> Literal["early", "middle", "late"]: ...
     def initialize(self) -> None: ...
     def shutdown(self) -> None: ...
-    def version(self) -> str: ...
-
-# ============================================================================
-# Configuration Classes
-# ============================================================================
 
 class ExtractionConfig:
     use_cache: bool
@@ -246,25 +232,18 @@ class TesseractConfig:
         thresholding_method: bool | None = None,
     ) -> None: ...
 
-# ============================================================================
-# Result Types
-# ============================================================================
-
 class ExtractionResult:
     content: str
     mime_type: str
     metadata: dict[str, Any]
     tables: list[ExtractedTable]
     detected_languages: list[str] | None
+    images: list[dict[str, Any]] | None
 
 class ExtractedTable:
     cells: list[list[str]]
     markdown: str
     page_number: int
-
-# ============================================================================
-# Synchronous Extraction Functions
-# ============================================================================
 
 @overload
 def extract_file_sync(
@@ -292,11 +271,6 @@ def batch_extract_bytes_sync(
     mime_types: list[str],
     config: ExtractionConfig = ...,
 ) -> list[ExtractionResult]: ...
-
-# ============================================================================
-# Asynchronous Extraction Functions
-# ============================================================================
-
 @overload
 async def extract_file(
     path: str | Path | bytes,
@@ -324,9 +298,8 @@ def batch_extract_bytes(
     config: ExtractionConfig = ...,
 ) -> Awaitable[list[ExtractionResult]]: ...
 
-# ============================================================================
-# Plugin Registration Functions
-# ============================================================================
-
+# TODO: add registration for all supported plugins - we need to add register validator and register extractor
 def register_ocr_backend(backend: OcrBackendProtocol) -> None: ...
 def register_post_processor(processor: PostProcessorProtocol) -> None: ...
+def clear_post_processors() -> None: ...
+def unregister_post_processor(name: str) -> None: ...

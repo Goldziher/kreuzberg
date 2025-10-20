@@ -35,14 +35,15 @@ import hashlib
 import json
 import threading
 
-# CRITICAL: This must be imported FIRST before any Rust bindings
-# It sets up dynamic library paths for bundled native libraries (pdfium, etc.)
+# ~keep: This must be imported FIRST before any Rust bindings
+# ~keep: It sets up dynamic library paths for bundled native libraries (pdfium, etc.)
 from importlib.metadata import version
 from typing import TYPE_CHECKING, Any
 
 from kreuzberg import _setup_lib_path  # noqa: F401
 from kreuzberg._internal_bindings import (
     ChunkingConfig,
+    ExtractedTable,
     ExtractionConfig,
     ExtractionResult,
     ImageExtractionConfig,
@@ -82,8 +83,15 @@ from kreuzberg._internal_bindings import (
 from kreuzberg._internal_bindings import (
     extract_file_sync as extract_file_sync_impl,
 )
-from kreuzberg.exceptions import MissingDependencyError
+from kreuzberg.exceptions import (
+    KreuzbergError,
+    MissingDependencyError,
+    OCRError,
+    ParsingError,
+    ValidationError,
+)
 from kreuzberg.postprocessors.protocol import PostProcessorProtocol
+from kreuzberg.types import Metadata
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -93,29 +101,28 @@ if TYPE_CHECKING:
 
 __version__ = version("kreuzberg")
 
-# ============================================================================
-# Public API
-# ============================================================================
 
 __all__ = [
-    # Configuration classes
     "ChunkingConfig",
+    "ExtractedTable",
     "ExtractionConfig",
-    # Result types
     "ExtractionResult",
     "ImageExtractionConfig",
     "ImagePreprocessingConfig",
+    "KreuzbergError",
     "LanguageDetectionConfig",
+    "Metadata",
+    "MissingDependencyError",
+    "OCRError",
     "OcrConfig",
+    "ParsingError",
     "PdfConfig",
     "PostProcessorConfig",
-    # Plugin system
     "PostProcessorProtocol",
     "TesseractConfig",
     "TokenReductionConfig",
-    # Version
+    "ValidationError",
     "__version__",
-    # Extraction functions
     "batch_extract_bytes",
     "batch_extract_bytes_sync",
     "batch_extract_files",
@@ -129,18 +136,11 @@ __all__ = [
     "unregister_post_processor",
 ]
 
-# ============================================================================
-# Module-level Plugin Caches
-# ============================================================================
 
-# Cache registered plugins to avoid re-instantiation with same kwargs
-# Key: (plugin_name, kwargs_hash) -> plugin instance
 _REGISTERED_OCR_BACKENDS: dict[tuple[str, str], Any] = {}
 
-# Thread safety lock for cache operations
 _OCR_CACHE_LOCK = threading.Lock()
 
-# Maximum cache size to prevent memory leaks in long-running processes
 _MAX_CACHE_SIZE = 10
 
 
@@ -149,8 +149,6 @@ def _hash_kwargs(kwargs: dict[str, Any]) -> str:
         serialized = json.dumps(kwargs, sort_keys=True, default=str)
         return hashlib.md5(serialized.encode()).hexdigest()  # noqa: S324
     except (TypeError, ValueError):
-        # Fallback for truly non-serializable objects
-        # Use repr as best effort, but this may not be stable
         return hashlib.md5(repr(kwargs).encode()).hexdigest()  # noqa: S324
 
 
@@ -164,37 +162,30 @@ def _ensure_ocr_backend_registered(
 
     backend_name = config.ocr.backend
 
-    # Skip tesseract (native Rust backend, no Python registration needed)
     if backend_name == "tesseract":
         return
 
-    # Get kwargs for this backend
     kwargs_map = {
         "easyocr": easyocr_kwargs or {},
         "paddleocr": paddleocr_kwargs or {},
     }
     kwargs = kwargs_map.get(backend_name, {})
 
-    # Thread-safe cache check and registration
     with _OCR_CACHE_LOCK:
         cache_key = (backend_name, _hash_kwargs(kwargs))
 
-        # Check cache again inside lock (double-checked locking pattern)
         if cache_key in _REGISTERED_OCR_BACKENDS:
-            return  # Already registered with these kwargs
+            return
 
-        # Evict oldest entry if cache is full (simple FIFO eviction)
         if len(_REGISTERED_OCR_BACKENDS) >= _MAX_CACHE_SIZE:
             oldest_key = next(iter(_REGISTERED_OCR_BACKENDS))
             del _REGISTERED_OCR_BACKENDS[oldest_key]
 
-        # Lazy import to avoid ImportError if optional dependencies not installed
         backend: Any
         if backend_name == "easyocr":
             try:
                 from kreuzberg.ocr.easyocr import EasyOCRBackend  # noqa: PLC0415
 
-                # Set language from config if not in kwargs
                 if "languages" not in kwargs:
                     kwargs["languages"] = [config.ocr.language]
 
@@ -209,7 +200,6 @@ def _ensure_ocr_backend_registered(
             try:
                 from kreuzberg.ocr.paddleocr import PaddleOCRBackend  # noqa: PLC0415
 
-                # Set language from config if not in kwargs
                 if "lang" not in kwargs:
                     kwargs["lang"] = config.ocr.language
 
@@ -221,17 +211,10 @@ def _ensure_ocr_backend_registered(
                     package_name="paddleocr",
                 ) from e
         else:
-            # Unknown backend - silently skip (might be registered separately)
             return
 
-        # Register with Rust core
         register_ocr_backend(backend)
         _REGISTERED_OCR_BACKENDS[cache_key] = backend
-
-
-# ============================================================================
-# Synchronous Extraction Functions
-# ============================================================================
 
 
 def extract_file_sync(
@@ -280,7 +263,6 @@ def extract_file_sync(
     if config is None:
         config = ExtractionConfig()
 
-    # Lazy register OCR backend with caching
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
 
     return extract_file_sync_impl(str(file_path), mime_type, config)
@@ -366,11 +348,6 @@ def batch_extract_bytes_sync(
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
 
     return batch_extract_bytes_sync_impl([bytes(d) for d in data_list], mime_types, config)
-
-
-# ============================================================================
-# Asynchronous Extraction Functions
-# ============================================================================
 
 
 async def extract_file(

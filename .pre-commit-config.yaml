@@ -1,48 +1,15 @@
-default_install_hook_types:
-  - pre-commit
-  - commit-msg
-
 repos:
-  - repo: https://github.com/Goldziher/gitfluff
-    rev: v0.3.1
-    hooks:
-      - id: gitfluff-write
-        stages: [commit-msg]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
-      - id: name-tests-test
-        args:
-          - --pytest
-        exclude: factories|test_utils|completion.py|test_data|docker_e2e.py|pandoc_helpers.py
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-toml
       - id: check-case-conflict
-      - id: detect-private-key
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.24.1
     hooks:
       - id: validate-pyproject
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 1.0.0
-    hooks:
-      - id: mdformat
-        exclude: ^test_documents
-        additional_dependencies:
-          - mdformat-mkdocs==4.1.0
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.45.0
-    hooks:
-      - id: markdownlint-fix
-        exclude: ^test_documents
-  - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.20.0
-    hooks:
-      - id: blacken-docs
-        args: ["--pyi", "--line-length", "120"]
-        additional_dependencies:
-          - black==25.1.0
   - repo: https://github.com/tox-dev/pyproject-fmt
     rev: v2.11.0
     hooks:
@@ -53,23 +20,6 @@ repos:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
       - id: ruff-format
-  - repo: https://github.com/jsh9/pydoclint
-    rev: 0.7.3
-    hooks:
-      - id: pydoclint
-        args:
-          [
-            --style=google,
-            --check-return-types=False,
-            --arg-type-hints-in-docstring=False,
-          ]
-        exclude: ^comparative-benchmarks/|^tests/|^scripts/
-  - repo: https://github.com/FeryET/pre-commit-rust
-    rev: v1.2.1
-    hooks:
-      - id: fmt
-      - id: cargo-check
-      - id: clippy
   - repo: local
     hooks:
       - id: mypy

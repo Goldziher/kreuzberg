@@ -20,7 +20,9 @@ def test_extract_xml_via_bytes_sync() -> None:
 
     assert "Test Book" in result.content
     assert "Test Author" in result.content
-    assert result.metadata["element_count"] > 0
+    # v4 nests XML metadata under 'xml' key
+    assert "xml" in result.metadata
+    assert result.metadata["xml"]["element_count"] > 0
 
 
 def test_extract_xml_via_file_sync() -> None:
@@ -33,7 +35,8 @@ def test_extract_xml_via_file_sync() -> None:
     assert "Tove" in result.content
     assert "Jani" in result.content
     assert "Reminder" in result.content
-    assert result.metadata["element_count"] == 5
+    # v4 nests XML metadata under 'xml' key
+    assert result.metadata["xml"]["element_count"] == 5
 
 
 @pytest.mark.asyncio
@@ -63,7 +66,8 @@ async def test_extract_xml_via_file_async() -> None:
     result = await extract_file(test_file)
 
     assert result.content
-    assert result.metadata["element_count"] > 10
+    # v4 nests XML metadata under 'xml' key
+    assert result.metadata["xml"]["element_count"] > 10
 
 
 def test_extract_svg_file() -> None:

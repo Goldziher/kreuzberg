@@ -6,7 +6,6 @@
  */
 
 // ============================================================================
-// Configuration Types
 // ============================================================================
 
 export interface TesseractConfig {
@@ -71,10 +70,6 @@ export interface ExtractionConfig {
 	postprocessor?: PostProcessorConfig;
 	maxConcurrentExtractions?: number;
 }
-
-// ============================================================================
-// Result Types
-// ============================================================================
 
 export interface Table {
 	cells: string[][];
@@ -176,13 +171,11 @@ export interface ErrorMetadata {
 }
 
 export interface Metadata {
-	// Common fields
 	language?: string | null;
 	date?: string | null;
 	subject?: string | null;
 	format?: string | null;
 
-	// Format-specific metadata
 	pdf?: PdfMetadata | null;
 	excel?: ExcelMetadata | null;
 	email?: EmailMetadata | null;
@@ -192,18 +185,14 @@ export interface Metadata {
 	xml?: XmlMetadata | null;
 	text?: TextMetadata | null;
 
-	// Processing metadata
 	ocr?: OcrMetadata | null;
 	imagePreprocessing?: ImagePreprocessingMetadata | null;
 
-	// Structured data
 	// biome-ignore lint/suspicious/noExplicitAny: JSON schema can be any valid JSON structure
 	jsonSchema?: any | null;
 
-	// Error metadata
 	error?: ErrorMetadata | null;
 
-	// Custom fields from postprocessors
 	// biome-ignore lint/suspicious/noExplicitAny: Postprocessors can add arbitrary metadata fields
 	[key: string]: any;
 }
@@ -216,10 +205,6 @@ export interface ExtractionResult {
 	detectedLanguages: string[] | null;
 	chunks?: string[] | null;
 }
-
-// ============================================================================
-// PostProcessor Protocol
-// ============================================================================
 
 export type ProcessingStage = "early" | "middle" | "late";
 
@@ -260,10 +245,6 @@ export interface PostProcessorProtocol {
 	 */
 	shutdown?(): void | Promise<void>;
 }
-
-// ============================================================================
-// OCR Backend Protocol
-// ============================================================================
 
 export interface OcrBackendProtocol {
 	/**

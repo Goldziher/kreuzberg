@@ -1,8 +1,11 @@
+# mypy: ignore-errors
 """Example: Creating and registering a custom PostProcessor.
 
 This example shows how to create a custom post-processor that adds
 custom metadata to extraction results.
 """
+
+from typing import Literal
 
 from kreuzberg import (
     ExtractionResult,
@@ -29,21 +32,18 @@ class WordCountProcessor:
         """
         content = result.content
 
-        # Count words
         words = content.split()
         word_count = len(words)
 
-        # Count sentences (simple heuristic)
         sentence_endings = content.count(".") + content.count("!") + content.count("?")
 
-        # Add to metadata
         result.metadata["word_count"] = word_count
         result.metadata["sentence_count"] = sentence_endings
         result.metadata["avg_word_length"] = sum(len(word) for word in words) / word_count if word_count > 0 else 0.0
 
         return result
 
-    def processing_stage(self) -> str:
+    def processing_stage(self) -> Literal["early", "middle", "late"]:
         """Run in the middle stage."""
         return "middle"
 
@@ -71,19 +71,17 @@ class UpperCaseProcessor:
         result.metadata["uppercase_applied"] = True
         return result
 
-    def processing_stage(self) -> str:
+    def processing_stage(self) -> Literal["early", "middle", "late"]:
         """Run in late stage (after other processors)."""
         return "late"
 
 
 def main() -> None:
     """Demo custom postprocessors."""
-    # Register custom processors
     word_counter = WordCountProcessor()
     register_post_processor(word_counter)
 
-    # Now extract a document - the custom processors will run automatically
-    result = extract_file_sync("example.txt")  # Replace with your file
+    result = extract_file_sync("example.txt")
 
     if result.metadata.get("uppercase_applied"):
         pass

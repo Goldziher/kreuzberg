@@ -54,10 +54,6 @@ import type {
 
 export * from "./types.js";
 
-// ============================================================================
-// Runtime Detection
-// ============================================================================
-
 // biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
 let binding: any = null;
 let bindingInitialized = false;
@@ -68,7 +64,6 @@ function getBinding(): any {
 		return binding;
 	}
 
-	// Try to load NAPI binding (Node.js/Bun)
 	try {
 		if (
 			typeof process !== "undefined" &&
@@ -79,14 +74,9 @@ function getBinding(): any {
 			bindingInitialized = true;
 			return binding;
 		}
-	} catch {
-		// NAPI binding not available, will try WASM
-	}
+	} catch {}
 
-	// If NAPI failed, try WASM (browsers/Deno)
 	try {
-		// WASM binding would be loaded here
-		// binding = require('kreuzberg-wasm');
 		throw new Error("WASM binding not yet implemented");
 	} catch {
 		throw new Error(
@@ -95,10 +85,6 @@ function getBinding(): any {
 		);
 	}
 }
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
 
 // biome-ignore lint/suspicious/noExplicitAny: JSON.parse returns any
 function parseMetadata(metadataStr: string): any {
@@ -123,10 +109,6 @@ function convertResult(rawResult: any): ExtractionResult {
 		chunks: rawResult.chunks || null,
 	};
 }
-
-// ============================================================================
-// Extraction Functions
-// ============================================================================
 
 /**
  * Extract content from a single file (synchronous).
@@ -444,10 +426,6 @@ export async function batchExtractBytes(
 	return rawResults.map(convertResult);
 }
 
-// ============================================================================
-// Plugin System (Stub - To be implemented)
-// ============================================================================
-
 /**
  * Register a custom postprocessor.
  *
@@ -515,9 +493,5 @@ export function registerOcrBackend(_backend: OcrBackendProtocol): void {
 	// TODO: Implement FFI bridge to Rust core
 	throw new Error("registerOcrBackend not yet implemented");
 }
-
-// ============================================================================
-// Version
-// ============================================================================
 
 export const __version__ = "4.0.0";

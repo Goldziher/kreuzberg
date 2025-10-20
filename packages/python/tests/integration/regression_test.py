@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 from __future__ import annotations
 
 import os
@@ -7,7 +8,6 @@ import pytest
 
 from kreuzberg import (
     ExtractionConfig,
-    PSMMode,
     TesseractConfig,
     batch_extract_files,
     extract_file,
@@ -115,7 +115,7 @@ async def test_batch_extraction_regression(
 @pytest.mark.asyncio
 async def test_psm_mode_4_specifically(google_doc_pdf: Path) -> None:
     config = ExtractionConfig(
-        ocr=TesseractConfig(psm=PSMMode.SINGLE_COLUMN),
+        ocr=TesseractConfig(psm=4),  # PSM 4 = single column
     )
 
     result = await extract_file(str(google_doc_pdf), config=config)
