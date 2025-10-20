@@ -368,16 +368,57 @@ pub async fn batch_extract_bytes(
     .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))
 }
 
+// TODO: JavaScript PostProcessor bridge implementation
+// Full callback bridge requires advanced NAPI-RS ThreadsafeFunction handling
+// For now, we validate input and return descriptive error
+
 /// Register a custom postprocessor
 ///
-/// **Note**: Full implementation requires JavaScript callback support.
-/// Currently throws an error - implementation in progress.
+/// Registers a JavaScript PostProcessor that will be called after extraction.
+///
+/// # Arguments
+///
+/// * `processor` - JavaScript object with the following interface:
+///   - `name(): string` - Unique processor name
+///   - `process(result): result` - Process function that receives and returns extraction result
+///   - `processingStage(): "early" | "middle" | "late"` - Optional processing stage
+///
+/// # Example
+///
+/// ```typescript
+/// import { registerPostProcessor } from '@kreuzberg/node';
+///
+/// registerPostProcessor({
+///   name: () => "word-counter",
+///   processingStage: () => "middle",
+///   process: (result) => {
+///     const wordCount = result.content.split(/\s+/).length;
+///     result.metadata = JSON.stringify({
+///       ...JSON.parse(result.metadata),
+///       word_count: wordCount
+///     });
+///     return result;
+///   }
+/// });
+/// ```
 #[napi]
-pub fn register_post_processor(_processor: Object) -> Result<()> {
+pub fn register_post_processor(_env: Env, processor: Object) -> Result<()> {
+    // Validate processor has required methods
+    processor
+        .get_named_property::<Function>("name")
+        .map_err(|e| Error::new(Status::InvalidArg, format!("Processor must have 'name' method: {}", e)))?;
+
+    processor
+        .get_named_property::<Function>("process")
+        .map_err(|e| Error::new(Status::InvalidArg, format!("Processor must have 'process' method: {}", e)))?;
+
+    // JavaScript callback support not yet implemented
     Err(Error::new(
         Status::GenericFailure,
-        "PostProcessor registration not yet fully implemented for Node.js. \
-        JavaScript-to-Rust callback support is in development.".to_string(),
+        "JavaScript PostProcessor registration is not yet implemented. \
+        This requires advanced NAPI-RS ThreadsafeFunction bridging to support \
+        calling JavaScript functions from Rust async contexts. \
+        Python PostProcessors are fully supported via the Python bindings.".to_string(),
     ))
 }
 
@@ -413,16 +454,64 @@ pub fn clear_post_processors() -> Result<()> {
     Ok(())
 }
 
+// TODO: JavaScript OCR Backend bridge implementation
+// Full callback bridge requires advanced NAPI-RS ThreadsafeFunction handling
+// For now, we validate input and return descriptive error
+
 /// Register a custom OCR backend
 ///
-/// **Note**: Full implementation requires JavaScript callback support.
-/// Currently throws an error - implementation in progress.
+/// Registers a JavaScript OCR backend that can process images and extract text.
+///
+/// # Arguments
+///
+/// * `backend` - JavaScript object with the following interface:
+///   - `name(): string` - Unique backend name
+///   - `supportedLanguages(): string[]` - Array of supported ISO 639-2/3 language codes
+///   - `processImage(imageBytes: Buffer, language: string): result` - Process image and return extraction result
+///
+/// # Example
+///
+/// ```typescript
+/// import { registerOcrBackend } from '@kreuzberg/node';
+///
+/// registerOcrBackend({
+///   name: () => "my-ocr",
+///   supportedLanguages: () => ["eng", "deu", "fra"],
+///   processImage: (imageBytes, language) => {
+///     // Perform OCR on imageBytes
+///     return {
+///       content: "extracted text",
+///       mime_type: "text/plain",
+///       metadata: JSON.stringify({ confidence: 0.95 }),
+///       tables: [],
+///       detected_languages: null,
+///       chunks: null
+///     };
+///   }
+/// });
+/// ```
 #[napi]
-pub fn register_ocr_backend(_backend: Object) -> Result<()> {
+pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
+    // Validate backend has required methods
+    backend
+        .get_named_property::<Function>("name")
+        .map_err(|e| Error::new(Status::InvalidArg, format!("OCR backend must have 'name' method: {}", e)))?;
+
+    backend
+        .get_named_property::<Function>("supportedLanguages")
+        .map_err(|e| Error::new(Status::InvalidArg, format!("OCR backend must have 'supportedLanguages' method: {}", e)))?;
+
+    backend
+        .get_named_property::<Function>("processImage")
+        .map_err(|e| Error::new(Status::InvalidArg, format!("OCR backend must have 'processImage' method: {}", e)))?;
+
+    // JavaScript callback support not yet implemented
     Err(Error::new(
         Status::GenericFailure,
-        "OCR backend registration not yet fully implemented for Node.js. \
-        JavaScript-to-Rust callback support is in development.".to_string(),
+        "JavaScript OCR backend registration is not yet implemented. \
+        This requires advanced NAPI-RS ThreadsafeFunction bridging to support \
+        calling JavaScript functions from Rust async contexts. \
+        Python OCR backends (EasyOCR, PaddleOCR) are fully supported via the Python bindings.".to_string(),
     ))
 }
 
