@@ -172,7 +172,6 @@ jobs:
               rm -rf .venv
             fi
             uv sync --all-packages --all-groups --all-extras
-            uv pip install --editable .
           shell: bash
 
       - name: Run Rust Checks
