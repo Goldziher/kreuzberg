@@ -97,7 +97,7 @@ jobs:
           RUST_BACKTRACE: 1
         run: |
           echo "Running Rust unit tests (core functionality)..."
-          cargo test --release --no-default-features --lib --bins
+          cargo test --release --no-default-features --lib --bins --package kreuzberg --package kreuzberg-cli
 
       - name: Run Rust Integration Tests (with all features)
         env:
