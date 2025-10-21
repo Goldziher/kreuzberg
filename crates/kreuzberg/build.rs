@@ -94,7 +94,11 @@ fn get_latest_version(repo: &str) -> String {
 
 fn get_pdfium_url_and_lib(target: &str) -> (String, String) {
     if target.contains("wasm") {
-        let version = get_latest_version("paulocoutinhox/pdfium-lib");
+        // Check environment variable first, then try GitHub API, then fallback
+        let version = env::var("PDFIUM_WASM_VERSION")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| get_latest_version("paulocoutinhox/pdfium-lib"));
         eprintln!("Using pdfium-lib version: {}", version);
 
         let wasm_arch = if target.contains("wasm32") { "wasm32" } else { "wasm64" };
@@ -132,7 +136,11 @@ fn get_pdfium_url_and_lib(target: &str) -> (String, String) {
         panic!("Unsupported target platform: {}", target);
     };
 
-    let version = get_latest_version("bblanchon/pdfium-binaries");
+    // Check environment variable first, then try GitHub API, then fallback
+    let version = env::var("PDFIUM_VERSION")
+        .ok()
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| get_latest_version("bblanchon/pdfium-binaries"));
     eprintln!("Using pdfium-binaries version: {}", version);
 
     let url = format!(

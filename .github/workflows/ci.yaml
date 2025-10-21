@@ -13,6 +13,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  # Pdfium version control - update these to upgrade pdfium
+  # See: https://github.com/bblanchon/pdfium-binaries/releases
+  PDFIUM_VERSION: "7455"
+  # See: https://github.com/paulocoutinhox/pdfium-lib/releases
+  PDFIUM_WASM_VERSION: "7469"
+
 jobs:
   rust-tests:
     runs-on: ${{ matrix.os }}
@@ -23,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    timeout-minutes: 60  # Increased for integration tests with system deps
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -71,6 +78,16 @@ jobs:
           key: rust-build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-build-${{ runner.os }}-
+
+      - name: Cache Pdfium binaries
+        id: cache-pdfium
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/*/build/*/out/pdfium/
+          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
+          restore-keys: |
+            pdfium-${{ runner.os }}-
 
       - name: Install system dependencies for integration tests
         uses: ./.github/actions/install-system-deps
@@ -132,6 +149,16 @@ jobs:
           key: rust-build-validate-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-build-validate-${{ runner.os }}-
+
+      - name: Cache Pdfium binaries
+        id: cache-pdfium-validate
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/*/build/*/out/pdfium/
+          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
+          restore-keys: |
+            pdfium-${{ runner.os }}-
 
       - name: Install Dependencies
         uses: nick-fields/retry@v3
@@ -211,6 +238,16 @@ jobs:
           key: rust-build-coverage-${{ matrix.os }}-${{ matrix.python }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-build-coverage-${{ matrix.os }}-${{ matrix.python }}-
+
+      - name: Cache Pdfium binaries
+        id: cache-pdfium-coverage
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/*/build/*/out/pdfium/
+          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
+          restore-keys: |
+            pdfium-${{ runner.os }}-
 
       - name: Sync dependencies
         uses: ./.github/actions/uv-sync
@@ -365,6 +402,16 @@ jobs:
           restore-keys: |
             rust-build-pytests-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.test-category.name }}-
 
+      - name: Cache Pdfium binaries
+        id: cache-pdfium-pytests
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/*/build/*/out/pdfium/
+          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
+          restore-keys: |
+            pdfium-${{ runner.os }}-
+
       - name: Sync dependencies
         uses: ./.github/actions/uv-sync
 
@@ -455,6 +502,16 @@ jobs:
           key: rust-build-node-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-build-node-${{ matrix.os }}-${{ matrix.node }}-
+
+      - name: Cache Pdfium binaries
+        id: cache-pdfium-node
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/*/build/*/out/pdfium/
+          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
+          restore-keys: |
+            pdfium-${{ runner.os }}-
 
       - name: Setup Node workspace
         uses: ./.github/actions/setup-node-workspace

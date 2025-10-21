@@ -53,6 +53,31 @@ prek run --all-files  # Run all checks manually
 uv run mkdocs serve                # Serve docs locally
 ```
 
+### Updating Pdfium Versions
+
+Kreuzberg uses [pdfium](https://pdfium.googlesource.com/pdfium/) for PDF rendering. The versions are controlled via environment variables in the CI workflow:
+
+1. **Check for new releases**:
+   - Standard builds: [bblanchon/pdfium-binaries](https://github.com/bblanchon/pdfium-binaries/releases)
+   - WASM builds: [paulocoutinhox/pdfium-lib](https://github.com/paulocoutinhox/pdfium-lib/releases)
+
+2. **Update versions in `.github/workflows/ci.yaml`**:
+   ```yaml
+   env:
+     PDFIUM_VERSION: "7455"           # Update this
+     PDFIUM_WASM_VERSION: "7469"      # Update this
+   ```
+
+3. **Test locally**:
+   ```bash
+   # Set env vars and test build
+   export PDFIUM_VERSION="7455"
+   export PDFIUM_WASM_VERSION="7469"
+   cargo build --release
+   ```
+
+4. **Fallback versions**: If env vars are not set, `crates/kreuzberg/build.rs` will attempt to fetch the latest version from GitHub API, or fall back to hardcoded versions.
+
 ### Commit Messages
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
