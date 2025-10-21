@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "node:child_process";
 import which from "which";
 
-// Mock which and spawnSync
 vi.mock("which");
 vi.mock("node:child_process");
 
@@ -30,7 +29,6 @@ describe("CLI", () => {
 				signal: null,
 			});
 
-			// Dynamically import to trigger the module
 			const result = which.sync("kreuzberg-cli");
 
 			expect(result).toBe("/usr/local/bin/kreuzberg-cli");

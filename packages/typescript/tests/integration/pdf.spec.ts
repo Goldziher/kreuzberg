@@ -33,10 +33,8 @@ describe("PDF Integration Tests", () => {
 		assertMimeType(result, "application/pdf");
 		assertNonEmptyContent(result);
 
-		// Chunks should be null or undefined without chunking config
 		expect(result.chunks === null || result.chunks === undefined).toBe(true);
 
-		// Language detection should be null when not enabled
 		expect(result.detectedLanguages).toBeNull();
 	});
 
@@ -78,13 +76,11 @@ describe("PDF Integration Tests", () => {
 		try {
 			const result = await extractFile(path, null, config);
 
-			// If it succeeds (some protection can be bypassed), validate structure
 			assertValidExtractionResult(result);
 			console.log(
 				"Protected PDF extracted (some protection can be bypassed)",
 			);
 		} catch (error) {
-			// Expected - password protection detected
 			console.log(
 				"Password protection detected (expected):",
 				(error as Error).message,
@@ -113,7 +109,6 @@ describe("PDF Integration Tests", () => {
 		assertMimeType(result, "application/pdf");
 		assertPdfMetadata(result.metadata);
 
-		// Check page count is populated
 		if (result.metadata.pdf?.pageCount) {
 			expect(result.metadata.pdf.pageCount).toBeGreaterThan(0);
 		}
@@ -137,7 +132,6 @@ describe("PDF Integration Tests", () => {
 		assertMimeType(result, "application/pdf");
 		assertNonEmptyContent(result);
 
-		// Table extraction is optional - if tables are extracted, validate them
 		if (result.tables.length > 0) {
 			console.log(`Tables extracted: ${result.tables.length}`);
 			assertTablesExtracted(result);
@@ -187,8 +181,6 @@ describe("PDF Integration Tests", () => {
 			return;
 		}
 
-		// This test demonstrates password configuration
-		// Actual password-protected test files may not be available
 		const path = getTestDocumentPath("pdfs/code_and_formula.pdf");
 		if (!existsSync(path)) {
 			return;

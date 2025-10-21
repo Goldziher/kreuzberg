@@ -14,7 +14,6 @@ describe("Helper Functions and Edge Cases", () => {
 			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
 			const result = extractFileSync(pdfPath, null, null);
 
-			// Metadata should be an object, not a string
 			expect(typeof result.metadata).toBe("object");
 			expect(result.metadata).not.toBeNull();
 		});
@@ -26,7 +25,6 @@ describe("Helper Functions and Edge Cases", () => {
 			});
 
 			expect(typeof result.metadata).toBe("object");
-			// PDF metadata may contain nested objects
 			if (result.metadata.pdf) {
 				expect(typeof result.metadata.pdf).toBe("object");
 			}
@@ -39,7 +37,6 @@ describe("Helper Functions and Edge Cases", () => {
 		it("should convert raw result to ExtractionResult", () => {
 			const result = extractFileSync(pdfPath, null, null);
 
-			// Check all required fields
 			expect(result).toHaveProperty("content");
 			expect(result).toHaveProperty("mimeType");
 			expect(result).toHaveProperty("metadata");
@@ -57,7 +54,6 @@ describe("Helper Functions and Edge Cases", () => {
 		it("should handle detectedLanguages as null when not enabled", () => {
 			const result = extractFileSync(pdfPath, null, null);
 
-			// Without language detection config, should be null
 			expect(
 				result.detectedLanguages === null ||
 					Array.isArray(result.detectedLanguages),
@@ -67,7 +63,6 @@ describe("Helper Functions and Edge Cases", () => {
 		it("should handle chunks as null when not configured", () => {
 			const result = extractFileSync(pdfPath, null, null);
 
-			// Without chunking config, should be null or undefined
 			expect(
 				result.chunks === null ||
 					result.chunks === undefined ||
@@ -78,7 +73,6 @@ describe("Helper Functions and Edge Cases", () => {
 		it("should preserve metadata when already an object", () => {
 			const result = extractFileSync(pdfPath, null, null);
 
-			// Metadata should be object, not string
 			expect(typeof result.metadata).toBe("object");
 			expect(result.metadata).not.toBeNull();
 		});
@@ -120,7 +114,6 @@ describe("Helper Functions and Edge Cases", () => {
 		});
 
 		it("should handle Uint8Array from various sources", () => {
-			// Create from buffer
 			const uint8 = new Uint8Array(pdfBytes);
 			const result = extractBytesSync(uint8, "application/pdf", null);
 
@@ -168,7 +161,6 @@ describe("Helper Functions and Edge Cases", () => {
 			const result = extractFileSync(pdfPath, null, null);
 
 			expect(Array.isArray(result.tables)).toBe(true);
-			// Tables may be empty, but should be array
 			result.tables.forEach((table) => {
 				expect(table).toHaveProperty("cells");
 				expect(table).toHaveProperty("markdown");
@@ -187,7 +179,6 @@ describe("Helper Functions and Edge Cases", () => {
 		});
 
 		it("should handle files with special characters in path", () => {
-			// Most paths should work fine
 			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
 			const result = extractFileSync(pdfPath, null, null);
 
@@ -202,7 +193,6 @@ describe("Helper Functions and Edge Cases", () => {
 
 			expect(result1.content).toBeTruthy();
 			expect(result2.content).toBeTruthy();
-			// Content should be consistent
 			expect(result1.mimeType).toBe(result2.mimeType);
 		});
 

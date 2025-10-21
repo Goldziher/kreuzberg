@@ -40,13 +40,11 @@ describe("OCR Integration Tests", () => {
 			assertMimeType(result, "image/png");
 			assertNonEmptyContent(result);
 
-			// Should contain "hello" or "world" (case insensitive)
 			assertOcrResult(result, ["hello", "world"], 0.3);
 
 			console.log("OCR successfully extracted text from image");
 		} catch (error) {
 			console.log("OCR test failed (Tesseract may not be installed):", (error as Error).message);
-			// Don't fail test - OCR dependencies are optional
 		}
 	});
 
@@ -75,7 +73,6 @@ describe("OCR Integration Tests", () => {
 			assertValidExtractionResult(result);
 			assertMimeType(result, "image/jpeg");
 
-			// Should have empty or very minimal content (OCR noise)
 			const contentLen = result.content.trim().length;
 			expect(contentLen).toBeLessThan(50);
 
@@ -97,7 +94,7 @@ describe("OCR Integration Tests", () => {
 		}
 
 		const config: ExtractionConfig = {
-			ocr: undefined, // No OCR
+			ocr: undefined,
 		};
 
 		const result = await extractFile(path, null, config);
@@ -105,7 +102,6 @@ describe("OCR Integration Tests", () => {
 		assertValidExtractionResult(result);
 		assertMimeType(result, "image/jpeg");
 
-		// Without OCR, we should still get image metadata
 		assertImageMetadata(result.metadata);
 
 		console.log("Image metadata extracted without OCR");
@@ -126,7 +122,7 @@ describe("OCR Integration Tests", () => {
 				backend: "tesseract",
 				language: "eng",
 				tesseractConfig: {
-					psm: 6, // Assume uniform block of text
+					psm: 6,
 					enableTableDetection: false,
 				},
 			},
@@ -139,7 +135,6 @@ describe("OCR Integration Tests", () => {
 			assertValidExtractionResult(result);
 			assertMimeType(result, "image/png");
 
-			// Verify OCR metadata includes our configuration
 			if (result.metadata.ocr) {
 				expect(result.metadata.ocr.language).toBe("eng");
 				if (result.metadata.ocr.psm !== undefined) {
@@ -176,14 +171,11 @@ describe("OCR Integration Tests", () => {
 
 			assertValidExtractionResult(result);
 
-			// Check metadata for confidence (varies by implementation)
 			const metadata: any = result.metadata;
 			if (metadata.confidence !== undefined) {
-				// Confidence must be in [0, 1] range
 				expect(metadata.confidence).toBeGreaterThanOrEqual(0.0);
 				expect(metadata.confidence).toBeLessThanOrEqual(1.0);
 
-				// For clean synthetic images with text, confidence should be reasonable
 				if (result.content.trim().length > 0) {
 					expect(metadata.confidence).toBeGreaterThan(0.1);
 					console.log(`OCR confidence: ${metadata.confidence}`);
@@ -199,7 +191,6 @@ describe("OCR Integration Tests", () => {
 			return;
 		}
 
-		// Use an image that might contain table-like structure
 		const path = getTestDocumentPath("images/test_hello_world.png");
 		if (!existsSync(path)) {
 			return;
@@ -222,7 +213,6 @@ describe("OCR Integration Tests", () => {
 			assertValidExtractionResult(result);
 			assertNonEmptyContent(result);
 
-			// If tables are detected, validate structure
 			if (result.tables.length > 0) {
 				console.log(`OCR detected ${result.tables.length} table(s)`);
 				for (const table of result.tables) {
@@ -250,7 +240,6 @@ describe("OCR Integration Tests", () => {
 				backend: "tesseract",
 				language: "eng",
 				tesseractConfig: {
-					// Only allow uppercase letters and space
 					tesseditCharWhitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ ",
 				},
 			},
@@ -262,11 +251,9 @@ describe("OCR Integration Tests", () => {
 
 			assertValidExtractionResult(result);
 
-			// All extracted text should only contain allowed characters
 			const content = result.content.trim();
 			if (content.length > 0) {
 				const hasOnlyAllowedChars = /^[A-Z ]+$/.test(content);
-				// Note: Tesseract may not perfectly enforce whitelist
 				console.log(`Whitelist enforced: ${hasOnlyAllowedChars}`);
 			}
 		} catch (error) {
@@ -302,11 +289,9 @@ describe("OCR Integration Tests", () => {
 
 			assertValidExtractionResult(result);
 
-			// Check if image preprocessing metadata was recorded
 			if (result.metadata.imagePreprocessing) {
 				console.log("Image preprocessing metadata:", result.metadata.imagePreprocessing);
 
-				// Validate preprocessing metadata structure
 				expect(result.metadata.imagePreprocessing.targetDpi).toBe(300);
 
 				if (result.metadata.imagePreprocessing.finalDpi) {

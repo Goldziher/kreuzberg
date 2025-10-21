@@ -125,14 +125,12 @@ describe("Extraction Result Structure", () => {
 		try {
 			const result = extractFileSync(tempFile.path);
 
-			// Required fields
 			expect(result).toHaveProperty("content");
 			expect(result).toHaveProperty("mimeType");
 			expect(result).toHaveProperty("metadata");
 			expect(result).toHaveProperty("tables");
 			expect(result).toHaveProperty("detectedLanguages");
 
-			// Type checks
 			expect(typeof result.content).toBe("string");
 			expect(typeof result.mimeType).toBe("string");
 			expect(typeof result.metadata).toBe("object");
@@ -191,7 +189,6 @@ describe("Metadata Parsing", () => {
 		try {
 			const result = extractFileSync(tempFile.path);
 
-			// Optional fields should be undefined, null, or correct type
 			if ("language" in result.metadata && result.metadata.language !== null) {
 				expect(typeof result.metadata.language).toBe("string");
 			}

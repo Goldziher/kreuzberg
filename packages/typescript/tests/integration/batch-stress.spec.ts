@@ -20,7 +20,6 @@ describe("Batch API Stress Tests", () => {
 			return;
 		}
 
-		// Batch APIs should handle multiple extractions without crashing
 		const results = await batchExtractFiles(files);
 		expect(results.length).toBe(files.length);
 

@@ -2,6 +2,8 @@ import { join } from "node:path";
 import { existsSync } from "node:fs";
 import { expect } from "vitest";
 import type { ExtractionResult, Metadata } from "../../src/types.js";
+import archiver from "archiver";
+import { Readable } from "node:stream";
 
 /**
  * Get path to test document in the repository's test_documents directory.
@@ -10,7 +12,6 @@ import type { ExtractionResult, Metadata } from "../../src/types.js";
  * @returns Absolute path to the test document
  */
 export function getTestDocumentPath(relativePath: string): string {
-	// From packages/typescript/tests -> workspace root
 	const workspaceRoot = join(process.cwd(), "../..");
 	return join(workspaceRoot, "test_documents", relativePath);
 }
@@ -61,26 +62,22 @@ export function assertNonEmptyContent(
 export function assertValidExtractionResult(
 	result: ExtractionResult,
 ): void {
-	// Required fields
 	expect(result).toHaveProperty("content");
 	expect(result).toHaveProperty("mimeType");
 	expect(result).toHaveProperty("metadata");
 	expect(result).toHaveProperty("tables");
 	expect(result).toHaveProperty("detectedLanguages");
 
-	// Type checks
 	expect(typeof result.content).toBe("string");
 	expect(typeof result.mimeType).toBe("string");
 	expect(typeof result.metadata).toBe("object");
 	expect(result.metadata).not.toBeNull();
 	expect(Array.isArray(result.tables)).toBe(true);
 
-	// detectedLanguages can be null or array
 	if (result.detectedLanguages !== null) {
 		expect(Array.isArray(result.detectedLanguages)).toBe(true);
 	}
 
-	// chunks can be undefined, null, or array
 	if (result.chunks !== undefined && result.chunks !== null) {
 		expect(Array.isArray(result.chunks)).toBe(true);
 	}
@@ -93,9 +90,7 @@ export function assertValidExtractionResult(
  * @param metadata - Extraction metadata
  */
 export function assertPdfMetadata(metadata: Metadata): void {
-	// PDF metadata is optional, but if present should be valid
 	if (metadata.pdf) {
-		// If page count exists, it should be > 0
 		if (metadata.pdf.pageCount !== undefined) {
 			expect(metadata.pdf.pageCount).toBeGreaterThan(0);
 		}
@@ -109,7 +104,6 @@ export function assertPdfMetadata(metadata: Metadata): void {
  * @param metadata - Extraction metadata
  */
 export function assertExcelMetadata(metadata: Metadata): void {
-	// Excel metadata is optional, but if present should be valid
 	if (metadata.excel) {
 		if (metadata.excel.sheetCount !== undefined) {
 			expect(metadata.excel.sheetCount).toBeGreaterThan(0);
@@ -128,13 +122,11 @@ export function assertExcelMetadata(metadata: Metadata): void {
 export function assertImageMetadata(metadata: Metadata): void {
 	expect(metadata.image).toBeTruthy();
 	if (metadata.image) {
-		// Should have width and height
 		expect(metadata.image.width).toBeTruthy();
 		expect(metadata.image.height).toBeTruthy();
 		expect(metadata.image.width).toBeGreaterThan(0);
 		expect(metadata.image.height).toBeGreaterThan(0);
 
-		// Format should be present
 		if (metadata.image.format) {
 			expect(typeof metadata.image.format).toBe("string");
 		}
@@ -155,28 +147,20 @@ export function assertOcrResult(
 ): void {
 	assertValidExtractionResult(result);
 
-	// Normalize content for comparison
 	const contentLower = result.content.toLowerCase().replace(/\n/g, " ").trim();
 
-	// Check for expected words
 	const foundWords = expectedWords.filter((word) =>
 		contentLower.includes(word.toLowerCase()),
 	);
 
-	// At least one expected word should be found
 	expect(foundWords.length).toBeGreaterThan(0);
 
-	// Validate OCR metadata if present
 	if (result.metadata.ocr) {
-		// Confidence should be in valid range [0, 1] if present
-		// Note: OCR metadata structure varies by backend
-		// We check for common confidence field patterns
 		const metadata: any = result.metadata;
 		if (metadata.confidence !== undefined) {
 			expect(metadata.confidence).toBeGreaterThanOrEqual(0.0);
 			expect(metadata.confidence).toBeLessThanOrEqual(1.0);
 
-			// If text was detected, confidence should be reasonable
 			if (foundWords.length > 0) {
 				expect(metadata.confidence).toBeGreaterThanOrEqual(minConfidence);
 			}
@@ -210,16 +194,13 @@ export function assertTablesExtracted(
 ): void {
 	expect(result.tables.length).toBeGreaterThanOrEqual(minTables);
 
-	// Validate table structure
 	for (const table of result.tables) {
 		expect(table.cells).toBeTruthy();
 		expect(Array.isArray(table.cells)).toBe(true);
 		expect(table.cells.length).toBeGreaterThan(0);
 
-		// Validate cells are 2D array
 		expect(Array.isArray(table.cells[0])).toBe(true);
 
-		// Markdown representation should exist
 		expect(table.markdown).toBeTruthy();
 		expect(typeof table.markdown).toBe("string");
 	}
@@ -233,12 +214,90 @@ export function assertTablesExtracted(
 export function assertMarkdownConversion(result: ExtractionResult): void {
 	assertNonEmptyContent(result);
 
-	// Check for common Markdown patterns
 	const hasHeaders = result.content.includes("##") || result.content.includes("#");
 	const hasTables = result.content.includes("|");
 	const hasLinks = result.content.includes("[");
 	const hasBold = result.content.includes("**");
 
-	// At least one markdown pattern should be present
 	expect(hasHeaders || hasTables || hasLinks || hasBold).toBe(true);
+}
+
+/**
+ * Create a ZIP archive from a map of file paths to contents.
+ *
+ * @param files - Map of file paths to file contents (string or Buffer)
+ * @returns Promise resolving to ZIP archive as Uint8Array
+ */
+export async function createZip(
+	files: Record<string, string | Buffer | Uint8Array>,
+): Promise<Uint8Array> {
+	return new Promise<Uint8Array>((resolve, reject) => {
+		const archive = archiver("zip", { zlib: { level: 9 } });
+		const chunks: Buffer[] = [];
+
+		archive.on("data", (chunk: Buffer) => {
+			chunks.push(chunk);
+		});
+
+		archive.on("end", () => {
+			resolve(new Uint8Array(Buffer.concat(chunks)));
+		});
+
+		archive.on("error", (err) => {
+			reject(err);
+		});
+
+		for (const [path, content] of Object.entries(files)) {
+			if (typeof content === "string") {
+				archive.append(content, { name: path });
+			} else {
+				archive.append(
+					content instanceof Uint8Array ? Buffer.from(content) : (content as Buffer),
+					{ name: path },
+				);
+			}
+		}
+
+		archive.finalize();
+	});
+}
+
+/**
+ * Create a TAR archive from a map of file paths to contents.
+ *
+ * @param files - Map of file paths to file contents (string or Buffer)
+ * @returns Promise resolving to TAR archive as Uint8Array
+ */
+export async function createTar(
+	files: Record<string, string | Buffer | Uint8Array>,
+): Promise<Uint8Array> {
+	return new Promise<Uint8Array>((resolve, reject) => {
+		const archive = archiver("tar", {});
+		const chunks: Buffer[] = [];
+
+		archive.on("data", (chunk: Buffer) => {
+			chunks.push(chunk);
+		});
+
+		archive.on("end", () => {
+			resolve(new Uint8Array(Buffer.concat(chunks)));
+		});
+
+		archive.on("error", (err) => {
+			reject(err);
+		});
+
+		for (const [path, content] of Object.entries(files)) {
+			if (typeof content === "string") {
+				archive.append(content, { name: path });
+			} else {
+				archive.append(
+					content instanceof Uint8Array ? Buffer.from(content) : (content as Buffer),
+					{ name: path },
+				);
+			}
+		}
+
+		archive.finalize();
+	});
 }

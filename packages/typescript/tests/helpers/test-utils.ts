@@ -26,7 +26,6 @@ export function getTestDocumentPath(relativePath: string): string {
  * Assert that an extraction result is valid and has required fields.
  */
 export function assertValidExtractionResult(result: ExtractionResult): void {
-	// Required fields
 	if (typeof result.content !== "string") {
 		throw new Error("result.content must be a string");
 	}
@@ -37,12 +36,10 @@ export function assertValidExtractionResult(result: ExtractionResult): void {
 		throw new Error("result.metadata must be an object");
 	}
 
-	// Tables can be null or array
 	if (result.tables !== null && !Array.isArray(result.tables)) {
 		throw new Error("result.tables must be null or an array");
 	}
 
-	// Detected languages can be null or array
 	if (
 		result.detectedLanguages !== null &&
 		!Array.isArray(result.detectedLanguages)
@@ -50,7 +47,6 @@ export function assertValidExtractionResult(result: ExtractionResult): void {
 		throw new Error("result.detectedLanguages must be null or an array");
 	}
 
-	// Chunks can be undefined, null, or array
 	if (
 		result.chunks !== undefined &&
 		result.chunks !== null &&
@@ -68,7 +64,6 @@ export function assertValidMetadata(metadata: Metadata): void {
 		throw new Error("metadata must be an object");
 	}
 
-	// Check optional fields have correct types if present
 	if (metadata.language !== undefined && metadata.language !== null) {
 		if (typeof metadata.language !== "string") {
 			throw new Error("metadata.language must be a string or null");

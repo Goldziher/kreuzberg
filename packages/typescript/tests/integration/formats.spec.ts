@@ -63,7 +63,6 @@ describe("Office Document Integration Tests", () => {
 		);
 		assertNonEmptyContent(result);
 
-		// Excel metadata should be present
 		assertExcelMetadata(result.metadata);
 
 		console.log("XLSX extraction successful");
@@ -150,7 +149,6 @@ describe("HTML/Web Integration Tests", () => {
 		assertMimeType(result, "text/html");
 		assertNonEmptyContent(result);
 
-		// HTML should be converted to Markdown
 		assertMarkdownConversion(result);
 
 		console.log("HTML to Markdown conversion successful");
@@ -221,7 +219,6 @@ describe("Data Format Integration Tests", () => {
 		assertMimeType(result, "application/json");
 		assertNonEmptyContent(result);
 
-		// JSON should contain braces or brackets
 		expect(result.content.includes("{") || result.content.includes("[")).toBe(
 			true,
 		);
@@ -264,7 +261,6 @@ describe("Data Format Integration Tests", () => {
 			return;
 		}
 
-		// Find first XML file
 		const { readdirSync } = await import("node:fs");
 		const xmlFiles = readdirSync(path).filter((f) => f.endsWith(".xml"));
 
@@ -283,7 +279,6 @@ describe("Data Format Integration Tests", () => {
 		assertMimeType(result, "application/xml");
 		assertNonEmptyContent(result);
 
-		// XML extraction should have metadata
 		const hasXmlMetadata =
 			result.metadata.xml?.elementCount !== undefined ||
 			result.metadata.xml?.uniqueElements !== undefined;
@@ -308,7 +303,6 @@ describe("Email Integration Tests", () => {
 			return;
 		}
 
-		// Find first EML file
 		const { readdirSync } = await import("node:fs");
 		const emlFiles = readdirSync(emailDir).filter((f) => f.endsWith(".eml"));
 
@@ -327,7 +321,6 @@ describe("Email Integration Tests", () => {
 		assertMimeType(result, "message/rfc822");
 		assertNonEmptyContent(result);
 
-		// Email metadata should be present
 		const hasEmailMetadata =
 			result.metadata.email?.fromEmail !== undefined ||
 			result.metadata.email?.toEmails !== undefined ||
@@ -360,7 +353,6 @@ describe("Text/Markdown Integration Tests", () => {
 		assertMimeType(result, "text/markdown");
 		assertNonEmptyContent(result);
 
-		// Markdown metadata should be extracted
 		const hasMarkdownMetadata =
 			result.metadata.text?.headers !== undefined ||
 			result.metadata.text?.links !== undefined ||

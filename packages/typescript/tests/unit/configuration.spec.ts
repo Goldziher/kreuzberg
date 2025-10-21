@@ -98,7 +98,6 @@ describe("Configuration Options", () => {
 			};
 			const result = extractFileSync(pdfPath, null, config);
 			expect(result.content).toBeTruthy();
-			// Chunks may or may not be present depending on content length
 		});
 
 		it("should handle chunking with different settings", () => {

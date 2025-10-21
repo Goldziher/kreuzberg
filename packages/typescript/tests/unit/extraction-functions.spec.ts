@@ -9,13 +9,11 @@ import {
 	batchExtractBytes,
 } from "../../src/index.js";
 
-// Helper to get test document path
 function getTestDocumentPath(relativePath: string): string {
 	const workspaceRoot = join(process.cwd(), "../..");
 	return join(workspaceRoot, "test_documents", relativePath);
 }
 
-// Sample test data
 let samplePdfPath: string;
 let samplePdfBytes: Uint8Array;
 let sampleTextPath: string;
@@ -61,7 +59,6 @@ describe("extractBytesSync", () => {
 	});
 
 	it("should handle Uint8Array conversion to Buffer", () => {
-		// Create a fresh Uint8Array to ensure conversion happens
 		const uint8Data = new Uint8Array(samplePdfBytes);
 		const result = extractBytesSync(uint8Data, "application/pdf", null);
 
@@ -116,11 +113,9 @@ describe("batchExtractFilesSync", () => {
 		expect(Array.isArray(results)).toBe(true);
 		expect(results.length).toBe(2);
 
-		// PDF result
 		expect(results[0].content).toBeTruthy();
 		expect(results[0].mimeType).toContain("application/pdf");
 
-		// Text result
 		expect(results[1].content).toBeTruthy();
 		expect(results[1].mimeType).toContain("text/markdown");
 	});
@@ -160,11 +155,9 @@ describe("batchExtractFiles (async)", () => {
 		expect(Array.isArray(results)).toBe(true);
 		expect(results.length).toBe(2);
 
-		// PDF result
 		expect(results[0].content).toBeTruthy();
 		expect(results[0].mimeType).toContain("application/pdf");
 
-		// Text result
 		expect(results[1].content).toBeTruthy();
 		expect(results[1].mimeType).toContain("text/markdown");
 	});
@@ -196,7 +189,6 @@ describe("batchExtractFiles (async)", () => {
 	});
 
 	it("should handle large batch of files", async () => {
-		// Test with 3 files
 		const paths = [samplePdfPath, sampleTextPath, samplePdfPath];
 		const results = await batchExtractFiles(paths, null);
 
@@ -216,11 +208,9 @@ describe("batchExtractBytes (async)", () => {
 		expect(Array.isArray(results)).toBe(true);
 		expect(results.length).toBe(2);
 
-		// PDF result
 		expect(results[0].content).toBeTruthy();
 		expect(results[0].mimeType).toContain("application/pdf");
 
-		// Text result
 		expect(results[1].content).toBeTruthy();
 		expect(results[1].mimeType).toContain("text/markdown");
 	});
@@ -260,7 +250,6 @@ describe("batchExtractBytes (async)", () => {
 	});
 
 	it("should convert Uint8Array to Buffer for each item", async () => {
-		// Create fresh Uint8Arrays
 		const data1 = new Uint8Array(samplePdfBytes);
 		const data2 = new Uint8Array(sampleTextBytes);
 

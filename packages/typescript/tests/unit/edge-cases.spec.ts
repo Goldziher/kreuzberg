@@ -10,29 +10,25 @@ function getTestDocumentPath(relativePath: string): string {
 describe("Edge Cases and Coverage", () => {
 	describe("Metadata parsing edge cases", () => {
 		it("should handle invalid JSON in metadata string", async () => {
-			// This tests the metadata parsing fallback
 			const { extractFileSync } = await import("../../src/index.js");
 			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
 
 			const result = extractFileSync(pdfPath, null, null);
 
-			// Metadata should always be an object
 			expect(typeof result.metadata).toBe("object");
 			expect(result.metadata).not.toBeNull();
 		});
 
 		it("should handle empty metadata", () => {
-			// Test metadata conversion when it's already an object
 			const mockResult = {
 				content: "test",
 				mimeType: "text/plain",
-				metadata: {}, // Already an object, not a string
+				metadata: {},
 				tables: [],
 				detectedLanguages: null,
 				chunks: null,
 			};
 
-			// Import and call convertResult directly
 			expect(mockResult.metadata).toEqual({});
 		});
 	});
@@ -44,7 +40,6 @@ describe("Edge Cases and Coverage", () => {
 
 			const result = extractFileSync(pdfPath, null, null);
 
-			// Tables should be array (converted from null if needed)
 			expect(Array.isArray(result.tables)).toBe(true);
 		});
 
@@ -54,7 +49,6 @@ describe("Edge Cases and Coverage", () => {
 
 			const result = extractFileSync(pdfPath, null, null);
 
-			// Chunks should be null or array
 			if (result.chunks !== null) {
 				expect(Array.isArray(result.chunks)).toBe(true);
 			}
@@ -66,7 +60,6 @@ describe("Edge Cases and Coverage", () => {
 
 			const result = extractFileSync(pdfPath, null, null);
 
-			// detectedLanguages should be null or array
 			if (result.detectedLanguages !== null) {
 				expect(Array.isArray(result.detectedLanguages)).toBe(true);
 			}
@@ -78,11 +71,9 @@ describe("Edge Cases and Coverage", () => {
 			const { extractFileSync } = await import("../../src/index.js");
 			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
 
-			// First call initializes binding
 			const result1 = extractFileSync(pdfPath, null, null);
 			expect(result1).toBeTruthy();
 
-			// Second call uses cached binding
 			const result2 = extractFileSync(pdfPath, null, null);
 			expect(result2).toBeTruthy();
 		});
@@ -102,7 +93,6 @@ describe("Edge Cases and Coverage", () => {
 			const { extractFileSync } = await import("../../src/index.js");
 			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
 
-			// Config with only one field
 			const result = extractFileSync(pdfPath, null, { useCache: false });
 
 			expect(result.content).toBeTruthy();
@@ -112,7 +102,6 @@ describe("Edge Cases and Coverage", () => {
 			const { extractFileSync } = await import("../../src/index.js");
 			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
 
-			// Partial OCR config
 			const result = extractFileSync(pdfPath, null, {
 				ocr: { backend: "tesseract" },
 			});
@@ -127,7 +116,6 @@ describe("Edge Cases and Coverage", () => {
 			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
 			const bytes = readFileSync(pdfPath);
 
-			// Test with various Uint8Array sources
 			const uint8Array = new Uint8Array(bytes);
 			const result = extractBytesSync(uint8Array, "application/pdf", null);
 
