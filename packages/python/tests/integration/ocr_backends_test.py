@@ -14,6 +14,7 @@ of breaking API changes, so we must validate:
 from __future__ import annotations
 
 import io
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -79,7 +80,8 @@ def create_empty_image() -> bytes:
 
 
 @pytest.mark.skipif(
-    not EASYOCR_AVAILABLE, reason="EasyOCR not installed - install with: pip install 'kreuzberg[easyocr]'"
+    not EASYOCR_AVAILABLE or sys.version_info >= (3, 14),
+    reason="EasyOCR not available (not installed or Python >=3.14)",
 )
 class TestEasyOCRBackend:
     """Integration tests for EasyOCR backend."""
@@ -328,7 +330,8 @@ class TestEasyOCRBackend:
 
 
 @pytest.mark.skipif(
-    not PADDLEOCR_AVAILABLE, reason="PaddleOCR not installed - install with: pip install 'kreuzberg[paddleocr]'"
+    not PADDLEOCR_AVAILABLE or sys.version_info >= (3, 14),
+    reason="PaddleOCR not available (not installed or Python >=3.14)",
 )
 class TestPaddleOCRBackend:
     """Integration tests for PaddleOCR backend."""
@@ -567,8 +570,8 @@ class TestPaddleOCRBackend:
 
 
 @pytest.mark.skipif(
-    not (EASYOCR_AVAILABLE and PADDLEOCR_AVAILABLE),
-    reason="Both EasyOCR and PaddleOCR required for compatibility tests",
+    not (EASYOCR_AVAILABLE and PADDLEOCR_AVAILABLE) or sys.version_info >= (3, 14),
+    reason="Both EasyOCR and PaddleOCR required for compatibility tests (not available or Python >=3.14)",
 )
 class TestOCRBackendCompatibility:
     """Tests that validate both backends have compatible interfaces."""

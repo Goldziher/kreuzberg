@@ -30,8 +30,8 @@ optional-dependencies.all = [
   "kreuzberg[easyocr,paddleocr]",
 ]
 optional-dependencies.easyocr = [
-  "easyocr>=1.7.2",
-  "torch>=2.9",
+  "easyocr>=1.7.2; python_version<'3.14'",
+  "torch>=2.9; python_version<'3.14'",
 ]
 optional-dependencies.paddleocr = [
   "paddleocr>=3.3; python_version<'3.14'",
