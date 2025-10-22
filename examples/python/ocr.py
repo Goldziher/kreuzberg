@@ -6,13 +6,14 @@ Demonstrates OCR extraction from scanned PDFs and images.
 
 from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
 
+
 def main():
     # Basic OCR extraction
     print("=== Basic OCR ===")
     config = ExtractionConfig(
         ocr=OcrConfig(
             backend="tesseract",  # Default backend
-            language="eng",       # English
+            language="eng",  # English
         )
     )
 
@@ -44,9 +45,7 @@ def main():
 
     # OCR from image
     print("\n=== OCR from Image ===")
-    config = ExtractionConfig(
-        ocr=OcrConfig(backend="tesseract", language="eng")
-    )
+    config = ExtractionConfig(ocr=OcrConfig(backend="tesseract", language="eng"))
 
     result = extract_file_sync("screenshot.png", config=config)
     print(f"Extracted from image: {len(result.content)} characters")
@@ -78,6 +77,7 @@ def main():
         print(f"  Rows: {len(table.cells)}")
         print(f"  Columns: {len(table.cells[0]) if table.cells else 0}")
         print(f"  Markdown:\n{table.markdown[:200]}...")
+
 
 if __name__ == "__main__":
     main()

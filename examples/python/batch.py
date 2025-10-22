@@ -8,6 +8,7 @@ from kreuzberg import batch_extract_files, batch_extract_files_sync, ExtractionC
 import asyncio
 from pathlib import Path
 
+
 def main():
     # Synchronous batch processing
     print("=== Synchronous Batch Processing ===")
@@ -111,6 +112,7 @@ def main():
             print(f"✓ {file}: {len(result.content)} chars")
         except Exception as e:
             print(f"✗ {file}: {type(e).__name__}: {e}")
+
 
 if __name__ == "__main__":
     main()

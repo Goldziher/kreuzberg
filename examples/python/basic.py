@@ -6,6 +6,7 @@ Demonstrates basic document extraction with Kreuzberg.
 
 from kreuzberg import extract_file, extract_file_sync, ExtractionConfig
 
+
 def main():
     # Synchronous extraction - simplest approach
     print("=== Synchronous Extraction ===")
@@ -51,6 +52,7 @@ def main():
         print(f"PDF Pages: {result.metadata.pdf.page_count}")
         print(f"Author: {result.metadata.pdf.author}")
         print(f"Title: {result.metadata.pdf.title}")
+
 
 if __name__ == "__main__":
     main()

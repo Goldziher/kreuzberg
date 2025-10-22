@@ -142,8 +142,7 @@ def main():
     # Register multiple OCR backends
     print("\n=== Register Multiple Backends ===")
     azure_ocr = AzureCognitiveServicesOCR(
-        endpoint="https://your-resource.cognitiveservices.azure.com",
-        api_key="your-api-key"
+        endpoint="https://your-resource.cognitiveservices.azure.com", api_key="your-api-key"
     )
     register_ocr_backend(azure_ocr)
 
@@ -159,25 +158,19 @@ def main():
 
     # Use Azure OCR
     print("\n=== Use Azure OCR ===")
-    config = ExtractionConfig(
-        ocr=OcrConfig(backend="azure_ocr", language="eng")
-    )
+    config = ExtractionConfig(ocr=OcrConfig(backend="azure_ocr", language="eng"))
     result = extract_file_sync("document.pdf", config=config)
     print(f"Extracted with Azure: {len(result.content)} characters")
 
     # Use custom ML model
     print("\n=== Use Custom ML Model ===")
-    config = ExtractionConfig(
-        ocr=OcrConfig(backend="custom_ml_ocr", language="eng")
-    )
+    config = ExtractionConfig(ocr=OcrConfig(backend="custom_ml_ocr", language="eng"))
     result = extract_file_sync("document.pdf", config=config)
     print(f"Extracted with custom model: {len(result.content)} characters")
 
     # Use handwriting OCR for specialized content
     print("\n=== Use Handwriting OCR ===")
-    config = ExtractionConfig(
-        ocr=OcrConfig(backend="handwriting_ocr", language="eng")
-    )
+    config = ExtractionConfig(ocr=OcrConfig(backend="handwriting_ocr", language="eng"))
     result = extract_file_sync("handwritten_notes.pdf", config=config)
     print(f"Extracted handwriting: {len(result.content)} characters")
 
@@ -188,9 +181,7 @@ def main():
     for backend_name in backends:
         try:
             print(f"Trying {backend_name}...")
-            config = ExtractionConfig(
-                ocr=OcrConfig(backend=backend_name, language="eng")
-            )
+            config = ExtractionConfig(ocr=OcrConfig(backend=backend_name, language="eng"))
             result = extract_file_sync("document.pdf", config=config)
             print(f"✓ Success with {backend_name}: {len(result.content)} chars")
             break
