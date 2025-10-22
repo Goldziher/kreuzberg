@@ -9,10 +9,6 @@ use tempfile::NamedTempFile;
 
 mod helpers;
 
-// ============================================================================
-// Extension-Based Detection Tests
-// ============================================================================
-
 /// Test MIME detection by file extension.
 ///
 /// Validates that file extensions are correctly mapped to MIME types.
@@ -21,8 +17,6 @@ mod helpers;
 async fn test_mime_detection_by_extension() {
     use tempfile::TempDir;
 
-    // Test common file extensions across all supported formats
-    // Each (filename, expected_mime) pair verifies correct MIME mapping
     let test_cases = vec![
         ("test.pdf", "application/pdf"),
         (
@@ -51,14 +45,11 @@ async fn test_mime_detection_by_extension() {
     ];
 
     for (filename, expected_mime) in test_cases {
-        // Use unique temp directory per iteration to avoid collisions on case-insensitive filesystems
         let temp_dir = TempDir::new().expect("Should create temp dir");
         let temp_path = temp_dir.path().join(filename);
 
-        // Write some content (doesn't matter what for extension-based detection)
         std::fs::write(&temp_path, b"test content").unwrap();
 
-        // Detect MIME type
         let detected = detect_mime_type(&temp_path, true);
 
         assert!(detected.is_ok(), "Should detect MIME type for {}", filename);
@@ -82,7 +73,6 @@ async fn test_mime_detection_case_insensitive() {
     ];
 
     for (filename, expected_mime) in test_cases {
-        // Use unique temp directory per iteration to avoid collisions on case-insensitive filesystems
         let temp_dir = TempDir::new().expect("Should create temp dir");
         let temp_path = temp_dir.path().join(filename);
 
@@ -94,14 +84,9 @@ async fn test_mime_detection_case_insensitive() {
     }
 }
 
-// ============================================================================
-// Content-Based Detection Tests
-// ============================================================================
-
 /// Test MIME detection by content (magic bytes).
 #[tokio::test]
 async fn test_mime_detection_by_content() {
-    // Test files with magic bytes but wrong/missing extensions
     struct TestCase {
         content: Vec<u8>,
         filename: &'static str,
@@ -109,25 +94,21 @@ async fn test_mime_detection_by_content() {
     }
 
     let test_cases = vec![
-        // PDF magic bytes
         TestCase {
             content: b"%PDF-1.4\ntest content".to_vec(),
             filename: "test",
             expected_fallback: Some("application/pdf"),
         },
-        // PNG magic bytes
         TestCase {
             content: vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
             filename: "test",
             expected_fallback: Some("image/png"),
         },
-        // ZIP magic bytes (PK)
         TestCase {
             content: vec![0x50, 0x4B, 0x03, 0x04],
             filename: "test",
             expected_fallback: Some("application/zip"),
         },
-        // JPEG magic bytes
         TestCase {
             content: vec![0xFF, 0xD8, 0xFF, 0xE0],
             filename: "test",
@@ -143,15 +124,10 @@ async fn test_mime_detection_by_content() {
         temp_file.flush().unwrap();
         std::fs::copy(temp_file.path(), &temp_path).unwrap();
 
-        // Our MIME detection primarily uses extension, but mime_guess crate can detect by content
         let detected = detect_mime_type(&temp_path, true);
 
-        // Without extension, mime_guess should fallback to content detection
-        // For files without extension, we expect failure or fallback to content detection
         if let Some(expected) = test_case.expected_fallback {
-            // If expected fallback is provided, verify it's detected or error is reasonable
             if let Ok(mime) = &detected {
-                // Content detection might work for some formats
                 assert!(
                     mime == expected || mime.starts_with("application/") || mime.starts_with("image/"),
                     "For {}, expected {} or reasonable fallback, got {}",
@@ -160,7 +136,6 @@ async fn test_mime_detection_by_content() {
                     mime
                 );
             } else {
-                // No extension detection failed - acceptable
                 assert!(
                     detected.is_err(),
                     "Should fail gracefully for {} without extension",
@@ -173,17 +148,12 @@ async fn test_mime_detection_by_content() {
     }
 }
 
-// ============================================================================
-// MIME Type Validation Tests
-// ============================================================================
-
 /// Test validation of supported MIME types.
 ///
 /// Validates that all documented supported MIME types pass validation.
 /// This ensures the MIME type registry is correctly configured.
 #[tokio::test]
 async fn test_mime_type_validation() {
-    // Core supported MIME types across all extractors
     let supported = vec![
         "application/pdf",
         "text/plain",
@@ -207,7 +177,6 @@ async fn test_mime_type_validation() {
 /// Test validation of image MIME types (prefix matching).
 #[tokio::test]
 async fn test_mime_type_image_prefix_validation() {
-    // Any image/* MIME type should be accepted
     let image_types = vec![
         "image/png",
         "image/jpeg",
@@ -216,7 +185,7 @@ async fn test_mime_type_image_prefix_validation() {
         "image/bmp",
         "image/tiff",
         "image/svg+xml",
-        "image/x-custom-format", // Even non-standard image types
+        "image/x-custom-format",
     ];
 
     for mime_type in image_types {
@@ -240,7 +209,6 @@ async fn test_unknown_mime_type() {
         let result = validate_mime_type(mime_type);
         assert!(result.is_err(), "Should reject unsupported MIME type: {}", mime_type);
 
-        // Verify error type
         let error = result.unwrap_err();
         assert!(
             matches!(error, kreuzberg::KreuzbergError::UnsupportedFormat(_)),
@@ -250,28 +218,20 @@ async fn test_unknown_mime_type() {
     }
 }
 
-// ============================================================================
-// MIME Mismatch Tests
-// ============================================================================
-
 /// Test handling of MIME type mismatch (extension vs content).
 #[tokio::test]
 async fn test_mime_mismatch_warning() {
-    // Create a file with .pdf extension but DOCX content (ZIP magic bytes)
     let mut temp_file = NamedTempFile::new().expect("Should create temp file");
     let temp_path = temp_file.path().parent().unwrap().join("document.pdf");
 
-    // Write ZIP/DOCX magic bytes
     temp_file.write_all(&[0x50, 0x4B, 0x03, 0x04]).unwrap();
     temp_file.flush().unwrap();
     std::fs::copy(temp_file.path(), &temp_path).unwrap();
 
-    // MIME detection is extension-based by default
     let detected = detect_mime_type(&temp_path, true);
 
     assert!(detected.is_ok(), "Should detect MIME type even with mismatch");
 
-    // Should detect as PDF based on extension (our implementation is extension-first)
     assert_eq!(
         detected.unwrap(),
         "application/pdf",
@@ -284,11 +244,9 @@ async fn test_mime_mismatch_warning() {
 /// Test file extension mismatch detection.
 #[tokio::test]
 async fn test_extension_content_mismatch() {
-    // Create file with .txt extension but PDF content
     let mut temp_file = NamedTempFile::new().expect("Should create temp file");
     let temp_path = temp_file.path().parent().unwrap().join("document.txt");
 
-    // Write PDF magic bytes
     temp_file.write_all(b"%PDF-1.4\n").unwrap();
     temp_file.flush().unwrap();
     std::fs::copy(temp_file.path(), &temp_path).unwrap();
@@ -297,7 +255,6 @@ async fn test_extension_content_mismatch() {
 
     assert!(detected.is_ok(), "Should detect MIME type");
 
-    // Extension-based detection returns text/plain
     assert_eq!(
         detected.unwrap(),
         "text/plain",
@@ -306,10 +263,6 @@ async fn test_extension_content_mismatch() {
 
     let _ = std::fs::remove_file(&temp_path);
 }
-
-// ============================================================================
-// Edge Cases
-// ============================================================================
 
 /// Test file without extension.
 #[tokio::test]
@@ -323,11 +276,7 @@ async fn test_no_extension() {
 
     let detected = detect_mime_type(&temp_path, true);
 
-    // Without extension, detection should either:
-    // 1. Fail with a Validation error (no extension to detect from)
-    // 2. Fallback to content detection (mime_guess crate behavior)
     if detected.is_err() {
-        // Acceptable - no extension means we can't reliably detect
         let error = detected.unwrap_err();
         assert!(
             matches!(
@@ -337,8 +286,6 @@ async fn test_no_extension() {
             "Should return appropriate error for file without extension"
         );
     } else {
-        // If it succeeds, mime_guess fell back to content detection
-        // Verify it's at least a valid MIME type string
         let mime = detected.unwrap();
         assert!(
             mime.contains('/'),
@@ -359,7 +306,6 @@ async fn test_mime_detection_nonexistent_file() {
 
     assert!(result.is_err(), "Should fail for nonexistent file");
 
-    // Should be a Validation error
     let error = result.unwrap_err();
     assert!(
         matches!(error, kreuzberg::KreuzbergError::Validation { .. }),
@@ -372,10 +318,8 @@ async fn test_mime_detection_nonexistent_file() {
 async fn test_mime_detection_skip_existence_check() {
     let nonexistent_path = "/nonexistent/path/to/document.pdf";
 
-    // Disable existence check
     let result = detect_mime_type(nonexistent_path, false);
 
-    // Should succeed because we're not checking existence
     assert!(result.is_ok(), "Should succeed when skipping existence check");
     assert_eq!(result.unwrap(), "application/pdf");
 }
@@ -415,10 +359,6 @@ async fn test_filename_special_characters() {
 
     let _ = std::fs::remove_file(&temp_path);
 }
-
-// ============================================================================
-// Comprehensive Format Coverage Tests
-// ============================================================================
 
 /// Test MIME detection for all Pandoc-supported formats.
 ///

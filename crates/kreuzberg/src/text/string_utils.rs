@@ -7,8 +7,6 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 
 // ============================================================================
-// Regex Patterns
-// ============================================================================
 
 static CONTROL_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]").unwrap());
 static REPLACEMENT_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new(r"\u{FFFD}+").unwrap());
@@ -18,10 +16,6 @@ static HEBREW_AS_CYRILLIC: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\u{0400}-\u{
 static ENCODING_CACHE: Lazy<RwLock<HashMap<String, &'static Encoding>>> = Lazy::new(|| RwLock::new(HashMap::new()));
 
 const CACHE_SIZE_LIMIT: usize = 1000;
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
 
 #[inline]
 fn chain_replacements<'a>(mut text: Cow<'a, str>, replacements: &[(&Regex, &str)]) -> Cow<'a, str> {
@@ -43,10 +37,6 @@ fn calculate_cache_key(data: &[u8]) -> String {
     data.len().hash(&mut hasher);
     format!("{:x}", hasher.finish())
 }
-
-// ============================================================================
-// Public API
-// ============================================================================
 
 pub fn safe_decode(byte_data: &[u8], encoding: Option<&str>) -> String {
     if byte_data.is_empty() {
@@ -157,10 +147,6 @@ fn fix_mojibake_internal(text: &str) -> String {
 
     chain_replacements(Cow::Borrowed(text), &replacements).into_owned()
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
 
 #[cfg(test)]
 mod tests {

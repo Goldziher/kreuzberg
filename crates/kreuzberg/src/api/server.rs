@@ -87,7 +87,6 @@ pub fn create_router(config: ExtractionConfig) -> Router {
 /// python -m kreuzberg.api
 /// ```
 pub async fn serve(host: impl AsRef<str>, port: u16) -> Result<()> {
-    // Discover config file in current/parent directories
     let config = match ExtractionConfig::discover()? {
         Some(config) => {
             tracing::info!("Loaded extraction config from discovered file");
@@ -161,15 +160,12 @@ mod tests {
     fn test_create_router() {
         let config = ExtractionConfig::default();
         let _router = create_router(config);
-        // Router creation should not panic
     }
 
     #[test]
     fn test_router_has_routes() {
         let config = ExtractionConfig::default();
         let router = create_router(config);
-        // Test that router is created with expected structure
-        // Actual route testing is done in integration tests
-        assert!(std::mem::size_of_val(&router) > 0);
+        assert!(size_of_val(&router) > 0);
     }
 }

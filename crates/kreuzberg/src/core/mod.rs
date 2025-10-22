@@ -34,7 +34,6 @@ pub mod io;
 pub mod mime;
 pub mod pipeline;
 
-// Re-export commonly used items
 pub use config::{
     ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, PdfConfig,
     TokenReductionConfig,

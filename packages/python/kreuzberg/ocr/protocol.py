@@ -99,8 +99,6 @@ class OcrBackendProtocol(Protocol):
         """
         ...
 
-    # Optional methods below
-
     def process_file(self, path: str, language: str) -> dict[str, Any]:
         """Process file from path (optional, defaults to reading and calling process_image).
 

@@ -165,7 +165,6 @@ def _filter_documents_by_name(
         doc_matched = False
         for _, lowered in normalized:
             if matched[lowered]:
-                # Selector already satisfied but we still need to include spec if it matches others.
                 if any(lowered in candidate for candidate in candidates):
                     doc_matched = True
                 continue

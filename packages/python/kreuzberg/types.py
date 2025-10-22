@@ -169,6 +169,24 @@ class Metadata(TypedDict, total=False):
         Any additional fields added by Python postprocessors (entity extraction,
         keyword extraction, etc.) will appear as top-level keys in the dict.
 
+    Attributes:
+        language: Document language (ISO 639-1 code)
+        date: Document date (ISO 8601 format)
+        subject: Document subject
+        format: File format name
+        pdf: PDF metadata (requires pdf feature)
+        excel: Excel/spreadsheet metadata
+        email: Email metadata
+        pptx: PowerPoint metadata
+        archive: Archive (ZIP/TAR/7Z) metadata
+        image: Image metadata
+        xml: XML metadata
+        text: Text/Markdown metadata
+        ocr: OCR processing metadata
+        image_preprocessing: Image preprocessing metadata
+        json_schema: JSON schema for structured extraction
+        error: Error metadata for batch operations
+
     Example:
         >>> result = extract_file("document.pdf")
         >>> metadata: Metadata = result["metadata"]
@@ -179,13 +197,11 @@ class Metadata(TypedDict, total=False):
         ...     entities = metadata["entities"]
     """
 
-    # Common fields
     language: str | None
     date: str | None
     subject: str | None
     format: str | None
 
-    # Format-specific metadata
     pdf: PdfMetadata | None
     excel: ExcelMetadata | None
     email: EmailMetadata | None
@@ -195,14 +211,11 @@ class Metadata(TypedDict, total=False):
     xml: XmlMetadata | None
     text: TextMetadata | None
 
-    # Processing metadata
     ocr: OcrMetadata | None
     image_preprocessing: ImagePreprocessingMetadata | None
 
-    # Structured data
     json_schema: Any | None
 
-    # Error metadata
     error: ErrorMetadata | None
 
 

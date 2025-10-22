@@ -7,7 +7,7 @@ export default defineConfig({
 		pool: "threads",
 		poolOptions: {
 			threads: {
-				singleThread: true, // Run in single thread - NAPI-RS has concurrency issues
+				singleThread: true,
 			},
 		},
 		coverage: {
@@ -18,9 +18,9 @@ export default defineConfig({
 				"dist",
 				"*.config.*",
 				"**/*.spec.ts",
-				"**/types.ts", // Type definitions only
-				"**/cli.ts", // CLI wrapper - thin subprocess proxy
-				"tests/helpers/**", // Test infrastructure
+				"**/types.ts",
+				"**/cli.ts",
+				"tests/helpers/**",
 			],
 			thresholds: {
 				lines: 90,
@@ -29,7 +29,7 @@ export default defineConfig({
 				statements: 90,
 			},
 		},
-		testTimeout: 30000, // 30s for OCR tests
+		testTimeout: 30000,
 		hookTimeout: 10000,
 	},
 });

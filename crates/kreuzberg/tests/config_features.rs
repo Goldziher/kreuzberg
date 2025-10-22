@@ -8,10 +8,6 @@ use kreuzberg::core::extractor::extract_bytes;
 
 mod helpers;
 
-// ============================================================================
-// Chunking Tests (4 tests)
-// ============================================================================
-
 /// Test chunking enabled - text split into chunks.
 #[tokio::test]
 async fn test_chunking_enabled() {
@@ -23,7 +19,6 @@ async fn test_chunking_enabled() {
         ..Default::default()
     };
 
-    // Long text that should be split into multiple chunks
     let text = "This is a long text that should be split into multiple chunks. ".repeat(10);
     let text_bytes = text.as_bytes();
 
@@ -31,12 +26,10 @@ async fn test_chunking_enabled() {
         .await
         .expect("Should extract successfully");
 
-    // Verify chunks field is populated
     assert!(result.chunks.is_some(), "Chunks should be present");
     let chunks = result.chunks.unwrap();
     assert!(chunks.len() > 1, "Should have multiple chunks");
 
-    // Verify chunk_count metadata for backward compatibility
     assert!(result.metadata.additional.contains_key("chunk_count"));
     let chunk_count = result.metadata.additional.get("chunk_count").unwrap();
     assert_eq!(
@@ -45,11 +38,10 @@ async fn test_chunking_enabled() {
         "Chunks length should match chunk_count metadata"
     );
 
-    // Verify each chunk respects max_chars
     for chunk in &chunks {
         assert!(!chunk.is_empty(), "Chunk should not be empty");
         assert!(
-            chunk.len() <= 50 + 10, // max_chars + some tolerance for overlap
+            chunk.len() <= 50 + 10,
             "Chunk length {} exceeds max_chars + overlap",
             chunk.len()
         );
@@ -67,27 +59,23 @@ async fn test_chunking_with_overlap() {
         ..Default::default()
     };
 
-    let text = "a".repeat(250); // 250 characters
+    let text = "a".repeat(250);
     let text_bytes = text.as_bytes();
 
     let result = extract_bytes(text_bytes, "text/plain", &config)
         .await
         .expect("Should extract successfully");
 
-    // Verify chunks field with overlap
     assert!(result.chunks.is_some(), "Chunks should be present");
     let chunks = result.chunks.unwrap();
     assert!(chunks.len() >= 2, "Should have at least 2 chunks");
 
-    // Verify chunk_count metadata
     assert!(result.metadata.additional.contains_key("chunk_count"));
 
-    // Verify overlap exists between consecutive chunks
     if chunks.len() >= 2 {
         let chunk1 = &chunks[0];
         let chunk2 = &chunks[1];
 
-        // Check that chunk2 starts with some content from the end of chunk1 (overlap)
         let chunk1_end = &chunk1[chunk1.len().saturating_sub(20)..];
         assert!(
             chunk2.starts_with(chunk1_end) || chunk1_end.starts_with(&chunk2[..chunk1_end.len().min(chunk2.len())]),
@@ -107,25 +95,22 @@ async fn test_chunking_custom_sizes() {
         ..Default::default()
     };
 
-    let text = "Custom chunk test. ".repeat(50); // ~950 characters
+    let text = "Custom chunk test. ".repeat(50);
     let text_bytes = text.as_bytes();
 
     let result = extract_bytes(text_bytes, "text/plain", &config)
         .await
         .expect("Should extract successfully");
 
-    // Verify custom chunking settings applied
     assert!(result.chunks.is_some(), "Chunks should be present");
     let chunks = result.chunks.unwrap();
     assert!(!chunks.is_empty(), "Should have at least 1 chunk");
 
-    // Verify chunk_count metadata
     assert!(result.metadata.additional.contains_key("chunk_count"));
 
-    // Verify each chunk respects the custom max_chars (200)
     for chunk in &chunks {
         assert!(
-            chunk.len() <= 200 + 50, // max_chars + overlap tolerance
+            chunk.len() <= 200 + 50,
             "Chunk length {} exceeds custom max_chars + overlap",
             chunk.len()
         );
@@ -136,7 +121,7 @@ async fn test_chunking_custom_sizes() {
 #[tokio::test]
 async fn test_chunking_disabled() {
     let config = ExtractionConfig {
-        chunking: None, // Chunking disabled
+        chunking: None,
         ..Default::default()
     };
 
@@ -147,21 +132,15 @@ async fn test_chunking_disabled() {
         .await
         .expect("Should extract successfully");
 
-    // Verify no chunking occurred
     assert!(result.chunks.is_none(), "Should not have chunks when chunking disabled");
     assert!(
         !result.metadata.additional.contains_key("chunk_count"),
         "Should not have chunk_count when chunking disabled"
     );
 
-    // Content should still be extracted normally
     assert!(!result.content.is_empty(), "Content should be extracted");
     assert!(result.content.contains("long text"), "Should contain original text");
 }
-
-// ============================================================================
-// Language Detection Tests (4 tests)
-// ============================================================================
 
 /// Test language detection for single language document.
 #[tokio::test]
@@ -182,7 +161,6 @@ async fn test_language_detection_single() {
         .await
         .expect("Should extract successfully");
 
-    // Verify language detection
     assert!(result.detected_languages.is_some(), "Should detect language");
     let languages = result.detected_languages.unwrap();
     assert!(!languages.is_empty(), "Should detect at least one language");
@@ -201,7 +179,6 @@ async fn test_language_detection_multiple() {
         ..Default::default()
     };
 
-    // Multi-language text (English + Spanish)
     let text = "Hello world! This is English. ".repeat(10) + "Hola mundo! Este es español. ".repeat(10).as_str();
     let text_bytes = text.as_bytes();
 
@@ -209,7 +186,6 @@ async fn test_language_detection_multiple() {
         .await
         .expect("Should extract successfully");
 
-    // Verify multiple language detection
     assert!(result.detected_languages.is_some(), "Should detect languages");
     let languages = result.detected_languages.unwrap();
     assert!(!languages.is_empty(), "Should detect at least one language");
@@ -221,7 +197,7 @@ async fn test_language_detection_confidence() {
     let config = ExtractionConfig {
         language_detection: Some(LanguageDetectionConfig {
             enabled: true,
-            min_confidence: 0.9, // High confidence threshold
+            min_confidence: 0.9,
             detect_multiple: false,
         }),
         ..Default::default()
@@ -234,8 +210,6 @@ async fn test_language_detection_confidence() {
         .await
         .expect("Should extract successfully");
 
-    // Verify language detection with high confidence threshold
-    // Note: Detection may return None for short text with high threshold
     if let Some(languages) = result.detected_languages {
         assert!(!languages.is_empty());
     }
@@ -246,7 +220,7 @@ async fn test_language_detection_confidence() {
 async fn test_language_detection_disabled() {
     let config = ExtractionConfig {
         language_detection: Some(LanguageDetectionConfig {
-            enabled: false, // Disabled
+            enabled: false,
             min_confidence: 0.8,
             detect_multiple: false,
         }),
@@ -260,16 +234,11 @@ async fn test_language_detection_disabled() {
         .await
         .expect("Should extract successfully");
 
-    // Verify language detection did not run
     assert!(
         result.detected_languages.is_none(),
         "Should not detect language when disabled"
     );
 }
-
-// ============================================================================
-// Caching Tests (4 tests)
-// ============================================================================
 
 /// Test cache hit behavior - second extraction from cache.
 #[tokio::test]
@@ -282,17 +251,14 @@ async fn test_cache_hit_behavior() {
     let text = "Test text for caching behavior.";
     let text_bytes = text.as_bytes();
 
-    // First extraction (cache miss)
     let result1 = extract_bytes(text_bytes, "text/plain", &config)
         .await
         .expect("First extraction should succeed");
 
-    // Second extraction (should hit cache for OCR results if applicable)
     let result2 = extract_bytes(text_bytes, "text/plain", &config)
         .await
         .expect("Second extraction should succeed");
 
-    // Verify both extractions returned same content
     assert_eq!(result1.content, result2.content);
 }
 
@@ -315,15 +281,12 @@ async fn test_cache_miss_invalidation() {
         .await
         .expect("Second extraction should succeed");
 
-    // Verify different content (cache miss for different input)
     assert_ne!(result1.content, result2.content);
 }
 
 /// Test custom cache directory (Note: OCR cache uses hardcoded directory).
 #[tokio::test]
 async fn test_custom_cache_directory() {
-    // Note: Current implementation uses hardcoded cache directory
-    // This test verifies cache functionality works regardless
     let config = ExtractionConfig {
         use_cache: true,
         ..Default::default()
@@ -343,7 +306,7 @@ async fn test_custom_cache_directory() {
 #[tokio::test]
 async fn test_cache_disabled() {
     let config = ExtractionConfig {
-        use_cache: false, // Cache disabled
+        use_cache: false,
         ..Default::default()
     };
 
@@ -358,13 +321,8 @@ async fn test_cache_disabled() {
         .await
         .expect("Second extraction should succeed");
 
-    // Both extractions should work (no cache errors)
     assert_eq!(result1.content, result2.content);
 }
-
-// ============================================================================
-// Token Reduction Tests (3 tests)
-// ============================================================================
 
 /// Test token reduction in aggressive mode.
 #[tokio::test]
@@ -384,7 +342,6 @@ async fn test_token_reduction_aggressive() {
         .await
         .expect("Should extract successfully");
 
-    // Verify extraction succeeded (token reduction is applied in pipeline if feature enabled)
     assert!(!result.content.is_empty());
 }
 
@@ -427,13 +384,8 @@ async fn test_token_reduction_disabled() {
         .await
         .expect("Should extract successfully");
 
-    // Text should be extracted without modification
     assert!(result.content.contains("without token reduction"));
 }
-
-// ============================================================================
-// Quality Processing Tests (3 tests)
-// ============================================================================
 
 /// Test quality processing enabled - quality scoring applied.
 #[tokio::test]
@@ -450,7 +402,6 @@ async fn test_quality_processing_enabled() {
         .await
         .expect("Should extract successfully");
 
-    // Verify quality score is present
     if let Some(score) = result.metadata.additional.get("quality_score") {
         let score_value = score.as_f64().unwrap();
         assert!((0.0..=1.0).contains(&score_value));
@@ -467,19 +418,16 @@ async fn test_quality_threshold_filtering() {
         ..Default::default()
     };
 
-    // High quality text
     let high_quality = "This is a well-structured document. It has proper sentences. And good formatting.";
     let result_high = extract_bytes(high_quality.as_bytes(), "text/plain", &config)
         .await
         .expect("Should extract successfully");
 
-    // Low quality text with OCR artifacts
     let low_quality = "a  b  c  d  ....... word123mixed .  . ";
     let result_low = extract_bytes(low_quality.as_bytes(), "text/plain", &config)
         .await
         .expect("Should extract successfully");
 
-    // Verify quality scores exist and are in valid range
     assert!(
         result_high.metadata.additional.contains_key("quality_score"),
         "High quality should have score"
@@ -504,12 +452,8 @@ async fn test_quality_threshold_filtering() {
         .as_f64()
         .unwrap();
 
-    // Verify scores are in valid range
     assert!((0.0..=1.0).contains(&score_high));
     assert!((0.0..=1.0).contains(&score_low));
-
-    // High quality should generally score higher than low quality (though not always guaranteed for short text)
-    // The important thing is that quality processing is working
 }
 
 /// Test quality processing disabled.
@@ -527,7 +471,6 @@ async fn test_quality_processing_disabled() {
         .await
         .expect("Should extract successfully");
 
-    // No quality score should be present
     assert!(!result.metadata.additional.contains_key("quality_score"));
     assert!(!result.content.is_empty());
 }

@@ -12,12 +12,9 @@ pub fn resize_image(image: &DynamicImage, new_width: u32, new_height: u32, scale
 
     let mut dst_image = FirImage::new(new_width, new_height, PixelType::U8x3);
 
-    // Choose algorithm based on scale factor
     let algorithm = if scale_factor < 1.0 {
-        // Downscaling: use Lanczos3 for better quality
         ResizeAlg::Convolution(FilterType::Lanczos3)
     } else {
-        // Upscaling: use CatmullRom for smoother results
         ResizeAlg::Convolution(FilterType::CatmullRom)
     };
 

@@ -18,10 +18,6 @@ use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
 use kreuzberg::extract_file_sync;
 use kreuzberg::types::TesseractConfig;
 
-// ============================================================================
-// Language Configuration Tests
-// ============================================================================
-
 #[test]
 fn test_ocr_language_english() {
     if skip_if_missing("images/test_hello_world.png") {
@@ -43,11 +39,8 @@ fn test_ocr_language_english() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
-
-    // English text should be extracted
 }
 
 #[test]
@@ -60,7 +53,7 @@ fn test_ocr_language_german() {
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
-            language: "deu".to_string(), // German language code
+            language: "deu".to_string(),
             tesseract_config: None,
         }),
         force_ocr: false,
@@ -69,13 +62,10 @@ fn test_ocr_language_german() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // German language pack may not be installed
-    // Test verifies language config is accepted and propagated
     match result {
         Ok(extraction_result) => {
             assert_mime_type(&extraction_result, "image/png");
 
-            // Verify ExtractionResult structure
             assert!(
                 extraction_result.chunks.is_none(),
                 "Chunks should be None without chunking config"
@@ -86,7 +76,6 @@ fn test_ocr_language_german() {
             );
         }
         Err(e) => {
-            // If German language pack not installed, this is expected
             eprintln!("German OCR failed (language pack may not be installed): {}", e);
         }
     }
@@ -102,7 +91,7 @@ fn test_ocr_language_multiple() {
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
-            language: "eng+kor".to_string(), // Multiple languages
+            language: "eng+kor".to_string(),
             tesseract_config: None,
         }),
         force_ocr: false,
@@ -111,12 +100,10 @@ fn test_ocr_language_multiple() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Korean language pack may not be installed
     match result {
         Ok(extraction_result) => {
             assert_mime_type(&extraction_result, "image/png");
 
-            // Verify ExtractionResult structure
             assert!(
                 extraction_result.chunks.is_none(),
                 "Chunks should be None without chunking config"
@@ -132,10 +119,6 @@ fn test_ocr_language_multiple() {
     }
 }
 
-// ============================================================================
-// PSM (Page Segmentation Mode) Tests
-// ============================================================================
-
 #[test]
 fn test_ocr_psm_auto() {
     if skip_if_missing("images/ocr_image.jpg") {
@@ -148,7 +131,7 @@ fn test_ocr_psm_auto() {
             backend: "tesseract".to_string(),
             language: "eng".to_string(),
             tesseract_config: Some(TesseractConfig {
-                psm: 3, // Fully automatic page segmentation
+                psm: 3,
                 ..Default::default()
             }),
         }),
@@ -160,7 +143,6 @@ fn test_ocr_psm_auto() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
@@ -177,7 +159,7 @@ fn test_ocr_psm_single_block() {
             backend: "tesseract".to_string(),
             language: "eng".to_string(),
             tesseract_config: Some(TesseractConfig {
-                psm: 6, // Assume a single uniform block of text
+                psm: 6,
                 ..Default::default()
             }),
         }),
@@ -189,7 +171,6 @@ fn test_ocr_psm_single_block() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
@@ -206,7 +187,7 @@ fn test_ocr_psm_single_line() {
             backend: "tesseract".to_string(),
             language: "eng".to_string(),
             tesseract_config: Some(TesseractConfig {
-                psm: 7, // Treat image as a single text line
+                psm: 7,
                 ..Default::default()
             }),
         }),
@@ -218,14 +199,9 @@ fn test_ocr_psm_single_line() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
-
-// ============================================================================
-// Force OCR Mode Tests
-// ============================================================================
 
 #[test]
 fn test_force_ocr_on_text_pdf() {
@@ -240,7 +216,7 @@ fn test_force_ocr_on_text_pdf() {
             language: "eng".to_string(),
             tesseract_config: None,
         }),
-        force_ocr: true, // Force OCR even though PDF has text layer
+        force_ocr: true,
         ..Default::default()
     };
 
@@ -249,7 +225,6 @@ fn test_force_ocr_on_text_pdf() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -270,7 +245,7 @@ fn test_force_ocr_disabled() {
             language: "eng".to_string(),
             tesseract_config: None,
         }),
-        force_ocr: false, // Don't force OCR if text layer exists
+        force_ocr: false,
         ..Default::default()
     };
 
@@ -279,17 +254,12 @@ fn test_force_ocr_disabled() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
-
-// ============================================================================
-// Table Detection Configuration Tests
-// ============================================================================
 
 #[test]
 fn test_table_detection_enabled() {
@@ -318,11 +288,8 @@ fn test_table_detection_enabled() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
-
-    // Table detection may or may not find tables depending on image quality
 }
 
 #[test]
@@ -349,14 +316,9 @@ fn test_table_detection_disabled() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
-
-// ============================================================================
-// Tesseract Boolean Configuration Tests
-// ============================================================================
 
 #[test]
 fn test_language_model_ngram_configuration() {
@@ -383,7 +345,6 @@ fn test_language_model_ngram_configuration() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
@@ -413,7 +374,6 @@ fn test_dictionary_correction_enabled() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
@@ -442,16 +402,9 @@ fn test_character_whitelist() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
-
-    // Output should only contain whitelisted characters
 }
-
-// ============================================================================
-// Cache Configuration Tests
-// ============================================================================
 
 #[test]
 fn test_ocr_cache_enabled() {
@@ -474,14 +427,12 @@ fn test_ocr_cache_enabled() {
         ..Default::default()
     };
 
-    // Extract twice to test caching
     let result1 = extract_file_sync(&file_path, None, &config).expect("First extraction should succeed");
     let result2 = extract_file_sync(&file_path, None, &config).expect("Second extraction should succeed (cached)");
 
     assert_mime_type(&result1, "image/jpeg");
     assert_mime_type(&result2, "image/jpeg");
 
-    // Verify ExtractionResult structure for both
     assert!(
         result1.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -492,8 +443,6 @@ fn test_ocr_cache_enabled() {
         "Chunks should be None without chunking config"
     );
     assert!(result2.detected_languages.is_none(), "Language detection not enabled");
-
-    // Second extraction should be faster due to caching
 }
 
 #[test]
@@ -521,14 +470,9 @@ fn test_ocr_cache_disabled() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
-
-// ============================================================================
-// Configuration Combination Tests
-// ============================================================================
 
 #[test]
 fn test_complex_configuration_combination() {
@@ -561,7 +505,6 @@ fn test_complex_configuration_combination() {
     assert_mime_type(&result, "image/jpeg");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }

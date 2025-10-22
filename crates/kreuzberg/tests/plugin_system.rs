@@ -13,10 +13,6 @@ use kreuzberg::types::{ExtractionResult, Metadata};
 use kreuzberg::{KreuzbergError, Result};
 use std::sync::Arc;
 
-// ============================================================================
-// Mock Implementations for Testing
-// ============================================================================
-
 struct FailingExtractor {
     name: String,
     should_fail_init: bool,
@@ -97,7 +93,6 @@ impl Plugin for MetadataModifyingProcessor {
 #[async_trait]
 impl PostProcessor for MetadataModifyingProcessor {
     async fn process(&self, result: &mut ExtractionResult, _: &ExtractionConfig) -> Result<()> {
-        // Add processor name to content to track execution order
         result.content.push_str(&format!(" [{}]", self.name));
         Ok(())
     }
@@ -179,10 +174,6 @@ impl Validator for StrictValidator {
     }
 }
 
-// ============================================================================
-// DocumentExtractor Plugin Tests (10 tests)
-// ============================================================================
-
 #[test]
 fn test_extractor_registration_failure() {
     let mut registry = DocumentExtractorRegistry::new();
@@ -235,7 +226,6 @@ fn test_extractor_duplicate_registration() {
     registry.register(extractor1).unwrap();
     registry.register(extractor2).unwrap();
 
-    // Both should be registered (last one wins for same priority)
     let names = registry.list();
     assert_eq!(names.len(), 1);
     assert!(names.contains(&"same-name".to_string()));
@@ -320,7 +310,6 @@ fn test_extractor_priority_ordering_complex() {
         }
     }
 
-    // Register 5 extractors with different priorities
     for priority in [10, 50, 100, 25, 75] {
         let extractor = Arc::new(PriorityExtractor {
             name: format!("priority-{}", priority),
@@ -329,7 +318,6 @@ fn test_extractor_priority_ordering_complex() {
         registry.register(extractor).unwrap();
     }
 
-    // Highest priority (100) should be selected
     let selected = registry.get("text/plain").unwrap();
     assert_eq!(selected.name(), "priority-100");
     assert_eq!(selected.priority(), 100);
@@ -339,7 +327,6 @@ fn test_extractor_priority_ordering_complex() {
 fn test_extractor_wildcard_vs_exact_priority() {
     let mut registry = DocumentExtractorRegistry::new();
 
-    // High priority wildcard
     let _wildcard = Arc::new(FailingExtractor {
         name: "wildcard-high".to_string(),
         should_fail_init: false,
@@ -381,7 +368,6 @@ fn test_extractor_wildcard_vs_exact_priority() {
         should_fail_extract: false,
     }));
 
-    // Low priority exact match
     let exact = Arc::new(FailingExtractor {
         name: "exact-low".to_string(),
         should_fail_init: false,
@@ -391,7 +377,6 @@ fn test_extractor_wildcard_vs_exact_priority() {
     registry.register(wildcard_arc).unwrap();
     registry.register(exact).unwrap();
 
-    // Exact match should be preferred even with lower priority
     let selected = registry.get("text/plain").unwrap();
     assert_eq!(selected.name(), "exact-low");
 }
@@ -414,7 +399,7 @@ fn test_extractor_special_characters_mime() {
 fn test_extractor_remove_nonexistent() {
     let mut registry = DocumentExtractorRegistry::new();
     let result = registry.remove("nonexistent");
-    assert!(result.is_ok()); // Removing nonexistent is OK
+    assert!(result.is_ok());
 }
 
 #[test]
@@ -430,7 +415,6 @@ fn test_extractor_list_after_partial_removal() {
         registry.register(extractor).unwrap();
     }
 
-    // Remove middle extractors
     registry.remove("extractor-2").unwrap();
     registry.remove("extractor-3").unwrap();
 
@@ -441,15 +425,10 @@ fn test_extractor_list_after_partial_removal() {
     assert!(names.contains(&"extractor-4".to_string()));
 }
 
-// ============================================================================
-// PostProcessor Plugin Tests (8 tests)
-// ============================================================================
-
 #[tokio::test]
 async fn test_processor_execution_order_within_stage() {
     let mut registry = PostProcessorRegistry::new();
 
-    // Register 3 processors with different priorities in same stage
     let high = Arc::new(MetadataModifyingProcessor {
         name: "high".to_string(),
         stage: ProcessingStage::Early,
@@ -472,7 +451,6 @@ async fn test_processor_execution_order_within_stage() {
     let processors = registry.get_for_stage(ProcessingStage::Early);
     assert_eq!(processors.len(), 3);
 
-    // Execute in order
     let mut result = ExtractionResult {
         content: "start".to_string(),
         mime_type: "text/plain".to_string(),
@@ -487,7 +465,6 @@ async fn test_processor_execution_order_within_stage() {
         processor.process(&mut result, &config).await.unwrap();
     }
 
-    // Should execute in priority order: high, medium, low
     assert_eq!(result.content, "start [high] [medium] [low]");
 }
 
@@ -600,7 +577,6 @@ fn test_processor_same_priority_same_stage() {
         stage: ProcessingStage::Early,
     });
 
-    // Same priority
     registry.register(proc1, 50).unwrap();
     registry.register(proc2, 50).unwrap();
 
@@ -659,10 +635,6 @@ fn test_processor_shutdown_clears_all_stages() {
     assert_eq!(registry.get_for_stage(ProcessingStage::Late).len(), 0);
 }
 
-// ============================================================================
-// Validator Plugin Tests (5 tests)
-// ============================================================================
-
 #[tokio::test]
 async fn test_validator_content_validation() {
     let mut registry = ValidatorRegistry::new();
@@ -679,7 +651,6 @@ async fn test_validator_content_validation() {
 
     let config = ExtractionConfig::default();
 
-    // Short content should fail
     let short_result = ExtractionResult {
         content: "short".to_string(),
         mime_type: "text/plain".to_string(),
@@ -692,7 +663,6 @@ async fn test_validator_content_validation() {
     let validation = validators[0].validate(&short_result, &config).await;
     assert!(matches!(validation, Err(KreuzbergError::Validation { .. })));
 
-    // Long content should pass
     let long_result = ExtractionResult {
         content: "this is long enough content".to_string(),
         mime_type: "text/plain".to_string(),
@@ -797,7 +767,6 @@ fn test_validator_priority_ordering() {
     let low = Arc::new(LowPriorityValidator);
     let high_priority = Arc::new(HighPriorityValidator);
 
-    // Register in random order
     registry.register(medium).unwrap();
     registry.register(low).unwrap();
     registry.register(high_priority).unwrap();
@@ -870,14 +839,9 @@ fn test_validator_remove_and_reregister() {
     registry.remove("validator").unwrap();
     assert_eq!(registry.get_all().len(), 0);
 
-    // Re-register same validator
     registry.register(validator).unwrap();
     assert_eq!(registry.get_all().len(), 1);
 }
-
-// ============================================================================
-// Cross-Registry Integration Tests (2 tests)
-// ============================================================================
 
 #[test]
 fn test_multiple_registries_independence() {
@@ -886,7 +850,6 @@ fn test_multiple_registries_independence() {
     let mut processor_registry = PostProcessorRegistry::new();
     let mut validator_registry = ValidatorRegistry::new();
 
-    // Register something in each
     let extractor = Arc::new(FailingExtractor {
         name: "test-extractor".to_string(),
         should_fail_init: false,
@@ -907,7 +870,6 @@ fn test_multiple_registries_independence() {
     processor_registry.register(processor, 50).unwrap();
     validator_registry.register(validator).unwrap();
 
-    // Each registry should be independent
     assert_eq!(ocr_registry.list().len(), 0);
     assert_eq!(extractor_registry.list().len(), 1);
     assert_eq!(processor_registry.list().len(), 1);
@@ -921,7 +883,6 @@ fn test_shutdown_all_registries() {
     let mut processor_registry = PostProcessorRegistry::new();
     let mut validator_registry = ValidatorRegistry::new();
 
-    // Register plugins in each
     let extractor = Arc::new(FailingExtractor {
         name: "test-extractor".to_string(),
         should_fail_init: false,
@@ -942,13 +903,11 @@ fn test_shutdown_all_registries() {
     processor_registry.register(processor, 50).unwrap();
     validator_registry.register(validator).unwrap();
 
-    // Shutdown all
     ocr_registry.shutdown_all().unwrap();
     extractor_registry.shutdown_all().unwrap();
     processor_registry.shutdown_all().unwrap();
     validator_registry.shutdown_all().unwrap();
 
-    // All should be empty
     assert_eq!(ocr_registry.list().len(), 0);
     assert_eq!(extractor_registry.list().len(), 0);
     assert_eq!(processor_registry.list().len(), 0);

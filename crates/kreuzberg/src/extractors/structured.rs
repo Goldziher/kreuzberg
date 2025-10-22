@@ -48,7 +48,6 @@ impl DocumentExtractor for StructuredExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Parse based on MIME type
         let structured_result = match mime_type {
             "application/json" | "text/json" => crate::extraction::structured::parse_json(content, None)?,
             "application/x-yaml" | "text/yaml" | "text/x-yaml" => crate::extraction::structured::parse_yaml(content)?,
@@ -56,14 +55,12 @@ impl DocumentExtractor for StructuredExtractor {
             _ => return Err(crate::KreuzbergError::UnsupportedFormat(mime_type.to_string())),
         };
 
-        // Build metadata with format in common field, everything else in additional
         let mut additional = std::collections::HashMap::new();
         additional.insert(
             "field_count".to_string(),
             serde_json::json!(structured_result.text_fields.len()),
         );
 
-        // Include the existing metadata from structured result
         for (key, value) in structured_result.metadata {
             additional.insert(key, serde_json::json!(value));
         }

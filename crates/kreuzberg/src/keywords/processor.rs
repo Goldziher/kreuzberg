@@ -48,43 +48,36 @@ impl Plugin for KeywordExtractor {
 #[async_trait]
 impl PostProcessor for KeywordExtractor {
     async fn process(&self, result: &mut ExtractionResult, config: &ExtractionConfig) -> Result<()> {
-        // Get keyword config - if not present, skip processing
         let keyword_config = match &config.keywords {
             Some(cfg) => cfg,
-            None => return Ok(()), // No keyword extraction configured
+            None => return Ok(()),
         };
 
-        // Skip if content is too short (less than 10 words)
         let word_count = result.content.split_whitespace().count();
         if word_count < 10 {
             return Ok(());
         }
 
-        // Extract keywords using configured algorithm
         let keywords = super::extract_keywords(&result.content, keyword_config)
             .map_err(|e| KreuzbergError::Other(format!("Keyword extraction failed: {}", e)))?;
 
-        // Store in metadata
         result
             .metadata
             .additional
-            .insert("keywords".to_string(), serde_json::to_value(&keywords).unwrap());
+            .insert("keywords".to_string(), serde_json::to_value(&keywords)?);
 
         Ok(())
     }
 
     fn processing_stage(&self) -> ProcessingStage {
-        // Run in Middle stage - after language detection, before late-stage hooks
         ProcessingStage::Middle
     }
 
     fn should_process(&self, _result: &ExtractionResult, config: &ExtractionConfig) -> bool {
-        // Only process if keyword extraction is configured
         config.keywords.is_some()
     }
 
     fn estimated_duration_ms(&self, result: &ExtractionResult) -> u64 {
-        // Rough estimate: ~1ms per 100 words
         let word_count = result.content.split_whitespace().count();
         (word_count as u64) / 100 + 10
     }
@@ -122,7 +115,6 @@ machine learning that uses neural networks with multiple layers.
 
         processor.process(&mut result, &config).await.unwrap();
 
-        // Should have added keywords to metadata
         assert!(result.metadata.additional.contains_key("keywords"));
         let keywords = result.metadata.additional.get("keywords").unwrap();
         assert!(keywords.is_array());
@@ -150,7 +142,6 @@ machine learning that uses neural networks with multiple layers.
 
         processor.process(&mut result, &config).await.unwrap();
 
-        // Should have added keywords to metadata
         assert!(result.metadata.additional.contains_key("keywords"));
         let keywords = result.metadata.additional.get("keywords").unwrap();
         assert!(keywords.is_array());
@@ -161,7 +152,7 @@ machine learning that uses neural networks with multiple layers.
     #[tokio::test]
     async fn test_keyword_processor_no_config() {
         let processor = KeywordExtractor;
-        let config = ExtractionConfig::default(); // No keywords config
+        let config = ExtractionConfig::default();
 
         let mut result = ExtractionResult {
             content: TEST_TEXT.to_string(),
@@ -174,7 +165,6 @@ machine learning that uses neural networks with multiple layers.
 
         processor.process(&mut result, &config).await.unwrap();
 
-        // Should NOT have added keywords (no config)
         assert!(!result.metadata.additional.contains_key("keywords"));
     }
 
@@ -188,7 +178,7 @@ machine learning that uses neural networks with multiple layers.
         };
 
         let mut result = ExtractionResult {
-            content: "Short text".to_string(), // Less than 10 words
+            content: "Short text".to_string(),
             mime_type: "text/plain".to_string(),
             metadata: Metadata::default(),
             tables: vec![],
@@ -198,7 +188,6 @@ machine learning that uses neural networks with multiple layers.
 
         processor.process(&mut result, &config).await.unwrap();
 
-        // Should NOT extract keywords from very short text
         assert!(!result.metadata.additional.contains_key("keywords"));
     }
 
@@ -231,14 +220,12 @@ machine learning that uses neural networks with multiple layers.
             chunks: None,
         };
 
-        // Should process with keyword config
         let config_with_keywords = ExtractionConfig {
             keywords: Some(KeywordConfig::yake()),
             ..Default::default()
         };
         assert!(processor.should_process(&result, &config_with_keywords));
 
-        // Should NOT process without keyword config
         let config_without_keywords = ExtractionConfig::default();
         assert!(!processor.should_process(&result, &config_without_keywords));
     }
@@ -257,7 +244,7 @@ machine learning that uses neural networks with multiple layers.
         };
 
         let long_result = ExtractionResult {
-            content: "word ".repeat(1000), // 1000 words
+            content: "word ".repeat(1000),
             mime_type: "text/plain".to_string(),
             metadata: Metadata::default(),
             tables: vec![],
@@ -268,7 +255,6 @@ machine learning that uses neural networks with multiple layers.
         let short_duration = processor.estimated_duration_ms(&short_result);
         let long_duration = processor.estimated_duration_ms(&long_result);
 
-        // Longer text should have higher estimated duration
         assert!(long_duration > short_duration);
     }
 }

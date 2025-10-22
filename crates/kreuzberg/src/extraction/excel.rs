@@ -8,12 +8,10 @@ use crate::error::{KreuzbergError, Result};
 use crate::types::{ExcelSheet, ExcelWorkbook};
 
 pub fn read_excel_file(file_path: &str) -> Result<ExcelWorkbook> {
-    // Note: Calamine incorrectly raises IO errors for format detection issues
     // We analyze the error and only wrap format errors, letting real IO errors bubble up ~keep
     let workbook = match open_workbook_auto(Path::new(file_path)) {
         Ok(wb) => wb,
         Err(calamine::Error::Io(io_err)) => {
-            // Check if it's a format detection error (InvalidData) vs real IO error
             if io_err.kind() == std::io::ErrorKind::InvalidData {
                 return Err(KreuzbergError::parsing(format!(
                     "Cannot detect Excel file format: {}",

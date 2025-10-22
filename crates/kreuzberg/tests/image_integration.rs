@@ -17,10 +17,6 @@ use helpers::*;
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::extract_file_sync;
 
-// ============================================================================
-// Basic Image Extraction Tests (without OCR)
-// ============================================================================
-
 #[test]
 fn test_jpg_image_metadata() {
     if skip_if_missing("images/example.jpg") {
@@ -33,11 +29,8 @@ fn test_jpg_image_metadata() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
-
-    // Image without OCR may have minimal content
 }
 
 #[test]
@@ -52,7 +45,6 @@ fn test_png_image_metadata() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
@@ -69,14 +61,9 @@ fn test_bmp_image_format() {
 
     assert_mime_type(&result, "image/bmp");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
-
-// ============================================================================
-// OCR Text Extraction Tests
-// ============================================================================
 
 #[test]
 fn test_ocr_simple_text() {
@@ -91,12 +78,9 @@ fn test_ocr_simple_text() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // OCR should extract some text
-    // Note: We don't assert exact text since OCR accuracy varies
     if !result.content.trim().is_empty() {
         assert_min_content_length(&result, 5);
     }
@@ -115,11 +99,9 @@ fn test_ocr_document_image() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Document image should have text content
     if !result.content.trim().is_empty() {
         assert_min_content_length(&result, 10);
     }
@@ -138,11 +120,9 @@ fn test_ocr_layout_parser() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Layout parser images typically have substantial text
     if !result.content.trim().is_empty() {
         assert_min_content_length(&result, 20);
     }
@@ -161,19 +141,13 @@ fn test_ocr_invoice_image() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Invoice images should have text content
     if !result.content.trim().is_empty() {
         assert_min_content_length(&result, 10);
     }
 }
-
-// ============================================================================
-// Table Detection in Images
-// ============================================================================
 
 #[test]
 fn test_table_image_simple() {
@@ -188,12 +162,8 @@ fn test_table_image_simple() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
-
-    // Table images should extract text
-    // Table detection may or may not be triggered depending on implementation
 }
 
 #[test]
@@ -210,14 +180,9 @@ fn test_table_image_complex() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
-
-// ============================================================================
-// Multi-Language OCR Tests
-// ============================================================================
 
 #[test]
 fn test_ocr_multilang_english_korean() {
@@ -232,12 +197,8 @@ fn test_ocr_multilang_english_korean() {
 
     assert_mime_type(&result, "image/png");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
-
-    // Mixed language text - OCR may extract some content
-    // English OCR should at least extract English portions
 }
 
 #[test]
@@ -253,12 +214,8 @@ fn test_ocr_chinese_simplified() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
-
-    // Chinese text with English OCR may not extract well
-    // This tests that OCR doesn't crash on non-English scripts
 }
 
 #[test]
@@ -274,17 +231,9 @@ fn test_ocr_japanese_vertical() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
-
-    // Japanese vertical text with English OCR may not extract well
-    // This tests that OCR handles different text orientations gracefully
 }
-
-// ============================================================================
-// Edge Cases: Images Without Text
-// ============================================================================
 
 #[test]
 fn test_image_no_text() {
@@ -299,10 +248,6 @@ fn test_image_no_text() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
-
-    // Images without text should extract successfully but have minimal/no content
-    // This is expected behavior - not an error
 }

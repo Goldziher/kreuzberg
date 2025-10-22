@@ -54,7 +54,6 @@ impl PythonOcrBackend {
     pub fn new(py: Python<'_>, python_obj: Py<PyAny>) -> PyResult<Self> {
         let obj = python_obj.bind(py);
 
-        // Validate required methods
         if !obj.hasattr("name")? {
             return Err(pyo3::exceptions::PyAttributeError::new_err(
                 "OCR backend must have a 'name()' method",
@@ -71,7 +70,6 @@ impl PythonOcrBackend {
             ));
         }
 
-        // Get backend name
         let name: String = obj.call_method0("name")?.extract()?;
         if name.is_empty() {
             return Err(pyo3::exceptions::PyValueError::new_err(
@@ -79,7 +77,6 @@ impl PythonOcrBackend {
             ));
         }
 
-        // Get supported languages
         let supported_languages: Vec<String> = obj.call_method0("supported_languages")?.extract()?;
         if supported_languages.is_empty() {
             return Err(pyo3::exceptions::PyValueError::new_err(
@@ -101,8 +98,6 @@ impl Plugin for PythonOcrBackend {
     }
 
     fn version(&self) -> String {
-        // Try to get version from Python, fallback to default
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             self.python_obj
                 .bind(py)
@@ -114,7 +109,6 @@ impl Plugin for PythonOcrBackend {
     }
 
     fn initialize(&self) -> Result<()> {
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("initialize")? {
@@ -129,7 +123,6 @@ impl Plugin for PythonOcrBackend {
     }
 
     fn shutdown(&self) -> Result<()> {
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("shutdown")? {
@@ -151,20 +144,14 @@ impl OcrBackend for PythonOcrBackend {
         let language = config.language.clone();
         let backend_name = self.name.clone();
 
-        // Clone the Python object reference with GIL
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) before passing to spawn_blocking
         let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
-        // Use spawn_blocking to avoid blocking the async runtime with Python/GIL
         tokio::task::spawn_blocking(move || {
-            // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) in blocking task
             Python::attach(|py| {
                 let obj = python_obj.bind(py);
 
-                // Convert Rust types → Python
                 let py_bytes = PyBytes::new(py, &image_bytes);
 
-                // Call Python method: process_image(image_bytes, language)
                 let result = obj
                     .call_method1("process_image", (py_bytes, language.as_str()))
                     .map_err(|e| KreuzbergError::Ocr {
@@ -175,7 +162,6 @@ impl OcrBackend for PythonOcrBackend {
                         source: Some(Box::new(e)),
                     })?;
 
-                // Convert Python dict → Rust ExtractionResult
                 dict_to_extraction_result(py, &result)
             })
         })
@@ -187,8 +173,6 @@ impl OcrBackend for PythonOcrBackend {
     }
 
     async fn process_file(&self, path: &Path, config: &OcrConfig) -> Result<ExtractionResult> {
-        // Check if Python backend has custom process_file implementation
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         let has_process_file = Python::attach(|py| self.python_obj.bind(py).hasattr("process_file").unwrap_or(false));
 
         if has_process_file {
@@ -196,12 +180,9 @@ impl OcrBackend for PythonOcrBackend {
             let language = config.language.clone();
             let backend_name = self.name.clone();
 
-            // Clone the Python object reference with GIL
-            // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) before passing to spawn_blocking
             let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
             tokio::task::spawn_blocking(move || {
-                // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach) in blocking task
                 Python::attach(|py| {
                     let obj = python_obj.bind(py);
                     let py_path = PyString::new(py, &path_str);
@@ -225,7 +206,6 @@ impl OcrBackend for PythonOcrBackend {
                 source: Some(Box::new(e)),
             })?
         } else {
-            // Default implementation: read file and call process_image
             use kreuzberg::core::io;
             let bytes = io::read_file_async(path).await?;
             self.process_image(&bytes, config).await
@@ -249,10 +229,6 @@ impl OcrBackend for PythonOcrBackend {
     }
 }
 
-// ============================================================================
-// Type Conversion Helpers
-// ============================================================================
-
 /// Convert Python dict to Rust ExtractionResult.
 ///
 /// Expected dict format:
@@ -264,7 +240,6 @@ impl OcrBackend for PythonOcrBackend {
 /// }
 /// ```
 fn dict_to_extraction_result(_py: Python<'_>, dict: &Bound<'_, PyAny>) -> Result<ExtractionResult> {
-    // Extract content (required)
     let content: String = match dict.get_item("content") {
         Ok(val) if !val.is_none() => val.extract().map_err(|e| KreuzbergError::Validation {
             message: format!("Python OCR result 'content' must be a string: {}", e),
@@ -284,13 +259,11 @@ fn dict_to_extraction_result(_py: Python<'_>, dict: &Bound<'_, PyAny>) -> Result
         }
     };
 
-    // Extract metadata (optional, default to empty)
     let additional = match dict.get_item("metadata") {
         Ok(m) if !m.is_none() => extract_metadata(&m).unwrap_or_default(),
         _ => HashMap::new(),
     };
 
-    // Extract tables (optional, default to empty)
     let tables = match dict.get_item("tables") {
         Ok(t) if !t.is_none() => extract_tables(&t).unwrap_or_default(),
         _ => vec![],
@@ -323,7 +296,6 @@ fn extract_metadata(obj: &Bound<'_, PyAny>) -> Result<HashMap<String, serde_json
             source: None,
         })?;
 
-        // Convert Python value to serde_json::Value
         let json_value = python_to_json(&value)?;
         metadata.insert(key_str, json_value);
     }
@@ -333,7 +305,6 @@ fn extract_metadata(obj: &Bound<'_, PyAny>) -> Result<HashMap<String, serde_json
 
 /// Extract tables from Python object.
 fn extract_tables(_obj: &Bound<'_, PyAny>) -> Result<Vec<Table>> {
-    // For now, tables support is optional - return empty vec
     // TODO: Implement full table extraction from Python
     Ok(vec![])
 }
@@ -367,7 +338,6 @@ fn python_to_json(obj: &Bound<'_, PyAny>) -> Result<serde_json::Value> {
         }
         Ok(serde_json::Value::Object(map))
     } else {
-        // Fallback: convert to string
         Ok(serde_json::Value::String(
             obj.str()
                 .map_err(|_| KreuzbergError::Validation {
@@ -378,10 +348,6 @@ fn python_to_json(obj: &Bound<'_, PyAny>) -> Result<serde_json::Value> {
         ))
     }
 }
-
-// ============================================================================
-// PyO3 Functions (exposed to Python)
-// ============================================================================
 
 /// Register a Python OCR backend with the Rust core.
 ///
@@ -440,14 +406,11 @@ fn python_to_json(obj: &Bound<'_, PyAny>) -> Result<serde_json::Value> {
 /// - Registration fails
 #[pyfunction]
 pub fn register_ocr_backend(py: Python<'_>, backend: Py<PyAny>) -> PyResult<()> {
-    // Create wrapper
     let rust_backend = PythonOcrBackend::new(py, backend)?;
     let backend_name = rust_backend.name().to_string();
 
-    // Wrap in Arc for thread-safe sharing
     let arc_backend: Arc<dyn OcrBackend> = Arc::new(rust_backend);
 
-    // Register with global registry (release GIL before locking registry)
     py.detach(|| {
         let registry = get_ocr_backend_registry();
         let mut registry = registry.write().map_err(|e| {
@@ -464,10 +427,6 @@ pub fn register_ocr_backend(py: Python<'_>, backend: Py<PyAny>) -> PyResult<()> 
 
     Ok(())
 }
-
-// ============================================================================
-// Python PostProcessor FFI Bridge
-// ============================================================================
 
 /// Wrapper that makes a Python PostProcessor usable from Rust.
 ///
@@ -503,7 +462,6 @@ impl PythonPostProcessor {
     pub fn new(py: Python<'_>, python_obj: Py<PyAny>) -> PyResult<Self> {
         let obj = python_obj.bind(py);
 
-        // Validate required methods
         if !obj.hasattr("name")? {
             return Err(pyo3::exceptions::PyAttributeError::new_err(
                 "PostProcessor must have a 'name()' method",
@@ -515,7 +473,6 @@ impl PythonPostProcessor {
             ));
         }
 
-        // Get processor name
         let name: String = obj.call_method0("name")?.extract()?;
         if name.is_empty() {
             return Err(pyo3::exceptions::PyValueError::new_err(
@@ -523,17 +480,16 @@ impl PythonPostProcessor {
             ));
         }
 
-        // Get processing stage (optional, default to Middle)
         let stage = if obj.hasattr("processing_stage")? {
             let stage_str: String = obj.call_method0("processing_stage")?.extract()?;
             match stage_str.to_lowercase().as_str() {
                 "early" => ProcessingStage::Early,
                 "middle" => ProcessingStage::Middle,
                 "late" => ProcessingStage::Late,
-                _ => ProcessingStage::Middle, // Default
+                _ => ProcessingStage::Middle,
             }
         } else {
-            ProcessingStage::Middle // Default
+            ProcessingStage::Middle
         };
 
         Ok(Self {
@@ -550,8 +506,6 @@ impl Plugin for PythonPostProcessor {
     }
 
     fn version(&self) -> String {
-        // Try to get version from Python, fallback to default
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             self.python_obj
                 .bind(py)
@@ -563,7 +517,6 @@ impl Plugin for PythonPostProcessor {
     }
 
     fn initialize(&self) -> Result<()> {
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("initialize")? {
@@ -578,7 +531,6 @@ impl Plugin for PythonPostProcessor {
     }
 
     fn shutdown(&self) -> Result<()> {
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             if obj.hasattr("shutdown")? {
@@ -598,18 +550,14 @@ impl PostProcessor for PythonPostProcessor {
     async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
         let processor_name = self.name.clone();
 
-        // SAFETY: Using attach for safe GIL acquisition (PyO3 0.26+ recommended approach)
-        // Process in a single GIL acquisition to avoid deadlocks
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
 
-            // Convert ExtractionResult to Python dict
             let result_dict = extraction_result_to_dict(py, result).map_err(|e| KreuzbergError::Plugin {
                 message: format!("Failed to convert ExtractionResult to Python dict: {}", e),
                 plugin_name: processor_name.clone(),
             })?;
 
-            // Call Python method: process(result: dict) -> dict
             let py_result = result_dict.bind(py);
             let processed = obj
                 .call_method1("process", (py_result,))
@@ -618,13 +566,11 @@ impl PostProcessor for PythonPostProcessor {
                     plugin_name: processor_name.clone(),
                 })?;
 
-            // Extract the processed dict
             let processed_dict = processed.downcast::<PyDict>().map_err(|e| KreuzbergError::Plugin {
                 message: format!("PostProcessor did not return a dict: {}", e),
                 plugin_name: processor_name.clone(),
             })?;
 
-            // Merge the processed result back into the original result
             merge_dict_to_extraction_result(py, processed_dict, result)?;
 
             Ok(())
@@ -635,10 +581,6 @@ impl PostProcessor for PythonPostProcessor {
         self.stage
     }
 }
-
-// ============================================================================
-// ExtractionResult ↔ Python Dict Conversions
-// ============================================================================
 
 /// Convert Rust ExtractionResult to Python dict.
 ///
@@ -654,19 +596,15 @@ impl PostProcessor for PythonPostProcessor {
 fn extraction_result_to_dict(py: Python<'_>, result: &ExtractionResult) -> PyResult<Py<PyDict>> {
     let dict = PyDict::new(py);
 
-    // Add content
     dict.set_item("content", &result.content)?;
 
-    // Add mime_type
     dict.set_item("mime_type", &result.mime_type)?;
 
-    // Add metadata - serialize the entire Metadata struct to Python using pythonize
     let metadata_py = pythonize::pythonize(py, &result.metadata).map_err(|e| {
         pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to serialize metadata to Python: {}", e))
     })?;
     dict.set_item("metadata", metadata_py)?;
 
-    // Add tables (simplified - just empty list for now)
     dict.set_item("tables", PyList::empty(py))?;
 
     Ok(dict.unbind())
@@ -681,7 +619,6 @@ fn merge_dict_to_extraction_result(
     dict: &Bound<'_, PyDict>,
     result: &mut ExtractionResult,
 ) -> Result<()> {
-    // Update content if present
     if let Some(val) = dict.get_item("content").map_err(|e| KreuzbergError::Plugin {
         message: format!("Failed to get 'content' from result dict: {}", e),
         plugin_name: "python".to_string(),
@@ -693,7 +630,6 @@ fn merge_dict_to_extraction_result(
         })?;
     }
 
-    // Merge metadata (allow processors to update existing keys)
     if let Some(m) = dict.get_item("metadata").map_err(|e| KreuzbergError::Plugin {
         message: format!("Failed to get 'metadata' from result dict: {}", e),
         plugin_name: "python".to_string(),
@@ -706,7 +642,6 @@ fn merge_dict_to_extraction_result(
                 plugin_name: "python".to_string(),
             })?;
 
-            // Allow processors to update existing keys
             let json_value = python_to_json(&value)?;
             result.metadata.additional.insert(key_str, json_value);
         }
@@ -714,10 +649,6 @@ fn merge_dict_to_extraction_result(
 
     Ok(())
 }
-
-// ============================================================================
-// PostProcessor Registration Functions (PyO3 exposed)
-// ============================================================================
 
 /// Register a Python PostProcessor with the Rust core.
 ///
@@ -772,14 +703,11 @@ fn merge_dict_to_extraction_result(
 /// - Registration fails
 #[pyfunction]
 pub fn register_post_processor(py: Python<'_>, processor: Py<PyAny>) -> PyResult<()> {
-    // Create wrapper
     let rust_processor = PythonPostProcessor::new(py, processor)?;
     let processor_name = rust_processor.name().to_string();
 
-    // Wrap in Arc for thread-safe sharing
     let arc_processor: Arc<dyn PostProcessor> = Arc::new(rust_processor);
 
-    // Register with global registry (release GIL before locking registry)
     py.detach(|| {
         let registry = get_post_processor_registry();
         let mut registry = registry.write().map_err(|e| {
@@ -789,7 +717,6 @@ pub fn register_post_processor(py: Python<'_>, processor: Py<PyAny>) -> PyResult
             ))
         })?;
 
-        // Register with default priority of 0
         registry.register(arc_processor, 0).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!(
                 "Failed to register PostProcessor '{}': {}",

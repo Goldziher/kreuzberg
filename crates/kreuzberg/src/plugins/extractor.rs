@@ -299,7 +299,7 @@ pub trait DocumentExtractor: Plugin {
     /// # }
     /// ```
     fn priority(&self) -> i32 {
-        50 // Default priority for extractors
+        50
     }
 
     /// Optional: Check if this extractor can handle a specific file.
@@ -465,9 +465,8 @@ mod tests {
         use std::path::PathBuf;
         let path = PathBuf::from("test.txt");
 
-        // Default implementation always returns true
         assert!(extractor.can_handle(&path, "text/plain"));
-        assert!(extractor.can_handle(&path, "application/pdf")); // Even for unsupported types
+        assert!(extractor.can_handle(&path, "application/pdf"));
     }
 
     #[tokio::test]
@@ -519,7 +518,6 @@ mod tests {
             .await
             .unwrap();
 
-        // Should handle non-UTF8 gracefully using lossy conversion
         assert!(!result.content.is_empty());
     }
 
@@ -530,7 +528,6 @@ mod tests {
             priority: 50,
         };
 
-        // Test Plugin trait methods
         assert_eq!(extractor.name(), "mock-extractor");
         assert_eq!(extractor.version(), "1.0.0");
         assert!(extractor.initialize().is_ok());
@@ -539,7 +536,6 @@ mod tests {
 
     #[test]
     fn test_document_extractor_default_priority() {
-        // Create a minimal extractor that uses default priority
         struct DefaultPriorityExtractor;
 
         impl Plugin for DefaultPriorityExtractor {
@@ -578,7 +574,6 @@ mod tests {
             fn supported_mime_types(&self) -> &[&str] {
                 &["text/plain"]
             }
-            // Uses default priority() implementation
         }
 
         let extractor = DefaultPriorityExtractor;
@@ -610,7 +605,6 @@ mod tests {
 
     #[test]
     fn test_document_extractor_priority_ranges() {
-        // Test different priority ranges
         let fallback = MockExtractor {
             mime_types: vec!["text/plain"],
             priority: 10,

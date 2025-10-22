@@ -32,7 +32,6 @@ pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
         .parse(data)
         .ok_or_else(|| KreuzbergError::parsing("Failed to parse EML file: invalid email format".to_string()))?;
 
-    // Extract basic fields
     let subject = message.subject().map(|s| s.to_string());
 
     let from_email = message
@@ -72,12 +71,10 @@ pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
 
     let message_id = message.message_id().map(|id| id.to_string());
 
-    // Extract text content
     let plain_text = message.body_text(0).map(|s| s.to_string());
 
     let html_content = message.body_html(0).map(|s| s.to_string());
 
-    // Create cleaned text
     let cleaned_text = if let Some(plain) = &plain_text {
         plain.clone()
     } else if let Some(html) = &html_content {
@@ -86,7 +83,6 @@ pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
         String::new()
     };
 
-    // Extract attachments
     let mut attachments = Vec::new();
     for attachment in message.attachments() {
         let filename = attachment.attachment_name().map(|s| s.to_string());
@@ -114,7 +110,6 @@ pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
         });
     }
 
-    // Build metadata
     let metadata = build_metadata(
         &subject,
         &from_email,
@@ -147,7 +142,6 @@ pub fn parse_msg_content(data: &[u8]) -> Result<EmailExtractionResult> {
     let outlook = msg_parser::Outlook::from_slice(data)
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse MSG file: {}", e)))?;
 
-    // Extract basic fields
     let subject = Some(outlook.subject.clone());
     let from_email = Some(outlook.sender.email.clone());
 
@@ -192,7 +186,6 @@ pub fn parse_msg_content(data: &[u8]) -> Result<EmailExtractionResult> {
     let html_content = None;
     let cleaned_text = plain_text.clone().unwrap_or_default();
 
-    // Extract attachments
     let attachments: Vec<EmailAttachment> = outlook
         .attachments
         .iter()
@@ -231,7 +224,6 @@ pub fn parse_msg_content(data: &[u8]) -> Result<EmailExtractionResult> {
         })
         .collect();
 
-    // Build metadata
     let from_name = if !outlook.sender.name.is_empty() {
         Some(outlook.sender.name.clone())
     } else {
@@ -349,24 +341,18 @@ pub fn build_email_text_output(result: &EmailExtractionResult) -> String {
     text_parts.join("\n")
 }
 
-// Helper functions
-
 fn clean_html_content(html: &str) -> String {
     if html.is_empty() {
         return String::new();
     }
 
-    // Remove scripts and styles
     let cleaned = script_regex().replace_all(html, "");
     let cleaned = style_regex().replace_all(&cleaned, "");
 
-    // Remove HTML tags
     let cleaned = html_tag_regex().replace_all(&cleaned, "");
 
-    // Normalize whitespace
     let cleaned = whitespace_regex().replace_all(&cleaned, " ");
 
-    // Trim and return
     cleaned.trim().to_string()
 }
 
@@ -503,8 +489,6 @@ mod tests {
 
     #[test]
     fn test_parse_eml_content_invalid() {
-        // mail-parser is very permissive and will parse almost anything
-        // so we expect success even with minimal content
         let result = parse_eml_content(b"not an email");
         assert!(result.is_ok());
     }
@@ -700,7 +684,6 @@ mod tests {
     fn test_extract_email_content_mime_variants() {
         let eml_content = b"From: test@example.com\r\n\r\nBody";
 
-        // Test both message/rfc822 and text/plain (both should work for EML)
         assert!(extract_email_content(eml_content, "message/rfc822").is_ok());
         assert!(extract_email_content(eml_content, "text/plain").is_ok());
     }
@@ -720,7 +703,6 @@ mod tests {
         let eml_content = b"From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: HTML Email\r\nContent-Type: text/html\r\n\r\n<html><body><p>HTML Body</p></body></html>";
 
         let result = parse_eml_content(eml_content).unwrap();
-        // mail-parser may extract the HTML content
         assert!(!result.cleaned_text.is_empty());
     }
 
@@ -776,7 +758,6 @@ mod tests {
         };
 
         let output = build_email_text_output(&result);
-        // Should not crash, but might not include attachment info if no names
         assert!(output.contains("Body"));
     }
 
@@ -834,13 +815,11 @@ mod tests {
 
     #[test]
     fn test_regex_initialization() {
-        // Test that regex patterns are initialized properly
         let _ = html_tag_regex();
         let _ = script_regex();
         let _ = style_regex();
         let _ = whitespace_regex();
 
-        // Call again to test OnceLock reuse
         let _ = html_tag_regex();
         let _ = script_regex();
         let _ = style_regex();

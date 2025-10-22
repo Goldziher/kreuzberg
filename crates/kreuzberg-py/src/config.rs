@@ -6,7 +6,6 @@
 use pyo3::prelude::*;
 
 // ============================================================================
-// ExtractionConfig - Main configuration
 // ============================================================================
 
 /// Main extraction configuration.
@@ -255,10 +254,6 @@ impl From<kreuzberg::ExtractionConfig> for ExtractionConfig {
     }
 }
 
-// ============================================================================
-// OcrConfig
-// ============================================================================
-
 /// OCR configuration.
 ///
 /// Example:
@@ -340,10 +335,6 @@ impl From<kreuzberg::OcrConfig> for OcrConfig {
     }
 }
 
-// ============================================================================
-// ChunkingConfig
-// ============================================================================
-
 /// Chunking configuration.
 ///
 /// Example:
@@ -407,10 +398,6 @@ impl From<kreuzberg::ChunkingConfig> for ChunkingConfig {
         Self { inner: config }
     }
 }
-
-// ============================================================================
-// ImageExtractionConfig
-// ============================================================================
 
 /// Image extraction configuration.
 ///
@@ -534,10 +521,6 @@ impl From<kreuzberg::ImageExtractionConfig> for ImageExtractionConfig {
     }
 }
 
-// ============================================================================
-// PdfConfig
-// ============================================================================
-
 /// PDF-specific configuration.
 ///
 /// Example:
@@ -619,10 +602,6 @@ impl From<kreuzberg::PdfConfig> for PdfConfig {
     }
 }
 
-// ============================================================================
-// TokenReductionConfig
-// ============================================================================
-
 /// Token reduction configuration.
 ///
 /// Example:
@@ -686,10 +665,6 @@ impl From<kreuzberg::TokenReductionConfig> for TokenReductionConfig {
         Self { inner: config }
     }
 }
-
-// ============================================================================
-// LanguageDetectionConfig
-// ============================================================================
 
 /// Language detection configuration.
 ///
@@ -765,10 +740,6 @@ impl From<kreuzberg::LanguageDetectionConfig> for LanguageDetectionConfig {
         Self { inner: config }
     }
 }
-
-// ============================================================================
-// PostProcessorConfig
-// ============================================================================
 
 /// Post-processor configuration.
 ///
@@ -848,10 +819,6 @@ impl From<kreuzberg::PostProcessorConfig> for PostProcessorConfig {
         Self { inner: config }
     }
 }
-
-// ============================================================================
-// ImagePreprocessingConfig
-// ============================================================================
 
 /// Image preprocessing configuration for OCR.
 ///
@@ -993,10 +960,6 @@ impl From<kreuzberg::types::ImagePreprocessingConfig> for ImagePreprocessingConf
         Self { inner: config }
     }
 }
-
-// ============================================================================
-// TesseractConfig
-// ============================================================================
 
 /// Tesseract OCR configuration.
 ///
@@ -1324,10 +1287,6 @@ impl From<kreuzberg::types::TesseractConfig> for TesseractConfig {
     }
 }
 
-// ============================================================================
-// KeywordAlgorithm - Enum for keyword extraction algorithms
-// ============================================================================
-
 #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
 /// Keyword extraction algorithm.
 ///
@@ -1369,10 +1328,6 @@ impl From<kreuzberg::keywords::KeywordAlgorithm> for KeywordAlgorithm {
         }
     }
 }
-
-// ============================================================================
-// YakeParams - YAKE algorithm parameters
-// ============================================================================
 
 /// YAKE-specific parameters.
 ///
@@ -1453,10 +1408,6 @@ impl From<kreuzberg::keywords::YakeParams> for YakeParams {
     }
 }
 
-// ============================================================================
-// RakeParams - RAKE algorithm parameters
-// ============================================================================
-
 /// RAKE-specific parameters.
 ///
 /// Example:
@@ -1524,10 +1475,6 @@ impl From<kreuzberg::keywords::RakeParams> for RakeParams {
         Self { inner: params }
     }
 }
-
-// ============================================================================
-// KeywordConfig - Main keyword extraction configuration
-// ============================================================================
 
 /// Keyword extraction configuration.
 ///

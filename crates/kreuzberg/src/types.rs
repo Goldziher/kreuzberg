@@ -5,8 +5,9 @@ use std::collections::HashMap;
 use crate::pdf::metadata::PdfMetadata;
 
 // ============================================================================
-// Extraction Result
 // ============================================================================
+
+// TODO: sort types meant for external consumption alphabetically and adxd doc strings as required
 
 /// General extraction result used by the core extraction API.
 ///
@@ -29,10 +30,6 @@ pub struct ExtractionResult {
     pub chunks: Option<Vec<String>>,
 }
 
-// ============================================================================
-// Metadata Types
-// ============================================================================
-
 /// Strongly-typed metadata for extraction results.
 ///
 /// This struct provides compile-time type safety for metadata fields
@@ -40,7 +37,6 @@ pub struct ExtractionResult {
 /// custom fields (e.g., from Python postprocessors).
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Metadata {
-    // Common fields (used across multiple formats)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
 
@@ -53,7 +49,6 @@ pub struct Metadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
 
-    // Format-specific metadata
     #[cfg(feature = "pdf")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pdf: Option<PdfMetadata>,
@@ -79,20 +74,17 @@ pub struct Metadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<TextMetadata>,
 
-    // Processing metadata
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ocr: Option<OcrMetadata>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_preprocessing: Option<ImagePreprocessingMetadata>,
 
-    // Structured data metadata
     #[serde(skip_serializing_if = "Option::is_none")]
     pub json_schema: Option<serde_json::Value>,
 
-    // Error metadata (for batch operations)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ErrorMetadata>,
+    pub error: Option<ErrorMetadata>, // TODO: move error out of metadata and into the ExtractionResult directly
 
     /// Additional custom fields.
     ///
@@ -164,7 +156,6 @@ pub struct TextMetadata {
     pub word_count: usize,
     pub character_count: usize,
 
-    // Markdown-specific fields
     #[serde(skip_serializing_if = "Option::is_none")]
     pub headers: Option<Vec<String>>,
 
@@ -363,7 +354,6 @@ impl Default for ImagePreprocessingConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TesseractConfig {
-    // Basic OCR settings
     pub language: String,
     pub psm: i32,
     pub output_format: String,
@@ -388,13 +378,11 @@ pub struct TesseractConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preprocessing: Option<ImagePreprocessingConfig>,
 
-    // Table detection settings
     pub enable_table_detection: bool,
     pub table_min_confidence: f64,
     pub table_column_threshold: i32,
     pub table_row_threshold_ratio: f64,
 
-    // Tesseract engine tweaks
     pub use_cache: bool,
     pub classify_use_pre_adapted_templates: bool,
     pub language_model_ngram_on: bool,
@@ -409,14 +397,15 @@ pub struct TesseractConfig {
 }
 
 impl Default for TesseractConfig {
+    // TODO: check for duplication - we have this in multiple places and should centralize
     fn default() -> Self {
         Self {
             language: "eng".to_string(),
             psm: 3,
             output_format: "markdown".to_string(),
-            oem: 3, // Default (auto-select based on available)
+            oem: 3,
             min_confidence: 0.0,
-            preprocessing: None, // No preprocessing by default
+            preprocessing: None,
             enable_table_detection: true,
             table_min_confidence: 0.0,
             table_column_threshold: 50,

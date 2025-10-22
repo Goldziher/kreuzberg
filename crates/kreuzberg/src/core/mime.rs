@@ -8,7 +8,6 @@ use once_cell::sync::Lazy;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-// MIME type constants (ported from Python _mime_types.py)
 pub const HTML_MIME_TYPE: &str = "text/html";
 pub const MARKDOWN_MIME_TYPE: &str = "text/markdown";
 pub const PDF_MIME_TYPE: &str = "application/pdf";
@@ -40,19 +39,15 @@ pub const OPENDOC_SPREADSHEET_MIME_TYPE: &str = "application/vnd.oasis.opendocum
 static EXT_TO_MIME: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let mut m = HashMap::new();
 
-    // Text formats
     m.insert("txt", PLAIN_TEXT_MIME_TYPE);
     m.insert("md", MARKDOWN_MIME_TYPE);
     m.insert("markdown", MARKDOWN_MIME_TYPE);
 
-    // PDF
     m.insert("pdf", PDF_MIME_TYPE);
 
-    // HTML
     m.insert("html", HTML_MIME_TYPE);
     m.insert("htm", HTML_MIME_TYPE);
 
-    // Office - Excel
     m.insert("xlsx", EXCEL_MIME_TYPE);
     m.insert("xls", EXCEL_BINARY_MIME_TYPE);
     m.insert("xlsm", EXCEL_MACRO_MIME_TYPE);
@@ -61,16 +56,13 @@ static EXT_TO_MIME: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     m.insert("xla", EXCEL_TEMPLATE_MIME_TYPE);
     m.insert("ods", OPENDOC_SPREADSHEET_MIME_TYPE);
 
-    // Office - PowerPoint
     m.insert("pptx", POWER_POINT_MIME_TYPE);
     m.insert("ppt", LEGACY_POWERPOINT_MIME_TYPE);
 
-    // Office - Word
     m.insert("docx", DOCX_MIME_TYPE);
     m.insert("doc", LEGACY_WORD_MIME_TYPE);
     m.insert("odt", "application/vnd.oasis.opendocument.text");
 
-    // Images
     m.insert("bmp", "image/bmp");
     m.insert("gif", "image/gif");
     m.insert("jpg", "image/jpeg");
@@ -88,7 +80,6 @@ static EXT_TO_MIME: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     m.insert("pgm", "image/x-portable-graymap");
     m.insert("ppm", "image/x-portable-pixmap");
 
-    // Data formats
     m.insert("csv", "text/csv");
     m.insert("tsv", "text/tab-separated-values");
     m.insert("json", JSON_MIME_TYPE);
@@ -98,18 +89,15 @@ static EXT_TO_MIME: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     m.insert("xml", XML_MIME_TYPE);
     m.insert("svg", SVG_MIME_TYPE);
 
-    // Email
     m.insert("eml", EML_MIME_TYPE);
     m.insert("msg", MSG_MIME_TYPE);
 
-    // Archives
     m.insert("zip", "application/zip");
     m.insert("tar", "application/x-tar");
     m.insert("gz", "application/gzip");
     m.insert("tgz", "application/x-tar");
     m.insert("7z", "application/x-7z-compressed");
 
-    // Other document formats
     m.insert("rst", "text/x-rst");
     m.insert("org", "text/x-org");
     m.insert("epub", "application/epub+zip");
@@ -128,12 +116,10 @@ static EXT_TO_MIME: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
 static SUPPORTED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     let mut set = HashSet::new();
 
-    // Plain text
     set.insert(PLAIN_TEXT_MIME_TYPE);
     set.insert(MARKDOWN_MIME_TYPE);
     set.insert("text/x-markdown");
 
-    // Images
     set.insert("image/bmp");
     set.insert("image/gif");
     set.insert("image/jp2");
@@ -153,7 +139,6 @@ static SUPPORTED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     set.insert("image/x-portable-pixmap");
     set.insert("image/x-tiff");
 
-    // Pandoc-supported formats
     set.insert("application/csl+json");
     set.insert("application/docbook+xml");
     set.insert("application/epub+zip");
@@ -183,7 +168,6 @@ static SUPPORTED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     set.insert("text/x-pod");
     set.insert("text/x-rst");
 
-    // Spreadsheets
     set.insert(EXCEL_MIME_TYPE);
     set.insert(EXCEL_BINARY_MIME_TYPE);
     set.insert(EXCEL_MACRO_MIME_TYPE);
@@ -192,7 +176,6 @@ static SUPPORTED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     set.insert(EXCEL_TEMPLATE_MIME_TYPE);
     set.insert(OPENDOC_SPREADSHEET_MIME_TYPE);
 
-    // Other formats
     set.insert(PDF_MIME_TYPE);
     set.insert(POWER_POINT_MIME_TYPE);
     set.insert(LEGACY_WORD_MIME_TYPE);
@@ -212,7 +195,6 @@ static SUPPORTED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     set.insert(XML_TEXT_MIME_TYPE);
     set.insert(SVG_MIME_TYPE);
 
-    // Archive formats
     set.insert("application/zip");
     set.insert("application/x-zip-compressed");
     set.insert("application/x-tar");
@@ -252,23 +234,19 @@ pub fn detect_mime_type(path: impl AsRef<Path>, check_exists: bool) -> Result<St
         )));
     }
 
-    // Get file extension
     let extension = path.extension().and_then(|ext| ext.to_str()).map(|s| s.to_lowercase());
 
-    if let Some(ext) = &extension {
-        // Try our extension mapping first
-        if let Some(mime_type) = EXT_TO_MIME.get(ext.as_str()) {
-            return Ok(mime_type.to_string());
-        }
+    if let Some(ext) = &extension
+        && let Some(mime_type) = EXT_TO_MIME.get(ext.as_str())
+    {
+        return Ok(mime_type.to_string());
     }
 
-    // Fallback to mime_guess crate
     let guess = mime_guess::from_path(path).first();
     if let Some(mime) = guess {
         return Ok(mime.to_string());
     }
 
-    // No MIME type found
     if let Some(ext) = extension {
         return Err(KreuzbergError::UnsupportedFormat(format!(
             "Unknown extension: .{}",
@@ -296,14 +274,11 @@ pub fn detect_mime_type(path: impl AsRef<Path>, check_exists: bool) -> Result<St
 ///
 /// Returns `KreuzbergError::UnsupportedFormat` if not supported.
 pub fn validate_mime_type(mime_type: &str) -> Result<String> {
-    // Check exact match
     if SUPPORTED_MIME_TYPES.contains(mime_type) {
         return Ok(mime_type.to_string());
     }
 
-    // Check if it's an image type (prefix match for "image/*")
     if mime_type.starts_with("image/") {
-        // Accept any image MIME type
         return Ok(mime_type.to_string());
     }
 
@@ -462,7 +437,6 @@ mod tests {
         assert!(validate_mime_type("image/gif").is_ok());
         assert!(validate_mime_type("image/webp").is_ok());
 
-        // Any image/ prefix should work
         assert!(validate_mime_type("image/custom-format").is_ok());
     }
 
@@ -485,7 +459,6 @@ mod tests {
         File::create(&file_path).unwrap();
 
         let result = detect_mime_type(&file_path, true);
-        // Should fail or fallback to mime_guess
         assert!(result.is_err() || result.is_ok());
     }
 
@@ -517,7 +490,6 @@ mod tests {
     fn test_case_insensitive_extensions() {
         let dir = tempdir().unwrap();
 
-        // Test uppercase extensions
         let file_path = dir.path().join("test.PDF");
         File::create(&file_path).unwrap();
         let mime = detect_mime_type(&file_path, true).unwrap();

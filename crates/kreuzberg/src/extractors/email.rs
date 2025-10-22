@@ -50,13 +50,10 @@ impl DocumentExtractor for EmailExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Extract email content
         let email_result = crate::extraction::email::extract_email_content(content, mime_type)?;
 
-        // Build text output
         let text = crate::extraction::email::build_email_text_output(&email_result);
 
-        // Build typed metadata
         let attachment_names: Vec<String> = email_result
             .attachments
             .iter()
@@ -65,7 +62,7 @@ impl DocumentExtractor for EmailExtractor {
 
         let email_metadata = EmailMetadata {
             from_email: email_result.from_email.clone(),
-            from_name: None, // Not available in EmailExtractionResult
+            from_name: None,
             to_emails: email_result.to_emails.clone(),
             cc_emails: email_result.cc_emails.clone(),
             bcc_emails: email_result.bcc_emails.clone(),
@@ -73,7 +70,6 @@ impl DocumentExtractor for EmailExtractor {
             attachments: attachment_names,
         };
 
-        // Any additional metadata fields go into additional HashMap
         let mut additional = std::collections::HashMap::new();
         for (key, value) in &email_result.metadata {
             additional.insert(key.clone(), serde_json::json!(value));

@@ -50,7 +50,6 @@ impl DocumentExtractor for ExcelExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Determine file extension from MIME type
         let extension = match mime_type {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => ".xlsx",
             "application/vnd.ms-excel.sheet.macroEnabled.12" => ".xlsm",
@@ -60,26 +59,21 @@ impl DocumentExtractor for ExcelExtractor {
             "application/vnd.ms-excel.addin.macroEnabled" => ".xla",
             "application/vnd.ms-excel.sheet.binary.macroEnabled.12" => ".xlsb",
             "application/vnd.oasis.opendocument.spreadsheet" => ".ods",
-            _ => ".xlsx", // Default fallback
+            _ => ".xlsx",
         };
 
-        // Read Excel workbook
         let workbook = crate::extraction::excel::read_excel_bytes(content, extension)?;
 
-        // Convert to markdown
         let markdown = crate::extraction::excel::excel_to_markdown(&workbook);
 
-        // Build typed metadata
         let sheet_names: Vec<String> = workbook.sheets.iter().map(|s| s.name.clone()).collect();
         let excel_metadata = ExcelMetadata {
             sheet_count: workbook.sheets.len(),
             sheet_names,
         };
 
-        // Any additional metadata fields go into additional HashMap
         let mut additional = std::collections::HashMap::new();
         for (key, value) in &workbook.metadata {
-            // Skip the fields we've already extracted into typed metadata
             if key != "sheet_count" && key != "sheet_names" {
                 additional.insert(key.clone(), serde_json::json!(value));
             }
@@ -100,7 +94,6 @@ impl DocumentExtractor for ExcelExtractor {
     }
 
     async fn extract_file(&self, path: &Path, mime_type: &str, _config: &ExtractionConfig) -> Result<ExtractionResult> {
-        // Use file-based extraction for better performance
         let path_str = path
             .to_str()
             .ok_or_else(|| crate::KreuzbergError::validation("Invalid file path".to_string()))?;
@@ -108,17 +101,14 @@ impl DocumentExtractor for ExcelExtractor {
         let workbook = crate::extraction::excel::read_excel_file(path_str)?;
         let markdown = crate::extraction::excel::excel_to_markdown(&workbook);
 
-        // Build typed metadata
         let sheet_names: Vec<String> = workbook.sheets.iter().map(|s| s.name.clone()).collect();
         let excel_metadata = ExcelMetadata {
             sheet_count: workbook.sheets.len(),
             sheet_names,
         };
 
-        // Any additional metadata fields go into additional HashMap
         let mut additional = std::collections::HashMap::new();
         for (key, value) in &workbook.metadata {
-            // Skip the fields we've already extracted into typed metadata
             if key != "sheet_count" && key != "sheet_names" {
                 additional.insert(key.clone(), serde_json::json!(value));
             }

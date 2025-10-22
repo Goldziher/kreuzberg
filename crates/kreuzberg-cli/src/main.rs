@@ -195,10 +195,8 @@ async fn main() -> Result<()> {
             detect_language,
             r#async,
         } => {
-            // Load config from file or discover
             let mut config = load_config(config_path)?;
 
-            // Apply CLI overrides
             if let Some(ocr_flag) = ocr {
                 if ocr_flag {
                     config.ocr = Some(OcrConfig {
@@ -224,15 +222,12 @@ async fn main() -> Result<()> {
                 } else {
                     config.chunking = None;
                 }
-            } else {
-                // Override chunk size/overlap if chunking is already enabled
-                if config.chunking.is_some() {
-                    if let Some(max_chars) = chunk_size {
-                        config.chunking.as_mut().unwrap().max_chars = max_chars;
-                    }
-                    if let Some(max_overlap) = chunk_overlap {
-                        config.chunking.as_mut().unwrap().max_overlap = max_overlap;
-                    }
+            } else if config.chunking.is_some() {
+                if let Some(max_chars) = chunk_size {
+                    config.chunking.as_mut().unwrap().max_chars = max_chars;
+                }
+                if let Some(max_overlap) = chunk_overlap {
+                    config.chunking.as_mut().unwrap().max_overlap = max_overlap;
                 }
             }
             if let Some(quality_flag) = quality {
@@ -290,10 +285,8 @@ async fn main() -> Result<()> {
             quality,
             r#async,
         } => {
-            // Load config from file or discover
             let mut config = load_config(config_path)?;
 
-            // Apply CLI overrides
             if let Some(ocr_flag) = ocr {
                 if ocr_flag {
                     config.ocr = Some(OcrConfig {
@@ -468,7 +461,6 @@ async fn main() -> Result<()> {
 /// If no config is found, returns default configuration.
 fn load_config(config_path: Option<PathBuf>) -> Result<ExtractionConfig> {
     if let Some(path) = config_path {
-        // Load from specified path
         let path_str = path.to_string_lossy();
         let config = if path_str.ends_with(".toml") {
             ExtractionConfig::from_toml_file(&path)
@@ -481,13 +473,9 @@ fn load_config(config_path: Option<PathBuf>) -> Result<ExtractionConfig> {
         };
         config.context("Failed to load config file")
     } else {
-        // Discover config in current/parent directories
         match ExtractionConfig::discover() {
             Ok(Some(config)) => Ok(config),
-            Ok(None) => {
-                // No config found, use default
-                Ok(ExtractionConfig::default())
-            }
+            Ok(None) => Ok(ExtractionConfig::default()),
             Err(e) => Err(e).context("Failed to discover config file"),
         }
     }

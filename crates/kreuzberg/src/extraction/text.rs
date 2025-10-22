@@ -9,7 +9,6 @@ static MARKDOWN_LINK: Lazy<Regex> = Lazy::new(|| Regex::new(r"\[([^\]]+)\]\(([^)
 static CODE_BLOCK_DELIMITER: Lazy<Regex> = Lazy::new(|| Regex::new(r"^```(\w*)[\r]?$").unwrap());
 
 pub fn parse_text(text_bytes: &[u8], is_markdown: bool) -> Result<TextExtractionResult> {
-    // Decode bytes to UTF-8, using lossy conversion if needed
     let text = String::from_utf8_lossy(text_bytes).into_owned();
 
     let mut line_count = 0;

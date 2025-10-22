@@ -8,16 +8,11 @@ use kreuzberg::core::extractor::extract_bytes;
 
 mod helpers;
 
-// ============================================================================
-// EML Basic Extraction Tests
-// ============================================================================
-
 /// Test basic EML extraction with subject, from, to, and body.
 #[tokio::test]
 async fn test_eml_basic_extraction() {
     let config = ExtractionConfig::default();
 
-    // Create a simple EML email
     let eml_content = b"From: sender@example.com\r\n\
 To: recipient@example.com\r\n\
 Subject: Test Email Subject\r\n\
@@ -30,26 +25,19 @@ This is the email body content.";
         .await
         .expect("Should extract EML successfully");
 
-    // Verify MIME type
     assert_eq!(result.mime_type, "message/rfc822");
 
-    // Verify subject metadata
     assert_eq!(result.metadata.subject, Some("Test Email Subject".to_string()));
 
-    // Verify email metadata - check ALL fields
     assert!(result.metadata.email.is_some());
     let email_meta = result.metadata.email.unwrap();
 
-    // Verify sender
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
-    // from_name may be None if not specified in email
 
-    // Verify recipients
     assert_eq!(email_meta.to_emails, vec!["recipient@example.com".to_string()]);
     assert!(email_meta.cc_emails.is_empty(), "CC should be empty");
     assert!(email_meta.bcc_emails.is_empty(), "BCC should be empty");
 
-    // Message ID may or may not include angle brackets depending on parser
     assert!(email_meta.message_id.is_some());
     let msg_id = email_meta.message_id.unwrap();
     assert!(
@@ -57,13 +45,10 @@ This is the email body content.";
         "Message ID should contain unique123@example.com"
     );
 
-    // Verify no attachments
     assert!(email_meta.attachments.is_empty(), "Should have no attachments");
 
-    // Verify date
     assert!(result.metadata.date.is_some());
 
-    // Verify content extraction
     assert!(result.content.contains("Subject: Test Email Subject"));
     assert!(result.content.contains("From: sender@example.com"));
     assert!(result.content.contains("To: recipient@example.com"));
@@ -75,7 +60,6 @@ This is the email body content.";
 async fn test_eml_with_attachments() {
     let config = ExtractionConfig::default();
 
-    // Create EML with attachment (simplified - real MIME multipart is complex)
     let eml_content = b"From: sender@example.com\r\n\
 To: recipient@example.com\r\n\
 Subject: Email with Attachment\r\n\
@@ -96,12 +80,9 @@ Attachment content here.\r\n\
         .await
         .expect("Should extract EML with attachment");
 
-    // Verify email metadata
     assert!(result.metadata.email.is_some());
     let email_meta = result.metadata.email.unwrap();
 
-    // Verify attachments are listed (mail-parser should detect them)
-    // Note: Attachment detection depends on mail-parser's parsing
     if !email_meta.attachments.is_empty() {
         assert!(result.content.contains("Attachments:"));
     }
@@ -132,15 +113,11 @@ Content-Type: text/html; charset=utf-8\r\n\
         .await
         .expect("Should extract HTML email");
 
-    // Verify HTML content is cleaned
-    // Scripts and styles should be removed, HTML tags stripped
     assert!(!result.content.contains("<script>"));
     assert!(!result.content.contains("<style>"));
 
-    // Text content should be extracted
     assert!(result.content.contains("HTML Heading") || result.content.contains("bold"));
 
-    // Verify basic email metadata
     assert!(result.metadata.email.is_some());
     let email_meta = result.metadata.email.unwrap();
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
@@ -166,12 +143,10 @@ And preserves formatting.";
         .await
         .expect("Should extract plain text email");
 
-    // Verify plain text content
     assert!(result.content.contains("This is a plain text email"));
     assert!(result.content.contains("multiple lines"));
     assert!(result.content.contains("preserves formatting"));
 
-    // Verify basic email metadata
     assert!(result.metadata.email.is_some());
     let email_meta = result.metadata.email.unwrap();
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
@@ -203,13 +178,11 @@ Content-Type: text/html\r\n\
         .await
         .expect("Should extract multipart email");
 
-    // mail-parser should extract at least one version
     assert!(
         result.content.contains("Plain text version") || result.content.contains("HTML version"),
         "Should extract either plain text or HTML content"
     );
 
-    // Verify basic email metadata
     assert!(result.metadata.email.is_some());
     let email_meta = result.metadata.email.unwrap();
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
@@ -225,12 +198,10 @@ Content-Type: text/html\r\n\
 async fn test_msg_file_extraction() {
     let config = ExtractionConfig::default();
 
-    // Invalid MSG data (should fail gracefully)
     let invalid_msg = b"This is not a valid MSG file";
 
     let result = extract_bytes(invalid_msg, "application/vnd.ms-outlook", &config).await;
 
-    // Should fail with parsing error, not panic
     assert!(result.is_err(), "Invalid MSG should fail gracefully");
 }
 
@@ -254,10 +225,8 @@ On Mon, 1 Jan 2024, person1@example.com wrote:\r\n\
         .await
         .expect("Should extract email thread");
 
-    // Verify thread structure
     assert!(result.content.contains("This is my reply"));
 
-    // Quoted text should be preserved
     assert!(result.content.contains("Original message text") || result.content.contains(">"));
 }
 
@@ -266,7 +235,6 @@ On Mon, 1 Jan 2024, person1@example.com wrote:\r\n\
 async fn test_email_encodings() {
     let config = ExtractionConfig::default();
 
-    // UTF-8 email with special characters
     let eml_content = "From: sender@example.com\r\n\
 To: recipient@example.com\r\n\
 Subject: Email with Unicode: 你好世界 🌍\r\n\
@@ -280,10 +248,8 @@ Emoji: 🎉 🚀 ✅"
         .await
         .expect("Should extract UTF-8 email");
 
-    // Verify Unicode is preserved
     assert!(result.content.contains("café") || result.content.contains("naive") || !result.content.is_empty());
 
-    // Subject with Unicode
     if let Some(subject) = result.metadata.subject {
         assert!(subject.contains("Unicode") || subject.contains("Email"));
     }
@@ -306,32 +272,22 @@ Email to multiple recipients.";
         .await
         .expect("Should extract email with multiple recipients");
 
-    // Verify email metadata - check ALL fields
     assert!(result.metadata.email.is_some());
     let email_meta = result.metadata.email.unwrap();
 
-    // Verify sender
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
 
-    // Verify To recipients
     assert_eq!(email_meta.to_emails.len(), 3, "Should have 3 To recipients");
     assert!(email_meta.to_emails.contains(&"r1@example.com".to_string()));
     assert!(email_meta.to_emails.contains(&"r2@example.com".to_string()));
     assert!(email_meta.to_emails.contains(&"r3@example.com".to_string()));
 
-    // Verify CC recipients
     assert_eq!(email_meta.cc_emails.len(), 2, "Should have 2 CC recipients");
     assert!(email_meta.cc_emails.contains(&"cc1@example.com".to_string()));
     assert!(email_meta.cc_emails.contains(&"cc2@example.com".to_string()));
 
-    // BCC is often not included in message headers (privacy)
-    // BCC may be empty even if specified in headers
-    // Note: We don't assert on BCC as it's typically stripped
-
-    // Verify subject
     assert_eq!(result.metadata.subject, Some("Multiple Recipients".to_string()));
 
-    // Verify no attachments
     assert!(email_meta.attachments.is_empty(), "Should have no attachments");
 }
 
@@ -340,13 +296,10 @@ Email to multiple recipients.";
 async fn test_malformed_email() {
     let config = ExtractionConfig::default();
 
-    // Malformed email (missing required headers, invalid structure)
     let malformed_eml = b"This is not a valid email at all.";
 
     let result = extract_bytes(malformed_eml, "message/rfc822", &config).await;
 
-    // mail-parser is very permissive and may parse this
-    // The important thing is it doesn't panic
     assert!(
         result.is_ok() || result.is_err(),
         "Should handle malformed email gracefully"

@@ -128,7 +128,7 @@ impl SemanticAnalyzer {
                 if token.importance_score < 0.5
                     && let Some(hypernym) = self.get_hypernym(&token.token)
                 {
-                    token.token = hypernym;
+                    token.token = hypernym; // FIXME: check value is used after being moved
                 }
             }
         }
@@ -366,7 +366,6 @@ mod tests {
         let analyzer = SemanticAnalyzer::new("en");
         let input = "The quick brown fox";
         let result = analyzer.apply_semantic_filtering(input, 0.9);
-        // High threshold should filter most words
         assert!(result.len() <= input.len());
     }
 
@@ -375,7 +374,6 @@ mod tests {
         let analyzer = SemanticAnalyzer::new("en");
         let input = "The car drove past the dog";
         let result = analyzer.apply_hypernym_compression(input, None);
-        // Should replace low-importance words with hypernyms
         assert!(!result.is_empty());
     }
 
@@ -405,18 +403,15 @@ mod tests {
     fn test_calculate_base_importance() {
         let analyzer = SemanticAnalyzer::new("en");
 
-        // High importance words
         let result_score = analyzer.calculate_base_importance("result");
         let conclusion_score = analyzer.calculate_base_importance("conclusion");
 
         assert!(result_score > 0.5);
         assert!(conclusion_score > 0.5);
 
-        // Medium importance
         let process_score = analyzer.calculate_base_importance("process");
         assert!(process_score >= 0.4);
 
-        // Regular words
         let regular_score = analyzer.calculate_base_importance("cat");
         assert!(regular_score < result_score);
     }
@@ -484,7 +479,6 @@ mod tests {
         let analyzer = SemanticAnalyzer::new("en");
         let tokens = analyzer.tokenize_and_score("first middle last");
 
-        // First and last positions should get boost
         assert!(tokens[0].importance_score > 0.0);
         assert!(tokens[2].importance_score > 0.0);
     }
@@ -497,7 +491,6 @@ mod tests {
         let test_token = tokens.iter().find(|t| t.token == "test").unwrap();
         let other_token = tokens.iter().find(|t| t.token == "other").unwrap();
 
-        // "test" appears 3 times, should have higher frequency score
         assert!(test_token.frequency_score > other_token.frequency_score);
     }
 
@@ -619,7 +612,6 @@ mod tests {
         let analyzer = SemanticAnalyzer::new("en");
         let input = "The car drove fast";
         let result = analyzer.apply_hypernym_compression(input, Some(0.0));
-        // Should return at least 1 word
         assert!(!result.is_empty());
     }
 }

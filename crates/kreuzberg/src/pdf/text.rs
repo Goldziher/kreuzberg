@@ -7,7 +7,6 @@ pub struct PdfTextExtractor {
 
 impl PdfTextExtractor {
     pub fn new() -> Result<Self> {
-        // Try to bind to the downloaded library first, fall back to system library
         let binding = Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./"))
             .or_else(|_| Pdfium::bind_to_system_library())
             .map_err(|e| PdfError::TextExtractionFailed(format!("Failed to initialize Pdfium: {}", e)))?;

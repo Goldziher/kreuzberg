@@ -12,12 +12,15 @@ impl Default for SimdTextProcessor {
 }
 
 impl SimdTextProcessor {
+    // TODO: we should use SIMD acceleration not only in token reduction, but also in other text processing, lets see if we can generalize this - inspect for refactor
     pub fn new() -> Self {
         Self::default()
     }
 
     #[allow(dead_code)]
     pub fn normalize_whitespace(&self, text: &str) -> String {
+        // TODO: check this - is this dead code?
+
         let bytes = text.as_bytes();
         let mut result = Vec::with_capacity(text.len());
         let mut i = 0;
@@ -157,7 +160,7 @@ pub fn chunk_text_for_parallel(text: &str, target_chunks: usize) -> Vec<&str> {
         let mut end = (start + approximate_chunk_size).min(text.len());
 
         if end < text.len() {
-            let search_start = (end.saturating_sub(200)).max(start);
+            let search_start = end.saturating_sub(200).max(start);
             let search_end = (end + 200).min(text.len());
 
             if let Some(boundary_pos) = memchr3(b'.', b'!', b'?', &text.as_bytes()[search_start..search_end]) {

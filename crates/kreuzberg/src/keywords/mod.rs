@@ -163,8 +163,6 @@ pub fn register_keyword_processor() -> Result<()> {
         .write()
         .map_err(|e| crate::KreuzbergError::Other(format!("Post-processor registry lock poisoned: {}", e)))?;
 
-    // Register keyword extractor in Middle stage with priority 50
-    // (runs after language detection, before custom hooks)
     registry.register(Arc::new(KeywordExtractor), 50)?;
 
     Ok(())
@@ -215,23 +213,18 @@ mod tests {
         let text = "Machine learning and artificial intelligence are transforming technology. \
                     Deep learning models require substantial computational resources.";
 
-        // Extract with YAKE
         let yake_config = KeywordConfig::yake().with_max_keywords(5);
         let yake_keywords = extract_keywords(text, &yake_config).unwrap();
 
-        // Extract with RAKE
         let rake_config = KeywordConfig::rake().with_max_keywords(5);
         let rake_keywords = extract_keywords(text, &rake_config).unwrap();
 
-        // Both should extract keywords
         assert!(!yake_keywords.is_empty());
         assert!(!rake_keywords.is_empty());
 
-        // Algorithms should be correctly set
         assert!(yake_keywords.iter().all(|k| k.algorithm == KeywordAlgorithm::Yake));
         assert!(rake_keywords.iter().all(|k| k.algorithm == KeywordAlgorithm::Rake));
 
-        // Results may differ between algorithms
         println!(
             "YAKE keywords: {:?}",
             yake_keywords.iter().map(|k| &k.text).collect::<Vec<_>>()

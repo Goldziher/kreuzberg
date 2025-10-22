@@ -20,7 +20,6 @@ async fn test_batch_extract_file_multiple_formats() {
         return;
     }
 
-    // Skip if any required files are missing
     if skip_if_missing("pdfs/fake_memo.pdf")
         || skip_if_missing("documents/fake.docx")
         || skip_if_missing("text/fake_text.txt")
@@ -41,10 +40,8 @@ async fn test_batch_extract_file_multiple_formats() {
     assert!(results.is_ok(), "Batch extraction should succeed");
     let results = results.unwrap();
 
-    // Should have 3 results
     assert_eq!(results.len(), 3);
 
-    // Verify each extraction succeeded
     assert!(!results[0].content.is_empty(), "PDF content should not be empty");
     assert_eq!(results[0].mime_type, "application/pdf");
 
@@ -57,7 +54,6 @@ async fn test_batch_extract_file_multiple_formats() {
     assert!(!results[2].content.is_empty(), "TXT content should not be empty");
     assert_eq!(results[2].mime_type, "text/plain");
 
-    // Verify no error metadata
     assert!(results[0].metadata.error.is_none());
     assert!(results[1].metadata.error.is_none());
     assert!(results[2].metadata.error.is_none());
@@ -89,7 +85,6 @@ fn test_batch_extract_file_sync_variant() {
 
     assert_eq!(results.len(), 2);
 
-    // Verify PDF extraction
     assert!(!results[0].content.is_empty(), "PDF content should not be empty");
     assert_eq!(
         results[0].mime_type, "application/pdf",
@@ -97,7 +92,6 @@ fn test_batch_extract_file_sync_variant() {
     );
     assert!(results[0].metadata.error.is_none(), "PDF should extract without errors");
 
-    // Verify text extraction
     assert!(!results[1].content.is_empty(), "Text content should not be empty");
     assert_eq!(results[1].mime_type, "text/plain", "Text MIME type should be correct");
     assert!(
@@ -128,14 +122,12 @@ async fn test_batch_extract_bytes_multiple() {
 
     assert_eq!(results.len(), 3);
 
-    // Text and markdown should extract cleanly
     assert_eq!(results[0].content, "This is plain text content");
     assert_eq!(results[0].mime_type, "text/plain");
 
     assert!(results[1].content.contains("Markdown Header"));
     assert_eq!(results[1].mime_type, "text/markdown");
 
-    // JSON should extract key-value pairs
     assert!(results[2].content.contains("key"));
     assert!(results[2].content.contains("value"));
     assert_eq!(results[2].mime_type, "application/json");
@@ -168,9 +160,9 @@ async fn test_batch_extract_one_file_fails() {
     let config = ExtractionConfig::default();
 
     let paths = vec![
-        get_test_file_path("text/fake_text.txt"),              // Valid file
-        get_test_documents_dir().join("nonexistent_file.txt"), // Invalid file
-        get_test_file_path("text/contract.txt"),               // Valid file
+        get_test_file_path("text/fake_text.txt"),
+        get_test_documents_dir().join("nonexistent_file.txt"),
+        get_test_file_path("text/contract.txt"),
     ];
 
     let results = batch_extract_file(paths, &config).await;
@@ -180,15 +172,12 @@ async fn test_batch_extract_one_file_fails() {
 
     assert_eq!(results.len(), 3);
 
-    // First file should succeed
     assert!(!results[0].content.is_empty());
     assert!(results[0].metadata.error.is_none());
 
-    // Second file should have error metadata
     assert!(results[1].metadata.error.is_some());
     assert!(results[1].content.contains("Error:"));
 
-    // Third file should succeed
     assert!(!results[2].content.is_empty());
     assert!(results[2].metadata.error.is_none());
 }
@@ -212,12 +201,10 @@ async fn test_batch_extract_all_fail() {
 
     assert_eq!(results.len(), 3);
 
-    // All results should have error metadata
     assert!(results[0].metadata.error.is_some());
     assert!(results[1].metadata.error.is_some());
     assert!(results[2].metadata.error.is_some());
 
-    // All contents should be error messages
     assert!(results[0].content.contains("Error:"));
     assert!(results[1].content.contains("Error:"));
     assert!(results[2].content.contains("Error:"));
@@ -237,7 +224,6 @@ async fn test_batch_extract_concurrent() {
 
     let config = ExtractionConfig::default();
 
-    // Use same file multiple times to test concurrent access
     let base_path = get_test_file_path("text/fake_text.txt");
     let paths: Vec<PathBuf> = (0..20).map(|_| base_path.clone()).collect();
 
@@ -250,21 +236,17 @@ async fn test_batch_extract_concurrent() {
 
     assert_eq!(results.len(), 20);
 
-    // Verify all succeeded
     for result in &results {
         assert!(result.metadata.error.is_none(), "Result should not have errors");
         assert!(!result.content.is_empty(), "Result content should not be empty");
         assert_eq!(result.mime_type, "text/plain", "MIME type should be text/plain");
     }
 
-    // Verify actual content from at least first result (all should be identical)
     assert!(
         !results[0].content.is_empty(),
         "Should have extracted actual text content"
     );
 
-    // Concurrent processing should be faster than sequential
-    // (This is a heuristic - 20 files in < 5 seconds is reasonable for text files)
     assert!(duration.as_secs() < 5, "Batch processing took too long: {:?}", duration);
 }
 
@@ -282,7 +264,6 @@ async fn test_batch_extract_large_batch() {
 
     let config = ExtractionConfig::default();
 
-    // Use same file 50 times (simulates large batch)
     let base_path = get_test_file_path("text/fake_text.txt");
     let paths: Vec<PathBuf> = (0..50).map(|_| base_path.clone()).collect();
 
@@ -293,7 +274,6 @@ async fn test_batch_extract_large_batch() {
 
     assert_eq!(results.len(), 50);
 
-    // Verify all succeeded
     for result in &results {
         assert!(result.metadata.error.is_none());
         assert!(!result.content.is_empty());

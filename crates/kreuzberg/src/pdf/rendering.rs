@@ -32,7 +32,6 @@ pub struct PdfRenderer {
 
 impl PdfRenderer {
     pub fn new() -> Result<Self> {
-        // Try to bind to the downloaded library first, fall back to system library
         let binding = Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./"))
             .or_else(|_| Pdfium::bind_to_system_library())
             .map_err(|e| PdfError::RenderingFailed(format!("Failed to initialize Pdfium: {}", e)))?;
@@ -138,9 +137,6 @@ impl PdfRenderer {
     }
 }
 
-// Note: No Default impl - PdfRenderer::new() can fail if Pdfium library is not found
-// Users should call PdfRenderer::new() explicitly to handle potential errors
-
 pub fn render_page_to_image(pdf_bytes: &[u8], page_index: usize, options: &PageRenderOptions) -> Result<DynamicImage> {
     let renderer = PdfRenderer::new()?;
     renderer.render_page_to_image(pdf_bytes, page_index, options)
@@ -242,9 +238,7 @@ mod tests {
 
     #[test]
     fn test_renderer_size() {
-        // Test that PdfRenderer has reasonable size
-        // (cannot use default() as it was removed to prevent panic on initialization failure)
-        assert!(std::mem::size_of::<PdfRenderer>() > 0);
+        assert!(size_of::<PdfRenderer>() > 0);
     }
 
     #[test]
@@ -280,49 +274,42 @@ mod tests {
 
     #[test]
     fn test_calculate_optimal_dpi_tall_page() {
-        // Test with a very tall page (height > width)
         let dpi = calculate_optimal_dpi(612.0, 10000.0, 300, 4096, 72, 600);
         assert!((72..=600).contains(&dpi));
     }
 
     #[test]
     fn test_calculate_optimal_dpi_wide_page() {
-        // Test with a very wide page (width > height)
         let dpi = calculate_optimal_dpi(10000.0, 612.0, 300, 4096, 72, 600);
         assert!((72..=600).contains(&dpi));
     }
 
     #[test]
     fn test_calculate_optimal_dpi_square_page() {
-        // Test with a square page
         let dpi = calculate_optimal_dpi(1000.0, 1000.0, 300, 65536, 72, 600);
         assert!((72..=600).contains(&dpi));
     }
 
     #[test]
     fn test_calculate_optimal_dpi_tiny_page() {
-        // Test with a very small page
         let dpi = calculate_optimal_dpi(72.0, 72.0, 300, 65536, 72, 600);
         assert_eq!(dpi, 300);
     }
 
     #[test]
     fn test_calculate_optimal_dpi_target_equals_max() {
-        // Test when target DPI equals max DPI
         let dpi = calculate_optimal_dpi(612.0, 792.0, 600, 65536, 72, 600);
         assert_eq!(dpi, 600);
     }
 
     #[test]
     fn test_calculate_optimal_dpi_target_equals_min() {
-        // Test when target DPI equals min DPI
         let dpi = calculate_optimal_dpi(612.0, 792.0, 72, 65536, 72, 600);
         assert_eq!(dpi, 72);
     }
 
     #[test]
     fn test_calculate_optimal_dpi_exactly_at_limit() {
-        // Test when dimensions exactly match the limit
         let page_size = 65536.0 / 300.0 * PDF_POINTS_PER_INCH;
         let dpi = calculate_optimal_dpi(page_size, page_size, 300, 65536, 72, 600);
         assert!((72..=600).contains(&dpi));
@@ -370,14 +357,12 @@ mod tests {
 
     #[test]
     fn test_calculate_optimal_dpi_zero_target() {
-        // Edge case: zero target DPI should clamp to min
         let dpi = calculate_optimal_dpi(612.0, 792.0, 0, 65536, 72, 600);
         assert_eq!(dpi, 72);
     }
 
     #[test]
     fn test_calculate_optimal_dpi_negative_target() {
-        // Edge case: negative target DPI should clamp to min
         let dpi = calculate_optimal_dpi(612.0, 792.0, -100, 65536, 72, 600);
         assert_eq!(dpi, 72);
     }

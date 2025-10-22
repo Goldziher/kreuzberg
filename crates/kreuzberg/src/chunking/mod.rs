@@ -139,9 +139,8 @@ mod tests {
         let result = chunk_text(text, &config).unwrap();
         assert!(result.chunk_count >= 2);
 
-        // Verify overlap exists between consecutive chunks
         if result.chunks.len() >= 2 {
-            let first_chunk_end = &result.chunks[0][(result.chunks[0].len().saturating_sub(5))..];
+            let first_chunk_end = &result.chunks[0][result.chunks[0].len().saturating_sub(5)..];
             assert!(
                 result.chunks[1].starts_with(first_chunk_end),
                 "Expected overlap '{}' at start of second chunk '{}'",
@@ -204,7 +203,6 @@ mod tests {
         let text = "  Leading and trailing spaces  should be trimmed  ";
         let result = chunk_text(text, &config).unwrap();
         assert!(result.chunk_count >= 1);
-        // All chunks should have trimmed whitespace
         assert!(result.chunks.iter().all(|chunk| !chunk.starts_with(' ')));
     }
 
@@ -219,7 +217,6 @@ mod tests {
         let text = "  Text with spaces  ";
         let result = chunk_text(text, &config).unwrap();
         assert_eq!(result.chunk_count, 1);
-        // Should preserve leading/trailing spaces when trim is false
         assert!(result.chunks[0].starts_with(' ') || result.chunks[0].len() < text.len());
     }
 
@@ -227,7 +224,7 @@ mod tests {
     fn test_chunk_with_invalid_overlap() {
         let config = ChunkingConfig {
             max_characters: 10,
-            overlap: 20, // Overlap larger than max_characters
+            overlap: 20,
             trim: true,
             chunker_type: ChunkerType::Text,
         };
@@ -289,16 +286,16 @@ mod tests {
         ];
         let results = chunk_texts_batch(&texts, &config).unwrap();
         assert_eq!(results.len(), 3);
-        assert_eq!(results[0].chunk_count, 1); // Short text
-        assert!(results[1].chunk_count > 1); // Long text
-        assert_eq!(results[2].chunk_count, 0); // Empty text
+        assert_eq!(results[0].chunk_count, 1);
+        assert!(results[1].chunk_count > 1);
+        assert_eq!(results[2].chunk_count, 0);
     }
 
     #[test]
     fn test_chunk_texts_batch_error_propagation() {
         let config = ChunkingConfig {
             max_characters: 10,
-            overlap: 20, // Invalid overlap
+            overlap: 20,
             trim: true,
             chunker_type: ChunkerType::Text,
         };
@@ -324,7 +321,7 @@ mod tests {
             trim: true,
             chunker_type: ChunkerType::Text,
         };
-        let text = "a".repeat(1000); // 1000 character string
+        let text = "a".repeat(1000);
         let result = chunk_text(&text, &config).unwrap();
         assert!(result.chunk_count >= 10);
         assert!(result.chunks.iter().all(|chunk| chunk.len() <= 100));

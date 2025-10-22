@@ -48,12 +48,10 @@ impl DocumentExtractor for HtmlExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Convert bytes to string (zero-copy if valid UTF-8)
         let html = std::str::from_utf8(content)
             .map(|s| s.to_string())
             .unwrap_or_else(|_| String::from_utf8_lossy(content).to_string());
 
-        // Convert HTML to markdown
         let markdown = crate::extraction::html::convert_html_to_markdown(&html, None)?;
 
         Ok(ExtractionResult {

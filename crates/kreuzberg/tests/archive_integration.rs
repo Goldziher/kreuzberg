@@ -16,25 +16,21 @@ mod helpers;
 async fn test_zip_basic_extraction() {
     let config = ExtractionConfig::default();
 
-    // Create a simple ZIP archive
     let zip_bytes = create_simple_zip();
 
     let result = extract_bytes(&zip_bytes, "application/zip", &config)
         .await
         .expect("Should extract ZIP successfully");
 
-    // Verify ExtractionResult structure
     assert_eq!(result.mime_type, "application/zip");
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify extraction
     assert!(result.content.contains("ZIP Archive"));
     assert!(result.content.contains("test.txt"));
     assert!(result.content.contains("Hello from ZIP!"));
 
-    // Verify metadata
     assert!(result.metadata.archive.is_some());
     let archive_meta = result.metadata.archive.unwrap();
     assert_eq!(archive_meta.format, "ZIP");
@@ -48,7 +44,6 @@ async fn test_zip_basic_extraction() {
 async fn test_zip_multiple_files() {
     let config = ExtractionConfig::default();
 
-    // Create ZIP with multiple files
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
@@ -71,22 +66,18 @@ async fn test_zip_multiple_files() {
         .await
         .expect("Should extract multi-file ZIP");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify all files are listed
     assert!(result.content.contains("file1.txt"));
     assert!(result.content.contains("file2.md"));
     assert!(result.content.contains("file3.json"));
 
-    // Verify content extraction
     assert!(result.content.contains("Content 1"));
     assert!(result.content.contains("Content 2"));
     assert!(result.content.contains("value"));
 
-    // Verify metadata
     let archive_meta = result.metadata.archive.unwrap();
     assert_eq!(archive_meta.file_count, 3, "Should have 3 files");
     assert_eq!(archive_meta.file_list.len(), 3, "file_list should contain 3 entries");
@@ -100,7 +91,6 @@ async fn test_zip_multiple_files() {
 async fn test_zip_nested_directories() {
     let config = ExtractionConfig::default();
 
-    // Create ZIP with nested directories
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
@@ -123,21 +113,17 @@ async fn test_zip_nested_directories() {
         .await
         .expect("Should extract nested ZIP");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify directory structure is preserved
     assert!(result.content.contains("dir1/"));
     assert!(result.content.contains("dir1/file.txt"));
     assert!(result.content.contains("dir1/subdir/nested.txt"));
 
-    // Verify content extraction
     assert!(result.content.contains("File in dir1"));
     assert!(result.content.contains("Nested file"));
 
-    // Verify metadata includes directories and files
     let archive_meta = result.metadata.archive.unwrap();
     assert!(
         archive_meta.file_count >= 2,
@@ -157,25 +143,21 @@ async fn test_zip_nested_directories() {
 async fn test_tar_extraction() {
     let config = ExtractionConfig::default();
 
-    // Create a simple TAR archive
     let tar_bytes = create_simple_tar();
 
     let result = extract_bytes(&tar_bytes, "application/x-tar", &config)
         .await
         .expect("Should extract TAR successfully");
 
-    // Verify ExtractionResult structure
     assert_eq!(result.mime_type, "application/x-tar");
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify extraction
     assert!(result.content.contains("TAR Archive"));
     assert!(result.content.contains("test.txt"));
     assert!(result.content.contains("Hello from TAR!"));
 
-    // Verify metadata
     let archive_meta = result.metadata.archive.unwrap();
     assert_eq!(archive_meta.format, "TAR");
     assert_eq!(archive_meta.file_count, 1);
@@ -189,16 +171,12 @@ async fn test_tar_extraction() {
 async fn test_tar_gz_extraction() {
     let config = ExtractionConfig::default();
 
-    // Create TAR archive (TAR.GZ would decompress to this)
     let tar_bytes = create_simple_tar();
 
-    // Test that we can extract the TAR directly
-    // In production, TAR.GZ would be decompressed first, then extracted
     let result = extract_bytes(&tar_bytes, "application/x-tar", &config)
         .await
         .expect("Should extract TAR");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
@@ -206,17 +184,14 @@ async fn test_tar_gz_extraction() {
     assert!(result.content.contains("TAR Archive"));
     assert!(result.content.contains("test.txt"));
 
-    // Verify metadata
     let archive_meta = result.metadata.archive.as_ref().unwrap();
     assert_eq!(archive_meta.format, "TAR");
     assert_eq!(archive_meta.file_count, 1);
 
-    // Verify TAR-specific MIME type handling
     let result2 = extract_bytes(&tar_bytes, "application/tar", &config)
         .await
         .expect("Should extract with alternative MIME type");
 
-    // Verify ExtractionResult structure for second extraction
     assert!(
         result2.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -231,9 +206,6 @@ async fn test_tar_gz_extraction() {
 /// Test 7z extraction.
 #[tokio::test]
 async fn test_7z_extraction() {
-    // 7z creation is complex, so we test with a minimal 7z structure
-    // In a real scenario, you'd use a 7z library or test file
-    // For now, we'll skip this test and mark it as conditional
     println!("7z test requires real 7z file - skipping programmatic creation");
 }
 
@@ -242,10 +214,8 @@ async fn test_7z_extraction() {
 async fn test_nested_archive() {
     let config = ExtractionConfig::default();
 
-    // Create inner ZIP
     let inner_zip = create_simple_zip();
 
-    // Create outer ZIP containing the inner ZIP
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
@@ -265,24 +235,18 @@ async fn test_nested_archive() {
         .await
         .expect("Should extract nested ZIP");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify outer archive lists inner.zip
     assert!(result.content.contains("inner.zip"));
     assert!(result.content.contains("readme.txt"));
     assert!(result.content.contains("This archive contains another archive"));
 
-    // Verify metadata
     let archive_meta = result.metadata.archive.unwrap();
     assert_eq!(archive_meta.file_count, 2, "Should have 2 files in outer archive");
     assert!(archive_meta.file_list.contains(&"inner.zip".to_string()));
     assert!(archive_meta.file_list.contains(&"readme.txt".to_string()));
-
-    // Note: Nested extraction (extracting the inner ZIP) would require
-    // recursive extraction logic, which is not currently implemented
 }
 
 /// Test archive with mixed file formats (PDF, DOCX, images).
@@ -290,25 +254,20 @@ async fn test_nested_archive() {
 async fn test_archive_mixed_formats() {
     let config = ExtractionConfig::default();
 
-    // Create ZIP with various file types
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
         let options = FileOptions::<'_, ()>::default();
 
-        // Text file (will be extracted)
         zip.start_file("document.txt", options).unwrap();
         zip.write_all(b"Text document").unwrap();
 
-        // Markdown file (will be extracted)
         zip.start_file("readme.md", options).unwrap();
         zip.write_all(b"# README").unwrap();
 
-        // Binary file (won't be extracted as text)
         zip.start_file("image.png", options).unwrap();
-        zip.write_all(&[0x89, 0x50, 0x4E, 0x47]).unwrap(); // PNG header
+        zip.write_all(&[0x89, 0x50, 0x4E, 0x47]).unwrap();
 
-        // PDF file (won't be extracted as text)
         zip.start_file("document.pdf", options).unwrap();
         zip.write_all(b"%PDF-1.4").unwrap();
 
@@ -320,22 +279,18 @@ async fn test_archive_mixed_formats() {
         .await
         .expect("Should extract mixed-format ZIP");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify all files are listed
     assert!(result.content.contains("document.txt"));
     assert!(result.content.contains("readme.md"));
     assert!(result.content.contains("image.png"));
     assert!(result.content.contains("document.pdf"));
 
-    // Verify only text files have content extracted
     assert!(result.content.contains("Text document"));
     assert!(result.content.contains("# README"));
 
-    // Verify metadata
     let archive_meta = result.metadata.archive.unwrap();
     assert_eq!(archive_meta.file_count, 4, "Should have 4 files");
     assert_eq!(archive_meta.file_list.len(), 4, "file_list should contain 4 entries");
@@ -350,14 +305,10 @@ async fn test_archive_mixed_formats() {
 async fn test_password_protected_archive() {
     let config = ExtractionConfig::default();
 
-    // Create encrypted ZIP (requires AES encryption)
-    // zip-rs doesn't easily support creating encrypted archives in tests,
-    // so we test with a corrupted/invalid ZIP that simulates failure
-    let invalid_zip = vec![0x50, 0x4B, 0x03, 0x04]; // PK header but invalid
+    let invalid_zip = vec![0x50, 0x4B, 0x03, 0x04];
 
     let result = extract_bytes(&invalid_zip, "application/zip", &config).await;
 
-    // Should fail gracefully
     assert!(result.is_err(), "Should fail on invalid/encrypted ZIP");
 }
 
@@ -366,25 +317,16 @@ async fn test_password_protected_archive() {
 async fn test_corrupted_archive() {
     let config = ExtractionConfig::default();
 
-    // Create corrupted ZIP (valid header but corrupted data)
-    let corrupted_zip = vec![
-        0x50, 0x4B, 0x03, 0x04, // PK header
-        0xFF, 0xFF, 0xFF, 0xFF, // Garbage data
-    ];
+    let corrupted_zip = vec![0x50, 0x4B, 0x03, 0x04, 0xFF, 0xFF, 0xFF, 0xFF];
 
     let result = extract_bytes(&corrupted_zip, "application/zip", &config).await;
 
-    // Should fail gracefully with parsing error
     assert!(result.is_err(), "Should fail on corrupted ZIP");
 
-    // TAR with invalid header (not all zeros, not a valid header)
-    let mut corrupted_tar = vec![0xFF; 512]; // Fill with 0xFF (invalid)
-    // Set a fake filename to make it look like it might be a header
+    let mut corrupted_tar = vec![0xFF; 512];
     corrupted_tar[0..5].copy_from_slice(b"file\0");
 
     let result = extract_bytes(&corrupted_tar, "application/x-tar", &config).await;
-    // Note: TAR extraction might succeed on some invalid data due to format flexibility
-    // The important thing is it doesn't panic
     assert!(
         result.is_ok() || result.is_err(),
         "Should handle corrupted TAR gracefully"
@@ -396,7 +338,6 @@ async fn test_corrupted_archive() {
 async fn test_large_archive() {
     let config = ExtractionConfig::default();
 
-    // Create ZIP with 100 files
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
@@ -415,12 +356,10 @@ async fn test_large_archive() {
         .await
         .expect("Should extract large ZIP");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify file count and file_list
     let archive_meta = result.metadata.archive.unwrap();
     assert_eq!(archive_meta.file_count, 100, "Should have 100 files");
     assert_eq!(
@@ -429,7 +368,6 @@ async fn test_large_archive() {
         "file_list should contain 100 entries"
     );
 
-    // Verify some files are listed
     assert!(result.content.contains("file_0.txt"));
     assert!(result.content.contains("file_99.txt"));
     assert!(archive_meta.file_list.contains(&"file_0.txt".to_string()));
@@ -442,17 +380,14 @@ async fn test_large_archive() {
 async fn test_archive_with_special_characters() {
     let config = ExtractionConfig::default();
 
-    // Create ZIP with Unicode and special character filenames
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
         let options = FileOptions::<'_, ()>::default();
 
-        // Unicode filename
         zip.start_file("测试文件.txt", options).unwrap();
         zip.write_all("Unicode content".as_bytes()).unwrap();
 
-        // Special characters
         zip.start_file("file with spaces.txt", options).unwrap();
         zip.write_all(b"Spaces in filename").unwrap();
 
@@ -467,21 +402,17 @@ async fn test_archive_with_special_characters() {
         .await
         .expect("Should extract ZIP with special characters");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify files are listed (exact string matching may vary with Unicode)
     assert!(result.content.contains("测试文件.txt") || result.content.contains("txt"));
     assert!(result.content.contains("file with spaces.txt"));
     assert!(result.content.contains("file-with-dashes.txt"));
 
-    // Verify metadata
     let archive_meta = result.metadata.archive.unwrap();
     assert_eq!(archive_meta.file_count, 3, "Should have 3 files");
     assert_eq!(archive_meta.file_list.len(), 3, "file_list should contain 3 entries");
-    // Verify specific files (Unicode filename may have encoding variations)
     assert!(archive_meta.file_list.iter().any(|f| f.contains("txt")));
     assert!(archive_meta.file_list.contains(&"file with spaces.txt".to_string()));
     assert!(archive_meta.file_list.contains(&"file-with-dashes.txt".to_string()));
@@ -492,7 +423,6 @@ async fn test_archive_with_special_characters() {
 async fn test_empty_archive() {
     let config = ExtractionConfig::default();
 
-    // Create empty ZIP
     let mut cursor = Cursor::new(Vec::new());
     {
         let zip = ZipWriter::new(&mut cursor);
@@ -504,12 +434,10 @@ async fn test_empty_archive() {
         .await
         .expect("Should extract empty ZIP");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify metadata
     assert!(result.content.contains("ZIP Archive"));
     let archive_meta = result.metadata.archive.unwrap();
     assert_eq!(archive_meta.file_count, 0, "Empty archive should have 0 files");
@@ -525,12 +453,10 @@ fn test_archive_extraction_sync() {
     let zip_bytes = create_simple_zip();
     let result = extract_bytes_sync(&zip_bytes, "application/zip", &config).expect("Should extract ZIP synchronously");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    // Verify content and metadata
     assert!(result.content.contains("ZIP Archive"));
     assert!(result.content.contains("test.txt"));
     assert!(result.content.contains("Hello from ZIP!"));
@@ -542,8 +468,6 @@ fn test_archive_extraction_sync() {
     assert_eq!(archive_meta.file_list.len(), 1);
     assert_eq!(archive_meta.file_list[0], "test.txt");
 }
-
-// Helper functions
 
 fn create_simple_zip() -> Vec<u8> {
     let mut cursor = Cursor::new(Vec::new());

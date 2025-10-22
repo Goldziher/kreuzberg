@@ -105,7 +105,7 @@ mod tests {
         assert_eq!(result.content, "Hello World");
         assert!(result.metadata.xml.is_some());
         let xml_meta = result.metadata.xml.unwrap();
-        assert_eq!(xml_meta.element_count, 3); // root, item, item
+        assert_eq!(xml_meta.element_count, 3);
         assert!(xml_meta.unique_elements.contains(&"root".to_string()));
         assert!(xml_meta.unique_elements.contains(&"item".to_string()));
     }

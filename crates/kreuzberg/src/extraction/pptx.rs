@@ -132,10 +132,6 @@ impl Default for ParserConfig {
     }
 }
 
-// ============================================================================
-// Content Builder
-// ============================================================================
-
 struct ContentBuilder {
     content: String,
 }
@@ -241,10 +237,6 @@ fn html_escape(text: &str) -> String {
         .replace('\'', "&#x27;")
 }
 
-// ============================================================================
-// PPTX Container (Zip Archive Handler)
-// ============================================================================
-
 struct PptxContainer {
     archive: ZipArchive<File>,
     slide_paths: Vec<String>,
@@ -255,7 +247,6 @@ impl PptxContainer {
         // IO errors must bubble up unchanged - file access issues need user reports ~keep
         let file = File::open(path)?;
 
-        // Zip errors: check if it's format/parsing issue vs IO error
         let mut archive = match ZipArchive::new(file) {
             Ok(arc) => arc,
             Err(zip::result::ZipError::Io(io_err)) => return Err(io_err.into()), // Bubble up IO errors ~keep
@@ -334,10 +325,6 @@ impl PptxContainer {
         Ok(contents)
     }
 }
-
-// ============================================================================
-// Slide Implementation
-// ============================================================================
 
 impl Slide {
     fn from_xml(slide_number: u32, xml_data: &[u8], rels_data: Option<&[u8]>) -> Result<Self> {
@@ -421,10 +408,6 @@ impl Slide {
     }
 }
 
-// ============================================================================
-// Slide Iterator
-// ============================================================================
-
 #[allow(dead_code)]
 struct SlideIterator {
     container: PptxContainer,
@@ -484,10 +467,6 @@ impl SlideIterator {
     }
 }
 
-// ============================================================================
-// XML Parsing
-// ============================================================================
-
 use roxmltree::Document;
 
 fn parse_slide_xml(xml_data: &[u8]) -> Result<Vec<SlideElement>> {
@@ -500,7 +479,6 @@ fn parse_slide_xml(xml_data: &[u8]) -> Result<Vec<SlideElement>> {
     let mut elements = Vec::new();
     const DRAWINGML_NS: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
 
-    // Simple extraction - just get text elements for now
     for node in doc.descendants() {
         if node.has_tag_name((DRAWINGML_NS, "t"))
             && let Some(text) = node.text()
@@ -565,10 +543,6 @@ fn parse_presentation_rels(rels_data: &[u8]) -> Result<Vec<String>> {
     Ok(slide_paths)
 }
 
-// ============================================================================
-// Metadata Extraction
-// ============================================================================
-
 fn extract_metadata(core_xml: &[u8]) -> Result<PptxMetadata> {
     let xml_str = std::str::from_utf8(core_xml)
         .map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in core.xml: {}", e)))?;
@@ -599,14 +573,9 @@ fn extract_metadata(core_xml: &[u8]) -> Result<PptxMetadata> {
     Ok(metadata)
 }
 
-// ============================================================================
-// Notes Extraction
-// ============================================================================
-
 fn extract_all_notes(container: &mut PptxContainer) -> Result<HashMap<u32, String>> {
     let mut notes = HashMap::new();
 
-    // Clone slide paths to avoid borrow issues
     let slide_paths: Vec<String> = container.slide_paths().to_vec();
 
     for (i, slide_path) in slide_paths.iter().enumerate() {
@@ -614,7 +583,7 @@ fn extract_all_notes(container: &mut PptxContainer) -> Result<HashMap<u32, Strin
         if let Ok(notes_xml) = container.read_file(&notes_path)
             && let Ok(note_text) = extract_notes_text(&notes_xml)
         {
-            notes.insert((i + 1) as u32, note_text);
+            notes.insert((i + 1) as u32, note_text); // FIXME: check value is used after being moved
         }
     }
 
@@ -642,10 +611,6 @@ fn extract_notes_text(notes_xml: &[u8]) -> Result<String> {
     Ok(text_parts.join(" "))
 }
 
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
 fn get_slide_rels_path(slide_path: &str) -> String {
     let parts: Vec<&str> = slide_path.rsplitn(2, '/').collect();
     if parts.len() == 2 {
@@ -656,23 +621,17 @@ fn get_slide_rels_path(slide_path: &str) -> String {
 }
 
 fn get_full_image_path(slide_path: &str, image_target: &str) -> String {
-    // slide_path is like "ppt/slides/slide1.xml"
-    // We want the directory containing "slides/", which is "ppt"
     if image_target.starts_with("..") {
-        // Relative path like "../media/image1.png"
-        // From "ppt/slides/slide1.xml", go up to "ppt/slides/", then up to "ppt/", then add "media/image1.png"
         let parts: Vec<&str> = slide_path.rsplitn(3, '/').collect();
         if parts.len() >= 3 {
-            // parts = ["slide1.xml", "slides", "ppt/..."]
-            format!("{}/{}", parts[2], &image_target[3..]) // "ppt" + "media/image1.png"
+            format!("{}/{}", parts[2], &image_target[3..])
         } else {
             format!("ppt/{}", &image_target[3..])
         }
     } else {
-        // Direct path like "image1.png" - stays in slides directory
         let parts: Vec<&str> = slide_path.rsplitn(2, '/').collect();
         if parts.len() == 2 {
-            format!("{}/{}", parts[1], image_target) // "ppt/slides" + "image1.png"
+            format!("{}/{}", parts[1], image_target)
         } else {
             format!("ppt/slides/{}", image_target)
         }
@@ -696,10 +655,6 @@ fn detect_image_format(data: &[u8]) -> String {
         "unknown".to_string()
     }
 }
-
-// ============================================================================
-// Public API
-// ============================================================================
 
 pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxExtractionResult> {
     let config = ParserConfig {
@@ -752,6 +707,7 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
             && let Ok(image_data) = iterator.get_slide_images(&slide)
         {
             for (_, data) in image_data {
+                // FIXME: check value is used after being moved
                 let format = detect_image_format(&data);
 
                 extracted_images.push(ExtractedImage {
@@ -778,7 +734,6 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
 }
 
 pub fn extract_pptx_from_bytes(data: &[u8], extract_images: bool) -> Result<PptxExtractionResult> {
-    // Write to temp file and extract
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let unique_id = COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -794,15 +749,10 @@ pub fn extract_pptx_from_bytes(data: &[u8], extract_images: bool) -> Result<Pptx
     result
 }
 
-// ============================================================================
-// Tests
-// ============================================================================
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // Test helper to create minimal valid PPTX structure in memory
     fn create_test_pptx_bytes(slides: Vec<&str>) -> Vec<u8> {
         use std::io::Write;
         use zip::write::{SimpleFileOptions, ZipWriter};
@@ -812,7 +762,6 @@ mod tests {
             let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buffer));
             let options = SimpleFileOptions::default();
 
-            // Add [Content_Types].xml
             zip.start_file("[Content_Types].xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -823,18 +772,15 @@ mod tests {
             )
             .unwrap();
 
-            // Add presentation.xml
             zip.start_file("ppt/presentation.xml", options).unwrap();
             zip.write_all(b"<?xml version=\"1.0\"?><presentation/>").unwrap();
 
-            // Add _rels/.rels
             zip.start_file("_rels/.rels", options).unwrap();
             zip.write_all(br#"<?xml version="1.0" encoding="UTF-8"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
 
-            // Add ppt/_rels/presentation.xml.rels
             let mut rels_xml = String::from(
                 r#"<?xml version="1.0" encoding="UTF-8"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">"#,
@@ -850,7 +796,6 @@ mod tests {
             zip.start_file("ppt/_rels/presentation.xml.rels", options).unwrap();
             zip.write_all(rels_xml.as_bytes()).unwrap();
 
-            // Add slides
             for (i, text) in slides.iter().enumerate() {
                 let slide_xml = format!(
                     r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -877,7 +822,6 @@ mod tests {
                 zip.write_all(slide_xml.as_bytes()).unwrap();
             }
 
-            // Add core.xml with metadata
             zip.start_file("docProps/core.xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -903,7 +847,6 @@ mod tests {
         let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
 
         assert_eq!(result.slide_count, 1);
-        // The parser extracts text from <a:t> elements
         assert!(
             result.content.contains("Hello World"),
             "Content was: {}",
@@ -941,7 +884,6 @@ mod tests {
         let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
 
         assert_eq!(result.slide_count, 3);
-        // Content may be empty or contain slide markers
     }
 
     #[test]
@@ -997,13 +939,13 @@ mod tests {
 
     #[test]
     fn test_detect_image_format_tiff_little_endian() {
-        let tiff_header = vec![0x49, 0x49, 0x2A, 0x00]; // "II\x2A\x00"
+        let tiff_header = vec![0x49, 0x49, 0x2A, 0x00];
         assert_eq!(detect_image_format(&tiff_header), "tiff");
     }
 
     #[test]
     fn test_detect_image_format_tiff_big_endian() {
-        let tiff_header = vec![0x4D, 0x4D, 0x00, 0x2A]; // "MM\x00\x2A"
+        let tiff_header = vec![0x4D, 0x4D, 0x00, 0x2A];
         assert_eq!(detect_image_format(&tiff_header), "tiff");
     }
 
@@ -1058,9 +1000,8 @@ mod tests {
     fn test_content_builder_add_text() {
         let mut builder = ContentBuilder::new();
         builder.add_text("Hello");
-        builder.add_text(" "); // This gets skipped because it's whitespace-only
+        builder.add_text(" ");
         builder.add_text("World");
-        // add_text skips whitespace-only text per line 194
         assert_eq!(builder.build(), "HelloWorld");
     }
 
@@ -1267,8 +1208,6 @@ mod tests {
 </p:sld>"#;
 
         let elements = parse_slide_xml(xml).unwrap();
-        // The current parser implementation is very simple and may not extract all elements
-        // It looks for <a:t> tags specifically
         if !elements.is_empty() {
             if let SlideElement::Text(text, _) = &elements[0] {
                 assert_eq!(text.runs[0].text, "Test Text");

@@ -108,16 +108,75 @@ export interface JsTokenReductionConfig {
 /**
  * Register a custom OCR backend
  *
- * **Note**: Full implementation requires JavaScript callback support.
- * Currently throws an error - implementation in progress.
+ * Registers a JavaScript OCR backend that can process images and extract text.
+ *
+ * # Arguments
+ *
+ * * `backend` - JavaScript object with the following interface:
+ *   - `name(): string` - Unique backend name
+ *   - `supportedLanguages(): string[]` - Array of supported ISO 639-2/3 language codes
+ *   - `processImage(imageBytes: Buffer, language: string): result` - Process image and return extraction result
+ *
+ * # Example
+ *
+ * ```typescript
+ * import { registerOcrBackend } from '@kreuzberg/node';
+ *
+ * registerOcrBackend({
+ *   name: () => "my-ocr",
+ *   supportedLanguages: () => ["eng", "deu", "fra"],
+ *   processImage: (imageBytes, language) => {
+ *     // Perform OCR on imageBytes
+ *     return {
+ *       content: "extracted text",
+ *       mime_type: "text/plain",
+ *       metadata: JSON.stringify({ confidence: 0.95 }),
+ *       tables: [],
+ *       detected_languages: null,
+ *       chunks: null
+ *     };
+ *   }
+ * });
+ * ```
  */
 export declare function registerOcrBackend(backend: object): void
 
 /**
  * Register a custom postprocessor
  *
- * **Note**: Full implementation requires JavaScript callback support.
- * Currently throws an error - implementation in progress.
+ * Registers a JavaScript PostProcessor that will be called after extraction.
+ *
+ * # Arguments
+ *
+ * * `processor` - JavaScript object with the following interface:
+ *   - `name(): string` - Unique processor name
+ *   - `process(...args): string` - Process function that receives JSON string as args[0]
+ *   - `processingStage(): "early" | "middle" | "late"` - Optional processing stage
+ *
+ * # Implementation Notes
+ *
+ * Due to NAPI ThreadsafeFunction limitations, the process function receives the extraction
+ * result as a JSON string in args[0] and must return a JSON string. Use the TypeScript
+ * wrapper functions for a cleaner API.
+ *
+ * # Example
+ *
+ * ```typescript
+ * import { registerPostProcessor } from '@kreuzberg/node';
+ *
+ * registerPostProcessor({
+ *   name: () => "word-counter",
+ *   processingStage: () => "middle",
+ *   process: (...args) => {
+ *     const result = JSON.parse(args[0]);
+ *     const wordCount = result.content.split(/\s+/).length;
+ *     const metadata = JSON.parse(result.metadata);
+ *     metadata.word_count = wordCount;
+ *     result.metadata = JSON.stringify(metadata);
+ *     return JSON.stringify(result);
+ *   }
+ * });
+ * ```
  */
 export declare function registerPostProcessor(processor: object): void
 

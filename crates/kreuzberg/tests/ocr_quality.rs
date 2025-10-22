@@ -21,10 +21,6 @@ use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
 use kreuzberg::extract_file_sync;
 use std::collections::HashMap;
 
-// ============================================================================
-// Quality Metrics Structures
-// ============================================================================
-
 #[derive(Debug, Clone)]
 struct TokenScores {
     precision: f64,
@@ -43,16 +39,12 @@ impl TokenScores {
     }
 }
 
-// ============================================================================
-// Token Processing Functions
-// ============================================================================
-
 /// Tokenize and normalize text for comparison.
 /// Matches Python implementation: lowercase, normalize dashes, remove punctuation.
 fn tokenize_text(text: &str) -> HashMap<String, usize> {
     let normalized = text
         .to_lowercase()
-        .replace(['\u{2013}', '\u{2014}'], "-") // em dash
+        .replace(['\u{2013}', '\u{2014}'], "-")
         .chars()
         .map(|ch| {
             if ch >= ' ' || ch == '\n' || ch == '\r' || ch == '\t' {
@@ -63,7 +55,6 @@ fn tokenize_text(text: &str) -> HashMap<String, usize> {
         })
         .collect::<String>();
 
-    // Remove punctuation
     let normalized = normalized
         .chars()
         .map(|ch| if "()[],.;:+`".contains(ch) { ' ' } else { ch })
@@ -84,12 +75,10 @@ fn extract_numeric_tokens(tokens: &HashMap<String, usize>) -> HashMap<String, us
     for (token, count) in tokens {
         let stripped = token.trim_matches(|c: char| "()[]{}".contains(c));
 
-        // Must contain digit
         if !stripped.chars().any(|ch| ch.is_ascii_digit()) {
             continue;
         }
 
-        // Must not contain letters (pure numeric)
         if stripped.chars().any(|ch| ch.is_ascii_alphabetic()) {
             continue;
         }
@@ -112,7 +101,6 @@ fn calculate_token_scores(
         return TokenScores::new(1.0, 1.0);
     }
 
-    // Calculate overlap (minimum count for each token)
     let overlap: usize = truth_tokens
         .keys()
         .map(|token| {
@@ -152,10 +140,6 @@ fn layout_delta(truth_lines: usize, ocr_lines: usize) -> f64 {
     delta.min(1.0)
 }
 
-// ============================================================================
-// Quality Threshold Tests
-// ============================================================================
-
 #[test]
 fn test_ocr_quality_simple_text_high_accuracy() {
     if skip_if_missing("pdfs/fake_memo.pdf") {
@@ -164,11 +148,9 @@ fn test_ocr_quality_simple_text_high_accuracy() {
 
     let file_path = get_test_file_path("pdfs/fake_memo.pdf");
 
-    // Extract native text (ground truth)
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
-    // Verify ExtractionResult structure for ground truth
     assert!(
         truth_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -178,7 +160,6 @@ fn test_ocr_quality_simple_text_high_accuracy() {
         "Language detection not enabled"
     );
 
-    // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -191,7 +172,6 @@ fn test_ocr_quality_simple_text_high_accuracy() {
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
-    // Verify ExtractionResult structure for OCR result
     assert!(
         ocr_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -201,7 +181,6 @@ fn test_ocr_quality_simple_text_high_accuracy() {
         "Language detection not enabled"
     );
 
-    // Debug: Check if force_ocr actually ran
     println!("Truth content length: {}", truth_result.content.len());
     println!("OCR content length: {}", ocr_result.content.len());
     println!(
@@ -213,7 +192,6 @@ fn test_ocr_quality_simple_text_high_accuracy() {
         &ocr_result.content.chars().take(100).collect::<String>()
     );
 
-    // Tokenize and score
     let truth_tokens = tokenize_text(&truth_result.content);
     let ocr_tokens = tokenize_text(&ocr_result.content);
 
@@ -227,7 +205,6 @@ fn test_ocr_quality_simple_text_high_accuracy() {
     println!("  Recall: {:.3}", scores.recall);
     println!("  F1: {:.3}", scores.f1);
 
-    // Assert minimum quality thresholds
     assert!(
         scores.f1 >= 0.70,
         "OCR F1 score too low: {:.3} (expected >= 0.70). Precision: {:.3}, Recall: {:.3}",
@@ -245,11 +222,9 @@ fn test_ocr_quality_numeric_accuracy() {
 
     let file_path = get_test_file_path("pdfs/embedded_images_tables.pdf");
 
-    // Extract native text (ground truth)
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
-    // Verify ExtractionResult structure for ground truth
     assert!(
         truth_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -259,7 +234,6 @@ fn test_ocr_quality_numeric_accuracy() {
         "Language detection not enabled"
     );
 
-    // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -272,7 +246,6 @@ fn test_ocr_quality_numeric_accuracy() {
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
-    // Verify ExtractionResult structure for OCR result
     assert!(
         ocr_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -282,14 +255,12 @@ fn test_ocr_quality_numeric_accuracy() {
         "Language detection not enabled"
     );
 
-    // Extract numeric tokens only
     let truth_tokens = tokenize_text(&truth_result.content);
     let ocr_tokens = tokenize_text(&ocr_result.content);
 
     let truth_numeric = extract_numeric_tokens(&truth_tokens);
     let ocr_numeric = extract_numeric_tokens(&ocr_tokens);
 
-    // Only test if document contains numbers
     if !truth_numeric.is_empty() {
         let numeric_scores = calculate_token_scores(&truth_numeric, &ocr_numeric);
 
@@ -300,7 +271,6 @@ fn test_ocr_quality_numeric_accuracy() {
         println!("  Numeric tokens in truth: {}", truth_numeric.len());
         println!("  Numeric tokens in OCR: {}", ocr_numeric.len());
 
-        // Numeric accuracy is critical - higher threshold
         assert!(
             numeric_scores.f1 >= 0.75,
             "Numeric F1 score too low: {:.3} (expected >= 0.75). Numbers must be accurate!",
@@ -317,11 +287,9 @@ fn test_ocr_quality_layout_preservation() {
 
     let file_path = get_test_file_path("pdfs/fake_memo.pdf");
 
-    // Extract native text (ground truth)
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
-    // Verify ExtractionResult structure for ground truth
     assert!(
         truth_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -331,7 +299,6 @@ fn test_ocr_quality_layout_preservation() {
         "Language detection not enabled"
     );
 
-    // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -344,7 +311,6 @@ fn test_ocr_quality_layout_preservation() {
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
-    // Verify ExtractionResult structure for OCR result
     assert!(
         ocr_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -354,7 +320,6 @@ fn test_ocr_quality_layout_preservation() {
         "Language detection not enabled"
     );
 
-    // Count lines
     let truth_lines = count_lines(&truth_result.content);
     let ocr_lines = count_lines(&ocr_result.content);
     let delta = layout_delta(truth_lines, ocr_lines);
@@ -364,7 +329,6 @@ fn test_ocr_quality_layout_preservation() {
     println!("  OCR lines: {}", ocr_lines);
     println!("  Layout delta: {:.3}", delta);
 
-    // Layout should be reasonably preserved
     assert!(
         delta <= 0.40,
         "Layout delta too high: {:.3} (expected <= 0.40). Truth: {} lines, OCR: {} lines",
@@ -382,11 +346,9 @@ fn test_ocr_quality_technical_document() {
 
     let file_path = get_test_file_path("pdfs/code_and_formula.pdf");
 
-    // Extract native text (ground truth)
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
-    // Verify ExtractionResult structure for ground truth
     assert!(
         truth_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -396,7 +358,6 @@ fn test_ocr_quality_technical_document() {
         "Language detection not enabled"
     );
 
-    // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -409,7 +370,6 @@ fn test_ocr_quality_technical_document() {
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
-    // Verify ExtractionResult structure for OCR result
     assert!(
         ocr_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -419,7 +379,6 @@ fn test_ocr_quality_technical_document() {
         "Language detection not enabled"
     );
 
-    // Overall quality
     let truth_tokens = tokenize_text(&truth_result.content);
     let ocr_tokens = tokenize_text(&ocr_result.content);
     let scores = calculate_token_scores(&truth_tokens, &ocr_tokens);
@@ -429,17 +388,12 @@ fn test_ocr_quality_technical_document() {
     println!("  Recall: {:.3}", scores.recall);
     println!("  F1: {:.3}", scores.f1);
 
-    // Technical docs (code, formulas) are harder - lower threshold
     assert!(
         scores.f1 >= 0.60,
         "Technical document F1 score too low: {:.3} (expected >= 0.60)",
         scores.f1
     );
 }
-
-// ============================================================================
-// Consistency Tests (Multiple Runs)
-// ============================================================================
 
 #[test]
 fn test_ocr_consistency_across_runs() {
@@ -455,16 +409,14 @@ fn test_ocr_consistency_across_runs() {
             tesseract_config: None,
         }),
         force_ocr: true,
-        use_cache: false, // Disable cache to ensure fresh extraction
+        use_cache: false,
         ..Default::default()
     };
 
-    // Run OCR 3 times
     let result1 = extract_file_sync(&file_path, None, &ocr_config).expect("First OCR run should succeed");
     let result2 = extract_file_sync(&file_path, None, &ocr_config).expect("Second OCR run should succeed");
     let result3 = extract_file_sync(&file_path, None, &ocr_config).expect("Third OCR run should succeed");
 
-    // Verify ExtractionResult structure for all runs
     assert!(
         result1.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -481,12 +433,10 @@ fn test_ocr_consistency_across_runs() {
     );
     assert!(result3.detected_languages.is_none(), "Language detection not enabled");
 
-    // Tokenize all runs
     let tokens1 = tokenize_text(&result1.content);
     let tokens2 = tokenize_text(&result2.content);
     let tokens3 = tokenize_text(&result3.content);
 
-    // Compare run1 vs run2
     let scores_1_2 = calculate_token_scores(&tokens1, &tokens2);
     let scores_1_3 = calculate_token_scores(&tokens1, &tokens3);
 
@@ -494,7 +444,6 @@ fn test_ocr_consistency_across_runs() {
     println!("  Run1 vs Run2 F1: {:.3}", scores_1_2.f1);
     println!("  Run1 vs Run3 F1: {:.3}", scores_1_3.f1);
 
-    // OCR should be deterministic - expect very high consistency
     assert!(
         scores_1_2.f1 >= 0.98,
         "OCR inconsistent between runs: F1 {:.3} (expected >= 0.98)",
@@ -515,7 +464,6 @@ fn test_ocr_consistency_with_different_psm() {
 
     let file_path = get_test_file_path("pdfs/fake_memo.pdf");
 
-    // PSM 3 (auto)
     let config_psm3 = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -529,7 +477,6 @@ fn test_ocr_consistency_with_different_psm() {
         ..Default::default()
     };
 
-    // PSM 6 (single block)
     let config_psm6 = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -546,7 +493,6 @@ fn test_ocr_consistency_with_different_psm() {
     let result_psm3 = extract_file_sync(&file_path, None, &config_psm3).expect("PSM 3 extraction should succeed");
     let result_psm6 = extract_file_sync(&file_path, None, &config_psm6).expect("PSM 6 extraction should succeed");
 
-    // Verify ExtractionResult structure for both PSM modes
     assert!(
         result_psm3.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -572,17 +518,12 @@ fn test_ocr_consistency_with_different_psm() {
     println!("OCR consistency across PSM modes:");
     println!("  PSM 3 vs PSM 6 F1: {:.3}", scores.f1);
 
-    // Different PSM modes should still produce similar results
     assert!(
         scores.f1 >= 0.85,
         "PSM modes produce too different results: F1 {:.3} (expected >= 0.85)",
         scores.f1
     );
 }
-
-// ============================================================================
-// Complex Document Quality Tests
-// ============================================================================
 
 #[test]
 fn test_ocr_quality_multi_page_consistency() {
@@ -592,11 +533,9 @@ fn test_ocr_quality_multi_page_consistency() {
 
     let file_path = get_test_file_path("pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf");
 
-    // Extract native text (ground truth) - limited pages for performance
     let truth_result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract ground truth text");
 
-    // Verify ExtractionResult structure for ground truth
     assert!(
         truth_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -606,7 +545,6 @@ fn test_ocr_quality_multi_page_consistency() {
         "Language detection not enabled"
     );
 
-    // Extract with forced OCR
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -619,7 +557,6 @@ fn test_ocr_quality_multi_page_consistency() {
 
     let ocr_result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with OCR");
 
-    // Verify ExtractionResult structure for OCR result
     assert!(
         ocr_result.chunks.is_none(),
         "Chunks should be None without chunking config"
@@ -629,7 +566,6 @@ fn test_ocr_quality_multi_page_consistency() {
         "Language detection not enabled"
     );
 
-    // For large documents, just verify OCR produces reasonable output
     let truth_tokens = tokenize_text(&truth_result.content);
     let ocr_tokens = tokenize_text(&ocr_result.content);
 
@@ -640,7 +576,6 @@ fn test_ocr_quality_multi_page_consistency() {
     println!("  Truth token count: {}", truth_count);
     println!("  OCR token count: {}", ocr_count);
 
-    // OCR should extract substantial content from large docs
     assert!(
         ocr_count >= (truth_count * 50 / 100),
         "OCR extracted too few tokens: {} (expected >= 50% of {})",
@@ -657,7 +592,6 @@ fn test_ocr_quality_with_tables() {
 
     let file_path = get_test_file_path("pdfs/embedded_images_tables.pdf");
 
-    // Extract with table detection enabled
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -674,7 +608,6 @@ fn test_ocr_quality_with_tables() {
 
     let result = extract_file_sync(&file_path, None, &ocr_config).expect("Should extract with table detection");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -682,7 +615,6 @@ fn test_ocr_quality_with_tables() {
     println!("  Tables found: {}", result.tables.len());
     println!("  Content length: {}", result.content.len());
 
-    // Verify OCR ran and produced content
     assert!(
         !result.content.trim().is_empty(),
         "OCR with tables should produce content"

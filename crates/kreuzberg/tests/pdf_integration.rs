@@ -16,10 +16,6 @@ use helpers::*;
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::extract_file_sync;
 
-// ============================================================================
-// Basic PDF Extraction Tests
-// ============================================================================
-
 #[test]
 fn test_pdf_simple_text_extraction() {
     if skip_if_missing("pdfs/fake_memo.pdf") {
@@ -30,19 +26,16 @@ fn test_pdf_simple_text_extraction() {
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default())
         .expect("Should extract fake_memo.pdf successfully");
 
-    // Basic assertions
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 50);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 
-    // Content should contain expected text from the memo
     assert_content_contains_any(&result, &["May 5, 2023", "To Whom it May Concern", "Mallori"]);
 }
 
@@ -60,12 +53,9 @@ fn test_pdf_with_code_and_formulas() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 100);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Should extract both code and mathematical content
-    // Metadata should exist (even if minimal)
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
@@ -83,14 +73,12 @@ fn test_pdf_with_embedded_images() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 
-    // Should have extracted tables (if any)
     if !result.tables.is_empty() {
         assert_has_tables(&result);
     }
@@ -109,17 +97,14 @@ fn test_pdf_large_document() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 
-    // Large document should have substantial content
     assert_min_content_length(&result, 10000);
 
-    // Should contain expected content (machine learning textbook)
     assert_content_contains_any(&result, &["machine learning", "algorithm", "training"]);
 }
 
@@ -139,20 +124,14 @@ fn test_pdf_technical_documentation() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 10000);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 
-    // Technical content should be extracted
     assert_content_contains_any(&result, &["statistical", "learning", "regression"]);
 }
-
-// ============================================================================
-// PDF with Tables Tests
-// ============================================================================
 
 #[test]
 fn test_pdf_with_tables_small() {
@@ -167,15 +146,11 @@ fn test_pdf_with_tables_small() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
-
-    // Should detect and extract tables
-    // Note: Table extraction quality depends on the PDF structure
 }
 
 #[test]
@@ -192,7 +167,6 @@ fn test_pdf_with_tables_medium() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 100);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -214,17 +188,12 @@ fn test_pdf_with_tables_large() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 500);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
-
-// ============================================================================
-// Password-Protected PDF Tests (Should Fail Gracefully)
-// ============================================================================
 
 #[test]
 fn test_pdf_password_protected_fails_gracefully() {
@@ -235,14 +204,10 @@ fn test_pdf_password_protected_fails_gracefully() {
     let file_path = get_test_file_path("pdfs/copy_protected.pdf");
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default());
 
-    // Should either succeed with limited extraction or return a clear error
-    // We don't test the exact behavior since it depends on PDF protection type
     match result {
         Ok(extraction_result) => {
-            // If extraction succeeded, verify it's valid
             assert_mime_type(&extraction_result, "application/pdf");
 
-            // Verify ExtractionResult structure
             assert!(
                 extraction_result.chunks.is_none(),
                 "Chunks should be None without chunking config"
@@ -253,7 +218,6 @@ fn test_pdf_password_protected_fails_gracefully() {
             );
         }
         Err(e) => {
-            // If it failed, ensure error message is helpful
             let error_msg = e.to_string().to_lowercase();
             assert!(
                 error_msg.contains("password") || error_msg.contains("protected") || error_msg.contains("encrypted"),
@@ -263,10 +227,6 @@ fn test_pdf_password_protected_fails_gracefully() {
         }
     }
 }
-
-// ============================================================================
-// Multi-Language PDF Tests
-// ============================================================================
 
 #[test]
 fn test_pdf_non_english_german() {
@@ -282,14 +242,12 @@ fn test_pdf_non_english_german() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 100);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 
-    // Should handle technical documentation
     assert_content_contains_any(&result, &["Intel", "page", "paging"]);
 }
 
@@ -306,19 +264,12 @@ fn test_pdf_right_to_left() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
-
-    // Should extract text even if direction is right-to-left
 }
-
-// ============================================================================
-// PDF Metadata Extraction Tests
-// ============================================================================
 
 #[test]
 fn test_pdf_metadata_extraction() {
@@ -330,11 +281,9 @@ fn test_pdf_metadata_extraction() {
     let result =
         extract_file_sync(&file_path, None, &ExtractionConfig::default()).expect("Should extract PDF successfully");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // All PDFs should have PDF metadata populated
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
@@ -352,17 +301,12 @@ fn test_pdf_google_doc_export() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
-
-// ============================================================================
-// OCR with PDF Tests (Image-based PDFs)
-// ============================================================================
 
 #[test]
 fn test_pdf_scanned_with_ocr() {
@@ -378,7 +322,6 @@ fn test_pdf_scanned_with_ocr() {
 
     assert_mime_type(&result, "application/pdf");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -386,9 +329,6 @@ fn test_pdf_scanned_with_ocr() {
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 
     // NOTE: This is a German PDF but we're using English OCR for testing
-    // OCR may not extract content if language mismatch or image quality is poor
-    // Just verify the extraction completed without errors
-    // In production, users would configure the correct language
 }
 
 #[test]
@@ -404,19 +344,12 @@ fn test_pdf_rotated_page() {
 
     assert_mime_type(&result, "application/pdf");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
-
-    // Rotated content might require OCR - just verify we got a result
 }
-
-// ============================================================================
-// Special PDF Format Tests
-// ============================================================================
 
 #[test]
 fn test_pdf_assembly_language_technical() {
@@ -432,14 +365,12 @@ fn test_pdf_assembly_language_technical() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 5000);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 
-    // Technical content should be preserved
     assert_content_contains_any(&result, &["assembly", "register", "instruction"]);
 }
 
@@ -457,14 +388,12 @@ fn test_pdf_fundamentals_deep_learning() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 1000);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 
-    // Should contain deep learning terminology
     assert_content_contains_any(&result, &["neural", "network", "deep learning"]);
 }
 
@@ -482,13 +411,11 @@ fn test_pdf_bayesian_data_analysis() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 10000);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 
-    // Should contain statistical terminology
     assert_content_contains_any(&result, &["Bayesian", "probability", "distribution"]);
 }

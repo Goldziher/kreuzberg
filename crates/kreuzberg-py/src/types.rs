@@ -6,7 +6,6 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
 // ============================================================================
-// ExtractionResult
 // ============================================================================
 
 /// Extraction result containing content, metadata, and tables.
@@ -86,18 +85,14 @@ impl ExtractionResult {
     /// - detected_languages Vec -> PyList
     /// - serde_json::Value -> Python objects
     pub fn from_rust(result: kreuzberg::ExtractionResult, py: Python) -> PyResult<Self> {
-        // Convert metadata HashMap -> PyDict using pythonize
-        // This is much faster than manual recursive conversion
         let metadata_py = pythonize::pythonize(py, &result.metadata)?;
         let metadata = metadata_py.downcast::<PyDict>()?.clone().unbind();
 
-        // Convert tables Vec -> PyList
         let tables = PyList::empty(py);
         for table in result.tables {
             tables.append(ExtractedTable::from_rust(table, py)?)?;
         }
 
-        // Convert detected_languages Option<Vec<String>> -> Option<PyList>
         let detected_languages = if let Some(langs) = result.detected_languages {
             let lang_list = PyList::new(py, langs)?;
             Some(lang_list.unbind())
@@ -114,10 +109,6 @@ impl ExtractionResult {
         })
     }
 }
-
-// ============================================================================
-// ExtractedTable
-// ============================================================================
 
 /// Extracted table with cells and markdown representation.
 ///
@@ -178,7 +169,6 @@ impl ExtractedTable {
 impl ExtractedTable {
     /// Convert from Rust Table to Python ExtractedTable.
     pub fn from_rust(table: kreuzberg::Table, py: Python) -> PyResult<Self> {
-        // Convert cells Vec<Vec<String>> -> PyList of PyLists
         let cells = PyList::empty(py);
         for row in table.cells {
             let py_row = PyList::new(py, row)?;
@@ -192,6 +182,3 @@ impl ExtractedTable {
         })
     }
 }
-
-// Note: We now use the `pythonize` crate for efficient serde_json::Value -> Python conversion.
-// The pythonize crate provides optimized serialization that is 30-50% faster than manual recursive conversion.

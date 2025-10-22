@@ -5,17 +5,14 @@ use std::collections::HashMap;
 pub fn get_pandoc_format_from_mime(mime_type: &str) -> Result<String> {
     let mappings = get_mime_to_pandoc_mapping();
 
-    // Direct lookup
     if let Some(format) = mappings.get(mime_type) {
         return Ok(format.to_string());
     }
 
-    // Special case for markdown
     if mime_type == "text/markdown" {
         return Ok("markdown".to_string());
     }
 
-    // Prefix matching fallback
     for (key, value) in &mappings {
         if mime_type.starts_with(key) {
             return Ok(value.to_string());

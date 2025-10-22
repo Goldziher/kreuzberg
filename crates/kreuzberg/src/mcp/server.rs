@@ -168,14 +168,12 @@ impl KreuzbergMcp {
         &self,
         Parameters(params): Parameters<ExtractBytesParams>,
     ) -> Result<CallToolResult, McpError> {
-        // Decode base64
         let bytes = BASE64_STANDARD
             .decode(&params.data)
             .map_err(|e| McpError::invalid_params(format!("Invalid base64: {}", e), None))?;
 
         let config = build_config(&self.default_config, params.enable_ocr, params.force_ocr);
 
-        // extract_bytes requires a MIME type, use empty string as default for auto-detection
         let mime_type = params.mime_type.as_deref().unwrap_or("");
 
         let result = if params.r#async {
@@ -292,28 +290,7 @@ impl KreuzbergMcp {
 }
 
 #[tool_handler]
-impl ServerHandler for KreuzbergMcp {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            protocol_version: ProtocolVersion::V_2024_11_05,
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            server_info: Implementation {
-                name: "kreuzberg-mcp".to_string(),
-                version: env!("CARGO_PKG_VERSION").to_string(),
-                icons: None,
-                title: Some("Kreuzberg Document Intelligence".to_string()),
-                website_url: Some("https://goldziher.github.io/kreuzberg/".to_string()),
-            },
-            instructions: Some(
-                "Kreuzberg document intelligence MCP server. \
-                 Tools: extract_file, extract_bytes, batch_extract_files, detect_mime_type, cache_stats, cache_clear. \
-                 Extracts text, metadata, and tables from PDFs, Office docs, images (OCR), emails, and more. \
-                 Includes cache management for performance optimization."
-                    .to_string(),
-            ),
-        }
-    }
-}
+impl ServerHandler for KreuzbergMcp {}
 
 impl Default for KreuzbergMcp {
     fn default() -> Self {
@@ -351,17 +328,12 @@ pub async fn start_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
 /// Build extraction config from MCP parameters.
 ///
 /// Starts with the default config and overlays OCR settings from request parameters.
 fn build_config(default_config: &ExtractionConfig, enable_ocr: bool, force_ocr: bool) -> ExtractionConfig {
     let mut config = default_config.clone();
 
-    // Override OCR settings from request parameters
     config.ocr = if enable_ocr {
         Some(crate::OcrConfig {
             backend: "tesseract".to_string(),
@@ -380,17 +352,14 @@ fn build_config(default_config: &ExtractionConfig, enable_ocr: bool, force_ocr: 
 fn format_extraction_result(result: &KreuzbergResult) -> String {
     let mut response = String::new();
 
-    // Content
     response.push_str(&format!("Content ({} characters):\n", result.content.len()));
     response.push_str(&result.content);
     response.push_str("\n\n");
 
-    // Metadata (always include, will be empty object if no data)
     response.push_str("Metadata:\n");
     response.push_str(&serde_json::to_string_pretty(&result.metadata).unwrap_or_default());
     response.push_str("\n\n");
 
-    // Tables
     if !result.tables.is_empty() {
         response.push_str(&format!("Tables ({}):\n", result.tables.len()));
         for (i, table) in result.tables.iter().enumerate() {

@@ -13,7 +13,6 @@ from kreuzberg.exceptions import OCRError, ValidationError
 
 logger = logging.getLogger(__name__)
 
-# Supported EasyOCR language codes
 SUPPORTED_LANGUAGES = {
     "abq",
     "ady",
@@ -152,7 +151,6 @@ class EasyOCRBackend:
         self.beam_width = beam_width
         self.model_storage_directory = model_storage_directory
 
-        # Validate languages
         unsupported = [lang for lang in self.languages if lang not in SUPPORTED_LANGUAGES]
         if unsupported:
             msg = f"Unsupported EasyOCR language codes: {', '.join(unsupported)}"
@@ -164,14 +162,11 @@ class EasyOCRBackend:
                 },
             )
 
-        # Determine GPU usage
         if use_gpu is None:
-            # Auto-detect CUDA availability
             self.use_gpu = self._is_cuda_available()
         else:
             self.use_gpu = use_gpu
 
-        # Reader instance (lazy loaded)
         self._reader: Any | None = None
 
     def name(self) -> str:
@@ -236,7 +231,6 @@ class EasyOCRBackend:
             OCRError: If OCR processing fails.
 
         """
-        # Ensure reader is initialized
         if self._reader is None:
             self.initialize()
 
@@ -244,7 +238,6 @@ class EasyOCRBackend:
             msg = "EasyOCR reader failed to initialize"
             raise RuntimeError(msg)
 
-        # Validate language
         if language not in SUPPORTED_LANGUAGES:
             msg = f"Language '{language}' not supported by EasyOCR"
             raise ValidationError(
@@ -253,26 +246,21 @@ class EasyOCRBackend:
             )
 
         try:
-            # Import dependencies
             import io  # noqa: PLC0415
 
             import numpy as np  # noqa: PLC0415
             from PIL import Image  # noqa: PLC0415
 
-            # Convert bytes to PIL Image
             image = Image.open(io.BytesIO(image_bytes))
             width, height = image.size
 
-            # Convert to numpy array for EasyOCR
             image_array = np.array(image)
 
-            # Perform OCR
             result = self._reader.readtext(
                 image_array,
                 beamWidth=self.beam_width,
             )
 
-            # Process results
             content, confidence, text_regions = self._process_easyocr_result(result)
 
             return {
@@ -303,7 +291,6 @@ class EasyOCRBackend:
             Exceptions from :meth:`process_image` propagate unchanged.
 
         """
-        # Read file and call process_image
         from pathlib import Path  # noqa: PLC0415
 
         with Path(path).open("rb") as f:
@@ -316,11 +303,7 @@ class EasyOCRBackend:
         if not result:
             return "", 0.0, 0
 
-        # Check result format
-        # EasyOCR returns: [(bbox, text, confidence), ...]
-        # Or with detail=0: [(text, confidence), ...]
         if all(len(item) == 2 for item in result):
-            # Simplified format: (text, confidence)
             text_parts = []
             total_confidence = 0.0
             for text, confidence in result:
@@ -332,14 +315,12 @@ class EasyOCRBackend:
             avg_confidence = total_confidence / len(result) if result else 0.0
             return content, avg_confidence, len(result)
 
-        # Full format with bounding boxes: (bbox, text, confidence)
-        # Group by lines based on Y coordinate
         sorted_results = sorted(result, key=lambda x: x[0][0][1] + x[0][2][1])
 
         line_groups: list[list[Any]] = []
         current_line: list[Any] = []
         prev_y_center: float | None = None
-        line_height_threshold = 20  # Pixels
+        line_height_threshold = 20
 
         for item in sorted_results:
             box, text, confidence = item
@@ -357,13 +338,11 @@ class EasyOCRBackend:
         if current_line:
             line_groups.append(current_line)
 
-        # Build text content
         text_parts = []
         total_confidence = 0.0
         text_count = 0
 
         for line in line_groups:
-            # Sort by X coordinate within line
             line_sorted = sorted(line, key=lambda x: x[0][0][0])
 
             line_text = []

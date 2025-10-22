@@ -17,7 +17,6 @@ pub enum KeywordAlgorithm {
 
 impl Default for KeywordAlgorithm {
     fn default() -> Self {
-        // Prefer YAKE if available, otherwise RAKE
         #[cfg(feature = "keywords-yake")]
         return Self::Yake;
 

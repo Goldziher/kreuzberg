@@ -25,6 +25,9 @@ doc = [
   "mkdocstrings[python]>=0.30.1",
 ]
 
+[tool.setuptools]
+packages = [  ]
+
 [tool.uv]
 cache-keys = [
   { file = "pyproject.toml" },
@@ -36,9 +39,6 @@ cache-keys = [
 
 [tool.uv.workspace]
 members = [ "comparative-benchmarks", "packages/python" ]
-
-[tool.setuptools]
-packages = []
 
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }

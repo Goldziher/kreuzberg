@@ -1,12 +1,12 @@
 #![deny(clippy::all)]
 
+use kreuzberg::plugins::registry::get_post_processor_registry;
 use kreuzberg::{
     ChunkingConfig as RustChunkingConfig, ExtractionConfig, ExtractionResult as RustExtractionResult,
     ImageExtractionConfig as RustImageExtractionConfig, LanguageDetectionConfig as RustLanguageDetectionConfig,
     OcrConfig as RustOcrConfig, PdfConfig as RustPdfConfig, PostProcessorConfig as RustPostProcessorConfig,
     TesseractConfig as RustTesseractConfig, TokenReductionConfig as RustTokenReductionConfig,
 };
-use kreuzberg::plugins::registry::get_post_processor_registry;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
@@ -189,6 +189,7 @@ impl From<JsExtractionConfig> for ExtractionConfig {
 }
 
 #[napi(object)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct JsTable {
     pub cells: Vec<Vec<String>>,
     pub markdown: String,
@@ -196,6 +197,7 @@ pub struct JsTable {
 }
 
 #[napi(object)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct JsExtractionResult {
     pub content: String,
     pub mime_type: String,
@@ -220,6 +222,29 @@ impl From<RustExtractionResult> for JsExtractionResult {
                     cells: t.cells,
                     markdown: t.markdown,
                     page_number: t.page_number as u32,
+                })
+                .collect(),
+            detected_languages: val.detected_languages,
+            chunks: val.chunks,
+        }
+    }
+}
+
+impl From<JsExtractionResult> for RustExtractionResult {
+    fn from(val: JsExtractionResult) -> Self {
+        let metadata = serde_json::from_str(&val.metadata).unwrap_or_default();
+
+        RustExtractionResult {
+            content: val.content,
+            mime_type: val.mime_type,
+            metadata,
+            tables: val
+                .tables
+                .into_iter()
+                .map(|t| kreuzberg::Table {
+                    cells: t.cells,
+                    markdown: t.markdown,
+                    page_number: t.page_number as usize,
                 })
                 .collect(),
             detected_languages: val.detected_languages,
@@ -368,9 +393,110 @@ pub async fn batch_extract_bytes(
     .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))
 }
 
-// TODO: JavaScript PostProcessor bridge implementation
-// Full callback bridge requires advanced NAPI-RS ThreadsafeFunction handling
-// For now, we validate input and return descriptive error
+// JavaScript PostProcessor bridge implementation using ThreadsafeFunction
+
+use async_trait::async_trait;
+use kreuzberg::plugins::{Plugin, PostProcessor as RustPostProcessor, ProcessingStage};
+use napi::bindgen_prelude::Promise;
+use napi::threadsafe_function::ThreadsafeFunction;
+use std::sync::Arc;
+
+/// Wrapper that makes a JavaScript PostProcessor usable from Rust.
+///
+/// Uses JSON serialization to pass data between Rust and JavaScript due to NAPI limitations
+/// with complex object types across ThreadsafeFunction boundaries.
+///
+/// Wrapper that holds the ThreadsafeFunction to call JavaScript from Rust.
+/// The process_fn is an async JavaScript function that:
+/// - Takes: String (JSON-serialized ExtractionResult)
+/// - Returns: Promise<String> (JSON-serialized ExtractionResult)
+///
+/// Type parameters:
+/// - Input: String
+/// - Return: Promise<String>
+/// - CallJsBackArgs: Vec<String> (because build_callback returns vec![value])
+/// - ErrorStatus: napi::Status
+/// - CalleeHandled: false (default with build_callback)
+struct JsPostProcessor {
+    name: String,
+    process_fn: Arc<ThreadsafeFunction<String, Promise<String>, Vec<String>, napi::Status, false>>,
+    stage: ProcessingStage,
+}
+
+// SAFETY: ThreadsafeFunction is explicitly designed to be called from any thread.
+// It uses internal synchronization and the Node.js event loop to safely execute
+// JavaScript. The Arc wrapper ensures the function lives long enough.
+unsafe impl Send for JsPostProcessor {}
+unsafe impl Sync for JsPostProcessor {}
+
+impl Plugin for JsPostProcessor {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn version(&self) -> String {
+        "1.0.0".to_string()
+    }
+
+    fn initialize(&self) -> std::result::Result<(), kreuzberg::KreuzbergError> {
+        Ok(())
+    }
+
+    fn shutdown(&self) -> std::result::Result<(), kreuzberg::KreuzbergError> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl RustPostProcessor for JsPostProcessor {
+    async fn process(
+        &self,
+        result: &mut kreuzberg::ExtractionResult,
+        _config: &kreuzberg::ExtractionConfig,
+    ) -> std::result::Result<(), kreuzberg::KreuzbergError> {
+        // Convert Rust ExtractionResult to JS format and serialize to JSON
+        let js_result: JsExtractionResult = result.clone().into();
+        let json_input = serde_json::to_string(&js_result).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+            message: format!("Failed to serialize result for JavaScript PostProcessor: {}", e),
+            plugin_name: self.name.clone(),
+        })?;
+
+        // Call JavaScript process function with JSON string and await result
+        // Double await: first for the ThreadsafeFunction call, second for the Promise returned by JS
+        let json_output = self
+            .process_fn
+            .call_async(json_input)
+            .await
+            .map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                message: format!("JavaScript PostProcessor '{}' failed: {}", self.name, e),
+                plugin_name: self.name.clone(),
+            })?
+            .await
+            .map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                message: format!("JavaScript PostProcessor '{}' failed: {}", self.name, e),
+                plugin_name: self.name.clone(),
+            })?;
+
+        // Deserialize the JSON result
+        let updated: JsExtractionResult =
+            serde_json::from_str(&json_output).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                message: format!(
+                    "Failed to deserialize result from JavaScript PostProcessor '{}': {}",
+                    self.name, e
+                ),
+                plugin_name: self.name.clone(),
+            })?;
+
+        // Update the result in-place by converting from JS format
+        let rust_result: kreuzberg::ExtractionResult = updated.into();
+        *result = rust_result;
+        Ok(())
+    }
+
+    fn processing_stage(&self) -> ProcessingStage {
+        self.stage
+    }
+}
 
 /// Register a custom postprocessor
 ///
@@ -380,8 +506,14 @@ pub async fn batch_extract_bytes(
 ///
 /// * `processor` - JavaScript object with the following interface:
 ///   - `name(): string` - Unique processor name
-///   - `process(result): result` - Process function that receives and returns extraction result
+///   - `process(...args): string` - Process function that receives JSON string as args[0]
 ///   - `processingStage(): "early" | "middle" | "late"` - Optional processing stage
+///
+/// # Implementation Notes
+///
+/// Due to NAPI ThreadsafeFunction limitations, the process function receives the extraction
+/// result as a JSON string in args[0] and must return a JSON string. Use the TypeScript
+/// wrapper functions for a cleaner API.
 ///
 /// # Example
 ///
@@ -391,35 +523,79 @@ pub async fn batch_extract_bytes(
 /// registerPostProcessor({
 ///   name: () => "word-counter",
 ///   processingStage: () => "middle",
-///   process: (result) => {
+///   process: (...args) => {
+///     const result = JSON.parse(args[0]);
 ///     const wordCount = result.content.split(/\s+/).length;
-///     result.metadata = JSON.stringify({
-///       ...JSON.parse(result.metadata),
-///       word_count: wordCount
-///     });
-///     return result;
+///     const metadata = JSON.parse(result.metadata);
+///     metadata.word_count = wordCount;
+///     result.metadata = JSON.stringify(metadata);
+///     return JSON.stringify(result);
 ///   }
 /// });
 /// ```
 #[napi]
 pub fn register_post_processor(_env: Env, processor: Object) -> Result<()> {
-    // Validate processor has required methods
-    processor
-        .get_named_property::<Function>("name")
-        .map_err(|e| Error::new(Status::InvalidArg, format!("Processor must have 'name' method: {}", e)))?;
+    // Get processor name
+    let name_fn: Function<(), String> = processor.get_named_property("name")?;
+    let name: String = name_fn.call(())?;
 
-    processor
-        .get_named_property::<Function>("process")
-        .map_err(|e| Error::new(Status::InvalidArg, format!("Processor must have 'process' method: {}", e)))?;
+    if name.is_empty() {
+        return Err(Error::new(
+            Status::InvalidArg,
+            "Processor name cannot be empty".to_string(),
+        ));
+    }
 
-    // JavaScript callback support not yet implemented
-    Err(Error::new(
-        Status::GenericFailure,
-        "JavaScript PostProcessor registration is not yet implemented. \
-        This requires advanced NAPI-RS ThreadsafeFunction bridging to support \
-        calling JavaScript functions from Rust async contexts. \
-        Python PostProcessors are fully supported via the Python bindings.".to_string(),
-    ))
+    // Get processing stage (optional, defaults to Middle)
+    let stage = if let Ok(stage_fn) = processor.get_named_property::<Function<(), String>>("processingStage") {
+        let stage_str: String = stage_fn.call(())?;
+        match stage_str.to_lowercase().as_str() {
+            "early" => ProcessingStage::Early,
+            "middle" => ProcessingStage::Middle,
+            "late" => ProcessingStage::Late,
+            _ => ProcessingStage::Middle,
+        }
+    } else {
+        ProcessingStage::Middle
+    };
+
+    // Get process function and create ThreadsafeFunction
+    // The JS function is async and returns Promise<String>
+    let process_fn: Function<String, Promise<String>> = processor.get_named_property("process")?;
+
+    // Build ThreadsafeFunction with callback to properly pass arguments to JS
+    // The JS function is async and returns a Promise, so we use build_callback
+    // to transform the argument passing (wrapping in an array)
+    let tsfn = process_fn.build_threadsafe_function().build_callback(|ctx| {
+        // Return the value wrapped in a vec so JS receives it as ...args
+        Ok(vec![ctx.value])
+    })?;
+
+    // Create the Rust wrapper
+    let js_processor = JsPostProcessor {
+        name: name.clone(),
+        process_fn: Arc::new(tsfn),
+        stage,
+    };
+
+    // Register with the Rust registry
+    let arc_processor: Arc<dyn RustPostProcessor> = Arc::new(js_processor);
+    let registry = get_post_processor_registry();
+    let mut registry = registry.write().map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to acquire write lock on PostProcessor registry: {}", e),
+        )
+    })?;
+
+    registry.register(arc_processor, 0).map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to register PostProcessor '{}': {}", name, e),
+        )
+    })?;
+
+    Ok(())
 }
 
 /// Unregister a postprocessor by name
@@ -493,17 +669,28 @@ pub fn clear_post_processors() -> Result<()> {
 #[napi]
 pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
     // Validate backend has required methods
-    backend
-        .get_named_property::<Function>("name")
-        .map_err(|e| Error::new(Status::InvalidArg, format!("OCR backend must have 'name' method: {}", e)))?;
+    backend.get_named_property::<Function>("name").map_err(|e| {
+        Error::new(
+            Status::InvalidArg,
+            format!("OCR backend must have 'name' method: {}", e),
+        )
+    })?;
 
     backend
         .get_named_property::<Function>("supportedLanguages")
-        .map_err(|e| Error::new(Status::InvalidArg, format!("OCR backend must have 'supportedLanguages' method: {}", e)))?;
+        .map_err(|e| {
+            Error::new(
+                Status::InvalidArg,
+                format!("OCR backend must have 'supportedLanguages' method: {}", e),
+            )
+        })?;
 
-    backend
-        .get_named_property::<Function>("processImage")
-        .map_err(|e| Error::new(Status::InvalidArg, format!("OCR backend must have 'processImage' method: {}", e)))?;
+    backend.get_named_property::<Function>("processImage").map_err(|e| {
+        Error::new(
+            Status::InvalidArg,
+            format!("OCR backend must have 'processImage' method: {}", e),
+        )
+    })?;
 
     // JavaScript callback support not yet implemented
     Err(Error::new(
@@ -511,7 +698,8 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
         "JavaScript OCR backend registration is not yet implemented. \
         This requires advanced NAPI-RS ThreadsafeFunction bridging to support \
         calling JavaScript functions from Rust async contexts. \
-        Python OCR backends (EasyOCR, PaddleOCR) are fully supported via the Python bindings.".to_string(),
+        Python OCR backends (EasyOCR, PaddleOCR) are fully supported via the Python bindings."
+            .to_string(),
     ))
 }
 

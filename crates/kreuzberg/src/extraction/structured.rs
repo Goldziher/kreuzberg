@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // ============================================================================
-// Types
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,7 +36,6 @@ impl Default for JsonExtractionConfig {
     }
 }
 
-// Text field keywords for automatic metadata extraction
 const TEXT_FIELD_KEYWORDS: &[&str] = &[
     "title",
     "name",
@@ -49,10 +47,6 @@ const TEXT_FIELD_KEYWORDS: &[&str] = &[
     "message",
 ];
 
-// ============================================================================
-// JSON Extraction
-// ============================================================================
-
 pub fn parse_json(data: &[u8], config: Option<JsonExtractionConfig>) -> Result<StructuredDataResult> {
     let config = config.unwrap_or_default();
 
@@ -62,14 +56,12 @@ pub fn parse_json(data: &[u8], config: Option<JsonExtractionConfig>) -> Result<S
     let mut metadata = HashMap::new();
     let mut text_fields = Vec::new();
 
-    // Extract schema if requested
     if config.extract_schema
         && let Ok(schema_json) = serde_json::to_string(&extract_json_schema(&value, "", 0, &config))
     {
         metadata.insert("json_schema".to_string(), schema_json);
     }
 
-    // Extract text content
     let text_parts = extract_from_json_value(&value, "", &config, &mut metadata, &mut text_fields);
     let content = text_parts.join("\n");
 
@@ -169,7 +161,6 @@ fn extract_from_json_value(
                     format!("{}: {}", prefix, s)
                 };
 
-                // Check if this is a text field for metadata
                 if is_text_field(prefix, &config.custom_text_field_patterns) {
                     metadata.insert(prefix.to_string(), s.clone());
                     text_fields.push(prefix.to_string());
@@ -203,14 +194,12 @@ fn extract_from_json_value(
 fn is_text_field(key: &str, custom_patterns: &[String]) -> bool {
     let key_lower = key.to_lowercase();
 
-    // Check built-in keywords
     for keyword in TEXT_FIELD_KEYWORDS {
         if key_lower.contains(keyword) {
             return true;
         }
     }
 
-    // Check custom patterns
     for pattern in custom_patterns {
         if key_lower.contains(&pattern.to_lowercase()) {
             return true;
@@ -220,18 +209,12 @@ fn is_text_field(key: &str, custom_patterns: &[String]) -> bool {
     false
 }
 
-// ============================================================================
-// YAML Extraction
-// ============================================================================
-
 pub fn parse_yaml(data: &[u8]) -> Result<StructuredDataResult> {
     use saphyr::LoadableYamlNode;
 
-    // Decode bytes to string
     let yaml_str =
         std::str::from_utf8(data).map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in YAML: {}", e)))?;
 
-    // Parse YAML using saphyr
     let docs = saphyr::Yaml::load_from_str(yaml_str)
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse YAML: {}", e)))?;
 
@@ -247,7 +230,6 @@ pub fn parse_yaml(data: &[u8]) -> Result<StructuredDataResult> {
     let mut metadata = HashMap::new();
     let mut text_fields = Vec::new();
 
-    // Extract text from first document
     let text_parts = extract_from_yaml(&docs[0], "", &mut metadata, &mut text_fields);
     let content = text_parts.join("\n");
 
@@ -275,7 +257,6 @@ fn extract_from_yaml(
                 if !s.trim().is_empty() {
                     let formatted = format!("{}: {}", prefix, s);
 
-                    // Check if this is a text field
                     if is_text_field(prefix, &[]) {
                         metadata.insert(prefix.to_string(), s.to_string());
                         text_fields.push(prefix.to_string());
@@ -315,31 +296,21 @@ fn extract_from_yaml(
         }
         saphyr::Yaml::Alias(_) => Vec::new(),
         saphyr::Yaml::BadValue => Vec::new(),
-        saphyr::Yaml::Tagged(_, inner) => {
-            // Handle tagged values by extracting the inner value
-            extract_from_yaml(inner, prefix, metadata, text_fields)
-        }
+        saphyr::Yaml::Tagged(_, inner) => extract_from_yaml(inner, prefix, metadata, text_fields),
         saphyr::Yaml::Representation(_, _, _) => Vec::new(),
     }
 }
 
-// ============================================================================
-// TOML Extraction
-// ============================================================================
-
 pub fn parse_toml(data: &[u8]) -> Result<StructuredDataResult> {
-    // Decode bytes to string
     let toml_str =
         std::str::from_utf8(data).map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in TOML: {}", e)))?;
 
-    // Parse TOML
     let value: toml::Value =
         toml::from_str(toml_str).map_err(|e| KreuzbergError::parsing(format!("Failed to parse TOML: {}", e)))?;
 
     let mut metadata = HashMap::new();
     let mut text_fields = Vec::new();
 
-    // Extract text content
     let text_parts = extract_from_toml_value(&value, "", &mut metadata, &mut text_fields);
     let content = text_parts.join("\n");
 
@@ -362,7 +333,6 @@ fn extract_from_toml_value(
             if !s.trim().is_empty() {
                 let formatted = format!("{}: {}", prefix, s);
 
-                // Check if this is a text field
                 if is_text_field(prefix, &[]) {
                     metadata.insert(prefix.to_string(), s.clone());
                     text_fields.push(prefix.to_string());
@@ -403,10 +373,6 @@ fn extract_from_toml_value(
         }
     }
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
 
 #[cfg(test)]
 mod tests {

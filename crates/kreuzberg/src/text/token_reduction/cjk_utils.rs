@@ -52,11 +52,11 @@ impl CjkTokenizer {
 
         if whitespace_tokens.len() == 1 {
             let token = whitespace_tokens[0];
-            if self.has_cjk(token) {
-                return self.tokenize_cjk_string(token);
+            return if self.has_cjk(token) {
+                self.tokenize_cjk_string(token)
             } else {
-                return vec![token.to_string()];
-            }
+                vec![token.to_string()]
+            };
         }
 
         let mut all_tokens = Vec::new();

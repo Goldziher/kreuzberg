@@ -13,23 +13,17 @@
 use kreuzberg::keywords::{KeywordConfig, extract_keywords};
 use std::collections::HashSet;
 
-// ============================================================================
-// Ground Truth Keywords (What domain experts would identify)
-// ============================================================================
-
 /// Ground truth keywords for ML document.
 /// These are the terms a machine learning expert would identify as key concepts.
 #[allow(dead_code)]
 fn get_ml_ground_truth() -> HashSet<&'static str> {
     [
-        // Core concepts
         "machine learning",
         "artificial intelligence",
         "deep learning",
         "neural networks",
         "artificial neural networks",
         "convolutional neural networks",
-        // Key terms
         "algorithms",
         "training data",
         "supervised learning",
@@ -38,7 +32,6 @@ fn get_ml_ground_truth() -> HashSet<&'static str> {
         "natural language processing",
         "computer science",
         "model",
-        // Related
         "predictions",
         "data",
         "learning",
@@ -52,21 +45,18 @@ fn get_ml_ground_truth() -> HashSet<&'static str> {
 #[allow(dead_code)]
 fn get_climate_ground_truth() -> HashSet<&'static str> {
     [
-        // Core concepts
         "climate change",
         "global warming",
         "greenhouse gases",
         "greenhouse gas emissions",
         "fossil fuels",
         "burning fossil fuels",
-        // Key terms
         "carbon dioxide",
         "methane",
         "temperatures",
         "weather patterns",
         "climate system",
         "human activities",
-        // Related
         "agriculture",
         "deforestation",
         "solar cycle",
@@ -76,10 +66,6 @@ fn get_climate_ground_truth() -> HashSet<&'static str> {
     .cloned()
     .collect()
 }
-
-// ============================================================================
-// Quality Metrics Functions
-// ============================================================================
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -95,21 +81,18 @@ struct KeywordQualityScores {
 
 impl KeywordQualityScores {
     fn new(exact_matches: usize, partial_matches: usize, total_extracted: usize, total_ground_truth: usize) -> Self {
-        // Precision: Of extracted keywords, how many are relevant?
         let precision = if total_extracted > 0 {
             (exact_matches + partial_matches) as f64 / total_extracted as f64
         } else {
             0.0
         };
 
-        // Recall: Of ground truth keywords, how many were extracted?
         let recall = if total_ground_truth > 0 {
             (exact_matches + partial_matches) as f64 / total_ground_truth as f64
         } else {
             0.0
         };
 
-        // F1: Harmonic mean of precision and recall
         let f1 = if precision + recall > 0.0 {
             2.0 * precision * recall / (precision + recall)
         } else {
@@ -143,14 +126,12 @@ fn evaluate_keyword_quality(extracted: &[&str], ground_truth: &HashSet<&str>) ->
     let mut matched_ground_truth: HashSet<String> = HashSet::new();
 
     for extracted_kw in &extracted_lower {
-        // Check for exact match
         if ground_truth_lower.contains(extracted_kw) {
             exact_matches += 1;
             matched_ground_truth.insert(extracted_kw.clone());
             continue;
         }
 
-        // Check for partial match (extracted keyword is substring of ground truth)
         let mut found_partial = false;
         for gt_kw in &ground_truth_lower {
             if (gt_kw.contains(extracted_kw) || extracted_kw.contains(gt_kw)) && !matched_ground_truth.contains(gt_kw) {
@@ -162,12 +143,10 @@ fn evaluate_keyword_quality(extracted: &[&str], ground_truth: &HashSet<&str>) ->
         }
 
         if !found_partial {
-            // Also check if extracted keyword contains important ground truth terms
             for gt_kw in &ground_truth_lower {
                 let gt_words: Vec<&str> = gt_kw.split_whitespace().collect();
                 let ex_words: HashSet<&str> = extracted_kw.split_whitespace().collect();
 
-                // If extracted keyword contains significant overlap with ground truth
                 let overlap = gt_words.iter().filter(|w| ex_words.contains(*w)).count();
                 if overlap >= gt_words.len() / 2 && overlap > 0 && !matched_ground_truth.contains(gt_kw) {
                     partial_matches += 1;
@@ -206,19 +185,14 @@ The main greenhouse gases that are causing climate change include carbon dioxide
 Global warming is the long-term heating of Earth's climate system. Climate science reveals that human activity has been the dominant cause of climate change since the mid-20th century.
 "#;
 
-// ============================================================================
-// Quality Tests with Default Configurations
-// ============================================================================
-
 #[cfg(feature = "keywords-yake")]
 #[test]
 fn test_yake_quality_ml_document_default_config() {
-    let config = KeywordConfig::yake(); // Default YAKE config
+    let config = KeywordConfig::yake();
     let keywords = extract_keywords(ML_DOC_SAMPLE, &config).unwrap();
 
     assert!(!keywords.is_empty(), "Should extract keywords with default config");
 
-    // Evaluate against ground truth
     let extracted: Vec<&str> = keywords.iter().map(|k| k.text.as_str()).collect();
     let ground_truth = get_ml_ground_truth();
     let scores = evaluate_keyword_quality(&extracted, &ground_truth);
@@ -236,7 +210,6 @@ fn test_yake_quality_ml_document_default_config() {
         println!("  {}: {} (score: {:.3})", i + 1, kw.text, kw.score);
     }
 
-    // Assert minimum quality thresholds for default config
     assert!(
         scores.precision >= 0.40,
         "YAKE precision too low with default config: {:.3} (expected >= 0.40). Only {}/{} keywords were relevant.",
@@ -265,12 +238,11 @@ fn test_yake_quality_ml_document_default_config() {
 #[cfg(feature = "keywords-rake")]
 #[test]
 fn test_rake_quality_ml_document_default_config() {
-    let config = KeywordConfig::rake(); // Default RAKE config
+    let config = KeywordConfig::rake();
     let keywords = extract_keywords(ML_DOC_SAMPLE, &config).unwrap();
 
     assert!(!keywords.is_empty(), "Should extract keywords with default config");
 
-    // Evaluate against ground truth
     let extracted: Vec<&str> = keywords.iter().map(|k| k.text.as_str()).collect();
     let ground_truth = get_ml_ground_truth();
     let scores = evaluate_keyword_quality(&extracted, &ground_truth);
@@ -288,7 +260,6 @@ fn test_rake_quality_ml_document_default_config() {
         println!("  {}: {} (score: {:.3})", i + 1, kw.text, kw.score);
     }
 
-    // Assert minimum quality thresholds for default config
     assert!(
         scores.precision >= 0.40,
         "RAKE precision too low with default config: {:.3} (expected >= 0.40). Only {}/{} keywords were relevant.",
@@ -339,7 +310,6 @@ fn test_yake_quality_climate_document_default_config() {
         println!("  {}: {} (score: {:.3})", i + 1, kw.text, kw.score);
     }
 
-    // Climate keywords should be well extracted
     assert!(
         scores.precision >= 0.40,
         "YAKE precision too low: {:.3} (expected >= 0.40)",
@@ -382,7 +352,6 @@ fn test_rake_quality_climate_document_default_config() {
         println!("  {}: {} (score: {:.3})", i + 1, kw.text, kw.score);
     }
 
-    // Climate keywords should be well extracted
     assert!(
         scores.precision >= 0.40,
         "RAKE precision too low: {:.3} (expected >= 0.40)",
@@ -400,17 +369,12 @@ fn test_rake_quality_climate_document_default_config() {
     );
 }
 
-// ============================================================================
-// Comparative Quality Tests
-// ============================================================================
-
 #[cfg(all(feature = "keywords-yake", feature = "keywords-rake"))]
 #[test]
 fn test_yake_vs_rake_quality_comparison() {
     let yake_config = KeywordConfig::yake();
     let rake_config = KeywordConfig::rake();
 
-    // Test on ML document
     let yake_keywords = extract_keywords(ML_DOC_SAMPLE, &yake_config).unwrap();
     let rake_keywords = extract_keywords(ML_DOC_SAMPLE, &rake_config).unwrap();
 
@@ -431,11 +395,9 @@ fn test_yake_vs_rake_quality_comparison() {
         rake_scores.f1, rake_scores.precision, rake_scores.recall
     );
 
-    // Both algorithms should produce reasonable quality
     assert!(yake_scores.f1 >= 0.25, "YAKE F1 too low: {:.3}", yake_scores.f1);
     assert!(rake_scores.f1 >= 0.25, "RAKE F1 too low: {:.3}", rake_scores.f1);
 
-    // At least one should achieve good quality
     let best_f1 = yake_scores.f1.max(rake_scores.f1);
     assert!(
         best_f1 >= 0.30,
@@ -444,14 +406,9 @@ fn test_yake_vs_rake_quality_comparison() {
     );
 }
 
-// ============================================================================
-// Optimized Configuration Quality Tests
-// ============================================================================
-
 #[cfg(feature = "keywords-yake")]
 #[test]
 fn test_yake_quality_with_optimized_config() {
-    // Optimized config: more keywords, broader ngram range
     let config = KeywordConfig::yake()
         .with_max_keywords(15)
         .with_ngram_range(1, 3)
@@ -469,7 +426,6 @@ fn test_yake_quality_with_optimized_config() {
         scores.f1, scores.precision, scores.recall
     );
 
-    // Optimized config should improve recall
     assert!(
         scores.recall >= 0.35,
         "Optimized config should improve recall: {:.3} (expected >= 0.35)",
@@ -480,7 +436,6 @@ fn test_yake_quality_with_optimized_config() {
 #[cfg(feature = "keywords-rake")]
 #[test]
 fn test_rake_quality_with_optimized_config() {
-    // Optimized config: more keywords, broader ngram range
     let config = KeywordConfig::rake()
         .with_max_keywords(15)
         .with_ngram_range(1, 3)
@@ -498,7 +453,6 @@ fn test_rake_quality_with_optimized_config() {
         scores.f1, scores.precision, scores.recall
     );
 
-    // Optimized config should improve recall
     assert!(
         scores.recall >= 0.35,
         "Optimized config should improve recall: {:.3} (expected >= 0.35)",
@@ -506,17 +460,12 @@ fn test_rake_quality_with_optimized_config() {
     );
 }
 
-// ============================================================================
-// Domain Relevance Tests
-// ============================================================================
-
 #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
 #[test]
 fn test_extracted_keywords_are_domain_relevant() {
     let config = KeywordConfig::default();
     let keywords = extract_keywords(ML_DOC_SAMPLE, &config).unwrap();
 
-    // Define domain-relevant terms
     let ml_terms = [
         "machine",
         "learning",
@@ -535,7 +484,6 @@ fn test_extracted_keywords_are_domain_relevant() {
         "processing",
     ];
 
-    // Check that extracted keywords contain domain-relevant terms
     let relevant_count = keywords
         .iter()
         .filter(|kw| {
@@ -551,7 +499,6 @@ fn test_extracted_keywords_are_domain_relevant() {
     println!("  Domain-relevant keywords: {}", relevant_count);
     println!("  Relevance ratio: {:.3}", relevance_ratio);
 
-    // At least 70% of extracted keywords should contain domain-relevant terms
     assert!(
         relevance_ratio >= 0.70,
         "Too many irrelevant keywords extracted. Relevance: {:.3} (expected >= 0.70). Relevant: {}/{}",

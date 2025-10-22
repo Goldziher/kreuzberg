@@ -20,10 +20,6 @@ use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
 use kreuzberg::types::TesseractConfig;
 use kreuzberg::{KreuzbergError, extract_bytes_sync, extract_file_sync};
 
-// ============================================================================
-// Invalid Configuration Tests
-// ============================================================================
-
 #[test]
 fn test_ocr_invalid_language_code() {
     if skip_if_missing("images/test_hello_world.png") {
@@ -34,7 +30,7 @@ fn test_ocr_invalid_language_code() {
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
-            language: "invalid_lang_99999".to_string(), // Invalid language code
+            language: "invalid_lang_99999".to_string(),
             tesseract_config: None,
         }),
         force_ocr: false,
@@ -43,11 +39,9 @@ fn test_ocr_invalid_language_code() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Should fail gracefully with an OCR error
     match result {
         Err(KreuzbergError::Ocr { message, .. }) => {
             eprintln!("Expected OCR error for invalid language: {}", message);
-            // Error message should mention the language issue
             assert!(
                 message.contains("language") || message.contains("lang") || message.contains("invalid"),
                 "Error message should mention language issue: {}",
@@ -55,11 +49,9 @@ fn test_ocr_invalid_language_code() {
             );
         }
         Err(e) => {
-            // Some versions of Tesseract may return different error types
             eprintln!("Invalid language produced error: {}", e);
         }
         Ok(_) => {
-            // Some Tesseract versions may fall back to default language
             eprintln!("Invalid language was accepted (fallback behavior)");
         }
     }
@@ -77,7 +69,7 @@ fn test_ocr_invalid_psm_mode() {
             backend: "tesseract".to_string(),
             language: "eng".to_string(),
             tesseract_config: Some(TesseractConfig {
-                psm: 999, // Invalid PSM mode (valid range is 0-13)
+                psm: 999,
                 ..Default::default()
             }),
         }),
@@ -87,7 +79,6 @@ fn test_ocr_invalid_psm_mode() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Should either fail or fall back to valid PSM
     match result {
         Err(KreuzbergError::Ocr { message, .. }) | Err(KreuzbergError::Validation { message, .. }) => {
             eprintln!("Expected error for invalid PSM: {}", message);
@@ -101,7 +92,6 @@ fn test_ocr_invalid_psm_mode() {
             eprintln!("Invalid PSM produced error: {}", e);
         }
         Ok(result) => {
-            // Tesseract may accept it and fall back
             eprintln!("Invalid PSM was accepted (fallback behavior)");
             assert_non_empty_content(&result);
         }
@@ -117,7 +107,7 @@ fn test_ocr_invalid_backend_name() {
     let file_path = get_test_file_path("images/test_hello_world.png");
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
-            backend: "nonexistent_ocr_backend_xyz".to_string(), // Invalid backend
+            backend: "nonexistent_ocr_backend_xyz".to_string(),
             language: "eng".to_string(),
             tesseract_config: None,
         }),
@@ -127,9 +117,6 @@ fn test_ocr_invalid_backend_name() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Note: Rust core currently ignores backend name and always uses Tesseract
-    // Python layer handles multiple backends (EasyOCR, PaddleOCR, etc.)
-    // In Rust, invalid backend names are silently ignored - falls back to Tesseract
     match result {
         Ok(extraction_result) => {
             eprintln!("Invalid backend name ignored, fallback to Tesseract (expected behavior in Rust core)");
@@ -150,13 +137,9 @@ fn test_ocr_invalid_backend_name() {
     }
 }
 
-// ============================================================================
-// Corrupted Input Tests
-// ============================================================================
-
 #[test]
 fn test_ocr_corrupted_image_data() {
-    let corrupted_data = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10]; // Truncated JPEG header
+    let corrupted_data = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -169,7 +152,6 @@ fn test_ocr_corrupted_image_data() {
 
     let result = extract_bytes_sync(&corrupted_data, "image/jpeg", &config);
 
-    // Should fail gracefully
     match result {
         Err(KreuzbergError::ImageProcessing { message, .. })
         | Err(KreuzbergError::Parsing { message, .. })
@@ -180,7 +162,6 @@ fn test_ocr_corrupted_image_data() {
             eprintln!("Corrupted image produced error: {}", e);
         }
         Ok(_) => {
-            // May succeed if corruption doesn't prevent basic processing
             eprintln!("Corrupted image was processed (partial success)");
         }
     }
@@ -201,7 +182,6 @@ fn test_ocr_empty_image() {
 
     let result = extract_bytes_sync(&empty_data, "image/png", &config);
 
-    // Should fail with validation or parsing error
     assert!(result.is_err(), "Empty image data should produce an error");
 
     match result {
@@ -232,7 +212,6 @@ fn test_ocr_non_image_data() {
 
     let result = extract_bytes_sync(text_data, "image/png", &config);
 
-    // Should fail with parsing or image processing error
     match result {
         Err(KreuzbergError::Parsing { message, .. }) | Err(KreuzbergError::ImageProcessing { message, .. }) => {
             eprintln!("Expected error for non-image data: {}", message);
@@ -241,15 +220,10 @@ fn test_ocr_non_image_data() {
             eprintln!("Non-image data produced error: {}", e);
         }
         Ok(_) => {
-            // Unlikely but possible if format detection is lenient
             eprintln!("Non-image data was accepted");
         }
     }
 }
-
-// ============================================================================
-// Extreme Configuration Tests
-// ============================================================================
 
 #[test]
 fn test_ocr_extreme_table_threshold() {
@@ -264,9 +238,9 @@ fn test_ocr_extreme_table_threshold() {
             language: "eng".to_string(),
             tesseract_config: Some(TesseractConfig {
                 enable_table_detection: true,
-                table_min_confidence: 1.5,       // Invalid (> 1.0)
-                table_column_threshold: -50,     // Invalid (negative)
-                table_row_threshold_ratio: 10.0, // Extreme value
+                table_min_confidence: 1.5,
+                table_column_threshold: -50,
+                table_row_threshold_ratio: 10.0,
                 ..Default::default()
             }),
         }),
@@ -276,7 +250,6 @@ fn test_ocr_extreme_table_threshold() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Should either validate and reject or clamp to valid range
     match result {
         Ok(extraction_result) => {
             eprintln!("Extreme table config was accepted (values may be clamped)");
@@ -303,7 +276,7 @@ fn test_ocr_negative_psm() {
             backend: "tesseract".to_string(),
             language: "eng".to_string(),
             tesseract_config: Some(TesseractConfig {
-                psm: -5, // Negative PSM (invalid)
+                psm: -5,
                 ..Default::default()
             }),
         }),
@@ -313,7 +286,6 @@ fn test_ocr_negative_psm() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Should handle gracefully (fail or clamp)
     match result {
         Ok(_) => {
             eprintln!("Negative PSM was accepted (clamped or default used)");
@@ -323,10 +295,6 @@ fn test_ocr_negative_psm() {
         }
     }
 }
-
-// ============================================================================
-// Character Whitelist/Blacklist Edge Cases
-// ============================================================================
 
 #[test]
 fn test_ocr_empty_whitelist() {
@@ -340,7 +308,7 @@ fn test_ocr_empty_whitelist() {
             backend: "tesseract".to_string(),
             language: "eng".to_string(),
             tesseract_config: Some(TesseractConfig {
-                tessedit_char_whitelist: "".to_string(), // Empty whitelist
+                tessedit_char_whitelist: "".to_string(),
                 ..Default::default()
             }),
         }),
@@ -350,14 +318,12 @@ fn test_ocr_empty_whitelist() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Empty whitelist might produce empty output or be ignored
     match result {
         Ok(extraction_result) => {
             eprintln!(
                 "Empty whitelist accepted, content length: {}",
                 extraction_result.content.len()
             );
-            // Content may be empty or fallback to no restriction
         }
         Err(e) => {
             eprintln!("Empty whitelist produced error: {}", e);
@@ -378,7 +344,7 @@ fn test_ocr_conflicting_whitelist_blacklist() {
             language: "eng".to_string(),
             tesseract_config: Some(TesseractConfig {
                 tessedit_char_whitelist: "abc".to_string(),
-                tessedit_char_blacklist: "abc".to_string(), // Conflicts with whitelist
+                tessedit_char_blacklist: "abc".to_string(),
                 ..Default::default()
             }),
         }),
@@ -388,7 +354,6 @@ fn test_ocr_conflicting_whitelist_blacklist() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Tesseract behavior with conflicting config is undefined
     match result {
         Ok(extraction_result) => {
             eprintln!(
@@ -402,10 +367,6 @@ fn test_ocr_conflicting_whitelist_blacklist() {
     }
 }
 
-// ============================================================================
-// Multiple Language Edge Cases
-// ============================================================================
-
 #[test]
 fn test_ocr_empty_language() {
     if skip_if_missing("images/test_hello_world.png") {
@@ -416,7 +377,7 @@ fn test_ocr_empty_language() {
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
-            language: "".to_string(), // Empty language string
+            language: "".to_string(),
             tesseract_config: None,
         }),
         force_ocr: false,
@@ -425,7 +386,6 @@ fn test_ocr_empty_language() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Should either fail or fall back to default language
     match result {
         Ok(_) => {
             eprintln!("Empty language accepted (fallback to default)");
@@ -449,7 +409,7 @@ fn test_ocr_malformed_multi_language() {
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
-            language: "eng++deu++fra".to_string(), // Malformed separator (should be single +)
+            language: "eng++deu++fra".to_string(),
             tesseract_config: None,
         }),
         force_ocr: false,
@@ -458,7 +418,6 @@ fn test_ocr_malformed_multi_language() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Tesseract may parse this differently
     match result {
         Ok(_) => {
             eprintln!("Malformed multi-language accepted (parser tolerant)");
@@ -469,10 +428,6 @@ fn test_ocr_malformed_multi_language() {
     }
 }
 
-// ============================================================================
-// Cache Configuration Edge Cases
-// ============================================================================
-
 #[test]
 fn test_ocr_cache_disabled_then_enabled() {
     if skip_if_missing("images/ocr_image.jpg") {
@@ -481,7 +436,6 @@ fn test_ocr_cache_disabled_then_enabled() {
 
     let file_path = get_test_file_path("images/ocr_image.jpg");
 
-    // First extraction with cache disabled
     let config_no_cache = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -499,7 +453,6 @@ fn test_ocr_cache_disabled_then_enabled() {
     let result1 = extract_file_sync(&file_path, None, &config_no_cache);
     assert!(result1.is_ok(), "First extraction should succeed");
 
-    // Second extraction with cache enabled
     let config_with_cache = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
@@ -517,14 +470,9 @@ fn test_ocr_cache_disabled_then_enabled() {
     let result2 = extract_file_sync(&file_path, None, &config_with_cache);
     assert!(result2.is_ok(), "Second extraction should succeed");
 
-    // Both should produce valid results
     assert_non_empty_content(&result1.unwrap());
     assert_non_empty_content(&result2.unwrap());
 }
-
-// ============================================================================
-// Concurrent Processing Tests
-// ============================================================================
 
 #[test]
 fn test_ocr_concurrent_same_file() {
@@ -547,7 +495,6 @@ fn test_ocr_concurrent_same_file() {
         ..Default::default()
     });
 
-    // Spawn 5 concurrent threads processing the same file
     let mut handles = vec![];
     for i in 0..5 {
         let file_path_clone = Arc::clone(&file_path);
@@ -563,8 +510,6 @@ fn test_ocr_concurrent_same_file() {
                 }
                 Err(e) => {
                     eprintln!("Thread {} failed: {}", i, e);
-                    // Concurrent access may cause some threads to fail
-                    // This is acceptable as long as some succeed
                 }
             }
             success
@@ -573,12 +518,10 @@ fn test_ocr_concurrent_same_file() {
         handles.push(handle);
     }
 
-    // Wait for all threads and count successes
     let successes: usize = handles.into_iter().map(|h| if h.join().unwrap() { 1 } else { 0 }).sum();
 
     eprintln!("Concurrent processing: {}/5 threads succeeded", successes);
 
-    // At least one thread should succeed
     assert!(
         successes >= 1,
         "At least one concurrent thread should succeed (got {})",
@@ -611,7 +554,6 @@ fn test_ocr_concurrent_different_files() {
         ..Default::default()
     });
 
-    // Process different files concurrently
     let mut handles = vec![];
     for (i, file_path) in files.iter().enumerate() {
         let file_path_clone = file_path.clone();
@@ -635,7 +577,6 @@ fn test_ocr_concurrent_different_files() {
         handles.push(handle);
     }
 
-    // All threads should succeed when processing different files
     let successes: usize = handles.into_iter().map(|h| if h.join().unwrap() { 1 } else { 0 }).sum();
 
     assert_eq!(
@@ -643,10 +584,6 @@ fn test_ocr_concurrent_different_files() {
         "All concurrent threads should succeed with different files"
     );
 }
-
-// ============================================================================
-// Preprocessing Error Tests
-// ============================================================================
 
 #[test]
 fn test_ocr_with_preprocessing_extreme_dpi() {
@@ -663,7 +600,7 @@ fn test_ocr_with_preprocessing_extreme_dpi() {
             language: "eng".to_string(),
             tesseract_config: Some(TesseractConfig {
                 preprocessing: Some(ImagePreprocessingConfig {
-                    target_dpi: 10000, // Extreme DPI value
+                    target_dpi: 10000,
                     auto_rotate: true,
                     deskew: true,
                     denoise: false,
@@ -680,7 +617,6 @@ fn test_ocr_with_preprocessing_extreme_dpi() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Should either clamp to valid range or fail gracefully
     match result {
         Ok(extraction_result) => {
             eprintln!("Extreme DPI accepted (clamped): {}", extraction_result.content.len());
@@ -714,7 +650,7 @@ fn test_ocr_with_invalid_binarization_method() {
                     deskew: true,
                     denoise: false,
                     contrast_enhance: false,
-                    binarization_method: "invalid_method_xyz".to_string(), // Invalid method
+                    binarization_method: "invalid_method_xyz".to_string(),
                     invert_colors: false,
                 }),
                 ..Default::default()
@@ -726,7 +662,6 @@ fn test_ocr_with_invalid_binarization_method() {
 
     let result = extract_file_sync(&file_path, None, &config);
 
-    // Should either fall back to default or fail
     match result {
         Ok(_) => {
             eprintln!("Invalid binarization method accepted (fallback used)");

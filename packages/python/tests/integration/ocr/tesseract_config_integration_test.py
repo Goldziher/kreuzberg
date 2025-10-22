@@ -19,13 +19,7 @@ from kreuzberg import (
     extract_file_sync,
 )
 
-# Path to test documents
 TEST_DOCUMENTS_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent / "test_documents"
-
-
-# ============================================================================
-# Fixtures
-# ============================================================================
 
 
 @pytest.fixture
@@ -79,15 +73,9 @@ def hello_world_image() -> Path:
 @pytest.fixture
 def sample_pdf() -> Path:
     """Sample PDF for force_ocr testing."""
-    # Pick a small PDF
     pdfs = list((TEST_DOCUMENTS_ROOT / "pdfs").glob("*.pdf"))
     assert len(pdfs) > 0, "No PDFs found in test_documents/pdfs"
-    return pdfs[0]  # Just use the first one
-
-
-# ============================================================================
-# Phase 1: Core Functionality Tests (OEM, Confidence, Blacklist, Force OCR)
-# ============================================================================
+    return pdfs[0]
 
 
 def test_oem_legacy_engine(invoice_image: Path) -> None:
@@ -97,7 +85,7 @@ def test_oem_legacy_engine(invoice_image: Path) -> None:
         ocr=OcrConfig(
             tesseract_config=TesseractConfig(
                 language="eng",
-                oem=0,  # Legacy engine
+                oem=0,
             ),
         ),
     )
@@ -107,7 +95,6 @@ def test_oem_legacy_engine(invoice_image: Path) -> None:
     assert result.content is not None
     assert len(result.content.strip()) > 0
     assert result.metadata is not None
-    # Verify OCR was used
     assert "ocr" in result.metadata or result.mime_type.startswith("image/")
 
 
@@ -118,7 +105,7 @@ def test_oem_lstm_engine(invoice_image: Path) -> None:
         ocr=OcrConfig(
             tesseract_config=TesseractConfig(
                 language="eng",
-                oem=1,  # LSTM only
+                oem=1,
             ),
         ),
     )
@@ -136,7 +123,7 @@ def test_oem_combined_engine(invoice_image: Path) -> None:
         ocr=OcrConfig(
             tesseract_config=TesseractConfig(
                 language="eng",
-                oem=2,  # Legacy + LSTM
+                oem=2,
             ),
         ),
     )
@@ -154,7 +141,7 @@ def test_oem_default_engine(invoice_image: Path) -> None:
         ocr=OcrConfig(
             tesseract_config=TesseractConfig(
                 language="eng",
-                oem=3,  # Default
+                oem=3,
             ),
         ),
     )
@@ -172,7 +159,7 @@ def test_min_confidence_zero(ocr_test_image: Path) -> None:
         ocr=OcrConfig(
             tesseract_config=TesseractConfig(
                 language="eng",
-                min_confidence=0.0,  # Accept everything
+                min_confidence=0.0,
             ),
         ),
     )
@@ -180,7 +167,6 @@ def test_min_confidence_zero(ocr_test_image: Path) -> None:
     result = extract_file_sync(str(ocr_test_image), config=config)
 
     assert result.content is not None
-    # With min_confidence=0, should get maximum text (including potential errors)
     low_conf_length = len(result.content.strip())
     assert low_conf_length > 0
 
@@ -192,7 +178,7 @@ def test_min_confidence_medium(ocr_test_image: Path) -> None:
         ocr=OcrConfig(
             tesseract_config=TesseractConfig(
                 language="eng",
-                min_confidence=50.0,  # Medium threshold
+                min_confidence=50.0,
             ),
         ),
     )
@@ -200,7 +186,6 @@ def test_min_confidence_medium(ocr_test_image: Path) -> None:
     result = extract_file_sync(str(ocr_test_image), config=config)
 
     assert result.content is not None
-    # Should still get reasonable content
     assert len(result.content.strip()) > 0
 
 
@@ -211,14 +196,13 @@ def test_min_confidence_high(ocr_test_image: Path) -> None:
         ocr=OcrConfig(
             tesseract_config=TesseractConfig(
                 language="eng",
-                min_confidence=80.0,  # High threshold
+                min_confidence=80.0,
             ),
         ),
     )
 
     result = extract_file_sync(str(ocr_test_image), config=config)
 
-    # With high confidence, might get less text but higher quality
     assert result.content is not None
 
 
@@ -237,8 +221,6 @@ def test_tessedit_char_blacklist_numbers(hello_world_image: Path) -> None:
     result = extract_file_sync(str(hello_world_image), config=config)
 
     assert result.content is not None
-    # Should not contain any digits (if there were any in the original)
-    # Note: hello_world_image might not have digits, but test structure is valid
 
 
 def test_tessedit_char_blacklist_special(hello_world_image: Path) -> None:
@@ -274,7 +256,6 @@ def test_force_ocr_on_pdf(sample_pdf: Path) -> None:
 
     assert result.content is not None
     assert len(result.content.strip()) > 0
-    # Verify OCR metadata is populated when force_ocr=True
     assert result.metadata is not None
 
 
@@ -298,15 +279,10 @@ async def test_tesseract_config_async(invoice_image: Path) -> None:
     assert len(result.content.strip()) > 0
 
 
-# ============================================================================
-# Phase 2: Preprocessing Tests
-# ============================================================================
-
-
 def test_preprocessing_dpi_adjustment(invoice_image: Path) -> None:
     """Test target_dpi=600 vs default 300."""
     preprocessing = ImagePreprocessingConfig(
-        target_dpi=600,  # Higher DPI
+        target_dpi=600,
     )
 
     config = ExtractionConfig(
@@ -516,11 +492,6 @@ async def test_preprocessing_async(invoice_image: Path) -> None:
     assert len(result.content.strip()) > 0
 
 
-# ============================================================================
-# Phase 3: Advanced Tests (Multi-language, Batch, Edge Cases)
-# ============================================================================
-
-
 def test_preprocessing_with_chinese(chinese_image: Path) -> None:
     """Test preprocessing with Chinese text (chi_sim_image.jpeg)."""
     pytest.importorskip("tesseract", reason="Chinese language data may not be installed")
@@ -536,7 +507,7 @@ def test_preprocessing_with_chinese(chinese_image: Path) -> None:
             language="chi_sim",
             tesseract_config=TesseractConfig(
                 language="chi_sim",
-                oem=1,  # LSTM better for non-Latin
+                oem=1,
                 preprocessing=preprocessing,
             ),
         ),
@@ -545,7 +516,6 @@ def test_preprocessing_with_chinese(chinese_image: Path) -> None:
     try:
         result = extract_file_sync(str(chinese_image), config=config)
         assert result.content is not None
-        # Chinese characters should be present (if language data installed)
     except Exception as e:
         if "chi_sim" in str(e).lower() or "language" in str(e).lower():
             pytest.skip(f"Chinese language data not installed: {e}")
@@ -565,7 +535,7 @@ def test_preprocessing_with_japanese(japanese_vertical_image: Path) -> None:
             language="jpn",
             tesseract_config=TesseractConfig(
                 language="jpn",
-                oem=1,  # LSTM better for non-Latin
+                oem=1,
                 preprocessing=preprocessing,
             ),
         ),
@@ -588,7 +558,7 @@ def test_oem_with_chinese_language(chinese_image: Path) -> None:
             language="chi_sim",
             tesseract_config=TesseractConfig(
                 language="chi_sim",
-                oem=1,  # LSTM typically better for non-Latin
+                oem=1,
             ),
         ),
     )
@@ -671,10 +641,10 @@ def test_combined_new_parameters(invoice_image: Path) -> None:
         ocr=OcrConfig(
             tesseract_config=TesseractConfig(
                 language="eng",
-                oem=1,  # LSTM
-                min_confidence=60.0,  # Medium-high confidence
+                oem=1,
+                min_confidence=60.0,
                 preprocessing=preprocessing,
-                tessedit_char_blacklist="",  # No blacklist
+                tessedit_char_blacklist="",
             ),
         ),
     )
@@ -688,16 +658,11 @@ def test_combined_new_parameters(invoice_image: Path) -> None:
 
 def test_config_defaults_work(invoice_image: Path) -> None:
     """Test that default TesseractConfig values work correctly."""
-    # Use defaults for all new fields
     config = ExtractionConfig(
         force_ocr=True,
         ocr=OcrConfig(
             tesseract_config=TesseractConfig(
                 language="eng",
-                # oem defaults to 3
-                # min_confidence defaults to 0.0
-                # preprocessing defaults to None
-                # tessedit_char_blacklist defaults to ""
             ),
         ),
     )

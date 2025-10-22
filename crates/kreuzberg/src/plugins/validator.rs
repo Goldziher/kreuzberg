@@ -363,7 +363,6 @@ mod tests {
 
         let config = ExtractionConfig::default();
 
-        // Default implementation always returns true
         assert!(validator.should_validate(&result, &config));
     }
 
@@ -377,7 +376,6 @@ mod tests {
     async fn test_validator_plugin_interface() {
         let validator = MockValidator { should_fail: false };
 
-        // Test Plugin trait methods
         assert_eq!(validator.name(), "mock-validator");
         assert_eq!(validator.version(), "1.0.0");
         assert!(validator.initialize().is_ok());
@@ -403,7 +401,6 @@ mod tests {
 
     #[test]
     fn test_validator_should_validate_conditional() {
-        // Create a validator that only validates PDFs
         struct PdfOnlyValidator;
 
         impl Plugin for PdfOnlyValidator {
@@ -459,7 +456,6 @@ mod tests {
 
     #[test]
     fn test_validator_priority_ranges() {
-        // Test different priority ranges
         struct HighPriorityValidator;
         struct LowPriorityValidator;
 

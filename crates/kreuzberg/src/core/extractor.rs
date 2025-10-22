@@ -49,15 +49,6 @@ static GLOBAL_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
 /// generation has changed.
 static CACHE_GENERATION: AtomicU64 = AtomicU64::new(0);
 
-// Thread-local extractor cache to reduce registry lock contention.
-//
-// This cache stores extractors per MIME type on a per-thread basis, providing
-// 10-30% performance improvement for batch operations by avoiding repeated
-// registry read lock acquisitions.
-//
-// The cache includes a generation number for automatic invalidation when
-// the registry changes.
-
 /// Type alias for the thread-local cache entry: (generation, extractor map)
 type ExtractorCacheEntry = (u64, HashMap<String, Arc<dyn DocumentExtractor>>);
 
@@ -106,11 +97,9 @@ pub fn invalidate_extractor_cache() {
 fn get_extractor_cached(mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
     let current_generation = CACHE_GENERATION.load(Ordering::Acquire);
 
-    // Try cache first, checking generation
     let cached = EXTRACTOR_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
 
-        // Invalidate cache if generation changed
         if cache.0 != current_generation {
             cache.1.clear();
             cache.0 = current_generation;
@@ -123,17 +112,14 @@ fn get_extractor_cached(mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
         return Ok(extractor);
     }
 
-    // Cache miss - acquire registry lock
     let extractor = {
         let registry = crate::plugins::registry::get_document_extractor_registry();
         let registry_read = registry
             .read()
-            .map_err(|e| crate::KreuzbergError::Other(format!("Document extractor registry lock poisoned: {}", e)))?;
+            .map_err(|e| KreuzbergError::Other(format!("Document extractor registry lock poisoned: {}", e)))?;
         registry_read.get(mime_type)?
-        // Lock released at end of scope
     };
 
-    // Store in cache for this thread
     EXTRACTOR_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
         cache.1.insert(mime_type.to_string(), Arc::clone(&extractor));
@@ -190,32 +176,17 @@ pub async fn extract_file(
 
     let path = path.as_ref();
 
-    // 1. Validate file exists
     io::validate_file_exists(path)?;
 
-    // 2. MIME detection/validation
     let detected_mime = mime::detect_or_validate(Some(path), mime_type)?;
 
-    // 3. Cache module exists but integration deferred to v4.1
-    //    See: https://github.com/Goldziher/kreuzberg/issues/TBD
-    //    The cache module in src/cache/ is functional but needs:
-    //    - Configuration plumbing through ExtractionConfig
-    //    - Performance benchmarking
-    //    - Cache invalidation strategy
-
-    // 4. Ensure built-in extractors are registered
     crate::extractors::ensure_initialized()?;
 
-    // 5. Get extractor (cached to avoid lock contention)
     let extractor = get_extractor_cached(&detected_mime)?;
 
-    // 6. Extract content
     let mut result = extractor.extract_file(path, &detected_mime, config).await?;
 
-    // 5. Run post-processing pipeline
     result = crate::core::pipeline::run_pipeline(result, config).await?;
-
-    // 6. Cache integration deferred to v4.1 (see comment at step 3)
 
     Ok(result)
 }
@@ -254,19 +225,14 @@ pub async fn extract_file(
 pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
     use crate::core::mime;
 
-    // 1. Validate MIME type
     let validated_mime = mime::validate_mime_type(mime_type)?;
 
-    // 2. Ensure built-in extractors are registered
     crate::extractors::ensure_initialized()?;
 
-    // 3. Get extractor (cached to avoid lock contention)
     let extractor = get_extractor_cached(&validated_mime)?;
 
-    // 4. Extract content
     let mut result = extractor.extract_bytes(content, &validated_mime, config).await?;
 
-    // 3. Run post-processing pipeline
     result = crate::core::pipeline::run_pipeline(result, config).await?;
 
     Ok(result)
@@ -304,14 +270,11 @@ pub async fn batch_extract_file(
         return Ok(vec![]);
     }
 
-    // Share config across tasks
     let config = Arc::new(config.clone());
 
-    // Create semaphore for concurrency limiting
     let max_concurrent = config.max_concurrent_extractions.unwrap_or_else(|| num_cpus::get() * 2);
     let semaphore = Arc::new(Semaphore::new(max_concurrent));
 
-    // Create task set for concurrent execution
     let mut tasks = JoinSet::new();
 
     for (index, path) in paths.into_iter().enumerate() {
@@ -320,15 +283,12 @@ pub async fn batch_extract_file(
         let semaphore_clone = Arc::clone(&semaphore);
 
         tasks.spawn(async move {
-            // Acquire semaphore permit (blocks if limit reached)
             let _permit = semaphore_clone.acquire().await.unwrap();
             let result = extract_file(&path_buf, None, &config_clone).await;
-            // Permit released automatically when _permit drops
             (index, result)
         });
     }
 
-    // Collect results in order
     let mut results: Vec<Option<ExtractionResult>> = vec![None; tasks.len()];
 
     while let Some(task_result) = tasks.join_next().await {
@@ -342,7 +302,6 @@ pub async fn batch_extract_file(
                     return Err(e);
                 }
 
-                // Other errors: create error result
                 use crate::types::{ErrorMetadata, Metadata};
                 let metadata = Metadata {
                     error: Some(ErrorMetadata {
@@ -367,11 +326,6 @@ pub async fn batch_extract_file(
         }
     }
 
-    // SAFETY: Unwrap is safe here because all results are guaranteed to be Some.
-    // The loop above ensures that for every task:
-    // - Ok(_) case sets results[index] = Some(_)
-    // - Err(join_err) case returns early, never reaching this line
-    // Therefore, all Option<ExtractionResult> values are Some by this point.
     #[allow(clippy::unwrap_used)]
     Ok(results.into_iter().map(|r| r.unwrap()).collect())
 }
@@ -403,20 +357,16 @@ pub async fn batch_extract_bytes(
         return Ok(vec![]);
     }
 
-    // Share config across tasks
     let config = Arc::new(config.clone());
 
-    // Create semaphore for concurrency limiting
     let max_concurrent = config.max_concurrent_extractions.unwrap_or_else(|| num_cpus::get() * 2);
     let semaphore = Arc::new(Semaphore::new(max_concurrent));
 
-    // Convert to owned data for tasks
     let owned_contents: Vec<(Vec<u8>, String)> = contents
         .into_iter()
         .map(|(bytes, mime)| (bytes.to_vec(), mime.to_string()))
         .collect();
 
-    // Create task set for concurrent execution
     let mut tasks = JoinSet::new();
 
     for (index, (bytes, mime_type)) in owned_contents.into_iter().enumerate() {
@@ -424,15 +374,12 @@ pub async fn batch_extract_bytes(
         let semaphore_clone = Arc::clone(&semaphore);
 
         tasks.spawn(async move {
-            // Acquire semaphore permit (blocks if limit reached)
             let _permit = semaphore_clone.acquire().await.unwrap();
             let result = extract_bytes(&bytes, &mime_type, &config_clone).await;
-            // Permit released automatically when _permit drops
             (index, result)
         });
     }
 
-    // Collect results in order
     let mut results: Vec<Option<ExtractionResult>> = vec![None; tasks.len()];
 
     while let Some(task_result) = tasks.join_next().await {
@@ -446,7 +393,6 @@ pub async fn batch_extract_bytes(
                     return Err(e);
                 }
 
-                // Other errors: create error result
                 use crate::types::{ErrorMetadata, Metadata};
                 let metadata = Metadata {
                     error: Some(ErrorMetadata {
@@ -471,11 +417,6 @@ pub async fn batch_extract_bytes(
         }
     }
 
-    // SAFETY: Unwrap is safe here because all results are guaranteed to be Some.
-    // The loop above ensures that for every task:
-    // - Ok(_) case sets results[index] = Some(_)
-    // - Err(join_err) case returns early, never reaching this line
-    // Therefore, all Option<ExtractionResult> values are Some by this point.
     #[allow(clippy::unwrap_used)]
     Ok(results.into_iter().map(|r| r.unwrap()).collect())
 }
@@ -643,12 +584,10 @@ mod tests {
 
         let config = ExtractionConfig::default();
 
-        // Test sync wrapper
         let result = extract_file_sync(&file_path, None, &config);
         assert!(result.is_ok());
         assert_eq!(result.unwrap().content, "sync test");
 
-        // Test bytes sync wrapper
         let result = extract_bytes_sync(b"test", "text/plain", &config);
         assert!(result.is_ok());
     }
@@ -657,19 +596,15 @@ mod tests {
     async fn test_extractor_cache() {
         let config = ExtractionConfig::default();
 
-        // First call - should populate cache
         let result1 = extract_bytes(b"test 1", "text/plain", &config).await;
         assert!(result1.is_ok());
 
-        // Second call with same MIME type - should use cache
         let result2 = extract_bytes(b"test 2", "text/plain", &config).await;
         assert!(result2.is_ok());
 
-        // Both should succeed and produce different content
         assert_eq!(result1.unwrap().content, "test 1");
         assert_eq!(result2.unwrap().content, "test 2");
 
-        // Call with different MIME type - should work
         let result3 = extract_bytes(b"# test 3", "text/markdown", &config).await;
         assert!(result3.is_ok());
     }
@@ -678,23 +613,18 @@ mod tests {
     async fn test_extractor_cache_invalidation() {
         let config = ExtractionConfig::default();
 
-        // Ensure built-in extractors are registered
         crate::extractors::ensure_initialized().unwrap();
 
-        // First extraction - should populate cache for text/plain
         let result1 = extract_bytes(b"first", "text/plain", &config).await;
         assert!(result1.is_ok());
         assert_eq!(result1.unwrap().content, "first");
 
-        // Manually invalidate cache (simulating registry change)
         invalidate_extractor_cache();
 
-        // Next extraction should work (cache will repopulate)
         let result2 = extract_bytes(b"second", "text/plain", &config).await;
         assert!(result2.is_ok());
         assert_eq!(result2.unwrap().content, "second");
 
-        // Verify multiple MIME types work after invalidation
         invalidate_extractor_cache();
 
         let result3 = extract_bytes(b"# markdown", "text/markdown", &config).await;
@@ -709,13 +639,10 @@ mod tests {
     async fn test_invalidate_extractor_cache_function() {
         let config = ExtractionConfig::default();
 
-        // Populate cache
         let _ = extract_bytes(b"test", "text/plain", &config).await;
 
-        // Manually invalidate
         invalidate_extractor_cache();
 
-        // Next call should work (cache will repopulate)
         let result = extract_bytes(b"after invalidation", "text/plain", &config).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap().content, "after invalidation");
@@ -727,17 +654,14 @@ mod tests {
 
         let config = Arc::new(ExtractionConfig::default());
 
-        // Spawn multiple concurrent tasks
         let mut tasks = JoinSet::new();
 
         for i in 0..10 {
             let config_clone = Arc::clone(&config);
             tasks.spawn(async move {
-                // Each task does extraction and invalidation
                 let content = format!("test {}", i);
                 let result = extract_bytes(content.as_bytes(), "text/plain", &config_clone).await;
 
-                // Randomly invalidate
                 if i % 3 == 0 {
                     invalidate_extractor_cache();
                 }
@@ -746,7 +670,6 @@ mod tests {
             });
         }
 
-        // All tasks should complete successfully
         let mut success_count = 0;
         while let Some(task_result) = tasks.join_next().await {
             if task_result.is_ok() && task_result.unwrap().is_ok() {
@@ -757,20 +680,18 @@ mod tests {
         assert_eq!(success_count, 10);
     }
 
-    // Edge Case Tests
-
     #[tokio::test]
     async fn test_extract_file_empty() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("empty.txt");
-        File::create(&file_path).unwrap(); // Empty file
+        File::create(&file_path).unwrap();
 
         let config = ExtractionConfig::default();
         let result = extract_file(&file_path, None, &config).await;
 
         assert!(result.is_ok());
         let result = result.unwrap();
-        assert_eq!(result.content, ""); // Empty content is valid
+        assert_eq!(result.content, "");
     }
 
     #[tokio::test]
@@ -793,27 +714,19 @@ mod tests {
         let result = extract_file(&file_path, None, &config).await;
 
         assert!(result.is_ok());
-        // Whitespace-only content is valid
     }
 
     #[tokio::test]
     async fn test_extract_file_very_long_path() {
-        // Test path with 200+ characters
         let dir = tempdir().unwrap();
         let long_name = "a".repeat(200);
         let file_path = dir.path().join(format!("{}.txt", long_name));
 
-        match File::create(&file_path) {
-            Ok(mut f) => {
-                f.write_all(b"content").unwrap();
-                let config = ExtractionConfig::default();
-                let result = extract_file(&file_path, None, &config).await;
-                // Should either succeed or fail gracefully
-                assert!(result.is_ok() || result.is_err());
-            }
-            Err(_) => {
-                // OS might not support paths this long - that's ok
-            }
+        if let Ok(mut f) = File::create(&file_path) {
+            f.write_all(b"content").unwrap();
+            let config = ExtractionConfig::default();
+            let result = extract_file(&file_path, None, &config).await;
+            assert!(result.is_ok() || result.is_err());
         }
     }
 
@@ -855,7 +768,6 @@ mod tests {
     async fn test_batch_extract_file_with_errors() {
         let dir = tempdir().unwrap();
 
-        // Create one valid file and one path to nonexistent file
         let valid_file = dir.path().join("valid.txt");
         File::create(&valid_file).unwrap().write_all(b"valid content").unwrap();
 
@@ -865,7 +777,6 @@ mod tests {
         let paths = vec![valid_file, invalid_file];
         let results = batch_extract_file(paths, &config).await;
 
-        // Should succeed but second result should have error metadata
         assert!(results.is_ok());
         let results = results.unwrap();
         assert_eq!(results.len(), 2);
@@ -883,7 +794,6 @@ mod tests {
         ];
         let results = batch_extract_bytes(contents, &config).await;
 
-        // Should succeed with error metadata for invalid one
         assert!(results.is_ok());
         let results = results.unwrap();
         assert_eq!(results.len(), 3);
@@ -901,7 +811,6 @@ mod tests {
         ];
         let results = batch_extract_bytes(contents, &config).await;
 
-        // Should succeed but all have error metadata
         assert!(results.is_ok());
         let results = results.unwrap();
         assert_eq!(results.len(), 2);
@@ -911,7 +820,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_bytes_very_large() {
-        // Test with 10MB of content
         let large_content = vec![b'a'; 10_000_000];
         let config = ExtractionConfig::default();
         let result = extract_bytes(&large_content, "text/plain", &config).await;
@@ -923,7 +831,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_batch_extract_large_count() {
-        // Test with 100 files
         let dir = tempdir().unwrap();
         let mut paths = Vec::new();
 
@@ -943,7 +850,6 @@ mod tests {
         let results = results.unwrap();
         assert_eq!(results.len(), 100);
 
-        // Verify all content is correct
         for (i, result) in results.iter().enumerate() {
             assert_eq!(result.content, format!("content {}", i));
         }
@@ -952,7 +858,6 @@ mod tests {
     #[tokio::test]
     async fn test_extract_file_mime_detection_fallback() {
         let dir = tempdir().unwrap();
-        // File with no extension
         let file_path = dir.path().join("testfile");
         File::create(&file_path)
             .unwrap()
@@ -960,10 +865,8 @@ mod tests {
             .unwrap();
 
         let config = ExtractionConfig::default();
-        // Without MIME override, should try to detect
         let result = extract_file(&file_path, None, &config).await;
 
-        // May fail or succeed depending on detection, but should not panic
         assert!(result.is_ok() || result.is_err());
     }
 
@@ -974,10 +877,8 @@ mod tests {
         File::create(&file_path).unwrap().write_all(b"plain text").unwrap();
 
         let config = ExtractionConfig::default();
-        // Force PDF extraction on a text file
         let result = extract_file(&file_path, Some("application/pdf"), &config).await;
 
-        // Should fail gracefully (PDF extractor will reject non-PDF content)
         assert!(result.is_err() || result.is_ok());
     }
 
@@ -1017,7 +918,6 @@ mod tests {
         let config = Arc::new(ExtractionConfig::default());
         let mut tasks = JoinSet::new();
 
-        // 50 concurrent extractions of the same MIME type
         for i in 0..50 {
             let config_clone = Arc::clone(&config);
             tasks.spawn(async move {
@@ -1043,10 +943,8 @@ mod tests {
         let config = Arc::new(ExtractionConfig::default());
         let mut tasks = JoinSet::new();
 
-        // Use only always-available MIME types that work with plain text content
         let mime_types = ["text/plain", "text/markdown"];
 
-        // 30 concurrent extractions with rotating MIME types
         for i in 0..30 {
             let config_clone = Arc::clone(&config);
             let mime = mime_types[i % mime_types.len()];

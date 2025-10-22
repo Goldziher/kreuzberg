@@ -14,7 +14,6 @@ __all__ = ["EasyOCRBackend", "OcrBackendProtocol", "PaddleOCRBackend"]
 
 from kreuzberg.ocr.protocol import OcrBackendProtocol
 
-# Make backends available for direct import (if dependencies are installed)
 try:
     from kreuzberg.ocr.easyocr import EasyOCRBackend
 except ImportError:

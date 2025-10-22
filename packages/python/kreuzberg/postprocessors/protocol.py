@@ -53,8 +53,6 @@ class PostProcessorProtocol(Protocol):
         """
         ...
 
-    # Optional methods
-
     def processing_stage(self) -> Literal["early", "middle", "late"]:
         """Return the processing stage for this processor.
 

@@ -25,6 +25,10 @@
 //! assert!(es_stopwords.contains("el"));
 //! ```
 
+// TODO: serious bug in this file. We should retrieve the stop words from the main branch and put under this rust package, we should embed the jsons part of our binary. We can compress them to reduce size.
+// TODO: load from JSON and memoize the stop words
+// TODO: allow the user to pass stop words and either MERGE with or REPLACE the stop words (default behavior should be merge)
+
 use ahash::{AHashMap, AHashSet};
 use once_cell::sync::Lazy;
 use std::fs;
@@ -62,7 +66,6 @@ fn load_stopwords_from_json(language: &str) -> AHashSet<String> {
         }
     }
 
-    // Fallback to hardcoded stopwords for English
     match language {
         "en" => [
             "a", "an", "and", "are", "as", "at", "be", "been", "by", "for", "from", "has", "have", "had", "he", "him",
@@ -104,11 +107,9 @@ fn load_stopwords_from_json(language: &str) -> AHashSet<String> {
 pub static STOPWORDS: Lazy<AHashMap<String, AHashSet<String>>> = Lazy::new(|| {
     let mut map = AHashMap::new();
 
-    // Load English stopwords (from JSON if available, otherwise hardcoded)
     let en_stopwords = load_stopwords_from_json("en");
     map.insert("en".to_string(), en_stopwords);
 
-    // Spanish stopwords (hardcoded comprehensive list)
     let es_stopwords: AHashSet<String> = [
         "a",
         "al",
@@ -379,7 +380,6 @@ mod tests {
 
     #[test]
     fn test_stopwords_lazy_initialization() {
-        // Access stopwords to ensure it initializes
         let stopwords = &*STOPWORDS;
         assert!(stopwords.contains_key("en"));
         assert!(stopwords.contains_key("es"));
@@ -391,14 +391,12 @@ mod tests {
     fn test_english_stopwords() {
         let en_stopwords = STOPWORDS.get("en").unwrap();
 
-        // Check common English stopwords
         assert!(en_stopwords.contains("the"));
         assert!(en_stopwords.contains("is"));
         assert!(en_stopwords.contains("and"));
         assert!(en_stopwords.contains("a"));
         assert!(en_stopwords.contains("of"));
 
-        // Should have at least 70 stopwords
         assert!(en_stopwords.len() >= 70);
     }
 
@@ -406,31 +404,26 @@ mod tests {
     fn test_spanish_stopwords() {
         let es_stopwords = STOPWORDS.get("es").unwrap();
 
-        // Check common Spanish stopwords
         assert!(es_stopwords.contains("el"));
         assert!(es_stopwords.contains("la"));
         assert!(es_stopwords.contains("es"));
         assert!(es_stopwords.contains("en"));
         assert!(es_stopwords.contains("de"));
 
-        // Should have at least 200 stopwords
         assert!(es_stopwords.len() >= 200);
     }
 
     #[test]
     fn test_unknown_language_returns_empty() {
-        // Unknown language should not be in the map
         assert!(!STOPWORDS.contains_key("xx"));
     }
 
     #[test]
     fn test_load_stopwords_from_json() {
-        // Test fallback to hardcoded English stopwords
         let en_stopwords = load_stopwords_from_json("en");
         assert!(!en_stopwords.is_empty());
         assert!(en_stopwords.contains("the"));
 
-        // Unknown language returns empty set
         let unknown = load_stopwords_from_json("unknown");
         assert!(unknown.is_empty());
     }

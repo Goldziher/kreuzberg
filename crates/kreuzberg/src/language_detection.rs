@@ -2,6 +2,8 @@
 //!
 //! Provides fast language detection for extracted text content.
 
+// TODO: move this file into its own folder - same as other features
+
 use crate::Result;
 use crate::core::config::LanguageDetectionConfig;
 use whatlang::{Lang, detect_lang};
@@ -32,22 +34,18 @@ use whatlang::{Lang, detect_lang};
 /// assert!(languages.is_some());
 /// ```
 pub fn detect_languages(text: &str, config: &LanguageDetectionConfig) -> Result<Option<Vec<String>>> {
-    // Skip if language detection is disabled
     if !config.enabled {
         return Ok(None);
     }
 
-    // Skip empty or very short text
     if text.trim().is_empty() {
         return Ok(None);
     }
 
-    // For single language detection (non-multilingual mode)
     if !config.detect_multiple {
         return detect_single_language(text, config);
     }
 
-    // For multilingual detection
     detect_multiple_languages(text, config)
 }
 
@@ -67,7 +65,6 @@ fn detect_single_language(text: &str, _config: &LanguageDetectionConfig) -> Resu
 /// This splits the text into chunks and detects the language of each chunk,
 /// then returns the most common languages found.
 fn detect_multiple_languages(text: &str, _config: &LanguageDetectionConfig) -> Result<Option<Vec<String>>> {
-    // Split text into chunks of approximately 500 characters
     const CHUNK_SIZE: usize = 500;
     let char_vec: Vec<char> = text.chars().collect();
     let chunk_strings: Vec<String> = char_vec
@@ -79,7 +76,6 @@ fn detect_multiple_languages(text: &str, _config: &LanguageDetectionConfig) -> R
         return Ok(None);
     }
 
-    // Detect language for each chunk
     let mut lang_counts = std::collections::HashMap::new();
     for chunk in &chunk_strings {
         if let Some(lang) = detect_lang(chunk) {
@@ -91,11 +87,9 @@ fn detect_multiple_languages(text: &str, _config: &LanguageDetectionConfig) -> R
         return Ok(None);
     }
 
-    // Sort languages by frequency
     let mut lang_vec: Vec<(Lang, usize)> = lang_counts.into_iter().collect();
     lang_vec.sort_by(|a, b| b.1.cmp(&a.1));
 
-    // Convert to ISO 639-3 codes and return
     let languages: Vec<String> = lang_vec.iter().map(|(lang, _)| lang_to_iso639_3(*lang)).collect();
 
     Ok(Some(languages))
@@ -227,7 +221,6 @@ mod tests {
         let result = detect_languages(text, &config).unwrap();
         assert!(result.is_some());
         let langs = result.unwrap();
-        // Should detect multiple languages
         assert!(!langs.is_empty());
     }
 

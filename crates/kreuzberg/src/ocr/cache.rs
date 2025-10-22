@@ -62,11 +62,6 @@ impl OcrCache {
         let serialized = rmp_serde::to_vec(result)
             .map_err(|e| OcrError::CacheError(format!("Failed to serialize result: {}", e)))?;
 
-        // Atomic write using unique temp file + rename pattern for thread safety
-        // This ensures no corruption if multiple processes/threads write simultaneously
-
-        // Generate unique temp file name using process ID, thread ID, and timestamp
-        // This prevents race conditions when multiple writers target the same cache entry
         let pid = std::process::id();
         let thread_id = std::thread::current().id();
         let timestamp = std::time::SystemTime::now()
@@ -76,14 +71,10 @@ impl OcrCache {
         let temp_name = format!("{}.tmp.{}.{:?}.{}", cache_key, pid, thread_id, timestamp);
         let temp_path = self.cache_dir.join(temp_name);
 
-        // Write to unique temporary file
         fs::write(&temp_path, &serialized)
             .map_err(|e| OcrError::CacheError(format!("Failed to write temp cache file: {}", e)))?;
 
-        // Atomic rename - this operation is atomic on POSIX systems
-        // If another process is also writing, only one rename will succeed
         fs::rename(&temp_path, &cache_path).map_err(|e| {
-            // Clean up temp file on error
             let _ = fs::remove_file(&temp_path);
             OcrError::CacheError(format!("Failed to rename cache file: {}", e))
         })?;
@@ -390,7 +381,7 @@ mod tests {
         cache.set_cached_result("test1", "tesseract", "eng", &result).unwrap();
         cache.set_cached_result("test2", "tesseract", "eng", &result).unwrap();
 
-        std::fs::write(temp_dir.path().join("other.txt"), "not a msgpack file").unwrap();
+        fs::write(temp_dir.path().join("other.txt"), "not a msgpack file").unwrap();
 
         cache.clear().unwrap();
 
@@ -428,7 +419,7 @@ mod tests {
         let path = cache.get_cache_path("abc123");
 
         assert!(path.to_string_lossy().contains("abc123.msgpack"));
-        assert!(path.parent().unwrap() == temp_dir.path());
+        assert_eq!(path.parent().unwrap(), temp_dir.path());
     }
 
     #[test]

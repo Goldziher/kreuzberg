@@ -50,12 +50,10 @@ impl DocumentExtractor for PptxExtractor {
         mime_type: &str,
         config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Extract images based on config
         let extract_images = config.images.as_ref().is_some_and(|img| img.extract_images);
 
         let pptx_result = crate::extraction::pptx::extract_pptx_from_bytes(content, extract_images)?;
 
-        // Use PptxMetadata directly, put counts in additional metadata
         let mut additional = std::collections::HashMap::new();
         additional.insert("slide_count".to_string(), serde_json::json!(pptx_result.slide_count));
         additional.insert("image_count".to_string(), serde_json::json!(pptx_result.image_count));
@@ -84,7 +82,6 @@ impl DocumentExtractor for PptxExtractor {
 
         let pptx_result = crate::extraction::pptx::extract_pptx_from_path(path_str, extract_images)?;
 
-        // Use PptxMetadata directly, put counts in additional metadata
         let mut additional = std::collections::HashMap::new();
         additional.insert("slide_count".to_string(), serde_json::json!(pptx_result.slide_count));
         additional.insert("image_count".to_string(), serde_json::json!(pptx_result.image_count));

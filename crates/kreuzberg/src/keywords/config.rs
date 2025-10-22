@@ -11,7 +11,6 @@ pub struct YakeParams {
     ///
     /// Controls the context window for computing co-occurrence statistics.
     pub window_size: usize,
-    // Note: Deduplication is handled automatically by YAKE's algorithm
 }
 
 #[cfg(feature = "keywords-yake")]

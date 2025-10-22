@@ -40,10 +40,8 @@ impl PdfExtractor {
             source: None,
         })?;
 
-        // Get TesseractConfig from OcrConfig
         let tess_config = ocr_config.tesseract_config.as_ref().cloned().unwrap_or_default();
 
-        // Render all PDF pages to images (synchronous, drops renderer before async processing)
         let images = {
             let render_options = PageRenderOptions::default();
             let renderer = PdfRenderer::new().map_err(|e| crate::KreuzbergError::Parsing {
@@ -57,14 +55,11 @@ impl PdfExtractor {
                     message: format!("Failed to render PDF pages: {}", e),
                     source: None,
                 })?
-            // renderer is dropped here, before async processing
         };
 
-        // Process each page with OCR
         let mut page_texts = Vec::with_capacity(images.len());
 
         for image in images {
-            // Convert DynamicImage to PNG bytes
             let rgb_image = image.to_rgb8();
             let (width, height) = rgb_image.dimensions();
 
@@ -80,14 +75,11 @@ impl PdfExtractor {
             let image_data = image_bytes.into_inner();
             let tess_config_clone = tess_config.clone();
 
-            // Run OCR on this page in blocking task
             let ocr_result = tokio::task::spawn_blocking(move || {
-                // Use cache directory from environment or default
                 let cache_dir = std::env::var("KREUZBERG_CACHE_DIR").ok().map(std::path::PathBuf::from);
 
                 let proc = OcrProcessor::new(cache_dir)?;
 
-                // Convert TesseractConfig using From trait
                 let ocr_tess_config: crate::ocr::types::TesseractConfig = (&tess_config_clone).into();
 
                 proc.process_image(&image_data, &ocr_tess_config)
@@ -105,7 +97,6 @@ impl PdfExtractor {
             page_texts.push(ocr_result.content);
         }
 
-        // Combine all page texts with page breaks
         Ok(page_texts.join("\n\n"))
     }
 }
@@ -136,28 +127,22 @@ impl DocumentExtractor for PdfExtractor {
         mime_type: &str,
         config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Extract metadata first (needed regardless of text extraction method)
         let pdf_metadata = crate::pdf::metadata::extract_metadata(content)?;
 
-        // Determine if we should use OCR instead of native text extraction
         let should_use_ocr = config.force_ocr && config.ocr.is_some();
 
         let text = if should_use_ocr {
-            // Force OCR mode: render pages and run OCR
             #[cfg(feature = "ocr")]
             {
                 self.extract_with_ocr(content, config).await?
             }
             #[cfg(not(feature = "ocr"))]
             {
-                // OCR feature not enabled, fall back to native extraction
                 crate::pdf::text::extract_text_from_pdf(content)?
             }
         } else {
-            // Normal mode: extract native text
             let native_text = crate::pdf::text::extract_text_from_pdf(content)?;
 
-            // If native extraction produced empty content and OCR is available, try OCR
             #[cfg(feature = "ocr")]
             {
                 if native_text.trim().is_empty() && config.ocr.is_some() {
@@ -196,7 +181,7 @@ impl DocumentExtractor for PdfExtractor {
     }
 
     fn priority(&self) -> i32 {
-        50 // Default priority
+        50
     }
 }
 

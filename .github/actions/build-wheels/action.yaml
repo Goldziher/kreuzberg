@@ -67,7 +67,6 @@ runs:
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
 
-        # Disable wheel repair - pdfium is dynamically linked and not bundled
         CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
         CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
         CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""

@@ -8,10 +8,6 @@ use crate::types::ExtractionResult;
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
 /// Extract a path string from Python input (str, pathlib.Path, or bytes).
 ///
 /// Supports:
@@ -19,19 +15,16 @@ use pyo3::types::PyList;
 /// - `pathlib.Path`: Extracts via `__fspath__()` protocol
 /// - `bytes`: UTF-8 decoded path bytes (Unix paths)
 fn extract_path_string(path: &Bound<'_, PyAny>) -> PyResult<String> {
-    // Try as string first (most common case)
     if let Ok(s) = path.extract::<String>() {
         return Ok(s);
     }
 
-    // Try as pathlib.Path via __fspath__() protocol
     if let Ok(fspath) = path.call_method0("__fspath__")
         && let Ok(s) = fspath.extract::<String>()
     {
         return Ok(s);
     }
 
-    // Try as bytes (for Unix path bytes)
     if let Ok(b) = path.extract::<Vec<u8>>() {
         if let Ok(s) = String::from_utf8(b) {
             return Ok(s);
@@ -45,10 +38,6 @@ fn extract_path_string(path: &Bound<'_, PyAny>) -> PyResult<String> {
         "Path must be a string, pathlib.Path, or bytes",
     ))
 }
-
-// ============================================================================
-// Synchronous Functions
-// ============================================================================
 
 /// Extract content from a file (synchronous).
 ///
@@ -152,7 +141,6 @@ pub fn batch_extract_files_sync(
     paths: &Bound<'_, PyList>,
     config: ExtractionConfig,
 ) -> PyResult<Py<PyList>> {
-    // Extract all paths as strings
     let path_strings: PyResult<Vec<String>> = paths.iter().map(|p| extract_path_string(&p)).collect();
     let path_strings = path_strings?;
 
@@ -193,7 +181,6 @@ pub fn batch_extract_bytes_sync(
     mime_types: Vec<String>,
     config: ExtractionConfig,
 ) -> PyResult<Py<PyList>> {
-    // Validate list lengths match
     if data_list.len() != mime_types.len() {
         return Err(pyo3::exceptions::PyValueError::new_err(format!(
             "data_list and mime_types must have the same length (got {} and {})",
@@ -204,7 +191,6 @@ pub fn batch_extract_bytes_sync(
 
     let rust_config = config.into();
 
-    // Zip data and MIME types into Vec<(&[u8], &str)>
     let contents: Vec<(&[u8], &str)> = data_list
         .iter()
         .zip(mime_types.iter())
@@ -219,10 +205,6 @@ pub fn batch_extract_bytes_sync(
     }
     Ok(list.unbind())
 }
-
-// ============================================================================
-// Asynchronous Functions
-// ============================================================================
 
 /// Extract content from a file (asynchronous).
 ///
@@ -345,7 +327,6 @@ pub fn batch_extract_files<'py>(
     paths: &Bound<'py, PyList>,
     config: ExtractionConfig,
 ) -> PyResult<Bound<'py, PyAny>> {
-    // Extract all paths as strings
     let path_strings: PyResult<Vec<String>> = paths.iter().map(|p| extract_path_string(&p)).collect();
     let path_strings = path_strings?;
 
@@ -395,7 +376,6 @@ pub fn batch_extract_bytes<'py>(
     mime_types: Vec<String>,
     config: ExtractionConfig,
 ) -> PyResult<Bound<'py, PyAny>> {
-    // Validate list lengths match
     if data_list.len() != mime_types.len() {
         return Err(pyo3::exceptions::PyValueError::new_err(format!(
             "data_list and mime_types must have the same length (got {} and {})",
@@ -406,7 +386,6 @@ pub fn batch_extract_bytes<'py>(
 
     let rust_config: kreuzberg::ExtractionConfig = config.into();
     pyo3_async_runtimes::tokio::future_into_py(py, async move {
-        // Zip data and MIME types into Vec<(&[u8], &str)>
         let contents: Vec<(&[u8], &str)> = data_list
             .iter()
             .zip(mime_types.iter())

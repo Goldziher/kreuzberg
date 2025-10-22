@@ -18,15 +18,12 @@ pub fn parse_xml(xml_bytes: &[u8], preserve_whitespace: bool) -> Result<XmlExtra
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
-                // Use lossy conversion for element names - XML spec requires UTF-8 but we handle legacy files
-                // Convert to owned bytes to avoid lifetime issues
                 let name_bytes = e.name().as_ref().to_vec();
                 let name: Cow<str> = String::from_utf8_lossy(&name_bytes);
                 element_count += 1;
                 unique_elements_set.insert(name.into_owned());
             }
             Ok(Event::Text(e)) => {
-                // Consistent lossy UTF-8 conversion for all text content
                 let text_cow: Cow<str> = String::from_utf8_lossy(e.as_ref());
                 if preserve_whitespace {
                     content.push_str(&text_cow);
@@ -40,7 +37,6 @@ pub fn parse_xml(xml_bytes: &[u8], preserve_whitespace: bool) -> Result<XmlExtra
                 }
             }
             Ok(Event::CData(e)) => {
-                // Consistent lossy UTF-8 conversion for CDATA sections
                 let text_cow: Cow<str> = String::from_utf8_lossy(&e);
                 content.push_str(&text_cow);
                 content.push(' ');
@@ -205,8 +201,6 @@ mod tests {
     fn test_xml_with_special_characters() {
         let xml = b"<root>&lt;&gt;&amp;&quot;&apos;</root>";
         let result = parse_xml(xml, false).unwrap();
-        // quick_xml may not decode all entities in text events
-        // Just verify parsing succeeds and we get some content
         assert!(result.element_count >= 1);
     }
 
@@ -246,7 +240,6 @@ mod tests {
     fn test_xml_unique_elements_sorted() {
         let xml = b"<root><z/><a/><m/><b/></root>";
         let result = parse_xml(xml, false).unwrap();
-        // Unique elements should be sorted alphabetically
         let expected = vec!["a", "b", "m", "root", "z"];
         assert_eq!(result.unique_elements, expected);
     }
@@ -256,7 +249,6 @@ mod tests {
         let xml = b"<root><item>Test</item></root>";
         let result = parse_xml(xml, false).unwrap();
 
-        // Test all fields are populated
         assert!(!result.content.is_empty());
         assert!(result.element_count > 0);
         assert!(!result.unique_elements.is_empty());
@@ -277,10 +269,8 @@ mod tests {
         let without_preserve = parse_xml(xml, false).unwrap();
         let with_preserve = parse_xml(xml, true).unwrap();
 
-        // Without preserve should trim
         assert!(!without_preserve.content.starts_with(' '));
 
-        // With preserve might keep spaces (implementation-dependent)
         assert!(with_preserve.content.len() >= without_preserve.content.len());
     }
 
@@ -288,23 +278,19 @@ mod tests {
     fn test_xml_element_count_accuracy() {
         let xml = b"<root><a><b><c/></b></a><d/></root>";
         let result = parse_xml(xml, false).unwrap();
-        // root + a + b + c + d = 5 elements
         assert_eq!(result.element_count, 5);
     }
 
     #[test]
     fn test_xml_with_invalid_utf8() {
-        // XML with invalid UTF-8 bytes (0xFF is not valid UTF-8)
         let xml = b"<root><item>Valid text \xFF invalid</item></root>";
         let result = parse_xml(xml, false).unwrap();
-        // Should succeed with lossy conversion (invalid bytes become replacement character)
         assert!(result.content.contains("Valid text"));
         assert_eq!(result.element_count, 2);
     }
 
     #[test]
     fn test_xml_cdata_with_invalid_utf8() {
-        // CDATA with invalid UTF-8 should now succeed with lossy conversion
         let xml = b"<root><![CDATA[Text \xFF more text]]></root>";
         let result = parse_xml(xml, false).unwrap();
         assert!(result.content.contains("Text"));
@@ -314,11 +300,8 @@ mod tests {
 
     #[test]
     fn test_xml_element_name_with_invalid_utf8() {
-        // Element name with invalid UTF-8 should be handled gracefully
         let xml = b"<root><item\xFF>Content</item\xFF></root>";
-        // Parser may fail on invalid element names, but shouldn't panic
         let result = parse_xml(xml, false);
-        // Just verify it doesn't panic - may succeed or fail depending on quick_xml behavior
         let _ = result;
     }
 }

@@ -429,14 +429,19 @@ export async function batchExtractBytes(
 /**
  * Register a custom postprocessor.
  *
- * **Status**: Partially implemented. JavaScript callback support is in development.
- * This function currently throws an error explaining the limitation.
+ * **IMPORTANT**: Custom processors only work with **async extraction functions**:
+ * - ✅ `extractFile()`, `extractBytes()`, `batchExtractFiles()`, `batchExtractBytes()`
+ * - ❌ `extractFileSync()`, `extractBytesSync()`, etc. (will skip custom processors)
+ *
+ * This limitation exists because sync extraction blocks the Node.js event loop,
+ * preventing JavaScript callbacks from executing. For v4.0, use async extraction
+ * when you need custom processors.
  *
  * @param processor - PostProcessorProtocol implementation
  *
  * @example
  * ```typescript
- * import { registerPostProcessor, ExtractionResult } from 'kreuzberg';
+ * import { registerPostProcessor, extractFile, ExtractionResult } from 'kreuzberg';
  *
  * class MyProcessor implements PostProcessorProtocol {
  *   name(): string {
@@ -454,11 +459,57 @@ export async function batchExtractBytes(
  * }
  *
  * registerPostProcessor(new MyProcessor());
+ *
+ * // Use async extraction (required for custom processors)
+ * const result = await extractFile('document.pdf');
+ * console.log(result.metadata.customField); // 'custom_value'
  * ```
  */
 export function registerPostProcessor(processor: PostProcessorProtocol): void {
 	const binding = getBinding();
-	binding.registerPostProcessor(processor);
+
+	// Wrap the processor to handle JSON serialization required by NAPI
+	const wrappedProcessor = {
+		name: processor.name.bind(processor),
+		processingStage: processor.processingStage?.bind(processor),
+		async process(...args: unknown[]): Promise<string> {
+			// With build_callback returning vec![value], NAPI passes args as [null, value]
+			// The first element is the error (null if no error), second is the value
+			const jsonString = args[1] as string;
+			const wireResult = JSON.parse(jsonString) as any;
+
+			// Convert from snake_case (Rust) to camelCase (TypeScript) and parse metadata
+			const result: ExtractionResult = {
+				content: wireResult.content,
+				mimeType: wireResult.mime_type,
+				metadata:
+					typeof wireResult.metadata === "string"
+						? JSON.parse(wireResult.metadata)
+						: wireResult.metadata,
+				tables: wireResult.tables || [],
+				detectedLanguages: wireResult.detected_languages,
+				chunks: wireResult.chunks,
+			};
+
+			// Call user's processor with parsed object (may be sync or async)
+			const updated = await processor.process(result);
+
+			// Convert from camelCase (TypeScript) back to snake_case (Rust) and stringify metadata
+			const wireUpdated = {
+				content: updated.content,
+				mime_type: updated.mimeType,
+				metadata: JSON.stringify(updated.metadata),
+				tables: updated.tables,
+				detected_languages: updated.detectedLanguages,
+				chunks: updated.chunks,
+			};
+
+			// Return as JSON string
+			return JSON.stringify(wireUpdated);
+		},
+	};
+
+	binding.registerPostProcessor(wrappedProcessor);
 }
 
 /**
@@ -500,8 +551,8 @@ export function clearPostProcessors(): void {
 /**
  * Register a custom OCR backend.
  *
- * **Status**: Partially implemented. JavaScript callback support is in development.
- * This function currently throws an error explaining the limitation.
+ * **Status**: Not yet implemented. JavaScript callback support for OCR backends
+ * is planned for a future release.
  *
  * @param backend - OcrBackendProtocol implementation
  *

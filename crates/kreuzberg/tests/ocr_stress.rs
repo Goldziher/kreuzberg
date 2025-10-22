@@ -21,10 +21,6 @@ use std::time::Instant;
 
 mod helpers;
 
-// ============================================================================
-// Rayon Parallel Batch Stress Tests
-// ============================================================================
-
 /// Stress test: Rayon parallel batch processing with many images.
 ///
 /// Validates that:
@@ -43,7 +39,6 @@ fn test_rayon_batch_stress_many_images() {
     let processor = OcrProcessor::new(None).expect("Should create processor");
     let config = TesseractConfig::default();
 
-    // Create 100 file paths (all same image for reproducibility)
     let file_path = get_test_file_path("images/ocr_image.jpg");
     let file_paths: Vec<String> = (0..100).map(|_| file_path.to_string_lossy().to_string()).collect();
 
@@ -51,7 +46,6 @@ fn test_rayon_batch_stress_many_images() {
     let results = processor.process_files_batch(file_paths, &config);
     let duration = start.elapsed();
 
-    // Verify all succeeded
     let success_count = results.iter().filter(|r| r.success).count();
     assert_eq!(
         success_count, 100,
@@ -59,7 +53,6 @@ fn test_rayon_batch_stress_many_images() {
         success_count
     );
 
-    // Verify all results are identical (same file, same config)
     let first_content = results[0].result.as_ref().unwrap().content.clone();
     for (i, result) in results.iter().enumerate().skip(1) {
         assert!(result.success, "Result {} should succeed", i);
@@ -77,8 +70,6 @@ fn test_rayon_batch_stress_many_images() {
         100.0 / duration.as_secs_f64()
     );
 
-    // Should leverage parallelism - much faster than sequential
-    // Conservative check: should process at least 5 images per second
     let images_per_sec = 100.0 / duration.as_secs_f64();
     assert!(
         images_per_sec > 5.0,
@@ -108,7 +99,6 @@ fn test_concurrent_rayon_batches() {
     let file_path = get_test_file_path("images/ocr_image.jpg");
     let file_paths: Vec<String> = (0..20).map(|_| file_path.to_string_lossy().to_string()).collect();
 
-    // Spawn 10 concurrent threads, each running batch processing
     let mut handles = vec![];
     let total_processed = Arc::new(AtomicUsize::new(0));
 
@@ -121,7 +111,6 @@ fn test_concurrent_rayon_batches() {
         handles.push(std::thread::spawn(move || {
             let results = processor.process_files_batch(file_paths, &config);
 
-            // Verify all succeeded in this batch
             let success_count = results.iter().filter(|r| r.success).count();
             assert_eq!(
                 success_count, 20,
@@ -134,14 +123,12 @@ fn test_concurrent_rayon_batches() {
         }));
     }
 
-    // Wait for all threads and verify results
     let mut all_results = vec![];
     for handle in handles {
         let results = handle.join().expect("Thread should not panic");
         all_results.push(results);
     }
 
-    // Verify total processed
     let total = total_processed.load(Ordering::Relaxed);
     assert_eq!(total, 200, "Should process 200 total images (10 batches × 20 images)");
 
@@ -168,7 +155,6 @@ fn test_rayon_batch_memory_pressure() {
 
     let file_path = get_test_file_path("images/ocr_image.jpg");
 
-    // Process in multiple waves to stress memory management
     for wave in 0..5 {
         let file_paths: Vec<String> = (0..50).map(|_| file_path.to_string_lossy().to_string()).collect();
 
@@ -188,10 +174,6 @@ fn test_rayon_batch_memory_pressure() {
 
     println!("Successfully completed 5 waves of 50 images (250 total) without memory issues");
 }
-
-// ============================================================================
-// Tesseract Thread-Safety Stress Tests
-// ============================================================================
 
 /// Stress test: Concurrent Tesseract API calls.
 ///
@@ -215,13 +197,12 @@ fn test_tesseract_api_thread_safety() {
             tesseract_config: None,
         }),
         force_ocr: false,
-        use_cache: false, // Disable cache to force actual Tesseract calls
+        use_cache: false,
         ..Default::default()
     };
 
     let file_path = get_test_file_path("images/ocr_image.jpg");
 
-    // Spawn 50 concurrent threads all calling Tesseract simultaneously
     let mut handles = vec![];
     for thread_id in 0..50 {
         let file_path = file_path.clone();
@@ -239,7 +220,6 @@ fn test_tesseract_api_thread_safety() {
         }));
     }
 
-    // Wait for all and verify consistency
     let mut results = vec![];
     for handle in handles {
         let extraction = handle.join().expect("Thread should not panic");
@@ -247,7 +227,6 @@ fn test_tesseract_api_thread_safety() {
         results.push(extraction);
     }
 
-    // All results should be identical (same image, same config, no cache)
     let first_content = &results[0].content;
     for (i, result) in results.iter().enumerate().skip(1) {
         assert_eq!(
@@ -277,14 +256,13 @@ fn test_sustained_concurrent_ocr_load() {
 
     let processor = Arc::new(OcrProcessor::new(None).expect("Should create processor"));
     let config = Arc::new(TesseractConfig {
-        use_cache: false, // Force actual OCR calls
+        use_cache: false,
         ..Default::default()
     });
 
     let file_path = get_test_file_path("images/ocr_image.jpg");
     let total_processed = Arc::new(AtomicUsize::new(0));
 
-    // Run 20 concurrent workers for sustained load
     let mut handles = vec![];
     for worker_id in 0..20 {
         let processor = Arc::clone(&processor);
@@ -293,7 +271,6 @@ fn test_sustained_concurrent_ocr_load() {
         let total = Arc::clone(&total_processed);
 
         handles.push(std::thread::spawn(move || {
-            // Each worker processes 10 images
             for batch in 0..2 {
                 let file_paths: Vec<String> = (0..5).map(|_| file_path.to_string_lossy().to_string()).collect();
 
@@ -311,7 +288,6 @@ fn test_sustained_concurrent_ocr_load() {
         }));
     }
 
-    // Wait for all workers
     for handle in handles {
         handle.join().expect("Worker should not panic");
     }
@@ -321,10 +297,6 @@ fn test_sustained_concurrent_ocr_load() {
 
     println!("Successfully sustained 20 concurrent workers processing 200 total images");
 }
-
-// ============================================================================
-// OCR Cache Stress Tests
-// ============================================================================
 
 /// Stress test: Concurrent cache access during batch OCR.
 ///
@@ -341,7 +313,6 @@ fn test_concurrent_batch_with_cache() {
         return;
     }
 
-    // Use temporary cache directory for test isolation
     let temp_dir = tempfile::tempdir().expect("Should create temp dir");
     let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).expect("Should create processor");
     let config = TesseractConfig {
@@ -351,11 +322,9 @@ fn test_concurrent_batch_with_cache() {
 
     let file_path = get_test_file_path("images/ocr_image.jpg");
 
-    // Warm the cache with first batch
     let warm_paths: Vec<String> = (0..10).map(|_| file_path.to_string_lossy().to_string()).collect();
     let _ = processor.process_files_batch(warm_paths, &config);
 
-    // Now run 10 concurrent batches (reduced from 20 for stability)
     let processor = Arc::new(processor);
     let config = Arc::new(config);
     let mut handles = vec![];
@@ -379,7 +348,6 @@ fn test_concurrent_batch_with_cache() {
         }));
     }
 
-    // Wait for all batches
     for handle in handles {
         let results = handle.join().expect("Thread should not panic");
         assert_eq!(results.len(), 5, "Each batch should process 5 images");
@@ -411,14 +379,13 @@ fn test_rayon_parallel_speedup() {
 
     let processor = OcrProcessor::new(None).expect("Should create processor");
     let config = TesseractConfig {
-        use_cache: false, // Force actual OCR for timing
+        use_cache: false,
         ..Default::default()
     };
 
     let file_path = get_test_file_path("images/ocr_image.jpg");
     let test_size = 20;
 
-    // Sequential baseline (process one at a time)
     let sequential_start = Instant::now();
     for _ in 0..test_size {
         let result = processor.process_file(&file_path.to_string_lossy(), &config);
@@ -426,7 +393,6 @@ fn test_rayon_parallel_speedup() {
     }
     let sequential_duration = sequential_start.elapsed();
 
-    // Parallel batch (Rayon)
     let file_paths: Vec<String> = (0..test_size)
         .map(|_| file_path.to_string_lossy().to_string())
         .collect();
@@ -446,17 +412,12 @@ fn test_rayon_parallel_speedup() {
         sequential_duration, parallel_duration, speedup
     );
 
-    // Should see at least 1.5x speedup (conservative, accounts for overhead)
     assert!(
         speedup > 1.5,
         "Rayon parallel should be at least 1.5x faster than sequential, got {:.2}x",
         speedup
     );
 }
-
-// ============================================================================
-// Error Handling Stress Tests
-// ============================================================================
 
 /// Stress test: Mixed valid and invalid files in batch.
 ///
@@ -469,10 +430,8 @@ fn test_rayon_batch_error_handling() {
     let processor = OcrProcessor::new(None).expect("Should create processor");
     let config = TesseractConfig::default();
 
-    // Mix of valid and invalid file paths
     let mut file_paths = vec![];
 
-    // Add invalid paths (should fail)
     for i in 0..10 {
         file_paths.push(format!("/nonexistent/file_{}.jpg", i));
     }
@@ -481,7 +440,6 @@ fn test_rayon_batch_error_handling() {
 
     assert_eq!(results.len(), 10, "Should return results for all files");
 
-    // All should fail gracefully (file not found)
     for (i, result) in results.iter().enumerate() {
         assert!(!result.success, "Result {} should fail (file doesn't exist)", i);
         assert!(result.error.is_some(), "Result {} should have error message", i);

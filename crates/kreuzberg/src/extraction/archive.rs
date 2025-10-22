@@ -127,7 +127,6 @@ pub fn extract_zip_text_content(bytes: &[u8]) -> Result<HashMap<String, String>>
 
         let path = file.name().to_string();
 
-        // Only extract text files
         if !file.is_dir() && text_extensions.iter().any(|ext| path.to_lowercase().ends_with(ext)) {
             let mut content = String::new();
             if file.read_to_string(&mut content).is_ok() {
@@ -165,7 +164,6 @@ pub fn extract_tar_text_content(bytes: &[u8]) -> Result<HashMap<String, String>>
             .to_string_lossy()
             .to_string();
 
-        // Only extract text files
         if !entry.header().entry_type().is_dir() && text_extensions.iter().any(|ext| path.to_lowercase().ends_with(ext))
         {
             let mut content = String::new();
@@ -226,7 +224,6 @@ pub fn extract_7z_text_content(bytes: &[u8]) -> Result<HashMap<String, String>> 
         .for_each_entries(|entry, reader| {
             let path = entry.name().to_string();
 
-            // Only extract text files
             if !entry.is_directory() && text_extensions.iter().any(|ext| path.to_lowercase().ends_with(ext)) {
                 let mut content = Vec::new();
                 if let Ok(_) = reader.read_to_end(&mut content)
@@ -251,7 +248,6 @@ mod tests {
 
     #[test]
     fn test_extract_zip_metadata() {
-        // Create a simple ZIP archive in memory
         let mut cursor = Cursor::new(Vec::new());
         {
             let mut zip = ZipWriter::new(&mut cursor);
@@ -277,7 +273,6 @@ mod tests {
 
     #[test]
     fn test_extract_tar_metadata() {
-        // Create a simple TAR archive in memory
         let mut cursor = Cursor::new(Vec::new());
         {
             let mut tar = TarBuilder::new(&mut cursor);

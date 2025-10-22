@@ -165,7 +165,6 @@ impl GenericCache {
     pub fn get(&self, cache_key: &str, source_file: Option<&str>) -> Result<Option<Vec<u8>>> {
         let cache_path = self.get_cache_path(cache_key);
 
-        // Check if file is being deleted (tombstone check)
         {
             let deleting = self
                 .deleting_files
@@ -295,19 +294,16 @@ impl GenericCache {
 
             let size_mb = metadata.len() as f64 / (1024.0 * 1024.0);
 
-            // Mark file as being deleted before actual deletion
             let _ = self.mark_for_deletion(&path);
 
             match fs::remove_file(&path) {
                 Ok(_) => {
                     removed_count += 1;
                     removed_size += size_mb;
-                    // Remove from deletion set after successful deletion
                     let _ = self.unmark_deletion(&path);
                 }
                 Err(e) => {
                     eprintln!("Failed to remove {:?}: {}", path, e);
-                    // Unmark on failure so it can be retried
                     let _ = self.unmark_deletion(&path);
                 }
             }
@@ -375,13 +371,8 @@ pub fn get_available_disk_space(path: &str) -> Result<f64> {
             .ok_or_else(|| KreuzbergError::validation("Path contains invalid UTF-8".to_string()))?;
         let c_path = CString::new(path_str).map_err(|e| KreuzbergError::validation(format!("Invalid path: {}", e)))?;
 
-        // SAFETY: statvfs is a valid C struct defined by POSIX that can be zero-initialized.
-        // All fields are integers (u64, c_ulong) which are safe when zeroed per the C standard.
         let mut stat: statvfs_struct = unsafe { std::mem::zeroed() };
 
-        // SAFETY: c_path is a valid null-terminated C string (CString guarantees this),
-        // stat is a valid mutable reference to a properly initialized statvfs struct,
-        // and statvfs is a standard POSIX syscall that won't cause UB when called correctly.
         let result = unsafe { statvfs(c_path.as_ptr(), &mut stat) };
 
         if result == 0 {
@@ -901,7 +892,7 @@ mod tests {
         assert_eq!(result, Some(data.clone()));
 
         sleep(Duration::from_millis(10));
-        let mut f = std::fs::OpenOptions::new()
+        let mut f = fs::OpenOptions::new()
             .write(true)
             .truncate(true)
             .open(&source_file)
@@ -1000,7 +991,7 @@ mod tests {
         f.write_all(b"test data").unwrap();
         drop(f);
 
-        let old_time = std::time::SystemTime::now() - std::time::Duration::from_secs(60);
+        let old_time = SystemTime::now() - std::time::Duration::from_secs(60);
         filetime::set_file_mtime(&cache_path, filetime::FileTime::from_system_time(old_time)).unwrap();
 
         let result = cache.get(cache_key, None).unwrap();

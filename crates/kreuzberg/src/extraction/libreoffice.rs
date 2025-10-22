@@ -10,7 +10,6 @@ pub const DEFAULT_CONVERSION_TIMEOUT: u64 = 300;
 
 /// Check if LibreOffice (soffice) is available in PATH
 pub async fn check_libreoffice_available() -> Result<()> {
-    // Try to run soffice --version to check availability
     let result = Command::new("soffice").arg("--version").output().await;
 
     match result {
@@ -37,13 +36,10 @@ pub async fn convert_office_doc(
     target_format: &str,
     timeout_seconds: u64,
 ) -> Result<Vec<u8>> {
-    // Check LibreOffice is available
     check_libreoffice_available().await?;
 
-    // Create output directory
     fs::create_dir_all(output_dir).await?;
 
-    // Build command
     let command = Command::new("soffice")
         .arg("--headless")
         .arg("--convert-to")
@@ -53,7 +49,6 @@ pub async fn convert_office_doc(
         .arg(input_path)
         .output();
 
-    // Execute with timeout
     let output = match timeout(Duration::from_secs(timeout_seconds), command).await {
         Ok(Ok(output)) => output,
         Ok(Err(e)) => return Err(KreuzbergError::parsing(format!("Failed to execute LibreOffice: {}", e))),
@@ -65,7 +60,6 @@ pub async fn convert_office_doc(
         }
     };
 
-    // Check if conversion succeeded
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -93,14 +87,12 @@ pub async fn convert_office_doc(
         ))));
     }
 
-    // Find output file
     let input_stem = input_path
         .file_stem()
         .ok_or_else(|| KreuzbergError::parsing("Invalid input file name".to_string()))?;
 
     let expected_output = output_dir.join(format!("{}.{}", input_stem.to_string_lossy(), target_format));
 
-    // Read converted file
     let converted_bytes = fs::read(&expected_output).await.map_err(|e| {
         KreuzbergError::parsing(format!(
             "LibreOffice conversion completed but output file not found: {}",
@@ -108,7 +100,6 @@ pub async fn convert_office_doc(
         ))
     })?;
 
-    // Check file is not empty
     if converted_bytes.is_empty() {
         return Err(KreuzbergError::parsing(
             "LibreOffice conversion produced empty file".to_string(),
@@ -120,7 +111,6 @@ pub async fn convert_office_doc(
 
 /// Convert .doc to .docx using LibreOffice
 pub async fn convert_doc_to_docx(doc_bytes: &[u8]) -> Result<LibreOfficeConversionResult> {
-    // Create temporary directory
     let temp_dir = std::env::temp_dir();
     let unique_id = uuid::Uuid::new_v4();
     let input_dir = temp_dir.join(format!("kreuzberg_doc_{}", unique_id));
@@ -128,14 +118,11 @@ pub async fn convert_doc_to_docx(doc_bytes: &[u8]) -> Result<LibreOfficeConversi
 
     fs::create_dir_all(&input_dir).await?;
 
-    // Write input file
     let input_path = input_dir.join("input.doc");
     fs::write(&input_path, doc_bytes).await?;
 
-    // Convert
     let result = convert_office_doc(&input_path, &output_dir, "docx", DEFAULT_CONVERSION_TIMEOUT).await;
 
-    // Cleanup
     let _ = fs::remove_dir_all(&input_dir).await;
     let _ = fs::remove_dir_all(&output_dir).await;
 
@@ -150,7 +137,6 @@ pub async fn convert_doc_to_docx(doc_bytes: &[u8]) -> Result<LibreOfficeConversi
 
 /// Convert .ppt to .pptx using LibreOffice
 pub async fn convert_ppt_to_pptx(ppt_bytes: &[u8]) -> Result<LibreOfficeConversionResult> {
-    // Create temporary directory
     let temp_dir = std::env::temp_dir();
     let unique_id = uuid::Uuid::new_v4();
     let input_dir = temp_dir.join(format!("kreuzberg_ppt_{}", unique_id));
@@ -158,14 +144,11 @@ pub async fn convert_ppt_to_pptx(ppt_bytes: &[u8]) -> Result<LibreOfficeConversi
 
     fs::create_dir_all(&input_dir).await?;
 
-    // Write input file
     let input_path = input_dir.join("input.ppt");
     fs::write(&input_path, ppt_bytes).await?;
 
-    // Convert
     let result = convert_office_doc(&input_path, &output_dir, "pptx", DEFAULT_CONVERSION_TIMEOUT).await;
 
-    // Cleanup
     let _ = fs::remove_dir_all(&input_dir).await;
     let _ = fs::remove_dir_all(&output_dir).await;
 
@@ -184,10 +167,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_libreoffice_available() {
-        // This test will pass if LibreOffice is installed, skip otherwise
         let result = check_libreoffice_available().await;
         if result.is_err() {
-            // LibreOffice not installed, skip test
             return;
         }
         assert!(result.is_ok());
@@ -195,7 +176,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_convert_office_doc_missing_file() {
-        // Skip if LibreOffice not available
         if check_libreoffice_available().await.is_err() {
             return;
         }
@@ -224,8 +204,6 @@ mod tests {
         let empty_bytes = b"";
         let result = convert_doc_to_docx(empty_bytes).await;
 
-        // LibreOffice may accept empty files and produce output
-        // We just verify the function completes without panicking
         let _ = result;
     }
 
@@ -238,8 +216,6 @@ mod tests {
         let empty_bytes = b"";
         let result = convert_ppt_to_pptx(empty_bytes).await;
 
-        // LibreOffice may accept empty files and produce output
-        // We just verify the function completes without panicking
         let _ = result;
     }
 
@@ -252,8 +228,6 @@ mod tests {
         let invalid_doc = b"This is not a valid .doc file";
         let result = convert_doc_to_docx(invalid_doc).await;
 
-        // LibreOffice may handle invalid files gracefully or error
-        // We just verify the function completes
         let _ = result;
     }
 
@@ -266,7 +240,6 @@ mod tests {
         let invalid_ppt = b"This is not a valid .ppt file";
         let result = convert_ppt_to_pptx(invalid_ppt).await;
 
-        // Should fail - invalid format
         assert!(result.is_err());
     }
 
@@ -280,19 +253,13 @@ mod tests {
         let input_path = temp_dir.join("test_input.txt");
         let output_dir = temp_dir.join("test_output_invalid_format");
 
-        // Create a simple text file
         fs::write(&input_path, b"test content").await.unwrap();
 
-        // Try converting to invalid format
         let result = convert_office_doc(&input_path, &output_dir, "invalid_format", 10).await;
 
-        // Should fail or succeed but not produce expected output
-        // LibreOffice may reject invalid formats
         let _ = fs::remove_file(&input_path).await;
         let _ = fs::remove_dir_all(&output_dir).await;
 
-        // We don't strictly assert failure here because LibreOffice behavior varies
-        // but we verify the function completes
         let _ = result;
     }
 
@@ -304,7 +271,6 @@ mod tests {
             let err = result.unwrap_err();
             match err {
                 KreuzbergError::MissingDependency(msg) => {
-                    // Verify error message contains helpful info
                     assert!(msg.contains("LibreOffice") || msg.contains("soffice"));
                 }
                 _ => panic!("Expected MissingDependency error"),
@@ -321,7 +287,6 @@ mod tests {
         let temp_dir = std::env::temp_dir();
         let output_dir = temp_dir.join(format!("test_create_output_{}", uuid::Uuid::new_v4()));
 
-        // Verify output directory doesn't exist yet
         assert!(!output_dir.exists());
 
         let input_path = temp_dir.join("test_create_output.txt");
@@ -329,15 +294,12 @@ mod tests {
 
         let _ = convert_office_doc(&input_path, &output_dir, "pdf", 10).await;
 
-        // Output directory should have been created
-        // (even if conversion fails, directory creation succeeds)
         let _ = fs::remove_file(&input_path).await;
         let _ = fs::remove_dir_all(&output_dir).await;
     }
 
     #[tokio::test]
     async fn test_conversion_result_structure() {
-        // Test the result structure directly without requiring LibreOffice
         let result = LibreOfficeConversionResult {
             converted_bytes: vec![1, 2, 3],
             original_format: "doc".to_string(),
@@ -357,9 +319,6 @@ mod tests {
 
         let invalid_doc = b"invalid doc content";
         let _result = convert_doc_to_docx(invalid_doc).await;
-
-        // Even if conversion fails, temp directories should be cleaned up
-        // We can't easily verify this without listing /tmp, but the function should handle it
     }
 
     #[tokio::test]
@@ -370,8 +329,5 @@ mod tests {
 
         let invalid_ppt = b"invalid ppt content";
         let _result = convert_ppt_to_pptx(invalid_ppt).await;
-
-        // Even if conversion fails, temp directories should be cleaned up
-        // We can't easily verify this without listing /tmp, but the function should handle it
     }
 }

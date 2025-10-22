@@ -125,7 +125,6 @@ where
         let path = entry.path();
 
         if path.is_file() {
-            // Apply filter if provided
             let should_include = match filter {
                 Some(f) => f(&path),
                 None => true,
@@ -135,7 +134,6 @@ where
                 files.push(path);
             }
         } else if path.is_dir() && recursive {
-            // Recursively traverse subdirectories
             traverse_directory_impl(&path, recursive, filter, files)?;
         }
     }
@@ -229,12 +227,10 @@ mod tests {
     fn test_traverse_directory_non_recursive() {
         let dir = tempdir().unwrap();
 
-        // Create test files
         File::create(dir.path().join("file1.txt")).unwrap();
         File::create(dir.path().join("file2.pdf")).unwrap();
         File::create(dir.path().join("file3.txt")).unwrap();
 
-        // Create subdirectory with files (should be ignored in non-recursive mode)
         std::fs::create_dir(dir.path().join("subdir")).unwrap();
         File::create(dir.path().join("subdir").join("file4.txt")).unwrap();
 
@@ -246,11 +242,9 @@ mod tests {
     fn test_traverse_directory_recursive() {
         let dir = tempdir().unwrap();
 
-        // Create test files
         File::create(dir.path().join("file1.txt")).unwrap();
         File::create(dir.path().join("file2.pdf")).unwrap();
 
-        // Create subdirectory with files
         std::fs::create_dir(dir.path().join("subdir")).unwrap();
         File::create(dir.path().join("subdir").join("file3.txt")).unwrap();
         File::create(dir.path().join("subdir").join("file4.pdf")).unwrap();
@@ -263,12 +257,10 @@ mod tests {
     fn test_traverse_directory_with_filter() {
         let dir = tempdir().unwrap();
 
-        // Create test files
         File::create(dir.path().join("file1.txt")).unwrap();
         File::create(dir.path().join("file2.pdf")).unwrap();
         File::create(dir.path().join("file3.txt")).unwrap();
 
-        // Filter for .txt files only
         let files = traverse_directory(
             dir.path(),
             false,
@@ -289,20 +281,16 @@ mod tests {
     fn test_find_files_by_extension() {
         let dir = tempdir().unwrap();
 
-        // Create test files
         File::create(dir.path().join("file1.txt")).unwrap();
         File::create(dir.path().join("file2.pdf")).unwrap();
-        File::create(dir.path().join("file3.TXT")).unwrap(); // Test case insensitivity
+        File::create(dir.path().join("file3.TXT")).unwrap();
 
-        // Create subdirectory with files
         std::fs::create_dir(dir.path().join("subdir")).unwrap();
         File::create(dir.path().join("subdir").join("file4.txt")).unwrap();
 
-        // Non-recursive
         let files = find_files_by_extension(dir.path(), "txt", false).unwrap();
         assert_eq!(files.len(), 2);
 
-        // Recursive
         let files_recursive = find_files_by_extension(dir.path(), "txt", true).unwrap();
         assert_eq!(files_recursive.len(), 3);
     }

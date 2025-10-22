@@ -1,12 +1,9 @@
-// Core extractors (always available)
 pub mod structured;
 pub mod text;
 
-// Image extraction (requires image crate, part of OCR feature)
 #[cfg(feature = "ocr")]
 pub mod image;
 
-// Optional extractors (feature-gated)
 #[cfg(feature = "archives")]
 pub mod archive;
 
@@ -34,15 +31,12 @@ pub mod table;
 #[cfg(feature = "xml")]
 pub mod xml;
 
-// Core exports
 pub use structured::{JsonExtractionConfig, StructuredDataResult, parse_json, parse_toml, parse_yaml};
 pub use text::parse_text;
 
-// Image exports (feature-gated)
 #[cfg(feature = "ocr")]
 pub use image::{ImageMetadata, extract_image_metadata};
 
-// Optional exports
 #[cfg(feature = "archives")]
 pub use archive::{
     ArchiveEntry, ArchiveMetadata, extract_7z_metadata, extract_7z_text_content, extract_tar_metadata,

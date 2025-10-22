@@ -15,10 +15,6 @@ use kreuzberg::{KreuzbergError, Result};
 use serial_test::serial;
 use std::sync::Arc;
 
-// ============================================================================
-// Mock Processors for Testing
-// ============================================================================
-
 struct OrderTrackingProcessor {
     name: String,
     stage: ProcessingStage,
@@ -42,7 +38,6 @@ impl Plugin for OrderTrackingProcessor {
 #[async_trait]
 impl PostProcessor for OrderTrackingProcessor {
     async fn process(&self, result: &mut ExtractionResult, _: &ExtractionConfig) -> Result<()> {
-        // Append processor name to track execution order
         result.content.push_str(&format!("[{}]", self.name));
         Ok(())
     }
@@ -122,7 +117,6 @@ impl PostProcessor for FailingProcessor {
     }
 }
 
-// Helper to clear registry between tests
 fn clear_processor_registry() {
     let registry = get_post_processor_registry();
     let mut reg = registry
@@ -130,10 +124,6 @@ fn clear_processor_registry() {
         .expect("Failed to acquire write lock on registry in test");
     let _ = reg.shutdown_all();
 }
-
-// ============================================================================
-// Basic Pipeline Flow Tests (5 tests)
-// ============================================================================
 
 #[tokio::test]
 #[serial]
@@ -208,7 +198,6 @@ async fn test_pipeline_multiple_processors_per_stage() {
             .write()
             .expect("Failed to acquire write lock on registry in test");
 
-        // Add 3 processors to Early stage with different priorities
         let early_high = Arc::new(OrderTrackingProcessor {
             name: "early-high".to_string(),
             stage: ProcessingStage::Early,
@@ -238,7 +227,6 @@ async fn test_pipeline_multiple_processors_per_stage() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Should execute in priority order: high, medium, low
     assert_eq!(processed.content, "start[early-high][early-medium][early-low]");
 }
 
@@ -312,13 +300,8 @@ async fn test_pipeline_postprocessing_disabled() {
     };
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Processor should NOT run
     assert_eq!(processed.content, "start");
 }
-
-// ============================================================================
-// Processor Ordering Tests (5 tests)
-// ============================================================================
 
 #[tokio::test]
 #[serial]
@@ -331,7 +314,6 @@ async fn test_pipeline_early_stage_runs_first() {
             .write()
             .expect("Failed to acquire write lock on registry in test");
 
-        // Register Late first, then Early
         let late = Arc::new(OrderTrackingProcessor {
             name: "late".to_string(),
             stage: ProcessingStage::Late,
@@ -356,7 +338,6 @@ async fn test_pipeline_early_stage_runs_first() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Should execute in stage order, not registration order
     assert_eq!(processed.content, "start[early][late]");
 }
 
@@ -429,7 +410,6 @@ async fn test_pipeline_late_stage_runs_last() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Should always execute in stage order
     assert_eq!(processed.content, "start[Early][Middle][Late]");
 }
 
@@ -444,7 +424,6 @@ async fn test_pipeline_within_stage_priority_order() {
             .write()
             .expect("Failed to acquire write lock on registry in test");
 
-        // Register 4 processors in same stage with different priorities
         for (name, priority) in [("p1", 100), ("p2", 10), ("p3", 50), ("p4", 75)] {
             let processor = Arc::new(OrderTrackingProcessor {
                 name: name.to_string(),
@@ -465,7 +444,6 @@ async fn test_pipeline_within_stage_priority_order() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Should execute in priority order: p1(100), p4(75), p3(50), p2(10)
     assert_eq!(processed.content, "start[p1][p4][p3][p2]");
 }
 
@@ -480,14 +458,12 @@ async fn test_pipeline_cross_stage_data_flow() {
             .write()
             .expect("Failed to acquire write lock on registry in test");
 
-        // Early stage adds metadata
         let early = Arc::new(MetadataAddingProcessor {
             name: "early".to_string(),
             key: "stage".to_string(),
             value: "early".to_string(),
         });
 
-        // Middle stage modifies content based on early metadata
         struct MiddleProcessor;
         impl Plugin for MiddleProcessor {
             fn name(&self) -> &str {
@@ -531,13 +507,8 @@ async fn test_pipeline_cross_stage_data_flow() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Middle should see metadata added by Early
     assert!(processed.content.contains("[saw:early]"));
 }
-
-// ============================================================================
-// Error Handling Tests (6 tests)
-// ============================================================================
 
 #[tokio::test]
 #[serial]
@@ -591,7 +562,6 @@ async fn test_pipeline_early_stage_error_recorded() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Error should be recorded in metadata
     assert!(
         processed
             .metadata
@@ -698,9 +668,7 @@ async fn test_pipeline_late_stage_error_doesnt_affect_earlier_stages() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Early stage should have run successfully
     assert_eq!(processed.content, "start[early]");
-    // Late error should be recorded
     assert!(
         processed
             .metadata
@@ -720,7 +688,6 @@ async fn test_pipeline_processor_error_doesnt_stop_other_processors() {
             .write()
             .expect("Failed to acquire write lock on registry in test");
 
-        // Register 3 processors: good, failing, good
         let p1 = Arc::new(OrderTrackingProcessor {
             name: "p1".to_string(),
             stage: ProcessingStage::Early,
@@ -734,7 +701,6 @@ async fn test_pipeline_processor_error_doesnt_stop_other_processors() {
             stage: ProcessingStage::Late,
         });
 
-        // Change p2 to Early stage so we can see the order
         struct EarlyFailingProcessor {
             name: String,
         }
@@ -787,7 +753,6 @@ async fn test_pipeline_processor_error_doesnt_stop_other_processors() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // All processors should run despite p2 failing
     assert!(processed.content.contains("[p1]"));
     assert!(processed.content.contains("[p3]"));
 }
@@ -858,7 +823,6 @@ async fn test_pipeline_multiple_processor_errors() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // All errors should be recorded
     assert!(processed.metadata.additional.contains_key("processing_error_fail1"));
     assert!(processed.metadata.additional.contains_key("processing_error_fail2"));
     assert!(processed.metadata.additional.contains_key("processing_error_fail3"));
@@ -903,10 +867,6 @@ async fn test_pipeline_error_context_preservation() {
     let error_str = error_value.as_str().unwrap();
     assert!(error_str.contains("Detailed error message with context"));
 }
-
-// ============================================================================
-// Metadata & Content Modification Tests (5 tests)
-// ============================================================================
 
 #[tokio::test]
 #[serial]
@@ -1014,7 +974,6 @@ async fn test_pipeline_content_modified_in_middle_visible_in_late() {
         #[async_trait]
         impl PostProcessor for LateReadingProcessor {
             async fn process(&self, result: &mut ExtractionResult, _: &ExtractionConfig) -> Result<()> {
-                // Late should see middle's modification
                 result.content.push_str("[late-saw-middle]");
                 Ok(())
             }
@@ -1053,7 +1012,6 @@ async fn test_pipeline_multiple_processors_modifying_same_metadata() {
             .write()
             .expect("Failed to acquire write lock on registry in test");
 
-        // Multiple processors adding/modifying same key
         for i in 1..=3 {
             struct MetadataOverwritingProcessor {
                 name: String,
@@ -1106,7 +1064,6 @@ async fn test_pipeline_multiple_processors_modifying_same_metadata() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Last processor (proc3, priority 70) should win
     assert_eq!(
         processed
             .metadata
@@ -1130,7 +1087,6 @@ async fn test_pipeline_processors_reading_previous_output() {
             .write()
             .expect("Failed to acquire write lock on registry in test");
 
-        // Chain of processors, each reading previous output
         struct CountingProcessor {
             name: String,
             stage: ProcessingStage,
@@ -1194,7 +1150,6 @@ async fn test_pipeline_processors_reading_previous_output() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Count should be 4 (incremented by each processor)
     assert_eq!(processed.metadata.additional.get("count").unwrap().as_i64().unwrap(), 4);
 }
 
@@ -1221,7 +1176,6 @@ async fn test_pipeline_large_content_modification() {
     #[async_trait]
     impl PostProcessor for LargeContentProcessor {
         async fn process(&self, result: &mut ExtractionResult, _: &ExtractionConfig) -> Result<()> {
-            // Append large content
             result.content.push_str(&"x".repeat(10000));
             Ok(())
         }
@@ -1251,10 +1205,6 @@ async fn test_pipeline_large_content_modification() {
     let processed = run_pipeline(result, &config).await.unwrap();
     assert!(processed.content.len() > 10000);
 }
-
-// ============================================================================
-// Selective Processor Execution Tests (4 tests)
-// ============================================================================
 
 #[tokio::test]
 #[serial]
@@ -1294,7 +1244,6 @@ async fn test_pipeline_enabled_processors_whitelist() {
     };
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // Only proc1 and proc3 should run
     assert!(processed.content.contains("[proc1]"));
     assert!(!processed.content.contains("[proc2]"));
     assert!(processed.content.contains("[proc3]"));
@@ -1338,7 +1287,6 @@ async fn test_pipeline_disabled_processors_blacklist() {
     };
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // proc1 and proc3 should run, proc2 should not
     assert!(processed.content.contains("[proc1]"));
     assert!(!processed.content.contains("[proc2]"));
     assert!(processed.content.contains("[proc3]"));
@@ -1375,7 +1323,6 @@ async fn test_pipeline_no_filtering_runs_all() {
     let config = ExtractionConfig::default();
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // All processors should run
     assert!(processed.content.contains("[proc1]"));
     assert!(processed.content.contains("[proc2]"));
     assert!(processed.content.contains("[proc3]"));
@@ -1412,13 +1359,12 @@ async fn test_pipeline_empty_whitelist_runs_none() {
     let config = ExtractionConfig {
         postprocessor: Some(PostProcessorConfig {
             enabled: true,
-            enabled_processors: Some(vec![]), // Empty whitelist
+            enabled_processors: Some(vec![]),
             disabled_processors: None,
         }),
         ..Default::default()
     };
 
     let processed = run_pipeline(result, &config).await.unwrap();
-    // No processors should run
     assert_eq!(processed.content, "start");
 }

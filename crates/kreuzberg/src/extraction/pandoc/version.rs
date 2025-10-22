@@ -7,12 +7,10 @@ static PANDOC_VALIDATED: OnceCell<bool> = OnceCell::new();
 
 /// Validate that Pandoc version 2 or above is installed and available
 pub async fn validate_pandoc_version() -> Result<()> {
-    // Return early if already validated
     if PANDOC_VALIDATED.get().is_some() {
         return Ok(());
     }
 
-    // Run pandoc --version
     let output = Command::new("pandoc").arg("--version").output().await.map_err(|e| {
         KreuzbergError::MissingDependency(format!(
             "Pandoc version 2 or above is required but not found in PATH: {}",
@@ -28,7 +26,6 @@ pub async fn validate_pandoc_version() -> Result<()> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Extract version number - try multiple patterns
     let version = extract_version(&stdout).ok_or_else(|| {
         KreuzbergError::MissingDependency(format!("Could not parse Pandoc version from output: {}", stdout))
     })?;
@@ -40,7 +37,6 @@ pub async fn validate_pandoc_version() -> Result<()> {
         )));
     }
 
-    // Mark as validated
     let _ = PANDOC_VALIDATED.set(true);
 
     Ok(())
@@ -54,7 +50,6 @@ struct Version {
 }
 
 fn extract_version(output: &str) -> Option<Version> {
-    // Try multiple regex patterns to extract version
     let patterns = [
         r"pandoc(?:\.exe)?(?:\s+|\s+v|\s+version\s+)(\d+)\.(\d+)(?:\.(\d+))?",
         r"pandoc\s+\(version\s+(\d+)\.(\d+)(?:\.(\d+))?\)",
@@ -75,7 +70,6 @@ fn extract_version(output: &str) -> Option<Version> {
         }
     }
 
-    // Fallback: try parsing each token
     for line in output.lines() {
         for token in line.split_whitespace() {
             if let Some(version) = parse_version_token(token) {

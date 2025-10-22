@@ -429,7 +429,7 @@ mod tests {
     fn test_html_with_inline_image() {
         let html = r#"<p>Image: <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Test"></p>"#;
         let result = process_html(html, None, true, 1024 * 1024).unwrap();
-        assert!(result.images.len() == 1);
+        assert_eq!(result.images.len(), 1);
         assert_eq!(result.images[0].format, "png");
     }
 
@@ -490,7 +490,6 @@ mod tests {
             ..Default::default()
         };
         let result = convert_html_to_markdown(html, Some(config)).unwrap();
-        // Navigation should be removed
         assert!(result.contains("Content"));
     }
 
@@ -594,9 +593,8 @@ mod tests {
     #[test]
     fn test_inline_image_format_other_with_plus() {
         let format = InlineImageFormat::Other("image/svg+xml".to_string());
-        // The function detects "svg" in the string and returns it
         let result = inline_image_format_to_str(&format);
-        assert!(result == "svg" || result == "image/svg"); // Either is acceptable
+        assert!(result == "svg" || result == "image/svg");
     }
 
     #[test]

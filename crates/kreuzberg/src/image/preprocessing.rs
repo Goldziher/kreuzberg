@@ -35,7 +35,6 @@ pub fn normalize_image_dpi(
     config: &ExtractionConfig,
     current_dpi: Option<f64>,
 ) -> Result<NormalizeResult> {
-    // Validate dimensions
     if width > 65536 || height > 65536 {
         return Err(KreuzbergError::validation(format!(
             "Image dimensions {}x{} exceed maximum 65536x65536",
@@ -43,7 +42,6 @@ pub fn normalize_image_dpi(
         )));
     }
 
-    // Validate data size
     let expected_size = height * width * 3;
     if rgb_data.len() != expected_size {
         return Err(KreuzbergError::validation(format!(
@@ -59,13 +57,11 @@ pub fn normalize_image_dpi(
     let original_dpi = (current_dpi, current_dpi);
     let max_memory_mb = 2048.0;
 
-    // Calculate target DPI
     let (target_dpi, auto_adjusted, calculated_dpi) =
         calculate_target_dpi(width as u32, height as u32, current_dpi, config, max_memory_mb);
 
     let scale_factor = f64::from(target_dpi) / current_dpi;
 
-    // Check if resize is needed
     if !needs_resize(width as u32, height as u32, scale_factor, config) {
         return Ok(create_skip_result(
             rgb_data.to_vec(),
@@ -80,11 +76,9 @@ pub fn normalize_image_dpi(
         ));
     }
 
-    // Calculate new dimensions
     let (new_width, new_height, final_scale, dimension_clamped) =
         calculate_new_dimensions(width as u32, height as u32, scale_factor, config);
 
-    // Perform resize
     perform_resize(
         rgb_data,
         width as u32,
@@ -211,7 +205,6 @@ fn perform_resize(
     calculated_dpi: Option<i32>,
     config: &ExtractionConfig,
 ) -> Result<NormalizeResult> {
-    // Convert flat RGB data to DynamicImage
     let img_buffer = ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(original_width, original_height, rgb_data.to_vec())
         .ok_or_else(|| {
             KreuzbergError::parsing(format!(
@@ -222,10 +215,8 @@ fn perform_resize(
 
     let image = DynamicImage::ImageRgb8(img_buffer);
 
-    // Perform resize
     let resized = resize_image(&image, new_width, new_height, final_scale)?;
 
-    // Convert back to flat RGB data
     let rgb_image = resized.to_rgb8();
     let result_rgb_data = rgb_image.into_raw();
 
@@ -258,9 +249,9 @@ mod tests {
     fn create_test_rgb_data(width: usize, height: usize) -> Vec<u8> {
         let mut data = Vec::with_capacity(width * height * 3);
         for _ in 0..width * height {
-            data.push(255); // R
-            data.push(0); // G
-            data.push(0); // B
+            data.push(255);
+            data.push(0);
+            data.push(0);
         }
         data
     }
@@ -374,7 +365,7 @@ mod tests {
     #[test]
     fn test_normalize_image_dpi_invalid_data_size() {
         let config = ExtractionConfig::default();
-        let rgb_data = vec![0u8; 100]; // Too small
+        let rgb_data = vec![0u8; 100];
 
         let result = normalize_image_dpi(&rgb_data, 100, 100, &config, None);
         assert!(result.is_err());
@@ -390,10 +381,8 @@ mod tests {
             max_dpi: 600,
         };
 
-        // Scale factor within 5% threshold - no resize
         assert!(!needs_resize(100, 100, 1.02, &config));
 
-        // Scale factor outside 5% threshold - resize
         assert!(needs_resize(100, 100, 1.10, &config));
     }
 

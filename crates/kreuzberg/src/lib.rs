@@ -20,7 +20,7 @@
 //! # Architecture
 //!
 //! - **Core Module** (`core`): Main extraction orchestration, MIME detection, config loading
-//! - **Plugin System** (coming in Phase 2): Language-agnostic plugin architecture
+//! - **Plugin System**: Language-agnostic plugin architecture
 //! - **Extractors**: Format-specific extraction (PDF, images, Office docs, email, etc.)
 //! - **OCR**: Multiple OCR backend support (Tesseract, EasyOCR, PaddleOCR)
 //!
@@ -43,7 +43,6 @@ pub mod plugins;
 pub mod text;
 pub mod types;
 
-// Optional modules (feature-gated)
 #[cfg(feature = "api")]
 pub mod api;
 
@@ -71,40 +70,24 @@ pub mod ocr;
 #[cfg(feature = "pdf")]
 pub mod pdf;
 
-// Core exports
 pub use error::{KreuzbergError, Result};
 pub use types::*;
 
-// Main extraction API - async versions
 pub use core::extractor::{batch_extract_bytes, batch_extract_file, extract_bytes, extract_file};
 
-// Main extraction API - sync versions
 pub use core::extractor::{batch_extract_bytes_sync, batch_extract_file_sync, extract_bytes_sync, extract_file_sync};
 
-// Configuration
 pub use core::config::{
     ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, PdfConfig,
     PostProcessorConfig, TokenReductionConfig,
 };
 
-// MIME detection utilities
 pub use core::mime::{
-    DOCX_MIME_TYPE,
-    EXCEL_MIME_TYPE,
-    HTML_MIME_TYPE,
-    JSON_MIME_TYPE,
-    MARKDOWN_MIME_TYPE,
-    // MIME type constants
-    PDF_MIME_TYPE,
-    PLAIN_TEXT_MIME_TYPE,
-    POWER_POINT_MIME_TYPE,
-    XML_MIME_TYPE,
-    detect_mime_type,
-    detect_or_validate,
+    DOCX_MIME_TYPE, EXCEL_MIME_TYPE, HTML_MIME_TYPE, JSON_MIME_TYPE, MARKDOWN_MIME_TYPE, PDF_MIME_TYPE,
+    PLAIN_TEXT_MIME_TYPE, POWER_POINT_MIME_TYPE, XML_MIME_TYPE, detect_mime_type, detect_or_validate,
     validate_mime_type,
 };
 
-// Plugin registry for advanced usage
 pub use plugins::registry::{
     get_document_extractor_registry, get_ocr_backend_registry, get_post_processor_registry, get_validator_registry,
 };

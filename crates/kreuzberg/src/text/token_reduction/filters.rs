@@ -441,11 +441,9 @@ mod tests {
         let input = "El perro grande bonito tiene";
         let result = pipeline.remove_stopwords(input);
 
-        // Check that Spanish stopwords are filtered and content words preserved
         assert!(result.contains("perro"));
         assert!(result.contains("grande"));
         assert!(result.contains("bonito"));
-        // Verify some common Spanish stopwords are removed
         let words: Vec<&str> = result.split_whitespace().collect();
         assert!(!words.contains(&"el"));
         assert!(!words.contains(&"El"));
@@ -456,7 +454,6 @@ mod tests {
         let config = Arc::new(TokenReductionConfig::default());
         let pipeline = FilterPipeline::new(&config, "unknown").unwrap();
 
-        // Should fall back to English stopwords
         let input = "The quick test with unknown language";
         let result = pipeline.remove_stopwords(input);
 
@@ -617,7 +614,6 @@ mod tests {
         let input = "I a x test";
         let result = pipeline.remove_stopwords(input);
 
-        // Single letter words should be preserved
         assert!(result.contains("I"));
         assert!(result.contains("x"));
     }
@@ -638,7 +634,6 @@ mod tests {
 
     #[test]
     fn test_lazy_regex_initialization() {
-        // Access each lazy static to ensure they initialize without panic
         let _ = &*HTML_COMMENT_REGEX;
         let _ = &*EXCESSIVE_NEWLINES_REGEX;
         let _ = &*MULTIPLE_SPACES_REGEX;

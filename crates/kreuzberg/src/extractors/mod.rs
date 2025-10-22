@@ -8,15 +8,12 @@ use crate::plugins::registry::get_document_extractor_registry;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 
-// Core extractors (always available)
 pub mod structured;
 pub mod text;
 
-// Image extractor (requires image crate, part of OCR feature)
 #[cfg(feature = "ocr")]
 pub mod image;
 
-// Optional extractors (feature-gated)
 #[cfg(feature = "archives")]
 pub mod archive;
 
@@ -41,15 +38,12 @@ pub mod pptx;
 #[cfg(feature = "xml")]
 pub mod xml;
 
-// Core exports
 pub use structured::StructuredExtractor;
 pub use text::{MarkdownExtractor, PlainTextExtractor};
 
-// Image extractor (feature-gated)
 #[cfg(feature = "ocr")]
 pub use image::ImageExtractor;
 
-// Optional exports
 #[cfg(feature = "archives")]
 pub use archive::{SevenZExtractor, TarExtractor, ZipExtractor};
 
@@ -118,16 +112,13 @@ pub fn register_default_extractors() -> Result<()> {
         .write()
         .map_err(|e| crate::KreuzbergError::Other(format!("Document extractor registry lock poisoned: {}", e)))?;
 
-    // Core extractors (always available)
     registry.register(Arc::new(PlainTextExtractor::new()))?;
     registry.register(Arc::new(MarkdownExtractor::new()))?;
     registry.register(Arc::new(StructuredExtractor::new()))?;
 
-    // Image extractor (requires OCR feature)
     #[cfg(feature = "ocr")]
     registry.register(Arc::new(ImageExtractor::new()))?;
 
-    // Optional extractors (feature-gated)
     #[cfg(feature = "xml")]
     registry.register(Arc::new(XmlExtractor::new()))?;
 
@@ -165,7 +156,6 @@ mod tests {
 
     #[test]
     fn test_register_default_extractors() {
-        // Clear registry for clean test
         let registry = get_document_extractor_registry();
         {
             let mut reg = registry
@@ -174,30 +164,25 @@ mod tests {
             *reg = crate::plugins::registry::DocumentExtractorRegistry::new();
         }
 
-        // Register extractors
         register_default_extractors().expect("Failed to register extractors");
 
-        // Verify all extractors are registered
         let reg = registry
             .read()
             .expect("Failed to acquire read lock on registry in test");
         let extractor_names = reg.list();
 
-        // Core extractors (always present)
-        #[allow(unused_mut)] // May be unused if no optional features are enabled
-        let mut expected_count = 3; // PlainText, Markdown, Structured
+        #[allow(unused_mut)]
+        let mut expected_count = 3;
         assert!(extractor_names.contains(&"plain-text-extractor".to_string()));
         assert!(extractor_names.contains(&"markdown-extractor".to_string()));
         assert!(extractor_names.contains(&"structured-extractor".to_string()));
 
-        // Image extractor (optional)
         #[cfg(feature = "ocr")]
         {
             expected_count += 1;
             assert!(extractor_names.contains(&"image-extractor".to_string()));
         }
 
-        // Optional extractors (feature-gated)
         #[cfg(feature = "xml")]
         {
             expected_count += 1;
@@ -218,7 +203,7 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 2; // PPTX, Pandoc
+            expected_count += 2;
             assert!(extractor_names.contains(&"pptx-extractor".to_string()));
             assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
         }
@@ -237,7 +222,7 @@ mod tests {
 
         #[cfg(feature = "archives")]
         {
-            expected_count += 3; // ZIP, TAR, 7Z
+            expected_count += 3;
             assert!(extractor_names.contains(&"zip-extractor".to_string()));
             assert!(extractor_names.contains(&"tar-extractor".to_string()));
             assert!(extractor_names.contains(&"7z-extractor".to_string()));
@@ -253,7 +238,6 @@ mod tests {
 
     #[test]
     fn test_ensure_initialized() {
-        // Should not fail
         ensure_initialized().expect("Failed to ensure extractors initialized");
     }
 }

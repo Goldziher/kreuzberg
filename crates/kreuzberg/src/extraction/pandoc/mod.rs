@@ -17,10 +17,8 @@ pub const MINIMAL_SUPPORTED_PANDOC_VERSION: u32 = 2;
 /// Extract content and metadata from a file using Pandoc
 /// Extracts content and metadata in parallel for better performance
 pub async fn extract_file(path: &Path, from_format: &str) -> Result<PandocExtractionResult> {
-    // Validate pandoc is available
     validate_pandoc_version().await?;
 
-    // Extract content and metadata IN PARALLEL (like Python's run_taskgroup)
     let (content_result, metadata_result) = tokio::join!(
         subprocess::extract_content(path, from_format),
         subprocess::extract_metadata(path, from_format)
@@ -34,10 +32,8 @@ pub async fn extract_file(path: &Path, from_format: &str) -> Result<PandocExtrac
 
 /// Extract content and metadata from bytes using Pandoc
 pub async fn extract_bytes(bytes: &[u8], from_format: &str, extension: &str) -> Result<PandocExtractionResult> {
-    // Validate pandoc is available
     validate_pandoc_version().await?;
 
-    // Create temporary file
     let temp_dir = std::env::temp_dir();
     let temp_file = temp_dir.join(format!(
         "pandoc_temp_{}_{}.{}",
@@ -46,13 +42,10 @@ pub async fn extract_bytes(bytes: &[u8], from_format: &str, extension: &str) -> 
         extension
     ));
 
-    // Write bytes to temp file
     fs::write(&temp_file, bytes).await?;
 
-    // Extract
     let result = extract_file(&temp_file, from_format).await;
 
-    // Cleanup
     let _ = fs::remove_file(&temp_file).await;
 
     result
@@ -60,14 +53,14 @@ pub async fn extract_bytes(bytes: &[u8], from_format: &str, extension: &str) -> 
 
 /// Extract using MIME type (convenience function that handles MIME type conversion)
 pub async fn extract_file_from_mime(path: &Path, mime_type: &str) -> Result<PandocExtractionResult> {
-    let from_format = mime_types::get_pandoc_format_from_mime(mime_type)?;
+    let from_format = get_pandoc_format_from_mime(mime_type)?;
     extract_file(path, &from_format).await
 }
 
 /// Extract bytes using MIME type (convenience function)
 pub async fn extract_bytes_from_mime(bytes: &[u8], mime_type: &str) -> Result<PandocExtractionResult> {
-    let from_format = mime_types::get_pandoc_format_from_mime(mime_type)?;
-    let extension = mime_types::get_extension_from_mime(mime_type)?;
+    let from_format = get_pandoc_format_from_mime(mime_type)?;
+    let extension = get_extension_from_mime(mime_type)?;
     extract_bytes(bytes, &from_format, &extension).await
 }
 
@@ -75,17 +68,14 @@ pub async fn extract_bytes_from_mime(bytes: &[u8], mime_type: &str) -> Result<Pa
 pub async fn extract_images(path: &Path, from_format: &str) -> Result<Vec<ExtractedImage>> {
     use tokio::process::Command;
 
-    // Validate pandoc is available
     validate_pandoc_version().await?;
 
     let mut images = Vec::new();
 
-    // Create temporary directory for media extraction
     let temp_dir = std::env::temp_dir();
     let media_dir = temp_dir.join(format!("pandoc_media_{}_{}", std::process::id(), uuid::Uuid::new_v4()));
     fs::create_dir_all(&media_dir).await?;
 
-    // Run pandoc with --extract-media flag
     let output = Command::new("pandoc")
         .arg(path)
         .arg(format!("--from={}", from_format))
@@ -100,12 +90,10 @@ pub async fn extract_images(path: &Path, from_format: &str) -> Result<Vec<Extrac
         })?;
 
     if !output.status.success() {
-        // Don't fail on image extraction errors - just return empty
         let _ = fs::remove_dir_all(&media_dir).await;
         return Ok(images);
     }
 
-    // Read all extracted images recursively
     let mut stack = vec![media_dir.clone()];
     while let Some(dir) = stack.pop() {
         if let Ok(mut entries) = fs::read_dir(&dir).await {
@@ -113,37 +101,33 @@ pub async fn extract_images(path: &Path, from_format: &str) -> Result<Vec<Extrac
                 let path = entry.path();
                 if path.is_dir() {
                     stack.push(path);
-                } else if path.is_file() {
-                    // Check if it's a supported image format
-                    if let Some(ext) = path.extension() {
-                        let ext_str = ext.to_string_lossy().to_lowercase();
-                        if matches!(
-                            ext_str.as_str(),
-                            "jpg" | "jpeg" | "png" | "gif" | "bmp" | "tiff" | "tif" | "webp"
-                        ) {
-                            // Read image data
-                            if let Ok(data) = fs::read(&path).await {
-                                let filename = path
-                                    .file_name()
-                                    .and_then(|n| n.to_str())
-                                    .unwrap_or("unknown")
-                                    .to_string();
+                } else if path.is_file()
+                    && let Some(ext) = path.extension()
+                {
+                    let ext_str = ext.to_string_lossy().to_lowercase();
+                    if matches!(
+                        ext_str.as_str(),
+                        "jpg" | "jpeg" | "png" | "gif" | "bmp" | "tiff" | "tif" | "webp"
+                    ) && let Ok(data) = fs::read(&path).await
+                    {
+                        let filename = path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("unknown")
+                            .to_string();
 
-                                images.push(ExtractedImage {
-                                    data,
-                                    format: ext_str,
-                                    slide_number: None,
-                                    filename: Some(filename),
-                                });
-                            }
-                        }
+                        images.push(ExtractedImage {
+                            data,
+                            format: ext_str,
+                            slide_number: None,
+                            filename: Some(filename),
+                        });
                     }
                 }
             }
         }
     }
 
-    // Cleanup
     let _ = fs::remove_dir_all(&media_dir).await;
 
     Ok(images)
@@ -156,11 +140,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_pandoc_version() {
-        // This test may fail in CI if pandoc is not installed
-        // We'll mark it as xfail in CI environments
         let result = validate_pandoc_version().await;
         if result.is_err() {
-            // Pandoc not installed, skip test
             return;
         }
         assert!(result.is_ok());
@@ -168,7 +149,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_markdown_content() {
-        // Skip if pandoc not available
         if validate_pandoc_version().await.is_err() {
             return;
         }
@@ -206,7 +186,6 @@ mod tests {
         let content = b"Simple text";
         let result = extract_bytes(content, "markdown", "md").await;
 
-        // Should succeed
         assert!(result.is_ok());
     }
 
@@ -216,7 +195,6 @@ mod tests {
             return;
         }
 
-        // Test MIME type conversion
         let mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
         let format = get_pandoc_format_from_mime(mime_type);
         assert!(format.is_ok());
@@ -265,7 +243,6 @@ mod tests {
             return;
         }
 
-        // Create temp file with markdown (no images)
         let temp_dir = std::env::temp_dir();
         let temp_file = temp_dir.join(format!("test_pandoc_{}.md", uuid::Uuid::new_v4()));
         tokio::fs::write(&temp_file, b"# No Images\n\nJust text.")
@@ -274,7 +251,6 @@ mod tests {
 
         let result = extract_images(&temp_file, "markdown").await;
 
-        // Should succeed with empty images
         if let Ok(images) = result {
             assert!(images.is_empty());
         }
@@ -289,7 +265,6 @@ mod tests {
 
     #[test]
     fn test_mime_type_mappings_complete() {
-        // Test common MIME types are supported
         let common_types = vec![
             "application/rtf",
             "application/epub+zip",
@@ -316,7 +291,6 @@ mod tests {
         let empty = b"";
         let result = extract_bytes(empty, "markdown", "md").await;
 
-        // Should succeed even with empty content
         if let Ok(extraction) = result {
             assert!(extraction.content.is_empty() || extraction.content.trim().is_empty());
         }

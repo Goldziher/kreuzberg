@@ -165,7 +165,10 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &PathBuf) {
         .expect("Failed to execute curl");
 
     if !status.success() {
-        panic!("Failed to download Pdfium from {}. Check if the URL is valid and the version exists.", url);
+        panic!(
+            "Failed to download Pdfium from {}. Check if the URL is valid and the version exists.",
+            url
+        );
     }
 
     // Verify the downloaded file is a gzip archive
@@ -179,7 +182,10 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &PathBuf) {
 
     if !file_type_output.to_lowercase().contains("gzip") && !file_type_output.to_lowercase().contains("compressed") {
         fs::remove_file(&archive_path).ok();
-        panic!("Downloaded file is not a valid gzip archive. URL may be incorrect or version unavailable: {}", url);
+        panic!(
+            "Downloaded file is not a valid gzip archive. URL may be incorrect or version unavailable: {}",
+            url
+        );
     }
 
     eprintln!("Extracting Pdfium archive...");

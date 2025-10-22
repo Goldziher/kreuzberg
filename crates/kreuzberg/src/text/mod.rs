@@ -1,4 +1,3 @@
-// Quality processing modules (feature-gated)
 #[cfg(feature = "quality")]
 pub mod quality;
 
@@ -8,7 +7,6 @@ pub mod string_utils;
 #[cfg(feature = "quality")]
 pub mod token_reduction;
 
-// Re-exports (feature-gated)
 #[cfg(feature = "quality")]
 pub use quality::{calculate_quality_score, clean_extracted_text, normalize_spaces};
 

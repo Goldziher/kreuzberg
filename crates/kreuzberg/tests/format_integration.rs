@@ -10,10 +10,6 @@ mod helpers;
 use helpers::*;
 use kreuzberg::{ExtractionConfig, extract_file, extract_file_sync};
 
-// ============================================================================
-// PDF Tests (20 tests)
-// ============================================================================
-
 /// Test basic PDF text extraction with a simple document.
 #[tokio::test]
 async fn test_pdf_simple_text_extraction() {
@@ -34,11 +30,9 @@ async fn test_pdf_simple_text_extraction() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // PDFs should have strongly-typed PDF metadata
     #[cfg(feature = "pdf")]
     assert!(
         result.metadata.pdf.is_some(),
@@ -65,11 +59,9 @@ async fn test_pdf_large_document() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Large document should have substantial content
     assert!(
         result.content.len() > 10000,
         "Large PDF should extract substantial content, got {} bytes",
@@ -96,19 +88,13 @@ async fn test_pdf_password_protected() {
     let config = ExtractionConfig::default();
     let result = extract_file(&path, None, &config).await;
 
-    // Should either:
-    // 1. Return an error (preferred)
-    // 2. Return empty content (acceptable fallback)
     match result {
         Err(e) => {
-            // Good - we detected the password protection
             eprintln!("Password protection detected (expected): {}", e);
         }
         Ok(res) => {
-            // Acceptable - some PDFs can be read despite protection
             eprintln!("Protected PDF extracted (some protection can be bypassed)");
 
-            // Verify ExtractionResult structure
             assert!(res.chunks.is_none(), "Chunks should be None without chunking config");
             assert!(res.detected_languages.is_none(), "Language detection not enabled");
         }
@@ -122,7 +108,6 @@ async fn test_pdf_metadata_extraction() {
         return;
     }
 
-    // Use a PDF that's likely to have metadata
     let path = get_test_file_path("pdfs/bayesian_data_analysis_third_edition_13th_feb_2020.pdf");
     if !path.exists() {
         eprintln!("Skipping test: PDF not available");
@@ -134,11 +119,9 @@ async fn test_pdf_metadata_extraction() {
 
     assert_mime_type(&result, "application/pdf");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // PDFs should have strongly-typed PDF metadata
     #[cfg(feature = "pdf")]
     {
         assert!(
@@ -146,7 +129,6 @@ async fn test_pdf_metadata_extraction() {
             "PDF should have metadata in metadata.pdf field"
         );
 
-        // Check page count is populated
         if let Some(ref pdf_meta) = result.metadata.pdf {
             assert!(pdf_meta.page_count.unwrap_or(0) > 0, "PDF page count should be > 0");
         }
@@ -172,15 +154,11 @@ async fn test_pdf_with_tables() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Table extraction is optional - just verify we got content
-    // If tables are extracted, they'll be in result.tables
     if !result.tables.is_empty() {
         eprintln!("Tables extracted: {}", result.tables.len());
-        // Verify table structure
         for table in &result.tables {
             assert!(!table.cells.is_empty(), "Table should have cells");
         }
@@ -208,17 +186,12 @@ fn test_pdf_extraction_sync() {
     assert_mime_type(&result, "application/pdf");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
     assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
 }
-
-// ============================================================================
-// Office Document Tests (15 tests)
-// ============================================================================
 
 /// Test basic DOCX extraction.
 #[tokio::test]
@@ -242,7 +215,6 @@ async fn test_docx_basic_extraction() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -278,12 +250,9 @@ async fn test_xlsx_basic_extraction() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Excel files should have sheet information in metadata
-    // Check if sheet metadata exists
     let has_sheet_info = result.metadata.additional.contains_key("sheet_count")
         || result.metadata.additional.contains_key("sheet_names");
 
@@ -302,7 +271,6 @@ async fn test_pptx_basic_extraction() {
         return;
     }
 
-    // Try to find any PPTX file
     let test_files = ["presentations/presentation.pptx", "presentations/demo.pptx"];
 
     for test_file in &test_files {
@@ -317,7 +285,6 @@ async fn test_pptx_basic_extraction() {
             );
             assert_non_empty_content(&result);
 
-            // Verify ExtractionResult structure
             assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
             assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -355,12 +322,10 @@ async fn test_legacy_doc_extraction() {
             assert_mime_type(&res, "application/msword");
             assert_non_empty_content(&res);
 
-            // Verify ExtractionResult structure
             assert!(res.chunks.is_none(), "Chunks should be None without chunking config");
             assert!(res.detected_languages.is_none(), "Language detection not enabled");
         }
         Err(e) => {
-            // LibreOffice might not be installed in CI
             eprintln!(
                 "Legacy Office extraction failed (LibreOffice may not be installed): {}",
                 e
@@ -368,10 +333,6 @@ async fn test_legacy_doc_extraction() {
         }
     }
 }
-
-// ============================================================================
-// Image + OCR Tests (12 tests)
-// ============================================================================
 
 /// Test OCR on simple English text image.
 #[tokio::test]
@@ -403,11 +364,9 @@ async fn test_ocr_simple_english() {
             assert_mime_type(&res, "image/png");
             assert_non_empty_content(&res);
 
-            // Verify ExtractionResult structure
             assert!(res.chunks.is_none(), "Chunks should be None without chunking config");
             assert!(res.detected_languages.is_none(), "Language detection not enabled");
 
-            // Should contain "hello" or "world" (case insensitive)
             let content_lower = res.content.to_lowercase();
             let has_expected_text = content_lower.contains("hello") || content_lower.contains("world");
 
@@ -415,12 +374,10 @@ async fn test_ocr_simple_english() {
                 eprintln!("OCR successfully extracted expected text");
             } else {
                 eprintln!("OCR extracted text but may not be perfect: {}", res.content);
-                // Don't fail - OCR accuracy varies
             }
         }
         Err(e) => {
             eprintln!("OCR test failed (Tesseract may not be installed): {}", e);
-            // Don't fail the test - OCR dependencies are optional
         }
     }
 }
@@ -454,11 +411,9 @@ async fn test_ocr_no_text_image() {
         Ok(res) => {
             assert_mime_type(&res, "image/jpeg");
 
-            // Verify ExtractionResult structure
             assert!(res.chunks.is_none(), "Chunks should be None without chunking config");
             assert!(res.detected_languages.is_none(), "Language detection not enabled");
 
-            // Should have empty or very minimal content (OCR noise)
             let content_len = res.content.trim().len();
             assert!(
                 content_len < 50,
@@ -486,7 +441,7 @@ async fn test_image_without_ocr() {
     }
 
     let config = ExtractionConfig {
-        ocr: None, // No OCR
+        ocr: None,
         ..Default::default()
     };
 
@@ -494,11 +449,9 @@ async fn test_image_without_ocr() {
 
     assert_mime_type(&result, "image/jpeg");
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Without OCR, we should still get image metadata (width, height, format)
     let has_image_metadata = result.metadata.additional.contains_key("width")
         || result.metadata.additional.contains_key("height")
         || result.metadata.additional.contains_key("format");
@@ -507,10 +460,6 @@ async fn test_image_without_ocr() {
         eprintln!("Image metadata extracted without OCR (good!)");
     }
 }
-
-// ============================================================================
-// HTML/Web Tests (8 tests)
-// ============================================================================
 
 /// Test HTML to Markdown conversion.
 #[tokio::test]
@@ -531,16 +480,13 @@ async fn test_html_to_markdown() {
     assert_mime_type(&result, "text/html");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // HTML should be converted to markdown
-    // Check for common markdown patterns
-    let has_markdown_patterns = result.content.contains("##") ||  // Headers
-        result.content.contains("|") ||   // Tables
-        result.content.contains("[") ||   // Links
-        result.content.contains("**"); // Bold
+    let has_markdown_patterns = result.content.contains("##")
+        || result.content.contains("|")
+        || result.content.contains("[")
+        || result.content.contains("**");
 
     if has_markdown_patterns {
         eprintln!("HTML successfully converted to Markdown");
@@ -564,11 +510,8 @@ async fn test_html_complex_layout() {
         return;
     }
 
-    // Large HTML files can cause stack overflow in recursive parsers.
-    // Spawn with 16MB stack and use current-thread runtime to avoid
-    // spawning additional threads.
     let result = std::thread::Builder::new()
-        .stack_size(16 * 1024 * 1024)  // 16MB stack
+        .stack_size(16 * 1024 * 1024)
         .spawn(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -587,11 +530,9 @@ async fn test_html_complex_layout() {
     assert_mime_type(&result, "text/html");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Should extract substantial content from Wikipedia article
     assert!(
         result.content.len() > 1000,
         "Wikipedia article should extract substantial content"
@@ -616,11 +557,8 @@ async fn test_html_non_english() {
         return;
     }
 
-    // Large HTML files can cause stack overflow in recursive parsers.
-    // Spawn with 16MB stack and use current-thread runtime to avoid
-    // spawning additional threads.
     let result = std::thread::Builder::new()
-        .stack_size(16 * 1024 * 1024)  // 16MB stack
+        .stack_size(16 * 1024 * 1024)
         .spawn(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -639,19 +577,12 @@ async fn test_html_non_english() {
     assert_mime_type(&result, "text/html");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Should handle UTF-8 properly (German umlauts)
-    // Just verify it doesn't crash and extracts something
     #[cfg(feature = "html")]
     assert!(!result.content.is_empty(), "HTML extraction should produce content");
 }
-
-// ============================================================================
-// Text/Markdown Tests (6 tests)
-// ============================================================================
 
 /// Test Markdown metadata extraction.
 #[tokio::test]
@@ -672,12 +603,9 @@ async fn test_markdown_metadata_extraction() {
     assert_mime_type(&result, "text/markdown");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Markdown extraction should populate metadata fields
-    // (headers, links, code blocks, word count, etc.)
     let has_markdown_metadata = result.metadata.additional.contains_key("headers")
         || result.metadata.additional.contains_key("links")
         || result.metadata.additional.contains_key("word_count")
@@ -695,7 +623,6 @@ async fn test_plain_text_extraction() {
         return;
     }
 
-    // Find any .txt file
     let test_files = ["text/simple.txt", "text/README.txt"];
 
     for test_file in &test_files {
@@ -707,7 +634,6 @@ async fn test_plain_text_extraction() {
             assert_mime_type(&result, "text/plain");
             assert_non_empty_content(&result);
 
-            // Verify ExtractionResult structure
             assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
             assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -717,10 +643,6 @@ async fn test_plain_text_extraction() {
 
     eprintln!("Skipping test: No plain text files available");
 }
-
-// ============================================================================
-// Data Format Tests (8 tests)
-// ============================================================================
 
 /// Test JSON extraction.
 #[tokio::test]
@@ -744,11 +666,9 @@ async fn test_json_extraction() {
     assert_mime_type(&result, "application/json");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // JSON should be pretty-printed or formatted
     assert!(result.content.contains("{") || result.content.contains("["));
 }
 
@@ -774,7 +694,6 @@ async fn test_yaml_extraction() {
     assert_mime_type(&result, "application/x-yaml");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 }
@@ -786,14 +705,12 @@ async fn test_xml_extraction() {
         return;
     }
 
-    // Find any XML file
     let xml_dir = get_test_documents_dir().join("xml");
     if !xml_dir.exists() {
         eprintln!("Skipping test: xml directory not available");
         return;
     }
 
-    // Get first XML file
     let mut xml_files = std::fs::read_dir(xml_dir)
         .unwrap()
         .filter_map(|e| e.ok())
@@ -812,11 +729,9 @@ async fn test_xml_extraction() {
     assert_mime_type(&result, "application/xml");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // XML extraction should have metadata
     let has_xml_metadata = result.metadata.additional.contains_key("element_count")
         || result.metadata.additional.contains_key("unique_elements");
 
@@ -827,10 +742,6 @@ async fn test_xml_extraction() {
     #[cfg(feature = "xml")]
     assert!(!result.content.is_empty(), "XML extraction should produce content");
 }
-
-// ============================================================================
-// Email Tests (6 tests)
-// ============================================================================
 
 /// Test basic email extraction.
 #[tokio::test]
@@ -845,7 +756,6 @@ async fn test_email_extraction() {
         return;
     }
 
-    // Get first EML file
     let mut eml_files = std::fs::read_dir(email_dir)
         .unwrap()
         .filter_map(|e| e.ok())
@@ -864,11 +774,9 @@ async fn test_email_extraction() {
     assert_mime_type(&result, "message/rfc822");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
-    // Email extraction should have metadata (from, to, subject, etc.)
     let has_email_metadata = result.metadata.additional.contains_key("from")
         || result.metadata.additional.contains_key("to")
         || result.metadata.additional.contains_key("subject");

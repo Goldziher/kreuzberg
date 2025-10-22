@@ -4,13 +4,11 @@ use std::io::Cursor;
 
 /// Convert Arrow IPC bytes to markdown table format
 pub fn table_from_arrow_to_markdown(arrow_bytes: &[u8]) -> Result<String> {
-    // Read DataFrame from Arrow IPC format
     let cursor = Cursor::new(arrow_bytes);
     let df = IpcReader::new(cursor)
         .finish()
         .map_err(|e| KreuzbergError::parsing(format!("Failed to read Arrow IPC data: {}", e)))?;
 
-    // Convert DataFrame to markdown
     dataframe_to_markdown(&df)
 }
 
@@ -22,7 +20,6 @@ fn dataframe_to_markdown(df: &DataFrame) -> Result<String> {
 
     let mut markdown = String::new();
 
-    // Header row
     markdown.push_str("| ");
     for col_name in df.get_column_names() {
         markdown.push_str(col_name);
@@ -30,14 +27,12 @@ fn dataframe_to_markdown(df: &DataFrame) -> Result<String> {
     }
     markdown.push('\n');
 
-    // Separator row
     markdown.push('|');
     for _ in 0..df.width() {
         markdown.push_str("------|");
     }
     markdown.push('\n');
 
-    // Data rows
     for row_idx in 0..df.height() {
         markdown.push_str("| ");
         for col in df.get_columns() {
@@ -53,16 +48,13 @@ fn dataframe_to_markdown(df: &DataFrame) -> Result<String> {
 }
 
 fn format_cell_value(series: &Series, idx: usize) -> Result<String> {
-    // Handle null values - is_null() returns a BooleanChunked array
     let is_null_array = series.is_null();
     if is_null_array.get(idx).unwrap_or(false) {
         return Ok(String::new());
     }
 
-    // Format based on data type - cast to i64/u64/f64 for display
     let value_str = match series.dtype() {
         DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
-            // Cast all integer types to i64 for consistent handling
             let casted = series
                 .cast(&DataType::Int64)
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to cast to i64: {}", e)))?;
@@ -74,7 +66,6 @@ fn format_cell_value(series: &Series, idx: usize) -> Result<String> {
                 .unwrap_or_default()
         }
         DataType::UInt8 | DataType::UInt16 | DataType::UInt32 | DataType::UInt64 => {
-            // Cast all unsigned integer types to u64 for consistent handling
             let casted = series
                 .cast(&DataType::UInt64)
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to cast to u64: {}", e)))?;
@@ -86,7 +77,6 @@ fn format_cell_value(series: &Series, idx: usize) -> Result<String> {
                 .unwrap_or_default()
         }
         DataType::Float32 | DataType::Float64 => {
-            // Cast all float types to f64 for consistent handling
             let casted = series
                 .cast(&DataType::Float64)
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to cast to f64: {}", e)))?;
@@ -110,7 +100,6 @@ fn format_cell_value(series: &Series, idx: usize) -> Result<String> {
             .map(|v| v.to_string())
             .unwrap_or_default(),
         _ => {
-            // For other types, use debug formatting
             format!("{:?}", series.get(idx))
         }
     };
@@ -182,7 +171,7 @@ mod tests {
 
         assert!(markdown.contains("| name | value |"));
         assert!(markdown.contains("| Alice | 1 |"));
-        assert!(markdown.contains("| Bob |  |")); // Empty for null
+        assert!(markdown.contains("| Bob |  |"));
         assert!(markdown.contains("| Charlie | 3 |"));
     }
 
@@ -262,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_invalid_arrow_bytes() {
-        let invalid_bytes = vec![0u8; 10]; // Invalid Arrow IPC data
+        let invalid_bytes = vec![0u8; 10];
         let result = table_from_arrow_to_markdown(&invalid_bytes);
         assert!(result.is_err());
     }
@@ -276,7 +265,6 @@ mod tests {
 
         let markdown = dataframe_to_markdown(&df).unwrap();
 
-        // Floats should be formatted to 2 decimal places
         assert!(markdown.contains("| 1.23 |"));
         assert!(markdown.contains("| 5.68 |"));
         assert!(markdown.contains("| 9.01 |"));

@@ -13,8 +13,7 @@ pub fn calculate_smart_dpi(
     let width_inches = page_width / PDF_POINTS_PER_INCH;
     let height_inches = page_height / PDF_POINTS_PER_INCH;
 
-    // Calculate maximum pixels based on memory constraint
-    let max_pixels = ((max_memory_mb * 1024.0 * 1024.0 / 3.0).sqrt()).round() as i32;
+    let max_pixels = (max_memory_mb * 1024.0 * 1024.0 / 3.0).sqrt().round() as i32;
 
     let max_dpi_for_memory_width = if width_inches > 0.0 {
         (f64::from(max_pixels) / width_inches).round() as i32
@@ -35,7 +34,6 @@ pub fn calculate_smart_dpi(
 
     let final_dpi = target_dpi.min(memory_constrained_dpi).min(dimension_constrained_dpi);
 
-    // Ensure minimum 72 DPI
     final_dpi.max(72)
 }
 
@@ -81,7 +79,6 @@ pub fn calculate_optimal_dpi(
 ) -> i32 {
     let smart_dpi = calculate_smart_dpi(page_width, page_height, target_dpi, max_dimension, 2048.0);
 
-    // Clamp between min and max
     min_dpi.max(smart_dpi.min(max_dpi))
 }
 

@@ -2189,7 +2189,6 @@ dependencies = [
  "base64",
  "calamine",
  "chardetng",
- "chrono",
  "encoding_rs",
  "fast_image_resize",
  "filetime",
@@ -2255,11 +2254,13 @@ dependencies = [
 name = "kreuzberg-node"
 version = "4.0.0"
 dependencies = [
+ "async-trait",
  "kreuzberg",
  "mimalloc-rust",
  "napi",
  "napi-build",
  "napi-derive",
+ "serde",
  "serde_json",
  "tokio",
 ]

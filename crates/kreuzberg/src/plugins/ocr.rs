@@ -378,7 +378,6 @@ mod tests {
         let backend = MockOcrBackend {
             languages: vec!["eng".to_string()],
         };
-        // Default implementation should return false
         assert!(!backend.supports_table_detection());
     }
 
@@ -438,7 +437,6 @@ mod tests {
             tesseract_config: None,
         };
 
-        // Mock backend doesn't validate, but real backends should
         let result = backend.process_image(b"", &config).await;
         assert!(result.is_ok());
     }

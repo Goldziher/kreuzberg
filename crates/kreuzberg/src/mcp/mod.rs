@@ -26,5 +26,4 @@ mod server;
 
 pub use server::start_mcp_server;
 
-// Re-export KreuzbergMcp with all its public methods
 pub use server::KreuzbergMcp;

@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-// Re-export ImagePreprocessingConfig from public types (same struct used internally)
 pub use crate::types::ImagePreprocessingConfig;
 
 /// Page Segmentation Mode for Tesseract OCR
@@ -49,27 +48,21 @@ impl PSMMode {
 /// Public API uses i32 for PyO3 compatibility, converted to u8 here for efficiency.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TesseractConfig {
-    // Basic settings
     pub language: String,
     pub psm: u8,
     pub output_format: String,
 
-    // NEW: OCR Engine Mode (0-3)
     pub oem: u8,
 
-    // NEW: Minimum confidence threshold
     pub min_confidence: f64,
 
-    // NEW: Image preprocessing
     pub preprocessing: Option<ImagePreprocessingConfig>,
 
-    // Table detection
     pub enable_table_detection: bool,
     pub table_min_confidence: f64,
     pub table_column_threshold: u32,
     pub table_row_threshold_ratio: f64,
 
-    // Tesseract engine tweaks
     pub use_cache: bool,
     pub classify_use_pre_adapted_templates: bool,
     pub language_model_ngram_on: bool,
@@ -89,7 +82,7 @@ impl Default for TesseractConfig {
             language: "eng".to_string(),
             psm: 3,
             output_format: "markdown".to_string(),
-            oem: 3, // Default (auto-select)
+            oem: 3,
             min_confidence: 0.0,
             preprocessing: None,
             enable_table_detection: true,
@@ -351,14 +344,14 @@ mod tests {
     fn test_tesseract_config_from_public_api() {
         let public_config = crate::types::TesseractConfig {
             language: "deu".to_string(),
-            psm: 6, // i32 in public API
+            psm: 6,
             output_format: "text".to_string(),
-            oem: 1, // i32 in public API
+            oem: 1,
             min_confidence: 70.0,
-            preprocessing: Some(crate::types::ImagePreprocessingConfig::default()),
+            preprocessing: Some(ImagePreprocessingConfig::default()),
             enable_table_detection: false,
             table_min_confidence: 50.0,
-            table_column_threshold: 100, // i32 in public API
+            table_column_threshold: 100,
             table_row_threshold_ratio: 0.8,
             use_cache: false,
             classify_use_pre_adapted_templates: false,
@@ -375,16 +368,15 @@ mod tests {
 
         let internal_config: TesseractConfig = (&public_config).into();
 
-        // Verify all fields converted correctly
         assert_eq!(internal_config.language, "deu");
-        assert_eq!(internal_config.psm, 6); // Converted to u8
+        assert_eq!(internal_config.psm, 6);
         assert_eq!(internal_config.output_format, "text");
-        assert_eq!(internal_config.oem, 1); // Converted to u8
+        assert_eq!(internal_config.oem, 1);
         assert_eq!(internal_config.min_confidence, 70.0);
         assert!(internal_config.preprocessing.is_some());
         assert!(!internal_config.enable_table_detection);
         assert_eq!(internal_config.table_min_confidence, 50.0);
-        assert_eq!(internal_config.table_column_threshold, 100); // Converted to u32
+        assert_eq!(internal_config.table_column_threshold, 100);
         assert_eq!(internal_config.table_row_threshold_ratio, 0.8);
         assert!(!internal_config.use_cache);
         assert!(!internal_config.classify_use_pre_adapted_templates);

@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-# Check if optional OCR dependencies are installed
 try:
     import easyocr  # noqa: F401
 
@@ -41,11 +40,6 @@ except ImportError:
     PADDLEOCR_AVAILABLE = False
 
 
-# ============================================================================
-# Test Image Generation
-# ============================================================================
-
-
 def create_test_image(text: str = "Hello World", size: tuple[int, int] = (400, 100)) -> bytes:
     """Create a simple test image with text.
 
@@ -56,21 +50,16 @@ def create_test_image(text: str = "Hello World", size: tuple[int, int] = (400, 1
     Returns:
         PNG image as bytes
     """
-    # Create white background
     img = Image.new("RGB", size, color="white")
     draw = ImageDraw.Draw(img)
 
-    # Try to use a built-in font, fall back to default
     try:
-        # Use a larger default font if available
         font = ImageFont.load_default()
     except Exception:
         font = None
 
-    # Draw black text
     draw.text((10, 40), text, fill="black", font=font)
 
-    # Convert to bytes
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     return buffer.getvalue()
@@ -87,11 +76,6 @@ def create_empty_image() -> bytes:
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     return buffer.getvalue()
-
-
-# ============================================================================
-# EasyOCR Backend Tests
-# ============================================================================
 
 
 @pytest.mark.skipif(
@@ -143,7 +127,7 @@ class TestEasyOCRBackend:
 
         backend = EasyOCRBackend(languages=["en"], use_gpu=False)
         assert callable(backend.shutdown)
-        backend.shutdown()  # Should not raise
+        backend.shutdown()
 
     def test_backend_process_image_signature(self) -> None:
         """Test that process_image() has correct signature."""
@@ -152,7 +136,6 @@ class TestEasyOCRBackend:
         backend = EasyOCRBackend(languages=["en"], use_gpu=False)
         assert callable(backend.process_image)
 
-        # Check it accepts bytes and language
         import inspect
 
         sig = inspect.signature(backend.process_image)
@@ -204,23 +187,19 @@ class TestEasyOCRBackend:
 
         result = backend.process_image(image_bytes, "en")
 
-        # Validate structure
         assert isinstance(result, dict)
         assert "content" in result
         assert "metadata" in result
 
-        # Validate types
         assert isinstance(result["content"], str)
         assert isinstance(result["metadata"], dict)
 
-        # Validate metadata fields
         metadata = result["metadata"]
         assert "width" in metadata
         assert "height" in metadata
         assert "confidence" in metadata
         assert "text_regions" in metadata
 
-        # Validate metadata types
         assert isinstance(metadata["width"], int)
         assert isinstance(metadata["height"], int)
         assert isinstance(metadata["confidence"], (int, float))
@@ -237,7 +216,7 @@ class TestEasyOCRBackend:
         result = backend.process_image(empty_image, "en")
 
         assert isinstance(result, dict)
-        assert result["content"] == "" or len(result["content"]) < 10  # Allow some noise
+        assert result["content"] == "" or len(result["content"]) < 10
         assert result["metadata"]["text_regions"] == 0
 
     @pytest.mark.slow
@@ -247,25 +226,20 @@ class TestEasyOCRBackend:
 
         backend = EasyOCRBackend(languages=["en"], use_gpu=False)
 
-        # Create image with known text
         test_text = "HELLO WORLD 2024"
         image_bytes = create_test_image(test_text, size=(600, 150))
 
         result = backend.process_image(image_bytes, "en")
 
-        # Validate text was extracted - normalize for comparison
         content = result["content"].upper().replace("\n", " ").strip()
         assert "HELLO" in content, f"Expected 'HELLO' in extracted text, got: {content}"
         assert "WORLD" in content, f"Expected 'WORLD' in extracted text, got: {content}"
 
-        # Validate confidence is in valid range [0, 1]
         confidence = result["metadata"]["confidence"]
         assert 0.0 <= confidence <= 1.0, f"Confidence {confidence} not in valid range [0, 1]"
 
-        # Validate reasonable confidence (OCR should be confident on clean synthetic images)
         assert confidence > 0.3, f"Confidence {confidence} too low - OCR likely failed on clean image"
 
-        # Validate we detected text regions
         assert result["metadata"]["text_regions"] > 0, "No text regions detected"
 
     @pytest.mark.slow
@@ -275,7 +249,6 @@ class TestEasyOCRBackend:
 
         backend = EasyOCRBackend(languages=["en"], use_gpu=False)
 
-        # Test multiple text cases
         test_cases = [
             ("Simple Text", (400, 100)),
             ("UPPERCASE 123", (500, 120)),
@@ -288,10 +261,8 @@ class TestEasyOCRBackend:
 
             confidence = result["metadata"]["confidence"]
 
-            # Confidence must always be in [0, 1] range
             assert 0.0 <= confidence <= 1.0, f"Invalid confidence {confidence} for text '{text}'"
 
-            # For clean synthetic images with text detected, confidence should be reasonable
             if result["metadata"]["text_regions"] > 0:
                 assert confidence > 0.1, f"Suspiciously low confidence {confidence} for clean image with text '{text}'"
 
@@ -312,7 +283,6 @@ class TestEasyOCRBackend:
 
         backend = EasyOCRBackend(languages=["en"], use_gpu=False)
 
-        # Create test file
         test_file = tmp_path / "test.png"
         test_file.write_bytes(create_test_image("File Test"))
 
@@ -333,7 +303,6 @@ class TestEasyOCRBackend:
         """Test that use_gpu parameter is accepted."""
         from kreuzberg.ocr.easyocr import EasyOCRBackend
 
-        # Should not raise
         backend1 = EasyOCRBackend(languages=["en"], use_gpu=True)
         assert backend1.name() == "easyocr"
 
@@ -356,11 +325,6 @@ class TestEasyOCRBackend:
 
         backend = EasyOCRBackend(languages=["en"], use_gpu=False, beam_width=10)
         assert backend.name() == "easyocr"
-
-
-# ============================================================================
-# PaddleOCR Backend Tests
-# ============================================================================
 
 
 @pytest.mark.skipif(
@@ -412,7 +376,7 @@ class TestPaddleOCRBackend:
 
         backend = PaddleOCRBackend(lang="en", use_gpu=False)
         assert callable(backend.shutdown)
-        backend.shutdown()  # Should not raise
+        backend.shutdown()
 
     def test_backend_process_image_signature(self) -> None:
         """Test that process_image() has correct signature."""
@@ -421,7 +385,6 @@ class TestPaddleOCRBackend:
         backend = PaddleOCRBackend(lang="en", use_gpu=False)
         assert callable(backend.process_image)
 
-        # Check it accepts bytes and language
         import inspect
 
         sig = inspect.signature(backend.process_image)
@@ -472,23 +435,19 @@ class TestPaddleOCRBackend:
 
         result = backend.process_image(image_bytes, "en")
 
-        # Validate structure
         assert isinstance(result, dict)
         assert "content" in result
         assert "metadata" in result
 
-        # Validate types
         assert isinstance(result["content"], str)
         assert isinstance(result["metadata"], dict)
 
-        # Validate metadata fields
         metadata = result["metadata"]
         assert "width" in metadata
         assert "height" in metadata
         assert "confidence" in metadata
         assert "text_regions" in metadata
 
-        # Validate metadata types
         assert isinstance(metadata["width"], int)
         assert isinstance(metadata["height"], int)
         assert isinstance(metadata["confidence"], (int, float))
@@ -505,7 +464,7 @@ class TestPaddleOCRBackend:
         result = backend.process_image(empty_image, "en")
 
         assert isinstance(result, dict)
-        assert result["content"] == "" or len(result["content"]) < 10  # Allow some noise
+        assert result["content"] == "" or len(result["content"]) < 10
         assert result["metadata"]["text_regions"] == 0
 
     @pytest.mark.slow
@@ -515,30 +474,24 @@ class TestPaddleOCRBackend:
 
         backend = PaddleOCRBackend(lang="en", use_gpu=False)
 
-        # Create image with known text (larger size for better detection)
         test_text = "HELLO WORLD 2024"
         image_bytes = create_test_image(test_text, size=(800, 200))
 
         result = backend.process_image(image_bytes, "en")
 
-        # Validate result structure
         assert isinstance(result, dict)
         assert "content" in result
         assert "metadata" in result
 
-        # PaddleOCR may not detect text in simple synthetic images (stricter detection threshold)
-        # Validate that if text is detected, it contains expected keywords
         content = result["content"].upper().replace("\n", " ").strip()
-        if content:  # Only validate content if text was detected
+        if content:
             assert any(word in content for word in ["HELLO", "WORLD", "2024"]), (
                 f"Expected at least one of 'HELLO', 'WORLD', '2024' in extracted text, got: {content}"
             )
 
-        # Validate confidence is in valid range [0, 1]
         confidence = result["metadata"]["confidence"]
         assert 0.0 <= confidence <= 1.0, f"Confidence {confidence} not in valid range [0, 1]"
 
-        # If text was detected, confidence should be reasonable
         if result["metadata"]["text_regions"] > 0:
             assert confidence > 0.1, f"Confidence {confidence} too low for detected text"
 
@@ -549,7 +502,6 @@ class TestPaddleOCRBackend:
 
         backend = PaddleOCRBackend(lang="en", use_gpu=False)
 
-        # Test multiple text cases
         test_cases = [
             ("Simple Text", (400, 100)),
             ("UPPERCASE 123", (500, 120)),
@@ -562,10 +514,8 @@ class TestPaddleOCRBackend:
 
             confidence = result["metadata"]["confidence"]
 
-            # Confidence must always be in [0, 1] range
             assert 0.0 <= confidence <= 1.0, f"Invalid confidence {confidence} for text '{text}'"
 
-            # For clean synthetic images with text detected, confidence should be reasonable
             if result["metadata"]["text_regions"] > 0:
                 assert confidence > 0.1, f"Suspiciously low confidence {confidence} for clean image with text '{text}'"
 
@@ -586,7 +536,6 @@ class TestPaddleOCRBackend:
 
         backend = PaddleOCRBackend(lang="en", use_gpu=False)
 
-        # Create test file
         test_file = tmp_path / "test.png"
         test_file.write_bytes(create_test_image("File Test"))
 
@@ -600,7 +549,6 @@ class TestPaddleOCRBackend:
         """Test that use_gpu parameter is accepted."""
         from kreuzberg.ocr.paddleocr import PaddleOCRBackend
 
-        # Should not raise
         backend1 = PaddleOCRBackend(lang="en", use_gpu=True)
         assert backend1.name() == "paddleocr"
 
@@ -616,11 +564,6 @@ class TestPaddleOCRBackend:
 
         backend = PaddleOCRBackend(lang="en", use_gpu=False, use_textline_orientation=False)
         assert backend.name() == "paddleocr"
-
-
-# ============================================================================
-# Cross-Backend Compatibility Tests
-# ============================================================================
 
 
 @pytest.mark.skipif(
@@ -648,13 +591,10 @@ class TestOCRBackendCompatibility:
 
     def test_both_backends_return_same_structure(self) -> None:
         """Test that both backends return dicts with the same structure."""
-        # This is validated by the individual return structure tests
-        # Just verify the structure is documented
 
         required_keys = {"content", "metadata"}
         required_metadata_keys = {"width", "height", "confidence", "text_regions"}
 
-        # These are the expected keys for both backends
         assert required_keys
         assert required_metadata_keys
 

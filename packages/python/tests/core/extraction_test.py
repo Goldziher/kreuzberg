@@ -64,7 +64,6 @@ async def test_extract_file_nonexistent_file() -> None:
     """Test that extracting a nonexistent file raises an error."""
     nonexistent_path = "/nonexistent/file.txt"
 
-    # Rust core raises ValueError for validation errors
     with pytest.raises((ValueError, ValidationError, OSError)):
         await extract_file(nonexistent_path)
 
@@ -73,7 +72,6 @@ def test_extract_file_sync_nonexistent_file() -> None:
     """Test that extracting a nonexistent file raises an error (sync)."""
     nonexistent_path = "/nonexistent/file.txt"
 
-    # Rust core raises ValueError for validation errors
     with pytest.raises((ValueError, ValidationError, OSError)):
         extract_file_sync(nonexistent_path)
 
@@ -143,7 +141,6 @@ async def test_extract_bytes_with_chunking() -> None:
 
     result = await extract_bytes(content, mime_type, config)
 
-    # Chunking is handled by Rust now
     assert "chunk_count" in result.metadata
 
 
@@ -155,7 +152,6 @@ def test_extract_bytes_sync_with_chunking() -> None:
 
     result = extract_bytes_sync(content, mime_type, config)
 
-    # Chunking is handled by Rust now
     assert "chunk_count" in result.metadata
 
 
@@ -168,7 +164,6 @@ async def test_extract_bytes_with_language_detection() -> None:
 
     result = await extract_bytes(content, mime_type, config)
 
-    # Language detection is handled by Rust now
     assert result.detected_languages is not None
 
 
@@ -180,7 +175,6 @@ def test_extract_bytes_sync_with_language_detection() -> None:
 
     result = extract_bytes_sync(content, mime_type, config)
 
-    # Language detection is handled by Rust now
     assert result.detected_languages is not None
 
 
@@ -190,7 +184,6 @@ async def test_extract_bytes_with_postprocessor_config() -> None:
     content = b"Test content"
     mime_type = "text/plain"
 
-    # Postprocessing is now configured via ExtractionConfig.postprocessor
     config = ExtractionConfig(
         postprocessor=PostProcessorConfig(
             enabled=True,
@@ -209,10 +202,9 @@ def test_extract_bytes_sync_with_postprocessor_config() -> None:
     content = b"Test content"
     mime_type = "text/plain"
 
-    # Postprocessing is now configured via ExtractionConfig.postprocessor
     config = ExtractionConfig(
         postprocessor=PostProcessorConfig(
-            enabled=False,  # Disable all postprocessing
+            enabled=False,
         ),
     )
 
@@ -231,7 +223,6 @@ async def test_extract_file_with_html_extractor(tmp_path: Path) -> None:
     result = await extract_file(str(test_file), mime_type="text/html")
 
     assert "Test HTML File" in result.content
-    # HTML extractor may return text/html or text/markdown depending on conversion
     assert result.mime_type in ("text/html", "text/markdown")
 
 
@@ -243,5 +234,4 @@ def test_extract_file_sync_with_html_extractor(tmp_path: Path) -> None:
     result = extract_file_sync(str(test_file), mime_type="text/html")
 
     assert "Test HTML File" in result.content
-    # HTML extractor may return text/html or text/markdown depending on conversion
     assert result.mime_type in ("text/html", "text/markdown")

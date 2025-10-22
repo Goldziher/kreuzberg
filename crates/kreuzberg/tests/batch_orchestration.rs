@@ -15,10 +15,6 @@ use std::time::{Duration, Instant};
 
 mod helpers;
 
-// ============================================================================
-// Multi-Document Batch Processing Tests
-// ============================================================================
-
 /// Test that batch extraction processes documents in parallel.
 ///
 /// Validates:
@@ -32,7 +28,6 @@ async fn test_batch_documents_parallel_execution() {
 
     let config = ExtractionConfig::default();
 
-    // Create list of test documents (20 files)
     let test_files = vec![
         "text/contract.txt",
         "json/sample_document.json",
@@ -40,7 +35,6 @@ async fn test_batch_documents_parallel_execution() {
         "text/readme.md",
     ];
 
-    // Repeat files to get 20 total
     let mut paths: Vec<PathBuf> = Vec::new();
     for _ in 0..5 {
         for file in &test_files {
@@ -48,7 +42,6 @@ async fn test_batch_documents_parallel_execution() {
         }
     }
 
-    // Measure parallel batch time
     let parallel_start = Instant::now();
     let results = batch_extract_file(paths.clone(), &config).await;
     let parallel_duration = parallel_start.elapsed();
@@ -57,7 +50,6 @@ async fn test_batch_documents_parallel_execution() {
     let results = results.unwrap();
     assert_eq!(results.len(), 20, "Should process all 20 files");
 
-    // Verify all succeeded
     for result in &results {
         assert!(
             !result.content.is_empty() || result.metadata.error.is_some(),
@@ -65,7 +57,6 @@ async fn test_batch_documents_parallel_execution() {
         );
     }
 
-    // Parallel should complete in reasonable time (<5s for 20 files)
     assert!(
         parallel_duration < Duration::from_secs(5),
         "Batch processing 20 files should take <5s, took: {:?}",
@@ -80,7 +71,6 @@ async fn test_batch_documents_parallel_execution() {
 async fn test_batch_documents_concurrency_limiting() {
     use helpers::get_test_file_path;
 
-    // Set low concurrency limit
     let config = ExtractionConfig {
         max_concurrent_extractions: Some(2),
         ..Default::default()
@@ -105,9 +95,8 @@ async fn test_batch_documents_concurrency_limiting() {
 async fn test_batch_documents_default_concurrency() {
     use helpers::get_test_file_path;
 
-    let config = ExtractionConfig::default(); // Uses num_cpus * 2
+    let config = ExtractionConfig::default();
 
-    // Create 50 file paths
     let mut paths = Vec::new();
     for _ in 0..13 {
         paths.push(get_test_file_path("text/contract.txt"));
@@ -125,7 +114,6 @@ async fn test_batch_documents_default_concurrency() {
     let results = results.unwrap();
     assert_eq!(results.len(), 50);
 
-    // Should leverage parallelism - 50 files in reasonable time
     println!("Processed 50 files in {:?}", duration);
     assert!(
         duration < Duration::from_secs(10),
@@ -150,15 +138,12 @@ async fn test_batch_documents_preserves_order() {
 
     let results = batch_extract_file(paths, &config).await.unwrap();
 
-    // Results should be in same order as input
     assert_eq!(results.len(), 3, "Should have 3 results");
 
-    // Verify all have content (validates order is preserved)
     assert!(!results[0].content.is_empty(), "First result should have content");
     assert!(!results[1].content.is_empty(), "Second result should have content");
     assert!(!results[2].content.is_empty(), "Third result should have content");
 
-    // Verify content comes from the correct files (validates ordering)
     assert!(
         results[0].content.contains("contract"),
         "First result should be from contract.txt, got: '{}'",
@@ -175,10 +160,6 @@ async fn test_batch_documents_preserves_order() {
         results[2].content
     );
 }
-
-// ============================================================================
-// Multi-Page PDF Processing Tests
-// ============================================================================
 
 /// Test that multi-page PDF extraction is efficient.
 ///
@@ -223,7 +204,6 @@ async fn test_concurrent_pdf_extractions() {
 
     let config = ExtractionConfig::default();
 
-    // Extract 10 PDFs concurrently
     let mut paths = Vec::new();
     for _ in 0..10 {
         paths.push(get_test_file_path("pdfs/simple.pdf"));
@@ -238,12 +218,7 @@ async fn test_concurrent_pdf_extractions() {
     assert_eq!(results.len(), 10);
 
     println!("Processed 10 PDFs in {:?}", duration);
-    // Should be faster than sequential (leveraging parallelism)
 }
-
-// ============================================================================
-// OCR Multi-Page Tests
-// ============================================================================
 
 /// Test OCR on multi-page scanned document.
 ///
@@ -274,21 +249,18 @@ fn test_ocr_multipage_efficiency() {
 
     let file_path = get_test_file_path("images/ocr_image.jpg");
 
-    // First extraction (populates cache)
     let start = Instant::now();
     let result1 = extract_file_sync(&file_path, None, &config);
     let first_duration = start.elapsed();
 
     assert!(result1.is_ok(), "First OCR should succeed");
 
-    // Second extraction (should hit cache)
     let start = Instant::now();
     let result2 = extract_file_sync(&file_path, None, &config);
     let second_duration = start.elapsed();
 
     assert!(result2.is_ok(), "Second OCR should succeed");
 
-    // Cache hit should be significantly faster
     println!(
         "OCR timing: first={:?}, cached={:?}, speedup={:.1}x",
         first_duration,
@@ -304,10 +276,6 @@ fn test_ocr_multipage_efficiency() {
     );
 }
 
-// ============================================================================
-// Bytes Batch Processing Tests
-// ============================================================================
-
 /// Test parallel processing of byte arrays.
 ///
 /// Validates that batch_extract_bytes processes data in parallel.
@@ -315,7 +283,6 @@ fn test_ocr_multipage_efficiency() {
 async fn test_batch_bytes_parallel_processing() {
     let config = ExtractionConfig::default();
 
-    // Create 30 test items
     let contents: Vec<(Vec<u8>, &str)> = (0..30)
         .map(|i| {
             let content = format!("Test content number {}", i);
@@ -323,7 +290,6 @@ async fn test_batch_bytes_parallel_processing() {
         })
         .collect();
 
-    // Convert to references for batch_extract_bytes
     let contents_ref: Vec<(&[u8], &str)> = contents.iter().map(|(bytes, mime)| (bytes.as_slice(), *mime)).collect();
 
     let start = Instant::now();
@@ -334,7 +300,6 @@ async fn test_batch_bytes_parallel_processing() {
     let results = results.unwrap();
     assert_eq!(results.len(), 30);
 
-    // Verify content
     for (i, result) in results.iter().enumerate() {
         assert_eq!(result.content, format!("Test content number {}", i));
     }
@@ -361,19 +326,13 @@ async fn test_batch_bytes_mixed_valid_invalid() {
     let results = results.unwrap();
     assert_eq!(results.len(), 5);
 
-    // Valid items should succeed
     assert_eq!(results[0].content, "valid content 1");
     assert_eq!(results[2].content, "valid content 2");
     assert_eq!(results[4].content, "valid content 3");
 
-    // Invalid items should have error metadata
     assert!(results[1].metadata.error.is_some());
     assert!(results[3].metadata.error.is_some());
 }
-
-// ============================================================================
-// Resource Utilization Tests
-// ============================================================================
 
 /// Test that batch processing utilizes multiple CPU cores.
 ///
@@ -386,11 +345,9 @@ async fn test_batch_utilizes_multiple_cores() {
         ..Default::default()
     };
 
-    // Track concurrent executions
     let _concurrent_count = Arc::new(AtomicUsize::new(0));
     let _max_concurrent = Arc::new(AtomicUsize::new(0));
 
-    // Create test data (use JSON to simulate some processing)
     let mut contents = Vec::new();
     for i in 0..20 {
         let json = format!(
@@ -412,15 +369,12 @@ async fn test_batch_utilizes_multiple_cores() {
     let results = results.unwrap();
     assert_eq!(results.len(), 20);
 
-    // With parallelism, should complete quickly
     println!(
         "Processed 20 JSON documents in {:?} with {} cores",
         duration,
         num_cpus::get()
     );
 
-    // On multi-core systems, should be faster than pure sequential
-    // (Conservative check: should take <2s for 20 small JSON files)
     assert!(
         duration < Duration::from_secs(2),
         "Batch processing should leverage parallelism, took: {:?}",
@@ -434,18 +388,13 @@ async fn test_batch_utilizes_multiple_cores() {
 #[tokio::test]
 async fn test_batch_memory_pressure_handling() {
     let config = ExtractionConfig {
-        max_concurrent_extractions: Some(4), // Low limit to prevent exhaustion
+        max_concurrent_extractions: Some(4),
         ..Default::default()
     };
 
-    // Create 50 large JSON documents
     let mut contents = Vec::new();
     for i in 0..50 {
-        let json = format!(
-            r#"{{"id": {}, "large_data": "{}"}}"#,
-            i,
-            "x".repeat(10000) // 10KB per document
-        );
+        let json = format!(r#"{{"id": {}, "large_data": "{}"}}"#, i, "x".repeat(10000));
         contents.push((json.into_bytes(), "application/json"));
     }
 
@@ -461,7 +410,6 @@ async fn test_batch_memory_pressure_handling() {
 
     println!("Processed 50 large documents with concurrency limit in {:?}", duration);
 
-    // Should complete without OOM, even with large documents
     for result in &results {
         assert!(!result.content.is_empty());
     }
@@ -470,15 +418,12 @@ async fn test_batch_memory_pressure_handling() {
 /// Test that batch processing scales with CPU count.
 #[tokio::test]
 async fn test_batch_scales_with_cpu_count() {
-    // Test with different concurrency levels
     let cpu_count = num_cpus::get();
 
-    // Prepare test data (30 small text files)
     let contents: Vec<(Vec<u8>, &str)> = (0..30)
         .map(|i| (format!("Content {}", i).into_bytes(), "text/plain"))
         .collect();
 
-    // Test with limited concurrency (1 core)
     let config_1 = ExtractionConfig {
         max_concurrent_extractions: Some(1),
         ..Default::default()
@@ -490,7 +435,6 @@ async fn test_batch_scales_with_cpu_count() {
     let _ = batch_extract_bytes(contents_ref.clone(), &config_1).await.unwrap();
     let duration_1 = start.elapsed();
 
-    // Test with full parallelism (all cores)
     let config_full = ExtractionConfig {
         max_concurrent_extractions: Some(cpu_count),
         ..Default::default()
@@ -508,8 +452,6 @@ async fn test_batch_scales_with_cpu_count() {
         duration_1.as_secs_f64() / duration_full.as_secs_f64()
     );
 
-    // Parallel should be faster (allow some overhead)
-    // On single-core systems, this might not show speedup
     if cpu_count > 1 {
         assert!(
             duration_full <= duration_1,
@@ -517,10 +459,6 @@ async fn test_batch_scales_with_cpu_count() {
         );
     }
 }
-
-// ============================================================================
-// Integration Tests
-// ============================================================================
 
 /// End-to-end test: batch process mixed document types.
 #[cfg(feature = "xml")]
@@ -543,7 +481,6 @@ async fn test_batch_mixed_document_types() {
     let results = results.unwrap();
     assert_eq!(results.len(), 4);
 
-    // All should have content - validates successful mixed-format processing
     for (i, result) in results.iter().enumerate() {
         assert!(
             !result.content.is_empty(),
@@ -552,7 +489,6 @@ async fn test_batch_mixed_document_types() {
         );
     }
 
-    // Verify different formats were processed correctly by checking content
     assert!(
         results[0].content.contains("contract"),
         "First result should be from contract.txt, got: '{}'",
@@ -580,7 +516,6 @@ async fn test_batch_mixed_document_types() {
 async fn test_batch_accuracy_under_load() {
     let config = ExtractionConfig::default();
 
-    // Create 100 documents with known content
     let mut contents = Vec::new();
     for i in 0..100 {
         let content = format!("Document number {} with unique content", i);
@@ -593,7 +528,6 @@ async fn test_batch_accuracy_under_load() {
 
     assert_eq!(results.len(), 100);
 
-    // Verify every single result is correct (no cross-contamination)
     for (i, result) in results.iter().enumerate() {
         let expected = format!("Document number {} with unique content", i);
         assert_eq!(

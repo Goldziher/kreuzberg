@@ -7,7 +7,7 @@ use axum::{
     http::{Request, StatusCode},
 };
 use serde_json::json;
-use tower::ServiceExt; // for `oneshot`
+use tower::ServiceExt;
 
 use kreuzberg::{
     ExtractionConfig,
@@ -57,7 +57,6 @@ async fn test_info_endpoint() {
 async fn test_extract_no_files() {
     let app = create_router(ExtractionConfig::default());
 
-    // Create an empty multipart body
     let boundary = "----boundary";
     let body_content = format!("--{}--\r\n", boundary);
 
@@ -115,7 +114,6 @@ async fn test_extract_text_file() {
     assert_eq!(results[0]["mime_type"], "text/plain");
     assert!(results[0]["content"].as_str().unwrap().contains("Hello, world!"));
 
-    // Verify ExtractionResult structure in JSON response
     assert!(
         results[0]["chunks"].is_null(),
         "Chunks should be null without chunking config"
@@ -174,7 +172,6 @@ async fn test_extract_with_config() {
     assert_eq!(results[0]["mime_type"], "text/plain");
     assert!(results[0]["content"].as_str().unwrap().contains("Hello, world!"));
 
-    // Verify ExtractionResult structure in JSON response
     assert!(
         results[0]["chunks"].is_null(),
         "Chunks should be null without chunking config"
@@ -270,7 +267,6 @@ async fn test_extract_multiple_files() {
     assert!(results[0]["content"].as_str().unwrap().contains("First file"));
     assert!(results[1]["content"].as_str().unwrap().contains("Second file"));
 
-    // Verify ExtractionResult structure for both files
     for result in &results {
         assert!(
             result["chunks"].is_null(),

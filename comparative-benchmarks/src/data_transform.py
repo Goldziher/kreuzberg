@@ -19,12 +19,10 @@ def results_to_dataframe(results: list[BenchmarkResult]) -> pl.DataFrame:
     for result in results:
         record = msgspec.structs.asdict(result)
 
-        # Drop heavy or nested fields that break DataFrame inference
         record.pop("extracted_metadata", None)
         record.pop("quality_metrics", None)
         record.pop("extracted_text", None)
 
-        # Normalize Enum values so Polars sees consistent string columns
         record["framework"] = record["framework"].value
         record["category"] = record["category"].value
         record["file_type"] = record["file_type"].value

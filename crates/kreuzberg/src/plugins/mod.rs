@@ -198,3 +198,6 @@ pub use ocr::{OcrBackend, OcrBackendType};
 pub use processor::{PostProcessor, ProcessingStage};
 pub use traits::Plugin;
 pub use validator::Validator;
+
+// TODO: user query - why do we need a version fn on all the plugins? what purpose does this serve?
+// TODO: audit the plugin interface - we need the minimum level. We should disallow plugins with the same need

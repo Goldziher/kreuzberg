@@ -9,7 +9,6 @@ use tokio::process::Command;
 
 /// Extract content from file using Pandoc (convert to markdown)
 pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
-    // Create temporary output file
     let temp_dir = std::env::temp_dir();
     let output_path = temp_dir.join(format!(
         "pandoc_output_{}_{}.md",
@@ -17,7 +16,6 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
         uuid::Uuid::new_v4()
     ));
 
-    // Build pandoc command
     let mut cmd = Command::new("pandoc");
     cmd.arg(path)
         .arg(format!("--from={}", from_format))
@@ -28,7 +26,6 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
         .arg("--output")
         .arg(&output_path);
 
-    // Execute
     let output = cmd.output().await.map_err(|e| {
         // Failed to execute pandoc - this is an IO error (command not found, etc.) ~keep
         std::io::Error::other(format!("Failed to execute pandoc: {}", e))
@@ -55,15 +52,12 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
         return Err(std::io::Error::other(format!("Pandoc system error: {}", stderr)).into());
     }
 
-    // Read output
     let content = fs::read_to_string(&output_path)
         .await
         .map_err(|e| KreuzbergError::parsing(format!("Failed to read pandoc output: {}", e)))?;
 
-    // Cleanup
     let _ = fs::remove_file(&output_path).await;
 
-    // Normalize spaces if quality feature is enabled
     #[cfg(feature = "quality")]
     {
         Ok(normalize_spaces(&content))
@@ -76,7 +70,6 @@ pub async fn extract_content(path: &Path, from_format: &str) -> Result<String> {
 
 /// Extract metadata from file using Pandoc JSON output
 pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<String, Value>> {
-    // Create temporary output file
     let temp_dir = std::env::temp_dir();
     let metadata_path = temp_dir.join(format!(
         "pandoc_meta_{}_{}.json",
@@ -84,7 +77,6 @@ pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<
         uuid::Uuid::new_v4()
     ));
 
-    // Build pandoc command
     let mut cmd = Command::new("pandoc");
     cmd.arg(path)
         .arg(format!("--from={}", from_format))
@@ -94,7 +86,6 @@ pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<
         .arg("--output")
         .arg(&metadata_path);
 
-    // Execute
     let output = cmd.output().await.map_err(|e| {
         // Failed to execute pandoc - this is an IO error (command not found, etc.) ~keep
         std::io::Error::other(format!("Failed to execute pandoc: {}", e))
@@ -121,19 +112,15 @@ pub async fn extract_metadata(path: &Path, from_format: &str) -> Result<HashMap<
         return Err(std::io::Error::other(format!("Pandoc metadata extraction system error: {}", stderr)).into());
     }
 
-    // Read JSON
     let json_content = fs::read_to_string(&metadata_path)
         .await
         .map_err(|e| KreuzbergError::parsing(format!("Failed to read pandoc JSON output: {}", e)))?;
 
-    // Cleanup
     let _ = fs::remove_file(&metadata_path).await;
 
-    // Parse JSON
     let json_data: Value = serde_json::from_str(&json_content)
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse pandoc JSON: {}", e)))?;
 
-    // Extract metadata
     extract_metadata_from_json(&json_data)
 }
 
@@ -211,11 +198,9 @@ const VALID_METADATA_KEYS: &[&str] = &[
 fn extract_metadata_from_json(json: &Value) -> Result<HashMap<String, Value>> {
     let mut metadata = HashMap::new();
 
-    // Get meta object
     if let Some(meta) = json.get("meta").and_then(|m| m.as_object()) {
         for (key, value) in meta {
             let pandoc_key = get_pandoc_key(key);
-            // Filter out invalid metadata keys (matches Python behavior)
             if !VALID_METADATA_KEYS.contains(&pandoc_key.as_str()) {
                 continue;
             }
@@ -225,7 +210,6 @@ fn extract_metadata_from_json(json: &Value) -> Result<HashMap<String, Value>> {
         }
     }
 
-    // Extract citations from blocks
     if let Some(blocks) = json.get("blocks").and_then(|b| b.as_array()) {
         let mut citations = Vec::new();
         extract_citations_from_blocks(blocks, &mut citations);
@@ -248,7 +232,6 @@ fn extract_metadata_from_json(json: &Value) -> Result<HashMap<String, Value>> {
         }
     }
 
-    // Extract citations from top-level if present
     if let Some(citations) = json.get("citations").and_then(|c| c.as_array()) {
         let cite_ids: Vec<String> = citations
             .iter()
@@ -385,7 +368,6 @@ fn extract_inline_text(node: &Value) -> Option<String> {
                 }
             }
             "Code" => {
-                // Code: [Attr, Text]
                 if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
                     && arr.len() == 2
                 {
@@ -393,7 +375,6 @@ fn extract_inline_text(node: &Value) -> Option<String> {
                 }
             }
             "Link" | "Image" => {
-                // Link/Image: [Attr, [Inline], Target]
                 if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
                     && arr.len() == 3
                     && let Some(inlines) = arr[1].as_array()
@@ -402,7 +383,6 @@ fn extract_inline_text(node: &Value) -> Option<String> {
                 }
             }
             "Quoted" => {
-                // Quoted: [QuoteType, [Inline]]
                 if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
                     && arr.len() == 2
                     && let Some(inlines) = arr[1].as_array()
@@ -411,7 +391,6 @@ fn extract_inline_text(node: &Value) -> Option<String> {
                 }
             }
             "Cite" => {
-                // Cite: [Citation], [Inline]
                 if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
                     && arr.len() == 2
                     && let Some(inlines) = arr[1].as_array()
@@ -420,7 +399,6 @@ fn extract_inline_text(node: &Value) -> Option<String> {
                 }
             }
             "Math" => {
-                // Math: [MathType, Text]
                 if let Some(arr) = obj.get("c").and_then(|c| c.as_array())
                     && arr.len() == 2
                 {
@@ -443,7 +421,6 @@ fn extract_citations_from_blocks(blocks: &[Value], citations: &mut Vec<String>) 
         if let Some(obj) = block.as_object() {
             let block_type = obj.get("t").and_then(|t| t.as_str());
 
-            // Check if this is a Cite block
             if block_type == Some("Cite")
                 && let Some(arr) = obj.get("c").and_then(|c| c.as_array())
                 && let Some(cite_list) = arr.first().and_then(|c| c.as_array())
@@ -455,12 +432,10 @@ fn extract_citations_from_blocks(blocks: &[Value], citations: &mut Vec<String>) 
                 }
             }
 
-            // Recursively check content
             if let Some(content) = obj.get("c") {
                 if let Some(nested_blocks) = content.as_array() {
                     extract_citations_from_blocks(nested_blocks, citations);
                 } else if let Some(nested_obj) = content.as_object() {
-                    // Handle nested structures
                     for value in nested_obj.values() {
                         if let Some(arr) = value.as_array() {
                             extract_citations_from_blocks(arr, citations);
@@ -484,7 +459,6 @@ pub async fn extract_with_pandoc_from_bytes(
     from_format: &str,
     extension: &str,
 ) -> Result<(String, HashMap<String, Value>)> {
-    // Create temporary file
     let temp_dir = std::env::temp_dir();
     let temp_file = temp_dir.join(format!(
         "pandoc_temp_{}_{}.{}",
@@ -661,7 +635,6 @@ mod tests {
 
     #[test]
     fn test_metadata_field_filtering() {
-        // Test that invalid metadata fields are filtered out
         let json = json!({
             "meta": {
                 "title": {"t": "MetaString", "c": "Valid Title"},
@@ -674,11 +647,9 @@ mod tests {
 
         let metadata = extract_metadata_from_json(&json).unwrap();
 
-        // Valid fields should be present
         assert!(metadata.contains_key("title"));
-        assert!(metadata.contains_key("authors")); // author -> authors mapping
+        assert!(metadata.contains_key("authors"));
 
-        // Invalid fields should be filtered out
         assert!(!metadata.contains_key("invalid_field"));
         assert!(!metadata.contains_key("random_key"));
     }
@@ -872,7 +843,6 @@ mod tests {
 
     #[test]
     fn test_extract_citations_from_nested_blocks() {
-        // Test extraction from blocks with nested structure
         let blocks = vec![json!({
             "t": "BulletList",
             "c": [
@@ -890,7 +860,6 @@ mod tests {
         let mut citations = Vec::new();
         extract_citations_from_blocks(&blocks, &mut citations);
 
-        // No citations in this structure
         assert!(citations.is_empty());
     }
 
@@ -958,7 +927,6 @@ mod tests {
 
     #[test]
     fn test_valid_metadata_keys_contains_standard_fields() {
-        // Verify key metadata fields are in the list
         assert!(VALID_METADATA_KEYS.contains(&"title"));
         assert!(VALID_METADATA_KEYS.contains(&"authors"));
         assert!(VALID_METADATA_KEYS.contains(&"date"));
@@ -969,7 +937,6 @@ mod tests {
 
     #[test]
     fn test_get_pandoc_key_unmapped() {
-        // Keys without special mapping should be returned as-is
         assert_eq!(get_pandoc_key("title"), "title");
         assert_eq!(get_pandoc_key("keywords"), "keywords");
         assert_eq!(get_pandoc_key("custom_field"), "custom_field");

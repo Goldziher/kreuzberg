@@ -68,10 +68,8 @@ impl DocumentExtractor for PandocExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Use Pandoc to extract
         let pandoc_result = extract_bytes_from_mime(content, mime_type).await?;
 
-        // Put all Pandoc metadata in additional (Pandoc supports many formats with different metadata)
         let mut additional = std::collections::HashMap::new();
         for (key, value) in pandoc_result.metadata {
             additional.insert(key, value);
@@ -92,38 +90,30 @@ impl DocumentExtractor for PandocExtractor {
 
     fn supported_mime_types(&self) -> &[&str] {
         &[
-            // Microsoft Office
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // DOCX
-            // OpenDocument
-            "application/vnd.oasis.opendocument.text", // ODT
-            // EPUB
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.oasis.opendocument.text",
             "application/epub+zip",
-            // LaTeX
             "application/x-latex",
             "text/x-tex",
-            // reStructuredText
             "text/x-rst",
             "text/prs.fallenstein.rst",
-            // RTF
             "application/rtf",
             "text/rtf",
-            // Other formats
-            "application/x-typst",           // Typst
-            "application/x-ipynb+json",      // Jupyter Notebook
-            "application/x-fictionbook+xml", // FictionBook
-            "text/x-org",                    // Org mode
-            "text/x-commonmark",             // CommonMark
-            "text/x-gfm",                    // GitHub Flavored Markdown
-            "text/x-multimarkdown",          // MultiMarkdown
-            "text/x-markdown-extra",         // Markdown Extra
-            "application/docbook+xml",       // DocBook
-            "application/x-jats+xml",        // JATS
-            "application/x-opml+xml",        // OPML
+            "application/x-typst",
+            "application/x-ipynb+json",
+            "application/x-fictionbook+xml",
+            "text/x-org",
+            "text/x-commonmark",
+            "text/x-gfm",
+            "text/x-multimarkdown",
+            "text/x-markdown-extra",
+            "application/docbook+xml",
+            "application/x-jats+xml",
+            "application/x-opml+xml",
         ]
     }
 
     fn priority(&self) -> i32 {
-        // Lower priority than specialized extractors
         40
     }
 }
@@ -182,7 +172,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_pandoc_extractor_markdown() {
-        // Skip if pandoc not available
         if validate_pandoc_version().await.is_err() {
             return;
         }
@@ -193,8 +182,6 @@ mod tests {
 
         let result = extractor.extract_bytes(markdown, "text/x-rst", &config).await;
 
-        // This may fail if pandoc is not installed or if the format is not recognized
-        // We'll just check that it doesn't panic
         let _ = result;
     }
 

@@ -61,7 +61,6 @@ mod tests {
         </div>"#;
 
         let markdown = convert_hocr_to_markdown(hocr, None).unwrap();
-        // html-to-markdown may process headings differently, just verify it's not empty and contains content
         assert!(!markdown.is_empty());
         assert!(markdown.contains("Content"));
     }

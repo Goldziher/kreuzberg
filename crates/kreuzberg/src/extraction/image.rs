@@ -25,7 +25,6 @@ pub struct ImageMetadata {
 ///
 /// Extracts dimensions, format, and EXIF data from the image.
 pub fn extract_image_metadata(bytes: &[u8]) -> Result<ImageMetadata> {
-    // Load image to get dimensions and format
     let reader = ImageReader::new(Cursor::new(bytes))
         .with_guessed_format()
         .map_err(|e| KreuzbergError::parsing(format!("Failed to read image format: {}", e)))?;
@@ -42,7 +41,6 @@ pub fn extract_image_metadata(bytes: &[u8]) -> Result<ImageMetadata> {
     let height = image.height();
     let format_str = format!("{:?}", format);
 
-    // Extract EXIF data
     let exif_data = extract_exif_data(bytes);
 
     Ok(ImageMetadata {
@@ -60,13 +58,11 @@ pub fn extract_image_metadata(bytes: &[u8]) -> Result<ImageMetadata> {
 fn extract_exif_data(bytes: &[u8]) -> HashMap<String, String> {
     let mut exif_map = HashMap::new();
 
-    // Try to parse EXIF data
     let exif_reader = match Reader::new().read_from_container(&mut Cursor::new(bytes)) {
         Ok(reader) => reader,
-        Err(_) => return exif_map, // No EXIF data or parsing failed
+        Err(_) => return exif_map,
     };
 
-    // Extract common EXIF fields
     let common_tags = [
         (Tag::Make, "Make"),
         (Tag::Model, "Model"),

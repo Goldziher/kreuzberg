@@ -370,10 +370,8 @@ mod tests {
 
     #[test]
     fn test_rmp_encode_error_conversion() {
-        // Test encoding error by using invalid message pack data
         use std::collections::HashMap;
         let mut map: HashMap<Vec<u8>, String> = HashMap::new();
-        // Binary keys are not supported in MessagePack
         map.insert(vec![255, 255], "test".to_string());
 
         let result = rmp_serde::to_vec(&map);

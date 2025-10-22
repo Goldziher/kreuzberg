@@ -13,7 +13,6 @@ from kreuzberg.exceptions import OCRError, ValidationError
 
 logger = logging.getLogger(__name__)
 
-# Supported PaddleOCR language codes
 SUPPORTED_LANGUAGES = {
     "ch",
     "en",
@@ -69,7 +68,6 @@ class PaddleOCRBackend:
         use_gpu: bool | None = None,
         use_textline_orientation: bool = True,
     ) -> None:
-        # Validate language
         if lang not in SUPPORTED_LANGUAGES:
             msg = f"Unsupported PaddleOCR language code: {lang}"
             raise ValidationError(
@@ -93,13 +91,11 @@ class PaddleOCRBackend:
         self.lang = lang
         self.use_textline_orientation = use_textline_orientation
 
-        # Determine device (PaddleOCR v3+ uses 'device' instead of 'use_gpu')
         if use_gpu is None:
             self.device = "gpu" if self._is_cuda_available() else "cpu"
         else:
             self.device = "gpu" if use_gpu else "cpu"
 
-        # OCR instance (lazy loaded)
         self._ocr: Any | None = None
 
     def name(self) -> str:
@@ -163,7 +159,6 @@ class PaddleOCRBackend:
             OCRError: If OCR processing fails.
 
         """
-        # Ensure OCR is initialized
         if self._ocr is None:
             self.initialize()
 
@@ -171,7 +166,6 @@ class PaddleOCRBackend:
             msg = "PaddleOCR failed to initialize"
             raise RuntimeError(msg)
 
-        # Validate language
         if language not in SUPPORTED_LANGUAGES:
             msg = f"Language '{language}' not supported by PaddleOCR"
             raise ValidationError(
@@ -180,23 +174,18 @@ class PaddleOCRBackend:
             )
 
         try:
-            # Import dependencies
             import io  # noqa: PLC0415
 
             import numpy as np  # noqa: PLC0415
             from PIL import Image  # noqa: PLC0415
 
-            # Convert bytes to PIL Image
             image = Image.open(io.BytesIO(image_bytes))
             width, height = image.size
 
-            # Convert to numpy array for PaddleOCR
             image_array = np.array(image)
 
-            # Perform OCR (use predict for PaddleOCR v3+)
             result = self._ocr.predict(image_array)
 
-            # Process results
             content, confidence, text_regions = self._process_paddleocr_result(result)
 
             return {
@@ -228,7 +217,6 @@ class PaddleOCRBackend:
             OCRError: If OCR processing fails.
 
         """
-        # PaddleOCR can process files directly
         if self._ocr is None:
             self.initialize()
 
@@ -239,14 +227,11 @@ class PaddleOCRBackend:
         try:
             from PIL import Image  # noqa: PLC0415
 
-            # Load image to get dimensions
             image = Image.open(path)
             width, height = image.size
 
-            # Perform OCR directly on file (use predict for PaddleOCR v3+)
             result = self._ocr.predict(path)
 
-            # Process results
             content, confidence, text_regions = self._process_paddleocr_result(result)
 
             return {
@@ -268,7 +253,6 @@ class PaddleOCRBackend:
         if not result or result[0] is None:
             return "", 0.0, 0
 
-        # PaddleOCR returns: [[[bbox, (text, confidence)], ...]]
         page_result = result[0]
 
         text_parts = []

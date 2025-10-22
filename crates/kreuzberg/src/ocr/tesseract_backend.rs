@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
 
-// Internal OCR types (different from public API types)
 use crate::ocr::types::TesseractConfig as InternalTesseractConfig;
 
 /// Native Tesseract OCR backend.
@@ -87,21 +86,16 @@ impl TesseractBackend {
     fn config_to_tesseract(&self, config: &OcrConfig) -> InternalTesseractConfig {
         match &config.tesseract_config {
             Some(tess_config) => Self::convert_config(tess_config),
-            None => {
-                // Use defaults but override language
-                InternalTesseractConfig {
-                    language: config.language.clone(),
-                    ..Default::default()
-                }
-            }
+            None => InternalTesseractConfig {
+                language: config.language.clone(),
+                ..Default::default()
+            },
         }
     }
 }
 
 impl Default for TesseractBackend {
     fn default() -> Self {
-        // Use unwrap here as this should only fail if cache directory creation fails,
-        // which would be a fatal error anyway
         Self::new().unwrap()
     }
 }
@@ -112,17 +106,14 @@ impl Plugin for TesseractBackend {
     }
 
     fn version(&self) -> String {
-        // Use the Tesseract library version
         tesseract_rs::TesseractAPI::version()
     }
 
     fn initialize(&self) -> Result<()> {
-        // Tesseract is initialized lazily on first use
         Ok(())
     }
 
     fn shutdown(&self) -> Result<()> {
-        // Clear cache on shutdown
         self.processor.clear_cache().map_err(|e| crate::KreuzbergError::Plugin {
             message: format!("Failed to clear Tesseract cache: {}", e),
             plugin_name: "tesseract".to_string(),
@@ -134,9 +125,8 @@ impl Plugin for TesseractBackend {
 impl OcrBackend for TesseractBackend {
     async fn process_image(&self, image_bytes: &[u8], config: &OcrConfig) -> Result<ExtractionResult> {
         let tess_config = self.config_to_tesseract(config);
-        let tess_config_clone = tess_config.clone(); // Clone for metadata
+        let tess_config_clone = tess_config.clone();
 
-        // Run OCR on blocking thread pool (Tesseract is blocking)
         let processor = Arc::clone(&self.processor);
         let image_bytes = image_bytes.to_vec();
 
@@ -151,8 +141,6 @@ impl OcrBackend for TesseractBackend {
                 source: Some(Box::new(e)),
             })?;
 
-        // Convert OcrExtractionResult to ExtractionResult
-        // Convert metadata from HashMap to Metadata struct
         let metadata = crate::types::Metadata {
             ocr: Some(crate::types::OcrMetadata {
                 language: tess_config.language.clone(),
@@ -189,9 +177,8 @@ impl OcrBackend for TesseractBackend {
 
     async fn process_file(&self, path: &Path, config: &OcrConfig) -> Result<ExtractionResult> {
         let tess_config = self.config_to_tesseract(config);
-        let tess_config_clone = tess_config.clone(); // Clone for metadata
+        let tess_config_clone = tess_config.clone();
 
-        // Run OCR on blocking thread pool
         let processor = Arc::clone(&self.processor);
         let path_str = path.to_string_lossy().to_string();
 
@@ -206,8 +193,6 @@ impl OcrBackend for TesseractBackend {
                 source: Some(Box::new(e)),
             })?;
 
-        // Convert OcrExtractionResult to ExtractionResult
-        // Convert metadata from HashMap to Metadata struct
         let metadata = crate::types::Metadata {
             ocr: Some(crate::types::OcrMetadata {
                 language: tess_config.language.clone(),
@@ -243,8 +228,6 @@ impl OcrBackend for TesseractBackend {
     }
 
     fn supports_language(&self, lang: &str) -> bool {
-        // Tesseract supports 100+ languages
-        // For now, return true for common languages
         // TODO: Query Tesseract for available languages
         matches!(
             lang,
@@ -291,12 +274,7 @@ impl OcrBackend for TesseractBackend {
         OcrBackendType::Tesseract
     }
 
-    fn supports_table_detection(&self) -> bool {
-        true
-    }
-
     fn supported_languages(&self) -> Vec<String> {
-        // Return common Tesseract languages
         // TODO: Query Tesseract API for available languages dynamically
         vec![
             "eng", "deu", "fra", "spa", "ita", "por", "rus", "chi_sim", "chi_tra", "jpn", "kor", "ara", "hin", "ben",
@@ -306,6 +284,10 @@ impl OcrBackend for TesseractBackend {
         .into_iter()
         .map(String::from)
         .collect()
+    }
+
+    fn supports_table_detection(&self) -> bool {
+        true
     }
 }
 
@@ -368,7 +350,6 @@ mod tests {
 
         let tess_config = backend.config_to_tesseract(&ocr_config);
         assert_eq!(tess_config.language, "deu");
-        // Should use defaults for other fields
         assert_eq!(tess_config.psm, InternalTesseractConfig::default().psm);
     }
 
@@ -384,12 +365,11 @@ mod tests {
 
         let ocr_config = OcrConfig {
             backend: "tesseract".to_string(),
-            language: "eng".to_string(), // This should be ignored
+            language: "eng".to_string(),
             tesseract_config: Some(custom_tess_config),
         };
 
         let tess_config = backend.config_to_tesseract(&ocr_config);
-        // Should use tesseract_config, not language from OcrConfig
         assert_eq!(tess_config.language, "fra");
         assert_eq!(tess_config.psm, 6);
         assert!(tess_config.enable_table_detection);
@@ -405,7 +385,6 @@ mod tests {
     fn test_config_conversion_with_new_fields() {
         let backend = TesseractBackend::new().unwrap();
 
-        // Test with preprocessing config
         let preprocessing = crate::types::ImagePreprocessingConfig {
             target_dpi: 600,
             auto_rotate: false,
@@ -420,7 +399,7 @@ mod tests {
             language: "eng".to_string(),
             psm: 6,
             output_format: "markdown".to_string(),
-            oem: 1, // LSTM only
+            oem: 1,
             min_confidence: 80.0,
             preprocessing: Some(preprocessing.clone()),
             tessedit_char_blacklist: "!@#$".to_string(),
@@ -435,12 +414,10 @@ mod tests {
 
         let tess_config = backend.config_to_tesseract(&ocr_config);
 
-        // Verify new fields are properly converted
         assert_eq!(tess_config.oem, 1);
         assert_eq!(tess_config.min_confidence, 80.0);
         assert_eq!(tess_config.tessedit_char_blacklist, "!@#$");
 
-        // Verify preprocessing config
         assert!(tess_config.preprocessing.is_some());
         let preproc = tess_config.preprocessing.unwrap();
         assert_eq!(preproc.target_dpi, 600);
@@ -454,18 +431,16 @@ mod tests {
 
     #[test]
     fn test_convert_config_type_conversions() {
-        // Test i32 to u8 conversions for oem and psm
         let public_config = crate::types::TesseractConfig {
             language: "eng".to_string(),
-            psm: 6,                      // i32
-            oem: 3,                      // i32
-            table_column_threshold: 100, // i32
+            psm: 6,
+            oem: 3,
+            table_column_threshold: 100,
             ..Default::default()
         };
 
         let internal_config = TesseractBackend::convert_config(&public_config);
 
-        // Verify type conversions
         assert_eq!(internal_config.psm, 6u8);
         assert_eq!(internal_config.oem, 3u8);
         assert_eq!(internal_config.table_column_threshold, 100u32);

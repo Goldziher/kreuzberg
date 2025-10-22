@@ -3,7 +3,7 @@
 //! This module provides common utilities for loading test files,
 //! making assertions, and setting up test environments.
 
-#![allow(dead_code)] // Test helpers are shared across multiple test files
+#![allow(dead_code)]
 
 use kreuzberg::types::ExtractionResult;
 use std::path::PathBuf;
@@ -13,9 +13,9 @@ use std::path::PathBuf;
 /// This assumes the test is running from the workspace root.
 pub fn get_test_documents_dir() -> PathBuf {
     let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()  // crates/kreuzberg -> crates
+        .parent()
         .unwrap()
-        .parent()  // crates -> workspace root
+        .parent()
         .unwrap()
         .to_path_buf();
 
@@ -133,12 +133,10 @@ mod tests {
 
     #[test]
     fn test_test_documents_available() {
-        // This test validates our helper function works
         let available = test_documents_available();
         if !available {
             eprintln!("Warning: test_documents directory not available");
             eprintln!("This is expected in CI without git submodules initialized");
         }
-        // Test should not fail - just informational
     }
 }

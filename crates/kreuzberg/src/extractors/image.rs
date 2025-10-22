@@ -31,20 +31,16 @@ impl ImageExtractor {
             source: None,
         })?;
 
-        // Get TesseractConfig from OcrConfig
         let tess_config = ocr_config.tesseract_config.as_ref().cloned().unwrap_or_default();
 
         let tess_config_clone = tess_config.clone();
         let image_data = content.to_vec();
 
-        // Run OCR on blocking thread pool
         let ocr_result = tokio::task::spawn_blocking(move || {
-            // Use cache directory from environment or default
             let cache_dir = std::env::var("KREUZBERG_CACHE_DIR").ok().map(std::path::PathBuf::from);
 
             let proc = OcrProcessor::new(cache_dir)?;
 
-            // Convert TesseractConfig using From trait
             let ocr_tess_config: crate::ocr::types::TesseractConfig = (&tess_config_clone).into();
 
             proc.process_image(&image_data, &ocr_tess_config)
@@ -105,7 +101,6 @@ impl DocumentExtractor for ImageExtractor {
     ) -> Result<ExtractionResult> {
         let extraction_metadata = extract_image_metadata(content)?;
 
-        // Build typed metadata - keep the exif_data as-is from extraction module
         let image_metadata = crate::types::ImageMetadata {
             width: extraction_metadata.width,
             height: extraction_metadata.height,
@@ -113,23 +108,19 @@ impl DocumentExtractor for ImageExtractor {
             exif: extraction_metadata.exif_data,
         };
 
-        // Check if OCR is configured
         let content_text = if config.ocr.is_some() {
-            // Run OCR to extract text from image
             #[cfg(feature = "ocr")]
             {
                 self.extract_with_ocr(content, config).await?
             }
             #[cfg(not(feature = "ocr"))]
             {
-                // OCR feature not enabled, fall back to metadata description
                 format!(
                     "Image: {} {}x{}",
                     extraction_metadata.format, extraction_metadata.width, extraction_metadata.height
                 )
             }
         } else {
-            // No OCR configured, return metadata description
             format!(
                 "Image: {} {}x{}",
                 extraction_metadata.format, extraction_metadata.width, extraction_metadata.height

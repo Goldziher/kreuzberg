@@ -42,7 +42,7 @@ impl ApiError {
             body: ErrorResponse {
                 error_type: error_type.to_string(),
                 message: error.to_string(),
-                traceback: None, // Rust doesn't have Python-style tracebacks
+                traceback: None,
                 status_code: status.as_u16(),
             },
         }
@@ -72,7 +72,6 @@ impl IntoResponse for ApiError {
 
 impl From<KreuzbergError> for ApiError {
     fn from(error: KreuzbergError) -> Self {
-        // Map Kreuzberg errors to appropriate HTTP status codes
         match &error {
             KreuzbergError::Validation { .. } => Self::validation(error),
             KreuzbergError::Parsing { .. } | KreuzbergError::Ocr { .. } => Self::unprocessable(error),

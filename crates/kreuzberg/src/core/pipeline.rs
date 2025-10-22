@@ -32,7 +32,6 @@ use crate::types::ExtractionResult;
 /// - Post-processor errors are caught and recorded in metadata
 /// - System errors (IO, RuntimeError equivalents) always bubble up
 pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfig) -> Result<ExtractionResult> {
-    // 1. Run validators (fail fast on validation errors)
     {
         let validator_registry = crate::plugins::registry::get_validator_registry();
         let validators = {
@@ -40,17 +39,15 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                 .read()
                 .map_err(|e| crate::KreuzbergError::Other(format!("Validator registry lock poisoned: {}", e)))?;
             registry.get_all()
-        }; // Release lock
+        };
 
         for validator in validators {
-            // Check if validator should process this result
             if validator.should_validate(&result, config) {
                 validator.validate(&result, config).await?;
             }
         }
     }
 
-    // 2. Quality processing (feature-gated)
     #[cfg(feature = "quality")]
     if config.enable_quality_processing {
         let quality_score = crate::text::quality::calculate_quality_score(
@@ -74,30 +71,25 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
 
     #[cfg(not(feature = "quality"))]
     if config.enable_quality_processing {
-        // Quality processing requested but feature not enabled
         result.metadata.additional.insert(
             "quality_processing_error".to_string(),
             serde_json::Value::String("Quality processing feature not enabled".to_string()),
         );
     }
 
-    // 3. Chunking (feature-gated)
     #[cfg(feature = "chunking")]
     if let Some(ref chunking_config) = config.chunking {
-        // Convert config to chunking module's config type
         let chunk_config = crate::chunking::ChunkingConfig {
             max_characters: chunking_config.max_chars,
             overlap: chunking_config.max_overlap,
-            trim: true,                                       // Default to trimming whitespace
-            chunker_type: crate::chunking::ChunkerType::Text, // Default chunker type
+            trim: true,
+            chunker_type: crate::chunking::ChunkerType::Text,
         };
 
         match crate::chunking::chunk_text(&result.content, &chunk_config) {
             Ok(chunking_result) => {
-                // Store chunks as first-class field
                 result.chunks = Some(chunking_result.chunks);
 
-                // Store chunk count in metadata for backward compatibility
                 if let Some(ref chunks) = result.chunks {
                     result.metadata.additional.insert(
                         "chunk_count".to_string(),
@@ -106,7 +98,6 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                 }
             }
             Err(e) => {
-                // Record chunking error in metadata, continue with degraded result
                 result
                     .metadata
                     .additional
@@ -117,14 +108,12 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
 
     #[cfg(not(feature = "chunking"))]
     if config.chunking.is_some() {
-        // Chunking requested but feature not enabled
         result.metadata.additional.insert(
             "chunking_error".to_string(),
             serde_json::Value::String("Chunking feature not enabled".to_string()),
         );
     }
 
-    // 4. Language detection (feature-gated)
     #[cfg(feature = "language-detection")]
     if let Some(ref lang_config) = config.language_detection {
         match crate::language_detection::detect_languages(&result.content, lang_config) {
@@ -132,7 +121,6 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                 result.detected_languages = detected;
             }
             Err(e) => {
-                // Record language detection error in metadata, continue with degraded result
                 result.metadata.additional.insert(
                     "language_detection_error".to_string(),
                     serde_json::Value::String(e.to_string()),
@@ -143,20 +131,16 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
 
     #[cfg(not(feature = "language-detection"))]
     if config.language_detection.is_some() {
-        // Language detection requested but feature not enabled
         result.metadata.additional.insert(
             "language_detection_error".to_string(),
             serde_json::Value::String("Language detection feature not enabled".to_string()),
         );
     }
 
-    // 5. Post-processors by stage (Early, Middle, Late)
-    // Check if postprocessing is enabled
     let pp_config = config.postprocessor.as_ref();
     let postprocessing_enabled = pp_config.is_none_or(|c| c.enabled);
 
     if postprocessing_enabled {
-        // Ensure keyword processor is registered if feature is enabled
         #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
         {
             let _ = crate::keywords::ensure_initialized();
@@ -170,40 +154,32 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                     crate::KreuzbergError::Other(format!("Post-processor registry lock poisoned: {}", e))
                 })?;
                 registry.get_for_stage(stage)
-            }; // Release lock
+            };
 
             for processor in processors {
                 let processor_name = processor.name();
 
-                // Filter based on postprocessor config
                 let should_run = if let Some(config) = pp_config {
                     if let Some(ref enabled) = config.enabled_processors {
-                        // Whitelist mode: only run if in enabled list
                         enabled.iter().any(|name| name == processor_name)
                     } else if let Some(ref disabled) = config.disabled_processors {
-                        // Blacklist mode: run unless in disabled list
                         !disabled.iter().any(|name| name == processor_name)
                     } else {
-                        // No filtering: run all
                         true
                     }
                 } else {
-                    // No config: run all
                     true
                 };
 
-                if should_run && processor.should_process(&result, config) {
-                    // Processors now take &mut ExtractionResult and return Result<()>,
-                    // which avoids unnecessary cloning of potentially large results.
-                    // On error, the original result is preserved (not modified).
-                    if let Err(e) = processor.process(&mut result, config).await {
-                        // Record processor error in metadata, continue with current result
-                        let error_key = format!("processing_error_{}", processor_name);
-                        result
-                            .metadata
-                            .additional
-                            .insert(error_key, serde_json::Value::String(e.to_string()));
-                    }
+                if should_run
+                    && processor.should_process(&result, config)
+                    && let Err(e) = processor.process(&mut result, config).await
+                {
+                    let error_key = format!("processing_error_{}", processor_name);
+                    result
+                        .metadata
+                        .additional
+                        .insert(error_key, serde_json::Value::String(e.to_string()));
                 }
             }
         }
@@ -444,7 +420,6 @@ Natural language processing enables computers to understand human language.
 
         let processed = run_pipeline(result, &config).await.unwrap();
 
-        // Should have extracted keywords and stored in metadata
         assert!(processed.metadata.additional.contains_key("keywords"));
 
         let keywords_value = processed.metadata.additional.get("keywords").unwrap();
@@ -453,7 +428,6 @@ Natural language processing enables computers to understand human language.
         let keywords = keywords_value.as_array().unwrap();
         assert!(!keywords.is_empty(), "Should have extracted keywords");
 
-        // Verify keyword structure
         let first_keyword = &keywords[0];
         assert!(first_keyword.is_object());
         assert!(first_keyword.get("text").is_some());
@@ -474,13 +448,12 @@ Natural language processing enables computers to understand human language.
         };
 
         let config = ExtractionConfig {
-            keywords: None, // No keyword extraction configured
+            keywords: None,
             ..Default::default()
         };
 
         let processed = run_pipeline(result, &config).await.unwrap();
 
-        // Should NOT have extracted keywords
         assert!(!processed.metadata.additional.contains_key("keywords"));
     }
 
@@ -488,7 +461,7 @@ Natural language processing enables computers to understand human language.
     #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
     async fn test_pipeline_keyword_extraction_short_content() {
         let result = ExtractionResult {
-            content: "Short text".to_string(), // Less than 10 words
+            content: "Short text".to_string(),
             mime_type: "text/plain".to_string(),
             metadata: Metadata::default(),
             tables: vec![],
@@ -509,7 +482,6 @@ Natural language processing enables computers to understand human language.
 
         let processed = run_pipeline(result, &config).await.unwrap();
 
-        // Should NOT have extracted keywords from very short text
         assert!(!processed.metadata.additional.contains_key("keywords"));
     }
 }

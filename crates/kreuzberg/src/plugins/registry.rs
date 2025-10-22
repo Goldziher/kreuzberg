@@ -93,10 +93,8 @@ impl OcrBackendRegistry {
     pub fn register(&mut self, backend: Arc<dyn OcrBackend>) -> Result<()> {
         let name = backend.name().to_string();
 
-        // Validate plugin name
         validate_plugin_name(&name)?;
 
-        // Initialize the backend
         backend.initialize()?;
 
         self.backends.insert(name, backend);
@@ -151,7 +149,6 @@ impl OcrBackendRegistry {
     /// Calls `shutdown()` on the backend before removing.
     pub fn remove(&mut self, name: &str) -> Result<()> {
         if let Some(backend) = self.backends.remove(name) {
-            // Shutdown the backend
             backend.shutdown()?;
         }
         Ok(())
@@ -182,7 +179,6 @@ impl Default for OcrBackendRegistry {
 /// The registry is thread-safe and can be accessed concurrently from multiple threads.
 #[allow(clippy::type_complexity)]
 pub struct DocumentExtractorRegistry {
-    // Maps MIME type -> (priority -> extractor_name -> extractor)
     extractors: HashMap<String, BTreeMap<i32, HashMap<String, Arc<dyn DocumentExtractor>>>>,
 }
 
@@ -211,10 +207,8 @@ impl DocumentExtractorRegistry {
         let priority = extractor.priority();
         let mime_types: Vec<String> = extractor.supported_mime_types().iter().map(|s| s.to_string()).collect();
 
-        // Validate plugin name
         validate_plugin_name(&name)?;
 
-        // Initialize the extractor
         extractor.initialize()?;
 
         for mime_type in mime_types {
@@ -226,7 +220,6 @@ impl DocumentExtractorRegistry {
                 .insert(name.clone(), Arc::clone(&extractor));
         }
 
-        // Invalidate thread-local caches since registry changed
         crate::core::extractor::invalidate_extractor_cache();
 
         Ok(())
@@ -242,16 +235,13 @@ impl DocumentExtractorRegistry {
     ///
     /// The highest priority extractor, or an error if none found.
     pub fn get(&self, mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
-        // Try exact match first
         if let Some(priority_map) = self.extractors.get(mime_type)
-            // Get highest priority (last in BTreeMap)
             && let Some((_priority, extractors)) = priority_map.iter().next_back()
             && let Some((_name, extractor)) = extractors.iter().next()
         {
             return Ok(Arc::clone(extractor));
         }
 
-        // Try prefix match (e.g., "image/*")
         let mut best_match: Option<(i32, Arc<dyn DocumentExtractor>)> = None;
 
         for (registered_mime, priority_map) in &self.extractors {
@@ -298,24 +288,20 @@ impl DocumentExtractorRegistry {
 
         for priority_map in self.extractors.values_mut() {
             for extractors in priority_map.values_mut() {
-                if let Some(extractor) = extractors.remove(name) {
-                    // Store first instance to shutdown (all are clones of same Arc)
-                    if extractor_to_shutdown.is_none() {
-                        extractor_to_shutdown = Some(extractor);
-                    }
+                if let Some(extractor) = extractors.remove(name)
+                    && extractor_to_shutdown.is_none()
+                {
+                    extractor_to_shutdown = Some(extractor);
                 }
             }
         }
 
-        // Shutdown the extractor once
         if let Some(extractor) = extractor_to_shutdown {
             extractor.shutdown()?;
 
-            // Invalidate thread-local caches since registry changed
             crate::core::extractor::invalidate_extractor_cache();
         }
 
-        // Clean up empty maps
         self.extractors.retain(|_, priority_map| {
             priority_map.retain(|_, extractors| !extractors.is_empty());
             !priority_map.is_empty()
@@ -345,7 +331,6 @@ impl Default for DocumentExtractorRegistry {
 /// Manages post-processors organized by processing stage.
 #[allow(clippy::type_complexity)]
 pub struct PostProcessorRegistry {
-    // Maps stage -> priority -> processor_name -> processor
     processors: HashMap<ProcessingStage, BTreeMap<i32, HashMap<String, Arc<dyn PostProcessor>>>>,
 }
 
@@ -367,7 +352,6 @@ impl PostProcessorRegistry {
         let name = processor.name().to_string();
         let stage = processor.processing_stage();
 
-        // Validate plugin name
         validate_plugin_name(&name)?;
 
         processor.initialize()?;
@@ -395,7 +379,6 @@ impl PostProcessorRegistry {
         let mut result = Vec::new();
 
         if let Some(priority_map) = self.processors.get(&stage) {
-            // Iterate in reverse order (highest priority first)
             for (_priority, processors) in priority_map.iter().rev() {
                 for processor in processors.values() {
                     result.push(Arc::clone(processor));
@@ -423,21 +406,18 @@ impl PostProcessorRegistry {
 
         for priority_map in self.processors.values_mut() {
             for processors in priority_map.values_mut() {
-                if let Some(processor) = processors.remove(name) {
-                    // Store first instance to shutdown
-                    if processor_to_shutdown.is_none() {
-                        processor_to_shutdown = Some(processor);
-                    }
+                if let Some(processor) = processors.remove(name)
+                    && processor_to_shutdown.is_none()
+                {
+                    processor_to_shutdown = Some(processor);
                 }
             }
         }
 
-        // Shutdown the processor once
         if let Some(processor) = processor_to_shutdown {
             processor.shutdown()?;
         }
 
-        // Clean up empty maps
         self.processors.retain(|_, priority_map| {
             priority_map.retain(|_, processors| !processors.is_empty());
             !priority_map.is_empty()
@@ -466,7 +446,6 @@ impl Default for PostProcessorRegistry {
 ///
 /// Manages validators with priority-based execution order.
 pub struct ValidatorRegistry {
-    // Maps priority -> validator_name -> validator
     validators: BTreeMap<i32, HashMap<String, Arc<dyn Validator>>>,
 }
 
@@ -487,7 +466,6 @@ impl ValidatorRegistry {
         let name = validator.name().to_string();
         let priority = validator.priority();
 
-        // Validate plugin name
         validate_plugin_name(&name)?;
 
         validator.initialize()?;
@@ -505,7 +483,6 @@ impl ValidatorRegistry {
     pub fn get_all(&self) -> Vec<Arc<dyn Validator>> {
         let mut result = Vec::new();
 
-        // Iterate in reverse order (highest priority first)
         for (_priority, validators) in self.validators.iter().rev() {
             for validator in validators.values() {
                 result.push(Arc::clone(validator));
@@ -529,20 +506,17 @@ impl ValidatorRegistry {
         let mut validator_to_shutdown: Option<Arc<dyn Validator>> = None;
 
         for validators in self.validators.values_mut() {
-            if let Some(validator) = validators.remove(name) {
-                // Store first instance to shutdown
-                if validator_to_shutdown.is_none() {
-                    validator_to_shutdown = Some(validator);
-                }
+            if let Some(validator) = validators.remove(name)
+                && validator_to_shutdown.is_none()
+            {
+                validator_to_shutdown = Some(validator);
             }
         }
 
-        // Shutdown the validator once
         if let Some(validator) = validator_to_shutdown {
             validator.shutdown()?;
         }
 
-        // Clean up empty maps
         self.validators.retain(|_, validators| !validators.is_empty());
 
         Ok(())
@@ -608,7 +582,6 @@ mod tests {
     use crate::types::ExtractionResult;
     use async_trait::async_trait;
 
-    // Mock implementations for testing
     struct MockOcrBackend {
         name: String,
         languages: Vec<String>,
@@ -767,15 +740,12 @@ mod tests {
 
         registry.register(backend).unwrap();
 
-        // Test get by name
         let retrieved = registry.get("test-ocr").unwrap();
         assert_eq!(retrieved.name(), "test-ocr");
 
-        // Test get by language
         let eng_backend = registry.get_for_language("eng").unwrap();
         assert_eq!(eng_backend.name(), "test-ocr");
 
-        // Test list
         let names = registry.list();
         assert_eq!(names.len(), 1);
         assert!(names.contains(&"test-ocr".to_string()));
@@ -798,7 +768,6 @@ mod tests {
         registry.register(early, 100).unwrap();
         registry.register(middle, 50).unwrap();
 
-        // Test get by stage
         let early_processors = registry.get_for_stage(ProcessingStage::Early);
         assert_eq!(early_processors.len(), 1);
         assert_eq!(early_processors[0].name(), "early-processor");
@@ -806,7 +775,6 @@ mod tests {
         let middle_processors = registry.get_for_stage(ProcessingStage::Middle);
         assert_eq!(middle_processors.len(), 1);
 
-        // Test list
         let names = registry.list();
         assert_eq!(names.len(), 2);
     }
@@ -828,7 +796,6 @@ mod tests {
         registry.register(high_priority).unwrap();
         registry.register(low_priority).unwrap();
 
-        // Test get_all returns in priority order
         let validators = registry.get_all();
         assert_eq!(validators.len(), 2);
         assert_eq!(validators[0].name(), "high-priority");
@@ -847,11 +814,9 @@ mod tests {
 
         registry.register(extractor).unwrap();
 
-        // Test exact MIME type match
         let retrieved = registry.get("application/pdf").unwrap();
         assert_eq!(retrieved.name(), "pdf-extractor");
 
-        // Test list
         let names = registry.list();
         assert_eq!(names.len(), 1);
         assert!(names.contains(&"pdf-extractor".to_string()));
@@ -869,7 +834,6 @@ mod tests {
 
         registry.register(image_extractor).unwrap();
 
-        // Test prefix match
         let retrieved = registry.get("image/png").unwrap();
         assert_eq!(retrieved.name(), "image-extractor");
 
@@ -896,7 +860,6 @@ mod tests {
         registry.register(low_priority).unwrap();
         registry.register(high_priority).unwrap();
 
-        // Should return highest priority extractor
         let retrieved = registry.get("application/pdf").unwrap();
         assert_eq!(retrieved.name(), "high-priority-pdf");
     }
@@ -1017,7 +980,6 @@ mod tests {
 
     #[test]
     fn test_global_registry_access() {
-        // Test that global registries can be accessed without panicking
         let ocr_registry = get_ocr_backend_registry();
         let _ = ocr_registry
             .read()
@@ -1124,7 +1086,6 @@ mod tests {
 
         registry.register(multi_extractor).unwrap();
 
-        // All MIME types should work
         assert_eq!(registry.get("text/plain").unwrap().name(), "multi-extractor");
         assert_eq!(registry.get("text/markdown").unwrap().name(), "multi-extractor");
         assert_eq!(registry.get("text/html").unwrap().name(), "multi-extractor");
@@ -1144,11 +1105,9 @@ mod tests {
             stage: ProcessingStage::Early,
         });
 
-        // Register in reverse order
         registry.register(low, 10).unwrap();
         registry.register(high, 100).unwrap();
 
-        // Should return in priority order (highest first)
         let processors = registry.get_for_stage(ProcessingStage::Early);
         assert_eq!(processors.len(), 2);
         assert_eq!(processors[0].name(), "high-priority");
@@ -1159,7 +1118,6 @@ mod tests {
     fn test_post_processor_registry_empty_stage() {
         let registry = PostProcessorRegistry::new();
 
-        // No processors for this stage
         let processors = registry.get_for_stage(ProcessingStage::Late);
         assert_eq!(processors.len(), 0);
     }
@@ -1192,14 +1150,12 @@ mod tests {
     fn test_document_extractor_registry_exact_over_prefix() {
         let mut registry = DocumentExtractorRegistry::new();
 
-        // Register prefix matcher
         let prefix_extractor = Arc::new(MockExtractor {
             name: "prefix-extractor".to_string(),
             mime_types: &["image/*"],
             priority: 100,
         });
 
-        // Register exact matcher with lower priority
         let exact_extractor = Arc::new(MockExtractor {
             name: "exact-extractor".to_string(),
             mime_types: &["image/png"],
@@ -1209,16 +1165,12 @@ mod tests {
         registry.register(prefix_extractor).unwrap();
         registry.register(exact_extractor).unwrap();
 
-        // Exact match should be preferred over prefix match
         let retrieved = registry.get("image/png").unwrap();
         assert_eq!(retrieved.name(), "exact-extractor");
 
-        // Other image types should use prefix match
         let retrieved_jpg = registry.get("image/jpeg").unwrap();
         assert_eq!(retrieved_jpg.name(), "prefix-extractor");
     }
-
-    // Plugin name validation tests
 
     #[test]
     fn test_ocr_backend_registry_invalid_name_empty() {

@@ -36,12 +36,10 @@ impl fmt::Display for PdfError {
 impl std::error::Error for PdfError {}
 
 // NOTE: No From<std::io::Error> impl - IO errors must bubble up unchanged per error handling policy
-// IOError variant is only for wrapping errors from non-IO sources
 
 impl From<lopdf::Error> for PdfError {
     fn from(err: lopdf::Error) -> Self {
         match err {
-            // lopdf IO errors should bubble up, not be wrapped - this is a library limitation
             lopdf::Error::IO(_) => panic!("lopdf IO errors should not be converted to PdfError - let them bubble up"),
             _ => PdfError::InvalidPdf(err.to_string()),
         }
@@ -121,7 +119,4 @@ mod tests {
         let err2 = err1.clone();
         assert_eq!(err1.to_string(), err2.to_string());
     }
-
-    // Note: lopdf::Error conversion is tested through actual usage in PDF extraction.
-    // Direct testing is omitted as lopdf::Error variants are complex and may change.
 }

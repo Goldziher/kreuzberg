@@ -4,27 +4,20 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 // ============================================================================
-// Constants
 // ============================================================================
 
-// Quality weights
 const OCR_PENALTY_WEIGHT: f64 = 0.3;
 const SCRIPT_PENALTY_WEIGHT: f64 = 0.2;
 const NAV_PENALTY_WEIGHT: f64 = 0.1;
 const STRUCTURE_BONUS_WEIGHT: f64 = 0.2;
 const METADATA_BONUS_WEIGHT: f64 = 0.1;
 
-// Text thresholds
 const MIN_TEXT_LENGTH: usize = 10;
 const LARGE_TEXT_LENGTH: usize = 1000;
 const MIN_SENTENCE_WORDS: f64 = 10.0;
 const MAX_SENTENCE_WORDS: f64 = 30.0;
 const MIN_PARAGRAPH_WORDS: f64 = 50.0;
 const MAX_PARAGRAPH_WORDS: f64 = 300.0;
-
-// ============================================================================
-// Regex Patterns
-// ============================================================================
 
 static SCATTERED_CHARS_PATTERN: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\b[a-zA-Z]\s{2,}[a-zA-Z]\s{2,}[a-zA-Z]\b").unwrap());
@@ -56,10 +49,6 @@ static WHITESPACE_NORMALIZE: Lazy<Regex> =
 static NEWLINE_NORMALIZE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\n\s*\n\s*\n+").unwrap());
 static NEWLINE_CLEANUP: Lazy<Regex> = Lazy::new(|| Regex::new(r"\n+").unwrap());
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
 #[inline]
 fn sum_match_lengths(text: &str, pattern: &Regex) -> usize {
     pattern.find_iter(text).map(|m| m.len()).sum()
@@ -85,10 +74,6 @@ where
         Cow::Borrowed(text)
     }
 }
-
-// ============================================================================
-// Quality Scoring
-// ============================================================================
 
 pub fn calculate_quality_score(text: &str, metadata: Option<&HashMap<String, String>>) -> f64 {
     if text.is_empty() || text.trim().is_empty() {
@@ -248,10 +233,6 @@ fn calculate_metadata_bonus(metadata: &HashMap<String, String>) -> f64 {
     present_fields as f64 / IMPORTANT_FIELDS.len() as f64
 }
 
-// ============================================================================
-// Text Cleaning
-// ============================================================================
-
 pub fn clean_extracted_text(text: &str) -> String {
     if text.is_empty() {
         return String::new();
@@ -364,10 +345,6 @@ fn clean_navigation_elements_cow<'a>(text: Cow<'a, str>) -> Cow<'a, str> {
     chain_replacements(text, &nav_replacements)
 }
 
-// ============================================================================
-// Space Normalization
-// ============================================================================
-
 pub fn normalize_spaces(text: &str) -> String {
     if text.is_empty() || text.trim().is_empty() {
         return String::new();
@@ -405,10 +382,6 @@ pub fn normalize_spaces(text: &str) -> String {
 
     result
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
 
 #[cfg(test)]
 mod tests {
@@ -647,7 +620,6 @@ mod tests {
     fn test_clean_extracted_text_scattered_chars() {
         let text = "a  b  c scattered";
         let cleaned = clean_extracted_text(text);
-        // Should attempt to fix scattered characters
         assert!(!cleaned.is_empty());
     }
 
@@ -655,8 +627,6 @@ mod tests {
     fn test_normalize_whitespace_cow_no_changes() {
         let text = Cow::Borrowed("normaltext");
         let result = normalize_whitespace_cow(text);
-        // The function may convert spaces to owned even for single spaces
-        // Just verify output is correct
         assert_eq!(result.as_ref(), "normaltext");
     }
 

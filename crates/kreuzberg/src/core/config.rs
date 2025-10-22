@@ -193,7 +193,6 @@ pub struct LanguageDetectionConfig {
     pub detect_multiple: bool,
 }
 
-// Default value helpers
 fn default_true() -> bool {
     true
 }
@@ -306,13 +305,11 @@ impl ExtractionConfig {
         let mut current = std::env::current_dir().map_err(KreuzbergError::Io)?;
 
         loop {
-            // Check for kreuzberg.toml
             let kreuzberg_toml = current.join("kreuzberg.toml");
             if kreuzberg_toml.exists() {
                 return Ok(Some(Self::from_toml_file(kreuzberg_toml)?));
             }
 
-            // Move to parent directory
             if let Some(parent) = current.parent() {
                 current = parent.to_path_buf();
             } else {
@@ -371,35 +368,27 @@ enable_quality_processing = true
         )
         .unwrap();
 
-        // Change to temp directory
         let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
 
-        // Run test and ensure we restore directory even if test fails
         let result = std::panic::catch_unwind(|| {
             let config = ExtractionConfig::discover().unwrap();
             assert!(config.is_some());
             assert!(!config.unwrap().use_cache);
         });
 
-        // Restore original directory before dropping temp dir
         std::env::set_current_dir(&original_dir).unwrap();
 
-        // Re-panic if test failed
         if let Err(e) = result {
             std::panic::resume_unwind(e);
         }
     }
-
-    // Note: test_discover_no_config removed because it's unreliable - discovery walks
-    // parent directories and may find the project's own kreuzberg.toml during testing
 
     #[test]
     fn test_v4_config_with_ocr_and_chunking() {
         let dir = tempdir().unwrap();
         let config_path = dir.path().join("kreuzberg.toml");
 
-        // Valid V4 config
         fs::write(
             &config_path,
             r#"

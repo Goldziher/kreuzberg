@@ -26,10 +26,6 @@ use tokio::time::timeout;
 
 mod helpers;
 
-// ============================================================================
-// Concurrent Extraction Tests
-// ============================================================================
-
 /// Test many concurrent extractions of different MIME types.
 ///
 /// Validates that:
@@ -40,7 +36,6 @@ mod helpers;
 async fn test_concurrent_extractions_mixed_formats() {
     let config = ExtractionConfig::default();
 
-    // Create test data for different formats (all supported)
     let test_cases = vec![
         (b"Plain text content" as &[u8], "text/plain"),
         (b"{\"key\": \"value\"}", "application/json"),
@@ -48,7 +43,6 @@ async fn test_concurrent_extractions_mixed_formats() {
         (b"# Markdown\n\nContent here", "text/markdown"),
     ];
 
-    // Spawn 50 concurrent tasks (10 per format)
     let mut handles = vec![];
     for _ in 0..10 {
         for (data, mime_type) in &test_cases {
@@ -62,7 +56,6 @@ async fn test_concurrent_extractions_mixed_formats() {
         }
     }
 
-    // Wait for all with timeout
     let results = timeout(Duration::from_secs(30), async {
         let mut results = vec![];
         for handle in handles {
@@ -73,7 +66,6 @@ async fn test_concurrent_extractions_mixed_formats() {
     .await
     .expect("All extractions should complete within 30s");
 
-    // Verify all succeeded
     for result in results {
         assert!(
             result.is_ok(),
@@ -90,23 +82,19 @@ async fn test_concurrent_extractions_mixed_formats() {
 async fn test_concurrent_batch_extractions() {
     let config = ExtractionConfig::default();
 
-    // Prepare test data as byte slices
     let contents: Vec<Vec<u8>> = (0..20).map(|i| format!("Content {}", i).into_bytes()).collect();
 
-    // Run 5 concurrent batch extractions
     let mut handles = vec![];
     for _ in 0..5 {
         let config = config.clone();
         let contents_clone = contents.clone();
 
         handles.push(tokio::spawn(async move {
-            // Create references for batch_extract_bytes
             let data: Vec<(&[u8], &str)> = contents_clone.iter().map(|c| (c.as_slice(), "text/plain")).collect();
             batch_extract_bytes(data, &config).await
         }));
     }
 
-    // Wait for all
     for handle in handles {
         let results = handle.await.expect("Task should not panic");
         assert!(results.is_ok(), "Batch extraction should succeed");
@@ -126,7 +114,7 @@ async fn test_concurrent_extractions_with_cache() {
     let config = ExtractionConfig {
         use_cache: true,
         postprocessor: Some(PostProcessorConfig {
-            enabled: false, // Disable to avoid interference from other tests
+            enabled: false,
             enabled_processors: None,
             disabled_processors: None,
         }),
@@ -135,10 +123,8 @@ async fn test_concurrent_extractions_with_cache() {
 
     let test_data = b"Cached content for concurrent access test";
 
-    // First, populate cache
     let _ = extract_bytes(test_data, "text/plain", &config).await.unwrap();
 
-    // Now spawn 100 concurrent reads (should all hit cache)
     let mut handles = vec![];
     for _ in 0..100 {
         let config = config.clone();
@@ -149,7 +135,6 @@ async fn test_concurrent_extractions_with_cache() {
         }));
     }
 
-    // All should succeed and return same content
     let expected_content = "Cached content for concurrent access test";
     for handle in handles {
         let result = handle.await.expect("Task should not panic");
@@ -158,10 +143,6 @@ async fn test_concurrent_extractions_with_cache() {
         assert_eq!(extraction.content, expected_content);
     }
 }
-
-// ============================================================================
-// Concurrent OCR Tests
-// ============================================================================
 
 /// Test concurrent OCR processing of different images.
 ///
@@ -192,7 +173,6 @@ async fn test_concurrent_ocr_processing() {
 
     let file_path = get_test_file_path("images/ocr_image.jpg");
 
-    // Spawn 20 concurrent OCR tasks on the same file
     let mut handles = vec![];
     for _ in 0..20 {
         let file_path = file_path.clone();
@@ -203,7 +183,6 @@ async fn test_concurrent_ocr_processing() {
         }));
     }
 
-    // Wait for all with timeout
     let results = timeout(Duration::from_secs(60), async {
         let mut results = vec![];
         for handle in handles {
@@ -214,7 +193,6 @@ async fn test_concurrent_ocr_processing() {
     .await
     .expect("All OCR operations should complete within 60s");
 
-    // Verify all succeeded and have consistent results
     let mut extracted_texts = vec![];
     for result in results {
         assert!(result.is_ok(), "OCR should succeed: {:?}", result.err());
@@ -223,7 +201,6 @@ async fn test_concurrent_ocr_processing() {
         extracted_texts.push(extraction.content);
     }
 
-    // All results should be identical (same file, same config)
     let first_text = &extracted_texts[0];
     for text in &extracted_texts[1..] {
         assert_eq!(text, first_text, "Concurrent OCR should produce identical results");
@@ -259,11 +236,9 @@ fn test_concurrent_ocr_cache_stress() {
 
     let file_path = get_test_file_path("images/ocr_image.jpg");
 
-    // Warm the cache with first extraction
     let first_result = extract_file_sync(&file_path, None, &config);
     assert!(first_result.is_ok(), "Initial OCR should succeed");
 
-    // Now spawn 50 concurrent threads (should all hit cache)
     let cache_hit_count = Arc::new(AtomicUsize::new(0));
 
     let mut handles = vec![];
@@ -277,7 +252,6 @@ fn test_concurrent_ocr_cache_stress() {
             let result = extract_file_sync(&file_path, None, &config);
             let duration = start.elapsed();
 
-            // Cache hits should be much faster than actual OCR (<100ms vs >500ms)
             if duration < Duration::from_millis(100) {
                 hit_count.fetch_add(1, Ordering::Relaxed);
             }
@@ -286,13 +260,11 @@ fn test_concurrent_ocr_cache_stress() {
         }));
     }
 
-    // Wait for all
     for handle in handles {
         let result = handle.join().expect("Thread should not panic");
         assert!(result.is_ok(), "Cached OCR should succeed");
     }
 
-    // Most should be cache hits (allow some misses due to timing)
     let hits = cache_hit_count.load(Ordering::Relaxed);
     assert!(
         hits >= 40,
@@ -300,10 +272,6 @@ fn test_concurrent_ocr_cache_stress() {
         hits
     );
 }
-
-// ============================================================================
-// Concurrent Pipeline Tests
-// ============================================================================
 
 /// Test concurrent pipeline processing.
 ///
@@ -313,7 +281,6 @@ fn test_concurrent_ocr_cache_stress() {
 /// - Registry reads are thread-safe
 #[tokio::test]
 async fn test_concurrent_pipeline_processing() {
-    // Create a simple processor for testing
     struct ConcurrentTestProcessor;
 
     impl Plugin for ConcurrentTestProcessor {
@@ -334,7 +301,6 @@ async fn test_concurrent_pipeline_processing() {
     #[async_trait]
     impl PostProcessor for ConcurrentTestProcessor {
         async fn process(&self, result: &mut ExtractionResult, _: &ExtractionConfig) -> Result<()> {
-            // Simulate some processing work
             tokio::time::sleep(Duration::from_millis(10)).await;
             result.content.push_str("[processed]");
             Ok(())
@@ -345,12 +311,10 @@ async fn test_concurrent_pipeline_processing() {
         }
     }
 
-    // Register processor once (production scenario)
     let registry = get_post_processor_registry();
     {
         let mut reg = registry.write().expect("Should acquire write lock");
         let processor = Arc::new(ConcurrentTestProcessor);
-        // Remove if already registered (from other tests)
         let _ = reg.remove("concurrent-test");
         reg.register(processor, 50).expect("Should register processor");
     }
@@ -364,7 +328,6 @@ async fn test_concurrent_pipeline_processing() {
         ..Default::default()
     };
 
-    // Spawn 50 concurrent pipeline runs
     let mut handles = vec![];
     for i in 0..50 {
         let config = config.clone();
@@ -383,7 +346,6 @@ async fn test_concurrent_pipeline_processing() {
         }));
     }
 
-    // Wait for all
     for handle in handles {
         let result = handle.await.expect("Task should not panic");
         assert!(result.is_ok(), "Pipeline should succeed");
@@ -391,16 +353,11 @@ async fn test_concurrent_pipeline_processing() {
         assert!(processed.content.contains("[processed]"), "Processor should run");
     }
 
-    // Cleanup
     {
         let mut reg = registry.write().expect("Should acquire write lock");
         let _ = reg.remove("concurrent-test");
     }
 }
-
-// ============================================================================
-// Concurrent Registry Access Tests
-// ============================================================================
 
 /// Test concurrent registry reads don't block unnecessarily.
 ///
@@ -411,14 +368,12 @@ async fn test_concurrent_pipeline_processing() {
 async fn test_concurrent_registry_reads() {
     let registry = get_document_extractor_registry();
 
-    // Spawn 200 concurrent registry reads
     let mut handles = vec![];
     for _ in 0..200 {
         let registry_clone = Arc::clone(&registry);
         handles.push(tokio::spawn(async move {
             let start = std::time::Instant::now();
 
-            // Perform registry lookup
             let reg = registry_clone.read().expect("Should acquire read lock");
             let _extractor = reg.get("text/plain");
 
@@ -426,7 +381,6 @@ async fn test_concurrent_registry_reads() {
         }));
     }
 
-    // All should complete quickly
     let mut max_duration = Duration::from_secs(0);
     for handle in handles {
         let duration = handle.await.expect("Task should not panic");
@@ -435,7 +389,6 @@ async fn test_concurrent_registry_reads() {
         }
     }
 
-    // Registry reads should be very fast (< 10ms even under high concurrency)
     assert!(
         max_duration < Duration::from_millis(10),
         "Registry reads should be fast, max duration: {:?}",
@@ -453,14 +406,12 @@ async fn test_extraction_throughput_scales() {
     let config = ExtractionConfig::default();
     let test_data = b"Throughput test content";
 
-    // Measure sequential baseline
     let sequential_start = std::time::Instant::now();
     for _ in 0..20 {
         let _ = extract_bytes(test_data, "text/plain", &config).await.unwrap();
     }
     let sequential_duration = sequential_start.elapsed();
 
-    // Measure parallel throughput
     let parallel_start = std::time::Instant::now();
     let mut handles = vec![];
     for _ in 0..20 {
@@ -477,8 +428,6 @@ async fn test_extraction_throughput_scales() {
     }
     let parallel_duration = parallel_start.elapsed();
 
-    // Parallel should be at least 2x faster (conservative check)
-    // On systems with 4+ cores, should be much faster
     println!(
         "Sequential: {:?}, Parallel: {:?}, Speedup: {:.2}x",
         sequential_duration,
@@ -494,10 +443,6 @@ async fn test_extraction_throughput_scales() {
     );
 }
 
-// ============================================================================
-// Stress Tests
-// ============================================================================
-
 /// High-load stress test with many concurrent operations.
 ///
 /// Validates system stability under sustained concurrent load.
@@ -508,7 +453,6 @@ async fn test_high_concurrency_stress() {
         ..Default::default()
     };
 
-    // Use only fully supported formats
     let formats = vec![
         (b"Text content" as &[u8], "text/plain"),
         (b"{\"json\": true}", "application/json"),
@@ -516,7 +460,6 @@ async fn test_high_concurrency_stress() {
         (b"# Markdown\n\nContent", "text/markdown"),
     ];
 
-    // Spawn 400 concurrent tasks
     let mut handles = vec![];
     for _ in 0..100 {
         for (data, mime_type) in &formats {
@@ -530,7 +473,6 @@ async fn test_high_concurrency_stress() {
         }
     }
 
-    // Should complete within reasonable time (60s for 400 tasks)
     let results = timeout(Duration::from_secs(60), async {
         let mut results = vec![];
         for handle in handles {
@@ -541,7 +483,6 @@ async fn test_high_concurrency_stress() {
     .await
     .expect("High-load stress test should complete within 60s");
 
-    // Verify all succeeded
     let success_count = results.iter().filter(|r| r.is_ok()).count();
     assert_eq!(
         success_count, 400,

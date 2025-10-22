@@ -21,7 +21,6 @@ fn build_archive_result(
     format_name: &str,
     mime_type: &str,
 ) -> ExtractionResult {
-    // Build typed metadata
     let file_names: Vec<String> = extraction_metadata
         .file_list
         .iter()
@@ -36,8 +35,7 @@ fn build_archive_result(
         compressed_size: None,
     };
 
-    // Put detailed file info in additional metadata
-    let mut additional = std::collections::HashMap::new();
+    let mut additional = HashMap::new();
     let file_details: Vec<serde_json::Value> = extraction_metadata
         .file_list
         .iter()
@@ -51,7 +49,6 @@ fn build_archive_result(
         .collect();
     additional.insert("files".to_string(), serde_json::json!(file_details));
 
-    // Build text output
     let mut output = format!(
         "{} Archive ({} files, {} bytes)\n\n",
         format_name, extraction_metadata.file_count, extraction_metadata.total_size
@@ -312,7 +309,6 @@ mod tests {
     async fn test_zip_extractor() {
         let extractor = ZipExtractor::new();
 
-        // Create a ZIP archive
         let mut cursor = Cursor::new(Vec::new());
         {
             let mut zip = ZipWriter::new(&mut cursor);
@@ -346,7 +342,6 @@ mod tests {
     async fn test_tar_extractor() {
         let extractor = TarExtractor::new();
 
-        // Create a TAR archive
         let mut cursor = Cursor::new(Vec::new());
         {
             let mut tar = TarBuilder::new(&mut cursor);

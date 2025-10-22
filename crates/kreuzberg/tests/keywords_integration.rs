@@ -40,14 +40,12 @@ fn test_yake_basic_extraction() {
     let config = KeywordConfig::yake();
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
-    // Basic assertions
     assert!(!keywords.is_empty(), "Should extract keywords from document");
     assert!(
         keywords.len() <= config.max_keywords,
         "Should respect max_keywords limit"
     );
 
-    // Verify keywords are sorted by score (highest first)
     for i in 1..keywords.len() {
         assert!(
             keywords[i - 1].score >= keywords[i].score,
@@ -57,12 +55,10 @@ fn test_yake_basic_extraction() {
         );
     }
 
-    // Verify all keywords use YAKE algorithm
     for keyword in &keywords {
         assert_eq!(keyword.algorithm, KeywordAlgorithm::Yake);
     }
 
-    // Verify extracted keywords are relevant to ML
     let keyword_texts: Vec<&str> = keywords.iter().map(|k| k.text.as_str()).collect();
     let relevant_terms = [
         "machine learning",
@@ -86,14 +82,12 @@ fn test_rake_basic_extraction() {
     let config = KeywordConfig::rake();
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
-    // Basic assertions
     assert!(!keywords.is_empty(), "Should extract keywords from document");
     assert!(
         keywords.len() <= config.max_keywords,
         "Should respect max_keywords limit"
     );
 
-    // Verify keywords are sorted by score (highest first)
     for i in 1..keywords.len() {
         assert!(
             keywords[i - 1].score >= keywords[i].score,
@@ -101,12 +95,10 @@ fn test_rake_basic_extraction() {
         );
     }
 
-    // Verify all keywords use RAKE algorithm
     for keyword in &keywords {
         assert_eq!(keyword.algorithm, KeywordAlgorithm::Rake);
     }
 
-    // Verify extracted keywords are relevant to ML
     let keyword_texts: Vec<&str> = keywords.iter().map(|k| k.text.as_str()).collect();
     let relevant_terms = [
         "machine learning",
@@ -127,22 +119,18 @@ fn test_rake_basic_extraction() {
 #[cfg(all(feature = "keywords-yake", feature = "keywords-rake"))]
 #[test]
 fn test_yake_vs_rake_comparison() {
-    // Extract with both algorithms
     let yake_config = KeywordConfig::yake().with_max_keywords(5);
     let rake_config = KeywordConfig::rake().with_max_keywords(5);
 
     let yake_keywords = extract_keywords(ML_DOCUMENT, &yake_config).unwrap();
     let rake_keywords = extract_keywords(ML_DOCUMENT, &rake_config).unwrap();
 
-    // Both should extract keywords
     assert!(!yake_keywords.is_empty(), "YAKE should extract keywords");
     assert!(!rake_keywords.is_empty(), "RAKE should extract keywords");
 
-    // Verify algorithm field is set correctly
     assert!(yake_keywords.iter().all(|k| k.algorithm == KeywordAlgorithm::Yake));
     assert!(rake_keywords.iter().all(|k| k.algorithm == KeywordAlgorithm::Rake));
 
-    // Compare results (algorithms may produce different keywords)
     println!("\nYAKE keywords:");
     for kw in &yake_keywords {
         println!("  {} (score: {:.3})", kw.text, kw.score);
@@ -153,11 +141,9 @@ fn test_yake_vs_rake_comparison() {
         println!("  {} (score: {:.3})", kw.text, kw.score);
     }
 
-    // Check if there's overlap (there should be some common important terms)
     let yake_texts: Vec<&str> = yake_keywords.iter().map(|k| k.text.as_str()).collect();
     let rake_texts: Vec<&str> = rake_keywords.iter().map(|k| k.text.as_str()).collect();
 
-    // At least one keyword should be common (case-insensitive comparison)
     let has_overlap = yake_texts.iter().any(|yt| {
         rake_texts.iter().any(|rt| {
             yt.to_lowercase() == rt.to_lowercase()
@@ -166,7 +152,6 @@ fn test_yake_vs_rake_comparison() {
         })
     });
 
-    // Note: This assertion is flexible - algorithms may find different keywords
     if !has_overlap {
         println!("Note: YAKE and RAKE found completely different keywords, which is possible");
     }
@@ -180,9 +165,7 @@ fn test_yake_with_max_keywords() {
 
     assert!(keywords.len() <= 3, "Should respect max_keywords=3 limit");
 
-    // If we got keywords, they should be the top-scored ones
     if !keywords.is_empty() {
-        // Scores should be decreasing
         for i in 1..keywords.len() {
             assert!(keywords[i - 1].score >= keywords[i].score);
         }
@@ -197,9 +180,7 @@ fn test_rake_with_max_keywords() {
 
     assert!(keywords.len() <= 3, "Should respect max_keywords=3 limit");
 
-    // If we got keywords, they should be the top-scored ones
     if !keywords.is_empty() {
-        // Scores should be decreasing
         for i in 1..keywords.len() {
             assert!(keywords[i - 1].score >= keywords[i].score);
         }
@@ -212,7 +193,6 @@ fn test_yake_with_min_score() {
     let config = KeywordConfig::yake().with_min_score(0.5);
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
-    // All keywords should meet minimum score
     for keyword in &keywords {
         assert!(
             keyword.score >= 0.5,
@@ -229,7 +209,6 @@ fn test_rake_with_min_score() {
     let config = KeywordConfig::rake().with_min_score(0.2);
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
-    // All keywords should meet minimum score
     for keyword in &keywords {
         assert!(
             keyword.score >= 0.2,
@@ -243,7 +222,6 @@ fn test_rake_with_min_score() {
 #[cfg(feature = "keywords-yake")]
 #[test]
 fn test_yake_with_ngram_range() {
-    // Test unigrams only
     let config = KeywordConfig::yake().with_ngram_range(1, 1);
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
@@ -252,14 +230,13 @@ fn test_yake_with_ngram_range() {
         assert_eq!(word_count, 1, "Should only extract unigrams (single words)");
     }
 
-    // Test bigrams and trigrams only
     let config = KeywordConfig::yake().with_ngram_range(2, 3);
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
     for keyword in &keywords {
         let word_count = keyword.text.split_whitespace().count();
         assert!(
-            word_count >= 2 && word_count <= 3,
+            (2..=3).contains(&word_count),
             "Should only extract 2-3 word phrases, got {} words in '{}'",
             word_count,
             keyword.text
@@ -270,7 +247,6 @@ fn test_yake_with_ngram_range() {
 #[cfg(feature = "keywords-rake")]
 #[test]
 fn test_rake_with_ngram_range() {
-    // Test unigrams only
     let config = KeywordConfig::rake().with_ngram_range(1, 1);
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
@@ -279,7 +255,6 @@ fn test_rake_with_ngram_range() {
         assert_eq!(word_count, 1, "Should only extract unigrams (single words)");
     }
 
-    // Test bigrams only
     let config = KeywordConfig::rake().with_ngram_range(2, 2);
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
@@ -297,14 +272,12 @@ fn test_rake_with_spanish() {
 
     assert!(!keywords.is_empty(), "Should extract Spanish keywords");
 
-    // Verify Spanish-specific terms are extracted
     let keyword_texts: Vec<&str> = keywords.iter().map(|k| k.text.as_str()).collect();
     println!("\nSpanish keywords:");
     for kw in &keywords {
         println!("  {} (score: {:.3})", kw.text, kw.score);
     }
 
-    // Check for relevant Spanish terms (case-insensitive)
     let relevant_terms = ["aprendizaje", "inteligencia", "redes neuronales", "lenguaje"];
     let has_relevant = keyword_texts
         .iter()
@@ -325,7 +298,6 @@ fn test_yake_with_spanish() {
 
     assert!(!keywords.is_empty(), "Should extract Spanish keywords");
 
-    // Verify Spanish-specific terms are extracted
     println!("\nYAKE Spanish keywords:");
     for kw in &keywords {
         println!("  {} (score: {:.3})", kw.text, kw.score);
@@ -357,8 +329,6 @@ fn test_rake_short_document() {
     let config = KeywordConfig::rake();
     let keywords = extract_keywords(short_text, &config).unwrap();
 
-    // Should extract at least something from short text
-    // Note: RAKE may return empty for very short texts with all stopwords
     println!(
         "Keywords from short text: {:?}",
         keywords.iter().map(|k| &k.text).collect::<Vec<_>>()
@@ -372,7 +342,6 @@ fn test_yake_short_document() {
     let config = KeywordConfig::yake();
     let keywords = extract_keywords(short_text, &config).unwrap();
 
-    // YAKE should handle short text
     println!(
         "YAKE keywords from short text: {:?}",
         keywords.iter().map(|k| &k.text).collect::<Vec<_>>()
@@ -384,29 +353,24 @@ fn test_yake_short_document() {
 fn test_rake_different_domains() {
     let config = KeywordConfig::rake().with_max_keywords(5);
 
-    // Test ML domain
     let ml_keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
     println!("\nML domain keywords:");
     for kw in &ml_keywords {
         println!("  {} (score: {:.3})", kw.text, kw.score);
     }
 
-    // Test climate domain
     let climate_keywords = extract_keywords(CLIMATE_DOCUMENT, &config).unwrap();
     println!("\nClimate domain keywords:");
     for kw in &climate_keywords {
         println!("  {} (score: {:.3})", kw.text, kw.score);
     }
 
-    // Both should extract domain-relevant keywords
     assert!(!ml_keywords.is_empty(), "Should extract ML keywords");
     assert!(!climate_keywords.is_empty(), "Should extract climate keywords");
 
-    // Keywords should be different (domain-specific)
     let ml_texts: Vec<&str> = ml_keywords.iter().map(|k| k.text.as_str()).collect();
     let climate_texts: Vec<&str> = climate_keywords.iter().map(|k| k.text.as_str()).collect();
 
-    // Check for domain-specific terms
     let has_ml_term = ml_texts.iter().any(|kw| {
         kw.to_lowercase().contains("learn")
             || kw.to_lowercase().contains("neural")
@@ -431,21 +395,18 @@ fn test_rake_different_domains() {
 fn test_yake_different_domains() {
     let config = KeywordConfig::yake().with_max_keywords(5);
 
-    // Test ML domain
     let ml_keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
     println!("\nYAKE ML domain keywords:");
     for kw in &ml_keywords {
         println!("  {} (score: {:.3})", kw.text, kw.score);
     }
 
-    // Test climate domain
     let climate_keywords = extract_keywords(CLIMATE_DOCUMENT, &config).unwrap();
     println!("\nYAKE Climate domain keywords:");
     for kw in &climate_keywords {
         println!("  {} (score: {:.3})", kw.text, kw.score);
     }
 
-    // Both should extract domain-relevant keywords
     assert!(!ml_keywords.is_empty(), "Should extract ML keywords");
     assert!(!climate_keywords.is_empty(), "Should extract climate keywords");
 }
@@ -457,10 +418,9 @@ fn test_rake_score_distribution() {
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
     if keywords.is_empty() {
-        return; // Skip if no keywords extracted
+        return;
     }
 
-    // Verify scores are in valid range [0.0, 1.0]
     for keyword in &keywords {
         assert!(
             keyword.score >= 0.0 && keyword.score <= 1.0,
@@ -470,7 +430,6 @@ fn test_rake_score_distribution() {
         );
     }
 
-    // Verify scores are distributed (not all the same)
     let first_score = keywords[0].score;
     let all_same = keywords.iter().all(|k| (k.score - first_score).abs() < 0.001);
     assert!(!all_same, "Scores should be distributed, not all identical");
@@ -483,10 +442,9 @@ fn test_yake_score_distribution() {
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
     if keywords.is_empty() {
-        return; // Skip if no keywords extracted
+        return;
     }
 
-    // Verify scores are in valid range [0.0, 1.0]
     for keyword in &keywords {
         assert!(
             keyword.score >= 0.0 && keyword.score <= 1.0,
@@ -496,7 +454,6 @@ fn test_yake_score_distribution() {
         );
     }
 
-    // Verify scores are distributed (not all the same)
     let first_score = keywords[0].score;
     let all_same = keywords.iter().all(|k| (k.score - first_score).abs() < 0.001);
     assert!(!all_same, "Scores should be distributed, not all identical");
@@ -509,16 +466,14 @@ fn test_keyword_struct_properties() {
     let keywords = extract_keywords(ML_DOCUMENT, &config).unwrap();
 
     if keywords.is_empty() {
-        return; // Skip if no keywords extracted
+        return;
     }
 
-    // Verify all keywords have required properties
     for keyword in &keywords {
         assert!(!keyword.text.is_empty(), "Keyword text should not be empty");
         assert!(keyword.score >= 0.0, "Score should be non-negative");
         assert!(keyword.score <= 1.0, "Score should not exceed 1.0");
 
-        // Verify text doesn't have leading/trailing whitespace
         assert_eq!(keyword.text.trim(), keyword.text, "Keyword text should be trimmed");
     }
 }

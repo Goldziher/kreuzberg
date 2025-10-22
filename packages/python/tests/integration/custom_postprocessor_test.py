@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """Integration tests for custom PostProcessor registration and execution.
 
 Tests cover:
@@ -21,10 +22,6 @@ from kreuzberg import (
     register_post_processor,
 )
 
-# ============================================================================
-# Fixtures
-# ============================================================================
-
 
 @pytest.fixture(autouse=True)
 def _clear_processors() -> None:
@@ -36,11 +33,6 @@ def _clear_processors() -> None:
     clear_post_processors()
     yield
     clear_post_processors()
-
-
-# ============================================================================
-# Test Processors - Different Stages
-# ============================================================================
 
 
 class EarlyStageProcessor:
@@ -94,11 +86,6 @@ class LateStageProcessor:
         return "late"
 
 
-# ============================================================================
-# Test Processors - Functionality
-# ============================================================================
-
-
 class WordCountProcessor:
     """Processor that adds word count statistics."""
 
@@ -122,7 +109,6 @@ class SentenceCountProcessor:
         return "sentence_count"
 
     def process(self, result: dict) -> dict:
-        # Simple heuristic: count sentence-ending punctuation
         sentence_endings = result["content"].count(".") + result["content"].count("!") + result["content"].count("?")
         result["metadata"]["sentence_count"] = max(1, sentence_endings)
         return result
@@ -138,7 +124,6 @@ class UppercaseTagProcessor:
         return "uppercase_tag"
 
     def process(self, result: dict) -> dict:
-        # Check if majority of text is uppercase
         text = result["content"]
         alpha_chars = [c for c in text if c.isalpha()]
         if alpha_chars:
@@ -193,7 +178,6 @@ class ErrorHandlingProcessor:
                 raise ValueError(msg)
             result["metadata"]["error_handler_success"] = True
         except Exception as e:
-            # Graceful degradation - don't crash the pipeline
             result["metadata"]["error_handler_error"] = str(e)
 
         return result
@@ -202,21 +186,14 @@ class ErrorHandlingProcessor:
         return "middle"
 
 
-# ============================================================================
-# Tests - Single Processor Registration
-# ============================================================================
-
-
 def test_register_early_stage_processor() -> None:
     """Test registering and executing an early-stage processor."""
     processor = EarlyStageProcessor()
     register_post_processor(processor)
 
-    # Create test extraction
     test_content = "This is a test document."
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # Verify processor executed
     assert result.metadata.get("early_executed") is True
     assert "early" in result.metadata.get("execution_order", [])
 
@@ -245,14 +222,8 @@ def test_register_late_stage_processor() -> None:
     assert "late" in result.metadata.get("execution_order", [])
 
 
-# ============================================================================
-# Tests - Multiple Processors and Ordering
-# ============================================================================
-
-
 def test_multiple_processors_execution_order() -> None:
     """Test that multiple processors execute in stage order."""
-    # Register processors in reverse order to test sorting
     late_proc = LateStageProcessor()
     middle_proc = MiddleStageProcessor()
     early_proc = EarlyStageProcessor()
@@ -264,18 +235,15 @@ def test_multiple_processors_execution_order() -> None:
     test_content = "Test content for ordering."
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # Verify all executed
     assert result.metadata.get("early_executed") is True
     assert result.metadata.get("middle_executed") is True
     assert result.metadata.get("late_executed") is True
 
-    # Verify execution order: early -> middle -> late
     execution_order = result.metadata.get("execution_order", [])
     assert "early" in execution_order
     assert "middle" in execution_order
     assert "late" in execution_order
 
-    # Early should come before middle, middle before late
     early_idx = execution_order.index("early")
     middle_idx = execution_order.index("middle")
     late_idx = execution_order.index("late")
@@ -294,18 +262,11 @@ def test_multiple_processors_same_stage() -> None:
     test_content = "Hello world. This is a test. How are you?"
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # Both should execute
     assert "word_count" in result.metadata
     assert "sentence_count" in result.metadata
 
-    # Verify counts
-    assert result.metadata["word_count"] == 9  # 9 words
-    assert result.metadata["sentence_count"] == 3  # 3 sentences
-
-
-# ============================================================================
-# Tests - Metadata Modification
-# ============================================================================
+    assert result.metadata["word_count"] == 9
+    assert result.metadata["sentence_count"] == 3
 
 
 def test_processor_adds_metadata() -> None:
@@ -316,11 +277,9 @@ def test_processor_adds_metadata() -> None:
     test_content = "One two three four five."
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # Verify new metadata added
     assert result.metadata["word_count"] == 5
     assert result.metadata["character_count"] == len(test_content)
 
-    # Verify existing metadata not removed (mime_type should exist)
     assert "mime_type" in result.metadata or result.mime_type == "text/plain"
 
 
@@ -337,34 +296,23 @@ def test_processor_chain_metadata_accumulation() -> None:
     test_content = "HELLO WORLD. THIS IS A TEST."
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # All processors should have added their metadata
     assert "word_count" in result.metadata
     assert "sentence_count" in result.metadata
     assert "uppercase_ratio" in result.metadata
     assert result.metadata["is_mostly_uppercase"] is True
 
 
-# ============================================================================
-# Tests - Initialization and Lifecycle
-# ============================================================================
-
-
 def test_processor_initialization() -> None:
     """Test that initialize() is called on processor registration."""
     processor = InitializableProcessor()
 
-    # Should not be initialized yet
     assert processor.initialized is False
 
     register_post_processor(processor)
 
-    # After registration, should be initialized
-    # Note: This depends on the FFI bridge calling initialize()
-    # We can verify it was called when the processor runs
     test_content = "Test initialization."
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # Processor should report it was initialized when it ran
     assert result.metadata.get("processor_initialized") is True
     assert result.metadata.get("processor_call_count", 0) > 0
 
@@ -374,21 +322,13 @@ def test_processor_multiple_calls() -> None:
     processor = InitializableProcessor()
     register_post_processor(processor)
 
-    # First extraction
     result1 = extract_bytes_sync(b"First call.", "text/plain", ExtractionConfig())
     count1 = result1.metadata.get("processor_call_count", 0)
 
-    # Second extraction
     result2 = extract_bytes_sync(b"Second call.", "text/plain", ExtractionConfig())
     count2 = result2.metadata.get("processor_call_count", 0)
 
-    # Call count should increase (processor is reused)
     assert count2 > count1
-
-
-# ============================================================================
-# Tests - Error Handling
-# ============================================================================
 
 
 def test_processor_error_handling_graceful() -> None:
@@ -399,7 +339,6 @@ def test_processor_error_handling_graceful() -> None:
     test_content = "Test error handling."
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # Should succeed
     assert result.metadata.get("error_handler_success") is True
     assert "error_handler_error" not in result.metadata
 
@@ -412,14 +351,8 @@ def test_processor_error_handling_with_failure() -> None:
     test_content = "Test error handling with failure."
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # Should have captured the error
     assert "error_handler_error" in result.metadata
     assert "Intentional error" in result.metadata["error_handler_error"]
-
-
-# ============================================================================
-# Tests - PostProcessorConfig Integration
-# ============================================================================
 
 
 def test_postprocessor_config_enabled() -> None:
@@ -429,18 +362,14 @@ def test_postprocessor_config_enabled() -> None:
 
     test_content = "Test with postprocessing enabled."
 
-    # With postprocessing enabled (default)
     config_enabled = ExtractionConfig(postprocessor=PostProcessorConfig(enabled=True))
     result_enabled = extract_bytes_sync(test_content.encode(), "text/plain", config_enabled)
 
-    # Should have word count
     assert "word_count" in result_enabled.metadata
 
-    # With postprocessing disabled
     config_disabled = ExtractionConfig(postprocessor=PostProcessorConfig(enabled=False))
     result_disabled = extract_bytes_sync(test_content.encode(), "text/plain", config_disabled)
 
-    # Should NOT have word count
     assert "word_count" not in result_disabled.metadata
 
 
@@ -454,20 +383,17 @@ def test_postprocessor_config_whitelist() -> None:
 
     test_content = "Test whitelist. Second sentence."
 
-    # Only enable word_count processor
     config = ExtractionConfig(
         postprocessor=PostProcessorConfig(
             enabled=True,
-            enabled_processors=["word_count"],  # Only word_count
+            enabled_processors=["word_count"],
         )
     )
 
     result = extract_bytes_sync(test_content.encode(), "text/plain", config)
 
-    # word_count should be present
     assert "word_count" in result.metadata
 
-    # sentence_count should NOT be present (not in whitelist)
     assert "sentence_count" not in result.metadata
 
 
@@ -481,31 +407,22 @@ def test_postprocessor_config_blacklist() -> None:
 
     test_content = "Test blacklist. Second sentence."
 
-    # Disable sentence_count processor
     config = ExtractionConfig(
         postprocessor=PostProcessorConfig(
             enabled=True,
-            disabled_processors=["sentence_count"],  # Blacklist sentence_count
+            disabled_processors=["sentence_count"],
         )
     )
 
     result = extract_bytes_sync(test_content.encode(), "text/plain", config)
 
-    # word_count should be present
     assert "word_count" in result.metadata
 
-    # sentence_count should NOT be present (blacklisted)
     assert "sentence_count" not in result.metadata
-
-
-# ============================================================================
-# Tests - Real-World Scenarios
-# ============================================================================
 
 
 def test_realistic_text_analysis_pipeline() -> None:
     """Test a realistic pipeline with multiple analysis processors."""
-    # Register a chain of processors
     word_proc = WordCountProcessor()
     sentence_proc = SentenceCountProcessor()
     uppercase_proc = UppercaseTagProcessor()
@@ -520,7 +437,6 @@ Deep learning uses neural networks with multiple layers."""
 
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # Verify all analysis was performed
     assert result.metadata["word_count"] == 26
     assert result.metadata["sentence_count"] == 3
     assert result.metadata["is_mostly_uppercase"] is False
@@ -534,7 +450,6 @@ def test_processor_with_empty_content() -> None:
 
     result = extract_bytes_sync(b"", "text/plain", ExtractionConfig())
 
-    # Should handle empty content
     assert result.metadata["word_count"] == 0
     assert result.metadata["character_count"] == 0
 
@@ -547,14 +462,8 @@ def test_processor_with_unicode_content() -> None:
     test_content = "Hello 世界! Здравствуй мир! مرحبا بالعالم!"
     result = extract_bytes_sync(test_content.encode("utf-8"), "text/plain", ExtractionConfig())
 
-    # Should count all words including Unicode
     assert result.metadata["word_count"] > 0
     assert result.metadata["character_count"] == len(test_content)
-
-
-# ============================================================================
-# Tests - Edge Cases
-# ============================================================================
 
 
 def test_processor_name_uniqueness() -> None:
@@ -562,7 +471,7 @@ def test_processor_name_uniqueness() -> None:
 
     class DuplicateNameProcessor:
         def name(self) -> str:
-            return "word_count"  # Same as WordCountProcessor
+            return "word_count"
 
         def process(self, result: dict) -> dict:
             result["metadata"]["duplicate"] = True
@@ -575,17 +484,11 @@ def test_processor_name_uniqueness() -> None:
     proc2 = DuplicateNameProcessor()
 
     register_post_processor(proc1)
-    # Registering with duplicate name should either:
-    # 1. Replace the existing processor, OR
-    # 2. Raise an error
-    # (Implementation dependent - document the behavior)
     register_post_processor(proc2)
 
     test_content = "Test duplicate names."
     result = extract_bytes_sync(test_content.encode(), "text/plain", ExtractionConfig())
 
-    # At least one should have executed
-    # (Exact behavior depends on Rust FFI bridge implementation)
     has_word_count = "word_count" in result.metadata
     has_duplicate = "duplicate" in result.metadata
 
@@ -603,10 +506,6 @@ def test_processor_without_optional_methods() -> None:
             result["metadata"]["minimal_executed"] = True
             return result
 
-        # No processing_stage() - should default to "middle"
-        # No initialize() - should work without it
-        # No shutdown() - should work without it
-
     processor = MinimalProcessor()
     register_post_processor(processor)
 
@@ -615,10 +514,6 @@ def test_processor_without_optional_methods() -> None:
 
     assert result.metadata.get("minimal_executed") is True
 
-
-# ============================================================================
-# Marker for pytest
-# ============================================================================
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

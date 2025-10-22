@@ -630,7 +630,6 @@ mod tests {
         let results = processor.process_files_batch(file_paths, &config);
         assert_eq!(results.len(), 3);
 
-        // All should fail (files don't exist)
         for result in &results {
             assert!(!result.success);
             assert!(result.error.is_some());
@@ -761,7 +760,6 @@ mod tests {
         let mut config = create_test_config();
         config.use_cache = false;
 
-        // Invalid image should fail regardless of cache setting
         let invalid_data = vec![0, 1, 2, 3];
         let result = processor.process_image(&invalid_data, &config);
 
@@ -809,15 +807,11 @@ mod tests {
 
     #[test]
     fn test_log_ci_debug_disabled() {
-        // Test that logging with disabled flag doesn't panic
         log_ci_debug(false, "test_stage", || "test message".to_string());
-        // If we get here, no panic occurred
     }
 
     #[test]
     fn test_log_ci_debug_enabled() {
-        // Test that logging with enabled flag doesn't panic
         log_ci_debug(true, "test_stage", || "test message".to_string());
-        // If we get here, no panic occurred
     }
 }

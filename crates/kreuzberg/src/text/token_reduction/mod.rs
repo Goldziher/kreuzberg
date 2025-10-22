@@ -8,7 +8,8 @@ mod simd_text;
 pub use config::{ReductionLevel, TokenReductionConfig};
 pub use core::TokenReducer;
 
-// Public API functions
+// TODO: reorganize token_reduction - move out of text, and reorganize text properly into utils etc.
+
 pub fn reduce_tokens(
     text: &str,
     config: &TokenReductionConfig,

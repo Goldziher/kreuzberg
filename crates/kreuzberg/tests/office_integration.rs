@@ -16,10 +16,6 @@ use helpers::*;
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::extract_file_sync;
 
-// ============================================================================
-// DOCX (Word) Document Tests
-// ============================================================================
-
 #[test]
 fn test_docx_simple_text() {
     if skip_if_missing("documents/fake.docx") {
@@ -37,7 +33,6 @@ fn test_docx_simple_text() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 20);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -64,7 +59,6 @@ fn test_docx_with_tables() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -73,9 +67,6 @@ fn test_docx_with_tables() {
         !result.metadata.additional.is_empty(),
         "Office document should have metadata"
     );
-
-    // Table extraction is optional - just verify we got content
-    // If tables are extracted, they'll be in result.tables
 }
 
 #[test]
@@ -94,7 +85,6 @@ fn test_docx_with_headers() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -121,7 +111,6 @@ fn test_docx_with_lists() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -148,7 +137,6 @@ fn test_docx_with_formatting() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -175,7 +163,6 @@ fn test_docx_with_equations() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -185,10 +172,6 @@ fn test_docx_with_equations() {
         "Office document should have metadata"
     );
 }
-
-// ============================================================================
-// XLSX (Excel) Spreadsheet Tests
-// ============================================================================
 
 #[test]
 fn test_xlsx_simple_spreadsheet() {
@@ -206,7 +189,6 @@ fn test_xlsx_simple_spreadsheet() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -230,14 +212,12 @@ fn test_xlsx_multi_sheet() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "excel")]
     assert!(!result.metadata.additional.is_empty(), "Excel should have metadata");
 
-    // Multi-sheet workbook should have substantial content
     assert_min_content_length(&result, 50);
 }
 
@@ -258,7 +238,6 @@ fn test_xlsx_with_data() {
     assert_non_empty_content(&result);
     assert_min_content_length(&result, 100);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -279,17 +258,12 @@ fn test_xls_legacy_format() {
     assert_mime_type(&result, "application/vnd.ms-excel");
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "excel")]
     assert!(!result.metadata.additional.is_empty(), "Excel should have metadata");
 }
-
-// ============================================================================
-// PPTX (PowerPoint) Presentation Tests
-// ============================================================================
 
 #[test]
 fn test_pptx_simple_presentation() {
@@ -307,7 +281,6 @@ fn test_pptx_simple_presentation() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -334,7 +307,6 @@ fn test_pptx_with_images() {
     );
     assert_non_empty_content(&result);
 
-    // Verify ExtractionResult structure
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
@@ -354,8 +326,6 @@ fn test_pptx_pitch_deck() {
     let file_path = get_test_file_path("presentations/pitch_deck_presentation.pptx");
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default());
 
-    // Some PPTX files may have unusual internal structures
-    // If extraction fails due to archive issues, this is expected behavior
     match result {
         Ok(extraction_result) => {
             assert_mime_type(
@@ -365,7 +335,6 @@ fn test_pptx_pitch_deck() {
             assert_non_empty_content(&extraction_result);
             assert_min_content_length(&extraction_result, 100);
 
-            // Verify ExtractionResult structure
             assert!(
                 extraction_result.chunks.is_none(),
                 "Chunks should be None without chunking config"
@@ -382,15 +351,10 @@ fn test_pptx_pitch_deck() {
             );
         }
         Err(e) => {
-            // File has unusual structure that causes parsing errors
             eprintln!("Pitch deck extraction failed (unusual PPTX structure): {}", e);
         }
     }
 }
-
-// ============================================================================
-// Legacy Office Format Tests (DOC, PPT)
-// ============================================================================
 
 #[test]
 fn test_doc_legacy_word() {
@@ -401,14 +365,11 @@ fn test_doc_legacy_word() {
     let file_path = get_test_file_path("legacy_office/unit_test_lists.doc");
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default());
 
-    // Legacy DOC requires LibreOffice conversion
-    // If LibreOffice is not available, extraction may fail
     match result {
         Ok(extraction_result) => {
             assert_mime_type(&extraction_result, "application/msword");
             assert_non_empty_content(&extraction_result);
 
-            // Verify ExtractionResult structure
             assert!(
                 extraction_result.chunks.is_none(),
                 "Chunks should be None without chunking config"
@@ -419,7 +380,6 @@ fn test_doc_legacy_word() {
             );
         }
         Err(e) => {
-            // If LibreOffice is not installed, this is expected
             eprintln!("Legacy DOC extraction failed (LibreOffice may not be installed): {}", e);
         }
     }
@@ -434,14 +394,11 @@ fn test_ppt_legacy_powerpoint() {
     let file_path = get_test_file_path("legacy_office/simple.ppt");
     let result = extract_file_sync(&file_path, None, &ExtractionConfig::default());
 
-    // Legacy PPT requires LibreOffice conversion
-    // If LibreOffice is not available, extraction may fail
     match result {
         Ok(extraction_result) => {
             assert_mime_type(&extraction_result, "application/vnd.ms-powerpoint");
             assert_non_empty_content(&extraction_result);
 
-            // Verify ExtractionResult structure
             assert!(
                 extraction_result.chunks.is_none(),
                 "Chunks should be None without chunking config"
@@ -452,7 +409,6 @@ fn test_ppt_legacy_powerpoint() {
             );
         }
         Err(e) => {
-            // If LibreOffice is not installed, this is expected
             eprintln!("Legacy PPT extraction failed (LibreOffice may not be installed): {}", e);
         }
     }
