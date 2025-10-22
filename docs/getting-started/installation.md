@@ -45,6 +45,13 @@ Kreuzberg is available for Python, TypeScript/Node.js, and as a standalone CLI v
     pip install "kreuzberg[langdetect]"
     ```
 
+    !!! warning "Python 3.14 Compatibility"
+        The `easyocr` and `paddleocr` extras are currently **not supported on Python 3.14** due to upstream compatibility issues with EasyOCR, PaddleOCR, and PyTorch.
+
+        These features are available on Python 3.10-3.13. If you need OCR functionality on Python 3.14, use the built-in Tesseract backend instead (no extra installation required).
+
+        Support for Python 3.14 will be added once the upstream packages release compatible versions.
+
     ### Verify Installation
 
     ```python
