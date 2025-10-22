@@ -87,8 +87,9 @@ impl ExtractionResult {
     /// - detected_languages Vec -> PyList
     /// - serde_json::Value -> Python objects
     pub fn from_rust(result: kreuzberg::ExtractionResult, py: Python) -> PyResult<Self> {
-        let metadata_json = serde_json::to_value(&result.metadata)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to serialize metadata: {}", e)))?;
+        let metadata_json = serde_json::to_value(&result.metadata).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to serialize metadata: {}", e))
+        })?;
         let metadata_py = json_value_to_py(py, &metadata_json)?;
         let metadata = metadata_py.cast_into::<PyDict>()?.clone().unbind();
 

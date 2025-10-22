@@ -3,8 +3,8 @@
 //! Demonstrates basic document extraction with Kreuzberg Rust crate.
 
 use kreuzberg::{
-    batch_extract_files, batch_extract_files_sync, extract_bytes, extract_bytes_sync,
-    extract_file, extract_file_sync, ChunkingConfig, ExtractionConfig, OcrConfig,
+    ChunkingConfig, ExtractionConfig, OcrConfig, batch_extract_files, batch_extract_files_sync, extract_bytes,
+    extract_bytes_sync, extract_file, extract_file_sync,
 };
 
 #[tokio::main]
@@ -14,7 +14,10 @@ async fn main() -> kreuzberg::Result<()> {
     let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default())?;
     println!("Content length: {} characters", result.content.len());
     println!("MIME type: {}", result.mime_type);
-    println!("First 200 chars: {}...", &result.content[..200.min(result.content.len())]);
+    println!(
+        "First 200 chars: {}...",
+        &result.content[..200.min(result.content.len())]
+    );
 
     // With configuration
     println!("\n=== With Configuration ===");

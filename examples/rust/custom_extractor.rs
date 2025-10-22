@@ -4,12 +4,8 @@
 
 use async_trait::async_trait;
 use kreuzberg::{
-    extract_file, extract_file_sync,
-    plugins::{
-        extractor::DocumentExtractor,
-        registry::get_document_extractor_registry,
-    },
-    ExtractionConfig, ExtractionResult, KreuzbergError, Metadata,
+    ExtractionConfig, ExtractionResult, KreuzbergError, Metadata, extract_file, extract_file_sync,
+    plugins::{extractor::DocumentExtractor, registry::get_document_extractor_registry},
 };
 use std::sync::Arc;
 
@@ -83,7 +79,7 @@ impl DocumentExtractor for CSVExtractor {
     }
 
     fn priority(&self) -> i32 {
-        100  // Higher priority than built-in extractor
+        100 // Higher priority than built-in extractor
     }
 
     async fn extract(
@@ -93,11 +89,9 @@ impl DocumentExtractor for CSVExtractor {
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult, KreuzbergError> {
         // Convert bytes to string
-        let content = String::from_utf8(data.to_vec()).map_err(|e| {
-            KreuzbergError::Parsing {
-                message: format!("Invalid UTF-8 in CSV file: {}", e),
-                source: None,
-            }
+        let content = String::from_utf8(data.to_vec()).map_err(|e| KreuzbergError::Parsing {
+            message: format!("Invalid UTF-8 in CSV file: {}", e),
+            source: None,
         })?;
 
         // Detect delimiter
@@ -278,7 +272,13 @@ async fn main() -> kreuzberg::Result<()> {
 
     // Use binary format extractor
     println!("\n=== Extracting Binary File ===");
-    match extract_file("custom.bin", Some("application/x-custom-binary"), &ExtractionConfig::default()).await {
+    match extract_file(
+        "custom.bin",
+        Some("application/x-custom-binary"),
+        &ExtractionConfig::default(),
+    )
+    .await
+    {
         Ok(result) => {
             println!("Extracted binary file:");
             println!("{}", result.content);

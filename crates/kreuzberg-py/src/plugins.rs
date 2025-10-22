@@ -965,29 +965,28 @@ impl Validator for PythonValidator {
             })?;
 
             let py_result = result_dict.bind(py);
-            obj
-                .call_method1("validate", (py_result,))
-                .map_err(|e| {
-                    // Check if it's a ValidationError from Python
-                    let is_validation_error = e.is_instance_of::<pyo3::exceptions::PyValueError>(py)
-                        || e.get_type(py).name()
-                            .ok()
-                            .and_then(|n| n.to_str().ok().map(|s| s.to_string()))
-                            .map(|s| s.contains("ValidationError"))
-                            .unwrap_or(false);
+            obj.call_method1("validate", (py_result,)).map_err(|e| {
+                // Check if it's a ValidationError from Python
+                let is_validation_error = e.is_instance_of::<pyo3::exceptions::PyValueError>(py)
+                    || e.get_type(py)
+                        .name()
+                        .ok()
+                        .and_then(|n| n.to_str().ok().map(|s| s.to_string()))
+                        .map(|s| s.contains("ValidationError"))
+                        .unwrap_or(false);
 
-                    if is_validation_error {
-                        KreuzbergError::Validation {
-                            message: e.to_string(),
-                            source: None,
-                        }
-                    } else {
-                        KreuzbergError::Plugin {
-                            message: format!("Python Validator '{}' failed during validate: {}", validator_name, e),
-                            plugin_name: validator_name.clone(),
-                        }
+                if is_validation_error {
+                    KreuzbergError::Validation {
+                        message: e.to_string(),
+                        source: None,
                     }
-                })?;
+                } else {
+                    KreuzbergError::Plugin {
+                        message: format!("Python Validator '{}' failed during validate: {}", validator_name, e),
+                        plugin_name: validator_name.clone(),
+                    }
+                }
+            })?;
 
             Ok(())
         })
