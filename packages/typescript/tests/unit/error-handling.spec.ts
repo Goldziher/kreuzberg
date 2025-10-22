@@ -1,15 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-	extractFile,
-	extractFileSync,
-	extractBytes,
-	extractBytesSync,
 	batchExtractFiles,
 	batchExtractFilesSync,
+	clearPostProcessors,
+	extractBytes,
+	extractBytesSync,
+	extractFile,
+	extractFileSync,
+	registerOcrBackend,
 	registerPostProcessor,
 	unregisterPostProcessor,
-	clearPostProcessors,
-	registerOcrBackend,
 } from "../../src/index.js";
 
 describe("Error Handling", () => {
@@ -21,9 +21,7 @@ describe("Error Handling", () => {
 		});
 
 		it("should throw error for non-existent file (async)", async () => {
-			await expect(
-				extractFile("/nonexistent/file/path.pdf", null, null),
-			).rejects.toThrow();
+			await expect(extractFile("/nonexistent/file/path.pdf", null, null)).rejects.toThrow();
 		});
 
 		it("should throw error for invalid file path", () => {
@@ -43,9 +41,7 @@ describe("Error Handling", () => {
 
 		it("should throw error for unsupported MIME type (async)", async () => {
 			const data = new Uint8Array([1, 2, 3, 4]);
-			await expect(
-				extractBytes(data, "application/x-fake-mime-type", null),
-			).rejects.toThrow();
+			await expect(extractBytes(data, "application/x-fake-mime-type", null)).rejects.toThrow();
 		});
 
 		it("should throw error for empty MIME type", () => {

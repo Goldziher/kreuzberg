@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { extractFileSync, extractBytesSync } from "../../src/index.js";
+import { describe, expect, it } from "vitest";
+import { extractBytesSync, extractFileSync } from "../../src/index.js";
 
 function getTestDocumentPath(relativePath: string): string {
 	const workspaceRoot = join(process.cwd(), "../..");
@@ -54,20 +54,13 @@ describe("Helper Functions and Edge Cases", () => {
 		it("should handle detectedLanguages as null when not enabled", () => {
 			const result = extractFileSync(pdfPath, null, null);
 
-			expect(
-				result.detectedLanguages === null ||
-					Array.isArray(result.detectedLanguages),
-			).toBe(true);
+			expect(result.detectedLanguages === null || Array.isArray(result.detectedLanguages)).toBe(true);
 		});
 
 		it("should handle chunks as null when not configured", () => {
 			const result = extractFileSync(pdfPath, null, null);
 
-			expect(
-				result.chunks === null ||
-					result.chunks === undefined ||
-					Array.isArray(result.chunks),
-			).toBe(true);
+			expect(result.chunks === null || result.chunks === undefined || Array.isArray(result.chunks)).toBe(true);
 		});
 
 		it("should preserve metadata when already an object", () => {

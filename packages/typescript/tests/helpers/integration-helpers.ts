@@ -1,9 +1,8 @@
-import { join } from "node:path";
 import { existsSync } from "node:fs";
+import { join } from "node:path";
+import archiver from "archiver";
 import { expect } from "vitest";
 import type { ExtractionResult, Metadata } from "../../src/types.js";
-import archiver from "archiver";
-import { Readable } from "node:stream";
 
 /**
  * Get path to test document in the repository's test_documents directory.
@@ -32,10 +31,7 @@ export function testDocumentsAvailable(): boolean {
  * @param result - Extraction result
  * @param expectedMimeType - Expected MIME type (can be partial match)
  */
-export function assertMimeType(
-	result: ExtractionResult,
-	expectedMimeType: string,
-): void {
+export function assertMimeType(result: ExtractionResult, expectedMimeType: string): void {
 	expect(result.mimeType).toContain(expectedMimeType);
 }
 
@@ -45,10 +41,7 @@ export function assertMimeType(
  * @param result - Extraction result
  * @param minLength - Minimum content length (default: 1)
  */
-export function assertNonEmptyContent(
-	result: ExtractionResult,
-	minLength = 1,
-): void {
+export function assertNonEmptyContent(result: ExtractionResult, minLength = 1): void {
 	expect(result.content).toBeTruthy();
 	expect(result.content.length).toBeGreaterThanOrEqual(minLength);
 }
@@ -59,9 +52,7 @@ export function assertNonEmptyContent(
  *
  * @param result - Extraction result
  */
-export function assertValidExtractionResult(
-	result: ExtractionResult,
-): void {
+export function assertValidExtractionResult(result: ExtractionResult): void {
 	expect(result).toHaveProperty("content");
 	expect(result).toHaveProperty("mimeType");
 	expect(result).toHaveProperty("metadata");
@@ -140,18 +131,12 @@ export function assertImageMetadata(metadata: Metadata): void {
  * @param expectedWords - Words expected in the content
  * @param minConfidence - Minimum acceptable confidence (default: 0.3)
  */
-export function assertOcrResult(
-	result: ExtractionResult,
-	expectedWords: string[],
-	minConfidence = 0.3,
-): void {
+export function assertOcrResult(result: ExtractionResult, expectedWords: string[], minConfidence = 0.3): void {
 	assertValidExtractionResult(result);
 
 	const contentLower = result.content.toLowerCase().replace(/\n/g, " ").trim();
 
-	const foundWords = expectedWords.filter((word) =>
-		contentLower.includes(word.toLowerCase()),
-	);
+	const foundWords = expectedWords.filter((word) => contentLower.includes(word.toLowerCase()));
 
 	expect(foundWords.length).toBeGreaterThan(0);
 
@@ -174,10 +159,7 @@ export function assertOcrResult(
  * @param result - Extraction result
  * @param minBytes - Minimum content size in bytes
  */
-export function assertSubstantialContent(
-	result: ExtractionResult,
-	minBytes = 1000,
-): void {
+export function assertSubstantialContent(result: ExtractionResult, minBytes = 1000): void {
 	assertNonEmptyContent(result, minBytes);
 	expect(result.content.length).toBeGreaterThanOrEqual(minBytes);
 }
@@ -188,10 +170,7 @@ export function assertSubstantialContent(
  * @param result - Extraction result
  * @param minTables - Minimum number of tables expected
  */
-export function assertTablesExtracted(
-	result: ExtractionResult,
-	minTables = 1,
-): void {
+export function assertTablesExtracted(result: ExtractionResult, minTables = 1): void {
 	expect(result.tables.length).toBeGreaterThanOrEqual(minTables);
 
 	for (const table of result.tables) {
@@ -228,9 +207,7 @@ export function assertMarkdownConversion(result: ExtractionResult): void {
  * @param files - Map of file paths to file contents (string or Buffer)
  * @returns Promise resolving to ZIP archive as Uint8Array
  */
-export async function createZip(
-	files: Record<string, string | Buffer | Uint8Array>,
-): Promise<Uint8Array> {
+export async function createZip(files: Record<string, string | Buffer | Uint8Array>): Promise<Uint8Array> {
 	return new Promise<Uint8Array>((resolve, reject) => {
 		const archive = archiver("zip", { zlib: { level: 9 } });
 		const chunks: Buffer[] = [];
@@ -251,10 +228,7 @@ export async function createZip(
 			if (typeof content === "string") {
 				archive.append(content, { name: path });
 			} else {
-				archive.append(
-					content instanceof Uint8Array ? Buffer.from(content) : (content as Buffer),
-					{ name: path },
-				);
+				archive.append(content instanceof Uint8Array ? Buffer.from(content) : (content as Buffer), { name: path });
 			}
 		}
 
@@ -268,9 +242,7 @@ export async function createZip(
  * @param files - Map of file paths to file contents (string or Buffer)
  * @returns Promise resolving to TAR archive as Uint8Array
  */
-export async function createTar(
-	files: Record<string, string | Buffer | Uint8Array>,
-): Promise<Uint8Array> {
+export async function createTar(files: Record<string, string | Buffer | Uint8Array>): Promise<Uint8Array> {
 	return new Promise<Uint8Array>((resolve, reject) => {
 		const archive = archiver("tar", {});
 		const chunks: Buffer[] = [];
@@ -291,10 +263,7 @@ export async function createTar(
 			if (typeof content === "string") {
 				archive.append(content, { name: path });
 			} else {
-				archive.append(
-					content instanceof Uint8Array ? Buffer.from(content) : (content as Buffer),
-					{ name: path },
-				);
+				archive.append(content instanceof Uint8Array ? Buffer.from(content) : (content as Buffer), { name: path });
 			}
 		}
 

@@ -220,9 +220,7 @@ export interface PostProcessorProtocol {
 	 * @param result - ExtractionResult with extracted content, metadata, and tables
 	 * @returns Modified result with enriched metadata
 	 */
-	process(
-		result: ExtractionResult,
-	): ExtractionResult | Promise<ExtractionResult>;
+	process(result: ExtractionResult): ExtractionResult | Promise<ExtractionResult>;
 
 	/**
 	 * Return the processing stage for this processor.
@@ -310,10 +308,7 @@ export interface OcrBackendProtocol {
 	 * @param language - Language code (e.g., "eng", "deu")
 	 * @returns Extracted text
 	 */
-	extractText(
-		imageBytes: Uint8Array,
-		language: string,
-	): string | Promise<string>;
+	extractText(imageBytes: Uint8Array, language: string): string | Promise<string>;
 }
 
 export interface ValidatorProtocol {

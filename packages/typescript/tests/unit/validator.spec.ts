@@ -5,12 +5,12 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-	type ExtractionResult,
-	type ValidatorProtocol,
 	clearValidators,
+	type ExtractionResult,
 	extractBytes,
 	registerValidator,
 	unregisterValidator,
+	type ValidatorProtocol,
 } from "../../src/index.js";
 
 describe("Validator Plugin System", () => {
@@ -35,11 +35,7 @@ describe("Validator Plugin System", () => {
 
 		registerValidator(new AlwaysPassValidator());
 
-		const result = await extractBytes(
-			Buffer.from("Test content"),
-			"text/plain",
-			null,
-		);
+		const result = await extractBytes(Buffer.from("Test content"), "text/plain", null);
 		expect(result.content).toBe("Test content");
 	});
 
@@ -58,9 +54,9 @@ describe("Validator Plugin System", () => {
 
 		registerValidator(new ContentLengthValidator());
 
-		await expect(
-			extractBytes(Buffer.from("Short"), "text/plain", null),
-		).rejects.toThrow(/ValidationError|Content too short/);
+		await expect(extractBytes(Buffer.from("Short"), "text/plain", null)).rejects.toThrow(
+			/ValidationError|Content too short/,
+		);
 	});
 
 	it("should execute validators in priority order", async () => {
@@ -118,11 +114,7 @@ describe("Validator Plugin System", () => {
 		unregisterValidator("fail_validator");
 
 		// Should not throw because validator was unregistered
-		const result = await extractBytes(
-			Buffer.from("Test"),
-			"text/plain",
-			null,
-		);
+		const result = await extractBytes(Buffer.from("Test"), "text/plain", null);
 		expect(result.content).toBe("Test");
 	});
 
@@ -141,11 +133,7 @@ describe("Validator Plugin System", () => {
 		clearValidators();
 
 		// Should not throw because validators were cleared
-		const result = await extractBytes(
-			Buffer.from("Test"),
-			"text/plain",
-			null,
-		);
+		const result = await extractBytes(Buffer.from("Test"), "text/plain", null);
 		expect(result.content).toBe("Test");
 	});
 
@@ -178,11 +166,7 @@ describe("Validator Plugin System", () => {
 		registerValidator(new LengthValidator());
 		registerValidator(new WordCountValidator());
 
-		const result = await extractBytes(
-			Buffer.from("Hello world"),
-			"text/plain",
-			null,
-		);
+		const result = await extractBytes(Buffer.from("Hello world"), "text/plain", null);
 		expect(result.content).toBe("Hello world");
 	});
 
@@ -220,9 +204,7 @@ describe("Validator Plugin System", () => {
 		registerValidator(new FirstValidator());
 		registerValidator(new SecondValidator());
 
-		await expect(
-			extractBytes(Buffer.from("Test"), "text/plain", null),
-		).rejects.toThrow();
+		await expect(extractBytes(Buffer.from("Test"), "text/plain", null)).rejects.toThrow();
 
 		expect(secondCalled).toBe(false);
 	});

@@ -1,72 +1,72 @@
 {
-  "name": "kreuzberg",
-  "version": "4.0.0",
-  "description": "Multi-language document intelligence framework - TypeScript SDK",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    },
-    "./cli": {
-      "types": "./dist/cli.d.ts",
-      "import": "./dist/cli.mjs",
-      "require": "./dist/cli.js"
-    }
-  },
-  "bin": {
-    "kreuzberg": "./dist/cli.js"
-  },
-  "scripts": {
-    "build": "tsup",
-    "test": "pnpm test:unit && pnpm test:integration",
-    "test:unit": "vitest run tests/unit/",
-    "test:integration": "vitest run tests/integration/pdf.spec.ts tests/integration/ocr.spec.ts && vitest run tests/integration/formats.spec.ts -t 'DOCX|XLSX|PPTX' && vitest run tests/integration/formats.spec.ts -t 'JSON|YAML|XML|email|Markdown|plain'",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage tests/unit/ tests/integration/pdf.spec.ts tests/integration/ocr.spec.ts",
-    "typecheck": "tsc --noEmit",
-    "lint": "biome check src && oxlint src",
-    "lint:fix": "biome check --write src",
-    "format": "biome format --write src",
-    "clean": "rm -rf dist node_modules"
-  },
-  "keywords": [
-    "document",
-    "extraction",
-    "ocr",
-    "pdf",
-    "rust",
-    "typescript"
-  ],
-  "repository": "https://github.com/Goldziher/kreuzberg",
-  "license": "MIT",
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "dependencies": {
-    "kreuzberg-node": "workspace:*",
-    "which": "^5.0.0"
-  },
-  "optionalDependencies": {
-    "@gutenye/ocr-node": "^1.4.8"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.2.6",
-    "@types/archiver": "^6.0.3",
-    "@types/node": "^24.9.1",
-    "@types/which": "^3.0.4",
-    "@vitest/coverage-v8": "^3.2.4",
-    "archiver": "^7.0.1",
-    "oxlint": "^1.23.0",
-    "tsup": "^8.5.0",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
-  },
-  "engines": {
-    "node": ">=18"
-  }
+	"name": "kreuzberg",
+	"version": "4.0.0",
+	"description": "Multi-language document intelligence framework - TypeScript SDK",
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		},
+		"./cli": {
+			"types": "./dist/cli.d.ts",
+			"import": "./dist/cli.mjs",
+			"require": "./dist/cli.js"
+		}
+	},
+	"bin": {
+		"kreuzberg": "./dist/cli.js"
+	},
+	"scripts": {
+		"build": "tsup",
+		"test": "pnpm test:unit && pnpm test:integration",
+		"test:unit": "vitest run tests/unit/",
+		"test:integration": "vitest run tests/integration/pdf.spec.ts tests/integration/ocr.spec.ts && vitest run tests/integration/formats.spec.ts -t 'DOCX|XLSX|PPTX' && vitest run tests/integration/formats.spec.ts -t 'JSON|YAML|XML|email|Markdown|plain'",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage tests/unit/ tests/integration/pdf.spec.ts tests/integration/ocr.spec.ts",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check src && oxlint src",
+		"lint:fix": "biome check --write src",
+		"format": "biome format --write src",
+		"clean": "rm -rf dist node_modules"
+	},
+	"keywords": [
+		"document",
+		"extraction",
+		"ocr",
+		"pdf",
+		"rust",
+		"typescript"
+	],
+	"repository": "https://github.com/Goldziher/kreuzberg",
+	"license": "MIT",
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"dependencies": {
+		"kreuzberg-node": "workspace:*",
+		"which": "^5.0.0"
+	},
+	"optionalDependencies": {
+		"@gutenye/ocr-node": "^1.4.8"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.6",
+		"@types/archiver": "^6.0.3",
+		"@types/node": "^24.9.1",
+		"@types/which": "^3.0.4",
+		"@vitest/coverage-v8": "^3.2.4",
+		"archiver": "^7.0.1",
+		"oxlint": "^1.23.0",
+		"tsup": "^8.5.0",
+		"typescript": "^5.9.3",
+		"vitest": "^3.2.4"
+	},
+	"engines": {
+		"node": ">=18"
+	}
 }

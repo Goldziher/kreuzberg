@@ -1,17 +1,17 @@
-import { describe, it, expect } from "vitest";
+import { existsSync } from "node:fs";
+import { describe, expect, it } from "vitest";
 import { extractFile, extractFileSync } from "../../src/index.js";
 import type { ExtractionConfig } from "../../src/types.js";
 import {
-	getTestDocumentPath,
-	testDocumentsAvailable,
 	assertMimeType,
 	assertNonEmptyContent,
-	assertValidExtractionResult,
 	assertPdfMetadata,
 	assertSubstantialContent,
 	assertTablesExtracted,
+	assertValidExtractionResult,
+	getTestDocumentPath,
+	testDocumentsAvailable,
 } from "../helpers/integration-helpers.js";
-import { existsSync } from "node:fs";
 
 describe("PDF Integration Tests", () => {
 	it("should extract simple PDF text", async () => {
@@ -43,9 +43,7 @@ describe("PDF Integration Tests", () => {
 			return;
 		}
 
-		const path = getTestDocumentPath(
-			"pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf",
-		);
+		const path = getTestDocumentPath("pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf");
 		if (!existsSync(path)) {
 			console.log("Skipping: large PDF not available");
 			return;
@@ -77,14 +75,9 @@ describe("PDF Integration Tests", () => {
 			const result = await extractFile(path, null, config);
 
 			assertValidExtractionResult(result);
-			console.log(
-				"Protected PDF extracted (some protection can be bypassed)",
-			);
+			console.log("Protected PDF extracted (some protection can be bypassed)");
 		} catch (error) {
-			console.log(
-				"Password protection detected (expected):",
-				(error as Error).message,
-			);
+			console.log("Password protection detected (expected):", (error as Error).message);
 			expect(error).toBeTruthy();
 		}
 	});
@@ -94,9 +87,7 @@ describe("PDF Integration Tests", () => {
 			return;
 		}
 
-		const path = getTestDocumentPath(
-			"pdfs/bayesian_data_analysis_third_edition_13th_feb_2020.pdf",
-		);
+		const path = getTestDocumentPath("pdfs/bayesian_data_analysis_third_edition_13th_feb_2020.pdf");
 		if (!existsSync(path)) {
 			console.log("Skipping: PDF not available");
 			return;

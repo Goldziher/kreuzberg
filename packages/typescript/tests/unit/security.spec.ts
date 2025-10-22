@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import { extractBytes, extractBytesSync, extractFile } from "../../src/index.js";
-import { createZip, createTar } from "../helpers/integration-helpers.js";
+import { createZip } from "../helpers/integration-helpers.js";
 
 describe("Security Validation Tests", () => {
 	describe("Archive Attacks", () => {
@@ -89,9 +89,7 @@ describe("Security Validation Tests", () => {
 <lolz>&lol3;</lolz>`;
 
 			// Should not hang or consume excessive memory
-			await expect(
-				extractBytes(Buffer.from(billionLaughs), "application/xml"),
-			).resolves.toBeDefined();
+			await expect(extractBytes(Buffer.from(billionLaughs), "application/xml")).resolves.toBeDefined();
 		});
 
 		it("should handle XML quadratic blowup", async () => {
@@ -101,9 +99,7 @@ describe("Security Validation Tests", () => {
 ]>
 <bomb>&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;</bomb>`;
 
-			await expect(
-				extractBytes(Buffer.from(quadraticBlowup), "application/xml"),
-			).resolves.toBeDefined();
+			await expect(extractBytes(Buffer.from(quadraticBlowup), "application/xml")).resolves.toBeDefined();
 		});
 
 		it("should block external entity injection (XXE)", async () => {
@@ -127,16 +123,13 @@ describe("Security Validation Tests", () => {
 ]>
 <data>&large;&large;&large;&large;&large;&large;&large;&large;</data>`;
 
-			await expect(
-				extractBytes(Buffer.from(dtdExpansion), "application/xml"),
-			).resolves.toBeDefined();
+			await expect(extractBytes(Buffer.from(dtdExpansion), "application/xml")).resolves.toBeDefined();
 		});
 	});
 
 	describe("Resource Limits", () => {
 		it("should handle large text files efficiently", async () => {
-			const largeText =
-				"This is a line of text that will be repeated many times.\n".repeat(200_000);
+			const largeText = "This is a line of text that will be repeated many times.\n".repeat(200_000);
 
 			const result = await extractBytes(Buffer.from(largeText), "text/plain");
 
@@ -151,9 +144,7 @@ describe("Security Validation Tests", () => {
 			}
 			xml += "</root>";
 
-			await expect(
-				extractBytes(Buffer.from(xml), "application/xml"),
-			).resolves.toBeDefined();
+			await expect(extractBytes(Buffer.from(xml), "application/xml")).resolves.toBeDefined();
 		});
 
 		it("should handle empty files", async () => {
@@ -183,18 +174,14 @@ describe("Security Validation Tests", () => {
 		it("should reject invalid MIME types", async () => {
 			const content = Buffer.from("Some content");
 
-			await expect(
-				extractBytes(content, "invalid/mime/type"),
-			).rejects.toThrow();
+			await expect(extractBytes(content, "invalid/mime/type")).rejects.toThrow();
 		});
 
 		it("should handle malformed XML structure", async () => {
 			const malformedXml = '<?xml version="1.0"?><root><item>test</item>';
 
 			// May succeed with partial content or fail gracefully
-			await expect(
-				extractBytes(Buffer.from(malformedXml), "application/xml"),
-			).resolves.toBeDefined();
+			await expect(extractBytes(Buffer.from(malformedXml), "application/xml")).resolves.toBeDefined();
 		});
 
 		it("should reject malformed ZIP structure", async () => {
@@ -205,26 +192,11 @@ describe("Security Validation Tests", () => {
 
 		it("should handle invalid UTF-8 sequences", async () => {
 			const invalidUtf8 = Buffer.from([
-				0x48,
-				0x65,
-				0x6c,
-				0x6c,
-				0x6f,
-				0x20,
-				0xff,
-				0xfe,
-				0x20,
-				0x57,
-				0x6f,
-				0x72,
-				0x6c,
-				0x64,
+				0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0xff, 0xfe, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64,
 			]);
 
 			// Should handle gracefully (replace invalid sequences or error)
-			await expect(
-				extractBytes(invalidUtf8, "text/plain"),
-			).resolves.toBeDefined();
+			await expect(extractBytes(invalidUtf8, "text/plain")).resolves.toBeDefined();
 		});
 
 		it("should handle mixed line endings", async () => {
@@ -241,9 +213,7 @@ describe("Security Validation Tests", () => {
 
 	describe("PDF Security", () => {
 		it("should handle minimal valid PDF", async () => {
-			const minimalPdf = Buffer.from(
-				"%PDF-1.4\nThis is a very minimal PDF structure for security testing.\n%%EOF",
-			);
+			const minimalPdf = Buffer.from("%PDF-1.4\nThis is a very minimal PDF structure for security testing.\n%%EOF");
 
 			// May succeed or fail depending on PDF validation strictness
 			try {
@@ -256,9 +226,7 @@ describe("Security Validation Tests", () => {
 		});
 
 		it("should reject malformed PDF header", async () => {
-			const malformedPdf = Buffer.from(
-				"%PDF-INVALID\nThis is not a valid PDF structure",
-			);
+			const malformedPdf = Buffer.from("%PDF-INVALID\nThis is not a valid PDF structure");
 
 			await expect(extractBytes(malformedPdf, "application/pdf")).rejects.toThrow();
 		});

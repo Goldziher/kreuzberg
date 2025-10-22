@@ -112,6 +112,21 @@ lint.per-file-ignores."**/tests/**/*.*" = [
   "SIM117",  # Combine with statements
   "SLF001",
 ]
+lint.per-file-ignores."examples/**/*.py" = [
+  "ANN202",  # Missing return type annotation for private function
+  "ARG002",  # Unused method argument (examples show interfaces)
+  "B007",    # Loop control variable not used
+  "BLE001",  # Blind exception catching (common in examples)
+  "D102",    # Missing docstring in public method
+  "D103",    # Missing docstring in public function
+  "DTZ005",  # datetime.now() without tz (examples are simple)
+  "ERA001",  # Commented-out code (examples show alternatives)
+  "INP001",  # Implicit namespace package (examples don't need __init__.py)
+  "PLC0415", # Import at top level (examples show conditional imports)
+  "PTH123",  # open() should be replaced by Path.open()
+  "PTH207",  # Replace glob with Path.glob
+  "S112",    # try-except-continue (examples show error handling patterns)
+]
 lint.per-file-ignores."packages/python/tests/e2e/*_test.py" = [
   "T201", # print statements are needed for test output
 ]
@@ -174,6 +189,7 @@ exclude_lines = [
 
 [tool.mypy]
 packages = [ "packages/python", "comparative-benchmarks" ]
+exclude = [ "examples" ]
 python_version = "3.10"
 implicit_reexport = false
 show_error_codes = true

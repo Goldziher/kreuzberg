@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
-	extractBytes,
-	extractBytesSync,
+	batchExtractBytes,
 	batchExtractFiles,
 	batchExtractFilesSync,
-	batchExtractBytes,
+	extractBytes,
+	extractBytesSync,
 } from "../../src/index.js";
 
 function getTestDocumentPath(relativePath: string): string {
@@ -223,11 +223,7 @@ describe("batchExtractBytes (async)", () => {
 	});
 
 	it("should handle single byte array in batch", async () => {
-		const results = await batchExtractBytes(
-			[samplePdfBytes],
-			["application/pdf"],
-			null,
-		);
+		const results = await batchExtractBytes([samplePdfBytes], ["application/pdf"], null);
 
 		expect(Array.isArray(results)).toBe(true);
 		expect(results.length).toBe(1);
@@ -239,11 +235,7 @@ describe("batchExtractBytes (async)", () => {
 			useCache: false,
 			enableQualityProcessing: true,
 		};
-		const results = await batchExtractBytes(
-			[samplePdfBytes],
-			["application/pdf"],
-			config,
-		);
+		const results = await batchExtractBytes([samplePdfBytes], ["application/pdf"], config);
 
 		expect(results.length).toBe(1);
 		expect(results[0].content).toBeTruthy();
@@ -253,11 +245,7 @@ describe("batchExtractBytes (async)", () => {
 		const data1 = new Uint8Array(samplePdfBytes);
 		const data2 = new Uint8Array(sampleTextBytes);
 
-		const results = await batchExtractBytes(
-			[data1, data2],
-			["application/pdf", "text/plain"],
-			null,
-		);
+		const results = await batchExtractBytes([data1, data2], ["application/pdf", "text/plain"], null);
 
 		expect(results.length).toBe(2);
 		results.forEach((result) => {

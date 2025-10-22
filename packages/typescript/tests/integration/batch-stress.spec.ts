@@ -1,11 +1,7 @@
-import { describe, expect, it } from "vitest";
-import {
-	batchExtractFiles,
-	batchExtractFilesSync,
-	batchExtractBytesSync,
-} from "../../src/index.js";
-import { getTestDocumentPath } from "../helpers/integration-helpers.js";
 import fs from "node:fs";
+import { describe, expect, it } from "vitest";
+import { batchExtractBytesSync, batchExtractFiles, batchExtractFilesSync } from "../../src/index.js";
+import { getTestDocumentPath } from "../helpers/integration-helpers.js";
 
 describe("Batch API Stress Tests", () => {
 	it("should handle batch extractions without NAPI crash", async () => {
@@ -27,10 +23,9 @@ describe("Batch API Stress Tests", () => {
 	});
 
 	it("should handle batchExtractFilesSync", () => {
-		const files = [
-			getTestDocumentPath("json/simple.json"),
-			getTestDocumentPath("text/contract.txt"),
-		].filter((p) => fs.existsSync(p));
+		const files = [getTestDocumentPath("json/simple.json"), getTestDocumentPath("text/contract.txt")].filter((p) =>
+			fs.existsSync(p),
+		);
 
 		if (files.length === 0) {
 			console.log("Skipping: No test files available");
@@ -44,10 +39,9 @@ describe("Batch API Stress Tests", () => {
 	});
 
 	it("should handle batchExtractBytesSync", () => {
-		const files = [
-			getTestDocumentPath("json/simple.json"),
-			getTestDocumentPath("text/contract.txt"),
-		].filter((p) => fs.existsSync(p));
+		const files = [getTestDocumentPath("json/simple.json"), getTestDocumentPath("text/contract.txt")].filter((p) =>
+			fs.existsSync(p),
+		);
 
 		if (files.length === 0) {
 			console.log("Skipping: No test files available");

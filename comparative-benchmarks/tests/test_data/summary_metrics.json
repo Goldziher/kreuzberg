@@ -1,67 +1,67 @@
 {
-  "total_runs": 18,
-  "total_files_processed": 1353,
-  "total_time_seconds": 6564.270669698715,
-  "frameworks_tested": 6,
-  "framework_performance": {
-    "kreuzberg_v4_sync": {
-      "total_files": 258,
-      "successful_files": 258,
-      "success_rate": 1.0,
-      "avg_files_per_second": 20.504910406347275,
-      "avg_memory_mb": 353.78355135658916
-    },
-    "kreuzberg_async": {
-      "total_files": 258,
-      "successful_files": 258,
-      "success_rate": 1.0,
-      "avg_files_per_second": 16.443231873676435,
-      "avg_memory_mb": 359.2521499515504
-    },
-    "docling": {
-      "total_files": 195,
-      "successful_files": 192,
-      "success_rate": 0.9846153846153847,
-      "avg_files_per_second": 0.17797559834766594,
-      "avg_memory_mb": 1764.0135008321006
-    },
-    "markitdown": {
-      "total_files": 168,
-      "successful_files": 165,
-      "success_rate": 0.9821428571428571,
-      "avg_files_per_second": 16.554927431747444,
-      "avg_memory_mb": 356.7802501860119
-    },
-    "unstructured": {
-      "total_files": 249,
-      "successful_files": 246,
-      "success_rate": 0.9879518072289156,
-      "avg_files_per_second": 2.8890274305803687,
-      "avg_memory_mb": 1271.3644307343006
-    },
-    "extractous": {
-      "total_files": 225,
-      "successful_files": 222,
-      "success_rate": 0.9866666666666667,
-      "avg_files_per_second": 2.9567113525077877,
-      "avg_memory_mb": 519.6949230072464
-    }
-  },
-  "category_performance": {
-    "tiny": {
-      "total_files": 747,
-      "successful_files": 747,
-      "success_rate": 1.0
-    },
-    "small": {
-      "total_files": 462,
-      "successful_files": 453,
-      "success_rate": 0.9805194805194806
-    },
-    "medium": {
-      "total_files": 144,
-      "successful_files": 141,
-      "success_rate": 0.9791666666666666
-    }
-  }
+	"total_runs": 18,
+	"total_files_processed": 1353,
+	"total_time_seconds": 6564.270669698715,
+	"frameworks_tested": 6,
+	"framework_performance": {
+		"kreuzberg_v4_sync": {
+			"total_files": 258,
+			"successful_files": 258,
+			"success_rate": 1.0,
+			"avg_files_per_second": 20.504910406347275,
+			"avg_memory_mb": 353.78355135658916
+		},
+		"kreuzberg_async": {
+			"total_files": 258,
+			"successful_files": 258,
+			"success_rate": 1.0,
+			"avg_files_per_second": 16.443231873676435,
+			"avg_memory_mb": 359.2521499515504
+		},
+		"docling": {
+			"total_files": 195,
+			"successful_files": 192,
+			"success_rate": 0.9846153846153847,
+			"avg_files_per_second": 0.17797559834766594,
+			"avg_memory_mb": 1764.0135008321006
+		},
+		"markitdown": {
+			"total_files": 168,
+			"successful_files": 165,
+			"success_rate": 0.9821428571428571,
+			"avg_files_per_second": 16.554927431747444,
+			"avg_memory_mb": 356.7802501860119
+		},
+		"unstructured": {
+			"total_files": 249,
+			"successful_files": 246,
+			"success_rate": 0.9879518072289156,
+			"avg_files_per_second": 2.8890274305803687,
+			"avg_memory_mb": 1271.3644307343006
+		},
+		"extractous": {
+			"total_files": 225,
+			"successful_files": 222,
+			"success_rate": 0.9866666666666667,
+			"avg_files_per_second": 2.9567113525077877,
+			"avg_memory_mb": 519.6949230072464
+		}
+	},
+	"category_performance": {
+		"tiny": {
+			"total_files": 747,
+			"successful_files": 747,
+			"success_rate": 1.0
+		},
+		"small": {
+			"total_files": 462,
+			"successful_files": 453,
+			"success_rate": 0.9805194805194806
+		},
+		"medium": {
+			"total_files": 144,
+			"successful_files": 141,
+			"success_rate": 0.9791666666666666
+		}
+	}
 }

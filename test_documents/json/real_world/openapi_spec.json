@@ -1,84 +1,84 @@
 {
-  "openapi": "3.0.0",
-  "info": {
-    "title": "Sample API",
-    "description": "This is a sample API specification",
-    "version": "1.0.0",
-    "contact": {
-      "name": "API Support",
-      "email": "support@example.com",
-      "url": "https://www.example.com/support"
-    },
-    "license": {
-      "name": "Apache 2.0",
-      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
-    }
-  },
-  "servers": [
-    {
-      "url": "https://api.example.com/v1",
-      "description": "Production server"
-    },
-    {
-      "url": "https://staging-api.example.com/v1",
-      "description": "Staging server"
-    }
-  ],
-  "paths": {
-    "/users": {
-      "get": {
-        "summary": "Get all users",
-        "description": "Returns a list of users",
-        "operationId": "getUsers",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "Maximum number of users to return",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 10
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/User"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "User": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "username": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
-          }
-        },
-        "required": ["id", "username"]
-      }
-    }
-  }
+	"openapi": "3.0.0",
+	"info": {
+		"title": "Sample API",
+		"description": "This is a sample API specification",
+		"version": "1.0.0",
+		"contact": {
+			"name": "API Support",
+			"email": "support@example.com",
+			"url": "https://www.example.com/support"
+		},
+		"license": {
+			"name": "Apache 2.0",
+			"url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+		}
+	},
+	"servers": [
+		{
+			"url": "https://api.example.com/v1",
+			"description": "Production server"
+		},
+		{
+			"url": "https://staging-api.example.com/v1",
+			"description": "Staging server"
+		}
+	],
+	"paths": {
+		"/users": {
+			"get": {
+				"summary": "Get all users",
+				"description": "Returns a list of users",
+				"operationId": "getUsers",
+				"parameters": [
+					{
+						"name": "limit",
+						"in": "query",
+						"description": "Maximum number of users to return",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"default": 10
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/User"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"User": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"username": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					}
+				},
+				"required": ["id", "username"]
+			}
+		}
+	}
 }

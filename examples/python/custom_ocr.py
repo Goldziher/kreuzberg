@@ -1,17 +1,13 @@
-"""
-Custom OCR Backend Example
+"""Custom OCR Backend Example.
 
 Demonstrates implementing a custom OCR backend plugin.
 """
 
-from kreuzberg import register_ocr_backend, extract_file_sync, ExtractionConfig, OcrConfig
-from typing import Callable
-import numpy as np
+from kreuzberg import ExtractionConfig, OcrConfig, extract_file_sync, register_ocr_backend
 
 
 class GoogleVisionOCR:
-    """
-    Example custom OCR backend using Google Cloud Vision API.
+    """Example custom OCR backend using Google Cloud Vision API.
 
     Note: This is a simplified example. In production, you would:
     - Add proper error handling
@@ -20,7 +16,7 @@ class GoogleVisionOCR:
     - Cache results
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         self.api_key = api_key
         # In production: initialize Google Vision client here
 
@@ -28,8 +24,7 @@ class GoogleVisionOCR:
         return "google_vision"
 
     def extract_text(self, image_bytes: bytes, language: str) -> str:
-        """
-        Extract text from image using Google Cloud Vision API.
+        """Extract text from image using Google Cloud Vision API.
 
         Args:
             image_bytes: Image data as bytes
@@ -45,16 +40,13 @@ class GoogleVisionOCR:
         # response = client.text_detection(image=image)
         # return response.full_text_annotation.text
 
-        print(f"[GoogleVisionOCR] Processing image: {len(image_bytes)} bytes, language: {language}")
         return f"Mock OCR result from Google Vision API (language: {language})"
 
 
 class AzureCognitiveServicesOCR:
-    """
-    Example custom OCR backend using Azure Cognitive Services.
-    """
+    """Example custom OCR backend using Azure Cognitive Services."""
 
-    def __init__(self, endpoint: str, api_key: str):
+    def __init__(self, endpoint: str, api_key: str) -> None:
         self.endpoint = endpoint
         self.api_key = api_key
 
@@ -73,16 +65,13 @@ class AzureCognitiveServicesOCR:
         # )
         # ...
 
-        print(f"[AzureOCR] Processing image: {len(image_bytes)} bytes")
         return f"Mock OCR result from Azure (language: {language})"
 
 
 class CustomMLModelOCR:
-    """
-    Example custom OCR backend using a PyTorch/TensorFlow model.
-    """
+    """Example custom OCR backend using a PyTorch/TensorFlow model."""
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str) -> None:
         self.model_path = model_path
         self.model = None
         # In production: load model here
@@ -101,14 +90,11 @@ class CustomMLModelOCR:
         # 3. Run model inference
         # 4. Post-process results
 
-        print(f"[CustomMLOCR] Processing with model: {self.model_path}")
         return "Mock OCR result from custom ML model"
 
 
 class HandwritingOCR:
-    """
-    Example specialized OCR backend for handwriting recognition.
-    """
+    """Example specialized OCR backend for handwriting recognition."""
 
     def name(self) -> str:
         return "handwriting_ocr"
@@ -116,16 +102,13 @@ class HandwritingOCR:
     def extract_text(self, image_bytes: bytes, language: str) -> str:
         """Extract handwritten text using specialized model."""
         # In production: use specialized handwriting recognition model
-        print("[HandwritingOCR] Processing handwritten text")
         return "Mock handwriting recognition result"
 
 
-def main():
+def main() -> None:
     # Register Google Vision OCR
-    print("=== Register Google Vision OCR ===")
     google_ocr = GoogleVisionOCR(api_key="your-api-key-here")
     register_ocr_backend(google_ocr)
-    print(f"Registered: {google_ocr.name()}")
 
     # Use Google Vision OCR
     config = ExtractionConfig(
@@ -135,12 +118,9 @@ def main():
         )
     )
 
-    result = extract_file_sync("scanned_document.pdf", config=config)
-    print(f"Extracted: {len(result.content)} characters")
-    print(f"Content: {result.content[:200]}...")
+    extract_file_sync("scanned_document.pdf", config=config)
 
     # Register multiple OCR backends
-    print("\n=== Register Multiple Backends ===")
     azure_ocr = AzureCognitiveServicesOCR(
         endpoint="https://your-resource.cognitiveservices.azure.com", api_key="your-api-key"
     )
@@ -152,41 +132,30 @@ def main():
     handwriting_ocr = HandwritingOCR()
     register_ocr_backend(handwriting_ocr)
 
-    print("Registered backends:")
-    for backend in [google_ocr, azure_ocr, custom_ml_ocr, handwriting_ocr]:
-        print(f"  - {backend.name()}")
+    for _backend in [google_ocr, azure_ocr, custom_ml_ocr, handwriting_ocr]:
+        pass
 
     # Use Azure OCR
-    print("\n=== Use Azure OCR ===")
     config = ExtractionConfig(ocr=OcrConfig(backend="azure_ocr", language="eng"))
-    result = extract_file_sync("document.pdf", config=config)
-    print(f"Extracted with Azure: {len(result.content)} characters")
+    extract_file_sync("document.pdf", config=config)
 
     # Use custom ML model
-    print("\n=== Use Custom ML Model ===")
     config = ExtractionConfig(ocr=OcrConfig(backend="custom_ml_ocr", language="eng"))
-    result = extract_file_sync("document.pdf", config=config)
-    print(f"Extracted with custom model: {len(result.content)} characters")
+    extract_file_sync("document.pdf", config=config)
 
     # Use handwriting OCR for specialized content
-    print("\n=== Use Handwriting OCR ===")
     config = ExtractionConfig(ocr=OcrConfig(backend="handwriting_ocr", language="eng"))
-    result = extract_file_sync("handwritten_notes.pdf", config=config)
-    print(f"Extracted handwriting: {len(result.content)} characters")
+    extract_file_sync("handwritten_notes.pdf", config=config)
 
     # Fallback strategy: try multiple backends
-    print("\n=== Fallback Strategy ===")
     backends = ["google_vision", "azure_ocr", "tesseract"]  # Priority order
 
     for backend_name in backends:
         try:
-            print(f"Trying {backend_name}...")
             config = ExtractionConfig(ocr=OcrConfig(backend=backend_name, language="eng"))
-            result = extract_file_sync("document.pdf", config=config)
-            print(f"✓ Success with {backend_name}: {len(result.content)} chars")
+            extract_file_sync("document.pdf", config=config)
             break
-        except Exception as e:
-            print(f"✗ {backend_name} failed: {e}")
+        except Exception:
             continue
 
 

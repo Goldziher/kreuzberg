@@ -66,11 +66,7 @@ function getBinding(): any {
 	}
 
 	try {
-		if (
-			typeof process !== "undefined" &&
-			process.versions &&
-			process.versions.node
-		) {
+		if (typeof process !== "undefined" && process.versions && process.versions.node) {
 			binding = require("kreuzberg-node");
 			bindingInitialized = true;
 			return binding;
@@ -101,10 +97,7 @@ function convertResult(rawResult: any): ExtractionResult {
 	return {
 		content: rawResult.content,
 		mimeType: rawResult.mimeType,
-		metadata:
-			typeof rawResult.metadata === "string"
-				? parseMetadata(rawResult.metadata)
-				: rawResult.metadata,
+		metadata: typeof rawResult.metadata === "string" ? parseMetadata(rawResult.metadata) : rawResult.metadata,
 		tables: rawResult.tables || [],
 		detectedLanguages: rawResult.detectedLanguages || null,
 		chunks: rawResult.chunks || null,
@@ -218,11 +211,7 @@ export function extractBytesSync(
 	mimeType: string,
 	config: ExtractionConfig | null = null,
 ): ExtractionResult {
-	const rawResult = getBinding().extractBytesSync(
-		Buffer.from(data),
-		mimeType,
-		config,
-	);
+	const rawResult = getBinding().extractBytesSync(Buffer.from(data), mimeType, config);
 	return convertResult(rawResult);
 }
 
@@ -252,11 +241,7 @@ export async function extractBytes(
 	mimeType: string,
 	config: ExtractionConfig | null = null,
 ): Promise<ExtractionResult> {
-	const rawResult = await getBinding().extractBytes(
-		Buffer.from(data),
-		mimeType,
-		config,
-	);
+	const rawResult = await getBinding().extractBytes(Buffer.from(data), mimeType, config);
 	return convertResult(rawResult);
 }
 
@@ -287,10 +272,7 @@ export async function extractBytes(
  * });
  * ```
  */
-export function batchExtractFilesSync(
-	paths: string[],
-	config: ExtractionConfig | null = null,
-): ExtractionResult[] {
+export function batchExtractFilesSync(paths: string[], config: ExtractionConfig | null = null): ExtractionResult[] {
 	const rawResults = getBinding().batchExtractFilesSync(paths, config);
 	return rawResults.map(convertResult);
 }
@@ -370,11 +352,7 @@ export function batchExtractBytesSync(
 	config: ExtractionConfig | null = null,
 ): ExtractionResult[] {
 	const buffers = dataList.map((data) => Buffer.from(data));
-	const rawResults = getBinding().batchExtractBytesSync(
-		buffers,
-		mimeTypes,
-		config,
-	);
+	const rawResults = getBinding().batchExtractBytesSync(buffers, mimeTypes, config);
 	return rawResults.map(convertResult);
 }
 
@@ -419,11 +397,7 @@ export async function batchExtractBytes(
 	config: ExtractionConfig | null = null,
 ): Promise<ExtractionResult[]> {
 	const buffers = dataList.map((data) => Buffer.from(data));
-	const rawResults = await getBinding().batchExtractBytes(
-		buffers,
-		mimeTypes,
-		config,
-	);
+	const rawResults = await getBinding().batchExtractBytes(buffers, mimeTypes, config);
 	return rawResults.map(convertResult);
 }
 
@@ -477,16 +451,20 @@ export function registerPostProcessor(processor: PostProcessorProtocol): void {
 			// With build_callback returning vec![value], NAPI passes args as [null, value]
 			// The first element is the error (null if no error), second is the value
 			const jsonString = args[1] as string;
-			const wireResult = JSON.parse(jsonString) as any;
+			const wireResult = JSON.parse(jsonString) as {
+				content: string;
+				mime_type: string;
+				metadata: string | Record<string, unknown>;
+				tables?: unknown[];
+				detected_languages?: string[];
+				chunks?: unknown[];
+			};
 
 			// Convert from snake_case (Rust) to camelCase (TypeScript) and parse metadata
 			const result: ExtractionResult = {
 				content: wireResult.content,
 				mimeType: wireResult.mime_type,
-				metadata:
-					typeof wireResult.metadata === "string"
-						? JSON.parse(wireResult.metadata)
-						: wireResult.metadata,
+				metadata: typeof wireResult.metadata === "string" ? JSON.parse(wireResult.metadata) : wireResult.metadata,
 				tables: wireResult.tables || [],
 				detectedLanguages: wireResult.detected_languages,
 				chunks: wireResult.chunks,
@@ -593,10 +571,7 @@ export function registerValidator(validator: ValidatorProtocol): void {
 			const result: ExtractionResult = {
 				content: wireResult.content,
 				mimeType: wireResult.mime_type,
-				metadata:
-					typeof wireResult.metadata === "string"
-						? JSON.parse(wireResult.metadata)
-						: wireResult.metadata,
+				metadata: typeof wireResult.metadata === "string" ? JSON.parse(wireResult.metadata) : wireResult.metadata,
 				tables: wireResult.tables || [],
 				detectedLanguages: wireResult.detected_languages,
 				chunks: wireResult.chunks,

@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import { extractBytes, extractBytesSync } from "../../src/index.js";
-import { createZip, createTar } from "../helpers/integration-helpers.js";
+import { createTar, createZip } from "../helpers/integration-helpers.js";
 
 describe("Archive Integration Tests", () => {
 	describe("ZIP Extraction", () => {
@@ -88,12 +88,8 @@ describe("Archive Integration Tests", () => {
 			const archiveMeta = result.metadata.archive;
 			expect(archiveMeta).toBeDefined();
 			expect(archiveMeta.file_count).toBeGreaterThanOrEqual(2);
-			expect(archiveMeta.file_list.some((f) => f.includes("dir1/file.txt"))).toBe(
-				true,
-			);
-			expect(
-				archiveMeta.file_list.some((f) => f.includes("dir1/subdir/nested.txt")),
-			).toBe(true);
+			expect(archiveMeta.file_list.some((f) => f.includes("dir1/file.txt"))).toBe(true);
+			expect(archiveMeta.file_list.some((f) => f.includes("dir1/subdir/nested.txt"))).toBe(true);
 		});
 
 		it("should extract ZIP with mixed file types", async () => {
@@ -147,9 +143,7 @@ describe("Archive Integration Tests", () => {
 		it("should reject corrupted ZIP gracefully", async () => {
 			const corruptedZip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0xff, 0xff, 0xff, 0xff]);
 
-			await expect(
-				extractBytes(corruptedZip, "application/zip"),
-			).rejects.toThrow();
+			await expect(extractBytes(corruptedZip, "application/zip")).rejects.toThrow();
 		});
 
 		it("should handle large ZIP with many files", async () => {
@@ -189,9 +183,7 @@ describe("Archive Integration Tests", () => {
 			expect(result.detectedLanguages).toBeNull();
 			expect(result.tables).toEqual([]);
 
-			expect(
-				result.content.includes("测试文件.txt") || result.content.includes("txt"),
-			).toBe(true);
+			expect(result.content.includes("测试文件.txt") || result.content.includes("txt")).toBe(true);
 			expect(result.content).toContain("file with spaces.txt");
 			expect(result.content).toContain("file-with-dashes.txt");
 

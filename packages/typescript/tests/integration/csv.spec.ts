@@ -36,16 +36,14 @@ describe("CSV Integration Tests", () => {
 				expect(result.content).toContain("Bob");
 				expect(result.content).toContain("25");
 				expect(result.content).toContain("LA");
-			} catch (error) {
+			} catch (_error) {
 				// Pandoc may not be installed - skip test
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
 
 		it("should extract CSV with headers", async () => {
-			const csvContent = Buffer.from(
-				"Product,Price,Quantity\nApple,1.50,100\nBanana,0.75,200\nOrange,2.00,150",
-			);
+			const csvContent = Buffer.from("Product,Price,Quantity\nApple,1.50,100\nBanana,0.75,200\nOrange,2.00,150");
 
 			try {
 				const result = await extractBytes(csvContent, "text/csv");
@@ -66,7 +64,7 @@ describe("CSV Integration Tests", () => {
 				expect(result.content).toContain("Orange");
 				expect(result.content).toContain("2.00");
 				expect(result.content).toContain("150");
-			} catch (error) {
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
@@ -86,7 +84,7 @@ describe("CSV Integration Tests", () => {
 				expect(result.content).toContain("Alice");
 				expect(result.content).toContain("30");
 				expect(result.content).toContain("NYC");
-			} catch (error) {
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
@@ -111,7 +109,7 @@ describe("CSV Integration Tests", () => {
 				expect(result.content).toContain("NYC");
 				expect(result.content).toContain("25");
 				expect(result.content).toContain("LA");
-			} catch (error) {
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
@@ -134,15 +132,11 @@ describe("CSV Integration Tests", () => {
 				expect(result.content).toContain("John");
 				expect(result.content).toContain("Doe");
 				expect(result.content).toContain("Jane");
-				expect(
-					result.content.includes("Product A") || result.content.includes("premium"),
-				).toBe(true);
-				expect(
-					result.content.includes("Product B") || result.content.includes("standard"),
-				).toBe(true);
+				expect(result.content.includes("Product A") || result.content.includes("premium")).toBe(true);
+				expect(result.content.includes("Product B") || result.content.includes("standard")).toBe(true);
 				expect(result.content).toContain("100");
 				expect(result.content).toContain("50");
-			} catch (error) {
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
@@ -150,9 +144,7 @@ describe("CSV Integration Tests", () => {
 
 	describe("Special Characters", () => {
 		it("should handle Unicode and emoji characters", async () => {
-			const csvContent = Buffer.from(
-				"Name,City,Emoji\nAlice,Tokyo 東京,🎉\nBob,París,✅\nCarlos,Москва,🌍",
-			);
+			const csvContent = Buffer.from("Name,City,Emoji\nAlice,Tokyo 東京,🎉\nBob,París,✅\nCarlos,Москва,🌍");
 
 			try {
 				const result = await extractBytes(csvContent, "text/csv");
@@ -165,13 +157,9 @@ describe("CSV Integration Tests", () => {
 				expect(result.content).toContain("Alice");
 				expect(result.content).toContain("Bob");
 				expect(result.content).toContain("Carlos");
-				expect(
-					result.content.includes("Tokyo") || result.content.includes("東京"),
-				).toBe(true);
-				expect(
-					result.content.includes("París") || result.content.includes("Paris"),
-				).toBe(true);
-			} catch (error) {
+				expect(result.content.includes("Tokyo") || result.content.includes("東京")).toBe(true);
+				expect(result.content.includes("París") || result.content.includes("Paris")).toBe(true);
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
@@ -192,16 +180,10 @@ describe("CSV Integration Tests", () => {
 				expect(result.tables).toEqual([]);
 				expect(result.content.length).toBeGreaterThan(1000);
 
-				expect(
-					result.content.includes("Item1") || result.content.includes("10.00"),
-				).toBe(true);
-				expect(
-					result.content.includes("Item5000") || result.content.includes("50000.00"),
-				).toBe(true);
-				expect(
-					result.content.includes("Item10000") || result.content.includes("100000.00"),
-				).toBe(true);
-			} catch (error) {
+				expect(result.content.includes("Item1") || result.content.includes("10.00")).toBe(true);
+				expect(result.content.includes("Item5000") || result.content.includes("50000.00")).toBe(true);
+				expect(result.content.includes("Item10000") || result.content.includes("100000.00")).toBe(true);
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		}, 10000); // Extended timeout for large file
@@ -209,9 +191,7 @@ describe("CSV Integration Tests", () => {
 
 	describe("Malformed CSV", () => {
 		it("should handle malformed CSV with inconsistent columns", async () => {
-			const csvContent = Buffer.from(
-				"Name,Age,City\nAlice,30\nBob,25,LA,Extra\nCarlos,35,SF",
-			);
+			const csvContent = Buffer.from("Name,Age,City\nAlice,30\nBob,25,LA,Extra\nCarlos,35,SF");
 
 			// Should handle gracefully (succeed or fail, but not crash)
 			try {
@@ -244,10 +224,8 @@ describe("CSV Integration Tests", () => {
 				expect(result.chunks).toBeNull();
 				expect(result.detectedLanguages).toBeNull();
 				expect(result.tables).toEqual([]);
-				expect(
-					result.content.includes("Name") || result.content.length > 0,
-				).toBe(true);
-			} catch (error) {
+				expect(result.content.includes("Name") || result.content.length > 0).toBe(true);
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
@@ -261,10 +239,8 @@ describe("CSV Integration Tests", () => {
 				expect(result.chunks).toBeNull();
 				expect(result.detectedLanguages).toBeNull();
 				expect(result.tables).toEqual([]);
-				expect(
-					result.content.includes("Alice") || result.content.includes("Bob"),
-				).toBe(true);
-			} catch (error) {
+				expect(result.content.includes("Alice") || result.content.includes("Bob")).toBe(true);
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
@@ -272,9 +248,7 @@ describe("CSV Integration Tests", () => {
 
 	describe("Numeric Data", () => {
 		it("should handle CSV with numeric data and decimals", async () => {
-			const csvContent = Buffer.from(
-				"ID,Price,Quantity,Discount\n1,19.99,100,0.15\n2,29.99,50,0.20\n3,9.99,200,0.10",
-			);
+			const csvContent = Buffer.from("ID,Price,Quantity,Discount\n1,19.99,100,0.15\n2,29.99,50,0.20\n3,9.99,200,0.10");
 
 			try {
 				const result = await extractBytes(csvContent, "text/csv");
@@ -293,7 +267,7 @@ describe("CSV Integration Tests", () => {
 				expect(result.content).toContain("50");
 				expect(result.content).toContain("9.99");
 				expect(result.content).toContain("200");
-			} catch (error) {
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
@@ -308,7 +282,7 @@ describe("CSV Integration Tests", () => {
 				expect(result.detectedLanguages).toBeNull();
 				expect(result.tables).toEqual([]);
 				expect(result.content.length).toBeGreaterThan(0);
-			} catch (error) {
+			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});

@@ -9,15 +9,15 @@
  * - Metadata modification
  */
 
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
-	extractBytesSync,
-	registerPostProcessor,
-	unregisterPostProcessor,
 	clearPostProcessors,
 	type ExtractionResult,
+	extractBytesSync,
 	type PostProcessorProtocol,
 	type ProcessingStage,
+	registerPostProcessor,
+	unregisterPostProcessor,
 } from "../../src/index.js";
 
 // ============================================================================
@@ -244,10 +244,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "This is a test document.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.early_executed).toBe(true);
 			expect(result.metadata?.execution_order).toContain("early");
@@ -258,10 +255,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "This is a test document.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.middle_executed).toBe(true);
 			expect(result.metadata?.execution_order).toContain("middle");
@@ -272,10 +266,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "This is a test document.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.late_executed).toBe(true);
 			expect(result.metadata?.execution_order).toContain("late");
@@ -294,10 +285,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(earlyProc);
 
 			const testContent = "Test content for ordering.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.early_executed).toBe(true);
 			expect(result.metadata?.middle_executed).toBe(true);
@@ -322,10 +310,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(sentenceProc);
 
 			const testContent = "Hello world. This is a test. How are you?";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.word_count).toBe(9);
 			expect(result.metadata?.sentence_count).toBe(3);
@@ -338,10 +323,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "One two three four five.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.word_count).toBe(5);
 			expect(result.metadata?.character_count).toBe(testContent.length);
@@ -357,10 +339,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(proc3);
 
 			const testContent = "HELLO WORLD. THIS IS A TEST.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.word_count).toBeDefined();
 			expect(result.metadata?.sentence_count).toBeDefined();
@@ -373,15 +352,12 @@ describe("Plugin System - PostProcessors", () => {
 		it("should call initialize() when processor is registered", () => {
 			const processor = new InitializableProcessor();
 
-			expect(processor["initialized"]).toBe(false);
+			expect(processor.initialized).toBe(false);
 
 			registerPostProcessor(processor);
 
 			const testContent = "Test initialization.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.processor_initialized).toBe(true);
 			expect((result.metadata?.processor_call_count as number) > 0).toBe(true);
@@ -391,16 +367,10 @@ describe("Plugin System - PostProcessors", () => {
 			const processor = new InitializableProcessor();
 			registerPostProcessor(processor);
 
-			const result1 = extractBytesSync(
-				new TextEncoder().encode("First call."),
-				"text/plain",
-			);
+			const result1 = extractBytesSync(new TextEncoder().encode("First call."), "text/plain");
 			const count1 = result1.metadata?.processor_call_count as number;
 
-			const result2 = extractBytesSync(
-				new TextEncoder().encode("Second call."),
-				"text/plain",
-			);
+			const result2 = extractBytesSync(new TextEncoder().encode("Second call."), "text/plain");
 			const count2 = result2.metadata?.processor_call_count as number;
 
 			expect(count2).toBeGreaterThan(count1);
@@ -413,10 +383,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "Test error handling.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.error_handler_success).toBe(true);
 			expect(result.metadata?.error_handler_error).toBeUndefined();
@@ -427,14 +394,9 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "Test error handling with failure.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
-			expect(result.metadata?.error_handler_error).toContain(
-				"Intentional error",
-			);
+			expect(result.metadata?.error_handler_error).toContain("Intentional error");
 		});
 	});
 
@@ -446,23 +408,15 @@ describe("Plugin System - PostProcessors", () => {
 			const testContent = "Test with postprocessing enabled.";
 
 			// With postprocessing enabled
-			const resultEnabled = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-				{
-					postprocessor: { enabled: true },
-				},
-			);
+			const resultEnabled = extractBytesSync(new TextEncoder().encode(testContent), "text/plain", {
+				postprocessor: { enabled: true },
+			});
 			expect(resultEnabled.metadata?.word_count).toBeDefined();
 
 			// With postprocessing disabled
-			const resultDisabled = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-				{
-					postprocessor: { enabled: false },
-				},
-			);
+			const resultDisabled = extractBytesSync(new TextEncoder().encode(testContent), "text/plain", {
+				postprocessor: { enabled: false },
+			});
 			expect(resultDisabled.metadata?.word_count).toBeUndefined();
 		});
 
@@ -474,16 +428,12 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(proc2);
 
 			const testContent = "Test whitelist. Second sentence.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-				{
-					postprocessor: {
-						enabled: true,
-						enabledProcessors: ["word_count"],
-					},
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain", {
+				postprocessor: {
+					enabled: true,
+					enabledProcessors: ["word_count"],
 				},
-			);
+			});
 
 			expect(result.metadata?.word_count).toBeDefined();
 			expect(result.metadata?.sentence_count).toBeUndefined();
@@ -497,16 +447,12 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(proc2);
 
 			const testContent = "Test blacklist. Second sentence.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-				{
-					postprocessor: {
-						enabled: true,
-						disabledProcessors: ["sentence_count"],
-					},
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain", {
+				postprocessor: {
+					enabled: true,
+					disabledProcessors: ["sentence_count"],
 				},
-			);
+			});
 
 			expect(result.metadata?.word_count).toBeDefined();
 			expect(result.metadata?.sentence_count).toBeUndefined();
@@ -518,10 +464,7 @@ describe("Plugin System - PostProcessors", () => {
 			const processor = new WordCountProcessor();
 			registerPostProcessor(processor);
 
-			const result = extractBytesSync(
-				new TextEncoder().encode(""),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(""), "text/plain");
 
 			expect(result.metadata?.word_count).toBe(0);
 			expect(result.metadata?.character_count).toBe(0);
@@ -532,10 +475,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "Hello 世界! Здравствуй мир! مرحبا بالعالم!";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect((result.metadata?.word_count as number) > 0).toBe(true);
 			expect(result.metadata?.character_count).toBe(testContent.length);
@@ -567,10 +507,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(proc2);
 
 			const testContent = "Test duplicate names.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			// One of them should have run
 			const hasWordCount = result.metadata?.word_count !== undefined;
@@ -583,10 +520,7 @@ describe("Plugin System - PostProcessors", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "Test minimal processor.";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.minimal_executed).toBe(true);
 		});
@@ -606,17 +540,13 @@ describe("Plugin System - PostProcessors", () => {
 It focuses on building systems that can learn from data.
 Deep learning uses neural networks with multiple layers.`;
 
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata?.word_count).toBe(26);
 			expect(result.metadata?.sentence_count).toBe(3);
 			expect(result.metadata?.is_mostly_uppercase).toBe(false);
 			expect(
-				(result.metadata?.uppercase_ratio as number) >= 0 &&
-					(result.metadata?.uppercase_ratio as number) <= 1,
+				(result.metadata?.uppercase_ratio as number) >= 0 && (result.metadata?.uppercase_ratio as number) <= 1,
 			).toBe(true);
 		});
 	});
@@ -626,18 +556,12 @@ Deep learning uses neural networks with multiple layers.`;
 			const processor = new WordCountProcessor();
 			registerPostProcessor(processor);
 
-			let result = extractBytesSync(
-				new TextEncoder().encode("Test content."),
-				"text/plain",
-			);
+			let result = extractBytesSync(new TextEncoder().encode("Test content."), "text/plain");
 			expect(result.metadata?.word_count).toBeDefined();
 
 			unregisterPostProcessor("word_count");
 
-			result = extractBytesSync(
-				new TextEncoder().encode("Test content."),
-				"text/plain",
-			);
+			result = extractBytesSync(new TextEncoder().encode("Test content."), "text/plain");
 			expect(result.metadata?.word_count).toBeUndefined();
 		});
 
@@ -648,19 +572,13 @@ Deep learning uses neural networks with multiple layers.`;
 			registerPostProcessor(proc1);
 			registerPostProcessor(proc2);
 
-			let result = extractBytesSync(
-				new TextEncoder().encode("Test content."),
-				"text/plain",
-			);
+			let result = extractBytesSync(new TextEncoder().encode("Test content."), "text/plain");
 			expect(result.metadata?.word_count).toBeDefined();
 			expect(result.metadata?.sentence_count).toBeDefined();
 
 			clearPostProcessors();
 
-			result = extractBytesSync(
-				new TextEncoder().encode("Test content."),
-				"text/plain",
-			);
+			result = extractBytesSync(new TextEncoder().encode("Test content."), "text/plain");
 			expect(result.metadata?.word_count).toBeUndefined();
 			expect(result.metadata?.sentence_count).toBeUndefined();
 		});

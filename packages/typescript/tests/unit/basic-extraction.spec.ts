@@ -1,15 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-	extractFileSync,
-	extractFile,
-	extractBytesSync,
-	extractBytes,
-} from "../../src/index.js";
-import {
-	assertValidExtractionResult,
-	createTempFile,
-	getTestDocumentPath,
-} from "../helpers/test-utils.js";
+import { extractBytes, extractBytesSync, extractFile, extractFileSync } from "../../src/index.js";
+import { assertValidExtractionResult, createTempFile } from "../helpers/test-utils.js";
 
 describe("Basic Extraction - Sync", () => {
 	it("should extract simple text file synchronously", () => {

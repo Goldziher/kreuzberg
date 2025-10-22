@@ -8,14 +8,14 @@
  * - Automatic case conversion (snake_case ↔ camelCase)
  */
 
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
-	extractBytes,
-	extractBytesSync,
-	registerPostProcessor,
 	clearPostProcessors,
 	type ExtractionResult,
+	extractBytes,
+	extractBytesSync,
 	type PostProcessorProtocol,
+	registerPostProcessor,
 } from "../../src/index.js";
 
 // ============================================================================
@@ -109,7 +109,7 @@ class AsyncErrorProcessor implements PostProcessorProtocol {
 		return "async_error";
 	}
 
-	async process(result: ExtractionResult): Promise<ExtractionResult> {
+	async process(_result: ExtractionResult): Promise<ExtractionResult> {
 		await new Promise((resolve) => setTimeout(resolve, 5));
 		throw new Error("Async processor error");
 	}
@@ -152,10 +152,7 @@ describe("Async PostProcessor Support", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "Hello world from async processor";
-			const result = await extractBytes(
-				Buffer.from(testContent),
-				"text/plain",
-			);
+			const result = await extractBytes(Buffer.from(testContent), "text/plain");
 
 			expect(result.metadata.async_word_count).toBe(5);
 			expect(result.metadata.processed_async).toBe(true);
@@ -166,10 +163,7 @@ describe("Async PostProcessor Support", () => {
 			registerPostProcessor(processor);
 
 			const testContent = "Hello world from sync processor";
-			const result = extractBytesSync(
-				new TextEncoder().encode(testContent),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode(testContent), "text/plain");
 
 			expect(result.metadata.sync_word_count).toBe(5);
 			expect(result.metadata.processed_sync).toBe(true);
@@ -183,10 +177,7 @@ describe("Async PostProcessor Support", () => {
 			registerPostProcessor(syncProc);
 
 			const testContent = "Test mixed processors";
-			const result = await extractBytes(
-				Buffer.from(testContent),
-				"text/plain",
-			);
+			const result = await extractBytes(Buffer.from(testContent), "text/plain");
 
 			expect(result.metadata.async_word_count).toBe(3);
 			expect(result.metadata.sync_word_count).toBe(3);
@@ -200,10 +191,7 @@ describe("Async PostProcessor Support", () => {
 			const processor = new MetadataManipulationProcessor();
 			registerPostProcessor(processor);
 
-			const result = extractBytesSync(
-				new TextEncoder().encode("Test metadata parsing"),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode("Test metadata parsing"), "text/plain");
 
 			// Verify metadata was manipulated as object
 			expect(result.metadata.custom).toBeDefined();
@@ -219,10 +207,7 @@ describe("Async PostProcessor Support", () => {
 			registerPostProcessor(wordProc);
 			registerPostProcessor(metaProc);
 
-			const result = extractBytesSync(
-				new TextEncoder().encode("Test metadata preservation"),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode("Test metadata preservation"), "text/plain");
 
 			// Both processors' metadata should be present
 			expect(result.metadata.sync_word_count).toBeDefined();
@@ -235,10 +220,7 @@ describe("Async PostProcessor Support", () => {
 			const processor = new CaseConversionTestProcessor();
 			registerPostProcessor(processor);
 
-			const result = extractBytesSync(
-				new TextEncoder().encode("Test case conversion"),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode("Test case conversion"), "text/plain");
 
 			expect(result.metadata.case_test_passed).toBe(true);
 		});
@@ -258,15 +240,8 @@ describe("Async PostProcessor Support", () => {
 					expect(Array.isArray(result.tables)).toBe(true);
 
 					// detectedLanguages and chunks may be null
-					expect(
-						result.detectedLanguages === null ||
-							Array.isArray(result.detectedLanguages),
-					).toBe(true);
-					expect(
-						result.chunks === null ||
-							result.chunks === undefined ||
-							Array.isArray(result.chunks),
-					).toBe(true);
+					expect(result.detectedLanguages === null || Array.isArray(result.detectedLanguages)).toBe(true);
+					expect(result.chunks === null || result.chunks === undefined || Array.isArray(result.chunks)).toBe(true);
 
 					result.metadata.all_props_valid = true;
 					return result;
@@ -276,10 +251,7 @@ describe("Async PostProcessor Support", () => {
 			const processor = new PropertyTestProcessor();
 			registerPostProcessor(processor);
 
-			const result = extractBytesSync(
-				new TextEncoder().encode("Test all properties"),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode("Test all properties"), "text/plain");
 
 			expect(result.metadata.all_props_valid).toBe(true);
 		});
@@ -290,15 +262,10 @@ describe("Async PostProcessor Support", () => {
 			const errorProc = new AsyncErrorProcessor();
 			registerPostProcessor(errorProc);
 
-			const result = await extractBytes(
-				Buffer.from("Test async error handling"),
-				"text/plain",
-			);
+			const result = await extractBytes(Buffer.from("Test async error handling"), "text/plain");
 
 			// Error should be captured in metadata
-			const errorKey = Object.keys(result.metadata).find((k) =>
-				k.includes("error"),
-			);
+			const errorKey = Object.keys(result.metadata).find((k) => k.includes("error"));
 			expect(errorKey).toBeDefined();
 		});
 
@@ -310,10 +277,7 @@ describe("Async PostProcessor Support", () => {
 			registerPostProcessor(errorProc);
 			registerPostProcessor(wordProc);
 
-			const result = await extractBytes(
-				Buffer.from("Test error recovery one two three"),
-				"text/plain",
-			);
+			const result = await extractBytes(Buffer.from("Test error recovery one two three"), "text/plain");
 
 			// Word counter should still execute
 			expect(result.metadata.async_word_count).toBeDefined();
@@ -328,19 +292,12 @@ describe("Async PostProcessor Support", () => {
 			registerPostProcessor(proc1);
 			registerPostProcessor(proc2);
 
-			const result = await extractBytes(
-				Buffer.from("Test chaining one two three"),
-				"text/plain",
-			);
+			const result = await extractBytes(Buffer.from("Test chaining one two three"), "text/plain");
 
 			expect(result.metadata.async_word_count).toBeDefined();
 			expect(result.metadata.chain_count).toBeDefined();
 			expect(result.metadata.previous_metadata_keys).toBeDefined();
-			expect(
-				(result.metadata.previous_metadata_keys as string[]).includes(
-					"async_word_count",
-				),
-			).toBe(true);
+			expect((result.metadata.previous_metadata_keys as string[]).includes("async_word_count")).toBe(true);
 		});
 
 		it("should maintain processor state across multiple extractions", async () => {
@@ -374,13 +331,12 @@ describe("Async PostProcessor Support", () => {
 					})(),
 			);
 
-			processors.forEach((p) => registerPostProcessor(p));
+			for (const p of processors) {
+				registerPostProcessor(p);
+			}
 
 			const start = Date.now();
-			const result = await extractBytes(
-				Buffer.from("Concurrent test"),
-				"text/plain",
-			);
+			const result = await extractBytes(Buffer.from("Concurrent test"), "text/plain");
 			const duration = Date.now() - start;
 
 			// All processors should have executed
@@ -402,10 +358,7 @@ describe("Async PostProcessor Support", () => {
 			const processor = new SyncWordCountProcessor();
 			registerPostProcessor(processor);
 
-			const result = extractBytesSync(
-				new TextEncoder().encode("Test sync extraction five words"),
-				"text/plain",
-			);
+			const result = extractBytesSync(new TextEncoder().encode("Test sync extraction five words"), "text/plain");
 
 			expect(result.metadata.sync_word_count).toBe(5);
 		});

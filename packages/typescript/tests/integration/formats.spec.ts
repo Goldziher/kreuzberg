@@ -1,17 +1,17 @@
-import { describe, it, expect } from "vitest";
+import { existsSync } from "node:fs";
+import { describe, expect, it } from "vitest";
 import { extractFile } from "../../src/index.js";
 import type { ExtractionConfig } from "../../src/types.js";
 import {
-	getTestDocumentPath,
-	testDocumentsAvailable,
-	assertMimeType,
-	assertNonEmptyContent,
-	assertValidExtractionResult,
 	assertExcelMetadata,
 	assertMarkdownConversion,
+	assertMimeType,
+	assertNonEmptyContent,
 	assertSubstantialContent,
+	assertValidExtractionResult,
+	getTestDocumentPath,
+	testDocumentsAvailable,
 } from "../helpers/integration-helpers.js";
-import { existsSync } from "node:fs";
 
 describe("Office Document Integration Tests", () => {
 	it("should extract DOCX document", async () => {
@@ -30,10 +30,7 @@ describe("Office Document Integration Tests", () => {
 		const result = await extractFile(path, null, config);
 
 		assertValidExtractionResult(result);
-		assertMimeType(
-			result,
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-		);
+		assertMimeType(result, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 		assertNonEmptyContent(result);
 
 		console.log("DOCX extraction successful");
@@ -57,10 +54,7 @@ describe("Office Document Integration Tests", () => {
 		const result = await extractFile(path, null, config);
 
 		assertValidExtractionResult(result);
-		assertMimeType(
-			result,
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		);
+		assertMimeType(result, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 		assertNonEmptyContent(result);
 
 		assertExcelMetadata(result.metadata);
@@ -86,10 +80,7 @@ describe("Office Document Integration Tests", () => {
 				const result = await extractFile(path, null, config);
 
 				assertValidExtractionResult(result);
-				assertMimeType(
-					result,
-					"application/vnd.openxmlformats-officedocument.presentationml.presentation",
-				);
+				assertMimeType(result, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
 				assertNonEmptyContent(result);
 
 				console.log("PPTX extraction successful");
@@ -122,10 +113,7 @@ describe("Office Document Integration Tests", () => {
 
 			console.log("Legacy DOC extraction successful");
 		} catch (error) {
-			console.log(
-				"Legacy Office extraction failed (LibreOffice may not be installed):",
-				(error as Error).message,
-			);
+			console.log("Legacy Office extraction failed (LibreOffice may not be installed):", (error as Error).message);
 		}
 	});
 });
@@ -219,9 +207,7 @@ describe("Data Format Integration Tests", () => {
 		assertMimeType(result, "application/json");
 		assertNonEmptyContent(result);
 
-		expect(result.content.includes("{") || result.content.includes("[")).toBe(
-			true,
-		);
+		expect(result.content.includes("{") || result.content.includes("[")).toBe(true);
 
 		console.log("JSON extraction successful");
 	});
@@ -280,8 +266,7 @@ describe("Data Format Integration Tests", () => {
 		assertNonEmptyContent(result);
 
 		const hasXmlMetadata =
-			result.metadata.xml?.elementCount !== undefined ||
-			result.metadata.xml?.uniqueElements !== undefined;
+			result.metadata.xml?.elementCount !== undefined || result.metadata.xml?.uniqueElements !== undefined;
 
 		if (hasXmlMetadata) {
 			console.log("XML metadata successfully extracted");
@@ -370,11 +355,7 @@ describe("Text/Markdown Integration Tests", () => {
 			return;
 		}
 
-		const testFiles = [
-			"text/contract.txt",
-			"text/book_war_and_peace_1p.txt",
-			"text/norwich_city.txt",
-		];
+		const testFiles = ["text/contract.txt", "text/book_war_and_peace_1p.txt", "text/norwich_city.txt"];
 
 		for (const testFile of testFiles) {
 			const path = getTestDocumentPath(testFile);

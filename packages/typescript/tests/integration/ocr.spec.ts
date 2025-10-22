@@ -1,16 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { existsSync } from "node:fs";
+import { describe, expect, it } from "vitest";
 import { extractFile } from "../../src/index.js";
 import type { ExtractionConfig } from "../../src/types.js";
 import {
-	getTestDocumentPath,
-	testDocumentsAvailable,
+	assertImageMetadata,
 	assertMimeType,
 	assertNonEmptyContent,
-	assertValidExtractionResult,
 	assertOcrResult,
-	assertImageMetadata,
+	assertValidExtractionResult,
+	getTestDocumentPath,
+	testDocumentsAvailable,
 } from "../helpers/integration-helpers.js";
-import { existsSync } from "node:fs";
 
 describe("OCR Integration Tests", () => {
 	it("should perform OCR on simple English text image", async () => {
@@ -143,7 +143,7 @@ describe("OCR Integration Tests", () => {
 			}
 
 			console.log("Tesseract configured with custom settings");
-		} catch (error) {
+		} catch (_error) {
 			console.log("OCR test failed (Tesseract may not be installed)");
 		}
 	});
@@ -181,7 +181,7 @@ describe("OCR Integration Tests", () => {
 					console.log(`OCR confidence: ${metadata.confidence}`);
 				}
 			}
-		} catch (error) {
+		} catch (_error) {
 			console.log("OCR test failed (Tesseract may not be installed)");
 		}
 	});
@@ -220,7 +220,7 @@ describe("OCR Integration Tests", () => {
 					expect(Array.isArray(table.cells)).toBe(true);
 				}
 			}
-		} catch (error) {
+		} catch (_error) {
 			console.log("OCR table detection test failed (Tesseract may not be installed)");
 		}
 	});
@@ -256,7 +256,7 @@ describe("OCR Integration Tests", () => {
 				const hasOnlyAllowedChars = /^[A-Z ]+$/.test(content);
 				console.log(`Whitelist enforced: ${hasOnlyAllowedChars}`);
 			}
-		} catch (error) {
+		} catch (_error) {
 			console.log("OCR whitelist test failed (Tesseract may not be installed)");
 		}
 	});

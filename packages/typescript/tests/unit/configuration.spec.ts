@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { extractFileSync, extractBytesSync } from "../../src/index.js";
+import { describe, expect, it } from "vitest";
+import { extractBytesSync, extractFileSync } from "../../src/index.js";
 import type { ExtractionConfig } from "../../src/types.js";
 
 function getTestDocumentPath(relativePath: string): string {

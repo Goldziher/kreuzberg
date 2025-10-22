@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "node:child_process";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import which from "which";
 
 vi.mock("which");
@@ -158,9 +158,7 @@ describe("CLI", () => {
 				signal: null,
 			});
 
-			const result = spawnSync("/usr/local/bin/kreuzberg-cli", [
-				"invalid-command",
-			], {
+			const result = spawnSync("/usr/local/bin/kreuzberg-cli", ["invalid-command"], {
 				stdio: "inherit",
 				shell: false,
 			});
@@ -302,11 +300,7 @@ describe("CLI", () => {
 				signal: null,
 			});
 
-			const result = spawnSync("/usr/local/bin/kreuzberg-cli", [
-				"api",
-				"--port",
-				"8000",
-			], {
+			const result = spawnSync("/usr/local/bin/kreuzberg-cli", ["api", "--port", "8000"], {
 				stdio: "inherit",
 				shell: false,
 			});
@@ -350,10 +344,7 @@ describe("CLI", () => {
 				signal: null,
 			});
 
-			const result = spawnSync("/usr/local/bin/kreuzberg-cli", [
-				"extract",
-				"document.pdf",
-			], {
+			const result = spawnSync("/usr/local/bin/kreuzberg-cli", ["extract", "document.pdf"], {
 				stdio: "inherit",
 				shell: false,
 			});

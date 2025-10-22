@@ -7,11 +7,7 @@ import type { ExtractionResult, Metadata } from "../../src/types.js";
  * Path should be relative to test_documents/ (e.g., "pdfs/simple.pdf")
  */
 export function loadTestDocument(relativePath: string): Buffer {
-	const testDocPath = join(
-		process.cwd(),
-		"../../test_documents",
-		relativePath,
-	);
+	const testDocPath = join(process.cwd(), "../../test_documents", relativePath);
 	return readFileSync(testDocPath);
 }
 
@@ -40,18 +36,11 @@ export function assertValidExtractionResult(result: ExtractionResult): void {
 		throw new Error("result.tables must be null or an array");
 	}
 
-	if (
-		result.detectedLanguages !== null &&
-		!Array.isArray(result.detectedLanguages)
-	) {
+	if (result.detectedLanguages !== null && !Array.isArray(result.detectedLanguages)) {
 		throw new Error("result.detectedLanguages must be null or an array");
 	}
 
-	if (
-		result.chunks !== undefined &&
-		result.chunks !== null &&
-		!Array.isArray(result.chunks)
-	) {
+	if (result.chunks !== undefined && result.chunks !== null && !Array.isArray(result.chunks)) {
 		throw new Error("result.chunks must be undefined, null, or an array");
 	}
 }
@@ -104,14 +93,10 @@ export async function assertExtractionError(
 
 	if (expectedMessagePattern) {
 		const pattern =
-			typeof expectedMessagePattern === "string"
-				? new RegExp(expectedMessagePattern)
-				: expectedMessagePattern;
+			typeof expectedMessagePattern === "string" ? new RegExp(expectedMessagePattern) : expectedMessagePattern;
 
 		if (!pattern.test(error.message)) {
-			throw new Error(
-				`Error message "${error.message}" does not match expected pattern ${pattern}`,
-			);
+			throw new Error(`Error message "${error.message}" does not match expected pattern ${pattern}`);
 		}
 	}
 }
@@ -119,14 +104,14 @@ export async function assertExtractionError(
 /**
  * Create a temporary test file for testing.
  */
-export function createTempFile(content: Buffer | string, extension = "txt"): {
+export function createTempFile(
+	content: Buffer | string,
+	extension = "txt",
+): {
 	path: string;
 	cleanup: () => void;
 } {
-	const tmpPath = join(
-		process.cwd(),
-		`temp-test-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`,
-	);
+	const tmpPath = join(process.cwd(), `temp-test-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`);
 	const fs = require("node:fs");
 
 	if (typeof content === "string") {

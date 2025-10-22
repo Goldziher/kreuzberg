@@ -1,17 +1,17 @@
-"""
-Batch Processing Example
+"""Batch Processing Example.
 
 Demonstrates efficient batch processing of multiple documents.
 """
 
-from kreuzberg import batch_extract_files, batch_extract_files_sync, ExtractionConfig
 import asyncio
+import contextlib
 from pathlib import Path
 
+from kreuzberg import ExtractionConfig, batch_extract_files, batch_extract_files_sync
 
-def main():
+
+def main() -> None:
     # Synchronous batch processing
-    print("=== Synchronous Batch Processing ===")
     files = [
         "document1.pdf",
         "document2.docx",
@@ -21,29 +21,22 @@ def main():
 
     results = batch_extract_files_sync(files)
 
-    for file, result in zip(files, results):
-        print(f"\n{file}:")
-        print(f"  Length: {len(result.content)} chars")
-        print(f"  MIME: {result.mime_type}")
-        print(f"  Preview: {result.content[:100]}...")
+    for file, _result in zip(files, results, strict=False):
+        pass
 
     # Async batch processing - better for large datasets
-    print("\n=== Async Batch Processing ===")
 
     async def process_batch():
         files = [f"doc{i}.pdf" for i in range(10)]
         results = await batch_extract_files(files)
 
-        total_chars = sum(len(r.content) for r in results)
-        print(f"Processed {len(results)} files")
-        print(f"Total characters: {total_chars}")
+        sum(len(r.content) for r in results)
 
         return results
 
     asyncio.run(process_batch())
 
     # Batch with configuration
-    print("\n=== Batch with Configuration ===")
     config = ExtractionConfig(
         enable_quality_processing=True,
         use_cache=True,
@@ -51,22 +44,18 @@ def main():
     )
 
     results = batch_extract_files_sync(files, config=config)
-    print(f"Processed {len(results)} files with configuration")
 
     # Process directory of files
-    print("\n=== Process Directory ===")
     from glob import glob
 
     pdf_files = glob("data/*.pdf")
     if pdf_files:
         results = batch_extract_files_sync(pdf_files[:5])  # Process first 5
 
-        for file, result in zip(pdf_files[:5], results):
-            filename = Path(file).name
-            print(f"{filename}: {len(result.content)} chars")
+        for file, _result in zip(pdf_files[:5], results, strict=False):
+            pass  # Process each result as needed
 
     # Batch extract from bytes
-    print("\n=== Batch Extract from Bytes ===")
     from kreuzberg import batch_extract_bytes_sync
 
     data_list = []
@@ -87,31 +76,21 @@ def main():
         mime_types.append(mime_map.get(ext, "application/octet-stream"))
 
     results = batch_extract_bytes_sync(data_list, mime_types)
-    print(f"Extracted {len(results)} documents from bytes")
 
     # Error handling in batch processing
-    print("\n=== Batch with Error Handling ===")
     files_with_invalid = [
         "valid1.pdf",
         "nonexistent.pdf",  # This will fail
         "valid2.txt",
     ]
 
-    try:
+    with contextlib.suppress(Exception):
         results = batch_extract_files_sync(files_with_invalid)
-    except Exception as e:
-        print(f"Batch error: {e}")
-        print("Note: Batch operations fail fast on first error")
-        print("Process files individually for better error handling")
 
     # Individual processing with error handling
-    print("\n=== Individual Processing with Error Handling ===")
     for file in files_with_invalid:
-        try:
-            result = batch_extract_files_sync([file])[0]
-            print(f"✓ {file}: {len(result.content)} chars")
-        except Exception as e:
-            print(f"✗ {file}: {type(e).__name__}: {e}")
+        with contextlib.suppress(Exception):
+            batch_extract_files_sync([file])[0]
 
 
 if __name__ == "__main__":

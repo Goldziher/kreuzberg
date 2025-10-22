@@ -14,11 +14,21 @@ repos:
     rev: v2.11.0
     hooks:
       - id: pyproject-fmt
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.2.6
+    hooks:
+      - id: biome-format
+      - id: biome-lint
+  - repo: https://github.com/oxc-project/mirrors-oxlint
+    rev: v1.24.0
+    hooks:
+      - id: oxlint
+        args: ["--fix"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.1
     hooks:
       - id: ruff
-        args: ["--fix", "--unsafe-fixes"]
+        args: [ "--fix", "--unsafe-fixes" ]
       - id: ruff-format
   - repo: local
     hooks:
@@ -27,5 +37,5 @@ repos:
         entry: uv run mypy
         require_serial: true
         language: system
-        types: [python]
-        exclude: ^scripts/|^comparative-benchmarks/
+        types: [ python ]
+        exclude: ^scripts/|^comparative-benchmarks/|^examples/

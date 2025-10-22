@@ -1,26 +1,22 @@
-"""
-Custom PostProcessor Example
+"""Custom PostProcessor Example.
 
 Demonstrates implementing custom post-processor plugins.
 """
 
-from kreuzberg import (
-    register_post_processor,
-    unregister_post_processor,
-    clear_post_processors,
-    extract_file_sync,
-    ExtractionResult,
-    ExtractionConfig,
-)
 import re
 from datetime import datetime
-from typing import Dict, Any
+
+from kreuzberg import (
+    ExtractionResult,
+    clear_post_processors,
+    extract_file_sync,
+    register_post_processor,
+    unregister_post_processor,
+)
 
 
 class MetadataEnricher:
-    """
-    Post-processor that enriches extraction results with metadata.
-    """
+    """Post-processor that enriches extraction results with metadata."""
 
     def name(self) -> str:
         return "metadata_enricher"
@@ -41,15 +37,11 @@ class MetadataEnricher:
         result.metadata["has_emails"] = bool(re.search(r"\S+@\S+\.\S+", content))
         result.metadata["has_phone_numbers"] = bool(re.search(r"\d{3}[-.]?\d{3}[-.]?\d{4}", content))
 
-        print(f"[MetadataEnricher] Added statistics: {result.metadata['word_count']} words")
-
         return result
 
 
 class PIIRedactor:
-    """
-    Post-processor that redacts Personally Identifiable Information.
-    """
+    """Post-processor that redacts Personally Identifiable Information."""
 
     def name(self) -> str:
         return "pii_redactor"
@@ -74,15 +66,11 @@ class PIIRedactor:
         result.content = content
         result.metadata["pii_redacted"] = True
 
-        print("[PIIRedactor] Redacted PII from content")
-
         return result
 
 
 class TextNormalizer:
-    """
-    Post-processor that normalizes text formatting.
-    """
+    """Post-processor that normalizes text formatting."""
 
     def name(self) -> str:
         return "text_normalizer"
@@ -105,19 +93,16 @@ class TextNormalizer:
         result.content = content
         result.metadata["text_normalized"] = True
 
-        print("[TextNormalizer] Normalized text formatting")
-
         return result
 
 
 class LanguageTranslator:
-    """
-    Post-processor that translates content to target language.
+    """Post-processor that translates content to target language.
 
     Note: This is a mock example. In production, use a translation API.
     """
 
-    def __init__(self, target_language: str = "en"):
+    def __init__(self, target_language: str = "en") -> None:
         self.target_language = target_language
 
     def name(self) -> str:
@@ -133,7 +118,6 @@ class LanguageTranslator:
         #     dest=self.target_language
         # ).text
 
-        print(f"[LanguageTranslator] Mock translation to {self.target_language}")
         result.metadata["translated_to"] = self.target_language
         result.metadata["original_language"] = result.detected_languages[0] if result.detected_languages else "unknown"
 
@@ -141,11 +125,9 @@ class LanguageTranslator:
 
 
 class SummaryGenerator:
-    """
-    Post-processor that generates a summary of the content.
-    """
+    """Post-processor that generates a summary of the content."""
 
-    def __init__(self, max_summary_length: int = 500):
+    def __init__(self, max_summary_length: int = 500) -> None:
         self.max_summary_length = max_summary_length
 
     def name(self) -> str:
@@ -172,15 +154,11 @@ class SummaryGenerator:
         result.metadata["summary"] = summary.strip()
         result.metadata["is_truncated"] = len(content) > self.max_summary_length
 
-        print(f"[SummaryGenerator] Generated summary: {len(summary)} chars")
-
         return result
 
 
 class KeywordExtractor:
-    """
-    Post-processor that extracts keywords from content.
-    """
+    """Post-processor that extracts keywords from content."""
 
     def name(self) -> str:
         return "keyword_extractor"
@@ -218,7 +196,7 @@ class KeywordExtractor:
         words = re.findall(r"\b[a-z]{4,}\b", content)
 
         # Count word frequencies
-        word_freq: Dict[str, int] = {}
+        word_freq: dict[str, int] = {}
         for word in words:
             if word not in stopwords:
                 word_freq[word] = word_freq.get(word, 0) + 1
@@ -227,14 +205,11 @@ class KeywordExtractor:
         keywords = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
         result.metadata["keywords"] = [word for word, _ in keywords]
 
-        print(f"[KeywordExtractor] Extracted {len(keywords)} keywords")
-
         return result
 
 
-def main():
+def main() -> None:
     # Register post-processors
-    print("=== Registering Post-Processors ===")
     register_post_processor(MetadataEnricher())
     register_post_processor(PIIRedactor())
     register_post_processor(TextNormalizer())
@@ -242,43 +217,24 @@ def main():
     register_post_processor(SummaryGenerator(max_summary_length=300))
     register_post_processor(KeywordExtractor())
 
-    print("Registered 6 post-processors\n")
-
     # Extract with all post-processors
-    print("=== Extraction with Post-Processors ===")
-    result = extract_file_sync("document.pdf")
-
-    print(f"\nFinal result:")
-    print(f"  Content length: {len(result.content)} chars")
-    print(f"  Word count: {result.metadata.get('word_count')}")
-    print(f"  PII redacted: {result.metadata.get('pii_redacted')}")
-    print(f"  Text normalized: {result.metadata.get('text_normalized')}")
-    print(f"  Summary length: {len(result.metadata.get('summary', ''))}")
-    print(f"  Keywords: {result.metadata.get('keywords', [])[:5]}")
+    extract_file_sync("document.pdf")
 
     # Unregister specific post-processor
-    print("\n=== Unregister Post-Processor ===")
     unregister_post_processor("pii_redactor")
-    print("Unregistered: pii_redactor")
 
-    result = extract_file_sync("document.pdf")
-    print(f"PII redacted: {result.metadata.get('pii_redacted', False)}")  # Should be False now
+    extract_file_sync("document.pdf")
 
     # Clear all post-processors
-    print("\n=== Clear All Post-Processors ===")
     clear_post_processors()
-    print("Cleared all post-processors")
 
-    result = extract_file_sync("document.pdf")
-    print(f"Word count (should be missing): {result.metadata.get('word_count')}")
+    extract_file_sync("document.pdf")
 
     # Register selective post-processors
-    print("\n=== Selective Post-Processing ===")
     register_post_processor(MetadataEnricher())
     register_post_processor(SummaryGenerator(max_summary_length=200))
 
-    result = extract_file_sync("document.pdf")
-    print(f"Only metadata enrichment and summary: {list(result.metadata.keys())}")
+    extract_file_sync("document.pdf")
 
 
 if __name__ == "__main__":
