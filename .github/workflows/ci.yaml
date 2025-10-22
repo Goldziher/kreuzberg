@@ -104,7 +104,7 @@ jobs:
           RUST_BACKTRACE: 1
         run: |
           echo "Running Rust integration tests (207 tests with comprehensive features)..."
-          cargo test --release --features full --tests
+          cargo test --release --features full --tests --package kreuzberg --package kreuzberg-cli
 
       - name: Check Rust Formatting
         if: matrix.os == 'ubuntu-latest'
