@@ -104,7 +104,7 @@ jobs:
           RUST_BACKTRACE: 1
         run: |
           echo "Running Rust integration tests (207 tests with comprehensive features)..."
-          cargo test --release --features full --tests --timeout 600
+          cargo test --release --features full --tests
 
       - name: Check Rust Formatting
         if: matrix.os == 'ubuntu-latest'
