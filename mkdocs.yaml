@@ -151,9 +151,13 @@ nav:
       - Rust Custom Extractor: plugins/rust-custom-extractor.md
   - CLI Guide:
       - Usage: cli/usage.md
+  - Examples:
+      - Python: examples/python.md
+      - TypeScript: examples/typescript.md
+      - Rust: examples/rust.md
   - API Reference:
       - Python: api-reference/python/
+  - Migration Guide:
+      - v3 to v4: migration/v3-to-v4.md
+  - Changelog: ../CHANGELOG.md
   - Contributing: contributing.md
-  # TODO: v4 documentation content - Phase 3 in progress
-  # - Examples
-  # - Migration Guide (v3→v4)
