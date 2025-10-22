@@ -50,6 +50,7 @@ import type {
 	ExtractionResult,
 	OcrBackendProtocol,
 	PostProcessorProtocol,
+	ValidatorProtocol,
 } from "./types.js";
 
 export * from "./types.js";
@@ -546,6 +547,104 @@ export function unregisterPostProcessor(name: string): void {
 export function clearPostProcessors(): void {
 	const binding = getBinding();
 	binding.clearPostProcessors();
+}
+
+/**
+ * Register a custom validator.
+ *
+ * Validators check extraction results for quality, completeness, or correctness.
+ * Unlike post-processors, validator errors **fail fast** - if a validator throws an error,
+ * the extraction fails immediately.
+ *
+ * @param validator - ValidatorProtocol implementation
+ *
+ * @example
+ * ```typescript
+ * import { registerValidator } from 'kreuzberg';
+ *
+ * class MinLengthValidator implements ValidatorProtocol {
+ *   name(): string {
+ *     return 'min_length_validator';
+ *   }
+ *
+ *   priority(): number {
+ *     return 100; // Run early
+ *   }
+ *
+ *   validate(result: ExtractionResult): void {
+ *     if (result.content.length < 100) {
+ *       throw new Error('Content too short: minimum 100 characters required');
+ *     }
+ *   }
+ * }
+ *
+ * registerValidator(new MinLengthValidator());
+ * ```
+ */
+export function registerValidator(validator: ValidatorProtocol): void {
+	const binding = getBinding();
+
+	const wrappedValidator = {
+		name: validator.name.bind(validator),
+		priority: validator.priority?.bind(validator),
+		async validate(...args: string[]): Promise<string> {
+			const jsonString = args[0];
+			const wireResult = JSON.parse(jsonString);
+			const result: ExtractionResult = {
+				content: wireResult.content,
+				mimeType: wireResult.mime_type,
+				metadata:
+					typeof wireResult.metadata === "string"
+						? JSON.parse(wireResult.metadata)
+						: wireResult.metadata,
+				tables: wireResult.tables || [],
+				detectedLanguages: wireResult.detected_languages,
+				chunks: wireResult.chunks,
+			};
+
+			await Promise.resolve(validator.validate(result));
+			return ""; // Return empty string on success
+		},
+	};
+
+	binding.registerValidator(wrappedValidator);
+}
+
+/**
+ * Unregister a validator by name.
+ *
+ * Removes a previously registered validator from the global registry.
+ *
+ * @param name - Validator name to unregister
+ *
+ * @example
+ * ```typescript
+ * import { unregisterValidator } from 'kreuzberg';
+ *
+ * unregisterValidator('min_length_validator');
+ * ```
+ */
+export function unregisterValidator(name: string): void {
+	const binding = getBinding();
+	binding.unregisterValidator(name);
+}
+
+/**
+ * Clear all registered validators.
+ *
+ * Removes all validators from the global registry. Useful for test cleanup
+ * or resetting state.
+ *
+ * @example
+ * ```typescript
+ * import { clearValidators } from 'kreuzberg';
+ *
+ * clearValidators();
+ * ```
+ */
+export function clearValidators(): void {
+	const binding = getBinding();
+	binding.clearValidators();
 }
 
 /**

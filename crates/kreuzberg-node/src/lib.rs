@@ -1,6 +1,6 @@
 #![deny(clippy::all)]
 
-use kreuzberg::plugins::registry::get_post_processor_registry;
+use kreuzberg::plugins::registry::{get_post_processor_registry, get_validator_registry};
 use kreuzberg::{
     ChunkingConfig as RustChunkingConfig, ExtractionConfig, ExtractionResult as RustExtractionResult,
     ImageExtractionConfig as RustImageExtractionConfig, LanguageDetectionConfig as RustLanguageDetectionConfig,
@@ -626,6 +626,243 @@ pub fn clear_post_processors() -> Result<()> {
     })?;
 
     // Clear all processors from the internal HashMap
+    *registry = Default::default();
+    Ok(())
+}
+
+// JavaScript Validator bridge implementation using ThreadsafeFunction
+
+use kreuzberg::plugins::Validator as RustValidator;
+
+/// Wrapper that makes a JavaScript Validator usable from Rust.
+///
+/// Uses JSON serialization to pass data between Rust and JavaScript due to NAPI limitations
+/// with complex object types across ThreadsafeFunction boundaries.
+///
+/// Wrapper that holds the ThreadsafeFunction to call JavaScript from Rust.
+/// The validate_fn is an async JavaScript function that:
+/// - Takes: String (JSON-serialized ExtractionResult)
+/// - Returns: Promise<String> (empty string on success, rejects on validation failure)
+///
+/// Type parameters:
+/// - Input: String
+/// - Return: Promise<String>
+/// - CallJsBackArgs: Vec<String> (because build_callback returns vec![value])
+/// - ErrorStatus: napi::Status
+/// - CalleeHandled: false (default with build_callback)
+struct JsValidator {
+    name: String,
+    validate_fn: Arc<ThreadsafeFunction<String, Promise<String>, Vec<String>, napi::Status, false>>,
+    priority: i32,
+}
+
+// SAFETY: ThreadsafeFunction is explicitly designed to be called from any thread.
+// It uses internal synchronization and the Node.js event loop to safely execute
+// JavaScript. The Arc wrapper ensures the function lives long enough.
+unsafe impl Send for JsValidator {}
+unsafe impl Sync for JsValidator {}
+
+impl Plugin for JsValidator {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn version(&self) -> String {
+        "1.0.0".to_string()
+    }
+
+    fn initialize(&self) -> std::result::Result<(), kreuzberg::KreuzbergError> {
+        Ok(())
+    }
+
+    fn shutdown(&self) -> std::result::Result<(), kreuzberg::KreuzbergError> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl RustValidator for JsValidator {
+    async fn validate(
+        &self,
+        result: &kreuzberg::ExtractionResult,
+        _config: &kreuzberg::ExtractionConfig,
+    ) -> std::result::Result<(), kreuzberg::KreuzbergError> {
+        // Convert Rust ExtractionResult to JS format and serialize to JSON
+        let js_result: JsExtractionResult = result.clone().into();
+        let json_input = serde_json::to_string(&js_result).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+            message: format!("Failed to serialize result for JavaScript Validator: {}", e),
+            plugin_name: self.name.clone(),
+        })?;
+
+        // Call JavaScript validate function with JSON string and await result
+        // Double await: first for the ThreadsafeFunction call, second for the Promise returned by JS
+        let _empty_result = self
+            .validate_fn
+            .call_async(json_input)
+            .await
+            .map_err(|e| {
+                let err_msg = e.to_string();
+                // Check if the error message contains "ValidationError" to determine error type
+                if err_msg.contains("ValidationError") || err_msg.contains("validation") {
+                    kreuzberg::KreuzbergError::Validation {
+                        message: err_msg,
+                        source: None,
+                    }
+                } else {
+                    kreuzberg::KreuzbergError::Plugin {
+                        message: format!("JavaScript Validator '{}' failed: {}", self.name, err_msg),
+                        plugin_name: self.name.clone(),
+                    }
+                }
+            })?
+            .await
+            .map_err(|e| {
+                let err_msg = e.to_string();
+                // Check if the error message contains "ValidationError" to determine error type
+                if err_msg.contains("ValidationError") || err_msg.contains("validation") {
+                    kreuzberg::KreuzbergError::Validation {
+                        message: err_msg,
+                        source: None,
+                    }
+                } else {
+                    kreuzberg::KreuzbergError::Plugin {
+                        message: format!("JavaScript Validator '{}' failed: {}", self.name, err_msg),
+                        plugin_name: self.name.clone(),
+                    }
+                }
+            })?;
+
+        // Validation passed (empty string returned)
+        Ok(())
+    }
+
+    fn priority(&self) -> i32 {
+        self.priority
+    }
+}
+
+/// Register a custom validator
+///
+/// Registers a JavaScript Validator that will be called after extraction.
+///
+/// # Arguments
+///
+/// * `validator` - JavaScript object with the following interface:
+///   - `name(): string` - Unique validator name
+///   - `validate(...args): Promise<string>` - Validate function that receives JSON string as args[0]
+///   - `priority(): number` - Optional priority (defaults to 50, higher runs first)
+///
+/// # Implementation Notes
+///
+/// Due to NAPI ThreadsafeFunction limitations, the validate function receives the extraction
+/// result as a JSON string in args[0]. On success, return an empty string. On validation
+/// failure, throw an error (the Promise should reject). Use the TypeScript wrapper functions
+/// for a cleaner API.
+///
+/// # Example
+///
+/// ```typescript
+/// import { registerValidator } from '@kreuzberg/node';
+///
+/// registerValidator({
+///   name: () => "min-length",
+///   priority: () => 100,
+///   validate: async (...args) => {
+///     const result = JSON.parse(args[0]);
+///     if (result.content.length < 100) {
+///       throw new Error("ValidationError: Content too short");
+///     }
+///     return ""; // Success - return empty string
+///   }
+/// });
+/// ```
+#[napi]
+pub fn register_validator(_env: Env, validator: Object) -> Result<()> {
+    // Get validator name
+    let name_fn: Function<(), String> = validator.get_named_property("name")?;
+    let name: String = name_fn.call(())?;
+
+    if name.is_empty() {
+        return Err(Error::new(
+            Status::InvalidArg,
+            "Validator name cannot be empty".to_string(),
+        ));
+    }
+
+    // Get priority (optional, defaults to 50)
+    let priority = if let Ok(priority_fn) = validator.get_named_property::<Function<(), i32>>("priority") {
+        priority_fn.call(())?
+    } else {
+        50
+    };
+
+    // Get validate function and create ThreadsafeFunction
+    // The JS function is async and returns Promise<String>
+    let validate_fn: Function<String, Promise<String>> = validator.get_named_property("validate")?;
+
+    // Build ThreadsafeFunction with callback to properly pass arguments to JS
+    // The JS function is async and returns a Promise, so we use build_callback
+    // to transform the argument passing (wrapping in an array)
+    let tsfn = validate_fn.build_threadsafe_function().build_callback(|ctx| {
+        // Return the value wrapped in a vec so JS receives it as ...args
+        Ok(vec![ctx.value])
+    })?;
+
+    // Create the Rust wrapper
+    let js_validator = JsValidator {
+        name: name.clone(),
+        validate_fn: Arc::new(tsfn),
+        priority,
+    };
+
+    // Register with the Rust registry
+    let arc_validator: Arc<dyn RustValidator> = Arc::new(js_validator);
+    let registry = get_validator_registry();
+    let mut registry = registry.write().map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to acquire write lock on Validator registry: {}", e),
+        )
+    })?;
+
+    registry.register(arc_validator).map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to register Validator '{}': {}", name, e),
+        )
+    })?;
+
+    Ok(())
+}
+
+/// Unregister a validator by name
+#[napi]
+pub fn unregister_validator(name: String) -> Result<()> {
+    let registry = get_validator_registry();
+    let mut registry = registry.write().map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to acquire write lock on Validator registry: {}", e),
+        )
+    })?;
+
+    // Remove validator from the internal HashMap
+    let _ = registry.remove(&name);
+    Ok(())
+}
+
+/// Clear all registered validators
+#[napi]
+pub fn clear_validators() -> Result<()> {
+    let registry = get_validator_registry();
+    let mut registry = registry.write().map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to acquire write lock on Validator registry: {}", e),
+        )
+    })?;
+
+    // Clear all validators from the internal HashMap
     *registry = Default::default();
     Ok(())
 }

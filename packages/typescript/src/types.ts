@@ -246,6 +246,57 @@ export interface PostProcessorProtocol {
 	shutdown?(): void | Promise<void>;
 }
 
+export interface ValidatorProtocol {
+	/**
+	 * Return the unique name of this validator.
+	 */
+	name(): string;
+
+	/**
+	 * Validate an extraction result.
+	 *
+	 * Throw an error if validation fails. The error message should explain why validation failed.
+	 * If validation passes, return without throwing.
+	 *
+	 * @param result - ExtractionResult to validate
+	 * @throws Error if validation fails (extraction will fail)
+	 */
+	validate(result: ExtractionResult): void | Promise<void>;
+
+	/**
+	 * Return the validation priority.
+	 *
+	 * Higher priority validators run first. Useful for running cheap validations before expensive ones.
+	 *
+	 * @returns Priority value (higher = runs earlier, default: 50)
+	 */
+	priority?(): number;
+
+	/**
+	 * Check if this validator should run for a given result.
+	 *
+	 * Allows conditional validation based on MIME type, metadata, or content.
+	 *
+	 * @param result - ExtractionResult to check
+	 * @returns true if validator should run, false to skip (default: true)
+	 */
+	shouldValidate?(result: ExtractionResult): boolean;
+
+	/**
+	 * Initialize the validator.
+	 *
+	 * Called once when the validator is registered.
+	 */
+	initialize?(): void | Promise<void>;
+
+	/**
+	 * Shutdown the validator and release resources.
+	 *
+	 * Called when the validator is unregistered.
+	 */
+	shutdown?(): void | Promise<void>;
+}
+
 export interface OcrBackendProtocol {
 	/**
 	 * Return the unique name of this OCR backend.
@@ -263,4 +314,49 @@ export interface OcrBackendProtocol {
 		imageBytes: Uint8Array,
 		language: string,
 	): string | Promise<string>;
+}
+
+export interface ValidatorProtocol {
+	/**
+	 * Return the unique name of this validator.
+	 */
+	name(): string;
+
+	/**
+	 * Validate an extraction result.
+	 *
+	 * Validators are fail-fast: if validation fails, throw an error with
+	 * "ValidationError" in the message to stop the extraction process.
+	 *
+	 * @param result - ExtractionResult to validate
+	 * @throws Error with "ValidationError" in message if validation fails
+	 *
+	 * @example
+	 * ```typescript
+	 * validate(result: ExtractionResult): void | Promise<void> {
+	 *   if (result.content.length < 10) {
+	 *     throw new Error("ValidationError: Content too short");
+	 *   }
+	 * }
+	 * ```
+	 */
+	validate(result: ExtractionResult): void | Promise<void>;
+
+	/**
+	 * Return the priority for this validator (optional).
+	 *
+	 * Validators with higher priority run first.
+	 * Default: 50
+	 *
+	 * @returns Priority number (higher runs first)
+	 */
+	priority?(): number;
+
+	/**
+	 * Determine if this validator should run for a given result (optional).
+	 *
+	 * @param result - ExtractionResult to check
+	 * @returns true if validation should run, false to skip
+	 */
+	shouldValidate?(result: ExtractionResult): boolean;
 }
