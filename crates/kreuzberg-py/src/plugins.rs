@@ -319,7 +319,7 @@ fn dict_to_extraction_result(_py: Python<'_>, dict: &Bound<'_, PyAny>) -> Result
 
 /// Extract metadata dict from Python object.
 fn extract_metadata(obj: &Bound<'_, PyAny>) -> Result<HashMap<String, serde_json::Value>> {
-    let dict = obj.downcast::<PyDict>().map_err(|_| KreuzbergError::Validation {
+    let dict = obj.cast::<PyDict>().map_err(|_| KreuzbergError::Validation {
         message: "Metadata must be a dict".to_string(),
         source: None,
     })?;
@@ -356,13 +356,13 @@ fn python_to_json(obj: &Bound<'_, PyAny>) -> Result<serde_json::Value> {
         Ok(serde_json::to_value(f).unwrap_or(serde_json::Value::Null))
     } else if let Ok(s) = obj.extract::<String>() {
         Ok(serde_json::Value::String(s))
-    } else if let Ok(list) = obj.downcast::<PyList>() {
+    } else if let Ok(list) = obj.cast::<PyList>() {
         let mut vec = Vec::new();
         for item in list.iter() {
             vec.push(python_to_json(&item)?);
         }
         Ok(serde_json::Value::Array(vec))
-    } else if let Ok(dict) = obj.downcast::<PyDict>() {
+    } else if let Ok(dict) = obj.cast::<PyDict>() {
         let mut map = serde_json::Map::new();
         for (key, value) in dict.iter() {
             let key_str: String = key.extract().map_err(|_| KreuzbergError::Validation {
@@ -601,12 +601,12 @@ impl PostProcessor for PythonPostProcessor {
                     plugin_name: processor_name.clone(),
                 })?;
 
-            let processed_dict = processed.downcast::<PyDict>().map_err(|e| KreuzbergError::Plugin {
+            let processed_dict = processed.cast_into::<PyDict>().map_err(|e| KreuzbergError::Plugin {
                 message: format!("PostProcessor did not return a dict: {}", e),
                 plugin_name: processor_name.clone(),
             })?;
 
-            merge_dict_to_extraction_result(py, processed_dict, result)?;
+            merge_dict_to_extraction_result(py, &processed_dict, result)?;
 
             Ok(())
         })
@@ -670,7 +670,7 @@ fn merge_dict_to_extraction_result(
         message: format!("Failed to get 'metadata' from result dict: {}", e),
         plugin_name: "python".to_string(),
     })? && !m.is_none()
-        && let Ok(meta_dict) = m.downcast::<PyDict>()
+        && let Ok(meta_dict) = m.cast_into::<PyDict>()
     {
         for (key, value) in meta_dict.iter() {
             let key_str: String = key.extract().map_err(|_| KreuzbergError::Plugin {

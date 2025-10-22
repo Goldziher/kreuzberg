@@ -90,7 +90,7 @@ impl ExtractionResult {
         let metadata_json = serde_json::to_value(&result.metadata)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to serialize metadata: {}", e)))?;
         let metadata_py = json_value_to_py(py, &metadata_json)?;
-        let metadata = metadata_py.downcast::<PyDict>()?.clone().unbind();
+        let metadata = metadata_py.cast_into::<PyDict>()?.clone().unbind();
 
         let tables = PyList::empty(py);
         for table in result.tables {
@@ -153,7 +153,7 @@ impl ExtractedTable {
                     .bind(py)
                     .get_item(0)
                     .ok()
-                    .and_then(|first_row| first_row.downcast::<PyList>().ok().map(|list| list.len()))
+                    .and_then(|first_row| first_row.cast_into::<PyList>().ok().map(|list| list.len()))
                     .unwrap_or(0)
             } else {
                 0
