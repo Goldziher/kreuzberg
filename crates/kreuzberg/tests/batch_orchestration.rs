@@ -7,10 +7,8 @@
 //! - File I/O optimization
 //! - Resource utilization (CPU cores)
 
-use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
-use kreuzberg::core::extractor::{batch_extract_bytes, batch_extract_file, extract_file_sync};
-use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
+use kreuzberg::core::config::ExtractionConfig;
+use kreuzberg::core::extractor::{batch_extract_bytes, batch_extract_file};
 use std::time::{Duration, Instant};
 
 mod helpers;
@@ -344,9 +342,6 @@ async fn test_batch_utilizes_multiple_cores() {
         max_concurrent_extractions: Some(num_cpus::get()),
         ..Default::default()
     };
-
-    let _concurrent_count = Arc::new(AtomicUsize::new(0));
-    let _max_concurrent = Arc::new(AtomicUsize::new(0));
 
     let mut contents = Vec::new();
     for i in 0..20 {
