@@ -55,9 +55,12 @@ from kreuzberg._internal_bindings import (
     TesseractConfig,
     TokenReductionConfig,
     clear_post_processors,
+    clear_validators,
     register_ocr_backend,
     register_post_processor,
+    register_validator,
     unregister_post_processor,
+    unregister_validator,
 )
 from kreuzberg._internal_bindings import (
     batch_extract_bytes as batch_extract_bytes_impl,
@@ -128,12 +131,15 @@ __all__ = [
     "batch_extract_files",
     "batch_extract_files_sync",
     "clear_post_processors",
+    "clear_validators",
     "extract_bytes",
     "extract_bytes_sync",
     "extract_file",
     "extract_file_sync",
     "register_post_processor",
+    "register_validator",
     "unregister_post_processor",
+    "unregister_validator",
 ]
 
 

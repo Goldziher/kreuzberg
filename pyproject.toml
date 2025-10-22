@@ -18,8 +18,11 @@ dev = [
   "uv-bump",
 ]
 doc = [
+  "mike>=2.0.0",
   "mkdocs>=1.6.1",
+  "mkdocs-gen-files>=0.5.0",
   "mkdocs-git-revision-date-localized-plugin>=1.4.7",
+  "mkdocs-literate-nav>=0.6.0",
   "mkdocs-material[imaging]>=9.6.22",
   "mkdocs-minify-plugin>=0.8.0",
   "mkdocstrings[python]>=0.30.1",

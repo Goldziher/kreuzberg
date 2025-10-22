@@ -5,6 +5,8 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
+use crate::plugins::json_value_to_py;
+
 // ============================================================================
 // ============================================================================
 
@@ -85,7 +87,9 @@ impl ExtractionResult {
     /// - detected_languages Vec -> PyList
     /// - serde_json::Value -> Python objects
     pub fn from_rust(result: kreuzberg::ExtractionResult, py: Python) -> PyResult<Self> {
-        let metadata_py = pythonize::pythonize(py, &result.metadata)?;
+        let metadata_json = serde_json::to_value(&result.metadata)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to serialize metadata: {}", e)))?;
+        let metadata_py = json_value_to_py(py, &metadata_json)?;
         let metadata = metadata_py.downcast::<PyDict>()?.clone().unbind();
 
         let tables = PyList::empty(py);

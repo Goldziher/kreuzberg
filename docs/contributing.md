@@ -51,7 +51,29 @@ prek run --all-files  # Run all checks manually
 
 # Documentation
 uv run mkdocs serve                # Serve docs locally
+uv run mkdocs build --clean --strict  # Build docs
 ```
+
+### Documentation System Dependencies
+
+Building documentation requires the **cairo** graphics library for social card image generation (part of `mkdocs-material[imaging]`):
+
+**macOS**:
+```bash
+brew install cairo
+```
+
+**Ubuntu/Debian**:
+```bash
+sudo apt-get install libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev
+```
+
+**RHEL/CentOS/Fedora**:
+```bash
+sudo dnf install cairo-devel freetype-devel libffi-devel libjpeg-devel libpng-devel zlib-devel
+```
+
+**Note**: If you encounter cairo-related errors when building docs, ensure the system library is installed. The Python `cairosvg` package requires these native dependencies.
 
 ### Updating Pdfium Versions
 

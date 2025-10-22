@@ -8,17 +8,52 @@
 //! - Python PostProcessors (entity extraction, keyword extraction, etc.) to enrich results
 
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict, PyList, PyString};
+use pyo3::types::{PyBool, PyBytes, PyDict, PyList, PyString};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
-use kreuzberg::plugins::registry::{get_ocr_backend_registry, get_post_processor_registry};
-use kreuzberg::plugins::{OcrBackend, OcrBackendType, Plugin, PostProcessor, ProcessingStage};
+use kreuzberg::plugins::registry::{get_ocr_backend_registry, get_post_processor_registry, get_validator_registry};
+use kreuzberg::plugins::{OcrBackend, OcrBackendType, Plugin, PostProcessor, ProcessingStage, Validator};
 use kreuzberg::types::{ExtractionResult, Table};
 use kreuzberg::{KreuzbergError, Result};
+
+/// Convert serde_json::Value to Python object
+pub(crate) fn json_value_to_py<'py>(py: Python<'py>, value: &serde_json::Value) -> PyResult<Bound<'py, PyAny>> {
+    match value {
+        serde_json::Value::Null => Ok(py.None().into_bound(py)),
+        serde_json::Value::Bool(b) => {
+            let py_bool = PyBool::new(py, *b);
+            Ok(py_bool.as_any().clone())
+        }
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Ok(i.into_pyobject(py)?.into_any())
+            } else if let Some(f) = n.as_f64() {
+                Ok(f.into_pyobject(py)?.into_any())
+            } else {
+                Ok(py.None().into_bound(py))
+            }
+        }
+        serde_json::Value::String(s) => Ok(s.into_pyobject(py)?.into_any()),
+        serde_json::Value::Array(arr) => {
+            let list = PyList::empty(py);
+            for item in arr {
+                list.append(json_value_to_py(py, item)?)?;
+            }
+            Ok(list.into_any())
+        }
+        serde_json::Value::Object(obj) => {
+            let dict = PyDict::new(py);
+            for (k, v) in obj {
+                dict.set_item(k, json_value_to_py(py, v)?)?;
+            }
+            Ok(dict.into_any())
+        }
+    }
+}
 
 /// Wrapper that makes a Python OCR backend usable from Rust.
 ///
@@ -600,9 +635,10 @@ fn extraction_result_to_dict(py: Python<'_>, result: &ExtractionResult) -> PyRes
 
     dict.set_item("mime_type", &result.mime_type)?;
 
-    let metadata_py = pythonize::pythonize(py, &result.metadata).map_err(|e| {
-        pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to serialize metadata to Python: {}", e))
+    let metadata_json = serde_json::to_value(&result.metadata).map_err(|e| {
+        pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to serialize metadata to JSON: {}", e))
     })?;
+    let metadata_py = json_value_to_py(py, &metadata_json)?;
     dict.set_item("metadata", metadata_py)?;
 
     dict.set_item("tables", PyList::empty(py))?;
@@ -798,6 +834,337 @@ pub fn clear_post_processors(py: Python<'_>) -> PyResult<()> {
 
         registry.shutdown_all().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to clear PostProcessor registry: {}", e))
+        })
+    })?;
+
+    Ok(())
+}
+
+/// Wrapper that makes a Python Validator usable from Rust.
+///
+/// This struct implements the Rust `Validator` trait by forwarding calls
+/// to a Python object via PyO3, bridging the FFI boundary with proper
+/// GIL management and type conversions.
+pub struct PythonValidator {
+    /// Python object implementing the Validator protocol
+    python_obj: Py<PyAny>,
+    /// Cached validator name (to avoid repeated GIL acquisition)
+    name: String,
+    /// Cached priority
+    priority: i32,
+}
+
+impl PythonValidator {
+    /// Create a new Python Validator wrapper.
+    ///
+    /// # Arguments
+    ///
+    /// * `py` - Python GIL token
+    /// * `python_obj` - Python object implementing the validator protocol
+    ///
+    /// # Returns
+    ///
+    /// A new `PythonValidator` or an error if the Python object is invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Python object doesn't have required methods
+    /// - Method calls fail during initialization
+    pub fn new(py: Python<'_>, python_obj: Py<PyAny>) -> PyResult<Self> {
+        let obj = python_obj.bind(py);
+
+        if !obj.hasattr("name")? {
+            return Err(pyo3::exceptions::PyAttributeError::new_err(
+                "Validator must have a 'name()' method",
+            ));
+        }
+        if !obj.hasattr("validate")? {
+            return Err(pyo3::exceptions::PyAttributeError::new_err(
+                "Validator must have a 'validate(result: dict) -> None' method",
+            ));
+        }
+
+        let name: String = obj.call_method0("name")?.extract()?;
+        if name.is_empty() {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "Validator name cannot be empty",
+            ));
+        }
+
+        let priority = if obj.hasattr("priority")? {
+            obj.call_method0("priority")?.extract()?
+        } else {
+            50 // Default priority
+        };
+
+        Ok(Self {
+            python_obj,
+            name,
+            priority,
+        })
+    }
+}
+
+impl Plugin for PythonValidator {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn version(&self) -> String {
+        Python::attach(|py| {
+            self.python_obj
+                .bind(py)
+                .getattr("version")
+                .and_then(|v| v.call0())
+                .and_then(|v| v.extract::<String>())
+                .unwrap_or_else(|_| "1.0.0".to_string())
+        })
+    }
+
+    fn initialize(&self) -> Result<()> {
+        Python::attach(|py| {
+            let obj = self.python_obj.bind(py);
+            if obj.hasattr("initialize")? {
+                obj.call_method0("initialize")?;
+            }
+            Ok(())
+        })
+        .map_err(|e: PyErr| KreuzbergError::Plugin {
+            message: format!("Failed to initialize Python Validator '{}': {}", self.name, e),
+            plugin_name: self.name.clone(),
+        })
+    }
+
+    fn shutdown(&self) -> Result<()> {
+        Python::attach(|py| {
+            let obj = self.python_obj.bind(py);
+            if obj.hasattr("shutdown")? {
+                obj.call_method0("shutdown")?;
+            }
+            Ok(())
+        })
+        .map_err(|e: PyErr| KreuzbergError::Plugin {
+            message: format!("Failed to shutdown Python Validator '{}': {}", self.name, e),
+            plugin_name: self.name.clone(),
+        })
+    }
+}
+
+#[async_trait]
+impl Validator for PythonValidator {
+    async fn validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+        let validator_name = self.name.clone();
+
+        Python::attach(|py| {
+            let obj = self.python_obj.bind(py);
+
+            let result_dict = extraction_result_to_dict(py, result).map_err(|e| KreuzbergError::Plugin {
+                message: format!("Failed to convert ExtractionResult to Python dict: {}", e),
+                plugin_name: validator_name.clone(),
+            })?;
+
+            let py_result = result_dict.bind(py);
+            obj
+                .call_method1("validate", (py_result,))
+                .map_err(|e| {
+                    // Check if it's a ValidationError from Python
+                    let is_validation_error = e.is_instance_of::<pyo3::exceptions::PyValueError>(py)
+                        || e.get_type(py).name()
+                            .ok()
+                            .and_then(|n| n.to_str().ok().map(|s| s.to_string()))
+                            .map(|s| s.contains("ValidationError"))
+                            .unwrap_or(false);
+
+                    if is_validation_error {
+                        KreuzbergError::Validation {
+                            message: e.to_string(),
+                            source: None,
+                        }
+                    } else {
+                        KreuzbergError::Plugin {
+                            message: format!("Python Validator '{}' failed during validate: {}", validator_name, e),
+                            plugin_name: validator_name.clone(),
+                        }
+                    }
+                })?;
+
+            Ok(())
+        })
+    }
+
+    fn should_validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> bool {
+        Python::attach(|py| {
+            let obj = self.python_obj.bind(py);
+
+            if obj.hasattr("should_validate").unwrap_or(false) {
+                let result_dict = extraction_result_to_dict(py, result).ok()?;
+                let py_result = result_dict.bind(py);
+                obj.call_method1("should_validate", (py_result,))
+                    .and_then(|v| v.extract::<bool>())
+                    .ok()
+            } else {
+                Some(true)
+            }
+        })
+        .unwrap_or(true)
+    }
+
+    fn priority(&self) -> i32 {
+        self.priority
+    }
+}
+
+/// Register a Python Validator with the Rust core.
+///
+/// This function validates the Python validator object, wraps it in a Rust
+/// `Validator` implementation, and registers it with the global Validator
+/// registry. Once registered, the validator will be called automatically after
+/// extraction to validate results.
+///
+/// # Arguments
+///
+/// * `validator` - Python object implementing the Validator protocol
+///
+/// # Required Methods on Python Validator
+///
+/// The Python validator must implement:
+/// - `name() -> str` - Return validator name
+/// - `validate(result: dict) -> None` - Validate the extraction result (raise error to fail)
+///
+/// # Optional Methods
+///
+/// - `should_validate(result: dict) -> bool` - Check if validator should run (defaults to True)
+/// - `priority() -> int` - Return priority (defaults to 50, higher runs first)
+/// - `initialize()` - Called when validator is registered
+/// - `shutdown()` - Called when validator is unregistered
+/// - `version() -> str` - Validator version (defaults to "1.0.0")
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import register_validator
+/// from kreuzberg.exceptions import ValidationError
+///
+/// class MinLengthValidator:
+///     def name(self) -> str:
+///         return "min_length_validator"
+///
+///     def priority(self) -> int:
+///         return 100  # Run early
+///
+///     def validate(self, result: dict) -> None:
+///         if len(result["content"]) < 100:
+///             raise ValidationError(
+///                 f"Content too short: {len(result['content'])} < 100 characters"
+///             )
+///
+/// register_validator(MinLengthValidator())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Validator is missing required methods
+/// - Validator name is empty or duplicate
+/// - Registration fails
+#[pyfunction]
+pub fn register_validator(py: Python<'_>, validator: Py<PyAny>) -> PyResult<()> {
+    let rust_validator = PythonValidator::new(py, validator)?;
+    let validator_name = rust_validator.name().to_string();
+
+    let arc_validator: Arc<dyn Validator> = Arc::new(rust_validator);
+
+    py.detach(|| {
+        let registry = get_validator_registry();
+        let mut registry = registry.write().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "Failed to acquire write lock on Validator registry: {}",
+                e
+            ))
+        })?;
+
+        registry.register(arc_validator).map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "Failed to register Validator '{}': {}",
+                validator_name, e
+            ))
+        })
+    })?;
+
+    Ok(())
+}
+
+/// Unregister a Validator by name.
+///
+/// Removes a previously registered validator from the global registry and
+/// calls its `shutdown()` method to release resources.
+///
+/// # Arguments
+///
+/// * `name` - Validator name to unregister
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import register_validator, unregister_validator
+///
+/// class MyValidator:
+///     def name(self) -> str:
+///         return "my_validator"
+///
+///     def validate(self, result: dict) -> None:
+///         pass
+///
+/// register_validator(MyValidator())
+/// # ... use validator ...
+/// unregister_validator("my_validator")
+/// ```
+#[pyfunction]
+pub fn unregister_validator(py: Python<'_>, name: &str) -> PyResult<()> {
+    py.detach(|| {
+        let registry = get_validator_registry();
+        let mut registry = registry.write().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "Failed to acquire write lock on Validator registry: {}",
+                e
+            ))
+        })?;
+
+        registry.remove(name).map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to unregister Validator '{}': {}", name, e))
+        })
+    })?;
+
+    Ok(())
+}
+
+/// Clear all registered Validators.
+///
+/// Removes all validators from the global registry and calls their `shutdown()`
+/// methods. Useful for test cleanup or resetting state.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import clear_validators
+///
+/// # In pytest fixture or test cleanup
+/// clear_validators()
+/// ```
+#[pyfunction]
+pub fn clear_validators(py: Python<'_>) -> PyResult<()> {
+    py.detach(|| {
+        let registry = get_validator_registry();
+        let mut registry = registry.write().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "Failed to acquire write lock on Validator registry: {}",
+                e
+            ))
+        })?;
+
+        registry.shutdown_all().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to clear Validator registry: {}", e))
         })
     })?;
 

@@ -60,6 +60,9 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(plugins::register_post_processor, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::unregister_post_processor, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::clear_post_processors, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::register_validator, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::unregister_validator, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::clear_validators, m)?)?;
 
     Ok(())
 }
