@@ -1345,13 +1345,11 @@ pub struct YakeParams {
 #[pymethods]
 impl YakeParams {
     #[new]
-    #[pyo3(signature = (window_size=None, deduplicate=None, dedup_threshold=None))]
-    fn new(window_size: Option<usize>, deduplicate: Option<bool>, dedup_threshold: Option<f32>) -> Self {
+    #[pyo3(signature = (window_size=None))]
+    fn new(window_size: Option<usize>) -> Self {
         Self {
             inner: kreuzberg::keywords::YakeParams {
                 window_size: window_size.unwrap_or(2),
-                deduplicate: deduplicate.unwrap_or(false),
-                dedup_threshold: dedup_threshold.unwrap_or(0.9),
             },
         }
     }
@@ -1366,31 +1364,8 @@ impl YakeParams {
         self.inner.window_size = value;
     }
 
-    #[getter]
-    fn deduplicate(&self) -> bool {
-        self.inner.deduplicate
-    }
-
-    #[setter]
-    fn set_deduplicate(&mut self, value: bool) {
-        self.inner.deduplicate = value;
-    }
-
-    #[getter]
-    fn dedup_threshold(&self) -> f32 {
-        self.inner.dedup_threshold
-    }
-
-    #[setter]
-    fn set_dedup_threshold(&mut self, value: f32) {
-        self.inner.dedup_threshold = value;
-    }
-
     fn __repr__(&self) -> String {
-        format!(
-            "YakeParams(window_size={}, deduplicate={}, dedup_threshold={})",
-            self.inner.window_size, self.inner.deduplicate, self.inner.dedup_threshold
-        )
+        format!("YakeParams(window_size={})", self.inner.window_size)
     }
 }
 

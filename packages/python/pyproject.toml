@@ -34,9 +34,9 @@ optional-dependencies.easyocr = [
   "torch>=2.9",
 ]
 optional-dependencies.paddleocr = [
-  "paddleocr>=3.3",
-  "paddlepaddle>=3.2",
-  "setuptools>=80.9",
+  "paddleocr>=3.3; python_version<'3.14'",
+  "paddlepaddle>=3.2; python_version<'3.14'",
+  "setuptools>=80.9; python_version<'3.14'",
 ]
 urls.Documentation = "https://kreuzberg.readthedocs.io"
 urls.Homepage = "https://github.com/Goldziher/kreuzberg"

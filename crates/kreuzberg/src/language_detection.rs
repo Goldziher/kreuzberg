@@ -169,6 +169,7 @@ fn lang_to_iso639_3(lang: Lang) -> String {
         Lang::Hye => "hye",
         Lang::Epo => "epo",
         Lang::Ben => "ben",
+        Lang::Cym => "cym",
     }
     .to_string()
 }
