@@ -32,6 +32,7 @@ theme:
   features:
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link          # Sync language tabs across pages!
     - navigation.indexes
     - navigation.sections
     - navigation.tabs
@@ -68,7 +69,9 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.mark
   - pymdownx.smartsymbols
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -76,6 +79,10 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.tasklist:
       custom_checkbox: true
   - tables
@@ -92,7 +99,7 @@ plugins:
       default_handler: python
       handlers:
         python:
-          paths: [.]
+          paths: [packages/python]
           options:
             show_source: true
             show_root_heading: true
@@ -103,6 +110,11 @@ plugins:
             show_submodules: false
             docstring_style: google
             docstring_section_style: spacy
+  - gen-files:
+      scripts:
+        - scripts/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
   - git-revision-date-localized:
       enable_creation_date: true
       type: timeago
@@ -123,41 +135,25 @@ extra_css:
 nav:
   - Home: index.md
   - Getting Started:
-      - getting-started/index.md
       - Installation: getting-started/installation.md
-      - Quick Start: getting-started/quick-start.md
-      - Migration Guide (v3→v4): getting-started/migration-guide.md
-  - User Guide:
-      - user-guide/index.md
-      - Basic Usage: user-guide/basic-usage.md
-      - Extraction Configuration: user-guide/extraction-configuration.md
-      - Table Extraction: user-guide/table-extraction.md
-      - Metadata Extraction: user-guide/metadata-extraction.md
-      - Content Chunking: user-guide/chunking.md
-      - OCR Configuration: user-guide/ocr-configuration.md
-      - OCR Backends: user-guide/ocr-backends.md
-      - Document Classification: user-guide/document-classification.md
-      - Supported Formats: user-guide/supported-formats.md
-      - Performance Analysis: advanced/performance.md
-      - MCP Server: user-guide/mcp-server.md
-      - API Server: user-guide/api-server.md
-      - Docker: user-guide/docker.md
-  - CLI Guide: cli.md
-  - Examples:
-      - examples/index.md
-      - Extraction Examples: examples/extraction-examples.md
+      - Quick Start: getting-started/quickstart.md
+  - Core Concepts:
+      - Architecture: concepts/architecture.md
+      - Extractors: concepts/extractors.md
+      - OCR System: concepts/ocr.md
+      - Plugin System: concepts/plugins.md
+  - Plugin Development:
+      - Overview: plugins/overview.md
+      - Python PostProcessor: plugins/python-postprocessor.md
+      - Python OCR Backend: plugins/python-ocr-backend.md
+      - TypeScript PostProcessor: plugins/typescript-postprocessor.md
+      - TypeScript Validator: plugins/typescript-validator.md
+      - Rust Custom Extractor: plugins/rust-custom-extractor.md
+  - CLI Guide:
+      - Usage: cli/usage.md
   - API Reference:
-      - api-reference/index.md
-      - Extraction Functions: api-reference/extraction-functions.md
-      - Types: api-reference/types.md
-      - OCR Configuration: api-reference/ocr-configuration.md
-      - Extractor Registry: api-reference/extractor-registry.md
-      - Exceptions: api-reference/exceptions.md
-  - Advanced:
-      - advanced/index.md
-      - Performance Guide: advanced/performance.md
-      - Error Handling: advanced/error-handling.md
-      - Custom Hooks: advanced/custom-hooks.md
-      - Custom Extractors: advanced/custom-extractors.md
+      - Python: api-reference/python/
   - Contributing: contributing.md
-  - Changelog: CHANGELOG.md
+  # TODO: v4 documentation content - Phase 3 in progress
+  # - Examples
+  # - Migration Guide (v3→v4)
