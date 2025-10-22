@@ -279,7 +279,7 @@ impl ExtractionConfig {
             KreuzbergError::validation(format!("Failed to read config file {}: {}", path.as_ref().display(), e))
         })?;
 
-        serde_yaml::from_str(&content)
+        serde_saphyr::from_str(&content)
             .map_err(|e| KreuzbergError::validation(format!("Invalid YAML in {}: {}", path.as_ref().display(), e)))
     }
 
