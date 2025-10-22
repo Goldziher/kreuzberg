@@ -50,6 +50,7 @@ import type {
 	ExtractionResult,
 	OcrBackendProtocol,
 	PostProcessorProtocol,
+	Table,
 	ValidatorProtocol,
 } from "./types.js";
 
@@ -465,9 +466,9 @@ export function registerPostProcessor(processor: PostProcessorProtocol): void {
 				content: wireResult.content,
 				mimeType: wireResult.mime_type,
 				metadata: typeof wireResult.metadata === "string" ? JSON.parse(wireResult.metadata) : wireResult.metadata,
-				tables: wireResult.tables || [],
-				detectedLanguages: wireResult.detected_languages,
-				chunks: wireResult.chunks,
+				tables: (wireResult.tables || []) as Table[],
+				detectedLanguages: wireResult.detected_languages ?? null,
+				chunks: wireResult.chunks as string[] | null | undefined,
 			};
 
 			// Call user's processor with parsed object (may be sync or async)
