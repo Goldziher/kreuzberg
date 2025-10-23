@@ -55,17 +55,63 @@ Kreuzberg v4 represents a complete architectural rewrite, transforming from a Py
 - Word count, line count, character count tracking
 - CRLF line ending support
 
-**Office Metadata Extraction**:
-- Comprehensive metadata extraction from DOCX, XLSX, and PPTX files
-- **Core properties**: Dublin Core metadata (title, creator, created/modified dates, keywords, description, revision, etc.)
-- **App properties**: Format-specific metadata
-  - DOCX: page count, word count, character count, line count, paragraph count, template, editing time
-  - XLSX: worksheet names, workbook structure
-  - PPTX: slide count, notes, hidden slides, multimedia clips, presentation format, slide titles
-- **Custom properties**: User-defined metadata when available
-- Automatic merging with Pandoc metadata (Pandoc takes precedence)
+**Comprehensive Metadata Extraction**:
+
+v4 introduces native metadata extraction across all major document formats:
+
+**PDF** (native Rust extraction via `lopdf`):
+- Title, subject, authors, keywords
+- Created/modified dates, creator, producer
+- Page count, page dimensions, PDF version
+- Encryption status
+- Auto-generated document summary
+
+**Office Documents** (native Office Open XML parsing):
+- **DOCX**: Core properties (Dublin Core metadata), app properties (page/word/character/line/paragraph counts, template, editing time), custom properties
+- **XLSX**: Core properties, app properties (worksheet names, sheet count), custom properties
+- **PPTX**: Core properties, app properties (slide count, notes, hidden slides, slide titles), custom properties
+- Automatic merging with Pandoc metadata for DOCX (Pandoc takes precedence for conflicts)
 - Non-blocking extraction (falls back gracefully if metadata unavailable)
-- Zero overhead for non-Office files
+
+**Email** (via `mail-parser`):
+- From, to, cc, bcc addresses
+- Message ID, subject, date
+- Attachment filenames
+
+**Images** (via `image` crate + `kamadak-exif`):
+- Width, height, format
+- Comprehensive EXIF data (camera settings, GPS, timestamps, etc.)
+
+**XML** (via Rust streaming parser):
+- Element count
+- Unique element names
+
+**Plain Text / Markdown** (via Rust streaming parser):
+- Line count, word count, character count
+- **Markdown only**: Headers, links, code blocks
+
+**Structured Data** (JSON/YAML/TOML):
+- Field count
+- Format type
+
+**HTML** (metadata extraction available but disabled by default):
+- `html-to-markdown-rs` library supports extensive metadata extraction when enabled:
+  - Document title, meta tags (description, keywords, author)
+  - Open Graph tags (og:title, og:description, og:image)
+  - Twitter Card tags (twitter:card, twitter:title)
+  - Base URL, canonical URL
+  - Link relations (author, license, alternate links)
+- Currently disabled by default (set `extract_metadata: false` in config)
+- Infrastructure in place for future enablement
+
+**Pandoc-Only Formats** (metadata via Pandoc subprocess):
+- ODT, EPUB, LaTeX, reStructuredText, RTF, Typst, Jupyter Notebooks, FictionBook, Org Mode, DocBook, JATS, OPML
+- Extracts whatever metadata Pandoc provides (varies by format)
+
+**Key Improvements from v3**:
+- PDF: Pure Rust `lopdf` instead of Python `playa-pdf` for better performance
+- Office: Comprehensive native metadata extraction merged with Pandoc (v3 relied solely on Pandoc)
+- All metadata extraction is non-blocking and gracefully handles failures
 
 **Legacy MS Office Support**:
 - LibreOffice conversion for `.doc` and `.ppt` files
