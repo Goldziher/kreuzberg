@@ -230,6 +230,10 @@ jobs:
         run: |
           pnpm build
 
+      - name: Reinstall workspace to update links with new .node file
+        run: |
+          pnpm install
+
       - name: Verify NAPI bindings were created
         working-directory: crates/kreuzberg-node
         shell: bash
