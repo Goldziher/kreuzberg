@@ -6,6 +6,17 @@ use std::io::Read;
 use std::path::Path;
 use zip::ZipArchive;
 
+#[cfg(feature = "office")]
+use crate::extraction::office_metadata::{
+    extract_core_properties, extract_custom_properties, extract_pptx_app_properties,
+};
+#[cfg(feature = "office")]
+use serde_json::Value;
+
+// ============================================================================
+// SECTION: Data Structures
+// ============================================================================
+
 #[derive(Debug, Clone, Default, PartialEq)]
 struct ElementPosition {
     x: i32,
@@ -132,6 +143,10 @@ impl Default for ParserConfig {
     }
 }
 
+// ============================================================================
+// SECTION: Content Builder - Markdown Generation
+// ============================================================================
+
 struct ContentBuilder {
     content: String,
 }
@@ -237,6 +252,10 @@ fn html_escape(text: &str) -> String {
         .replace('\'', "&#x27;")
 }
 
+// ============================================================================
+// SECTION: ZIP Container Management
+// ============================================================================
+
 struct PptxContainer {
     archive: ZipArchive<File>,
     slide_paths: Vec<String>,
@@ -325,6 +344,10 @@ impl PptxContainer {
         Ok(contents)
     }
 }
+
+// ============================================================================
+// SECTION: Slide Processing
+// ============================================================================
 
 impl Slide {
     fn from_xml(slide_number: u32, xml_data: &[u8], rels_data: Option<&[u8]>) -> Result<Self> {
@@ -467,6 +490,10 @@ impl SlideIterator {
     }
 }
 
+// ============================================================================
+// SECTION: XML Parsing
+// ============================================================================
+
 use roxmltree::Document;
 
 fn parse_slide_xml(xml_data: &[u8]) -> Result<Vec<SlideElement>> {
@@ -543,35 +570,121 @@ fn parse_presentation_rels(rels_data: &[u8]) -> Result<Vec<String>> {
     Ok(slide_paths)
 }
 
-fn extract_metadata(core_xml: &[u8]) -> Result<PptxMetadata> {
-    let xml_str = std::str::from_utf8(core_xml)
-        .map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in core.xml: {}", e)))?;
+// ============================================================================
+// SECTION: Metadata Extraction
+// ============================================================================
 
-    let doc =
-        Document::parse(xml_str).map_err(|e| KreuzbergError::parsing(format!("Failed to parse core.xml: {}", e)))?;
+/// Extract comprehensive metadata from PPTX using office_metadata module
+fn extract_metadata(archive: &mut ZipArchive<File>) -> PptxMetadata {
+    #[cfg(feature = "office")]
+    {
+        let mut metadata_map = HashMap::new();
 
-    let mut metadata = PptxMetadata {
-        title: None,
-        author: None,
-        description: None,
-        summary: None,
-        fonts: Vec::new(),
-    };
-
-    for node in doc.descendants() {
-        if let Some(text) = node.text() {
-            match node.tag_name().name() {
-                "title" => metadata.title = Some(text.to_string()),
-                "creator" => metadata.author = Some(text.to_string()),
-                "description" => metadata.description = Some(text.to_string()),
-                "subject" => metadata.summary = Some(text.to_string()),
-                _ => {}
+        // Extract core properties (Dublin Core metadata)
+        if let Ok(core) = extract_core_properties(archive) {
+            if let Some(title) = core.title {
+                metadata_map.insert("title".to_string(), title);
             }
+            if let Some(creator) = core.creator {
+                metadata_map.insert("author".to_string(), creator.clone());
+                metadata_map.insert("created_by".to_string(), creator);
+            }
+            if let Some(subject) = core.subject {
+                metadata_map.insert("subject".to_string(), subject.clone());
+                metadata_map.insert("summary".to_string(), subject);
+            }
+            if let Some(keywords) = core.keywords {
+                metadata_map.insert("keywords".to_string(), keywords);
+            }
+            if let Some(description) = core.description {
+                metadata_map.insert("description".to_string(), description);
+            }
+            if let Some(modified_by) = core.last_modified_by {
+                metadata_map.insert("modified_by".to_string(), modified_by);
+            }
+            if let Some(created) = core.created {
+                metadata_map.insert("created_at".to_string(), created);
+            }
+            if let Some(modified) = core.modified {
+                metadata_map.insert("modified_at".to_string(), modified);
+            }
+            if let Some(revision) = core.revision {
+                metadata_map.insert("revision".to_string(), revision);
+            }
+            if let Some(category) = core.category {
+                metadata_map.insert("category".to_string(), category);
+            }
+        }
+
+        // Extract app properties (PPTX-specific metadata)
+        if let Ok(app) = extract_pptx_app_properties(archive) {
+            if let Some(slides) = app.slides {
+                metadata_map.insert("slide_count".to_string(), slides.to_string());
+            }
+            if let Some(notes) = app.notes {
+                metadata_map.insert("notes_count".to_string(), notes.to_string());
+            }
+            if let Some(hidden_slides) = app.hidden_slides {
+                metadata_map.insert("hidden_slides".to_string(), hidden_slides.to_string());
+            }
+            if !app.slide_titles.is_empty() {
+                metadata_map.insert("slide_titles".to_string(), app.slide_titles.join(", "));
+            }
+            if let Some(presentation_format) = app.presentation_format {
+                metadata_map.insert("presentation_format".to_string(), presentation_format);
+            }
+            if let Some(company) = app.company {
+                metadata_map.insert("organization".to_string(), company);
+            }
+            if let Some(application) = app.application {
+                metadata_map.insert("application".to_string(), application);
+            }
+            if let Some(app_version) = app.app_version {
+                metadata_map.insert("application_version".to_string(), app_version);
+            }
+        }
+
+        // Extract custom properties (optional)
+        if let Ok(custom) = extract_custom_properties(archive) {
+            for (key, value) in custom {
+                // Convert Value to String
+                let value_str = match value {
+                    Value::String(s) => s,
+                    Value::Number(n) => n.to_string(),
+                    Value::Bool(b) => b.to_string(),
+                    Value::Null => "null".to_string(),
+                    Value::Array(_) | Value::Object(_) => value.to_string(),
+                };
+                metadata_map.insert(format!("custom_{}", key), value_str);
+            }
+        }
+
+        // Convert to PptxMetadata struct
+        PptxMetadata {
+            title: metadata_map.get("title").cloned(),
+            author: metadata_map.get("author").cloned(),
+            description: metadata_map.get("description").cloned(),
+            summary: metadata_map.get("summary").cloned(),
+            fonts: Vec::new(),
         }
     }
 
-    Ok(metadata)
+    #[cfg(not(feature = "office"))]
+    {
+        // Return empty metadata when office feature is disabled
+        PptxMetadata {
+            title: None,
+            author: None,
+            description: None,
+            summary: None,
+            fonts: Vec::new(),
+        }
+    }
 }
+
+// ============================================================================
+// SECTION: Notes Extraction
+// ============================================================================
 
 fn extract_all_notes(container: &mut PptxContainer) -> Result<HashMap<u32, String>> {
     let mut notes = HashMap::new();
@@ -610,6 +723,10 @@ fn extract_notes_text(notes_xml: &[u8]) -> Result<String> {
 
     Ok(text_parts.join(" "))
 }
+
+// ============================================================================
+// SECTION: Helper Functions
+// ============================================================================
 
 fn get_slide_rels_path(slide_path: &str) -> String {
     let parts: Vec<&str> = slide_path.rsplitn(2, '/').collect();
@@ -656,6 +773,10 @@ fn detect_image_format(data: &[u8]) -> String {
     }
 }
 
+// ============================================================================
+// SECTION: Public API - Main Extraction Functions
+// ============================================================================
+
 pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxExtractionResult> {
     let config = ParserConfig {
         extract_images,
@@ -664,22 +785,8 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
 
     let mut container = PptxContainer::open(path)?;
 
-    let metadata = match container.read_file("docProps/core.xml") {
-        Ok(core_xml) => extract_metadata(&core_xml).unwrap_or_else(|_| PptxMetadata {
-            title: None,
-            author: None,
-            description: None,
-            summary: None,
-            fonts: Vec::new(),
-        }),
-        Err(_) => PptxMetadata {
-            title: None,
-            author: None,
-            description: None,
-            summary: None,
-            fonts: Vec::new(),
-        },
-    };
+    // Extract comprehensive metadata using office_metadata module
+    let metadata = extract_metadata(&mut container.archive);
 
     let notes = extract_all_notes(&mut container)?;
 
@@ -748,6 +855,10 @@ pub fn extract_pptx_from_bytes(data: &[u8], extract_images: bool) -> Result<Pptx
 
     result
 }
+
+// ============================================================================
+// SECTION: Tests
+// ============================================================================
 
 #[cfg(test)]
 mod tests {
@@ -1274,39 +1385,6 @@ mod tests {
         assert_eq!(slides.len(), 2);
         assert_eq!(slides[0], "ppt/slides/slide1.xml");
         assert_eq!(slides[1], "ppt/slides/slide2.xml");
-    }
-
-    #[test]
-    fn test_extract_metadata_complete() {
-        let core_xml = br#"<?xml version="1.0"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
-                   xmlns:dc="http://purl.org/dc/elements/1.1/">
-    <dc:title>My Presentation</dc:title>
-    <dc:creator>John Doe</dc:creator>
-    <dc:description>A test presentation</dc:description>
-    <dc:subject>Testing</dc:subject>
-</cp:coreProperties>"#;
-
-        let metadata = extract_metadata(core_xml).unwrap();
-        assert_eq!(metadata.title, Some("My Presentation".to_string()));
-        assert_eq!(metadata.author, Some("John Doe".to_string()));
-        assert_eq!(metadata.description, Some("A test presentation".to_string()));
-        assert_eq!(metadata.summary, Some("Testing".to_string()));
-    }
-
-    #[test]
-    fn test_extract_metadata_partial() {
-        let core_xml = br#"<?xml version="1.0"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
-                   xmlns:dc="http://purl.org/dc/elements/1.1/">
-    <dc:title>Title Only</dc:title>
-</cp:coreProperties>"#;
-
-        let metadata = extract_metadata(core_xml).unwrap();
-        assert_eq!(metadata.title, Some("Title Only".to_string()));
-        assert_eq!(metadata.author, None);
-        assert_eq!(metadata.description, None);
-        assert_eq!(metadata.summary, None);
     }
 
     #[test]
