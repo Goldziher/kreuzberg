@@ -230,8 +230,9 @@ jobs:
         run: |
           pnpm build
 
-      - name: Reinstall workspace to update links with new .node file
+      - name: Update workspace symlinks to include generated files
         run: |
+          rm -rf packages/typescript/node_modules/kreuzberg-node
           pnpm install
 
       - name: Verify NAPI bindings were created
@@ -241,11 +242,8 @@ jobs:
           echo "Checking for .node files..."
           ls -lah *.node || echo "No .node files found in crates/kreuzberg-node/"
           echo ""
-          echo "Checking package.json files field..."
-          cat package.json | grep -A 3 '"files"'
-          echo ""
-          echo "Verifying Node.js can resolve kreuzberg-node..."
-          node -e "try { const path = require.resolve('kreuzberg-node'); console.log('Resolved to:', path); const fs = require('fs'); const dir = path.replace('index.js', ''); console.log('Directory contents:', fs.readdirSync(dir).filter(f => f.endsWith('.node'))); } catch(e) { console.error('Resolution failed:', e.message); }"
+          echo "Checking generated index.js..."
+          ls -lah index.js index.d.ts || echo "Generated files not found"
 
       - name: Build TypeScript SDK
         working-directory: packages/typescript
