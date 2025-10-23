@@ -55,6 +55,18 @@ Kreuzberg v4 represents a complete architectural rewrite, transforming from a Py
 - Word count, line count, character count tracking
 - CRLF line ending support
 
+**Office Metadata Extraction**:
+- Comprehensive metadata extraction from DOCX, XLSX, and PPTX files
+- **Core properties**: Dublin Core metadata (title, creator, created/modified dates, keywords, description, revision, etc.)
+- **App properties**: Format-specific metadata
+  - DOCX: page count, word count, character count, line count, paragraph count, template, editing time
+  - XLSX: worksheet names, workbook structure
+  - PPTX: slide count, notes, hidden slides, multimedia clips, presentation format, slide titles
+- **Custom properties**: User-defined metadata when available
+- Automatic merging with Pandoc metadata (Pandoc takes precedence)
+- Non-blocking extraction (falls back gracefully if metadata unavailable)
+- Zero overhead for non-Office files
+
 **Legacy MS Office Support**:
 - LibreOffice conversion for `.doc` and `.ppt` files
 - Automatic fallback to modern format extractors

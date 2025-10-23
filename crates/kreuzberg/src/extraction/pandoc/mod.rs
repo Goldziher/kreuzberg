@@ -4,6 +4,8 @@ mod version;
 
 use crate::error::Result;
 use crate::types::{ExtractedImage, PandocExtractionResult};
+use serde_json::Value;
+use std::collections::HashMap;
 use std::path::Path;
 use tokio::fs;
 
@@ -25,7 +27,15 @@ pub async fn extract_file(path: &Path, from_format: &str) -> Result<PandocExtrac
     );
 
     let content = content_result?;
-    let metadata = metadata_result?;
+    let mut metadata = metadata_result?;
+
+    // For DOCX files, extract comprehensive Office metadata and merge with Pandoc metadata
+    // If metadata extraction fails, continue with Pandoc metadata only (non-blocking)
+    if from_format == "docx"
+        && let Ok(office_metadata) = extract_docx_metadata(path).await
+    {
+        merge_metadata(&mut metadata, office_metadata);
+    }
 
     Ok(PandocExtractionResult { content, metadata })
 }
@@ -131,6 +141,125 @@ pub async fn extract_images(path: &Path, from_format: &str) -> Result<Vec<Extrac
     let _ = fs::remove_dir_all(&media_dir).await;
 
     Ok(images)
+}
+
+/// Extract comprehensive metadata from a DOCX file
+///
+/// Extracts metadata from docProps/core.xml, docProps/app.xml, and docProps/custom.xml
+/// and converts it to a format compatible with Pandoc metadata.
+async fn extract_docx_metadata(path: &Path) -> Result<HashMap<String, Value>> {
+    use crate::extraction::office_metadata::{
+        extract_core_properties, extract_custom_properties, extract_docx_app_properties,
+    };
+
+    let file = tokio::task::spawn_blocking({
+        let path = path.to_path_buf();
+        move || std::fs::File::open(&path)
+    })
+    .await
+    .map_err(|e| crate::error::KreuzbergError::parsing(format!("Task join error: {}", e)))??;
+
+    let mut archive = tokio::task::spawn_blocking(move || {
+        zip::ZipArchive::new(file).map_err(|e| std::io::Error::other(format!("Failed to open ZIP archive: {}", e)))
+    })
+    .await
+    .map_err(|e| crate::error::KreuzbergError::parsing(format!("Task join error: {}", e)))??;
+
+    let mut metadata = HashMap::new();
+
+    // Extract core properties
+    if let Ok(core) = extract_core_properties(&mut archive) {
+        if let Some(title) = core.title {
+            metadata.insert("title".to_string(), Value::String(title));
+        }
+        if let Some(creator) = core.creator {
+            metadata.insert(
+                "authors".to_string(),
+                Value::Array(vec![Value::String(creator.clone())]),
+            );
+            metadata.insert("created_by".to_string(), Value::String(creator));
+        }
+        if let Some(subject) = core.subject {
+            metadata.insert("subject".to_string(), Value::String(subject));
+        }
+        if let Some(keywords) = core.keywords {
+            metadata.insert("keywords".to_string(), Value::String(keywords));
+        }
+        if let Some(description) = core.description {
+            metadata.insert("description".to_string(), Value::String(description));
+        }
+        if let Some(modified_by) = core.last_modified_by {
+            metadata.insert("modified_by".to_string(), Value::String(modified_by));
+        }
+        if let Some(created) = core.created {
+            metadata.insert("created_at".to_string(), Value::String(created));
+        }
+        if let Some(modified) = core.modified {
+            metadata.insert("modified_at".to_string(), Value::String(modified));
+        }
+        if let Some(revision) = core.revision {
+            metadata.insert("revision".to_string(), Value::String(revision));
+        }
+        if let Some(category) = core.category {
+            metadata.insert("category".to_string(), Value::String(category));
+        }
+        if let Some(content_status) = core.content_status {
+            metadata.insert("content_status".to_string(), Value::String(content_status));
+        }
+        if let Some(language) = core.language {
+            metadata.insert("language".to_string(), Value::String(language));
+        }
+    }
+
+    // Extract app properties
+    if let Ok(app) = extract_docx_app_properties(&mut archive) {
+        if let Some(pages) = app.pages {
+            metadata.insert("page_count".to_string(), Value::Number(pages.into()));
+        }
+        if let Some(words) = app.words {
+            metadata.insert("word_count".to_string(), Value::Number(words.into()));
+        }
+        if let Some(chars) = app.characters {
+            metadata.insert("character_count".to_string(), Value::Number(chars.into()));
+        }
+        if let Some(lines) = app.lines {
+            metadata.insert("line_count".to_string(), Value::Number(lines.into()));
+        }
+        if let Some(paragraphs) = app.paragraphs {
+            metadata.insert("paragraph_count".to_string(), Value::Number(paragraphs.into()));
+        }
+        if let Some(template) = app.template {
+            metadata.insert("template".to_string(), Value::String(template));
+        }
+        if let Some(company) = app.company {
+            metadata.insert("organization".to_string(), Value::String(company));
+        }
+        if let Some(time) = app.total_time {
+            metadata.insert("total_editing_time_minutes".to_string(), Value::Number(time.into()));
+        }
+        if let Some(application) = app.application {
+            metadata.insert("application".to_string(), Value::String(application));
+        }
+    }
+
+    // Extract custom properties (optional)
+    if let Ok(custom) = extract_custom_properties(&mut archive) {
+        for (key, value) in custom {
+            metadata.insert(format!("custom_{}", key), value);
+        }
+    }
+
+    Ok(metadata)
+}
+
+/// Merge Office metadata with Pandoc metadata
+///
+/// Pandoc metadata takes precedence in case of conflicts.
+fn merge_metadata(pandoc_metadata: &mut HashMap<String, Value>, office_metadata: HashMap<String, Value>) {
+    for (key, value) in office_metadata {
+        // Only insert if Pandoc didn't already provide this field
+        pandoc_metadata.entry(key).or_insert(value);
+    }
 }
 
 #[cfg(test)]

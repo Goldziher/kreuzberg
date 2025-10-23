@@ -52,7 +52,7 @@ jobs:
       - name: Download wheels
         uses: actions/download-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}
+          name: wheels-${{ runner.os }}
           path: ./wheels
 
       - name: Install wheel and test

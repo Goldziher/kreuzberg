@@ -20,6 +20,9 @@ pub mod html;
 pub mod libreoffice;
 
 #[cfg(feature = "office")]
+pub mod office_metadata;
+
+#[cfg(feature = "office")]
 pub mod pandoc;
 
 #[cfg(feature = "office")]
@@ -54,6 +57,12 @@ pub use html::{convert_html_to_markdown, process_html};
 
 #[cfg(feature = "office")]
 pub use libreoffice::{check_libreoffice_available, convert_doc_to_docx, convert_ppt_to_pptx};
+
+#[cfg(feature = "office")]
+pub use office_metadata::{
+    CoreProperties, CustomProperties, DocxAppProperties, PptxAppProperties, XlsxAppProperties, extract_core_properties,
+    extract_custom_properties, extract_docx_app_properties, extract_pptx_app_properties, extract_xlsx_app_properties,
+};
 
 #[cfg(feature = "office")]
 pub use pptx::{extract_pptx_from_bytes, extract_pptx_from_path};

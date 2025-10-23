@@ -95,3 +95,7 @@ visualizations/
 wheels/
 yarn-debug.log*
 yarn-error.log*
+
+# NAPI-RS generated files (should not be committed)
+crates/kreuzberg-node/index.js
+crates/kreuzberg-node/index.d.ts
