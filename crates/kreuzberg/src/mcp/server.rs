@@ -290,7 +290,31 @@ impl KreuzbergMcp {
 }
 
 #[tool_handler]
-impl ServerHandler for KreuzbergMcp {}
+impl ServerHandler for KreuzbergMcp {
+    fn get_info(&self) -> ServerInfo {
+        ServerInfo {
+            protocol_version: ProtocolVersion::default(),
+            capabilities: ServerCapabilities {
+                tools: Some(ToolsCapability::default()),
+                ..Default::default()
+            },
+            server_info: Implementation {
+                name: "kreuzberg-mcp".to_string(),
+                title: Some("Kreuzberg Document Intelligence MCP Server".to_string()),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+                icons: None,
+                website_url: Some("https://goldziher.github.io/kreuzberg/".to_string()),
+            },
+            instructions: Some(
+                "Extract content from documents in various formats. Supports PDFs, Word documents, \
+                 Excel spreadsheets, images (with OCR), HTML, emails, and more. Use enable_ocr=true \
+                 for scanned documents, force_ocr=true to always use OCR even if text extraction \
+                 succeeds."
+                    .to_string(),
+            ),
+        }
+    }
+}
 
 impl Default for KreuzbergMcp {
     fn default() -> Self {
