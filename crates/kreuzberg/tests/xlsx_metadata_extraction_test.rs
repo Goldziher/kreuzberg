@@ -4,18 +4,20 @@ use kreuzberg::extraction::excel::read_excel_file;
 
 #[test]
 fn test_xlsx_full_metadata_extraction() {
-    // Path is relative to workspace root when running tests
-    let path = "../../test_documents/office/excel.xlsx";
-    if !std::path::Path::new(path).exists() {
-        // Try alternative path (from workspace root)
-        let path = "test_documents/office/excel.xlsx";
-        if !std::path::Path::new(path).exists() {
-            println!("Skipping test: Test file not found");
-            return;
-        }
+    // Compute path from workspace root (crates/kreuzberg -> workspace root)
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let test_file = workspace_root.join("test_documents/office/excel.xlsx");
+
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
     }
 
-    let result = read_excel_file("../../test_documents/office/excel.xlsx").expect("Should extract XLSX successfully");
+    let result = read_excel_file(test_file.to_str().unwrap()).expect("Should extract XLSX successfully");
 
     // Verify content extraction
     assert!(!result.sheets.is_empty(), "Should have at least one sheet");
@@ -34,17 +36,20 @@ fn test_xlsx_full_metadata_extraction() {
 
 #[test]
 fn test_xlsx_multi_sheet_metadata() {
-    let path = "../../test_documents/spreadsheets/excel_multi_sheet.xlsx";
-    if !std::path::Path::new(path).exists() {
-        let path = "test_documents/spreadsheets/excel_multi_sheet.xlsx";
-        if !std::path::Path::new(path).exists() {
-            println!("Skipping test: Test file not found");
-            return;
-        }
+    // Compute path from workspace root
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let test_file = workspace_root.join("test_documents/spreadsheets/excel_multi_sheet.xlsx");
+
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
     }
 
-    let result = read_excel_file("../../test_documents/spreadsheets/excel_multi_sheet.xlsx")
-        .expect("Should extract multi-sheet XLSX successfully");
+    let result = read_excel_file(test_file.to_str().unwrap()).expect("Should extract multi-sheet XLSX successfully");
 
     // Verify multiple sheets
     assert!(
@@ -65,17 +70,20 @@ fn test_xlsx_multi_sheet_metadata() {
 
 #[test]
 fn test_xlsx_minimal_metadata_extraction() {
-    let path = "../../test_documents/spreadsheets/test_01.xlsx";
-    if !std::path::Path::new(path).exists() {
-        let path = "test_documents/spreadsheets/test_01.xlsx";
-        if !std::path::Path::new(path).exists() {
-            println!("Skipping test: Test file not found");
-            return;
-        }
+    // Compute path from workspace root
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let test_file = workspace_root.join("test_documents/spreadsheets/test_01.xlsx");
+
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
     }
 
-    let result =
-        read_excel_file("../../test_documents/spreadsheets/test_01.xlsx").expect("Should extract XLSX successfully");
+    let result = read_excel_file(test_file.to_str().unwrap()).expect("Should extract XLSX successfully");
 
     // Verify content extraction works even with minimal metadata
     assert!(!result.sheets.is_empty(), "Content should not be empty");

@@ -12,23 +12,22 @@ async fn test_docx_full_metadata_extraction() {
         return;
     }
 
-    // Path is relative to workspace root when running tests
-    let path = std::path::Path::new("../../test_documents/documents/word_sample.docx");
-    if !path.exists() {
-        // Try alternative path (from workspace root)
-        let path = std::path::Path::new("test_documents/documents/word_sample.docx");
-        if !path.exists() {
-            println!("Skipping test: Test file not found");
-            return;
-        }
+    // Compute path from workspace root (crates/kreuzberg -> workspace root)
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let test_file = workspace_root.join("test_documents/documents/word_sample.docx");
+
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
     }
 
-    let result = extract_file(
-        std::path::Path::new("../../test_documents/documents/word_sample.docx"),
-        "docx",
-    )
-    .await
-    .expect("Should extract DOCX successfully");
+    let result = extract_file(&test_file, "docx")
+        .await
+        .expect("Should extract DOCX successfully");
 
     // Verify content extraction
     assert!(!result.content.is_empty(), "Content should not be empty");
@@ -98,12 +97,22 @@ async fn test_docx_minimal_metadata_extraction() {
         return;
     }
 
-    let result = extract_file(
-        std::path::Path::new("../../test_documents/documents/lorem_ipsum.docx"),
-        "docx",
-    )
-    .await
-    .expect("Should extract DOCX successfully");
+    // Compute path from workspace root
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let test_file = workspace_root.join("test_documents/documents/lorem_ipsum.docx");
+
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "docx")
+        .await
+        .expect("Should extract DOCX successfully");
 
     // Verify content extraction
     assert!(!result.content.is_empty(), "Content should not be empty");
