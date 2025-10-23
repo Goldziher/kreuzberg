@@ -34,7 +34,7 @@ jobs:
         id: setup-python
         uses: ./.github/actions/setup-python-env
         with:
-          python-version: '13'
+          python-version: '3.13'
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
@@ -78,7 +78,7 @@ jobs:
         id: setup-python
         uses: ./.github/actions/setup-python-env
         with:
-          python-version: '13'
+          python-version: '3.13'
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
