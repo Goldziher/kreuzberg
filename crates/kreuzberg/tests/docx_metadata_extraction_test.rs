@@ -1,5 +1,7 @@
 //! End-to-end integration test for DOCX metadata extraction
 
+#![cfg(feature = "office")]
+
 use kreuzberg::extraction::pandoc::extract_file;
 
 #[tokio::test]

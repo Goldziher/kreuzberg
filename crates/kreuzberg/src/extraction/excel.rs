@@ -7,7 +7,30 @@ use std::path::Path;
 use crate::error::{KreuzbergError, Result};
 use crate::types::{ExcelSheet, ExcelWorkbook};
 
+#[cfg(feature = "office")]
+use crate::extraction::office_metadata::{
+    extract_core_properties, extract_custom_properties, extract_xlsx_app_properties,
+};
+#[cfg(feature = "office")]
+use serde_json::Value;
+
 pub fn read_excel_file(file_path: &str) -> Result<ExcelWorkbook> {
+    // Extract Office metadata for XLSX files before opening with calamine
+    // If extraction fails, continue without Office metadata (non-blocking)
+    #[cfg(feature = "office")]
+    let office_metadata = if file_path.to_lowercase().ends_with(".xlsx")
+        || file_path.to_lowercase().ends_with(".xlsm")
+        || file_path.to_lowercase().ends_with(".xlam")
+        || file_path.to_lowercase().ends_with(".xltm")
+    {
+        extract_xlsx_office_metadata_from_file(file_path).ok()
+    } else {
+        None
+    };
+
+    #[cfg(not(feature = "office"))]
+    let office_metadata: Option<HashMap<String, String>> = None;
+
     // We analyze the error and only wrap format errors, letting real IO errors bubble up ~keep
     let workbook = match open_workbook_auto(Path::new(file_path)) {
         Ok(wb) => wb,
@@ -24,32 +47,43 @@ pub fn read_excel_file(file_path: &str) -> Result<ExcelWorkbook> {
         Err(e) => return Err(KreuzbergError::parsing(format!("Failed to parse Excel file: {}", e))),
     };
 
-    process_workbook(workbook)
+    process_workbook(workbook, office_metadata)
 }
 
 pub fn read_excel_bytes(data: &[u8], file_extension: &str) -> Result<ExcelWorkbook> {
+    // Extract Office metadata for XLSX files before opening with calamine
+    // If extraction fails, continue without Office metadata (non-blocking)
+    #[cfg(feature = "office")]
+    let office_metadata = match file_extension.to_lowercase().as_str() {
+        ".xlsx" | ".xlsm" | ".xlam" | ".xltm" => extract_xlsx_office_metadata_from_bytes(data).ok(),
+        _ => None,
+    };
+
+    #[cfg(not(feature = "office"))]
+    let office_metadata: Option<HashMap<String, String>> = None;
+
     let cursor = Cursor::new(data);
 
     match file_extension.to_lowercase().as_str() {
         ".xlsx" | ".xlsm" | ".xlam" | ".xltm" => {
             let workbook = calamine::Xlsx::new(cursor)
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to parse XLSX: {}", e)))?;
-            process_workbook(workbook)
+            process_workbook(workbook, office_metadata)
         }
         ".xls" | ".xla" => {
             let workbook = calamine::Xls::new(cursor)
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to parse XLS: {}", e)))?;
-            process_workbook(workbook)
+            process_workbook(workbook, office_metadata)
         }
         ".xlsb" => {
             let workbook = calamine::Xlsb::new(cursor)
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to parse XLSB: {}", e)))?;
-            process_workbook(workbook)
+            process_workbook(workbook, office_metadata)
         }
         ".ods" => {
             let workbook = calamine::Ods::new(cursor)
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to parse ODS: {}", e)))?;
-            process_workbook(workbook)
+            process_workbook(workbook, office_metadata)
         }
         _ => Err(KreuzbergError::parsing(format!(
             "Unsupported file extension: {}",
@@ -58,7 +92,7 @@ pub fn read_excel_bytes(data: &[u8], file_extension: &str) -> Result<ExcelWorkbo
     }
 }
 
-fn process_workbook<RS, R>(mut workbook: R) -> Result<ExcelWorkbook>
+fn process_workbook<RS, R>(mut workbook: R, office_metadata: Option<HashMap<String, String>>) -> Result<ExcelWorkbook>
 where
     RS: std::io::Read + std::io::Seek,
     R: Reader<RS>,
@@ -73,7 +107,7 @@ where
         }
     }
 
-    let metadata = extract_metadata(&workbook, &sheet_names);
+    let metadata = extract_metadata(&workbook, &sheet_names, office_metadata);
 
     Ok(ExcelWorkbook { sheets, metadata })
 }
@@ -203,7 +237,11 @@ fn escape_markdown_into(buffer: &mut String, s: &str) {
     }
 }
 
-fn extract_metadata<RS, R>(workbook: &R, sheet_names: &[String]) -> HashMap<String, String>
+fn extract_metadata<RS, R>(
+    workbook: &R,
+    sheet_names: &[String],
+    office_metadata: Option<HashMap<String, String>>,
+) -> HashMap<String, String>
 where
     RS: std::io::Read + std::io::Seek,
     R: Reader<RS>,
@@ -230,6 +268,13 @@ where
 
     let _workbook_metadata = workbook.metadata();
 
+    // Merge Office metadata if available (Office metadata takes precedence for overlapping fields)
+    if let Some(office_meta) = office_metadata {
+        for (key, value) in office_meta {
+            metadata.insert(key, value);
+        }
+    }
+
     metadata
 }
 
@@ -247,6 +292,112 @@ pub fn excel_to_markdown(workbook: &ExcelWorkbook) -> String {
     }
 
     result
+}
+
+#[cfg(feature = "office")]
+fn extract_xlsx_office_metadata_from_file(file_path: &str) -> Result<HashMap<String, String>> {
+    use std::fs::File;
+    use zip::ZipArchive;
+
+    let file =
+        File::open(file_path).map_err(|e| KreuzbergError::parsing(format!("Failed to open XLSX file: {}", e)))?;
+
+    let mut archive =
+        ZipArchive::new(file).map_err(|e| KreuzbergError::parsing(format!("Failed to open ZIP archive: {}", e)))?;
+
+    extract_xlsx_office_metadata_from_archive(&mut archive)
+}
+
+#[cfg(feature = "office")]
+fn extract_xlsx_office_metadata_from_bytes(data: &[u8]) -> Result<HashMap<String, String>> {
+    use zip::ZipArchive;
+
+    let cursor = Cursor::new(data);
+    let mut archive =
+        ZipArchive::new(cursor).map_err(|e| KreuzbergError::parsing(format!("Failed to open ZIP archive: {}", e)))?;
+
+    extract_xlsx_office_metadata_from_archive(&mut archive)
+}
+
+#[cfg(feature = "office")]
+fn extract_xlsx_office_metadata_from_archive<R: std::io::Read + std::io::Seek>(
+    archive: &mut zip::ZipArchive<R>,
+) -> Result<HashMap<String, String>> {
+    let mut metadata = HashMap::new();
+
+    // Extract core properties
+    if let Ok(core) = extract_core_properties(archive) {
+        if let Some(title) = core.title {
+            metadata.insert("title".to_string(), title);
+        }
+        if let Some(creator) = core.creator {
+            metadata.insert("creator".to_string(), creator.clone());
+            metadata.insert("created_by".to_string(), creator);
+        }
+        if let Some(subject) = core.subject {
+            metadata.insert("subject".to_string(), subject);
+        }
+        if let Some(keywords) = core.keywords {
+            metadata.insert("keywords".to_string(), keywords);
+        }
+        if let Some(description) = core.description {
+            metadata.insert("description".to_string(), description);
+        }
+        if let Some(modified_by) = core.last_modified_by {
+            metadata.insert("modified_by".to_string(), modified_by);
+        }
+        if let Some(created) = core.created {
+            metadata.insert("created_at".to_string(), created);
+        }
+        if let Some(modified) = core.modified {
+            metadata.insert("modified_at".to_string(), modified);
+        }
+        if let Some(revision) = core.revision {
+            metadata.insert("revision".to_string(), revision);
+        }
+        if let Some(category) = core.category {
+            metadata.insert("category".to_string(), category);
+        }
+        if let Some(content_status) = core.content_status {
+            metadata.insert("content_status".to_string(), content_status);
+        }
+        if let Some(language) = core.language {
+            metadata.insert("language".to_string(), language);
+        }
+    }
+
+    // Extract app properties
+    if let Ok(app) = extract_xlsx_app_properties(archive) {
+        if !app.worksheet_names.is_empty() {
+            metadata.insert("worksheet_names".to_string(), app.worksheet_names.join(", "));
+        }
+        if let Some(company) = app.company {
+            metadata.insert("organization".to_string(), company);
+        }
+        if let Some(application) = app.application {
+            metadata.insert("application".to_string(), application);
+        }
+        if let Some(app_version) = app.app_version {
+            metadata.insert("application_version".to_string(), app_version);
+        }
+    }
+
+    // Extract custom properties (optional)
+    if let Ok(custom) = extract_custom_properties(archive) {
+        for (key, value) in custom {
+            // Convert Value to String
+            let value_str = match value {
+                Value::String(s) => s,
+                Value::Number(n) => n.to_string(),
+                Value::Bool(b) => b.to_string(),
+                Value::Null => "null".to_string(),
+                Value::Array(_) | Value::Object(_) => value.to_string(),
+            };
+            metadata.insert(format!("custom_{}", key), value_str);
+        }
+    }
+
+    Ok(metadata)
 }
 
 #[cfg(test)]
