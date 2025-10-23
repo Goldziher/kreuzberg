@@ -21,7 +21,44 @@ env:
   PDFIUM_WASM_VERSION: "7469"
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Python environment
+        id: setup-python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '13'
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-validate
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Load Cached Prek Dependencies
+        id: cached-prek-dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prek/
+          key: prek|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Execute Prek
+        run: uv run prek run --show-diff-on-failure --color=always --all-files
+
   rust-tests:
+    needs:
+      - validate
     runs-on: ${{ matrix.os }}
     env:
       KREUZBERG_CI_DEBUG: "1"
@@ -37,178 +74,50 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-
-      - name: Set up Python
+      - name: Setup Python environment
         id: setup-python
-        uses: actions/setup-python@v6
+        uses: ./.github/actions/setup-python-env
         with:
-          python-version: "3.13"
-
-      - name: Cache Python dependencies
-        id: rust-python-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/uv
-            .venv
-          key: python-dependencies-${{ matrix.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            python-dependencies-${{ matrix.os }}-
+          python-version: '13'
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: ./.github/actions/setup-rust
         with:
-          components: rustfmt, clippy, llvm-tools-preview
-
-      - name: Install Python dependencies for Rust tests
-        run: python -m pip install --upgrade pip numpy
-
-      - name: Cache Rust build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target/
-          key: rust-build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            rust-build-${{ runner.os }}-
+          cache-key-prefix: rust-tests-${{ matrix.os }}
 
       - name: Cache Pdfium binaries
-        id: cache-pdfium
-        uses: actions/cache@v4
+        uses: ./.github/actions/cache-pdfium
         with:
-          path: |
-            target/*/build/*/out/pdfium/
-          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
-          restore-keys: |
-            pdfium-${{ runner.os }}-
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Install system dependencies for integration tests
         uses: ./.github/actions/install-system-deps
 
-      - name: Run Rust Unit Tests (no default features)
-        env:
-          RUST_BACKTRACE: 1
+      - name: Generate Rust coverage (unit tests)
+        run: cargo llvm-cov --no-default-features --lib --bins --lcov --output-path rust-coverage-unit.lcov
+
+      - name: Generate Rust coverage (integration tests with all features)
+        run: cargo llvm-cov --features full --tests --lcov --output-path rust-coverage-integration.lcov
+
+      - name: Upload coverage to DeepSource
+        if: always() && env.DEEPSOURCE_DSN != ''
+        shell: bash
         run: |
-          echo "Running Rust unit tests (core functionality)..."
-          cargo test --release --no-default-features --lib --bins --package kreuzberg --package kreuzberg-cli
+          curl -fsSL https://deepsource.io/cli | sh
+          ./bin/deepsource report --analyzer test-coverage --key rust --value-file ./rust-coverage.lcov
 
-      - name: Run Rust Integration Tests (with all features)
-        env:
-          RUST_BACKTRACE: 1
-        run: |
-          echo "Running Rust integration tests (207 tests with comprehensive features)..."
-          cargo test --release --features full --tests --package kreuzberg --package kreuzberg-cli
-
-      - name: Check Rust Formatting
-        if: matrix.os == 'ubuntu-latest'
-        run: cargo fmt --check
-
-      - name: Run Clippy
-        if: matrix.os == 'ubuntu-latest'
-        run: cargo clippy -- -D warnings
-
-  validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          components: rustfmt, clippy, llvm-tools-preview
-
-      - name: Cache Rust build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target/
-          key: rust-build-validate-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            rust-build-validate-${{ runner.os }}-
-
-      - name: Cache Pdfium binaries
-        id: cache-pdfium-validate
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/*/build/*/out/pdfium/
-          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
-          restore-keys: |
-            pdfium-${{ runner.os }}-
-
-      - name: Install Dependencies
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 45
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            if [[ "${{ runner.os }}" == "Windows" ]] && [[ -d ".venv" ]]; then
-              echo "Removing existing .venv directory on Windows"
-              rm -rf .venv
-            fi
-            uv sync --all-packages --all-groups --all-extras
-          shell: bash
-
-      - name: Run Rust Checks
-        run: |
-          echo "Running Rust formatting check..."
-          cargo fmt --check
-          echo "Running Rust clippy (no default features)..."
-          cargo clippy --no-default-features -- -D warnings
-          echo "Running Rust clippy (with all features)..."
-          cargo clippy --features full -- -D warnings
-
-      - name: Install prek
-        run: |
-          # Install prek using uv (recommended method)
-          uv tool install prek
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Load Cached Prek Dependencies
-        id: cached-prek-dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/prek/
-          key: prek|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
-
-      - name: Execute Prek
-        run: prek run --show-diff-on-failure --color=always --all-files
-
-  coverage:
+  python-tests:
+    needs:
+      - validate
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.10", "3.13", "3.14"]
+        python: ["3.10", "3.13"]
     env:
       DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
-    timeout-minutes: 120
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -222,46 +131,23 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: ./.github/actions/setup-rust
         with:
-          components: rustfmt, clippy, llvm-tools-preview
-
-      - name: Cache Rust build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target/
-          key: rust-build-coverage-${{ matrix.os }}-${{ matrix.python }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            rust-build-coverage-${{ matrix.os }}-${{ matrix.python }}-
+          cache-key-prefix: rust-python-${{ matrix.os }}-${{ matrix.python }}
 
       - name: Cache Pdfium binaries
-        id: cache-pdfium-coverage
-        uses: actions/cache@v4
+        uses: ./.github/actions/cache-pdfium
         with:
-          path: |
-            target/*/build/*/out/pdfium/
-          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
-          restore-keys: |
-            pdfium-${{ runner.os }}-
-
-      - name: Sync dependencies
-        uses: ./.github/actions/uv-sync
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Install system dependencies
-        if: matrix.python != '3.14'
         uses: ./.github/actions/install-system-deps
 
       - name: Install SpaCy model for testing
-        if: matrix.python != '3.14'
         run: |
           uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 
       - name: Cache TATR models
-        if: matrix.python != '3.14'
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
@@ -270,7 +156,6 @@ jobs:
             huggingface-models-tatr-v1-
 
       - name: Download TATR models if not cached
-        if: matrix.python != '3.14'
         env:
           TRANSFORMERS_CACHE: ~/.cache/huggingface
         run: |
@@ -282,45 +167,11 @@ jobs:
           fi
 
       - name: Run test suite with coverage
-        uses: nick-fields/retry@v3
         env:
           HF_HOME: ~/.cache/huggingface
           TRANSFORMERS_CACHE: ~/.cache/huggingface
-        with:
-          timeout_minutes: 45
-          max_attempts: 2
-          retry_wait_seconds: 10
-          command: |
-            set -euo pipefail
-            uv run coverage erase || true
-            # Skip tests requiring torch/paddle on Python 3.14
-            if [[ "${{ matrix.python }}" == "3.14" ]]; then
-              uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/ --ignore=tests/ocr/ --ignore=tests/features/entity_extraction_test.py --ignore=tests/features/document_classification_test.py
-            else
-              uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
-            fi
-            uv run coverage report --precision=2
-          shell: bash
-
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
-
-      - name: Generate Rust coverage (unit tests)
-        run: cargo llvm-cov --no-default-features --lib --bins --lcov --output-path rust-coverage-unit.lcov
-
-      - name: Generate Rust coverage (integration tests with all features)
-        if: matrix.python != '3.14'
-        run: cargo llvm-cov --features full --tests --lcov --output-path rust-coverage-integration.lcov
-
-      - name: Merge Rust coverage reports
         shell: bash
-        run: |
-          # Merge coverage files
-          if [ -f rust-coverage-integration.lcov ]; then
-            cat rust-coverage-unit.lcov rust-coverage-integration.lcov > rust-coverage.lcov
-          else
-            cp rust-coverage-unit.lcov rust-coverage.lcov
-          fi
+        run: uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
 
       - name: Upload coverage to DeepSource
         if: always() && env.DEEPSOURCE_DSN != ''
@@ -328,7 +179,6 @@ jobs:
         run: |
           curl -fsSL https://deepsource.io/cli | sh
           ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
-          ./bin/deepsource report --analyzer test-coverage --key rust --value-file ./rust-coverage.lcov
 
       - name: Upload coverage artifacts
         if: always()
@@ -343,141 +193,16 @@ jobs:
             .coverage
           retention-days: 7
 
-  python-tests:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.10", "3.13", "3.14"]
-        test-category:
-          - name: "core"
-            path: "tests/core,tests/utils"
-            system-deps: false
-            timeout: 40
-          - name: "extractors"
-            path: "tests/extractors"
-            system-deps: true
-            timeout: 50
-          - name: "integration"
-            path: "tests/integration,tests/api"
-            system-deps: true
-            timeout: 60
-          - name: "features"
-            path: "tests/features,tests/interfaces,tests/mcp,tests/multiprocessing,tests/ocr"
-            system-deps: true
-            timeout: 50
-          - name: "comparative-benchmarks"
-            path: "comparative-benchmarks/tests"
-            system-deps: false
-            timeout: 30
-    timeout-minutes: ${{ matrix.test-category.timeout }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-
-      - name: Setup Python environment
-        id: setup-python
-        uses: ./.github/actions/setup-python-env
-        with:
-          python-version: ${{ matrix.python }}
-
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          components: rustfmt, clippy, llvm-tools-preview
-
-      - name: Cache Rust build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target/
-          key: rust-build-pytests-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.test-category.name }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            rust-build-pytests-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.test-category.name }}-
-
-      - name: Cache Pdfium binaries
-        id: cache-pdfium-pytests
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/*/build/*/out/pdfium/
-          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
-          restore-keys: |
-            pdfium-${{ runner.os }}-
-
-      - name: Sync dependencies
-        uses: ./.github/actions/uv-sync
-
-      - name: Cache test artifacts
-        uses: actions/cache@v4
-        with:
-          path: .pytest_cache/
-          key: pytest-cache-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.test-category.name }}
-
-      - name: Install system dependencies
-        if: matrix.test-category.system-deps && matrix.python != '3.14'
-        uses: ./.github/actions/install-system-deps
-
-      - name: Install SpaCy model for testing
-        if: matrix.test-category.system-deps && matrix.python != '3.14'
-        run: |
-          uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
-
-      - name: Cache TATR models
-        if: contains(matrix.test-category.path, 'gmft') && matrix.python != '3.14'
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: huggingface-models-tatr-v1-${{ runner.os }}
-          restore-keys: |
-            huggingface-models-tatr-v1-
-
-      - name: Download TATR models if not cached
-        if: contains(matrix.test-category.path, 'gmft') && matrix.python != '3.14'
-        env:
-          TRANSFORMERS_CACHE: ~/.cache/huggingface
-        run: |
-          if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
-            echo "Cache miss - downloading TATR models..."
-            uv run python scripts/download_tatr_models.py
-          else
-            echo "Using cached TATR models"
-          fi
-
-      - name: Run Tests - ${{ matrix.test-category.name }}
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: ${{ matrix.test-category.timeout }}
-          max_attempts: 2
-          retry_wait_seconds: 5
-          command: |
-            set -euo pipefail
-            if [[ "${{ runner.os }}" == "Windows" ]] && [[ "${{ matrix.test-category.name }}" == "comparative-benchmarks" ]]; then
-              echo "Skipping comparative-benchmarks/tests on Windows"
-              exit 0
-            fi
-            # Skip tests that require torch/paddle on Python 3.14 (not yet supported)
-            if [[ "${{ matrix.python }}" == "3.14" ]] && [[ "${{ matrix.test-category.name }}" == "features" ]]; then
-              echo "Skipping features tests on Python 3.14 (torch/paddle dependencies not available)"
-              exit 0
-            fi
-            uv run coverage erase || true
-            uv run pytest $(echo "${{ matrix.test-category.path }}" | tr ',' ' ') -v --cov=kreuzberg --cov-report=term --cov-report=xml --cov-config=pyproject.toml --cov-fail-under=0 --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
-          shell: bash
 
   node-bindings:
+    needs:
+      - validate
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node: ["20", "22", "24"]
+        node: "20"
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -486,31 +211,15 @@ jobs:
           submodules: recursive
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: ./.github/actions/setup-rust
         with:
           components: rustfmt, clippy
-
-      - name: Cache Rust build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target/
-          key: rust-build-node-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            rust-build-node-${{ matrix.os }}-${{ matrix.node }}-
+          cache-key-prefix: rust-node-${{ matrix.os }}-${{ matrix.node }}
 
       - name: Cache Pdfium binaries
-        id: cache-pdfium-node
-        uses: actions/cache@v4
+        uses: ./.github/actions/cache-pdfium
         with:
-          path: |
-            target/*/build/*/out/pdfium/
-          key: pdfium-${{ runner.os }}-${{ env.PDFIUM_VERSION }}
-          restore-keys: |
-            pdfium-${{ runner.os }}-
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Setup Node workspace
         uses: ./.github/actions/setup-node-workspace
@@ -527,13 +236,14 @@ jobs:
         run: |
           pnpm build
 
-      - name: Run TypeScript tests
+      - name: Run TypeScript tests without coverage
+        if: matrix.os != 'ubuntu-latest'
         working-directory: packages/typescript
         run: |
           pnpm test
 
       - name: Run TypeScript tests with coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
+        if: matrix.os == 'ubuntu-latest'
         working-directory: packages/typescript
         run: |
           pnpm test:coverage
@@ -546,7 +256,7 @@ jobs:
           cargo test --release
 
       - name: Upload TypeScript coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ts-coverage-${{ github.sha }}

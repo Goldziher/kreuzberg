@@ -56,7 +56,7 @@ const isMuslFromReport = () => {
 
 const isMuslFromChildProcess = () => {
 	try {
-		return require("node:child_process").execSync("ldd --version", { encoding: "utf8" }).includes("musl");
+		return require("child_process").execSync("ldd --version", { encoding: "utf8" }).includes("musl");
 	} catch (e) {
 		// If we reach this case, we don't know if the system is musl or not, so is better to just fallback to false
 		return false;
@@ -736,10 +736,13 @@ module.exports.batchExtractBytesSync = nativeBinding.batchExtractBytesSync;
 module.exports.batchExtractFiles = nativeBinding.batchExtractFiles;
 module.exports.batchExtractFilesSync = nativeBinding.batchExtractFilesSync;
 module.exports.clearPostProcessors = nativeBinding.clearPostProcessors;
+module.exports.clearValidators = nativeBinding.clearValidators;
 module.exports.extractBytes = nativeBinding.extractBytes;
 module.exports.extractBytesSync = nativeBinding.extractBytesSync;
 module.exports.extractFile = nativeBinding.extractFile;
 module.exports.extractFileSync = nativeBinding.extractFileSync;
 module.exports.registerOcrBackend = nativeBinding.registerOcrBackend;
 module.exports.registerPostProcessor = nativeBinding.registerPostProcessor;
+module.exports.registerValidator = nativeBinding.registerValidator;
 module.exports.unregisterPostProcessor = nativeBinding.unregisterPostProcessor;
+module.exports.unregisterValidator = nativeBinding.unregisterValidator;

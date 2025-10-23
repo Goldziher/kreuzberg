@@ -55,16 +55,16 @@
 		"@gutenye/ocr-node": "^1.4.8"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.6",
+		"@biomejs/biome": "^2.2.7",
 		"@types/archiver": "^6.0.3",
 		"@types/node": "^24.9.1",
 		"@types/which": "^3.0.4",
-		"@vitest/coverage-v8": "^3.2.4",
+		"@vitest/coverage-v8": "^4.0.1",
 		"archiver": "^7.0.1",
-		"oxlint": "^1.23.0",
+		"oxlint": "^1.24.0",
 		"tsup": "^8.5.0",
 		"typescript": "^5.9.3",
-		"vitest": "^3.2.4"
+		"vitest": "^4.0.1"
 	},
 	"engines": {
 		"node": ">=18"
