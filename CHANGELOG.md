@@ -94,15 +94,15 @@ v4 introduces native metadata extraction across all major document formats:
 - Field count
 - Format type
 
-**HTML** (metadata extraction available but disabled by default):
-- `html-to-markdown-rs` library supports extensive metadata extraction when enabled:
+**HTML** (via `html-to-markdown-rs`):
+- Comprehensive metadata extraction enabled by default
+- Extracts as YAML frontmatter in markdown output:
   - Document title, meta tags (description, keywords, author)
   - Open Graph tags (og:title, og:description, og:image)
   - Twitter Card tags (twitter:card, twitter:title)
   - Base URL, canonical URL
   - Link relations (author, license, alternate links)
-- Currently disabled by default (set `extract_metadata: false` in config)
-- Infrastructure in place for future enablement
+- Metadata included in the content field as frontmatter
 
 **Pandoc-Only Formats** (metadata via Pandoc subprocess):
 - ODT, EPUB, LaTeX, reStructuredText, RTF, Typst, Jupyter Notebooks, FictionBook, Org Mode, DocBook, JATS, OPML

@@ -84,7 +84,7 @@ impl Default for HtmlConversionConfig {
             br_in_tables: None,
             hocr_spatial_tables: Some(false),
             highlight_style: None,
-            extract_metadata: Some(false),
+            extract_metadata: Some(true),
             whitespace_mode: None,
             strip_newlines: None,
             wrap: None,
@@ -190,7 +190,7 @@ fn build_conversion_options(config: Option<HtmlConversionConfig>) -> Result<Conv
 
     if config.is_none() {
         options.hocr_spatial_tables = false;
-        options.extract_metadata = false;
+        options.extract_metadata = true;
         return Ok(options);
     }
 
@@ -619,7 +619,7 @@ mod tests {
     fn test_html_config_default_values() {
         let config = HtmlConversionConfig::default();
         assert_eq!(config.hocr_spatial_tables, Some(false));
-        assert_eq!(config.extract_metadata, Some(false));
+        assert_eq!(config.extract_metadata, Some(true));
         assert!(config.heading_style.is_none());
     }
 
@@ -627,7 +627,7 @@ mod tests {
     fn test_build_conversion_options_none() {
         let options = build_conversion_options(None).unwrap();
         assert!(!options.hocr_spatial_tables);
-        assert!(!options.extract_metadata);
+        assert!(options.extract_metadata);
     }
 
     #[test]
