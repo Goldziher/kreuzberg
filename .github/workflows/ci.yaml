@@ -202,7 +202,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node: "20"
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -214,7 +213,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           components: rustfmt, clippy
-          cache-key-prefix: rust-node-${{ matrix.os }}-${{ matrix.node }}
+          cache-key-prefix: rust-node-${{ matrix.os }}
 
       - name: Cache Pdfium binaries
         uses: ./.github/actions/cache-pdfium
@@ -224,17 +223,37 @@ jobs:
       - name: Setup Node workspace
         uses: ./.github/actions/setup-node-workspace
         with:
-          node-version: ${{ matrix.node }}
+          node-version: "20"
 
       - name: Build NAPI-RS bindings
         working-directory: crates/kreuzberg-node
         run: |
           pnpm build
 
+      - name: Verify NAPI bindings were created
+        working-directory: crates/kreuzberg-node
+        shell: bash
+        run: |
+          echo "Checking for .node files..."
+          ls -lah *.node || echo "No .node files found in crates/kreuzberg-node/"
+          echo ""
+          echo "Checking package.json files field..."
+          cat package.json | grep -A 3 '"files"'
+          echo ""
+          echo "Verifying Node.js can resolve kreuzberg-node..."
+          node -e "try { const path = require.resolve('kreuzberg-node'); console.log('Resolved to:', path); const fs = require('fs'); const dir = path.replace('index.js', ''); console.log('Directory contents:', fs.readdirSync(dir).filter(f => f.endsWith('.node'))); } catch(e) { console.error('Resolution failed:', e.message); }"
+
       - name: Build TypeScript SDK
         working-directory: packages/typescript
         run: |
           pnpm build
+
+      - name: Debug binding resolution from TypeScript package
+        working-directory: packages/typescript
+        shell: bash
+        run: |
+          echo "Attempting to load kreuzberg-node from TypeScript package context..."
+          node -e "try { const binding = require('kreuzberg-node'); console.log('✓ Binding loaded successfully'); console.log('Available exports:', Object.keys(binding)); } catch(e) { console.error('✗ Failed to load binding:', e.message); console.error('Stack:', e.stack); process.exit(1); }"
 
       - name: Run TypeScript tests without coverage
         if: matrix.os != 'ubuntu-latest'
