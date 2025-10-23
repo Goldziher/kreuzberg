@@ -65,3 +65,40 @@ def german_image_pdf() -> Path:
     if not path.exists():
         pytest.skip(f"Test file not found: {path}")
     return path
+
+
+@pytest.fixture
+def docx_document() -> Path:
+    """Path to DOCX test file."""
+    # Use root-level test_documents directory
+    path = Path(__file__).parent.parent.parent / "test_documents" / "documents" / "lorem_ipsum.docx"
+    if not path.exists():
+        pytest.skip(f"Test file not found: {path}")
+    return path
+
+
+@pytest.fixture
+def searchable_pdf() -> Path:
+    """Path to searchable PDF test file with images."""
+    path = Path(__file__).parent.parent.parent / "test_documents" / "pdfs" / "embedded_images_tables.pdf"
+    if not path.exists():
+        pytest.skip(f"Test file not found: {path}")
+    return path
+
+
+@pytest.fixture
+def pptx_document() -> Path:
+    """Path to PPTX test file."""
+    path = Path(__file__).parent.parent.parent / "test_documents" / "presentations" / "simple.pptx"
+    if not path.exists():
+        pytest.skip(f"Test file not found: {path}")
+    return path
+
+
+@pytest.fixture
+def test_files_path() -> Path:
+    """Path to test_documents directory."""
+    path = Path(__file__).parent.parent.parent / "test_documents"
+    if not path.exists():
+        pytest.skip(f"Test documents directory not found: {path}")
+    return path
