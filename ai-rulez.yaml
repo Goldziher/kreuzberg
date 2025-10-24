@@ -447,7 +447,55 @@ rules:
       - **Keep comments** - Use `~keep` suffix for error handling explanations (e.g., `// OSError must bubble up ~keep`)
       - **Private items** - Doc comments optional but encouraged for complex logic
       - **No redundant comments** - Code should be self-documenting, comments explain "why" not "what"
+
+      ### TypeScript/JSDoc Documentation
+      - **ALL exported functions and classes must have JSDoc** - Use `/** */` format
+      - **Include @param, @returns, @example** - Provide comprehensive documentation
+      - **Type information in JSDoc** - Use proper TypeScript types in documentation
+      - **Examples must be valid** - All code examples should be syntactically correct
+      - **No redundant comments** - Code should be self-documenting
     name: Documentation Standards
+    priority: critical
+  - content: |
+      ### README File Principles
+      - **NEVER create README files proactively** - Only when explicitly requested
+      - **Language-specific examples only** - Use the target language's syntax and patterns
+      - **Simple to advanced progression** - Start with basic examples, progress to complex
+      - **One code block per example** - Don't fragment examples across multiple blocks
+      - **No unnecessary comments in code blocks** - Keep examples clean and focused
+      - **Technical but friendly tone** - Address technical users with clarity
+      - **Avoid fluff** - Be concise and direct, focus on practical information
+
+      ### README Structure Guidelines
+      - **Root README**: Multiplatform overview, installation for all languages, quick starts for each
+      - **Language-specific READMEs**: Focused on that language, comprehensive examples, troubleshooting
+      - **Badges at top**: PyPI/npm/crates.io version, license, documentation links
+      - **Installation first**: Show how to install immediately
+      - **Quick start second**: Simple working example within first 3 sections
+      - **Progress from simple to advanced**: Basic usage → Configuration → Advanced features
+      - **API reference section**: List functions, types, exceptions/errors
+      - **Examples section**: Real-world use cases
+      - **Troubleshooting section**: Common issues and solutions
+      - **Link to full docs**: Always provide link to complete documentation
+
+      ### Code Example Guidelines
+      - **One complete example per code block** - Don't split across multiple blocks
+      - **No inline comments** - Let the code speak for itself
+      - **Section headers above examples** - Use markdown headers to explain purpose
+      - **Valid, runnable code** - All examples must be syntactically correct
+      - **Language-appropriate style**:
+        - Python: Follow PEP 8, use type hints where helpful
+        - TypeScript: Use proper types, async/await patterns
+        - Rust: Follow Rust conventions, use `?` operator, proper error handling
+      - **Realistic filenames**: Use "document.pdf", "invoice.pdf" (not "file.txt", "example.pdf")
+      - **Show result usage**: Don't just extract, show accessing result properties
+
+      ### README Maintenance
+      - **Keep in sync with code**: Update READMEs when API changes
+      - **Version compatibility**: Note minimum versions when relevant
+      - **System dependencies**: Clearly document required tools (Tesseract, LibreOffice, etc.)
+      - **Cross-reference**: Link to language-specific READMEs from root
+    name: README and Documentation File Guidelines
     priority: critical
   - content: |
       ### Rust Core Library Structure (crates/kreuzberg)

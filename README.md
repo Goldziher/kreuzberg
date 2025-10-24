@@ -1,240 +1,88 @@
 # Kreuzberg
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20our%20community-7289da)](https://discord.gg/pXxagNK2zN)
-[![PyPI version](https://badge.fury.io/py/kreuzberg.svg)](https://badge.fury.io/py/kreuzberg)
+[![PyPI](https://badge.fury.io/py/kreuzberg.svg)](https://badge.fury.io/py/kreuzberg)
+[![npm](https://img.shields.io/npm/v/@goldziher/kreuzberg)](https://www.npmjs.com/package/@goldziher/kreuzberg)
+[![Crates.io](https://img.shields.io/crates/v/kreuzberg)](https://crates.io/crates/kreuzberg)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
-[![Benchmarks](https://img.shields.io/badge/benchmarks-fastest%20CPU-orange)](https://benchmarks.kreuzberg.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![DeepSource](https://app.deepsource.com/gh/Goldziher/kreuzberg.svg/?label=code+coverage&show_trend=true&token=U8AW1VWWSLwVhrbtL8LmLBDN)](https://app.deepsource.com/gh/Goldziher/kreuzberg/)
 
-**A document intelligence framework for Python.** Extract text, metadata, and structured information from diverse document formats through a unified, extensible API. Built on established open source foundations with hybrid Rust-Python architecture for maximum performance.
+**A multiplatform document intelligence engine written in Rust.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats through a unified API. Use in Rust, Python, TypeScript/Node.js—or via CLI, REST API, or MCP.
 
-📖 **[Complete Documentation](https://kreuzberg.dev/)**
+## Why Kreuzberg
 
-## Framework Overview
+- **High-performance Rust core** – 10-50x faster than pure-Python alternatives
+- **Multiplatform** – Native libraries for Rust, Python, TypeScript/Node.js
+- **Production-ready** – Battle-tested with comprehensive error handling and validation
+- **50+ formats** – PDF, DOCX, XLSX, PPTX, images, HTML, XML, emails, and more
+- **OCR built-in** – Multiple backends (Tesseract, EasyOCR, PaddleOCR) with table extraction
+- **Flexible deployment** – Use as library, CLI tool, REST API server, or MCP server
+- **Memory efficient** – Streaming parsers handle multi-GB files with constant memory
 
-### Document Intelligence Capabilities
+📖 **[Complete Documentation](https://kreuzberg.dev/)** • 🚀 **[Quick Start Guides](#quick-start)** • 📊 **[Benchmarks](https://benchmarks.kreuzberg.dev/)**
 
-- **Text Extraction**: High-fidelity text extraction preserving document structure and formatting
-- **Image Extraction**: Extract embedded images from PDFs, presentations, HTML, and Office documents with optional OCR
-- **Metadata Extraction**: Comprehensive metadata including author, creation date, language, and document properties
-- **Format Support**: 50+ document types including PDF, Microsoft Office (modern + legacy), images, HTML, XML, and structured data formats
-- **OCR Integration**: Multiple OCR backends with different strengths (Tesseract, EasyOCR, PaddleOCR)
-- **Table Extraction**: Multiple approaches including vision-based detection and OCR-based extraction
+## Installation
 
-### OCR Backends
-
-| Backend       | Best For                         | Model Size | Installation                         |
-| ------------- | -------------------------------- | ---------- | ------------------------------------ |
-| **Tesseract** | Printed text, CPU                | 5-10MB     | System package (default)             |
-| **EasyOCR**   | Scene text, GPU, handwriting     | 100-500MB  | `pip install "kreuzberg[easyocr]"`   |
-| **PaddleOCR** | Complex layouts, Asian languages | 10-50MB    | `pip install "kreuzberg[paddleocr]"` |
-
-```python
-from kreuzberg import extract_file, ExtractionConfig, EasyOCRConfig, PaddleOCRConfig
-
-# Tesseract (default)
-result = await extract_file("document.pdf")
-
-# EasyOCR (GPU-accelerated)
-result = await extract_file("photo.jpg", config=ExtractionConfig(ocr=EasyOCRConfig(language=("en",), device="cuda")))
-
-# PaddleOCR (complex layouts)
-result = await extract_file("invoice.pdf", config=ExtractionConfig(ocr=PaddleOCRConfig(language="ch")))
-```
-
-📖 **[OCR Configuration Guide](https://kreuzberg.dev/user-guide/ocr-backends/)**
-
-- **Document Classification**: Automatic document type detection (contracts, forms, invoices, receipts, reports)
-- **Streaming Parsers**: Memory-efficient Rust streaming for XML, plain text, and markdown (handles multi-GB files)
-
-### Technical Architecture
-
-- **Hybrid Implementation**: Rust-Python architecture with performance-critical operations in Rust
-- **Performance**: Fastest text extraction framework in its category
-- **Resource Efficiency**: Minimal installation footprint and memory usage
-- **Extensibility**: Plugin architecture for custom extractors via the Extractor base class
-- **API Design**: Synchronous and asynchronous APIs with consistent interfaces
-- **Type Safety**: Complete type annotations throughout the codebase
-
-### Open Source Foundation
-
-Kreuzberg leverages established open source technologies:
-
-- **Pandoc**: Universal document converter for robust format support
-- **PDFium**: Google's PDF rendering engine for accurate PDF processing
-- **Tesseract**: Google's OCR engine for text recognition
-- **Rust**: Performance-critical operations implemented in Rust for maximum speed
-
-## Quick Start
-
-### Extract Text with CLI
+### CLI
 
 ```bash
-# Extract text from any file to text format
-uvx kreuzberg extract document.pdf > output.txt
-
-# With all features (chunking, language detection, etc.)
-uvx kreuzberg extract invoice.pdf --ocr-backend tesseract --output-format text
-
-# Extract with rich metadata
-uvx kreuzberg extract report.pdf --show-metadata --output-format json
+brew install goldziher/tap/kreuzberg
 ```
-
-### Python Usage
-
-**Async (recommended for web apps):**
-
-```python
-from kreuzberg import extract_file
-
-# In your async function
-result = await extract_file("presentation.pptx")
-print(result.content)
-
-# Rich metadata extraction
-print(f"Title: {result.metadata.title}")
-print(f"Author: {result.metadata.author}")
-print(f"Page count: {result.metadata.page_count}")
-print(f"Created: {result.metadata.created_at}")
-```
-
-**Sync (for scripts and CLI tools):**
-
-```python
-from kreuzberg import extract_file_sync
-
-result = extract_file_sync("report.docx")
-print(result.content)
-
-# Access rich metadata
-print(f"Language: {result.metadata.language}")
-print(f"Word count: {result.metadata.word_count}")
-print(f"Keywords: {result.metadata.keywords}")
-```
-
-### Advanced Examples
-
-**XML extraction with streaming parser:**
-
-```python
-from kreuzberg import extract_file_sync
-
-# Handles multi-GB XML files efficiently
-result = extract_file_sync("large_dataset.xml")
-print(f"Element count: {result.metadata['element_count']}")
-print(f"Unique elements: {result.metadata['unique_elements']}")
-```
-
-**Legacy Office formats (.doc, .ppt):**
-
-```python
-from kreuzberg import extract_file_sync
-
-# Requires LibreOffice installed
-result = extract_file_sync("legacy_document.doc")
-print(result.content)
-
-result = extract_file_sync("old_presentation.ppt")
-print(f"Slides: {result.metadata['slide_count']}")
-```
-
-**Markdown with metadata extraction:**
-
-```python
-from kreuzberg import extract_file_sync
-
-result = extract_file_sync("README.md")
-print(f"Headers: {result.metadata['headers']}")  # All markdown headers
-print(f"Links: {result.metadata['links']}")  # All [text](url) links
-print(f"Code blocks: {result.metadata['code_blocks']}")  # Language and code
-```
-
-### Docker
-
-Two optimized images available:
 
 ```bash
-# Base image (API + CLI + multilingual OCR)
-docker run -p 8000:8000 goldziher/kreuzberg
-
-# Core image (+ chunking + crypto + document classification + language detection)
-docker run -p 8000:8000 goldziher/kreuzberg-core:latest
-
-# Extract via API
-curl -X POST -F "files=@document.pdf" http://localhost:8000/extract
+cargo install kreuzberg-cli
 ```
 
-📖 **[Installation Guide](https://kreuzberg.dev/getting-started/installation/)** • **[CLI Documentation](https://kreuzberg.dev/cli/)** • **[API Reference](https://kreuzberg.dev/api-reference/)**
+### Python
 
-## Using the Rust Crate
+```bash
+pip install kreuzberg
+```
 
-The Kreuzberg Rust core (`crates/kreuzberg`) is a standalone library that can be used directly in Rust projects with optional feature flags for minimal binary sizes.
+### TypeScript/Node.js
 
-### Installation
+```bash
+npm install @goldziher/kreuzberg
+```
 
-Add to your `Cargo.toml`:
+### Rust
 
 ```toml
 [dependencies]
-# Minimal installation (text, JSON, YAML, TOML only) - ~10MB binary
 kreuzberg = "4.0"
-
-# With specific features
-kreuzberg = { version = "4.0", features = ["pdf", "excel", "ocr"] }
-
-# Full-featured installation - ~55MB binary
-kreuzberg = { version = "4.0", features = ["full"] }
 ```
 
-### Feature Flags
+## Quick Start
 
-| Feature              | Dependencies                                                  | Use Case                     | Binary Size |
-| -------------------- | ------------------------------------------------------------- | ---------------------------- | ----------- |
-| `pdf`                | pdfium-render, lopdf                                          | PDF extraction               | +25MB       |
-| `excel`              | calamine, polars                                              | Excel/spreadsheet parsing    | +3MB        |
-| `office`             | roxmltree, zip                                                | DOCX, PPTX extraction        | +1MB        |
-| `email`              | mail-parser, msg_parser                                       | EML, MSG extraction          | +500KB      |
-| `html`               | html-to-markdown-rs, html-escape                              | HTML to markdown             | +1MB        |
-| `xml`                | quick-xml, roxmltree                                          | XML streaming parser         | +500KB      |
-| `archives`           | zip, tar, sevenz-rust                                         | Archive extraction           | +2MB        |
-| `ocr`                | tesseract-rs, image, fast_image_resize, ndarray, kamadak-exif | OCR processing               | +5MB        |
-| `language-detection` | whatlang                                                      | Language detection           | +100KB      |
-| `chunking`           | text-splitter                                                 | Text chunking                | +200KB      |
-| `quality`            | unicode-normalization, chardetng, encoding_rs                 | Text quality & normalization | +500KB      |
+### CLI
 
-### Feature Bundles
-
-Convenience bundles for common use cases:
-
-```toml
-# Full features (everything)
-kreuzberg = { version = "4.0", features = ["full"] }
-
-# Server deployment (PDF, Excel, HTML, OCR, API)
-kreuzberg = { version = "4.0", features = ["server"] }
-
-# CLI usage (PDF, Excel, Office, HTML, OCR, language detection, chunking, quality)
-kreuzberg = { version = "4.0", features = ["cli"] }
+```bash
+kreuzberg extract document.pdf
+kreuzberg extract scanned.pdf --ocr true
+kreuzberg batch *.pdf --output-format json
 ```
 
-### Basic Usage
+### Python
 
-**Async extraction:**
+```python
+from kreuzberg import extract_file_sync
 
-```rust
-use kreuzberg::{extract_file, ExtractionConfig};
-
-#[tokio::main]
-async fn main() -> kreuzberg::Result<()> {
-    let config = ExtractionConfig::default();
-    let result = extract_file("document.pdf", None, &config).await?;
-    println!("Extracted text: {}", result.content);
-    Ok(())
-}
+result = extract_file_sync("document.pdf")
+print(result.content)
+print(f"Pages: {result.metadata['page_count']}")
 ```
 
-**Sync extraction:**
+### TypeScript/Node.js
+
+```typescript
+import { extractFileSync } from '@goldziher/kreuzberg';
+
+const result = extractFileSync('document.pdf');
+console.log(result.content);
+console.log(`Pages: ${result.metadata.pageCount}`);
+```
+
+### Rust
 
 ```rust
 use kreuzberg::{extract_file_sync, ExtractionConfig};
@@ -242,235 +90,198 @@ use kreuzberg::{extract_file_sync, ExtractionConfig};
 fn main() -> kreuzberg::Result<()> {
     let config = ExtractionConfig::default();
     let result = extract_file_sync("document.pdf", None, &config)?;
-    println!("Extracted text: {}", result.content);
+    println!("Content: {}", result.content);
     Ok(())
 }
 ```
 
-**Batch processing:**
+## Language-Specific Documentation
 
-```rust
-use kreuzberg::{batch_extract_file, ExtractionConfig};
+Each platform has detailed documentation with language-specific examples and best practices:
 
-#[tokio::main]
-async fn main() -> kreuzberg::Result<()> {
-    let config = ExtractionConfig::default();
-    let files = vec!["doc1.pdf", "doc2.pdf", "doc3.pdf"];
-    let results = batch_extract_file(&files, None, &config).await?;
-    for result in results {
-        println!("Extracted: {}", result.content);
-    }
-    Ok(())
+- **[Python Documentation](packages/python/README.md)** – Installation, examples, configuration
+- **[TypeScript/Node.js Documentation](packages/typescript/README.md)** – Installation, examples, types
+- **[Rust Documentation](crates/kreuzberg/README.md)** – Crate usage, features, examples
+
+## Supported Formats
+
+### Documents & Productivity
+
+| Format | Extensions | Metadata | Tables | Images |
+|--------|-----------|----------|--------|--------|
+| PDF | `.pdf` | ✅ | ✅ | ✅ |
+| Word | `.docx`, `.doc` | ✅ | ✅ | ✅ |
+| Excel | `.xlsx`, `.xls`, `.ods` | ✅ | ✅ | ❌ |
+| PowerPoint | `.pptx`, `.ppt` | ✅ | ✅ | ✅ |
+| Rich Text | `.rtf` | ✅ | ❌ | ❌ |
+| EPUB | `.epub` | ✅ | ❌ | ❌ |
+
+### Images
+
+All image formats support OCR: `.jpg`, `.jpeg`, `.png`, `.tiff`, `.tif`, `.bmp`, `.gif`, `.webp`, `.jp2`
+
+### Web & Structured Data
+
+| Format | Extensions | Features |
+|--------|-----------|----------|
+| HTML | `.html`, `.htm` | Metadata extraction, link preservation |
+| XML | `.xml` | Streaming parser for multi-GB files |
+| JSON | `.json` | Intelligent field detection |
+| YAML | `.yaml`, `.yml` | Structure preservation |
+| TOML | `.toml` | Configuration parsing |
+
+### Email & Archives
+
+| Format | Extensions | Features |
+|--------|-----------|----------|
+| Email | `.eml`, `.msg` | Full metadata, attachment extraction |
+| Archives | `.zip`, `.tar`, `.gz`, `.7z` | File listing, metadata |
+
+### Academic & Technical
+
+LaTeX (`.tex`), BibTeX (`.bib`), Jupyter (`.ipynb`), reStructuredText (`.rst`), Org Mode (`.org`), Markdown (`.md`)
+
+**[Complete Format Documentation](https://kreuzberg.dev/formats/)**
+
+## Key Features
+
+### OCR with Table Extraction
+
+```python
+from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig, TesseractConfig
+
+config = ExtractionConfig(
+    ocr=OcrConfig(
+        backend="tesseract",
+        tesseract_config=TesseractConfig(
+            enable_table_detection=True
+        )
+    )
+)
+
+result = extract_file_sync("scanned_invoice.pdf", config=config)
+for table in result.tables:
+    print(table.markdown)
+```
+
+### Batch Processing
+
+```typescript
+import { batchExtractFiles } from '@goldziher/kreuzberg';
+
+const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
+const results = await batchExtractFiles(files);
+
+for (const result of results) {
+  console.log(result.content);
 }
 ```
 
-**With OCR enabled:**
+### Password-Protected PDFs
 
 ```rust
-use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig};
+use kreuzberg::{extract_file_sync, ExtractionConfig, PdfConfig};
 
-fn main() -> kreuzberg::Result<()> {
-    let config = ExtractionConfig {
-        ocr: Some(OcrConfig::default()),
-        force_ocr: false,
+let config = ExtractionConfig {
+    pdf_options: Some(PdfConfig {
+        passwords: Some(vec!["password1".to_string(), "password2".to_string()]),
         ..Default::default()
-    };
-    let result = extract_file_sync("scanned.pdf", None, &config)?;
-    println!("Extracted: {}", result.content);
-    Ok(())
-}
+    }),
+    ..Default::default()
+};
+
+let result = extract_file_sync("protected.pdf", None, &config)?;
 ```
 
-**Compilation examples:**
+### Language Detection
 
-```bash
-# Minimal binary (~10MB)
-cargo build --release
+```python
+from kreuzberg import extract_file_sync, ExtractionConfig, LanguageDetectionConfig
 
-# PDF extraction only (~35MB)
-cargo build --release --features pdf
+config = ExtractionConfig(
+    language_detection=LanguageDetectionConfig(enabled=True)
+)
 
-# Common formats (~38MB)
-cargo build --release --features pdf,excel,html
-
-# Server deployment (~40MB)
-cargo build --release --features server
-
-# CLI with all common features (~42MB)
-cargo build --release --features cli
-
-# Everything (~55MB)
-cargo build --release --features full
+result = extract_file_sync("multilingual.pdf", config=config)
+print(result.detected_languages)
 ```
 
-### System Dependencies
+### Metadata Extraction
 
-#### LibreOffice (Optional - for legacy Office formats)
+```typescript
+import { extractFileSync } from '@goldziher/kreuzberg';
 
-Required only for `.doc` and `.ppt` file support. Modern Office formats (`.docx`, `.pptx`, `.xlsx`) work without LibreOffice.
+const result = extractFileSync('document.pdf');
 
-**macOS:**
-
-```bash
-brew install libreoffice
+console.log(result.metadata.pdf?.title);
+console.log(result.metadata.pdf?.author);
+console.log(result.metadata.pdf?.pageCount);
+console.log(result.metadata.pdf?.creationDate);
 ```
-
-**Ubuntu/Debian:**
-
-```bash
-sudo apt-get update
-sudo apt-get install libreoffice
-```
-
-**RHEL/CentOS/Fedora:**
-
-```bash
-sudo dnf install libreoffice
-```
-
-**Windows:**
-
-Download from [libreoffice.org](https://www.libreoffice.org/download/download/) and add to PATH.
-
-**Docker:**
-
-LibreOffice is pre-installed in all Kreuzberg Docker images.
 
 ## Deployment Options
 
-### 🤖 MCP Server (AI Integration)
+### REST API Server
 
-**Add to Claude Desktop with one command:**
+```bash
+uvx kreuzberg serve --port 8000
+```
+
+```bash
+curl -X POST -F "file=@document.pdf" http://localhost:8000/extract
+```
+
+**[API Documentation](https://kreuzberg.dev/user-guide/api-server/)**
+
+### MCP Server (AI Integration)
 
 ```bash
 claude mcp add kreuzberg uvx kreuzberg-mcp
 ```
 
-**Or configure manually in `claude_desktop_config.json`:**
+**[MCP Documentation](https://kreuzberg.dev/user-guide/mcp-server/)**
 
-```json
-{
-  "mcpServers": {
-    "kreuzberg": {
-      "command": "uvx",
-      "args": ["kreuzberg-mcp"]
-    }
-  }
-}
+### Docker
+
+```bash
+docker run -p 8000:8000 goldziher/kreuzberg:latest
 ```
 
-**MCP capabilities:**
+All images include LibreOffice, Pandoc, and Tesseract:
+- `goldziher/kreuzberg:latest` – Core features
+- `goldziher/kreuzberg:latest-easyocr` – With EasyOCR
+- `goldziher/kreuzberg:latest-paddleocr` – With PaddleOCR
+- `goldziher/kreuzberg:latest-all` – All features
 
-- Extract text from PDFs, images, Office docs, and more
-- Multilingual OCR support with Tesseract
-- Metadata parsing and language detection
+**[Docker Documentation](https://kreuzberg.dev/user-guide/docker/)**
 
-📖 **[MCP Documentation](https://kreuzberg.dev/user-guide/mcp-server/)**
+## Performance
 
-## Supported Formats
-
-### Document Formats
-
-| Format            | Extensions | Implementation | OCR | Table Extraction | Metadata    | Notes                                 |
-| ----------------- | ---------- | -------------- | --- | ---------------- | ----------- | ------------------------------------- |
-| **PDF**           | `.pdf`     | PDFium (Rust)  | ✅  | ✅ Vision-based  | ✅ Full     | Fastest, most reliable PDF extraction |
-| **Word (Modern)** | `.docx`    | Pandoc         | ❌  | ✅ Native        | ✅ Full     | Office Open XML format                |
-| **Word (Legacy)** | `.doc`     | LibreOffice    | ❌  | ✅ Native        | ✅ Full     | Requires LibreOffice (optional)       |
-| **Plain Text**    | `.txt`     | Rust           | ❌  | ❌               | ✅ Basic    | Streaming parser for multi-GB files   |
-| **Markdown**      | `.md`      | Rust           | ❌  | ❌               | ✅ Enhanced | Extracts headers, links, code blocks  |
-| **Rich Text**     | `.rtf`     | Pandoc         | ❌  | ❌               | ✅ Basic    | Rich Text Format                      |
-| **EPUB**          | `.epub`    | Pandoc         | ❌  | ❌               | ✅ Full     | E-book format                         |
-| **ODT**           | `.odt`     | Pandoc         | ❌  | ✅ Native        | ✅ Full     | OpenDocument Text                     |
-
-### Image Formats
-
-| Format        | Extensions                     | Implementation  | OCR | Notes                    |
-| ------------- | ------------------------------ | --------------- | --- | ------------------------ |
-| **JPEG**      | `.jpg`, `.jpeg`                | Rust (image-rs) | ✅  | Most common image format |
-| **PNG**       | `.png`                         | Rust (image-rs) | ✅  | Lossless compression     |
-| **TIFF**      | `.tiff`, `.tif`                | Rust (image-rs) | ✅  | Multi-page support       |
-| **BMP**       | `.bmp`                         | Rust (image-rs) | ✅  | Windows bitmap           |
-| **GIF**       | `.gif`                         | Rust (image-rs) | ✅  | Animated support         |
-| **WEBP**      | `.webp`                        | Rust (image-rs) | ✅  | Modern web format        |
-| **JPEG 2000** | `.jp2`, `.jpx`, `.jpm`, `.mj2` | Rust (image-rs) | ✅  | Advanced JPEG            |
-
-### Spreadsheet Formats
-
-| Format             | Extensions | Implementation  | Table Extraction | Metadata | Notes                    |
-| ------------------ | ---------- | --------------- | ---------------- | -------- | ------------------------ |
-| **Excel (Modern)** | `.xlsx`    | Rust (calamine) | ✅ Markdown      | ✅ Full  | Fastest Excel extraction |
-| **Excel (Legacy)** | `.xls`     | Rust (calamine) | ✅ Markdown      | ✅ Full  | Binary format (BIFF)     |
-| **Excel (Macro)**  | `.xlsm`    | Rust (calamine) | ✅ Markdown      | ✅ Full  | Macro-enabled workbooks  |
-| **Excel (Binary)** | `.xlsb`    | Rust (calamine) | ✅ Markdown      | ✅ Full  | Binary Office Open XML   |
-| **OpenDocument**   | `.ods`     | Rust (calamine) | ✅ Markdown      | ✅ Full  | OpenDocument Spreadsheet |
-| **CSV**            | `.csv`     | Pandoc          | ✅ Markdown      | ❌       | Comma-separated values   |
-| **TSV**            | `.tsv`     | Pandoc          | ✅ Markdown      | ❌       | Tab-separated values     |
-
-### Presentation Formats
-
-| Format                  | Extensions | Implementation     | Image Extraction | Table Extraction | Metadata | Notes                           |
-| ----------------------- | ---------- | ------------------ | ---------------- | ---------------- | -------- | ------------------------------- |
-| **PowerPoint (Modern)** | `.pptx`    | Rust (python-pptx) | ✅               | ✅ Markdown      | ✅ Full  | Office Open XML                 |
-| **PowerPoint (Legacy)** | `.ppt`     | LibreOffice        | ✅               | ✅ Markdown      | ✅ Full  | Requires LibreOffice (optional) |
-
-### Web & Structured Formats
-
-| Format   | Extensions      | Implementation       | Features                            | Notes                    |
-| -------- | --------------- | -------------------- | ----------------------------------- | ------------------------ |
-| **HTML** | `.html`, `.htm` | Python (markdownify) | Image extraction, link preservation | Web pages                |
-| **XML**  | `.xml`          | Rust (quick-xml)     | Streaming parser, element tracking  | Multi-GB file support    |
-| **SVG**  | `.svg`          | Rust (quick-xml)     | XML extraction                      | Scalable vector graphics |
-| **JSON** | `.json`         | Python (stdlib)      | Intelligent text field detection    | Structured data          |
-| **YAML** | `.yaml`, `.yml` | Python (pyyaml)      | Nested structure preservation       | Configuration files      |
-| **TOML** | `.toml`         | Python (stdlib)      | Structure preservation              | Configuration files      |
-
-### Email Formats
-
-| Format  | Extensions | Implementation     | Attachment Extraction | Metadata | Notes                  |
-| ------- | ---------- | ------------------ | --------------------- | -------- | ---------------------- |
-| **EML** | `.eml`     | Rust (mail-parser) | ✅                    | ✅ Full  | RFC 822 email messages |
-| **MSG** | `.msg`     | Rust (mail-parser) | ✅                    | ✅ Full  | Outlook email messages |
-
-### Academic & Technical Formats
-
-| Format               | Extensions | Implementation | Features                | Notes                |
-| -------------------- | ---------- | -------------- | ----------------------- | -------------------- |
-| **LaTeX**            | `.tex`     | Pandoc         | Math formula extraction | TeX documents        |
-| **BibTeX**           | `.bib`     | Pandoc         | Bibliography parsing    | Citation databases   |
-| **Jupyter**          | `.ipynb`   | Pandoc         | Code cell extraction    | Jupyter notebooks    |
-| **reStructuredText** | `.rst`     | Pandoc         | Directive parsing       | Python documentation |
-| **Org Mode**         | `.org`     | Pandoc         | Outline structure       | Emacs Org files      |
-
-**Total Supported Formats**: 50+ file types across 8 categories
-
-## 📊 Performance
-
-Kreuzberg consistently ranks as the fastest Python CPU-based text extraction framework with optimal resource efficiency and 100% reliability across all tested file formats.
+Kreuzberg consistently ranks as the **fastest CPU-based document extraction framework**, with optimal resource efficiency and 100% reliability across tested formats.
 
 **[View Live Benchmarks](https://benchmarks.kreuzberg.dev/)** • **[Benchmark Methodology](https://github.com/Goldziher/python-text-extraction-libs-benchmarks)**
 
 ### Architecture Advantages
 
-- **Hybrid Rust-Python**: Performance-critical operations in Rust for maximum speed
-- **Async/await support**: True asynchronous processing with adaptive task scheduling
-- **Memory efficiency**: Minimal memory allocation and optimized data handling
-- **Process pooling**: Automatic multiprocessing for CPU-intensive operations
-- **Native foundations**: Built on PDFium and Tesseract for proven reliability
+- **Rust core** – Performance-critical operations in native code
+- **Async throughout** – True asynchronous processing with Tokio runtime
+- **Memory efficient** – Streaming parsers for large files
+- **Parallel batch processing** – Configurable concurrency
+- **Zero-copy operations** – Efficient data handling where possible
 
 ## Documentation
 
-### Quick Links
+- **[Installation Guide](https://kreuzberg.dev/getting-started/installation/)** – Setup and dependencies
+- **[User Guide](https://kreuzberg.dev/user-guide/)** – Comprehensive usage guide
+- **[API Reference](https://kreuzberg.dev/api-reference/)** – Complete API documentation
+- **[Format Support](https://kreuzberg.dev/formats/)** – Supported file formats
+- **[OCR Backends](https://kreuzberg.dev/user-guide/ocr-backends/)** – OCR engine setup
+- **[CLI Guide](https://kreuzberg.dev/cli/)** – Command-line usage
+- **[Migration Guide](https://kreuzberg.dev/migration/v3-to-v4/)** – Upgrading from v3
 
-- [Installation Guide](https://kreuzberg.dev/getting-started/installation/) - Setup and dependencies
-- [User Guide](https://kreuzberg.dev/user-guide/) - Comprehensive usage guide
-- [Performance Guide](https://kreuzberg.dev/advanced/performance/) - Optimization and analysis
-- [API Reference](https://kreuzberg.dev/api-reference/) - Complete API documentation
-- [Docker Guide](https://kreuzberg.dev/user-guide/docker/) - Container deployment
-- [REST API](https://kreuzberg.dev/user-guide/api-server/) - HTTP endpoints
-- [CLI Guide](https://kreuzberg.dev/cli/) - Command-line usage
-- [OCR Backends](https://kreuzberg.dev/user-guide/ocr-backends/) - OCR engine setup
-- [Table Extraction](https://kreuzberg.dev/user-guide/table-extraction/) - Vision-based and OCR table extraction
-- [Changelog](https://kreuzberg.dev/CHANGELOG/) - Version history and release notes
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
