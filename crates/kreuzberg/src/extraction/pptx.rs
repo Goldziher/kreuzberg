@@ -1,3 +1,36 @@
+//! PowerPoint presentation extraction functions.
+//!
+//! This module provides PowerPoint (PPTX) file parsing by directly reading the Office Open XML
+//! format. It extracts text content, slide structure, images, and presentation metadata.
+//!
+//! # Features
+//!
+//! - **Slide extraction**: Reads all slides from presentation
+//! - **Text formatting**: Preserves bold, italic, underline formatting as Markdown
+//! - **Image extraction**: Optionally extracts embedded images with metadata
+//! - **Office metadata**: Extracts core properties, custom properties (when `office` feature enabled)
+//! - **Structure preservation**: Maintains heading hierarchy and list structure
+//!
+//! # Supported Formats
+//!
+//! - `.pptx` - PowerPoint Presentation
+//! - `.pptm` - PowerPoint Macro-Enabled Presentation
+//! - `.ppsx` - PowerPoint Slide Show
+//!
+//! # Example
+//!
+//! ```rust
+//! use kreuzberg::extraction::pptx::extract_pptx_from_path;
+//!
+//! # fn example() -> kreuzberg::Result<()> {
+//! let result = extract_pptx_from_path("presentation.pptx", true)?;
+//!
+//! println!("Slide count: {}", result.slide_count);
+//! println!("Image count: {}", result.image_count);
+//! println!("Content:\n{}", result.content);
+//! # Ok(())
+//! # }
+//! ```
 use crate::error::{KreuzbergError, Result};
 use crate::types::{ExtractedImage, PptxExtractionResult, PptxMetadata};
 use std::collections::HashMap;

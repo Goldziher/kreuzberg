@@ -1,7 +1,70 @@
+//! Error types for Kreuzberg.
+//!
+//! This module defines all error types used throughout the library. All errors
+//! inherit from `KreuzbergError` and follow Rust error handling best practices:
+//!
+//! - Use `thiserror` for automatic `Error` trait implementation
+//! - Preserve error chains with `#[source]` attributes
+//! - Include context in error messages (file paths, config values, etc.)
+//!
+//! # Error Handling Philosophy
+//!
+//! **System errors MUST always bubble up unchanged:**
+//! - `KreuzbergError::Io` (from `std::io::Error`) - File system errors, permission errors
+//! - These indicate real system problems that users need to know about
+//! - Never wrap or suppress these - they must surface to enable bug reports
+//!
+//! **Application errors are wrapped with context:**
+//! - `Parsing` - Document format errors, corrupt files
+//! - `Validation` - Invalid configuration or parameters
+//! - `Ocr` - OCR processing failures
+//! - `MissingDependency` - Missing optional system dependencies
+//!
+//! # Example
+//!
+//! ```rust
+//! use kreuzberg::{KreuzbergError, Result};
+//!
+//! fn process_file(path: &str) -> Result<String> {
+//!     // IO errors bubble up automatically via ?
+//!     let content = std::fs::read_to_string(path)?;
+//!
+//!     // Application errors include context
+//!     if content.is_empty() {
+//!         return Err(KreuzbergError::validation(
+//!             format!("File is empty: {}", path)
+//!         ));
+//!     }
+//!
+//!     Ok(content)
+//! }
+//! ```
 use thiserror::Error;
 
+/// Result type alias using `KreuzbergError`.
+///
+/// This is the standard return type for all fallible operations in Kreuzberg.
 pub type Result<T> = std::result::Result<T, KreuzbergError>;
 
+/// Main error type for all Kreuzberg operations.
+///
+/// All errors in Kreuzberg use this enum, which preserves error chains
+/// and provides context for debugging.
+///
+/// # Variants
+///
+/// - `Io` - File system and I/O errors (always bubble up)
+/// - `Parsing` - Document parsing errors (corrupt files, unsupported features)
+/// - `Ocr` - OCR processing errors
+/// - `Validation` - Input validation errors (invalid paths, config, parameters)
+/// - `Cache` - Cache operation errors (non-fatal, can be ignored)
+/// - `ImageProcessing` - Image manipulation errors
+/// - `Serialization` - JSON/MessagePack serialization errors
+/// - `MissingDependency` - Missing optional dependencies (tesseract, pandoc, etc.)
+/// - `Plugin` - Plugin-specific errors
+/// - `LockPoisoned` - Mutex/RwLock poisoning (should not happen in normal operation)
+/// - `UnsupportedFormat` - Unsupported MIME type or file format
+/// - `Other` - Catch-all for uncommon errors
 #[derive(Debug, Error)]
 pub enum KreuzbergError {
     #[error("IO error: {0}")]

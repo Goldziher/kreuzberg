@@ -1,3 +1,51 @@
+//! Text chunking utilities.
+//!
+//! This module provides text chunking functionality using the `text-splitter` library.
+//! It splits long text into smaller chunks while preserving semantic boundaries.
+//!
+//! # Features
+//!
+//! - **Smart splitting**: Respects word and sentence boundaries
+//! - **Markdown-aware**: Preserves Markdown structure (headings, code blocks, lists)
+//! - **Configurable overlap**: Overlap chunks to maintain context
+//! - **Unicode support**: Handles CJK characters and emojis correctly
+//! - **Batch processing**: Process multiple texts efficiently
+//!
+//! # Chunker Types
+//!
+//! - **Text**: Generic text splitter, splits on whitespace and punctuation
+//! - **Markdown**: Markdown-aware splitter, preserves formatting and structure
+//!
+//! # Example
+//!
+//! ```rust
+//! use kreuzberg::chunking::{chunk_text, ChunkingConfig, ChunkerType};
+//!
+//! # fn example() -> kreuzberg::Result<()> {
+//! let config = ChunkingConfig {
+//!     max_characters: 500,
+//!     overlap: 50,
+//!     trim: true,
+//!     chunker_type: ChunkerType::Text,
+//! };
+//!
+//! let long_text = "This is a very long document...".repeat(100);
+//! let result = chunk_text(&long_text, &config)?;
+//!
+//! println!("Split into {} chunks", result.chunk_count);
+//! for (i, chunk) in result.chunks.iter().enumerate() {
+//!     println!("Chunk {}: {} chars", i + 1, chunk.len());
+//! }
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! # Use Cases
+//!
+//! - Splitting documents for LLM context windows
+//! - Creating overlapping chunks for semantic search
+//! - Processing large documents in batches
+//! - Maintaining context across chunk boundaries
 use crate::error::{KreuzbergError, Result};
 use serde::{Deserialize, Serialize};
 use text_splitter::{Characters, ChunkCapacity, ChunkConfig, MarkdownSplitter, TextSplitter};

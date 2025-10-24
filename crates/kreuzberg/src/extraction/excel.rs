@@ -1,3 +1,32 @@
+//! Excel and spreadsheet extraction functions.
+//!
+//! This module provides Excel file parsing using the `calamine` library.
+//! Supports both modern Office Open XML formats (.xlsx, .xlsm, .xlam, .xltm, .xlsb)
+//! and legacy binary formats (.xls, .xla), as well as OpenDocument spreadsheets (.ods).
+//!
+//! # Features
+//!
+//! - **Multiple formats**: XLSX, XLSM, XLS, XLSB, ODS
+//! - **Sheet extraction**: Reads all sheets from workbook
+//! - **Markdown conversion**: Converts spreadsheet data to Markdown tables
+//! - **Office metadata**: Extracts core properties, custom properties (when `office` feature enabled)
+//! - **Error handling**: Distinguishes between format errors and true I/O errors
+//!
+//! # Example
+//!
+//! ```rust
+//! use kreuzberg::extraction::excel::read_excel_file;
+//!
+//! # fn example() -> kreuzberg::Result<()> {
+//! let workbook = read_excel_file("data.xlsx")?;
+//!
+//! println!("Sheet count: {}", workbook.sheets.len());
+//! for sheet in &workbook.sheets {
+//!     println!("Sheet: {}", sheet.name);
+//! }
+//! # Ok(())
+//! # }
+//! ```
 use calamine::{Data, Range, Reader, open_workbook_auto};
 use std::collections::HashMap;
 use std::fmt::Write as FmtWrite;

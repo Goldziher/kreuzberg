@@ -99,77 +99,119 @@ pub struct Metadata {
 }
 
 /// Excel/spreadsheet metadata.
+///
+/// Contains information about sheets in Excel, LibreOffice Calc, and other
+/// spreadsheet formats (.xlsx, .xls, .ods, etc.).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExcelMetadata {
+    /// Total number of sheets in the workbook
     pub sheet_count: usize,
+    /// Names of all sheets in order
     pub sheet_names: Vec<String>,
 }
 
-/// Email metadata.
+/// Email metadata extracted from .eml and .msg files.
+///
+/// Includes sender/recipient information, message ID, and attachment list.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmailMetadata {
+    /// Sender's email address
     #[serde(skip_serializing_if = "Option::is_none")]
     pub from_email: Option<String>,
 
+    /// Sender's display name
     #[serde(skip_serializing_if = "Option::is_none")]
     pub from_name: Option<String>,
 
+    /// Primary recipients
     pub to_emails: Vec<String>,
+    /// CC recipients
     pub cc_emails: Vec<String>,
+    /// BCC recipients
     pub bcc_emails: Vec<String>,
 
+    /// Message-ID header value
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message_id: Option<String>,
 
+    /// List of attachment filenames
     pub attachments: Vec<String>,
 }
 
-/// Archive (ZIP/TAR) metadata.
+/// Archive (ZIP/TAR/7Z) metadata.
+///
+/// Extracted from compressed archive files containing file lists and size information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArchiveMetadata {
+    /// Archive format ("ZIP", "TAR", "7Z", etc.)
     pub format: String,
+    /// Total number of files in the archive
     pub file_count: usize,
+    /// List of file paths within the archive
     pub file_list: Vec<String>,
+    /// Total uncompressed size in bytes
     pub total_size: usize,
 
+    /// Compressed size in bytes (if available)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub compressed_size: Option<usize>,
 }
 
-/// Image metadata.
+/// Image metadata extracted from image files.
+///
+/// Includes dimensions, format, and EXIF data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImageMetadata {
+    /// Image width in pixels
     pub width: u32,
+    /// Image height in pixels
     pub height: u32,
+    /// Image format (e.g., "PNG", "JPEG", "TIFF")
     pub format: String,
+    /// EXIF metadata tags
     pub exif: HashMap<String, String>,
 }
 
-/// XML metadata.
+/// XML metadata extracted during XML parsing.
+///
+/// Provides statistics about XML document structure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct XmlMetadata {
+    /// Total number of XML elements processed
     pub element_count: usize,
+    /// List of unique element tag names (sorted)
     pub unique_elements: Vec<String>,
 }
 
 /// Text/Markdown metadata.
+///
+/// Extracted from plain text and Markdown files. Includes word counts and,
+/// for Markdown, structural elements like headers and links.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextMetadata {
+    /// Number of lines in the document
     pub line_count: usize,
+    /// Number of words
     pub word_count: usize,
+    /// Number of characters
     pub character_count: usize,
 
+    /// Markdown headers (headings text only, for Markdown files)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub headers: Option<Vec<String>>,
 
+    /// Markdown links as (text, url) tuples (for Markdown files)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub links: Option<Vec<(String, String)>>,
 
+    /// Code blocks as (language, code) tuples (for Markdown files)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_blocks: Option<Vec<(String, String)>>,
 }
 
-/// HTML metadata.
+/// HTML metadata extracted from HTML documents.
+///
+/// Includes meta tags, Open Graph data, Twitter Card metadata, and link relations.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HtmlMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -240,11 +282,17 @@ pub struct HtmlMetadata {
 }
 
 /// OCR processing metadata.
+///
+/// Captures information about OCR processing configuration and results.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcrMetadata {
+    /// OCR language code(s) used
     pub language: String,
+    /// Tesseract Page Segmentation Mode (PSM)
     pub psm: i32,
+    /// Output format (e.g., "text", "hocr")
     pub output_format: String,
+    /// Number of tables detected
     pub table_count: usize,
 
     #[serde(skip_serializing_if = "Option::is_none")]

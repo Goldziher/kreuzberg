@@ -1,3 +1,27 @@
+//! Plain text and Markdown extraction functions.
+//!
+//! This module provides memory-efficient streaming parsers for plain text and Markdown files.
+//! Key features:
+//!
+//! - **Streaming parsing**: Processes files line-by-line to handle multi-GB files
+//! - **Markdown support**: Extracts headers, links, and code blocks from Markdown
+//! - **Word/line counting**: Accurate statistics without loading entire file
+//! - **CRLF support**: Handles both Unix and Windows line endings
+//!
+//! # Example
+//!
+//! ```rust
+//! use kreuzberg::extraction::text::parse_text;
+//!
+//! # fn example() -> kreuzberg::Result<()> {
+//! let text = b"# Hello\n\nThis is [a link](https://example.com).";
+//! let result = parse_text(text, true)?; // true = is Markdown
+//!
+//! assert_eq!(result.line_count, 3);
+//! assert!(result.headers.unwrap().contains(&"Hello".to_string()));
+//! # Ok(())
+//! # }
+//! ```
 use once_cell::sync::Lazy;
 use regex::Regex;
 

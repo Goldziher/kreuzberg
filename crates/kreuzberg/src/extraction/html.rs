@@ -1,3 +1,31 @@
+//! HTML to Markdown conversion functions.
+//!
+//! This module provides HTML to Markdown conversion using the `html-to-markdown-rs` library.
+//! It supports advanced features like inline image extraction, YAML frontmatter parsing,
+//! and extensive customization options.
+//!
+//! # Features
+//!
+//! - **HTML to Markdown conversion**: Clean, readable Markdown output
+//! - **Inline image extraction**: Extract base64 and data URI images
+//! - **YAML frontmatter**: Parse YAML metadata from Markdown output
+//! - **Customizable conversion**: Heading styles, list formatting, escaping rules
+//! - **Preprocessing options**: Minification, whitespace handling, tag stripping
+//!
+//! # Example
+//!
+//! ```rust
+//! use kreuzberg::extraction::html::convert_html_to_markdown;
+//!
+//! # fn example() -> kreuzberg::Result<()> {
+//! let html = r#"<h1>Title</h1><p>This is <strong>bold</strong> text.</p>"#;
+//! let markdown = convert_html_to_markdown(html, None)?;
+//!
+//! assert!(markdown.contains("# Title"));
+//! assert!(markdown.contains("**bold**"));
+//! # Ok(())
+//! # }
+//! ```
 use crate::error::{KreuzbergError, Result};
 use crate::types::HtmlMetadata;
 use html_to_markdown_rs::{

@@ -1,3 +1,29 @@
+//! XML extraction functions.
+//!
+//! Provides memory-efficient streaming XML parsing using `quick-xml`. Can handle
+//! multi-GB XML files without loading them entirely into memory.
+//!
+//! # Features
+//!
+//! - **Streaming parser**: Processes XML files in constant memory
+//! - **Element tracking**: Counts total elements and unique element names
+//! - **Text extraction**: Extracts text content while filtering XML structure
+//! - **Whitespace handling**: Optional whitespace preservation
+//!
+//! # Example
+//!
+//! ```rust
+//! use kreuzberg::extraction::xml::parse_xml;
+//!
+//! # fn example() -> kreuzberg::Result<()> {
+//! let xml = b"<root><item>Hello</item><item>World</item></root>";
+//! let result = parse_xml(xml, false)?; // false = trim whitespace
+//!
+//! assert_eq!(result.content, "Hello World");
+//! assert_eq!(result.element_count, 3);
+//! # Ok(())
+//! # }
+//! ```
 use crate::error::{KreuzbergError, Result};
 use crate::types::XmlExtractionResult;
 use quick_xml::Reader;

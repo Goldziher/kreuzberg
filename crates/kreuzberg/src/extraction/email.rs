@@ -1,3 +1,29 @@
+//! Email extraction functions.
+//!
+//! Parses .eml (RFC822) and .msg (Outlook) email files using `mail-parser`.
+//! Extracts message content, headers, and attachment information.
+//!
+//! # Features
+//!
+//! - **EML support**: RFC822 format parsing
+//! - **HTML to text**: Strips HTML tags from HTML email bodies
+//! - **Metadata extraction**: Sender, recipients, subject, message ID
+//! - **Attachment list**: Names of all attachments (content not extracted)
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use kreuzberg::extraction::email::parse_eml_content;
+//!
+//! # fn example() -> kreuzberg::Result<()> {
+//! let eml_bytes = std::fs::read("message.eml")?;
+//! let result = parse_eml_content(&eml_bytes)?;
+//!
+//! println!("From: {:?}", result.from_email);
+//! println!("Subject: {:?}", result.subject);
+//! # Ok(())
+//! # }
+//! ```
 use crate::error::{KreuzbergError, Result};
 use crate::types::{EmailAttachment, EmailExtractionResult};
 use mail_parser::MimeHeaders;

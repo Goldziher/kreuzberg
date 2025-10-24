@@ -1,3 +1,35 @@
+//! Structured data extraction (JSON, YAML, TOML).
+//!
+//! Parses structured data formats and extracts text content while preserving
+//! schema information and metadata.
+//!
+//! # Supported Formats
+//!
+//! - **JSON**: Using `serde_json` with schema extraction
+//! - **YAML**: Using `serde_yaml`
+//! - **TOML**: Using `toml`
+//!
+//! # Features
+//!
+//! - **Text extraction**: Identifies text fields by common keywords (title, description, etc.)
+//! - **Schema extraction**: Optional JSON schema generation
+//! - **Depth limiting**: Prevents stack overflow on deeply nested data
+//! - **Flattening**: Converts nested structures to flat text representation
+//!
+//! # Example
+//!
+//! ```rust
+//! use kreuzberg::extraction::structured::parse_json;
+//!
+//! # fn example() -> kreuzberg::Result<()> {
+//! let json = br#"{"title": "Example", "description": "Test document"}"#;
+//! let result = parse_json(json, None)?;
+//!
+//! assert!(result.content.contains("Example"));
+//! assert!(result.content.contains("Test document"));
+//! # Ok(())
+//! # }
+//! ```
 use crate::error::{KreuzbergError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
