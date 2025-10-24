@@ -447,6 +447,11 @@ pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, Stri
         return Ok((None, markdown.to_string()));
     };
 
+    // If yaml_content is empty, return None for metadata
+    if yaml_content.is_empty() {
+        return Ok((None, remaining_content.to_string()));
+    }
+
     // Parse YAML using saphyr
     let yaml_docs = saphyr::Yaml::load_from_str(yaml_content)
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse YAML frontmatter: {}", e)))?;
