@@ -121,6 +121,30 @@ export interface TextMetadata {
 	codeBlocks?: [string, string][] | null;
 }
 
+export interface HtmlMetadata {
+	title?: string | null;
+	description?: string | null;
+	keywords?: string | null;
+	author?: string | null;
+	canonical?: string | null;
+	baseHref?: string | null;
+	ogTitle?: string | null;
+	ogDescription?: string | null;
+	ogImage?: string | null;
+	ogUrl?: string | null;
+	ogType?: string | null;
+	ogSiteName?: string | null;
+	twitterCard?: string | null;
+	twitterTitle?: string | null;
+	twitterDescription?: string | null;
+	twitterImage?: string | null;
+	twitterSite?: string | null;
+	twitterCreator?: string | null;
+	linkAuthor?: string | null;
+	linkLicense?: string | null;
+	linkAlternate?: string | null;
+}
+
 export interface PdfMetadata {
 	title?: string | null;
 	author?: string | null;
@@ -184,6 +208,7 @@ export interface Metadata {
 	image?: ImageMetadata | null;
 	xml?: XmlMetadata | null;
 	text?: TextMetadata | null;
+	html?: HtmlMetadata | null;
 
 	ocr?: OcrMetadata | null;
 	imagePreprocessing?: ImagePreprocessingMetadata | null;

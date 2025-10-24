@@ -201,7 +201,8 @@ pub struct JsTable {
 pub struct JsExtractionResult {
     pub content: String,
     pub mime_type: String,
-    pub metadata: String,
+    #[napi(ts_type = "Metadata")]
+    pub metadata: serde_json::Value,
     pub tables: Vec<JsTable>,
     pub detected_languages: Option<Vec<String>>,
     pub chunks: Option<Vec<String>>,
@@ -209,7 +210,7 @@ pub struct JsExtractionResult {
 
 impl From<RustExtractionResult> for JsExtractionResult {
     fn from(val: RustExtractionResult) -> Self {
-        let metadata = serde_json::to_string(&val.metadata).unwrap_or_else(|_| "{}".to_string());
+        let metadata = serde_json::to_value(&val.metadata).unwrap_or(serde_json::json!({}));
 
         JsExtractionResult {
             content: val.content,
@@ -232,7 +233,7 @@ impl From<RustExtractionResult> for JsExtractionResult {
 
 impl From<JsExtractionResult> for RustExtractionResult {
     fn from(val: JsExtractionResult) -> Self {
-        let metadata = serde_json::from_str(&val.metadata).unwrap_or_default();
+        let metadata = serde_json::from_value(val.metadata).unwrap_or_default();
 
         RustExtractionResult {
             content: val.content,
@@ -526,9 +527,7 @@ impl RustPostProcessor for JsPostProcessor {
 ///   process: (...args) => {
 ///     const result = JSON.parse(args[0]);
 ///     const wordCount = result.content.split(/\s+/).length;
-///     const metadata = JSON.parse(result.metadata);
-///     metadata.word_count = wordCount;
-///     result.metadata = JSON.stringify(metadata);
+///     result.metadata.word_count = wordCount;
 ///     return JSON.stringify(result);
 ///   }
 /// });
@@ -895,7 +894,7 @@ pub fn clear_validators() -> Result<()> {
 ///     return {
 ///       content: "extracted text",
 ///       mime_type: "text/plain",
-///       metadata: JSON.stringify({ confidence: 0.95 }),
+///       metadata: { confidence: 0.95 },
 ///       tables: [],
 ///       detected_languages: null,
 ///       chunks: null

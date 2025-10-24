@@ -424,21 +424,27 @@ pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, Stri
         return Ok((None, markdown.to_string()));
     };
 
-    let closing_pos = after_opening
+    // Check for closing delimiter at the start (empty frontmatter) or after content
+    let (yaml_content, remaining_content) = if after_opening.starts_with("---\n") {
+        // Empty frontmatter: ---\n---\n
+        let content = after_opening.strip_prefix("---\n").unwrap_or(after_opening);
+        ("", content)
+    } else if after_opening.starts_with("---\r\n") {
+        // Empty frontmatter with CRLF: ---\r\n---\r\n
+        let content = after_opening.strip_prefix("---\r\n").unwrap_or(after_opening);
+        ("", content)
+    } else if let Some(pos) = after_opening
         .find("\n---\n")
-        .or_else(|| after_opening.find("\r\n---\r\n"));
-
-    let (yaml_content, remaining_content) = match closing_pos {
-        Some(pos) => {
-            let yaml = &after_opening[..pos];
-            let content_start = pos + if after_opening[pos..].starts_with("\r\n") { 7 } else { 5 };
-            let content = &after_opening[content_start..];
-            (yaml, content)
-        }
-        None => {
-            // No closing delimiter found, treat as no frontmatter
-            return Ok((None, markdown.to_string()));
-        }
+        .or_else(|| after_opening.find("\r\n---\r\n"))
+    {
+        // Frontmatter with content
+        let yaml = &after_opening[..pos];
+        let content_start = pos + if after_opening[pos..].starts_with("\r\n") { 7 } else { 5 };
+        let content = &after_opening[content_start..];
+        (yaml, content)
+    } else {
+        // No closing delimiter found, treat as no frontmatter
+        return Ok((None, markdown.to_string()));
     };
 
     // Parse YAML using saphyr
@@ -538,7 +544,16 @@ mod tests {
     #[test]
     fn test_html_with_inline_image() {
         let html = r#"<p>Image: <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Test"></p>"#;
-        let result = process_html(html, None, true, 1024 * 1024).unwrap();
+        let config = HtmlConversionConfig {
+            preprocessing: Some(HtmlPreprocessingConfig {
+                enabled: Some(false),
+                preset: None,
+                remove_navigation: None,
+                remove_forms: None,
+            }),
+            ..Default::default()
+        };
+        let result = process_html(html, Some(config), true, 1024 * 1024).unwrap();
         assert_eq!(result.images.len(), 1);
         assert_eq!(result.images[0].format, "png");
     }

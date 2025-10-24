@@ -81,6 +81,32 @@ class PdfMetadata(TypedDict, total=False):
     page_count: int
 
 
+class HtmlMetadata(TypedDict, total=False):
+    """HTML metadata."""
+
+    title: str | None
+    description: str | None
+    keywords: str | None
+    author: str | None
+    canonical: str | None
+    base_href: str | None
+    og_title: str | None
+    og_description: str | None
+    og_image: str | None
+    og_url: str | None
+    og_type: str | None
+    og_site_name: str | None
+    twitter_card: str | None
+    twitter_title: str | None
+    twitter_description: str | None
+    twitter_image: str | None
+    twitter_site: str | None
+    twitter_creator: str | None
+    link_author: str | None
+    link_license: str | None
+    link_alternate: str | None
+
+
 class PptxMetadata(TypedDict, total=False):
     """PowerPoint metadata."""
 
@@ -154,6 +180,7 @@ class Metadata(TypedDict, total=False):
         image: Image metadata
         xml: XML metadata
         text: Text/Markdown metadata
+        html: HTML metadata
 
     Processing metadata:
         ocr: OCR processing metadata
@@ -182,6 +209,7 @@ class Metadata(TypedDict, total=False):
         image: Image metadata
         xml: XML metadata
         text: Text/Markdown metadata
+        html: HTML metadata
         ocr: OCR processing metadata
         image_preprocessing: Image preprocessing metadata
         json_schema: JSON schema for structured extraction
@@ -210,6 +238,7 @@ class Metadata(TypedDict, total=False):
     image: ImageMetadata | None
     xml: XmlMetadata | None
     text: TextMetadata | None
+    html: HtmlMetadata | None
 
     ocr: OcrMetadata | None
     image_preprocessing: ImagePreprocessingMetadata | None
@@ -251,6 +280,7 @@ __all__ = [
     "ErrorMetadata",
     "ExcelMetadata",
     "ExtractionResult",
+    "HtmlMetadata",
     "ImageMetadata",
     "ImagePreprocessingMetadata",
     "Metadata",
