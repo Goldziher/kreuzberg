@@ -137,6 +137,23 @@ Analyzes file magic bytes when extension is missing or ambiguous:
     console.log(`Text: ${result.content}`);
     ```
 
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig::default();
+        let result = extract_file_sync("document.pdf", None, &config)?;
+
+        if let Some(pdf_meta) = result.metadata.pdf {
+            println!("Pages: {}", pdf_meta.page_count.unwrap_or(0));
+        }
+        println!("Text: {}", result.content);
+        Ok(())
+    }
+    ```
+
 ### Excel Extractor
 
 **Implementation**: Rust using `calamine`
@@ -180,6 +197,26 @@ Analyzes file magic bytes when extension is missing or ambiguous:
     }
     ```
 
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig::default();
+        let result = extract_file_sync("spreadsheet.xlsx", None, &config)?;
+
+        if let Some(excel_meta) = result.metadata.excel {
+            println!("Sheets: {}", excel_meta.sheet_names.join(", "));
+        }
+
+        for table in &result.tables {
+            println!("Table: {}", table.markdown);
+        }
+        Ok(())
+    }
+    ```
+
 ### Email Extractor
 
 **Implementation**: Rust using `mail-parser`
@@ -209,8 +246,10 @@ Analyzes file magic bytes when extension is missing or ambiguous:
     from kreuzberg import extract_file_sync, ExtractionConfig
 
     result = extract_file_sync("email.eml", config=ExtractionConfig())
-    print(f"From: {result.metadata['from']}")
-    print(f"Subject: {result.metadata['subject']}")
+    if result.metadata.get("email"):
+        email_meta = result.metadata["email"]
+        print(f"From: {email_meta.get('from_email')}")
+        print(f"To: {', '.join(email_meta.get('to_emails', []))}")
     print(f"Body: {result.content}")
     ```
 
@@ -220,9 +259,31 @@ Analyzes file magic bytes when extension is missing or ambiguous:
     import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
 
     const result = extractFileSync('email.eml', null, new ExtractionConfig());
-    console.log(`From: ${result.metadata.from}`);
-    console.log(`Subject: ${result.metadata.subject}`);
+    if (result.metadata.email) {
+        console.log(`From: ${result.metadata.email.fromEmail}`);
+        console.log(`To: ${result.metadata.email.toEmails.join(', ')}`);
+    }
     console.log(`Body: ${result.content}`);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig::default();
+        let result = extract_file_sync("email.eml", None, &config)?;
+
+        if let Some(email_meta) = result.metadata.email {
+            if let Some(from) = email_meta.from_email {
+                println!("From: {}", from);
+            }
+            println!("To: {}", email_meta.to_emails.join(", "));
+        }
+        println!("Body: {}", result.content);
+        Ok(())
+    }
     ```
 
 ### HTML Extractor
@@ -269,6 +330,60 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - `linkLicense` - License link URL
 - `linkAlternate` - Alternate version URL
 
+**Example**:
+=== "Python"
+
+    ```python
+    from kreuzberg import extract_file_sync, ExtractionConfig
+
+    result = extract_file_sync("page.html", config=ExtractionConfig())
+    if result.metadata.get("html"):
+        html_meta = result.metadata["html"]
+        print(f"Title: {html_meta.get('title')}")
+        print(f"Description: {html_meta.get('description')}")
+        print(f"Open Graph Image: {html_meta.get('og_image')}")
+    print(f"Markdown:\n{result.content}")
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+
+    const result = extractFileSync('page.html', null, new ExtractionConfig());
+    if (result.metadata.html) {
+        console.log(`Title: ${result.metadata.html.title}`);
+        console.log(`Description: ${result.metadata.html.description}`);
+        console.log(`Open Graph Image: ${result.metadata.html.ogImage}`);
+    }
+    console.log(`Markdown:\n${result.content}`);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig::default();
+        let result = extract_file_sync("page.html", None, &config)?;
+
+        if let Some(html_meta) = result.metadata.html {
+            if let Some(title) = html_meta.title {
+                println!("Title: {}", title);
+            }
+            if let Some(desc) = html_meta.description {
+                println!("Description: {}", desc);
+            }
+            if let Some(og_img) = html_meta.og_image {
+                println!("Open Graph Image: {}", og_img);
+            }
+        }
+        println!("Markdown:\n{}", result.content);
+        Ok(())
+    }
+    ```
+
 ### XML Extractor
 
 **Implementation**: Rust using `quick-xml` (streaming parser)
@@ -280,10 +395,55 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - Preserves whitespace optionally
 
 **Metadata Extracted**:
-- Element count
-- Unique elements
+- `elementCount` - Total number of XML elements
+- `uniqueElements` - Array of unique element names found
 
 **Performance**: Can process multi-GB XML files with minimal memory usage.
+
+**Example**:
+=== "Python"
+
+    ```python
+    from kreuzberg import extract_file_sync, ExtractionConfig
+
+    result = extract_file_sync("data.xml", config=ExtractionConfig())
+    if result.metadata.get("xml"):
+        xml_meta = result.metadata["xml"]
+        print(f"Elements: {xml_meta.get('element_count')}")
+        print(f"Unique: {', '.join(xml_meta.get('unique_elements', []))}")
+    print(f"Text content:\n{result.content}")
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+
+    const result = extractFileSync('data.xml', null, new ExtractionConfig());
+    if (result.metadata.xml) {
+        console.log(`Elements: ${result.metadata.xml.elementCount}`);
+        console.log(`Unique: ${result.metadata.xml.uniqueElements.join(', ')}`);
+    }
+    console.log(`Text content:\n${result.content}`);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig::default();
+        let result = extract_file_sync("data.xml", None, &config)?;
+
+        if let Some(xml_meta) = result.metadata.xml {
+            println!("Elements: {}", xml_meta.element_count);
+            println!("Unique: {}", xml_meta.unique_elements.join(", "));
+        }
+        println!("Text content:\n{}", result.content);
+        Ok(())
+    }
+    ```
 
 ### Plain Text & Markdown Extractor
 
@@ -317,6 +477,58 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - `description` - Presentation description
 - `summary` - Presentation summary
 - `fonts` - Array of fonts used in the presentation
+
+**Example**:
+=== "Python"
+
+    ```python
+    from kreuzberg import extract_file_sync, ExtractionConfig
+
+    result = extract_file_sync("presentation.pptx", config=ExtractionConfig())
+    if result.metadata.get("pptx"):
+        pptx_meta = result.metadata["pptx"]
+        print(f"Title: {pptx_meta.get('title')}")
+        print(f"Author: {pptx_meta.get('author')}")
+        print(f"Fonts: {', '.join(pptx_meta.get('fonts', []))}")
+    print(f"Content:\n{result.content}")
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+
+    const result = extractFileSync('presentation.pptx', null, new ExtractionConfig());
+    if (result.metadata.pptx) {
+        console.log(`Title: ${result.metadata.pptx.title}`);
+        console.log(`Author: ${result.metadata.pptx.author}`);
+        console.log(`Fonts: ${result.metadata.pptx.fonts.join(', ')}`);
+    }
+    console.log(`Content:\n${result.content}`);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig::default();
+        let result = extract_file_sync("presentation.pptx", None, &config)?;
+
+        if let Some(pptx_meta) = result.metadata.pptx {
+            if let Some(title) = pptx_meta.title {
+                println!("Title: {}", title);
+            }
+            if let Some(author) = pptx_meta.author {
+                println!("Author: {}", author);
+            }
+            println!("Fonts: {}", pptx_meta.fonts.join(", "));
+        }
+        println!("Content:\n{}", result.content);
+        Ok(())
+    }
+    ```
 
 ### Image Extractor
 
@@ -365,6 +577,65 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - `fileList` - Array of file paths within archive
 - `totalSize` - Total uncompressed size in bytes
 - `compressedSize` - Compressed archive size in bytes (if available)
+
+**Example**:
+=== "Python"
+
+    ```python
+    from kreuzberg import extract_file_sync, ExtractionConfig
+
+    result = extract_file_sync("archive.zip", config=ExtractionConfig())
+    if result.metadata.get("archive"):
+        archive_meta = result.metadata["archive"]
+        print(f"Format: {archive_meta.get('format')}")
+        print(f"Files: {archive_meta.get('file_count')}")
+        print(f"Total size: {archive_meta.get('total_size')} bytes")
+        print(f"Files in archive:")
+        for file in archive_meta.get('file_list', []):
+            print(f"  - {file}")
+    print(f"\nAggregated content:\n{result.content[:500]}...")
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+
+    const result = extractFileSync('archive.zip', null, new ExtractionConfig());
+    if (result.metadata.archive) {
+        console.log(`Format: ${result.metadata.archive.format}`);
+        console.log(`Files: ${result.metadata.archive.fileCount}`);
+        console.log(`Total size: ${result.metadata.archive.totalSize} bytes`);
+        console.log('Files in archive:');
+        for (const file of result.metadata.archive.fileList) {
+            console.log(`  - ${file}`);
+        }
+    }
+    console.log(`\nAggregated content:\n${result.content.substring(0, 500)}...`);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig::default();
+        let result = extract_file_sync("archive.zip", None, &config)?;
+
+        if let Some(archive_meta) = result.metadata.archive {
+            println!("Format: {}", archive_meta.format);
+            println!("Files: {}", archive_meta.file_count);
+            println!("Total size: {} bytes", archive_meta.total_size);
+            println!("Files in archive:");
+            for file in &archive_meta.file_list {
+                println!("  - {}", file);
+            }
+        }
+        println!("\nAggregated content:\n{}...", &result.content[..500.min(result.content.len())]);
+        Ok(())
+    }
+    ```
 
 ### Pandoc Extractor
 
