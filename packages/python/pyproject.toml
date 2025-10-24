@@ -5,23 +5,59 @@ requires = [ "maturin>=1,<2" ]
 [project]
 name = "kreuzberg"
 version = "4.0.0"
-description = "Multi-language document intelligence framework with Rust core"
+description = "High-performance document intelligence library for Python. Extract text, metadata, and structured data from PDFs, Office documents, images, and 50+ formats. Powered by Rust core for 10-50x speed improvements."
 readme = "README.md"
+keywords = [
+  "document-extraction",
+  "document-intelligence",
+  "document-parsing",
+  "document-processing",
+  "docx",
+  "easyocr",
+  "email-parsing",
+  "html",
+  "markdown",
+  "metadata-extraction",
+  "ocr",
+  "office-documents",
+  "paddleocr",
+  "pdf",
+  "pdf-extraction",
+  "performance",
+  "pptx",
+  "rust",
+  "table-extraction",
+  "tesseract",
+  "text-extraction",
+  "xlsx",
+  "xml",
+]
 license = { text = "MIT" }
+maintainers = [ { name = "Na'aman Hirschfeld", email = "nhirschfeld@gmail.com" } ]
 authors = [ { name = "Na'aman Hirschfeld", email = "nhirschfeld@gmail.com" } ]
 requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Science/Research",
   "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Rust",
+  "Topic :: Office/Business",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Text Processing",
+  "Topic :: Text Processing :: Filters",
+  "Topic :: Text Processing :: General",
+  "Typing :: Typed",
 ]
 
 dependencies = [  ]
@@ -38,10 +74,12 @@ optional-dependencies.paddleocr = [
   "paddlepaddle>=3.2; python_version<'3.14'",
   "setuptools>=80.9; python_version<'3.14'",
 ]
-urls.Documentation = "https://kreuzberg.readthedocs.io"
-urls.Homepage = "https://github.com/Goldziher/kreuzberg"
+urls.Changelog = "https://kreuzberg.dev/CHANGELOG/"
+urls.Documentation = "https://kreuzberg.dev"
+urls.Homepage = "https://kreuzberg.dev"
 urls.Issues = "https://github.com/Goldziher/kreuzberg/issues"
 urls.Repository = "https://github.com/Goldziher/kreuzberg"
+urls.Source = "https://github.com/Goldziher/kreuzberg"
 scripts.kreuzberg = "kreuzberg.__main__:main"
 
 [tool.maturin]

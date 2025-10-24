@@ -1,7 +1,7 @@
 {
-	"name": "kreuzberg",
+	"name": "@goldziher/kreuzberg",
 	"version": "4.0.0",
-	"description": "Multi-language document intelligence framework - TypeScript SDK",
+	"description": "High-performance document intelligence library for TypeScript/Node.js. Extract text, metadata, and structured data from PDFs, Office documents, images, and 50+ formats. Powered by Rust core for 10-50x speed improvements.",
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",
 	"types": "dist/index.d.ts",
@@ -34,14 +34,41 @@
 		"clean": "rm -rf dist node_modules"
 	},
 	"keywords": [
-		"document",
-		"extraction",
+		"document-intelligence",
+		"document-extraction",
+		"text-extraction",
+		"pdf-extraction",
 		"ocr",
 		"pdf",
+		"docx",
+		"xlsx",
+		"pptx",
+		"office-documents",
+		"table-extraction",
+		"metadata-extraction",
 		"rust",
-		"typescript"
+		"napi",
+		"performance",
+		"typescript",
+		"nodejs",
+		"document-parsing",
+		"tesseract",
+		"markdown",
+		"html",
+		"xml"
 	],
-	"repository": "https://github.com/Goldziher/kreuzberg",
+	"author": {
+		"name": "Na'aman Hirschfeld",
+		"email": "nhirschfeld@gmail.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Goldziher/kreuzberg"
+	},
+	"homepage": "https://kreuzberg.dev",
+	"bugs": {
+		"url": "https://github.com/Goldziher/kreuzberg/issues"
+	},
 	"license": "MIT",
 	"files": [
 		"dist",

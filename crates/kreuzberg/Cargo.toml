@@ -2,11 +2,15 @@
 name = "kreuzberg"
 version = "4.0.0"
 edition = "2024"
-authors = ["Na'aman Hirschfeld <nhirschfed@gmail.com>"]
-description = "High-performance document intelligence library"
+authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
+description = "High-performance document intelligence library for Rust. Extract text, metadata, and structured data from PDFs, Office documents, images, and 50+ formats with async/sync APIs."
 license = "MIT"
 repository = "https://github.com/Goldziher/kreuzberg"
-homepage = "https://goldziher.github.io/kreuzberg/"
+homepage = "https://kreuzberg.dev"
+documentation = "https://docs.rs/kreuzberg"
+keywords = ["document", "extraction", "pdf", "ocr", "parsing"]
+categories = ["parsing", "text-processing", "asynchronous", "data-structures"]
+readme = "README.md"
 
 [lib]
 crate-type = ["rlib"]
