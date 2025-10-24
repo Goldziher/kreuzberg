@@ -1,3 +1,48 @@
+//! LibreOffice document conversion utilities.
+//!
+//! This module provides functions for converting legacy Microsoft Office formats
+//! (.doc, .ppt) to modern formats using LibreOffice's headless conversion mode.
+//!
+//! # Features
+//!
+//! - **Headless conversion**: Uses `soffice --headless` for server-side conversions
+//! - **Timeout protection**: Configurable timeout to prevent hanging conversions
+//! - **Format detection**: Automatic output format based on input file type
+//! - **Error handling**: Distinguishes between missing dependencies and conversion failures
+//!
+//! # Supported Conversions
+//!
+//! - `.doc` → `.docx` (Word documents)
+//! - `.ppt` → `.pptx` (PowerPoint presentations)
+//! - `.xls` → `.xlsx` (Excel spreadsheets) - future support
+//!
+//! # System Requirement
+//!
+//! LibreOffice must be installed and `soffice` must be in PATH:
+//! - **macOS**: `brew install --cask libreoffice`
+//! - **Linux**: `apt install libreoffice` or `dnf install libreoffice`
+//! - **Windows**: `winget install LibreOffice.LibreOffice`
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use kreuzberg::extraction::libreoffice::{convert_office_doc, check_libreoffice_available};
+//! use std::path::Path;
+//!
+//! # async fn example() -> kreuzberg::Result<()> {
+//! // Check if LibreOffice is available
+//! check_libreoffice_available().await?;
+//!
+//! // Convert .doc to .docx
+//! let input = Path::new("legacy.doc");
+//! let output_dir = Path::new("/tmp");
+//! let converted = convert_office_doc(input, output_dir, "docx", 300).await?;
+//!
+//! println!("Converted {} bytes", converted.len());
+//! # Ok(())
+//! # }
+//! ```
+
 use crate::error::{KreuzbergError, Result};
 use crate::types::LibreOfficeConversionResult;
 use std::path::Path;

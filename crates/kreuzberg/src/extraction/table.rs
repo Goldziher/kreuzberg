@@ -1,3 +1,45 @@
+//! Table conversion utilities.
+//!
+//! This module provides functions for converting tabular data between different formats.
+//! Currently supports converting Apache Arrow IPC format to Markdown tables using Polars.
+//!
+//! # Features
+//!
+//! - **Arrow IPC parsing**: Read tables from Arrow IPC binary format
+//! - **Markdown generation**: Convert DataFrames to clean Markdown tables
+//! - **Type-safe**: Handles all Polars data types safely
+//! - **Empty table handling**: Gracefully handles empty DataFrames
+//!
+//! # Supported Conversions
+//!
+//! - Arrow IPC → Markdown table
+//! - Polars DataFrame → Markdown table
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use kreuzberg::extraction::table::table_from_arrow_to_markdown;
+//!
+//! # fn example() -> kreuzberg::Result<()> {
+//! // Convert Arrow IPC bytes to Markdown
+//! let arrow_bytes = vec![/* Arrow IPC data */];
+//! let markdown = table_from_arrow_to_markdown(&arrow_bytes)?;
+//!
+//! println!("Markdown table:\n{}", markdown);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! # Output Format
+//!
+//! The generated Markdown follows GitHub Flavored Markdown table syntax:
+//! ```markdown
+//! | Column1 | Column2 | Column3 |
+//! |------|------|------|
+//! | value1 | value2 | value3 |
+//! | value4 | value5 | value6 |
+//! ```
+
 use crate::error::{KreuzbergError, Result};
 use polars::prelude::*;
 use std::io::Cursor;
