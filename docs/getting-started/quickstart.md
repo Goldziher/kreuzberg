@@ -32,6 +32,22 @@ Extract text from any supported document format:
     console.log(result.tables);    // Extracted tables
     ```
 
+=== "Rust"
+
+    ```rust
+    use kreuzberg::extract_file_sync;
+
+    fn main() -> kreuzberg::Result<()> {
+        // Extract from a file
+        let result = extract_file_sync("document.pdf", None, &Default::default())?;
+
+        println!("{}", result.content);  // Extracted text
+        println!("{:?}", result.metadata);  // Document metadata
+        println!("{:?}", result.tables);    // Extracted tables
+        Ok(())
+    }
+    ```
+
 === "CLI"
 
     ```bash
@@ -75,6 +91,19 @@ For better performance with I/O-bound operations:
     main();
     ```
 
+=== "Rust"
+
+    ```rust
+    use kreuzberg::extract_file;
+
+    #[tokio::main]
+    async fn main() -> kreuzberg::Result<()> {
+        let result = extract_file("document.pdf", None, &Default::default()).await?;
+        println!("{}", result.content);
+        Ok(())
+    }
+    ```
+
 ## OCR Extraction
 
 Extract text from images and scanned documents:
@@ -111,6 +140,27 @@ Extract text from images and scanned documents:
     console.log(result.content);
     ```
 
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig {
+            ocr: Some(OcrConfig {
+                backend: "tesseract".to_string(),
+                language: Some("eng".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let result = extract_file_sync("scanned.pdf", None, &config)?;
+        println!("{}", result.content);
+        Ok(())
+    }
+    ```
+
 === "CLI"
 
     ```bash
@@ -143,6 +193,22 @@ Process multiple files concurrently:
 
     for (const result of results) {
         console.log(`Content length: ${result.content.length}`);
+    }
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{batch_extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let files = vec!["doc1.pdf", "doc2.docx", "doc3.pptx"];
+        let results = batch_extract_file_sync(&files, None, &ExtractionConfig::default())?;
+
+        for result in results {
+            println!("Content length: {}", result.content.len());
+        }
+        Ok(())
     }
     ```
 
@@ -190,6 +256,25 @@ When you already have file content in memory:
         new ExtractionConfig()
     );
     console.log(result.content);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_bytes_sync, ExtractionConfig};
+    use std::fs;
+
+    fn main() -> kreuzberg::Result<()> {
+        let data = fs::read("document.pdf")?;
+
+        let result = extract_bytes_sync(
+            &data,
+            "application/pdf",
+            &ExtractionConfig::default()
+        )?;
+        println!("{}", result.content);
+        Ok(())
+    }
     ```
 
 ## Advanced Configuration
@@ -308,6 +393,65 @@ Customize extraction behavior:
     }
     ```
 
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{
+        extract_file_sync,
+        ExtractionConfig,
+        OcrConfig,
+        ChunkingConfig,
+        LanguageDetectionConfig
+    };
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig {
+            // Enable OCR
+            ocr: Some(OcrConfig {
+                backend: "tesseract".to_string(),
+                language: Some("eng+deu".to_string()),  // Multiple languages
+                ..Default::default()
+            }),
+
+            // Enable chunking for LLM processing
+            chunking: Some(ChunkingConfig {
+                max_chunk_size: 1000,
+                overlap: 100,
+            }),
+
+            // Enable language detection
+            language_detection: Some(LanguageDetectionConfig {
+                enabled: true,
+                detect_multiple: true,
+                ..Default::default()
+            }),
+
+            // Enable caching
+            use_cache: true,
+
+            // Enable quality processing
+            enable_quality_processing: true,
+
+            ..Default::default()
+        };
+
+        let result = extract_file_sync("document.pdf", None, &config)?;
+
+        // Access chunks
+        if let Some(chunks) = result.chunks {
+            for chunk in chunks {
+                println!("Chunk: {}...", &chunk[..100.min(chunk.len())]);
+            }
+        }
+
+        // Access detected languages
+        if let Some(languages) = result.detected_languages {
+            println!("Languages: {:?}", languages);
+        }
+        Ok(())
+    }
+    ```
+
 ## Working with Metadata
 
 Access format-specific metadata from extracted documents:
@@ -355,6 +499,44 @@ Access format-specific metadata from extracted documents:
         console.log(`Title: ${htmlResult.metadata.html.title}`);
         console.log(`Description: ${htmlResult.metadata.html.description}`);
         console.log(`Open Graph Image: ${htmlResult.metadata.html.ogImage}`);
+    }
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default())?;
+
+        // Access PDF metadata
+        if let Some(pdf_meta) = result.metadata.pdf {
+            if let Some(pages) = pdf_meta.page_count {
+                println!("Pages: {}", pages);
+            }
+            if let Some(author) = pdf_meta.author {
+                println!("Author: {}", author);
+            }
+            if let Some(title) = pdf_meta.title {
+                println!("Title: {}", title);
+            }
+        }
+
+        // Access HTML metadata
+        let html_result = extract_file_sync("page.html", None, &ExtractionConfig::default())?;
+        if let Some(html_meta) = html_result.metadata.html {
+            if let Some(title) = html_meta.title {
+                println!("Title: {}", title);
+            }
+            if let Some(desc) = html_meta.description {
+                println!("Description: {}", desc);
+            }
+            if let Some(og_img) = html_meta.og_image {
+                println!("Open Graph Image: {}", og_img);
+            }
+        }
+        Ok(())
     }
     ```
 
@@ -411,6 +593,28 @@ Extract and process tables from documents:
     }
     ```
 
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default())?;
+
+        // Iterate over tables
+        for table in &result.tables {
+            println!("Table with {} rows", table.cells.len());
+            println!("{}", table.markdown);  // Markdown representation
+
+            // Access cells
+            for row in &table.cells {
+                println!("{:?}", row);
+            }
+        }
+        Ok(())
+    }
+    ```
+
 ## Error Handling
 
 Handle extraction errors gracefully:
@@ -457,6 +661,34 @@ Handle extraction errors gracefully:
             console.error(`Extraction error: ${error.message}`);
         } else {
             throw error;
+        }
+    }
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig, KreuzbergError};
+
+    fn main() {
+        let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default());
+
+        match result {
+            Ok(extraction) => {
+                println!("{}", extraction.content);
+            }
+            Err(KreuzbergError::Validation(msg)) => {
+                eprintln!("Invalid configuration: {}", msg);
+            }
+            Err(KreuzbergError::Parsing(msg)) => {
+                eprintln!("Failed to parse document: {}", msg);
+            }
+            Err(KreuzbergError::Ocr(msg)) => {
+                eprintln!("OCR processing failed: {}", msg);
+            }
+            Err(e) => {
+                eprintln!("Extraction error: {}", e);
+            }
         }
     }
     ```
