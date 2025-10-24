@@ -150,6 +150,83 @@ config = ExtractionConfig(
 )
 ```
 
+#### Complete Configuration (v4)
+
+v4 provides extensive configuration options across all features:
+
+```python
+from kreuzberg import (
+    ExtractionConfig,
+    OcrConfig,
+    TesseractConfig,
+    ChunkingConfig,
+    ImageExtractionConfig,
+    PdfConfig,
+    TokenReductionConfig,
+    LanguageDetectionConfig,
+    PostProcessorConfig,
+)
+
+config = ExtractionConfig(
+    # Caching
+    use_cache=True,
+
+    # Quality processing
+    enable_quality_processing=True,
+
+    # OCR configuration
+    ocr=OcrConfig(
+        backend="tesseract",
+        language="eng",
+        tesseract_config=TesseractConfig(
+            psm=6,
+            oem=3,
+        ),
+    ),
+    force_ocr=False,  # Force OCR even for text-based PDFs
+
+    # Chunking
+    chunking=ChunkingConfig(
+        max_chars=1000,
+        max_overlap=100,
+    ),
+
+    # Image extraction
+    images=ImageExtractionConfig(
+        extract_images=True,
+        target_dpi=300,
+        max_image_dimension=4096,
+        auto_adjust_dpi=True,
+        min_dpi=72,
+    ),
+
+    # PDF options
+    pdf_options=PdfConfig(
+        extract_images=True,
+        passwords=["password1", "password2"],  # Try multiple passwords
+        extract_metadata=True,
+    ),
+
+    # Token reduction
+    token_reduction=TokenReductionConfig(
+        mode="moderate",  # "off", "light", "moderate", "aggressive"
+        preserve_important_words=True,
+    ),
+
+    # Language detection
+    language_detection=LanguageDetectionConfig(
+        enabled=True,
+        min_confidence=0.7,
+        detect_multiple=True,
+    ),
+
+    # PostProcessor configuration
+    postprocessor=PostProcessorConfig(
+        enabled=True,
+    ),
+)
+```
+
 #### Metadata Access
 
 ```python
@@ -332,6 +409,66 @@ for chunk in result.chunks:
     print(f"Chunk: {len(chunk)} chars")
 ```
 
+### Password-Protected PDFs
+
+```python
+# v3 - Not available
+
+# v4 - Password support (requires kreuzberg[crypto])
+from kreuzberg import PdfConfig
+
+config = ExtractionConfig(
+    pdf_options=PdfConfig(
+        passwords=["password1", "password2"],  # Try multiple passwords in order
+        extract_metadata=True,
+    ),
+)
+
+result = extract_file("encrypted.pdf", config=config)
+```
+
+### Token Reduction
+
+```python
+# v3 - Not available
+
+# v4 - Token reduction for LLM processing
+from kreuzberg import TokenReductionConfig
+
+config = ExtractionConfig(
+    token_reduction=TokenReductionConfig(
+        mode="aggressive",  # "off", "light", "moderate", "aggressive"
+        preserve_important_words=True,
+    ),
+)
+
+result = extract_file("document.pdf", config=config)
+# Content is automatically reduced while preserving meaning
+```
+
+### Extract from Bytes
+
+```python
+# v3 - Limited support
+
+# v4 - Full bytes extraction API
+from kreuzberg import extract_bytes, extract_bytes_sync
+
+# Read file into memory
+with open("document.pdf", "rb") as f:
+    data = f.read()
+
+# Sync extraction
+result = extract_bytes_sync(data, "application/pdf")
+
+# Async extraction
+import asyncio
+result = asyncio.run(extract_bytes(data, "application/pdf"))
+
+# With MIME type auto-detection
+result = extract_bytes_sync(data, None)  # Auto-detect MIME type
+```
+
 ### Table Extraction
 
 ```python
@@ -398,11 +535,38 @@ config = load_config("custom-config.toml")
 result = extract_file("doc.pdf", config=config)
 ```
 
+### Image Extraction
+
+```python
+# v3 - Basic image extraction
+
+# v4 - Advanced image extraction with DPI control
+from kreuzberg import ImageExtractionConfig
+
+config = ExtractionConfig(
+    images=ImageExtractionConfig(
+        extract_images=True,
+        target_dpi=300,              # Target DPI for extracted images
+        max_image_dimension=4096,     # Max dimension in pixels
+        auto_adjust_dpi=True,         # Auto-adjust DPI for memory efficiency
+        min_dpi=72,                   # Minimum DPI threshold
+    ),
+)
+
+result = extract_file("document.pdf", config=config)
+# Images are extracted with optimized DPI settings
+```
+
 ### API Server
 
 ```bash
-# v4 - Built-in API server
+# v3 - Not available
+
+# v4 - Built-in REST API server
 pip install "kreuzberg[api]"
+python -m kreuzberg serve --host 0.0.0.0 --port 8000
+
+# Or via CLI binary
 kreuzberg serve --port 8000
 
 # Or via Docker
@@ -412,8 +576,17 @@ docker run -p 8000:8000 goldziher/kreuzberg:v4.0.0
 ### MCP Server
 
 ```bash
-# v4 - Claude Desktop integration
+# v3 - Not available
+
+# v4 - Model Context Protocol server for Claude Desktop
+python -m kreuzberg mcp
+
+# Or via CLI binary
 kreuzberg mcp
+
+# Configure in Claude Desktop:
+# macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+# Add: {"mcpServers": {"kreuzberg": {"command": "/path/to/kreuzberg", "args": ["mcp"]}}}
 ```
 
 ## Breaking Changes
