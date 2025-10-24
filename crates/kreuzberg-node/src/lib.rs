@@ -507,13 +507,13 @@ impl RustPostProcessor for JsPostProcessor {
 ///
 /// * `processor` - JavaScript object with the following interface:
 ///   - `name(): string` - Unique processor name
-///   - `process(...args): string` - Process function that receives JSON string as args[0]
+///   - `process(...args): string` - Process function that receives JSON string as args\[0\]
 ///   - `processingStage(): "early" | "middle" | "late"` - Optional processing stage
 ///
 /// # Implementation Notes
 ///
 /// Due to NAPI ThreadsafeFunction limitations, the process function receives the extraction
-/// result as a JSON string in args[0] and must return a JSON string. Use the TypeScript
+/// result as a JSON string in args\[0\] and must return a JSON string. Use the TypeScript
 /// wrapper functions for a cleaner API.
 ///
 /// # Example
@@ -748,13 +748,13 @@ impl RustValidator for JsValidator {
 ///
 /// * `validator` - JavaScript object with the following interface:
 ///   - `name(): string` - Unique validator name
-///   - `validate(...args): Promise<string>` - Validate function that receives JSON string as args[0]
+///   - `validate(...args): Promise<string>` - Validate function that receives JSON string as args\[0\]
 ///   - `priority(): number` - Optional priority (defaults to 50, higher runs first)
 ///
 /// # Implementation Notes
 ///
 /// Due to NAPI ThreadsafeFunction limitations, the validate function receives the extraction
-/// result as a JSON string in args[0]. On success, return an empty string. On validation
+/// result as a JSON string in args\[0\]. On success, return an empty string. On validation
 /// failure, throw an error (the Promise should reject). Use the TypeScript wrapper functions
 /// for a cleaner API.
 ///
