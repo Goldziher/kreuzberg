@@ -54,10 +54,16 @@ impl DocumentExtractor for HtmlExtractor {
 
         let markdown = crate::extraction::html::convert_html_to_markdown(&html, None)?;
 
+        // Parse and extract HTML metadata from YAML frontmatter
+        let (html_metadata, content_without_frontmatter) = crate::extraction::html::parse_html_metadata(&markdown)?;
+
         Ok(ExtractionResult {
-            content: markdown,
+            content: content_without_frontmatter,
             mime_type: mime_type.to_string(),
-            metadata: Metadata::default(),
+            metadata: Metadata {
+                html: html_metadata,
+                ..Default::default()
+            },
             tables: vec![],
             detected_languages: None,
             chunks: None,

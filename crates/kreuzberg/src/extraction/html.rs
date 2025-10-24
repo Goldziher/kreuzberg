@@ -1,9 +1,11 @@
 use crate::error::{KreuzbergError, Result};
+use crate::types::HtmlMetadata;
 use html_to_markdown_rs::{
     CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, InlineImage,
     InlineImageConfig as RustInlineImageConfig, InlineImageFormat, ListIndentType, NewlineStyle, PreprocessingOptions,
     PreprocessingPreset, WhitespaceMode, convert as convert_html, convert_with_inline_images,
 };
+use saphyr::LoadableYamlNode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -403,6 +405,114 @@ pub fn process_html(
     }
 }
 
+/// Parse YAML frontmatter from markdown and extract HTML metadata.
+///
+/// Returns a tuple of (HtmlMetadata, content_without_frontmatter).
+pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, String)> {
+    // Check if markdown starts with YAML frontmatter delimiter
+    if !markdown.starts_with("---\n") && !markdown.starts_with("---\r\n") {
+        return Ok((None, markdown.to_string()));
+    }
+
+    // Find the closing delimiter
+    let after_opening = if let Some(stripped) = markdown.strip_prefix("---\r\n") {
+        stripped
+    } else if let Some(stripped) = markdown.strip_prefix("---\n") {
+        stripped
+    } else {
+        // Shouldn't happen due to check above, but handle it gracefully
+        return Ok((None, markdown.to_string()));
+    };
+
+    let closing_pos = after_opening
+        .find("\n---\n")
+        .or_else(|| after_opening.find("\r\n---\r\n"));
+
+    let (yaml_content, remaining_content) = match closing_pos {
+        Some(pos) => {
+            let yaml = &after_opening[..pos];
+            let content_start = pos + if after_opening[pos..].starts_with("\r\n") { 7 } else { 5 };
+            let content = &after_opening[content_start..];
+            (yaml, content)
+        }
+        None => {
+            // No closing delimiter found, treat as no frontmatter
+            return Ok((None, markdown.to_string()));
+        }
+    };
+
+    // Parse YAML using saphyr
+    let yaml_docs = saphyr::Yaml::load_from_str(yaml_content)
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to parse YAML frontmatter: {}", e)))?;
+
+    if yaml_docs.is_empty() {
+        return Ok((None, remaining_content.to_string()));
+    }
+
+    let yaml_doc = &yaml_docs[0];
+
+    // Extract metadata fields
+    let mut metadata = HtmlMetadata::default();
+
+    if let saphyr::Yaml::Mapping(mapping) = yaml_doc {
+        for (key, value) in mapping {
+            if let (saphyr::Yaml::Value(saphyr::Scalar::String(k)), saphyr::Yaml::Value(saphyr::Scalar::String(v))) =
+                (key, value)
+            {
+                let key_str = k.to_string();
+                let value_str = v.to_string();
+
+                match key_str.as_str() {
+                    "title" => metadata.title = Some(value_str),
+                    "base-href" => metadata.base_href = Some(value_str),
+                    "canonical" => metadata.canonical = Some(value_str),
+                    "meta-description" => metadata.description = Some(value_str),
+                    "meta-keywords" => metadata.keywords = Some(value_str),
+                    "meta-author" => metadata.author = Some(value_str),
+                    "meta-og-title" | "meta-og:title" => metadata.og_title = Some(value_str),
+                    "meta-og-description" | "meta-og:description" => metadata.og_description = Some(value_str),
+                    "meta-og-image" | "meta-og:image" => metadata.og_image = Some(value_str),
+                    "meta-og-url" | "meta-og:url" => metadata.og_url = Some(value_str),
+                    "meta-og-type" | "meta-og:type" => metadata.og_type = Some(value_str),
+                    "meta-og-site-name" | "meta-og:site-name" | "meta-og:site_name" => {
+                        metadata.og_site_name = Some(value_str)
+                    }
+                    "meta-twitter-card" | "meta-twitter:card" => metadata.twitter_card = Some(value_str),
+                    "meta-twitter-title" | "meta-twitter:title" => metadata.twitter_title = Some(value_str),
+                    "meta-twitter-description" | "meta-twitter:description" => {
+                        metadata.twitter_description = Some(value_str)
+                    }
+                    "meta-twitter-image" | "meta-twitter:image" => metadata.twitter_image = Some(value_str),
+                    "meta-twitter-site" | "meta-twitter:site" => metadata.twitter_site = Some(value_str),
+                    "meta-twitter-creator" | "meta-twitter:creator" => metadata.twitter_creator = Some(value_str),
+                    "link-author" => metadata.link_author = Some(value_str),
+                    "link-license" => metadata.link_license = Some(value_str),
+                    "link-alternate" => metadata.link_alternate = Some(value_str),
+                    _ => {} // Ignore unknown fields
+                }
+            }
+        }
+    }
+
+    // Check if any metadata was extracted
+    let has_metadata = metadata.title.is_some()
+        || metadata.description.is_some()
+        || metadata.keywords.is_some()
+        || metadata.author.is_some()
+        || metadata.canonical.is_some()
+        || metadata.base_href.is_some()
+        || metadata.og_title.is_some()
+        || metadata.og_description.is_some()
+        || metadata.og_image.is_some()
+        || metadata.twitter_card.is_some();
+
+    if has_metadata {
+        Ok((Some(metadata), remaining_content.to_string()))
+    } else {
+        Ok((None, remaining_content.to_string()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -709,5 +819,98 @@ mod tests {
         assert_eq!(inline_image_format_to_str(&InlineImageFormat::Bmp), "bmp");
         assert_eq!(inline_image_format_to_str(&InlineImageFormat::Webp), "webp");
         assert_eq!(inline_image_format_to_str(&InlineImageFormat::Svg), "svg");
+    }
+
+    #[test]
+    fn test_parse_html_metadata_with_frontmatter() {
+        let markdown = "---\ntitle: Test Page\nmeta-description: A test page\nmeta-keywords: test, page\n---\n\n# Content\n\nSome content.";
+        let (metadata, content) = parse_html_metadata(markdown).unwrap();
+
+        assert!(metadata.is_some());
+        let meta = metadata.unwrap();
+        assert_eq!(meta.title, Some("Test Page".to_string()));
+        assert_eq!(meta.description, Some("A test page".to_string()));
+        assert_eq!(meta.keywords, Some("test, page".to_string()));
+        assert_eq!(content.trim(), "# Content\n\nSome content.");
+    }
+
+    #[test]
+    fn test_parse_html_metadata_without_frontmatter() {
+        let markdown = "# Content\n\nSome content without frontmatter.";
+        let (metadata, content) = parse_html_metadata(markdown).unwrap();
+
+        assert!(metadata.is_none());
+        assert_eq!(content, markdown);
+    }
+
+    #[test]
+    fn test_parse_html_metadata_with_open_graph() {
+        let markdown = "---\ntitle: OG Test\nmeta-og-title: OG Title\nmeta-og-description: OG Description\nmeta-og-image: https://example.com/image.jpg\n---\n\nContent";
+        let (metadata, _content) = parse_html_metadata(markdown).unwrap();
+
+        assert!(metadata.is_some());
+        let meta = metadata.unwrap();
+        assert_eq!(meta.title, Some("OG Test".to_string()));
+        assert_eq!(meta.og_title, Some("OG Title".to_string()));
+        assert_eq!(meta.og_description, Some("OG Description".to_string()));
+        assert_eq!(meta.og_image, Some("https://example.com/image.jpg".to_string()));
+    }
+
+    #[test]
+    fn test_parse_html_metadata_with_twitter_card() {
+        let markdown = "---\nmeta-twitter-card: summary\nmeta-twitter-title: Twitter Title\nmeta-twitter-image: https://example.com/twitter.jpg\n---\n\nContent";
+        let (metadata, _content) = parse_html_metadata(markdown).unwrap();
+
+        assert!(metadata.is_some());
+        let meta = metadata.unwrap();
+        assert_eq!(meta.twitter_card, Some("summary".to_string()));
+        assert_eq!(meta.twitter_title, Some("Twitter Title".to_string()));
+        assert_eq!(meta.twitter_image, Some("https://example.com/twitter.jpg".to_string()));
+    }
+
+    #[test]
+    fn test_parse_html_metadata_with_links() {
+        let markdown = "---\ncanonical: https://example.com/page\nlink-author: https://example.com/author\nlink-license: https://creativecommons.org/licenses/by/4.0/\n---\n\nContent";
+        let (metadata, _content) = parse_html_metadata(markdown).unwrap();
+
+        assert!(metadata.is_some());
+        let meta = metadata.unwrap();
+        assert_eq!(meta.canonical, Some("https://example.com/page".to_string()));
+        assert_eq!(meta.link_author, Some("https://example.com/author".to_string()));
+        assert_eq!(
+            meta.link_license,
+            Some("https://creativecommons.org/licenses/by/4.0/".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_html_metadata_empty_frontmatter() {
+        let markdown = "---\n---\n\nContent";
+        let (metadata, content) = parse_html_metadata(markdown).unwrap();
+
+        assert!(metadata.is_none());
+        assert_eq!(content.trim(), "Content");
+    }
+
+    #[test]
+    fn test_parse_html_metadata_incomplete_frontmatter() {
+        let markdown = "---\ntitle: Test\n\nNo closing delimiter";
+        let (metadata, content) = parse_html_metadata(markdown).unwrap();
+
+        // Should treat as no frontmatter when closing delimiter is missing
+        assert!(metadata.is_none());
+        assert_eq!(content, markdown);
+    }
+
+    #[test]
+    fn test_parse_html_metadata_crlf_line_endings() {
+        let markdown = "---\r\ntitle: Test\r\nmeta-author: John Doe\r\n---\r\n\r\nContent";
+        let (metadata, content) = parse_html_metadata(markdown).unwrap();
+
+        assert!(metadata.is_some());
+        let meta = metadata.unwrap();
+        assert_eq!(meta.title, Some("Test".to_string()));
+        assert_eq!(meta.author, Some("John Doe".to_string()));
+        assert_eq!(content.trim(), "Content");
     }
 }

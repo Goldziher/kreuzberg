@@ -75,6 +75,9 @@ pub struct Metadata {
     pub text: Option<TextMetadata>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub html: Option<HtmlMetadata>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ocr: Option<OcrMetadata>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -164,6 +167,76 @@ pub struct TextMetadata {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_blocks: Option<Vec<(String, String)>>,
+}
+
+/// HTML metadata.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct HtmlMetadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub canonical: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_href: Option<String>,
+
+    // Open Graph metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub og_title: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub og_description: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub og_image: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub og_url: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub og_type: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub og_site_name: Option<String>,
+
+    // Twitter Card metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub twitter_card: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub twitter_title: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub twitter_description: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub twitter_image: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub twitter_site: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub twitter_creator: Option<String>,
+
+    // Link relations
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub link_author: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub link_license: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub link_alternate: Option<String>,
 }
 
 /// OCR processing metadata.
