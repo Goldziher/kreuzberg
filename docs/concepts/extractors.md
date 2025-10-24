@@ -106,11 +106,15 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - Table detection (when OCR enabled)
 
 **Metadata Extracted**:
-- Page count
-- PDF version
-- Creation date, modification date
-- Author, title, subject
-- Producer application
+- `pageCount` - Number of pages in the PDF
+- `title` - Document title
+- `author` - Document author
+- `subject` - Document subject
+- `keywords` - Document keywords
+- `creator` - Creating application
+- `producer` - PDF producer/converter
+- `creationDate` - Document creation date
+- `modificationDate` - Last modification date
 
 **Example**:
 === "Python"
@@ -145,9 +149,8 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - Sheet-level metadata
 
 **Metadata Extracted**:
-- Sheet names
-- Row and column counts
-- Cell count
+- `sheetCount` - Number of sheets in the workbook
+- `sheetNames` - Array of sheet names
 
 **Table Extraction**: Each sheet becomes a table in `result.tables[]`
 
@@ -189,11 +192,15 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - Nested message handling
 
 **Metadata Extracted**:
-- From, To, Cc, Bcc
-- Subject
-- Date
-- Message-ID
-- Attachment names and types
+- `fromEmail` - Sender email address
+- `fromName` - Sender display name
+- `toEmails` - Array of recipient email addresses
+- `ccEmails` - Array of CC email addresses
+- `bccEmails` - Array of BCC email addresses
+- `messageId` - Unique message identifier
+- `attachments` - Array of attachment filenames
+
+**Note**: Subject and date are extracted into the main `content` field
 
 **Example**:
 === "Python"
@@ -224,15 +231,43 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 
 **Features**:
 - HTML to markdown conversion
+- YAML frontmatter extraction
 - Link preservation
 - Image alt text extraction
 - Code block preservation
 - Table extraction
+- Inline image extraction
 
-**Metadata Extracted**:
-- Title (from `<title>` tag)
-- Meta description
-- Language (from `lang` attribute)
+**Metadata Extracted** (21 fields):
+
+**Basic SEO**:
+- `title` - Page title from `<title>` tag
+- `description` - Meta description
+- `keywords` - Meta keywords
+- `author` - Meta author
+- `canonical` - Canonical URL
+- `baseHref` - Base URL for relative links
+
+**Open Graph**:
+- `ogTitle` - Open Graph title
+- `ogDescription` - Open Graph description
+- `ogImage` - Open Graph image URL
+- `ogUrl` - Open Graph URL
+- `ogType` - Open Graph content type
+- `ogSiteName` - Open Graph site name
+
+**Twitter Card**:
+- `twitterCard` - Twitter card type
+- `twitterTitle` - Twitter card title
+- `twitterDescription` - Twitter card description
+- `twitterImage` - Twitter card image URL
+- `twitterSite` - Twitter site handle
+- `twitterCreator` - Twitter creator handle
+
+**Link Relationships**:
+- `linkAuthor` - Author link URL
+- `linkLicense` - License link URL
+- `linkAlternate` - Alternate version URL
 
 ### XML Extractor
 
@@ -277,10 +312,11 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - Image extraction
 
 **Metadata Extracted**:
-- Slide count
-- Title
-- Author
-- Creation date
+- `title` - Presentation title
+- `author` - Presentation author
+- `description` - Presentation description
+- `summary` - Presentation summary
+- `fonts` - Array of fonts used in the presentation
 
 ### Image Extractor
 
@@ -293,10 +329,10 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - Multi-format support (JPEG, PNG, TIFF, BMP, WebP)
 
 **Metadata Extracted**:
-- Image dimensions
-- Format
-- DPI (if available)
-- Color space
+- `width` - Image width in pixels
+- `height` - Image height in pixels
+- `format` - Image format (jpeg, png, tiff, etc.)
+- `exif` - EXIF metadata as key-value pairs (includes DPI, color space, camera info, etc.)
 
 **Requires**: OCR configuration with `config.ocr = OcrConfig(...)`
 
@@ -324,9 +360,11 @@ Analyzes file magic bytes when extension is missing or ambiguous:
 - Aggregates content from all extractable files
 
 **Metadata Extracted**:
-- Archive type
-- File count
-- Extracted file list
+- `format` - Archive format (zip, tar, gzip)
+- `fileCount` - Number of files in archive
+- `fileList` - Array of file paths within archive
+- `totalSize` - Total uncompressed size in bytes
+- `compressedSize` - Compressed archive size in bytes (if available)
 
 ### Pandoc Extractor
 
@@ -443,6 +481,45 @@ When no specific extractor is found:
 1. **Check for OCR**: If file is an image and OCR enabled → ImageExtractor
 2. **Try text extraction**: Attempt to read as UTF-8 text
 3. **Error**: Return `ParsingError` if all attempts fail
+
+## Additional Metadata Types
+
+Beyond format-specific metadata, Kreuzberg also tracks processing-related metadata:
+
+### OCR Metadata
+
+When OCR is performed on a document, `result.metadata.ocr` contains:
+
+- `language` - OCR language code (e.g., "eng", "deu")
+- `psm` - Page segmentation mode used
+- `outputFormat` - Output format (text, hocr, etc.)
+- `tableCount` - Number of tables detected
+- `tableRows` - Total rows across all tables (if available)
+- `tableCols` - Total columns across all tables (if available)
+
+### Image Preprocessing Metadata
+
+When images are preprocessed for OCR, `result.metadata.imagePreprocessing` contains:
+
+- `originalDimensions` - Original image dimensions `[width, height]`
+- `originalDpi` - Original DPI `[x, y]`
+- `targetDpi` - Target DPI for OCR
+- `scaleFactor` - Scale factor applied
+- `autoAdjusted` - Whether DPI was auto-adjusted
+- `finalDpi` - Final DPI after adjustment
+- `newDimensions` - New dimensions after resize `[width, height]` (if resized)
+- `resampleMethod` - Resampling method used (lanczos, bilinear, etc.)
+- `dimensionClamped` - Whether dimensions were clamped to max size
+- `calculatedDpi` - Calculated DPI (if available)
+- `skippedResize` - Whether resize was skipped
+- `resizeError` - Error message if resize failed
+
+### Error Metadata
+
+When extraction fails for a file (especially in batch operations), `result.metadata.error` contains:
+
+- `errorType` - Type of error (ParsingError, ValidationError, etc.)
+- `message` - Detailed error message
 
 ## Custom Extractors
 

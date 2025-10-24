@@ -308,6 +308,69 @@ Customize extraction behavior:
     }
     ```
 
+## Working with Metadata
+
+Access format-specific metadata from extracted documents:
+
+=== "Python"
+
+    ```python
+    from kreuzberg import extract_file_sync, ExtractionConfig
+
+    result = extract_file_sync("document.pdf", config=ExtractionConfig())
+
+    # Access PDF metadata
+    if result.metadata.get("pdf"):
+        pdf_meta = result.metadata["pdf"]
+        print(f"Pages: {pdf_meta.get('page_count')}")
+        print(f"Author: {pdf_meta.get('author')}")
+        print(f"Title: {pdf_meta.get('title')}")
+
+    # Access HTML metadata
+    result = extract_file_sync("page.html", config=ExtractionConfig())
+    if result.metadata.get("html"):
+        html_meta = result.metadata["html"]
+        print(f"Title: {html_meta.get('title')}")
+        print(f"Description: {html_meta.get('description')}")
+        print(f"Open Graph Image: {html_meta.get('og_image')}")
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+
+    const result = extractFileSync('document.pdf', null, new ExtractionConfig());
+
+    // Access PDF metadata
+    if (result.metadata.pdf) {
+        console.log(`Pages: ${result.metadata.pdf.pageCount}`);
+        console.log(`Author: ${result.metadata.pdf.author}`);
+        console.log(`Title: ${result.metadata.pdf.title}`);
+    }
+
+    // Access HTML metadata
+    const htmlResult = extractFileSync('page.html', null, new ExtractionConfig());
+    if (htmlResult.metadata.html) {
+        console.log(`Title: ${htmlResult.metadata.html.title}`);
+        console.log(`Description: ${htmlResult.metadata.html.description}`);
+        console.log(`Open Graph Image: ${htmlResult.metadata.html.ogImage}`);
+    }
+    ```
+
+Kreuzberg extracts format-specific metadata for:
+- **PDF**: page count, title, author, subject, keywords, dates
+- **HTML**: 21 fields including SEO meta tags, Open Graph, Twitter Card
+- **Excel**: sheet count, sheet names
+- **Email**: from, to, CC, BCC, message ID, attachments
+- **PowerPoint**: title, author, description, fonts
+- **Images**: dimensions, format, EXIF data
+- **Archives**: format, file count, file list, sizes
+- **XML**: element count, unique elements
+- **Text/Markdown**: word count, line count, headers, links
+
+See [Extractors Documentation](../concepts/extractors.md) for complete metadata reference.
+
 ## Working with Tables
 
 Extract and process tables from documents:
