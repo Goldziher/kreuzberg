@@ -71,6 +71,7 @@ mod tests {
 
     #[test]
     fn test_validation_error_with_source() {
+        pyo3::prepare_freethreaded_python();
         let source = std::io::Error::new(std::io::ErrorKind::InvalidInput, "bad input");
         let error = KreuzbergError::validation_with_source("Invalid configuration", source);
         let py_err = to_py_err(error);
@@ -83,6 +84,7 @@ mod tests {
 
     #[test]
     fn test_validation_error_without_source() {
+        pyo3::prepare_freethreaded_python();
         let error = KreuzbergError::validation("Invalid configuration");
         let py_err = to_py_err(error);
 
@@ -93,6 +95,7 @@ mod tests {
 
     #[test]
     fn test_parsing_error_with_source() {
+        pyo3::prepare_freethreaded_python();
         let source = std::io::Error::new(std::io::ErrorKind::InvalidData, "corrupt file");
         let error = KreuzbergError::parsing_with_source("Failed to parse PDF", source);
         let py_err = to_py_err(error);
@@ -105,6 +108,7 @@ mod tests {
 
     #[test]
     fn test_parsing_error_without_source() {
+        pyo3::prepare_freethreaded_python();
         let error = KreuzbergError::parsing("Failed to parse PDF");
         let py_err = to_py_err(error);
 
@@ -115,6 +119,7 @@ mod tests {
 
     #[test]
     fn test_ocr_error_with_source() {
+        pyo3::prepare_freethreaded_python();
         let source = std::io::Error::other("tesseract failed");
         let error = KreuzbergError::ocr_with_source("OCR processing failed", source);
         let py_err = to_py_err(error);
@@ -127,6 +132,7 @@ mod tests {
 
     #[test]
     fn test_ocr_error_without_source() {
+        pyo3::prepare_freethreaded_python();
         let error = KreuzbergError::ocr("OCR processing failed");
         let py_err = to_py_err(error);
 
@@ -137,6 +143,7 @@ mod tests {
 
     #[test]
     fn test_plugin_error() {
+        pyo3::prepare_freethreaded_python();
         let error = KreuzbergError::Plugin {
             message: "Extraction failed".to_string(),
             plugin_name: "pdf-extractor".to_string(),
@@ -151,6 +158,7 @@ mod tests {
 
     #[test]
     fn test_cache_error_with_source() {
+        pyo3::prepare_freethreaded_python();
         let source = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
         let error = KreuzbergError::Cache {
             message: "Cache write failed".to_string(),
@@ -166,6 +174,7 @@ mod tests {
 
     #[test]
     fn test_image_processing_error_with_source() {
+        pyo3::prepare_freethreaded_python();
         let source = std::io::Error::other("resize failed");
         let error = KreuzbergError::ImageProcessing {
             message: "Image processing failed".to_string(),
@@ -181,6 +190,7 @@ mod tests {
 
     #[test]
     fn test_serialization_error_with_source() {
+        pyo3::prepare_freethreaded_python();
         let json_err = serde_json::from_str::<serde_json::Value>("invalid json").unwrap_err();
         let error: KreuzbergError = json_err.into();
         let py_err = to_py_err(error);
@@ -192,6 +202,7 @@ mod tests {
 
     #[test]
     fn test_io_error() {
+        pyo3::prepare_freethreaded_python();
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let error: KreuzbergError = io_err.into();
         let py_err = to_py_err(error);
@@ -203,6 +214,7 @@ mod tests {
 
     #[test]
     fn test_unsupported_format_error() {
+        pyo3::prepare_freethreaded_python();
         let error = KreuzbergError::UnsupportedFormat("application/unknown".to_string());
         let py_err = to_py_err(error);
 
@@ -213,6 +225,7 @@ mod tests {
 
     #[test]
     fn test_missing_dependency_error() {
+        pyo3::prepare_freethreaded_python();
         let error = KreuzbergError::MissingDependency("tesseract not found".to_string());
         let py_err = to_py_err(error);
 
@@ -223,6 +236,7 @@ mod tests {
 
     #[test]
     fn test_other_error() {
+        pyo3::prepare_freethreaded_python();
         let error = KreuzbergError::Other("unexpected error".to_string());
         let py_err = to_py_err(error);
 
@@ -246,6 +260,7 @@ mod tests {
 
     #[test]
     fn test_lock_poisoned_error() {
+        pyo3::prepare_freethreaded_python();
         let error = KreuzbergError::LockPoisoned("Registry lock poisoned".to_string());
         let py_err = to_py_err(error);
 
