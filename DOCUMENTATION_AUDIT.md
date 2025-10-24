@@ -126,105 +126,150 @@ This file tracks the coverage of all public APIs against the documentation. Use 
 
 ## 2. Python API (`packages/python/kreuzberg/`)
 
-### 2.1 Main Extraction Functions (via bindings)
+### 2.1 Package Documentation
+
+| File | Module Docstring | Usage Guide | Examples | Status |
+|------|------------------|-------------|----------|--------|
+| `__init__.py` | ✅ | ✅ (docs/examples/python.md) | ✅ | ✅ |
+| `types.py` | ✅ | ✅ (docs/examples/python.md) | ✅ | ✅ |
+| `exceptions.py` | ✅ | ✅ (docs/examples/python.md) | ✅ | ✅ |
+
+**Notes:**
+- `__init__.py` has comprehensive module docstring with:
+  - Architecture explanation (Rust core + Python wrapper)
+  - Python-specific features listed
+  - Custom PostProcessor creation example
+- All type classes have docstrings
+- All exception classes have excellent docstrings with examples
+- **EXCELLENT OVERALL**: Python API is well-documented at package level
+
+### 2.2 Main Extraction Functions (via bindings)
 
 | Function | Python Docs | Usage Guide | Examples | Status |
 |----------|-------------|-------------|----------|--------|
-| `extract_file()` | ❌ | ❌ | ❌ | ❌ |
-| `extract_file_sync()` | ❌ | ❌ | ❌ | ❌ |
-| `extract_bytes()` | ❌ | ❌ | ❌ | ❌ |
-| `extract_bytes_sync()` | ❌ | ❌ | ❌ | ❌ |
-| `batch_extract_file()` | ❌ | ❌ | ❌ | ❌ |
-| `batch_extract_file_sync()` | ❌ | ❌ | ❌ | ❌ |
-| `batch_extract_bytes()` | ❌ | ❌ | ❌ | ❌ |
-| `batch_extract_bytes_sync()` | ❌ | ❌ | ❌ | ❌ |
+| `extract_file()` | ✅ (via __init__.py) | ✅ (docs/examples/python.md) | ✅ | ✅ |
+| `extract_file_sync()` | ✅ (via __init__.py) | ✅ (docs/examples/python.md) | ✅ | ✅ |
+| `extract_bytes()` | ✅ (via __init__.py) | ✅ (docs/examples/python.md) | ✅ | ✅ |
+| `extract_bytes_sync()` | ✅ (via __init__.py) | ✅ (docs/examples/python.md) | ✅ | ✅ |
+| `batch_extract_files()` | ✅ (via __init__.py) | ✅ (docs/examples/python.md) | ✅ | ✅ |
+| `batch_extract_files_sync()` | ✅ (via __init__.py) | ✅ (docs/examples/python.md) | ✅ | ✅ |
+| `batch_extract_bytes()` | ✅ (via __init__.py) | ✅ (docs/examples/python.md) | ✅ | ✅ |
+| `batch_extract_bytes_sync()` | ✅ (via __init__.py) | ✅ (docs/examples/python.md) | ✅ | ✅ |
 
-### 2.2 Configuration Classes
+**Notes:**
+- Functions are imported from Rust bindings
+- Module docstring covers usage patterns
+- Full examples in docs/examples/python.md
+
+### 2.3 Configuration and Types
 
 | Class | Python Docs | Usage Guide | Examples | Status |
 |-------|-------------|-------------|----------|--------|
-| `ExtractionConfig` | ❌ | ❌ | ❌ | ❌ |
-| `OcrConfig` | ❌ | ❌ | ❌ | ❌ |
-| `PdfConfig` | ❌ | ❌ | ❌ | ❌ |
-| `ChunkingConfig` | ❌ | ❌ | ❌ | ❌ |
-| `TokenReductionConfig` | ❌ | ❌ | ❌ | ❌ |
-| `LanguageDetectionConfig` | ❌ | ❌ | ❌ | ❌ |
-| `ImageExtractionConfig` | ❌ | ❌ | ❌ | ❌ |
-| `PostProcessorConfig` | ❌ | ❌ | ❌ | ❌ |
-
-### 2.3 Types (`types.py`)
-
-| Type | Python Docs | Usage Guide | Examples | Status |
-|------|-------------|-------------|----------|--------|
-| `ExtractionResult` | ❌ | ❌ | ❌ | ❌ |
-| `ExtractionMetadata` | ❌ | ❌ | ❌ | ❌ |
-| `TableData` | ❌ | ❌ | ❌ | ❌ |
-| `ChunkData` | ❌ | ❌ | ❌ | ❌ |
+| All config classes | ✅ (from Rust) | ✅ (CLI usage.md) | ✅ | ✅ |
+| All metadata types | ✅ (TypedDict with docs) | ✅ (examples) | ✅ | ✅ |
 
 ### 2.4 Exceptions (`exceptions.py`)
 
-| Exception | Python Docs | Usage Guide | Examples | Status |
-|-----------|-------------|-------------|----------|--------|
-| `KreuzbergError` | ❌ | ❌ | ❌ | ❌ |
-| `ValidationError` | ❌ | ❌ | ❌ | ❌ |
-| `ParsingError` | ❌ | ❌ | ❌ | ❌ |
-| `OCRError` | ❌ | ❌ | ❌ | ❌ |
-| `MissingDependencyError` | ❌ | ❌ | ❌ | ❌ |
+| Exception | Docstring | Usage Guide | Examples | Status |
+|-----------|-----------|-------------|----------|--------|
+| `KreuzbergError` | ✅ | ✅ (CLAUDE.md) | ✅ | ✅ |
+| `ValidationError` | ✅ | ✅ (CLAUDE.md) | ✅ | ✅ |
+| `ParsingError` | ✅ | ✅ (CLAUDE.md) | ✅ | ✅ |
+| `OCRError` | ✅ | ✅ (CLAUDE.md) | ✅ | ✅ |
+| `MissingDependencyError` | ✅ | ✅ (CLAUDE.md) | ✅ | ✅ |
+
+**Notes:**
+- Each exception has comprehensive docstring with example
+- `MissingDependencyError` has `.create_for_package()` factory method with full docs
 
 ### 2.5 Python-Specific Features
 
-| Feature | Python Docs | Usage Guide | Examples | Status |
+| Feature | Module Docs | Usage Guide | Examples | Status |
 |---------|-------------|-------------|----------|--------|
-| EasyOCR backend | ❌ | ❌ | ❌ | ❌ |
-| PaddleOCR backend | ❌ | ❌ | ❌ | ❌ |
-| API Server (Litestar) | ✅ | ✅ | ✅ | ✅ |
-| MCP Server | ✅ | ✅ | ✅ | ✅ |
-| CLI proxy | ✅ | ✅ | ✅ | ✅ |
+| EasyOCR backend | ✅ | ✅ (docs/concepts/ocr.md) | ✅ | ✅ |
+| PaddleOCR backend | ✅ | ✅ (docs/concepts/ocr.md) | ✅ | ✅ |
+| PostProcessor protocol | ✅ | ✅ (docs/plugins/python-postprocessor.md) | ✅ | ✅ |
+| API Server (Litestar) | ✅ | ✅ (docs/concepts/server.md) | ✅ | ✅ |
+| MCP Server | ✅ | ✅ (docs/concepts/server.md) | ✅ | ✅ |
+| CLI proxy | ✅ | ✅ (docs/cli/usage.md) | ✅ | ✅ |
+
+**Notes:**
+- All Python-specific features have module docstrings
+- OCR backends have language support constants documented
 
 ---
 
 ## 3. TypeScript API (`packages/typescript/`)
 
-### 3.1 Main Extraction Functions
+### 3.1 Package Documentation
 
-| Function | TypeScript Docs | Usage Guide | Examples | Status |
-|----------|-----------------|-------------|----------|--------|
-| `extractFile()` | ❌ | ❌ | ❌ | ❌ |
-| `extractFileSync()` | ❌ | ❌ | ❌ | ❌ |
-| `extractBytes()` | ❌ | ❌ | ❌ | ❌ |
-| `extractBytesSync()` | ❌ | ❌ | ❌ | ❌ |
-| `batchExtractFile()` | ❌ | ❌ | ❌ | ❌ |
-| `batchExtractFileSync()` | ❌ | ❌ | ❌ | ❌ |
-| `batchExtractBytes()` | ❌ | ❌ | ❌ | ❌ |
-| `batchExtractBytesSync()` | ❌ | ❌ | ❌ | ❌ |
+| File | JSDoc/TSDoc | Usage Guide | Examples | Status |
+|------|-------------|-------------|----------|--------|
+| `index.ts` | ✅ | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
+| `types.ts` | ✅ | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
 
-### 3.2 Configuration Interfaces
+**Notes:**
+- `index.ts` has comprehensive JSDoc with:
+  - API usage recommendations (batch vs single extraction)
+  - Supported formats list
+  - Complete usage examples
+- `types.ts` has module-level documentation
+- **EXCELLENT OVERALL**: TypeScript API is well-documented with TSDoc
 
-| Interface | TypeScript Docs | Usage Guide | Examples | Status |
-|-----------|-----------------|-------------|----------|--------|
-| `ExtractionConfig` | ❌ | ❌ | ❌ | ❌ |
-| `OcrConfig` | ❌ | ❌ | ❌ | ❌ |
-| `PdfConfig` | ❌ | ❌ | ❌ | ❌ |
-| `ChunkingConfig` | ❌ | ❌ | ❌ | ❌ |
-| `TokenReductionConfig` | ❌ | ❌ | ❌ | ❌ |
-| `LanguageDetectionConfig` | ❌ | ❌ | ❌ | ❌ |
-| `ImageExtractionConfig` | ❌ | ❌ | ❌ | ❌ |
-| `PostProcessorConfig` | ❌ | ❌ | ❌ | ❌ |
+### 3.2 Main Extraction Functions
 
-### 3.3 Types (`types.ts`)
+| Function | TSDoc | Usage Guide | Examples | Status |
+|----------|-------|-------------|----------|--------|
+| `extractFile()` | ✅ (via index.ts) | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
+| `extractFileSync()` | ✅ (via index.ts) | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
+| `extractBytes()` | ✅ (via index.ts) | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
+| `extractBytesSync()` | ✅ (via index.ts) | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
+| `batchExtractFiles()` | ✅ (via index.ts) | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
+| `batchExtractFilesSync()` | ✅ (via index.ts) | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
+| `batchExtractBytes()` | ✅ (via index.ts) | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
+| `batchExtractBytesSync()` | ✅ (via index.ts) | ✅ (docs/examples/typescript.md) | ✅ | ✅ |
 
-| Type | TypeScript Docs | Usage Guide | Examples | Status |
-|------|-----------------|-------------|----------|--------|
-| `ExtractionResult` | ❌ | ❌ | ❌ | ❌ |
-| `ExtractionMetadata` | ❌ | ❌ | ❌ | ❌ |
-| `TableData` | ❌ | ❌ | ❌ | ❌ |
-| `ChunkData` | ❌ | ❌ | ❌ | ❌ |
+**Notes:**
+- Module-level JSDoc covers API usage patterns
+- Includes code examples in JSDoc
+- Full examples in docs/examples/typescript.md
 
-### 3.4 TypeScript-Specific Features
+### 3.3 Configuration Interfaces
 
-| Feature | TypeScript Docs | Usage Guide | Examples | Status |
-|---------|-----------------|-------------|----------|--------|
-| CLI proxy | ✅ | ✅ | ✅ | ✅ |
+| Interface | TSDoc | Usage Guide | Examples | Status |
+|-----------|-------|-------------|----------|--------|
+| `ExtractionConfig` | ✅ | ✅ (CLI usage.md) | ✅ | ✅ |
+| `OcrConfig` | ✅ | ✅ (docs/concepts/ocr.md) | ✅ | ✅ |
+| `PdfConfig` | ✅ | ✅ (CLI usage.md) | ✅ | ✅ |
+| `ChunkingConfig` | ✅ | ✅ (CLI usage.md) | ✅ | ✅ |
+| `TokenReductionConfig` | ✅ | ✅ (CLI usage.md) | ✅ | ✅ |
+| `LanguageDetectionConfig` | ✅ | ✅ (CLI usage.md) | ✅ | ✅ |
+| `ImageExtractionConfig` | ✅ | ✅ (CLI usage.md) | ✅ | ✅ |
+| `PostProcessorConfig` | ✅ | ✅ (docs/concepts/text-processing.md) | ✅ | ✅ |
+
+**Notes:**
+- All interfaces have proper TypeScript typing
+- Type definitions mirror Rust structures
+
+### 3.4 Types (`types.ts`)
+
+| Type | TSDoc | Usage Guide | Examples | Status |
+|------|-------|-------------|----------|--------|
+| `ExtractionResult` | ✅ | ✅ (examples) | ✅ | ✅ |
+| `Metadata` | ✅ | ✅ (examples) | ✅ | ✅ |
+| `Table` | ✅ | ✅ (CLI usage.md) | ✅ | ✅ |
+| Various metadata interfaces | ✅ | ✅ (per extractor) | ✅ | ✅ |
+
+**Notes:**
+- Module docstring explains type definitions
+- All interfaces properly typed
+
+### 3.5 TypeScript-Specific Features
+
+| Feature | TSDoc | Usage Guide | Examples | Status |
+|---------|-------|-------------|----------|--------|
+| CLI proxy | ✅ | ✅ (docs/cli/usage.md) | ✅ | ✅ |
+| NAPI bindings | ✅ | ✅ (index.ts) | ✅ | ✅ |
 
 ---
 
@@ -306,75 +351,48 @@ This file tracks the coverage of all public APIs against the documentation. Use 
 
 ## 6. Format-Specific Extractors
 
-### 6.1 PDF Extractor (`src/extraction/pdf.rs`)
+### 6.1 Extraction Functions (`src/extraction/`)
 
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
+These are low-level parsing functions used by the extractor plugins.
 
-### 6.2 Excel Extractor (`src/extraction/excel.rs`)
+| Module | Module Docs | Function Docs | Usage Guide | Status |
+|--------|-------------|---------------|-------------|--------|
+| `archive.rs` | ✅ | ✅ (type docs) | ✅ (CLI usage.md) | ✅ |
+| `email.rs` | ❌ | ✅ (parse_eml_content) | ✅ (examples) | 📝 |
+| `excel.rs` | ❌ | ❌ | ✅ (CLI usage.md) | 📝 |
+| `html.rs` | ❌ | ❌ | ✅ (examples) | 📝 |
+| `image.rs` | ✅ | ✅ | ✅ (examples) | ✅ |
+| `structured.rs` | ❌ | ❌ | ✅ (examples) | 📝 |
+| `text.rs` | ❌ | ❌ | ✅ (CLI usage.md) | 📝 |
+| `xml.rs` | ❌ | ❌ | ✅ (CLI usage.md) | 📝 |
+| `libreoffice.rs` | ❌ | ❌ | ✅ (CLAUDE.md) | 📝 |
+| `pptx.rs` | ❌ | ❌ | ✅ (examples) | 📝 |
+| `table.rs` | ❌ | ❌ | ✅ (CLI usage.md) | 📝 |
 
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
+**Notes:**
+- archive.rs and image.rs have good documentation
+- Most extraction modules lack module-level docs
+- **ACTION ITEM**: Add module docs to text.rs, xml.rs, structured.rs, email.rs, excel.rs, html.rs, pptx.rs
 
-### 6.3 Email Extractor (`src/extraction/email.rs`)
+### 6.2 Extractor Plugins (`src/extractors/`)
 
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
+These are the plugin implementations that use the extraction functions.
 
-### 6.4 HTML Extractor (`src/extraction/html.rs`)
+| Extractor | Module Docs | Struct Docs | Usage Guide | Status |
+|-----------|-------------|-------------|-------------|--------|
+| `PlainTextExtractor` (text.rs) | ✅ | ✅ | ✅ (CLI usage.md) | ✅ |
+| `MarkdownExtractor` (text.rs) | ✅ | ✅ | ✅ (CLI usage.md) | ✅ |
+| `ExcelExtractor` (excel.rs) | ✅ | ✅ | ✅ (CLI usage.md) | ✅ |
+| `EmailExtractor` (email.rs) | ❌ | ❌ | ✅ (examples) | 📝 |
+| `HtmlExtractor` (html.rs) | ❌ | ❌ | ✅ (examples) | 📝 |
+| `ImageExtractor` (image.rs) | ❌ | ❌ | ✅ (examples) | 📝 |
+| `StructuredDataExtractor` (structured.rs) | ❌ | ❌ | ✅ (examples) | 📝 |
+| `XmlExtractor` (xml.rs) | ❌ | ❌ | ✅ (CLI usage.md) | 📝 |
+| `ArchiveExtractor` (archive.rs) | ❌ | ❌ | ✅ (examples) | 📝 |
 
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
-
-### 6.5 XML Extractor (`src/extraction/xml.rs`)
-
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
-
-### 6.6 Plain Text Extractor (`src/extraction/text.rs`)
-
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
-
-### 6.7 Image Extractor (`src/extraction/image.rs`)
-
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
-
-### 6.8 Structured Data (JSON/YAML/TOML) (`src/extraction/structured.rs`)
-
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
-
-### 6.9 Pandoc Integration (`src/extraction/pandoc.rs`)
-
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
-
-### 6.10 LibreOffice Integration (`src/extraction/libreoffice.rs`)
-
-| Aspect | Rust Docs | Usage Guide | Examples | Status |
-|--------|-----------|-------------|----------|--------|
-| Module docs | ❌ | ❌ | ❌ | ❌ |
-| Public functions | ❌ | ❌ | ❌ | ❌ |
+**Notes:**
+- text.rs and excel.rs extractors have excellent documentation
+- **ACTION ITEM**: Add module and struct docs to remaining extractor plugins
 
 ---
 
