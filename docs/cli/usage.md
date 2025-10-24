@@ -623,6 +623,129 @@ kreuzberg extract large_files/*.pdf --workers 1 --no-parallel
 kreuzberg extract slow_file.pdf --timeout 300
 ```
 
+## Server Commands
+
+### Start API Server
+
+The `serve` command starts a RESTful HTTP API server:
+
+=== "Rust CLI"
+
+    ```bash
+    # Start server (default: 127.0.0.1:8000)
+    kreuzberg serve
+
+    # Specify host and port
+    kreuzberg serve --host 0.0.0.0 --port 3000
+
+    # With custom config
+    kreuzberg serve --config production.toml
+    ```
+
+=== "Python"
+
+    ```bash
+    # Start server via Python CLI proxy
+    python -m kreuzberg serve
+
+    # Specify host and port
+    python -m kreuzberg serve --host 0.0.0.0 --port 3000
+
+    # With custom config
+    python -m kreuzberg serve --config production.toml
+    ```
+
+=== "TypeScript"
+
+    ```bash
+    # Start server via TypeScript CLI proxy
+    npx kreuzberg serve
+
+    # Specify host and port
+    npx kreuzberg serve --host 0.0.0.0 --port 3000
+
+    # With custom config
+    npx kreuzberg serve --config production.toml
+    ```
+
+The server provides endpoints for:
+- `/extract` - Extract text from uploaded files
+- `/health` - Health check
+- `/info` - Server information
+- `/cache/stats` - Cache statistics
+- `/cache/clear` - Clear cache
+
+See [Server Documentation](../concepts/server.md) for full API details.
+
+### Start MCP Server
+
+The `mcp` command starts a Model Context Protocol server for AI integration:
+
+=== "Rust CLI"
+
+    ```bash
+    # Start MCP server (stdio transport)
+    kreuzberg mcp
+
+    # With custom config
+    kreuzberg mcp --config kreuzberg.toml
+    ```
+
+=== "Python"
+
+    ```bash
+    # Start MCP server via Python CLI proxy
+    python -m kreuzberg mcp
+
+    # With custom config
+    python -m kreuzberg mcp --config kreuzberg.toml
+    ```
+
+=== "TypeScript"
+
+    ```bash
+    # Start MCP server via TypeScript CLI proxy
+    npx kreuzberg mcp
+
+    # With custom config
+    npx kreuzberg mcp --config kreuzberg.toml
+    ```
+
+The MCP server provides tools for AI agents:
+- `extract_file` - Extract text from a file path
+- `extract_bytes` - Extract text from base64-encoded bytes
+- `batch_extract` - Extract from multiple files
+
+See [Server Documentation](../concepts/server.md) for MCP integration details.
+
+## Cache Management
+
+### View Cache Statistics
+
+```bash
+# Show cache statistics
+kreuzberg cache stats
+
+# Specify cache directory
+kreuzberg cache stats --cache-dir /path/to/cache
+
+# JSON output
+kreuzberg cache stats --format json
+```
+
+### Clear Cache
+
+```bash
+# Clear all cached files
+kreuzberg cache clear
+
+# Specify cache directory
+kreuzberg cache clear --cache-dir /path/to/cache
+
+# Show what was cleared
+kreuzberg cache clear --format json
+```
+
 ## Getting Help
 
 ### CLI Help
@@ -633,6 +756,9 @@ kreuzberg --help
 
 # Command help
 kreuzberg extract --help
+kreuzberg serve --help
+kreuzberg mcp --help
+kreuzberg cache --help
 
 # List all options
 kreuzberg extract --help-all
@@ -645,11 +771,12 @@ kreuzberg extract --help-all
 kreuzberg --version
 
 # Show detailed version info
-kreuzberg version --verbose
+kreuzberg version --format json
 ```
 
 ## Next Steps
 
+- [Server Documentation](../concepts/server.md) - API and MCP server setup
 - [Core Concepts](../concepts/architecture.md) - Understand Kreuzberg architecture
 - [Plugin Development](../plugins/overview.md) - Extend Kreuzberg functionality
 - [API Reference](../api-reference/python/) - Programmatic access
