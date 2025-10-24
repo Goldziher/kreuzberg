@@ -94,17 +94,17 @@ The API server provides RESTful HTTP endpoints for document extraction with mult
 
     ```bash
     # Run the API server in Docker
-    docker run -d -p 8000:8000 goldziher/kreuzberg:v4.0.0
+    docker run -d -p 8000:8000 goldziher/kreuzberg:latest
 
     # With custom config volume
     docker run -d -p 8000:8000 \
       -v $(pwd)/kreuzberg.toml:/app/kreuzberg.toml \
-      goldziher/kreuzberg:v4.0.0
+      goldziher/kreuzberg:latest
 
     # With cache persistence
     docker run -d -p 8000:8000 \
       -v $(pwd)/.kreuzberg:/app/.kreuzberg \
-      goldziher/kreuzberg:v4.0.0
+      goldziher/kreuzberg:latest
     ```
 
 ### Using the API
@@ -584,7 +584,7 @@ overlap = 100
       -e KREUZBERG_PORT=8000 \
       -e RUST_LOG=info \
       -p 8000:8000 \
-      goldziher/kreuzberg:v4.0.0
+      goldziher/kreuzberg:latest
     ```
 
 ## Error Handling
@@ -673,7 +673,7 @@ The API server is stateless (except for local cache) and can be scaled horizonta
     version: '3.8'
     services:
       kreuzberg:
-        image: goldziher/kreuzberg:v4.0.0
+        image: goldziher/kreuzberg:latest
         ports:
           - "8000:8000"
         environment:
@@ -717,7 +717,7 @@ The API server is stateless (except for local cache) and can be scaled horizonta
         spec:
           containers:
           - name: kreuzberg
-            image: goldziher/kreuzberg:v4.0.0
+            image: goldziher/kreuzberg:latest
             ports:
             - containerPort: 8000
             env:
@@ -957,10 +957,12 @@ Official Docker images include API server pre-configured:
 
 | Image | Description | Size |
 |-------|-------------|------|
-| `goldziher/kreuzberg:v4.0.0` | Core + Tesseract OCR + API | ~500MB |
-| `goldziher/kreuzberg:v4.0.0-easyocr` | Core + EasyOCR + API | ~2GB |
-| `goldziher/kreuzberg:v4.0.0-paddle` | Core + PaddleOCR + API | ~1.5GB |
-| `goldziher/kreuzberg:v4.0.0-all` | All features + API | ~3GB |
+| `goldziher/kreuzberg:latest` | Core + Tesseract OCR + API | ~500MB |
+| `goldziher/kreuzberg:latest-easyocr` | Core + EasyOCR + API | ~2GB |
+| `goldziher/kreuzberg:latest-paddle` | Core + PaddleOCR + API | ~1.5GB |
+| `goldziher/kreuzberg:latest-all` | All features + API | ~3GB |
+
+**Note**: After v4.0.0 release, versioned tags will be available (e.g., `4.0.0`, `4.0.0-easyocr`).
 
 ### Docker Compose Example
 
@@ -968,7 +970,7 @@ Official Docker images include API server pre-configured:
 version: '3.8'
 services:
   kreuzberg-api:
-    image: goldziher/kreuzberg:v4.0.0
+    image: goldziher/kreuzberg:latest
     ports:
       - "8000:8000"
     environment:
@@ -1103,7 +1105,7 @@ brew install tesseract
 sudo apt-get install tesseract-ocr
 
 # Docker: Use kreuzberg image (includes Tesseract)
-docker run -p 8000:8000 goldziher/kreuzberg:v4.0.0
+docker run -p 8000:8000 goldziher/kreuzberg:latest
 ```
 
 ### Cache Issues

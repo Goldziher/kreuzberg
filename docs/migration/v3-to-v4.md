@@ -570,7 +570,7 @@ python -m kreuzberg serve --host 0.0.0.0 --port 8000
 kreuzberg serve --port 8000
 
 # Or via Docker
-docker run -p 8000:8000 goldziher/kreuzberg:v4.0.0
+docker run -p 8000:8000 goldziher/kreuzberg:latest
 ```
 
 ### MCP Server
