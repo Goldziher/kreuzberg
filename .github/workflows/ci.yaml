@@ -255,7 +255,12 @@ jobs:
         shell: bash
         run: |
           echo "Attempting to load kreuzberg-node from TypeScript package context..."
-          node -e "try { const binding = require('kreuzberg-node'); console.log('✓ Binding loaded successfully'); console.log('Available exports:', Object.keys(binding)); } catch(e) { console.error('✗ Failed to load binding:', e.message); console.error('Stack:', e.stack); process.exit(1); }"
+          echo "Checking symlink..."
+          ls -la node_modules/kreuzberg-node || echo "Symlink not found"
+          echo "Checking .node file through symlink..."
+          ls -la node_modules/kreuzberg-node/*.node || echo ".node files not found through symlink"
+          echo "Attempting to load binding..."
+          node -e "try { const binding = require('kreuzberg-node'); console.log('✓ Binding loaded successfully'); console.log('Available exports:', Object.keys(binding)); } catch(e) { console.error('✗ Failed to load binding:', e.message); if (e.cause) { console.error('Cause chain:'); let cause = e.cause; while (cause) { console.error(' - ', cause.message || cause); cause = cause.cause; } } console.error('Stack:', e.stack); process.exit(1); }"
 
       - name: Run TypeScript tests without coverage
         if: matrix.os != 'ubuntu-latest'
