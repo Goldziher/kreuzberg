@@ -566,8 +566,15 @@ export function registerValidator(validator: ValidatorProtocol): void {
 	const wrappedValidator = {
 		name: validator.name.bind(validator),
 		priority: validator.priority?.bind(validator),
-		async validate(...args: string[]): Promise<string> {
-			const jsonString = args[0];
+		async validate(...args: unknown[]): Promise<string> {
+			// Validators receive result as first argument (unlike postprocessors which use args[1])
+			const jsonString = args[0] as string;
+
+			// Guard against undefined/null
+			if (!jsonString || jsonString === "undefined") {
+				throw new Error("Validator received invalid JSON string");
+			}
+
 			const wireResult = JSON.parse(jsonString);
 			const result: ExtractionResult = {
 				content: wireResult.content,

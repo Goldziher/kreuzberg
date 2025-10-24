@@ -230,6 +230,39 @@ jobs:
         run: |
           pnpm build
 
+      - name: Copy Pdfium library to NAPI bindings directory
+        shell: bash
+        run: |
+          # Find and copy pdfium library to the NAPI bindings directory
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            PDFIUM_LIB=$(find target -name "pdfium.dll" -type f | head -n 1)
+            if [ -n "$PDFIUM_LIB" ]; then
+              echo "Found pdfium library at: $PDFIUM_LIB"
+              cp "$PDFIUM_LIB" crates/kreuzberg-node/
+              echo "Copied pdfium.dll to crates/kreuzberg-node/"
+            else
+              echo "Warning: pdfium.dll not found in target directory"
+            fi
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            PDFIUM_LIB=$(find target -name "libpdfium.dylib" -type f | head -n 1)
+            if [ -n "$PDFIUM_LIB" ]; then
+              echo "Found pdfium library at: $PDFIUM_LIB"
+              cp "$PDFIUM_LIB" crates/kreuzberg-node/
+              echo "Copied libpdfium.dylib to crates/kreuzberg-node/"
+            else
+              echo "Warning: libpdfium.dylib not found in target directory"
+            fi
+          else
+            PDFIUM_LIB=$(find target -name "libpdfium.so" -type f | head -n 1)
+            if [ -n "$PDFIUM_LIB" ]; then
+              echo "Found pdfium library at: $PDFIUM_LIB"
+              cp "$PDFIUM_LIB" crates/kreuzberg-node/
+              echo "Copied libpdfium.so to crates/kreuzberg-node/"
+            else
+              echo "Warning: libpdfium.so not found in target directory"
+            fi
+          fi
+
       - name: Update workspace symlinks to include generated files
         run: |
           rm -rf packages/typescript/node_modules/kreuzberg-node

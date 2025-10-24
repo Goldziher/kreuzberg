@@ -83,8 +83,8 @@ describe("Error Handling", () => {
 		});
 	});
 
-	describe("Plugin registration (partial implementation)", () => {
-		it("should throw error when registering postprocessor", () => {
+	describe("Plugin registration", () => {
+		it("should allow registering postprocessor", () => {
 			const processor = {
 				name: () => "test_processor",
 				process: (result: any) => result,
@@ -93,32 +93,32 @@ describe("Error Handling", () => {
 
 			expect(() => {
 				registerPostProcessor(processor);
-			}).toThrow("PostProcessor registration not yet fully implemented");
+			}).not.toThrow();
 		});
 
 		it("should allow unregistering postprocessor", () => {
-			// unregister works even though register doesn't
 			expect(() => {
 				unregisterPostProcessor("test_processor");
 			}).not.toThrow();
 		});
 
 		it("should allow clearing postprocessors", () => {
-			// clear works even though register doesn't
 			expect(() => {
 				clearPostProcessors();
 			}).not.toThrow();
 		});
 
-		it("should throw error when registering OCR backend", () => {
+		it("should throw error when registering OCR backend (not yet implemented)", () => {
 			const backend = {
 				name: () => "test_ocr",
+				supportedLanguages: () => ["eng", "spa"],
+				processImage: async () => ({ content: "test", confidence: 1.0, textRegions: 1 }),
 				extractText: async () => ({ text: "test", confidence: 1.0 }),
 			};
 
 			expect(() => {
 				registerOcrBackend(backend);
-			}).toThrow("OCR backend registration not yet fully implemented");
+			}).toThrow(/not yet implemented/);
 		});
 	});
 });
