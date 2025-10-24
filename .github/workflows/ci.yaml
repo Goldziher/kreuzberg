@@ -94,7 +94,7 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Generate Rust coverage (unit tests)
-        run: cargo llvm-cov --no-default-features --lib --bins --lcov --output-path rust-coverage-unit.lcov
+        run: cargo llvm-cov --no-default-features --lib --bins --exclude kreuzberg-py --lcov --output-path rust-coverage-unit.lcov
 
       - name: Generate Rust coverage (integration tests with all features)
         run: cargo llvm-cov --features full --tests --lcov --output-path rust-coverage-integration.lcov
