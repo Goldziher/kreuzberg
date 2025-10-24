@@ -20,7 +20,7 @@ pub struct NormalizeResult {
 /// Normalize image DPI based on extraction configuration
 ///
 /// # Arguments
-/// * `rgb_data` - RGB image data as a flat Vec<u8> (height * width * 3 bytes, row-major)
+/// * `rgb_data` - RGB image data as a flat `Vec<u8>` (height * width * 3 bytes, row-major)
 /// * `width` - Image width in pixels
 /// * `height` - Image height in pixels
 /// * `config` - Extraction configuration containing DPI settings
