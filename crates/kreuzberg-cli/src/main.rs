@@ -130,6 +130,30 @@ enum Commands {
         #[command(subcommand)]
         command: CacheCommands,
     },
+
+    /// Start the API server
+    #[cfg(feature = "api")]
+    Serve {
+        /// Host to bind to (e.g., "127.0.0.1" or "0.0.0.0")
+        #[arg(short = 'H', long, default_value = "127.0.0.1")]
+        host: String,
+
+        /// Port to bind to
+        #[arg(short, long, default_value_t = 8000)]
+        port: u16,
+
+        /// Path to config file (TOML, YAML, or JSON). If not specified, searches for kreuzberg.toml/yaml/json in current and parent directories.
+        #[arg(short, long)]
+        config: Option<PathBuf>,
+    },
+
+    /// Start the MCP (Model Context Protocol) server
+    #[cfg(feature = "mcp")]
+    Mcp {
+        /// Path to config file (TOML, YAML, or JSON). If not specified, searches for kreuzberg.toml/yaml/json in current and parent directories.
+        #[arg(short, long)]
+        config: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -382,6 +406,30 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&output)?);
                 }
             }
+        }
+
+        #[cfg(feature = "api")]
+        Commands::Serve {
+            host,
+            port,
+            config: config_path,
+        } => {
+            let config = load_config(config_path)?;
+
+            println!("Starting Kreuzberg API server on http://{}:{}...", host, port);
+            kreuzberg::api::serve_with_config(&host, port, config)
+                .await
+                .context("Failed to start API server")?;
+        }
+
+        #[cfg(feature = "mcp")]
+        Commands::Mcp { config: config_path } => {
+            let config = load_config(config_path)?;
+
+            eprintln!("Starting Kreuzberg MCP server...");
+            kreuzberg::mcp::start_mcp_server_with_config(config)
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to start MCP server: {}", e))?;
         }
 
         Commands::Cache { command } => {

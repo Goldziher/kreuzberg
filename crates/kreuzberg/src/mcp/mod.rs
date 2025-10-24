@@ -24,6 +24,6 @@
 
 mod server;
 
-pub use server::start_mcp_server;
+pub use server::{start_mcp_server, start_mcp_server_with_config};
 
 pub use server::KreuzbergMcp;

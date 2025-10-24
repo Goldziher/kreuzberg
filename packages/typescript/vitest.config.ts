@@ -4,10 +4,10 @@ export default defineConfig({
 	test: {
 		globals: true,
 		environment: "node",
-		pool: "threads",
+		pool: "forks",
 		poolOptions: {
-			threads: {
-				singleThread: true,
+			forks: {
+				singleFork: true,
 			},
 		},
 		coverage: {

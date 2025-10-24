@@ -14,6 +14,15 @@ tokio = { version = "1.48", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0"
 serde_json = "1.0"
 
+[features]
+default = []
+api = ["kreuzberg/api"]
+mcp = ["kreuzberg/mcp"]
+all = ["api", "mcp"]
+
 [[bin]]
 name = "kreuzberg"
 path = "src/main.rs"
+
+[dev-dependencies]
+ureq = { version = "2.10", features = ["json"] }

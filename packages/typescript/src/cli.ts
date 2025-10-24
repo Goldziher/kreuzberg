@@ -7,15 +7,32 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import which from "which";
 
 function main(argv: string[]): number {
 	const args = argv.slice(2);
 
-	let cliPath: string;
+	// Try to find the CLI binary on PATH first (production mode)
+	let cliPath: string | undefined;
 	try {
 		cliPath = which.sync("kreuzberg-cli");
 	} catch {
+		// Not found on PATH
+	}
+
+	// In development mode, look for the binary in target/release
+	if (!cliPath) {
+		const __dirname = typeof __filename !== "undefined" ? dirname(__filename) : dirname(fileURLToPath(import.meta.url));
+		const devBinary = join(__dirname, "..", "..", "..", "target", "release", "kreuzberg");
+		if (existsSync(devBinary)) {
+			cliPath = devBinary;
+		}
+	}
+
+	if (!cliPath) {
 		console.error(
 			"The embedded Kreuzberg CLI binary could not be located. " +
 				"This indicates a packaging issue; please open an issue at " +

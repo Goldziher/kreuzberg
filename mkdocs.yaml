@@ -141,6 +141,8 @@ nav:
       - Architecture: concepts/architecture.md
       - Extractors: concepts/extractors.md
       - OCR System: concepts/ocr.md
+      - Text Processing: concepts/text-processing.md
+      - Server Features: concepts/server.md
       - Plugin System: concepts/plugins.md
   - Plugin Development:
       - Overview: plugins/overview.md

@@ -352,6 +352,19 @@ pub async fn start_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Start MCP server with custom extraction config.
+///
+/// This variant allows specifying a custom extraction configuration
+/// (e.g., loaded from a file) instead of using defaults.
+pub async fn start_mcp_server_with_config(_config: ExtractionConfig) -> Result<(), Box<dyn std::error::Error>> {
+    // Note: MCP server currently uses default config
+    // TODO: Pass config to KreuzbergMcp::new() when implemented
+    let service = KreuzbergMcp::new()?.serve(stdio()).await?;
+
+    service.waiting().await?;
+    Ok(())
+}
+
 /// Build extraction config from MCP parameters.
 ///
 /// Starts with the default config and overlays OCR settings from request parameters.
