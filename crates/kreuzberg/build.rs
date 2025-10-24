@@ -28,6 +28,19 @@ fn main() {
         eprintln!("Pdfium library already present at {}", lib_file.display());
     }
 
+    // On Windows, ensure pdfium.dll.lib is renamed to pdfium.lib
+    // This handles both fresh downloads and cached versions
+    if target.contains("windows") {
+        let lib_dir = pdfium_dir.join("lib");
+        let dll_lib = lib_dir.join("pdfium.dll.lib");
+        let expected_lib = lib_dir.join("pdfium.lib");
+
+        if dll_lib.exists() && !expected_lib.exists() {
+            eprintln!("Renaming cached {} to {}", dll_lib.display(), expected_lib.display());
+            fs::rename(&dll_lib, &expected_lib).expect("Failed to rename pdfium.dll.lib to pdfium.lib");
+        }
+    }
+
     let lib_dir = pdfium_dir.join("lib");
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
     println!("cargo:rustc-link-lib=dylib={}", lib_name);
@@ -200,6 +213,22 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &PathBuf) {
     }
 
     fs::remove_file(&archive_path).ok();
+
+    // On Windows, bblanchon/pdfium-binaries names the import library pdfium.dll.lib
+    // but the linker expects pdfium.lib. Rename it after extraction.
+    let target = env::var("TARGET").unwrap();
+    if target.contains("windows") {
+        let lib_dir = dest_dir.join("lib");
+        let dll_lib = lib_dir.join("pdfium.dll.lib");
+        let expected_lib = lib_dir.join("pdfium.lib");
+
+        if dll_lib.exists() {
+            eprintln!("Renaming {} to {}", dll_lib.display(), expected_lib.display());
+            fs::rename(&dll_lib, &expected_lib).expect("Failed to rename pdfium.dll.lib to pdfium.lib");
+        } else {
+            eprintln!("Warning: Expected {} not found after extraction", dll_lib.display());
+        }
+    }
 
     eprintln!("Pdfium downloaded and extracted successfully");
 }
