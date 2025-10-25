@@ -264,6 +264,7 @@ jobs:
           fi
 
       - name: Update workspace symlinks to include generated files
+        shell: bash
         run: |
           rm -rf packages/typescript/node_modules/kreuzberg-node
           pnpm install
