@@ -8,6 +8,9 @@ import pytest
 from kreuzberg import ExtractionConfig, ImageExtractionConfig, extract_file
 
 
+@pytest.mark.skip(
+    reason="Image extraction removed from general ExtractionResult in v4 - images are now format-specific"
+)
 @pytest.mark.asyncio
 async def test_extract_images_from_pdf_smoke(searchable_pdf: Any) -> None:
     cfg = ExtractionConfig(images=ImageExtractionConfig())

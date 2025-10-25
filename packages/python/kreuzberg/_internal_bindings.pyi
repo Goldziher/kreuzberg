@@ -248,7 +248,6 @@ class ExtractionResult:
     metadata: dict[str, Any]
     tables: list[ExtractedTable]
     detected_languages: list[str] | None
-    images: list[dict[str, Any]] | None
 
 class ExtractedTable:
     cells: list[list[str]]

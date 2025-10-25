@@ -21,6 +21,9 @@ def _candidate_paths(base: Path) -> list[Path]:
     return [base / "pdfs" / name for name in REAL_PDFS if (base / "pdfs" / name).exists()]
 
 
+@pytest.mark.skip(
+    reason="Image extraction removed from general ExtractionResult in v4 - images are now format-specific"
+)
 @pytest.mark.asyncio
 async def test_extract_images_from_real_pdfs_runs(test_files_path: Path) -> None:
     cfg = ExtractionConfig(images=ImageExtractionConfig())
@@ -35,6 +38,9 @@ async def test_extract_images_from_real_pdfs_runs(test_files_path: Path) -> None
             assert isinstance(img.format, str)
 
 
+@pytest.mark.skip(
+    reason="Image extraction removed from general ExtractionResult in v4 - images are now format-specific"
+)
 @pytest.mark.asyncio
 async def test_at_least_one_real_pdf_has_images(test_files_path: Path) -> None:
     cfg = ExtractionConfig(images=ImageExtractionConfig())
