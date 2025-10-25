@@ -515,51 +515,94 @@ rules:
         - `validator.rs`: `Validator` trait for validation hooks
         - `registry.rs`: Plugin registries (4 types: extractor, OCR, processor, validator)
 
-      - **Extractors** (src/extraction/): Built-in format extractors
-        - `pdf.rs`: PDF extraction (pdfium-render)
-        - `excel.rs`: Excel/spreadsheets (calamine)
-        - `email.rs`: Email extraction (mail-parser)
-        - `html.rs`: HTML to markdown (html-to-markdown-rs)
-        - `xml.rs`: XML streaming parser (quick-xml)
-        - `text.rs`: Plain text/markdown streaming parser
-        - `image.rs`: Image extraction
-        - `structured.rs`: JSON/YAML/TOML parsing
-        - `pandoc.rs`: Pandoc integration (subprocess)
-        - `libreoffice.rs`: LibreOffice conversion (subprocess)
+      - **Extraction Layer** (dual structure for separation of concerns):
+        - **src/extraction/**: Core extraction implementations
+          - `pdf.rs`: PDF extraction (pdfium-render)
+          - `excel.rs`: Excel/spreadsheets (calamine)
+          - `email.rs`: Email extraction (mail-parser)
+          - `html.rs`: HTML to markdown (html-to-markdown-rs)
+          - `xml.rs`: XML streaming parser (quick-xml)
+          - `text.rs`: Plain text/markdown streaming parser
+          - `image.rs`: Image extraction
+          - `structured.rs`: JSON/YAML/TOML parsing
+          - `archive.rs`: Archive extraction (ZIP, TAR, etc.)
+          - `pptx.rs`: PowerPoint extraction
+          - `table.rs`: Table extraction
+          - `libreoffice.rs`: LibreOffice conversion (subprocess)
+          - `pandoc/`: Pandoc integration (subprocess)
+        - **src/extractors/**: `DocumentExtractor` trait wrappers
+          - Registers format handlers with the plugin system
+          - Provides MIME type → implementation mappings
+          - Delegates to src/extraction/ implementations
 
-      - **OCR** (src/ocr/): OCR subsystem
+      - **OCR Subsystem** (src/ocr/): OCR processing and table extraction
         - `processor.rs`: OCR orchestration
-        - `tesseract.rs`: Native Tesseract backend (tesseract-rs)
+        - `tesseract_backend.rs`: Native Tesseract backend (tesseract-rs)
         - `cache.rs`: OCR result caching
         - `types.rs`: OCR-specific types
+        - `validation.rs`: OCR result validation
+        - `hocr.rs`: HOCR format support
+        - `utils.rs`: OCR utilities
         - `table/`: Table detection and reconstruction
 
-      - **Utilities**: PDF (src/pdf/), image (src/image/), text (src/text/), cache (src/cache/)
+      - **Additional Modules**:
+        - `src/api/`: API server interfaces
+        - `src/chunking/`: Text chunking algorithms
+        - `src/keywords/`: Keyword extraction
+        - `src/stopwords/`: Stopwords filtering
+        - `src/mcp/`: Model Context Protocol support
+        - `src/language_detection.rs`: Language detection integration
+        - `src/pdf/`: PDF utilities (images, etc.)
+        - `src/image/`: Image processing utilities
+        - `src/text/`: Text processing utilities
+        - `src/cache/`: Cache management
+        - `src/types.rs`: Core type definitions
+        - `src/error.rs`: Error type definitions
 
-      ### Python Package Structure
-      - **Python API** (kreuzberg/): Thin proxy to Rust core, Python-specific features
-        - Entry point: `extraction.py` proxies to Rust via `_internal_bindings`
-        - Python OCR backends: EasyOCR, PaddleOCR (registered with Rust core as plugins)
-        - API server: Litestar framework in `_api/main.py`
-        - CLI: Click-based command-line interface
+      ### Multi-Language Support
+      - **Python Package** (packages/python/kreuzberg/):
+        - Thin proxy to Rust core via `_internal_bindings.abi3.so` (PyO3)
+        - Python-specific OCR backends: EasyOCR, PaddleOCR
+        - Custom postprocessors
+        - Type stubs (`_internal_bindings.pyi`)
 
-      - **PyO3 Bindings** (crates/kreuzberg-py/): Rust-Python FFI bridge
-        - Exposes Rust core functions to Python
-        - Handles type conversion between Rust and Python
+      - **TypeScript/Node.js Package** (packages/typescript/):
+        - NAPI-RS bindings (crates/kreuzberg-node)
+        - TypeScript SDK with full type definitions
+        - Promise-based async API
+        - Node.js native module
+
+      - **Python Bindings** (crates/kreuzberg-py/):
+        - PyO3 FFI bridge exposing Rust core to Python
+        - Type conversion between Rust and Python
         - Plugin registration bridge for Python-based plugins
 
+      - **Node Bindings** (crates/kreuzberg-node/):
+        - NAPI-RS FFI bridge exposing Rust core to Node.js
+        - JavaScript native module compilation
+        - Type definitions generation
+
       ### Key Architectural Concepts
-      - **Rust-first design**: Core extraction logic in Rust for performance
+      - **Rust-first design**: Core extraction logic in Rust for performance (10-50x speedup)
       - **Plugin-based extensibility**: Traits allow cross-language plugins
       - **Async throughout**: Tokio runtime, full async/await support
       - **Registry pattern**: MIME type → extractor mapping with priority support
-      - **Multi-language**: Rust core usable standalone, Python/TypeScript via bindings
-      - **Thin bindings**: Python/Node packages are minimal wrappers around Rust core
+      - **Multi-language support**: Rust core usable standalone, Python/TypeScript/Node.js via thin bindings
       - **Zero-copy where possible**: Efficient data passing across FFI boundaries
+      - **Streaming parsers**: Memory-efficient processing of large files (XML, text, archives)
+      - **Dual extraction structure**: Core implementations (extraction/) + plugin wrappers (extractors/)
+
+      ### Data Flow
+      ```
+      File → MIME Detection → Registry Lookup → Extractor → Pipeline → Result
+                                                   ↓
+                                            (Optional OCR)
+      ```
 
       ### Adding New Features
       - **Rust extractors**: Implement `DocumentExtractor` trait, register with `ExtractorRegistry`
       - **Python OCR backends**: Implement Python OCR interface, register via `_internal_bindings`
+      - **Node.js features**: Add to TypeScript SDK (packages/typescript/)
       - **Configuration**: Extend `ExtractionConfig` struct in Rust core
       - **Validators/Processors**: Implement respective traits, register with appropriate registry
     name: Architecture
