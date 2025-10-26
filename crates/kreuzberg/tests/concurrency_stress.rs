@@ -338,6 +338,7 @@ async fn test_concurrent_pipeline_processing() {
                 tables: vec![],
                 detected_languages: None,
                 chunks: None,
+                images: None,
             };
 
             run_pipeline(result, &config).await

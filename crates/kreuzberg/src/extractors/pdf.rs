@@ -157,17 +157,49 @@ impl DocumentExtractor for PdfExtractor {
             }
         };
 
+        // Extract images if configured
+        let images = if config.images.is_some() {
+            match crate::pdf::images::extract_images_from_pdf(content) {
+                Ok(pdf_images) => Some(
+                    pdf_images
+                        .into_iter()
+                        .enumerate()
+                        .map(|(idx, img)| {
+                            let format = img.filters.first().cloned().unwrap_or_else(|| "unknown".to_string());
+                            crate::types::ExtractedImage {
+                                data: img.data,
+                                format,
+                                image_index: idx,
+                                page_number: Some(img.page_number),
+                                width: Some(img.width as u32),
+                                height: Some(img.height as u32),
+                                colorspace: img.color_space,
+                                bits_per_component: img.bits_per_component.map(|b| b as u32),
+                                is_mask: false,
+                                description: None,
+                                ocr_result: None,
+                            }
+                        })
+                        .collect(),
+                ),
+                Err(_) => None, // If image extraction fails, continue without images
+            }
+        } else {
+            None
+        };
+
         Ok(ExtractionResult {
             content: text,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
                 #[cfg(feature = "pdf")]
-                pdf: Some(pdf_metadata),
+                format: Some(crate::types::FormatMetadata::Pdf(pdf_metadata)),
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images,
         })
     }
 

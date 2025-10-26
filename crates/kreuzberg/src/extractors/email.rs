@@ -79,7 +79,7 @@ impl DocumentExtractor for EmailExtractor {
             content: text,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
-                email: Some(email_metadata),
+                format: Some(crate::types::FormatMetadata::Email(email_metadata)),
                 subject: email_result.subject.clone(),
                 date: email_result.date.clone(),
                 additional,
@@ -88,6 +88,7 @@ impl DocumentExtractor for EmailExtractor {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 

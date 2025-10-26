@@ -33,7 +33,6 @@ use html_to_markdown_rs::{
     InlineImageConfig as RustInlineImageConfig, InlineImageFormat, ListIndentType, NewlineStyle, PreprocessingOptions,
     PreprocessingPreset, WhitespaceMode, convert as convert_html, convert_with_inline_images,
 };
-use saphyr::LoadableYamlNode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -480,28 +479,17 @@ pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, Stri
         return Ok((None, remaining_content.to_string()));
     }
 
-    // Parse YAML using saphyr
-    let yaml_docs = saphyr::Yaml::load_from_str(yaml_content)
+    // Parse YAML using serde_yaml_ng
+    let yaml_value: serde_json::Value = serde_yaml_ng::from_str(yaml_content)
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse YAML frontmatter: {}", e)))?;
-
-    if yaml_docs.is_empty() {
-        return Ok((None, remaining_content.to_string()));
-    }
-
-    let yaml_doc = &yaml_docs[0];
 
     // Extract metadata fields
     let mut metadata = HtmlMetadata::default();
 
-    if let saphyr::Yaml::Mapping(mapping) = yaml_doc {
+    if let serde_json::Value::Object(mapping) = yaml_value {
         for (key, value) in mapping {
-            if let (saphyr::Yaml::Value(saphyr::Scalar::String(k)), saphyr::Yaml::Value(saphyr::Scalar::String(v))) =
-                (key, value)
-            {
-                let key_str = k.to_string();
-                let value_str = v.to_string();
-
-                match key_str.as_str() {
+            if let serde_json::Value::String(value_str) = value {
+                match key.as_str() {
                     "title" => metadata.title = Some(value_str),
                     "base-href" => metadata.base_href = Some(value_str),
                     "canonical" => metadata.canonical = Some(value_str),

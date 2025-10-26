@@ -335,11 +335,197 @@ impl From<kreuzberg::OcrConfig> for OcrConfig {
     }
 }
 
-/// Chunking configuration.
+/// Embedding model type.
+///
+/// Specifies which model to use for embedding generation.
+///
+/// Available presets:
+///     - "fast": AllMiniLML6V2Q (384 dimensions) - Quick prototyping, low-latency
+///     - "balanced": BGEBaseENV15 (768 dimensions) - General-purpose RAG
+///     - "quality": BGELargeENV15 (1024 dimensions) - High-quality embeddings
+///     - "multilingual": MultilingualE5Base (768 dimensions) - Multi-language support
 ///
 /// Example:
-///     >>> from kreuzberg import ChunkingConfig
-///     >>> config = ChunkingConfig(max_chars=2000, max_overlap=300)
+///     >>> from kreuzberg import EmbeddingModelType
+///     >>> # Use a preset
+///     >>> model = EmbeddingModelType.preset("balanced")
+///     >>> # Use a specific FastEmbed model
+///     >>> model = EmbeddingModelType.fastembed("BGEBaseENV15", 768)
+///     >>> # Use a custom model
+///     >>> model = EmbeddingModelType.custom("my-model", 512)
+#[pyclass(name = "EmbeddingModelType", module = "kreuzberg")]
+#[derive(Clone)]
+pub struct EmbeddingModelType {
+    inner: kreuzberg::EmbeddingModelType,
+}
+
+#[pymethods]
+impl EmbeddingModelType {
+    /// Create a model type from a preset name.
+    #[staticmethod]
+    fn preset(name: String) -> Self {
+        Self {
+            inner: kreuzberg::EmbeddingModelType::Preset { name },
+        }
+    }
+
+    /// Create a model type from a FastEmbed model name.
+    #[staticmethod]
+    fn fastembed(model: String, dimensions: usize) -> Self {
+        Self {
+            inner: kreuzberg::EmbeddingModelType::FastEmbed { model, dimensions },
+        }
+    }
+
+    /// Create a custom ONNX model type.
+    #[staticmethod]
+    fn custom(model_id: String, dimensions: usize) -> Self {
+        Self {
+            inner: kreuzberg::EmbeddingModelType::Custom { model_id, dimensions },
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        match &self.inner {
+            kreuzberg::EmbeddingModelType::Preset { name } => format!("EmbeddingModelType.preset('{}')", name),
+            kreuzberg::EmbeddingModelType::FastEmbed { model, dimensions } => {
+                format!("EmbeddingModelType.fastembed('{}', {})", model, dimensions)
+            }
+            kreuzberg::EmbeddingModelType::Custom { model_id, dimensions } => {
+                format!("EmbeddingModelType.custom('{}', {})", model_id, dimensions)
+            }
+        }
+    }
+}
+
+impl From<EmbeddingModelType> for kreuzberg::EmbeddingModelType {
+    fn from(model: EmbeddingModelType) -> Self {
+        model.inner
+    }
+}
+
+impl From<kreuzberg::EmbeddingModelType> for EmbeddingModelType {
+    fn from(model: kreuzberg::EmbeddingModelType) -> Self {
+        Self { inner: model }
+    }
+}
+
+/// Embedding configuration.
+///
+/// Controls embedding generation for text chunks.
+///
+/// Attributes:
+///     model (EmbeddingModelType): Model to use (default: preset("balanced"))
+///     normalize (bool): Normalize embeddings to unit length (default: True)
+///     batch_size (int): Batch size for embedding generation (default: 32)
+///     show_download_progress (bool): Show model download progress (default: False)
+///     cache_dir (str | None): Custom cache directory for models (default: None)
+///
+/// Example:
+///     >>> from kreuzberg import EmbeddingConfig, EmbeddingModelType
+///     >>> config = EmbeddingConfig(
+///     ...     model=EmbeddingModelType.preset("balanced"),
+///     ...     normalize=True,
+///     ...     batch_size=32
+///     ... )
+#[pyclass(name = "EmbeddingConfig", module = "kreuzberg")]
+#[derive(Clone)]
+pub struct EmbeddingConfig {
+    inner: kreuzberg::EmbeddingConfig,
+}
+
+#[pymethods]
+impl EmbeddingConfig {
+    #[new]
+    #[pyo3(signature = (model=None, normalize=None, batch_size=None, show_download_progress=None, cache_dir=None))]
+    fn new(
+        model: Option<EmbeddingModelType>,
+        normalize: Option<bool>,
+        batch_size: Option<usize>,
+        show_download_progress: Option<bool>,
+        cache_dir: Option<String>,
+    ) -> Self {
+        Self {
+            inner: kreuzberg::EmbeddingConfig {
+                model: model.map(Into::into).unwrap_or(kreuzberg::EmbeddingModelType::Preset {
+                    name: "balanced".to_string(),
+                }),
+                normalize: normalize.unwrap_or(true),
+                batch_size: batch_size.unwrap_or(32),
+                show_download_progress: show_download_progress.unwrap_or(false),
+                cache_dir: cache_dir.map(std::path::PathBuf::from),
+            },
+        }
+    }
+
+    #[getter]
+    fn normalize(&self) -> bool {
+        self.inner.normalize
+    }
+
+    #[setter]
+    fn set_normalize(&mut self, value: bool) {
+        self.inner.normalize = value;
+    }
+
+    #[getter]
+    fn batch_size(&self) -> usize {
+        self.inner.batch_size
+    }
+
+    #[setter]
+    fn set_batch_size(&mut self, value: usize) {
+        self.inner.batch_size = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "EmbeddingConfig(normalize={}, batch_size={})",
+            self.inner.normalize, self.inner.batch_size
+        )
+    }
+}
+
+impl From<EmbeddingConfig> for kreuzberg::EmbeddingConfig {
+    fn from(config: EmbeddingConfig) -> Self {
+        config.inner
+    }
+}
+
+impl From<kreuzberg::EmbeddingConfig> for EmbeddingConfig {
+    fn from(config: kreuzberg::EmbeddingConfig) -> Self {
+        Self { inner: config }
+    }
+}
+
+/// Chunking configuration.
+///
+/// Controls how text is split into chunks with optional embedding generation.
+///
+/// Attributes:
+///     max_chars (int): Maximum characters per chunk (default: 1000)
+///     max_overlap (int): Overlap between chunks in characters (default: 200, must be < max_chars)
+///     embedding (EmbeddingConfig | None): Embedding configuration (default: None)
+///     preset (str | None): Chunking preset to use (default: None)
+///
+/// Important:
+///     The max_overlap must be less than max_chars, otherwise a validation error will be raised.
+///
+/// Example:
+///     >>> from kreuzberg import ChunkingConfig, EmbeddingConfig, EmbeddingModelType
+///     >>> # Basic chunking without embeddings
+///     >>> basic = ChunkingConfig(max_chars=1000, max_overlap=200)
+///     >>>
+///     >>> # Chunking with embeddings
+///     >>> embedding = EmbeddingConfig(
+///     ...     model=EmbeddingModelType.preset("fast"),
+///     ...     normalize=True
+///     ... )
+///     >>> config = ChunkingConfig(
+///     ...     max_chars=2000,
+///     ...     max_overlap=400,
+///     ...     embedding=embedding
+///     ... )
 #[pyclass(name = "ChunkingConfig", module = "kreuzberg")]
 #[derive(Clone)]
 pub struct ChunkingConfig {
@@ -349,12 +535,19 @@ pub struct ChunkingConfig {
 #[pymethods]
 impl ChunkingConfig {
     #[new]
-    #[pyo3(signature = (max_chars=None, max_overlap=None))]
-    fn new(max_chars: Option<usize>, max_overlap: Option<usize>) -> Self {
+    #[pyo3(signature = (max_chars=None, max_overlap=None, embedding=None, preset=None))]
+    fn new(
+        max_chars: Option<usize>,
+        max_overlap: Option<usize>,
+        embedding: Option<EmbeddingConfig>,
+        preset: Option<String>,
+    ) -> Self {
         Self {
             inner: kreuzberg::ChunkingConfig {
                 max_chars: max_chars.unwrap_or(1000),
                 max_overlap: max_overlap.unwrap_or(200),
+                embedding: embedding.map(Into::into),
+                preset,
             },
         }
     }
@@ -379,10 +572,37 @@ impl ChunkingConfig {
         self.inner.max_overlap = value;
     }
 
+    #[getter]
+    fn embedding(&self) -> Option<EmbeddingConfig> {
+        self.inner.embedding.clone().map(Into::into)
+    }
+
+    #[setter]
+    fn set_embedding(&mut self, value: Option<EmbeddingConfig>) {
+        self.inner.embedding = value.map(Into::into);
+    }
+
+    #[getter]
+    fn preset(&self) -> Option<String> {
+        self.inner.preset.clone()
+    }
+
+    #[setter]
+    fn set_preset(&mut self, value: Option<String>) {
+        self.inner.preset = value;
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "ChunkingConfig(max_chars={}, max_overlap={})",
-            self.inner.max_chars, self.inner.max_overlap
+            "ChunkingConfig(max_chars={}, max_overlap={}, embedding={}, preset={})",
+            self.inner.max_chars,
+            self.inner.max_overlap,
+            if self.inner.embedding.is_some() { "..." } else { "None" },
+            self.inner
+                .preset
+                .as_ref()
+                .map(|s| format!("'{}'", s))
+                .unwrap_or_else(|| "None".to_string())
         )
     }
 }

@@ -228,15 +228,38 @@ ocr_config = OcrConfig(
 
 ### ChunkingConfig
 
-Configure content chunking for large documents:
+Configure content chunking for large documents with optional embedding generation:
 
 ```python
-from kreuzberg import ChunkingConfig
-
-chunking_config = ChunkingConfig(
-    max_chars=1000,   # Maximum characters per chunk
-    max_overlap=100,  # Overlap between chunks
+from kreuzberg._internal_bindings import (
+    ChunkingConfig,
+    EmbeddingConfig,
+    EmbeddingModelType,
 )
+
+# Basic chunking without embeddings
+basic_chunking = ChunkingConfig(
+    max_chars=1000,   # Maximum characters per chunk
+    max_overlap=100,  # Overlap between chunks (must be < max_chars)
+)
+
+# Chunking with embedding generation
+embedding_config = EmbeddingConfig(
+    model=EmbeddingModelType.preset("fast"),  # 384-dimensional embeddings
+    normalize=True,
+    batch_size=32,
+)
+
+chunking_with_embeddings = ChunkingConfig(
+    max_chars=1000,
+    max_overlap=200,
+    embedding=embedding_config,
+)
+
+# Use with ExtractionConfig
+from kreuzberg import ExtractionConfig
+
+config = ExtractionConfig(chunking=chunking_with_embeddings)
 ```
 
 ## Working with Results
@@ -271,7 +294,15 @@ if result.detected_languages:
 # Chunks (if chunking enabled)
 if result.chunks:
     for i, chunk in enumerate(result.chunks):
-        print(f"Chunk {i + 1}: {len(chunk)} chars")
+        print(f"Chunk {i + 1}: {chunk['content'][:50]}...")
+
+        # Access embedding if generated
+        if chunk['embedding']:
+            print(f"  Embedding dimensions: {len(chunk['embedding'])}")
+            print(f"  First 5 values: {chunk['embedding'][:5]}")
+
+        # Access chunk metadata
+        print(f"  Metadata: {chunk['metadata']}")
 ```
 
 ## Error Handling

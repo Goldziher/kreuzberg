@@ -263,15 +263,34 @@ const ocrConfig = new OcrConfig({
 
 ### ChunkingConfig
 
-Configure content chunking for large documents:
+Configure content chunking for large documents with optional embedding generation:
 
 ```typescript
-import { ChunkingConfig } from '@goldziher/kreuzberg';
+import { ExtractionConfig } from '@goldziher/kreuzberg';
 
-const chunkingConfig = new ChunkingConfig({
-    maxChars: 1000,   // Maximum characters per chunk
-    maxOverlap: 100,  // Overlap between chunks
-});
+// Basic chunking without embeddings
+const basicChunking: ExtractionConfig = {
+    chunking: {
+        maxChars: 1000,   // Maximum characters per chunk
+        maxOverlap: 100,  // Overlap between chunks (must be < maxChars)
+    },
+};
+
+// Chunking with embedding generation
+const chunkingWithEmbeddings: ExtractionConfig = {
+    chunking: {
+        maxChars: 1000,
+        maxOverlap: 200,  // Must be < maxChars
+        embedding: {
+            model: {
+                modelType: 'preset',
+                value: 'fast',  // 384-dimensional embeddings
+            },
+            normalize: true,
+            batchSize: 32,
+        },
+    },
+};
 ```
 
 ## Working with Results
@@ -311,7 +330,16 @@ if (result.detectedLanguages) {
 // Chunks (if chunking enabled)
 if (result.chunks) {
     result.chunks.forEach((chunk, i) => {
-        console.log(`Chunk ${i + 1}: ${chunk.length} chars`);
+        console.log(`Chunk ${i + 1}: ${chunk.content.slice(0, 50)}...`);
+
+        // Access embedding if generated
+        if (chunk.embedding) {
+            console.log(`  Embedding dimensions: ${chunk.embedding.length}`);
+            console.log(`  First 5 values: ${chunk.embedding.slice(0, 5)}`);
+        }
+
+        // Access chunk metadata
+        console.log(`  Metadata:`, chunk.metadata);
     });
 }
 ```

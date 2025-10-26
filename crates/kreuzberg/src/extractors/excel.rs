@@ -83,13 +83,14 @@ impl DocumentExtractor for ExcelExtractor {
             content: markdown,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
-                excel: Some(excel_metadata),
+                format: Some(crate::types::FormatMetadata::Excel(excel_metadata)),
                 additional,
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 
@@ -118,13 +119,14 @@ impl DocumentExtractor for ExcelExtractor {
             content: markdown,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
-                excel: Some(excel_metadata),
+                format: Some(crate::types::FormatMetadata::Excel(excel_metadata)),
                 additional,
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 

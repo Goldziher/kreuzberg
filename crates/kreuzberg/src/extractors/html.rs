@@ -61,12 +61,13 @@ impl DocumentExtractor for HtmlExtractor {
             content: content_without_frontmatter,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
-                html: html_metadata,
+                format: html_metadata.map(|m| crate::types::FormatMetadata::Html(Box::new(m))),
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 

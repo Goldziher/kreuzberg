@@ -242,27 +242,16 @@ fn is_text_field(key: &str, custom_patterns: &[String]) -> bool {
 }
 
 pub fn parse_yaml(data: &[u8]) -> Result<StructuredDataResult> {
-    use saphyr::LoadableYamlNode;
-
     let yaml_str =
         std::str::from_utf8(data).map_err(|e| KreuzbergError::parsing(format!("Invalid UTF-8 in YAML: {}", e)))?;
 
-    let docs = saphyr::Yaml::load_from_str(yaml_str)
+    let value: serde_json::Value = serde_yaml_ng::from_str(yaml_str)
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse YAML: {}", e)))?;
-
-    if docs.is_empty() {
-        return Ok(StructuredDataResult {
-            content: String::new(),
-            format: "yaml".to_string(),
-            metadata: HashMap::new(),
-            text_fields: Vec::new(),
-        });
-    }
 
     let mut metadata = HashMap::new();
     let mut text_fields = Vec::new();
 
-    let text_parts = extract_from_yaml(&docs[0], "", &mut metadata, &mut text_fields);
+    let text_parts = extract_from_value(&value, "", &mut metadata, &mut text_fields);
     let content = text_parts.join("\n");
 
     Ok(StructuredDataResult {
@@ -273,63 +262,54 @@ pub fn parse_yaml(data: &[u8]) -> Result<StructuredDataResult> {
     })
 }
 
-fn extract_from_yaml(
-    node: &saphyr::Yaml,
+fn extract_from_value(
+    value: &serde_json::Value,
     prefix: &str,
     metadata: &mut HashMap<String, String>,
     text_fields: &mut Vec<String>,
 ) -> Vec<String> {
-    match node {
-        saphyr::Yaml::Value(scalar) => match scalar {
-            saphyr::Scalar::Null => Vec::new(),
-            saphyr::Scalar::Boolean(b) => vec![format!("{}: {}", prefix, b)],
-            saphyr::Scalar::Integer(i) => vec![format!("{}: {}", prefix, i)],
-            saphyr::Scalar::FloatingPoint(f) => vec![format!("{}: {}", prefix, f)],
-            saphyr::Scalar::String(s) => {
-                if !s.trim().is_empty() {
-                    let formatted = format!("{}: {}", prefix, s);
+    match value {
+        serde_json::Value::Null => Vec::new(),
+        serde_json::Value::Bool(b) => vec![format!("{}: {}", prefix, b)],
+        serde_json::Value::Number(n) => vec![format!("{}: {}", prefix, n)],
+        serde_json::Value::String(s) => {
+            if !s.trim().is_empty() {
+                let formatted = format!("{}: {}", prefix, s);
 
-                    if is_text_field(prefix, &[]) {
-                        metadata.insert(prefix.to_string(), s.to_string());
-                        text_fields.push(prefix.to_string());
-                    }
-
-                    vec![formatted]
-                } else {
-                    Vec::new()
+                if is_text_field(prefix, &[]) {
+                    metadata.insert(prefix.to_string(), s.to_string());
+                    text_fields.push(prefix.to_string());
                 }
+
+                vec![formatted]
+            } else {
+                Vec::new()
             }
-        },
-        saphyr::Yaml::Sequence(seq) => {
+        }
+        serde_json::Value::Array(arr) => {
             let mut text_parts = Vec::new();
-            for (i, item) in seq.iter().enumerate() {
+            for (i, item) in arr.iter().enumerate() {
                 let item_key = if prefix.is_empty() {
                     format!("item_{}", i)
                 } else {
                     format!("{}[{}]", prefix, i)
                 };
-                text_parts.extend(extract_from_yaml(item, &item_key, metadata, text_fields));
+                text_parts.extend(extract_from_value(item, &item_key, metadata, text_fields));
             }
             text_parts
         }
-        saphyr::Yaml::Mapping(mapping) => {
+        serde_json::Value::Object(obj) => {
             let mut text_parts = Vec::new();
-            for (key, value) in mapping {
-                if let Some(key_str) = key.as_str() {
-                    let full_key = if prefix.is_empty() {
-                        key_str.to_string()
-                    } else {
-                        format!("{}.{}", prefix, key_str)
-                    };
-                    text_parts.extend(extract_from_yaml(value, &full_key, metadata, text_fields));
-                }
+            for (key, val) in obj {
+                let full_key = if prefix.is_empty() {
+                    key.to_string()
+                } else {
+                    format!("{}.{}", prefix, key)
+                };
+                text_parts.extend(extract_from_value(val, &full_key, metadata, text_fields));
             }
             text_parts
         }
-        saphyr::Yaml::Alias(_) => Vec::new(),
-        saphyr::Yaml::BadValue => Vec::new(),
-        saphyr::Yaml::Tagged(_, inner) => extract_from_yaml(inner, prefix, metadata, text_fields),
-        saphyr::Yaml::Representation(_, _, _) => Vec::new(),
     }
 }
 

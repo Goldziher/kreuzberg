@@ -1,9 +1,11 @@
 from collections.abc import Awaitable
 from pathlib import Path
-from typing import Any, Literal, Protocol, overload
+from typing import Any, Literal, Protocol, TypedDict, overload
 
 __all__ = [
     "ChunkingConfig",
+    "EmbeddingConfig",
+    "EmbeddingModelType",
     "ExtractedTable",
     "ExtractionConfig",
     "ExtractionResult",
@@ -97,11 +99,45 @@ class OcrConfig:
         tesseract_config: TesseractConfig | None = None,
     ) -> None: ...
 
+class EmbeddingModelType:
+    @staticmethod
+    def preset(name: str) -> EmbeddingModelType: ...
+    @staticmethod
+    def fastembed(model: str, dimensions: int) -> EmbeddingModelType: ...
+    @staticmethod
+    def custom(model_id: str, dimensions: int) -> EmbeddingModelType: ...
+
+class EmbeddingConfig:
+    model: EmbeddingModelType
+    normalize: bool
+    batch_size: int
+    show_download_progress: bool
+    cache_dir: str | None
+
+    def __init__(
+        self,
+        *,
+        model: EmbeddingModelType | None = None,
+        normalize: bool | None = None,
+        batch_size: int | None = None,
+        show_download_progress: bool | None = None,
+        cache_dir: str | None = None,
+    ) -> None: ...
+
 class ChunkingConfig:
     max_chars: int
     max_overlap: int
+    embedding: EmbeddingConfig | None
+    preset: str | None
 
-    def __init__(self, *, max_chars: int | None = None, max_overlap: int | None = None) -> None: ...
+    def __init__(
+        self,
+        *,
+        max_chars: int | None = None,
+        max_overlap: int | None = None,
+        embedding: EmbeddingConfig | None = None,
+        preset: str | None = None,
+    ) -> None: ...
 
 class ImageExtractionConfig:
     extract_images: bool
@@ -242,12 +278,240 @@ class TesseractConfig:
         thresholding_method: bool | None = None,
     ) -> None: ...
 
+class PdfMetadata(TypedDict, total=False):
+    title: str
+    subject: str
+    authors: list[str]
+    keywords: list[str]
+    created_at: str
+    modified_at: str
+    created_by: str
+    producer: str
+    page_count: int
+    pdf_version: str
+    is_encrypted: bool
+    width: int
+    height: int
+    summary: str
+
+class ExcelMetadata(TypedDict, total=False):
+    sheet_count: int
+    sheet_names: list[str]
+
+class EmailMetadata(TypedDict, total=False):
+    from_email: str
+    from_name: str
+    to_emails: list[str]
+    cc_emails: list[str]
+    bcc_emails: list[str]
+    message_id: str
+    attachments: list[str]
+
+class PptxMetadata(TypedDict, total=False):
+    title: str
+    author: str
+    description: str
+    summary: str
+    fonts: list[str]
+
+class ArchiveMetadata(TypedDict, total=False):
+    format: str
+    file_count: int
+    file_list: list[str]
+    total_size: int
+    compressed_size: int
+
+class ImageMetadata(TypedDict, total=False):
+    width: int
+    height: int
+    format: str
+    exif: dict[str, str]
+
+class XmlMetadata(TypedDict, total=False):
+    element_count: int
+    unique_elements: list[str]
+
+class TextMetadata(TypedDict, total=False):
+    line_count: int
+    word_count: int
+    character_count: int
+    headers: list[str]  # Markdown only
+    links: list[tuple[str, str]]  # Markdown only
+    code_blocks: list[tuple[str, str]]  # Markdown only
+
+class HtmlMetadata(TypedDict, total=False):
+    title: str
+    description: str
+    keywords: str
+    author: str
+    canonical: str
+    base_href: str
+    # Open Graph
+    og_title: str
+    og_description: str
+    og_image: str
+    og_url: str
+    og_type: str
+    og_site_name: str
+    # Twitter Card
+    twitter_card: str
+    twitter_title: str
+    twitter_description: str
+    twitter_image: str
+    twitter_site: str
+    twitter_creator: str
+    # Link relations
+    link_author: str
+    link_license: str
+    link_alternate: str
+
+class OcrMetadata(TypedDict, total=False):
+    language: str
+    psm: int
+    output_format: str
+    table_count: int
+    table_rows: int
+    table_cols: int
+
+class ImagePreprocessingMetadata(TypedDict, total=False):
+    original_dimensions: tuple[int, int]
+    original_dpi: tuple[float, float]
+    target_dpi: int
+    scale_factor: float
+    auto_adjusted: bool
+    final_dpi: int
+    new_dimensions: tuple[int, int]
+    resample_method: str
+    dimension_clamped: bool
+    calculated_dpi: int
+    skipped_resize: bool
+    resize_error: str
+
+class ErrorMetadata(TypedDict, total=False):
+    error_type: str
+    message: str
+
+class Metadata(TypedDict, total=False):
+    # Common fields
+    language: str
+    date: str
+    subject: str
+
+    # Discriminator field - indicates which format-specific fields are present
+    format_type: Literal["pdf", "excel", "email", "pptx", "archive", "image", "xml", "text", "html", "ocr"]
+
+    # PDF format fields (when format_type == "pdf")
+    title: str  # PDF
+    authors: list[str]  # PDF
+    keywords: list[str]  # PDF
+    created_at: str  # PDF
+    modified_at: str  # PDF
+    created_by: str  # PDF
+    producer: str  # PDF
+    page_count: int  # PDF
+    pdf_version: str  # PDF
+    is_encrypted: bool  # PDF
+    width: int  # PDF
+    height: int  # PDF
+    summary: str  # PDF
+
+    # Excel format fields (when format_type == "excel")
+    sheet_count: int  # Excel
+    sheet_names: list[str]  # Excel
+
+    # Email format fields (when format_type == "email")
+    from_email: str  # Email
+    from_name: str  # Email
+    to_emails: list[str]  # Email
+    cc_emails: list[str]  # Email
+    bcc_emails: list[str]  # Email
+    message_id: str  # Email
+    attachments: list[str]  # Email
+
+    # PowerPoint format fields (when format_type == "pptx")
+    author: str  # PPTX
+    description: str  # PPTX
+    fonts: list[str]  # PPTX
+
+    # Archive format fields (when format_type == "archive")
+    format: str  # Archive
+    file_count: int  # Archive
+    file_list: list[str]  # Archive
+    total_size: int  # Archive
+    compressed_size: int  # Archive
+
+    # Image format fields (when format_type == "image")
+    exif: dict[str, str]  # Image
+
+    # XML format fields (when format_type == "xml")
+    element_count: int  # XML
+    unique_elements: list[str]  # XML
+
+    # Text/Markdown format fields (when format_type == "text")
+    line_count: int  # Text
+    word_count: int  # Text
+    character_count: int  # Text
+    headers: list[str]  # Text (Markdown only)
+    links: list[tuple[str, str]]  # Text (Markdown only)
+    code_blocks: list[tuple[str, str]]  # Text (Markdown only)
+
+    # HTML format fields (when format_type == "html")
+    canonical: str  # HTML
+    base_href: str  # HTML
+    og_title: str  # HTML Open Graph
+    og_description: str  # HTML Open Graph
+    og_image: str  # HTML Open Graph
+    og_url: str  # HTML Open Graph
+    og_type: str  # HTML Open Graph
+    og_site_name: str  # HTML Open Graph
+    twitter_card: str  # HTML Twitter Card
+    twitter_title: str  # HTML Twitter Card
+    twitter_description: str  # HTML Twitter Card
+    twitter_image: str  # HTML Twitter Card
+    twitter_site: str  # HTML Twitter Card
+    twitter_creator: str  # HTML Twitter Card
+    link_author: str  # HTML Link Relations
+    link_license: str  # HTML Link Relations
+    link_alternate: str  # HTML Link Relations
+
+    # OCR format fields (when format_type == "ocr")
+    psm: int  # OCR
+    output_format: str  # OCR
+    table_count: int  # OCR
+    table_rows: int  # OCR
+    table_cols: int  # OCR
+
+    # Other metadata fields
+    image_preprocessing: ImagePreprocessingMetadata
+    json_schema: dict[str, Any]
+    error: ErrorMetadata
+
+class ExtractedImage(TypedDict, total=False):
+    data: bytes
+    format: str
+    image_index: int
+    page_number: int
+    width: int
+    height: int
+    colorspace: str
+    bits_per_component: int
+    is_mask: bool
+    description: str
+    ocr_result: ExtractionResult  # Recursive - nested OCR result if image was OCRed
+
+class Chunk(TypedDict, total=False):
+    content: str
+    embedding: list[float] | None
+    metadata: dict[str, Any]
+
 class ExtractionResult:
     content: str
     mime_type: str
-    metadata: dict[str, Any]
+    metadata: Metadata
     tables: list[ExtractedTable]
     detected_languages: list[str] | None
+    chunks: list[Chunk] | None
+    images: list[ExtractedImage] | None
 
 class ExtractedTable:
     cells: list[list[str]]

@@ -65,19 +65,20 @@ impl DocumentExtractor for PlainTextExtractor {
             content: text_result.content,
             mime_type: mime_type.to_string(),
             metadata: crate::types::Metadata {
-                text: Some(crate::types::TextMetadata {
+                format: Some(crate::types::FormatMetadata::Text(crate::types::TextMetadata {
                     line_count: text_result.line_count,
                     word_count: text_result.word_count,
                     character_count: text_result.character_count,
                     headers: None,
                     links: None,
                     code_blocks: None,
-                }),
+                })),
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 
@@ -149,19 +150,20 @@ impl DocumentExtractor for MarkdownExtractor {
             content: text_result.content,
             mime_type: mime_type.to_string(),
             metadata: crate::types::Metadata {
-                text: Some(crate::types::TextMetadata {
+                format: Some(crate::types::FormatMetadata::Text(crate::types::TextMetadata {
                     line_count: text_result.line_count,
                     word_count: text_result.word_count,
                     character_count: text_result.character_count,
                     headers: text_result.headers,
                     links: text_result.links,
                     code_blocks: text_result.code_blocks,
-                }),
+                })),
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 
@@ -188,8 +190,11 @@ mod tests {
 
         assert_eq!(result.mime_type, "text/plain");
         assert!(result.content.contains("Hello, World!"));
-        assert!(result.metadata.text.is_some());
-        let text_meta = result.metadata.text.unwrap();
+        assert!(result.metadata.format.is_some());
+        let text_meta = match result.metadata.format.as_ref().unwrap() {
+            crate::types::FormatMetadata::Text(meta) => meta,
+            _ => panic!("Expected Text metadata"),
+        };
         assert_eq!(text_meta.line_count, 2);
         assert_eq!(text_meta.word_count, 6);
     }
@@ -207,8 +212,11 @@ mod tests {
 
         assert_eq!(result.mime_type, "text/markdown");
         assert!(result.content.contains("# Header"));
-        assert!(result.metadata.text.is_some());
-        let text_meta = result.metadata.text.unwrap();
+        assert!(result.metadata.format.is_some());
+        let text_meta = match result.metadata.format.as_ref().unwrap() {
+            crate::types::FormatMetadata::Text(meta) => meta,
+            _ => panic!("Expected Text metadata"),
+        };
         assert!(text_meta.headers.is_some());
         assert!(text_meta.links.is_some());
         assert!(text_meta.code_blocks.is_some());

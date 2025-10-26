@@ -229,7 +229,7 @@ fn test_force_ocr_on_text_pdf() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -258,7 +258,7 @@ fn test_force_ocr_disabled() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]

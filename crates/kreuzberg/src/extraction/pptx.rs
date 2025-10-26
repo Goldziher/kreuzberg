@@ -849,12 +849,20 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
             for (_, data) in image_data {
                 // FIXME: check value is used after being moved
                 let format = detect_image_format(&data);
+                let image_index = extracted_images.len();
 
                 extracted_images.push(ExtractedImage {
                     data,
                     format,
-                    slide_number: Some(slide.slide_number as usize),
-                    filename: None,
+                    image_index,
+                    page_number: Some(slide.slide_number as usize),
+                    width: None,
+                    height: None,
+                    colorspace: None,
+                    bits_per_component: None,
+                    is_mask: false,
+                    description: None,
+                    ocr_result: None,
                 });
             }
         }

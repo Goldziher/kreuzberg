@@ -52,6 +52,9 @@ pub mod mcp;
 #[cfg(feature = "chunking")]
 pub mod chunking;
 
+#[cfg(feature = "embeddings")]
+pub mod embeddings;
+
 #[cfg(feature = "ocr")]
 pub mod image;
 
@@ -78,8 +81,8 @@ pub use core::extractor::{batch_extract_bytes, batch_extract_file, extract_bytes
 pub use core::extractor::{batch_extract_bytes_sync, batch_extract_file_sync, extract_bytes_sync, extract_file_sync};
 
 pub use core::config::{
-    ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, PdfConfig,
-    PostProcessorConfig, TokenReductionConfig,
+    ChunkingConfig, EmbeddingConfig, EmbeddingModelType, ExtractionConfig, ImageExtractionConfig,
+    LanguageDetectionConfig, OcrConfig, PdfConfig, PostProcessorConfig, TokenReductionConfig,
 };
 
 pub use core::mime::{
@@ -91,3 +94,6 @@ pub use core::mime::{
 pub use plugins::registry::{
     get_document_extractor_registry, get_ocr_backend_registry, get_post_processor_registry, get_validator_registry,
 };
+
+#[cfg(feature = "embeddings")]
+pub use embeddings::{EMBEDDING_PRESETS, EmbeddingPreset, get_preset, list_presets};

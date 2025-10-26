@@ -57,6 +57,7 @@ impl DocumentExtractor for FailingExtractor {
                 tables: vec![],
                 detected_languages: None,
                 chunks: None,
+                images: None,
             })
         }
     }
@@ -300,6 +301,7 @@ fn test_extractor_priority_ordering_complex() {
                 tables: vec![],
                 detected_languages: None,
                 chunks: None,
+                images: None,
             })
         }
         fn supported_mime_types(&self) -> &[&str] {
@@ -458,6 +460,7 @@ async fn test_processor_execution_order_within_stage() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
 
     let config = ExtractionConfig::default();
@@ -488,6 +491,7 @@ async fn test_processor_error_propagation() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
 
     let config = ExtractionConfig::default();
@@ -658,6 +662,7 @@ async fn test_validator_content_validation() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
 
     let validation = validators[0].validate(&short_result, &config).await;
@@ -670,6 +675,7 @@ async fn test_validator_content_validation() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
 
     let validation = validators[0].validate(&long_result, &config).await;

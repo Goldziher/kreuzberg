@@ -41,6 +41,29 @@ Kreuzberg v4 represents a complete architectural rewrite, transforming from a Py
 - **Configurable Confidence Thresholds**: Control detection sensitivity
 - **Available in**: `ExtractionResult.detected_languages`
 
+#### RAG & Embeddings Support
+- **Automatic Embedding Generation**: Generate embeddings for text chunks using ONNX models via fastembed-rs
+- **RAG-Optimized Presets**: 4 pre-configured presets (fast, balanced, quality, multilingual)
+  - `fast`: 384-dim AllMiniLML6V2Q (~22M params) - Quick prototyping
+  - `balanced`: 768-dim BGEBaseENV15 (~109M params) - Production default
+  - `quality`: 1024-dim BGELargeENV15 (~335M params) - Maximum accuracy
+  - `multilingual`: 768-dim MultilingualE5Base (100+ languages)
+- **Model Caching**: Thread-safe model cache with automatic download management
+- **Batch Processing**: Efficient batch embedding generation with configurable batch size
+- **Embedding Normalization**: Optional L2 normalization for similarity search
+- **Custom Model Paths**: Configure custom cache directories for model storage
+- **Chunk Integration**: Embeddings automatically generated and attached to chunks via `Chunk.embedding`
+- **Available in**: All languages (Rust, Python, TypeScript)
+
+#### Image Extraction
+- **Native Image Extraction**: Extract embedded images from PDFs and PowerPoint presentations
+- **Rich Metadata**: Format, dimensions, colorspace, bits per component, page number
+- **Cross-Language Raw Bytes**: Returns raw image bytes (not PIL objects) for maximum compatibility
+- **Nested OCR Support**: Each extracted image can have an optional nested `ocr_result` field
+- **Clean API Design**: Images stored in `ExtractionResult.images` list with all metadata inline
+- **No Backward Compatibility Required**: New v4-only feature with clean, forward-looking design
+- **Supported Formats**: PDF (via `lopdf`), PowerPoint (via Python `python-pptx`)
+
 #### Enhanced Extraction
 
 **XML Extraction**:
@@ -113,6 +136,11 @@ v4 introduces native metadata extraction across all major document formats:
 - PDF: Pure Rust `lopdf` instead of Python `playa-pdf` for better performance
 - Office: Comprehensive native metadata extraction merged with Pandoc (v3 relied solely on Pandoc)
 - All metadata extraction is non-blocking and gracefully handles failures
+- **Python Type Safety**: All metadata types now have proper `TypedDict` definitions with comprehensive field typing
+  - `PdfMetadata`, `ExcelMetadata`, `EmailMetadata`, `PptxMetadata`, `ArchiveMetadata`
+  - `ImageMetadata`, `XmlMetadata`, `TextMetadata`, `HtmlMetadata`
+  - `OcrMetadata`, `ImagePreprocessingMetadata`, `ErrorMetadata`
+  - IDE autocomplete and type checking for all metadata fields
 
 **Legacy MS Office Support**:
 - LibreOffice conversion for `.doc` and `.ppt` files

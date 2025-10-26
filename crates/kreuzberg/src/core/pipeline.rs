@@ -96,6 +96,35 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                         serde_json::Value::Number(serde_json::Number::from(chunks.len())),
                     );
                 }
+
+                // Generate embeddings if configured
+                #[cfg(feature = "embeddings")]
+                if let Some(ref embedding_config) = chunking_config.embedding
+                    && let Some(ref mut chunks) = result.chunks
+                {
+                    match crate::embeddings::generate_embeddings_for_chunks(chunks, embedding_config) {
+                        Ok(()) => {
+                            result
+                                .metadata
+                                .additional
+                                .insert("embeddings_generated".to_string(), serde_json::Value::Bool(true));
+                        }
+                        Err(e) => {
+                            result
+                                .metadata
+                                .additional
+                                .insert("embedding_error".to_string(), serde_json::Value::String(e.to_string()));
+                        }
+                    }
+                }
+
+                #[cfg(not(feature = "embeddings"))]
+                if chunking_config.embedding.is_some() {
+                    result.metadata.additional.insert(
+                        "embedding_error".to_string(),
+                        serde_json::Value::String("Embeddings feature not enabled".to_string()),
+                    );
+                }
             }
             Err(e) => {
                 result
@@ -202,6 +231,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
         let config = ExtractionConfig::default();
 
@@ -219,6 +249,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
         let config = ExtractionConfig {
             enable_quality_processing: true,
@@ -238,6 +269,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
         let config = ExtractionConfig {
             enable_quality_processing: false,
@@ -258,11 +290,14 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
         let config = ExtractionConfig {
             chunking: Some(crate::ChunkingConfig {
                 max_chars: 500,
                 max_overlap: 50,
+                embedding: None,
+                preset: None,
             }),
             ..Default::default()
         };
@@ -282,6 +317,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
         let config = ExtractionConfig {
             chunking: None,
@@ -309,6 +345,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
         let config = ExtractionConfig::default();
 
@@ -340,6 +377,7 @@ mod tests {
             tables: vec![table],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
         let config = ExtractionConfig::default();
 
@@ -357,6 +395,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
         let config = ExtractionConfig::default();
 
@@ -374,12 +413,15 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
         let config = ExtractionConfig {
             enable_quality_processing: true,
             chunking: Some(crate::ChunkingConfig {
                 max_chars: 500,
                 max_overlap: 50,
+                embedding: None,
+                preset: None,
             }),
             ..Default::default()
         };
@@ -405,6 +447,7 @@ Natural language processing enables computers to understand human language.
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         #[cfg(feature = "keywords-yake")]
@@ -445,6 +488,7 @@ Natural language processing enables computers to understand human language.
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let config = ExtractionConfig {
@@ -467,6 +511,7 @@ Natural language processing enables computers to understand human language.
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         #[cfg(feature = "keywords-yake")]

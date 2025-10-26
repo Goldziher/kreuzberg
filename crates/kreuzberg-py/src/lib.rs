@@ -27,6 +27,8 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<config::OcrConfig>()?;
     m.add_class::<config::PdfConfig>()?;
     m.add_class::<config::ChunkingConfig>()?;
+    m.add_class::<config::EmbeddingConfig>()?;
+    m.add_class::<config::EmbeddingModelType>()?;
     m.add_class::<config::LanguageDetectionConfig>()?;
     m.add_class::<config::TokenReductionConfig>()?;
     m.add_class::<config::ImageExtractionConfig>()?;

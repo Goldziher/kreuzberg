@@ -34,7 +34,7 @@ fn test_pdf_simple_text_extraction() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 
     assert_content_contains_any(&result, &["May 5, 2023", "To Whom it May Concern", "Mallori"]);
 }
@@ -57,7 +57,7 @@ fn test_pdf_with_code_and_formulas() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn test_pdf_with_embedded_images() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 
     if !result.tables.is_empty() {
         assert_has_tables(&result);
@@ -101,7 +101,7 @@ fn test_pdf_large_document() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 
     assert_min_content_length(&result, 10000);
 
@@ -128,7 +128,7 @@ fn test_pdf_technical_documentation() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 
     assert_content_contains_any(&result, &["statistical", "learning", "regression"]);
 }
@@ -150,7 +150,7 @@ fn test_pdf_with_tables_small() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -171,7 +171,7 @@ fn test_pdf_with_tables_medium() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -192,7 +192,7 @@ fn test_pdf_with_tables_large() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -246,7 +246,7 @@ fn test_pdf_non_english_german() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 
     assert_content_contains_any(&result, &["Intel", "page", "paging"]);
 }
@@ -268,7 +268,7 @@ fn test_pdf_right_to_left() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -285,7 +285,7 @@ fn test_pdf_metadata_extraction() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -305,7 +305,7 @@ fn test_pdf_google_doc_export() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -326,7 +326,7 @@ fn test_pdf_scanned_with_ocr() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 
     // NOTE: This is a German PDF but we're using English OCR for testing
 }
@@ -348,7 +348,7 @@ fn test_pdf_rotated_page() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 #[test]
@@ -369,7 +369,7 @@ fn test_pdf_assembly_language_technical() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 
     assert_content_contains_any(&result, &["assembly", "register", "instruction"]);
 }
@@ -392,7 +392,7 @@ fn test_pdf_fundamentals_deep_learning() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 
     assert_content_contains_any(&result, &["neural", "network", "deep learning"]);
 }
@@ -415,7 +415,7 @@ fn test_pdf_bayesian_data_analysis() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 
     assert_content_contains_any(&result, &["Bayesian", "probability", "distribution"]);
 }

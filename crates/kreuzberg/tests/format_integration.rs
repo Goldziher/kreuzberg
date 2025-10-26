@@ -35,7 +35,7 @@ async fn test_pdf_simple_text_extraction() {
 
     #[cfg(feature = "pdf")]
     assert!(
-        result.metadata.pdf.is_some(),
+        result.metadata.format.is_some(),
         "PDF should have metadata in metadata.pdf field"
     );
 }
@@ -69,7 +69,7 @@ async fn test_pdf_large_document() {
     );
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 /// Test PDF with password protection (should fail gracefully).
@@ -125,11 +125,11 @@ async fn test_pdf_metadata_extraction() {
     #[cfg(feature = "pdf")]
     {
         assert!(
-            result.metadata.pdf.is_some(),
+            result.metadata.format.is_some(),
             "PDF should have metadata in metadata.pdf field"
         );
 
-        if let Some(ref pdf_meta) = result.metadata.pdf {
+        if let Some(kreuzberg::FormatMetadata::Pdf(ref pdf_meta)) = result.metadata.format {
             assert!(pdf_meta.page_count.unwrap_or(0) > 0, "PDF page count should be > 0");
         }
     }
@@ -165,7 +165,7 @@ async fn test_pdf_with_tables() {
     }
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 /// Test sync wrapper for PDF extraction.
@@ -190,7 +190,7 @@ fn test_pdf_extraction_sync() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
 
     #[cfg(feature = "pdf")]
-    assert!(result.metadata.pdf.is_some(), "PDF should have metadata");
+    assert!(result.metadata.format.is_some(), "PDF should have metadata");
 }
 
 /// Test basic DOCX extraction.

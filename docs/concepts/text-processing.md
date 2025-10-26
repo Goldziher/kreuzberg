@@ -669,6 +669,490 @@ Protect specific patterns from reduction:
     };
     ```
 
+## Chunking with Embeddings
+
+Kreuzberg provides built-in chunking capabilities with optional embedding generation for RAG (Retrieval-Augmented Generation) applications. Text can be split into chunks with configurable overlap, and each chunk can have embeddings generated using fastembed models.
+
+### Overview
+
+The chunking system provides:
+
+- **Text Splitting**: Split long documents into smaller chunks with configurable size and overlap
+- **Embedding Generation**: Generate embeddings for each chunk using fastembed models
+- **Multiple Presets**: Fast, balanced, quality, and multilingual embedding models
+- **Custom Models**: Support for custom fastembed models with configurable dimensions
+- **Cache Support**: Optional caching of embedding models for faster initialization
+- **Validation**: Automatic validation of chunking configuration (overlap < chunk size)
+
+### Model Presets
+
+Kreuzberg provides four embedding model presets optimized for different use cases:
+
+| Preset | Model | Dimensions | Use Case |
+|--------|-------|------------|----------|
+| `fast` | AllMiniLML6V2Q | 384 | Quick prototyping, low-latency applications |
+| `balanced` | BGEBaseENV15 | 768 | General-purpose RAG, good balance of speed and quality |
+| `quality` | BGELargeENV15 | 1024 | High-quality embeddings, semantic search |
+| `multilingual` | MultilingualE5Base | 768 | Multi-language support, international documents |
+
+### Basic Usage
+
+=== "Python"
+
+    ```python
+    from kreuzberg import extract_file_sync, ExtractionConfig
+    from kreuzberg._internal_bindings import (
+        ChunkingConfig,
+        EmbeddingConfig,
+        EmbeddingModelType,
+    )
+
+    # Configure chunking with embeddings
+    embedding_config = EmbeddingConfig(
+        model=EmbeddingModelType.preset("fast"),
+        normalize=True,
+        batch_size=32,
+    )
+
+    chunking_config = ChunkingConfig(
+        max_chars=1000,
+        max_overlap=200,  # Must be < max_chars
+        embedding=embedding_config,
+    )
+
+    config = ExtractionConfig(chunking=chunking_config)
+
+    # Extract with chunking and embeddings
+    result = extract_file_sync("document.pdf", config=config)
+
+    # Access chunks with embeddings
+    if result.chunks:
+        for chunk in result.chunks:
+            print(f"Content: {chunk['content'][:100]}...")
+            print(f"Embedding dimensions: {len(chunk['embedding'])}")
+            print(f"Metadata: {chunk['metadata']}")
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+
+    // Configure chunking with embeddings
+    const config: ExtractionConfig = {
+      chunking: {
+        maxChars: 1000,
+        maxOverlap: 200,  // Must be < maxChars
+        embedding: {
+          model: {
+            modelType: 'preset',
+            value: 'fast',
+          },
+          normalize: true,
+          batchSize: 32,
+        },
+      },
+    };
+
+    // Extract with chunking and embeddings
+    const result = extractFileSync('document.pdf', { config });
+
+    // Access chunks with embeddings
+    if (result.chunks) {
+      for (const chunk of result.chunks) {
+        console.log(`Content: ${chunk.content.slice(0, 100)}...`);
+        console.log(`Embedding dimensions: ${chunk.embedding?.length}`);
+        console.log(`Metadata:`, chunk.metadata);
+      }
+    }
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+    use kreuzberg::chunking::{ChunkingConfig, EmbeddingConfig, EmbeddingModelType};
+
+    fn main() -> kreuzberg::Result<()> {
+        // Configure chunking with embeddings
+        let embedding_config = EmbeddingConfig {
+            model: Some(EmbeddingModelType::Preset("fast".to_string())),
+            normalize: true,
+            batch_size: 32,
+            ..Default::default()
+        };
+
+        let chunking_config = ChunkingConfig {
+            max_chars: 1000,
+            max_overlap: 200,  // Must be < max_chars
+            embedding: Some(embedding_config),
+            ..Default::default()
+        };
+
+        let config = ExtractionConfig {
+            chunking: Some(chunking_config),
+            ..Default::default()
+        };
+
+        // Extract with chunking and embeddings
+        let result = extract_file_sync("document.pdf", None, &config)?;
+
+        // Access chunks with embeddings
+        if let Some(chunks) = result.chunks {
+            for chunk in chunks {
+                println!("Content: {}...", &chunk.content[..100.min(chunk.content.len())]);
+                if let Some(embedding) = chunk.embedding {
+                    println!("Embedding dimensions: {}", embedding.len());
+                }
+                println!("Metadata: {:?}", chunk.metadata);
+            }
+        }
+
+        Ok(())
+    }
+    ```
+
+### Model Selection
+
+Choose the appropriate model preset based on your needs:
+
+=== "Python"
+
+    ```python
+    from kreuzberg._internal_bindings import EmbeddingModelType
+
+    # Fast: 384-dimensional embeddings (AllMiniLML6V2Q)
+    fast_model = EmbeddingModelType.preset("fast")
+
+    # Balanced: 768-dimensional embeddings (BGEBaseENV15)
+    balanced_model = EmbeddingModelType.preset("balanced")
+
+    # Quality: 1024-dimensional embeddings (BGELargeENV15)
+    quality_model = EmbeddingModelType.preset("quality")
+
+    # Multilingual: 768-dimensional embeddings (MultilingualE5Base)
+    multilingual_model = EmbeddingModelType.preset("multilingual")
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    // Fast: 384-dimensional embeddings
+    const fastModel = { modelType: 'preset', value: 'fast' };
+
+    // Balanced: 768-dimensional embeddings
+    const balancedModel = { modelType: 'preset', value: 'balanced' };
+
+    // Quality: 1024-dimensional embeddings
+    const qualityModel = { modelType: 'preset', value: 'quality' };
+
+    // Multilingual: 768-dimensional embeddings
+    const multilingualModel = { modelType: 'preset', value: 'multilingual' };
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::chunking::EmbeddingModelType;
+
+    // Fast: 384-dimensional embeddings
+    let fast_model = EmbeddingModelType::Preset("fast".to_string());
+
+    // Balanced: 768-dimensional embeddings
+    let balanced_model = EmbeddingModelType::Preset("balanced".to_string());
+
+    // Quality: 1024-dimensional embeddings
+    let quality_model = EmbeddingModelType::Preset("quality".to_string());
+
+    // Multilingual: 768-dimensional embeddings
+    let multilingual_model = EmbeddingModelType::Preset("multilingual".to_string());
+    ```
+
+### Custom Embedding Models
+
+Use custom fastembed models for specialized use cases:
+
+=== "Python"
+
+    ```python
+    from kreuzberg._internal_bindings import EmbeddingConfig, EmbeddingModelType
+
+    # Custom fastembed model
+    custom_model = EmbeddingModelType.fastembed("BGEBaseENV15", 768)
+
+    embedding_config = EmbeddingConfig(
+        model=custom_model,
+        normalize=True,
+        batch_size=16,
+    )
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    // Custom fastembed model
+    const customModel = {
+      modelType: 'fastembed',
+      value: 'BGEBaseENV15',
+      dimensions: 768,
+    };
+
+    const embeddingConfig = {
+      model: customModel,
+      normalize: true,
+      batchSize: 16,
+    };
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::chunking::{EmbeddingConfig, EmbeddingModelType};
+
+    // Custom fastembed model
+    let custom_model = EmbeddingModelType::Fastembed {
+        model_name: "BGEBaseENV15".to_string(),
+        dimensions: 768,
+    };
+
+    let embedding_config = EmbeddingConfig {
+        model: Some(custom_model),
+        normalize: true,
+        batch_size: 16,
+        ..Default::default()
+    };
+    ```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `max_chars` | int | 1000 | Maximum characters per chunk |
+| `max_overlap` | int | 200 | Overlap between chunks (must be < max_chars) |
+| `preset` | str | None | Chunking preset (fast, balanced, quality, multilingual) |
+| `embedding.model` | EmbeddingModelType | None | Embedding model to use |
+| `embedding.normalize` | bool | `true` | Normalize embeddings to unit length |
+| `embedding.batch_size` | int | 32 | Batch size for embedding generation |
+| `embedding.show_download_progress` | bool | `false` | Show model download progress |
+| `embedding.cache_dir` | str | None | Custom cache directory for models |
+
+### Advanced Configuration
+
+=== "Python"
+
+    ```python
+    from kreuzberg import extract_file_sync, ExtractionConfig
+    from kreuzberg._internal_bindings import (
+        ChunkingConfig,
+        EmbeddingConfig,
+        EmbeddingModelType,
+    )
+
+    # Advanced configuration
+    embedding_config = EmbeddingConfig(
+        model=EmbeddingModelType.preset("quality"),
+        normalize=True,
+        batch_size=64,
+        show_download_progress=True,
+        cache_dir="/tmp/kreuzberg_models",
+    )
+
+    chunking_config = ChunkingConfig(
+        max_chars=2000,
+        max_overlap=400,
+        embedding=embedding_config,
+    )
+
+    config = ExtractionConfig(chunking=chunking_config)
+    result = extract_file_sync("large_document.pdf", config=config)
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+
+    // Advanced configuration
+    const config: ExtractionConfig = {
+      chunking: {
+        maxChars: 2000,
+        maxOverlap: 400,
+        embedding: {
+          model: { modelType: 'preset', value: 'quality' },
+          normalize: true,
+          batchSize: 64,
+          showDownloadProgress: true,
+          cacheDir: '/tmp/kreuzberg_models',
+        },
+      },
+    };
+
+    const result = extractFileSync('large_document.pdf', { config });
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig};
+    use kreuzberg::chunking::{ChunkingConfig, EmbeddingConfig, EmbeddingModelType};
+
+    fn main() -> kreuzberg::Result<()> {
+        // Advanced configuration
+        let embedding_config = EmbeddingConfig {
+            model: Some(EmbeddingModelType::Preset("quality".to_string())),
+            normalize: true,
+            batch_size: 64,
+            show_download_progress: true,
+            cache_dir: Some("/tmp/kreuzberg_models".to_string()),
+            ..Default::default()
+        };
+
+        let chunking_config = ChunkingConfig {
+            max_chars: 2000,
+            max_overlap: 400,
+            embedding: Some(embedding_config),
+            ..Default::default()
+        };
+
+        let config = ExtractionConfig {
+            chunking: Some(chunking_config),
+            ..Default::default()
+        };
+
+        let result = extract_file_sync("large_document.pdf", None, &config)?;
+        Ok(())
+    }
+    ```
+
+### Normalization
+
+Normalized embeddings have unit length (L2 norm = 1.0), which is useful for:
+
+- **Cosine similarity**: Normalized embeddings enable efficient cosine similarity using dot product
+- **Distance metrics**: Consistent distance measurements across different models
+- **Vector databases**: Most vector databases expect normalized embeddings
+
+=== "Python"
+
+    ```python
+    # Check normalization
+    import math
+
+    result = extract_file_sync("document.pdf", config=config)
+    if result.chunks and result.chunks[0]['embedding']:
+        embedding = result.chunks[0]['embedding']
+        magnitude = math.sqrt(sum(x * x for x in embedding))
+        print(f"L2 norm: {magnitude:.6f}")  # Should be ~1.0
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    // Check normalization
+    const result = extractFileSync('document.pdf', { config });
+    if (result.chunks && result.chunks[0].embedding) {
+      const embedding = result.chunks[0].embedding;
+      const magnitude = Math.sqrt(
+        embedding.reduce((sum, x) => sum + x * x, 0)
+      );
+      console.log(`L2 norm: ${magnitude.toFixed(6)}`);  // Should be ~1.0
+    }
+    ```
+
+### Chunking Validation
+
+The chunking system validates configuration to prevent errors:
+
+**Important**: `max_overlap` must be less than `max_chars`
+
+=== "Python"
+
+    ```python
+    # ❌ Invalid: overlap >= chunk size
+    invalid_config = ChunkingConfig(
+        max_chars=100,
+        max_overlap=200,  # ERROR: Must be < 100
+    )
+
+    # ✅ Valid: overlap < chunk size
+    valid_config = ChunkingConfig(
+        max_chars=100,
+        max_overlap=20,  # OK: 20% overlap
+    )
+
+    # ✅ Recommended: 20% overlap
+    def create_chunking_config(chunk_size: int) -> ChunkingConfig:
+        overlap = min(int(chunk_size * 0.2), chunk_size - 1)
+        return ChunkingConfig(
+            max_chars=chunk_size,
+            max_overlap=overlap,
+        )
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    // ❌ Invalid: overlap >= chunk size
+    const invalidConfig = {
+      chunking: {
+        maxChars: 100,
+        maxOverlap: 200,  // ERROR: Must be < 100
+      },
+    };
+
+    // ✅ Valid: overlap < chunk size
+    const validConfig = {
+      chunking: {
+        maxChars: 100,
+        maxOverlap: 20,  // OK: 20% overlap
+      },
+    };
+
+    // ✅ Recommended: 20% overlap
+    function createChunkingConfig(chunkSize: number) {
+      const overlap = Math.min(Math.floor(chunkSize * 0.2), chunkSize - 1);
+      return {
+        chunking: {
+          maxChars: chunkSize,
+          maxOverlap: overlap,
+        },
+      };
+    }
+    ```
+
+### Performance Considerations
+
+- **Model Download**: First use downloads models (~100-500MB depending on preset)
+- **Caching**: Models are cached automatically for subsequent use
+- **Batch Size**: Larger batches (64-128) are faster but use more memory
+- **Normalization**: Minimal performance impact, recommended for most use cases
+- **Chunk Size**: Smaller chunks (500-1000 chars) provide better granularity for RAG
+
+### Best Practices
+
+1. **Choose the right model preset**:
+   - `fast` for prototyping and low-latency applications
+   - `balanced` for general-purpose RAG systems
+   - `quality` for semantic search and high-accuracy retrieval
+   - `multilingual` for international documents
+
+2. **Configure chunk size appropriately**:
+   - 500-1000 chars for granular RAG retrieval
+   - 1000-2000 chars for context-aware chunking
+   - Always ensure `max_overlap < max_chars`
+
+3. **Use normalization**:
+   - Enable `normalize=True` for cosine similarity
+   - Consistent distance metrics across models
+
+4. **Cache models**:
+   - Set `cache_dir` for persistent model caching
+   - Reduces initialization time for repeated use
+
+5. **Monitor performance**:
+   - Adjust `batch_size` based on available memory
+   - Use `show_download_progress` for transparency
+
 ## Stopwords
 
 Stopwords are common words filtered out during text analysis. Kreuzberg provides built-in stopword collections for multiple languages.

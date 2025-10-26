@@ -119,6 +119,72 @@ pub struct ChunkingConfig {
     /// Overlap between chunks in characters
     #[serde(default = "default_chunk_overlap")]
     pub max_overlap: usize,
+
+    /// Optional embedding configuration for chunk embeddings
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedding: Option<EmbeddingConfig>,
+
+    /// Use a preset configuration (overrides individual settings if provided)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preset: Option<String>,
+}
+
+/// Embedding configuration for text chunks.
+///
+/// Configures embedding generation using ONNX models via fastembed-rs.
+/// Requires the `embeddings` feature to be enabled.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingConfig {
+    /// The embedding model to use
+    pub model: EmbeddingModelType,
+
+    /// Whether to normalize embedding vectors (recommended for cosine similarity)
+    #[serde(default = "default_normalize")]
+    pub normalize: bool,
+
+    /// Batch size for embedding generation
+    #[serde(default = "default_batch_size")]
+    pub batch_size: usize,
+
+    /// Show model download progress
+    #[serde(default)]
+    pub show_download_progress: bool,
+
+    /// Custom cache directory for model files
+    ///
+    /// Defaults to `~/.cache/kreuzberg/embeddings/` if not specified.
+    /// Allows full customization of model download location.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_dir: Option<std::path::PathBuf>,
+}
+
+impl Default for EmbeddingConfig {
+    fn default() -> Self {
+        Self {
+            model: EmbeddingModelType::Preset {
+                name: "balanced".to_string(),
+            },
+            normalize: true,
+            batch_size: 32,
+            show_download_progress: false,
+            cache_dir: None,
+        }
+    }
+}
+
+/// Embedding model types supported by Kreuzberg.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum EmbeddingModelType {
+    /// Use a preset model configuration (recommended)
+    Preset { name: String },
+
+    /// Use a specific fastembed model by name
+    #[cfg(feature = "embeddings")]
+    FastEmbed { model: String, dimensions: usize },
+
+    /// Use a custom ONNX model from HuggingFace
+    Custom { model_id: String, dimensions: usize },
 }
 
 /// Image extraction configuration.
@@ -205,6 +271,12 @@ fn default_chunk_size() -> usize {
 fn default_chunk_overlap() -> usize {
     200
 }
+fn default_normalize() -> bool {
+    true
+}
+fn default_batch_size() -> usize {
+    32
+}
 fn default_target_dpi() -> i32 {
     300
 }
@@ -279,7 +351,7 @@ impl ExtractionConfig {
             KreuzbergError::validation(format!("Failed to read config file {}: {}", path.as_ref().display(), e))
         })?;
 
-        serde_saphyr::from_str(&content)
+        serde_yaml_ng::from_str(&content)
             .map_err(|e| KreuzbergError::validation(format!("Invalid YAML in {}: {}", path.as_ref().display(), e)))
     }
 

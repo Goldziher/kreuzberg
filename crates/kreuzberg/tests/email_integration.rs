@@ -29,8 +29,11 @@ This is the email body content.";
 
     assert_eq!(result.metadata.subject, Some("Test Email Subject".to_string()));
 
-    assert!(result.metadata.email.is_some());
-    let email_meta = result.metadata.email.unwrap();
+    assert!(result.metadata.format.is_some());
+    let email_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Email(meta) => meta,
+        _ => panic!("Expected Email metadata"),
+    };
 
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
 
@@ -39,7 +42,7 @@ This is the email body content.";
     assert!(email_meta.bcc_emails.is_empty(), "BCC should be empty");
 
     assert!(email_meta.message_id.is_some());
-    let msg_id = email_meta.message_id.unwrap();
+    let msg_id = email_meta.message_id.clone().unwrap();
     assert!(
         msg_id.contains("unique123@example.com"),
         "Message ID should contain unique123@example.com"
@@ -80,8 +83,11 @@ Attachment content here.\r\n\
         .await
         .expect("Should extract EML with attachment");
 
-    assert!(result.metadata.email.is_some());
-    let email_meta = result.metadata.email.unwrap();
+    assert!(result.metadata.format.is_some());
+    let email_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Email(meta) => meta,
+        _ => panic!("Expected Email metadata"),
+    };
 
     if !email_meta.attachments.is_empty() {
         assert!(result.content.contains("Attachments:"));
@@ -118,8 +124,11 @@ Content-Type: text/html; charset=utf-8\r\n\
 
     assert!(result.content.contains("HTML Heading") || result.content.contains("bold"));
 
-    assert!(result.metadata.email.is_some());
-    let email_meta = result.metadata.email.unwrap();
+    assert!(result.metadata.format.is_some());
+    let email_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Email(meta) => meta,
+        _ => panic!("Expected Email metadata"),
+    };
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
     assert_eq!(email_meta.to_emails, vec!["recipient@example.com".to_string()]);
     assert_eq!(result.metadata.subject, Some("HTML Email".to_string()));
@@ -147,8 +156,11 @@ And preserves formatting.";
     assert!(result.content.contains("multiple lines"));
     assert!(result.content.contains("preserves formatting"));
 
-    assert!(result.metadata.email.is_some());
-    let email_meta = result.metadata.email.unwrap();
+    assert!(result.metadata.format.is_some());
+    let email_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Email(meta) => meta,
+        _ => panic!("Expected Email metadata"),
+    };
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
     assert_eq!(email_meta.to_emails, vec!["recipient@example.com".to_string()]);
     assert_eq!(result.metadata.subject, Some("Plain Text Email".to_string()));
@@ -183,8 +195,11 @@ Content-Type: text/html\r\n\
         "Should extract either plain text or HTML content"
     );
 
-    assert!(result.metadata.email.is_some());
-    let email_meta = result.metadata.email.unwrap();
+    assert!(result.metadata.format.is_some());
+    let email_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Email(meta) => meta,
+        _ => panic!("Expected Email metadata"),
+    };
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
     assert_eq!(email_meta.to_emails, vec!["recipient@example.com".to_string()]);
     assert_eq!(result.metadata.subject, Some("Multipart Email".to_string()));
@@ -272,8 +287,11 @@ Email to multiple recipients.";
         .await
         .expect("Should extract email with multiple recipients");
 
-    assert!(result.metadata.email.is_some());
-    let email_meta = result.metadata.email.unwrap();
+    assert!(result.metadata.format.is_some());
+    let email_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Email(meta) => meta,
+        _ => panic!("Expected Email metadata"),
+    };
 
     assert_eq!(email_meta.from_email, Some("sender@example.com".to_string()));
 

@@ -323,6 +323,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let config = ExtractionConfig::default();
@@ -340,6 +341,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let config = ExtractionConfig::default();
@@ -359,6 +361,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let config = ExtractionConfig::default();
@@ -393,6 +396,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let config = ExtractionConfig::default();
@@ -439,6 +443,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let txt_result = ExtractionResult {
@@ -448,6 +453,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         assert!(validator.should_validate(&pdf_result, &config));
@@ -530,6 +536,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let config = ExtractionConfig::default();
@@ -560,6 +567,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let config = ExtractionConfig::default();
@@ -585,6 +593,7 @@ mod tests {
             tables: vec![table],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let config = ExtractionConfig::default();
@@ -612,6 +621,7 @@ mod tests {
                 tables: vec![],
                 detected_languages: None,
                 chunks: None,
+                images: None,
             };
 
             assert!(validator.validate(&result, &config).await.is_ok());
@@ -629,6 +639,7 @@ mod tests {
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         };
 
         let config = ExtractionConfig::default();

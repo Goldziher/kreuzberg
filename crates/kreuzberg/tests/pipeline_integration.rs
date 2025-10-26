@@ -137,6 +137,7 @@ async fn test_pipeline_empty_no_processors() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -180,6 +181,7 @@ async fn test_pipeline_single_processor_per_stage() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -223,6 +225,7 @@ async fn test_pipeline_multiple_processors_per_stage() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -257,6 +260,7 @@ async fn test_pipeline_all_stages_enabled() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -289,6 +293,7 @@ async fn test_pipeline_postprocessing_disabled() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig {
         postprocessor: Some(PostProcessorConfig {
@@ -334,6 +339,7 @@ async fn test_pipeline_early_stage_runs_first() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -372,6 +378,7 @@ async fn test_pipeline_middle_stage_runs_second() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -406,6 +413,7 @@ async fn test_pipeline_late_stage_runs_last() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -440,6 +448,7 @@ async fn test_pipeline_within_stage_priority_order() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -503,6 +512,7 @@ async fn test_pipeline_cross_stage_data_flow() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -558,6 +568,7 @@ async fn test_pipeline_early_stage_error_recorded() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -596,6 +607,7 @@ async fn test_pipeline_middle_stage_error_propagation() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -664,6 +676,7 @@ async fn test_pipeline_late_stage_error_doesnt_affect_earlier_stages() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -749,6 +762,7 @@ async fn test_pipeline_processor_error_doesnt_stop_other_processors() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -819,6 +833,7 @@ async fn test_pipeline_multiple_processor_errors() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -854,6 +869,7 @@ async fn test_pipeline_error_context_preservation() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -924,6 +940,7 @@ async fn test_pipeline_metadata_added_in_early_visible_in_middle() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -993,6 +1010,7 @@ async fn test_pipeline_content_modified_in_middle_visible_in_late() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1060,6 +1078,7 @@ async fn test_pipeline_multiple_processors_modifying_same_metadata() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1146,6 +1165,7 @@ async fn test_pipeline_processors_reading_previous_output() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1199,6 +1219,7 @@ async fn test_pipeline_large_content_modification() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1233,6 +1254,7 @@ async fn test_pipeline_enabled_processors_whitelist() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig {
         postprocessor: Some(PostProcessorConfig {
@@ -1276,6 +1298,7 @@ async fn test_pipeline_disabled_processors_blacklist() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig {
         postprocessor: Some(PostProcessorConfig {
@@ -1319,6 +1342,7 @@ async fn test_pipeline_no_filtering_runs_all() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1355,6 +1379,7 @@ async fn test_pipeline_empty_whitelist_runs_none() {
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     };
     let config = ExtractionConfig {
         postprocessor: Some(PostProcessorConfig {

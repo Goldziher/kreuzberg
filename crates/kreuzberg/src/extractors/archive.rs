@@ -69,14 +69,14 @@ fn build_archive_result(
         content: output,
         mime_type: mime_type.to_string(),
         metadata: Metadata {
-            archive: Some(archive_metadata),
-            format: Some(format_name.to_string()),
+            format: Some(crate::types::FormatMetadata::Archive(archive_metadata)),
             additional,
             ..Default::default()
         },
         tables: vec![],
         detected_languages: None,
         chunks: None,
+        images: None,
     }
 }
 
@@ -332,8 +332,11 @@ mod tests {
         assert!(result.content.contains("ZIP Archive"));
         assert!(result.content.contains("test.txt"));
         assert!(result.content.contains("Hello, World!"));
-        assert!(result.metadata.archive.is_some());
-        let archive_meta = result.metadata.archive.unwrap();
+        assert!(result.metadata.format.is_some());
+        let archive_meta = match result.metadata.format.as_ref().unwrap() {
+            crate::types::FormatMetadata::Archive(meta) => meta,
+            _ => panic!("Expected Archive metadata"),
+        };
         assert_eq!(archive_meta.format, "ZIP");
         assert_eq!(archive_meta.file_count, 1);
     }
@@ -368,8 +371,11 @@ mod tests {
         assert!(result.content.contains("TAR Archive"));
         assert!(result.content.contains("test.txt"));
         assert!(result.content.contains("Hello, World!"));
-        assert!(result.metadata.archive.is_some());
-        let archive_meta = result.metadata.archive.unwrap();
+        assert!(result.metadata.format.is_some());
+        let archive_meta = match result.metadata.format.as_ref().unwrap() {
+            crate::types::FormatMetadata::Archive(meta) => meta,
+            _ => panic!("Expected Archive metadata"),
+        };
         assert_eq!(archive_meta.format, "TAR");
         assert_eq!(archive_meta.file_count, 1);
     }

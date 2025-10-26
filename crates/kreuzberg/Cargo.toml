@@ -31,6 +31,8 @@ archives = ["dep:zip", "dep:tar", "dep:sevenz-rust"]
 ocr = ["dep:tesseract-rs", "dep:image", "dep:fast_image_resize", "dep:ndarray", "dep:kamadak-exif"]
 language-detection = ["dep:whatlang"]
 chunking = ["dep:text-splitter"]
+embeddings = ["dep:fastembed", "chunking"]
+embeddings-download = ["embeddings", "fastembed?/hf-hub-native-tls", "fastembed?/ort-download-binaries"]
 stopwords = []  # Stopwords for keyword extraction and token reduction
 quality = ["dep:unicode-normalization", "dep:chardetng", "dep:encoding_rs", "stopwords"]
 
@@ -46,7 +48,7 @@ mcp = ["dep:rmcp"]
 # Convenience bundles
 full = [
     "pdf", "excel", "office", "email", "html", "xml", "archives",
-    "ocr", "language-detection", "chunking", "quality", "keywords"
+    "ocr", "language-detection", "chunking", "quality", "keywords", "embeddings-download"
 ]
 server = ["pdf", "excel", "html", "ocr", "api", "mcp"]
 cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking", "quality"]
@@ -69,8 +71,7 @@ rayon = "1.11.0"
 regex = "1.12.2"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
-saphyr = "0.0.6"
-serde-saphyr = "0.0.6"
+serde_yaml_ng = "0.10.0"
 toml = "0.9.8"
 mime_guess = "2.0"
 rmp-serde = "1.3"
@@ -101,6 +102,7 @@ ndarray = { version = "0.16.1", optional = true }
 kamadak-exif = { version = "0.6.1", optional = true }
 whatlang = { version = "0.18.0", optional = true }
 text-splitter = { version = "0.28.0", features = ["markdown"], optional = true }
+fastembed = { version = "5.2", default-features = false, features = ["hf-hub"], optional = true }
 unicode-normalization = { version = "0.1.24", optional = true }
 chardetng = { version = "0.1.17", optional = true }
 encoding_rs = { version = "0.8.35", optional = true }

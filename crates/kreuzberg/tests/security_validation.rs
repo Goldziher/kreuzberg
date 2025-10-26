@@ -34,7 +34,7 @@ fn test_archive_zip_bomb_detection() {
 
     assert!(result.is_ok() || result.is_err());
     if let Ok(extracted) = result {
-        assert!(extracted.metadata.archive.is_some());
+        assert!(extracted.metadata.format.is_some());
     }
 }
 
@@ -58,7 +58,10 @@ fn test_archive_path_traversal_zip() {
     let result = extract_bytes_sync(&bytes, "application/zip", &config);
 
     if let Ok(extracted) = result
-        && let Some(archive_meta) = &extracted.metadata.archive
+        && let Some(archive_meta) = &extracted.metadata.format.as_ref().and_then(|f| match f {
+            kreuzberg::FormatMetadata::Archive(m) => Some(m),
+            _ => None,
+        })
     {
         for file_path in &archive_meta.file_list {
             assert!(!file_path.starts_with('/'), "Absolute paths should be rejected");
@@ -148,7 +151,7 @@ fn test_archive_many_small_files() {
 
     assert!(result.is_ok());
     if let Ok(extracted) = result {
-        assert!(extracted.metadata.archive.is_some());
+        assert!(extracted.metadata.format.is_some());
     }
 }
 

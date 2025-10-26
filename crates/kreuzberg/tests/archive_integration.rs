@@ -31,8 +31,11 @@ async fn test_zip_basic_extraction() {
     assert!(result.content.contains("test.txt"));
     assert!(result.content.contains("Hello from ZIP!"));
 
-    assert!(result.metadata.archive.is_some());
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.format, "ZIP");
     assert_eq!(archive_meta.file_count, 1);
     assert_eq!(archive_meta.file_list.len(), 1);
@@ -78,7 +81,11 @@ async fn test_zip_multiple_files() {
     assert!(result.content.contains("Content 2"));
     assert!(result.content.contains("value"));
 
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.file_count, 3, "Should have 3 files");
     assert_eq!(archive_meta.file_list.len(), 3, "file_list should contain 3 entries");
     assert!(archive_meta.file_list.contains(&"file1.txt".to_string()));
@@ -124,7 +131,11 @@ async fn test_zip_nested_directories() {
     assert!(result.content.contains("File in dir1"));
     assert!(result.content.contains("Nested file"));
 
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert!(
         archive_meta.file_count >= 2,
         "Should have at least 2 files (excluding empty dirs)"
@@ -158,7 +169,11 @@ async fn test_tar_extraction() {
     assert!(result.content.contains("test.txt"));
     assert!(result.content.contains("Hello from TAR!"));
 
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.format, "TAR");
     assert_eq!(archive_meta.file_count, 1);
 }
@@ -184,7 +199,11 @@ async fn test_tar_gz_extraction() {
     assert!(result.content.contains("TAR Archive"));
     assert!(result.content.contains("test.txt"));
 
-    let archive_meta = result.metadata.archive.as_ref().unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.format, "TAR");
     assert_eq!(archive_meta.file_count, 1);
 
@@ -200,7 +219,7 @@ async fn test_tar_gz_extraction() {
     assert!(result2.tables.is_empty(), "Archive should not have tables");
 
     assert!(result2.content.contains("TAR Archive"));
-    assert!(result2.metadata.archive.is_some());
+    assert!(result2.metadata.format.is_some());
 }
 
 /// Test 7z extraction.
@@ -243,7 +262,11 @@ async fn test_nested_archive() {
     assert!(result.content.contains("readme.txt"));
     assert!(result.content.contains("This archive contains another archive"));
 
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.file_count, 2, "Should have 2 files in outer archive");
     assert!(archive_meta.file_list.contains(&"inner.zip".to_string()));
     assert!(archive_meta.file_list.contains(&"readme.txt".to_string()));
@@ -291,7 +314,11 @@ async fn test_archive_mixed_formats() {
     assert!(result.content.contains("Text document"));
     assert!(result.content.contains("# README"));
 
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.file_count, 4, "Should have 4 files");
     assert_eq!(archive_meta.file_list.len(), 4, "file_list should contain 4 entries");
     assert!(archive_meta.file_list.contains(&"document.txt".to_string()));
@@ -360,7 +387,11 @@ async fn test_large_archive() {
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.file_count, 100, "Should have 100 files");
     assert_eq!(
         archive_meta.file_list.len(),
@@ -410,7 +441,11 @@ async fn test_archive_with_special_characters() {
     assert!(result.content.contains("file with spaces.txt"));
     assert!(result.content.contains("file-with-dashes.txt"));
 
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.file_count, 3, "Should have 3 files");
     assert_eq!(archive_meta.file_list.len(), 3, "file_list should contain 3 entries");
     assert!(archive_meta.file_list.iter().any(|f| f.contains("txt")));
@@ -439,7 +474,11 @@ async fn test_empty_archive() {
     assert!(result.tables.is_empty(), "Archive should not have tables");
 
     assert!(result.content.contains("ZIP Archive"));
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some());
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.file_count, 0, "Empty archive should have 0 files");
     assert_eq!(archive_meta.total_size, 0, "Empty archive should have 0 total size");
     assert!(archive_meta.file_list.is_empty(), "file_list should be empty");
@@ -461,8 +500,11 @@ fn test_archive_extraction_sync() {
     assert!(result.content.contains("test.txt"));
     assert!(result.content.contains("Hello from ZIP!"));
 
-    assert!(result.metadata.archive.is_some(), "Should have archive metadata");
-    let archive_meta = result.metadata.archive.unwrap();
+    assert!(result.metadata.format.is_some(), "Should have archive metadata");
+    let archive_meta = match result.metadata.format.as_ref().unwrap() {
+        kreuzberg::FormatMetadata::Archive(meta) => meta,
+        _ => panic!("Expected Archive metadata"),
+    };
     assert_eq!(archive_meta.format, "ZIP");
     assert_eq!(archive_meta.file_count, 1);
     assert_eq!(archive_meta.file_list.len(), 1);

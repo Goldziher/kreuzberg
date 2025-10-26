@@ -2,7 +2,8 @@
 
 use kreuzberg::plugins::registry::{get_post_processor_registry, get_validator_registry};
 use kreuzberg::{
-    ChunkingConfig as RustChunkingConfig, ExtractionConfig, ExtractionResult as RustExtractionResult,
+    ChunkingConfig as RustChunkingConfig, EmbeddingConfig as RustEmbeddingConfig,
+    EmbeddingModelType as RustEmbeddingModelType, ExtractionConfig, ExtractionResult as RustExtractionResult,
     ImageExtractionConfig as RustImageExtractionConfig, LanguageDetectionConfig as RustLanguageDetectionConfig,
     OcrConfig as RustOcrConfig, PdfConfig as RustPdfConfig, PostProcessorConfig as RustPostProcessorConfig,
     TesseractConfig as RustTesseractConfig, TokenReductionConfig as RustTokenReductionConfig,
@@ -50,10 +51,78 @@ impl From<JsTesseractConfig> for RustTesseractConfig {
     }
 }
 
+/// Embedding model type configuration for Node.js bindings.
+///
+/// This struct represents different embedding model sources:
+/// - `preset`: Use a named preset (e.g., "balanced", "fast", "quality", "multilingual")
+/// - `fastembed`: Use a FastEmbed model with custom dimensions
+/// - `custom`: Use a custom ONNX model
+#[napi(object)]
+pub struct JsEmbeddingModelType {
+    /// Type of model: "preset", "fastembed", or "custom"
+    pub model_type: String,
+    /// For preset: preset name; for fastembed/custom: model ID
+    pub value: String,
+    /// Number of dimensions (only for fastembed/custom)
+    pub dimensions: Option<u32>,
+}
+
+impl From<JsEmbeddingModelType> for RustEmbeddingModelType {
+    fn from(val: JsEmbeddingModelType) -> Self {
+        match val.model_type.as_str() {
+            "preset" => RustEmbeddingModelType::Preset { name: val.value },
+            "fastembed" => RustEmbeddingModelType::FastEmbed {
+                model: val.value,
+                dimensions: val.dimensions.unwrap_or(768) as usize,
+            },
+            "custom" => RustEmbeddingModelType::Custom {
+                model_id: val.value,
+                dimensions: val.dimensions.unwrap_or(512) as usize,
+            },
+            _ => RustEmbeddingModelType::Preset {
+                name: "balanced".to_string(),
+            },
+        }
+    }
+}
+
+/// Embedding generation configuration for Node.js bindings.
+#[napi(object)]
+pub struct JsEmbeddingConfig {
+    /// Embedding model configuration
+    pub model: Option<JsEmbeddingModelType>,
+    /// Whether to normalize embeddings (L2 normalization)
+    pub normalize: Option<bool>,
+    /// Batch size for embedding generation
+    pub batch_size: Option<u32>,
+    /// Whether to show download progress for models
+    pub show_download_progress: Option<bool>,
+    /// Custom cache directory for model storage
+    pub cache_dir: Option<String>,
+}
+
+impl From<JsEmbeddingConfig> for RustEmbeddingConfig {
+    fn from(val: JsEmbeddingConfig) -> Self {
+        RustEmbeddingConfig {
+            model: val.model.map(Into::into).unwrap_or(RustEmbeddingModelType::Preset {
+                name: "balanced".to_string(),
+            }),
+            normalize: val.normalize.unwrap_or(true),
+            batch_size: val.batch_size.unwrap_or(32) as usize,
+            show_download_progress: val.show_download_progress.unwrap_or(false),
+            cache_dir: val.cache_dir.map(std::path::PathBuf::from),
+        }
+    }
+}
+
 #[napi(object)]
 pub struct JsChunkingConfig {
     pub max_chars: Option<u32>,
     pub max_overlap: Option<u32>,
+    /// Optional embedding configuration for generating embeddings
+    pub embedding: Option<JsEmbeddingConfig>,
+    /// Optional preset name for chunking parameters
+    pub preset: Option<String>,
 }
 
 impl From<JsChunkingConfig> for RustChunkingConfig {
@@ -61,6 +130,8 @@ impl From<JsChunkingConfig> for RustChunkingConfig {
         RustChunkingConfig {
             max_chars: val.max_chars.unwrap_or(1000) as usize,
             max_overlap: val.max_overlap.unwrap_or(200) as usize,
+            embedding: val.embedding.map(Into::into),
+            preset: val.preset,
         }
     }
 }
@@ -197,6 +268,22 @@ pub struct JsTable {
 }
 
 #[napi(object)]
+pub struct JsExtractedImage {
+    pub data: Buffer,
+    pub format: String,
+    pub image_index: u32,
+    pub page_number: Option<u32>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub colorspace: Option<String>,
+    pub bits_per_component: Option<u32>,
+    pub is_mask: bool,
+    pub description: Option<String>,
+    #[napi(ts_type = "JsExtractionResult | undefined")]
+    pub ocr_result: Option<serde_json::Value>,
+}
+
+#[napi(object)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct JsExtractionResult {
     pub content: String,
@@ -206,11 +293,33 @@ pub struct JsExtractionResult {
     pub tables: Vec<JsTable>,
     pub detected_languages: Option<Vec<String>>,
     pub chunks: Option<Vec<String>>,
+    #[serde(skip)]
+    pub images: Option<Vec<JsExtractedImage>>,
 }
 
 impl From<RustExtractionResult> for JsExtractionResult {
     fn from(val: RustExtractionResult) -> Self {
         let metadata = serde_json::to_value(&val.metadata).unwrap_or(serde_json::json!({}));
+
+        let images = val.images.map(|imgs| {
+            imgs.into_iter()
+                .map(|img| JsExtractedImage {
+                    data: img.data.into(),
+                    format: img.format,
+                    image_index: img.image_index as u32,
+                    page_number: img.page_number.map(|p| p as u32),
+                    width: img.width,
+                    height: img.height,
+                    colorspace: img.colorspace,
+                    bits_per_component: img.bits_per_component,
+                    is_mask: img.is_mask,
+                    description: img.description,
+                    ocr_result: img
+                        .ocr_result
+                        .and_then(|ocr| serde_json::to_value(JsExtractionResult::from(*ocr)).ok()),
+                })
+                .collect()
+        });
 
         JsExtractionResult {
             content: val.content,
@@ -226,7 +335,10 @@ impl From<RustExtractionResult> for JsExtractionResult {
                 })
                 .collect(),
             detected_languages: val.detected_languages,
-            chunks: val.chunks,
+            chunks: val
+                .chunks
+                .map(|chunks| chunks.into_iter().map(|chunk| chunk.content).collect()),
+            images,
         }
     }
 }
@@ -234,6 +346,28 @@ impl From<RustExtractionResult> for JsExtractionResult {
 impl From<JsExtractionResult> for RustExtractionResult {
     fn from(val: JsExtractionResult) -> Self {
         let metadata = serde_json::from_value(val.metadata).unwrap_or_default();
+
+        let images = val.images.map(|imgs| {
+            imgs.into_iter()
+                .map(|img| kreuzberg::ExtractedImage {
+                    data: img.data.to_vec(),
+                    format: img.format,
+                    image_index: img.image_index as usize,
+                    page_number: img.page_number.map(|p| p as usize),
+                    width: img.width,
+                    height: img.height,
+                    colorspace: img.colorspace,
+                    bits_per_component: img.bits_per_component,
+                    is_mask: img.is_mask,
+                    description: img.description,
+                    ocr_result: img.ocr_result.and_then(|json| {
+                        serde_json::from_value::<JsExtractionResult>(json)
+                            .ok()
+                            .map(|js_res| Box::new(js_res.into()))
+                    }),
+                })
+                .collect()
+        });
 
         RustExtractionResult {
             content: val.content,
@@ -249,7 +383,25 @@ impl From<JsExtractionResult> for RustExtractionResult {
                 })
                 .collect(),
             detected_languages: val.detected_languages,
-            chunks: val.chunks,
+            chunks: val.chunks.map(|chunks| {
+                let total_chunks = chunks.len();
+                chunks
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, content)| kreuzberg::Chunk {
+                        content: content.clone(),
+                        embedding: None,
+                        metadata: kreuzberg::ChunkMetadata {
+                            char_start: 0,
+                            char_end: content.len(),
+                            token_count: None,
+                            chunk_index: index,
+                            total_chunks,
+                        },
+                    })
+                    .collect()
+            }),
+            images,
         }
     }
 }

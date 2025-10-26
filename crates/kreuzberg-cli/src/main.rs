@@ -242,7 +242,12 @@ async fn main() -> Result<()> {
                 if chunk_flag {
                     let max_chars = chunk_size.unwrap_or(1000);
                     let max_overlap = chunk_overlap.unwrap_or(200);
-                    config.chunking = Some(ChunkingConfig { max_chars, max_overlap });
+                    config.chunking = Some(ChunkingConfig {
+                        max_chars,
+                        max_overlap,
+                        embedding: None,
+                        preset: None,
+                    });
                 } else {
                     config.chunking = None;
                 }

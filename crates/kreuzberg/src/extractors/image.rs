@@ -131,13 +131,13 @@ impl DocumentExtractor for ImageExtractor {
             content: content_text,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
-                image: Some(image_metadata),
-                format: Some(extraction_metadata.format),
+                format: Some(crate::types::FormatMetadata::Image(image_metadata)),
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 

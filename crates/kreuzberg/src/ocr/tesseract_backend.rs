@@ -142,7 +142,7 @@ impl OcrBackend for TesseractBackend {
             })?;
 
         let metadata = crate::types::Metadata {
-            ocr: Some(crate::types::OcrMetadata {
+            format: Some(crate::types::FormatMetadata::Ocr(crate::types::OcrMetadata {
                 language: tess_config.language.clone(),
                 psm: tess_config.psm as i32,
                 output_format: tess_config.output_format.clone(),
@@ -152,7 +152,7 @@ impl OcrBackend for TesseractBackend {
                     .tables
                     .first()
                     .and_then(|t| t.cells.first().map(|row| row.len())),
-            }),
+            })),
             additional: ocr_result.metadata,
             ..Default::default()
         };
@@ -172,6 +172,7 @@ impl OcrBackend for TesseractBackend {
                 .collect(),
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 
@@ -194,7 +195,7 @@ impl OcrBackend for TesseractBackend {
             })?;
 
         let metadata = crate::types::Metadata {
-            ocr: Some(crate::types::OcrMetadata {
+            format: Some(crate::types::FormatMetadata::Ocr(crate::types::OcrMetadata {
                 language: tess_config.language.clone(),
                 psm: tess_config.psm as i32,
                 output_format: tess_config.output_format.clone(),
@@ -204,7 +205,7 @@ impl OcrBackend for TesseractBackend {
                     .tables
                     .first()
                     .and_then(|t| t.cells.first().map(|row| row.len())),
-            }),
+            })),
             additional: ocr_result.metadata,
             ..Default::default()
         };
@@ -224,6 +225,7 @@ impl OcrBackend for TesseractBackend {
                 .collect(),
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 

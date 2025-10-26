@@ -24,76 +24,82 @@ pub struct ExtractionResult {
     /// Text chunks when chunking is enabled.
     ///
     /// When chunking configuration is provided, the content is split into
-    /// overlapping chunks for efficient processing. Each chunk is guaranteed
-    /// to respect the max_chars limit with configured overlap.
+    /// overlapping chunks for efficient processing. Each chunk contains the text,
+    /// optional embeddings (if enabled), and metadata about its position.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub chunks: Option<Vec<String>>,
+    pub chunks: Option<Vec<Chunk>>,
+
+    /// Extracted images from the document.
+    ///
+    /// When image extraction is enabled via `ImageExtractionConfig`, this field
+    /// contains all images found in the document with their raw data and metadata.
+    /// Each image may optionally contain a nested `ocr_result` if OCR was performed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub images: Option<Vec<ExtractedImage>>,
 }
 
-/// Strongly-typed metadata for extraction results.
+/// Format-specific metadata (discriminated union).
 ///
-/// This struct provides compile-time type safety for metadata fields
-/// while remaining flexible through the `additional` HashMap for
-/// custom fields (e.g., from Python postprocessors).
+/// Only one format type can exist per extraction result. This provides
+/// type-safe, clean metadata without nested optionals.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "format_type", rename_all = "snake_case")]
+pub enum FormatMetadata {
+    #[cfg(feature = "pdf")]
+    Pdf(PdfMetadata),
+    Excel(ExcelMetadata),
+    Email(EmailMetadata),
+    Pptx(PptxMetadata),
+    Archive(ArchiveMetadata),
+    Image(ImageMetadata),
+    Xml(XmlMetadata),
+    Text(TextMetadata),
+    Html(Box<HtmlMetadata>),
+    Ocr(OcrMetadata),
+}
+
+/// Extraction result metadata.
+///
+/// Contains common fields applicable to all formats, format-specific metadata
+/// via a discriminated union, and additional custom fields from postprocessors.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Metadata {
+    /// Language of the document (ISO 639 code)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
 
+    /// Document date (format varies by source)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date: Option<String>,
 
+    /// Document subject/description
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subject: Option<String>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub format: Option<String>,
+    /// Format-specific metadata (discriminated union)
+    ///
+    /// Contains detailed metadata specific to the document format.
+    /// Serializes with a `format_type` discriminator field.
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub format: Option<FormatMetadata>,
 
-    #[cfg(feature = "pdf")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pdf: Option<PdfMetadata>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub excel: Option<ExcelMetadata>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<EmailMetadata>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pptx: Option<PptxMetadata>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub archive: Option<ArchiveMetadata>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub image: Option<ImageMetadata>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub xml: Option<XmlMetadata>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub text: Option<TextMetadata>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub html: Option<HtmlMetadata>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ocr: Option<OcrMetadata>,
-
+    /// Image preprocessing metadata (when OCR preprocessing was applied)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_preprocessing: Option<ImagePreprocessingMetadata>,
 
+    /// JSON schema (for structured data extraction)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub json_schema: Option<serde_json::Value>,
 
+    /// Error metadata (for batch operations)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ErrorMetadata>, // TODO: move error out of metadata and into the ExtractionResult directly
+    pub error: Option<ErrorMetadata>,
 
-    /// Additional custom fields.
+    /// Additional custom fields from postprocessors.
     ///
-    /// This flattened HashMap allows Python postprocessors (entity extraction,
-    /// keyword extraction, etc.) to add arbitrary fields. Fields in this map
-    /// are merged at the root level during serialization.
+    /// This flattened HashMap allows Python/TypeScript postprocessors to add
+    /// arbitrary fields (entity extraction, keyword extraction, etc.).
+    /// Fields are merged at the root level during serialization.
     #[serde(flatten)]
     pub additional: HashMap<String, serde_json::Value>,
 }
@@ -323,6 +329,101 @@ pub struct Table {
     pub page_number: usize,
 }
 
+/// A text chunk with optional embedding and metadata.
+///
+/// Chunks are created when chunking is enabled in `ExtractionConfig`. Each chunk
+/// contains the text content, optional embedding vector (if embedding generation
+/// is configured), and metadata about its position in the document.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Chunk {
+    /// The text content of this chunk.
+    pub content: String,
+
+    /// Optional embedding vector for this chunk.
+    ///
+    /// Only populated when `EmbeddingConfig` is provided in chunking configuration.
+    /// The dimensionality depends on the chosen embedding model.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedding: Option<Vec<f32>>,
+
+    /// Metadata about this chunk's position and properties.
+    pub metadata: ChunkMetadata,
+}
+
+/// Metadata about a chunk's position in the original document.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChunkMetadata {
+    /// Character offset where this chunk starts in the original text.
+    pub char_start: usize,
+
+    /// Character offset where this chunk ends in the original text.
+    pub char_end: usize,
+
+    /// Number of tokens in this chunk (if available).
+    ///
+    /// This is calculated by the embedding model's tokenizer if embeddings are enabled.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_count: Option<usize>,
+
+    /// Zero-based index of this chunk in the document.
+    pub chunk_index: usize,
+
+    /// Total number of chunks in the document.
+    pub total_chunks: usize,
+}
+
+/// Extracted image from a document.
+///
+/// Contains raw image data, metadata, and optional nested OCR results.
+/// Raw bytes allow cross-language compatibility - users can convert to
+/// PIL.Image (Python), Sharp (Node.js), or other formats as needed.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedImage {
+    /// Raw image data (PNG, JPEG, WebP, etc. bytes)
+    pub data: Vec<u8>,
+
+    /// Image format (e.g., "jpeg", "png", "webp")
+    pub format: String,
+
+    /// Zero-indexed position of this image in the document/page
+    pub image_index: usize,
+
+    /// Page/slide number where image was found (1-indexed)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_number: Option<usize>,
+
+    /// Image width in pixels
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub width: Option<u32>,
+
+    /// Image height in pixels
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub height: Option<u32>,
+
+    /// Colorspace information (e.g., "RGB", "CMYK", "Gray")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub colorspace: Option<String>,
+
+    /// Bits per color component (e.g., 8, 16)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bits_per_component: Option<u32>,
+
+    /// Whether this image is a mask image
+    #[serde(default)]
+    pub is_mask: bool,
+
+    /// Optional description of the image
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Nested OCR extraction result (if image was OCRed)
+    ///
+    /// When OCR is performed on this image, the result is embedded here
+    /// rather than in a separate collection, making the relationship explicit.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ocr_result: Option<Box<ExtractionResult>>,
+}
+
 /// Excel workbook representation.
 ///
 /// Contains all sheets from an Excel file (.xlsx, .xls, etc.) with
@@ -426,23 +527,6 @@ pub struct PptxMetadata {
     pub summary: Option<String>,
     /// List of fonts used in the presentation
     pub fonts: Vec<String>,
-}
-
-/// Extracted image from a document.
-///
-/// Represents an image extracted from PDF, PPTX, or other formats.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExtractedImage {
-    /// Raw image data bytes
-    pub data: Vec<u8>,
-    /// Image format (e.g., "PNG", "JPEG")
-    pub format: String,
-    /// Slide/page number where image was found (if applicable)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub slide_number: Option<usize>,
-    /// Original filename or identifier
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub filename: Option<String>,
 }
 
 /// Email extraction result.

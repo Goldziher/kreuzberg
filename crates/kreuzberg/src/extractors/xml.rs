@@ -65,15 +65,16 @@ impl DocumentExtractor for XmlExtractor {
             content: xml_result.content,
             mime_type: mime_type.to_string(),
             metadata: crate::types::Metadata {
-                xml: Some(crate::types::XmlMetadata {
+                format: Some(crate::types::FormatMetadata::Xml(crate::types::XmlMetadata {
                     element_count: xml_result.element_count,
                     unique_elements: xml_result.unique_elements,
-                }),
+                })),
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 
@@ -103,8 +104,11 @@ mod tests {
 
         assert_eq!(result.mime_type, "application/xml");
         assert_eq!(result.content, "Hello World");
-        assert!(result.metadata.xml.is_some());
-        let xml_meta = result.metadata.xml.unwrap();
+        assert!(result.metadata.format.is_some());
+        let xml_meta = match result.metadata.format.as_ref().unwrap() {
+            crate::types::FormatMetadata::Xml(meta) => meta,
+            _ => panic!("Expected Xml metadata"),
+        };
         assert_eq!(xml_meta.element_count, 3);
         assert!(xml_meta.unique_elements.contains(&"root".to_string()));
         assert!(xml_meta.unique_elements.contains(&"item".to_string()));

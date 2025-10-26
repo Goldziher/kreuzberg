@@ -612,6 +612,7 @@ mod tests {
                 tables: vec![],
                 detected_languages: None,
                 chunks: None,
+                images: None,
             })
         }
 
@@ -655,6 +656,7 @@ mod tests {
                 tables: vec![],
                 detected_languages: None,
                 chunks: None,
+                images: None,
             })
         }
 

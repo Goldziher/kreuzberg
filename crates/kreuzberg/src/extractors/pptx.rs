@@ -59,17 +59,24 @@ impl DocumentExtractor for PptxExtractor {
         additional.insert("image_count".to_string(), serde_json::json!(pptx_result.image_count));
         additional.insert("table_count".to_string(), serde_json::json!(pptx_result.table_count));
 
+        let images = if !pptx_result.images.is_empty() {
+            Some(pptx_result.images)
+        } else {
+            None
+        };
+
         Ok(ExtractionResult {
             content: pptx_result.content,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
-                pptx: Some(pptx_result.metadata),
+                format: Some(crate::types::FormatMetadata::Pptx(pptx_result.metadata)),
                 additional,
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images,
         })
     }
 
@@ -87,17 +94,24 @@ impl DocumentExtractor for PptxExtractor {
         additional.insert("image_count".to_string(), serde_json::json!(pptx_result.image_count));
         additional.insert("table_count".to_string(), serde_json::json!(pptx_result.table_count));
 
+        let images = if !pptx_result.images.is_empty() {
+            Some(pptx_result.images)
+        } else {
+            None
+        };
+
         Ok(ExtractionResult {
             content: pptx_result.content,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
-                pptx: Some(pptx_result.metadata),
+                format: Some(crate::types::FormatMetadata::Pptx(pptx_result.metadata)),
                 additional,
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images,
         })
     }
 

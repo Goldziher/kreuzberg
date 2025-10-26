@@ -15,6 +15,8 @@ async fn test_chunking_enabled() {
         chunking: Some(ChunkingConfig {
             max_chars: 50,
             max_overlap: 10,
+            embedding: None,
+            preset: None,
         }),
         ..Default::default()
     };
@@ -39,11 +41,11 @@ async fn test_chunking_enabled() {
     );
 
     for chunk in &chunks {
-        assert!(!chunk.is_empty(), "Chunk should not be empty");
+        assert!(!chunk.content.is_empty(), "Chunk should not be empty");
         assert!(
-            chunk.len() <= 50 + 10,
+            chunk.content.len() <= 50 + 10,
             "Chunk length {} exceeds max_chars + overlap",
-            chunk.len()
+            chunk.content.len()
         );
     }
 }
@@ -55,6 +57,8 @@ async fn test_chunking_with_overlap() {
         chunking: Some(ChunkingConfig {
             max_chars: 100,
             max_overlap: 20,
+            embedding: None,
+            preset: None,
         }),
         ..Default::default()
     };
@@ -76,9 +80,10 @@ async fn test_chunking_with_overlap() {
         let chunk1 = &chunks[0];
         let chunk2 = &chunks[1];
 
-        let chunk1_end = &chunk1[chunk1.len().saturating_sub(20)..];
+        let chunk1_end = &chunk1.content[chunk1.content.len().saturating_sub(20)..];
         assert!(
-            chunk2.starts_with(chunk1_end) || chunk1_end.starts_with(&chunk2[..chunk1_end.len().min(chunk2.len())]),
+            chunk2.content.starts_with(chunk1_end)
+                || chunk1_end.starts_with(&chunk2.content[..chunk1_end.len().min(chunk2.content.len())]),
             "Chunks should have overlap"
         );
     }
@@ -91,6 +96,8 @@ async fn test_chunking_custom_sizes() {
         chunking: Some(ChunkingConfig {
             max_chars: 200,
             max_overlap: 50,
+            embedding: None,
+            preset: None,
         }),
         ..Default::default()
     };
@@ -110,9 +117,9 @@ async fn test_chunking_custom_sizes() {
 
     for chunk in &chunks {
         assert!(
-            chunk.len() <= 200 + 50,
+            chunk.content.len() <= 200 + 50,
             "Chunk length {} exceeds custom max_chars + overlap",
-            chunk.len()
+            chunk.content.len()
         );
     }
 }
@@ -473,4 +480,106 @@ async fn test_quality_processing_disabled() {
 
     assert!(!result.metadata.additional.contains_key("quality_score"));
     assert!(!result.content.is_empty());
+}
+
+/// Test chunking with embeddings using balanced preset.
+#[tokio::test]
+#[cfg(feature = "embeddings")]
+async fn test_chunking_with_embeddings() {
+    use kreuzberg::core::config::EmbeddingConfig;
+
+    let config = ExtractionConfig {
+        chunking: Some(ChunkingConfig {
+            max_chars: 100,
+            max_overlap: 20,
+            embedding: Some(EmbeddingConfig::default()),
+            preset: None,
+        }),
+        ..Default::default()
+    };
+
+    let text = "This is a test document for embedding generation. ".repeat(10);
+    let text_bytes = text.as_bytes();
+
+    let result = extract_bytes(text_bytes, "text/plain", &config)
+        .await
+        .expect("Should extract successfully");
+
+    // Verify chunks are present
+    assert!(result.chunks.is_some(), "Chunks should be present");
+    let chunks = result.chunks.unwrap();
+    assert!(chunks.len() > 1, "Should have multiple chunks");
+
+    // Verify embeddings were generated
+    println!("Metadata: {:?}", result.metadata.additional);
+
+    if let Some(error) = result.metadata.additional.get("embedding_error") {
+        panic!("Embedding generation failed: {}", error);
+    }
+
+    assert!(
+        result.metadata.additional.contains_key("embeddings_generated"),
+        "Should have embeddings_generated metadata"
+    );
+    assert_eq!(
+        result.metadata.additional.get("embeddings_generated").unwrap(),
+        &serde_json::Value::Bool(true)
+    );
+
+    // Verify each chunk has an embedding with correct dimensions
+    for chunk in &chunks {
+        assert!(chunk.embedding.is_some(), "Each chunk should have an embedding");
+        let embedding = chunk.embedding.as_ref().unwrap();
+        // Default config uses balanced preset (BGEBaseENV15) with 768 dimensions
+        assert_eq!(
+            embedding.len(),
+            768,
+            "Embedding should have 768 dimensions for balanced preset"
+        );
+
+        // Verify embeddings are normalized
+        let magnitude: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!(
+            (magnitude - 1.0).abs() < 0.01,
+            "Embedding should be normalized (magnitude ~= 1.0)"
+        );
+    }
+}
+
+/// Test chunking with fast embedding preset.
+#[tokio::test]
+#[cfg(feature = "embeddings")]
+async fn test_chunking_with_fast_embeddings() {
+    use kreuzberg::core::config::{EmbeddingConfig, EmbeddingModelType};
+
+    let config = ExtractionConfig {
+        chunking: Some(ChunkingConfig {
+            max_chars: 100,
+            max_overlap: 20,
+            embedding: Some(EmbeddingConfig {
+                model: EmbeddingModelType::Preset {
+                    name: "fast".to_string(),
+                },
+                ..Default::default()
+            }),
+            preset: None,
+        }),
+        ..Default::default()
+    };
+
+    let text = "Fast embedding test. ".repeat(10);
+    let text_bytes = text.as_bytes();
+
+    let result = extract_bytes(text_bytes, "text/plain", &config)
+        .await
+        .expect("Should extract successfully");
+
+    let chunks = result.chunks.expect("Should have chunks");
+    assert!(chunks.len() > 0, "Should have at least one chunk");
+
+    // Verify embeddings have correct dimensions for fast preset (384)
+    for chunk in &chunks {
+        let embedding = chunk.embedding.as_ref().expect("Should have embedding");
+        assert_eq!(embedding.len(), 384, "Fast preset should produce 384-dim embeddings");
+    }
 }

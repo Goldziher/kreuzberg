@@ -42,6 +42,10 @@ pub struct ExtractionResult {
 
     #[pyo3(get)]
     pub detected_languages: Option<Py<PyList>>,
+
+    images: Option<Py<PyList>>,
+
+    chunks: Option<Py<PyList>>,
 }
 
 #[pymethods]
@@ -60,6 +64,16 @@ impl ExtractionResult {
     #[getter]
     fn tables<'py>(&self, py: Python<'py>) -> Bound<'py, PyList> {
         self.tables.bind(py).clone()
+    }
+
+    #[getter]
+    fn images<'py>(&self, py: Python<'py>) -> Option<Bound<'py, PyList>> {
+        self.images.as_ref().map(|img| img.bind(py).clone())
+    }
+
+    #[getter]
+    fn chunks<'py>(&self, py: Python<'py>) -> Option<Bound<'py, PyList>> {
+        self.chunks.as_ref().map(|chunks| chunks.bind(py).clone())
     }
 
     fn __repr__(&self) -> String {
@@ -105,12 +119,86 @@ impl ExtractionResult {
             None
         };
 
+        let images = if let Some(imgs) = result.images {
+            let img_list = PyList::empty(py);
+            for img in imgs {
+                let img_dict = PyDict::new(py);
+                img_dict.set_item("data", pyo3::types::PyBytes::new(py, &img.data))?;
+                img_dict.set_item("format", &img.format)?;
+                img_dict.set_item("image_index", img.image_index)?;
+
+                if let Some(page) = img.page_number {
+                    img_dict.set_item("page_number", page)?;
+                }
+                if let Some(width) = img.width {
+                    img_dict.set_item("width", width)?;
+                }
+                if let Some(height) = img.height {
+                    img_dict.set_item("height", height)?;
+                }
+                if let Some(colorspace) = &img.colorspace {
+                    img_dict.set_item("colorspace", colorspace)?;
+                }
+                if let Some(bits) = img.bits_per_component {
+                    img_dict.set_item("bits_per_component", bits)?;
+                }
+                img_dict.set_item("is_mask", img.is_mask)?;
+                if let Some(desc) = &img.description {
+                    img_dict.set_item("description", desc)?;
+                }
+
+                // Recursively convert nested OCR result
+                if let Some(ocr) = img.ocr_result {
+                    let ocr_py = Self::from_rust(*ocr, py)?;
+                    img_dict.set_item("ocr_result", ocr_py)?;
+                }
+
+                img_list.append(img_dict)?;
+            }
+            Some(img_list.unbind())
+        } else {
+            None
+        };
+
+        let chunks = if let Some(chnks) = result.chunks {
+            let chunk_list = PyList::empty(py);
+            for chunk in chnks {
+                let chunk_dict = PyDict::new(py);
+                chunk_dict.set_item("content", &chunk.content)?;
+
+                // Add embedding if present
+                if let Some(embedding) = chunk.embedding {
+                    let emb_list = PyList::new(py, embedding)?;
+                    chunk_dict.set_item("embedding", emb_list)?;
+                } else {
+                    chunk_dict.set_item("embedding", py.None())?;
+                }
+
+                // Add metadata
+                let chunk_metadata_json = serde_json::to_value(&chunk.metadata).map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                        "Failed to serialize chunk metadata: {}",
+                        e
+                    ))
+                })?;
+                let chunk_metadata_py = json_value_to_py(py, &chunk_metadata_json)?;
+                chunk_dict.set_item("metadata", chunk_metadata_py)?;
+
+                chunk_list.append(chunk_dict)?;
+            }
+            Some(chunk_list.unbind())
+        } else {
+            None
+        };
+
         Ok(Self {
             content: result.content,
             mime_type: result.mime_type,
             metadata,
             tables: tables.unbind(),
             detected_languages,
+            images,
+            chunks,
         })
     }
 }

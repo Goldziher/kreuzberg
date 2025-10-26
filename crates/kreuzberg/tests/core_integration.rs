@@ -456,6 +456,8 @@ async fn test_extraction_with_chunking_config() {
         chunking: Some(kreuzberg::ChunkingConfig {
             max_chars: 100,
             max_overlap: 20,
+            embedding: None,
+            preset: None,
         }),
         ..Default::default()
     };
@@ -483,9 +485,9 @@ async fn test_extraction_with_chunking_config() {
 
     for chunk in &chunks {
         assert!(
-            chunk.len() <= 100 + 20,
+            chunk.content.len() <= 100 + 20,
             "Chunk length {} exceeds max_chars + overlap",
-            chunk.len()
+            chunk.content.len()
         );
     }
 }

@@ -34,7 +34,7 @@
 //!
 //! println!("Split into {} chunks", result.chunk_count);
 //! for (i, chunk) in result.chunks.iter().enumerate() {
-//!     println!("Chunk {}: {} chars", i + 1, chunk.len());
+//!     println!("Chunk {}: {} chars", i + 1, chunk.content.len());
 //! }
 //! # Ok(())
 //! # }
@@ -47,6 +47,7 @@
 //! - Processing large documents in batches
 //! - Maintaining context across chunk boundaries
 use crate::error::{KreuzbergError, Result};
+use crate::types::{Chunk, ChunkMetadata};
 use serde::{Deserialize, Serialize};
 use text_splitter::{Characters, ChunkCapacity, ChunkConfig, MarkdownSplitter, TextSplitter};
 
@@ -58,7 +59,7 @@ pub enum ChunkerType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChunkingResult {
-    pub chunks: Vec<String>,
+    pub chunks: Vec<Chunk>,
     pub chunk_count: usize,
 }
 
@@ -97,16 +98,41 @@ pub fn chunk_text(text: &str, config: &ChunkingConfig) -> Result<ChunkingResult>
 
     let chunk_config = build_chunk_config(config.max_characters, config.overlap, config.trim)?;
 
-    let chunks: Vec<String> = match config.chunker_type {
+    let text_chunks: Vec<&str> = match config.chunker_type {
         ChunkerType::Text => {
             let splitter = TextSplitter::new(chunk_config);
-            splitter.chunks(text).map(|chunk| chunk.to_string()).collect()
+            splitter.chunks(text).collect()
         }
         ChunkerType::Markdown => {
             let splitter = MarkdownSplitter::new(chunk_config);
-            splitter.chunks(text).map(|chunk| chunk.to_string()).collect()
+            splitter.chunks(text).collect()
         }
     };
+
+    let total_chunks = text_chunks.len();
+    let mut char_offset = 0;
+
+    let chunks: Vec<Chunk> = text_chunks
+        .into_iter()
+        .enumerate()
+        .map(|(index, chunk_text)| {
+            let char_start = char_offset;
+            let char_end = char_start + chunk_text.chars().count();
+            char_offset = char_end;
+
+            Chunk {
+                content: chunk_text.to_string(),
+                embedding: None,
+                metadata: ChunkMetadata {
+                    char_start,
+                    char_end,
+                    token_count: None,
+                    chunk_index: index,
+                    total_chunks,
+                },
+            }
+        })
+        .collect();
 
     let chunk_count = chunks.len();
 
@@ -157,7 +183,7 @@ mod tests {
         let result = chunk_text(text, &config).unwrap();
         assert_eq!(result.chunks.len(), 1);
         assert_eq!(result.chunk_count, 1);
-        assert_eq!(result.chunks[0], text);
+        assert_eq!(result.chunks[0].content, text);
     }
 
     #[test]
@@ -172,7 +198,7 @@ mod tests {
         let result = chunk_text(text, &config).unwrap();
         assert!(result.chunk_count >= 2);
         assert_eq!(result.chunks.len(), result.chunk_count);
-        assert!(result.chunks.iter().all(|chunk| chunk.len() <= 20));
+        assert!(result.chunks.iter().all(|chunk| chunk.content.len() <= 20));
     }
 
     #[test]
@@ -188,12 +214,12 @@ mod tests {
         assert!(result.chunk_count >= 2);
 
         if result.chunks.len() >= 2 {
-            let first_chunk_end = &result.chunks[0][result.chunks[0].len().saturating_sub(5)..];
+            let first_chunk_end = &result.chunks[0].content[result.chunks[0].content.len().saturating_sub(5)..];
             assert!(
-                result.chunks[1].starts_with(first_chunk_end),
+                result.chunks[1].content.starts_with(first_chunk_end),
                 "Expected overlap '{}' at start of second chunk '{}'",
                 first_chunk_end,
-                result.chunks[1]
+                result.chunks[1].content
             );
         }
     }
@@ -209,7 +235,7 @@ mod tests {
         let markdown = "# Title\n\nParagraph one.\n\n## Section\n\nParagraph two.";
         let result = chunk_text(markdown, &config).unwrap();
         assert!(result.chunk_count >= 1);
-        assert!(result.chunks.iter().any(|chunk| chunk.contains("# Title")));
+        assert!(result.chunks.iter().any(|chunk| chunk.content.contains("# Title")));
     }
 
     #[test]
@@ -223,7 +249,7 @@ mod tests {
         let markdown = "# Code Example\n\n```python\nprint('hello')\n```\n\nSome text after code.";
         let result = chunk_text(markdown, &config).unwrap();
         assert!(result.chunk_count >= 1);
-        assert!(result.chunks.iter().any(|chunk| chunk.contains("```")));
+        assert!(result.chunks.iter().any(|chunk| chunk.content.contains("```")));
     }
 
     #[test]
@@ -237,7 +263,7 @@ mod tests {
         let markdown = "Check out [this link](https://example.com) for more info.";
         let result = chunk_text(markdown, &config).unwrap();
         assert_eq!(result.chunk_count, 1);
-        assert!(result.chunks[0].contains("[this link]"));
+        assert!(result.chunks[0].content.contains("[this link]"));
     }
 
     #[test]
@@ -251,7 +277,7 @@ mod tests {
         let text = "  Leading and trailing spaces  should be trimmed  ";
         let result = chunk_text(text, &config).unwrap();
         assert!(result.chunk_count >= 1);
-        assert!(result.chunks.iter().all(|chunk| !chunk.starts_with(' ')));
+        assert!(result.chunks.iter().all(|chunk| !chunk.content.starts_with(' ')));
     }
 
     #[test]
@@ -265,7 +291,7 @@ mod tests {
         let text = "  Text with spaces  ";
         let result = chunk_text(text, &config).unwrap();
         assert_eq!(result.chunk_count, 1);
-        assert!(result.chunks[0].starts_with(' ') || result.chunks[0].len() < text.len());
+        assert!(result.chunks[0].content.starts_with(' ') || result.chunks[0].content.len() < text.len());
     }
 
     #[test]
@@ -286,7 +312,7 @@ mod tests {
     fn test_chunk_text_with_type_text() {
         let result = chunk_text_with_type("Simple text", 50, 10, true, ChunkerType::Text).unwrap();
         assert_eq!(result.chunk_count, 1);
-        assert_eq!(result.chunks[0], "Simple text");
+        assert_eq!(result.chunks[0].content, "Simple text");
     }
 
     #[test]
@@ -294,7 +320,7 @@ mod tests {
         let markdown = "# Header\n\nContent here.";
         let result = chunk_text_with_type(markdown, 50, 10, true, ChunkerType::Markdown).unwrap();
         assert_eq!(result.chunk_count, 1);
-        assert!(result.chunks[0].contains("# Header"));
+        assert!(result.chunks[0].content.contains("# Header"));
     }
 
     #[test]
@@ -372,7 +398,7 @@ mod tests {
         let text = "a".repeat(1000);
         let result = chunk_text(&text, &config).unwrap();
         assert!(result.chunk_count >= 10);
-        assert!(result.chunks.iter().all(|chunk| chunk.len() <= 100));
+        assert!(result.chunks.iter().all(|chunk| chunk.content.len() <= 100));
     }
 
     #[test]
@@ -399,7 +425,7 @@ mod tests {
         let markdown = "# List Example\n\n- Item 1\n- Item 2\n- Item 3\n\nMore text.";
         let result = chunk_text(markdown, &config).unwrap();
         assert!(result.chunk_count >= 1);
-        assert!(result.chunks.iter().any(|chunk| chunk.contains("- Item")));
+        assert!(result.chunks.iter().any(|chunk| chunk.content.contains("- Item")));
     }
 
     #[test]
@@ -413,7 +439,7 @@ mod tests {
         let markdown = "# Table\n\n| Col1 | Col2 |\n|------|------|\n| A    | B    |\n| C    | D    |";
         let result = chunk_text(markdown, &config).unwrap();
         assert!(result.chunk_count >= 1);
-        assert!(result.chunks.iter().any(|chunk| chunk.contains("|")));
+        assert!(result.chunks.iter().any(|chunk| chunk.content.contains("|")));
     }
 
     #[test]
@@ -427,7 +453,7 @@ mod tests {
         let text = "Special chars: @#$%^&*()[]{}|\\<>?/~`";
         let result = chunk_text(text, &config).unwrap();
         assert_eq!(result.chunk_count, 1);
-        assert!(result.chunks[0].contains("@#$%"));
+        assert!(result.chunks[0].content.contains("@#$%"));
     }
 
     #[test]
@@ -441,8 +467,8 @@ mod tests {
         let text = "Unicode: 你好世界 🌍 café résumé";
         let result = chunk_text(text, &config).unwrap();
         assert_eq!(result.chunk_count, 1);
-        assert!(result.chunks[0].contains("你好"));
-        assert!(result.chunks[0].contains("🌍"));
+        assert!(result.chunks[0].content.contains("你好"));
+        assert!(result.chunks[0].content.contains("🌍"));
     }
 
     #[test]

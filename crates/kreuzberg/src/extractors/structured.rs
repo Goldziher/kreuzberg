@@ -60,6 +60,7 @@ impl DocumentExtractor for StructuredExtractor {
             "field_count".to_string(),
             serde_json::json!(structured_result.text_fields.len()),
         );
+        additional.insert("data_format".to_string(), serde_json::json!(structured_result.format));
 
         for (key, value) in structured_result.metadata {
             additional.insert(key, serde_json::json!(value));
@@ -69,13 +70,13 @@ impl DocumentExtractor for StructuredExtractor {
             content: structured_result.content,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
-                format: Some(structured_result.format),
                 additional,
                 ..Default::default()
             },
             tables: vec![],
             detected_languages: None,
             chunks: None,
+            images: None,
         })
     }
 

@@ -126,11 +126,19 @@ pub async fn extract_images(path: &Path, from_format: &str) -> Result<Vec<Extrac
                             .unwrap_or("unknown")
                             .to_string();
 
+                        let image_index = images.len();
                         images.push(ExtractedImage {
                             data,
                             format: ext_str,
-                            slide_number: None,
-                            filename: Some(filename),
+                            image_index,
+                            page_number: None,
+                            width: None,
+                            height: None,
+                            colorspace: None,
+                            bits_per_component: None,
+                            is_mask: false,
+                            description: Some(filename),
+                            ocr_result: None,
                         });
                     }
                 }
