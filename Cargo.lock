@@ -2451,15 +2451,11 @@ dependencies = [
  "tesseract-rs",
  "text-splitter",
  "thiserror 2.0.17",
-<<<<<<< HEAD
- "tl",
-=======
  "tokio",
  "toml 0.9.8",
  "tower",
  "tower-http",
  "tracing",
->>>>>>> origin/v4-dev
  "unicode-normalization",
  "uuid",
  "whatlang",
