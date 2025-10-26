@@ -11,9 +11,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.mark.skip(
-    reason="Image extraction removed from general ExtractionResult in v4 - images are now format-specific"
-)
 @pytest.mark.asyncio
 @pytest.mark.skipif(os.getenv("RUN_PERF_TESTS") != "1", reason="Set RUN_PERF_TESTS=1 to run performance tests")
 async def test_large_pdf_image_extraction_performance(test_files_path: Path) -> None:
@@ -28,4 +25,4 @@ async def test_large_pdf_image_extraction_performance(test_files_path: Path) -> 
 
     cfg = ExtractionConfig(images=ImageExtractionConfig())
     result = await extract_file(str(candidate), config=cfg)
-    assert isinstance(result.images, list)  # type: ignore[attr-defined]
+    assert isinstance(result.images, list)

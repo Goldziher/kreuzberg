@@ -10,20 +10,15 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.mark.skip(
-    reason="Image extraction removed from general ExtractionResult in v4 - images are now format-specific"
-)
 @pytest.mark.asyncio
 async def test_docx_image_extraction_smoke(docx_document: Any) -> None:
     cfg = ExtractionConfig(images=ImageExtractionConfig())
     result = await extract_file(str(docx_document), config=cfg)
     assert result is not None
-    assert isinstance(result.images, list)  # type: ignore[attr-defined]
+    # Images may be None or empty list if file has no images
+    assert result.images is None or isinstance(result.images, list)
 
 
-@pytest.mark.skip(
-    reason="Image extraction removed from general ExtractionResult in v4 - images are now format-specific"
-)
 @pytest.mark.asyncio
 async def test_epub_odt_image_extraction_smoke(tmp_path: Path) -> None:  # pragma: no cover - smoke
     odt = tmp_path / "sample.odt"

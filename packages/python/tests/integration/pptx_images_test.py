@@ -8,14 +8,13 @@ import pytest
 from kreuzberg import ExtractionConfig, ImageExtractionConfig, extract_file
 
 
-@pytest.mark.skip(
-    reason="Image extraction removed from general ExtractionResult in v4 - images are now format-specific"
-)
 @pytest.mark.asyncio
 async def test_extract_images_from_pptx_smoke(pptx_document: Any) -> None:
     cfg = ExtractionConfig(images=ImageExtractionConfig())
     result = await extract_file(str(pptx_document), config=cfg)
-    assert isinstance(result.images, list)
-    for img in result.images:
-        assert isinstance(img.data, (bytes, bytearray))
-        assert isinstance(img.format, str)
+    # Images may be None or empty list if file has no images
+    assert result.images is None or isinstance(result.images, list)
+    if result.images:
+        for img in result.images:
+            assert isinstance(img["data"], (bytes, bytearray))
+            assert isinstance(img["format"], str)
