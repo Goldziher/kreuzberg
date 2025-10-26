@@ -99,5 +99,7 @@ yarn-error.log*
 # NAPI-RS generated files (should not be committed)
 crates/kreuzberg-node/index.js
 crates/kreuzberg-node/index.d.ts
+
+# Embedding model caches (default is .kreuzberg/embeddings, but tests may create these)
 .fastembed_cache/
 */.fastembed_cache/

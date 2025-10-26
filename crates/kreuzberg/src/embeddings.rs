@@ -62,11 +62,16 @@ pub fn get_or_init_model(
     model: EmbeddingModel,
     cache_dir: Option<std::path::PathBuf>,
 ) -> crate::Result<Arc<Mutex<TextEmbedding>>> {
-    let model_key = format!(
-        "{:?}_{}",
-        model,
-        cache_dir.as_ref().map(|p| p.display().to_string()).unwrap_or_default()
-    );
+    // Determine cache directory upfront
+    // Default to .kreuzberg/embeddings if not specified (following OCR cache pattern)
+    let cache_directory = cache_dir.unwrap_or_else(|| {
+        let mut path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        path.push(".kreuzberg");
+        path.push("embeddings");
+        path
+    });
+
+    let model_key = format!("{:?}_{}", model, cache_directory.display());
 
     // Fast path: check if model is already cached
     {
@@ -92,11 +97,9 @@ pub fn get_or_init_model(
             return Ok(Arc::clone(cached_model));
         }
 
-        // Initialize model
+        // Initialize model with cache directory
         let mut init_options = InitOptions::new(model);
-        if let Some(dir) = cache_dir {
-            init_options = init_options.with_cache_dir(dir);
-        }
+        init_options = init_options.with_cache_dir(cache_directory);
 
         let embedding_model = TextEmbedding::try_new(init_options).map_err(|e| crate::KreuzbergError::Plugin {
             message: format!("Failed to initialize embedding model: {}", e),

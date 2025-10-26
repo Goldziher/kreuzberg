@@ -934,7 +934,7 @@ Use custom fastembed models for specialized use cases:
 | `embedding.normalize` | bool | `true` | Normalize embeddings to unit length |
 | `embedding.batch_size` | int | 32 | Batch size for embedding generation |
 | `embedding.show_download_progress` | bool | `false` | Show model download progress |
-| `embedding.cache_dir` | str | None | Custom cache directory for models |
+| `embedding.cache_dir` | str | `.kreuzberg/embeddings` | Custom cache directory for models |
 
 ### Advanced Configuration
 
