@@ -15,9 +15,6 @@ license = "MIT"
 repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://kreuzberg.dev"
 
-[features]
-default = []
-extension-module = ["pyo3/extension-module"]
 
 [profile.release]
 lto = "thin"
