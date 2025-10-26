@@ -1,81 +1,37 @@
 repos:
-  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: "v9.23.0"
-    hooks:
-      - id: commitlint
-        stages: [commit-msg]
-        additional_dependencies: ["@commitlint/config-conventional"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
-      - id: name-tests-test
-        args:
-          - --pytest
-        exclude: factories|test_utils|completion.py|test_data|docker_e2e.py|pandoc_helpers.py
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-toml
       - id: check-case-conflict
-      - id: detect-private-key
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.24.1
     hooks:
       - id: validate-pyproject
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.22
-    hooks:
-      - id: mdformat
-        exclude: ^test_documents
-        additional_dependencies:
-          - mdformat-mkdocs==4.1.0
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.45.0
-    hooks:
-      - id: markdownlint-fix
-        exclude: ^test_documents
-  - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.20.0
-    hooks:
-      - id: blacken-docs
-        args: ["--pyi", "--line-length", "130"]
-        exclude: tests/features/token_reduction_test.py
-        additional_dependencies:
-          - black==25.1.0
-  - repo: https://github.com/rbubley/mirrors-prettier
-    rev: "v3.6.2"
-    hooks:
-      - id: prettier
-        exclude: ^tests|^.idea|^migrations|^.git|^docs|\.md$
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: "v2.10.0"
+    rev: v2.11.0
     hooks:
       - id: pyproject-fmt
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.2.6
+    hooks:
+      - id: biome-format
+      - id: biome-lint
+  - repo: https://github.com/oxc-project/mirrors-oxlint
+    rev: v1.24.0
+    hooks:
+      - id: oxlint
+        args: ["--fix"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+    rev: v0.14.1
     hooks:
       - id: ruff
-        args: ["--fix", "--unsafe-fixes"]
+        args: [ "--fix", "--unsafe-fixes" ]
       - id: ruff-format
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
-    hooks:
-      - id: codespell
-        exclude: ^tests|^scripts|^kreuzberg/_tesseract|^kreuzberg/_mime_types|^test_documents
-        additional_dependencies:
-          - tomli==2.2.1
-  - repo: https://github.com/jsh9/pydoclint
-    rev: 0.7.3
-    hooks:
-      - id: pydoclint
-        args:
-          [
-            --style=google,
-            --check-return-types=False,
-            --arg-type-hints-in-docstring=False,
-          ]
-        exclude: ^benchmarks/|^kreuzberg/_|^tests/|^scripts/|^run_benchmarks\.py
-  - repo: https://github.com/FeryET/pre-commit-rust
-    rev: v1.2.1
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
     hooks:
       - id: fmt
       - id: cargo-check
@@ -87,5 +43,5 @@ repos:
         entry: uv run mypy
         require_serial: true
         language: system
-        types: [python]
-        exclude: ^scripts/|^comparative-benchmarks/
+        types: [ python ]
+        exclude: ^scripts/|^comparative-benchmarks/|^examples/

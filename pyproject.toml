@@ -1,171 +1,50 @@
-[build-system]
-build-backend = "maturin"
-
-requires = [ "maturin>=1.9.6,<2.0" ]
-
-[project]
-name = "kreuzberg"
-version = "4.0.0"
-description = "High-performance document intelligence framework for Python - Extract text, metadata, and structured data from diverse file formats with Rust-powered speed"
-readme = "README.md"
-keywords = [
-  "aarch64",
-  "arm64",
-  "async",
-  "document-analysis",
-  "document-classification",
-  "document-intelligence",
-  "document-processing",
-  "email-extraction",
-  "excel",
-  "extensible",
-  "html",
-  "information-extraction",
-  "markdown",
-  "mcp",
-  "metadata-extraction",
-  "model-context-protocol",
-  "ocr",
-  "office-documents",
-  "pandoc",
-  "pdf-extraction",
-  "pdfium",
-  "plugin-architecture",
-  "rag",
-  "retrieval-augmented-generation",
-  "rust",
-  "structured-data",
-  "table-extraction",
-  "tesseract",
-  "text-extraction",
-  "xml",
-]
-license = { text = "MIT" }
-authors = [ { name = "Na'aman Hirschfeld", email = "nhirschfed@gmail.com" } ]
-requires-python = ">=3.10"
-classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Intended Audience :: Developers",
-  "Intended Audience :: Information Technology",
-  "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
-  "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Rust",
-  "Topic :: Database",
-  "Topic :: Multimedia :: Graphics :: Capture :: Scanners",
-  "Topic :: Office/Business :: Office Suites",
-  "Topic :: Scientific/Engineering :: Artificial Intelligence",
-  "Topic :: Scientific/Engineering :: Information Analysis",
-  "Topic :: Software Development :: Libraries :: Python Modules",
-  "Topic :: Text Processing :: General",
-  "Typing :: Typed",
-]
-
-dependencies = [
-  "anyio>=4.10.0",
-  "exceptiongroup>=1.2.2; python_version<'3.11'",
-  "langcodes>=3.5.0",
-  "mcp>=1.16.0",
-  "msgspec>=0.18.0",
-  "numpy>=2.0.0",
-  "pillow>=11.3.0",
-  "playa-pdf>=0.7.0",
-  "polars>=1.34.0",
-  "psutil>=7.1.0",
-  "pypdfium2==4.30.0",
-  "typing-extensions>=4.15.0; python_version<'3.12'",
-]
-
-optional-dependencies.additional-extensions = [
-  "mailparse>=1.0.15",
-  "tomli>=2.0.0; python_version<'3.11'",
-]
-optional-dependencies.all = [
-  "kreuzberg[additional-extensions,api,cli,crypto,document-classification,easyocr,entity-extraction,langdetect,paddleocr,vision-tables]",
-]
-optional-dependencies.api = [
-  "litestar[opentelemetry,standard,structlog]>=2.18.0",
-]
-optional-dependencies.cli = [
-  "click>=8.3.0",
-  "rich>=14.2.0",
-  "tomli>=2.0.0; python_version<'3.11'",
-]
-optional-dependencies.crypto = [ "playa-pdf[crypto]>=0.7.0" ]
-optional-dependencies.dev = [ "numpy>=2.0.0" ]
-optional-dependencies.document-classification = [ "deep-translator>=1.11.4" ]
-optional-dependencies.easyocr = [ "easyocr>=1.7.2; python_version<'3.14'" ]
-optional-dependencies.entity-extraction = [
-  "keybert>=0.9.0; python_version<'3.14'",
-  "spacy>=3.8.7; python_version<'3.14'",
-]
-optional-dependencies.langdetect = [ "fast-langdetect>=1.0.0" ]
-optional-dependencies.paddleocr = [
-  "paddleocr>=3.2.0; python_version<'3.14'",
-  "paddlepaddle>=3.2.0; python_version<'3.14'",
-  "setuptools>=80.9.0",
-]
-optional-dependencies.vision-tables = [
-  "torch>=2.8.0; python_version<'3.14'",
-  "transformers>=4.57.0; python_version<'3.14'",
-]
-urls.documentation = "https://kreuzberg.dev"
-
-urls.homepage = "https://github.com/Goldziher/kreuzberg"
-scripts.kreuzberg = "kreuzberg.cli:cli"
-scripts.kreuzberg-mcp = "kreuzberg._mcp.server:main"
-
 [dependency-groups]
 dev = [
+  "cibuildwheel>=3.2.1",
   "covdefaults>=2.3.0",
   "maturin>=1.9.6",
   "memory-profiler>=0.61.0",
   "mypy>=1.18.2",
+  "numpy>=2.3.4",
+  "prek>=0.2.10",
   "pytest>=8.4.2",
+  "pytest-asyncio>=0.25.0",
   "pytest-benchmark>=5.1.0",
   "pytest-cov>=7.0.0",
   "pytest-mock>=3.15.1",
   "pytest-rerunfailures>=16.1",
   "pytest-timeout>=2.4.0",
   "rich>=14.2.0",
-  "ruff>=0.14.0",
-  "tabulate>=0.9.0",
-  "trio>=0.31.0",
-  "types-psutil>=7.0.0.20250822",
+  "ruff>=0.14.1",
+  "types-psutil>=7.0.0.20251001",
   "types-pyyaml>=6.0.12.20250915",
   "uv-bump",
 ]
 doc = [
+  "mike>=2.0.0",
   "mkdocs>=1.6.1",
-  "mkdocs-git-revision-date-localized-plugin>=1.4.5",
-  "mkdocs-material[imaging]>=9.6.9",
+  "mkdocs-gen-files>=0.5.0",
+  "mkdocs-git-revision-date-localized-plugin>=1.4.7",
+  "mkdocs-literate-nav>=0.6.0",
+  "mkdocs-material[imaging]>=9.6.22",
   "mkdocs-minify-plugin>=0.8.0",
-  "mkdocstrings[python]>=0.29.0",
+  "mkdocstrings[python]>=0.30.1",
 ]
 
-[tool.maturin]
-python-source = "."
-module-name = "kreuzberg._internal_bindings"
-features = [ "pyo3/extension-module" ]
-compatibility = "manylinux2014"
+[tool.setuptools]
+packages = [  ]
 
 [tool.uv]
 cache-keys = [
   { file = "pyproject.toml" },
   { file = "Cargo.toml" },
   { file = "Cargo.lock" },
-  { file = "src/**/*.rs" },
+  { file = "crates/**/*.rs" },
+  { file = "crates/**/Cargo.toml" },
 ]
 
 [tool.uv.workspace]
-members = [ ".", "comparative-benchmarks" ]
+members = [ "comparative-benchmarks", "packages/python" ]
 
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
@@ -173,7 +52,7 @@ uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
 [tool.ruff]
 target-version = "py310"
 line-length = 120
-src = [ "kreuzberg", "tests" ]
+src = [ "comparative-benchmarks/*", "packages/python/*" ]
 format.docstring-code-line-length = 120
 format.docstring-code-format = true
 lint.select = [ "ALL" ]
@@ -195,6 +74,22 @@ lint.ignore = [
   "S603",    # subprocess-without-shell-equals-true
   "TD",      # We allow todo and fixme comments
   "TRY",     # Try except block, rules are too strict
+]
+lint.per-file-ignores."**/benchmarks/**/*.*" = [
+  "BLE001",  # Blind exception catching (common in benchmarks)
+  "C901",    # Function complexity (benchmarks can be complex)
+  "D101",    # Missing docstring in public class
+  "D102",    # Missing docstring in public method
+  "D103",    # Missing docstring in public function
+  "D105",    # Missing docstring in magic method
+  "PERF203", # Try-except within a loop (acceptable in benchmarks)
+  "PLC0415", # Import at top level (conditional imports for optional deps)
+  "PLR0912", # Too many branches
+  "PLR0913", # Too many arguments
+  "PLR0915", # Too many statements
+  "S101",
+  "S110",    # Try-except-pass (acceptable in benchmarks)
+  "SLF001",  # Private member access (needed for benchmark configuration)
 ]
 lint.per-file-ignores."**/tests/**/*.*" = [
   "A005",    # Module shadows standard library
@@ -220,35 +115,30 @@ lint.per-file-ignores."**/tests/**/*.*" = [
   "SIM117",  # Combine with statements
   "SLF001",
 ]
-lint.per-file-ignores."benchmarks/**/*.*" = [
-  "BLE001",  # Blind exception catching (common in benchmarks)
-  "C901",    # Function complexity (benchmarks can be complex)
-  "D101",    # Missing docstring in public class
+lint.per-file-ignores."examples/**/*.py" = [
+  "ANN202",  # Missing return type annotation for private function
+  "ARG002",  # Unused method argument (examples show interfaces)
+  "B007",    # Loop control variable not used
+  "BLE001",  # Blind exception catching (common in examples)
   "D102",    # Missing docstring in public method
   "D103",    # Missing docstring in public function
-  "D105",    # Missing docstring in magic method
-  "PERF203", # Try-except within a loop (acceptable in benchmarks)
-  "PLC0415", # Import at top level (conditional imports for optional deps)
-  "PLR0912", # Too many branches
-  "PLR0913", # Too many arguments
-  "PLR0915", # Too many statements
-  "S101",
-  "S110",    # Try-except-pass (acceptable in benchmarks)
-  "SLF001",  # Private member access (needed for benchmark configuration)
+  "DTZ005",  # datetime.now() without tz (examples are simple)
+  "ERA001",  # Commented-out code (examples show alternatives)
+  "INP001",  # Implicit namespace package (examples don't need __init__.py)
+  "PLC0415", # Import at top level (examples show conditional imports)
+  "PTH123",  # open() should be replaced by Path.open()
+  "PTH207",  # Replace glob with Path.glob
+  "S112",    # try-except-continue (examples show error handling patterns)
 ]
-lint.per-file-ignores."tests/e2e/*_test.py" = [
+lint.per-file-ignores."packages/python/tests/e2e/*_test.py" = [
   "T201", # print statements are needed for test output
 ]
-lint.isort.known-first-party = [ "kreuzberg", "tests" ]
+lint.isort.known-first-party = [ "kreuzberg" ]
 lint.mccabe.max-complexity = 15
 lint.pydocstyle.convention = "google"
 lint.pylint.max-args = 10
 lint.pylint.max-branches = 15
 lint.pylint.max-returns = 10
-
-[tool.codespell]
-ignore-words-list = "addin,inh,te,tha,vie,mis,ment,bu,ned,inout"
-skip = "kreuzberg/_token_reduction/stopwords/*"
 
 [tool.pyproject-fmt]
 keep_full_version = true
@@ -256,7 +146,7 @@ max_supported_python = "3.14"
 
 [tool.pytest.ini_options]
 timeout = 300
-testpaths = [ "tests" ]
+testpaths = [ "packages/python/tests" ]
 norecursedirs = [
   "dist",
   "build",
@@ -266,6 +156,8 @@ markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "integration: marks tests as integration tests",
 ]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
   "ignore:Exception ignored in:pytest.PytestUnraisableExceptionWarning",
   "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
@@ -277,15 +169,14 @@ filterwarnings = [
 [tool.coverage.run]
 branch = true
 omit = [
-  "tests/*",
+  "packages/python/tests/*",
   "scripts/*",
   "benchmarks/*",
 ]
 plugins = [ "covdefaults" ]
-source = [ "kreuzberg" ]
+source = [ "packages/python/kreuzberg" ]
 
 [tool.coverage.report]
-fail_under = 85
 exclude_lines = [
   'if TYPE_CHECKING:',
   "except ImportError:",
@@ -299,8 +190,8 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-packages = [ "kreuzberg", "tests" ]
-exclude = [ "comparative-benchmarks" ]
+packages = [ "packages/python", "comparative-benchmarks" ]
+exclude = [ "examples" ]
 python_version = "3.10"
 implicit_reexport = false
 show_error_codes = true
@@ -308,13 +199,9 @@ strict = true
 
 [[tool.mypy.overrides]]
 module = [
+  "keybert",
   "easyocr",
   "paddleocr",
-  "deep_translator",
-  "pypdfium2",
-  "chardetng_py",
-  "fast_langdetect",
-  "mailparse",
-  "keybert",
+  "kreuzberg._internal_bindings",
 ]
 ignore_missing_imports = true

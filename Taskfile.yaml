@@ -10,33 +10,89 @@ tasks:
     cmds:
       - uv sync --all-extras --all-packages --all-groups
       - uv pip install maturin
-      - maturin develop --release
+      - cd crates/kreuzberg-py && maturin develop --release
+      - |
+        # Fix pdfium library path on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          SO_FILE="packages/python/kreuzberg/_internal_bindings.abi3.so"
+          if [ -f "$SO_FILE" ]; then
+            if otool -L "$SO_FILE" | grep -q "./libpdfium.dylib"; then
+              echo "Fixing pdfium library path..."
+              install_name_tool -change ./libpdfium.dylib @loader_path/libpdfium.dylib "$SO_FILE"
+              echo "✅ Fixed pdfium library path"
+            fi
+          fi
+        fi
       - prek install && prek install --hook-type commit-msg
 
   update:
     desc: "Update Python and Rust dependencies"
     cmds:
-      - uv run uv-bump
-      - cd benchmarks && uv run uv-bump && cd ..
-      - cargo upgrade --incompatible
+      - uv run uv-bump --pyproject-toml pyproject.toml
+      - uv run uv-bump --pyproject-toml packages/python/pyproject.toml
+      - uv run uv-bump --pyproject-toml comparative-benchmarks/pyproject.toml
+      - cargo upgrade --workspace --incompatible
+      - cargo update --workspace
       - uv sync --all-extras --all-packages --all-groups --upgrade
-      - maturin develop --release
+      - cd crates/kreuzberg-py && maturin develop --release
+      - |
+        # Fix pdfium library path on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          SO_FILE="packages/python/kreuzberg/_internal_bindings.abi3.so"
+          if [ -f "$SO_FILE" ]; then
+            if otool -L "$SO_FILE" | grep -q "./libpdfium.dylib"; then
+              echo "Fixing pdfium library path..."
+              install_name_tool -change ./libpdfium.dylib @loader_path/libpdfium.dylib "$SO_FILE"
+              echo "✅ Fixed pdfium library path"
+            fi
+          fi
+        fi
       - prek autoupdate
 
   test:python:
     desc: "Run Python tests with pytest"
     cmds:
-      - uv run pytest
+      - uv run pytest packages/python/tests/ -v
 
   test:cov:
     desc: "Run Python tests with coverage"
     cmds:
-      - uv run pytest --cov
+      - uv run pytest packages/python/tests/ --cov=packages/python/kreuzberg --cov-report=term
 
   test:rust:
     desc: "Run Rust tests"
     cmds:
       - cargo test --release
+
+  check:rust:
+    desc: "Fast check of Rust code (no codegen)"
+    cmds:
+      - cargo check --workspace --all-features
+
+  clippy:rust:
+    desc: "Run Rust linter (clippy)"
+    cmds:
+      - cargo clippy --workspace --all-features -- -D warnings
+
+  fmt:rust:
+    desc: "Format Rust code"
+    cmds:
+      - cargo fmt --all
+
+  fmt:rust:check:
+    desc: "Check Rust formatting without modifying files"
+    cmds:
+      - cargo fmt --all --check
+
+  build:rust:
+    desc: "Build Rust workspace in release mode"
+    cmds:
+      - cargo build --workspace --release
+
+  build:rust:debug:
+    desc: "Build Rust workspace in debug mode"
+    cmds:
+      - cargo build --workspace
 
   cov:rust:
     desc: "Generate Rust code coverage report (requires cargo-llvm-cov)"
@@ -48,7 +104,7 @@ tasks:
   cov:python:
     desc: "Generate Python code coverage report"
     cmds:
-      - uv run pytest --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term
+      - uv run pytest packages/python/tests/ --cov=packages/python/kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term
       - echo "Python coverage report generated at coverage.lcov"
 
   cov:all:
@@ -66,23 +122,54 @@ tasks:
   lint:
     desc: "Lint Python code with ruff/prek and Rust code with clippy/fmt"
     cmds:
+      - task: clippy:rust
       - prek run --all-files
 
   fmt:
     desc: "Format Python and Rust code"
     cmds:
-      - cargo fmt
+      - task: fmt:rust
       - prek run ruff-format --all-files
+
+  check:
+    desc: "Fast check of Python and Rust code"
+    cmds:
+      - task: check:rust
+      - uv run ruff check packages/python
 
   build:
     desc: "Build Rust components for development"
     cmds:
-      - maturin develop --release
+      - cd crates/kreuzberg-py && maturin develop --release
+      - |
+        # Fix pdfium library path on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          SO_FILE="packages/python/kreuzberg/_internal_bindings.abi3.so"
+          if [ -f "$SO_FILE" ]; then
+            if otool -L "$SO_FILE" | grep -q "./libpdfium.dylib"; then
+              echo "Fixing pdfium library path..."
+              install_name_tool -change ./libpdfium.dylib @loader_path/libpdfium.dylib "$SO_FILE"
+              echo "✅ Fixed pdfium library path"
+            fi
+          fi
+        fi
 
   build:debug:
     desc: "Build Rust components in debug mode"
     cmds:
-      - maturin develop
+      - cd crates/kreuzberg-py && maturin develop
+      - |
+        # Fix pdfium library path on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          SO_FILE="packages/python/kreuzberg/_internal_bindings.abi3.so"
+          if [ -f "$SO_FILE" ]; then
+            if otool -L "$SO_FILE" | grep -q "./libpdfium.dylib"; then
+              echo "Fixing pdfium library path..."
+              install_name_tool -change ./libpdfium.dylib @loader_path/libpdfium.dylib "$SO_FILE"
+              echo "✅ Fixed pdfium library path"
+            fi
+          fi
+        fi
 
   docs:build:
     desc: "Build documentation"
@@ -97,43 +184,43 @@ tasks:
   bench:quick:
     desc: "Run quick benchmarks (tiny/small/medium categories)"
     cmds:
-      - cd benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_async --category tiny,small,medium --iterations 1 --timeout 300
+      - cd comparative-benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_async --category tiny,small,medium --iterations 1 --timeout 300
 
   bench:all:
     desc: "Run all benchmarks (all categories, all frameworks)"
     cmds:
-      - cd benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_async --category all --iterations 3 --timeout 1800
+      - cd comparative-benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_async --category all --iterations 3 --timeout 1800
 
   bench:kreuzberg:
     desc: "Run Kreuzberg benchmarks (sync and async)"
     cmds:
-      - cd benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_async --iterations 3
+      - cd comparative-benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_async --iterations 3
 
   bench:compare:
     desc: "Compare Kreuzberg v3 vs v4"
     cmds:
-      - cd benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_v3 --category small --iterations 3
+      - cd comparative-benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_v3 --category small --iterations 3
 
   bench:report:
     desc: "Generate benchmark report"
     cmds:
-      - cd benchmarks && uv run python -m src.cli report --output-format html
+      - cd comparative-benchmarks && uv run python -m src.cli report --output-format html
 
   bench:visualize:
     desc: "Generate benchmark visualizations"
     cmds:
-      - cd benchmarks && uv run python -m src.cli visualize
+      - cd comparative-benchmarks && uv run python -m src.cli visualize
 
   bench:aggregate:
     desc: "Aggregate benchmark results"
     cmds:
-      - cd benchmarks && uv run python -m src.cli aggregate
+      - cd comparative-benchmarks && uv run python -m src.cli aggregate
 
   bench:clean-cache:
     desc: "Clean Kreuzberg cache before benchmarking"
     cmds:
       - rm -rf .kreuzberg
-      - rm -rf benchmarks/.kreuzberg
+      - rm -rf comparative-benchmarks/.kreuzberg
 
   bench:full:
     desc: "Run full benchmarking pipeline with reports"

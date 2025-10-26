@@ -1,0 +1,22 @@
+name: Cache Pdfium Binaries
+description: Cache Pdfium binary downloads to speed up builds
+inputs:
+  pdfium-version:
+    description: Pdfium version to cache
+    required: true
+outputs:
+  cache-hit:
+    description: Whether the Pdfium cache was restored
+    value: ${{ steps.cache-pdfium.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - name: Cache Pdfium binaries
+      id: cache-pdfium
+      uses: actions/cache@v4
+      with:
+        path: |
+          target/*/build/*/out/pdfium/
+        key: pdfium-${{ runner.os }}-${{ inputs.pdfium-version }}
+        restore-keys: |
+          pdfium-${{ runner.os }}-

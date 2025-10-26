@@ -19,7 +19,7 @@ runs:
   using: composite
   steps:
     - name: Install uv
-      uses: astral-sh/setup-uv@v6
+      uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
 
@@ -39,3 +39,9 @@ runs:
         key: ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('uv.lock') }}
         restore-keys: |
           ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-
+
+    - name: Install Python dependencies
+      shell: bash
+      run: |
+        # Install workspace packages and all dev dependencies from root pyproject.toml
+        uv sync --all-packages --all-groups --all-extras --no-install-project
