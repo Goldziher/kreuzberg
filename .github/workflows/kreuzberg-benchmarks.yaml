@@ -87,7 +87,7 @@ jobs:
 
       - name: Upload benchmark results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmark-results-py${{ matrix.python-version }}-${{ github.sha }}
           path: benchmark_results.json
