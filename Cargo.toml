@@ -5,11 +5,11 @@ members = [
     "crates/kreuzberg-rb",
     "crates/kreuzberg-cli",
     "crates/kreuzberg-node",
+    "tools/benchmark-harness",
 ]
 default-members = [
     "crates/kreuzberg",
     "crates/kreuzberg-cli",
-    "crates/kreuzberg-node",
 ]
 resolver = "2"
 
