@@ -229,8 +229,8 @@ impl PandocServer {
 
         #[cfg(not(unix))]
         {
-            return Err(KreuzbergError::Validation(
-                "Pandoc server mode requires Unix-like system for symlinks".to_string(),
+            return Err(KreuzbergError::validation(
+                "Pandoc server mode requires Unix-like system for symlinks",
             ));
         }
 
