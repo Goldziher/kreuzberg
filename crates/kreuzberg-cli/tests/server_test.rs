@@ -106,6 +106,7 @@ language = "eng"
     fs::remove_file("test_config.toml").ok();
 }
 
+#[cfg(not(coverage))]
 #[test]
 fn test_serve_command_help() {
     // Build the binary first
@@ -136,6 +137,7 @@ fn test_serve_command_help() {
     assert!(stdout.contains("--config"));
 }
 
+#[cfg(not(coverage))]
 #[test]
 fn test_mcp_command_help() {
     // Build the binary first

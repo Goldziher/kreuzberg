@@ -79,6 +79,14 @@ enum Commands {
         /// Number of benchmark iterations for statistical analysis
         #[arg(short = 'i', long, default_value = "3")]
         iterations: usize,
+
+        /// Enable OCR for image extraction
+        #[arg(long, default_value = "true")]
+        ocr: bool,
+
+        /// Enable quality assessment
+        #[arg(long, default_value = "true")]
+        measure_quality: bool,
     },
 }
 
@@ -131,8 +139,11 @@ async fn main() -> Result<()> {
             mode,
             warmup,
             iterations,
+            ocr,
+            measure_quality,
         } => {
             use benchmark_harness::{AdapterRegistry, BenchmarkRunner, NativeAdapter};
+            use kreuzberg::{ExtractionConfig, OcrConfig};
             use std::sync::Arc;
 
             let config = BenchmarkConfig {
@@ -142,16 +153,31 @@ async fn main() -> Result<()> {
                 benchmark_mode: mode.into(),
                 warmup_iterations: warmup,
                 benchmark_iterations: iterations,
+                measure_quality,
                 ..Default::default()
             };
 
             config.validate()?;
 
+            // Create extraction config with OCR if enabled
+            let extraction_config = if ocr {
+                ExtractionConfig {
+                    ocr: Some(OcrConfig {
+                        backend: "tesseract".to_string(),
+                        language: "eng".to_string(),
+                        tesseract_config: None,
+                    }),
+                    ..Default::default()
+                }
+            } else {
+                ExtractionConfig::default()
+            };
+
             // Create registry and register adapters
             let mut registry = AdapterRegistry::new();
 
-            // Register native adapter by default
-            registry.register(Arc::new(NativeAdapter::new()))?;
+            // Register native adapter with OCR config
+            registry.register(Arc::new(NativeAdapter::with_config(extraction_config)))?;
 
             // Register external framework adapters
             use benchmark_harness::adapters::external::{
