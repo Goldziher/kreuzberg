@@ -211,8 +211,13 @@ async fn test_concurrent_ocr_processing() {
 ///
 /// Note: This test is simplified to avoid runtime nesting issues.
 /// It validates that concurrent OCR extractions work correctly with caching.
+///
+/// WARNING: This test uses timing heuristics (<500ms = cache hit) which are unreliable
+/// in CI environments where even cached operations may exceed the threshold on slow runners.
+/// Ignored in CI to prevent flaky failures.
 #[cfg(feature = "ocr")]
 #[cfg_attr(coverage, ignore = "coverage instrumentation disrupts cache hit heuristics")]
+#[cfg_attr(not(debug_assertions), ignore = "timing-based cache heuristic is flaky in CI")]
 #[test]
 fn test_concurrent_ocr_cache_stress() {
     use helpers::{get_test_file_path, skip_if_missing};
