@@ -104,7 +104,7 @@ jobs:
 
           echo "Running benchmarks with adapters: $ADAPTER_FRAMEWORKS"
 
-          # Run actual benchmarks with all fixtures
+          # Run actual benchmarks with all fixtures (OCR and quality always enabled)
           ./target/release/benchmark-harness run \
             --fixtures fixtures/ \
             --frameworks "$ADAPTER_FRAMEWORKS" \
@@ -113,7 +113,9 @@ jobs:
             --iterations 3 \
             --warmup 1 \
             --max-concurrent 4 \
-            --mode batch 2>&1 | tee results/benchmark_run.log
+            --mode batch \
+            --ocr \
+            --measure-quality 2>&1 | tee results/benchmark_run.log
 
           echo "Benchmark execution completed"
 
