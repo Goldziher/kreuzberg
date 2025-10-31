@@ -5,7 +5,7 @@
 
 use crate::adapter::FrameworkAdapter;
 use crate::config::BenchmarkConfig;
-use crate::fixture::{Fixture, FixtureManager};
+use crate::fixture::FixtureManager;
 use crate::registry::AdapterRegistry;
 use crate::types::BenchmarkResult;
 use crate::{Error, Result};
@@ -93,7 +93,7 @@ impl BenchmarkRunner {
         // Create task queue: (fixture, adapter)
         let mut task_queue: Vec<(PathBuf, String, Arc<dyn FrameworkAdapter>)> = Vec::new();
 
-        for (fixture_path, fixture) in self.fixtures.fixtures() {
+        for (_fixture_path, fixture) in self.fixtures.fixtures() {
             for adapter in &frameworks {
                 // Check if adapter supports this format
                 if !adapter.supports_format(&fixture.file_type) {
@@ -108,7 +108,7 @@ impl BenchmarkRunner {
             }
         }
 
-        let total_tasks = task_queue.len();
+        let _total_tasks = task_queue.len();
         let mut task_iter = task_queue.into_iter();
 
         // Fill initial task pool
@@ -116,10 +116,7 @@ impl BenchmarkRunner {
             if let Some((file_path, _framework_name, adapter)) = task_iter.next() {
                 let timeout = self.config.timeout;
 
-                tasks.spawn(async move {
-                    let result = adapter.extract(&file_path, timeout).await;
-                    result
-                });
+                tasks.spawn(async move { adapter.extract(&file_path, timeout).await });
 
                 active_count += 1;
             } else {
@@ -148,10 +145,7 @@ impl BenchmarkRunner {
             if let Some((file_path, _framework_name, adapter)) = task_iter.next() {
                 let timeout = self.config.timeout;
 
-                tasks.spawn(async move {
-                    let result = adapter.extract(&file_path, timeout).await;
-                    result
-                });
+                tasks.spawn(async move { adapter.extract(&file_path, timeout).await });
 
                 active_count += 1;
             }
