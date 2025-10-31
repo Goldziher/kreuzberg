@@ -35,6 +35,37 @@ pub trait FrameworkAdapter: Send + Sync {
     /// * `Err(Error)` - Extraction failed
     async fn extract(&self, file_path: &Path, timeout: Duration) -> Result<BenchmarkResult>;
 
+    /// Extract content from multiple documents using framework's batch API
+    ///
+    /// Frameworks with native batch support should override this method to use
+    /// their optimized batch extraction API (e.g., Kreuzberg's `batch_extract_file()`).
+    ///
+    /// Default implementation calls `extract()` sequentially for each file.
+    ///
+    /// # Arguments
+    /// * `file_paths` - Paths to documents to extract
+    /// * `timeout` - Maximum time to wait for each extraction
+    ///
+    /// # Returns
+    /// * `Ok(Vec<BenchmarkResult>)` - Results for all files
+    /// * `Err(Error)` - Batch extraction failed
+    async fn extract_batch(&self, file_paths: &[&Path], timeout: Duration) -> Result<Vec<BenchmarkResult>> {
+        // Default: sequential extraction
+        let mut results = Vec::new();
+        for path in file_paths {
+            results.push(self.extract(path, timeout).await?);
+        }
+        Ok(results)
+    }
+
+    /// Check if this adapter supports batch extraction
+    ///
+    /// Returns true if the adapter overrides `extract_batch()` with an optimized implementation.
+    /// Default is false (uses sequential extraction).
+    fn supports_batch(&self) -> bool {
+        false
+    }
+
     /// Get version information for this framework
     fn version(&self) -> String {
         "unknown".to_string()

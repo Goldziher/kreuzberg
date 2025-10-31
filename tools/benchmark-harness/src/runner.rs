@@ -12,7 +12,6 @@ use crate::{Error, Result};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::task::JoinSet;
 
 /// Calculate percentile from duration values
 ///
@@ -254,6 +253,105 @@ impl BenchmarkRunner {
         })
     }
 
+    /// Run multiple iterations of batch extraction (static method for async spawning)
+    ///
+    /// # Arguments
+    /// * `file_paths` - Paths to files to extract in batch
+    /// * `adapter` - Framework adapter to use
+    /// * `config` - Benchmark configuration
+    ///
+    /// # Returns
+    /// Vector of aggregated benchmark results (one per file) with iterations and statistics
+    async fn run_batch_iterations_static(
+        file_paths: Vec<PathBuf>,
+        adapter: Arc<dyn FrameworkAdapter>,
+        config: &BenchmarkConfig,
+    ) -> Result<Vec<BenchmarkResult>> {
+        let total_iterations = config.warmup_iterations + config.benchmark_iterations;
+        let mut all_batch_results = Vec::new();
+
+        // Run all iterations (warmup + benchmark)
+        for iteration in 0..total_iterations {
+            let refs: Vec<&std::path::Path> = file_paths.iter().map(|p| p.as_path()).collect();
+            let batch_results = adapter.extract_batch(&refs, config.timeout).await?;
+
+            // Only keep benchmark iterations (skip warmup)
+            if iteration >= config.warmup_iterations {
+                all_batch_results.push(batch_results);
+            }
+        }
+
+        // If only 1 benchmark iteration, return it directly
+        if config.benchmark_iterations == 1 && !all_batch_results.is_empty() {
+            return Ok(all_batch_results.into_iter().next().unwrap());
+        }
+
+        // Aggregate multiple iterations
+        // For each file, aggregate across iterations
+        let file_count = file_paths.len();
+        let mut aggregated_results = Vec::new();
+
+        for file_idx in 0..file_count {
+            // Collect results for this file across all iterations
+            let file_iterations: Vec<&BenchmarkResult> =
+                all_batch_results.iter().map(|batch| &batch[file_idx]).collect();
+
+            // Extract iteration data
+            let iterations: Vec<IterationResult> = file_iterations
+                .iter()
+                .enumerate()
+                .map(|(idx, result)| IterationResult {
+                    iteration: idx + 1,
+                    duration: result.duration,
+                    extraction_duration: result.extraction_duration,
+                    metrics: result.metrics.clone(),
+                })
+                .collect();
+
+            // Calculate statistics
+            let statistics = calculate_statistics(&iterations);
+
+            // Aggregate metrics
+            let aggregated_metrics = aggregate_metrics(&iterations);
+
+            // Calculate average extraction_duration if available
+            let extraction_durations: Vec<Duration> =
+                file_iterations.iter().filter_map(|r| r.extraction_duration).collect();
+
+            let avg_extraction_duration = if !extraction_durations.is_empty() {
+                let total_ms: f64 = extraction_durations.iter().map(|d| d.as_secs_f64() * 1000.0).sum();
+                Some(Duration::from_secs_f64(
+                    total_ms / extraction_durations.len() as f64 / 1000.0,
+                ))
+            } else {
+                None
+            };
+
+            // Calculate subprocess overhead from mean duration and avg extraction duration
+            let subprocess_overhead = avg_extraction_duration.map(|ext| statistics.mean.saturating_sub(ext));
+
+            // Use first result as template
+            let first_result = file_iterations[0];
+
+            aggregated_results.push(BenchmarkResult {
+                framework: first_result.framework.clone(),
+                file_path: first_result.file_path.clone(),
+                file_size: first_result.file_size,
+                success: true,
+                error_message: None,
+                duration: statistics.mean,
+                extraction_duration: avg_extraction_duration,
+                subprocess_overhead,
+                metrics: aggregated_metrics,
+                quality: first_result.quality.clone(),
+                iterations,
+                statistics: Some(statistics),
+            });
+        }
+
+        Ok(aggregated_results)
+    }
+
     /// Run benchmarks for specified frameworks
     ///
     /// # Arguments
@@ -289,76 +387,111 @@ impl BenchmarkRunner {
 
         let mut results = Vec::new();
 
-        // Determine concurrency based on benchmark mode
-        let max_concurrent = match self.config.benchmark_mode {
-            BenchmarkMode::SingleFile => 1, // Sequential execution for fair latency comparison
-            BenchmarkMode::Batch => self.config.max_concurrent, // Concurrent for throughput
-        };
+        // Check if we should use batch extraction
+        let use_batch = matches!(self.config.benchmark_mode, BenchmarkMode::Batch);
 
-        let mut tasks = JoinSet::new();
-        let mut active_count = 0;
+        if use_batch {
+            // Batch mode: Group files by adapter and use batch extraction if supported
+            use std::collections::HashMap;
 
-        // Create task queue: (fixture, adapter)
-        let mut task_queue: Vec<(PathBuf, String, Arc<dyn FrameworkAdapter>)> = Vec::new();
+            // Group files by adapter
+            let mut adapter_files: HashMap<String, Vec<PathBuf>> = HashMap::new();
 
-        for (fixture_path, fixture) in self.fixtures.fixtures() {
+            for (fixture_path, fixture) in self.fixtures.fixtures() {
+                for adapter in &frameworks {
+                    // Check if adapter supports this format
+                    if !adapter.supports_format(&fixture.file_type) {
+                        continue;
+                    }
+
+                    // Resolve document path relative to fixture directory
+                    let fixture_dir = fixture_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+                    let document_path = fixture.resolve_document_path(fixture_dir);
+
+                    adapter_files
+                        .entry(adapter.name().to_string())
+                        .or_insert_with(Vec::new)
+                        .push(document_path);
+                }
+            }
+
+            // Clone config data needed for async blocks
+            let config = self.config.clone();
+
+            // Process each adapter
             for adapter in &frameworks {
-                // Check if adapter supports this format
-                if !adapter.supports_format(&fixture.file_type) {
-                    continue;
-                }
+                let adapter_name = adapter.name();
 
-                // Resolve document path relative to fixture directory
-                let fixture_dir = fixture_path.parent().unwrap_or_else(|| std::path::Path::new("."));
-                let document_path = fixture.resolve_document_path(fixture_dir);
+                if let Some(file_paths) = adapter_files.get(adapter_name) {
+                    if file_paths.is_empty() {
+                        continue;
+                    }
 
-                task_queue.push((document_path, adapter.name().to_string(), Arc::clone(adapter)));
-            }
-        }
+                    if adapter.supports_batch() {
+                        // Use native batch extraction
+                        let adapter = Arc::clone(adapter);
+                        let file_paths = file_paths.clone();
+                        let config = config.clone();
 
-        let _total_tasks = task_queue.len();
-        let mut task_iter = task_queue.into_iter();
+                        match Self::run_batch_iterations_static(file_paths, adapter, &config).await {
+                            Ok(batch_results) => {
+                                results.extend(batch_results);
+                            }
+                            Err(e) => {
+                                eprintln!("Batch benchmark task failed for {}: {}", adapter_name, e);
+                            }
+                        }
+                    } else {
+                        // Fall back to sequential extraction
+                        for file_path in file_paths {
+                            let adapter = Arc::clone(adapter);
+                            let file_path = file_path.clone();
+                            let config = config.clone();
 
-        // Clone config data needed for async blocks
-        let config = self.config.clone();
-
-        // Fill initial task pool
-        while active_count < max_concurrent {
-            if let Some((file_path, _framework_name, adapter)) = task_iter.next() {
-                let config = config.clone();
-
-                tasks.spawn(async move { Self::run_iterations_static(&file_path, adapter, &config).await });
-
-                active_count += 1;
-            } else {
-                break;
-            }
-        }
-
-        // Process tasks as they complete
-        while let Some(task_result) = tasks.join_next().await {
-            // Handle task completion
-            match task_result {
-                Ok(Ok(result)) => {
-                    results.push(result);
-                }
-                Ok(Err(e)) => {
-                    eprintln!("Benchmark task failed: {}", e);
-                }
-                Err(e) => {
-                    eprintln!("Task join error: {}", e);
+                            match Self::run_iterations_static(&file_path, adapter, &config).await {
+                                Ok(result) => {
+                                    results.push(result);
+                                }
+                                Err(e) => {
+                                    eprintln!("Benchmark task failed for {}: {}", adapter_name, e);
+                                }
+                            }
+                        }
+                    }
                 }
             }
+        } else {
+            // SingleFile mode: Sequential execution for fair latency comparison
+            let mut task_queue: Vec<(PathBuf, String, Arc<dyn FrameworkAdapter>)> = Vec::new();
 
-            active_count -= 1;
+            for (fixture_path, fixture) in self.fixtures.fixtures() {
+                for adapter in &frameworks {
+                    // Check if adapter supports this format
+                    if !adapter.supports_format(&fixture.file_type) {
+                        continue;
+                    }
 
-            // Spawn next task if available
-            if let Some((file_path, _framework_name, adapter)) = task_iter.next() {
-                let config = config.clone();
+                    // Resolve document path relative to fixture directory
+                    let fixture_dir = fixture_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+                    let document_path = fixture.resolve_document_path(fixture_dir);
 
-                tasks.spawn(async move { Self::run_iterations_static(&file_path, adapter, &config).await });
+                    task_queue.push((document_path, adapter.name().to_string(), Arc::clone(adapter)));
+                }
+            }
 
-                active_count += 1;
+            // Clone config data needed for async blocks
+            let config = self.config.clone();
+
+            // Process tasks sequentially
+            for (file_path, _framework_name, adapter) in task_queue {
+                match Self::run_iterations_static(&file_path, adapter, &config).await {
+                    Ok(result) => {
+                        results.push(result);
+                    }
+                    Err(e) => {
+                        eprintln!("Benchmark task failed: {}", e);
+                    }
+                }
             }
         }
 

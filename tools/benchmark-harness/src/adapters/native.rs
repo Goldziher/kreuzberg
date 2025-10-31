@@ -8,8 +8,8 @@ use crate::monitoring::ResourceMonitor;
 use crate::types::{BenchmarkResult, PerformanceMetrics};
 use crate::{Error, Result};
 use async_trait::async_trait;
-use kreuzberg::{ExtractionConfig, extract_file};
-use std::path::Path;
+use kreuzberg::{ExtractionConfig, batch_extract_file, extract_file};
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 /// Native Rust adapter using kreuzberg crate directly
@@ -153,6 +153,105 @@ impl FrameworkAdapter for NativeAdapter {
             iterations: vec![],
             statistics: None,
         })
+    }
+
+    async fn extract_batch(&self, file_paths: &[&Path], timeout: Duration) -> Result<Vec<BenchmarkResult>> {
+        // Start resource monitoring for the entire batch
+        let monitor = ResourceMonitor::new();
+        monitor.start(Duration::from_millis(10)).await;
+
+        let start = Instant::now();
+
+        // Convert paths for batch extraction
+        let paths: Vec<PathBuf> = file_paths.iter().map(|p| p.to_path_buf()).collect();
+
+        // Execute batch extraction with timeout using Kreuzberg's batch API
+        let batch_result = tokio::time::timeout(timeout, batch_extract_file(paths.clone(), &self.config))
+            .await
+            .map_err(|_| Error::Timeout(format!("Batch extraction exceeded {:?}", timeout)))?
+            .map_err(|e| Error::Benchmark(format!("Batch extraction failed: {}", e)));
+
+        let total_duration = start.elapsed();
+
+        // Stop monitoring and collect samples
+        let samples = monitor.stop().await;
+        let resource_stats = ResourceMonitor::calculate_stats(&samples);
+
+        // Handle batch extraction failure
+        if let Err(e) = batch_result {
+            // Return error results for all files
+            return Ok(file_paths
+                .iter()
+                .map(|path| {
+                    let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+                    BenchmarkResult {
+                        framework: self.name().to_string(),
+                        file_path: path.to_path_buf(),
+                        file_size,
+                        success: false,
+                        error_message: Some(e.to_string()),
+                        duration: total_duration,
+                        extraction_duration: None,
+                        subprocess_overhead: None,
+                        metrics: PerformanceMetrics::default(),
+                        quality: None,
+                        iterations: vec![],
+                        statistics: None,
+                    }
+                })
+                .collect());
+        }
+
+        let extraction_results = batch_result.unwrap();
+
+        // Convert Kreuzberg results to BenchmarkResults
+        let mut benchmark_results = Vec::new();
+        for (path, _extraction_result) in paths.iter().zip(extraction_results.iter()) {
+            let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+
+            // Approximate per-file duration (total / count)
+            let per_file_duration = Duration::from_secs_f64(total_duration.as_secs_f64() / paths.len() as f64);
+
+            // Approximate throughput per file
+            let throughput = if per_file_duration.as_secs_f64() > 0.0 {
+                file_size as f64 / per_file_duration.as_secs_f64()
+            } else {
+                0.0
+            };
+
+            // Use resource stats from the overall batch
+            // In a real benchmark, you'd want per-file resource tracking,
+            // but for batch operations this gives the overall profile
+            let metrics = PerformanceMetrics {
+                peak_memory_bytes: resource_stats.peak_memory_bytes,
+                avg_cpu_percent: resource_stats.avg_cpu_percent,
+                throughput_bytes_per_sec: throughput,
+                p50_memory_bytes: resource_stats.p50_memory_bytes,
+                p95_memory_bytes: resource_stats.p95_memory_bytes,
+                p99_memory_bytes: resource_stats.p99_memory_bytes,
+            };
+
+            benchmark_results.push(BenchmarkResult {
+                framework: self.name().to_string(),
+                file_path: path.clone(),
+                file_size,
+                success: true, // batch_extract_file returns Vec<ExtractionResult> only on success
+                error_message: None,
+                duration: per_file_duration,
+                extraction_duration: None,
+                subprocess_overhead: None,
+                metrics,
+                quality: None,
+                iterations: vec![],
+                statistics: None,
+            });
+        }
+
+        Ok(benchmark_results)
+    }
+
+    fn supports_batch(&self) -> bool {
+        true // Kreuzberg has native batch support via batch_extract_file()
     }
 
     fn version(&self) -> String {
