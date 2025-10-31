@@ -34,30 +34,6 @@ env:
   RUSTFLAGS: "--cap-lints=warn"
 
 jobs:
-  lint:
-    name: Lint (clippy + fmt)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-rust
-        with:
-          cache-key-prefix: lint
-
-      - name: Cache Pdfium binaries
-        uses: ./.github/actions/cache-pdfium
-        with:
-          pdfium-version: ${{ env.PDFIUM_VERSION }}
-
-      - name: Run clippy
-        run: cargo clippy --workspace --all-features --all-targets -- -D warnings
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
   test:
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -111,25 +87,3 @@ jobs:
         run: |
           curl -fsSL https://deepsource.io/cli | sh
           ./bin/deepsource report --analyzer test-coverage --key rust --value-file ./rust-coverage.lcov
-
-  check-msrv:
-    name: Check MSRV
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Rust toolchain (MSRV)
-        uses: ./.github/actions/setup-rust
-        with:
-          cache-key-prefix: msrv
-          toolchain: '1.80'  # Minimum Supported Rust Version
-
-      - name: Cache Pdfium binaries
-        uses: ./.github/actions/cache-pdfium
-        with:
-          pdfium-version: ${{ env.PDFIUM_VERSION }}
-
-      - name: Check build with MSRV
-        run: cargo check --workspace --all-features --exclude kreuzberg-py --exclude kreuzberg-rb

@@ -40,6 +40,12 @@ runs:
         restore-keys: |
           ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-
 
+    - name: Pin Python version for uv
+      shell: bash
+      run: |
+        # Explicitly pin Python version to ensure uv uses the correct version
+        uv python pin ${{ inputs.python-version }}
+
     - name: Install Python dependencies
       shell: bash
       run: |

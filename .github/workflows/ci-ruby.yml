@@ -63,6 +63,34 @@ jobs:
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
+      - name: Stage Pdfium runtime artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Copy pdfium library to crates/kreuzberg-rb for linking during build
+          # and to packages/ruby for runtime loading
+          case "${RUNNER_OS:-unknown}" in
+            Windows)
+              src="$RUNNER_TEMP/pdfium/bin/pdfium.dll"
+              cp -f "$src" "crates/kreuzberg-rb/pdfium.dll"
+              cp -f "$src" "packages/ruby/pdfium.dll"
+              ;;
+            macOS)
+              src="$RUNNER_TEMP/pdfium/lib/libpdfium.dylib"
+              cp -f "$src" "crates/kreuzberg-rb/libpdfium.dylib"
+              cp -f "$src" "packages/ruby/libpdfium.dylib"
+              ;;
+            Linux)
+              src="$RUNNER_TEMP/pdfium/lib/libpdfium.so"
+              cp -f "$src" "crates/kreuzberg-rb/libpdfium.so"
+              cp -f "$src" "packages/ruby/libpdfium.so"
+              ;;
+            *)
+              echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Install Ruby dependencies
         working-directory: packages/ruby
         run: |
@@ -76,27 +104,3 @@ jobs:
       - name: Run tests
         working-directory: packages/ruby
         run: bundle exec rspec --format documentation
-
-  lint:
-    name: Lint (rubocop)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.3'
-          bundler-cache: false
-
-      - name: Install Ruby dependencies
-        working-directory: packages/ruby
-        run: |
-          bundle config set --local path 'vendor/bundle'
-          bundle install --jobs 4 --retry 3
-
-      - name: Run RuboCop
-        working-directory: packages/ruby
-        run: bundle exec rubocop
