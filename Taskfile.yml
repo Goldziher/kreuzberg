@@ -1,50 +1,301 @@
-version: "3"
+version: '3'
 
-env:
-  DOCKER_BUILDKIT: 1
-  BUILDKIT_PROGRESS: plain
+vars:
+  RUST_LOG: info
 
 tasks:
-  setup:
-    desc: "Install dependencies with uv"
+  # Rust tasks
+  rust:build:
+    desc: Build all Rust crates
     cmds:
-      - uv sync --all-packages --all-extras --all-groups
-      - prek install && prek install --hook-type commit-msg
+      - cargo build --release --workspace
 
-  update:
-    desc: "Update the dependencies"
+  rust:test:
+    desc: Run all Rust tests
     cmds:
-      - uv run uv-bump
-      - cd comparative-benchmarks && uv run uv-bump && cd -
-      - uv sync --all-packages --all-extras --all-groups --upgrade
-      - prek autoupdate
+      - cargo test --workspace --release
 
-  test:
-    desc: "Run tests with pytest"
+  rust:check:
+    desc: Check Rust code
+    cmds:
+      - cargo check --workspace
+      - cargo clippy --workspace -- -D warnings
+
+  rust:fmt:
+    desc: Format Rust code
+    cmds:
+      - cargo fmt --all
+
+  rust:doc:
+    desc: Generate Rust documentation
+    cmds:
+      - cargo doc --no-deps --open
+
+  # Python tasks
+  python:install:
+    desc: Install Python dependencies
+    dir: packages/python
+    cmds:
+      - uv sync --all-extras
+
+  python:test:
+    desc: Run Python tests
+    dir: packages/python
     cmds:
       - uv run pytest
 
-  test:cov:
-    desc: "Run tests with coverage"
+  python:test:coverage:
+    desc: Run Python tests with coverage
+    dir: packages/python
     cmds:
-      - uv run pytest --cov
+      - uv run pytest --cov --cov-report=html
 
-  lint:
-    desc: "Lint code with ruff and docs with markdownlint"
+  python:lint:
+    desc: Lint Python code
+    dir: packages/python
+    cmds:
+      - uv run ruff check
+      - uv run ruff format --check
+      - uv run mypy
+
+  python:format:
+    desc: Format Python code
+    dir: packages/python
+    cmds:
+      - uv run ruff check --fix
+      - uv run ruff format
+
+  python:build:
+    desc: Build Python wheel
+    dir: packages/python
+    cmds:
+      - maturin develop --release
+
+  # Ruby tasks
+  ruby:install:
+    desc: Install Ruby dependencies
+    dir: packages/ruby
+    cmds:
+      - bundle install
+
+  ruby:build:
+    desc: Build Ruby extension
+    dir: packages/ruby
+    cmds:
+      - bundle exec rake compile
+
+  ruby:test:
+    desc: Run Ruby tests
+    dir: packages/ruby
+    cmds:
+      - bundle exec rspec
+
+  ruby:test:verbose:
+    desc: Run Ruby tests with detailed output
+    dir: packages/ruby
+    cmds:
+      - bundle exec rspec --format documentation --color
+
+  ruby:lint:
+    desc: Lint Ruby code
+    dir: packages/ruby
+    cmds:
+      - bundle exec rubocop
+
+  ruby:lint:fix:
+    desc: Auto-fix Ruby lint issues
+    dir: packages/ruby
+    cmds:
+      - bundle exec rubocop --autocorrect-all
+
+  ruby:console:
+    desc: Open Ruby console with Kreuzberg loaded
+    dir: packages/ruby
+    cmds:
+      - bundle exec pry -r ./lib/kreuzberg
+
+  # TypeScript tasks
+  typescript:install:
+    desc: Install TypeScript dependencies
+    dir: packages/typescript
+    cmds:
+      - pnpm install
+
+  typescript:build:
+    desc: Build TypeScript package
+    dir: packages/typescript
+    cmds:
+      - pnpm build
+
+  typescript:test:
+    desc: Run TypeScript tests
+    dir: packages/typescript
+    cmds:
+      - pnpm test
+
+  typescript:lint:
+    desc: Lint TypeScript code
+    dir: packages/typescript
+    cmds:
+      - pnpm lint
+
+  typescript:format:
+    desc: Format TypeScript code
+    dir: packages/typescript
+    cmds:
+      - pnpm format
+
+  # CLI tasks
+  cli:build:
+    desc: Build CLI binary
+    cmds:
+      - cargo build --release --package kreuzberg-cli
+
+  cli:install:
+    desc: Install CLI binary
+    cmds:
+      - cargo install --path crates/kreuzberg-cli
+
+  # Development tasks
+  dev:install:
+    desc: Install all dependencies
+    cmds:
+      - task: rust:build
+      - task: python:install
+      - task: ruby:install
+      - task: typescript:install
+
+  dev:test:
+    desc: Run all tests
+    cmds:
+      - task: rust:test
+      - task: python:test
+      - task: ruby:test
+      - task: typescript:test
+
+  dev:lint:
+    desc: Lint all code
+    cmds:
+      - task: rust:check
+      - task: python:lint
+      - task: ruby:lint
+      - task: typescript:lint
+
+  dev:format:
+    desc: Format all code
+    cmds:
+      - task: rust:fmt
+      - task: python:format
+      - task: ruby:lint:fix
+      - task: typescript:format
+
+  # Pre-commit tasks
+  pre-commit:install:
+    desc: Install pre-commit hooks
+    cmds:
+      - prek install
+      - prek install --hook-type commit-msg
+
+  pre-commit:run:
+    desc: Run pre-commit on all files
     cmds:
       - prek run --all-files
 
+  # Documentation tasks
   docs:build:
-    desc: "Build documentation"
+    desc: Build documentation
     cmds:
       - uv run mkdocs build --clean --strict
 
   docs:serve:
-    desc: "Serve documentation locally"
+    desc: Serve documentation locally
     cmds:
       - uv run mkdocs serve
 
-  default:
-    desc: "Show available tasks"
+  # Benchmark tasks
+  bench:quick:
+    desc: Run quick benchmarks (tiny/small/medium categories)
     cmds:
-      - task --list
+      - cd comparative-benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_async --category tiny,small,medium --iterations 1 --timeout 300
+
+  bench:all:
+    desc: Run all benchmarks (all categories, all frameworks)
+    cmds:
+      - cd comparative-benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_async --category all --iterations 3 --timeout 1800
+
+  bench:kreuzberg:
+    desc: Run Kreuzberg benchmarks (sync and async)
+    cmds:
+      - cd comparative-benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_async --iterations 3
+
+  bench:compare:
+    desc: Compare Kreuzberg v3 vs v4
+    cmds:
+      - cd comparative-benchmarks && uv run python -m src.cli benchmark --framework kreuzberg_sync,kreuzberg_v3 --category small --iterations 3
+
+  bench:report:
+    desc: Generate benchmark report
+    cmds:
+      - cd comparative-benchmarks && uv run python -m src.cli report --output-format html
+
+  bench:visualize:
+    desc: Generate benchmark visualizations
+    cmds:
+      - cd comparative-benchmarks && uv run python -m src.cli visualize
+
+  bench:aggregate:
+    desc: Aggregate benchmark results
+    cmds:
+      - cd comparative-benchmarks && uv run python -m src.cli aggregate
+
+  bench:clean-cache:
+    desc: Clean Kreuzberg cache before benchmarking
+    cmds:
+      - rm -rf .kreuzberg
+      - rm -rf comparative-benchmarks/.kreuzberg
+
+  bench:full:
+    desc: Run full benchmarking pipeline with reports
+    cmds:
+      - task: bench:clean-cache
+      - task: bench:all
+      - task: bench:aggregate
+      - task: bench:report
+      - task: bench:visualize
+
+  bench:test:
+    desc: Run benchmarks tests
+    cmds:
+      - uv run pytest tests/benchmarks/ -v
+
+  # Clean tasks
+  clean:rust:
+    desc: Clean Rust build artifacts
+    cmds:
+      - cargo clean
+
+  clean:python:
+    desc: Clean Python build artifacts
+    dir: packages/python
+    cmds:
+      - rm -rf build/ dist/ *.egg-info .pytest_cache .ruff_cache .mypy_cache
+
+  clean:ruby:
+    desc: Clean Ruby build artifacts
+    dir: packages/ruby
+    cmds:
+      - rm -rf lib/*.bundle lib/*.so pkg/ tmp/
+
+  clean:typescript:
+    desc: Clean TypeScript build artifacts
+    dir: packages/typescript
+    cmds:
+      - rm -rf dist/ node_modules/
+
+  clean:
+    desc: Clean all build artifacts
+    cmds:
+      - task: clean:rust
+      - task: clean:python
+      - task: clean:ruby
+      - task: clean:typescript

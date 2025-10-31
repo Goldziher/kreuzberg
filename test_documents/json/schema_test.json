@@ -1,25 +1,22 @@
 {
-  "string_field": "test value",
-  "number_field": 123,
-  "float_field": 45.67,
-  "boolean_field": true,
-  "null_field": null,
-  "array_strings": ["item1", "item2", "item3"],
-  "array_numbers": [1, 2, 3, 4, 5],
-  "array_mixed": ["text", 123, true, null],
-  "array_objects": [
-    { "id": 1, "name": "first" },
-    { "id": 2, "name": "second" }
-  ],
-  "nested_object": {
-    "level1": {
-      "level2": {
-        "level3": {
-          "deep_value": "deeply nested content"
-        }
-      }
-    }
-  },
-  "empty_array": [],
-  "empty_object": {}
+	"string_field": "test value",
+	"number_field": 123,
+	"float_field": 45.67,
+	"boolean_field": true,
+	"null_field": null,
+	"array_strings": ["item1", "item2", "item3"],
+	"array_numbers": [1, 2, 3, 4, 5],
+	"array_mixed": ["text", 123, true, null],
+	"array_objects": [{ "id": 1, "name": "first" }, { "id": 2, "name": "second" }],
+	"nested_object": {
+		"level1": {
+			"level2": {
+				"level3": {
+					"deep_value": "deeply nested content"
+				}
+			}
+		}
+	},
+	"empty_array": [],
+	"empty_object": {}
 }

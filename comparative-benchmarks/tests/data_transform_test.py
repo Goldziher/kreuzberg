@@ -44,7 +44,7 @@ def test_results_to_dataframe_converts_single_result_correctly() -> None:
         file_size=1024,
         file_type=FileType.PDF,
         category=DocumentCategory.SMALL,
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         iteration=1,
         extraction_time=0.5,
         peak_memory_mb=100.0,
@@ -61,7 +61,7 @@ def test_results_to_dataframe_converts_single_result_correctly() -> None:
     assert len(df) == 1
     assert df.get_column("file_path").item() == "/test/file.pdf"
     assert df.get_column("extraction_time").item() == 0.5
-    assert df.get_column("framework").item() == "kreuzberg_sync"
+    assert df.get_column("framework").item() == "kreuzberg_v4_sync"
 
 
 def test_results_to_dataframe_converts_multiple_results_correctly() -> None:
@@ -71,7 +71,7 @@ def test_results_to_dataframe_converts_multiple_results_correctly() -> None:
             file_size=1024 * i,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.5 * i,
             peak_memory_mb=100.0,
@@ -102,7 +102,7 @@ def test_summaries_to_dataframe_converts_empty_list_to_empty_dataframe() -> None
 
 def test_summaries_to_dataframe_converts_summaries_correctly() -> None:
     summary = BenchmarkSummary(
-        framework=Framework.KREUZBERG_SYNC,
+        framework=Framework.KREUZBERG_V4_SYNC,
         category=DocumentCategory.SMALL,
         total_files=10,
         successful_files=9,
@@ -115,7 +115,7 @@ def test_summaries_to_dataframe_converts_summaries_correctly() -> None:
     df = summaries_to_dataframe([summary])
 
     assert len(df) == 1
-    assert df.get_column("framework").item() == "kreuzberg_sync"
+    assert df.get_column("framework").item() == "kreuzberg_v4_sync"
     assert df.get_column("total_files").item() == 10
     assert df.get_column("success_rate").item() == 0.9
 
@@ -127,7 +127,7 @@ def test_aggregate_by_framework_groups_results_correctly() -> None:
             file_size=1024,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.5,
             peak_memory_mb=100.0,
@@ -143,7 +143,7 @@ def test_aggregate_by_framework_groups_results_correctly() -> None:
     aggregated = aggregate_by_framework(df)
 
     assert len(aggregated) == 1
-    assert aggregated.get_column("framework").item() == "kreuzberg_sync"
+    assert aggregated.get_column("framework").item() == "kreuzberg_v4_sync"
     assert aggregated.get_column("total_files").item() == 3
     assert aggregated.get_column("successful_files").item() == 3
 
@@ -155,7 +155,7 @@ def test_aggregate_by_framework_calculates_success_rate_correctly() -> None:
             file_size=1024,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.5,
             peak_memory_mb=100.0,
@@ -169,7 +169,7 @@ def test_aggregate_by_framework_calculates_success_rate_correctly() -> None:
             file_size=1024,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.0,
             peak_memory_mb=0.0,
@@ -195,7 +195,7 @@ def test_aggregate_by_framework_and_format_groups_correctly() -> None:
             file_size=1024,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.5,
             peak_memory_mb=100.0,
@@ -209,7 +209,7 @@ def test_aggregate_by_framework_and_format_groups_correctly() -> None:
             file_size=2048,
             file_type=FileType.DOCX,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.3,
             peak_memory_mb=80.0,
@@ -234,7 +234,7 @@ def test_aggregate_by_framework_and_category_groups_correctly() -> None:
             file_size=1024,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.5,
             peak_memory_mb=100.0,
@@ -248,7 +248,7 @@ def test_aggregate_by_framework_and_category_groups_correctly() -> None:
             file_size=10240,
             file_type=FileType.PDF,
             category=DocumentCategory.LARGE,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=2.5,
             peak_memory_mb=200.0,
@@ -285,7 +285,7 @@ def test_filter_successful_results_filters_correctly() -> None:
             file_size=1024,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.5,
             peak_memory_mb=100.0,
@@ -299,7 +299,7 @@ def test_filter_successful_results_filters_correctly() -> None:
             file_size=1024,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.0,
             peak_memory_mb=0.0,
@@ -324,7 +324,7 @@ def test_add_derived_metrics_adds_correct_columns() -> None:
             file_size=1048576,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=1.0,
             peak_memory_mb=100.0,
@@ -393,7 +393,7 @@ def test_load_results_from_json_loads_correctly(tmp_path: Path) -> None:
             file_size=1024,
             file_type=FileType.PDF,
             category=DocumentCategory.SMALL,
-            framework=Framework.KREUZBERG_SYNC,
+            framework=Framework.KREUZBERG_V4_SYNC,
             iteration=1,
             extraction_time=0.5,
             peak_memory_mb=100.0,

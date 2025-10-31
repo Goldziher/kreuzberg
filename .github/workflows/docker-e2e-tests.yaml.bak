@@ -1,0 +1,154 @@
+name: Docker E2E Tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-docker-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      matrix:
+        image:
+          - { name: "base", extras: "cli" }
+          - { name: "core", extras: "cli chunking crypto document-classification langdetect additional-extensions" }
+          - { name: "full", extras: "all" }
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: |
+          uv pip install --system asyncio
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc tesseract-ocr jq bc
+
+      - name: Free up disk space
+        run: |
+          echo "Initial disk usage:"
+          df -h
+
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+
+          docker system prune -af --volumes
+
+          sudo swapoff -a
+          sudo rm -f /swapfile
+
+          echo "Available disk space after cleanup:"
+          df -h
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+
+      - name: Configure Docker
+        run: |
+          sudo mkdir -p /mnt/docker-data
+          sudo tee /etc/docker/daemon.json > /dev/null <<EOF
+          {
+            "max-concurrent-downloads": 10,
+            "max-concurrent-uploads": 10,
+            "storage-driver": "overlay2",
+            "data-root": "/mnt/docker-data"
+          }
+          EOF
+
+          sudo systemctl restart docker
+          docker info
+          sudo rm -rf /var/lib/docker || true
+
+      - name: Build Docker image - ${{ matrix.image.name }}
+        run: |
+          export DOCKER_BUILDKIT=1
+          export BUILDKIT_PROGRESS=plain
+
+          echo "Building ${{ matrix.image.name }} image..."
+          docker build -f .docker/Dockerfile \
+            --build-arg EXTRAS="${{ matrix.image.extras }}" \
+            -t kreuzberg:${{ matrix.image.name }} \
+            --no-cache \
+            .
+
+          echo "Built image:"
+          docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | grep kreuzberg:${{ matrix.image.name }} || true
+
+      - name: Run E2E tests - ${{ matrix.image.name }}
+        run: |
+          mkdir -p tests/e2e/logs
+          echo "Running E2E tests for ${{ matrix.image.name }}..."
+          python3 tests/e2e/docker_e2e.py --image ${{ matrix.image.name }}
+
+      - name: Generate test report - ${{ matrix.image.name }}
+        if: always()
+        run: |
+          if [ -f "tests/e2e/test_report.json" ]; then
+            echo "## Test Report Summary for ${{ matrix.image.name }}" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            jq '.["${{ matrix.image.name }}"]' tests/e2e/test_report.json >> $GITHUB_STEP_SUMMARY || echo "No results for ${{ matrix.image.name }}" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Collect Docker logs on failure
+        if: failure()
+        run: |
+          mkdir -p tests/e2e/docker-logs
+
+          for container in $(docker ps -a --filter "name=kreuzberg-test" --format "{{.Names}}"); do
+            docker logs "$container" > "tests/e2e/docker-logs/${container}.log" 2>&1 || true
+          done
+
+          docker info > tests/e2e/docker-logs/docker-info.txt 2>&1 || true
+          docker version > tests/e2e/docker-logs/docker-version.txt 2>&1 || true
+
+      - name: Upload test results - ${{ matrix.image.name }}
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-e2e-test-results-${{ matrix.image.name }}
+          path: |
+            tests/e2e/logs/
+            tests/e2e/*.log
+            tests/e2e/*.json
+            tests/e2e/docker-logs/
+          retention-days: 7
+
+      - name: Clean up Docker resources
+        if: always()
+        run: |
+          docker ps -aq --filter "name=kreuzberg-test" | xargs -r docker rm -f || true
+          docker rmi kreuzberg:${{ matrix.image.name }} || true
+          docker system prune -af --volumes || true
+
+          echo "Final disk usage after ${{ matrix.image.name }}:"
+          df -h

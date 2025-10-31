@@ -52,18 +52,30 @@ aggregated-results/
 benchmark_results.json
 benchmarks/results/
 build/
-Cargo.lock
 CLAUDE.md
+
+# Coverage
+coverage/
 coverage.lcov
 coverage.xml
+rust-coverage.lcov
+coverage.info
+# TypeScript / Build artifacts
 dist/
+*.tsbuildinfo
+*.node
+temp-test-*
+
 docker-compose.yaml
 docs/_build/
 docs/build/
 GEMINI.md
 htmlcov/
+# Node.js / pnpm
 node_modules/
 npm-debug.log*
+pnpm-debug.log*
+.pnpm-store/
 output.txt
 prompt_template.egg-info/
 reports/
@@ -79,8 +91,16 @@ tests/benchmarks/results/*.json
 tests/e2e/logs/
 tests/e2e/test_report.json
 todo.md
-TODO.md
 visualizations/
 wheels/
 yarn-debug.log*
 yarn-error.log*
+
+# NAPI-RS generated files (should not be committed)
+crates/kreuzberg-node/index.js
+crates/kreuzberg-node/index.d.ts
+
+# Embedding model caches (default is .kreuzberg/embeddings, but tests may create these)
+.fastembed_cache/
+*/.fastembed_cache/
+results/

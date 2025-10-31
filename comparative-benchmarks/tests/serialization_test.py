@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 import msgspec
+
 from src.types import (
     BenchmarkResult,
     BenchmarkSummary,
@@ -20,7 +21,7 @@ def create_test_result(
         "file_size": 1000,
         "file_type": FileType.PDF,
         "category": DocumentCategory.SMALL,
-        "framework": Framework.KREUZBERG_SYNC,
+        "framework": Framework.KREUZBERG_V4_SYNC,
         "iteration": 1,
         "extraction_time": 1.5,
         "peak_memory_mb": 100.0,
@@ -65,7 +66,7 @@ def test_failed_result_serialization() -> None:
             file_size=1000 * (i + 1),
             file_type=FileType.PDF,
             category=DocumentCategory.LARGE,
-            framework=Framework.KREUZBERG_ASYNC,
+            framework=Framework.KREUZBERG_V4_ASYNC,
             iteration=1,
             extraction_time=0.001,
             peak_memory_mb=50.0,
@@ -107,7 +108,7 @@ def test_none_value_serialization() -> None:
 
 def test_benchmark_summary_with_all_failed() -> None:
     summary = BenchmarkSummary(
-        framework=Framework.KREUZBERG_ASYNC,
+        framework=Framework.KREUZBERG_V4_ASYNC,
         category=DocumentCategory.LARGE,
         total_files=9,
         successful_files=0,

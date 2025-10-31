@@ -41,13 +41,12 @@ logger = get_logger(__name__)
 
 @cache
 def get_console() -> Console:
-    """Get or create the console instance lazily."""
     return Console()
 
 
 @click.group()
 def cli() -> None:
-    """Benchmark suite for text extraction frameworks."""
+    pass
 
 
 @cli.command()
@@ -81,7 +80,6 @@ def cli() -> None:
 def benchmark(
     iterations: int, timeout: int, framework: str | None, output: Path
 ) -> None:
-    """Run benchmarks for all frameworks."""
     console = get_console()
     console.print("[bold]Starting Benchmark Suite[/bold]")
     console.print(f"  Iterations: {iterations}")
@@ -97,8 +95,6 @@ def benchmark(
 
     categories = list(DocumentCategory)
 
-    # Use output file's parent directory for single-framework runs
-    # This ensures raw benchmark_results.json is saved alongside aggregated results.json
     if framework:
         output_dir = output.parent
     else:
@@ -162,7 +158,6 @@ def benchmark(
     help="Output directory for charts",
 )
 def visualize(input_file: Path, output_dir: Path) -> None:
-    """Generate visualizations from benchmark results."""
     console = get_console()
     console.print("[bold blue]Generating Visualizations[/bold blue]")
     console.print(f"Input: {input_file}")
@@ -222,7 +217,6 @@ def visualize(input_file: Path, output_dir: Path) -> None:
     help="Directory containing generated charts",
 )
 def generate_docs(input_file: Path, output_dir: Path, charts_dir: Path | None) -> None:
-    """Generate documentation from benchmark results."""
     console = get_console()
     console.print("[bold blue]Generating Documentation[/bold blue]")
     console.print(f"Input: {input_file}")
@@ -266,7 +260,6 @@ def generate_docs(input_file: Path, output_dir: Path, charts_dir: Path | None) -
 
 
 def main() -> None:
-    """Entry point for CLI."""
     cli()
 
 

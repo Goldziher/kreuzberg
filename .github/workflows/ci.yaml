@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -12,6 +13,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  PDFIUM_VERSION: "7455"
+  PDFIUM_WASM_VERSION: "7469"
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -19,321 +24,319 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
         with:
-          enable-cache: true
+          submodules: recursive
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
         with:
-          python-version: "3.13"
+          python-version: '3.13'
 
-      - name: Install Dependencies
-        uses: nick-fields/retry@v3
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
         with:
-          timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            if [[ "${{ runner.os }}" == "Windows" ]] && [[ -d ".venv" ]]; then
-              echo "Removing existing .venv directory on Windows"
-              rm -rf .venv
-            fi
-            uv sync --all-packages --all-extras --all-groups
-          shell: bash
+          cache-key-prefix: lint
 
-      - name: Install prek
-        run: |
-          # Install prek using uv (recommended method)
-          uv tool install prek
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Load Cached Prek Dependencies
-        id: cached-prek-dependencies
-        uses: actions/cache@v4
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
         with:
-          path: ~/.cache/prek/
-          key: prek|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
-      - name: Execute Prek
-        run: prek run --show-diff-on-failure --color=always --all-files
+      - name: Run Prek linters
+        run: uv run prek run --show-diff-on-failure --color=always --all-files
 
-  coverage:
+  rust-linux:
+    needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 15
+    env:
+      KREUZBERG_CI_DEBUG: "1"
+      RUSTFLAGS: "--cap-lints=warn"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
         with:
-          enable-cache: true
+          submodules: recursive
 
-      - name: Install Python
-        uses: actions/setup-python@v6
-        id: setup-python
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
         with:
-          python-version: "3.13"
+          python-version: '3.13'
 
-      - name: Cache Python Dependencies
-        id: python-cache
-        uses: actions/cache@v4
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
         with:
-          path: |
-            ~/.cache/uv
-            .venv
-          key: python-dependencies-ubuntu-latest-3.13-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            python-dependencies-ubuntu-latest-3.13-
+          cache-key-prefix: rust-linux
 
-      - name: Install Dependencies
-        uses: nick-fields/retry@v3
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
         with:
-          timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            uv sync --all-packages --all-extras --all-groups
-          shell: bash
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
-      - name: Install System Dependencies
-        uses: nick-fields/retry@v3
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install llvm-tools-preview
+        run: rustup component add llvm-tools-preview
+
+      - name: Generate Rust coverage
+        run: cargo llvm-cov --workspace --no-default-features --features full --exclude kreuzberg-py --lcov --output-path rust-coverage.lcov
+
+      - name: Upload Rust coverage artifact
+        uses: actions/upload-artifact@v4
         with:
-          timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            sudo apt-get update
-            sudo apt-get install -y tesseract-ocr tesseract-ocr-deu pandoc
-          shell: bash
+          name: rust-coverage-${{ github.sha }}
+          path: rust-coverage.lcov
+          retention-days: 7
 
-      - name: Install SpaCy Model for Testing
+      - name: Upload Rust coverage to DeepSource
+        if: env.DEEPSOURCE_DSN != ''
+        shell: bash
+        run: |
+          curl -fsSL https://deepsource.io/cli | sh
+          ./bin/deepsource report --analyzer test-coverage --key rust --value-file ./rust-coverage.lcov
+
+  rust-cross:
+    needs: rust-linux
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-cross-${{ matrix.os }}
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Run Rust tests
+        run: cargo test --workspace --no-default-features --exclude kreuzberg-py
+
+  python-tests:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HF_HOME: ~/.cache/huggingface
+      TRANSFORMERS_CACHE: ~/.cache/huggingface
+      DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '3.10'
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: python
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install SpaCy model
         run: |
           uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 
-      - name: Cache HuggingFace Models
+      - name: Cache HuggingFace models
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          key: huggingface-models-gmft-v1-${{ runner.os }}
-          restore-keys: |
-            huggingface-models-gmft-v1-
+          key: huggingface-models-ci-${{ runner.os }}
 
-      - name: Download GMFT Models if Not Cached
-        env:
-          HF_HOME: ~/.cache/huggingface
+      - name: Download TATR models if needed
         run: |
           if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
-            echo "Cache miss - downloading GMFT models..."
-            uv run --script scripts/download_gmft_models.py
-          else
-            echo "Using cached GMFT models"
+            uv run python scripts/download_tatr_models.py
           fi
 
-      - name: Run Tests with Coverage
-        uses: nick-fields/retry@v3
-        env:
-          HF_HOME: ~/.cache/huggingface
-        with:
-          timeout_minutes: 15
-          max_attempts: 3
-          retry_wait_seconds: 10
-          command: |
-            uv run coverage erase
-            uv run pytest -s -vvv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 2 --reruns-delay 1 --ignore=tests/benchmarks/
-            uv run coverage report --precision=2
-          shell: bash
+      - name: Run Python test suite with coverage
+        run: uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
 
-      - name: Upload Coverage to DeepSource
-        if: always()
-        env:
-          DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
-        run: |
-          # Install DeepSource CLI
-          curl -fsSL https://deepsource.io/cli | sh
-          # Upload coverage report
-          ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
-
-      - name: Upload Coverage Artifacts
-        if: always()
-        uses: actions/upload-artifact@v5
+      - name: Upload Python coverage artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage-report-${{ github.sha }}
+          name: python-coverage-${{ github.sha }}
           path: |
             coverage.lcov
             .coverage
           retention-days: 7
 
-  python-tests:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.13"]
-        test-category:
-          - name: "core"
-            path: "tests/core,tests/utils"
-            system-deps: false
-            timeout: 20
-          - name: "extractors"
-            path: "tests/extractors"
-            system-deps: true
-            timeout: 25
-          - name: "integration"
-            path: "tests/integration,tests/api"
-            system-deps: true
-            timeout: 30
-          - name: "features"
-            path: "tests/features,tests/interfaces,tests/mcp,tests/multiprocessing,tests/ocr"
-            system-deps: true
-            timeout: 25
-          - name: "comparative-benchmarks"
-            path: "comparative-benchmarks/tests"
-            system-deps: false
-            timeout: 15
-    timeout-minutes: ${{ matrix.test-category.timeout }}
+      - name: Upload Python coverage to DeepSource
+        if: env.DEEPSOURCE_DSN != ''
+        shell: bash
+        run: |
+          curl -fsSL https://deepsource.io/cli | sh
+          ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
+
+  node-tests:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
         with:
-          enable-cache: true
+          submodules: recursive
 
-      - name: Install Python
-        uses: actions/setup-python@v6
-        id: setup-python
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
         with:
-          python-version: ${{ matrix.python }}
+          cache-key-prefix: node
 
-      - name: Cache Python Dependencies
-        id: python-cache
-        uses: actions/cache@v4
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
         with:
-          path: |
-            ~/.cache/uv
-            .venv
-          key: python-dependencies-${{ matrix.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            python-dependencies-${{ matrix.os }}-${{ matrix.python }}-
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
-      - name: Install Dependencies
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            if [[ "${{ runner.os }}" == "Windows" ]] && [[ -d ".venv" ]]; then
-              echo "Removing existing .venv directory on Windows"
-              rm -rf .venv
-            fi
-            uv sync --all-packages --all-extras --all-groups
-          shell: bash
-
-      - name: Cache Test Artifacts
-        uses: actions/cache@v4
-        with:
-          path: .pytest_cache/
-          key: pytest-cache-${{ matrix.os }}-${{ matrix.python }}
-
-      - name: Cache and Install Homebrew (macOS)
-        if: runner.os == 'macOS'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            # Using the underlying homebrew commands instead of the action
-            brew update || true
-            brew install tesseract tesseract-lang pandoc || brew upgrade tesseract tesseract-lang pandoc || true
-            brew list tesseract tesseract-lang pandoc
-          shell: bash
-
-      - name: Cache and Install APT Packages (Linux)
-        if: runner.os == 'Linux'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            sudo apt-get update
-            sudo apt-get install -y tesseract-ocr tesseract-ocr-deu pandoc
-          shell: bash
-
-      - name: Install System Dependencies (Windows)
-        if: runner.os == 'Windows'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            choco install -y tesseract pandoc --no-progress
-            Write-Output "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            Write-Output "C:\Program Files\Pandoc" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            $env:PATH = "C:\Program Files\Tesseract-OCR;C:\Program Files\Pandoc;" + $env:PATH
-
-            # Install python-magic-bin for Windows
-            pip install python-magic-bin
-
-            # Download German language pack for Tesseract
-            $tessDataDir = "C:\Program Files\Tesseract-OCR\tessdata"
-            if (-not (Test-Path $tessDataDir)) {
-                New-Item -ItemType Directory -Path $tessDataDir -Force
-            }
-            Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/deu.traineddata" -OutFile "$tessDataDir\deu.traineddata"
-
-            tesseract --version
-            tesseract --list-langs
-            pandoc --version
-          shell: pwsh
-
-      - name: Install SpaCy Model for Testing
-        if: matrix.test-category.system-deps
+      - name: Prepare Pdfium runtime for Node bindings
+        shell: bash
         run: |
-          uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+          set -euo pipefail
+          platform="$(uname -s)"
+          case "$platform" in
+            Linux*) platform_id="linux" ;;
+            Darwin*) platform_id="mac" ;;
+            MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
+            *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
+          esac
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64|amd64) arch_id="x64" ;;
+            arm64|aarch64) arch_id="arm64" ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+          version="${PDFIUM_VERSION:-7455}"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL -o "$tmpdir/pdfium.tgz" "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
+          mkdir -p "$tmpdir/extracted"
+          tar -xzf "$tmpdir/pdfium.tgz" -C "$tmpdir/extracted"
+          dest="$RUNNER_TEMP/pdfium-prebuilt"
+          rm -rf "$dest"
+          mv "$tmpdir/extracted" "$dest"
+          rm -rf "$tmpdir"
+          echo "KREUZBERG_PDFIUM_PREBUILT=$dest" >> "$GITHUB_ENV"
 
-      - name: Cache HuggingFace Models
-        if: contains(matrix.test-category.path, 'gmft')
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: huggingface-models-gmft-v1-${{ runner.os }}
-          restore-keys: |
-            huggingface-models-gmft-v1-
-
-      - name: Download GMFT Models if Not Cached
-        if: contains(matrix.test-category.path, 'gmft')
-        env:
-          HF_HOME: ~/.cache/huggingface
+      - name: Stage Pdfium runtime artifacts
+        shell: bash
         run: |
-          if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
-            echo "Cache miss - downloading GMFT models..."
-            uv run --script scripts/download_gmft_models.py
-          else
-            echo "Using cached GMFT models"
+          set -euo pipefail
+          if [ -z "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
+            echo "KREUZBERG_PDFIUM_PREBUILT is not set" >&2
+            exit 1
           fi
-
-      - name: Run Tests - ${{ matrix.test-category.name }}
-        uses: nick-fields/retry@v3
+          mkdir -p crates/kreuzberg-node packages/python/kreuzberg
+          case "${RUNNER_OS:-unknown}" in
+            Windows)
+              bin_dir="$KREUZBERG_PDFIUM_PREBUILT/bin"
+              lib_dir="$KREUZBERG_PDFIUM_PREBUILT/lib"
+              cp -f "$bin_dir/pdfium.dll" "crates/kreuzberg-node/pdfium.dll"
+              cp -f "$bin_dir/pdfium.dll" "packages/python/kreuzberg/pdfium.dll"
+              if [ -f "$lib_dir/pdfium.dll.lib" ]; then
+                cp -f "$lib_dir/pdfium.dll.lib" "$lib_dir/pdfium.lib"
+              fi
+              ;;
+            macOS)
+              lib_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.dylib"
+              cp -f "$lib_path" "crates/kreuzberg-node/libpdfium.dylib"
+              cp -f "$lib_path" "packages/python/kreuzberg/libpdfium.dylib"
+              ;;
+            Linux)
+              lib_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.so"
+              cp -f "$lib_path" "crates/kreuzberg-node/libpdfium.so"
+              cp -f "$lib_path" "packages/python/kreuzberg/libpdfium.so"
+              ;;
+            *)
+              echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
+              exit 1
+              ;;
+          esac
+      - name: Setup Node workspace
+        uses: ./.github/actions/setup-node-workspace
         with:
-          timeout_minutes: 10
-          max_attempts: 2
-          retry_wait_seconds: 5
-          command: |
-            # Skip comparative-benchmarks/tests on Windows
-            if [[ "${{ runner.os }}" == "Windows" ]] && [[ "${{ matrix.test-category.name }}" == "comparative-benchmarks" ]]; then
-              echo "Skipping comparative-benchmarks/tests on Windows"
-              exit 0
-            fi
-            # Run tests from specified paths, explicitly excluding benchmarks
-            uv run pytest $(echo "${{ matrix.test-category.path }}" | tr ',' ' ') -v --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
-          shell: bash
+          node-version: "20"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run TypeScript tests with coverage
+        working-directory: packages/typescript
+        run: pnpm test:coverage
+
+      - name: Upload TypeScript coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ts-coverage-${{ github.sha }}
+          path: packages/typescript/coverage/
+          retention-days: 7
+
+  ruby-tests:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: false
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: ruby
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install Ruby dependencies
+        working-directory: packages/ruby
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+
+      - name: Build Ruby native extension
+        working-directory: packages/ruby
+        run: bundle exec rake compile
+
+      - name: Run RuboCop
+        working-directory: packages/ruby
+        run: bundle exec rubocop
+
+      - name: Run Ruby tests
+        working-directory: packages/ruby
+        run: bundle exec rspec --format documentation

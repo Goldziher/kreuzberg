@@ -1,214 +1,249 @@
 # Installation
 
-Kreuzberg is a modular document intelligence framework with a core package and optional components for specialized functionality.
+Kreuzberg is available for Python, TypeScript/Node.js, and as a standalone CLI via Rust/Cargo or Homebrew.
+
+## Choose Your Platform
+
+=== "Python"
+
+    **Requirements**: Python 3.10 or later
+
+    ### Basic Installation
+
+    ```bash
+    pip install kreuzberg
+    ```
+
+    ### With All Features
+
+    ```bash
+    pip install "kreuzberg[all]"
+    ```
+
+    ### Individual Features
+
+    ```bash
+    # API server
+    pip install "kreuzberg[api]"
+
+    # CLI tools
+    pip install "kreuzberg[cli]"
+
+    # PDF encryption support (AES)
+    pip install "kreuzberg[crypto]"
+
+    # EasyOCR backend
+    pip install "kreuzberg[easyocr]"
+
+    # PaddleOCR backend
+    pip install "kreuzberg[paddleocr]"
+
+    # Vision-based table extraction
+    pip install "kreuzberg[vision-tables]"
+
+    # Language detection
+    pip install "kreuzberg[langdetect]"
+    ```
+
+    !!! warning "Python 3.14 Compatibility"
+        The `easyocr` and `paddleocr` extras are currently **not supported on Python 3.14** due to upstream compatibility issues with EasyOCR, PaddleOCR, and PyTorch.
+
+        These features are available on Python 3.10-3.13. If you need OCR functionality on Python 3.14, use the built-in Tesseract backend instead (no extra installation required).
+
+        Support for Python 3.14 will be added once the upstream packages release compatible versions.
+
+    ### Verify Installation
+
+    ```python
+    from kreuzberg import extract_file_sync, __version__
+    print(f"Kreuzberg {__version__} installed successfully!")
+    ```
+
+=== "TypeScript"
+
+    **Requirements**: Node.js 18 or later
+
+    ### npm
+
+    ```bash
+    npm install @goldziher/kreuzberg
+    ```
+
+    ### yarn
+
+    ```bash
+    yarn add @goldziher/kreuzberg
+    ```
+
+    ### pnpm
+
+    ```bash
+    pnpm add @goldziher/kreuzberg
+    ```
+
+    ### Verify Installation
+
+    ```typescript
+    import { extractFileSync } from '@goldziher/kreuzberg';
+    console.log('Kreuzberg installed successfully!');
+    ```
+
+=== "Ruby"
+
+    **Requirements**: Ruby 3.0 or later
+
+    ### Install via RubyGems
+
+    ```bash
+    gem install kreuzberg
+    ```
+
+    ### Verify Installation
+
+    ```ruby
+    require 'kreuzberg'
+    result = Kreuzberg.extract_file_sync('document.pdf')
+    puts "Kreuzberg #{Kreuzberg::VERSION} installed successfully!"
+    ```
+
+=== "CLI (Homebrew)"
+
+    **Requirements**: macOS or Linux
+
+    ### Install via Homebrew
+
+    ```bash
+    brew install kreuzberg
+    ```
+
+    ### Verify Installation
+
+    ```bash
+    kreuzberg --version
+    ```
+
+=== "CLI (Cargo)"
+
+    **Requirements**: Rust 1.75 or later
+
+    ### Install via Cargo
+
+    ```bash
+    cargo install kreuzberg-cli
+    ```
+
+    ### Verify Installation
+
+    ```bash
+    kreuzberg --version
+    ```
 
 ## System Dependencies
 
-### Pandoc
+Kreuzberg requires some system libraries for full functionality:
 
-Pandoc is the foundation of Kreuzberg's universal document conversion capabilities. This **required** system dependency enables reliable extraction across diverse document formats. Install Pandoc for your platform:
+### Tesseract OCR (Optional)
 
-#### Ubuntu/Debian
+Required for OCR support with the Tesseract backend.
 
-```shell
-sudo apt-get install pandoc
-```
+=== "macOS"
 
-#### macOS
-
-```shell
-brew install pandoc
-```
-
-#### Windows
-
-```shell
-choco install -y pandoc
-```
-
-## Kreuzberg Core Package
-
-The Kreuzberg core package can be installed using pip with:
-
-```shell
-pip install kreuzberg
-```
-
-!!! note "Python Compatibility"
-
-    Kreuzberg runs on Python 3.10 through 3.14. The core library fully supports 3.14, but some optional extras (EasyOCR, PaddleOCR, entity extraction via spaCy) remain unavailable until their upstream wheels add 3.14 support.
-
-## Optional Features
-
-### OCR
-
-OCR is an optional feature for extracting text from images and non-searchable PDFs. Kreuzberg supports multiple OCR backends. To understand the differences between these backends, please read the [OCR Configuration documentation](../user-guide/ocr-configuration.md).
-
-#### Tesseract OCR
-
-Tesseract OCR is built into Kreuzberg and doesn't require additional Python packages. However, you must install Tesseract 5.0 or higher on your system:
-
-##### Ubuntu/Debian
-
-```shell
-sudo apt-get install tesseract-ocr
-```
-
-##### macOS
-
-```shell
-brew install tesseract
-```
-
-##### Windows
-
-```shell
-choco install -y tesseract
-```
-
-!!! note "Language Support"
-
-    Tesseract includes English language support by default. Kreuzberg Docker images come pre-configured with 12 common business languages: English, Spanish, French, German, Italian, Portuguese, Chinese (Simplified & Traditional), Japanese, Arabic, Russian, and Hindi.
-
-    For local installations requiring additional languages, you must install the appropriate language data files:
-
-    - **Ubuntu/Debian**: `sudo apt-get install tesseract-ocr-deu` (for German)
-    - **macOS**: `brew install tesseract-lang` (includes all languages)
-    - **Windows**: Download language files manually to the Tesseract `tessdata` directory:
-
-    ```powershell
-    # For German language support on Windows
-    $tessDataDir = "C:\Program Files\Tesseract-OCR\tessdata"
-    Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/deu.traineddata" -OutFile "$tessDataDir\deu.traineddata"
-
-    # Verify installation
-    tesseract --list-langs
+    ```bash
+    brew install tesseract
     ```
 
-    For more details on language installation and configuration, refer to the [Tesseract documentation](https://tesseract-ocr.github.io/tessdoc/Installation.html).
+=== "Ubuntu/Debian"
 
-#### EasyOCR
+    ```bash
+    sudo apt-get install tesseract-ocr
+    ```
 
-EasyOCR is a Python-based OCR backend with wide language support and strong performance.
+=== "RHEL/CentOS/Fedora"
 
-```shell
-pip install "kreuzberg[easyocr]"
+    ```bash
+    sudo dnf install tesseract
+    ```
+
+=== "Windows"
+
+    Download from [GitHub releases](https://github.com/UB-Mannheim/tesseract/wiki)
+
+### Pandoc (Optional)
+
+Required for extracting certain document formats (DOCX, ODT, etc.) via Pandoc.
+
+=== "macOS"
+
+    ```bash
+    brew install pandoc
+    ```
+
+=== "Ubuntu/Debian"
+
+    ```bash
+    sudo apt-get install pandoc
+    ```
+
+=== "RHEL/CentOS/Fedora"
+
+    ```bash
+    sudo dnf install pandoc
+    ```
+
+=== "Windows"
+
+    Download from [pandoc.org](https://pandoc.org/installing.html)
+
+### LibreOffice (Optional)
+
+Required for legacy MS Office formats (.doc, .ppt).
+
+=== "macOS"
+
+    ```bash
+    brew install libreoffice
+    ```
+
+=== "Ubuntu/Debian"
+
+    ```bash
+    sudo apt-get install libreoffice
+    ```
+
+=== "RHEL/CentOS/Fedora"
+
+    ```bash
+    sudo dnf install libreoffice
+    ```
+
+## Docker
+
+Pre-built Docker images are available with all dependencies included:
+
+```bash
+# Core image with Tesseract
+docker pull goldziher/kreuzberg:latest
+
+# With EasyOCR
+docker pull goldziher/kreuzberg:latest-easyocr
+
+# With PaddleOCR
+docker pull goldziher/kreuzberg:latest-paddle
+
+# With vision-based table extraction
+docker pull goldziher/kreuzberg:latest-vision-tables
+
+# All features
+docker pull goldziher/kreuzberg:latest-all
 ```
 
-!!! warning
+### Run API Server
 
-    EasyOCR wheels are currently available only for Python 3.13 and below. On Python 3.14 this extra is skipped until upstream support lands.
-
-#### PaddleOCR
-
-PaddleOCR is particularly strong for Chinese and other Asian languages. It requires additional system dependencies for OpenCV support:
-
-##### System Dependencies
-
-```shell
-# Ubuntu/Debian
-sudo apt-get install libgl1 libglib2.0-0
-
-# macOS
-# OpenGL is typically included; if needed:
-brew install glfw
+```bash
+docker run -p 8000:8000 goldziher/kreuzberg:latest
 ```
 
-OpenGL libraries are typically included with graphics drivers on Windows.
+## Next Steps
 
-##### Python Package
-
-```shell
-pip install "kreuzberg[paddleocr]"
-```
-
-!!! warning
-
-    PaddleOCR/PaddlePaddle do not yet ship Python 3.14 wheels. Installation on 3.14 will skip this extra until the upstream projects add support.
-
-### Chunking
-
-Chunking is an optional feature - useful for RAG applications among others. Kreuzberg uses the excellent `semantic-text-splitter` package for chunking. To install Kreuzberg with chunking support, you can use:
-
-```shell
-pip install "kreuzberg[chunking]"
-```
-
-### Table Extraction
-
-!!! warning "GMFT Deprecation"
-
-    The GMFT-powered table extraction pipeline is deprecated and will be removed in Kreuzberg v4.0. The upcoming release ships a native TATR-based `TableExtractionConfig` that replaces GMFT end-to-end.
-
-If you need to keep using the legacy GMFT integration in the current series, install the extra explicitly:
-
-```shell
-pip install "kreuzberg[gmft]"
-```
-
-`GMFTConfig` will emit a `FutureWarning` whenever it is instantiated to remind you to migrate. Plan to switch to the new table extraction configuration before upgrading to v4.0.
-
-### Language Detection
-
-Language detection is an optional feature that automatically detects the language of extracted text. It uses the [fast-langdetect](https://github.com/LlmKira/fast-langdetect) package. To install Kreuzberg with language detection support, you can use:
-
-```shell
-pip install "kreuzberg[langdetect]"
-```
-
-### Document Classification
-
-For automatic document type detection (invoice, contract, receipt, etc.), install the document classification extra:
-
-```shell
-pip install "kreuzberg[document-classification]"
-```
-
-This feature uses Google Translate for multi-language support and requires explicit opt-in by setting `auto_detect_document_type=True` in your configuration.
-
-### All Optional Dependencies
-
-To install Kreuzberg with all optional dependencies, you can use the `all` extra group:
-
-```shell
-pip install "kreuzberg[all]"
-```
-
-This is equivalent to:
-
-```shell
-pip install "kreuzberg[api,chunking,cli,crypto,document-classification,easyocr,entity-extraction,gmft,langdetect,paddleocr,additional-extensions]"
-```
-
-## Development Setup
-
-For development and testing, additional system dependencies and language packs are required:
-
-### Required System Dependencies
-
-```shell
-# Ubuntu/Debian
-sudo apt-get install tesseract-ocr tesseract-ocr-deu pandoc
-
-# macOS
-brew install tesseract tesseract-lang pandoc
-
-# Windows
-choco install -y tesseract pandoc
-# Then install German language pack as shown above
-```
-
-### Testing Requirements
-
-The test suite includes OCR tests with German language documents that require the `deu` (German) language pack for Tesseract. Ensure the German language pack is installed as described in the Language Support section above.
-
-To verify your development setup:
-
-```shell
-# Verify Tesseract has German support
-tesseract --list-langs | grep deu
-
-# Run the test suite
-uv sync --all-extras --all-groups
-uv run pytest
-```
+- [Quick Start Guide](quickstart.md) - Get started with your first extraction
+- [Contributing](../contributing.md) - Learn how to contribute

@@ -2,6 +2,7 @@ import asyncio
 import time
 
 import pytest
+
 from src.profiler import (
     AsyncPerformanceProfiler,
     PerformanceMetrics,

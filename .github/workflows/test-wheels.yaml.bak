@@ -1,0 +1,109 @@
+name: Test Wheel Building
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - v4-dev
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pyproject.toml'
+      - '.github/workflows/test-wheels.yaml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Build wheels
+        uses: ./.github/actions/build-wheels
+
+  test_wheels:
+    name: Test wheels installation
+    needs: build_wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-${{ runner.os }}
+          path: ./wheels
+
+      - name: Install wheel and test
+        shell: bash
+        run: |
+          # Find the wheel file for this Python version (cp310-abi3 is compatible with all Python 3.10+)
+          wheel_file=$(find ./wheels -name "*.whl" | head -1)
+
+          if [ -z "$wheel_file" ]; then
+            echo "No wheel found for Python ${{ matrix.python-version }}"
+            ls ./wheels/
+            exit 1
+          fi
+
+          echo "Installing wheel: $wheel_file"
+          pip install "$wheel_file"
+
+          # Test basic import and functionality
+          python -c "
+          import kreuzberg
+          print('Import successful')
+
+          # Test Rust internal bindings
+          from kreuzberg import _internal_bindings
+          print('Rust internal bindings available')
+
+          # Test basic extraction
+          from kreuzberg import extract_file_sync
+          print('Basic extraction functions available')
+          print('All wheel tests passed!')
+          "
+
+  summarize:
+    name: Wheel building summary
+    needs: [build_wheels, test_wheels]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Display results
+        run: |
+          echo "## Wheel Building Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build Status: ${{ needs.build_wheels.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "Test Status: ${{ needs.test_wheels.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.build_wheels.result }}" = "success" ] && [ "${{ needs.test_wheels.result }}" = "success" ]; then
+            echo "All wheels built and tested successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "Ready to integrate with release pipeline." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Some wheel builds or tests failed." >> $GITHUB_STEP_SUMMARY
+            echo "Check job details for more information." >> $GITHUB_STEP_SUMMARY
+          fi
