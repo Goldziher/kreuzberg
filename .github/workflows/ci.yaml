@@ -125,16 +125,9 @@ jobs:
         id: features
         shell: bash
         run: |
-          # TODO: Windows excludes 'ocr' feature due to tesseract-rs build complexity
-          # tesseract-rs compiles Tesseract/Leptonica from source using CMake, which fails on Windows CI
-          # Benchmarks show tesseract-rs is 2x faster than alternatives (45ms vs 90ms avg)
-          # See: https://github.com/cafercangundogdu/tesseract-rs (no Windows CI upstream)
-          # Alternative: Switch to 'tesseract' crate (links system libs) if Windows support critical
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            echo "features=pdf,excel,office,email,html,xml,archives,language-detection,chunking,quality,keywords,embeddings" >> $GITHUB_OUTPUT
-          else
-            echo "features=full" >> $GITHUB_OUTPUT
-          fi
+          # All platforms now use full features including OCR
+          # Windows build fixed via tesseract-rs fork (kreuzberg-dev/tesseract-rs) with debug library support
+          echo "features=full" >> $GITHUB_OUTPUT
 
       - name: Run Rust tests
         run: cargo test --workspace --no-default-features --features ${{ steps.features.outputs.features }} --exclude kreuzberg-py --exclude kreuzberg-rb
