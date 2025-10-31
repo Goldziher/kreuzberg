@@ -3,8 +3,8 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { writeFileSync, unlinkSync } from "node:fs";
-import { describe, it, expect, afterEach } from "vitest";
+import { unlinkSync, writeFileSync } from "node:fs";
+import { afterEach, describe, expect, it } from "vitest";
 
 describe("CLI Server Commands", () => {
 	it("serve command help is accessible via TypeScript CLI proxy", () => {

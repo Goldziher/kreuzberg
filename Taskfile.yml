@@ -212,6 +212,24 @@ tasks:
     cmds:
       - uv run mkdocs serve
 
+  # Update tasks
+  update:
+    desc: Update all dependencies to latest versions
+    cmds:
+      - echo "Updating Rust dependencies..."
+      - cargo upgrade --incompatible
+      - cargo update
+      - echo "Updating TypeScript dependencies..."
+      - pnpm up --latest -r
+      - echo "Updating Ruby dependencies..."
+      - cd packages/ruby && bundle update
+      - echo "Updating Python dependencies..."
+      - uv run uv-bump --pyproject-toml pyproject.toml
+      - uv run uv-bump --pyproject-toml packages/python/pyproject.toml
+      - uv run uv-bump --pyproject-toml comparative-benchmarks/pyproject.toml
+      - uv sync --all-packages --all-extras --upgrade
+      - echo "✓ All dependencies updated"
+
   # Benchmark tasks
   bench:quick:
     desc: Run quick benchmarks (tiny/small/medium categories)

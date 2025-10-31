@@ -70,8 +70,8 @@ optional-dependencies.easyocr = [
   "torch>=2.9; python_version<'3.14'",
 ]
 optional-dependencies.paddleocr = [
-  "paddleocr>=3.3; python_version<'3.14'",
-  "paddlepaddle>=3.2; python_version<'3.14'",
+  "paddleocr>=3.3.1; python_version<'3.14'",
+  "paddlepaddle>=3.2.1; python_version<'3.14'",
   "setuptools>=80.9; python_version<'3.14'",
 ]
 urls.Changelog = "https://kreuzberg.dev/CHANGELOG/"

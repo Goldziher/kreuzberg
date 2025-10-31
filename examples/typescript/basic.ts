@@ -4,9 +4,9 @@
  * Demonstrates basic document extraction with Kreuzberg.
  */
 
-import { ExtractionConfig, extractBytes, extractBytesSync, extractFile, extractFileSync } from "@goldziher/kreuzberg";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { ExtractionConfig, extractBytes, extractBytesSync, extractFile, extractFileSync } from "@goldziher/kreuzberg";
 
 async function main() {
 	// Synchronous extraction - simplest approach

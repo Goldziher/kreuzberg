@@ -4,6 +4,9 @@
  * Demonstrates efficient batch processing of multiple documents.
  */
 
+import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 import {
 	batchExtractBytes,
 	batchExtractBytesSync,
@@ -11,10 +14,7 @@ import {
 	batchExtractFilesSync,
 	ExtractionConfig,
 } from "@goldziher/kreuzberg";
-import { readFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { glob } from "glob";
-import { basename } from "node:path";
 
 async function main() {
 	// Synchronous batch processing

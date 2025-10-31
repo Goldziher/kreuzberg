@@ -24,7 +24,7 @@ repos:
       - id: oxlint
         args: ["--fix"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.1
+    rev: v0.14.3
     hooks:
       - id: ruff
         args: [ "--fix", "--unsafe-fixes" ]
@@ -36,7 +36,7 @@ repos:
       - id: cargo-check
       - id: clippy
   - repo: https://github.com/rubocop/rubocop
-    rev: v1.69.2
+    rev: v1.81.6
     hooks:
       - id: rubocop
         args: ['--autocorrect', '--config', 'packages/ruby/.rubocop.yml']

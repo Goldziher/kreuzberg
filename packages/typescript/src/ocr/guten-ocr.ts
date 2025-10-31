@@ -226,7 +226,7 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		}
 
 		try {
-			this.ocr = await this.ocrModule!.create(this.options);
+			this.ocr = await this.ocrModule?.create(this.options);
 		} catch (e) {
 			const error = e as Error;
 			throw new Error(`Failed to initialize Guten OCR: ${error.message}`);
@@ -307,7 +307,7 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 
 			// Decode image to get pixel data and dimensions
 			const image = sharp(Buffer.from(imageBytes));
-			const metadata = await image.metadata();
+			const _metadata = await image.metadata();
 			const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
 
 			// Create image input for Guten OCR

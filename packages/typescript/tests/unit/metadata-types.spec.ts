@@ -15,7 +15,23 @@
  */
 
 import { describe, expect, it } from "vitest";
-
+// Import from NAPI bindings (crates/kreuzberg-node)
+// This will break at compile time if the import fails
+import type {
+	ArchiveMetadata as NapiArchiveMetadata,
+	EmailMetadata as NapiEmailMetadata,
+	ErrorMetadata as NapiErrorMetadata,
+	ExcelMetadata as NapiExcelMetadata,
+	HtmlMetadata as NapiHtmlMetadata,
+	ImageMetadata as NapiImageMetadata,
+	ImagePreprocessingMetadata as NapiImagePreprocessingMetadata,
+	Metadata as NapiMetadata,
+	OcrMetadata as NapiOcrMetadata,
+	PdfMetadata as NapiPdfMetadata,
+	PptxMetadata as NapiPptxMetadata,
+	TextMetadata as NapiTextMetadata,
+	XmlMetadata as NapiXmlMetadata,
+} from "../../../../crates/kreuzberg-node/metadata";
 // Import from local types (packages/typescript/src/types.ts)
 import type {
 	ArchiveMetadata,
@@ -32,24 +48,6 @@ import type {
 	TextMetadata,
 	XmlMetadata,
 } from "../../src/types";
-
-// Import from NAPI bindings (crates/kreuzberg-node)
-// This will break at compile time if the import fails
-import type {
-	Metadata as NapiMetadata,
-	HtmlMetadata as NapiHtmlMetadata,
-	PdfMetadata as NapiPdfMetadata,
-	ExcelMetadata as NapiExcelMetadata,
-	EmailMetadata as NapiEmailMetadata,
-	PptxMetadata as NapiPptxMetadata,
-	ArchiveMetadata as NapiArchiveMetadata,
-	ImageMetadata as NapiImageMetadata,
-	XmlMetadata as NapiXmlMetadata,
-	TextMetadata as NapiTextMetadata,
-	OcrMetadata as NapiOcrMetadata,
-	ImagePreprocessingMetadata as NapiImagePreprocessingMetadata,
-	ErrorMetadata as NapiErrorMetadata,
-} from "../../../../crates/kreuzberg-node/metadata";
 
 // ============================================================================
 // Type Compatibility Tests (Compile-Time)

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 
-def parse_args() -> argparse.Namespace:  # noqa: D103
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verify wheel exposes expected modules.")
     parser.add_argument("--project-root", required=True, help="Path to the extracted project sources.")
     parser.add_argument(
@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:  # noqa: D103
     return parser.parse_args()
 
 
-def main() -> int:  # noqa: D103
+def main() -> int:
     args = parse_args()
 
     project_root = Path(args.project_root).resolve()

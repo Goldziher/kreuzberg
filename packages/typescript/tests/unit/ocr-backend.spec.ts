@@ -5,7 +5,7 @@
  * registration process validates inputs correctly.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { registerOcrBackend } from "../../src/index.js";
 import type { OcrBackendProtocol } from "../../src/types.js";
 
