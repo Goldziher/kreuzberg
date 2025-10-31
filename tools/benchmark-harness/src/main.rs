@@ -52,7 +52,8 @@ enum Commands {
     },
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
@@ -98,8 +99,11 @@ fn main() -> Result<()> {
             max_concurrent,
             timeout,
         } => {
+            use benchmark_harness::{AdapterRegistry, BenchmarkRunner, NativeAdapter};
+            use std::sync::Arc;
+
             let config = BenchmarkConfig {
-                output_dir: output,
+                output_dir: output.clone(),
                 max_concurrent: max_concurrent.unwrap_or_else(num_cpus::get),
                 timeout: std::time::Duration::from_secs(timeout.unwrap_or(1800)),
                 ..Default::default()
@@ -107,20 +111,58 @@ fn main() -> Result<()> {
 
             config.validate()?;
 
-            let mut manager = FixtureManager::new();
+            // Create registry and register adapters
+            let mut registry = AdapterRegistry::new();
 
-            if fixtures.is_dir() {
-                manager.load_fixtures_from_dir(&fixtures)?;
-            } else {
-                manager.load_fixture(&fixtures)?;
+            // Register native adapter by default
+            registry.register(Arc::new(NativeAdapter::new()))?;
+
+            // TODO: Register other adapters based on availability
+            // registry.register(Arc::new(PythonAdapter::new()))?;
+            // registry.register(Arc::new(NodeAdapter::new()))?;
+            // registry.register(Arc::new(RubyAdapter::new()))?;
+
+            // Create runner and load fixtures
+            let mut runner = BenchmarkRunner::new(config, registry);
+            runner.load_fixtures(&fixtures)?;
+
+            println!("Loaded {} fixture(s)", runner.fixture_count());
+            println!("Frameworks: {:?}", frameworks);
+            println!("Configuration: {:?}", runner.config());
+
+            if runner.fixture_count() == 0 {
+                println!("No fixtures to benchmark");
+                return Ok(());
             }
 
-            println!("Loaded {} fixture(s)", manager.len());
-            println!("Frameworks: {:?}", frameworks);
-            println!("Configuration: {:?}", config);
+            // Run benchmarks
+            println!("\nRunning benchmarks...");
+            let results = runner.run(&frameworks).await?;
 
-            // TODO: Implement actual benchmark execution
-            println!("NOTE: Benchmark execution not yet implemented (Phase 5)");
+            println!("\nCompleted {} benchmark(s)", results.len());
+
+            // Print summary
+            let mut success_count = 0;
+            let mut failure_count = 0;
+
+            for result in &results {
+                if result.success {
+                    success_count += 1;
+                } else {
+                    failure_count += 1;
+                }
+            }
+
+            println!("\nSummary:");
+            println!("  Successful: {}", success_count);
+            println!("  Failed: {}", failure_count);
+            println!("  Total: {}", results.len());
+
+            // Write results to JSON file
+            use benchmark_harness::write_json;
+            let output_file = output.join("results.json");
+            write_json(&results, &output_file)?;
+            println!("\nResults written to: {}", output_file.display());
 
             Ok(())
         }

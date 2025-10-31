@@ -10,7 +10,9 @@ pub mod config;
 pub mod error;
 pub mod fixture;
 pub mod monitoring;
+pub mod output;
 pub mod registry;
+pub mod runner;
 pub mod types;
 
 pub use adapter::FrameworkAdapter;
@@ -19,5 +21,7 @@ pub use config::BenchmarkConfig;
 pub use error::{Error, Result};
 pub use fixture::{Fixture, FixtureManager};
 pub use monitoring::{ResourceMonitor, ResourceSample, ResourceStats};
+pub use output::write_json;
 pub use registry::AdapterRegistry;
+pub use runner::BenchmarkRunner;
 pub use types::BenchmarkResult;
