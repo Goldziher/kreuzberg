@@ -17,7 +17,7 @@ pub mod types;
 
 pub use adapter::FrameworkAdapter;
 pub use adapters::{NativeAdapter, NodeAdapter, PythonAdapter, RubyAdapter};
-pub use config::BenchmarkConfig;
+pub use config::{BenchmarkConfig, BenchmarkMode};
 pub use error::{Error, Result};
 pub use fixture::{Fixture, FixtureManager};
 pub use monitoring::{ResourceMonitor, ResourceSample, ResourceStats};

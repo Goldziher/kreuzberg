@@ -1,8 +1,26 @@
 //! Benchmark harness CLI
 
-use benchmark_harness::{BenchmarkConfig, FixtureManager, Result};
-use clap::{Parser, Subcommand};
+use benchmark_harness::{BenchmarkConfig, BenchmarkMode, FixtureManager, Result};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
+
+/// CLI enum for benchmark mode
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum CliMode {
+    /// Single-file mode: Sequential execution for fair latency comparison
+    SingleFile,
+    /// Batch mode: Concurrent execution for throughput measurement
+    Batch,
+}
+
+impl From<CliMode> for BenchmarkMode {
+    fn from(mode: CliMode) -> Self {
+        match mode {
+            CliMode::SingleFile => BenchmarkMode::SingleFile,
+            CliMode::Batch => BenchmarkMode::Batch,
+        }
+    }
+}
 
 #[derive(Parser)]
 #[command(name = "benchmark-harness")]
@@ -49,6 +67,18 @@ enum Commands {
         /// Timeout in seconds
         #[arg(short = 't', long)]
         timeout: Option<u64>,
+
+        /// Benchmark mode: single-file (sequential) or batch (concurrent)
+        #[arg(short = 'm', long, value_enum, default_value = "batch")]
+        mode: CliMode,
+
+        /// Number of warmup iterations (discarded from statistics)
+        #[arg(short = 'w', long, default_value = "1")]
+        warmup: usize,
+
+        /// Number of benchmark iterations for statistical analysis
+        #[arg(short = 'i', long, default_value = "3")]
+        iterations: usize,
     },
 }
 
@@ -98,6 +128,9 @@ async fn main() -> Result<()> {
             output,
             max_concurrent,
             timeout,
+            mode,
+            warmup,
+            iterations,
         } => {
             use benchmark_harness::{AdapterRegistry, BenchmarkRunner, NativeAdapter};
             use std::sync::Arc;
@@ -106,6 +139,9 @@ async fn main() -> Result<()> {
                 output_dir: output.clone(),
                 max_concurrent: max_concurrent.unwrap_or_else(num_cpus::get),
                 timeout: std::time::Duration::from_secs(timeout.unwrap_or(1800)),
+                benchmark_mode: mode.into(),
+                warmup_iterations: warmup,
+                benchmark_iterations: iterations,
                 ..Default::default()
             };
 
