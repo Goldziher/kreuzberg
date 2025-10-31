@@ -35,7 +35,7 @@ sysinfo = "0.37"
 # Utilities
 ahash = "0.8"
 num_cpus = "1"
-which = "6"
+which = "8"
 
 # Optional external framework integrations
 extractous = { version = "0.3", optional = true }
