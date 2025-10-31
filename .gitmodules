@@ -1,3 +1,0 @@
-[submodule "external/tesseract-rs"]
-	path = external/tesseract-rs
-	url = https://github.com/kreuzberg-dev/tesseract-rs.git
