@@ -121,8 +121,18 @@ jobs:
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
+      - name: Set features for platform
+        id: features
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            echo "features=pdf,excel,office,email,html,xml,archives,language-detection,chunking,quality,keywords,embeddings" >> $GITHUB_OUTPUT
+          else
+            echo "features=full" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Rust tests
-        run: cargo test --workspace --no-default-features --exclude kreuzberg-py --exclude kreuzberg-rb
+        run: cargo test --workspace --no-default-features --features ${{ steps.features.outputs.features }} --exclude kreuzberg-py --exclude kreuzberg-rb
 
   python-tests:
     runs-on: ubuntu-latest
