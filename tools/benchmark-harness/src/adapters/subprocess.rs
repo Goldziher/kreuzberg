@@ -170,6 +170,8 @@ impl FrameworkAdapter for SubprocessAdapter {
                     success: false,
                     error_message: Some(e.to_string()),
                     duration: Duration::from_secs(0),
+                    extraction_duration: None,
+                    subprocess_overhead: None,
                     metrics: PerformanceMetrics {
                         peak_memory_bytes: resource_stats.peak_memory_bytes,
                         avg_cpu_percent: resource_stats.avg_cpu_percent,
@@ -179,6 +181,8 @@ impl FrameworkAdapter for SubprocessAdapter {
                         p99_memory_bytes: resource_stats.p99_memory_bytes,
                     },
                     quality: None,
+                    iterations: vec![],
+                    statistics: None,
                 });
             }
         };
@@ -187,26 +191,42 @@ impl FrameworkAdapter for SubprocessAdapter {
         let samples = monitor.stop().await;
         let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-        // Parse output
-        if let Err(e) = self.parse_output(&stdout) {
-            return Ok(BenchmarkResult {
-                framework: self.name.clone(),
-                file_path: file_path.to_path_buf(),
-                file_size,
-                success: false,
-                error_message: Some(e.to_string()),
-                duration,
-                metrics: PerformanceMetrics {
-                    peak_memory_bytes: resource_stats.peak_memory_bytes,
-                    avg_cpu_percent: resource_stats.avg_cpu_percent,
-                    throughput_bytes_per_sec: 0.0,
-                    p50_memory_bytes: resource_stats.p50_memory_bytes,
-                    p95_memory_bytes: resource_stats.p95_memory_bytes,
-                    p99_memory_bytes: resource_stats.p99_memory_bytes,
-                },
-                quality: None,
-            });
-        }
+        // Parse output and extract internal timing if available
+        let parsed = match self.parse_output(&stdout) {
+            Ok(value) => value,
+            Err(e) => {
+                return Ok(BenchmarkResult {
+                    framework: self.name.clone(),
+                    file_path: file_path.to_path_buf(),
+                    file_size,
+                    success: false,
+                    error_message: Some(e.to_string()),
+                    duration,
+                    extraction_duration: None,
+                    subprocess_overhead: None,
+                    metrics: PerformanceMetrics {
+                        peak_memory_bytes: resource_stats.peak_memory_bytes,
+                        avg_cpu_percent: resource_stats.avg_cpu_percent,
+                        throughput_bytes_per_sec: 0.0,
+                        p50_memory_bytes: resource_stats.p50_memory_bytes,
+                        p95_memory_bytes: resource_stats.p95_memory_bytes,
+                        p99_memory_bytes: resource_stats.p99_memory_bytes,
+                    },
+                    quality: None,
+                    iterations: vec![],
+                    statistics: None,
+                });
+            }
+        };
+
+        // Extract internal timing if available from _extraction_time_ms
+        let extraction_duration = parsed
+            .get("_extraction_time_ms")
+            .and_then(|v| v.as_f64())
+            .map(|ms| Duration::from_secs_f64(ms / 1000.0));
+
+        // Calculate subprocess overhead if we have internal timing
+        let subprocess_overhead = extraction_duration.map(|ext| duration.saturating_sub(ext));
 
         // Calculate throughput
         let throughput = if duration.as_secs_f64() > 0.0 {
@@ -232,8 +252,12 @@ impl FrameworkAdapter for SubprocessAdapter {
             success: true,
             error_message: None,
             duration,
+            extraction_duration,
+            subprocess_overhead,
             metrics,
             quality: None,
+            iterations: vec![],
+            statistics: None,
         })
     }
 

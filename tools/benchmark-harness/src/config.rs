@@ -4,6 +4,15 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;
 
+/// Benchmark execution mode
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BenchmarkMode {
+    /// Single-file mode: Sequential execution (max_concurrent=1) for fair latency comparison
+    SingleFile,
+    /// Batch mode: Concurrent execution to measure throughput
+    Batch,
+}
+
 /// Configuration for benchmark runs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkConfig {
@@ -27,6 +36,15 @@ pub struct BenchmarkConfig {
 
     /// Sample interval for resource monitoring (milliseconds)
     pub sample_interval_ms: u64,
+
+    /// Benchmark execution mode (single-file or batch)
+    pub benchmark_mode: BenchmarkMode,
+
+    /// Number of warmup iterations (discarded from statistics)
+    pub warmup_iterations: usize,
+
+    /// Number of benchmark iterations for statistical analysis
+    pub benchmark_iterations: usize,
 }
 
 impl Default for BenchmarkConfig {
@@ -39,6 +57,9 @@ impl Default for BenchmarkConfig {
             output_dir: PathBuf::from("results"),
             measure_quality: false,
             sample_interval_ms: 10,
+            benchmark_mode: BenchmarkMode::Batch,
+            warmup_iterations: 1,
+            benchmark_iterations: 3,
         }
     }
 }
@@ -56,6 +77,17 @@ impl BenchmarkConfig {
 
         if self.sample_interval_ms == 0 {
             return Err(crate::Error::Config("sample_interval_ms must be > 0".to_string()));
+        }
+
+        if self.benchmark_iterations == 0 {
+            return Err(crate::Error::Config("benchmark_iterations must be > 0".to_string()));
+        }
+
+        // Single-file mode requires max_concurrent=1
+        if self.benchmark_mode == BenchmarkMode::SingleFile && self.max_concurrent != 1 {
+            return Err(crate::Error::Config(
+                "single-file mode requires max_concurrent=1".to_string(),
+            ));
         }
 
         Ok(())

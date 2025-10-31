@@ -3,6 +3,7 @@
 
 import json
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -14,8 +15,12 @@ except ImportError as e:
 
 def extract_with_extractous(file_path: str) -> dict[str, object]:
     """Extract content using extractous."""
+    start = time.perf_counter()
+
     extractor = Extractor()
     result = extractor.extract_file(file_path)
+
+    extraction_ms = (time.perf_counter() - start) * 1000
 
     metadata = {}
     if hasattr(result, "metadata"):
@@ -24,6 +29,7 @@ def extract_with_extractous(file_path: str) -> dict[str, object]:
     return {
         "content": result.text if hasattr(result, "text") else str(result),
         "metadata": metadata,
+        "_extraction_time_ms": extraction_ms,
     }
 
 

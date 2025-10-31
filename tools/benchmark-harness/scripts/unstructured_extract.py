@@ -3,6 +3,7 @@
 
 import json
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -14,6 +15,8 @@ except ImportError as e:
 
 def extract_with_unstructured(file_path: str) -> dict[str, object]:
     """Extract content using unstructured."""
+    start = time.perf_counter()
+
     elements = partition(filename=file_path)
 
     content_parts = []
@@ -24,12 +27,15 @@ def extract_with_unstructured(file_path: str) -> dict[str, object]:
         if hasattr(element, "metadata") and element.metadata:
             metadata_items.append(element.metadata.to_dict())
 
+    extraction_ms = (time.perf_counter() - start) * 1000
+
     return {
         "content": "\n\n".join(content_parts),
         "metadata": {
             "num_elements": len(elements),
             "element_types": list({type(e).__name__ for e in elements}),
         },
+        "_extraction_time_ms": extraction_ms,
     }
 
 

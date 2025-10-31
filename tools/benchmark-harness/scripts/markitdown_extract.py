@@ -3,6 +3,7 @@
 
 import json
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -14,14 +15,19 @@ except ImportError as e:
 
 def extract_with_markitdown(file_path: str) -> dict[str, object]:
     """Extract content using markitdown."""
+    start = time.perf_counter()
+
     md = MarkItDown()
     result = md.convert(file_path)
+
+    extraction_ms = (time.perf_counter() - start) * 1000
 
     return {
         "content": result.text_content,
         "metadata": {
             "title": getattr(result, "title", None),
         },
+        "_extraction_time_ms": extraction_ms,
     }
 
 

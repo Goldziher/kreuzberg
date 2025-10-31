@@ -22,14 +22,31 @@ pub struct BenchmarkResult {
     /// Error message if extraction failed
     pub error_message: Option<String>,
 
-    /// Extraction duration
+    /// Total wall-clock duration (process spawn + extraction)
+    /// For single iteration: the actual duration
+    /// For multiple iterations: mean duration across all iterations
     pub duration: Duration,
 
-    /// Performance metrics
+    /// Pure extraction time (reported by subprocess via _extraction_time_ms)
+    /// Only available for external frameworks with internal timing
+    pub extraction_duration: Option<Duration>,
+
+    /// Subprocess overhead (duration - extraction_duration)
+    /// Only available when extraction_duration is present
+    pub subprocess_overhead: Option<Duration>,
+
+    /// Performance metrics (averaged across iterations if multiple)
     pub metrics: PerformanceMetrics,
 
     /// Quality metrics (if ground truth available)
     pub quality: Option<QualityMetrics>,
+
+    /// Individual iteration results (empty for single iteration)
+    pub iterations: Vec<IterationResult>,
+
+    /// Statistical analysis of durations across iterations
+    /// Only present when multiple iterations were run
+    pub statistics: Option<DurationStatistics>,
 }
 
 /// Performance metrics collected during extraction
@@ -105,4 +122,48 @@ pub struct BenchmarkSummary {
 
     /// Average quality metrics (if available)
     pub avg_quality: Option<QualityMetrics>,
+}
+
+/// Result from a single benchmark iteration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IterationResult {
+    /// Iteration number (0-indexed)
+    pub iteration: usize,
+
+    /// Total wall-clock duration for this iteration
+    pub duration: Duration,
+
+    /// Pure extraction time (if available from subprocess)
+    pub extraction_duration: Option<Duration>,
+
+    /// Performance metrics for this iteration
+    pub metrics: PerformanceMetrics,
+}
+
+/// Statistical analysis of durations across multiple iterations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DurationStatistics {
+    /// Mean duration
+    pub mean: Duration,
+
+    /// Median duration
+    pub median: Duration,
+
+    /// Standard deviation (in milliseconds as f64)
+    pub std_dev_ms: f64,
+
+    /// Minimum duration
+    pub min: Duration,
+
+    /// Maximum duration
+    pub max: Duration,
+
+    /// 95th percentile duration
+    pub p95: Duration,
+
+    /// 99th percentile duration
+    pub p99: Duration,
+
+    /// Number of iterations included in statistics
+    pub sample_count: usize,
 }

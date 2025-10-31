@@ -113,6 +113,8 @@ impl FrameworkAdapter for NativeAdapter {
                 success: false,
                 error_message: Some(e.to_string()),
                 duration,
+                extraction_duration: None,
+                subprocess_overhead: None,
                 metrics: PerformanceMetrics {
                     peak_memory_bytes: resource_stats.peak_memory_bytes,
                     avg_cpu_percent: resource_stats.avg_cpu_percent,
@@ -122,6 +124,8 @@ impl FrameworkAdapter for NativeAdapter {
                     p99_memory_bytes: resource_stats.p99_memory_bytes,
                 },
                 quality: None,
+                iterations: vec![],
+                statistics: None,
             });
         }
 
@@ -142,8 +146,12 @@ impl FrameworkAdapter for NativeAdapter {
             success: true,
             error_message: None,
             duration,
+            extraction_duration: None,
+            subprocess_overhead: None,
             metrics,
             quality: None,
+            iterations: vec![],
+            statistics: None,
         })
     }
 

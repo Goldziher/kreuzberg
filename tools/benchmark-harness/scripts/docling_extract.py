@@ -3,6 +3,7 @@
 
 import json
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -14,8 +15,12 @@ except ImportError as e:
 
 def extract_with_docling(file_path: str) -> dict[str, object]:
     """Extract content using docling."""
+    start = time.perf_counter()
+
     converter = DocumentConverter()
     result = converter.convert(file_path)
+
+    extraction_ms = (time.perf_counter() - start) * 1000
 
     return {
         "content": result.document.export_to_markdown(),
@@ -23,6 +28,7 @@ def extract_with_docling(file_path: str) -> dict[str, object]:
             "num_pages": getattr(result.document, "num_pages", None),
             "title": getattr(result.document, "title", None),
         },
+        "_extraction_time_ms": extraction_ms,
     }
 
 
