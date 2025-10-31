@@ -189,7 +189,6 @@ plugins = [ "covdefaults" ]
 source = [ "packages/python/kreuzberg" ]
 
 [tool.coverage.report]
-fail_under = 99 # Reduced from 100 (covdefaults default) to allow minor gaps
 exclude_lines = [
   'if TYPE_CHECKING:',
   "except ImportError:",
