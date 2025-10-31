@@ -1,4 +1,13 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
 repos:
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.3.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -27,7 +36,7 @@ repos:
     rev: v0.14.3
     hooks:
       - id: ruff
-        args: [ "--fix", "--unsafe-fixes" ]
+        args: ["--fix", "--unsafe-fixes"]
       - id: ruff-format
   - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
@@ -39,7 +48,7 @@ repos:
     rev: v1.81.6
     hooks:
       - id: rubocop
-        args: ['--autocorrect', '--config', 'packages/ruby/.rubocop.yml']
+        args: ["--autocorrect", "--config", "packages/ruby/.rubocop.yml"]
         files: ^packages/ruby/
   - repo: local
     hooks:
@@ -48,5 +57,5 @@ repos:
         entry: uv run mypy
         require_serial: true
         language: system
-        types: [ python ]
+        types: [python]
         exclude: ^scripts/|^comparative-benchmarks/|^examples/

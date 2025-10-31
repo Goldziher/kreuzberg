@@ -1,0 +1,11 @@
+{
+	"document": "../../../test_documents/text/hip_13044_b.md",
+	"file_type": "md",
+	"file_size": 33792,
+	"expected_frameworks": ["kreuzberg", "markitdown"],
+	"metadata": {
+		"description": "Technical markdown document - 33KB scientific text",
+		"category": "markdown-technical",
+		"size_class": "small"
+	}
+}
