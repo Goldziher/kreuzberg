@@ -10,14 +10,15 @@
 //! These tests ensure production workloads with high concurrency work correctly.
 
 use async_trait::async_trait;
-use kreuzberg::Result;
 use kreuzberg::core::config::{ExtractionConfig, PostProcessorConfig};
 use kreuzberg::core::extractor::{batch_extract_bytes, extract_bytes};
 use kreuzberg::core::pipeline::run_pipeline;
 use kreuzberg::plugins::registry::{get_document_extractor_registry, get_post_processor_registry};
 use kreuzberg::plugins::{Plugin, PostProcessor, ProcessingStage};
 use kreuzberg::types::{ExtractionResult, Metadata};
+use kreuzberg::{OcrConfig, Result, extract_file_sync};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use tokio::time::timeout;
 

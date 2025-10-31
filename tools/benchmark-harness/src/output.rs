@@ -49,6 +49,8 @@ mod tests {
             success: true,
             error_message: None,
             duration: Duration::from_secs(1),
+            extraction_duration: None,
+            subprocess_overhead: None,
             metrics: PerformanceMetrics {
                 peak_memory_bytes: 10_000_000,
                 avg_cpu_percent: 50.0,
@@ -58,6 +60,8 @@ mod tests {
                 p99_memory_bytes: 9_900_000,
             },
             quality: None,
+            iterations: vec![],
+            statistics: None,
         }];
 
         write_json(&results, &output_path).unwrap();
