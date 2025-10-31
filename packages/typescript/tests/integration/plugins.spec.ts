@@ -17,8 +17,6 @@ import {
 	clearValidators,
 	type ExtractionResult,
 	extractBytes,
-	extractBytesSync,
-	extractFile,
 	type OcrBackendProtocol,
 	type PostProcessorProtocol,
 	registerOcrBackend,

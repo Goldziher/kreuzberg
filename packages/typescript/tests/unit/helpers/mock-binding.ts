@@ -109,7 +109,7 @@ export function createMockExtractionBinding() {
 				if (enabledSet && !enabledSet.has(proc.name)) {
 					return false;
 				}
-				if (disabledSet && disabledSet.has(proc.name)) {
+				if (disabledSet?.has(proc.name)) {
 					return false;
 				}
 				return true;

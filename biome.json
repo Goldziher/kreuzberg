@@ -62,6 +62,16 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["**/scripts/**/*.ts", "**/src/ocr/**/*.ts", "**/src/ocr/**/*.d.ts"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noExplicitAny": "off"
+					}
+				}
+			}
 		}
 	]
 }

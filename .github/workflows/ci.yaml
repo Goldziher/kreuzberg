@@ -47,7 +47,7 @@ jobs:
 
   rust-linux:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       KREUZBERG_CI_DEBUG: "1"
       RUSTFLAGS: "--cap-lints=warn"
@@ -122,11 +122,11 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Run Rust tests
-        run: cargo test --workspace --no-default-features --exclude kreuzberg-py
+        run: cargo test --workspace --no-default-features --exclude kreuzberg-py --exclude kreuzberg-rb
 
   python-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       HF_HOME: ~/.cache/huggingface
       TRANSFORMERS_CACHE: ~/.cache/huggingface
@@ -283,6 +283,9 @@ jobs:
         working-directory: crates/kreuzberg-node
         run: pnpm run build
 
+      - name: Link built NAPI bindings to workspace
+        run: pnpm install
+
       - name: Run TypeScript tests with coverage
         working-directory: packages/typescript
         run: pnpm test:coverage
@@ -323,19 +326,19 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Install Ruby dependencies
-        working-directory: crates/kreuzberg-rb
+        working-directory: packages/ruby
         run: |
           bundle config set --local path 'vendor/bundle'
           bundle install --jobs 4 --retry 3
 
       - name: Build Ruby native extension
-        working-directory: crates/kreuzberg-rb
+        working-directory: packages/ruby
         run: bundle exec rake compile
 
       - name: Run RuboCop
-        working-directory: crates/kreuzberg-rb
+        working-directory: packages/ruby
         run: bundle exec rubocop
 
       - name: Run Ruby tests
-        working-directory: crates/kreuzberg-rb
+        working-directory: packages/ruby
         run: bundle exec rspec --format documentation

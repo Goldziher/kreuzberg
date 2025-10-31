@@ -39,7 +39,7 @@ function profileExtraction(
 	iterations: number,
 	label: string,
 ): ProfileResult {
-	console.log("\n" + "=".repeat(70));
+	console.log(`\n${"=".repeat(70)}`);
 	console.log(`Profiling: ${label}`);
 	console.log(`File: ${basename(filePath)}`);
 	console.log(`Iterations: ${iterations}`);

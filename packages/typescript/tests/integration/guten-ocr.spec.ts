@@ -5,10 +5,8 @@
  * for text extraction from images.
  */
 
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { extractBytes, extractFile, registerOcrBackend } from "../../src/index.js";
+import { extractBytes, registerOcrBackend } from "../../src/index.js";
 import { GutenOcrBackend } from "../../src/ocr/guten-ocr.js";
 
 // Skip tests if @gutenye/ocr-node is not installed
