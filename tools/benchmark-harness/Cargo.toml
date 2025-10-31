@@ -37,5 +37,12 @@ ahash = "0.8"
 num_cpus = "1"
 which = "6"
 
+# Optional external framework integrations
+extractous = { version = "0.3", optional = true }
+
 [dev-dependencies]
 tempfile = "3"
+
+[features]
+default = []
+extractous-native = ["dep:extractous"]

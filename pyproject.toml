@@ -30,6 +30,12 @@ doc = [
   "mkdocs-minify-plugin>=0.8.0",
   "mkdocstrings[python]>=0.30.1",
 ]
+comparative-benchmarks = [
+  "docling>=2.59",
+  "extractous>=0.3",
+  "markitdown[docx,pdf]>=0.1.3",
+  "unstructured[all-docs]>=0.18.15",
+]
 
 [tool.setuptools]
 packages = [  ]
@@ -145,6 +151,11 @@ lint.per-file-ignores."scripts/**/*.py" = [
   "PLW2901", # Loop variable overwriting (common pattern in scripts)
   "SIM105",  # Use contextlib.suppress (explicit is clearer in scripts)
 ]
+lint.per-file-ignores."tools/benchmark-harness/scripts/*.py" = [
+  "BLE001", # Blind exception catching (acceptable in CLI scripts)
+  "D103",   # Missing docstring in public function (not needed for scripts)
+  "T201",   # print statements (needed for output)
+]
 lint.isort.known-first-party = [ "kreuzberg" ]
 lint.mccabe.max-complexity = 15
 lint.pydocstyle.convention = "google"
@@ -215,5 +226,9 @@ module = [
   "easyocr",
   "paddleocr",
   "kreuzberg._internal_bindings",
+  "extractous",
+  "docling.*",
+  "markitdown",
+  "unstructured.*",
 ]
 ignore_missing_imports = true
