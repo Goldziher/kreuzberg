@@ -46,7 +46,6 @@ jobs:
         run: uv run prek run --show-diff-on-failure --color=always --all-files
 
   rust-linux:
-    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -97,7 +96,6 @@ jobs:
           ./bin/deepsource report --analyzer test-coverage --key rust --value-file ./rust-coverage.lcov
 
   rust-cross:
-    needs: rust-linux
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -127,7 +125,6 @@ jobs:
         run: cargo test --workspace --no-default-features --exclude kreuzberg-py
 
   python-tests:
-    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -194,7 +191,6 @@ jobs:
           ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
 
   node-tests:
-    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -295,7 +291,6 @@ jobs:
           retention-days: 7
 
   ruby-tests:
-    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
