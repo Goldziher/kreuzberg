@@ -125,6 +125,11 @@ jobs:
         id: features
         shell: bash
         run: |
+          # TODO: Windows excludes 'ocr' feature due to tesseract-rs build complexity
+          # tesseract-rs compiles Tesseract/Leptonica from source using CMake, which fails on Windows CI
+          # Benchmarks show tesseract-rs is 2x faster than alternatives (45ms vs 90ms avg)
+          # See: https://github.com/cafercangundogdu/tesseract-rs (no Windows CI upstream)
+          # Alternative: Switch to 'tesseract' crate (links system libs) if Windows support critical
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
             echo "features=pdf,excel,office,email,html,xml,archives,language-detection,chunking,quality,keywords,embeddings" >> $GITHUB_OUTPUT
           else
