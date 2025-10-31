@@ -1,0 +1,4 @@
+packages:
+  - "packages/typescript"
+  - "crates/kreuzberg-node"
+  - "crates/kreuzberg-wasm"
