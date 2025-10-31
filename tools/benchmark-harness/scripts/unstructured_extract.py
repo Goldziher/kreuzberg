@@ -1,57 +1,26 @@
 #!/usr/bin/env python3
-"""Wrapper script for unstructured extraction."""
+"""Unstructured extraction wrapper for benchmark harness."""
 
-import json
 import sys
-import time
-from pathlib import Path
 
-try:
-    from unstructured.partition.auto import partition
-except ImportError as e:
-    print(json.dumps({"error": f"unstructured not installed: {e}"}), file=sys.stderr)
-    sys.exit(1)
-
-
-def extract_with_unstructured(file_path: str) -> dict[str, object]:
-    """Extract content using unstructured."""
-    start = time.perf_counter()
-
-    elements = partition(filename=file_path)
-
-    content_parts = []
-    metadata_items = []
-
-    for element in elements:
-        content_parts.append(str(element))
-        if hasattr(element, "metadata") and element.metadata:
-            metadata_items.append(element.metadata.to_dict())
-
-    extraction_ms = (time.perf_counter() - start) * 1000
-
-    return {
-        "content": "\n\n".join(content_parts),
-        "metadata": {
-            "num_elements": len(elements),
-            "element_types": list({type(e).__name__ for e in elements}),
-        },
-        "_extraction_time_ms": extraction_ms,
-    }
+from unstructured.partition.auto import partition
 
 
 def main() -> None:
     if len(sys.argv) != 2:
+        print("Usage: unstructured_extract.py <file_path>", file=sys.stderr)
         sys.exit(1)
 
     file_path = sys.argv[1]
-    if not Path(file_path).exists():
-        sys.exit(1)
 
     try:
-        result = extract_with_unstructured(file_path)
-        print(json.dumps(result))
+        elements = partition(filename=file_path)
+
+        # Extract and print text from all elements
+        text = "\n\n".join([str(el) for el in elements])
+        print(text, end="")
     except Exception as e:
-        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        print(f"Error extracting with Unstructured: {e}", file=sys.stderr)
         sys.exit(1)
 
 

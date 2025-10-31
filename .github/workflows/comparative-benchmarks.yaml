@@ -76,11 +76,11 @@ jobs:
           cd tools/benchmark-harness
           cargo build --release --features extractous-native
 
-      - name: Create test documents directory
+      - name: Validate fixtures
         run: |
-          mkdir -p benchmark-test-docs
-          echo "Sample PDF content" > benchmark-test-docs/sample.txt
-          echo "# Sample Markdown" > benchmark-test-docs/sample.md
+          cd tools/benchmark-harness
+          cargo run --release -- validate --fixtures fixtures/
+          echo "✓ All fixtures validated successfully"
 
       - name: Run benchmarks
         id: benchmark
@@ -94,14 +94,34 @@ jobs:
           echo "=== Starting Comparative Benchmarks ==="
           echo "Frameworks: $FRAMEWORKS"
           echo "Timeout: ${TIMEOUT}s per extraction"
+          echo "Fixtures: $(ls fixtures/*.json | wc -l) total"
 
           # Create results directory
           mkdir -p results
 
-          # Run benchmark harness tests to verify adapters work
-          cargo test --release --features extractous-native -- --nocapture 2>&1 | tee results/test_output.log
+          # Convert framework input to use correct adapter names
+          ADAPTER_FRAMEWORKS=$(echo "$FRAMEWORKS" | sed 's/kreuzberg/kreuzberg-native/g' | sed 's/extractous/extractous-python/g')
+
+          echo "Running benchmarks with adapters: $ADAPTER_FRAMEWORKS"
+
+          # Run actual benchmarks with all fixtures
+          ./target/release/benchmark-harness run \
+            --fixtures fixtures/ \
+            --frameworks "$ADAPTER_FRAMEWORKS" \
+            --output results \
+            --timeout "$TIMEOUT" \
+            --iterations 3 \
+            --warmup 1 \
+            --max-concurrent 4 \
+            --mode batch 2>&1 | tee results/benchmark_run.log
 
           echo "Benchmark execution completed"
+
+          # Display summary
+          if [ -f results/summary.json ]; then
+            echo "Summary results generated:"
+            cat results/summary.json
+          fi
 
       - name: Generate summary
         if: always()
@@ -111,12 +131,21 @@ jobs:
           echo "### Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Frameworks**: ${{ github.event.inputs.frameworks }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Timeout**: ${{ github.event.inputs.timeout }}s" >> $GITHUB_STEP_SUMMARY
+          echo "- **Fixtures**: $(ls tools/benchmark-harness/fixtures/*.json 2>/dev/null | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Iterations**: 3 (with 1 warmup)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ -f "tools/benchmark-harness/results/test_output.log" ]; then
-            echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          if [ -f "tools/benchmark-harness/results/summary.json" ]; then
+            echo "### Benchmark Summary" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat tools/benchmark-harness/results/summary.json >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -50 tools/benchmark-harness/results/test_output.log >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f "tools/benchmark-harness/results/benchmark_run.log" ]; then
+            echo "### Execution Log (last 100 lines)" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -100 tools/benchmark-harness/results/benchmark_run.log >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ No benchmark results found" >> $GITHUB_STEP_SUMMARY
