@@ -279,6 +279,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Build NAPI-RS bindings
+        working-directory: crates/kreuzberg-node
+        run: pnpm run build
+
       - name: Run TypeScript tests with coverage
         working-directory: packages/typescript
         run: pnpm test:coverage
@@ -319,19 +323,19 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Install Ruby dependencies
-        working-directory: packages/ruby
+        working-directory: crates/kreuzberg-rb
         run: |
           bundle config set --local path 'vendor/bundle'
           bundle install --jobs 4 --retry 3
 
       - name: Build Ruby native extension
-        working-directory: packages/ruby
+        working-directory: crates/kreuzberg-rb
         run: bundle exec rake compile
 
       - name: Run RuboCop
-        working-directory: packages/ruby
+        working-directory: crates/kreuzberg-rb
         run: bundle exec rubocop
 
       - name: Run Ruby tests
-        working-directory: packages/ruby
+        working-directory: crates/kreuzberg-rb
         run: bundle exec rspec --format documentation
