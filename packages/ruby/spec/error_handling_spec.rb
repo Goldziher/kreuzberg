@@ -116,12 +116,11 @@ RSpec.describe 'Error Handling' do
 
     it 'propagates errors in async bytes extraction' do
       # Implementation may either handle invalid MIME types or raise error
-      begin
-        result = Kreuzberg.extract_bytes('data', 'invalid/mime/type/that/causes/error')
-        expect(result).to be_a(Kreuzberg::Result)
-      rescue StandardError => e
-        expect(e).to be_a(StandardError)
-      end
+
+      result = Kreuzberg.extract_bytes('data', 'invalid/mime/type/that/causes/error')
+      expect(result).to be_a(Kreuzberg::Result)
+    rescue StandardError => e
+      expect(e).to be_a(StandardError)
     end
   end
 

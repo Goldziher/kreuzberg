@@ -98,11 +98,11 @@ RSpec.describe Kreuzberg::Config do
     it 'creates with custom values' do
       pdf = described_class.new(
         extract_images: true,
-        passwords: ['secret', 'backup']
+        passwords: %w[secret backup]
       )
 
       expect(pdf.extract_images).to be true
-      expect(pdf.passwords).to eq(['secret', 'backup'])
+      expect(pdf.passwords).to eq(%w[secret backup])
     end
 
     it 'converts to hash' do

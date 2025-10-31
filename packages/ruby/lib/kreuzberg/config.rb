@@ -68,7 +68,7 @@ module Kreuzberg
       attr_reader :enabled, :min_confidence
 
       def initialize(enabled: false, min_confidence: 0.5)
-        @enabled = !!enabled
+        @enabled = !enabled.nil?
         @min_confidence = min_confidence.to_f
       end
 
@@ -93,8 +93,12 @@ module Kreuzberg
         passwords: nil,
         extract_metadata: true
       )
-        @extract_images = !!extract_images
-        @passwords = passwords.is_a?(Array) ? passwords.map(&:to_s) : (passwords ? [passwords.to_s] : nil)
+        @extract_images = !extract_images.nil?
+        @passwords = if passwords.is_a?(Array)
+                       passwords.map(&:to_s)
+                     else
+                       (passwords ? [passwords.to_s] : nil)
+                     end
         @extract_metadata = !!extract_metadata
       end
 
@@ -140,9 +144,9 @@ module Kreuzberg
         language_detection: nil,
         pdf_options: nil
       )
-        @use_cache = !!use_cache
-        @enable_quality_processing = !!enable_quality_processing
-        @force_ocr = !!force_ocr
+        @use_cache = !use_cache.nil?
+        @enable_quality_processing = !enable_quality_processing.nil?
+        @force_ocr = !force_ocr.nil?
         @ocr = normalize_config(ocr, OCR)
         @chunking = normalize_config(chunking, Chunking)
         @language_detection = normalize_config(language_detection, LanguageDetection)
