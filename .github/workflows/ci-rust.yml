@@ -1,0 +1,135 @@
+name: Rust CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/ci-rust.yml'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/ci-rust.yml'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+
+concurrency:
+  group: rust-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PDFIUM_VERSION: "7455"
+  RUSTFLAGS: "--cap-lints=warn"
+
+jobs:
+  lint:
+    name: Lint (clippy + fmt)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: lint
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-features --all-targets -- -D warnings
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      KREUZBERG_CI_DEBUG: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: test-${{ matrix.os }}
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Run tests (Linux - with coverage)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          rustup component add llvm-tools-preview
+          cargo llvm-cov --workspace --no-default-features --features full --exclude kreuzberg-py --exclude kreuzberg-rb --lcov --output-path rust-coverage.lcov
+
+      - name: Run tests (macOS/Windows)
+        if: matrix.os != 'ubuntu-latest'
+        run: cargo test --workspace --no-default-features --features full --exclude kreuzberg-py --exclude kreuzberg-rb
+
+      - name: Upload coverage artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-coverage-${{ github.sha }}
+          path: rust-coverage.lcov
+          retention-days: 7
+
+      - name: Upload coverage to DeepSource
+        if: matrix.os == 'ubuntu-latest' && env.DEEPSOURCE_DSN != ''
+        env:
+          DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
+        shell: bash
+        run: |
+          curl -fsSL https://deepsource.io/cli | sh
+          ./bin/deepsource report --analyzer test-coverage --key rust --value-file ./rust-coverage.lcov
+
+  check-msrv:
+    name: Check MSRV
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust toolchain (MSRV)
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: msrv
+          toolchain: '1.80'  # Minimum Supported Rust Version
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Check build with MSRV
+        run: cargo check --workspace --all-features --exclude kreuzberg-py --exclude kreuzberg-rb

@@ -1,0 +1,179 @@
+name: TypeScript CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/typescript/**'
+      - 'crates/kreuzberg-node/**'
+      - 'crates/kreuzberg/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/ci-typescript.yml'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/typescript/**'
+      - 'crates/kreuzberg-node/**'
+      - 'crates/kreuzberg/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/ci-typescript.yml'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+
+concurrency:
+  group: typescript-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PDFIUM_VERSION: "7455"
+
+jobs:
+  test:
+    name: Test (Node ${{ matrix.node-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: ['20', '22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: typescript-${{ matrix.os }}-${{ matrix.node-version }}
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Prepare Pdfium runtime for Node bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          platform="$(uname -s)"
+          case "$platform" in
+            Linux*) platform_id="linux" ;;
+            Darwin*) platform_id="mac" ;;
+            MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
+            *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
+          esac
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64|amd64) arch_id="x64" ;;
+            arm64|aarch64) arch_id="arm64" ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+          version="${PDFIUM_VERSION:-7455}"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL -o "$tmpdir/pdfium.tgz" "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
+          mkdir -p "$tmpdir/extracted"
+          tar -xzf "$tmpdir/pdfium.tgz" -C "$tmpdir/extracted"
+          dest="$RUNNER_TEMP/pdfium-prebuilt"
+          rm -rf "$dest"
+          mv "$tmpdir/extracted" "$dest"
+          rm -rf "$tmpdir"
+          echo "KREUZBERG_PDFIUM_PREBUILT=$dest" >> "$GITHUB_ENV"
+
+      - name: Stage Pdfium runtime artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
+            echo "KREUZBERG_PDFIUM_PREBUILT is not set" >&2
+            exit 1
+          fi
+          mkdir -p crates/kreuzberg-node packages/python/kreuzberg
+          case "${RUNNER_OS:-unknown}" in
+            Windows)
+              bin_dir="$KREUZBERG_PDFIUM_PREBUILT/bin"
+              lib_dir="$KREUZBERG_PDFIUM_PREBUILT/lib"
+              cp -f "$bin_dir/pdfium.dll" "crates/kreuzberg-node/pdfium.dll"
+              if [ -f "$lib_dir/pdfium.dll.lib" ]; then
+                cp -f "$lib_dir/pdfium.dll.lib" "$lib_dir/pdfium.lib"
+              fi
+              ;;
+            macOS)
+              lib_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.dylib"
+              cp -f "$lib_path" "crates/kreuzberg-node/libpdfium.dylib"
+              ;;
+            Linux)
+              lib_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.so"
+              cp -f "$lib_path" "crates/kreuzberg-node/libpdfium.so"
+              ;;
+            *)
+              echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Setup Node workspace
+        uses: ./.github/actions/setup-node-workspace
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build NAPI-RS bindings
+        working-directory: crates/kreuzberg-node
+        run: pnpm run build
+
+      - name: Link built NAPI bindings to workspace
+        run: pnpm install
+
+      - name: Run tests (Linux, Node 20 - with coverage)
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        working-directory: packages/typescript
+        run: pnpm test:coverage
+
+      - name: Run tests (other platforms/versions)
+        if: matrix.os != 'ubuntu-latest' || matrix.node-version != '20'
+        working-directory: packages/typescript
+        run: pnpm test
+
+      - name: Upload coverage artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        uses: actions/upload-artifact@v4
+        with:
+          name: typescript-coverage-${{ github.sha }}
+          path: packages/typescript/coverage/
+          retention-days: 7
+
+  lint:
+    name: Lint (biome)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node workspace
+        uses: ./.github/actions/setup-node-workspace
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run biome check
+        working-directory: packages/typescript
+        run: pnpm exec biome check

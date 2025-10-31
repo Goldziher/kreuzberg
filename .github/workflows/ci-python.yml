@@ -1,0 +1,138 @@
+name: Python CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/python/**'
+      - 'crates/kreuzberg-py/**'
+      - 'crates/kreuzberg/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/ci-python.yml'
+      - '.github/actions/setup-python-env/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/python/**'
+      - 'crates/kreuzberg-py/**'
+      - 'crates/kreuzberg/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/ci-python.yml'
+      - '.github/actions/setup-python-env/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+
+concurrency:
+  group: python-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PDFIUM_VERSION: "7455"
+  HF_HOME: ~/.cache/huggingface
+  TRANSFORMERS_CACHE: ~/.cache/huggingface
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.10', '3.13']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: python-${{ matrix.os }}-${{ matrix.python-version }}
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install SpaCy model (Linux only)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        run: uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+
+      - name: Cache HuggingFace models (Linux only)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: huggingface-models-ci-${{ runner.os }}
+
+      - name: Download TATR models (Linux only)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        run: |
+          if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
+            uv run python scripts/download_tatr_models.py
+          fi
+
+      - name: Run tests (Linux, Python 3.10 - with coverage)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        run: uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
+
+      - name: Run tests (other platforms/versions)
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.10'
+        run: uv run pytest -vv --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
+
+      - name: Upload coverage artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage-${{ github.sha }}
+          path: |
+            coverage.lcov
+            .coverage
+          retention-days: 7
+
+      - name: Upload coverage to DeepSource
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10' && env.DEEPSOURCE_DSN != ''
+        env:
+          DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
+        shell: bash
+        run: |
+          curl -fsSL https://deepsource.io/cli | sh
+          ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
+
+  lint:
+    name: Lint (ruff + mypy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '3.13'
+
+      - name: Run ruff format check
+        run: uv run ruff format --check
+
+      - name: Run ruff lint
+        run: uv run ruff check
+
+      - name: Run mypy
+        run: uv run mypy

@@ -1,0 +1,102 @@
+name: Ruby CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/ruby/**'
+      - 'crates/kreuzberg-rb/**'
+      - 'crates/kreuzberg/**'
+      - '.github/workflows/ci-ruby.yml'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/ruby/**'
+      - 'crates/kreuzberg-rb/**'
+      - 'crates/kreuzberg/**'
+      - '.github/workflows/ci-ruby.yml'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+
+concurrency:
+  group: ruby-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PDFIUM_VERSION: "7455"
+
+jobs:
+  test:
+    name: Test (Ruby ${{ matrix.ruby-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        ruby-version: ['3.3', '3.4']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: false
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: ruby-${{ matrix.os }}-${{ matrix.ruby-version }}
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install Ruby dependencies
+        working-directory: packages/ruby
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+
+      - name: Build Ruby native extension
+        working-directory: packages/ruby
+        run: bundle exec rake compile
+
+      - name: Run tests
+        working-directory: packages/ruby
+        run: bundle exec rspec --format documentation
+
+  lint:
+    name: Lint (rubocop)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: false
+
+      - name: Install Ruby dependencies
+        working-directory: packages/ruby
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+
+      - name: Run RuboCop
+        working-directory: packages/ruby
+        run: bundle exec rubocop
