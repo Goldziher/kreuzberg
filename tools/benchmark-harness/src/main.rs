@@ -117,10 +117,25 @@ async fn main() -> Result<()> {
             // Register native adapter by default
             registry.register(Arc::new(NativeAdapter::new()))?;
 
-            // TODO: Register other adapters based on availability
-            // registry.register(Arc::new(PythonAdapter::new()))?;
-            // registry.register(Arc::new(NodeAdapter::new()))?;
-            // registry.register(Arc::new(RubyAdapter::new()))?;
+            // Register external framework adapters
+            use benchmark_harness::adapters::external::{
+                create_docling_adapter, create_extractous_python_adapter, create_markitdown_adapter,
+                create_unstructured_adapter,
+            };
+
+            // Try to register each external adapter, ignore errors if not available
+            if let Ok(adapter) = create_docling_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_extractous_python_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_markitdown_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_unstructured_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
 
             // Create runner and load fixtures
             let mut runner = BenchmarkRunner::new(config, registry);

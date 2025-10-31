@@ -4,53 +4,37 @@ use std::{env, path::PathBuf};
 /// Creates a subprocess adapter for Docling framework
 pub fn create_docling_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("docling_extract.py")?;
-    let python_cmd = find_python_with_framework("docling")?;
+    let (command, mut args) = find_python_with_framework("docling")?;
+    args.push(script_path.to_string_lossy().to_string());
 
-    Ok(SubprocessAdapter::new(
-        "docling",
-        python_cmd,
-        vec![script_path.to_string_lossy().to_string()],
-        vec![],
-    ))
+    Ok(SubprocessAdapter::new("docling", command, args, vec![]))
 }
 
 /// Creates a subprocess adapter for Unstructured framework
 pub fn create_unstructured_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("unstructured_extract.py")?;
-    let python_cmd = find_python_with_framework("unstructured")?;
+    let (command, mut args) = find_python_with_framework("unstructured")?;
+    args.push(script_path.to_string_lossy().to_string());
 
-    Ok(SubprocessAdapter::new(
-        "unstructured",
-        python_cmd,
-        vec![script_path.to_string_lossy().to_string()],
-        vec![],
-    ))
+    Ok(SubprocessAdapter::new("unstructured", command, args, vec![]))
 }
 
 /// Creates a subprocess adapter for MarkItDown framework
 pub fn create_markitdown_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("markitdown_extract.py")?;
-    let python_cmd = find_python_with_framework("markitdown")?;
+    let (command, mut args) = find_python_with_framework("markitdown")?;
+    args.push(script_path.to_string_lossy().to_string());
 
-    Ok(SubprocessAdapter::new(
-        "markitdown",
-        python_cmd,
-        vec![script_path.to_string_lossy().to_string()],
-        vec![],
-    ))
+    Ok(SubprocessAdapter::new("markitdown", command, args, vec![]))
 }
 
 /// Creates a subprocess adapter for Extractous (Python bindings)
 pub fn create_extractous_python_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("extractous_extract.py")?;
-    let python_cmd = find_python_with_framework("extractous")?;
+    let (command, mut args) = find_python_with_framework("extractous")?;
+    args.push(script_path.to_string_lossy().to_string());
 
-    Ok(SubprocessAdapter::new(
-        "extractous-python",
-        python_cmd,
-        vec![script_path.to_string_lossy().to_string()],
-        vec![],
-    ))
+    Ok(SubprocessAdapter::new("extractous-python", command, args, vec![]))
 }
 
 // NOTE: Native Rust adapter for Extractous could be implemented here
@@ -80,11 +64,14 @@ fn get_script_path(script_name: &str) -> Result<PathBuf> {
 }
 
 /// Helper function to find Python interpreter with a specific framework installed
-fn find_python_with_framework(framework: &str) -> Result<PathBuf> {
+///
+/// Returns (command, args) where command is the executable and args are the base arguments
+fn find_python_with_framework(framework: &str) -> Result<(PathBuf, Vec<String>)> {
     // First, try using uv to run with the comparative-benchmarks group
     if which::which("uv").is_ok() {
         // uv will use the workspace environment with comparative-benchmarks group
-        return Ok(PathBuf::from("uv"));
+        // Command will be: uv run python script.py file_path
+        return Ok((PathBuf::from("uv"), vec!["run".to_string(), "python".to_string()]));
     }
 
     // Fall back to system Python
@@ -101,7 +88,8 @@ fn find_python_with_framework(framework: &str) -> Result<PathBuf> {
             if let Ok(output) = check
                 && output.status.success()
             {
-                return Ok(python_path);
+                // Command will be: python script.py file_path
+                return Ok((python_path, vec![]));
             }
         }
     }
