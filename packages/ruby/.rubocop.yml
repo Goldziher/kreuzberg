@@ -83,3 +83,6 @@ RSpec/RepeatedExampleGroupBody:
 
 RSpec/DescribeClass:
   Enabled: false
+
+Capybara/RSpec/PredicateMatcher:
+  Enabled: false # Cop crashes in CI, disable until rubocop-rspec fixes it

@@ -276,6 +276,9 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
       - name: Install dependencies
         run: pnpm install
 
