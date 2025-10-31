@@ -1,10 +1,5 @@
 name: Install System Dependencies
-description: Install platform specific dependencies required for OCR and document conversion
-inputs:
-  tesseract-langs:
-    description: Comma separated list of Tesseract language packs to install on Windows
-    required: false
-    default: deu,fra,spa,chi_sim
+description: Install platform specific dependencies required for document conversion
 runs:
   using: composite
   steps:
@@ -15,12 +10,12 @@ runs:
         set -eo pipefail
         echo "Updating Homebrew..."
         brew update || true
-        echo "Installing tesseract, language packs, and pandoc..."
-        brew install tesseract tesseract-lang pandoc || brew upgrade tesseract tesseract-lang pandoc || true
+        echo "Installing pandoc..."
+        brew install pandoc || brew upgrade pandoc || true
         echo "Installing LibreOffice via Homebrew Cask..."
         brew install --cask libreoffice || brew upgrade --cask libreoffice || true
         echo "Installed packages:"
-        brew list tesseract tesseract-lang pandoc
+        brew list pandoc
         echo "Verifying LibreOffice installation..."
         if ! soffice --version; then
           echo "Warning: soffice not available in PATH" >&2
@@ -33,59 +28,24 @@ runs:
         set -eo pipefail
         sudo apt-get update
         sudo apt-get install -y \
-          tesseract-ocr \
-          tesseract-ocr-eng \
-          tesseract-ocr-deu \
-          tesseract-ocr-fra \
-          tesseract-ocr-spa \
-          tesseract-ocr-chi-sim \
           pandoc \
           libreoffice
         echo "Verifying Linux installations..."
-        tesseract --version
         pandoc --version
         soffice --version
-
-    - name: Configure Tesseract data directory (Linux)
-      if: runner.os == 'Linux'
-      shell: bash
-      run: |
-        set -eo pipefail
-        TESSDATA_DIR=$(tesseract --print-tessdata-dir 2>/dev/null | head -n1 || true)
-        if [[ -z "$TESSDATA_DIR" || "$TESSDATA_DIR" == Usage:* ]]; then
-          TESSDATA_DIR="/usr/share/tesseract-ocr/5/tessdata"
-        fi
-        echo "Using TESSDATA_PREFIX=$TESSDATA_DIR"
-        echo "TESSDATA_PREFIX=$TESSDATA_DIR" >> "$GITHUB_ENV"
 
     - name: Install dependencies (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
         $ErrorActionPreference = "Stop"
-        choco install -y tesseract pandoc libreoffice --no-progress
-        Write-Output "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        choco install -y pandoc libreoffice --no-progress
         Write-Output "C:\Program Files\Pandoc" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         Write-Output "C:\Program Files\LibreOffice\program" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $env:PATH = "C:\Program Files\Tesseract-OCR;C:\Program Files\Pandoc;C:\Program Files\LibreOffice\program;" + $env:PATH
+        $env:PATH = "C:\Program Files\Pandoc;C:\Program Files\LibreOffice\program;" + $env:PATH
 
         # Install python-magic-bin for Windows compatibility
         python -m pip install python-magic-bin
 
-        $tessdataDir = "C:\Program Files\Tesseract-OCR\tessdata"
-        if (-not (Test-Path $tessdataDir)) {
-          New-Item -ItemType Directory -Path $tessdataDir -Force | Out-Null
-        }
-
-        $languageCodes = "${{ inputs.tesseract-langs }}".Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
-        foreach ($lang in $languageCodes) {
-          $url = "https://github.com/tesseract-ocr/tessdata/raw/main/$lang.traineddata"
-          $destination = Join-Path $tessdataDir "$lang.traineddata"
-          Write-Host "Downloading $lang language pack..."
-          Invoke-WebRequest -Uri $url -OutFile $destination
-        }
-
-        tesseract --version
-        tesseract --list-langs
         pandoc --version
         soffice --version
