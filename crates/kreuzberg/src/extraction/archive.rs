@@ -692,7 +692,7 @@ mod tests {
         assert_eq!(contents.get("file1.txt").unwrap(), "Content 1");
         assert_eq!(contents.get("file2.md").unwrap(), "# Markdown");
         assert_eq!(contents.get("data.json").unwrap(), "{\"key\":\"value\"}");
-        assert!(contents.get("binary.bin").is_none());
+        assert!(!contents.contains_key("binary.bin"));
     }
 
     #[test]

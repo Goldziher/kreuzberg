@@ -29,7 +29,7 @@ fn get_test_file(relative_path: &str) -> String {
 /// Build the binary before running tests.
 fn build_binary() {
     let status = Command::new("cargo")
-        .args(&["build", "--bin", "kreuzberg"])
+        .args(["build", "--bin", "kreuzberg"])
         .status()
         .expect("Failed to build kreuzberg binary");
 
@@ -51,7 +51,7 @@ fn test_extract_text_file() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&["extract", &test_file])
+        .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute extract command");
 
@@ -76,7 +76,7 @@ fn test_extract_with_json_output() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&["extract", &test_file, "--format", "json"])
+        .args(["extract", test_file.as_str(), "--format", "json"])
         .output()
         .expect("Failed to execute extract command");
 
@@ -109,9 +109,9 @@ fn test_extract_with_chunking() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&[
+        .args([
             "extract",
-            &test_file,
+            test_file.as_str(),
             "--chunk-size",
             "100",
             "--chunk-overlap",
@@ -145,7 +145,7 @@ fn test_extract_file_not_found() {
     build_binary();
 
     let output = Command::new(get_binary_path())
-        .args(&["extract", "/nonexistent/file.txt"])
+        .args(["extract", "/nonexistent/file.txt"])
         .output()
         .expect("Failed to execute extract command");
 
@@ -164,7 +164,7 @@ fn test_extract_directory_not_file() {
     build_binary();
 
     let output = Command::new(get_binary_path())
-        .args(&["extract", "/tmp"])
+        .args(["extract", "/tmp"])
         .output()
         .expect("Failed to execute extract command");
 
@@ -189,7 +189,7 @@ fn test_extract_invalid_chunk_size_zero() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&["extract", &test_file, "--chunk-size", "0"])
+        .args(["extract", test_file.as_str(), "--chunk-size", "0"])
         .output()
         .expect("Failed to execute extract command");
 
@@ -214,7 +214,7 @@ fn test_extract_invalid_chunk_size_too_large() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&["extract", &test_file, "--chunk-size", "2000000"])
+        .args(["extract", test_file.as_str(), "--chunk-size", "2000000"])
         .output()
         .expect("Failed to execute extract command");
 
@@ -239,7 +239,14 @@ fn test_extract_invalid_overlap_equals_chunk_size() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&["extract", &test_file, "--chunk-size", "100", "--chunk-overlap", "100"])
+        .args([
+            "extract",
+            test_file.as_str(),
+            "--chunk-size",
+            "100",
+            "--chunk-overlap",
+            "100",
+        ])
         .output()
         .expect("Failed to execute extract command");
 
@@ -271,7 +278,7 @@ fn test_detect_mime_type() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&["detect", &test_file])
+        .args(["detect", test_file.as_str()])
         .output()
         .expect("Failed to execute detect command");
 
@@ -301,7 +308,7 @@ fn test_detect_with_json_output() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&["detect", &test_file, "--format", "json"])
+        .args(["detect", test_file.as_str(), "--format", "json"])
         .output()
         .expect("Failed to execute detect command");
 
@@ -328,7 +335,7 @@ fn test_detect_file_not_found() {
     build_binary();
 
     let output = Command::new(get_binary_path())
-        .args(&["detect", "/nonexistent/file.txt"])
+        .args(["detect", "/nonexistent/file.txt"])
         .output()
         .expect("Failed to execute detect command");
 
@@ -359,7 +366,7 @@ fn test_batch_multiple_files() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&["batch", &file1, &file2, "--format", "json"])
+        .args(["batch", file1.as_str(), file2.as_str(), "--format", "json"])
         .output()
         .expect("Failed to execute batch command");
 
@@ -392,7 +399,7 @@ fn test_batch_with_missing_file() {
     }
 
     let output = Command::new(get_binary_path())
-        .args(&["batch", &valid_file, "/nonexistent/file.txt"])
+        .args(["batch", valid_file.as_str(), "/nonexistent/file.txt"])
         .output()
         .expect("Failed to execute batch command");
 
@@ -415,7 +422,7 @@ fn test_extract_help() {
     build_binary();
 
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--help"])
+        .args(["extract", "--help"])
         .output()
         .expect("Failed to execute extract --help");
 
@@ -432,7 +439,7 @@ fn test_detect_help() {
     build_binary();
 
     let output = Command::new(get_binary_path())
-        .args(&["detect", "--help"])
+        .args(["detect", "--help"])
         .output()
         .expect("Failed to execute detect --help");
 
@@ -447,7 +454,7 @@ fn test_batch_help() {
     build_binary();
 
     let output = Command::new(get_binary_path())
-        .args(&["batch", "--help"])
+        .args(["batch", "--help"])
         .output()
         .expect("Failed to execute batch --help");
 

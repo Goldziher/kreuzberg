@@ -272,8 +272,8 @@ mod tests {
         let mut bytes = create_test_image(100, 100, ImageFormat::Png);
         // Corrupt the middle of the image data
         if bytes.len() > 50 {
-            for i in 20..50 {
-                bytes[i] = 0xFF;
+            for byte in bytes.iter_mut().take(50).skip(20) {
+                *byte = 0xFF;
             }
         }
 

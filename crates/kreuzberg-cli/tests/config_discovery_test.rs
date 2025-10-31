@@ -18,7 +18,7 @@ fn get_binary_path() -> String {
 /// Build the binary before running tests.
 fn build_binary() {
     let status = Command::new("cargo")
-        .args(&["build", "--bin", "kreuzberg"])
+        .args(["build", "--bin", "kreuzberg"])
         .status()
         .expect("Failed to build kreuzberg binary");
 
@@ -69,7 +69,7 @@ enable_quality_processing = false
     // Run extract command from the directory containing .kreuzberg.toml
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
-        .args(&["extract", &test_file])
+        .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -107,7 +107,7 @@ enable_quality_processing: false
     // Run extract command from the directory containing .kreuzberg.yaml
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
-        .args(&["extract", &test_file])
+        .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -145,7 +145,7 @@ enable_quality_processing: false
     // Run extract command from the directory containing .kreuzberg.yml
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
-        .args(&["extract", &test_file])
+        .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -183,7 +183,7 @@ fn test_discover_kreuzberg_json_in_current_directory() {
     // Run extract command from the directory containing .kreuzberg.json
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
-        .args(&["extract", &test_file])
+        .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -220,9 +220,11 @@ use_cache = false
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -254,9 +256,11 @@ use_cache: false
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -288,9 +292,11 @@ use_cache: false
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -322,9 +328,11 @@ fn test_case_insensitive_json_extension() {
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -361,8 +369,10 @@ enable_quality_processing = false
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -395,8 +405,10 @@ enable_quality_processing: false
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -429,8 +441,10 @@ fn test_explicit_config_path_json() {
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -460,8 +474,10 @@ fn test_invalid_config_extension() {
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -491,8 +507,10 @@ fn test_malformed_toml_config() {
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -516,8 +534,10 @@ fn test_malformed_yaml_config() {
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -541,8 +561,10 @@ fn test_malformed_json_config() {
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -563,8 +585,10 @@ fn test_nonexistent_config_file() {
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -591,7 +615,7 @@ fn test_default_config_when_no_file_found() {
     // Run from empty directory - should use default config
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
-        .args(&["extract", &test_file])
+        .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
@@ -629,8 +653,10 @@ max_pages = -1
         return;
     }
 
+    let config_arg = config_path.to_string_lossy().into_owned();
+
     let output = Command::new(get_binary_path())
-        .args(&["extract", "--config", &config_path.to_string_lossy(), &test_file])
+        .args(["extract", "--config", config_arg.as_str(), test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 

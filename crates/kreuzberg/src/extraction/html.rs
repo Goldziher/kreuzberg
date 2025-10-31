@@ -313,8 +313,10 @@ mod tests {
     #[test]
     fn test_html_config_heading_style() {
         let html = "<h1>Heading</h1>";
-        let mut options = ConversionOptions::default();
-        options.heading_style = HeadingStyle::Atx;
+        let options = ConversionOptions {
+            heading_style: HeadingStyle::Atx,
+            ..Default::default()
+        };
         let result = convert_html_to_markdown(html, Some(options)).unwrap();
         assert!(result.contains("# Heading"));
     }

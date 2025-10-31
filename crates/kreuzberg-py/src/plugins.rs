@@ -205,7 +205,7 @@ mod tests {
 
     fn prepare_python() {
         static INIT: Once = Once::new();
-        INIT.call_once(|| Python::initialize());
+        INIT.call_once(Python::initialize);
     }
 
     fn with_py<F, R>(f: F) -> R

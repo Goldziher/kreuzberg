@@ -9,7 +9,7 @@ use crate::fixture::FixtureManager;
 use crate::registry::AdapterRegistry;
 use crate::types::{BenchmarkResult, DurationStatistics, IterationResult, PerformanceMetrics};
 use crate::{Error, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -174,7 +174,7 @@ impl BenchmarkRunner {
     /// # Returns
     /// Aggregated benchmark result with iterations and statistics
     async fn run_iterations_static(
-        file_path: &PathBuf,
+        file_path: &Path,
         adapter: Arc<dyn FrameworkAdapter>,
         config: &BenchmarkConfig,
     ) -> Result<BenchmarkResult> {
@@ -410,7 +410,7 @@ impl BenchmarkRunner {
 
                     adapter_files
                         .entry(adapter.name().to_string())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(document_path);
                 }
             }

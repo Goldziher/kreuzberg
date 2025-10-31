@@ -1683,18 +1683,18 @@ mod tests {
 
             if result.is_ok() {
                 let call_result = result.unwrap();
-                if let Some(content) = call_result.content.first() {
-                    if let RawContent::Text(text) = &content.raw {
-                        // Output should reference documents in order
-                        assert!(text.text.contains("Document 1"));
-                        assert!(text.text.contains("Document 2"));
+                if let Some(content) = call_result.content.first()
+                    && let RawContent::Text(text) = &content.raw
+                {
+                    // Output should reference documents in order
+                    assert!(text.text.contains("Document 1"));
+                    assert!(text.text.contains("Document 2"));
 
-                        // Document 1 should appear before Document 2
-                        let doc1_pos = text.text.find("Document 1");
-                        let doc2_pos = text.text.find("Document 2");
-                        if let (Some(pos1), Some(pos2)) = (doc1_pos, doc2_pos) {
-                            assert!(pos1 < pos2, "Documents should be in order");
-                        }
+                    // Document 1 should appear before Document 2
+                    let doc1_pos = text.text.find("Document 1");
+                    let doc2_pos = text.text.find("Document 2");
+                    if let (Some(pos1), Some(pos2)) = (doc1_pos, doc2_pos) {
+                        assert!(pos1 < pos2, "Documents should be in order");
                     }
                 }
             }
@@ -1722,12 +1722,12 @@ mod tests {
 
         assert!(result.is_ok());
         let call_result = result.unwrap();
-        if let Some(content) = call_result.content.first() {
-            if let RawContent::Text(text) = &content.raw {
-                // Should report removed files and freed space
-                assert!(text.text.contains("Removed files:"));
-                assert!(text.text.contains("Freed space:"));
-            }
+        if let Some(content) = call_result.content.first()
+            && let RawContent::Text(text) = &content.raw
+        {
+            // Should report removed files and freed space
+            assert!(text.text.contains("Removed files:"));
+            assert!(text.text.contains("Freed space:"));
         }
     }
 
@@ -1808,11 +1808,11 @@ mod tests {
             assert!(result.is_ok());
             let call_result = result.unwrap();
 
-            if let Some(content) = call_result.content.first() {
-                if let RawContent::Text(text) = &content.raw {
-                    // Response should include metadata section
-                    assert!(text.text.contains("Metadata:"));
-                }
+            if let Some(content) = call_result.content.first()
+                && let RawContent::Text(text) = &content.raw
+            {
+                // Response should include metadata section
+                assert!(text.text.contains("Metadata:"));
             }
         }
     }
@@ -1837,12 +1837,12 @@ mod tests {
             assert!(result.is_ok());
             let call_result = result.unwrap();
 
-            if let Some(content) = call_result.content.first() {
-                if let RawContent::Text(text) = &content.raw {
-                    // Response should mention content length
-                    assert!(text.text.contains("characters"));
-                    assert!(text.text.contains("Content"));
-                }
+            if let Some(content) = call_result.content.first()
+                && let RawContent::Text(text) = &content.raw
+            {
+                // Response should mention content length
+                assert!(text.text.contains("characters"));
+                assert!(text.text.contains("Content"));
             }
         }
     }
@@ -2002,11 +2002,11 @@ mod tests {
 
             assert!(result.is_ok());
             let call_result = result.unwrap();
-            if let Some(content) = call_result.content.first() {
-                if let RawContent::Text(text) = &content.raw {
-                    // Should detect PDF based on extension
-                    assert!(text.text.contains("pdf") || text.text.contains("PDF"));
-                }
+            if let Some(content) = call_result.content.first()
+                && let RawContent::Text(text) = &content.raw
+            {
+                // Should detect PDF based on extension
+                assert!(text.text.contains("pdf") || text.text.contains("PDF"));
             }
         }
     }
@@ -2037,17 +2037,17 @@ mod tests {
 
         assert!(result.is_ok());
         let call_result = result.unwrap();
-        if let Some(content) = call_result.content.first() {
-            if let RawContent::Text(text) = &content.raw {
-                // Should contain all expected fields
-                assert!(text.text.contains("Cache Statistics"));
-                assert!(text.text.contains("Directory:"));
-                assert!(text.text.contains("Total files:"));
-                assert!(text.text.contains("Total size:"));
-                assert!(text.text.contains("Available space:"));
-                assert!(text.text.contains("Oldest file age:"));
-                assert!(text.text.contains("Newest file age:"));
-            }
+        if let Some(content) = call_result.content.first()
+            && let RawContent::Text(text) = &content.raw
+        {
+            // Should contain all expected fields
+            assert!(text.text.contains("Cache Statistics"));
+            assert!(text.text.contains("Directory:"));
+            assert!(text.text.contains("Total files:"));
+            assert!(text.text.contains("Total size:"));
+            assert!(text.text.contains("Available space:"));
+            assert!(text.text.contains("Oldest file age:"));
+            assert!(text.text.contains("Newest file age:"));
         }
     }
 }

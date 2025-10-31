@@ -1302,14 +1302,14 @@ mod tests {
         // Verify some specific size ranges for major languages
         let en_size = STOPWORDS.get("en").unwrap().len();
         assert!(
-            en_size >= 70 && en_size <= 1500,
+            (70..=1500).contains(&en_size),
             "English stopwords size {} outside expected range",
             en_size
         );
 
         let es_size = STOPWORDS.get("es").unwrap().len();
         assert!(
-            es_size >= 200 && es_size <= 1000,
+            (200..=1000).contains(&es_size),
             "Spanish stopwords size {} outside expected range",
             es_size
         );
@@ -1410,7 +1410,7 @@ mod tests {
         ];
 
         for (hyphen1, underscore1, hyphen2, underscore2, base) in test_cases {
-            let base_result = get_stopwords(base).expect(&format!("{} should be valid", base));
+            let base_result = get_stopwords(base).unwrap_or_else(|| panic!("{} should be valid", base));
 
             let h1 = get_stopwords(hyphen1);
             let u1 = get_stopwords(underscore1);
