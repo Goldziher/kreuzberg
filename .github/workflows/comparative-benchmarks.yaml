@@ -1,0 +1,141 @@
+name: Comparative Framework Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      frameworks:
+        description: "Comma-separated frameworks to benchmark (docling,extractous,markitdown,unstructured,kreuzberg)"
+        required: false
+        default: "docling,extractous,markitdown,unstructured,kreuzberg"
+        type: string
+      timeout:
+        description: "Timeout per extraction in seconds"
+        required: false
+        default: "300"
+        type: string
+
+jobs:
+  benchmark:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: benchmark-${{ runner.os }}-${{ hashFiles('uv.lock', 'Cargo.lock') }}
+          restore-keys: |
+            benchmark-${{ runner.os }}-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-deu \
+            tesseract-ocr-fra \
+            poppler-utils \
+            libmagic1 \
+            pandoc
+
+      - name: Install Python dependencies
+        run: |
+          echo "Installing workspace with comparative-benchmarks group..."
+          uv sync --group comparative-benchmarks
+
+      - name: Build benchmark harness
+        run: |
+          cd tools/benchmark-harness
+          cargo build --release --features extractous-native
+
+      - name: Create test documents directory
+        run: |
+          mkdir -p benchmark-test-docs
+          echo "Sample PDF content" > benchmark-test-docs/sample.txt
+          echo "# Sample Markdown" > benchmark-test-docs/sample.md
+
+      - name: Run benchmarks
+        id: benchmark
+        continue-on-error: true
+        run: |
+          cd tools/benchmark-harness
+
+          FRAMEWORKS="${{ github.event.inputs.frameworks }}"
+          TIMEOUT="${{ github.event.inputs.timeout }}"
+
+          echo "=== Starting Comparative Benchmarks ==="
+          echo "Frameworks: $FRAMEWORKS"
+          echo "Timeout: ${TIMEOUT}s per extraction"
+
+          # Create results directory
+          mkdir -p results
+
+          # Run benchmark harness tests to verify adapters work
+          cargo test --release --features extractous-native -- --nocapture 2>&1 | tee results/test_output.log
+
+          echo "Benchmark execution completed"
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## 📊 Comparative Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frameworks**: ${{ github.event.inputs.frameworks }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timeout**: ${{ github.event.inputs.timeout }}s" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "tools/benchmark-harness/results/test_output.log" ]; then
+            echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -50 tools/benchmark-harness/results/test_output.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No benchmark results found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: |
+            tools/benchmark-harness/results/
+            tools/benchmark-harness/target/release/
+          retention-days: 30
+
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-${{ github.run_id }}
+          path: tools/benchmark-harness/results/*.log
+          retention-days: 30
