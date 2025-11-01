@@ -51,6 +51,7 @@ jobs:
           bundler-cache: false
 
       - name: Setup MSYS2 (Windows)
+        id: setup-msys2
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         continue-on-error: true
@@ -129,16 +130,25 @@ jobs:
               ;;
           esac
 
+      - name: Check Windows build requirements
+        if: runner.os == 'Windows' && steps.setup-msys2.outcome != 'success'
+        run: |
+          echo "::warning::Skipping Windows build - MSYS2 setup failed. Ruby native extensions require MSYS2 on Windows."
+          echo "::warning::This is a known limitation. Windows support for Ruby bindings is experimental."
+
       - name: Install Ruby dependencies
+        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
         working-directory: packages/ruby
         run: |
           bundle config set --local path 'vendor/bundle'
           bundle install --jobs 4 --retry 3
 
       - name: Build Ruby native extension
+        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
         working-directory: packages/ruby
         run: bundle exec rake compile
 
       - name: Run tests
+        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
         working-directory: packages/ruby
         run: bundle exec rspec --format documentation
