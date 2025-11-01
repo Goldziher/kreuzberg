@@ -10,12 +10,12 @@ runs:
         set -eo pipefail
         echo "Updating Homebrew..."
         brew update || true
-        echo "Installing pandoc..."
-        brew install pandoc || brew upgrade pandoc || true
-        echo "Installing LibreOffice via Homebrew Cask..."
+        echo "Installing pandoc, tesseract, and LibreOffice..."
+        brew install pandoc tesseract || brew upgrade pandoc tesseract || true
         brew install --cask libreoffice || brew upgrade --cask libreoffice || true
         echo "Installed packages:"
-        brew list pandoc
+        brew list pandoc tesseract
+        tesseract --version
         echo "Verifying LibreOffice installation..."
         if ! soffice --version; then
           echo "Warning: soffice not available in PATH" >&2
@@ -29,10 +29,12 @@ runs:
         sudo apt-get update
         sudo apt-get install -y \
           pandoc \
-          libreoffice
+          libreoffice \
+          tesseract-ocr
         echo "Verifying Linux installations..."
         pandoc --version
         soffice --version
+        tesseract --version
 
     - name: Cache LibreOffice (Windows)
       if: runner.os == 'Windows'
@@ -52,20 +54,22 @@ runs:
         $libreofficeInstalled = Test-Path "C:\Program Files\LibreOffice\program\soffice.exe"
 
         if (-not $libreofficeInstalled) {
-          Write-Host "Installing pandoc and LibreOffice from chocolatey..."
-          choco install -y pandoc libreoffice --no-progress
+          Write-Host "Installing pandoc, tesseract, and LibreOffice from chocolatey..."
+          choco install -y pandoc tesseract libreoffice --no-progress
         } else {
           Write-Host "LibreOffice found in cache, skipping installation"
-          Write-Host "Installing pandoc only..."
-          choco install -y pandoc --no-progress
+          Write-Host "Installing pandoc and tesseract..."
+          choco install -y pandoc tesseract --no-progress
         }
 
         Write-Output "C:\Program Files\Pandoc" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         Write-Output "C:\Program Files\LibreOffice\program" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $env:PATH = "C:\Program Files\Pandoc;C:\Program Files\LibreOffice\program;" + $env:PATH
+        Write-Output "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $env:PATH = "C:\Program Files\Pandoc;C:\Program Files\LibreOffice\program;C:\Program Files\Tesseract-OCR;" + $env:PATH
 
         # Install python-magic-bin for Windows compatibility
         python -m pip install python-magic-bin
 
         pandoc --version
         soffice --version
+        tesseract --version
