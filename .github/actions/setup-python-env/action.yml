@@ -36,9 +36,9 @@ runs:
         path: |
           ~/.cache/uv
           .venv
-        key: ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('uv.lock') }}
+        key: ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('uv.lock') }}-v2
         restore-keys: |
-          ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-
+          ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-v2-
 
     - name: Pin Python version for uv
       shell: bash
@@ -51,3 +51,12 @@ runs:
       run: |
         # Install workspace packages and all dev dependencies from root pyproject.toml
         uv sync --all-packages --all-groups --all-extras --no-install-project
+
+        # Check if cv2 is broken (missing cvtColor attribute) and fix if needed
+        # This can happen when opencv-contrib-python and opencv-python-headless conflict
+        if ! uv run python -c "import cv2; assert hasattr(cv2, 'cvtColor')" 2>/dev/null; then
+          echo "⚠️  Detected broken cv2 module, reinstalling OpenCV packages..."
+          uv pip uninstall opencv-contrib-python opencv-python-headless --quiet 2>/dev/null || true
+          uv pip install opencv-python-headless opencv-contrib-python
+          echo "✅ OpenCV packages reinstalled"
+        fi

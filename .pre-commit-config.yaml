@@ -45,7 +45,7 @@ repos:
       - id: cargo-check
       - id: clippy
   - repo: https://github.com/rubocop/rubocop
-    rev: v1.81.6
+    rev: v1.81.7
     hooks:
       - id: rubocop
         args: ["--autocorrect", "--config", "packages/ruby/.rubocop.yml"]
