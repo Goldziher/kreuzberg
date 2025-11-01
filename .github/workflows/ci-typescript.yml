@@ -158,6 +158,10 @@ jobs:
         working-directory: packages/typescript
         run: pnpm test
 
+      - name: Cleanup Rust cache before save
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
       - name: Upload coverage artifact
         if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
         uses: actions/upload-artifact@v4

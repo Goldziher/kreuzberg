@@ -71,6 +71,10 @@ jobs:
         if: matrix.os != 'ubuntu-latest'
         run: cargo test --workspace --no-default-features --features full --exclude kreuzberg-py --exclude kreuzberg-rb
 
+      - name: Cleanup Rust cache before save
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
       - name: Upload coverage artifact
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4

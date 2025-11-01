@@ -82,6 +82,10 @@ jobs:
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.10'
         run: uv run pytest -vv --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
 
+      - name: Cleanup Rust cache before save
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
       - name: Upload coverage artifact
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
         uses: actions/upload-artifact@v4

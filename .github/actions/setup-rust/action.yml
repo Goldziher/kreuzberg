@@ -13,6 +13,10 @@ inputs:
     description: Whether to cache cargo home directory
     required: false
     default: 'true'
+  maximize-build-space:
+    description: Whether to maximize build space on Linux (removes .NET, Android, etc.)
+    required: false
+    default: 'true'
 outputs:
   cache-hit:
     description: Whether the Rust cache was restored
@@ -20,6 +24,25 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Maximize build space (Linux only)
+      if: runner.os == 'Linux' && inputs.maximize-build-space == 'true'
+      shell: bash
+      run: |
+        echo "Freeing up disk space on Linux runner..."
+        # Remove .NET runtime (~17 GB)
+        sudo rm -rf /usr/share/dotnet
+        # Remove Android SDK (~11 GB)
+        sudo rm -rf /usr/local/lib/android
+        # Remove Haskell (~2.7 GB)
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/.ghcup
+        # Remove CodeQL (~5.4 GB)
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        # Remove Docker images (~3 GB)
+        docker system prune -af 2>/dev/null || true
+        echo "Disk space freed successfully"
+        df -h
+
     - name: Setup Rust
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
