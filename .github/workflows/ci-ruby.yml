@@ -53,6 +53,7 @@ jobs:
       - name: Setup MSYS2 (Windows)
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
+        continue-on-error: true
         with:
           path-type: inherit
           update: true
