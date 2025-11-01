@@ -220,8 +220,14 @@ mod tests {
 
     #[test]
     fn test_absolute_path_rejected() {
+        // Use platform-specific absolute paths to ensure the test works on all platforms
+        #[cfg(windows)]
+        let absolute_path = PathBuf::from("C:\\absolute\\path\\test.pdf");
+        #[cfg(not(windows))]
+        let absolute_path = PathBuf::from("/absolute/path/test.pdf");
+
         let fixture = Fixture {
-            document: PathBuf::from("/absolute/path/test.pdf"),
+            document: absolute_path,
             file_type: "pdf".to_string(),
             file_size: 1024,
             expected_frameworks: vec![],

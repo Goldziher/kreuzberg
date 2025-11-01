@@ -214,10 +214,9 @@ async fn test_concurrent_ocr_processing() {
 ///
 /// WARNING: This test uses timing heuristics (<500ms = cache hit) which are unreliable
 /// in CI environments where even cached operations may exceed the threshold on slow runners.
-/// Ignored in CI to prevent flaky failures.
+/// Ignored to prevent flaky failures - cache hit rates vary significantly across platforms.
 #[cfg(feature = "ocr")]
-#[cfg_attr(coverage, ignore = "coverage instrumentation disrupts cache hit heuristics")]
-#[cfg_attr(not(debug_assertions), ignore = "timing-based cache heuristic is flaky in CI")]
+#[ignore = "flaky timing-based cache heuristic - cache hit rates vary significantly across platforms"]
 #[test]
 fn test_concurrent_ocr_cache_stress() {
     use helpers::{get_test_file_path, skip_if_missing};

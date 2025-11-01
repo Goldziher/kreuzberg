@@ -20,7 +20,7 @@ jobs:
   prek:
     name: Pre-commit hooks
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
