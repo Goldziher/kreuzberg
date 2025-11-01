@@ -27,9 +27,9 @@ Kreuzberg supports four ways to configure extraction:
 
     [ocr]
     backend = "tesseract"
-
-    [ocr.tesseract]
     language = "eng"
+
+    [ocr.tesseract_config]
     psm = 3
     ```
 
@@ -42,8 +42,8 @@ Kreuzberg supports four ways to configure extraction:
 
     ocr:
       backend: tesseract
-      tesseract:
-        language: eng
+      language: eng
+      tesseract_config:
         psm: 3
     ```
 
@@ -55,8 +55,8 @@ Kreuzberg supports four ways to configure extraction:
       "enable_quality_processing": true,
       "ocr": {
         "backend": "tesseract",
-        "tesseract": {
-          "language": "eng",
+        "language": "eng",
+        "tesseract_config": {
           "psm": 3
         }
       }
@@ -76,7 +76,6 @@ Kreuzberg automatically discovers configuration files in the following locations
     ```python
     from kreuzberg import ExtractionConfig
 
-    # Automatically discovers and loads config from standard locations
     config = ExtractionConfig.discover()
     result = extract_file("document.pdf", config=config)
     ```
@@ -86,7 +85,6 @@ Kreuzberg automatically discovers configuration files in the following locations
     ```typescript
     import { ExtractionConfig, extractFile } from '@kreuzberg/sdk';
 
-    // Automatically discovers and loads config from standard locations
     const config = await ExtractionConfig.discover();
     const result = await extractFile('document.pdf', { config });
     ```
@@ -96,7 +94,6 @@ Kreuzberg automatically discovers configuration files in the following locations
     ```rust
     use kreuzberg::ExtractionConfig;
 
-    // Automatically discovers and loads config from standard locations
     let config = ExtractionConfig::discover()?;
     let result = extract_file("document.pdf", None, &config).await?;
     ```
@@ -106,7 +103,6 @@ Kreuzberg automatically discovers configuration files in the following locations
     ```ruby
     require 'kreuzberg'
 
-    # Automatically discovers and loads config from standard locations
     config = Kreuzberg::ExtractionConfig.discover
     result = Kreuzberg.extract_file('document.pdf', config: config)
     ```
@@ -121,14 +117,12 @@ The main configuration object controlling extraction behavior.
 | `enable_quality_processing` | `bool` | `true` | Enable quality post-processing |
 | `force_ocr` | `bool` | `false` | Force OCR even for text-based PDFs |
 | `ocr` | `OcrConfig?` | `None` | OCR configuration (if None, OCR disabled) |
-| `pdf` | `PdfConfig?` | `None` | PDF-specific configuration |
-| `image_extraction` | `ImageExtractionConfig?` | `None` | Image extraction configuration |
+| `pdf_options` | `PdfConfig?` | `None` | PDF-specific configuration |
+| `images` | `ImageExtractionConfig?` | `None` | Image extraction configuration |
 | `chunking` | `ChunkingConfig?` | `None` | Text chunking configuration |
-| `embedding` | `EmbeddingConfig?` | `None` | Embedding generation configuration |
 | `token_reduction` | `TokenReductionConfig?` | `None` | Token reduction configuration |
 | `language_detection` | `LanguageDetectionConfig?` | `None` | Language detection configuration |
-| `post_processors` | `PostProcessorConfig?` | `None` | Post-processing pipeline configuration |
-| `keywords` | `KeywordConfig?` | `None` | Keyword extraction configuration (requires feature flag) |
+| `postprocessor` | `PostProcessorConfig?` | `None` | Post-processing pipeline configuration |
 
 ### Basic Example
 
@@ -188,8 +182,8 @@ Configuration for OCR processing. Set to enable OCR on images and scanned PDFs.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `backend` | `str` | `"tesseract"` | OCR backend: `"tesseract"`, `"easyocr"`, `"paddleocr"` |
-| `tesseract` | `TesseractConfig?` | `None` | Tesseract-specific configuration |
-| `image_preprocessing` | `ImagePreprocessingConfig?` | `None` | Image preprocessing configuration |
+| `language` | `str` | `"eng"` | Language code(s), e.g., `"eng"`, `"eng+fra"` |
+| `tesseract_config` | `TesseractConfig?` | `None` | Tesseract-specific configuration |
 
 ### Example
 
@@ -201,7 +195,8 @@ Configuration for OCR processing. Set to enable OCR on images and scanned PDFs.
     config = ExtractionConfig(
         ocr=OcrConfig(
             backend="tesseract",
-            tesseract=TesseractConfig(language="eng+fra", psm=3)
+            language="eng+fra",
+            tesseract_config=TesseractConfig(psm=3)
         )
     )
     ```
@@ -214,7 +209,8 @@ Configuration for OCR processing. Set to enable OCR on images and scanned PDFs.
     const config = new ExtractionConfig({
       ocr: new OcrConfig({
         backend: 'tesseract',
-        tesseract: new TesseractConfig({ language: 'eng+fra', psm: 3 })
+        language: 'eng+fra',
+        tesseractConfig: new TesseractConfig({ psm: 3 })
       })
     });
     ```
@@ -227,12 +223,11 @@ Configuration for OCR processing. Set to enable OCR on images and scanned PDFs.
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
             backend: "tesseract".to_string(),
-            tesseract: Some(TesseractConfig {
-                language: "eng+fra".to_string(),
+            language: "eng+fra".to_string(),
+            tesseract_config: Some(TesseractConfig {
                 psm: 3,
                 ..Default::default()
             }),
-            ..Default::default()
         }),
         ..Default::default()
     };
@@ -246,7 +241,8 @@ Configuration for OCR processing. Set to enable OCR on images and scanned PDFs.
     config = Kreuzberg::ExtractionConfig.new(
       ocr: Kreuzberg::OcrConfig.new(
         backend: 'tesseract',
-        tesseract: Kreuzberg::TesseractConfig.new(language: 'eng+fra', psm: 3)
+        language: 'eng+fra',
+        tesseract_config: Kreuzberg::TesseractConfig.new(psm: 3)
       )
     )
     ```
@@ -259,24 +255,25 @@ Tesseract OCR engine configuration.
 |-------|------|---------|-------------|
 | `language` | `str` | `"eng"` | Language code(s), e.g., `"eng"`, `"eng+fra"` |
 | `psm` | `int` | `3` | Page segmentation mode (0-13) |
+| `output_format` | `str` | `"text"` | Output format: `"text"`, `"hocr"` |
 | `oem` | `int` | `3` | OCR engine mode (0-3) |
-| `dpi` | `int?` | `None` | DPI for image processing |
-| `min_confidence` | `float?` | `None` | Minimum confidence threshold (0.0-1.0) |
-| `preserve_interword_spaces` | `bool` | `false` | Preserve multiple spaces between words |
-| `char_whitelist` | `str?` | `None` | Allowed characters |
-| `char_blacklist` | `str?` | `None` | Disallowed characters |
-| `tessedit_char_whitelist` | `str?` | `None` | Tesseract variable: character whitelist |
-| `tessedit_char_blacklist` | `str?` | `None` | Tesseract variable: character blacklist |
-| `tessedit_pageseg_mode` | `int?` | `None` | Tesseract variable: page segmentation mode |
-| `tessedit_ocr_engine_mode` | `int?` | `None` | Tesseract variable: OCR engine mode |
-| `preserve_interword_spaces_flag` | `bool?` | `None` | Tesseract variable: preserve interword spaces |
-| `textord_heavy_nr` | `bool?` | `None` | Tesseract variable: heavy noise removal |
-| `textord_noise_rejwords` | `bool?` | `None` | Tesseract variable: reject noisy words |
-| `textord_noise_rejrows` | `bool?` | `None` | Tesseract variable: reject noisy rows |
-| `edges_use_new_outline_complexity` | `bool?` | `None` | Tesseract variable: use new outline complexity |
-| `lstm_use_matrix` | `int?` | `None` | Tesseract variable: LSTM matrix usage |
-| `user_words_file` | `str?` | `None` | Path to custom dictionary file |
-| `user_patterns_file` | `str?` | `None` | Path to custom patterns file |
+| `min_confidence` | `float` | `0.0` | Minimum confidence threshold (0.0-1.0) |
+| `preprocessing` | `ImagePreprocessingConfig?` | `None` | Image preprocessing configuration |
+| `enable_table_detection` | `bool` | `false` | Enable table detection and extraction |
+| `table_min_confidence` | `float` | `0.5` | Minimum confidence for table cells |
+| `table_column_threshold` | `int` | `50` | Pixel threshold for column detection |
+| `table_row_threshold_ratio` | `float` | `0.5` | Row threshold ratio |
+| `use_cache` | `bool` | `true` | Enable OCR result caching |
+| `classify_use_pre_adapted_templates` | `bool` | `false` | Tesseract variable |
+| `language_model_ngram_on` | `bool` | `false` | Tesseract variable |
+| `tessedit_dont_blkrej_good_wds` | `bool` | `false` | Tesseract variable |
+| `tessedit_dont_rowrej_good_wds` | `bool` | `false` | Tesseract variable |
+| `tessedit_enable_dict_correction` | `bool` | `false` | Tesseract variable |
+| `tessedit_char_whitelist` | `str` | `""` | Allowed characters |
+| `tessedit_char_blacklist` | `str` | `""` | Disallowed characters |
+| `tessedit_use_primary_params_model` | `bool` | `false` | Tesseract variable |
+| `textord_space_size_is_variable` | `bool` | `false` | Tesseract variable |
+| `thresholding_method` | `bool` | `false` | Tesseract variable |
 
 ### Page Segmentation Modes (PSM)
 
@@ -311,14 +308,13 @@ Tesseract OCR engine configuration.
 
     config = ExtractionConfig(
         ocr=OcrConfig(
-            tesseract=TesseractConfig(
-                language="eng+fra+deu",
+            language="eng+fra+deu",
+            tesseract_config=TesseractConfig(
                 psm=6,
                 oem=1,
-                dpi=300,
                 min_confidence=0.8,
-                char_whitelist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?",
-                preserve_interword_spaces=True
+                tessedit_char_whitelist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?",
+                enable_table_detection=True
             )
         )
     )
@@ -331,14 +327,13 @@ Tesseract OCR engine configuration.
 
     const config = new ExtractionConfig({
       ocr: new OcrConfig({
-        tesseract: new TesseractConfig({
-          language: 'eng+fra+deu',
+        language: 'eng+fra+deu',
+        tesseractConfig: new TesseractConfig({
           psm: 6,
           oem: 1,
-          dpi: 300,
           minConfidence: 0.8,
-          charWhitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?',
-          preserveInterwordSpaces: true
+          tesseditCharWhitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?',
+          enableTableDetection: true
         })
       })
     });
@@ -351,14 +346,13 @@ Tesseract OCR engine configuration.
 
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
-            tesseract: Some(TesseractConfig {
-                language: "eng+fra+deu".to_string(),
+            language: "eng+fra+deu".to_string(),
+            tesseract_config: Some(TesseractConfig {
                 psm: 6,
                 oem: 1,
-                dpi: Some(300),
-                min_confidence: Some(0.8),
-                char_whitelist: Some("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?".to_string()),
-                preserve_interword_spaces: true,
+                min_confidence: 0.8,
+                tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?".to_string(),
+                enable_table_detection: true,
                 ..Default::default()
             }),
             ..Default::default()
@@ -374,14 +368,13 @@ Tesseract OCR engine configuration.
 
     config = Kreuzberg::ExtractionConfig.new(
       ocr: Kreuzberg::OcrConfig.new(
-        tesseract: Kreuzberg::TesseractConfig.new(
-          language: 'eng+fra+deu',
+        language: 'eng+fra+deu',
+        tesseract_config: Kreuzberg::TesseractConfig.new(
           psm: 6,
           oem: 1,
-          dpi: 300,
           min_confidence: 0.8,
-          char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?',
-          preserve_interword_spaces: true
+          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?',
+          enable_table_detection: true
         )
       )
     )
@@ -393,29 +386,31 @@ Image preprocessing configuration for OCR.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `resize_factor` | `float` | `2.0` | Image resize factor for OCR |
-| `denoise` | `bool` | `true` | Apply denoising |
-| `deskew` | `bool` | `true` | Apply deskewing |
-| `remove_background` | `bool` | `false` | Remove background |
-| `enhance_contrast` | `bool` | `true` | Enhance contrast |
-| `grayscale` | `bool` | `true` | Convert to grayscale |
-| `binarize` | `bool` | `false` | Apply binarization |
+| `target_dpi` | `int` | `300` | Target DPI for OCR processing |
+| `auto_rotate` | `bool` | `true` | Automatically rotate images based on orientation |
+| `deskew` | `bool` | `true` | Apply deskewing to straighten tilted text |
+| `denoise` | `bool` | `true` | Apply denoising filter |
+| `contrast_enhance` | `bool` | `true` | Enhance image contrast |
+| `binarization_method` | `str` | `"otsu"` | Binarization method: `"otsu"`, `"adaptive"`, `"none"` |
+| `invert_colors` | `bool` | `false` | Invert image colors (useful for white-on-black text) |
 
 ### Example
 
 === "Python"
 
     ```python
-    from kreuzberg import ExtractionConfig, OcrConfig, ImagePreprocessingConfig
+    from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig
 
     config = ExtractionConfig(
         ocr=OcrConfig(
-            image_preprocessing=ImagePreprocessingConfig(
-                resize_factor=3.0,
-                denoise=True,
-                deskew=True,
-                enhance_contrast=True,
-                binarize=True
+            tesseract_config=TesseractConfig(
+                preprocessing=ImagePreprocessingConfig(
+                    target_dpi=300,
+                    denoise=True,
+                    deskew=True,
+                    contrast_enhance=True,
+                    binarization_method="otsu"
+                )
             )
         )
     )
@@ -424,16 +419,18 @@ Image preprocessing configuration for OCR.
 === "TypeScript"
 
     ```typescript
-    import { ExtractionConfig, OcrConfig, ImagePreprocessingConfig } from '@kreuzberg/sdk';
+    import { ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig } from '@kreuzberg/sdk';
 
     const config = new ExtractionConfig({
       ocr: new OcrConfig({
-        imagePreprocessing: new ImagePreprocessingConfig({
-          resizeFactor: 3.0,
-          denoise: true,
-          deskew: true,
-          enhanceContrast: true,
-          binarize: true
+        tesseractConfig: new TesseractConfig({
+          preprocessing: new ImagePreprocessingConfig({
+            targetDpi: 300,
+            denoise: true,
+            deskew: true,
+            contrastEnhance: true,
+            binarizationMethod: 'otsu'
+          })
         })
       })
     });
@@ -442,16 +439,19 @@ Image preprocessing configuration for OCR.
 === "Rust"
 
     ```rust
-    use kreuzberg::{ExtractionConfig, OcrConfig, ImagePreprocessingConfig};
+    use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig};
 
     let config = ExtractionConfig {
         ocr: Some(OcrConfig {
-            image_preprocessing: Some(ImagePreprocessingConfig {
-                resize_factor: 3.0,
-                denoise: true,
-                deskew: true,
-                enhance_contrast: true,
-                binarize: true,
+            tesseract_config: Some(TesseractConfig {
+                preprocessing: Some(ImagePreprocessingConfig {
+                    target_dpi: 300,
+                    denoise: true,
+                    deskew: true,
+                    contrast_enhance: true,
+                    binarization_method: "otsu".to_string(),
+                    ..Default::default()
+                }),
                 ..Default::default()
             }),
             ..Default::default()
@@ -467,12 +467,14 @@ Image preprocessing configuration for OCR.
 
     config = Kreuzberg::ExtractionConfig.new(
       ocr: Kreuzberg::OcrConfig.new(
-        image_preprocessing: Kreuzberg::ImagePreprocessingConfig.new(
-          resize_factor: 3.0,
-          denoise: true,
-          deskew: true,
-          enhance_contrast: true,
-          binarize: true
+        tesseract_config: Kreuzberg::TesseractConfig.new(
+          preprocessing: Kreuzberg::ImagePreprocessingConfig.new(
+            target_dpi: 300,
+            denoise: true,
+            deskew: true,
+            contrast_enhance: true,
+            binarization_method: 'otsu'
+          )
         )
       )
     )
@@ -484,9 +486,9 @@ PDF-specific extraction configuration.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `extract_images` | `bool` | `true` | Extract embedded images |
-| `extract_tables` | `bool` | `true` | Extract tables |
-| `password` | `str | list[str]?` | `None` | Password(s) for encrypted PDFs |
+| `extract_images` | `bool` | `true` | Extract embedded images from PDF |
+| `extract_metadata` | `bool` | `true` | Extract PDF metadata (title, author, etc.) |
+| `passwords` | `list[str]?` | `None` | List of passwords to try for encrypted PDFs |
 
 ### Example
 
@@ -496,10 +498,10 @@ PDF-specific extraction configuration.
     from kreuzberg import ExtractionConfig, PdfConfig
 
     config = ExtractionConfig(
-        pdf=PdfConfig(
+        pdf_options=PdfConfig(
             extract_images=True,
-            extract_tables=True,
-            password="secret123"
+            extract_metadata=True,
+            passwords=["password1", "password2"]
         )
     )
     ```
@@ -510,10 +512,10 @@ PDF-specific extraction configuration.
     import { ExtractionConfig, PdfConfig } from '@kreuzberg/sdk';
 
     const config = new ExtractionConfig({
-      pdf: new PdfConfig({
+      pdfOptions: new PdfConfig({
         extractImages: true,
-        extractTables: true,
-        password: 'secret123'
+        extractMetadata: true,
+        passwords: ['password1', 'password2']
       })
     });
     ```
@@ -524,10 +526,10 @@ PDF-specific extraction configuration.
     use kreuzberg::{ExtractionConfig, PdfConfig};
 
     let config = ExtractionConfig {
-        pdf: Some(PdfConfig {
+        pdf_options: Some(PdfConfig {
             extract_images: true,
-            extract_tables: true,
-            password: Some("secret123".to_string()),
+            extract_metadata: true,
+            passwords: Some(vec!["password1".to_string(), "password2".to_string()]),
         }),
         ..Default::default()
     };
@@ -539,10 +541,10 @@ PDF-specific extraction configuration.
     require 'kreuzberg'
 
     config = Kreuzberg::ExtractionConfig.new(
-      pdf: Kreuzberg::PdfConfig.new(
+      pdf_options: Kreuzberg::PdfConfig.new(
         extract_images: true,
-        extract_tables: true,
-        password: 'secret123'
+        extract_metadata: true,
+        passwords: ['password1', 'password2']
       )
     )
     ```
@@ -553,12 +555,12 @@ Configuration for extracting images from documents.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `min_width` | `int` | `100` | Minimum image width in pixels |
-| `min_height` | `int` | `100` | Minimum image height in pixels |
-| `format` | `str` | `"png"` | Output format: `"png"`, `"jpeg"`, `"webp"` |
-| `quality` | `int` | `90` | JPEG/WebP quality (1-100) |
-| `extract_to_dir` | `str?` | `None` | Directory to save extracted images |
-| `include_metadata` | `bool` | `true` | Include image metadata in results |
+| `extract_images` | `bool` | `true` | Extract images from documents |
+| `target_dpi` | `int` | `150` | Target DPI for extracted images |
+| `max_image_dimension` | `int` | `4096` | Maximum image dimension (width or height) in pixels |
+| `auto_adjust_dpi` | `bool` | `true` | Automatically adjust DPI based on image size |
+| `min_dpi` | `int` | `72` | Minimum DPI when auto-adjusting |
+| `max_dpi` | `int` | `300` | Maximum DPI when auto-adjusting |
 
 ### Example
 
@@ -568,12 +570,11 @@ Configuration for extracting images from documents.
     from kreuzberg import ExtractionConfig, ImageExtractionConfig
 
     config = ExtractionConfig(
-        image_extraction=ImageExtractionConfig(
-            min_width=200,
-            min_height=200,
-            format="jpeg",
-            quality=85,
-            extract_to_dir="./extracted_images"
+        images=ImageExtractionConfig(
+            extract_images=True,
+            target_dpi=200,
+            max_image_dimension=2048,
+            auto_adjust_dpi=True
         )
     )
     ```
@@ -584,12 +585,11 @@ Configuration for extracting images from documents.
     import { ExtractionConfig, ImageExtractionConfig } from '@kreuzberg/sdk';
 
     const config = new ExtractionConfig({
-      imageExtraction: new ImageExtractionConfig({
-        minWidth: 200,
-        minHeight: 200,
-        format: 'jpeg',
-        quality: 85,
-        extractToDir: './extracted_images'
+      images: new ImageExtractionConfig({
+        extractImages: true,
+        targetDpi: 200,
+        maxImageDimension: 2048,
+        autoAdjustDpi: true
       })
     });
     ```
@@ -600,12 +600,11 @@ Configuration for extracting images from documents.
     use kreuzberg::{ExtractionConfig, ImageExtractionConfig};
 
     let config = ExtractionConfig {
-        image_extraction: Some(ImageExtractionConfig {
-            min_width: 200,
-            min_height: 200,
-            format: "jpeg".to_string(),
-            quality: 85,
-            extract_to_dir: Some("./extracted_images".to_string()),
+        images: Some(ImageExtractionConfig {
+            extract_images: true,
+            target_dpi: 200,
+            max_image_dimension: 2048,
+            auto_adjust_dpi: true,
             ..Default::default()
         }),
         ..Default::default()
@@ -618,12 +617,11 @@ Configuration for extracting images from documents.
     require 'kreuzberg'
 
     config = Kreuzberg::ExtractionConfig.new(
-      image_extraction: Kreuzberg::ImageExtractionConfig.new(
-        min_width: 200,
-        min_height: 200,
-        format: 'jpeg',
-        quality: 85,
-        extract_to_dir: './extracted_images'
+      images: Kreuzberg::ImageExtractionConfig.new(
+        extract_images: true,
+        target_dpi: 200,
+        max_image_dimension: 2048,
+        auto_adjust_dpi: true
       )
     )
     ```
@@ -634,10 +632,10 @@ Text chunking configuration for splitting extracted text into chunks.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `chunk_size` | `int` | `1000` | Maximum chunk size in characters |
-| `chunk_overlap` | `int` | `200` | Overlap between chunks in characters |
-| `separator` | `str` | `"\n\n"` | Separator for splitting text |
-| `keep_separator` | `bool` | `true` | Keep separator in chunks |
+| `max_chars` | `int` | `1000` | Maximum chunk size in characters |
+| `max_overlap` | `int` | `200` | Overlap between chunks in characters |
+| `embedding` | `EmbeddingConfig?` | `None` | Embedding configuration for chunks |
+| `preset` | `str?` | `None` | Chunking preset: `"small"`, `"medium"`, `"large"` |
 
 ### Example
 
@@ -648,10 +646,8 @@ Text chunking configuration for splitting extracted text into chunks.
 
     config = ExtractionConfig(
         chunking=ChunkingConfig(
-            chunk_size=500,
-            chunk_overlap=50,
-            separator="\n",
-            keep_separator=False
+            max_chars=500,
+            max_overlap=50
         )
     )
     ```
@@ -663,10 +659,8 @@ Text chunking configuration for splitting extracted text into chunks.
 
     const config = new ExtractionConfig({
       chunking: new ChunkingConfig({
-        chunkSize: 500,
-        chunkOverlap: 50,
-        separator: '\n',
-        keepSeparator: false
+        maxChars: 500,
+        maxOverlap: 50
       })
     });
     ```
@@ -678,10 +672,9 @@ Text chunking configuration for splitting extracted text into chunks.
 
     let config = ExtractionConfig {
         chunking: Some(ChunkingConfig {
-            chunk_size: 500,
-            chunk_overlap: 50,
-            separator: "\n".to_string(),
-            keep_separator: false,
+            max_chars: 500,
+            max_overlap: 50,
+            ..Default::default()
         }),
         ..Default::default()
     };
@@ -694,42 +687,55 @@ Text chunking configuration for splitting extracted text into chunks.
 
     config = Kreuzberg::ExtractionConfig.new(
       chunking: Kreuzberg::ChunkingConfig.new(
-        chunk_size: 500,
-        chunk_overlap: 50,
-        separator: "\n",
-        keep_separator: false
+        max_chars: 500,
+        max_overlap: 50
       )
     )
     ```
 
 ## EmbeddingConfig
 
-Configuration for generating embeddings from extracted text.
+Configuration for generating embeddings from extracted text or chunks.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `model` | `str` | `"all-MiniLM-L6-v2"` | Embedding model name |
-| `batch_size` | `int` | `32` | Batch size for embedding generation |
+| `model` | `EmbeddingModelType` | `preset("all-MiniLM-L6-v2")` | Embedding model configuration |
 | `normalize` | `bool` | `true` | Normalize embeddings to unit length |
+| `batch_size` | `int` | `32` | Batch size for embedding generation |
+| `show_download_progress` | `bool` | `true` | Show download progress for models |
+| `cache_dir` | `str?` | `None` | Custom cache directory for models |
 
-### Available Models
+### EmbeddingModelType
 
-- `"all-MiniLM-L6-v2"`: Fast, 384-dimensional embeddings (default)
-- `"all-mpnet-base-v2"`: High quality, 768-dimensional embeddings
-- `"paraphrase-multilingual-MiniLM-L12-v2"`: Multilingual support
+Create embedding models using these factory methods:
+
+- `EmbeddingModelType.preset(name)`: Use a preset model
+  - `"all-MiniLM-L6-v2"`: Fast, 384-dimensional embeddings (default)
+  - `"all-mpnet-base-v2"`: High quality, 768-dimensional embeddings
+  - `"paraphrase-multilingual-MiniLM-L12-v2"`: Multilingual support
+
+- `EmbeddingModelType.fastembed(model, dimensions)`: Use a FastEmbed model
+  - Example: `fastembed("BAAI/bge-small-en-v1.5", 384)`
+
+- `EmbeddingModelType.custom(model_id, dimensions)`: Use a custom model
+  - Example: `custom("sentence-transformers/all-MiniLM-L6-v2", 384)`
 
 ### Example
 
 === "Python"
 
     ```python
-    from kreuzberg import ExtractionConfig, EmbeddingConfig
+    from kreuzberg import ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType
 
     config = ExtractionConfig(
-        embedding=EmbeddingConfig(
-            model="all-mpnet-base-v2",
-            batch_size=16,
-            normalize=True
+        chunking=ChunkingConfig(
+            max_chars=1000,
+            embedding=EmbeddingConfig(
+                model=EmbeddingModelType.preset("all-mpnet-base-v2"),
+                batch_size=16,
+                normalize=True,
+                show_download_progress=True
+            )
         )
     )
     ```
@@ -737,13 +743,17 @@ Configuration for generating embeddings from extracted text.
 === "TypeScript"
 
     ```typescript
-    import { ExtractionConfig, EmbeddingConfig } from '@kreuzberg/sdk';
+    import { ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType } from '@kreuzberg/sdk';
 
     const config = new ExtractionConfig({
-      embedding: new EmbeddingConfig({
-        model: 'all-mpnet-base-v2',
-        batchSize: 16,
-        normalize: true
+      chunking: new ChunkingConfig({
+        maxChars: 1000,
+        embedding: new EmbeddingConfig({
+          model: EmbeddingModelType.preset('all-mpnet-base-v2'),
+          batchSize: 16,
+          normalize: true,
+          showDownloadProgress: true
+        })
       })
     });
     ```
@@ -751,300 +761,18 @@ Configuration for generating embeddings from extracted text.
 === "Rust"
 
     ```rust
-    use kreuzberg::{ExtractionConfig, EmbeddingConfig};
+    use kreuzberg::{ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType};
 
     let config = ExtractionConfig {
-        embedding: Some(EmbeddingConfig {
-            model: "all-mpnet-base-v2".to_string(),
-            batch_size: 16,
-            normalize: true,
-        }),
-        ..Default::default()
-    };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      embedding: Kreuzberg::EmbeddingConfig.new(
-        model: 'all-mpnet-base-v2',
-        batch_size: 16,
-        normalize: true
-      )
-    )
-    ```
-
-## TokenReductionConfig
-
-Configuration for reducing token count in extracted text.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `max_tokens` | `int` | `4096` | Maximum token count |
-| `strategy` | `str` | `"truncate"` | Reduction strategy: `"truncate"`, `"summarize"` |
-
-### Example
-
-=== "Python"
-
-    ```python
-    from kreuzberg import ExtractionConfig, TokenReductionConfig
-
-    config = ExtractionConfig(
-        token_reduction=TokenReductionConfig(
-            max_tokens=2048,
-            strategy="truncate"
-        )
-    )
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, TokenReductionConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      tokenReduction: new TokenReductionConfig({
-        maxTokens: 2048,
-        strategy: 'truncate'
-      })
-    });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{ExtractionConfig, TokenReductionConfig};
-
-    let config = ExtractionConfig {
-        token_reduction: Some(TokenReductionConfig {
-            max_tokens: 2048,
-            strategy: "truncate".to_string(),
-        }),
-        ..Default::default()
-    };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      token_reduction: Kreuzberg::TokenReductionConfig.new(
-        max_tokens: 2048,
-        strategy: 'truncate'
-      )
-    )
-    ```
-
-## LanguageDetectionConfig
-
-Configuration for automatic language detection.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `min_confidence` | `float` | `0.8` | Minimum confidence threshold (0.0-1.0) |
-| `detect_all` | `bool` | `false` | Detect all languages (vs. dominant only) |
-| `max_languages` | `int` | `3` | Maximum languages to detect |
-
-### Example
-
-=== "Python"
-
-    ```python
-    from kreuzberg import ExtractionConfig, LanguageDetectionConfig
-
-    config = ExtractionConfig(
-        language_detection=LanguageDetectionConfig(
-            min_confidence=0.9,
-            detect_all=True,
-            max_languages=5
-        )
-    )
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, LanguageDetectionConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      languageDetection: new LanguageDetectionConfig({
-        minConfidence: 0.9,
-        detectAll: true,
-        maxLanguages: 5
-      })
-    });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{ExtractionConfig, LanguageDetectionConfig};
-
-    let config = ExtractionConfig {
-        language_detection: Some(LanguageDetectionConfig {
-            min_confidence: 0.9,
-            detect_all: true,
-            max_languages: 5,
-        }),
-        ..Default::default()
-    };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      language_detection: Kreuzberg::LanguageDetectionConfig.new(
-        min_confidence: 0.9,
-        detect_all: true,
-        max_languages: 5
-      )
-    )
-    ```
-
-## PostProcessorConfig
-
-Configuration for post-processing pipeline.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `remove_duplicates` | `bool` | `true` | Remove duplicate text |
-| `normalize_whitespace` | `bool` | `true` | Normalize whitespace |
-| `fix_encoding` | `bool` | `true` | Fix encoding issues (mojibake) |
-
-### Example
-
-=== "Python"
-
-    ```python
-    from kreuzberg import ExtractionConfig, PostProcessorConfig
-
-    config = ExtractionConfig(
-        post_processors=PostProcessorConfig(
-            remove_duplicates=True,
-            normalize_whitespace=True,
-            fix_encoding=True
-        )
-    )
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, PostProcessorConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      postProcessors: new PostProcessorConfig({
-        removeDuplicates: true,
-        normalizeWhitespace: true,
-        fixEncoding: true
-      })
-    });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{ExtractionConfig, PostProcessorConfig};
-
-    let config = ExtractionConfig {
-        post_processors: Some(PostProcessorConfig {
-            remove_duplicates: true,
-            normalize_whitespace: true,
-            fix_encoding: true,
-        }),
-        ..Default::default()
-    };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      post_processors: Kreuzberg::PostProcessorConfig.new(
-        remove_duplicates: true,
-        normalize_whitespace: true,
-        fix_encoding: true
-      )
-    )
-    ```
-
-## KeywordConfig
-
-Configuration for keyword extraction (requires `keywords` feature flag).
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `algorithm` | `str` | `"rake"` | Algorithm: `"rake"`, `"yake"`, `"textrank"` |
-| `max_keywords` | `int` | `10` | Maximum keywords to extract |
-| `min_score` | `float` | `0.5` | Minimum score threshold |
-| `ngram_range` | `tuple[int, int]` | `(1, 3)` | N-gram range for keywords |
-| `stopwords` | `list[str]?` | `None` | Custom stopwords list |
-| `language` | `str` | `"en"` | Language for stopwords |
-| `normalize` | `bool` | `true` | Normalize keywords (lowercase, etc.) |
-
-!!! note "Feature Flag Required"
-    Keyword extraction requires building Kreuzberg with the `keywords` feature flag enabled.
-
-### Example
-
-=== "Python"
-
-    ```python
-    from kreuzberg import ExtractionConfig, KeywordConfig
-
-    config = ExtractionConfig(
-        keywords=KeywordConfig(
-            algorithm="rake",
-            max_keywords=20,
-            min_score=0.6,
-            ngram_range=(1, 2),
-            language="en",
-            normalize=True
-        )
-    )
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, KeywordConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      keywords: new KeywordConfig({
-        algorithm: 'rake',
-        maxKeywords: 20,
-        minScore: 0.6,
-        ngramRange: [1, 2],
-        language: 'en',
-        normalize: true
-      })
-    });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{ExtractionConfig, KeywordConfig};
-
-    let config = ExtractionConfig {
-        keywords: Some(KeywordConfig {
-            algorithm: "rake".to_string(),
-            max_keywords: 20,
-            min_score: 0.6,
-            ngram_range: (1, 2),
-            language: "en".to_string(),
-            normalize: true,
+        chunking: Some(ChunkingConfig {
+            max_chars: 1000,
+            embedding: Some(EmbeddingConfig {
+                model: EmbeddingModelType::preset("all-mpnet-base-v2"),
+                batch_size: 16,
+                normalize: true,
+                show_download_progress: true,
+                ..Default::default()
+            }),
             ..Default::default()
         }),
         ..Default::default()
@@ -1057,13 +785,219 @@ Configuration for keyword extraction (requires `keywords` feature flag).
     require 'kreuzberg'
 
     config = Kreuzberg::ExtractionConfig.new(
-      keywords: Kreuzberg::KeywordConfig.new(
-        algorithm: 'rake',
-        max_keywords: 20,
-        min_score: 0.6,
-        ngram_range: [1, 2],
-        language: 'en',
-        normalize: true
+      chunking: Kreuzberg::ChunkingConfig.new(
+        max_chars: 1000,
+        embedding: Kreuzberg::EmbeddingConfig.new(
+          model: Kreuzberg::EmbeddingModelType.preset('all-mpnet-base-v2'),
+          batch_size: 16,
+          normalize: true,
+          show_download_progress: true
+        )
+      )
+    )
+    ```
+
+## TokenReductionConfig
+
+Configuration for reducing token count in extracted text.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `mode` | `str` | `"off"` | Reduction mode: `"off"`, `"moderate"`, `"aggressive"` |
+| `preserve_important_words` | `bool` | `true` | Preserve important words during reduction |
+
+### Example
+
+=== "Python"
+
+    ```python
+    from kreuzberg import ExtractionConfig, TokenReductionConfig
+
+    config = ExtractionConfig(
+        token_reduction=TokenReductionConfig(
+            mode="moderate",
+            preserve_important_words=True
+        )
+    )
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { ExtractionConfig, TokenReductionConfig } from '@kreuzberg/sdk';
+
+    const config = new ExtractionConfig({
+      tokenReduction: new TokenReductionConfig({
+        mode: 'moderate',
+        preserveImportantWords: true
+      })
+    });
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{ExtractionConfig, TokenReductionConfig};
+
+    let config = ExtractionConfig {
+        token_reduction: Some(TokenReductionConfig {
+            mode: "moderate".to_string(),
+            preserve_important_words: true,
+        }),
+        ..Default::default()
+    };
+    ```
+
+=== "Ruby"
+
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::ExtractionConfig.new(
+      token_reduction: Kreuzberg::TokenReductionConfig.new(
+        mode: 'moderate',
+        preserve_important_words: true
+      )
+    )
+    ```
+
+## LanguageDetectionConfig
+
+Configuration for automatic language detection.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `true` | Enable language detection |
+| `min_confidence` | `float` | `0.8` | Minimum confidence threshold (0.0-1.0) |
+| `detect_multiple` | `bool` | `false` | Detect multiple languages (vs. dominant only) |
+
+### Example
+
+=== "Python"
+
+    ```python
+    from kreuzberg import ExtractionConfig, LanguageDetectionConfig
+
+    config = ExtractionConfig(
+        language_detection=LanguageDetectionConfig(
+            enabled=True,
+            min_confidence=0.9,
+            detect_multiple=True
+        )
+    )
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { ExtractionConfig, LanguageDetectionConfig } from '@kreuzberg/sdk';
+
+    const config = new ExtractionConfig({
+      languageDetection: new LanguageDetectionConfig({
+        enabled: true,
+        minConfidence: 0.9,
+        detectMultiple: true
+      })
+    });
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{ExtractionConfig, LanguageDetectionConfig};
+
+    let config = ExtractionConfig {
+        language_detection: Some(LanguageDetectionConfig {
+            enabled: true,
+            min_confidence: 0.9,
+            detect_multiple: true,
+        }),
+        ..Default::default()
+    };
+    ```
+
+=== "Ruby"
+
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::ExtractionConfig.new(
+      language_detection: Kreuzberg::LanguageDetectionConfig.new(
+        enabled: true,
+        min_confidence: 0.9,
+        detect_multiple: true
+      )
+    )
+    ```
+
+## PostProcessorConfig
+
+Configuration for post-processing pipeline.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `true` | Enable post-processing pipeline |
+| `enabled_processors` | `list[str]?` | `None` | Specific processors to enable (if None, all enabled) |
+| `disabled_processors` | `list[str]?` | `None` | Specific processors to disable |
+
+### Example
+
+=== "Python"
+
+    ```python
+    from kreuzberg import ExtractionConfig, PostProcessorConfig
+
+    config = ExtractionConfig(
+        postprocessor=PostProcessorConfig(
+            enabled=True,
+            enabled_processors=["deduplication", "whitespace_normalization"],
+            disabled_processors=["mojibake_fix"]
+        )
+    )
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { ExtractionConfig, PostProcessorConfig } from '@kreuzberg/sdk';
+
+    const config = new ExtractionConfig({
+      postprocessor: new PostProcessorConfig({
+        enabled: true,
+        enabledProcessors: ['deduplication', 'whitespace_normalization'],
+        disabledProcessors: ['mojibake_fix']
+      })
+    });
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{ExtractionConfig, PostProcessorConfig};
+
+    let config = ExtractionConfig {
+        postprocessor: Some(PostProcessorConfig {
+            enabled: true,
+            enabled_processors: Some(vec![
+                "deduplication".to_string(),
+                "whitespace_normalization".to_string()
+            ]),
+            disabled_processors: Some(vec!["mojibake_fix".to_string()]),
+        }),
+        ..Default::default()
+    };
+    ```
+
+=== "Ruby"
+
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::ExtractionConfig.new(
+      postprocessor: Kreuzberg::PostProcessorConfig.new(
+        enabled: true,
+        enabled_processors: ['deduplication', 'whitespace_normalization'],
+        disabled_processors: ['mojibake_fix']
       )
     )
     ```
@@ -1085,6 +1019,7 @@ Here's a complete example showing all configuration options together:
         ImageExtractionConfig,
         ChunkingConfig,
         EmbeddingConfig,
+        EmbeddingModelType,
         TokenReductionConfig,
         LanguageDetectionConfig,
         PostProcessorConfig,
@@ -1096,50 +1031,48 @@ Here's a complete example showing all configuration options together:
         force_ocr=False,
         ocr=OcrConfig(
             backend="tesseract",
-            tesseract=TesseractConfig(
-                language="eng+fra",
+            language="eng+fra",
+            tesseract_config=TesseractConfig(
                 psm=3,
                 oem=3,
-                dpi=300,
                 min_confidence=0.8,
-            ),
-            image_preprocessing=ImagePreprocessingConfig(
-                resize_factor=2.0,
-                denoise=True,
-                deskew=True,
-                enhance_contrast=True,
+                preprocessing=ImagePreprocessingConfig(
+                    target_dpi=300,
+                    denoise=True,
+                    deskew=True,
+                    contrast_enhance=True,
+                ),
+                enable_table_detection=True,
             ),
         ),
-        pdf=PdfConfig(
+        pdf_options=PdfConfig(
             extract_images=True,
-            extract_tables=True,
+            extract_metadata=True,
         ),
-        image_extraction=ImageExtractionConfig(
-            min_width=100,
-            min_height=100,
-            format="png",
-            quality=90,
+        images=ImageExtractionConfig(
+            extract_images=True,
+            target_dpi=150,
+            max_image_dimension=4096,
         ),
         chunking=ChunkingConfig(
-            chunk_size=1000,
-            chunk_overlap=200,
-        ),
-        embedding=EmbeddingConfig(
-            model="all-MiniLM-L6-v2",
-            batch_size=32,
+            max_chars=1000,
+            max_overlap=200,
+            embedding=EmbeddingConfig(
+                model=EmbeddingModelType.preset("all-MiniLM-L6-v2"),
+                batch_size=32,
+            ),
         ),
         token_reduction=TokenReductionConfig(
-            max_tokens=4096,
-            strategy="truncate",
+            mode="moderate",
+            preserve_important_words=True,
         ),
         language_detection=LanguageDetectionConfig(
+            enabled=True,
             min_confidence=0.8,
-            detect_all=False,
+            detect_multiple=False,
         ),
-        post_processors=PostProcessorConfig(
-            remove_duplicates=True,
-            normalize_whitespace=True,
-            fix_encoding=True,
+        postprocessor=PostProcessorConfig(
+            enabled=True,
         ),
     )
 
@@ -1156,48 +1089,45 @@ Here's a complete example showing all configuration options together:
 
     [ocr]
     backend = "tesseract"
-
-    [ocr.tesseract]
     language = "eng+fra"
+
+    [ocr.tesseract_config]
     psm = 3
     oem = 3
-    dpi = 300
     min_confidence = 0.8
+    enable_table_detection = true
 
-    [ocr.image_preprocessing]
-    resize_factor = 2.0
+    [ocr.tesseract_config.preprocessing]
+    target_dpi = 300
     denoise = true
     deskew = true
-    enhance_contrast = true
+    contrast_enhance = true
 
-    [pdf]
+    [pdf_options]
     extract_images = true
-    extract_tables = true
+    extract_metadata = true
 
-    [image_extraction]
-    min_width = 100
-    min_height = 100
-    format = "png"
-    quality = 90
+    [images]
+    extract_images = true
+    target_dpi = 150
+    max_image_dimension = 4096
 
     [chunking]
-    chunk_size = 1000
-    chunk_overlap = 200
+    max_chars = 1000
+    max_overlap = 200
 
-    [embedding]
-    model = "all-MiniLM-L6-v2"
+    [chunking.embedding]
     batch_size = 32
 
     [token_reduction]
-    max_tokens = 4096
-    strategy = "truncate"
+    mode = "moderate"
+    preserve_important_words = true
 
     [language_detection]
+    enabled = true
     min_confidence = 0.8
-    detect_all = false
+    detect_multiple = false
 
-    [post_processors]
-    remove_duplicates = true
-    normalize_whitespace = true
-    fix_encoding = true
+    [postprocessor]
+    enabled = true
     ```

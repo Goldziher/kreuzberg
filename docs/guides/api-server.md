@@ -6,7 +6,7 @@ Kreuzberg provides two server modes for programmatic access: an HTTP REST API se
 
 ### HTTP REST API Server
 
-A production-ready HTTP API server built with Axum (Rust) providing RESTful endpoints for document extraction, health checks, and cache management.
+A production-ready HTTP API server providing RESTful endpoints for document extraction, health checks, and cache management.
 
 **Best for:**
 - Web applications
@@ -48,13 +48,6 @@ A Model Context Protocol server that exposes Kreuzberg as tools for AI agents an
 
     # Start server
     subprocess.Popen(["python", "-m", "kreuzberg", "serve", "-H", "0.0.0.0", "-p", "8000"])
-
-    # Or use the CLI module
-    from kreuzberg.__main__ import main
-    import sys
-
-    sys.argv = ["kreuzberg", "serve", "-H", "0.0.0.0", "-p", "8000"]
-    main()
     ```
 
 === "Rust"
@@ -267,15 +260,14 @@ KREUZBERG_PORT=8000              # Port number (default: 8000)
 KREUZBERG_MAX_UPLOAD_SIZE_MB=200  # Max upload size in MB (default: 100)
 ```
 
-**CORS Configuration (Critical for Production):**
+**CORS Configuration:**
 
 ```bash
 # Comma-separated list of allowed origins
 KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 ```
 
-!!! warning "Security Warning"
-    The default CORS configuration allows **all origins** for development convenience. This permits CSRF attacks. **Always set `KREUZBERG_CORS_ORIGINS` in production.**
+**Security Warning:** The default CORS configuration allows all origins for development convenience. This permits CSRF attacks. Always set `KREUZBERG_CORS_ORIGINS` in production.
 
 ### Client Examples
 
@@ -833,18 +825,18 @@ api.example.com {
 
 ### Production Checklist
 
-- [ ] **Set `KREUZBERG_CORS_ORIGINS`** to explicit allowed origins
-- [ ] **Configure `KREUZBERG_MAX_UPLOAD_SIZE_MB`** based on expected document sizes
-- [ ] **Use reverse proxy** (Nginx/Caddy) for SSL/TLS termination
-- [ ] **Enable logging** via `RUST_LOG=info` environment variable
-- [ ] **Set up health checks** on `/health` endpoint
-- [ ] **Monitor cache size** and set up periodic clearing
-- [ ] **Use `0.0.0.0` binding** for containerized deployments
-- [ ] **Configure resource limits** (CPU, memory) in container orchestration
-- [ ] **Test with large files** to validate upload limits and timeouts
-- [ ] **Implement rate limiting** at reverse proxy level
-- [ ] **Set up monitoring** (Prometheus metrics, logs aggregation)
-- [ ] **Plan for horizontal scaling** with load balancing
+1. Set `KREUZBERG_CORS_ORIGINS` to explicit allowed origins
+2. Configure `KREUZBERG_MAX_UPLOAD_SIZE_MB` based on expected document sizes
+3. Use reverse proxy (Nginx/Caddy) for SSL/TLS termination
+4. Enable logging via `RUST_LOG=info` environment variable
+5. Set up health checks on `/health` endpoint
+6. Monitor cache size and set up periodic clearing
+7. Use `0.0.0.0` binding for containerized deployments
+8. Configure resource limits (CPU, memory) in container orchestration
+9. Test with large files to validate upload limits and timeouts
+10. Implement rate limiting at reverse proxy level
+11. Set up monitoring (Prometheus metrics, logs aggregation)
+12. Plan for horizontal scaling with load balancing
 
 ### Monitoring
 

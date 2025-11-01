@@ -110,11 +110,6 @@ plugins:
             show_submodules: false
             docstring_style: google
             docstring_section_style: spacy
-  - gen-files:
-      scripts:
-        - scripts/gen_ref_pages.py
-  - literate-nav:
-      nav_file: SUMMARY.md
   - git-revision-date-localized:
       enable_creation_date: true
       type: timeago
@@ -136,6 +131,7 @@ nav:
   - Home: index.md
   - Installation: getting-started/installation.md
   - Quick Start: getting-started/quickstart.md
+  - Features: features.md
   - Guides:
       - Extraction Basics: guides/extraction.md
       - Configuration: guides/configuration.md

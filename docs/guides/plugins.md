@@ -18,9 +18,8 @@ Kreuzberg supports four types of plugins:
 All plugins must implement the base `Plugin` trait and a type-specific trait. Plugins are:
 
 - **Thread-safe**: All plugins must be `Send + Sync` (Rust) or thread-safe (Python)
-- **Registered globally**: Plugins are stored in singleton registries
 - **Lifecycle-managed**: Plugins have `initialize()` and `shutdown()` methods
-- **Immutable**: Methods take `&self`, not `&mut self` - use interior mutability for state
+- **Registered globally**: Use registry functions to register your plugins
 
 ## Document Extractors
 
@@ -93,7 +92,7 @@ Extract content from custom file formats or override built-in extractors.
 === "Python"
 
     ```python
-    from kreuzberg import register_document_extractor
+    from kreuzberg import register_document_extractor, ExtractionResult
     import json
 
     class CustomJsonExtractor:
@@ -114,7 +113,7 @@ Extract content from custom file formats or override built-in extractors.
             content: bytes,
             mime_type: str,
             config: dict
-        ) -> dict:
+        ) -> ExtractionResult:
             data = json.loads(content)
             text = self._extract_text(data)
 
@@ -135,10 +134,10 @@ Extract content from custom file formats or override built-in extractors.
             return ""
 
         def initialize(self) -> None:
-            print("Extractor initialized")
+            pass
 
         def shutdown(self) -> None:
-            print("Extractor shutdown")
+            pass
 
     # Register the extractor
     register_document_extractor(CustomJsonExtractor())
@@ -154,11 +153,8 @@ Extract content from custom file formats or override built-in extractors.
 
     fn register_custom_extractor() -> Result<()> {
         let extractor = Arc::new(CustomJsonExtractor);
-
         let registry = get_document_extractor_registry();
-        let mut registry = registry.write()?;
-        registry.register(extractor)?;
-
+        registry.register(extractor, 50)?;
         Ok(())
     }
     ```
@@ -190,9 +186,9 @@ Transform and enrich extraction results after initial extraction.
 
 Post-processors execute in three stages:
 
-- **Early**: Foundational processing (language detection, quality scoring, encoding normalization)
-- **Middle**: Content transformation (keyword extraction, token reduction, summarization)
-- **Late**: Final enrichment (custom hooks, analytics, output formatting)
+- **Early**: Run first, use for foundational operations like language detection, quality scoring, or text normalization that other processors may depend on
+- **Middle**: Run second, use for content transformation like keyword extraction, token reduction, or summarization
+- **Late**: Run last, use for final enrichment like custom metadata, analytics tracking, or output formatting
 
 ### Rust Implementation
 
@@ -249,7 +245,7 @@ Post-processors execute in three stages:
 === "Python"
 
     ```python
-    from kreuzberg import register_post_processor
+    from kreuzberg import register_post_processor, ExtractionResult
 
     class WordCountProcessor:
         def name(self) -> str:
@@ -261,12 +257,12 @@ Post-processors execute in three stages:
         def processing_stage(self) -> str:
             return "early"  # or "middle", "late"
 
-        def process(self, result: dict) -> dict:
+        def process(self, result: ExtractionResult) -> ExtractionResult:
             word_count = len(result["content"].split())
             result["metadata"]["word_count"] = word_count
             return result
 
-        def should_process(self, result: dict) -> bool:
+        def should_process(self, result: ExtractionResult) -> bool:
             return bool(result["content"])
 
         def initialize(self) -> None:
@@ -311,11 +307,11 @@ Post-processors execute in three stages:
 
     ```python
     class PdfOnlyProcessor:
-        def process(self, result: dict) -> dict:
+        def process(self, result: ExtractionResult) -> ExtractionResult:
             # PDF-specific processing
             return result
 
-        def should_process(self, result: dict) -> bool:
+        def should_process(self, result: ExtractionResult) -> bool:
             return result["mime_type"] == "application/pdf"
     ```
 
@@ -438,10 +434,10 @@ Integrate custom OCR engines or cloud services.
             }
 
         def initialize(self) -> None:
-            print("Cloud OCR backend initialized")
+            pass
 
         def shutdown(self) -> None:
-            print("Cloud OCR backend shutdown")
+            pass
 
     # Register the backend
     register_ocr_backend(CloudOcrBackend(api_key="your-api-key"))
@@ -590,26 +586,22 @@ Enforce quality requirements on extraction results.
 
     // List document extractors
     let registry = get_document_extractor_registry();
-    let registry = registry.read()?;
-    let extractors = registry.list();
+    let extractors = registry.list()?;
     println!("Registered extractors: {:?}", extractors);
 
     // List post-processors
     let registry = get_post_processor_registry();
-    let registry = registry.read()?;
-    let processors = registry.list();
+    let processors = registry.list()?;
     println!("Registered processors: {:?}", processors);
 
     // List OCR backends
     let registry = get_ocr_backend_registry();
-    let registry = registry.read()?;
-    let backends = registry.list();
+    let backends = registry.list()?;
     println!("Registered OCR backends: {:?}", backends);
 
     // List validators
     let registry = get_validator_registry();
-    let registry = registry.read()?;
-    let validators = registry.list();
+    let validators = registry.list()?;
     println!("Registered validators: {:?}", validators);
     ```
 
@@ -638,7 +630,6 @@ Enforce quality requirements on extraction results.
 
     // Unregister a specific plugin
     let registry = get_document_extractor_registry();
-    let mut registry = registry.write()?;
     registry.remove("custom-json-extractor")?;
     ```
 
@@ -686,6 +677,7 @@ All plugins must be thread-safe:
     ```rust
     use std::sync::{Arc, Mutex};
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use kreuzberg::KreuzbergError;
 
     struct StatefulPlugin {
         // Use atomic types for simple counters
@@ -700,7 +692,6 @@ All plugins must be thread-safe:
         fn version(&self) -> String { "1.0.0".to_string() }
 
         fn initialize(&self) -> Result<()> {
-            // Safe to modify with interior mutability
             self.call_count.store(0, Ordering::Release);
             Ok(())
         }
@@ -722,8 +713,9 @@ All plugins must be thread-safe:
             // Increment counter atomically
             self.call_count.fetch_add(1, Ordering::AcqRel);
 
-            // Access cache with lock
-            let mut cache = self.cache.lock().unwrap();
+            // Access cache with proper error handling
+            let mut cache = self.cache.lock()
+                .map_err(|_| KreuzbergError::plugin("Cache lock poisoned"))?;
             cache.insert("last_mime".to_string(), result.mime_type.clone());
 
             Ok(())
@@ -900,7 +892,7 @@ All plugins must be thread-safe:
             let result = extractor
                 .extract_bytes(json_data, "application/json", &config)
                 .await
-                .unwrap();
+                .expect("Extraction failed");
 
             assert!(result.content.contains("Hello, world!"));
             assert_eq!(result.mime_type, "application/json");
@@ -1006,7 +998,6 @@ All plugins must be thread-safe:
     fn register() -> Result<()> {
         let processor = Arc::new(PdfMetadataExtractor::new());
         let registry = get_post_processor_registry();
-        let mut registry = registry.write()?;
         registry.register(processor, 50)?;  // Default priority
         Ok(())
     }
@@ -1015,7 +1006,7 @@ All plugins must be thread-safe:
 === "Python"
 
     ```python
-    from kreuzberg import register_post_processor
+    from kreuzberg import register_post_processor, ExtractionResult
     import logging
 
     logger = logging.getLogger(__name__)
@@ -1036,10 +1027,10 @@ All plugins must be thread-safe:
         def processing_stage(self) -> str:
             return "early"
 
-        def should_process(self, result: dict) -> bool:
+        def should_process(self, result: ExtractionResult) -> bool:
             return result["mime_type"] == "application/pdf"
 
-        def process(self, result: dict) -> dict:
+        def process(self, result: ExtractionResult) -> ExtractionResult:
             self.processed_count += 1
 
             # Extract PDF-specific metadata

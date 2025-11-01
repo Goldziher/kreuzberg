@@ -1,10 +1,10 @@
 # Advanced Features
 
-Kreuzberg provides powerful features for text processing, analysis, and optimization beyond basic extraction.
+Kreuzberg provides text processing, analysis, and optimization features beyond basic extraction.
 
 ## Text Chunking
 
-Split extracted text into manageable chunks for downstream processing like RAG (Retrieval-Augmented Generation) systems, vector databases, or LLM context windows.
+Split extracted text into chunks for downstream processing like RAG (Retrieval-Augmented Generation) systems, vector databases, or LLM context windows.
 
 ### Overview
 
@@ -18,14 +18,12 @@ Kreuzberg uses the `text-splitter` library with two chunking strategies:
 === "Python"
 
     ```python
-    from kreuzberg import ExtractionConfig, ChunkingConfig, ChunkerType
+    from kreuzberg import ExtractionConfig, ChunkingConfig
 
     config = ExtractionConfig(
         chunking=ChunkingConfig(
-            max_characters=1000,        # Maximum chunk size
-            overlap=200,                # Overlap between chunks
-            trim=True,                  # Remove leading/trailing whitespace
-            chunker_type=ChunkerType.MARKDOWN  # or ChunkerType.TEXT
+            max_chars=1000,        # Maximum chunk size
+            max_overlap=200        # Overlap between chunks
         )
     )
     ```
@@ -33,14 +31,12 @@ Kreuzberg uses the `text-splitter` library with two chunking strategies:
 === "TypeScript"
 
     ```typescript
-    import { ExtractionConfig, ChunkingConfig, ChunkerType } from '@kreuzberg/sdk';
+    import { ExtractionConfig, ChunkingConfig } from '@kreuzberg/sdk';
 
     const config = new ExtractionConfig({
       chunking: new ChunkingConfig({
-        maxCharacters: 1000,
-        overlap: 200,
-        trim: true,
-        chunkerType: ChunkerType.MARKDOWN
+        maxChars: 1000,
+        maxOverlap: 200
       })
     });
     ```
@@ -48,34 +44,20 @@ Kreuzberg uses the `text-splitter` library with two chunking strategies:
 === "Rust"
 
     ```rust
-    use kreuzberg::{ExtractionConfig, ChunkingConfig, ChunkerType};
+    use kreuzberg::{ExtractionConfig, ChunkingConfig};
 
     let config = ExtractionConfig {
         chunking: Some(ChunkingConfig {
-            max_characters: 1000,
-            overlap: 200,
-            trim: true,
-            chunker_type: ChunkerType::Markdown,
+            max_chars: 1000,
+            max_overlap: 200,
             embedding: None,
         }),
         ..Default::default()
     };
     ```
 
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      chunking: Kreuzberg::ChunkingConfig.new(
-        max_characters: 1000,
-        overlap: 200,
-        trim: true,
-        chunker_type: Kreuzberg::ChunkerType::MARKDOWN
-      )
-    )
-    ```
+!!! note "Ruby Support"
+    Ruby bindings are currently under development and not yet production-ready.
 
 ### Chunk Output
 
@@ -95,15 +77,14 @@ Each chunk includes:
 === "Python"
 
     ```python
-    from kreuzberg import extract_file, ExtractionConfig, ChunkingConfig, EmbeddingConfig
+    from kreuzberg import extract_file, ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType
 
     config = ExtractionConfig(
         chunking=ChunkingConfig(
-            max_characters=500,
-            overlap=50,
-            chunker_type=ChunkerType.MARKDOWN,
+            max_chars=500,
+            max_overlap=50,
             embedding=EmbeddingConfig(
-                model="balanced",
+                model=EmbeddingModelType.preset("balanced"),
                 normalize=True
             )
         )
@@ -126,9 +107,8 @@ Each chunk includes:
 
     const config = new ExtractionConfig({
       chunking: new ChunkingConfig({
-        maxCharacters: 500,
-        overlap: 50,
-        chunkerType: ChunkerType.MARKDOWN,
+        maxChars: 500,
+        maxOverlap: 50,
         embedding: new EmbeddingConfig({
           model: 'balanced',
           normalize: true
@@ -151,13 +131,12 @@ Each chunk includes:
 === "Rust"
 
     ```rust
-    use kreuzberg::{extract_file, ExtractionConfig, ChunkingConfig, EmbeddingConfig, ChunkerType};
+    use kreuzberg::{extract_file, ExtractionConfig, ChunkingConfig, EmbeddingConfig};
 
     let config = ExtractionConfig {
         chunking: Some(ChunkingConfig {
-            max_characters: 500,
-            overlap: 50,
-            chunker_type: ChunkerType::Markdown,
+            max_chars: 500,
+            max_overlap: 50,
             embedding: Some(EmbeddingConfig {
                 model: "balanced".to_string(),
                 normalize: true,
@@ -188,36 +167,9 @@ Each chunk includes:
     }
     ```
 
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      chunking: Kreuzberg::ChunkingConfig.new(
-        max_characters: 500,
-        overlap: 50,
-        chunker_type: Kreuzberg::ChunkerType::MARKDOWN,
-        embedding: Kreuzberg::EmbeddingConfig.new(
-          model: 'balanced',
-          normalize: true
-        )
-      )
-    )
-
-    result = Kreuzberg.extract_file('research_paper.pdf', config: config)
-
-    result.chunks.each do |chunk|
-      puts "Chunk #{chunk.metadata['chunk_index'] + 1}/#{chunk.metadata['total_chunks']}"
-      puts "Position: #{chunk.metadata['char_start']}-#{chunk.metadata['char_end']}"
-      puts "Content: #{chunk.content[0...100]}..."
-      puts "Embedding: #{chunk.embedding.length} dimensions" if chunk.embedding
-    end
-    ```
-
 ## Language Detection
 
-Automatically detect languages in extracted text using the fast `whatlang` library. Supports 60+ languages with ISO 639-3 codes.
+Detect languages in extracted text using the fast `whatlang` library. Supports 60+ languages with ISO 639-3 codes.
 
 ### Configuration
 
@@ -262,20 +214,6 @@ Automatically detect languages in extracted text using the fast `whatlang` libra
         }),
         ..Default::default()
     };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      language_detection: Kreuzberg::LanguageDetectionConfig.new(
-        enabled: true,
-        min_confidence: 0.8,
-        detect_multiple: false
-      )
-    )
     ```
 
 ### Detection Modes
@@ -360,51 +298,35 @@ ISO 639-3 codes including:
     // Output: Some(["eng", "fra", "deu"])
     ```
 
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      language_detection: Kreuzberg::LanguageDetectionConfig.new(
-        enabled: true,
-        min_confidence: 0.8,
-        detect_multiple: true
-      )
-    )
-
-    result = Kreuzberg.extract_file('multilingual_document.pdf', config: config)
-
-    puts "Detected languages: #{result.detected_languages}"
-    # Output: ['eng', 'fra', 'deu']
-    ```
-
 ## Embedding Generation
 
-Generate semantic embeddings for extracted text using ONNX models via `fastembed-rs`. Perfect for vector databases, semantic search, and RAG systems.
+Generate embeddings for vector databases, semantic search, and RAG systems using ONNX models via `fastembed-rs`.
 
 ### Available Presets
 
-| Preset | Model | Dimensions | Chunk Size | Use Case |
+| Preset | Model | Dimensions | Max Tokens | Use Case |
 |--------|-------|-----------|------------|----------|
 | **fast** | AllMiniLML6V2Q | 384 | 512 | Rapid prototyping, development |
 | **balanced** | BGEBaseENV15 | 768 | 1024 | Production RAG, general-purpose |
 | **quality** | BGELargeENV15 | 1024 | 2000 | Maximum accuracy, complex docs |
 | **multilingual** | MultilingualE5Base | 768 | 1024 | 100+ languages, international |
 
+!!! note "Max Tokens vs. max_chars"
+    The "Max Tokens" values shown are the model's maximum token limits. These don't directly correspond to the `max_chars` setting in `ChunkingConfig`, which controls character-based chunking. The embedding model will process chunks up to its token limit.
+
 ### Configuration
 
 === "Python"
 
     ```python
-    from kreuzberg import ExtractionConfig, ChunkingConfig, EmbeddingConfig
+    from kreuzberg import ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType
 
     config = ExtractionConfig(
         chunking=ChunkingConfig(
-            max_characters=1024,
-            overlap=100,
+            max_chars=1024,
+            max_overlap=100,
             embedding=EmbeddingConfig(
-                model="balanced",           # Preset name
+                model=EmbeddingModelType.preset("balanced"),  # EmbeddingModelType object
                 normalize=True,             # L2 normalization for cosine similarity
                 batch_size=32,              # Batch processing size
                 show_download_progress=False
@@ -420,8 +342,8 @@ Generate semantic embeddings for extracted text using ONNX models via `fastembed
 
     const config = new ExtractionConfig({
       chunking: new ChunkingConfig({
-        maxCharacters: 1024,
-        overlap: 100,
+        maxChars: 1024,
+        maxOverlap: 100,
         embedding: new EmbeddingConfig({
           model: 'balanced',
           normalize: true,
@@ -439,8 +361,8 @@ Generate semantic embeddings for extracted text using ONNX models via `fastembed
 
     let config = ExtractionConfig {
         chunking: Some(ChunkingConfig {
-            max_characters: 1024,
-            overlap: 100,
+            max_chars: 1024,
+            max_overlap: 100,
             embedding: Some(EmbeddingConfig {
                 model: "balanced".to_string(),
                 normalize: true,
@@ -454,38 +376,22 @@ Generate semantic embeddings for extracted text using ONNX models via `fastembed
     };
     ```
 
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      chunking: Kreuzberg::ChunkingConfig.new(
-        max_characters: 1024,
-        overlap: 100,
-        embedding: Kreuzberg::EmbeddingConfig.new(
-          model: 'balanced',
-          normalize: true,
-          batch_size: 32,
-          show_download_progress: false
-        )
-      )
-    )
-    ```
-
 ### Example: Vector Database Integration
 
 === "Python"
 
     ```python
-    from kreuzberg import extract_file, ExtractionConfig, ChunkingConfig, EmbeddingConfig
+    from kreuzberg import extract_file, ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType
     import chromadb
 
     config = ExtractionConfig(
         chunking=ChunkingConfig(
-            max_characters=512,
-            overlap=50,
-            embedding=EmbeddingConfig(model="balanced", normalize=True)
+            max_chars=512,
+            max_overlap=50,
+            embedding=EmbeddingConfig(
+                model=EmbeddingModelType.preset("balanced"),
+                normalize=True
+            )
         )
     )
 
@@ -518,8 +424,8 @@ Generate semantic embeddings for extracted text using ONNX models via `fastembed
 
     const config = new ExtractionConfig({
       chunking: new ChunkingConfig({
-        maxCharacters: 512,
-        overlap: 50,
+        maxChars: 512,
+        maxOverlap: 50,
         embedding: new EmbeddingConfig({ model: 'balanced', normalize: true })
       })
     });
@@ -554,8 +460,8 @@ Generate semantic embeddings for extracted text using ONNX models via `fastembed
 
     let config = ExtractionConfig {
         chunking: Some(ChunkingConfig {
-            max_characters: 512,
-            overlap: 50,
+            max_chars: 512,
+            max_overlap: 50,
             embedding: Some(EmbeddingConfig {
                 model: "balanced".to_string(),
                 normalize: true,
@@ -578,32 +484,6 @@ Generate semantic embeddings for extracted text using ONNX models via `fastembed
     }
     ```
 
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      chunking: Kreuzberg::ChunkingConfig.new(
-        max_characters: 512,
-        overlap: 50,
-        embedding: Kreuzberg::EmbeddingConfig.new(
-          model: 'balanced',
-          normalize: true
-        )
-      )
-    )
-
-    result = Kreuzberg.extract_file('document.pdf', config: config)
-
-    result.chunks.each_with_index do |chunk, i|
-      if chunk.embedding
-        # Store in vector database
-        puts "Chunk #{i}: #{chunk.embedding.length} dimensions"
-      end
-    end
-    ```
-
 ## Token Reduction
 
 Intelligently reduce token count while preserving meaning. Removes stopwords, redundancy, and applies compression.
@@ -612,22 +492,20 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
 
 | Level | Reduction | Features |
 |-------|-----------|----------|
-| **Off** | 0% | No reduction, pass-through |
-| **Light** | 5-10% | Basic stopword removal |
-| **Moderate** | 15-25% | Stopwords + redundancy removal |
-| **Aggressive** | 30-50% | Semantic clustering, importance scoring |
-| **Maximum** | 50-70% | Maximum compression |
+| **off** | 0% | No reduction, pass-through |
+| **moderate** | 15-25% | Stopwords + redundancy removal |
+| **aggressive** | 30-50% | Semantic clustering, importance scoring |
 
 ### Configuration
 
 === "Python"
 
     ```python
-    from kreuzberg import ExtractionConfig, TokenReductionConfig, ReductionLevel
+    from kreuzberg import ExtractionConfig, TokenReductionConfig
 
     config = ExtractionConfig(
         token_reduction=TokenReductionConfig(
-            level=ReductionLevel.MODERATE,
+            mode="moderate",              # "off", "moderate", or "aggressive"
             preserve_markdown=True,
             preserve_code=True,
             language_hint="eng"
@@ -638,11 +516,11 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
 === "TypeScript"
 
     ```typescript
-    import { ExtractionConfig, TokenReductionConfig, ReductionLevel } from '@kreuzberg/sdk';
+    import { ExtractionConfig, TokenReductionConfig } from '@kreuzberg/sdk';
 
     const config = new ExtractionConfig({
       tokenReduction: new TokenReductionConfig({
-        level: ReductionLevel.MODERATE,
+        mode: 'moderate',
         preserveMarkdown: true,
         preserveCode: true,
         languageHint: 'eng'
@@ -653,11 +531,11 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
 === "Rust"
 
     ```rust
-    use kreuzberg::{ExtractionConfig, TokenReductionConfig, ReductionLevel};
+    use kreuzberg::{ExtractionConfig, TokenReductionConfig};
 
     let config = ExtractionConfig {
         token_reduction: Some(TokenReductionConfig {
-            level: ReductionLevel::Moderate,
+            mode: "moderate".to_string(),
             preserve_markdown: true,
             preserve_code: true,
             language_hint: Some("eng".to_string()),
@@ -667,31 +545,16 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
     };
     ```
 
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      token_reduction: Kreuzberg::TokenReductionConfig.new(
-        level: Kreuzberg::ReductionLevel::MODERATE,
-        preserve_markdown: true,
-        preserve_code: true,
-        language_hint: 'eng'
-      )
-    )
-    ```
-
 ### Example
 
 === "Python"
 
     ```python
-    from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig, ReductionLevel
+    from kreuzberg import extract_file, ExtractionConfig, TokenReductionConfig
 
     config = ExtractionConfig(
         token_reduction=TokenReductionConfig(
-            level=ReductionLevel.MODERATE,
+            mode="moderate",
             preserve_markdown=True
         )
     )
@@ -710,11 +573,11 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
 === "TypeScript"
 
     ```typescript
-    import { extractFile, ExtractionConfig, TokenReductionConfig, ReductionLevel } from '@kreuzberg/sdk';
+    import { extractFile, ExtractionConfig, TokenReductionConfig } from '@kreuzberg/sdk';
 
     const config = new ExtractionConfig({
       tokenReduction: new TokenReductionConfig({
-        level: ReductionLevel.MODERATE,
+        mode: 'moderate',
         preserveMarkdown: true
       })
     });
@@ -732,11 +595,11 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
 === "Rust"
 
     ```rust
-    use kreuzberg::{extract_file, ExtractionConfig, TokenReductionConfig, ReductionLevel};
+    use kreuzberg::{extract_file, ExtractionConfig, TokenReductionConfig};
 
     let config = ExtractionConfig {
         token_reduction: Some(TokenReductionConfig {
-            level: ReductionLevel::Moderate,
+            mode: "moderate".to_string(),
             preserve_markdown: true,
             ..Default::default()
         }),
@@ -751,28 +614,6 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
     if let Some(reduced) = result.metadata.additional.get("token_count") {
         println!("Reduced tokens: {}", reduced);
     }
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      token_reduction: Kreuzberg::TokenReductionConfig.new(
-        level: Kreuzberg::ReductionLevel::MODERATE,
-        preserve_markdown: true
-      )
-    )
-
-    result = Kreuzberg.extract_file('verbose_document.pdf', config: config)
-
-    original_tokens = result.metadata['original_token_count']
-    reduced_tokens = result.metadata['token_count']
-    reduction_ratio = result.metadata['token_reduction_ratio']
-
-    puts "Reduced from #{original_tokens} to #{reduced_tokens} tokens"
-    puts "Reduction: #{(reduction_ratio * 100).round(1)}%"
     ```
 
 ## Keyword Extraction
@@ -846,22 +687,6 @@ Extract important keywords and phrases using YAKE or RAKE algorithms.
     };
     ```
 
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      keywords: Kreuzberg::KeywordConfig.new(
-        algorithm: Kreuzberg::KeywordAlgorithm::YAKE,
-        max_keywords: 10,
-        min_score: 0.3,
-        ngram_range: [1, 3],
-        language: 'en'
-      )
-    )
-    ```
-
 ### Example
 
 === "Python"
@@ -931,27 +756,6 @@ Extract important keywords and phrases using YAKE or RAKE algorithms.
     }
     ```
 
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      keywords: Kreuzberg::KeywordConfig.new(
-        algorithm: Kreuzberg::KeywordAlgorithm::YAKE,
-        max_keywords: 10,
-        min_score: 0.3
-      )
-    )
-
-    result = Kreuzberg.extract_file('research_paper.pdf', config: config)
-
-    keywords = result.metadata['keywords'] || []
-    keywords.each do |kw|
-      puts "#{kw['text']}: #{kw['score'].round(3)}"
-    end
-    ```
-
 ## Quality Processing
 
 Automatic text quality scoring that detects OCR artifacts, script content, navigation elements, and evaluates document structure.
@@ -999,16 +803,6 @@ Quality processing is enabled by default:
         enable_quality_processing: true,  // Default
         ..Default::default()
     };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      enable_quality_processing: true  # Default
-    )
     ```
 
 ### Quality Score
@@ -1078,24 +872,6 @@ The quality score ranges from 0.0 (lowest quality) to 1.0 (highest quality):
     }
     ```
 
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(enable_quality_processing: true)
-    result = Kreuzberg.extract_file('scanned_document.pdf', config: config)
-
-    quality_score = result.metadata['quality_score'] || 0.0
-
-    if quality_score < 0.5
-      puts "Warning: Low quality extraction (#{quality_score.round(2)})"
-      puts 'Consider re-scanning with higher DPI or adjusting OCR settings'
-    else
-      puts "Quality score: #{quality_score.round(2)}"
-    end
-    ```
-
 ## Combining Features
 
 Advanced features work seamlessly together:
@@ -1108,9 +884,9 @@ Advanced features work seamlessly together:
         ExtractionConfig,
         ChunkingConfig,
         EmbeddingConfig,
+        EmbeddingModelType,
         LanguageDetectionConfig,
         TokenReductionConfig,
-        ReductionLevel,
         KeywordConfig,
         KeywordAlgorithm
     )
@@ -1127,16 +903,16 @@ Advanced features work seamlessly together:
 
         # Reduce tokens before chunking
         token_reduction=TokenReductionConfig(
-            level=ReductionLevel.MODERATE,
+            mode="moderate",
             preserve_markdown=True
         ),
 
         # Chunk with embeddings
         chunking=ChunkingConfig(
-            max_characters=512,
-            overlap=50,
+            max_chars=512,
+            max_overlap=50,
             embedding=EmbeddingConfig(
-                model="balanced",
+                model=EmbeddingModelType.preset("balanced"),
                 normalize=True
             )
         ),
@@ -1153,7 +929,8 @@ Advanced features work seamlessly together:
     print(f"Quality: {result.metadata['quality_score']:.2f}")
     print(f"Languages: {result.detected_languages}")
     print(f"Keywords: {[kw['text'] for kw in result.metadata['keywords']]}")
-    print(f"Chunks: {len(result.chunks)} with {len(result.chunks[0].embedding)} dimensions")
+    if result.chunks and result.chunks[0].embedding:
+        print(f"Chunks: {len(result.chunks)} with {len(result.chunks[0].embedding)} dimensions")
     ```
 
 === "TypeScript"
@@ -1166,7 +943,6 @@ Advanced features work seamlessly together:
       EmbeddingConfig,
       LanguageDetectionConfig,
       TokenReductionConfig,
-      ReductionLevel,
       KeywordConfig,
       KeywordAlgorithm
     } from '@kreuzberg/sdk';
@@ -1180,13 +956,13 @@ Advanced features work seamlessly together:
       }),
 
       tokenReduction: new TokenReductionConfig({
-        level: ReductionLevel.MODERATE,
+        mode: 'moderate',
         preserveMarkdown: true
       }),
 
       chunking: new ChunkingConfig({
-        maxCharacters: 512,
-        overlap: 50,
+        maxChars: 512,
+        maxOverlap: 50,
         embedding: new EmbeddingConfig({
           model: 'balanced',
           normalize: true
@@ -1212,7 +988,7 @@ Advanced features work seamlessly together:
     ```rust
     use kreuzberg::{
         extract_file, ExtractionConfig, ChunkingConfig, EmbeddingConfig,
-        LanguageDetectionConfig, TokenReductionConfig, ReductionLevel,
+        LanguageDetectionConfig, TokenReductionConfig,
         KeywordConfig, KeywordAlgorithm
     };
 
@@ -1226,14 +1002,14 @@ Advanced features work seamlessly together:
         }),
 
         token_reduction: Some(TokenReductionConfig {
-            level: ReductionLevel::Moderate,
+            mode: "moderate".to_string(),
             preserve_markdown: true,
             ..Default::default()
         }),
 
         chunking: Some(ChunkingConfig {
-            max_characters: 512,
-            overlap: 50,
+            max_chars: 512,
+            max_overlap: 50,
             embedding: Some(EmbeddingConfig {
                 model: "balanced".to_string(),
                 normalize: true,
@@ -1257,50 +1033,10 @@ Advanced features work seamlessly together:
     println!("Languages: {:?}", result.detected_languages);
     println!("Keywords: {:?}", result.metadata.additional.get("keywords"));
     if let Some(chunks) = result.chunks {
-        println!("Chunks: {} with {} dimensions",
-            chunks.len(),
-            chunks[0].embedding.as_ref().unwrap().len()
-        );
+        if let Some(first_chunk) = chunks.first() {
+            if let Some(embedding) = &first_chunk.embedding {
+                println!("Chunks: {} with {} dimensions", chunks.len(), embedding.len());
+            }
+        }
     }
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      enable_quality_processing: true,
-
-      language_detection: Kreuzberg::LanguageDetectionConfig.new(
-        enabled: true,
-        detect_multiple: true
-      ),
-
-      token_reduction: Kreuzberg::TokenReductionConfig.new(
-        level: Kreuzberg::ReductionLevel::MODERATE,
-        preserve_markdown: true
-      ),
-
-      chunking: Kreuzberg::ChunkingConfig.new(
-        max_characters: 512,
-        overlap: 50,
-        embedding: Kreuzberg::EmbeddingConfig.new(
-          model: 'balanced',
-          normalize: true
-        )
-      ),
-
-      keywords: Kreuzberg::KeywordConfig.new(
-        algorithm: Kreuzberg::KeywordAlgorithm::YAKE,
-        max_keywords: 10
-      )
-    )
-
-    result = Kreuzberg.extract_file('document.pdf', config: config)
-
-    puts "Quality: #{result.metadata['quality_score'].round(2)}"
-    puts "Languages: #{result.detected_languages}"
-    puts "Keywords: #{result.metadata['keywords'].map { |k| k['text'] }}"
-    puts "Chunks: #{result.chunks.length} with #{result.chunks[0].embedding.length} dimensions"
     ```
