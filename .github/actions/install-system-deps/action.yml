@@ -34,12 +34,32 @@ runs:
         pandoc --version
         soffice --version
 
+    - name: Cache LibreOffice (Windows)
+      if: runner.os == 'Windows'
+      id: cache-libreoffice-windows
+      uses: actions/cache@v4
+      with:
+        path: C:\Program Files\LibreOffice
+        key: libreoffice-windows-${{ runner.os }}-v1
+
     - name: Install dependencies (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
         $ErrorActionPreference = "Stop"
-        choco install -y pandoc libreoffice --no-progress
+
+        # Check if LibreOffice is already cached
+        $libreofficeInstalled = Test-Path "C:\Program Files\LibreOffice\program\soffice.exe"
+
+        if (-not $libreofficeInstalled) {
+          Write-Host "Installing pandoc and LibreOffice from chocolatey..."
+          choco install -y pandoc libreoffice --no-progress
+        } else {
+          Write-Host "LibreOffice found in cache, skipping installation"
+          Write-Host "Installing pandoc only..."
+          choco install -y pandoc --no-progress
+        }
+
         Write-Output "C:\Program Files\Pandoc" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         Write-Output "C:\Program Files\LibreOffice\program" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         $env:PATH = "C:\Program Files\Pandoc;C:\Program Files\LibreOffice\program;" + $env:PATH

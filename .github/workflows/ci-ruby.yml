@@ -54,6 +54,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
+          path-type: inherit
           update: true
           install: >-
             base-devel
