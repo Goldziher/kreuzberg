@@ -107,6 +107,8 @@ jobs:
               if [ -f "$lib_dir/pdfium.dll.lib" ]; then
                 cp -f "$lib_dir/pdfium.dll.lib" "$lib_dir/pdfium.lib"
               fi
+              # Add DLL directory to PATH so Windows can find it at runtime
+              echo "$GITHUB_WORKSPACE/crates/kreuzberg-node" >> "$GITHUB_PATH"
               ;;
             macOS)
               lib_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.dylib"
