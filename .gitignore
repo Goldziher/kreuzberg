@@ -104,3 +104,7 @@ crates/kreuzberg-node/index.d.ts
 .fastembed_cache/
 */.fastembed_cache/
 results/
+
+# Docker test artifacts
+/tmp/kreuzberg-docker-test-results.json
+docker-logs/

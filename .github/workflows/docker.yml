@@ -5,16 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'Dockerfile'
-      - '.dockerignore'
-      - 'crates/**'
-      - 'scripts/test_docker.sh'
-      - '.github/workflows/docker.yml'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'Dockerfile'
+      - 'docker/**'
       - '.dockerignore'
       - 'crates/**'
       - 'scripts/test_docker.sh'
@@ -28,14 +19,21 @@ on:
         default: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test-docker:
-    name: Build and Test Docker Image
+    name: Build and Test Docker Image (${{ matrix.variant }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - core
+          - full
 
     steps:
       - name: Checkout repository
@@ -79,37 +77,55 @@ jobs:
 
       - name: Build Docker image
         run: |
-          echo "=== Building Docker image ==="
-          docker build --squash -t kreuzberg:test .
+          echo "=== Building Docker image (${{ matrix.variant }}) ==="
+          docker build -f docker/Dockerfile.${{ matrix.variant }} -t kreuzberg:${{ matrix.variant }} .
 
           echo "=== Docker image built successfully ==="
-          docker images | grep kreuzberg:test
+          docker images | grep kreuzberg:${{ matrix.variant }}
 
       - name: Test Docker image size
         run: |
-          size=$(docker images kreuzberg:test --format "{{.Size}}")
-          echo "Docker image size: $size"
+          size=$(docker images kreuzberg:${{ matrix.variant }} --format "{{.Size}}")
+          echo "Docker image size (${{ matrix.variant }}): $size"
 
-          # Extract numeric value (assuming format like "1.2GB" or "500MB")
-          size_mb=$(docker inspect kreuzberg:test --format='{{.Size}}' | awk '{print int($1/1024/1024)}')
+          # Extract numeric value
+          size_mb=$(docker inspect kreuzberg:${{ matrix.variant }} --format='{{.Size}}' | awk '{print int($1/1024/1024)}')
           echo "Image size in MB: $size_mb"
 
-          # Warn if image is larger than 2GB
-          if [ $size_mb -gt 2048 ]; then
-            echo "::warning::Docker image is larger than 2GB ($size_mb MB). Consider optimization."
+          # Warn if image is larger than expected (2.5GB for full, 1.5GB for core)
+          if [ "${{ matrix.variant }}" = "full" ] && [ $size_mb -gt 2560 ]; then
+            echo "::warning::Full image is larger than 2.5GB ($size_mb MB). Consider optimization."
+          elif [ "${{ matrix.variant }}" = "core" ] && [ $size_mb -gt 1536 ]; then
+            echo "::warning::Core image is larger than 1.5GB ($size_mb MB). Consider optimization."
           fi
 
       - name: Run comprehensive feature tests
         if: ${{ !inputs.skip_tests }}
         run: |
-          echo "=== Running Docker feature tests ==="
-          ./scripts/test_docker.sh --skip-build --image kreuzberg:test --verbose
+          echo "=== Running Docker feature tests (${{ matrix.variant }}) ==="
+          ./scripts/test_docker.sh --skip-build --image kreuzberg:${{ matrix.variant }} --variant ${{ matrix.variant }} --verbose
+
+      - name: Save Docker image as artifact
+        if: success()
+        run: |
+          echo "=== Saving Docker image as tar archive ==="
+          docker save kreuzberg:${{ matrix.variant }} | gzip > /tmp/kreuzberg-${{ matrix.variant }}.tar.gz
+          ls -lh /tmp/kreuzberg-${{ matrix.variant }}.tar.gz
+
+      - name: Upload Docker image artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ matrix.variant }}
+          path: /tmp/kreuzberg-${{ matrix.variant }}.tar.gz
+          retention-days: 7
+          compression-level: 0  # Already gzipped
 
       - name: Upload test results
         if: always() && !inputs.skip_tests
         uses: actions/upload-artifact@v4
         with:
-          name: docker-test-results
+          name: docker-test-results-${{ matrix.variant }}
           path: /tmp/kreuzberg-docker-test-results.json
           retention-days: 7
 
@@ -136,7 +152,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: docker-logs
+          name: docker-logs-${{ matrix.variant }}
           path: /tmp/docker-logs/
           retention-days: 7
 
@@ -149,7 +165,7 @@ jobs:
           docker ps -aq --filter "name=kreuzberg-test" | xargs -r docker rm -f || true
 
           # Remove test image
-          docker rmi kreuzberg:test || true
+          docker rmi kreuzberg:${{ matrix.variant }} || true
 
           # Clean up Docker system
           docker system prune -af --volumes || true
@@ -162,8 +178,8 @@ jobs:
         run: |
           echo "✅ Docker image built and tested successfully!"
           echo ""
-          echo "Image: kreuzberg:test"
-          echo "Tests: All passed"
+          echo "Variant: ${{ matrix.variant }}"
+          echo "Image: kreuzberg:${{ matrix.variant }}"
           echo ""
           if [ -f /tmp/kreuzberg-docker-test-results.json ]; then
             echo "Test Results:"

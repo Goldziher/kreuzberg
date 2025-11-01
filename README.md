@@ -243,17 +243,34 @@ claude mcp add kreuzberg uvx kreuzberg-mcp
 
 ### Docker
 
+Kreuzberg provides official Docker images with two variants:
+
+**Core** (~1.0-1.3GB): Production-ready with Tesseract OCR, Pandoc, modern Office formats
 ```bash
-docker run -p 8000:8000 goldziher/kreuzberg:latest
+docker pull goldziher/kreuzberg:v4-core
+docker run -p 8000:8000 goldziher/kreuzberg:v4-core
 ```
 
-All images include LibreOffice, Pandoc, and Tesseract:
-- `goldziher/kreuzberg:latest` – Core features
-- `goldziher/kreuzberg:latest-easyocr` – With EasyOCR
-- `goldziher/kreuzberg:latest-paddleocr` – With PaddleOCR
-- `goldziher/kreuzberg:latest-all` – All features
+**Full** (~1.5-2.1GB): Adds LibreOffice for legacy Office formats (.doc, .ppt)
+```bash
+docker pull goldziher/kreuzberg:v4-full
+docker run -p 8000:8000 goldziher/kreuzberg:v4-full
+```
 
-**[Docker Documentation](https://kreuzberg.dev/user-guide/docker/)**
+Each image supports three execution modes:
+
+```bash
+# API Server (default)
+docker run -p 8000:8000 goldziher/kreuzberg:v4-core
+
+# CLI Mode
+docker run -v $(pwd):/data goldziher/kreuzberg:v4-core extract /data/document.pdf
+
+# MCP Server
+docker run goldziher/kreuzberg:v4-core mcp
+```
+
+**[Docker Deployment Guide](https://kreuzberg.dev/guides/docker/)**
 
 ## Performance
 
