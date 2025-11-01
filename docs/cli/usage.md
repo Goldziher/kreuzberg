@@ -675,7 +675,7 @@ The server provides endpoints for:
 - `/cache/stats` - Cache statistics
 - `/cache/clear` - Clear cache
 
-See [Server Documentation](../concepts/server.md) for full API details.
+See [API Server Guide](../guides/api-server.md) for full API details.
 
 ### Start MCP Server
 
@@ -716,7 +716,7 @@ The MCP server provides tools for AI agents:
 - `extract_bytes` - Extract text from base64-encoded bytes
 - `batch_extract` - Extract from multiple files
 
-See [Server Documentation](../concepts/server.md) for MCP integration details.
+See [API Server Guide](../guides/api-server.md) for MCP integration details.
 
 ## Cache Management
 
@@ -776,7 +776,7 @@ kreuzberg version --format json
 
 ## Next Steps
 
-- [Server Documentation](../concepts/server.md) - API and MCP server setup
-- [Core Concepts](../concepts/architecture.md) - Understand Kreuzberg architecture
-- [Plugin Development](../plugins/overview.md) - Extend Kreuzberg functionality
-- [API Reference](../api-reference/python/) - Programmatic access
+- [API Server Guide](../guides/api-server.md) - API and MCP server setup
+- [Advanced Features](../guides/advanced.md) - Advanced Kreuzberg features
+- [Plugin Development](../guides/plugins.md) - Extend Kreuzberg functionality
+- [API Reference](../reference/api-python.md) - Programmatic access

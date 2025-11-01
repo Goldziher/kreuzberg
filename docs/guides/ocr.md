@@ -4,6 +4,43 @@ Extract text from images and scanned PDFs using OCR.
 
 ## When OCR is Needed
 
+```mermaid
+flowchart TD
+    Start[Document File] --> FileType{File Type}
+
+    FileType -->|Image| ImageOCR[Always Use OCR]
+    FileType -->|PDF| CheckPDF{Check PDF}
+    FileType -->|Other| NoOCR[No OCR Needed]
+
+    CheckPDF --> ForceOCR{force_ocr=True?}
+    ForceOCR -->|Yes| AllPagesOCR[OCR All Pages]
+    ForceOCR -->|No| TextLayer{Has Text Layer?}
+
+    TextLayer -->|No Text| ScannedOCR[OCR Required]
+    TextLayer -->|Some Text| HybridPDF[Hybrid PDF]
+    TextLayer -->|All Text| NativeExtract[Native Extraction]
+
+    HybridPDF --> PageByPage[Process Pages]
+    PageByPage --> CheckPage{Page Has Text?}
+    CheckPage -->|No| PageOCR[OCR This Page]
+    CheckPage -->|Yes| PageNative[Native Extraction]
+
+    ImageOCR --> OCRBackend[OCR Backend Configured?]
+    ScannedOCR --> OCRBackend
+    AllPagesOCR --> OCRBackend
+    PageOCR --> OCRBackend
+
+    OCRBackend -->|Yes| ProcessOCR[Process with OCR]
+    OCRBackend -->|No| Error[MissingDependencyError]
+
+    style ImageOCR fill:#FFB6C1
+    style ScannedOCR fill:#FFB6C1
+    style AllPagesOCR fill:#FFB6C1
+    style PageOCR fill:#FFB6C1
+    style ProcessOCR fill:#90EE90
+    style Error fill:#FF6B6B
+```
+
 Kreuzberg automatically determines when OCR is required:
 
 - **Images** (`.png`, `.jpg`, `.tiff`, `.bmp`, `.webp`) - Always requires OCR
@@ -15,6 +52,27 @@ Kreuzberg automatically determines when OCR is required:
     You don't need to manually enable OCR for images. Kreuzberg detects the file type and applies OCR automatically when an OCR backend is configured.
 
 ## OCR Backend Comparison
+
+```mermaid
+flowchart TD
+    Start[Choose OCR Backend] --> Platform{Platform Support}
+    Platform -->|All Platforms| Tesseract
+    Platform -->|Python Only| PythonBackends[EasyOCR/PaddleOCR]
+
+    Tesseract --> TessPriority{Priority}
+    TessPriority -->|Speed| TessSpeed[Tesseract: Fast]
+    TessPriority -->|Accuracy| TessAccuracy[Tesseract: Good]
+    TessPriority -->|Production| TessProd[Tesseract: Best Choice]
+
+    PythonBackends --> PyPriority{Priority}
+    PyPriority -->|Highest Accuracy| Easy[EasyOCR: Excellent Accuracy]
+    PyPriority -->|Speed + Accuracy| Paddle[PaddleOCR: Very Fast + Excellent]
+    PyPriority -->|GPU Available| GPU[EasyOCR/PaddleOCR with GPU]
+
+    style Tesseract fill:#90EE90
+    style Easy fill:#FFD700
+    style Paddle fill:#87CEEB
+```
 
 Kreuzberg supports three OCR backends with different strengths:
 
@@ -532,5 +590,5 @@ kreuzberg extract scanned.pdf --ocr --dpi 600
 
 - [Configuration](configuration.md) - All configuration options
 - [Advanced Features](advanced.md) - Chunking, language detection
-- [Troubleshooting](troubleshooting.md) - Common issues and solutions
+- [Advanced Features](advanced.md) - Advanced Kreuzberg features
 - [Extraction Basics](extraction.md) - Core extraction API

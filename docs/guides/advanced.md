@@ -4,6 +4,43 @@ Kreuzberg provides text processing, analysis, and optimization features beyond b
 
 ## Text Chunking
 
+```mermaid
+flowchart TD
+    Start[Extracted Text] --> Detect{Detect Format}
+
+    Detect -->|Markdown| MarkdownChunker[Markdown Chunker]
+    Detect -->|Plain Text| TextChunker[Text Chunker]
+
+    MarkdownChunker --> MDStrategy[Structure-Aware Splitting]
+    MDStrategy --> MDPreserve[Preserve:<br/>- Headings<br/>- Lists<br/>- Code blocks<br/>- Formatting]
+
+    TextChunker --> TextStrategy[Generic Text Splitting]
+    TextStrategy --> TextBoundaries[Smart Boundaries:<br/>- Whitespace<br/>- Punctuation<br/>- Sentence breaks]
+
+    MDPreserve --> CreateChunks[Create Chunks]
+    TextBoundaries --> CreateChunks
+
+    CreateChunks --> Config[Apply ChunkingConfig]
+    Config --> MaxChars[max_chars: Max size]
+    Config --> Overlap[max_overlap: Overlap]
+
+    MaxChars --> FinalChunks[Final Chunks]
+    Overlap --> FinalChunks
+
+    FinalChunks --> Metadata[Add Metadata:<br/>- char_start/end<br/>- chunk_index<br/>- total_chunks<br/>- token_count]
+
+    Metadata --> Embeddings{Generate<br/>Embeddings?}
+    Embeddings -->|Yes| AddEmbeddings[Add Embedding Vectors]
+    Embeddings -->|No| Return[Return Chunks]
+
+    AddEmbeddings --> Return
+
+    style MarkdownChunker fill:#FFD700
+    style TextChunker fill:#87CEEB
+    style CreateChunks fill:#90EE90
+    style AddEmbeddings fill:#FFB6C1
+```
+
 Split extracted text into chunks for downstream processing like RAG (Retrieval-Augmented Generation) systems, vector databases, or LLM context windows.
 
 ### Overview
@@ -168,6 +205,42 @@ Each chunk includes:
     ```
 
 ## Language Detection
+
+```mermaid
+flowchart TD
+    Start[Extracted Text] --> Config{detect_multiple?}
+
+    Config -->|false| SingleMode[Single Language Mode]
+    Config -->|true| MultiMode[Multiple Languages Mode]
+
+    SingleMode --> FullText[Analyze Full Text]
+    FullText --> DetectSingle[Detect Dominant Language]
+    DetectSingle --> CheckConfSingle{Confidence ≥<br/>min_confidence?}
+
+    CheckConfSingle -->|Yes| ReturnSingle[Return Language]
+    CheckConfSingle -->|No| EmptySingle[Return Empty]
+
+    MultiMode --> ChunkText[Split into 200-char Chunks]
+    ChunkText --> AnalyzeChunks[Analyze Each Chunk]
+    AnalyzeChunks --> DetectPerChunk[Detect Language per Chunk]
+
+    DetectPerChunk --> FilterConfidence[Filter by min_confidence]
+    FilterConfidence --> CountFrequency[Count Language Frequency]
+    CountFrequency --> SortByFrequency[Sort by Frequency]
+    SortByFrequency --> ReturnMultiple[Return Language List]
+
+    ReturnSingle --> Result[detected_languages]
+    EmptySingle --> Result
+    ReturnMultiple --> Result
+
+    Result --> ISOCodes[ISO 639-3 Codes:<br/>eng, spa, fra, deu, cmn,<br/>jpn, ara, rus, etc.]
+
+    style SingleMode fill:#87CEEB
+    style MultiMode fill:#FFD700
+    style ReturnSingle fill:#90EE90
+    style ReturnMultiple fill:#90EE90
+    style ISOCodes fill:#FFB6C1
+```
 
 Detect languages in extracted text using the fast `whatlang` library. Supports 60+ languages with ISO 639-3 codes.
 

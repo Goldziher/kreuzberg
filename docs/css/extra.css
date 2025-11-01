@@ -1,56 +1,451 @@
-/* Custom styles for Kreuzberg documentation */
+/* ============================================================================
+   Kreuzberg Documentation - Custom Styles
+   Professional, crisp styling for technical documentation
+   ============================================================================ */
+
+/* ============================================================================
+   Color Schemes
+   ============================================================================ */
+
+:root {
+	/* Light mode custom colors */
+	--kreuzberg-light-bg: #ffffff;
+	--kreuzberg-light-surface: #fafafa;
+	--kreuzberg-light-text: #1a1a1a;
+	--kreuzberg-light-text-secondary: #4a4a4a;
+	--kreuzberg-light-border: #e0e0e0;
+	--kreuzberg-light-code-bg: #f5f5f5;
+	--kreuzberg-light-shadow: rgba(0, 0, 0, 0.08);
+
+	/* Dark mode custom colors */
+	--kreuzberg-dark-bg: #0d1117;
+	--kreuzberg-dark-surface: #161b22;
+	--kreuzberg-dark-text: #e6edf3;
+	--kreuzberg-dark-text-secondary: #9198a1;
+	--kreuzberg-dark-border: #30363d;
+	--kreuzberg-dark-code-bg: #0d1117;
+	--kreuzberg-dark-shadow: rgba(0, 0, 0, 0.3);
+}
 
 [data-md-color-scheme="default"] {
-	--md-default-bg-color: #f4f4f4; /* Softer light background */
-	--md-default-fg-color: #212121; /* Keep text dark for contrast */
+	--md-default-bg-color: var(--kreuzberg-light-bg);
+	--md-default-fg-color: var(--kreuzberg-light-text);
+	--md-code-bg-color: var(--kreuzberg-light-code-bg);
+	--md-code-fg-color: var(--kreuzberg-light-text);
+	--md-typeset-a-color: #7c3aed;
+	--md-typeset-color: var(--kreuzberg-light-text);
+	--md-typeset-table-color: var(--kreuzberg-light-text);
 }
 
 [data-md-color-scheme="slate"] {
-	--md-default-bg-color: #121212; /* Darker background */
-	--md-default-fg-color: #e0e0e0; /* Light text for good contrast */
-	--md-accent-fg-color: #ffcc00; /* Accent in yellow/amber for contrast */
-	--md-code-bg-color: #1e1e1e; /* Dark code block background */
+	--md-default-bg-color: var(--kreuzberg-dark-bg);
+	--md-default-fg-color: var(--kreuzberg-dark-text);
+	--md-code-bg-color: var(--kreuzberg-dark-code-bg);
+	--md-code-fg-color: var(--kreuzberg-dark-text);
+	--md-typeset-a-color: #a78bfa;
+	--md-typeset-color: var(--kreuzberg-dark-text);
+	--md-typeset-table-color: var(--kreuzberg-dark-text);
 }
 
-/* Improve code readability */
-.codehilite pre,
-.highlight pre {
-	padding: 1em;
+/* ============================================================================
+   Typography
+   ============================================================================ */
+
+.md-typeset {
+	font-size: 0.9rem;
+	line-height: 1.7;
+	letter-spacing: 0.01em;
+	color: var(--md-typeset-color);
+}
+
+.md-typeset h1 {
+	font-size: 2.25rem;
+	font-weight: 700;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	margin-bottom: 1.5rem;
+}
+
+.md-typeset h2 {
+	font-size: 1.75rem;
+	font-weight: 600;
+	line-height: 1.3;
+	letter-spacing: -0.01em;
+	margin-top: 2.5rem;
+	margin-bottom: 1rem;
+}
+
+.md-typeset h3 {
+	font-size: 1.375rem;
+	font-weight: 600;
+	line-height: 1.4;
+	margin-top: 2rem;
+	margin-bottom: 0.75rem;
+}
+
+.md-typeset h4 {
+	font-size: 1.125rem;
+	font-weight: 600;
+	line-height: 1.5;
+	margin-top: 1.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.md-typeset p {
+	margin-bottom: 1rem;
+}
+
+.md-typeset strong {
+	font-weight: 600;
+	color: var(--md-typeset-color);
+}
+
+/* ============================================================================
+   Code Blocks
+   ============================================================================ */
+
+.md-typeset code {
+	padding: 0.15em 0.4em;
+	font-size: 0.875em;
+	font-weight: 500;
 	border-radius: 4px;
+	background-color: var(--md-code-bg-color);
+	color: var(--md-code-fg-color);
+	border: 1px solid rgba(128, 128, 128, 0.1);
 }
 
-/* Make API method names stand out */
-h3 code {
-	font-weight: bold;
+.md-typeset pre {
+	border-radius: 8px;
+	padding: 1.25rem;
+	margin: 1.5rem 0;
+	line-height: 1.6;
+	font-size: 0.875rem;
+	border: 1px solid var(--kreuzberg-light-border);
+	box-shadow: 0 2px 8px var(--kreuzberg-light-shadow);
 }
 
-/* Custom admonition styles */
-.md-typeset .admonition.tip,
-.md-typeset details.tip {
-	border-color: var(--md-accent-fg-color);
+[data-md-color-scheme="slate"] .md-typeset pre {
+	border-color: var(--kreuzberg-dark-border);
+	box-shadow: 0 2px 8px var(--kreuzberg-dark-shadow);
 }
 
-.md-typeset .tip > .admonition-title,
-.md-typeset .tip > summary {
-	background-color: var(--md-accent-fg-color--transparent);
+.md-typeset pre code {
+	background-color: transparent;
+	padding: 0;
+	border: none;
+	font-size: 0.875rem;
+	font-weight: 400;
 }
 
-.md-typeset .tip > .admonition-title::before,
-.md-typeset .tip > summary::before {
-	background-color: var(--md-accent-fg-color);
+.md-typeset .highlight {
+	border-radius: 8px;
+	overflow: hidden;
 }
 
-/* Custom footer styling */
+/* Code block copy button */
+.md-clipboard {
+	border-radius: 4px;
+	transition: background-color 0.2s ease;
+}
+
+.md-clipboard:hover {
+	background-color: rgba(128, 128, 128, 0.15);
+}
+
+/* ============================================================================
+   Tables
+   ============================================================================ */
+
+.md-typeset table:not([class]) {
+	border: 1px solid var(--kreuzberg-light-border);
+	border-radius: 8px;
+	border-collapse: separate;
+	border-spacing: 0;
+	overflow: hidden;
+	box-shadow: 0 2px 8px var(--kreuzberg-light-shadow);
+	margin: 1.5rem 0;
+	width: 100%;
+	font-size: 0.875rem;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) {
+	border-color: var(--kreuzberg-dark-border);
+	box-shadow: 0 2px 8px var(--kreuzberg-dark-shadow);
+}
+
+.md-typeset table:not([class]) th {
+	background-color: var(--kreuzberg-light-surface);
+	font-weight: 600;
+	text-align: left;
+	padding: 1rem;
+	border-bottom: 2px solid var(--kreuzberg-light-border);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+	background-color: var(--kreuzberg-dark-surface);
+	border-bottom-color: var(--kreuzberg-dark-border);
+}
+
+.md-typeset table:not([class]) td {
+	padding: 0.875rem 1rem;
+	border-bottom: 1px solid var(--kreuzberg-light-border);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) td {
+	border-bottom-color: var(--kreuzberg-dark-border);
+}
+
+.md-typeset table:not([class]) tr:last-child td {
+	border-bottom: none;
+}
+
+.md-typeset table:not([class]) tr:hover {
+	background-color: rgba(124, 58, 237, 0.05);
+}
+
+/* ============================================================================
+   Admonitions
+   ============================================================================ */
+
+.md-typeset .admonition,
+.md-typeset details {
+	border-radius: 8px;
+	border-left-width: 4px;
+	box-shadow: 0 2px 8px var(--kreuzberg-light-shadow);
+	margin: 1.5rem 0;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition,
+[data-md-color-scheme="slate"] .md-typeset details {
+	box-shadow: 0 2px 8px var(--kreuzberg-dark-shadow);
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+	font-weight: 600;
+	letter-spacing: 0.01em;
+}
+
+/* ============================================================================
+   Links
+   ============================================================================ */
+
+.md-typeset a {
+	text-decoration: none;
+	font-weight: 500;
+	transition: all 0.2s ease;
+	border-bottom: 1px solid transparent;
+}
+
+.md-typeset a:hover {
+	border-bottom-color: currentColor;
+	opacity: 0.85;
+}
+
+.md-typeset a code {
+	color: var(--md-typeset-a-color);
+}
+
+/* ============================================================================
+   Navigation
+   ============================================================================ */
+
+.md-header {
+	box-shadow: 0 2px 8px var(--kreuzberg-light-shadow);
+}
+
+[data-md-color-scheme="slate"] .md-header {
+	box-shadow: 0 2px 8px var(--kreuzberg-dark-shadow);
+}
+
+.md-nav__link--active {
+	font-weight: 600;
+}
+
+.md-nav__link:hover {
+	opacity: 0.85;
+}
+
+/* Breadcrumbs */
+.md-path {
+	font-size: 0.8rem;
+	opacity: 0.7;
+}
+
+/* ============================================================================
+   Content Tabs
+   ============================================================================ */
+
+.md-typeset .tabbed-set {
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: 0 2px 8px var(--kreuzberg-light-shadow);
+	margin: 1.5rem 0;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .tabbed-set {
+	box-shadow: 0 2px 8px var(--kreuzberg-dark-shadow);
+}
+
+.md-typeset .tabbed-labels > label {
+	font-weight: 600;
+	font-size: 0.875rem;
+	letter-spacing: 0.01em;
+	padding: 0.875rem 1.25rem;
+	transition: all 0.2s ease;
+}
+
+.md-typeset .tabbed-labels > label:hover {
+	background-color: rgba(124, 58, 237, 0.08);
+}
+
+/* ============================================================================
+   Search
+   ============================================================================ */
+
+.md-search__input {
+	border-radius: 6px;
+	font-size: 0.9rem;
+}
+
+.md-search__input::placeholder {
+	opacity: 0.6;
+}
+
+/* ============================================================================
+   Footer
+   ============================================================================ */
+
 .md-footer-meta {
-	background-color: var(--md-primary-fg-color--dark);
+	background-color: var(--kreuzberg-light-surface);
 }
 
-/* Logo sizing */
+[data-md-color-scheme="slate"] .md-footer-meta {
+	background-color: var(--kreuzberg-dark-surface);
+}
+
+/* ============================================================================
+   API Documentation
+   ============================================================================ */
+
+/* Make API method names more prominent */
+.md-typeset h3 code,
+.md-typeset h4 code {
+	font-weight: 600;
+	font-size: 1em;
+	padding: 0.2em 0.5em;
+}
+
+/* API signatures */
+.doc-signature {
+	background-color: var(--md-code-bg-color);
+	border-radius: 6px;
+	padding: 0.75rem 1rem;
+	margin: 0.5rem 0;
+	font-family: var(--md-code-font-family);
+	font-size: 0.875rem;
+	border: 1px solid var(--kreuzberg-light-border);
+}
+
+[data-md-color-scheme="slate"] .doc-signature {
+	border-color: var(--kreuzberg-dark-border);
+}
+
+/* ============================================================================
+   Logo
+   ============================================================================ */
+
 .md-header__button.md-logo img {
 	height: 1.6rem;
+	width: auto;
 }
 
-/* Custom link color on hover */
-a:hover {
-	color: var(--md-accent-fg-color);
+/* ============================================================================
+   Announcement Bar
+   ============================================================================ */
+
+.md-announce {
+	background-color: rgba(124, 58, 237, 0.1);
+	font-weight: 500;
+}
+
+/* ============================================================================
+   Spacing & Layout
+   ============================================================================ */
+
+.md-content {
+	max-width: none;
+}
+
+.md-content__inner {
+	padding-top: 2rem;
+	padding-bottom: 2rem;
+}
+
+/* Better spacing for lists */
+.md-typeset ul,
+.md-typeset ol {
+	margin: 1rem 0;
+}
+
+.md-typeset li {
+	margin: 0.5rem 0;
+}
+
+.md-typeset li p {
+	margin: 0.25rem 0;
+}
+
+/* ============================================================================
+   Responsive Design
+   ============================================================================ */
+
+@media screen and (max-width: 76.1875em) {
+	.md-typeset h1 {
+		font-size: 1.875rem;
+	}
+
+	.md-typeset h2 {
+		font-size: 1.5rem;
+	}
+
+	.md-typeset h3 {
+		font-size: 1.25rem;
+	}
+}
+
+/* ============================================================================
+   Print Styles
+   ============================================================================ */
+
+@media print {
+	.md-typeset {
+		font-size: 11pt;
+		line-height: 1.6;
+	}
+
+	.md-typeset code,
+	.md-typeset pre {
+		border: 1px solid #ccc;
+	}
+}
+
+/* ============================================================================
+   Accessibility
+   ============================================================================ */
+
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+	outline: 2px solid var(--md-accent-fg-color);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+/* Improve contrast for links in dark mode */
+[data-md-color-scheme="slate"] .md-typeset a {
+	color: #a78bfa;
+}
+
+[data-md-color-scheme="slate"] .md-typeset a:hover {
+	color: #c4b5fd;
 }

@@ -686,7 +686,7 @@ Kreuzberg extracts format-specific metadata for:
 - **XML**: element count, unique elements
 - **Text/Markdown**: word count, line count, headers, links
 
-See [Extractors Documentation](../concepts/extractors.md) for complete metadata reference.
+See [Types Reference](../reference/types.md) for complete metadata reference.
 
 ## Working with Tables
 

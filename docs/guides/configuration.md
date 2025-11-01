@@ -1,5 +1,29 @@
 # Configuration
 
+```mermaid
+graph TD
+    ExtractionConfig[ExtractionConfig<br/>Main Configuration]
+
+    ExtractionConfig --> OCR[OcrConfig<br/>OCR Backend Settings]
+    ExtractionConfig --> PDF[PdfConfig<br/>PDF Options]
+    ExtractionConfig --> Images[ImageExtractionConfig<br/>Image Settings]
+    ExtractionConfig --> Chunking[ChunkingConfig<br/>Text Chunking]
+    ExtractionConfig --> TokenRed[TokenReductionConfig<br/>Token Optimization]
+    ExtractionConfig --> LangDet[LanguageDetectionConfig<br/>Language Detection]
+    ExtractionConfig --> PostProc[PostProcessorConfig<br/>Post-Processing]
+
+    OCR --> Tesseract[TesseractConfig<br/>Tesseract Options]
+    Tesseract --> ImgPreproc[ImagePreprocessingConfig<br/>Image Enhancement]
+
+    Chunking --> Embedding[EmbeddingConfig<br/>Vector Embeddings]
+    Embedding --> Model[EmbeddingModelType<br/>Model Selection]
+
+    style ExtractionConfig fill:#4CAF50,color:#fff
+    style OCR fill:#87CEEB
+    style Chunking fill:#FFD700
+    style Embedding fill:#FFB6C1
+```
+
 Kreuzberg's behavior is controlled through configuration objects. All settings are optional with sensible defaults, allowing you to configure only what you need.
 
 ## Configuration Methods
@@ -65,6 +89,32 @@ Kreuzberg supports four ways to configure extraction:
 
 ### Configuration Discovery
 
+```mermaid
+flowchart TD
+    Start[ExtractionConfig.discover] --> Current{Check Current Directory}
+
+    Current -->|Found| LoadCurrent[Load ./kreuzberg.*]
+    Current -->|Not Found| User{Check User Config}
+
+    User -->|Found| LoadUser[Load ~/.config/kreuzberg/config.*]
+    User -->|Not Found| System{Check System Config}
+
+    System -->|Found| LoadSystem[Load /etc/kreuzberg/config.*]
+    System -->|Not Found| Default[Use Default Config]
+
+    LoadCurrent --> Merge[Merge with Defaults]
+    LoadUser --> Merge
+    LoadSystem --> Merge
+    Default --> Return[Return Config]
+
+    Merge --> Return
+
+    style LoadCurrent fill:#90EE90
+    style LoadUser fill:#87CEEB
+    style LoadSystem fill:#FFD700
+    style Default fill:#FFB6C1
+```
+
 Kreuzberg automatically discovers configuration files in the following locations (in order):
 
 1. Current directory: `./kreuzberg.{toml,yaml,yml,json}`
@@ -122,6 +172,7 @@ The main configuration object controlling extraction behavior.
 | `chunking` | `ChunkingConfig?` | `None` | Text chunking configuration |
 | `token_reduction` | `TokenReductionConfig?` | `None` | Token reduction configuration |
 | `language_detection` | `LanguageDetectionConfig?` | `None` | Language detection configuration |
+| `keywords` | `KeywordConfig?` | `None` | Keyword extraction configuration (requires `keywords-yake` or `keywords-rake` feature flag) |
 | `postprocessor` | `PostProcessorConfig?` | `None` | Post-processing pipeline configuration |
 
 ### Basic Example
@@ -556,11 +607,11 @@ Configuration for extracting images from documents.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `extract_images` | `bool` | `true` | Extract images from documents |
-| `target_dpi` | `int` | `150` | Target DPI for extracted images |
+| `target_dpi` | `int` | `300` | Target DPI for extracted images |
 | `max_image_dimension` | `int` | `4096` | Maximum image dimension (width or height) in pixels |
 | `auto_adjust_dpi` | `bool` | `true` | Automatically adjust DPI based on image size |
 | `min_dpi` | `int` | `72` | Minimum DPI when auto-adjusting |
-| `max_dpi` | `int` | `300` | Maximum DPI when auto-adjusting |
+| `max_dpi` | `int` | `600` | Maximum DPI when auto-adjusting |
 
 ### Example
 

@@ -1,5 +1,29 @@
 # Extraction Basics
 
+```mermaid
+flowchart LR
+    Input[Input] --> FileOrBytes{File or Bytes?}
+    FileOrBytes -->|File Path| FileFunctions[File Functions]
+    FileOrBytes -->|In-Memory Data| BytesFunctions[Bytes Functions]
+
+    FileFunctions --> SingleOrBatch{Single or Batch?}
+    BytesFunctions --> SingleOrBatch
+
+    SingleOrBatch -->|Single| SingleMode[Single Extraction]
+    SingleOrBatch -->|Multiple| BatchMode[Batch Processing]
+
+    SingleMode --> SyncAsync{Sync or Async?}
+    BatchMode --> SyncAsync
+
+    SyncAsync -->|Sync| SyncFuncs[extract_file_sync<br/>extract_bytes_sync<br/>batch_extract_files_sync<br/>batch_extract_bytes_sync]
+    SyncAsync -->|Async| AsyncFuncs[extract_file<br/>extract_bytes<br/>batch_extract_files<br/>batch_extract_bytes]
+
+    style FileFunctions fill:#87CEEB
+    style BytesFunctions fill:#FFD700
+    style SyncFuncs fill:#90EE90
+    style AsyncFuncs fill:#FFB6C1
+```
+
 Kreuzberg provides 8 core extraction functions organized into 4 categories: file extraction, bytes extraction, batch file extraction, and batch bytes extraction. Each has both sync and async variants.
 
 ## Extract from Files
@@ -108,6 +132,33 @@ Extract text, tables, and metadata from a file on disk.
     result = Kreuzberg.extract_file('document.pdf')
     puts result.content
     ```
+
+```mermaid
+flowchart TD
+    Start[Choose Sync or Async] --> Context{Already in<br/>Async Context?}
+
+    Context -->|Yes| UseAsync[Use Async Variants]
+    Context -->|No| CheckUse{Use Case}
+
+    CheckUse -->|Simple Script| UseSyncSimple[Use Sync<br/>Simpler, same speed]
+    CheckUse -->|Multiple Files| CheckConcurrency{Concurrent<br/>Processing?}
+    CheckUse -->|Single File| UseSyncSingle[Use Sync<br/>Easier to read]
+
+    CheckConcurrency -->|Yes| UseAsyncConcurrent[Use Async<br/>Better concurrency]
+    CheckConcurrency -->|No| UseSyncBatch[Use Sync<br/>Adequate]
+
+    UseAsync --> AsyncFunctions[extract_file<br/>extract_bytes<br/>batch_extract_files<br/>batch_extract_bytes]
+    UseSyncSimple --> SyncFunctions[extract_file_sync<br/>extract_bytes_sync<br/>batch_extract_files_sync<br/>batch_extract_bytes_sync]
+    UseSyncSingle --> SyncFunctions
+    UseAsyncConcurrent --> AsyncFunctions
+    UseSyncBatch --> SyncFunctions
+
+    style UseAsync fill:#FFB6C1
+    style UseAsyncConcurrent fill:#FFB6C1
+    style UseSyncSimple fill:#90EE90
+    style UseSyncSingle fill:#90EE90
+    style UseSyncBatch fill:#90EE90
+```
 
 !!! tip "When to Use Async"
     Use async variants when you're already in an async context or processing multiple files concurrently. For simple scripts, sync variants are simpler and just as fast.
@@ -435,6 +486,39 @@ Process multiple files concurrently for better performance.
         puts "Document #{i+1}: #{result.content.length} characters"
     end
     ```
+
+```mermaid
+flowchart TD
+    Start[Multiple Files to Process] --> Method{Processing Method}
+
+    Method -->|Sequential| Sequential[Process One by One]
+    Method -->|Batch| Batch[Batch Processing]
+
+    Sequential --> Seq1[File 1: 1.0s]
+    Seq1 --> Seq2[File 2: 1.0s]
+    Seq2 --> Seq3[File 3: 1.0s]
+    Seq3 --> Seq4[File 4: 1.0s]
+    Seq4 --> SeqTotal[Total: 4.0s]
+
+    Batch --> Parallel[Automatic Parallelization]
+    Parallel --> Par1[File 1: 1.0s]
+    Parallel --> Par2[File 2: 1.0s]
+    Parallel --> Par3[File 3: 1.0s]
+    Parallel --> Par4[File 4: 1.0s]
+
+    Par1 --> ParTotal[Total: ~1.2s]
+    Par2 --> ParTotal
+    Par3 --> ParTotal
+    Par4 --> ParTotal
+
+    SeqTotal --> Result[Sequential: Slow]
+    ParTotal --> ResultFast[Batch: 2-5x Faster]
+
+    style Sequential fill:#FFB6C1
+    style Batch fill:#90EE90
+    style SeqTotal fill:#FF6B6B
+    style ResultFast fill:#4CAF50
+```
 
 !!! tip "Performance"
     Batch processing provides automatic parallelization. For large sets of files, this can be 2-5x faster than processing files sequentially.

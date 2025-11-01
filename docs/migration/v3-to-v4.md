@@ -653,158 +653,27 @@ KreuzbergError (base)
 
 ### Removed Features
 
-#### GMFT (Give Me Formatted Tables) - Removed
-
-**What it was in v3:**
-GMFT was a vision-based table extraction feature using the TATR (Table Transformer) deep learning model. It provided sophisticated table extraction with:
-
-- Vision-based table detection using transformer models
-- Complex table parsing with multi-level headers
-- Output as polars DataFrames and PIL Images
-- Configuration via `GMFTConfig` with fine-grained control
-- Optional dependency: `pip install "kreuzberg[gmft]"`
-
-**What replaces it in v4:**
-Kreuzberg v4 includes **native Tesseract-based table detection** which is simpler but faster:
+#### GMFT (Give Me Formatted Tables)
+v3's vision-based table extraction using TATR models. Replaced with Tesseract OCR table detection:
 
 ```python
-# v4 - Table extraction via Tesseract
-from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig
-
+# v4 - Tesseract table detection
 config = ExtractionConfig(
     ocr=OcrConfig(
-        backend="tesseract",
-        language="eng",
-        tesseract_config=TesseractConfig(
-            enable_table_detection=True,
-            table_min_confidence=50.0,
-            table_column_threshold=10,
-            table_row_threshold_ratio=0.5,
-        ),
-    ),
+        tesseract_config=TesseractConfig(enable_table_detection=True)
+    )
 )
-
-result = extract_file("document.pdf", config=config)
-
-# Access extracted tables
-for table in result.tables:
-    print(table.markdown)  # Markdown representation
-    print(table.cells)     # 2D list of cells
-    print(table.page_number)  # Source page
-```
-
-**Key differences:**
-- v4 table detection is OCR-based (requires scanned/image-based documents)
-- Simpler output format: no DataFrames or PIL Images
-- Much faster but less sophisticated than GMFT's vision models
-- Built-in (no extra dependencies needed)
-
-**For users requiring advanced table extraction:**
-Kreuzberg v4 focuses on fast, accurate document extraction. For specialized table extraction with vision models, consider:
-
-- Using v3.x (maintenance mode until June 2025)
-- Using specialized table extraction libraries alongside Kreuzberg
-- Contributing a vision-based table extraction plugin to v4
-
-#### Entity Extraction (spaCy) - Removed
-
-**What it was:**
-```python
-# v3 - spaCy entity extraction
-config = ExtractionConfig(
-    extract_entities=True,
-    spacy_entity_extraction_config=SpacyEntityExtractionConfig(
-        language_models={"en": "en_core_web_sm"},
-    ),
-)
-
 result = extract_file("doc.pdf", config=config)
-# result.entities -> List of Entity objects (PERSON, ORG, DATE, etc.)
+# result.tables -> list[ExtractedTable] with .cells and .markdown
 ```
 
-**Migration:**
-Use external NER libraries in a postprocessor:
+#### Entity Extraction, Keyword Extraction, Document Classification
+Removed. Use external libraries (spaCy, KeyBERT, etc.) with postprocessors if needed.
 
-```python
-# v4 - Add entity extraction via postprocessor
-import spacy
-from kreuzberg import ExtractionResult
-
-nlp = spacy.load("en_core_web_sm")
-
-class EntityExtractorPostProcessor:
-    def name(self) -> str:
-        return "entity_extractor"
-
-    def process(self, result: ExtractionResult) -> ExtractionResult:
-        doc = nlp(result.content)
-        entities = [(ent.text, ent.label_) for ent in doc.ents]
-        # Add to result.metadata or custom field
-        return result
-
-# Register and use
-from kreuzberg import register_postprocessor
-register_postprocessor(EntityExtractorPostProcessor())
-```
-
-#### Keyword Extraction (KeyBERT) - Removed
-
-**What it was:**
-```python
-# v3 - KeyBERT keyword extraction
-config = ExtractionConfig(
-    extract_keywords=True,
-    keyword_count=10,
-)
-
-result = extract_file("doc.pdf", config=config)
-# result.keywords -> List[(keyword, score)]
-```
-
-**Migration:**
-Use external keyword extraction in a postprocessor:
-
-```python
-# v4 - Add keyword extraction via postprocessor
-from keybert import KeyBERT
-
-kw_model = KeyBERT()
-
-class KeywordExtractorPostProcessor:
-    def name(self) -> str:
-        return "keyword_extractor"
-
-    def process(self, result: ExtractionResult) -> ExtractionResult:
-        keywords = kw_model.extract_keywords(result.content, top_n=10)
-        # Add to result.metadata
-        return result
-```
-
-#### Document Classification - Removed
-
-**What it was:**
-```python
-# v3 - Automatic document type detection
-config = ExtractionConfig(
-    auto_detect_document_type=True,
-    document_type_confidence_threshold=0.5,
-)
-
-result = extract_file("doc.pdf", config=config)
-# result.document_type -> "contract", "invoice", "receipt", etc.
-# result.document_type_confidence -> 0.85
-```
-
-**Migration:**
-Use external classification models or cloud APIs in a postprocessor.
-
-#### Other Removed Features
-
-- **ExtractorRegistry** - Not publicly exposed; custom extractors must be Rust-based
-- **HTMLToMarkdownConfig** - Uses default conversion settings
-- **JSONExtractionConfig** - Basic JSON parsing only (no schema extraction)
-- **ImageOCRConfig** - Simplified to `ImageExtractionConfig`
-- **Custom MIME detection** - Now handled internally with improved detection
+#### Other
+- **ExtractorRegistry**: Custom extractors must be Rust plugins
+- **HTMLToMarkdownConfig**, **JSONExtractionConfig**: Now use defaults
+- **ImageOCRConfig**: Replaced by `ImageExtractionConfig`
 
 ## Migration Examples
 
@@ -961,9 +830,9 @@ print(f"Batch (100 files): {time.time() - start:.2f}s")
 ## Getting Help
 
 - **Documentation**: [https://docs.kreuzberg.dev](https://docs.kreuzberg.dev)
-- **Examples**: See [Python Examples](../examples/python.md), [TypeScript Examples](../examples/typescript.md), [Rust Examples](../examples/rust.md)
+- **Examples**: See [Python API Reference](../reference/api-python.md), [TypeScript API Reference](../reference/api-typescript.md), [Rust API Reference](../reference/api-rust.md)
 - **Issues**: [GitHub Issues](https://github.com/Goldziher/kreuzberg/issues)
-- **Changelog**: [CHANGELOG.md](../../CHANGELOG.md)
+- **Changelog**: [CHANGELOG.md](../changelog.md)
 
 ## Deprecation Timeline
 

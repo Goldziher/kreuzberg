@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.0.0] - TBD
 
-### 🎉 Major Release - Complete Architecture Rewrite
+### Major Release - Complete Architecture Rewrite
 
 Kreuzberg v4 represents a complete architectural rewrite, transforming from a Python-only library into a multi-language document intelligence framework with a high-performance Rust core.
 
-### ⚡ Architecture Changes
+### Architecture Changes
 
 #### Rust-First Design
 - **Complete Rust Core Rewrite** (`crates/kreuzberg`): All extraction logic now implemented in Rust for maximum performance
@@ -27,7 +27,7 @@ Kreuzberg v4 represents a complete architectural rewrite, transforming from a Py
 - **Rust**: Direct usage of `kreuzberg` crate in Rust applications
 - **CLI**: Rust-based CLI (`crates/kreuzberg-cli`) with improved performance
 
-### 🚀 New Features
+### New Features
 
 #### Plugin System
 - **PostProcessor Plugins**: Transform extraction results (Python, TypeScript, Rust)
@@ -181,7 +181,7 @@ v4 introduces native metadata extraction across all major document formats:
 - Image preprocessing and DPI adjustment
 - OCR result caching
 
-### 🔧 API Changes
+### API Changes
 
 #### Core Extraction Functions
 
@@ -259,7 +259,7 @@ class ExtractionResult:
 - Type-safe access to format-specific metadata
 - No more dictionary casting or key errors
 
-### 🔌 Plugin System
+### Plugin System
 
 #### PostProcessors
 ```python
@@ -306,7 +306,7 @@ class CloudOCR:
 register_ocr_backend(CloudOCR())
 ```
 
-### 📊 Performance
+### Performance
 
 - **10-50x faster** text processing operations (streaming parsers)
 - **Memory-efficient** streaming for multi-GB files
@@ -314,7 +314,7 @@ register_ocr_backend(CloudOCR())
 - **SIMD optimizations** for text processing hot paths
 - **Zero-copy operations** where possible
 
-### 🐳 Docker Images
+### Docker Images
 
 All Docker images include LibreOffice, Pandoc, and Tesseract by default:
 
@@ -324,7 +324,7 @@ All Docker images include LibreOffice, Pandoc, and Tesseract by default:
 - `goldziher/kreuzberg:4.0.0-vision-tables` - Core + vision-based table extraction
 - `goldziher/kreuzberg:4.0.0-all` - All features included
 
-### 📦 Installation
+### Installation
 
 **Python**:
 ```bash
@@ -357,7 +357,7 @@ brew install goldziher/tap/kreuzberg
 cargo install kreuzberg-cli
 ```
 
-### 🔄 Breaking Changes from v3
+### Breaking Changes from v3
 
 #### Architecture
 - **Rust core required**: Python package now includes Rust binaries (PyO3 bindings)
@@ -389,7 +389,7 @@ cargo install kreuzberg-cli
 #### Migration Path
 See [Migration Guide](https://docs.kreuzberg.dev/migration/v3-to-v4/) for detailed migration instructions.
 
-### 📚 Documentation
+### Documentation
 
 - **New Documentation Site**: https://docs.kreuzberg.dev
 - **Multi-Language Examples**: Python, TypeScript, and Rust examples
@@ -397,14 +397,14 @@ See [Migration Guide](https://docs.kreuzberg.dev/migration/v3-to-v4/) for detail
 - **API Reference**: Auto-generated from docstrings
 - **Architecture Documentation**: Detailed system architecture explanations
 
-### 🧪 Testing
+### Testing
 
 - **95%+ Test Coverage**: Comprehensive test suite in Python, TypeScript, and Rust
 - **Integration Tests**: Real-world document testing
 - **Benchmark Suite**: Performance comparison with other extraction libraries
 - **CI/CD**: Automated testing on Linux, macOS, and Windows
 
-### 🐛 Bug Fixes
+### Bug Fixes
 
 - Fixed memory leaks in PDF extraction
 - Improved error handling and error messages
@@ -412,14 +412,14 @@ See [Migration Guide](https://docs.kreuzberg.dev/migration/v3-to-v4/) for detail
 - Fixed table extraction edge cases
 - Resolved deadlocks in plugin system
 
-### 🔐 Security
+### Security
 
 - All dependencies audited and updated
 - No known security vulnerabilities
 - Sandboxed subprocess execution (Pandoc, LibreOffice)
 - Input validation on all user-provided data
 
-### 👥 Contributors
+### Contributors
 
 Kreuzberg v4 was a major undertaking. Thank you to all contributors!
 
