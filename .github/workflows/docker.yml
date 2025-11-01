@@ -66,15 +66,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Cache Pdfium binaries
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pdfium
-          key: pdfium-${{ runner.os }}-7469
-          restore-keys: |
-            pdfium-${{ runner.os }}-
-
       - name: Build Docker image
         run: |
           echo "=== Building Docker image (${{ matrix.variant }}) ==="
