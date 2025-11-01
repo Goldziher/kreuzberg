@@ -1,0 +1,90 @@
+name: Validate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '**'
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PDFIUM_VERSION: "7455"
+
+jobs:
+  prek:
+    name: Pre-commit hooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '3.13'
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: lint
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Run Prek linters
+        run: uv run prek run --show-diff-on-failure --color=always --all-files
+
+  rubocop:
+    name: RuboCop
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: false
+
+      - name: Install Ruby dependencies
+        working-directory: packages/ruby
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+
+      - name: Run RuboCop
+        working-directory: packages/ruby
+        run: bundle exec rubocop
+
+  check-msrv:
+    name: Check MSRV
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust toolchain (MSRV)
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: msrv
+          toolchain: '1.80'  # Minimum Supported Rust Version
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Check build with MSRV
+        run: cargo check --workspace --all-features --exclude kreuzberg-py --exclude kreuzberg-rb

@@ -1,0 +1,11 @@
+{
+	"document": "../../../test_documents/documents/equations.docx",
+	"file_type": "docx",
+	"file_size": 15360,
+	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "DOCX with mathematical equations - 15KB document with complex formatting",
+		"category": "docx-equations",
+		"size_class": "small"
+	}
+}

@@ -1,0 +1,821 @@
+/**
+ * Kreuzberg - Multi-language document intelligence framework.
+ *
+ * This is a TypeScript SDK around a high-performance Rust core.
+ * All extraction logic, chunking, quality processing, and language detection
+ * are implemented in Rust for maximum performance.
+ *
+ * ## API Usage Recommendations
+ *
+ * **For processing multiple documents**, prefer batch APIs:
+ * - Use `batchExtractFiles()` / `batchExtractFilesSync()` for multiple files
+ * - Use `batchExtractBytes()` / `batchExtractBytesSync()` for multiple byte arrays
+ *
+ * **Batch APIs provide**:
+ * - Better performance (parallel processing in Rust)
+ * - More reliable memory management
+ * - Recommended for all multi-document workflows
+ *
+ * **Single extraction APIs** (`extractFile`, `extractBytes`) are suitable for:
+ * - One-off document processing
+ * - Interactive applications processing documents on-demand
+ * - Avoid calling these in tight loops - use batch APIs instead
+ *
+ * ## Supported Formats
+ *
+ * - **Documents**: PDF, DOCX, PPTX, XLSX, DOC, PPT (with LibreOffice)
+ * - **Text**: Markdown, Plain Text, XML
+ * - **Web**: HTML (converted to Markdown)
+ * - **Data**: JSON, YAML, TOML
+ * - **Email**: EML, MSG
+ * - **Images**: PNG, JPEG, TIFF (with OCR support)
+ *
+ * @example
+ * ```typescript
+ * import { extractFile, batchExtractFiles } from 'kreuzberg';
+ *
+ * // Single file extraction
+ * const result = await extractFile('document.pdf');
+ * console.log(result.content);
+ *
+ * // Multiple files (recommended approach)
+ * const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
+ * const results = await batchExtractFiles(files);
+ * results.forEach(r => console.log(r.content));
+ * ```
+ */
+
+import type {
+	ExtractionConfig,
+	ExtractionResult,
+	OcrBackendProtocol,
+	PostProcessorProtocol,
+	Table,
+	ValidatorProtocol,
+} from "./types.js";
+
+export { GutenOcrBackend } from "./ocr/guten-ocr.js";
+export * from "./types.js";
+
+// biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
+let binding: any = null;
+let bindingInitialized = false;
+
+function createNativeBindingError(error: unknown): Error {
+	const hintParts: string[] = [];
+	let detail = "Unknown error while requiring native module.";
+
+	if (error instanceof Error) {
+		detail = error.message || error.toString();
+		if (/pdfium/i.test(detail)) {
+			hintParts.push(
+				"Pdfium runtime library was not found. Ensure the bundled libpdfium (dll/dylib/so) is present next to the native module.",
+			);
+		}
+		return new Error(
+			[
+				"Failed to load Kreuzberg native bindings.",
+				hintParts.length ? hintParts.join(" ") : "",
+				"Report this error and attach the logs/stack trace for investigation.",
+				`Underlying error: ${detail}`,
+			]
+				.filter(Boolean)
+				.join(" "),
+			{ cause: error },
+		);
+	}
+
+	return new Error(
+		[
+			"Failed to load Kreuzberg native bindings.",
+			"Report this error and attach the logs/stack trace for investigation.",
+			`Underlying error: ${String(error)}`,
+		].join(" "),
+	);
+}
+
+function assertUint8Array(value: unknown, name: string): Uint8Array {
+	if (!(value instanceof Uint8Array)) {
+		throw new TypeError(`${name} must be a Uint8Array`);
+	}
+	return value;
+}
+
+function assertUint8ArrayList(values: unknown, name: string): Uint8Array[] {
+	if (!Array.isArray(values)) {
+		throw new TypeError(`${name} must be an array of Uint8Array`);
+	}
+
+	const array = values as unknown[];
+	return array.map((value, index) => {
+		try {
+			return assertUint8Array(value, `${name}[${index}]`);
+		} catch (_error) {
+			// Re-throw with clearer context
+			throw new TypeError(`${name}[${index}] must be a Uint8Array`);
+		}
+	});
+}
+
+/**
+ * @internal Allows tests to provide a mocked native binding.
+ */
+export function __setBindingForTests(mock: unknown): void {
+	binding = mock;
+	bindingInitialized = true;
+}
+
+/**
+ * @internal Resets the cached native binding for tests.
+ */
+export function __resetBindingForTests(): void {
+	binding = null;
+	bindingInitialized = false;
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
+function getBinding(): any {
+	if (bindingInitialized) {
+		return binding;
+	}
+
+	try {
+		if (typeof process !== "undefined" && process.versions && process.versions.node) {
+			binding = require("kreuzberg-node");
+			bindingInitialized = true;
+			return binding;
+		}
+	} catch (error) {
+		throw createNativeBindingError(error);
+	}
+
+	throw new Error(
+		"Failed to load Kreuzberg bindings. Neither NAPI (Node.js) nor WASM (browsers/Deno) bindings are available. " +
+			"Make sure you have installed the kreuzberg-node package for Node.js/Bun.",
+	);
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: JSON.parse returns any
+function parseMetadata(metadataStr: string): any {
+	try {
+		return JSON.parse(metadataStr);
+	} catch {
+		return {};
+	}
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: Raw NAPI result is untyped
+function convertResult(rawResult: any): ExtractionResult {
+	return {
+		content: rawResult.content,
+		mimeType: rawResult.mimeType,
+		metadata: typeof rawResult.metadata === "string" ? parseMetadata(rawResult.metadata) : rawResult.metadata,
+		tables: rawResult.tables || [],
+		detectedLanguages: rawResult.detectedLanguages || null,
+		chunks: rawResult.chunks || null,
+	};
+}
+
+/**
+ * Extract content from a single file (synchronous).
+ *
+ * **Usage Note**: For processing multiple files, prefer `batchExtractFilesSync()` which
+ * provides better performance and memory management.
+ *
+ * @param filePath - Path to the file (string)
+ * @param mimeType - Optional MIME type hint (auto-detected if null)
+ * @param config - Extraction configuration (uses defaults if null)
+ * @returns ExtractionResult with content, metadata, and tables
+ *
+ * @example
+ * ```typescript
+ * import { extractFileSync } from 'kreuzberg';
+ *
+ * // Basic usage
+ * const result = extractFileSync('document.pdf');
+ * console.log(result.content);
+ *
+ * // With OCR configuration
+ * const config = {
+ *   ocr: {
+ *     backend: 'tesseract',
+ *     language: 'eng',
+ *     tesseractConfig: {
+ *       psm: 6,
+ *       enableTableDetection: true,
+ *     },
+ *   },
+ * };
+ * const result2 = extractFileSync('scanned.pdf', null, config);
+ * ```
+ */
+export function extractFileSync(
+	filePath: string,
+	mimeType: string | null = null,
+	config: ExtractionConfig | null = null,
+): ExtractionResult {
+	const rawResult = getBinding().extractFileSync(filePath, mimeType, config);
+	return convertResult(rawResult);
+}
+
+/**
+ * Extract content from a single file (asynchronous).
+ *
+ * **Usage Note**: For processing multiple files, prefer `batchExtractFiles()` which
+ * provides better performance and memory management.
+ *
+ * @param filePath - Path to the file (string)
+ * @param mimeType - Optional MIME type hint (auto-detected if null)
+ * @param config - Extraction configuration (uses defaults if null)
+ * @returns Promise<ExtractionResult> with content, metadata, and tables
+ *
+ * @example
+ * ```typescript
+ * import { extractFile } from 'kreuzberg';
+ *
+ * // Basic usage
+ * const result = await extractFile('document.pdf');
+ * console.log(result.content);
+ *
+ * // With chunking enabled
+ * const config = {
+ *   chunking: {
+ *     maxChars: 1000,
+ *     maxOverlap: 200,
+ *   },
+ * };
+ * const result2 = await extractFile('long_document.pdf', null, config);
+ * console.log(result2.chunks); // Array of text chunks
+ * ```
+ */
+export async function extractFile(
+	filePath: string,
+	mimeType: string | null = null,
+	config: ExtractionConfig | null = null,
+): Promise<ExtractionResult> {
+	const rawResult = await getBinding().extractFile(filePath, mimeType, config);
+	return convertResult(rawResult);
+}
+
+/**
+ * Extract content from raw bytes (synchronous).
+ *
+ * **Usage Note**: For processing multiple byte arrays, prefer `batchExtractBytesSync()`
+ * which provides better performance and memory management.
+ *
+ * @param data - File content as Uint8Array
+ * @param mimeType - MIME type of the data (required for format detection)
+ * @param config - Extraction configuration (uses defaults if null)
+ * @returns ExtractionResult with content, metadata, and tables
+ *
+ * @example
+ * ```typescript
+ * import { extractBytesSync } from 'kreuzberg';
+ * import { readFileSync } from 'fs';
+ *
+ * const data = readFileSync('document.pdf');
+ * const result = extractBytesSync(data, 'application/pdf');
+ * console.log(result.content);
+ * ```
+ */
+export function extractBytesSync(
+	data: Uint8Array,
+	mimeType: string,
+	config: ExtractionConfig | null = null,
+): ExtractionResult {
+	const validated = assertUint8Array(data, "data");
+	const rawResult = getBinding().extractBytesSync(Buffer.from(validated), mimeType, config);
+	return convertResult(rawResult);
+}
+
+/**
+ * Extract content from raw bytes (asynchronous).
+ *
+ * **Usage Note**: For processing multiple byte arrays, prefer `batchExtractBytes()`
+ * which provides better performance and memory management.
+ *
+ * @param data - File content as Uint8Array
+ * @param mimeType - MIME type of the data (required for format detection)
+ * @param config - Extraction configuration (uses defaults if null)
+ * @returns Promise<ExtractionResult> with content, metadata, and tables
+ *
+ * @example
+ * ```typescript
+ * import { extractBytes } from 'kreuzberg';
+ * import { readFile } from 'fs/promises';
+ *
+ * const data = await readFile('document.pdf');
+ * const result = await extractBytes(data, 'application/pdf');
+ * console.log(result.content);
+ * ```
+ */
+export async function extractBytes(
+	data: Uint8Array,
+	mimeType: string,
+	config: ExtractionConfig | null = null,
+): Promise<ExtractionResult> {
+	const validated = assertUint8Array(data, "data");
+	const rawResult = await getBinding().extractBytes(Buffer.from(validated), mimeType, config);
+	return convertResult(rawResult);
+}
+
+/**
+ * Extract content from multiple files in parallel (synchronous).
+ *
+ * **Recommended for**: Processing multiple documents efficiently with better
+ * performance and memory management compared to individual `extractFileSync()` calls.
+ *
+ * **Benefits**:
+ * - Parallel processing in Rust for maximum performance
+ * - Optimized memory usage across all extractions
+ * - More reliable for batch document processing
+ *
+ * @param paths - List of file paths to extract
+ * @param config - Extraction configuration (uses defaults if null)
+ * @returns Array of ExtractionResults (one per file, in same order as input)
+ *
+ * @example
+ * ```typescript
+ * import { batchExtractFilesSync } from 'kreuzberg';
+ *
+ * const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
+ * const results = batchExtractFilesSync(files);
+ *
+ * results.forEach((result, i) => {
+ *   console.log(`File ${files[i]}: ${result.content.substring(0, 100)}...`);
+ * });
+ * ```
+ */
+export function batchExtractFilesSync(paths: string[], config: ExtractionConfig | null = null): ExtractionResult[] {
+	const rawResults = getBinding().batchExtractFilesSync(paths, config);
+	return rawResults.map(convertResult);
+}
+
+/**
+ * Extract content from multiple files in parallel (asynchronous).
+ *
+ * **Recommended for**: Processing multiple documents efficiently with better
+ * performance and memory management compared to individual `extractFile()` calls.
+ *
+ * **Benefits**:
+ * - Parallel processing in Rust for maximum performance
+ * - Optimized memory usage across all extractions
+ * - More reliable for batch document processing
+ *
+ * @param paths - List of file paths to extract
+ * @param config - Extraction configuration (uses defaults if null)
+ * @returns Promise resolving to array of ExtractionResults (one per file, in same order as input)
+ *
+ * @example
+ * ```typescript
+ * import { batchExtractFiles } from 'kreuzberg';
+ *
+ * const files = ['invoice1.pdf', 'invoice2.pdf', 'invoice3.pdf'];
+ * const results = await batchExtractFiles(files, {
+ *   ocr: { backend: 'tesseract', language: 'eng' }
+ * });
+ *
+ * // Process all results
+ * const totalAmount = results
+ *   .map(r => extractAmount(r.content))
+ *   .reduce((a, b) => a + b, 0);
+ * ```
+ */
+export async function batchExtractFiles(
+	paths: string[],
+	config: ExtractionConfig | null = null,
+): Promise<ExtractionResult[]> {
+	const rawResults = await getBinding().batchExtractFiles(paths, config);
+	return rawResults.map(convertResult);
+}
+
+/**
+ * Extract content from multiple byte arrays in parallel (synchronous).
+ *
+ * **Recommended for**: Processing multiple documents from memory efficiently with better
+ * performance and memory management compared to individual `extractBytesSync()` calls.
+ *
+ * **Benefits**:
+ * - Parallel processing in Rust for maximum performance
+ * - Optimized memory usage across all extractions
+ * - More reliable for batch document processing
+ *
+ * @param dataList - List of file contents as Uint8Arrays
+ * @param mimeTypes - List of MIME types (one per data item, required for format detection)
+ * @param config - Extraction configuration (uses defaults if null)
+ * @returns Array of ExtractionResults (one per data item, in same order as input)
+ *
+ * @example
+ * ```typescript
+ * import { batchExtractBytesSync } from 'kreuzberg';
+ * import { readFileSync } from 'fs';
+ *
+ * const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
+ * const dataList = files.map(f => readFileSync(f));
+ * const mimeTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+ *
+ * const results = batchExtractBytesSync(dataList, mimeTypes);
+ * results.forEach((result, i) => {
+ *   console.log(`File ${files[i]}: ${result.content.substring(0, 100)}...`);
+ * });
+ * ```
+ */
+export function batchExtractBytesSync(
+	dataList: Uint8Array[],
+	mimeTypes: string[],
+	config: ExtractionConfig | null = null,
+): ExtractionResult[] {
+	const buffers = assertUint8ArrayList(dataList, "dataList").map((data) => Buffer.from(data));
+
+	if (buffers.length !== mimeTypes.length) {
+		throw new TypeError("dataList and mimeTypes must have the same length");
+	}
+
+	const rawResults = getBinding().batchExtractBytesSync(buffers, mimeTypes, config);
+	return rawResults.map(convertResult);
+}
+
+/**
+ * Extract content from multiple byte arrays in parallel (asynchronous).
+ *
+ * **Recommended for**: Processing multiple documents from memory efficiently with better
+ * performance and memory management compared to individual `extractBytes()` calls.
+ *
+ * **Benefits**:
+ * - Parallel processing in Rust for maximum performance
+ * - Optimized memory usage across all extractions
+ * - More reliable for batch document processing
+ *
+ * @param dataList - List of file contents as Uint8Arrays
+ * @param mimeTypes - List of MIME types (one per data item, required for format detection)
+ * @param config - Extraction configuration (uses defaults if null)
+ * @returns Promise resolving to array of ExtractionResults (one per data item, in same order as input)
+ *
+ * @example
+ * ```typescript
+ * import { batchExtractBytes } from 'kreuzberg';
+ * import { readFile } from 'fs/promises';
+ *
+ * const files = ['invoice1.pdf', 'invoice2.pdf', 'invoice3.pdf'];
+ * const dataList = await Promise.all(files.map(f => readFile(f)));
+ * const mimeTypes = files.map(() => 'application/pdf');
+ *
+ * const results = await batchExtractBytes(dataList, mimeTypes, {
+ *   ocr: { backend: 'tesseract', language: 'eng' }
+ * });
+ *
+ * // Process all results
+ * const totalAmount = results
+ *   .map(r => extractAmount(r.content))
+ *   .reduce((a, b) => a + b, 0);
+ * ```
+ */
+export async function batchExtractBytes(
+	dataList: Uint8Array[],
+	mimeTypes: string[],
+	config: ExtractionConfig | null = null,
+): Promise<ExtractionResult[]> {
+	const buffers = assertUint8ArrayList(dataList, "dataList").map((data) => Buffer.from(data));
+
+	if (buffers.length !== mimeTypes.length) {
+		throw new TypeError("dataList and mimeTypes must have the same length");
+	}
+
+	const rawResults = await getBinding().batchExtractBytes(buffers, mimeTypes, config);
+	return rawResults.map(convertResult);
+}
+
+/**
+ * Register a custom postprocessor.
+ *
+ * **IMPORTANT**: Custom processors only work with **async extraction functions**:
+ * - ✅ `extractFile()`, `extractBytes()`, `batchExtractFiles()`, `batchExtractBytes()`
+ * - ❌ `extractFileSync()`, `extractBytesSync()`, etc. (will skip custom processors)
+ *
+ * This limitation exists because sync extraction blocks the Node.js event loop,
+ * preventing JavaScript callbacks from executing. For v4.0, use async extraction
+ * when you need custom processors.
+ *
+ * @param processor - PostProcessorProtocol implementation
+ *
+ * @example
+ * ```typescript
+ * import { registerPostProcessor, extractFile, ExtractionResult } from 'kreuzberg';
+ *
+ * class MyProcessor implements PostProcessorProtocol {
+ *   name(): string {
+ *     return 'my_processor';
+ *   }
+ *
+ *   process(result: ExtractionResult): ExtractionResult {
+ *     result.metadata.customField = 'custom_value';
+ *     return result;
+ *   }
+ *
+ *   processingStage(): 'early' | 'middle' | 'late' {
+ *     return 'middle';
+ *   }
+ * }
+ *
+ * registerPostProcessor(new MyProcessor());
+ *
+ * // Use async extraction (required for custom processors)
+ * const result = await extractFile('document.pdf');
+ * console.log(result.metadata.customField); // 'custom_value'
+ * ```
+ */
+export function registerPostProcessor(processor: PostProcessorProtocol): void {
+	const binding = getBinding();
+
+	// Wrap the processor to handle JSON serialization required by NAPI
+	const wrappedProcessor = {
+		name: processor.name.bind(processor),
+		processingStage: processor.processingStage?.bind(processor),
+		async process(...args: unknown[]): Promise<string> {
+			// With build_callback returning vec![value], NAPI wraps it in ANOTHER array
+			// So JavaScript receives [[json_string]], and we need args[0][0]
+			const wrappedValue = args[0] as unknown[];
+			const jsonString = wrappedValue[0] as string;
+
+			const wireResult = JSON.parse(jsonString) as {
+				content: string;
+				mime_type: string;
+				metadata: string | Record<string, unknown>;
+				tables?: unknown[];
+				detected_languages?: string[];
+				chunks?: unknown[];
+			};
+
+			// Convert from snake_case (Rust) to camelCase (TypeScript) and parse metadata
+			const result: ExtractionResult = {
+				content: wireResult.content,
+				mimeType: wireResult.mime_type,
+				metadata: typeof wireResult.metadata === "string" ? JSON.parse(wireResult.metadata) : wireResult.metadata,
+				tables: (wireResult.tables || []) as Table[],
+				detectedLanguages: wireResult.detected_languages ?? null,
+				chunks: wireResult.chunks as string[] | null | undefined,
+			};
+
+			// Call user's processor with parsed object (may be sync or async)
+			const updated = await processor.process(result);
+
+			// Convert from camelCase (TypeScript) back to snake_case (Rust)
+			// Metadata should be an object, not a stringified JSON
+			const wireUpdated = {
+				content: updated.content,
+				mime_type: updated.mimeType,
+				metadata: updated.metadata,
+				tables: updated.tables,
+				detected_languages: updated.detectedLanguages,
+				chunks: updated.chunks,
+			};
+
+			// Return as JSON string
+			return JSON.stringify(wireUpdated);
+		},
+	};
+
+	Object.defineProperty(wrappedProcessor, "__original", {
+		value: processor,
+		enumerable: false,
+	});
+
+	const stage = processor.processingStage?.() ?? "middle";
+	Object.defineProperty(wrappedProcessor, "__stage", {
+		value: stage,
+		enumerable: false,
+	});
+
+	binding.registerPostProcessor(wrappedProcessor);
+}
+
+/**
+ * Unregister a postprocessor by name.
+ *
+ * Removes a previously registered postprocessor from the registry.
+ *
+ * @param name - Name of the processor to unregister
+ *
+ * @example
+ * ```typescript
+ * import { unregisterPostProcessor } from 'kreuzberg';
+ *
+ * unregisterPostProcessor('my_processor');
+ * ```
+ */
+export function unregisterPostProcessor(name: string): void {
+	const binding = getBinding();
+	binding.unregisterPostProcessor(name);
+}
+
+/**
+ * Clear all registered postprocessors.
+ *
+ * Removes all postprocessors from the registry.
+ *
+ * @example
+ * ```typescript
+ * import { clearPostProcessors } from 'kreuzberg';
+ *
+ * clearPostProcessors();
+ * ```
+ */
+export function clearPostProcessors(): void {
+	const binding = getBinding();
+	binding.clearPostProcessors();
+}
+
+/**
+ * Register a custom validator.
+ *
+ * Validators check extraction results for quality, completeness, or correctness.
+ * Unlike post-processors, validator errors **fail fast** - if a validator throws an error,
+ * the extraction fails immediately.
+ *
+ * @param validator - ValidatorProtocol implementation
+ *
+ * @example
+ * ```typescript
+ * import { registerValidator } from 'kreuzberg';
+ *
+ * class MinLengthValidator implements ValidatorProtocol {
+ *   name(): string {
+ *     return 'min_length_validator';
+ *   }
+ *
+ *   priority(): number {
+ *     return 100; // Run early
+ *   }
+ *
+ *   validate(result: ExtractionResult): void {
+ *     if (result.content.length < 100) {
+ *       throw new Error('Content too short: minimum 100 characters required');
+ *     }
+ *   }
+ * }
+ *
+ * registerValidator(new MinLengthValidator());
+ * ```
+ */
+export function registerValidator(validator: ValidatorProtocol): void {
+	const binding = getBinding();
+
+	const wrappedValidator = {
+		name: validator.name.bind(validator),
+		priority: validator.priority?.bind(validator),
+		async validate(...args: unknown[]): Promise<string> {
+			// Validators receive result as first argument (unlike postprocessors which use args[1])
+			const jsonString = args[0] as string;
+
+			// Guard against undefined/null
+			if (!jsonString || jsonString === "undefined") {
+				throw new Error("Validator received invalid JSON string");
+			}
+
+			const wireResult = JSON.parse(jsonString);
+			const result: ExtractionResult = {
+				content: wireResult.content,
+				mimeType: wireResult.mime_type,
+				metadata: typeof wireResult.metadata === "string" ? JSON.parse(wireResult.metadata) : wireResult.metadata,
+				tables: wireResult.tables || [],
+				detectedLanguages: wireResult.detected_languages,
+				chunks: wireResult.chunks,
+			};
+
+			await Promise.resolve(validator.validate(result));
+			return ""; // Return empty string on success
+		},
+	};
+
+	binding.registerValidator(wrappedValidator);
+}
+
+/**
+ * Unregister a validator by name.
+ *
+ * Removes a previously registered validator from the global registry.
+ *
+ * @param name - Validator name to unregister
+ *
+ * @example
+ * ```typescript
+ * import { unregisterValidator } from 'kreuzberg';
+ *
+ * unregisterValidator('min_length_validator');
+ * ```
+ */
+export function unregisterValidator(name: string): void {
+	const binding = getBinding();
+	binding.unregisterValidator(name);
+}
+
+/**
+ * Clear all registered validators.
+ *
+ * Removes all validators from the global registry. Useful for test cleanup
+ * or resetting state.
+ *
+ * @example
+ * ```typescript
+ * import { clearValidators } from 'kreuzberg';
+ *
+ * clearValidators();
+ * ```
+ */
+export function clearValidators(): void {
+	const binding = getBinding();
+	binding.clearValidators();
+}
+
+/**
+ * Register a custom OCR backend.
+ *
+ * This function registers a JavaScript OCR backend that will be used by Kreuzberg's
+ * extraction pipeline when OCR is enabled. The backend must implement the
+ * {@link OcrBackendProtocol} interface.
+ *
+ * ## Usage
+ *
+ * 1. Create a class implementing {@link OcrBackendProtocol}
+ * 2. Call `initialize()` on your backend instance (if needed)
+ * 3. Register the backend with `registerOcrBackend()`
+ * 4. Use the backend name in extraction config
+ *
+ * ## Thread Safety
+ *
+ * The registered backend must be thread-safe as it may be called concurrently
+ * from multiple Rust async tasks. Ensure your implementation handles concurrent
+ * calls properly.
+ *
+ * @param backend - OcrBackendProtocol implementation
+ *
+ * @throws {Error} If backend is missing required methods
+ * @throws {Error} If backend name is empty or duplicate
+ * @throws {Error} If registration fails
+ *
+ * @example
+ * ```typescript
+ * import { GutenOcrBackend } from '@goldziher/kreuzberg/ocr/guten-ocr';
+ * import { registerOcrBackend, extractFile } from '@goldziher/kreuzberg';
+ *
+ * // Create and initialize backend
+ * const backend = new GutenOcrBackend();
+ * await backend.initialize();
+ *
+ * // Register with Kreuzberg
+ * registerOcrBackend(backend);
+ *
+ * // Use in extraction
+ * const result = await extractFile('scanned.pdf', null, {
+ *   ocr: { backend: 'guten-ocr', language: 'en' }
+ * });
+ * console.log(result.content);
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Custom OCR backend implementation
+ * class MyOcrBackend implements OcrBackendProtocol {
+ *   name(): string {
+ *     return 'my-ocr';
+ *   }
+ *
+ *   supportedLanguages(): string[] {
+ *     return ['en', 'de', 'fr'];
+ *   }
+ *
+ *   async processImage(imageBytes: Uint8Array, language: string) {
+ *     const text = await myCustomOcrEngine(imageBytes, language);
+ *     return {
+ *       content: text,
+ *       mime_type: 'text/plain',
+ *       metadata: { confidence: 0.95, language },
+ *       tables: []
+ *     };
+ *   }
+ * }
+ *
+ * registerOcrBackend(new MyOcrBackend());
+ * ```
+ */
+export function registerOcrBackend(backend: OcrBackendProtocol): void {
+	const binding = getBinding();
+
+	// Wrap the backend to handle the NAPI bridge requirements
+	const wrappedBackend = {
+		name: backend.name.bind(backend),
+		supportedLanguages: backend.supportedLanguages.bind(backend),
+		// processImage receives (Buffer, String) and must return Promise<String> (JSON)
+		async processImage(imageBytes: Buffer, language: string): Promise<string> {
+			// Call user's backend with Uint8Array
+			const result = await backend.processImage(new Uint8Array(imageBytes), language);
+
+			// Return as JSON string
+			return JSON.stringify(result);
+		},
+	};
+
+	binding.registerOcrBackend(wrappedBackend);
+}
+
+export const __version__ = "4.0.0";

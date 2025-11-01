@@ -1,4 +1,4 @@
----
+______________________________________________________________________
 
 title: Complex Metadata Test Document
 subtitle: Testing Nested and Advanced Metadata Structures
@@ -56,7 +56,7 @@ keywords:
   This is for internal use only.
   Do not distribute.
 
----
+______________________________________________________________________
 
 # Document Content
 

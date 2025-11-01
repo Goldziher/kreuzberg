@@ -1,37 +1,34 @@
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "AllowS3ReadAccess",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::123456789012:user/example-user"
-      },
-      "Action": ["s3:GetObject", "s3:ListBucket"],
-      "Resource": [
-        "arn:aws:s3:::example-bucket",
-        "arn:aws:s3:::example-bucket/*"
-      ],
-      "Condition": {
-        "StringEquals": {
-          "s3:ExistingObjectTag/Department": "Finance"
-        },
-        "IpAddress": {
-          "aws:SourceIp": ["192.168.1.0/24", "10.0.0.0/16"]
-        }
-      }
-    },
-    {
-      "Sid": "DenyUnencryptedObjectUploads",
-      "Effect": "Deny",
-      "Principal": "*",
-      "Action": "s3:PutObject",
-      "Resource": "arn:aws:s3:::example-bucket/*",
-      "Condition": {
-        "StringNotEquals": {
-          "s3:x-amz-server-side-encryption": "AES256"
-        }
-      }
-    }
-  ]
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "AllowS3ReadAccess",
+			"Effect": "Allow",
+			"Principal": {
+				"AWS": "arn:aws:iam::123456789012:user/example-user"
+			},
+			"Action": ["s3:GetObject", "s3:ListBucket"],
+			"Resource": ["arn:aws:s3:::example-bucket", "arn:aws:s3:::example-bucket/*"],
+			"Condition": {
+				"StringEquals": {
+					"s3:ExistingObjectTag/Department": "Finance"
+				},
+				"IpAddress": {
+					"aws:SourceIp": ["192.168.1.0/24", "10.0.0.0/16"]
+				}
+			}
+		},
+		{
+			"Sid": "DenyUnencryptedObjectUploads",
+			"Effect": "Deny",
+			"Principal": "*",
+			"Action": "s3:PutObject",
+			"Resource": "arn:aws:s3:::example-bucket/*",
+			"Condition": {
+				"StringNotEquals": {
+					"s3:x-amz-server-side-encryption": "AES256"
+				}
+			}
+		}
+	]
 }

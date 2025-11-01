@@ -1,0 +1,10 @@
+{
+	"document": "../../../test_documents/spreadsheets/excel_multi_sheet.xlsx",
+	"file_type": "xlsx",
+	"file_size": 6144,
+	"expected_frameworks": ["kreuzberg", "docling", "unstructured"],
+	"metadata": {
+		"description": "Simple Excel spreadsheet with multiple sheets",
+		"category": "structured"
+	}
+}

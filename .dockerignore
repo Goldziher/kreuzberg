@@ -1,20 +1,75 @@
+# Git
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Build artifacts
+target/
+**/target/
+dist/
+build/
+
+# Documentation
+docs/
+*.md
+!README.md
+CHANGELOG.md
+LICENSE
+
+# Tests and benchmarks
+tests/
+benchmarks/
+test_documents/
+tools/
+
+# Python
+packages/python/
 *.pyc
 *.pyd
 *.pyo
-.git
-.github/
-.gitignore
-.idea/
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-.vscode/
-.venv/
+.Python
 __pycache__/
-benchmarks/
-comparative-benchmarks/
-dist/
-docs/
-scripts/
-test_documents/
-tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+uv.lock
+
+# Node.js / TypeScript
+packages/typescript/
+crates/kreuzberg-node/
+node_modules/
+*.node
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Ruby
+packages/ruby/
+crates/kreuzberg-rb/
+*.gem
+.bundle/
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CI/CD
+.github/workflows/
+
+# Misc
+.env
+.env.*
+*.log
+*.bak
+*.tmp
+.dockerignore
+Dockerfile
+docker-compose.yml

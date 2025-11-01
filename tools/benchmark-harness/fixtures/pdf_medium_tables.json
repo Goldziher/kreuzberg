@@ -1,0 +1,11 @@
+{
+	"document": "../../../test_documents/pdfs_with_tables/medium.pdf",
+	"file_type": "pdf",
+	"file_size": 245760,
+	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "Medium PDF with complex tables - 240KB technical document",
+		"category": "pdf-tables",
+		"size_class": "medium"
+	}
+}

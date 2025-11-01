@@ -1,0 +1,12 @@
+{
+	"document": "../../../test_documents/tables/complex_document.png",
+	"file_type": "png",
+	"file_size": 28672,
+	"expected_frameworks": ["kreuzberg"],
+	"metadata": {
+		"description": "Complex table image - 28KB PNG with detailed table structure",
+		"category": "image-table",
+		"size_class": "small",
+		"requires_ocr": true
+	}
+}
