@@ -300,6 +300,7 @@ fn run_profile(path: &Path, flamegraph_path: Option<PathBuf>) -> Result<ProfileO
 
     #[cfg(feature = "profiling")]
     let guard = if flamegraph_path.is_some() {
+        #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
         let mut builder = ProfilerGuardBuilder::default().frequency(100);
 
         #[cfg(target_os = "macos")]
