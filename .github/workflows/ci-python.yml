@@ -74,20 +74,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
         run: uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 
-      - name: Cache HuggingFace models (Linux only)
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: huggingface-models-ci-${{ runner.os }}
-
-      - name: Download TATR models (Linux only)
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
-        run: |
-          if [ ! -d ~/.cache/huggingface ] || [ -z "$(ls -A ~/.cache/huggingface 2>/dev/null)" ]; then
-            uv run python scripts/download_tatr_models.py
-          fi
-
       - name: Run tests (Linux, Python 3.10 - with coverage)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
         run: uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/

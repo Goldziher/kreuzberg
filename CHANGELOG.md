@@ -375,6 +375,16 @@ cargo install kreuzberg-cli
 - **Pure-Python API**: No longer available (use v3 for pure Python)
 - **Old configuration format**: Dictionary-based config no longer supported
 - **Legacy extractors**: Some Python-only extractors migrated to Rust
+- **GMFT (Give Me Formatted Tables)**: Vision-based table extraction using TATR (Table Transformer) models removed
+  - v3's GMFT used deep learning models for sophisticated table detection and parsing
+  - Provided polars DataFrames, PIL Images, and multi-level header support
+  - v4 replaces this with **native Tesseract-based table detection** (OCR-based, faster, simpler)
+  - Configure via `TesseractConfig.enable_table_detection=True`
+  - Returns `ExtractedTable` objects with cells (2D list) and markdown output
+  - For advanced vision-based table extraction, use v3.x or specialized libraries
+- **Entity Extraction (spaCy)**: Named entity recognition removed - use external NER libraries with postprocessors
+- **Keyword Extraction (KeyBERT)**: Automatic keyword extraction removed - use external keyword extractors with postprocessors
+- **Document Classification**: Automatic document type detection removed - use external classifiers with postprocessors
 
 #### Migration Path
 See [Migration Guide](https://docs.kreuzberg.dev/migration/v3-to-v4/) for detailed migration instructions.
