@@ -22,7 +22,7 @@ Extract text from any supported document format:
 === "TypeScript"
 
     ```typescript
-    import { extractFileSync } from '@goldziher/kreuzberg';
+    import { extractFileSync } from 'kreuzberg';
 
     // Extract from a file
     const result = extractFileSync('document.pdf');
@@ -94,7 +94,7 @@ For better performance with I/O-bound operations:
 === "TypeScript"
 
     ```typescript
-    import { extractFile } from '@goldziher/kreuzberg';
+    import { extractFile } from 'kreuzberg';
 
     async function main() {
         const result = await extractFile('document.pdf');
@@ -151,7 +151,7 @@ Extract text from images and scanned documents:
 === "TypeScript"
 
     ```typescript
-    import { extractFileSync, ExtractionConfig, OcrConfig } from '@goldziher/kreuzberg';
+    import { extractFileSync, ExtractionConfig, OcrConfig } from 'kreuzberg';
 
     const config = new ExtractionConfig({
         ocr: new OcrConfig({
@@ -226,7 +226,7 @@ Process multiple files concurrently:
 === "TypeScript"
 
     ```typescript
-    import { batchExtractFilesSync, ExtractionConfig } from '@goldziher/kreuzberg';
+    import { batchExtractFilesSync, ExtractionConfig } from 'kreuzberg';
 
     const files = ['doc1.pdf', 'doc2.docx', 'doc3.pptx'];
     const results = batchExtractFilesSync(files, new ExtractionConfig());
@@ -298,7 +298,7 @@ When you already have file content in memory:
 === "TypeScript"
 
     ```typescript
-    import { extractBytesSync, ExtractionConfig } from '@goldziher/kreuzberg';
+    import { extractBytesSync, ExtractionConfig } from 'kreuzberg';
     import { readFileSync } from 'fs';
 
     const data = readFileSync('document.pdf');
@@ -413,7 +413,7 @@ Customize extraction behavior:
         ChunkingConfig,
         TokenReductionConfig,
         LanguageDetectionConfig
-    } from '@goldziher/kreuzberg';
+    } from 'kreuzberg';
 
     const config = new ExtractionConfig({
         // Enable OCR
@@ -592,7 +592,7 @@ Access format-specific metadata from extracted documents:
 === "TypeScript"
 
     ```typescript
-    import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+    import { extractFileSync, ExtractionConfig } from 'kreuzberg';
 
     const result = extractFileSync('document.pdf', null, new ExtractionConfig());
 
@@ -712,7 +712,7 @@ Extract and process tables from documents:
 === "TypeScript"
 
     ```typescript
-    import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+    import { extractFileSync, ExtractionConfig } from 'kreuzberg';
 
     const result = extractFileSync('document.pdf', null, new ExtractionConfig());
 
@@ -805,7 +805,7 @@ Handle extraction errors gracefully:
         extractFileSync,
         ExtractionConfig,
         KreuzbergError
-    } from '@goldziher/kreuzberg';
+    } from 'kreuzberg';
 
     try {
         const result = extractFileSync('document.pdf', null, new ExtractionConfig());
