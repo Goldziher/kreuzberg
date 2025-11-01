@@ -134,33 +134,25 @@ extra_css:
 
 nav:
   - Home: index.md
-  - Getting Started:
-      - Installation: getting-started/installation.md
-      - Quick Start: getting-started/quickstart.md
-  - Core Concepts:
-      - Architecture: concepts/architecture.md
-      - Extractors: concepts/extractors.md
-      - OCR System: concepts/ocr.md
-      - Text Processing: concepts/text-processing.md
-      - Server Features: concepts/server.md
-      - Plugin System: concepts/plugins.md
-  - Plugin Development:
-      - Overview: plugins/overview.md
-      - Python PostProcessor: plugins/python-postprocessor.md
-      - Python OCR Backend: plugins/python-ocr-backend.md
-      - TypeScript PostProcessor: plugins/typescript-postprocessor.md
-      - TypeScript Validator: plugins/typescript-validator.md
-      - Rust Custom Extractor: plugins/rust-custom-extractor.md
-  - CLI Guide:
-      - Usage: cli/usage.md
-  - Examples:
-      - Python: examples/python.md
-      - TypeScript: examples/typescript.md
-      - Rust: examples/rust.md
-      - Ruby: examples/ruby.md
+  - Installation: getting-started/installation.md
+  - Quick Start: getting-started/quickstart.md
+  - Guides:
+      - Extraction Basics: guides/extraction.md
+      - Configuration: guides/configuration.md
+      - OCR: guides/ocr.md
+      - Advanced Features: guides/advanced.md
+      - Creating Plugins: guides/plugins.md
+  - CLI: cli/usage.md
+  - API Server: guides/api-server.md
+  - Troubleshooting: guides/troubleshooting.md
   - API Reference:
-      - Python: api-reference/python/
-  - Migration Guide:
-      - v3 to v4: migration/v3-to-v4.md
+      - Python: reference/api-python.md
+      - TypeScript: reference/api-typescript.md
+      - Rust: reference/api-rust.md
+      - Ruby: reference/api-ruby.md
+      - Configuration: reference/configuration.md
+      - Types: reference/types.md
+      - Errors: reference/errors.md
+  - Migration Guide: migration/v3-to-v4.md
   - Changelog: ../CHANGELOG.md
   - Contributing: contributing.md

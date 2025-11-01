@@ -66,26 +66,49 @@ Kreuzberg is available for Python, TypeScript/Node.js, and as a standalone CLI v
     ### npm
 
     ```bash
-    npm install @goldziher/kreuzberg
+    npm install kreuzberg
     ```
 
     ### yarn
 
     ```bash
-    yarn add @goldziher/kreuzberg
+    yarn add kreuzberg
     ```
 
     ### pnpm
 
     ```bash
-    pnpm add @goldziher/kreuzberg
+    pnpm add kreuzberg
     ```
 
     ### Verify Installation
 
     ```typescript
-    import { extractFileSync } from '@goldziher/kreuzberg';
+    import { extractFileSync } from 'kreuzberg';
     console.log('Kreuzberg installed successfully!');
+    ```
+
+=== "Rust"
+
+    **Requirements**: Rust 1.75 or later
+
+    ### Add to Cargo.toml
+
+    ```toml
+    [dependencies]
+    kreuzberg = "4.0"
+    tokio = { version = "1", features = ["rt", "macros"] }  # For async
+    ```
+
+    ### Verify Installation
+
+    ```rust
+    use kreuzberg::extract_file_sync;
+
+    fn main() -> kreuzberg::Result<()> {
+        println!("Kreuzberg installed successfully!");
+        Ok(())
+    }
     ```
 
 === "Ruby"
