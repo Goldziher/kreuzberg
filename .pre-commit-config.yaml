@@ -58,4 +58,4 @@ repos:
         require_serial: true
         language: system
         types: [python]
-        exclude: ^scripts/|^comparative-benchmarks/|^examples/
+        exclude: ^scripts/|^examples/

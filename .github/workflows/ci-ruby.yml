@@ -50,6 +50,15 @@ jobs:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: false
 
+      - name: Setup MSYS2 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-x86_64-gcc
+
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
         with:
