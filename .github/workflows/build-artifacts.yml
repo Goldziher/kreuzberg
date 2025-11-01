@@ -218,6 +218,8 @@ jobs:
     name: Build Ruby gem (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
+    env:
+      RB_SYS_CARGO_PROFILE: release
     strategy:
       fail-fast: false
       matrix:
@@ -248,45 +250,38 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: ruby-${{ matrix.label }}
+
+      - name: Install MSYS2 toolchain (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ridk exec pacman -S --needed --noconfirm base-devel mingw-w64-ucrt-x86_64-toolchain
+
+      - name: Install Rust GNU toolchain (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: rustup toolchain install stable-gnu --profile minimal --no-self-update
+
+      - name: Configure bindgen sysroot (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "BINDGEN_EXTRA_CLANG_ARGS=--target=x86_64-pc-windows-gnu --sysroot=${RI_DEVKIT//\\/\/}$MSYSTEM_PREFIX" >> "$GITHUB_ENV"
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
           bundler-cache: false
 
-      - name: Setup MSYS2 (Windows)
-        id: setup-msys2
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        continue-on-error: true
-        with:
-          path-type: inherit
-          update: true
-          install: >-
-            base-devel
-            mingw-w64-x86_64-gcc
-
-      - name: Check Windows build requirements
-        if: runner.os == 'Windows' && steps.setup-msys2.outcome != 'success'
-        run: |
-          echo "::warning::Skipping Windows build - MSYS2 setup failed. Ruby native extensions require MSYS2 on Windows."
-          echo "::warning::This is a known limitation. Windows support for Ruby bindings is experimental."
-          exit 1
-
-      - name: Setup Rust toolchain
-        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
-        uses: ./.github/actions/setup-rust
-        with:
-          cache-key-prefix: ruby-${{ matrix.label }}
-
       - name: Cache Pdfium binaries
-        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
         uses: ./.github/actions/cache-pdfium
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download Pdfium binaries
-        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
@@ -314,7 +309,6 @@ jobs:
           rm -rf "$tmpdir"
 
       - name: Stage Pdfium runtime artifacts
-        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
@@ -340,20 +334,36 @@ jobs:
               ;;
           esac
 
-      - name: Install Ruby dependencies
-        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
+      - name: Install Ruby dependencies (Unix)
+        if: runner.os != 'Windows'
         working-directory: packages/ruby
         run: |
           bundle config set --local path 'vendor/bundle'
           bundle install --jobs 4 --retry 3
 
-      - name: Build native gem
-        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
+      - name: Install Ruby dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $rubydir = "$workspace/packages/ruby"
+          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle config set --local path 'vendor/bundle' && bundle install --jobs 4 --retry 3"
+
+      - name: Build native gem (Unix)
+        if: runner.os != 'Windows'
         working-directory: packages/ruby
         run: bundle exec rake native:kreuzberg_rb:${{ matrix.platform }} gem
 
+      - name: Build native gem (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $rubydir = "$workspace/packages/ruby"
+          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle exec rake native:kreuzberg_rb:${{ matrix.platform }} gem"
+
       - name: Build source gem
-        if: matrix.build_source_gem && (runner.os != 'Windows' || steps.setup-msys2.outcome == 'success')
+        if: matrix.build_source_gem
         working-directory: packages/ruby
         run: bundle exec rake gem
 
@@ -362,7 +372,6 @@ jobs:
         uses: ./.github/actions/cleanup-rust-cache
 
       - name: Upload native gem artifact
-        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: gem-${{ matrix.label }}
@@ -370,7 +379,6 @@ jobs:
           retention-days: 7
 
       - name: List built gems
-        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
         shell: bash
         run: |
           echo "📦 Built Ruby gem for ${{ matrix.label }}:"
