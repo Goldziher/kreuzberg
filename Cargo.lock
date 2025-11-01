@@ -6101,7 +6101,7 @@ dependencies = [
 [[package]]
 name = "tesseract-rs"
 version = "0.2.0"
-source = "git+https://github.com/kreuzberg-dev/tesseract-rs-non-fork.git?branch=master#ec49efb847131995c75269bb7ae51f91812ccfe9"
+source = "git+https://github.com/kreuzberg-dev/tesseract-rs.git?branch=master#f9f785803c0ca0e3de1ddd13a83fc9e9668bd276"
 dependencies = [
  "cc",
  "cmake",

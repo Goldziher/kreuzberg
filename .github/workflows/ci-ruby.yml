@@ -63,6 +63,33 @@ jobs:
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
+      - name: Download Pdfium binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          platform="$(uname -s)"
+          case "$platform" in
+            Linux*) platform_id="linux" ;;
+            Darwin*) platform_id="mac" ;;
+            MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
+            *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
+          esac
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64|amd64) arch_id="x64" ;;
+            arm64|aarch64) arch_id="arm64" ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+          version="${PDFIUM_VERSION:-7455}"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL -o "$tmpdir/pdfium.tgz" "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
+          mkdir -p "$tmpdir/extracted"
+          tar -xzf "$tmpdir/pdfium.tgz" -C "$tmpdir/extracted"
+          dest="$RUNNER_TEMP/pdfium"
+          rm -rf "$dest"
+          mv "$tmpdir/extracted" "$dest"
+          rm -rf "$tmpdir"
+
       - name: Stage Pdfium runtime artifacts
         shell: bash
         run: |

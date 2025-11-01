@@ -101,7 +101,7 @@ tar = { version = "0.4.44", optional = true }
 sevenz-rust = { version = "0.6.1", optional = true }
 
 # Processing features (optional)
-tesseract-rs = { git = "https://github.com/kreuzberg-dev/tesseract-rs-non-fork.git", branch = "master", optional = true }
+tesseract-rs = { git = "https://github.com/kreuzberg-dev/tesseract-rs.git", branch = "master", optional = true }
 image = { version = "0.25.8", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif", "rayon"], optional = true }
 fast_image_resize = { version = "5.3.0", optional = true }
 ndarray = { version = "0.16.1", optional = true }
