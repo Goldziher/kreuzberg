@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "transformers>=4.56.2",
+# ]
+# ///
 """Download TATR (Table Transformer) models for vision-based table extraction caching."""
 
 from __future__ import annotations

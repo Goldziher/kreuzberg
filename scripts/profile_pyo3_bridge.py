@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "psutil",
+#   "kreuzberg",
+# ]
+# ///
 """Profile PyO3 bridge for memory leaks and overhead.
 
 Tests:

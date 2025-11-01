@@ -1,23 +1,17 @@
 [dependency-groups]
 dev = [
-  "cibuildwheel>=3.2.1",
   "covdefaults>=2.3.0",
   "maturin>=1.9.6",
-  "memory-profiler>=0.61.0",
   "mypy>=1.18.2",
-  "numpy>=2.3.4",
   "prek>=0.2.12",
   "pytest>=8.4.2",
   "pytest-asyncio>=0.25.0",
-  "pytest-benchmark>=5.2.0",
   "pytest-cov>=7.0.0",
   "pytest-mock>=3.15.1",
   "pytest-rerunfailures>=16.1",
   "pytest-timeout>=2.4.0",
-  "rich>=14.2.0",
   "ruff>=0.14.3",
   "types-psutil>=7.0.0.20251001",
-  "types-pyyaml>=6.0.12.20250915",
   "uv-bump",
 ]
 doc = [
@@ -29,12 +23,6 @@ doc = [
   "mkdocs-material[imaging]>=9.6.22",
   "mkdocs-minify-plugin>=0.8.0",
   "mkdocstrings[python]>=0.30.1",
-]
-comparative-benchmarks = [
-  "docling>=2.59",
-  "extractous>=0.3",
-  "markitdown[docx,pdf]>=0.1.3",
-  "unstructured[all-docs]>=0.18.15",
 ]
 
 [tool.setuptools]
@@ -50,7 +38,7 @@ cache-keys = [
 ]
 
 [tool.uv.workspace]
-members = [ "comparative-benchmarks", "packages/python" ]
+members = [ "packages/python" ]
 
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
@@ -58,7 +46,7 @@ uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
 [tool.ruff]
 target-version = "py310"
 line-length = 120
-src = [ "comparative-benchmarks/*", "packages/python/*" ]
+src = [ "packages/python/*" ]
 format.docstring-code-line-length = 120
 format.docstring-code-format = true
 lint.select = [ "ALL" ]
@@ -213,7 +201,7 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-packages = [ "packages/python", "comparative-benchmarks" ]
+packages = [ "packages/python" ]
 exclude = [ "examples" ]
 python_version = "3.10"
 implicit_reexport = false

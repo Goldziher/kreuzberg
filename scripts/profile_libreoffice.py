@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 """Profile LibreOffice conversions by shelling out to `soffice --convert-to`.
 
 Usage examples:

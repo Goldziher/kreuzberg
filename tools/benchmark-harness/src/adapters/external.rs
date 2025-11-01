@@ -67,9 +67,9 @@ fn get_script_path(script_name: &str) -> Result<PathBuf> {
 ///
 /// Returns (command, args) where command is the executable and args are the base arguments
 fn find_python_with_framework(framework: &str) -> Result<(PathBuf, Vec<String>)> {
-    // First, try using uv to run with the comparative-benchmarks group
+    // First, try using uv to run with the workspace environment
     if which::which("uv").is_ok() {
-        // uv will use the workspace environment with comparative-benchmarks group
+        // uv will use the workspace environment
         // Command will be: uv run python script.py file_path
         return Ok((PathBuf::from("uv"), vec!["run".to_string(), "python".to_string()]));
     }
@@ -95,8 +95,8 @@ fn find_python_with_framework(framework: &str) -> Result<(PathBuf, Vec<String>)>
     }
 
     Err(crate::error::Error::Config(format!(
-        "No Python interpreter found with {} installed. Install with: uv sync --group comparative-benchmarks",
-        framework
+        "No Python interpreter found with {} installed. Install with: pip install {}",
+        framework, framework
     )))
 }
 
