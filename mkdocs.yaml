@@ -144,7 +144,6 @@ nav:
       - Creating Plugins: guides/plugins.md
   - CLI: cli/usage.md
   - API Server: guides/api-server.md
-  - Troubleshooting: guides/troubleshooting.md
   - API Reference:
       - Python: reference/api-python.md
       - TypeScript: reference/api-typescript.md
