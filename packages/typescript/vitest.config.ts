@@ -13,14 +13,22 @@ export default defineConfig({
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "json", "html", "lcov"],
-			exclude: ["node_modules", "dist", "*.config.*", "**/*.spec.ts", "**/types.ts", "**/cli.ts", "tests/helpers/**"],
-			// Coverage thresholds disabled - don't fail CI on coverage
-			// thresholds: {
-			// 	lines: 90,
-			// 	functions: 95,
-			// 	branches: 85,
-			// 	statements: 90,
-			// },
+			exclude: [
+				"node_modules",
+				"dist",
+				"*.config.*",
+				"**/*.spec.ts",
+				"**/types.ts",
+				"**/cli.ts",
+				"tests/**/helpers/**",
+				"tests/unit/helpers/**",
+			],
+			thresholds: {
+				lines: 88,
+				functions: 94,
+				branches: 73,
+				statements: 88,
+			},
 		},
 		testTimeout: 30000,
 		hookTimeout: 10000,

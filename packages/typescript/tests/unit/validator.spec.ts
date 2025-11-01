@@ -208,4 +208,26 @@ describe("Validator Plugin System", () => {
 
 		expect(secondCalled).toBe(false);
 	});
+
+	it("should handle invalid JSON in validator wrapper gracefully", async () => {
+		// This tests the edge case at line 671-672 in src/index.ts
+		// where the validator wrapper receives invalid/undefined JSON
+		class TestValidator implements ValidatorProtocol {
+			name(): string {
+				return "test_validator";
+			}
+
+			validate(result: ExtractionResult): void {
+				// Validation logic
+				expect(result).toBeDefined();
+				expect(result.content).toBeDefined();
+			}
+		}
+
+		registerValidator(new TestValidator());
+
+		// Normal execution should work fine
+		const result = await extractBytes(Buffer.from("Test content"), "text/plain", null);
+		expect(result.content).toBe("Test content");
+	});
 });

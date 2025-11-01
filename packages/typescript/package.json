@@ -87,12 +87,12 @@
 		"@types/archiver": "^7.0.0",
 		"@types/node": "^24.9.2",
 		"@types/which": "^3.0.4",
-		"@vitest/coverage-v8": "^4.0.5",
+		"@vitest/coverage-v8": "^4.0.6",
 		"archiver": "^7.0.1",
 		"oxlint": "^1.25.0",
 		"tsup": "^8.5.0",
 		"typescript": "^5.9.3",
-		"vitest": "^4.0.5"
+		"vitest": "^4.0.6"
 	},
 	"engines": {
 		"node": ">=18"
