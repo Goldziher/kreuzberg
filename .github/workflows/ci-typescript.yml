@@ -122,6 +122,12 @@ jobs:
               ;;
           esac
 
+      - name: Set library path for macOS runtime
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          echo "DYLD_LIBRARY_PATH=${{ github.workspace }}/crates/kreuzberg-node:${DYLD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
       - name: Setup Node workspace
         uses: ./.github/actions/setup-node-workspace
         with:

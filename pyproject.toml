@@ -201,7 +201,7 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-packages = [ "packages/python" ]
+packages = [ "kreuzberg" ]
 exclude = [ "examples" ]
 python_version = "3.10"
 implicit_reexport = false

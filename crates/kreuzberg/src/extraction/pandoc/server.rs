@@ -210,31 +210,32 @@ impl PandocServer {
     /// This is required because pandoc only runs in server mode when invoked
     /// as "pandoc-server" (checks argv[0]).
     async fn create_server_symlink(pandoc_path: &Path) -> Result<PathBuf> {
-        let temp_dir = std::env::temp_dir();
-        let symlink_path = temp_dir.join(format!("pandoc-server-{}", std::process::id()));
-
-        // Remove existing symlink if present
-        let _ = tokio::fs::remove_file(&symlink_path).await;
-
-        // Create symlink
         #[cfg(unix)]
         {
+            let temp_dir = std::env::temp_dir();
+            let symlink_path = temp_dir.join(format!("pandoc-server-{}", std::process::id()));
+
+            // Remove existing symlink if present
+            let _ = tokio::fs::remove_file(&symlink_path).await;
+
+            // Create symlink
             tokio::fs::symlink(pandoc_path, &symlink_path).await.map_err(|e| {
                 KreuzbergError::Io(std::io::Error::other(format!(
                     "Failed to create pandoc-server symlink: {}",
                     e
                 )))
             })?;
+
+            Ok(symlink_path)
         }
 
         #[cfg(not(unix))]
         {
-            return Err(KreuzbergError::validation(
+            let _ = pandoc_path; // Suppress unused variable warning
+            Err(KreuzbergError::validation(
                 "Pandoc server mode requires Unix-like system for symlinks",
-            ));
+            ))
         }
-
-        Ok(symlink_path)
     }
 
     /// Start the pandoc server process
