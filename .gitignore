@@ -45,6 +45,7 @@ tests/benchmarks/results/
 .venv/
 .vscode/
 .windsurfrules
+.playwright-mcp/
 __pycache__/
 AGENTS.md
 AGENTS.md

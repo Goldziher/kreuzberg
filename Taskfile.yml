@@ -2,6 +2,7 @@ version: '3'
 
 vars:
   RUST_LOG: info
+  V3_TAG: v3.20.2  # Latest v3 release tag for documentation
 
 tasks:
   # Rust tasks
@@ -211,6 +212,42 @@ tasks:
     desc: Serve documentation locally
     cmds:
       - uv run mkdocs serve
+
+  docs:serve:versioned:
+    desc: Serve versioned documentation with mike
+    cmds:
+      - uv run mike serve
+
+  docs:deploy:v4:
+    desc: Deploy v4 documentation with mike
+    cmds:
+      - uv run mike deploy --update-aliases 4.0 latest
+      - uv run mike set-default latest
+
+  docs:deploy:v3:
+    desc: Deploy v3 documentation from tagged release
+    cmds:
+      - echo "Creating git worktree for v3 docs ({{.V3_TAG}})..."
+      - git worktree remove --force /tmp/kreuzberg-v3-build 2>/dev/null || true
+      - git worktree add /tmp/kreuzberg-v3-build {{.V3_TAG}}
+      - echo "Disabling social plugin (requires cairo)..."
+      - "sed -i.bak 's/^  - social$/  # - social/' /tmp/kreuzberg-v3-build/mkdocs.yaml"
+      - echo "Building and deploying v3 docs..."
+      - cd /tmp/kreuzberg-v3-build && uv sync --group doc && uv pip install mike
+      - cd /tmp/kreuzberg-v3-build && uv run mike deploy 3.0 v3
+      - echo "Cleaning up worktree..."
+      - git worktree remove --force /tmp/kreuzberg-v3-build || true
+
+  docs:deploy:all:
+    desc: Deploy both v3 and v4 documentation
+    cmds:
+      - task: docs:deploy:v4
+      - task: docs:deploy:v3
+
+  docs:publish:
+    desc: Publish documentation to GitHub Pages
+    cmds:
+      - uv run mike deploy --push 4.0 latest
 
   # Update tasks
   update:
