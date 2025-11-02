@@ -496,8 +496,141 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
     type Error = napi::Error;
 
     fn try_from(val: JsExtractionResult) -> Result<Self> {
-        let metadata = serde_json::from_value(val.metadata)
-            .map_err(|e| Error::new(Status::GenericFailure, format!("Failed to deserialize metadata: {}", e)))?;
+        // Custom metadata deserialization to handle JavaScript post-processor additions
+        // Post-processors can add arbitrary fields to metadata, so we need to preserve them
+        // in the `additional` HashMap while also properly deserializing known fields.
+        let metadata = {
+            // Parse metadata as a generic map to access all fields
+            let mut metadata_map: std::collections::HashMap<String, serde_json::Value> =
+                serde_json::from_value(val.metadata.clone()).map_err(|e| {
+                    Error::new(
+                        Status::GenericFailure,
+                        format!("Failed to parse metadata as map: {}", e),
+                    )
+                })?;
+
+            // Extract the top-level known fields
+            let language = metadata_map
+                .remove("language")
+                .and_then(|v| serde_json::from_value(v).ok());
+            let date = metadata_map.remove("date").and_then(|v| serde_json::from_value(v).ok());
+            let subject = metadata_map
+                .remove("subject")
+                .and_then(|v| serde_json::from_value(v).ok());
+            let image_preprocessing = metadata_map
+                .remove("image_preprocessing")
+                .and_then(|v| serde_json::from_value(v).ok());
+            let json_schema = metadata_map.remove("json_schema");
+            let error = metadata_map
+                .remove("error")
+                .and_then(|v| serde_json::from_value(v).ok());
+
+            // Extract format metadata if present (it's flattened, so fields are at top level)
+            // Format-specific fields - collect all that match known format types
+            let known_format_fields: std::collections::HashSet<&str> = [
+                "format_type",
+                // PDF fields
+                "title",
+                "author",
+                "keywords",
+                "creator",
+                "producer",
+                "creation_date",
+                "modification_date",
+                "page_count",
+                // Excel fields
+                "sheet_count",
+                "sheet_names",
+                // Email fields
+                "from_email",
+                "from_name",
+                "to_emails",
+                "cc_emails",
+                "bcc_emails",
+                "message_id",
+                "attachments",
+                // PowerPoint fields
+                "description",
+                "summary",
+                "fonts",
+                // Archive fields
+                "format",
+                "file_count",
+                "file_list",
+                "total_size",
+                "compressed_size",
+                // Image fields
+                "width",
+                "height",
+                "exif",
+                // XML fields
+                "element_count",
+                "unique_elements",
+                // Text fields
+                "line_count",
+                "word_count",
+                "character_count",
+                "headers",
+                "links",
+                "code_blocks",
+                // HTML fields
+                "canonical",
+                "base_href",
+                "og_title",
+                "og_description",
+                "og_image",
+                "og_url",
+                "og_type",
+                "og_site_name",
+                "twitter_card",
+                "twitter_title",
+                "twitter_description",
+                "twitter_image",
+                "twitter_site",
+                "twitter_creator",
+                "link_author",
+                "link_license",
+                "link_alternate",
+                // OCR fields
+                "psm",
+                "output_format",
+                "table_count",
+                "table_rows",
+                "table_cols",
+            ]
+            .iter()
+            .copied()
+            .collect();
+
+            // Build a JSON object with just the format fields for deserialization
+            let mut format_fields = serde_json::Map::new();
+            for key in known_format_fields.iter() {
+                if let Some(value) = metadata_map.remove(*key) {
+                    format_fields.insert(key.to_string(), value);
+                }
+            }
+
+            // Try to deserialize the format metadata
+            let format = if !format_fields.is_empty() {
+                serde_json::from_value(serde_json::Value::Object(format_fields)).ok()
+            } else {
+                None
+            };
+
+            // Everything remaining in metadata_map is a custom field from post-processors
+            let additional = metadata_map;
+
+            kreuzberg::Metadata {
+                language,
+                date,
+                subject,
+                format,
+                image_preprocessing,
+                json_schema,
+                error,
+                additional,
+            }
+        };
 
         let images = if let Some(imgs) = val.images {
             let mut rust_images = Vec::with_capacity(imgs.len());
@@ -1010,6 +1143,12 @@ impl RustPostProcessor for JsPostProcessor {
         result: &mut kreuzberg::ExtractionResult,
         _config: &kreuzberg::ExtractionConfig,
     ) -> std::result::Result<(), kreuzberg::KreuzbergError> {
+        eprintln!("\n[POST-PROCESSOR] === Starting JS Post-Processor '{}' ===", self.name);
+        eprintln!(
+            "[POST-PROCESSOR] Original Rust metadata.additional keys: {:?}",
+            result.metadata.additional.keys().collect::<Vec<_>>()
+        );
+
         // Convert Rust ExtractionResult to JS format and serialize to JSON
         let js_result =
             JsExtractionResult::try_from(result.clone()).map_err(|e| kreuzberg::KreuzbergError::Plugin {
@@ -1020,6 +1159,11 @@ impl RustPostProcessor for JsPostProcessor {
             message: format!("Failed to serialize result for JavaScript PostProcessor: {}", e),
             plugin_name: self.name.clone(),
         })?;
+
+        eprintln!(
+            "[POST-PROCESSOR] JSON being sent to JS (first 500 chars): {}",
+            &json_input.chars().take(500).collect::<String>()
+        );
 
         // Call JavaScript process function with JSON string
         // We're already in an async context, so we can directly await the ThreadsafeFunction
@@ -1038,6 +1182,11 @@ impl RustPostProcessor for JsPostProcessor {
                 plugin_name: self.name.clone(),
             })?;
 
+        eprintln!(
+            "[POST-PROCESSOR] JSON received from JS (first 500 chars): {}",
+            &json_output.chars().take(500).collect::<String>()
+        );
+
         // Deserialize the JSON result
         let updated: JsExtractionResult =
             serde_json::from_str(&json_output).map_err(|e| kreuzberg::KreuzbergError::Plugin {
@@ -1054,6 +1203,13 @@ impl RustPostProcessor for JsPostProcessor {
                 message: format!("Failed to convert result from JavaScript PostProcessor: {}", e),
                 plugin_name: self.name.clone(),
             })?;
+
+        eprintln!(
+            "[POST-PROCESSOR] Final Rust metadata.additional keys after conversion: {:?}",
+            rust_result.metadata.additional.keys().collect::<Vec<_>>()
+        );
+        eprintln!("[POST-PROCESSOR] === Completed JS Post-Processor '{}' ===\n", self.name);
+
         *result = rust_result;
         Ok(())
     }
@@ -1199,6 +1355,20 @@ pub fn clear_post_processors() -> Result<()> {
     // Clear all processors from the internal HashMap
     *registry = Default::default();
     Ok(())
+}
+
+/// List all registered post-processors
+#[napi]
+pub fn list_post_processors() -> Result<Vec<String>> {
+    let registry = get_post_processor_registry();
+    let registry = registry.read().map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to acquire read lock on PostProcessor registry: {}", e),
+        )
+    })?;
+
+    Ok(registry.list())
 }
 
 // JavaScript Validator bridge implementation using ThreadsafeFunction
@@ -1453,6 +1623,20 @@ pub fn clear_validators() -> Result<()> {
     // Clear all validators from the internal HashMap
     *registry = Default::default();
     Ok(())
+}
+
+/// List all registered validators
+#[napi]
+pub fn list_validators() -> Result<Vec<String>> {
+    let registry = get_validator_registry();
+    let registry = registry.read().map_err(|e| {
+        Error::new(
+            Status::GenericFailure,
+            format!("Failed to acquire read lock on Validator registry: {}", e),
+        )
+    })?;
+
+    Ok(registry.list())
 }
 
 // JavaScript OCR Backend bridge implementation using ThreadsafeFunction

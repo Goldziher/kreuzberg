@@ -964,31 +964,38 @@ impl PostProcessor for PythonPostProcessor {
     async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
         let processor_name = self.name.clone();
 
-        Python::attach(|py| {
-            let obj = self.python_obj.bind(py);
+        // Use block_in_place to run blocking Python code without thread pool deadlock
+        let updated_result = tokio::task::block_in_place(|| {
+            Python::attach(|py| {
+                let obj = self.python_obj.bind(py);
 
-            let result_dict = extraction_result_to_dict(py, result).map_err(|e| KreuzbergError::Plugin {
-                message: format!("Failed to convert ExtractionResult to Python dict: {}", e),
-                plugin_name: processor_name.clone(),
-            })?;
-
-            let py_result = result_dict.bind(py);
-            let processed = obj
-                .call_method1("process", (py_result,))
-                .map_err(|e| KreuzbergError::Plugin {
-                    message: format!("Python PostProcessor '{}' failed during process: {}", processor_name, e),
+                let result_dict = extraction_result_to_dict(py, result).map_err(|e| KreuzbergError::Plugin {
+                    message: format!("Failed to convert ExtractionResult to Python dict: {}", e),
                     plugin_name: processor_name.clone(),
                 })?;
 
-            let processed_dict = processed.cast_into::<PyDict>().map_err(|e| KreuzbergError::Plugin {
-                message: format!("PostProcessor did not return a dict: {}", e),
-                plugin_name: processor_name.clone(),
-            })?;
+                let py_result = result_dict.bind(py);
+                let processed = obj
+                    .call_method1("process", (py_result,))
+                    .map_err(|e| KreuzbergError::Plugin {
+                        message: format!("Python PostProcessor '{}' failed during process: {}", processor_name, e),
+                        plugin_name: processor_name.clone(),
+                    })?;
 
-            merge_dict_to_extraction_result(py, &processed_dict, result)?;
+                let processed_dict = processed.cast_into::<PyDict>().map_err(|e| KreuzbergError::Plugin {
+                    message: format!("PostProcessor did not return a dict: {}", e),
+                    plugin_name: processor_name.clone(),
+                })?;
 
-            Ok(())
-        })
+                let mut updated_result = result.clone();
+                merge_dict_to_extraction_result(py, &processed_dict, &mut updated_result)?;
+
+                Ok::<ExtractionResult, KreuzbergError>(updated_result)
+            })
+        })?;
+
+        *result = updated_result;
+        Ok(())
     }
 
     fn processing_stage(&self) -> ProcessingStage {
@@ -1327,40 +1334,45 @@ impl Validator for PythonValidator {
     async fn validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
         let validator_name = self.name.clone();
 
-        Python::attach(|py| {
-            let obj = self.python_obj.bind(py);
+        // Use block_in_place to run blocking Python code without thread pool deadlock
+        tokio::task::block_in_place(|| {
+            Python::attach(|py| {
+                let obj = self.python_obj.bind(py);
 
-            let result_dict = extraction_result_to_dict(py, result).map_err(|e| KreuzbergError::Plugin {
-                message: format!("Failed to convert ExtractionResult to Python dict: {}", e),
-                plugin_name: validator_name.clone(),
-            })?;
+                let result_dict = extraction_result_to_dict(py, result).map_err(|e| KreuzbergError::Plugin {
+                    message: format!("Failed to convert ExtractionResult to Python dict: {}", e),
+                    plugin_name: validator_name.clone(),
+                })?;
 
-            let py_result = result_dict.bind(py);
-            obj.call_method1("validate", (py_result,)).map_err(|e| {
-                // Check if it's a ValidationError from Python
-                let is_validation_error = e.is_instance_of::<pyo3::exceptions::PyValueError>(py)
-                    || e.get_type(py)
-                        .name()
-                        .ok()
-                        .and_then(|n| n.to_str().ok().map(|s| s.to_string()))
-                        .map(|s| s.contains("ValidationError"))
-                        .unwrap_or(false);
+                let py_result = result_dict.bind(py);
+                obj.call_method1("validate", (py_result,)).map_err(|e| {
+                    // Check if it's a ValidationError from Python
+                    let is_validation_error = e.is_instance_of::<pyo3::exceptions::PyValueError>(py)
+                        || e.get_type(py)
+                            .name()
+                            .ok()
+                            .and_then(|n| n.to_str().ok().map(|s| s.to_string()))
+                            .map(|s| s.contains("ValidationError"))
+                            .unwrap_or(false);
 
-                if is_validation_error {
-                    KreuzbergError::Validation {
-                        message: e.to_string(),
-                        source: None,
+                    if is_validation_error {
+                        KreuzbergError::Validation {
+                            message: e.to_string(),
+                            source: None,
+                        }
+                    } else {
+                        KreuzbergError::Plugin {
+                            message: format!("Python Validator '{}' failed during validate: {}", validator_name, e),
+                            plugin_name: validator_name.clone(),
+                        }
                     }
-                } else {
-                    KreuzbergError::Plugin {
-                        message: format!("Python Validator '{}' failed during validate: {}", validator_name, e),
-                        plugin_name: validator_name.clone(),
-                    }
-                }
-            })?;
+                })?;
 
-            Ok(())
-        })
+                Ok::<(), KreuzbergError>(())
+            })
+        })?;
+
+        Ok(())
     }
 
     fn should_validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> bool {

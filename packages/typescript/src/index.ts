@@ -626,6 +626,26 @@ export function clearPostProcessors(): void {
 }
 
 /**
+ * List all registered post-processors.
+ *
+ * Returns the names of all currently registered post-processors.
+ *
+ * @returns Array of post-processor names
+ *
+ * @example
+ * ```typescript
+ * import { listPostProcessors } from 'kreuzberg';
+ *
+ * const names = listPostProcessors();
+ * console.log('Registered post-processors:', names);
+ * ```
+ */
+export function listPostProcessors(): string[] {
+	const binding = getBinding();
+	return binding.listPostProcessors();
+}
+
+/**
  * Register a custom validator.
  *
  * Validators check extraction results for quality, completeness, or correctness.
@@ -725,6 +745,26 @@ export function unregisterValidator(name: string): void {
 export function clearValidators(): void {
 	const binding = getBinding();
 	binding.clearValidators();
+}
+
+/**
+ * List all registered validators.
+ *
+ * Returns the names of all currently registered validators.
+ *
+ * @returns Array of validator names
+ *
+ * @example
+ * ```typescript
+ * import { listValidators } from 'kreuzberg';
+ *
+ * const names = listValidators();
+ * console.log('Registered validators:', names);
+ * ```
+ */
+export function listValidators(): string[] {
+	const binding = getBinding();
+	return binding.listValidators();
 }
 
 /**

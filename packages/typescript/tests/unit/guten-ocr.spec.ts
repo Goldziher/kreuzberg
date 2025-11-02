@@ -142,16 +142,30 @@ describe("GutenOcrBackend", () => {
 		beforeEach(() => {
 			vi.resetModules();
 
-			// Mock OCR result
+			// Mock OCR result - Guten OCR returns an array directly
 			mockOcrInstance = {
-				detect: vi.fn().mockResolvedValue({
-					texts: [
-						{ text: "Hello", score: 0.95, frame: { top: 0, left: 0, width: 100, height: 20 } },
-						{ text: "World", score: 0.9, frame: { top: 25, left: 0, width: 100, height: 20 } },
-					],
-					resizedImageWidth: 800,
-					resizedImageHeight: 600,
-				}),
+				detect: vi.fn().mockResolvedValue([
+					{
+						text: "Hello",
+						mean: 0.95,
+						box: [
+							[0, 0],
+							[100, 0],
+							[100, 20],
+							[0, 20],
+						],
+					},
+					{
+						text: "World",
+						mean: 0.9,
+						box: [
+							[0, 25],
+							[100, 25],
+							[100, 45],
+							[0, 45],
+						],
+					},
+				]),
 			};
 
 			mockOcrModule = {
@@ -215,11 +229,7 @@ describe("GutenOcrBackend", () => {
 		});
 
 		it("should handle empty text detection", async () => {
-			mockOcrInstance.detect.mockResolvedValue({
-				texts: [],
-				resizedImageWidth: 800,
-				resizedImageHeight: 600,
-			});
+			mockOcrInstance.detect.mockResolvedValue([]);
 
 			const backend = new GutenOcrBackend();
 
@@ -235,15 +245,38 @@ describe("GutenOcrBackend", () => {
 		});
 
 		it("should calculate average confidence correctly", async () => {
-			mockOcrInstance.detect.mockResolvedValue({
-				texts: [
-					{ text: "One", score: 1.0, frame: { top: 0, left: 0, width: 100, height: 20 } },
-					{ text: "Two", score: 0.8, frame: { top: 25, left: 0, width: 100, height: 20 } },
-					{ text: "Three", score: 0.7, frame: { top: 50, left: 0, width: 100, height: 20 } },
-				],
-				resizedImageWidth: 800,
-				resizedImageHeight: 600,
-			});
+			mockOcrInstance.detect.mockResolvedValue([
+				{
+					text: "One",
+					mean: 1.0,
+					box: [
+						[0, 0],
+						[100, 0],
+						[100, 20],
+						[0, 20],
+					],
+				},
+				{
+					text: "Two",
+					mean: 0.8,
+					box: [
+						[0, 25],
+						[100, 25],
+						[100, 45],
+						[0, 45],
+					],
+				},
+				{
+					text: "Three",
+					mean: 0.7,
+					box: [
+						[0, 50],
+						[100, 50],
+						[100, 70],
+						[0, 70],
+					],
+				},
+			]);
 
 			const backend = new GutenOcrBackend();
 
