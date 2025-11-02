@@ -144,3 +144,27 @@ class MissingDependencyError(KreuzbergError):
             "install_command": install_cmd,
         }
         return cls(message, context=context)
+
+
+class ExtractionError(KreuzbergError):
+    """Raised for general structured-extraction failures.
+
+    This includes model failures, parsing failures of model output, or other
+    runtime errors that occur during structured extraction.
+
+    Example:
+        >>> raise ExtractionError("Model failed to produce valid JSON", context={"model": "litellm/vision"})
+
+    """
+
+
+class ExtractionValidationError(KreuzbergError):
+    """Raised when extracted data fails schema validation.
+
+    Contains validation details in the context to aid debugging and retry
+    prompt construction.
+
+    Example:
+        >>> raise ExtractionValidationError("Validation failed", context={"errors": validation_errors})
+
+    """
