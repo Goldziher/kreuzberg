@@ -24,7 +24,7 @@
 		"build": "tsup",
 		"test": "pnpm test:unit && pnpm test:integration",
 		"test:unit": "vitest run tests/unit/",
-		"test:integration": "vitest run tests/integration/pdf.spec.ts tests/integration/ocr.spec.ts && vitest run tests/integration/formats.spec.ts -t 'DOCX|XLSX|PPTX' && vitest run tests/integration/formats.spec.ts -t 'JSON|YAML|XML|email|Markdown|plain'",
+		"test:integration": "vitest run tests/integration/",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage tests/unit/ tests/integration/pdf.spec.ts tests/integration/ocr.spec.ts",
 		"typecheck": "tsc --noEmit",
