@@ -48,27 +48,36 @@ function extractFileSync(
 
 - `Error`: Base error for all extraction failures (validation, parsing, OCR, etc.)
 
-**Examples:**
+**Example - Basic usage:**
 
 ```typescript
 import { extractFileSync } from '@goldziher/kreuzberg';
 
-// Basic usage
 const result = extractFileSync('document.pdf');
 console.log(result.content);
 console.log(`Pages: ${result.metadata.pageCount}`);
+```
 
-// With OCR
+**Example - With OCR:**
+
+```typescript
+import { extractFileSync } from '@goldziher/kreuzberg';
+
 const config = {
   ocr: {
     backend: 'tesseract',
     language: 'eng'
   }
 };
-const ocrResult = extractFileSync('scanned.pdf', null, config);
+const result = extractFileSync('scanned.pdf', null, config);
+```
 
-// With explicit MIME type
-const pdfResult = extractFileSync('document.pdf', 'application/pdf');
+**Example - With explicit MIME type:**
+
+```typescript
+import { extractFileSync } from '@goldziher/kreuzberg';
+
+const result = extractFileSync('document.pdf', 'application/pdf');
 ```
 
 ---

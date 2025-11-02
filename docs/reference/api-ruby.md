@@ -42,17 +42,21 @@ Kreuzberg.extract_file_sync(path, mime_type: nil, config: nil) -> Kreuzberg::Res
 
 - `StandardError`: Base error for all extraction failures
 
-**Examples:**
+**Example - Basic usage:**
 
 ```ruby
 require 'kreuzberg'
 
-# Basic usage
 result = Kreuzberg.extract_file_sync("document.pdf")
 puts result.content
 puts "Pages: #{result.metadata['page_count']}"
+```
 
-# With configuration hash
+**Example - With configuration hash:**
+
+```ruby
+require 'kreuzberg'
+
 config = {
   ocr: {
     backend: 'tesseract',
@@ -60,12 +64,22 @@ config = {
   }
 }
 result = Kreuzberg.extract_file_sync("scanned.pdf", config: config)
+```
 
-# With config object
+**Example - With config object:**
+
+```ruby
+require 'kreuzberg'
+
 config = Kreuzberg::Config::Extraction.new(force_ocr: true)
 result = Kreuzberg.extract_file_sync("document.pdf", config: config)
+```
 
-# With explicit MIME type
+**Example - With explicit MIME type:**
+
+```ruby
+require 'kreuzberg'
+
 result = Kreuzberg.extract_file_sync("document.pdf", mime_type: "application/pdf")
 ```
 

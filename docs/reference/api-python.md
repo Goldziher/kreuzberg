@@ -8,17 +8,27 @@ Complete reference for the Kreuzberg Python API.
 pip install kreuzberg
 ```
 
-**With optional features:**
+**With EasyOCR:**
 
 ```bash
-# OCR backends
 pip install "kreuzberg[easyocr]"
+```
+
+**With PaddleOCR:**
+
+```bash
 pip install "kreuzberg[paddleocr]"
+```
 
-# API server
+**With API server:**
+
+```bash
 pip install "kreuzberg[api]"
+```
 
-# All features
+**With all features:**
+
+```bash
 pip install "kreuzberg[all]"
 ```
 
@@ -61,25 +71,32 @@ def extract_file_sync(
 - `OCRError`: OCR processing failure
 - `MissingDependencyError`: Required system dependency not found
 
-**Examples:**
+**Example - Basic usage:**
 
 ```python
 from kreuzberg import extract_file_sync
 
-# Basic usage
 result = extract_file_sync("document.pdf")
 print(result.content)
 print(f"Pages: {result.metadata['page_count']}")
+```
 
-# With OCR
-from kreuzberg import ExtractionConfig, OcrConfig
+**Example - With OCR:**
+
+```python
+from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
 
 config = ExtractionConfig(
     ocr=OcrConfig(backend="tesseract", language="eng")
 )
 result = extract_file_sync("scanned.pdf", config=config)
+```
 
-# With EasyOCR custom options
+**Example - With EasyOCR custom options:**
+
+```python
+from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
+
 config = ExtractionConfig(
     ocr=OcrConfig(backend="easyocr", language="eng")
 )
@@ -373,15 +390,19 @@ OCR processing configuration.
 - `language` (str): Language code for OCR (ISO 639-3). Default: "eng"
 - `tesseract_config` (TesseractConfig | None): Tesseract-specific configuration. Default: None
 
-**Example:**
+**Example - Basic OCR:**
 
 ```python
 from kreuzberg import OcrConfig
 
-# Basic OCR
 ocr_config = OcrConfig(backend="tesseract", language="eng")
+```
 
-# With EasyOCR
+**Example - With EasyOCR:**
+
+```python
+from kreuzberg import OcrConfig
+
 ocr_config = OcrConfig(backend="easyocr", language="en")
 ```
 
