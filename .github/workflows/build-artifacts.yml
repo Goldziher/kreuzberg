@@ -139,48 +139,8 @@ jobs:
         with:
           targets: ${{ matrix.settings.target }}
 
-      - name: Install cross-compilation tools (Linux ARM64)
-        if: matrix.settings.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-
-      - name: Install cross-compilation tools (Linux ARMv7)
-        if: matrix.settings.target == 'armv7-unknown-linux-gnueabihf'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabihf
-
-      - name: Install cross-compilation tools (Linux musl)
-        if: contains(matrix.settings.target, 'musl')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools
-
-      - name: Configure cross-compilation linkers
-        if: matrix.settings.os == 'ubuntu-latest'
-        run: |
-          mkdir -p .cargo
-          cat > .cargo/config.toml << 'EOF'
-          [target.aarch64-unknown-linux-gnu]
-          linker = "aarch64-linux-gnu-gcc"
-
-          [target.armv7-unknown-linux-gnueabihf]
-          linker = "arm-linux-gnueabihf-gcc"
-
-          [target.aarch64-unknown-linux-musl]
-          linker = "aarch64-linux-musl-gcc"
-          EOF
-
-      - name: Install musl cross-compiler (aarch64)
-        if: matrix.settings.target == 'aarch64-unknown-linux-musl'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-          sudo mkdir -p /usr/local/bin
-          echo '#!/bin/sh' | sudo tee /usr/local/bin/aarch64-linux-musl-gcc
-          echo 'exec aarch64-linux-gnu-gcc "$@"' | sudo tee -a /usr/local/bin/aarch64-linux-musl-gcc
-          sudo chmod +x /usr/local/bin/aarch64-linux-musl-gcc
+      # NAPI-RS uses Docker-based cross-compilation for Linux ARM/musl targets
+      # The napi CLI automatically handles cross-compilation toolchains
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -191,11 +151,24 @@ jobs:
             target
           key: ${{ matrix.settings.os }}-cargo-napi-${{ matrix.settings.target }}-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Setup Docker buildx (Linux cross-compilation)
+        if: |
+          matrix.settings.os == 'ubuntu-latest' && (
+            matrix.settings.target == 'aarch64-unknown-linux-gnu' ||
+            matrix.settings.target == 'aarch64-unknown-linux-musl' ||
+            matrix.settings.target == 'x86_64-unknown-linux-musl' ||
+            matrix.settings.target == 'armv7-unknown-linux-gnueabihf'
+          )
+        uses: docker/setup-buildx-action@v3
+
       - name: Build NAPI-RS bindings
         working-directory: crates/kreuzberg-node
+        env:
+          # Use Docker for Linux ARM/musl cross-compilation
+          NAPI_CROSS: ${{ (matrix.settings.os == 'ubuntu-latest' && (matrix.settings.target == 'aarch64-unknown-linux-gnu' || matrix.settings.target == 'aarch64-unknown-linux-musl' || matrix.settings.target == 'x86_64-unknown-linux-musl' || matrix.settings.target == 'armv7-unknown-linux-gnueabihf')) && 'true' || 'false' }}
         run: |
           pnpm install
-          pnpm run build --target ${{ matrix.settings.target }}
+          pnpm run build --target ${{ matrix.settings.target }} --use-cross
 
       - name: Cleanup Rust cache before save
         if: always()
