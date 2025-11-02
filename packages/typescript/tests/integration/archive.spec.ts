@@ -31,11 +31,11 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("test.txt");
 			expect(result.content).toContain("Hello from ZIP!");
 
-			expect(result.metadata.archive).toBeDefined();
-			expect(result.metadata.archive.format).toBe("ZIP");
-			expect(result.metadata.archive.file_count).toBe(1);
-			expect(result.metadata.archive.file_list).toHaveLength(1);
-			expect(result.metadata.archive.file_list[0]).toBe("test.txt");
+			expect(result.metadata).toBeDefined();
+			expect(result.metadata.format).toBe("ZIP");
+			expect(result.metadata.file_count).toBe(1);
+			expect(result.metadata.file_list).toHaveLength(1);
+			expect(result.metadata.file_list[0]).toBe("test.txt");
 		});
 
 		it("should extract ZIP with multiple files", async () => {
@@ -58,13 +58,13 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("Content 2");
 			expect(result.content).toContain("value");
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_count).toBe(3);
-			expect(archiveMeta.file_list).toHaveLength(3);
-			expect(archiveMeta.file_list).toContain("file1.txt");
-			expect(archiveMeta.file_list).toContain("file2.md");
-			expect(archiveMeta.file_list).toContain("file3.json");
+			expect(result.metadata.file_count).toBe(3);
+			expect(result.metadata.file_list).toHaveLength(3);
+			expect(result.metadata.file_list).toContain("file1.txt");
+			expect(result.metadata.file_list).toContain("file2.md");
+			expect(result.metadata.file_list).toContain("file3.json");
 		});
 
 		it("should extract ZIP with nested directories", async () => {
@@ -85,11 +85,11 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("File in dir1");
 			expect(result.content).toContain("Nested file");
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_count).toBeGreaterThanOrEqual(2);
-			expect(archiveMeta.file_list.some((f) => f.includes("dir1/file.txt"))).toBe(true);
-			expect(archiveMeta.file_list.some((f) => f.includes("dir1/subdir/nested.txt"))).toBe(true);
+			expect(result.metadata.file_count).toBeGreaterThanOrEqual(2);
+			expect(result.metadata.file_list.some((f) => f.includes("dir1/file.txt"))).toBe(true);
+			expect(result.metadata.file_list.some((f) => f.includes("dir1/subdir/nested.txt"))).toBe(true);
 		});
 
 		it("should extract ZIP with mixed file types", async () => {
@@ -113,14 +113,14 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("Text document");
 			expect(result.content).toContain("# README");
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_count).toBe(4);
-			expect(archiveMeta.file_list).toHaveLength(4);
-			expect(archiveMeta.file_list).toContain("document.txt");
-			expect(archiveMeta.file_list).toContain("readme.md");
-			expect(archiveMeta.file_list).toContain("image.png");
-			expect(archiveMeta.file_list).toContain("document.pdf");
+			expect(result.metadata.file_count).toBe(4);
+			expect(result.metadata.file_list).toHaveLength(4);
+			expect(result.metadata.file_list).toContain("document.txt");
+			expect(result.metadata.file_list).toContain("readme.md");
+			expect(result.metadata.file_list).toContain("image.png");
+			expect(result.metadata.file_list).toContain("document.pdf");
 		});
 
 		it("should handle empty ZIP gracefully", async () => {
@@ -133,11 +133,11 @@ describe("Archive Integration Tests", () => {
 			expect(result.tables).toEqual([]);
 
 			expect(result.content).toContain("ZIP Archive");
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_count).toBe(0);
-			expect(archiveMeta.total_size).toBe(0);
-			expect(archiveMeta.file_list).toEqual([]);
+			expect(result.metadata.file_count).toBe(0);
+			expect(result.metadata.total_size).toBe(0);
+			expect(result.metadata.file_list).toEqual([]);
 		});
 
 		it("should reject corrupted ZIP gracefully", async () => {
@@ -159,15 +159,15 @@ describe("Archive Integration Tests", () => {
 			expect(result.detectedLanguages).toBeNull();
 			expect(result.tables).toEqual([]);
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_count).toBe(100);
-			expect(archiveMeta.file_list).toHaveLength(100);
+			expect(result.metadata.file_count).toBe(100);
+			expect(result.metadata.file_list).toHaveLength(100);
 			expect(result.content).toContain("file_0.txt");
 			expect(result.content).toContain("file_99.txt");
-			expect(archiveMeta.file_list).toContain("file_0.txt");
-			expect(archiveMeta.file_list).toContain("file_50.txt");
-			expect(archiveMeta.file_list).toContain("file_99.txt");
+			expect(result.metadata.file_list).toContain("file_0.txt");
+			expect(result.metadata.file_list).toContain("file_50.txt");
+			expect(result.metadata.file_list).toContain("file_99.txt");
 		});
 
 		it("should handle ZIP with special characters in filenames", async () => {
@@ -187,13 +187,13 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("file with spaces.txt");
 			expect(result.content).toContain("file-with-dashes.txt");
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_count).toBe(3);
-			expect(archiveMeta.file_list).toHaveLength(3);
-			expect(archiveMeta.file_list.some((f) => f.includes("txt"))).toBe(true);
-			expect(archiveMeta.file_list).toContain("file with spaces.txt");
-			expect(archiveMeta.file_list).toContain("file-with-dashes.txt");
+			expect(result.metadata.file_count).toBe(3);
+			expect(result.metadata.file_list).toHaveLength(3);
+			expect(result.metadata.file_list.some((f) => f.includes("txt"))).toBe(true);
+			expect(result.metadata.file_list).toContain("file with spaces.txt");
+			expect(result.metadata.file_list).toContain("file-with-dashes.txt");
 		});
 
 		it("should extract ZIP synchronously", async () => {
@@ -211,11 +211,11 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("test.txt");
 			expect(result.content).toContain("Hello from ZIP!");
 
-			expect(result.metadata.archive).toBeDefined();
-			expect(result.metadata.archive.format).toBe("ZIP");
-			expect(result.metadata.archive.file_count).toBe(1);
-			expect(result.metadata.archive.file_list).toHaveLength(1);
-			expect(result.metadata.archive.file_list[0]).toBe("test.txt");
+			expect(result.metadata).toBeDefined();
+			expect(result.metadata.format).toBe("ZIP");
+			expect(result.metadata.file_count).toBe(1);
+			expect(result.metadata.file_list).toHaveLength(1);
+			expect(result.metadata.file_list[0]).toBe("test.txt");
 		});
 	});
 
@@ -236,10 +236,10 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("test.txt");
 			expect(result.content).toContain("Hello from TAR!");
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.format).toBe("TAR");
-			expect(archiveMeta.file_count).toBe(1);
+			expect(result.metadata.format).toBe("TAR");
+			expect(result.metadata.file_count).toBe(1);
 		});
 
 		it("should extract TAR with alternative MIME type", async () => {
@@ -254,7 +254,7 @@ describe("Archive Integration Tests", () => {
 			expect(result.tables).toEqual([]);
 
 			expect(result.content).toContain("TAR Archive");
-			expect(result.metadata.archive).toBeDefined();
+			expect(result.metadata).toBeDefined();
 		});
 
 		it("should extract TAR with multiple files", async () => {
@@ -273,9 +273,9 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("file2.md");
 			expect(result.content).toContain("TAR content 1");
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_count).toBe(2);
+			expect(result.metadata.file_count).toBe(2);
 		});
 
 		it("should handle corrupted TAR gracefully", async () => {
@@ -319,11 +319,11 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("readme.txt");
 			expect(result.content).toContain("This archive contains another archive");
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_count).toBe(2);
-			expect(archiveMeta.file_list).toContain("inner.zip");
-			expect(archiveMeta.file_list).toContain("readme.txt");
+			expect(result.metadata.file_count).toBe(2);
+			expect(result.metadata.file_list).toContain("inner.zip");
+			expect(result.metadata.file_list).toContain("readme.txt");
 		});
 
 		it("should extract TAR containing ZIP", async () => {
@@ -345,9 +345,9 @@ describe("Archive Integration Tests", () => {
 			expect(result.content).toContain("archive.zip");
 			expect(result.content).toContain("info.txt");
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_count).toBeGreaterThanOrEqual(2);
+			expect(result.metadata.file_count).toBeGreaterThanOrEqual(2);
 		});
 	});
 
@@ -361,8 +361,8 @@ describe("Archive Integration Tests", () => {
 
 			const result = await extractBytes(zipBytes, "application/zip");
 
-			expect(result.metadata.archive).toBeDefined();
-			expect(result.metadata.archive.file_count).toBe(3);
+			expect(result.metadata).toBeDefined();
+			expect(result.metadata.file_count).toBe(3);
 		});
 
 		it("should report total extracted size", async () => {
@@ -373,8 +373,8 @@ describe("Archive Integration Tests", () => {
 
 			const result = await extractBytes(zipBytes, "application/zip");
 
-			expect(result.metadata.archive).toBeDefined();
-			expect(result.metadata.archive.total_size).toBeGreaterThan(0);
+			expect(result.metadata).toBeDefined();
+			expect(result.metadata.total_size).toBeGreaterThan(0);
 		});
 
 		it("should list all entry names", async () => {
@@ -386,12 +386,12 @@ describe("Archive Integration Tests", () => {
 
 			const result = await extractBytes(zipBytes, "application/zip");
 
-			const archiveMeta = result.metadata.archive;
+			const archiveMeta = result.metadata;
 			expect(archiveMeta).toBeDefined();
-			expect(archiveMeta.file_list).toHaveLength(3);
-			expect(archiveMeta.file_list).toContain("alpha.txt");
-			expect(archiveMeta.file_list).toContain("beta.txt");
-			expect(archiveMeta.file_list).toContain("gamma.txt");
+			expect(result.metadata.file_list).toHaveLength(3);
+			expect(result.metadata.file_list).toContain("alpha.txt");
+			expect(result.metadata.file_list).toContain("beta.txt");
+			expect(result.metadata.file_list).toContain("gamma.txt");
 		});
 
 		it("should indicate archive format", async () => {
@@ -401,8 +401,8 @@ describe("Archive Integration Tests", () => {
 			const zipResult = await extractBytes(zipBytes, "application/zip");
 			const tarResult = await extractBytes(tarBytes, "application/x-tar");
 
-			expect(zipResult.metadata.archive.format).toBe("ZIP");
-			expect(tarResult.metadata.archive.format).toBe("TAR");
+			expect(zipResult.metadata.format).toBe("ZIP");
+			expect(tarResult.metadata.format).toBe("TAR");
 		});
 	});
 });
