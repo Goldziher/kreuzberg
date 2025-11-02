@@ -24,9 +24,13 @@ runs:
         python-version: ${{ inputs.python-version }}
         cache-prefix: python-build-wheels
 
+    - name: Install cibuildwheel
+      shell: bash
+      run: uv tool install cibuildwheel
+
     - name: Build wheels
       shell: bash
-      run: python -m cibuildwheel packages/python --output-dir wheelhouse
+      run: uvx cibuildwheel packages/python --output-dir wheelhouse
       env:
         CIBW_BUILD: cp310-*
 
