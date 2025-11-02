@@ -693,7 +693,7 @@ interface Table {
 
 **Fields:**
 
-- `cells` (string[][]): 2D array of table cells (rows x columns)
+- `cells` (`string[][]`): 2D array of table cells (rows x columns)
 - `markdown` (string): Table rendered as markdown
 - `pageNumber` (number): Page number where table was found
 
