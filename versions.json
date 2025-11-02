@@ -5,5 +5,12 @@
     "aliases": [
       "latest"
     ]
+  },
+  {
+    "version": "3.0",
+    "title": "3.0",
+    "aliases": [
+      "v3"
+    ]
   }
 ]
