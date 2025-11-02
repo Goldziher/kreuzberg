@@ -626,7 +626,7 @@ if metadata.get("format_type") == "pdf":
     print(f"Pages: {metadata.get('page_count')}")
 ```
 
-See [Types Reference](types.md) for complete metadata field documentation.
+See the Types Reference for complete metadata field documentation.
 
 ---
 

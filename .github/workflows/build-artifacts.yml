@@ -99,20 +99,28 @@ jobs:
       fail-fast: false
       matrix:
         settings:
+          # Linux native build
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+          # Linux cross-compilation targets (use zigbuild)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
+            use_zigbuild: true
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
+            use_zigbuild: true
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
+            use_zigbuild: true
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
-          - os: macos-latest
+            use_zigbuild: true
+          # macOS: use native runners for each architecture (ONNX runtime doesn't cross-compile)
+          - os: macos-13  # Intel
             target: x86_64-apple-darwin
-          - os: macos-latest
+          - os: macos-latest  # Apple Silicon
             target: aarch64-apple-darwin
+          # Windows
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: windows-latest
@@ -139,9 +147,6 @@ jobs:
         with:
           targets: ${{ matrix.settings.target }}
 
-      # NAPI-RS uses Docker-based cross-compilation for Linux ARM/musl targets
-      # The napi CLI automatically handles cross-compilation toolchains
-
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -151,17 +156,29 @@ jobs:
             target
           key: ${{ matrix.settings.os }}-cargo-napi-${{ matrix.settings.target }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Setup Docker (Linux cross-compilation)
-        if: |
-          matrix.settings.os == 'ubuntu-latest' && (
-            matrix.settings.target == 'aarch64-unknown-linux-gnu' ||
-            matrix.settings.target == 'aarch64-unknown-linux-musl' ||
-            matrix.settings.target == 'x86_64-unknown-linux-musl' ||
-            matrix.settings.target == 'armv7-unknown-linux-gnueabihf'
-          )
-        uses: docker/setup-buildx-action@v3
+      # Install Zig for cross-compilation on Linux
+      - name: Setup Zig (Linux cross-compilation)
+        if: matrix.settings.use_zigbuild
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
 
-      - name: Build NAPI-RS bindings
+      - name: Install cargo-zigbuild (Linux cross-compilation)
+        if: matrix.settings.use_zigbuild
+        run: cargo install cargo-zigbuild --locked
+
+      - name: Build NAPI-RS bindings (with zigbuild)
+        if: matrix.settings.use_zigbuild
+        working-directory: crates/kreuzberg-node
+        env:
+          # Tell NAPI-RS to use cargo-zigbuild
+          NAPI_RS_CARGO: cargo-zigbuild
+        run: |
+          pnpm install
+          pnpm run build --target ${{ matrix.settings.target }} --cargo-name cargo-zigbuild --zig
+
+      - name: Build NAPI-RS bindings (native)
+        if: ${{ !matrix.settings.use_zigbuild }}
         working-directory: crates/kreuzberg-node
         run: |
           pnpm install
