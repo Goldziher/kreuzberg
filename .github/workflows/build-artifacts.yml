@@ -151,7 +151,7 @@ jobs:
             target
           key: ${{ matrix.settings.os }}-cargo-napi-${{ matrix.settings.target }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Setup Docker buildx (Linux cross-compilation)
+      - name: Setup Docker (Linux cross-compilation)
         if: |
           matrix.settings.os == 'ubuntu-latest' && (
             matrix.settings.target == 'aarch64-unknown-linux-gnu' ||
@@ -163,12 +163,9 @@ jobs:
 
       - name: Build NAPI-RS bindings
         working-directory: crates/kreuzberg-node
-        env:
-          # Use Docker for Linux ARM/musl cross-compilation
-          NAPI_CROSS: ${{ (matrix.settings.os == 'ubuntu-latest' && (matrix.settings.target == 'aarch64-unknown-linux-gnu' || matrix.settings.target == 'aarch64-unknown-linux-musl' || matrix.settings.target == 'x86_64-unknown-linux-musl' || matrix.settings.target == 'armv7-unknown-linux-gnueabihf')) && 'true' || 'false' }}
         run: |
           pnpm install
-          pnpm run build --target ${{ matrix.settings.target }} --use-cross
+          pnpm run build --target ${{ matrix.settings.target }}
 
       - name: Cleanup Rust cache before save
         if: always()
