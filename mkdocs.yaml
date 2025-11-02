@@ -70,7 +70,7 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
-      linenums: true
+      linenums: false
       use_pygments: true
   - pymdownx.inlinehilite
   - pymdownx.keys
