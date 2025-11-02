@@ -190,6 +190,7 @@ nav:
       - Configuration: guides/configuration.md
       - OCR: guides/ocr.md
       - Advanced Features: guides/advanced.md
+      - Docker Deployment: guides/docker.md
       - Creating Plugins: guides/plugins.md
   - CLI: cli/usage.md
   - API Server: guides/api-server.md

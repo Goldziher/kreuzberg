@@ -72,7 +72,6 @@ jobs:
           docker build -f docker/Dockerfile.${{ matrix.variant }} -t kreuzberg:${{ matrix.variant }} .
 
           echo "=== Docker image built successfully ==="
-          docker images | grep kreuzberg:${{ matrix.variant }}
 
       - name: Test Docker image size
         run: |
