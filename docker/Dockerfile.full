@@ -99,9 +99,11 @@ RUN apt-get update && \
     if [ "$TARGETARCH" = "arm64" ]; then \
         PANDOC_ARCH="arm64"; \
         LO_ARCH="aarch64"; \
+        LO_FILE_ARCH="aarch64"; \
     else \
         PANDOC_ARCH="amd64"; \
         LO_ARCH="x86_64"; \
+        LO_FILE_ARCH="x86-64"; \
     fi && \
     curl -fL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-${PANDOC_ARCH}.tar.gz" \
         -o /tmp/pandoc.tar.gz && \
@@ -109,7 +111,7 @@ RUN apt-get update && \
     cp /tmp/pandoc-${PANDOC_VERSION}/bin/pandoc /usr/local/bin/ && \
     rm -rf /tmp/pandoc* && \
     # Download and install LibreOffice (arch-aware)
-    curl -fL "https://download.documentfoundation.org/libreoffice/stable/${LIBREOFFICE_VERSION}/deb/${LO_ARCH}/LibreOffice_${LIBREOFFICE_VERSION}_Linux_${LO_ARCH}_deb.tar.gz" \
+    curl -fL "https://download.documentfoundation.org/libreoffice/stable/${LIBREOFFICE_VERSION}/deb/${LO_ARCH}/LibreOffice_${LIBREOFFICE_VERSION}_Linux_${LO_FILE_ARCH}_deb.tar.gz" \
         -o /tmp/libreoffice.tar.gz && \
     mkdir -p /tmp/libreoffice && \
     tar -xzf /tmp/libreoffice.tar.gz -C /tmp/libreoffice --strip-components=1 && \
