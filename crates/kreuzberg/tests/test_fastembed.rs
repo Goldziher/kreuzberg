@@ -558,12 +558,12 @@ async fn test_generate_embeddings_for_chunks_batch_size() {
         .collect();
 
     // Note: The "fast" model uses dynamic quantization which doesn't support batching
-    // Use batch_size=None to process all chunks at once
+    // Use batch_size=10 (same as chunk count) to process all chunks at once
     let config = EmbeddingConfig {
         model: EmbeddingModelType::Preset {
             name: "fast".to_string(),
         },
-        batch_size: None,
+        batch_size: 10,
         normalize: false,
         show_download_progress: false,
         cache_dir: None,
@@ -587,7 +587,7 @@ async fn test_generate_embeddings_for_chunks_batch_size() {
         );
     }
 
-    println!("✓ Processing with batch_size=None works for 10 chunks");
+    println!("✓ Processing with batch_size=10 works for 10 chunks");
 }
 
 #[cfg(all(feature = "embeddings", feature = "chunking"))]
