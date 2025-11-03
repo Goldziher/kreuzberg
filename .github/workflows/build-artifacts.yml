@@ -103,18 +103,9 @@ jobs:
           # Linux native build
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          # Linux cross-compilation targets (use zigbuild)
+          # Linux musl (use zigbuild for cross-compilation)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            use_zigbuild: true
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            use_zigbuild: true
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            use_zigbuild: true
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-gnueabihf
             use_zigbuild: true
           # macOS: use native runners for each architecture (ONNX runtime doesn't cross-compile)
           - os: macos-13  # Intel
@@ -176,7 +167,7 @@ jobs:
           NAPI_RS_CARGO: cargo-zigbuild
         run: |
           pnpm install
-          pnpm run build --target ${{ matrix.settings.target }} --zig
+          pnpm run build --target ${{ matrix.settings.target }}
 
       - name: Build NAPI-RS bindings (native)
         if: ${{ !matrix.settings.use_zigbuild }}
@@ -342,7 +333,7 @@ jobs:
         working-directory: packages/ruby
         run: |
           RUBY_PLATFORM=$(ruby -e "puts Gem::Platform.local.to_s")
-          bundle exec rake native:kreuzberg:${RUBY_PLATFORM}:gem
+          bundle exec rake native:kreuzberg:${RUBY_PLATFORM}
 
       - name: Build native gem (Windows)
         if: runner.os == 'Windows'
@@ -350,7 +341,7 @@ jobs:
         run: |
           $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
           $rubydir = "$workspace/packages/ruby"
-          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && RUBY_PLATFORM=\$(ruby -e 'puts Gem::Platform.local.to_s') && bundle exec rake native:kreuzberg:\${RUBY_PLATFORM}:gem"
+          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && RUBY_PLATFORM=\$(ruby -e 'puts Gem::Platform.local.to_s') && bundle exec rake native:kreuzberg:\${RUBY_PLATFORM}"
 
       - name: Build source gem
         if: matrix.build_source_gem

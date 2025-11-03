@@ -14,38 +14,15 @@ import type { OcrBackendProtocol } from "../types.js";
  */
 interface TextLine {
 	text: string;
-	score: number;
-	frame: {
-		top: number;
-		left: number;
-		width: number;
-		height: number;
-	};
-}
-
-/**
- * Result from Guten OCR detection.
- */
-interface GutenOcrResult {
-	texts: TextLine[];
-	resizedImageWidth: number;
-	resizedImageHeight: number;
+	mean: number; // Confidence score (0-1)
+	box: number[][]; // Bounding box coordinates
 }
 
 /**
  * Guten OCR instance interface.
  */
 interface GutenOcr {
-	detect(
-		imagePath:
-			| string
-			| {
-					data: Uint8Array | Uint8ClampedArray | Buffer;
-					width: number;
-					height: number;
-			  },
-		options?: { onnxOptions?: unknown },
-	): Promise<GutenOcrResult>;
+	detect(imagePath: string | Buffer, options?: { onnxOptions?: unknown }): Promise<TextLine[]>;
 }
 
 /**
@@ -226,7 +203,7 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		}
 
 		try {
-			this.ocr = await this.ocrModule?.create(this.options);
+			this.ocr = (await this.ocrModule?.create(this.options)) ?? null;
 		} catch (e) {
 			const error = e as Error;
 			throw new Error(`Failed to initialize Guten OCR: ${error.message}`);
@@ -302,40 +279,31 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		}
 
 		try {
-			// Import sharp for image decoding
+			// Import sharp for image metadata
 			const sharp = await import("sharp").then((m: any) => m.default || m);
 
-			// Decode image to get pixel data and dimensions
+			// Get image dimensions for metadata
 			const image = sharp(Buffer.from(imageBytes));
-			const _metadata = await image.metadata();
-			const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
+			const metadata = await image.metadata();
 
-			// Create image input for Guten OCR
-			const imageInput = {
-				data: new Uint8Array(data),
-				width: info.width,
-				height: info.height,
-			};
-
-			// Run OCR detection
-			const result = await this.ocr.detect(imageInput);
+			// Run OCR detection - Guten OCR accepts image buffers directly
+			const result = await this.ocr.detect(Buffer.from(imageBytes));
 
 			// Process detected text lines
-			const textLines = result.texts.map((line) => line.text);
+			const textLines = result.map((line) => line.text);
 			const content = textLines.join("\n");
 
 			// Calculate average confidence
-			const avgConfidence =
-				result.texts.length > 0 ? result.texts.reduce((sum, line) => sum + line.score, 0) / result.texts.length : 0;
+			const avgConfidence = result.length > 0 ? result.reduce((sum, line) => sum + line.mean, 0) / result.length : 0;
 
 			return {
 				content,
 				mime_type: "text/plain",
 				metadata: {
-					width: info.width,
-					height: info.height,
+					width: metadata.width ?? 0,
+					height: metadata.height ?? 0,
 					confidence: avgConfidence,
-					text_regions: result.texts.length,
+					text_regions: result.length,
 					language,
 				},
 				tables: [],

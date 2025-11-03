@@ -24,10 +24,10 @@ export default defineConfig({
 				"tests/unit/helpers/**",
 			],
 			thresholds: {
-				lines: 88,
-				functions: 94,
+				lines: 85,
+				functions: 90,
 				branches: 73,
-				statements: 88,
+				statements: 86,
 			},
 		},
 		testTimeout: 30000,

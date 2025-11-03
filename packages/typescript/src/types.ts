@@ -194,28 +194,109 @@ export interface ErrorMetadata {
 	message?: string;
 }
 
+/**
+ * Extraction result metadata.
+ *
+ * Uses a flattened discriminated union approach with format_type as the discriminator.
+ * When format_type is set (e.g., "archive"), the corresponding format-specific fields
+ * are available at the root level of the metadata object.
+ *
+ * This structure matches the Rust serialization with serde's tagged enum flattening.
+ */
 export interface Metadata {
+	// Common fields
 	language?: string | null;
 	date?: string | null;
 	subject?: string | null;
-	format?: string | null;
 
-	pdf?: PdfMetadata | null;
-	excel?: ExcelMetadata | null;
-	email?: EmailMetadata | null;
-	pptx?: PptxMetadata | null;
-	archive?: ArchiveMetadata | null;
-	image?: ImageMetadata | null;
-	xml?: XmlMetadata | null;
-	text?: TextMetadata | null;
-	html?: HtmlMetadata | null;
+	// Discriminator field - indicates which format-specific fields are present
+	format_type?: "pdf" | "excel" | "email" | "pptx" | "archive" | "image" | "xml" | "text" | "html" | "ocr";
 
-	ocr?: OcrMetadata | null;
-	imagePreprocessing?: ImagePreprocessingMetadata | null;
+	// PDF format fields (when format_type === "pdf")
+	title?: string | null;
+	author?: string | null;
+	keywords?: string | null;
+	creator?: string | null;
+	producer?: string | null;
+	creation_date?: string | null;
+	modification_date?: string | null;
+	page_count?: number;
 
-	// biome-ignore lint/suspicious/noExplicitAny: JSON schema can be any valid JSON structure
-	jsonSchema?: any | null;
+	// Excel format fields (when format_type === "excel")
+	sheet_count?: number;
+	sheet_names?: string[];
 
+	// Email format fields (when format_type === "email")
+	from_email?: string | null;
+	from_name?: string | null;
+	to_emails?: string[];
+	cc_emails?: string[];
+	bcc_emails?: string[];
+	message_id?: string | null;
+	attachments?: string[];
+
+	// PowerPoint format fields (when format_type === "pptx")
+	description?: string | null;
+	summary?: string | null;
+	fonts?: string[];
+
+	// Archive format fields (when format_type === "archive")
+	format?: string;
+	file_count?: number;
+	file_list?: string[];
+	total_size?: number;
+	compressed_size?: number | null;
+
+	// Image format fields (when format_type === "image")
+	width?: number;
+	height?: number;
+	exif?: Record<string, string>;
+
+	// XML format fields (when format_type === "xml")
+	element_count?: number;
+	unique_elements?: string[];
+
+	// Text format fields (when format_type === "text")
+	line_count?: number;
+	word_count?: number;
+	character_count?: number;
+	headers?: string[] | null;
+	links?: [string, string][] | null;
+	code_blocks?: [string, string][] | null;
+
+	// HTML format fields (when format_type === "html")
+	canonical?: string | null;
+	base_href?: string | null;
+	og_title?: string | null;
+	og_description?: string | null;
+	og_image?: string | null;
+	og_url?: string | null;
+	og_type?: string | null;
+	og_site_name?: string | null;
+	twitter_card?: string | null;
+	twitter_title?: string | null;
+	twitter_description?: string | null;
+	twitter_image?: string | null;
+	twitter_site?: string | null;
+	twitter_creator?: string | null;
+	link_author?: string | null;
+	link_license?: string | null;
+	link_alternate?: string | null;
+
+	// OCR format fields (when format_type === "ocr")
+	psm?: number;
+	output_format?: string;
+	table_count?: number;
+	table_rows?: number | null;
+	table_cols?: number | null;
+
+	// Image preprocessing metadata (when OCR preprocessing was applied)
+	image_preprocessing?: ImagePreprocessingMetadata | null;
+
+	// JSON schema (for structured data extraction)
+	json_schema?: Record<string, unknown> | null;
+
+	// Error metadata (for batch operations)
 	error?: ErrorMetadata | null;
 
 	// biome-ignore lint/suspicious/noExplicitAny: Postprocessors can add arbitrary metadata fields

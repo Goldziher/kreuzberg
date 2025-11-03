@@ -11,11 +11,10 @@ use crate::types::ExtractionResult;
 /// Run the post-processing pipeline on an extraction result.
 ///
 /// Executes post-processing in the following order:
-/// 1. Validators - Run validation hooks (can fail fast)
+/// 1. Post-Processors - Execute by stage (Early, Middle, Late) to modify/enhance the result
 /// 2. Quality Processing - Text cleaning and quality scoring
 /// 3. Chunking - Text splitting if enabled
-/// 4. Post-Processors - Execute by stage (Early, Middle, Late)
-/// 5. Custom Hooks - User-registered plugins
+/// 4. Validators - Run validation hooks on the processed result (can fail fast)
 ///
 /// # Arguments
 ///
@@ -32,18 +31,51 @@ use crate::types::ExtractionResult;
 /// - Post-processor errors are caught and recorded in metadata
 /// - System errors (IO, RuntimeError equivalents) always bubble up
 pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfig) -> Result<ExtractionResult> {
-    {
-        let validator_registry = crate::plugins::registry::get_validator_registry();
-        let validators = {
-            let registry = validator_registry
-                .read()
-                .map_err(|e| crate::KreuzbergError::Other(format!("Validator registry lock poisoned: {}", e)))?;
-            registry.get_all()
-        };
+    // Run post-processors FIRST so validators can check the processed result
+    let pp_config = config.postprocessor.as_ref();
+    let postprocessing_enabled = pp_config.is_none_or(|c| c.enabled);
 
-        for validator in validators {
-            if validator.should_validate(&result, config) {
-                validator.validate(&result, config).await?;
+    if postprocessing_enabled {
+        #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
+        {
+            let _ = crate::keywords::ensure_initialized();
+        }
+
+        let processor_registry = crate::plugins::registry::get_post_processor_registry();
+
+        for stage in [ProcessingStage::Early, ProcessingStage::Middle, ProcessingStage::Late] {
+            let processors = {
+                let registry = processor_registry.read().map_err(|e| {
+                    crate::KreuzbergError::Other(format!("Post-processor registry lock poisoned: {}", e))
+                })?;
+                registry.get_for_stage(stage)
+            };
+
+            for processor in processors {
+                let processor_name = processor.name();
+
+                let should_run = if let Some(config) = pp_config {
+                    if let Some(ref enabled) = config.enabled_processors {
+                        enabled.iter().any(|name| name == processor_name)
+                    } else if let Some(ref disabled) = config.disabled_processors {
+                        !disabled.iter().any(|name| name == processor_name)
+                    } else {
+                        true
+                    }
+                } else {
+                    true
+                };
+
+                if should_run
+                    && processor.should_process(&result, config)
+                    && let Err(e) = processor.process(&mut result, config).await
+                {
+                    let error_key = format!("processing_error_{}", processor_name);
+                    result
+                        .metadata
+                        .additional
+                        .insert(error_key, serde_json::Value::String(e.to_string()));
+                }
             }
         }
     }
@@ -166,50 +198,19 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
         );
     }
 
-    let pp_config = config.postprocessor.as_ref();
-    let postprocessing_enabled = pp_config.is_none_or(|c| c.enabled);
+    // Run validators LAST, after all processing is complete
+    {
+        let validator_registry = crate::plugins::registry::get_validator_registry();
+        let validators = {
+            let registry = validator_registry
+                .read()
+                .map_err(|e| crate::KreuzbergError::Other(format!("Validator registry lock poisoned: {}", e)))?;
+            registry.get_all()
+        };
 
-    if postprocessing_enabled {
-        #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
-        {
-            let _ = crate::keywords::ensure_initialized();
-        }
-
-        let processor_registry = crate::plugins::registry::get_post_processor_registry();
-
-        for stage in [ProcessingStage::Early, ProcessingStage::Middle, ProcessingStage::Late] {
-            let processors = {
-                let registry = processor_registry.read().map_err(|e| {
-                    crate::KreuzbergError::Other(format!("Post-processor registry lock poisoned: {}", e))
-                })?;
-                registry.get_for_stage(stage)
-            };
-
-            for processor in processors {
-                let processor_name = processor.name();
-
-                let should_run = if let Some(config) = pp_config {
-                    if let Some(ref enabled) = config.enabled_processors {
-                        enabled.iter().any(|name| name == processor_name)
-                    } else if let Some(ref disabled) = config.disabled_processors {
-                        !disabled.iter().any(|name| name == processor_name)
-                    } else {
-                        true
-                    }
-                } else {
-                    true
-                };
-
-                if should_run
-                    && processor.should_process(&result, config)
-                    && let Err(e) = processor.process(&mut result, config).await
-                {
-                    let error_key = format!("processing_error_{}", processor_name);
-                    result
-                        .metadata
-                        .additional
-                        .insert(error_key, serde_json::Value::String(e.to_string()));
-                }
+        for validator in validators {
+            if validator.should_validate(&result, config) {
+                validator.validate(&result, config).await?;
             }
         }
     }
@@ -528,5 +529,382 @@ Natural language processing enables computers to understand human language.
         let processed = run_pipeline(result, &config).await.unwrap();
 
         assert!(!processed.metadata.additional.contains_key("keywords"));
+    }
+
+    // ===== POST-PROCESSOR AND VALIDATOR INTERACTION TESTS =====
+    // These tests validate the critical behavior of post-processors running BEFORE validators
+
+    #[tokio::test]
+    async fn test_postprocessor_runs_before_validator() {
+        use crate::plugins::{Plugin, PostProcessor, ProcessingStage, Validator};
+        use async_trait::async_trait;
+        use std::sync::Arc;
+
+        // Create a post-processor that adds metadata
+        struct TestPostProcessor;
+        impl Plugin for TestPostProcessor {
+            fn name(&self) -> &str {
+                "test-processor"
+            }
+            fn version(&self) -> String {
+                "1.0.0".to_string()
+            }
+            fn initialize(&self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl PostProcessor for TestPostProcessor {
+            async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                result
+                    .metadata
+                    .additional
+                    .insert("processed".to_string(), serde_json::json!(true));
+                Ok(())
+            }
+
+            fn processing_stage(&self) -> ProcessingStage {
+                ProcessingStage::Middle
+            }
+        }
+
+        // Create a validator that checks for the metadata added by the post-processor
+        struct TestValidator;
+        impl Plugin for TestValidator {
+            fn name(&self) -> &str {
+                "test-validator"
+            }
+            fn version(&self) -> String {
+                "1.0.0".to_string()
+            }
+            fn initialize(&self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl Validator for TestValidator {
+            async fn validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                // This should pass if post-processor ran first
+                let processed = result
+                    .metadata
+                    .additional
+                    .get("processed")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+
+                if !processed {
+                    return Err(crate::KreuzbergError::Validation {
+                        message: "Post-processor did not run before validator".to_string(),
+                        source: None,
+                    });
+                }
+                Ok(())
+            }
+        }
+
+        // Register both plugins
+        let pp_registry = crate::plugins::registry::get_post_processor_registry();
+        {
+            let mut registry = pp_registry.write().unwrap();
+            registry.register(Arc::new(TestPostProcessor), 0).unwrap();
+        }
+
+        let val_registry = crate::plugins::registry::get_validator_registry();
+        {
+            let mut registry = val_registry.write().unwrap();
+            registry.register(Arc::new(TestValidator)).unwrap();
+        }
+
+        // Run pipeline
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: Metadata::default(),
+            tables: vec![],
+            detected_languages: None,
+            chunks: None,
+            images: None,
+        };
+
+        let config = ExtractionConfig::default();
+        let processed = run_pipeline(result, &config).await;
+
+        // Clean up
+        {
+            let mut registry = pp_registry.write().unwrap();
+            registry.remove("test-processor").unwrap();
+        }
+        {
+            let mut registry = val_registry.write().unwrap();
+            registry.remove("test-validator").unwrap();
+        }
+
+        // Validation should pass if post-processor ran first
+        assert!(processed.is_ok(), "Validator should have seen post-processor metadata");
+        let processed = processed.unwrap();
+        assert_eq!(
+            processed.metadata.additional.get("processed"),
+            Some(&serde_json::json!(true)),
+            "Post-processor metadata should be present"
+        );
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "quality")]
+    async fn test_quality_processing_runs_before_validator() {
+        use crate::plugins::{Plugin, Validator};
+        use async_trait::async_trait;
+        use std::sync::Arc;
+
+        // Create a validator that checks for quality_score
+        struct QualityValidator;
+        impl Plugin for QualityValidator {
+            fn name(&self) -> &str {
+                "quality-validator"
+            }
+            fn version(&self) -> String {
+                "1.0.0".to_string()
+            }
+            fn initialize(&self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl Validator for QualityValidator {
+            async fn validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                if !result.metadata.additional.contains_key("quality_score") {
+                    return Err(crate::KreuzbergError::Validation {
+                        message: "Quality processing did not run before validator".to_string(),
+                        source: None,
+                    });
+                }
+                Ok(())
+            }
+        }
+
+        // Register validator
+        let val_registry = crate::plugins::registry::get_validator_registry();
+        {
+            let mut registry = val_registry.write().unwrap();
+            registry.register(Arc::new(QualityValidator)).unwrap();
+        }
+
+        // Run pipeline with quality processing enabled
+        let result = ExtractionResult {
+            content: "This is meaningful test content for quality scoring.".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: Metadata::default(),
+            tables: vec![],
+            detected_languages: None,
+            chunks: None,
+            images: None,
+        };
+
+        let config = ExtractionConfig {
+            enable_quality_processing: true,
+            ..Default::default()
+        };
+
+        let processed = run_pipeline(result, &config).await;
+
+        // Clean up
+        {
+            let mut registry = val_registry.write().unwrap();
+            registry.remove("quality-validator").unwrap();
+        }
+
+        // Validation should pass if quality processing ran first
+        assert!(processed.is_ok(), "Validator should have seen quality_score");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_postprocessors_run_before_validator() {
+        use crate::plugins::{Plugin, PostProcessor, ProcessingStage, Validator};
+        use async_trait::async_trait;
+        use std::sync::Arc;
+
+        // Early stage processor
+        struct EarlyProcessor;
+        impl Plugin for EarlyProcessor {
+            fn name(&self) -> &str {
+                "early-proc"
+            }
+            fn version(&self) -> String {
+                "1.0.0".to_string()
+            }
+            fn initialize(&self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl PostProcessor for EarlyProcessor {
+            async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                let mut order = result
+                    .metadata
+                    .additional
+                    .get("execution_order")
+                    .and_then(|v| v.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+                order.push(serde_json::json!("early"));
+                result
+                    .metadata
+                    .additional
+                    .insert("execution_order".to_string(), serde_json::json!(order));
+                Ok(())
+            }
+
+            fn processing_stage(&self) -> ProcessingStage {
+                ProcessingStage::Early
+            }
+        }
+
+        // Late stage processor
+        struct LateProcessor;
+        impl Plugin for LateProcessor {
+            fn name(&self) -> &str {
+                "late-proc"
+            }
+            fn version(&self) -> String {
+                "1.0.0".to_string()
+            }
+            fn initialize(&self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl PostProcessor for LateProcessor {
+            async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                let mut order = result
+                    .metadata
+                    .additional
+                    .get("execution_order")
+                    .and_then(|v| v.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+                order.push(serde_json::json!("late"));
+                result
+                    .metadata
+                    .additional
+                    .insert("execution_order".to_string(), serde_json::json!(order));
+                Ok(())
+            }
+
+            fn processing_stage(&self) -> ProcessingStage {
+                ProcessingStage::Late
+            }
+        }
+
+        // Validator that checks execution order
+        struct OrderValidator;
+        impl Plugin for OrderValidator {
+            fn name(&self) -> &str {
+                "order-validator"
+            }
+            fn version(&self) -> String {
+                "1.0.0".to_string()
+            }
+            fn initialize(&self) -> Result<()> {
+                Ok(())
+            }
+            fn shutdown(&self) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl Validator for OrderValidator {
+            async fn validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+                let order = result
+                    .metadata
+                    .additional
+                    .get("execution_order")
+                    .and_then(|v| v.as_array())
+                    .ok_or_else(|| crate::KreuzbergError::Validation {
+                        message: "No execution order found".to_string(),
+                        source: None,
+                    })?;
+
+                // Should have both "early" and "late"
+                if order.len() != 2 {
+                    return Err(crate::KreuzbergError::Validation {
+                        message: format!("Expected 2 processors to run, got {}", order.len()),
+                        source: None,
+                    });
+                }
+
+                // Early should come before Late
+                if order[0] != "early" || order[1] != "late" {
+                    return Err(crate::KreuzbergError::Validation {
+                        message: format!("Wrong execution order: {:?}", order),
+                        source: None,
+                    });
+                }
+
+                Ok(())
+            }
+        }
+
+        // Register plugins
+        let pp_registry = crate::plugins::registry::get_post_processor_registry();
+        {
+            let mut registry = pp_registry.write().unwrap();
+            registry.register(Arc::new(EarlyProcessor), 0).unwrap();
+            registry.register(Arc::new(LateProcessor), 0).unwrap();
+        }
+
+        let val_registry = crate::plugins::registry::get_validator_registry();
+        {
+            let mut registry = val_registry.write().unwrap();
+            registry.register(Arc::new(OrderValidator)).unwrap();
+        }
+
+        // Run pipeline
+        let result = ExtractionResult {
+            content: "test".to_string(),
+            mime_type: "text/plain".to_string(),
+            metadata: Metadata::default(),
+            tables: vec![],
+            detected_languages: None,
+            chunks: None,
+            images: None,
+        };
+
+        let config = ExtractionConfig::default();
+        let processed = run_pipeline(result, &config).await;
+
+        // Clean up
+        {
+            let mut registry = pp_registry.write().unwrap();
+            registry.remove("early-proc").unwrap();
+            registry.remove("late-proc").unwrap();
+        }
+        {
+            let mut registry = val_registry.write().unwrap();
+            registry.remove("order-validator").unwrap();
+        }
+
+        // Should pass if all processors ran in order before validator
+        assert!(processed.is_ok(), "All processors should run before validator");
     }
 }

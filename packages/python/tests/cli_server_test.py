@@ -2,6 +2,7 @@
 
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import cast
@@ -21,7 +22,7 @@ def _get_free_port() -> int:
 def test_serve_command_help() -> None:
     """Test that serve command help is accessible via Python CLI proxy."""
     result = subprocess.run(
-        ["python", "-m", "kreuzberg", "serve", "--help"],
+        [sys.executable, "-m", "kreuzberg", "serve", "--help"],
         capture_output=True,
         text=True,
         check=False,
@@ -38,7 +39,7 @@ def test_serve_command_help() -> None:
 def test_mcp_command_help() -> None:
     """Test that mcp command help is accessible via Python CLI proxy."""
     result = subprocess.run(
-        ["python", "-m", "kreuzberg", "mcp", "--help"],
+        [sys.executable, "-m", "kreuzberg", "mcp", "--help"],
         capture_output=True,
         text=True,
         check=False,
@@ -57,7 +58,7 @@ def test_serve_command_starts_and_responds() -> None:
 
     # Start server in background
     process = subprocess.Popen(
-        ["python", "-m", "kreuzberg", "serve", "-H", "127.0.0.1", "-p", str(port)],
+        [sys.executable, "-m", "kreuzberg", "serve", "-H", "127.0.0.1", "-p", str(port)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -119,7 +120,7 @@ language = "eng"
     # Start server with config
     process = subprocess.Popen(
         [
-            "python",
+            sys.executable,
             "-m",
             "kreuzberg",
             "serve",
@@ -167,7 +168,7 @@ def test_serve_command_extract_endpoint(tmp_path: Path) -> None:
 
     # Start server
     process = subprocess.Popen(
-        ["python", "-m", "kreuzberg", "serve", "-H", "127.0.0.1", "-p", str(port)],
+        [sys.executable, "-m", "kreuzberg", "serve", "-H", "127.0.0.1", "-p", str(port)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

@@ -102,6 +102,7 @@ describe("Guten OCR Backend Integration", () => {
 				backend: "guten-ocr",
 				language: "en",
 			},
+			forceOcr: true,
 		});
 
 		expect(result.content).toBeTruthy();
