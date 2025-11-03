@@ -67,9 +67,9 @@ jobs:
           rustup component add llvm-tools-preview
           cargo llvm-cov --workspace --no-default-features --features full --exclude kreuzberg-py --exclude kreuzberg-rb --lcov --output-path rust-coverage.lcov
 
-      - name: Run tests (macOS - without embeddings and chunking due to ONNX Runtime)
+      - name: Run tests (macOS)
         if: matrix.os == 'macos-latest'
-        run: cargo test --workspace --no-default-features --features pdf,excel,office,email,html,xml,archives,ocr,language-detection,quality,keywords --exclude kreuzberg-py --exclude kreuzberg-rb --exclude kreuzberg-node --exclude benchmark-harness
+        run: cargo test --workspace --no-default-features --features full --exclude kreuzberg-py --exclude kreuzberg-rb --exclude kreuzberg-node --exclude benchmark-harness
 
       - name: Run tests (Windows)
         if: matrix.os == 'windows-latest'
