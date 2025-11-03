@@ -124,6 +124,26 @@ jobs:
               ;;
           esac
 
+      - name: Prepare ONNX Runtime (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ort_version="1.23.2"
+          archive="onnxruntime-osx-arm64-${ort_version}.tgz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+          extract_dir="$RUNNER_TEMP/onnxruntime"
+          mkdir -p "$extract_dir"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+          ort_root="$extract_dir/onnxruntime-osx-arm64-${ort_version}"
+          if [ ! -d "$ort_root/lib" ]; then
+            echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
+            exit 1
+          fi
+          cp -f "$ort_root/lib/libonnxruntime.dylib" "crates/kreuzberg-node/libonnxruntime.dylib"
+          echo "ORT_LIB_LOCATION=$ort_root" >> "$GITHUB_ENV"
+          echo "ORT_PREFER_DYNAMIC_LINK=1" >> "$GITHUB_ENV"
+
       - name: Set library path for macOS runtime
         if: runner.os == 'macOS'
         shell: bash

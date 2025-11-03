@@ -12,31 +12,13 @@ description = "Kreuzberg document intelligence - Node.js native bindings"
 crate-type = ["cdylib"]
 
 [dependencies]
+kreuzberg = { path = "../kreuzberg", features = ["full"] }
 napi = { version = "3.4", default-features = false, features = ["napi8", "async", "serde-json"] }
 napi-derive = "3.3"
 tokio = { version = "1.48.0", features = ["rt", "macros"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 async-trait = "0.1"
-
-[target.'cfg(not(target_os = "macos"))'.dependencies]
-kreuzberg = { path = "../kreuzberg", features = ["full"] }
-
-[target.'cfg(target_os = "macos")'.dependencies]
-kreuzberg = { path = "../kreuzberg", default-features = false, features = [
-    "pdf",
-    "excel",
-    "office",
-    "email",
-    "html",
-    "xml",
-    "archives",
-    "ocr",
-    "language-detection",
-    "quality",
-    "keywords",
-    "chunking",
-] }
 
 [build-dependencies]
 napi-build = "2.2"

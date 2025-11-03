@@ -201,14 +201,9 @@ impl From<JsEmbeddingModelType> for RustEmbeddingModelType {
     fn from(val: JsEmbeddingModelType) -> Self {
         match val.model_type.as_str() {
             "preset" => RustEmbeddingModelType::Preset { name: val.value },
-            #[cfg(not(target_os = "macos"))]
             "fastembed" => RustEmbeddingModelType::FastEmbed {
                 model: val.value,
                 dimensions: val.dimensions.unwrap_or(768) as usize,
-            },
-            #[cfg(target_os = "macos")]
-            "fastembed" => RustEmbeddingModelType::Preset {
-                name: "balanced".to_string(),
             },
             "custom" => RustEmbeddingModelType::Custom {
                 model_id: val.value,
