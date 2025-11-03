@@ -163,7 +163,7 @@ jobs:
             echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
             exit 1
           fi
-          cp -f "$ort_root/lib/libonnxruntime.dylib" "crates/kreuzberg-node/libonnxruntime.dylib"
+          cp -f "$ort_root/lib/"libonnxruntime*.dylib "crates/kreuzberg-node/"
           echo "ORT_LIB_LOCATION=$ort_root" >> "$GITHUB_ENV"
           echo "ORT_PREFER_DYNAMIC_LINK=1" >> "$GITHUB_ENV"
           echo "ORT_SKIP_DOWNLOAD=1" >> "$GITHUB_ENV"
