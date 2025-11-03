@@ -67,8 +67,12 @@ jobs:
           rustup component add llvm-tools-preview
           cargo llvm-cov --workspace --no-default-features --features full --exclude kreuzberg-py --exclude kreuzberg-rb --lcov --output-path rust-coverage.lcov
 
-      - name: Run tests (macOS/Windows)
-        if: matrix.os != 'ubuntu-latest'
+      - name: Run tests (macOS - without embeddings due to ONNX Runtime)
+        if: matrix.os == 'macos-latest'
+        run: cargo test --workspace --no-default-features --features pdf,excel,office,email,html,xml,archives,ocr,language-detection,chunking,quality,keywords --exclude kreuzberg-py --exclude kreuzberg-rb
+
+      - name: Run tests (Windows)
+        if: matrix.os == 'windows-latest'
         run: cargo test --workspace --no-default-features --features full --exclude kreuzberg-py --exclude kreuzberg-rb
 
       - name: Cleanup Rust cache before save
