@@ -239,6 +239,49 @@ Required for legacy MS Office formats (.doc, .ppt).
     sudo dnf install libreoffice
     ```
 
+### ONNX Runtime (Optional — Embeddings)
+
+Required to enable FastEmbed-powered embeddings for chunking, semantic search, and RAG features.
+Our CI and prebuilt packages automatically download the correct binary when it’s missing. For local builds you can either install it system-wide or point `ORT_LIB_LOCATION` at an extracted release archive.
+
+=== "macOS"
+
+    ```bash
+    brew install onnxruntime
+    ```
+
+    Or download the `onnxruntime-osx-arm64-<version>.tgz` archive from the [official releases](https://github.com/microsoft/onnxruntime/releases) and set:
+
+    ```bash
+    export ORT_LIB_LOCATION=/path/to/onnxruntime-osx-arm64-<version>
+    ```
+
+=== "Linux"
+
+    ```bash
+    curl -L -o onnxruntime-linux-x64.tgz https://github.com/microsoft/onnxruntime/releases/download/v1.23.2/onnxruntime-linux-x64-1.23.2.tgz
+    tar -xzf onnxruntime-linux-x64.tgz
+    export ORT_LIB_LOCATION=$PWD/onnxruntime-linux-x64-1.23.2
+    export LD_LIBRARY_PATH=$ORT_LIB_LOCATION/lib:${LD_LIBRARY_PATH:-}
+    ```
+
+=== "Windows"
+
+    ```powershell
+    winget install Microsoft.ML.OnnxRuntime
+    ```
+
+    Or download the ZIP from the [official releases](https://github.com/microsoft/onnxruntime/releases) and set:
+
+    ```powershell
+    setx ORT_LIB_LOCATION "C:\path\to\onnxruntime-win-x64-1.23.2"
+    setx PATH "%ORT_LIB_LOCATION%\lib;%PATH%"
+    ```
+
+!!! tip
+    Setting `ORT_LIB_LOCATION` ensures the Node.js bindings can find ONNX Runtime even if it is not installed globally.
+    To disable the automatic download logic in CI or custom builds, export `ORT_SKIP_DOWNLOAD=1`.
+
 ## Docker
 
 Pre-built Docker images are available with all dependencies included:

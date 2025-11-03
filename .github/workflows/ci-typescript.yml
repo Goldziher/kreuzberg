@@ -37,6 +37,7 @@ concurrency:
 
 env:
   PDFIUM_VERSION: "7455"
+  ORT_VERSION: "1.23.2"
 
 jobs:
   test:
@@ -124,12 +125,34 @@ jobs:
               ;;
           esac
 
+      - name: Prepare ONNX Runtime (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ort_version="${ORT_VERSION:-1.23.2}"
+          archive="onnxruntime-linux-x64-${ort_version}.tgz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+          extract_dir="$RUNNER_TEMP/onnxruntime"
+          mkdir -p "$extract_dir"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+          ort_root="$extract_dir/onnxruntime-linux-x64-${ort_version}"
+          if [ ! -d "$ort_root/lib" ]; then
+            echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
+            exit 1
+          fi
+          cp -f "$ort_root/lib/"*.so* "crates/kreuzberg-node/"
+          echo "ORT_LIB_LOCATION=$ort_root" >> "$GITHUB_ENV"
+          echo "ORT_PREFER_DYNAMIC_LINK=1" >> "$GITHUB_ENV"
+          echo "ORT_SKIP_DOWNLOAD=1" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/crates/kreuzberg-node:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
       - name: Prepare ONNX Runtime (macOS)
         if: matrix.os == 'macos-latest'
         shell: bash
         run: |
           set -euo pipefail
-          ort_version="1.23.2"
+          ort_version="${ORT_VERSION:-1.23.2}"
           archive="onnxruntime-osx-arm64-${ort_version}.tgz"
           curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
           extract_dir="$RUNNER_TEMP/onnxruntime"
@@ -143,12 +166,35 @@ jobs:
           cp -f "$ort_root/lib/libonnxruntime.dylib" "crates/kreuzberg-node/libonnxruntime.dylib"
           echo "ORT_LIB_LOCATION=$ort_root" >> "$GITHUB_ENV"
           echo "ORT_PREFER_DYNAMIC_LINK=1" >> "$GITHUB_ENV"
+          echo "ORT_SKIP_DOWNLOAD=1" >> "$GITHUB_ENV"
+          echo "DYLD_LIBRARY_PATH=$GITHUB_WORKSPACE/crates/kreuzberg-node:${DYLD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
 
-      - name: Set library path for macOS runtime
-        if: runner.os == 'macOS'
-        shell: bash
+      - name: Prepare ONNX Runtime (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          echo "DYLD_LIBRARY_PATH=${{ github.workspace }}/crates/kreuzberg-node:${DYLD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+          $OrtVersion = if ($Env:ORT_VERSION) { $Env:ORT_VERSION } else { '1.23.2' }
+          $Archive = "onnxruntime-win-x64-$OrtVersion.zip"
+          $DownloadPath = Join-Path $env:TEMP $Archive
+          Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v$OrtVersion/$Archive" -OutFile $DownloadPath -UseBasicParsing
+          $ExtractRoot = Join-Path $env:TEMP "onnxruntime"
+          New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+          Expand-Archive -Path $DownloadPath -DestinationPath $ExtractRoot -Force
+          $OrtRoot = Join-Path $ExtractRoot "onnxruntime-win-x64-$OrtVersion"
+          if (!(Test-Path (Join-Path $OrtRoot 'lib'))) {
+            Write-Error "ONNX Runtime lib directory missing at $OrtRoot\lib"
+            exit 1
+          }
+          $NodeLibDir = Join-Path $env:GITHUB_WORKSPACE 'crates' 'kreuzberg-node'
+          Copy-Item -Path (Join-Path $OrtRoot 'lib' 'onnxruntime.dll') -Destination $NodeLibDir -Force
+          Copy-Item -Path (Join-Path $OrtRoot 'lib' 'onnxruntime.lib') -Destination $NodeLibDir -Force
+          if (Test-Path (Join-Path $OrtRoot 'lib' 'onnxruntime.pdb')) {
+            Copy-Item -Path (Join-Path $OrtRoot 'lib' 'onnxruntime.pdb') -Destination $NodeLibDir -Force
+          }
+          "ORT_LIB_LOCATION=$OrtRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ORT_PREFER_DYNAMIC_LINK=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ORT_SKIP_DOWNLOAD=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PATH=$NodeLibDir;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Setup Node workspace
         uses: ./.github/actions/setup-node-workspace
