@@ -69,8 +69,28 @@ def download_pdfium_windows() -> None:
     temp_tgz.unlink()
 
 
+def cleanup_build_artifacts() -> None:
+    """Clean up stale build artifacts (.pyd, .so, .dll) from package directories."""
+    possible_paths = [
+        Path("kreuzberg"),
+        Path("packages/python/kreuzberg"),
+    ]
+
+    for package_dir in possible_paths:
+        if not (package_dir.exists() and package_dir.is_dir()):
+            continue
+
+        # Remove stale native module files
+        for pattern in ["*.pyd", "*.so", "_internal_bindings.*.so"]:
+            for file in package_dir.glob(pattern):
+                with suppress(Exception):
+                    file.unlink()
+
+
 def main() -> None:
     """Main entry point."""
+    cleanup_build_artifacts()
+
     if platform.system() == "Windows":
         download_pdfium_windows()
     else:
