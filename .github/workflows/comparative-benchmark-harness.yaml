@@ -36,6 +36,7 @@ jobs:
             echo "::error::tools/benchmark-harness not found on branch ${GITHUB_REF}. Run this workflow against v4-dev." >&2
             exit 1
           fi
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
