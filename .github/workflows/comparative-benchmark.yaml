@@ -30,6 +30,12 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
+      - name: Ensure benchmark harness exists
+        run: |
+          if [ ! -d tools/benchmark-harness ]; then
+            echo "::error::tools/benchmark-harness not found on branch ${GITHUB_REF}. Run this workflow against v4-dev." >&2
+            exit 1
+          fi
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
