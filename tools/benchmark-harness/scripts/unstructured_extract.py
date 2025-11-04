@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Unstructured extraction wrapper for benchmark harness."""
 
+from __future__ import annotations
+
+import json
 import sys
+import time
 
 from unstructured.partition.auto import partition
 
@@ -14,11 +18,17 @@ def main() -> None:
     file_path = sys.argv[1]
 
     try:
+        start = time.perf_counter()
         elements = partition(filename=file_path)
+        duration_ms = (time.perf_counter() - start) * 1000.0
 
-        # Extract and print text from all elements
-        text = "\n\n".join([str(el) for el in elements])
-        print(text, end="")
+        text = "\n\n".join(str(el) for el in elements)
+        payload = {
+            "content": text,
+            "metadata": {"framework": "unstructured"},
+            "_extraction_time_ms": duration_ms,
+        }
+        print(json.dumps(payload), end="")
     except Exception as e:
         print(f"Error extracting with Unstructured: {e}", file=sys.stderr)
         sys.exit(1)

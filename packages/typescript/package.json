@@ -83,9 +83,9 @@
 		"sharp": "^0.34.4"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.2",
+		"@biomejs/biome": "^2.3.3",
 		"@types/archiver": "^7.0.0",
-		"@types/node": "^24.9.2",
+		"@types/node": "^24.10.0",
 		"@types/which": "^3.0.4",
 		"@vitest/coverage-v8": "^4.0.6",
 		"archiver": "^7.0.1",

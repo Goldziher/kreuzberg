@@ -106,7 +106,8 @@ describe("Guten OCR Backend Integration", () => {
 		});
 
 		expect(result.content).toBeTruthy();
-		expect(result.mimeType).toBe("text/plain");
+		// OCR keeps the original MIME type to reflect the source document
+		expect(result.mimeType).toBe("image/png");
 	});
 
 	it("should handle unsupported language gracefully", async () => {

@@ -52,6 +52,6 @@
 	},
 	"devDependencies": {
 		"@napi-rs/cli": "^3.4.1",
-		"@types/node": "^24.9.2"
+		"@types/node": "^24.10.0"
 	}
 }
