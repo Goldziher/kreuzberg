@@ -13,6 +13,11 @@ on:
         required: false
         default: "300"
         type: string
+      branch:
+        description: "Git branch to benchmark"
+        required: false
+        default: "main"
+        type: string
 
 jobs:
   framework-benchmark:
@@ -33,6 +38,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
