@@ -37,10 +37,10 @@ pub enum OcrBackendType {
 ///
 /// ```rust
 /// use kreuzberg::plugins::{Plugin, OcrBackend, OcrBackendType};
-/// use kreuzberg::{Result, ExtractionResult, OcrConfig};
+/// use kreuzberg::{Result, OcrConfig};
 /// use async_trait::async_trait;
 /// use std::path::Path;
-/// use std::collections::HashMap;
+/// use kreuzberg::types::{ExtractionResult, Metadata};
 ///
 /// struct CustomOcrBackend;
 ///
@@ -58,10 +58,11 @@ pub enum OcrBackendType {
 ///         Ok(ExtractionResult {
 ///             content: "Extracted text".to_string(),
 ///             mime_type: "text/plain".to_string(),
-///             metadata: HashMap::new(),
+///             metadata: Metadata::default(),
 ///             tables: vec![],
 ///             detected_languages: None,
 ///             chunks: None,
+///             images: None,
 ///         })
 ///     }
 ///
@@ -102,10 +103,10 @@ pub trait OcrBackend: Plugin {
     ///
     /// ```rust
     /// # use kreuzberg::plugins::{Plugin, OcrBackend};
-    /// # use kreuzberg::{Result, ExtractionResult, OcrConfig};
+    /// # use kreuzberg::{Result, OcrConfig};
     /// # use async_trait::async_trait;
     /// # use std::path::Path;
-    /// # use std::collections::HashMap;
+    /// # use kreuzberg::types::{ExtractionResult, Metadata};
     /// # struct MyOcr;
     /// # impl Plugin for MyOcr {
     /// #     fn name(&self) -> &str { "my-ocr" }
@@ -134,10 +135,11 @@ pub trait OcrBackend: Plugin {
     ///     Ok(ExtractionResult {
     ///         content: text,
     ///         mime_type: "text/plain".to_string(),
-    ///         metadata: HashMap::new(),
+    ///         metadata: Metadata::default(),
     ///         tables: vec![],
     ///         detected_languages: None,
-    ///             chunks: None,
+    ///         chunks: None,
+    ///         images: None,
     ///     })
     /// }
     /// # }

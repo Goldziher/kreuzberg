@@ -103,36 +103,36 @@ jobs:
           fi
 
           uv run python - <<'PY'
-import json
-from pathlib import Path
+          import json
+          from pathlib import Path
 
-results_path = Path("benchmark-results/results.json")
-data = json.loads(results_path.read_text())
+          results_path = Path("benchmark-results/results.json")
+          data = json.loads(results_path.read_text())
 
-summary_lines = [
-    "## 📊 Comparative Benchmark Results",
-    "",
-    "| Framework | Files | Success | Failures | Mean Duration (ms) |",
-    "|-----------|-------|---------|----------|--------------------|",
-]
+          summary_lines = [
+              "## 📊 Comparative Benchmark Results",
+              "",
+              "| Framework | Files | Success | Failures | Mean Duration (ms) |",
+              "|-----------|-------|---------|----------|--------------------|",
+          ]
 
-from collections import defaultdict
-stats = defaultdict(list)
-for entry in data:
-    stats[entry["framework"]].append(entry)
+          from collections import defaultdict
+          stats = defaultdict(list)
+          for entry in data:
+              stats[entry["framework"]].append(entry)
 
-for framework, entries in stats.items():
-    files = len(entries)
-    successes = sum(1 for e in entries if e.get("success"))
-    failures = files - successes
-    durations = [e["duration"]["secs"] * 1000 + e["duration"]["nanos"] / 1_000_000 for e in entries]
-    mean_ms = sum(durations) / len(durations) if durations else 0.0
-    summary_lines.append(f"| {framework} | {files} | {successes} | {failures} | {mean_ms:.2f} |")
+          for framework, entries in stats.items():
+              files = len(entries)
+              successes = sum(1 for e in entries if e.get("success"))
+              failures = files - successes
+              durations = [e["duration"]["secs"] * 1000 + e["duration"]["nanos"] / 1_000_000 for e in entries]
+              mean_ms = sum(durations) / len(durations) if durations else 0.0
+              summary_lines.append(f"| {framework} | {files} | {successes} | {failures} | {mean_ms:.2f} |")
 
-summary_text = "\n".join(summary_lines)
-print(summary_text)
-Path("benchmark-results/summary.md").write_text(summary_text + "\n")
-PY
+          summary_text = "\n".join(summary_lines)
+          print(summary_text)
+          Path("benchmark-results/summary.md").write_text(summary_text + "\n")
+          PY
 
           cat benchmark-results/summary.md >> "${GITHUB_STEP_SUMMARY}"
 

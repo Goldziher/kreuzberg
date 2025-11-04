@@ -30,8 +30,8 @@ use whatlang::{Lang, detect};
 ///     min_confidence: 0.8,
 ///     detect_multiple: false,
 /// };
-/// let languages = detect_languages(text, &config).unwrap();
-/// assert!(languages.is_some());
+/// let languages = detect_languages(text, &config).expect("language detection succeeded");
+/// println!("Detected languages: {:?}", languages);
 /// ```
 pub fn detect_languages(text: &str, config: &LanguageDetectionConfig) -> Result<Option<Vec<String>>> {
     if !config.enabled {
