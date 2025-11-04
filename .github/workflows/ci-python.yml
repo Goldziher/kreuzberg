@@ -75,7 +75,10 @@ jobs:
         run: |
           # Build the Rust extension and install in development mode
           # This is needed for CLI tests that run `python -m kreuzberg`
-          cd packages/python && uv run maturin develop --release
+          cd packages/python
+          uv run maturin develop --release
+          cd ..
+          cargo build -p kreuzberg-cli --release --features all
 
       - name: Install SpaCy model (Linux only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'

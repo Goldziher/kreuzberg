@@ -32,10 +32,10 @@ use std::path::Path;
 ///
 /// ```rust
 /// use kreuzberg::plugins::{Plugin, DocumentExtractor};
-/// use kreuzberg::{Result, ExtractionResult, ExtractionConfig};
+/// use kreuzberg::{Result, ExtractionConfig};
+/// use kreuzberg::types::{ExtractionResult, Metadata};
 /// use async_trait::async_trait;
 /// use std::path::Path;
-/// use std::collections::HashMap;
 ///
 /// /// Custom PDF extractor with premium features
 /// struct PremiumPdfExtractor;
@@ -55,10 +55,11 @@ use std::path::Path;
 ///         Ok(ExtractionResult {
 ///             content: "Premium extracted content".to_string(),
 ///             mime_type: mime_type.to_string(),
-///             metadata: HashMap::new(),
+///             metadata: Metadata::default(),
 ///             tables: vec![],
 ///             detected_languages: None,
 ///             chunks: None,
+///             images: None,
 ///         })
 ///     }
 ///
@@ -104,7 +105,8 @@ pub trait DocumentExtractor: Plugin {
     ///
     /// ```rust,no_run
     /// # use kreuzberg::plugins::{Plugin, DocumentExtractor};
-    /// # use kreuzberg::{Result, ExtractionResult, ExtractionConfig};
+    /// # use kreuzberg::{Result, ExtractionConfig};
+    /// # use kreuzberg::types::{ExtractionResult, Metadata};
     /// # use async_trait::async_trait;
     /// # use std::path::Path;
     /// # struct MyExtractor;
@@ -125,16 +127,17 @@ pub trait DocumentExtractor: Plugin {
     ///     let text = String::from_utf8_lossy(content).to_string();
     ///
     ///     // Extract metadata
-    ///     let mut metadata = std::collections::HashMap::new();
-    ///     metadata.insert("byte_count".to_string(), serde_json::json!(content.len()));
+    ///     let mut metadata = Metadata::default();
+    ///     metadata.additional.insert("byte_count".to_string(), serde_json::json!(content.len()));
     ///
     ///     Ok(ExtractionResult {
     ///         content: text,
     ///         mime_type: mime_type.to_string(),
     ///         metadata,
     ///         tables: vec![],
-    ///             detected_languages: None,
-    ///             chunks: None,
+    ///         detected_languages: None,
+    ///         chunks: None,
+    ///         images: None,
     ///     })
     /// }
     /// # }
@@ -166,6 +169,7 @@ pub trait DocumentExtractor: Plugin {
     /// ```rust,no_run
     /// # use kreuzberg::plugins::{Plugin, DocumentExtractor};
     /// # use kreuzberg::{Result, ExtractionResult, ExtractionConfig};
+    /// # use kreuzberg::types::Metadata;
     /// # use async_trait::async_trait;
     /// # use std::path::Path;
     /// # struct StreamingExtractor;
@@ -199,10 +203,11 @@ pub trait DocumentExtractor: Plugin {
     ///     Ok(ExtractionResult {
     ///         content,
     ///         mime_type: mime_type.to_string(),
-    ///         metadata: std::collections::HashMap::new(),
+    ///         metadata: Metadata::default(),
     ///         tables: vec![],
-    ///             detected_languages: None,
-    ///             chunks: None,
+    ///         detected_languages: None,
+    ///         chunks: None,
+    ///         images: None,
     ///     })
     /// }
     /// # }

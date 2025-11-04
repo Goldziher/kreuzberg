@@ -36,7 +36,7 @@ pub use core::TokenReducer;
 /// use kreuzberg::text::token_reduction::{reduce_tokens, TokenReductionConfig, ReductionLevel};
 ///
 /// let text = "This is a simple example text with some stopwords.";
-/// let config = TokenReductionConfig::new(ReductionLevel::Moderate);
+/// let config = TokenReductionConfig::default();
 /// let reduced = reduce_tokens(text, &config, Some("eng"))?;
 /// println!("Reduced: {}", reduced);
 /// # Ok::<(), kreuzberg::error::KreuzbergError>(())
@@ -80,7 +80,7 @@ pub fn reduce_tokens(
 ///     "Here is another document with different content.",
 ///     "And finally, a third document to process.",
 /// ];
-/// let config = TokenReductionConfig::new(ReductionLevel::Moderate);
+/// let config = TokenReductionConfig::default();
 /// let reduced = batch_reduce_tokens(&texts, &config, Some("eng"))?;
 /// assert_eq!(reduced.len(), 3);
 /// # Ok::<(), kreuzberg::error::KreuzbergError>(())
@@ -121,7 +121,7 @@ pub fn batch_reduce_tokens(
 /// use kreuzberg::text::token_reduction::{reduce_tokens, get_reduction_statistics, TokenReductionConfig, ReductionLevel};
 ///
 /// let original = "This is a simple example text with some stopwords and redundancy.";
-/// let config = TokenReductionConfig::new(ReductionLevel::Moderate);
+/// let config = TokenReductionConfig::default();
 /// let reduced = reduce_tokens(original, &config, Some("eng"))?;
 ///
 /// let (char_ratio, token_ratio, orig_chars, red_chars, orig_tokens, red_tokens) =

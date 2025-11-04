@@ -128,6 +128,33 @@ jobs:
         with:
           version: 10
 
+      - name: Prepare ONNX Runtime (macOS)
+        if: startsWith(matrix.settings.target, 'aarch64-apple-darwin') || startsWith(matrix.settings.target, 'x86_64-apple-darwin')
+        run: |
+          set -euo pipefail
+          case "${{ matrix.settings.target }}" in
+            aarch64-apple-darwin)
+              ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/aarch64-apple-darwin.tgz"
+              ;;
+            x86_64-apple-darwin)
+              ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/x86_64-apple-darwin.tgz"
+              ;;
+            *)
+              echo "Unsupported macOS target: ${{ matrix.settings.target }}" >&2
+              exit 1
+              ;;
+          esac
+          ort_dir="${RUNNER_TEMP}/onnxruntime/${{ matrix.settings.target }}"
+          if [ ! -f "${ort_dir}/onnxruntime/lib/libonnxruntime.a" ]; then
+            mkdir -p "${ort_dir}"
+            curl -fsSL "${ort_url}" | tar -xz -C "${ort_dir}"
+          fi
+          {
+            echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime"
+            echo "ORT_SKIP_DOWNLOAD=1"
+            echo "ORT_PREFER_DYNAMIC_LINK=0"
+          } >> "${GITHUB_ENV}"
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -154,6 +181,16 @@ jobs:
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.13.0
+
+      - name: Configure Zig toolchain for musl target
+        if: matrix.settings.use_zigbuild
+        run: |
+          {
+            echo "CC_x86_64_unknown_linux_musl=zig cc -target x86_64-linux-musl"
+            echo "CXX_x86_64_unknown_linux_musl=zig c++ -target x86_64-linux-musl"
+            echo "AR_x86_64_unknown_linux_musl=zig ar"
+            echo "RANLIB_x86_64_unknown_linux_musl=zig ranlib"
+          } >> "${GITHUB_ENV}"
 
       - name: Install cargo-zigbuild (Linux cross-compilation)
         if: matrix.settings.use_zigbuild
@@ -332,8 +369,8 @@ jobs:
         if: runner.os != 'Windows'
         working-directory: packages/ruby
         run: |
-          RUBY_PLATFORM=$(ruby -e "puts Gem::Platform.local.to_s")
-          bundle exec rake native:kreuzberg:${RUBY_PLATFORM}
+          RUBY_ARCH=$(ruby -e "require 'rbconfig'; print RbConfig::CONFIG['arch']")
+          bundle exec rake native:kreuzberg:${RUBY_ARCH}
 
       - name: Build native gem (Windows)
         if: runner.os == 'Windows'

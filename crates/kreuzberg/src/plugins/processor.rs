@@ -95,10 +95,7 @@ pub enum ProcessingStage {
 ///         let word_count = result.content.split_whitespace().count();
 ///
 ///         // Add to metadata
-///         result.metadata.insert(
-///             "word_count".to_string(),
-///             serde_json::json!(word_count),
-///         );
+///         result.metadata.additional.insert("word_count".to_string(), serde_json::json!(word_count));
 ///
 ///         Ok(())
 ///     }
@@ -159,10 +156,7 @@ pub trait PostProcessor: Plugin {
     ///     let language = "en"; // Placeholder detection
     ///
     ///     // Add to metadata
-    ///     result.metadata.insert(
-    ///         "detected_language".to_string(),
-    ///         serde_json::json!(language),
-    ///     );
+    ///     result.metadata.additional.insert("detected_language".to_string(), serde_json::json!(language));
     ///
     ///     Ok(())
     /// }
@@ -188,14 +182,11 @@ pub trait PostProcessor: Plugin {
     /// async fn process(&self, result: &mut ExtractionResult, config: &ExtractionConfig)
     ///     -> Result<()> {
     ///     // Remove excessive whitespace
-    ///     result.content = result.content
+    ///     result.content = result
+    ///         .content
     ///         .split_whitespace()
     ///         .collect::<Vec<_>>()
     ///         .join(" ");
-    ///
-    ///     // Normalize Unicode to NFC form
-    ///     use unicode_normalization::UnicodeNormalization;
-    ///     result.content = result.content.chars().nfc().collect();
     ///
     ///     Ok(())
     /// }

@@ -18,11 +18,11 @@
 //! ```rust,no_run
 //! use kreuzberg::ocr::{OcrProcessor, TesseractConfig};
 //!
-//! # fn example() -> kreuzberg::Result<()> {
+//! # fn example() -> Result<(), kreuzberg::ocr::error::OcrError> {
 //! let processor = OcrProcessor::new(None)?;
 //! let config = TesseractConfig::default();
 //!
-//! let image_bytes = std::fs::read("scanned.png")?;
+//! let image_bytes = std::fs::read("scanned.png").expect("failed to read image");
 //! let result = processor.process_image(&image_bytes, &config)?;
 //!
 //! println!("Extracted text: {}", result.content);

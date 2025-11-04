@@ -28,34 +28,37 @@
 //! use std::sync::Arc;
 //!
 //! # struct MyExtractor;
+//! # use kreuzberg::types::{ExtractionResult, Metadata};
 //! # impl kreuzberg::plugins::Plugin for MyExtractor {
 //! #     fn name(&self) -> &str { "my" }
-//! #     fn version(&self) -> &str { "1.0.0" }
+//! #     fn version(&self) -> String { "1.0.0".to_string() }
 //! #     fn initialize(&self) -> kreuzberg::Result<()> { Ok(()) }
 //! #     fn shutdown(&self) -> kreuzberg::Result<()> { Ok(()) }
 //! # }
 //! # #[async_trait::async_trait]
 //! # impl DocumentExtractor for MyExtractor {
 //! #     async fn extract_bytes(&self, _: &[u8], _: &str, _: &kreuzberg::ExtractionConfig)
-//! #         -> kreuzberg::Result<kreuzberg::ExtractionResult> {
-//! #         Ok(kreuzberg::ExtractionResult {
+//! #         -> kreuzberg::Result<ExtractionResult> {
+//! #         Ok(ExtractionResult {
 //! #             content: String::new(),
 //! #             mime_type: String::new(),
-//! #             metadata: std::collections::HashMap::new(),
+//! #             metadata: Metadata::default(),
 //! #             tables: vec![],
 //! #             detected_languages: None,
 //! #             chunks: None,
+//! #             images: None,
 //! #         })
 //! #     }
 //! #     async fn extract_file(&self, _: &std::path::Path, _: &str, _: &kreuzberg::ExtractionConfig)
-//! #         -> kreuzberg::Result<kreuzberg::ExtractionResult> {
-//! #         Ok(kreuzberg::ExtractionResult {
+//! #         -> kreuzberg::Result<ExtractionResult> {
+//! #         Ok(ExtractionResult {
 //! #             content: String::new(),
 //! #             mime_type: String::new(),
-//! #             metadata: std::collections::HashMap::new(),
+//! #             metadata: Metadata::default(),
 //! #             tables: vec![],
 //! #             detected_languages: None,
 //! #             chunks: None,
+//! #             images: None,
 //! #         })
 //! #     }
 //! #     fn supported_mime_types(&self) -> &[&str] { &[] }
@@ -78,16 +81,16 @@
 //!
 //! ```rust
 //! use kreuzberg::plugins::{Plugin, DocumentExtractor};
-//! use kreuzberg::{Result, ExtractionResult, ExtractionConfig};
+//! use kreuzberg::{Result, ExtractionConfig};
+//! use kreuzberg::types::{ExtractionResult, Metadata};
 //! use async_trait::async_trait;
 //! use std::path::Path;
-//! use std::collections::HashMap;
 //!
 //! struct CustomJsonExtractor;
 //!
 //! impl Plugin for CustomJsonExtractor {
 //!     fn name(&self) -> &str { "custom-json-extractor" }
-//!     fn version(&self) -> &str { "1.0.0" }
+//!     fn version(&self) -> String { "1.0.0".to_string() }
 //!     fn initialize(&self) -> Result<()> {
 //!         println!("JSON extractor initialized");
 //!         Ok(())
@@ -106,13 +109,17 @@
 //!         let json: serde_json::Value = serde_json::from_slice(content)?;
 //!         let extracted_text = extract_strings_from_json(&json);
 //!
+//!         let mut metadata = Metadata::default();
+//!         metadata.additional.insert("extracted_fields".to_string(), serde_json::json!(true));
+//!
 //!         Ok(ExtractionResult {
 //!             content: extracted_text,
 //!             mime_type: "application/json".to_string(),
-//!             metadata: HashMap::new(),
+//!             metadata,
 //!             tables: vec![],
 //!             detected_languages: None,
 //!             chunks: None,
+//!             images: None,
 //!         })
 //!     }
 //!
@@ -170,7 +177,7 @@
 //!
 //! impl Plugin for StatefulPlugin {
 //!     fn name(&self) -> &str { "stateful-plugin" }
-//!     fn version(&self) -> &str { "1.0.0" }
+//!     fn version(&self) -> String { "1.0.0".to_string() }
 //!
 //!     fn initialize(&self) -> kreuzberg::Result<()> {
 //!         // Modify through interior mutability

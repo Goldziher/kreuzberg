@@ -146,6 +146,7 @@ pub trait Validator: Plugin {
     ///     -> Result<()> {
     ///     // Check if quality_score exists in metadata
     ///     let score = result.metadata
+    ///         .additional
     ///         .get("quality_score")
     ///         .and_then(|v| v.as_f64())
     ///         .unwrap_or(0.0);
