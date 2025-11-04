@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       iterations:
-        description: "Number of iterations per test"
+        description: "Number of benchmark iterations"
         required: false
         default: "5"
         type: string
       timeout:
-        description: "Timeout per file in seconds"
+        description: "Timeout per document in seconds"
         required: false
         default: "300"
         type: string
@@ -20,26 +20,41 @@ on:
         type: string
 
 jobs:
-  framework-benchmark:
-    if: github.event_name == 'workflow_dispatch'
+  benchmark:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        framework:
-          - kreuzberg_sync
-          - kreuzberg_async
-          - docling
-          - markitdown
-          - unstructured
-          - extractous
+    timeout-minutes: 240
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Ensure benchmark harness exists
+        run: |
+          if [ ! -d tools/benchmark-harness ]; then
+            echo "::error::tools/benchmark-harness not found on branch ${GITHUB_REF}. Run this workflow against v4-dev." >&2
+            exit 1
+          fi
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-deu \
+            tesseract-ocr-fra \
+            tesseract-ocr-heb \
+            tesseract-ocr-chi-sim \
+            tesseract-ocr-jpn \
+            tesseract-ocr-kor \
+            poppler-utils \
+            libmagic1 \
+            pandoc
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -47,261 +62,84 @@ jobs:
           enable-cache: true
           cache-dependency-glob: |
             uv.lock
-            comparative-benchmarks/uv.lock
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
+      - name: Sync benchmark dependencies
+        run: uv sync --group benchmark
 
-      - name: Cache uv dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/uv
-            .venv
-            comparative-benchmarks/.venv
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock', 'comparative-benchmarks/uv.lock') }}
-          restore-keys: |
-            uv-${{ runner.os }}-
+      - name: Build benchmark harness
+        run: cargo build --manifest-path tools/benchmark-harness/Cargo.toml --release
 
-      - name: Cache APT packages
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu tesseract-ocr-fra tesseract-ocr-heb tesseract-ocr-chi-sim tesseract-ocr-jpn tesseract-ocr-kor poppler-utils libmagic1 pandoc
-          version: 2.0
-
-      - name: Install Python Dependencies
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            echo "Installing core workspace packages..."
-            uv sync
-            echo "Installing comparative-benchmarks extras..."
-            uv sync --package comparative-benchmarks --all-extras
-          shell: bash
-
-      - name: Clear Kreuzberg Cache
+      - name: Run benchmark harness
+        env:
+          ITERATIONS: ${{ github.event.inputs.iterations }}
+          TIMEOUT: ${{ github.event.inputs.timeout }}
         run: |
-          echo "Clearing any existing Kreuzberg cache..."
-          rm -rf ~/.kreuzberg .kreuzberg comparative-benchmarks/.kreuzberg
-          echo "Cache cleared"
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results"
+          rm -rf "${OUTPUT_DIR}"
 
-      - name: Run Framework Benchmark
-        id: benchmark
+          echo "Running benchmarks with ${ITERATIONS:-5} iterations and ${TIMEOUT:-300}s timeout..."
+
+          cargo run \
+            --manifest-path tools/benchmark-harness/Cargo.toml \
+            --release \
+            --bin benchmark-harness \
+            -- run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-native,docling,markitdown,unstructured,extractous-python" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS:-5}" \
+            --timeout "${TIMEOUT:-300}"
+
+          ls -R "${OUTPUT_DIR}"
+
+      - name: Summarize benchmark results
         run: |
-          cd comparative-benchmarks
+          set -euo pipefail
+          RESULTS_PATH="benchmark-results/results.json"
+          if [ ! -f "${RESULTS_PATH}" ]; then
+            echo "⚠️ No benchmark results found" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
 
-          ITERATIONS="${{ github.event.inputs.iterations }}"
-          TIMEOUT="${{ github.event.inputs.timeout }}"
-          FRAMEWORK="${{ matrix.framework }}"
+          uv run python - <<'PY'
+import json
+from pathlib import Path
 
-          echo "=== Starting Benchmark for $FRAMEWORK ==="
-          echo "Framework: $FRAMEWORK"
-          echo "Iterations: $ITERATIONS"
-          echo "Timeout: ${TIMEOUT}s per file"
+results_path = Path("benchmark-results/results.json")
+data = json.loads(results_path.read_text())
 
-          # Create results directory for this framework
-          mkdir -p results/$FRAMEWORK
+summary_lines = [
+    "## 📊 Comparative Benchmark Results",
+    "",
+    "| Framework | Files | Success | Failures | Mean Duration (ms) |",
+    "|-----------|-------|---------|----------|--------------------|",
+]
 
-          # Run benchmarks for specific framework
-          uv run python -m src.cli benchmark \
-            --iterations "$ITERATIONS" \
-            --timeout "$TIMEOUT" \
-            --framework "$FRAMEWORK" \
-            --output "results/$FRAMEWORK/results.json"
+from collections import defaultdict
+stats = defaultdict(list)
+for entry in data:
+    stats[entry["framework"]].append(entry)
 
-          echo "Benchmark execution completed for $FRAMEWORK"
+for framework, entries in stats.items():
+    files = len(entries)
+    successes = sum(1 for e in entries if e.get("success"))
+    failures = files - successes
+    durations = [e["duration"]["secs"] * 1000 + e["duration"]["nanos"] / 1_000_000 for e in entries]
+    mean_ms = sum(durations) / len(durations) if durations else 0.0
+    summary_lines.append(f"| {framework} | {files} | {successes} | {failures} | {mean_ms:.2f} |")
 
-      - name: Upload Framework Results
+summary_text = "\n".join(summary_lines)
+print(summary_text)
+Path("benchmark-results/summary.md").write_text(summary_text + "\n")
+PY
+
+          cat benchmark-results/summary.md >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload benchmark artifacts
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: benchmark-results-${{ matrix.framework }}-${{ github.run_id }}
-          path: comparative-benchmarks/results/${{ matrix.framework }}/
-          retention-days: 90
-
-  aggregate-results:
-    # Always run aggregation, even if some frameworks fail
-    # This allows partial results to be collected and analyzed
-    if: ${{ always() && github.event_name == 'workflow_dispatch' }}
-    needs: framework-benchmark
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-
-      - name: Install Dependencies
-        run: |
-          uv sync --all-packages
-
-      - name: Download All Framework Results
-        uses: actions/download-artifact@v6
-        with:
-          pattern: benchmark-results-*-${{ github.run_id }}
-          path: comparative-benchmarks/individual-results/
-
-      - name: Aggregate Results
-        run: |
-          cd comparative-benchmarks
-          echo "=== Aggregating Results from All Frameworks ==="
-
-          mkdir -p aggregated-results
-
-          # Find all individual result directories
-          find individual-results -name "benchmark_results.json" -type f | while read file; do
-            framework_dir=$(dirname "$file")
-            framework=$(basename "$framework_dir")
-            echo "Found benchmark results for: $framework"
-          done
-
-          # Run aggregation using ResultAggregator
-          uv run python -c "
-          from pathlib import Path
-          import msgspec
-          from src.aggregate import ResultAggregator
-          from src.types import BenchmarkResult
-
-          # Collect all framework result directories
-          result_dirs = []
-          individual_results = Path('individual-results')
-
-          if individual_results.exists():
-              # Each subdirectory should contain benchmark_results.json
-              for framework_dir in individual_results.iterdir():
-                  if framework_dir.is_dir():
-                      benchmark_file = framework_dir / 'benchmark_results.json'
-                      if benchmark_file.exists():
-                          result_dirs.append(framework_dir)
-                          print(f'Found results in: {framework_dir.name}')
-
-          if not result_dirs:
-              print('WARNING: No benchmark_results.json files found in individual-results/')
-              # Create an empty list for raw results
-              raw_results = []
-              # Create empty aggregated results
-              from src.types import AggregatedResults
-              aggregated = AggregatedResults(
-                  total_runs=0,
-                  total_files_processed=0,
-                  total_time_seconds=0,
-                  framework_summaries={},
-                  category_summaries={},
-                  framework_category_matrix={},
-                  failure_patterns={},
-                  timeout_files=[],
-                  performance_over_iterations={},
-                  platform_results={},
-              )
-          else:
-              print(f'Aggregating results from {len(result_dirs)} frameworks...')
-              aggregator = ResultAggregator()
-              # Get all raw results
-              all_results = []
-              for result_dir in result_dirs:
-                  results_file = result_dir / 'benchmark_results.json'
-                  if results_file.exists():
-                      with results_file.open('rb') as f:
-                          data = f.read()
-                          if data:
-                              all_results.extend(msgspec.json.decode(data, type=list[BenchmarkResult]))
-              raw_results = all_results
-              aggregated = aggregator.aggregate_results(result_dirs)
-
-          # Save raw results
-          output_dir = Path('aggregated-results')
-          output_dir.mkdir(parents=True, exist_ok=True)
-          raw_results_path = output_dir / 'raw_results.json'
-          with raw_results_path.open('wb') as f:
-              f.write(msgspec.json.encode(raw_results))
-
-          # Save aggregated results
-          aggregator = ResultAggregator()
-          aggregator.save_results(aggregated, output_dir, 'aggregated_results.json')
-
-          print(f'Aggregated results saved: {aggregated.total_files_processed} files from {aggregated.total_runs} runs')
-          print(f'Frameworks: {list(aggregated.framework_summaries.keys())}')
-          "
-
-      - name: Generate Visualizations
-        if: always()
-        run: |
-          echo "=== Generating Visualizations ==="
-          mkdir -p docs/comparative-benchmarks/charts
-
-          if [ -f "comparative-benchmarks/aggregated-results/raw_results.json" ]; then
-            cd comparative-benchmarks
-            uv run python -m src.cli visualize \
-              --input aggregated-results/raw_results.json \
-              --output-dir ../docs/comparative-benchmarks/charts
-
-            echo "✅ Visualizations generated successfully"
-          else
-            echo "⚠️ No aggregated results for visualization"
-          fi
-
-      - name: Generate Documentation
-        if: always()
-        run: |
-          echo "=== Generating Benchmark Documentation ==="
-
-          if [ -f "comparative-benchmarks/aggregated-results/raw_results.json" ]; then
-            cd comparative-benchmarks
-            uv run python -m src.cli generate-docs \
-              --input aggregated-results/raw_results.json \
-              --output-dir ../docs/comparative-benchmarks \
-              --charts-dir ../docs/comparative-benchmarks/charts
-
-            echo "✅ Documentation generated successfully"
-          else
-            echo "⚠️ No aggregated results for documentation"
-          fi
-
-      - name: Create Summary
-        if: always()
-        run: |
-          echo "## 📊 Comparative Benchmark Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
-          echo "- **Iterations**: ${{ github.event.inputs.iterations }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Timeout**: ${{ github.event.inputs.timeout }}s" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Add summary from aggregated results if available
-          if [ -f "comparative-benchmarks/aggregated-results/aggregated_results.json" ]; then
-            echo "### Results Summary" >> $GITHUB_STEP_SUMMARY
-            python -c 'import json; data=json.load(open("comparative-benchmarks/aggregated-results/aggregated_results.json")); print(f"- **Total Results**: {len(data) if isinstance(data, list) else 1}") if "error" not in str(data) else print("❌ Error in results")' >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "⚠️ Could not parse results" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ No aggregated results file found" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Upload Aggregated Results
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: benchmark-results-aggregated-${{ github.run_id }}
-          path: comparative-benchmarks/aggregated-results/
-          retention-days: 90
-
-      - name: Upload Documentation
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: benchmark-docs-${{ github.run_id }}
-          path: docs/comparative-benchmarks/
-          retention-days: 90
+          name: comparative-benchmark-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
