@@ -5,6 +5,22 @@ vars:
   V3_TAG: v3.20.2  # Latest v3 release tag for documentation
 
 tasks:
+  setup:
+    desc: Install dependencies for all languages
+    cmds:
+      - task: python:install
+      - task: typescript:install
+      - task: ruby:install
+      - task: rust:build
+
+  lint:
+    desc: Run linters for all languages
+    cmds:
+      - task: rust:check
+      - task: python:lint
+      - task: ruby:lint
+      - task: typescript:lint
+
   # Rust tasks
   rust:build:
     desc: Build all Rust crates
@@ -31,6 +47,13 @@ tasks:
     desc: Generate Rust documentation
     cmds:
       - cargo doc --no-deps --open
+
+  rust:update:
+    desc: Update Rust dependencies
+    cmds:
+      - echo "Updating Rust dependencies..."
+      - cargo upgrade --incompatible
+      - cargo update
 
   # Python tasks
   python:install:
@@ -72,6 +95,14 @@ tasks:
     cmds:
       - maturin develop --release
 
+  python:update:
+    desc: Update Python dependencies
+    cmds:
+      - echo "Updating Python dependencies..."
+      - uv run uv-bump --pyproject-toml pyproject.toml
+      - uv run uv-bump --pyproject-toml packages/python/pyproject.toml
+      - uv sync --all-packages --all-extras --upgrade
+
   # Ruby tasks
   ruby:install:
     desc: Install Ruby dependencies
@@ -84,6 +115,12 @@ tasks:
     dir: packages/ruby
     cmds:
       - bundle exec rake compile
+
+  ruby:update:
+    desc: Update Ruby dependencies
+    dir: packages/ruby
+    cmds:
+      - bundle update
 
   ruby:test:
     desc: Run Ruby tests
@@ -146,6 +183,12 @@ tasks:
     cmds:
       - pnpm format
 
+  typescript:update:
+    desc: Update TypeScript dependencies
+    cmds:
+      - echo "Updating TypeScript dependencies..."
+      - pnpm up --latest -r
+
   # CLI tasks
   cli:build:
     desc: Build CLI binary
@@ -161,10 +204,7 @@ tasks:
   dev:install:
     desc: Install all dependencies
     cmds:
-      - task: rust:build
-      - task: python:install
-      - task: ruby:install
-      - task: typescript:install
+      - task: setup
 
   dev:test:
     desc: Run all tests
@@ -177,10 +217,7 @@ tasks:
   dev:lint:
     desc: Lint all code
     cmds:
-      - task: rust:check
-      - task: python:lint
-      - task: ruby:lint
-      - task: typescript:lint
+      - task: lint
 
   dev:format:
     desc: Format all code
@@ -253,17 +290,10 @@ tasks:
   update:
     desc: Update all dependencies to latest versions
     cmds:
-      - echo "Updating Rust dependencies..."
-      - cargo upgrade --incompatible
-      - cargo update
-      - echo "Updating TypeScript dependencies..."
-      - pnpm up --latest -r
-      - echo "Updating Ruby dependencies..."
-      - cd packages/ruby && bundle update
-      - echo "Updating Python dependencies..."
-      - uv run uv-bump --pyproject-toml pyproject.toml
-      - uv run uv-bump --pyproject-toml packages/python/pyproject.toml
-      - uv sync --all-packages --all-extras --upgrade
+      - task: rust:update
+      - task: typescript:update
+      - task: ruby:update
+      - task: python:update
       - echo "✓ All dependencies updated"
 
   # Clean tasks
