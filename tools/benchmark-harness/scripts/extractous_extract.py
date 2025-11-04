@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Extractous extraction wrapper for benchmark harness."""
 
+from __future__ import annotations
+
+import json
 import sys
+import time
 
 from extractous import Extractor
 
@@ -15,10 +19,16 @@ def main() -> None:
 
     try:
         extractor = Extractor()
+        start = time.perf_counter()
         result = extractor.extract_file(file_path)
+        duration_ms = (time.perf_counter() - start) * 1000.0
 
-        # Print extracted text
-        print(result, end="")
+        payload = {
+            "content": result or "",
+            "metadata": {"framework": "extractous"},
+            "_extraction_time_ms": duration_ms,
+        }
+        print(json.dumps(payload), end="")
     except Exception as e:
         print(f"Error extracting with Extractous: {e}", file=sys.stderr)
         sys.exit(1)

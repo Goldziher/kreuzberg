@@ -24,6 +24,12 @@ doc = [
   "mkdocs-minify-plugin>=0.8.0",
   "mkdocstrings[python]>=0.30.1",
 ]
+benchmark = [
+  "docling>=2.13.0",
+  "extractous>=0.3.0",
+  "markitdown>=0.0.19",
+  "unstructured>=0.15.9",
+]
 
 [tool.setuptools]
 packages = [  ]

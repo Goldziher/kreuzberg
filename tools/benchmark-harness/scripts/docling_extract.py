@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Docling extraction wrapper for benchmark harness."""
 
+from __future__ import annotations
+
+import json
 import sys
+import time
 
 from docling.document_converter import DocumentConverter
 
@@ -14,11 +18,18 @@ def main() -> None:
     file_path = sys.argv[1]
 
     try:
+        start = time.perf_counter()
         converter = DocumentConverter()
         result = converter.convert(file_path)
+        markdown = result.document.export_to_markdown()
+        duration_ms = (time.perf_counter() - start) * 1000.0
 
-        # Extract markdown text
-        print(result.document.export_to_markdown(), end="")
+        payload = {
+            "content": markdown,
+            "metadata": {"framework": "docling"},
+            "_extraction_time_ms": duration_ms,
+        }
+        print(json.dumps(payload), end="")
     except Exception as e:
         print(f"Error extracting with Docling: {e}", file=sys.stderr)
         sys.exit(1)
