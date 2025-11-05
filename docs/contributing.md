@@ -15,7 +15,7 @@ Thank you for contributing to Kreuzberg!
     ```bash
     git clone https://github.com/Goldziher/kreuzberg.git
     cd kreuzberg
-    uv sync --all-packages --all-extras --all-groups
+    uv sync --all-extras --dev
     ```
 
 1. **Install prek and hooks**:
@@ -51,7 +51,54 @@ prek run --all-files  # Run all checks manually
 
 # Documentation
 uv run mkdocs serve                # Serve docs locally
+uv run mkdocs build --clean --strict  # Build docs
 ```
+
+### Documentation System Dependencies
+
+Building documentation requires the **cairo** graphics library for social card image generation (part of `mkdocs-material[imaging]`):
+
+**macOS**:
+```bash
+brew install cairo
+```
+
+**Ubuntu/Debian**:
+```bash
+sudo apt-get install libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev
+```
+
+**RHEL/CentOS/Fedora**:
+```bash
+sudo dnf install cairo-devel freetype-devel libffi-devel libjpeg-devel libpng-devel zlib-devel
+```
+
+**Note**: If you encounter cairo-related errors when building docs, ensure the system library is installed. The Python `cairosvg` package requires these native dependencies.
+
+### Updating Pdfium Versions
+
+Kreuzberg uses [pdfium](https://pdfium.googlesource.com/pdfium/) for PDF rendering. The versions are controlled via environment variables in the CI workflow:
+
+1. **Check for new releases**:
+   - Standard builds: [bblanchon/pdfium-binaries](https://github.com/bblanchon/pdfium-binaries/releases)
+   - WASM builds: [paulocoutinhox/pdfium-lib](https://github.com/paulocoutinhox/pdfium-lib/releases)
+
+2. **Update versions in `.github/workflows/ci.yaml`**:
+   ```yaml
+   env:
+     PDFIUM_VERSION: "7455"           # Update this
+     PDFIUM_WASM_VERSION: "7469"      # Update this
+   ```
+
+3. **Test locally**:
+   ```bash
+   # Set env vars and test build
+   export PDFIUM_VERSION="7455"
+   export PDFIUM_WASM_VERSION="7469"
+   cargo build --release
+   ```
+
+4. **Fallback versions**: If env vars are not set, `crates/kreuzberg/build.rs` will attempt to fetch the latest version from GitHub API, or fall back to hardcoded versions.
 
 ### Commit Messages
 
@@ -72,7 +119,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Notes
 
-- Python 3.10-3.14 supported (note: EasyOCR, PaddleOCR, and entity extraction extras remain unavailable on 3.14 until upstream wheels support it)
+- Python 3.10-3.13 supported
 - System dependencies (optional): Tesseract, Pandoc
 - Prek runs automatically on commit
 - Join our [Discord](https://discord.gg/pXxagNK2zN) for help
