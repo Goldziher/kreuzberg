@@ -1,0 +1,21 @@
+{
+	"id": "xml_plant_catalog",
+	"category": "xml",
+	"description": "XML plant catalog to validate streaming XML extraction.",
+	"document": {
+		"path": "xml/plant_catalog.xml",
+		"media_type": "application/xml"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/xml",
+		"min_content_length": 100,
+		"metadata": {
+			"element_count": {
+				"gte": 1
+			}
+		}
+	}
+}

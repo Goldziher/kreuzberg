@@ -1,0 +1,27 @@
+{
+	"id": "ocr_image_no_text",
+	"category": "ocr",
+	"description": "Image with no text to ensure OCR handles empty results gracefully.",
+	"document": {
+		"path": "images/flower_no_text.jpg",
+		"media_type": "image/jpeg",
+		"requires_external_tool": ["tesseract"]
+	},
+	"extraction": {
+		"config": {
+			"ocr": {
+				"backend": "tesseract",
+				"language": "eng"
+			},
+			"force_ocr": true
+		}
+	},
+	"assertions": {
+		"expected_mime": "image/jpeg",
+		"max_content_length": 200
+	},
+	"skip": {
+		"requires_feature": ["tesseract"],
+		"notes": "Skip when Tesseract is unavailable."
+	}
+}

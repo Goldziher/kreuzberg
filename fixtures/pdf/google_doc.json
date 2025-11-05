@@ -1,0 +1,21 @@
+{
+	"id": "pdf_google_doc",
+	"category": "pdf",
+	"description": "Google Docs exported PDF to verify conversion fidelity.",
+	"document": {
+		"path": "pdfs/google_doc_document.pdf",
+		"media_type": "application/pdf"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 50,
+		"metadata": {
+			"format_type": {
+				"eq": "pdf"
+			}
+		}
+	}
+}

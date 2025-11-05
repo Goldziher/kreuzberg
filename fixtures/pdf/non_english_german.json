@@ -1,0 +1,22 @@
+{
+	"id": "pdf_non_english_german",
+	"category": "pdf",
+	"description": "German technical PDF to ensure non-ASCII content extraction.",
+	"document": {
+		"path": "pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf",
+		"media_type": "application/pdf"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 100,
+		"content_contains_any": ["Intel", "paging"],
+		"metadata": {
+			"format_type": {
+				"eq": "pdf"
+			}
+		}
+	}
+}

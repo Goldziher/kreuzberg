@@ -1,0 +1,22 @@
+{
+	"id": "office_doc_legacy",
+	"category": "office",
+	"description": "Legacy .doc document conversion via LibreOffice.",
+	"document": {
+		"path": "legacy_office/unit_test_lists.doc",
+		"media_type": "application/msword",
+		"requires_external_tool": ["libreoffice"]
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/msword",
+		"min_content_length": 20
+	},
+	"skip": {
+		"if_document_missing": true,
+		"requires_feature": ["libreoffice"],
+		"notes": "LibreOffice must be installed for conversion."
+	}
+}

@@ -1,0 +1,22 @@
+{
+	"id": "pdf_assembly_technical",
+	"category": "pdf",
+	"description": "Assembly language technical manual with large body of text.",
+	"document": {
+		"path": "pdfs/assembly_language_for_beginners_al4_b_en.pdf",
+		"media_type": "application/pdf"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 5000,
+		"content_contains_any": ["assembly", "register", "instruction"],
+		"metadata": {
+			"format_type": {
+				"eq": "pdf"
+			}
+		}
+	}
+}

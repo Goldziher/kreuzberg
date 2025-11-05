@@ -1,0 +1,17 @@
+{
+	"id": "structured_json_basic",
+	"category": "structured",
+	"description": "Structured JSON extraction should stream and preserve content.",
+	"document": {
+		"path": "json/sample_document.json",
+		"media_type": "application/json"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/json",
+		"min_content_length": 20,
+		"content_contains_any": ["Sample Document", "Test Author"]
+	}
+}

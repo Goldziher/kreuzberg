@@ -1,0 +1,16 @@
+{
+	"id": "office_docx_formatting",
+	"category": "office",
+	"description": "DOCX document heavy on formatting for style preservation.",
+	"document": {
+		"path": "documents/unit_test_formatting.docx",
+		"media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		"min_content_length": 20
+	}
+}

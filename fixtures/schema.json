@@ -1,0 +1,161 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "Kreuzberg E2E Fixture",
+	"description": "Defines a single end-to-end extraction scenario shared across language bindings.",
+	"type": "object",
+	"required": ["id", "description", "document", "extraction", "assertions"],
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^[a-z0-9_]+$",
+			"description": "Stable identifier used by generators and test names."
+		},
+		"tags": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			},
+			"description": "Optional classification tags (e.g., pdf, ocr, regression)."
+		},
+		"description": {
+			"type": "string"
+		},
+		"category": {
+			"type": "string",
+			"description": "Fixture category used for grouping generated tests (e.g., pdf, office)."
+		},
+		"document": {
+			"type": "object",
+			"required": ["path"],
+			"properties": {
+				"path": {
+					"type": "string",
+					"description": "Path to input document relative to test_documents/."
+				},
+				"media_type": {
+					"type": "string",
+					"description": "Expected MIME type for the source file."
+				},
+				"requires_external_tool": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Optional external dependencies (e.g., libreoffice, tesseract)."
+				}
+			}
+		},
+		"extraction": {
+			"type": "object",
+			"properties": {
+				"config": {
+					"type": "object",
+					"description": "ExtractionConfig overrides encoded as JSON (merged with default config)."
+				},
+				"force_async": {
+					"type": "boolean",
+					"description": "Request async API usage when true."
+				},
+				"chunking": {
+					"type": "object",
+					"description": "Chunking-specific expectations (e.g., chunk count thresholds)."
+				}
+			},
+			"additionalProperties": false
+		},
+		"assertions": {
+			"type": "object",
+			"properties": {
+				"expected_mime": {
+					"oneOf": [
+						{
+							"type": "string"
+						},
+						{
+							"type": "array",
+							"items": {
+								"type": "string"
+							}
+						}
+					]
+				},
+				"min_content_length": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"max_content_length": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"content_contains_any": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"content_contains_all": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"tables": {
+					"type": "object",
+					"properties": {
+						"min": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"max": {
+							"type": "integer",
+							"minimum": 0
+						}
+					},
+					"additionalProperties": false
+				},
+				"detected_languages": {
+					"type": "object",
+					"properties": {
+						"expects": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							}
+						},
+						"min_confidence": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						}
+					},
+					"additionalProperties": false
+				},
+				"metadata": {
+					"type": "object",
+					"description": "Metadata assertions keyed by metadata path (e.g., pdf.page_count >= 1)."
+				}
+			},
+			"additionalProperties": false
+		},
+		"skip": {
+			"type": "object",
+			"properties": {
+				"if_document_missing": {
+					"type": "boolean",
+					"default": true
+				},
+				"requires_feature": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"notes": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

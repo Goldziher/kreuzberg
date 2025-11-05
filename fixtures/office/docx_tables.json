@@ -1,0 +1,16 @@
+{
+	"id": "office_docx_tables",
+	"category": "office",
+	"description": "DOCX document containing tables for table-aware extraction.",
+	"document": {
+		"path": "documents/docx_tables.docx",
+		"media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		"min_content_length": 20
+	}
+}

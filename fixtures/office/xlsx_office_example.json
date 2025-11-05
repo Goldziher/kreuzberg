@@ -1,0 +1,16 @@
+{
+	"id": "office_xlsx_office_example",
+	"category": "office",
+	"description": "Simple XLSX spreadsheet shipped alongside office integration tests.",
+	"document": {
+		"path": "office/excel.xlsx",
+		"media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		"min_content_length": 10
+	}
+}

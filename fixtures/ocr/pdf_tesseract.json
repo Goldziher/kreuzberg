@@ -1,0 +1,28 @@
+{
+	"id": "ocr_pdf_tesseract",
+	"category": "ocr",
+	"description": "Scanned PDF requires OCR to extract text.",
+	"document": {
+		"path": "pdfs/ocr_test.pdf",
+		"media_type": "application/pdf",
+		"requires_external_tool": ["tesseract"]
+	},
+	"extraction": {
+		"config": {
+			"ocr": {
+				"backend": "tesseract",
+				"language": "eng"
+			},
+			"force_ocr": true
+		}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 20,
+		"content_contains_any": ["Docling", "Markdown", "JSON"]
+	},
+	"skip": {
+		"requires_feature": ["tesseract"],
+		"notes": "Skip automatically if OCR backend is unavailable."
+	}
+}

@@ -1,0 +1,16 @@
+{
+	"id": "structured_yaml_simple",
+	"category": "structured",
+	"description": "Simple YAML document to validate structured extraction.",
+	"document": {
+		"path": "data_formats/simple.yaml",
+		"media_type": "application/x-yaml"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/x-yaml",
+		"min_content_length": 10
+	}
+}

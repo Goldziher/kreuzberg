@@ -1,0 +1,21 @@
+{
+	"id": "office_xlsx_multi_sheet",
+	"category": "office",
+	"description": "XLSX workbook with multiple sheets.",
+	"document": {
+		"path": "spreadsheets/excel_multi_sheet.xlsx",
+		"media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		"min_content_length": 20,
+		"metadata": {
+			"sheet_count": {
+				"gte": 2
+			}
+		}
+	}
+}

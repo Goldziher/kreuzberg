@@ -1,0 +1,22 @@
+{
+	"id": "pdf_bayesian_data_analysis",
+	"category": "pdf",
+	"description": "Bayesian data analysis textbook PDF with large content volume.",
+	"document": {
+		"path": "pdfs/bayesian_data_analysis_third_edition_13th_feb_2020.pdf",
+		"media_type": "application/pdf"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 10000,
+		"content_contains_any": ["Bayesian", "probability", "distribution"],
+		"metadata": {
+			"format_type": {
+				"eq": "pdf"
+			}
+		}
+	}
+}

@@ -1,0 +1,16 @@
+{
+	"id": "office_pptx_pitch_deck",
+	"category": "office",
+	"description": "Pitch deck PPTX used to validate large slide extraction.",
+	"document": {
+		"path": "presentations/pitch_deck_presentation.pptx",
+		"media_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+		"min_content_length": 100
+	}
+}

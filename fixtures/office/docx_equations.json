@@ -1,0 +1,16 @@
+{
+	"id": "office_docx_equations",
+	"category": "office",
+	"description": "DOCX file containing equations to validate math extraction.",
+	"document": {
+		"path": "documents/equations.docx",
+		"media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		"min_content_length": 20
+	}
+}
