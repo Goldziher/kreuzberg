@@ -1,41 +1,41 @@
 {
-  "title": "Complex Document",
-  "description": "This document tests nested object processing",
-  "metadata": {
-    "author": "Test Author",
-    "version": 2.1,
-    "tags": ["test", "nested", "complex"],
-    "config": {
-      "enabled": true,
-      "settings": {
-        "theme": "dark",
-        "language": "en"
-      }
-    }
-  },
-  "sections": [
-    {
-      "name": "Introduction",
-      "content": "Introduction text content",
-      "subsections": [
-        {
-          "title": "Overview",
-          "body": "Overview body text"
-        },
-        {
-          "title": "Goals",
-          "body": "Goals body text"
-        }
-      ]
-    },
-    {
-      "name": "Details",
-      "description": "Detailed section description",
-      "data": {
-        "count": 42,
-        "active": true,
-        "items": ["item1", "item2", "item3"]
-      }
-    }
-  ]
+	"title": "Complex Document",
+	"description": "This document tests nested object processing",
+	"metadata": {
+		"author": "Test Author",
+		"version": 2.1,
+		"tags": ["test", "nested", "complex"],
+		"config": {
+			"enabled": true,
+			"settings": {
+				"theme": "dark",
+				"language": "en"
+			}
+		}
+	},
+	"sections": [
+		{
+			"name": "Introduction",
+			"content": "Introduction text content",
+			"subsections": [
+				{
+					"title": "Overview",
+					"body": "Overview body text"
+				},
+				{
+					"title": "Goals",
+					"body": "Goals body text"
+				}
+			]
+		},
+		{
+			"name": "Details",
+			"description": "Detailed section description",
+			"data": {
+				"count": 42,
+				"active": true,
+				"items": ["item1", "item2", "item3"]
+			}
+		}
+	]
 }
