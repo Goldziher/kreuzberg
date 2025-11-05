@@ -1,0 +1,7 @@
+{
+	"name": "kreuzberg-root",
+	"private": true,
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.3"
+	}
+}
