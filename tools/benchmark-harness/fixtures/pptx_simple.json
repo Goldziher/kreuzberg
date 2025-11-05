@@ -1,0 +1,10 @@
+{
+	"document": "../../../test_documents/presentations/powerpoint_sample.pptx",
+	"file_type": "pptx",
+	"file_size": 46080,
+	"expected_frameworks": ["kreuzberg", "docling", "unstructured"],
+	"metadata": {
+		"description": "Simple PowerPoint presentation",
+		"category": "presentation"
+	}
+}

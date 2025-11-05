@@ -1,0 +1,12 @@
+{
+	"document": "../../../test_documents/images/invoice_image.png",
+	"file_type": "png",
+	"file_size": 10240,
+	"expected_frameworks": ["kreuzberg"],
+	"metadata": {
+		"description": "Invoice image requiring OCR - 10KB PNG document image",
+		"category": "image-invoice",
+		"size_class": "tiny",
+		"requires_ocr": true
+	}
+}

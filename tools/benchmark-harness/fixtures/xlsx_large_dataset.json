@@ -1,0 +1,11 @@
+{
+	"document": "../../../test_documents/spreadsheets/test_01.xlsx",
+	"file_type": "xlsx",
+	"file_size": 169984,
+	"expected_frameworks": ["kreuzberg"],
+	"metadata": {
+		"description": "Large Excel dataset - 166KB spreadsheet with extensive data",
+		"category": "xlsx-large",
+		"size_class": "medium"
+	}
+}

@@ -1,0 +1,10 @@
+{
+	"document": "../../../test_documents/pdfs/100_g_networking_technology_overview_slides_toronto_august_2016.pdf",
+	"file_type": "pdf",
+	"file_size": 1468006,
+	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "Large PDF - Technical presentation slides",
+		"category": "presentation"
+	}
+}

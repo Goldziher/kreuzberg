@@ -1,0 +1,10 @@
+{
+	"document": "../../../test_documents/documents/docx_tables.docx",
+	"file_type": "docx",
+	"file_size": 12288,
+	"expected_frameworks": ["kreuzberg", "docling", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "DOCX with tables",
+		"category": "structured"
+	}
+}

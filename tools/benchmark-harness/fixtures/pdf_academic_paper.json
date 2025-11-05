@@ -1,0 +1,11 @@
+{
+	"document": "../../../test_documents/pdfs/a_comprehensive_study_of_convergent_and_commutative_replicated_data_types.pdf",
+	"file_type": "pdf",
+	"file_size": 1572864,
+	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "Academic research paper - 1.5MB scientific publication with figures",
+		"category": "pdf-academic",
+		"size_class": "large"
+	}
+}

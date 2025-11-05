@@ -1,0 +1,11 @@
+{
+	"document": "../../../test_documents/web/complex_table.html",
+	"file_type": "html",
+	"file_size": 2662,
+	"expected_frameworks": ["kreuzberg", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "Complex HTML with nested tables - 2.6KB web document",
+		"category": "html-complex",
+		"size_class": "tiny"
+	}
+}
