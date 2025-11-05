@@ -1,0 +1,177 @@
+name: Docker Build & Test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker/**'
+      - '.dockerignore'
+      - 'crates/**'
+      - 'scripts/test_docker.sh'
+      - '.github/workflows/docker.yml'
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip feature tests (build only)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-docker:
+    name: Build and Test Docker Image (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - core
+          - full
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          echo "=== Initial disk space ==="
+          df -h /
+
+          echo "=== Removing unnecessary packages ==="
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/local/lib/node_modules
+          sudo rm -rf /opt/microsoft
+
+          echo "=== Cleaning apt cache ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "=== Cleaning Docker ==="
+          docker system prune -af --volumes
+
+          echo "=== Available disk space after cleanup ==="
+          df -h /
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          echo "=== Building Docker image (${{ matrix.variant }}) ==="
+          docker build -f docker/Dockerfile.${{ matrix.variant }} -t kreuzberg:${{ matrix.variant }} .
+
+          echo "=== Docker image built successfully ==="
+
+      - name: Test Docker image size
+        run: |
+          size=$(docker images kreuzberg:${{ matrix.variant }} --format "{{.Size}}")
+          echo "Docker image size (${{ matrix.variant }}): $size"
+
+          # Extract numeric value
+          size_mb=$(docker inspect kreuzberg:${{ matrix.variant }} --format='{{.Size}}' | awk '{print int($1/1024/1024)}')
+          echo "Image size in MB: $size_mb"
+
+          # Warn if image is larger than expected (2.5GB for full, 1.5GB for core)
+          if [ "${{ matrix.variant }}" = "full" ] && [ $size_mb -gt 2560 ]; then
+            echo "::warning::Full image is larger than 2.5GB ($size_mb MB). Consider optimization."
+          elif [ "${{ matrix.variant }}" = "core" ] && [ $size_mb -gt 1536 ]; then
+            echo "::warning::Core image is larger than 1.5GB ($size_mb MB). Consider optimization."
+          fi
+
+      - name: Run comprehensive feature tests
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          echo "=== Running Docker feature tests (${{ matrix.variant }}) ==="
+          ./scripts/test_docker.sh --skip-build --image kreuzberg:${{ matrix.variant }} --variant ${{ matrix.variant }} --verbose
+
+      - name: Save Docker image as artifact
+        if: success()
+        run: |
+          echo "=== Saving Docker image as tar archive ==="
+          docker save kreuzberg:${{ matrix.variant }} | gzip > /tmp/kreuzberg-${{ matrix.variant }}.tar.gz
+          ls -lh /tmp/kreuzberg-${{ matrix.variant }}.tar.gz
+
+      - name: Upload Docker image artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ matrix.variant }}
+          path: /tmp/kreuzberg-${{ matrix.variant }}.tar.gz
+          retention-days: 7
+          compression-level: 0  # Already gzipped
+
+      - name: Upload test results
+        if: always() && !inputs.skip_tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-test-results-${{ matrix.variant }}
+          path: /tmp/kreuzberg-docker-test-results.json
+          retention-days: 7
+
+      - name: Collect Docker logs on failure
+        if: failure()
+        run: |
+          echo "=== Collecting Docker logs ==="
+          mkdir -p /tmp/docker-logs
+
+          # Collect logs from any kreuzberg-test containers
+          for container in $(docker ps -a --filter "name=kreuzberg-test" --format "{{.Names}}"); do
+            echo "Collecting logs from: $container"
+            docker logs "$container" > "/tmp/docker-logs/${container}.log" 2>&1 || true
+          done
+
+          # Docker system info
+          docker info > /tmp/docker-logs/docker-info.txt 2>&1 || true
+          docker version > /tmp/docker-logs/docker-version.txt 2>&1 || true
+
+          echo "=== Docker logs collected ==="
+          ls -lh /tmp/docker-logs/
+
+      - name: Upload Docker logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-logs-${{ matrix.variant }}
+          path: /tmp/docker-logs/
+          retention-days: 7
+
+      - name: Clean up Docker resources
+        if: always()
+        run: |
+          echo "=== Cleaning up Docker resources ==="
+
+          # Stop and remove all kreuzberg-test containers
+          docker ps -aq --filter "name=kreuzberg-test" | xargs -r docker rm -f || true
+
+          # Remove test image
+          docker rmi kreuzberg:${{ matrix.variant }} || true
+
+          # Clean up Docker system
+          docker system prune -af --volumes || true
+
+          echo "=== Final disk space ==="
+          df -h /
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ Docker image built and tested successfully!"
+          echo ""
+          echo "Variant: ${{ matrix.variant }}"
+          echo "Image: kreuzberg:${{ matrix.variant }}"
+          echo ""
+          if [ -f /tmp/kreuzberg-docker-test-results.json ]; then
+            echo "Test Results:"
+            cat /tmp/kreuzberg-docker-test-results.json | jq .
+          fi
