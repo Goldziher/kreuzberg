@@ -16,6 +16,10 @@ fn test_office_doc_legacy() {
         );
         return;
     }
+    if !e2e_rust::external_tool_available("libreoffice") {
+        println!("Skipping office_doc_legacy: libreoffice not available on PATH");
+        return;
+    }
     let config = ExtractionConfig::default();
 
     let result = match kreuzberg::extract_file_sync(&document_path, None, &config) {
@@ -230,6 +234,10 @@ fn test_office_ppt_legacy() {
             "Skipping office_ppt_legacy: missing document at {}",
             document_path.display()
         );
+        return;
+    }
+    if !e2e_rust::external_tool_available("libreoffice") {
+        println!("Skipping office_ppt_legacy: libreoffice not available on PATH");
         return;
     }
     let config = ExtractionConfig::default();

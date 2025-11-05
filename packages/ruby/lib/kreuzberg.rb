@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require_relative 'kreuzberg/setup_lib_path'
+Kreuzberg::SetupLibPath.configure
+
 require_relative 'kreuzberg/version'
 require 'kreuzberg_rb'
 

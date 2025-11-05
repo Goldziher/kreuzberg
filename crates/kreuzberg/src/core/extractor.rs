@@ -13,11 +13,15 @@
 
 use crate::core::config::ExtractionConfig;
 use crate::core::mime::{LEGACY_POWERPOINT_MIME_TYPE, LEGACY_WORD_MIME_TYPE};
+#[cfg(feature = "office")]
 use crate::extraction::libreoffice::{convert_doc_to_docx, convert_ppt_to_pptx};
 use crate::plugins::DocumentExtractor;
-use crate::types::{ExtractionResult, LibreOfficeConversionResult};
+use crate::types::ExtractionResult;
+#[cfg(feature = "office")]
+use crate::types::LibreOfficeConversionResult;
 use crate::{KreuzbergError, Result};
 use once_cell::sync::Lazy;
+#[cfg(feature = "office")]
 use serde_json::json;
 use std::path::Path;
 use std::sync::Arc;
@@ -111,6 +115,7 @@ pub async fn extract_file(
     let detected_mime = mime::detect_or_validate(Some(path), mime_type)?;
 
     match detected_mime.as_str() {
+        #[cfg(feature = "office")]
         LEGACY_WORD_MIME_TYPE => {
             let original_bytes = tokio::fs::read(path).await?;
             let conversion = convert_doc_to_docx(&original_bytes).await?;
@@ -119,6 +124,13 @@ pub async fn extract_file(
             apply_libreoffice_metadata(&mut result, LEGACY_WORD_MIME_TYPE, &conversion);
             return Ok(result);
         }
+        #[cfg(not(feature = "office"))]
+        LEGACY_WORD_MIME_TYPE => {
+            return Err(KreuzbergError::UnsupportedFormat(format!(
+                "Legacy Word conversion requires the `office` feature or LibreOffice support"
+            )));
+        }
+        #[cfg(feature = "office")]
         LEGACY_POWERPOINT_MIME_TYPE => {
             let original_bytes = tokio::fs::read(path).await?;
             let conversion = convert_ppt_to_pptx(&original_bytes).await?;
@@ -126,6 +138,12 @@ pub async fn extract_file(
                 extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
             apply_libreoffice_metadata(&mut result, LEGACY_POWERPOINT_MIME_TYPE, &conversion);
             return Ok(result);
+        }
+        #[cfg(not(feature = "office"))]
+        LEGACY_POWERPOINT_MIME_TYPE => {
+            return Err(KreuzbergError::UnsupportedFormat(format!(
+                "Legacy PowerPoint conversion requires the `office` feature or LibreOffice support"
+            )));
         }
         _ => {}
     }
@@ -140,6 +158,7 @@ pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionC
     let validated_mime = mime::validate_mime_type(mime_type)?;
 
     match validated_mime.as_str() {
+        #[cfg(feature = "office")]
         LEGACY_WORD_MIME_TYPE => {
             let conversion = convert_doc_to_docx(content).await?;
             let mut result =
@@ -147,12 +166,25 @@ pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionC
             apply_libreoffice_metadata(&mut result, LEGACY_WORD_MIME_TYPE, &conversion);
             return Ok(result);
         }
+        #[cfg(not(feature = "office"))]
+        LEGACY_WORD_MIME_TYPE => {
+            return Err(KreuzbergError::UnsupportedFormat(
+                "Legacy Word conversion requires the `office` feature or LibreOffice support".to_string(),
+            ));
+        }
+        #[cfg(feature = "office")]
         LEGACY_POWERPOINT_MIME_TYPE => {
             let conversion = convert_ppt_to_pptx(content).await?;
             let mut result =
                 extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
             apply_libreoffice_metadata(&mut result, LEGACY_POWERPOINT_MIME_TYPE, &conversion);
             return Ok(result);
+        }
+        #[cfg(not(feature = "office"))]
+        LEGACY_POWERPOINT_MIME_TYPE => {
+            return Err(KreuzbergError::UnsupportedFormat(
+                "Legacy PowerPoint conversion requires the `office` feature or LibreOffice support".to_string(),
+            ));
         }
         _ => {}
     }
@@ -416,6 +448,7 @@ async fn extract_bytes_with_extractor(
     Ok(result)
 }
 
+#[cfg(feature = "office")]
 fn apply_libreoffice_metadata(
     result: &mut ExtractionResult,
     legacy_mime: &str,

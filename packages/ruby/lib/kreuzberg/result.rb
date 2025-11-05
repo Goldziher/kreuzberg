@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
-require 'json'
+begin
+  require 'json'
+rescue LoadError
+  require 'json/pure'
+end
 
 module Kreuzberg
   # Extraction result wrapper

@@ -24,6 +24,17 @@ pub fn resolve_document(relative: &str) -> PathBuf {
     test_documents_dir().join(relative)
 }
 
+/// Check if an external tool is available on the system PATH.
+pub fn external_tool_available(tool: &str) -> bool {
+    std::process::Command::new(tool)
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
 /// Generated assertions shared across tests.
 pub mod assertions {
     use super::*;
