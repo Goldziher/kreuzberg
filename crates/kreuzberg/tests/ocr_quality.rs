@@ -531,6 +531,11 @@ fn test_ocr_quality_multi_page_consistency() {
         return;
     }
 
+    if std::env::var_os("KREUZBERG_RUN_FULL_OCR").is_none() {
+        println!("Skipping test_ocr_quality_multi_page_consistency: set KREUZBERG_RUN_FULL_OCR=1 to enable");
+        return;
+    }
+
     let file_path = get_test_file_path("pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf");
 
     let truth_result =

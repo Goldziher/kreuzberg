@@ -76,7 +76,7 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v1
         with:
-          version: latest
+          version: '3.45.4'
 
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
@@ -307,7 +307,7 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v1
         with:
-          version: latest
+          version: '3.45.4'
 
       - name: Setup Python environment
         uses: ./.github/actions/setup-python-env
@@ -417,7 +417,7 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v1
         with:
-          version: latest
+          version: '3.45.4'
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -548,6 +548,10 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
 
+      - name: Install Ruby gems
+        working-directory: packages/ruby
+        run: bundle install --jobs 4 --retry 3
+
       - name: Run RuboCop
         working-directory: packages/ruby
         run: bundle exec rubocop
@@ -568,7 +572,7 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v1
         with:
-          version: latest
+          version: '3.45.4'
 
       - name: Run validation (prek)
         run: task lint
@@ -616,7 +620,7 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v1
         with:
-          version: latest
+          version: '3.45.4'
 
       - name: Verify Rust E2E suite
         run: task e2e:rust:verify
