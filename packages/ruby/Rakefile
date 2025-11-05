@@ -1,0 +1,25 @@
+# frozen_string_literal: true
+
+require 'bundler/gem_tasks'
+require 'rake/extensiontask'
+require 'rspec/core/rake_task'
+
+GEMSPEC = Gem::Specification.load(File.expand_path('kreuzberg.gemspec', __dir__))
+
+Rake::ExtensionTask.new('kreuzberg_rb', GEMSPEC) do |ext|
+  ext.lib_dir = 'lib'
+  ext.ext_dir = 'ext/kreuzberg_rb'
+  ext.cross_compile = true
+  ext.cross_platform = %w[
+    x86_64-linux
+    aarch64-linux
+    x86_64-darwin
+    arm64-darwin
+    x64-mingw32
+  ]
+end
+
+RSpec::Core::RakeTask.new(:spec)
+
+task spec: :compile
+task default: :spec
