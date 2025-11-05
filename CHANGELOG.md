@@ -119,6 +119,17 @@ The following internal GMFT options have been removed for simplicity:
 - **Legacy Dependencies**: Removed Python-based office document parsing libraries
 - **Complex GMFT Options**: Simplified configuration by removing internal tuning parameters
 
+## [3.21.0] - 2025-11-05
+
+### Added
+
+- Markdown report rendering helper used by the core library, CLI, REST API, and MCP server to return rich Markdown results.
+- Documentation for enabling Markdown output across CLI, API, and MCP interfaces.
+
+### Changed
+
+- Extended CLI, API, and MCP integration tests to cover the new Markdown pathways.
+
 ### Fixed
 
 - **Windows Compatibility**: Resolved platform-specific issues and casting warnings

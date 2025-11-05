@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import warnings
 from collections.abc import Awaitable, Callable, Mapping
@@ -19,6 +20,7 @@ from html_to_markdown._html_to_markdown import (
 
 from kreuzberg._constants import DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OVERLAP
 from kreuzberg._utils._table import (
+    enhance_table_markdown,
     export_table_to_csv,
     export_table_to_tsv,
     extract_table_structure_info,
@@ -917,6 +919,32 @@ class ExtractionResult:
             return []
 
         return [extract_table_structure_info(table) for table in self.tables]
+
+    def to_markdown(self, show_metadata: bool = False) -> str:
+        """Render the extraction result as a Markdown document."""
+        sections: list[str] = []
+
+        content_block = self.content.rstrip()
+        if content_block:
+            sections.append(content_block)
+
+        if self.tables:
+            table_sections: list[str] = ["## Tables"]
+            for index, table in enumerate(self.tables, start=1):
+                table_heading = f"### Table {index}"
+                table_markdown = enhance_table_markdown(table).strip()
+                if not table_markdown and table.get("text"):
+                    table_markdown = str(table.get("text", "")).strip()
+                if not table_markdown:
+                    table_markdown = "_No table data available._"
+                table_sections.append(f"{table_heading}\n\n{table_markdown}")
+            sections.append("\n\n".join(table_sections))
+
+        if show_metadata and self.metadata:
+            metadata_payload = json.dumps(self.metadata, indent=2, ensure_ascii=False)
+            sections.append(f"## Metadata\n\n```json\n{metadata_payload}\n```")
+
+        return "\n\n".join(part.strip() for part in sections if part.strip())
 
 
 PostProcessingHook = Callable[[ExtractionResult], ExtractionResult | Awaitable[ExtractionResult]]

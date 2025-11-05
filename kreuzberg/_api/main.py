@@ -243,6 +243,7 @@ def merge_configs(
 async def handle_files_upload(  # noqa: PLR0913
     request: Request[Any, Any, Any],
     data: Annotated[list[UploadFile], Body(media_type=RequestEncodingType.MULTI_PART)],
+    response_format: Literal["json", "markdown"] = "json",
     chunk_content: str | bool | None = None,
     max_chars: int | None = None,
     max_overlap: int | None = None,
@@ -261,7 +262,7 @@ async def handle_files_upload(  # noqa: PLR0913
     image_ocr_min_height: int | None = None,
     image_ocr_max_width: int | None = None,
     image_ocr_max_height: int | None = None,
-) -> list[ExtractionResult]:
+) -> list[ExtractionResult] | Response[Any]:
     """Extract text, metadata, and structured data from uploaded documents.
 
     This endpoint processes multiple file uploads and extracts comprehensive information including:
@@ -277,6 +278,7 @@ async def handle_files_upload(  # noqa: PLR0913
     Args:
         request: The HTTP request object
         data: List of files to process (multipart form data)
+        response_format: Response format (`json` or `markdown`)
         chunk_content: Enable text chunking for large documents
         max_chars: Maximum characters per chunk (default: 1000)
         max_overlap: Character overlap between chunks (default: 200)
@@ -297,9 +299,10 @@ async def handle_files_upload(  # noqa: PLR0913
         image_ocr_max_height: Maximum image height for OCR eligibility
 
     Returns:
-        List of extraction results, one per uploaded file
+        List of extraction results, one per uploaded file or a Markdown response when `response_format="markdown"`
 
     Additional query parameters:
+        response_format: Set to 'markdown' to return a markdown response instead of JSON
         extract_images: Enable image extraction for supported formats
         ocr_extracted_images: Run OCR over extracted images
         image_ocr_backend: Optional backend override for image OCR
@@ -344,10 +347,26 @@ async def handle_files_upload(  # noqa: PLR0913
 
     final_config = merge_configs(static_config, query_params, header_config)
 
-    return await batch_extract_bytes(
-        [(await file.read(), file.content_type) for file in data],
-        config=final_config,
-    )
+    payloads = [(await file.read(), file.content_type or "application/octet-stream") for file in data]
+    extraction_results = await batch_extract_bytes(payloads, config=final_config)
+
+    if response_format == "markdown":
+        sections: list[str] = []
+        for uploaded_file, extraction_result in zip(data, extraction_results, strict=False):
+            filename = getattr(uploaded_file, "filename", None) or "Document"
+            markdown_body = extraction_result.to_markdown(show_metadata=True)
+            if markdown_body:
+                sections.append("\n\n".join([f"# {filename}", markdown_body]).strip())
+            else:
+                sections.append(f"# {filename}")
+        combined_markdown = "\n\n---\n\n".join(section for section in sections if section)
+        return Response(
+            content=combined_markdown,
+            status_code=201,
+            media_type="text/markdown",
+        )
+
+    return extraction_results
 
 
 @get("/health", operation_id="HealthCheck")

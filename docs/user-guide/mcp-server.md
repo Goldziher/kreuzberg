@@ -243,8 +243,9 @@ Comprehensive document extraction with full configuration options.
 - `max_overlap` (optional): Character overlap between chunks
 - `keyword_count` (optional): Number of keywords to extract
 - `auto_detect_language` (optional): Auto-detect document language
+- `response_format` (optional): `"json"` (default) or `"markdown"` for Markdown output
 
-**Returns:** Dictionary with extracted content, metadata, tables, chunks, entities, and keywords.
+**Returns:** Dictionary with extracted content, metadata, tables, chunks, entities, and keywords. When `response_format="markdown"`, returns a dictionary containing Markdown content and `mime_type="text/markdown"`.
 
 #### `extract_bytes`
 
@@ -255,8 +256,9 @@ Extract text from document bytes (base64-encoded).
 - `content_base64` (required): Base64-encoded document content
 - `mime_type` (required): MIME type of the document
 - All other parameters same as `extract_document`
+- `response_format` (optional): `"json"` (default) or `"markdown"` for Markdown output
 
-**Returns:** Dictionary with extracted content, metadata, and optional features.
+**Returns:** Dictionary with extracted content, metadata, and optional features. When `response_format="markdown"`, returns a dictionary containing Markdown content and `mime_type="text/markdown"`.
 
 #### `extract_simple`
 
@@ -266,8 +268,9 @@ Simple text extraction with minimal configuration.
 
 - `file_path` (required): Path to the document file
 - `mime_type` (optional): MIME type of the document
+- `response_format` (optional): `"text"` (default) or `"markdown"` for a Markdown summary
 
-**Returns:** Extracted text content as a string.
+**Returns:** Extracted text content as a string. When `response_format="markdown"`, returns a Markdown-formatted string.
 
 ### Resources
 
@@ -321,6 +324,14 @@ Claude: I'll extract the text from your PDF document using the Kreuzberg MCP ser
 [Uses extract_simple tool]
 
 The document contains: [extracted text content]
+```
+
+### Markdown Output
+
+```text
+Human: Give me a Markdown report for /path/to/document.pdf
+
+Claude: I'll call extract_document with response_format="markdown" so you get a Markdown summary.
 ```
 
 ### Advanced Document Processing (with all features)

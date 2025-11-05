@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from kreuzberg import ExtractionConfig
+from kreuzberg import ExtractionConfig, ExtractionResult
 from kreuzberg._api.main import merge_configs
 
 if TYPE_CHECKING:
@@ -89,6 +89,31 @@ async def test_extract_with_query_params_ocr_backend(test_client: AsyncTestClien
     data = response.json()
     assert len(data) == 1
     assert len(data[0]["content"]) > 0
+
+
+@pytest.mark.anyio
+async def test_extract_with_markdown_response_format(test_client: AsyncTestClient[Any], searchable_pdf: Path) -> None:
+    mock_result = ExtractionResult(
+        content="Markdown body",
+        mime_type="text/markdown",
+        metadata={"title": "Sample"},
+        tables=[],
+    )
+
+    with (
+        patch("kreuzberg._api.main.batch_extract_bytes", new_callable=AsyncMock) as mock_extract,
+        searchable_pdf.open("rb") as f,
+    ):
+        mock_extract.return_value = [mock_result]
+        response = await test_client.post(
+            "/extract?response_format=markdown",
+            files=[("data", (searchable_pdf.name, f.read(), "application/pdf"))],
+        )
+
+    assert response.status_code == 201
+    assert response.headers["content-type"].startswith("text/markdown")
+    assert "# " in response.text
+    assert "Markdown body" in response.text
 
 
 @pytest.mark.anyio
