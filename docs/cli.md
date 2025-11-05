@@ -30,6 +30,12 @@ kreuzberg extract document.pdf
 kreuzberg extract document.pdf -o output.txt
 ```
 
+### Extract to Markdown
+
+```bash
+kreuzberg extract invoice.pdf --output-format markdown --show-metadata -o invoice.md
+```
+
 ### Extract from stdin
 
 ```bash
@@ -43,7 +49,7 @@ kreuzberg extract -
 ### General Options
 
 - `-o, --output PATH`: Output file path (default: stdout)
-- `--output-format [text|json|markdown|tsv|hocr]`: Output format for extraction
+- `--output-format [text|json|markdown]`: Output format for extraction (stdout or `-o`)
 - `--show-metadata`: Include metadata in output
 - `-v, --verbose`: Verbose output for debugging
 
@@ -120,10 +126,10 @@ kreuzberg extract document.pdf --tesseract-output-format text
 ### Get structured markdown output
 
 ```bash
-# Markdown is the default format
-kreuzberg extract document.jpg
+# Render the entire extraction as Markdown
+kreuzberg extract document.pdf --output-format markdown --show-metadata
 
-# Or explicitly specify markdown
+# OCR-specific output format still uses Tesseract options
 kreuzberg extract document.jpg --tesseract-output-format markdown
 ```
 

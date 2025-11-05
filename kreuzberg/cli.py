@@ -49,7 +49,7 @@ def format_extraction_result(result: ExtractionResult, show_metadata: bool, outp
     Args:
         result: Extraction result to format.
         show_metadata: Whether to include metadata.
-        output_format: Output format (text, json).
+        output_format: Output format (text, json, markdown).
 
     Returns:
         Formatted string.
@@ -79,6 +79,9 @@ def format_extraction_result(result: ExtractionResult, show_metadata: bool, outp
         if result.chunks:
             output_data["chunks"] = result.chunks
         return json.dumps(output_data, indent=2, ensure_ascii=False)
+
+    if output_format == "markdown":
+        return result.to_markdown(show_metadata=show_metadata)
 
     output_parts = [result.content]
 
@@ -295,7 +298,12 @@ def cli(ctx: click.Context) -> None:
 )
 @click.option("--config", "config_file", type=click.Path(exists=True, path_type=Path), help="Configuration file path")
 @click.option("--show-metadata", is_flag=True, help="Include metadata in output")
-@click.option("--output-format", type=click.Choice(["text", "json"]), default="text", help="Output format")
+@click.option(
+    "--output-format",
+    type=click.Choice(["text", "json", "markdown"]),
+    default="text",
+    help="Output format",
+)
 @click.option("-v", "--verbose", is_flag=True, help="Verbose output for debugging")
 @click.option("--tesseract-lang", help="Tesseract language(s) (e.g., 'eng+deu')")
 @click.option("--tesseract-psm", type=int, help="Tesseract PSM mode (0-13)")

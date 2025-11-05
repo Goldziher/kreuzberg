@@ -4,7 +4,7 @@ import base64
 import binascii
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import msgspec
 from mcp.server import FastMCP
@@ -183,6 +183,7 @@ def _create_config_with_overrides(**kwargs: Any) -> ExtractionConfig:
 def extract_document(  # noqa: PLR0913
     file_path: str,
     mime_type: str | None = None,
+    response_format: Literal["json", "markdown"] = "json",
     force_ocr: bool = False,
     chunk_content: bool = False,
     extract_tables: bool = False,
@@ -217,6 +218,11 @@ def extract_document(  # noqa: PLR0913
     )
 
     result = extract_file_sync(str(validated_path), mime_type, config)
+    if response_format == "markdown":
+        return {
+            "content": result.to_markdown(show_metadata=True),
+            "mime_type": "text/markdown",
+        }
     return result.to_dict(include_none=True)
 
 
@@ -224,6 +230,7 @@ def extract_document(  # noqa: PLR0913
 def extract_bytes(  # noqa: PLR0913
     content_base64: str,
     mime_type: str,
+    response_format: Literal["json", "markdown"] = "json",
     force_ocr: bool = False,
     chunk_content: bool = False,
     extract_tables: bool = False,
@@ -259,12 +266,18 @@ def extract_bytes(  # noqa: PLR0913
     )
 
     result = extract_bytes_sync(content_bytes, mime_type, config)
+    if response_format == "markdown":
+        return {
+            "content": result.to_markdown(show_metadata=True),
+            "mime_type": "text/markdown",
+        }
     return result.to_dict(include_none=True)
 
 
 @mcp.tool()
 def batch_extract_document(  # noqa: PLR0913
     file_paths: list[str],
+    response_format: Literal["json", "markdown"] = "json",
     force_ocr: bool = False,
     chunk_content: bool = False,
     extract_tables: bool = False,
@@ -314,12 +327,21 @@ def batch_extract_document(  # noqa: PLR0913
     )
 
     results = batch_extract_file_sync(validated_paths, config)
+    if response_format == "markdown":
+        return [
+            {
+                "content": result.to_markdown(show_metadata=True),
+                "mime_type": "text/markdown",
+            }
+            for result in results
+        ]
     return [result.to_dict(include_none=True) for result in results]
 
 
 @mcp.tool()
 def batch_extract_bytes(  # noqa: PLR0913
     content_items: list[dict[str, str]],
+    response_format: Literal["json", "markdown"] = "json",
     force_ocr: bool = False,
     chunk_content: bool = False,
     extract_tables: bool = False,
@@ -400,6 +422,14 @@ def batch_extract_bytes(  # noqa: PLR0913
         contents.append((content_bytes, mime_type))
 
     results = batch_extract_bytes_sync(contents, config)
+    if response_format == "markdown":
+        return [
+            {
+                "content": result.to_markdown(show_metadata=True),
+                "mime_type": "text/markdown",
+            }
+            for result in results
+        ]
     return [result.to_dict(include_none=True) for result in results]
 
 
@@ -407,10 +437,13 @@ def batch_extract_bytes(  # noqa: PLR0913
 def extract_simple(
     file_path: str,
     mime_type: str | None = None,
+    response_format: Literal["text", "markdown"] = "text",
 ) -> str:
     validated_path = _validate_file_path(file_path)
     config = _create_config_with_overrides()
     result = extract_file_sync(str(validated_path), mime_type, config)
+    if response_format == "markdown":
+        return result.to_markdown(show_metadata=False)
     return result.content
 
 

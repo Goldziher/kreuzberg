@@ -102,6 +102,15 @@ curl -X POST http://localhost:8000/extract \
 ]
 ```
 
+To receive Markdown instead of JSON, set `response_format=markdown`:
+
+```bash
+curl -X POST "http://localhost:8000/extract?response_format=markdown" \
+  -F "data=@document.pdf"
+```
+
+The response will be a `text/markdown` document containing the extracted content, table sections, and metadata blocks.
+
 ### Runtime Configuration
 
 The `/extract` endpoint supports runtime configuration via query parameters and HTTP headers, allowing you to customize extraction behavior without requiring static configuration files.
@@ -129,6 +138,13 @@ Force OCR with specific backend:
 ```bash
 curl -X POST "http://localhost:8000/extract?force_ocr=true&ocr_backend=tesseract" \
   -F "data=@image.jpg"
+```
+
+Return Markdown output:
+
+```bash
+curl -X POST "http://localhost:8000/extract?response_format=markdown" \
+  -F "data=@report.pdf"
 ```
 
 ### Image Extraction and OCR

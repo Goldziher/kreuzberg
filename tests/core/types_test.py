@@ -220,6 +220,26 @@ def test_extraction_result_to_dict() -> None:
     assert dict_without_none["content"] == "Test content"
 
 
+def test_extraction_result_to_markdown() -> None:
+    from kreuzberg._types import ExtractionResult, TableData
+
+    table = TableData(text="Table content", page_number=1, cropped_image=None)  # type: ignore[typeddict-item]
+    result = ExtractionResult(
+        content="Intro content",
+        mime_type="text/plain",
+        metadata={"title": "Doc"},
+        tables=[table],
+    )
+
+    markdown = result.to_markdown(show_metadata=True)
+
+    assert "Intro content" in markdown
+    assert "## Tables" in markdown
+    assert "Table content" in markdown
+    assert "## Metadata" in markdown
+    assert '"title": "Doc"' in markdown
+
+
 def test_extraction_result_table_export_methods() -> None:
     import polars as pl
 

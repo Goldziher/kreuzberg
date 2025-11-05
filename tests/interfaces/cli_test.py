@@ -133,6 +133,22 @@ def test_format_extraction_result_json_with_pandas_dataframe() -> None:
     mock_df.to_csv.assert_called_once_with(index=False)
 
 
+def test_format_extraction_result_markdown() -> None:
+    result = ExtractionResult(
+        content="# Heading\n\nBody text",
+        mime_type="text/markdown",
+        metadata={"title": "Test Document"},
+        tables=[{"text": "Fallback table content"}],  # type: ignore[typeddict-item]
+    )
+
+    output = format_extraction_result(result, show_metadata=True, output_format="markdown")
+    assert "# Heading" in output
+    assert "## Tables" in output
+    assert "Fallback table content" in output
+    assert "## Metadata" in output
+    assert '"title": "Test Document"' in output
+
+
 def test_load_config_with_path(tmp_path: Path) -> None:
     config_file = tmp_path / "config.toml"
     config_file.write_text("force_ocr = true")
@@ -495,6 +511,37 @@ def test_extract_command_with_options(tmp_path: Path) -> None:
 
         assert result.exit_code == 0
         assert output_file.exists()
+
+
+def test_extract_command_markdown_output(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.md"
+    test_file.touch()
+
+    mock_result = ExtractionResult(
+        content="Document intro",
+        mime_type="text/markdown",
+        metadata={"title": "Markdown Doc"},
+        tables=[{"text": "Some table data"}],  # type: ignore[typeddict-item]
+    )
+
+    runner = CliRunner()
+    with patch("kreuzberg.cli.extract_file_sync") as mock_extract:
+        mock_extract.return_value = mock_result
+
+        result = runner.invoke(
+            extract,
+            [
+                str(test_file),
+                "--output-format",
+                "markdown",
+                "--show-metadata",
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert "Document intro" in result.output
+    assert "## Tables" in result.output
+    assert "## Metadata" in result.output
 
 
 def test_extract_command_error() -> None:

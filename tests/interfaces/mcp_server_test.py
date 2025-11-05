@@ -130,6 +130,75 @@ def test_batch_extract_bytes_multiple_items() -> None:
             assert res["mime_type"] == "text/plain"
 
 
+def test_extract_document_markdown_response(tmp_path: Path) -> None:
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Hello, world!")
+
+    with patch("kreuzberg._mcp.server.extract_file_sync") as mock_extract:
+        mock_result = ExtractionResult(
+            content="# Heading",
+            mime_type="text/markdown",
+            metadata={"title": "Doc"},
+            tables=[],
+        )
+        mock_extract.return_value = mock_result
+
+        result = extract_document(str(test_file), response_format="markdown")
+
+    assert isinstance(result, dict)
+    assert result["mime_type"] == "text/markdown"
+    assert "# Heading" in result["content"]
+    assert "## Metadata" in result["content"]
+
+
+def test_batch_extract_document_markdown_response(tmp_path: Path) -> None:
+    test_files = []
+    for i in range(2):
+        file_path = tmp_path / f"doc{i}.txt"
+        file_path.write_text(f"Content {i}")
+        test_files.append(str(file_path))
+
+    with patch("kreuzberg._mcp.server.batch_extract_file_sync") as mock_batch:
+        mock_results = [
+            ExtractionResult(
+                content=f"# Doc {i}",
+                mime_type="text/markdown",
+                metadata={"title": f"Doc {i}"},
+                tables=[],
+            )
+            for i in range(2)
+        ]
+        mock_batch.return_value = mock_results
+
+        result = batch_extract_document(test_files, response_format="markdown")
+
+    assert isinstance(result, list)
+    assert len(result) == 2
+    for index, item in enumerate(result):
+        assert item["mime_type"] == "text/markdown"
+        assert f"# Doc {index}" in item["content"]
+        assert "## Metadata" in item["content"]
+
+
+def test_extract_simple_markdown_response(tmp_path: Path) -> None:
+    test_file = tmp_path / "simple.txt"
+    test_file.write_text("Simple content")
+
+    with patch("kreuzberg._mcp.server.extract_file_sync") as mock_extract:
+        mock_result = ExtractionResult(
+            content="Simple content",
+            mime_type="text/plain",
+            metadata={},
+            tables=[],
+        )
+        mock_extract.return_value = mock_result
+
+        result = extract_simple(str(test_file), response_format="markdown")
+
+    assert isinstance(result, str)
+    assert "Simple content" in result
+
+
 def test_batch_extract_document_with_config_parameters(tmp_path: Path) -> None:
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test content")
