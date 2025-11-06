@@ -426,7 +426,7 @@ checksum = "55248b47b0caf0546f7988906588779981c43bb1bc9d0c44087278f80cdb44ba"
 
 [[package]]
 name = "benchmark-harness"
-version = "4.0.0"
+version = "4.0.0-rc.1"
 dependencies = [
  "ahash",
  "async-trait",
@@ -2737,7 +2737,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg"
-version = "4.0.0"
+version = "4.0.0-rc.1"
 dependencies = [
  "ahash",
  "async-trait",
@@ -2801,7 +2801,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-cli"
-version = "4.0.0"
+version = "4.0.0-rc.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2833,7 +2833,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-node"
-version = "4.0.0"
+version = "4.0.0-rc.1"
 dependencies = [
  "async-trait",
  "kreuzberg",
@@ -2848,7 +2848,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-py"
-version = "4.0.0"
+version = "4.0.0-rc.1"
 dependencies = [
  "async-trait",
  "kreuzberg",
@@ -2861,7 +2861,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-rb"
-version = "4.0.0"
+version = "4.0.0-rc.1"
 dependencies = [
  "kreuzberg",
  "magnus",

@@ -147,7 +147,7 @@ curl http://localhost:8000/health
 ```json
 {
   "status": "healthy",
-  "version": "4.0.0"
+  "version": "4.0.0-rc.1"
 }
 ```
 
@@ -165,7 +165,7 @@ curl http://localhost:8000/info
 
 ```json
 {
-  "version": "4.0.0",
+  "version": "4.0.0-rc.1",
   "rust_backend": true
 }
 ```
@@ -678,7 +678,7 @@ version: '3.8'
 
 services:
   kreuzberg-api:
-    image: goldziher/kreuzberg:v4.0.0-all
+    image: goldziher/kreuzberg:v4.0.0-rc1-all
     ports:
       - "8000:8000"
     environment:
@@ -723,7 +723,7 @@ spec:
     spec:
       containers:
       - name: kreuzberg
-        image: goldziher/kreuzberg:v4.0.0-all
+        image: goldziher/kreuzberg:v4.0.0-rc1-all
         ports:
         - containerPort: 8000
         env:

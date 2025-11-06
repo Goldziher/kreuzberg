@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg"
-version = "4.0.0"
+version = "4.0.0-rc.1"
 dependencies = [
  "ahash",
  "async-trait",
@@ -678,7 +678,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-rb"
-version = "4.0.0"
+version = "4.0.0-rc.1"
 dependencies = [
  "kreuzberg",
  "magnus",

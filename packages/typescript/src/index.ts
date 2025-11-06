@@ -858,4 +858,4 @@ export function registerOcrBackend(backend: OcrBackendProtocol): void {
 	binding.registerOcrBackend(wrappedBackend);
 }
 
-export const __version__ = "4.0.0";
+export const __version__ = "4.0.0-rc.1";

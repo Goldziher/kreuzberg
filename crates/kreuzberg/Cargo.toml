@@ -1,6 +1,6 @@
 [package]
 name = "kreuzberg"
-version = "4.0.0"
+version = "4.0.0-rc.1"
 edition = "2024"
 authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
 description = "High-performance document intelligence library for Rust. Extract text, metadata, and structured data from PDFs, Office documents, images, and 50+ formats with async/sync APIs."

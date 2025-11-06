@@ -5,7 +5,7 @@ All notable changes to Kreuzberg will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.0.0] - TBD
+## [4.0.0-rc.1] - TBD
 
 ### Major Release - Complete Architecture Rewrite
 
@@ -318,11 +318,11 @@ register_ocr_backend(CloudOCR())
 
 All Docker images include LibreOffice, Pandoc, and Tesseract by default:
 
-- `goldziher/kreuzberg:4.0.0` - Core image with Tesseract OCR
-- `goldziher/kreuzberg:4.0.0-easyocr` - Core + EasyOCR
-- `goldziher/kreuzberg:4.0.0-paddle` - Core + PaddleOCR
-- `goldziher/kreuzberg:4.0.0-vision-tables` - Core + vision-based table extraction
-- `goldziher/kreuzberg:4.0.0-all` - All features included
+- `goldziher/kreuzberg:4.0.0-rc.1` - Core image with Tesseract OCR
+- `goldziher/kreuzberg:4.0.0-rc.1-easyocr` - Core + EasyOCR
+- `goldziher/kreuzberg:4.0.0-rc.1-paddle` - Core + PaddleOCR
+- `goldziher/kreuzberg:4.0.0-rc.1-vision-tables` - Core + vision-based table extraction
+- `goldziher/kreuzberg:4.0.0-rc.1-all` - All features included
 
 ### Installation
 
@@ -438,4 +438,4 @@ See v3 branch for previous changelog entries. The v3 architecture was Python-onl
 - **Examples**: https://github.com/Goldziher/kreuzberg/tree/v4-dev/examples
 - **Support**: https://github.com/Goldziher/kreuzberg/issues
 
-[4.0.0]: https://github.com/Goldziher/kreuzberg/compare/v3.0.0...v4.0.0
+[4.0.0-rc.1]: https://github.com/Goldziher/kreuzberg/compare/v3.0.0...v4.0.0-rc.1

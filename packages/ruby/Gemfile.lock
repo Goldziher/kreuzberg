@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    kreuzberg (4.0.0)
+    kreuzberg (4.0.0.rc1)
 
 GEM
   remote: https://rubygems.org/
