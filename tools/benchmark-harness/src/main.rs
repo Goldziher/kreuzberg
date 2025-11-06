@@ -179,6 +179,36 @@ async fn main() -> Result<()> {
             // Register native adapter with OCR config
             registry.register(Arc::new(NativeAdapter::with_config(extraction_config)))?;
 
+            // Register Kreuzberg language binding adapters
+            use benchmark_harness::adapters::{
+                create_node_async_adapter, create_node_batch_adapter, create_python_async_adapter,
+                create_python_batch_adapter, create_python_sync_adapter, create_ruby_batch_adapter,
+                create_ruby_sync_adapter,
+            };
+
+            // Try to register each Kreuzberg binding adapter, ignore errors if not available
+            if let Ok(adapter) = create_python_sync_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_python_async_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_python_batch_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_node_async_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_node_batch_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_ruby_sync_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_ruby_batch_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+
             // Register external framework adapters
             use benchmark_harness::adapters::external::{
                 create_docling_adapter, create_extractous_python_adapter, create_markitdown_adapter,
