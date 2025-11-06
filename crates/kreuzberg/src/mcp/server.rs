@@ -1638,8 +1638,8 @@ mod tests {
         // Read a real PDF file
         let pdf_path = get_test_path("pdfs_with_tables/tiny.pdf");
 
-        if std::path::Path::new(pdf_path).exists() {
-            let pdf_bytes = std::fs::read(pdf_path).unwrap();
+        if std::path::Path::new(&pdf_path).exists() {
+            let pdf_bytes = std::fs::read(&pdf_path).unwrap();
             let encoded = BASE64_STANDARD.encode(&pdf_bytes);
 
             let params = ExtractBytesParams {
@@ -1686,7 +1686,7 @@ mod tests {
         let file1 = get_test_path("pdfs_with_tables/tiny.pdf");
         let file2 = get_test_path("pdfs_with_tables/medium.pdf");
 
-        if std::path::Path::new(file1).exists() && std::path::Path::new(file2).exists() {
+        if std::path::Path::new(&file1).exists() && std::path::Path::new(&file2).exists() {
             let params = BatchExtractFilesParams {
                 paths: vec![file1.to_string(), file2.to_string()],
                 enable_ocr: false,
@@ -1809,7 +1809,7 @@ mod tests {
 
         let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
-        if std::path::Path::new(test_file).exists() {
+        if std::path::Path::new(&test_file).exists() {
             let params = ExtractFileParams {
                 path: test_file.to_string(),
                 mime_type: None,
@@ -1838,7 +1838,7 @@ mod tests {
 
         let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
-        if std::path::Path::new(test_file).exists() {
+        if std::path::Path::new(&test_file).exists() {
             let params = ExtractFileParams {
                 path: test_file.to_string(),
                 mime_type: None,
@@ -1963,7 +1963,7 @@ mod tests {
 
         let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
-        if std::path::Path::new(test_file).exists() {
+        if std::path::Path::new(&test_file).exists() {
             let params = ExtractFileParams {
                 path: test_file.to_string(),
                 mime_type: None,
@@ -1985,7 +1985,7 @@ mod tests {
 
         let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
-        if std::path::Path::new(test_file).exists() {
+        if std::path::Path::new(&test_file).exists() {
             let params = BatchExtractFilesParams {
                 paths: vec![test_file.to_string()],
                 enable_ocr: false,
@@ -2007,7 +2007,7 @@ mod tests {
 
         let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
-        if std::path::Path::new(test_file).exists() {
+        if std::path::Path::new(&test_file).exists() {
             let params = DetectMimeTypeParams {
                 path: test_file.to_string(),
                 use_content: false,
@@ -2032,7 +2032,7 @@ mod tests {
 
         let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
-        if std::path::Path::new(test_file).exists() {
+        if std::path::Path::new(&test_file).exists() {
             let params = DetectMimeTypeParams {
                 path: test_file.to_string(),
                 use_content: true,
