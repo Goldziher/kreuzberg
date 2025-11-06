@@ -86,7 +86,7 @@ reqwest = { version = "0.12", features = ["json"] }
 base64-simd = "0.8"
 
 # Format extractors (optional)
-pdfium-render = { version = "0.8.35", features = ["thread_safe", "image"], optional = true }
+pdfium-render = { version = "0.8.36", features = ["thread_safe", "image"], optional = true }
 lopdf = { version = "0.38.0", optional = true }
 calamine = { version = "0.31.0", features = ["dates"], optional = true }
 polars = { version = "0.52.0", default-features = false, features = ["ipc"], optional = true }
