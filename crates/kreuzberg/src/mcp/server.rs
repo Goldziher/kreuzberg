@@ -510,6 +510,23 @@ fn format_extraction_result(result: &KreuzbergResult) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+
+    /// Get the path to a test document relative to workspace root.
+    fn get_test_path(relative_path: &str) -> String {
+        let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_path_buf();
+
+        workspace_root
+            .join("test_documents")
+            .join(relative_path)
+            .to_string_lossy()
+            .to_string()
+    }
 
     #[tokio::test]
     async fn test_tool_router_has_routes() {
@@ -843,7 +860,7 @@ mod tests {
     async fn test_extract_file_sync_with_valid_pdf() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let params = ExtractFileParams {
-            path: "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf".to_string(),
+            path: get_test_path("pdfs_with_tables/tiny.pdf").to_string(),
             mime_type: None,
             enable_ocr: false,
             force_ocr: false,
@@ -871,7 +888,7 @@ mod tests {
     async fn test_extract_file_async_with_valid_pdf() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let params = ExtractFileParams {
-            path: "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf".to_string(),
+            path: get_test_path("pdfs_with_tables/tiny.pdf").to_string(),
             mime_type: None,
             enable_ocr: false,
             force_ocr: false,
@@ -917,7 +934,7 @@ mod tests {
     async fn test_extract_file_with_mime_type_hint() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let params = ExtractFileParams {
-            path: "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf".to_string(),
+            path: get_test_path("pdfs_with_tables/tiny.pdf").to_string(),
             mime_type: Some("application/pdf".to_string()),
             enable_ocr: false,
             force_ocr: false,
@@ -933,7 +950,7 @@ mod tests {
     async fn test_extract_file_with_ocr_enabled() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let params = ExtractFileParams {
-            path: "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf".to_string(),
+            path: get_test_path("pdfs_with_tables/tiny.pdf").to_string(),
             mime_type: None,
             enable_ocr: true,
             force_ocr: false,
@@ -950,7 +967,7 @@ mod tests {
     async fn test_extract_file_with_force_ocr() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let params = ExtractFileParams {
-            path: "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf".to_string(),
+            path: get_test_path("pdfs_with_tables/tiny.pdf").to_string(),
             mime_type: None,
             enable_ocr: true,
             force_ocr: true,
@@ -1085,9 +1102,7 @@ mod tests {
     async fn test_batch_extract_files_sync_with_valid_files() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let params = BatchExtractFilesParams {
-            paths: vec![
-                "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf".to_string(),
-            ],
+            paths: vec![get_test_path("pdfs_with_tables/tiny.pdf").to_string()],
             enable_ocr: false,
             force_ocr: false,
             r#async: true,
@@ -1115,8 +1130,8 @@ mod tests {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let params = BatchExtractFilesParams {
             paths: vec![
-                "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf".to_string(),
-                "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/medium.pdf".to_string(),
+                get_test_path("pdfs_with_tables/tiny.pdf").to_string(),
+                get_test_path("pdfs_with_tables/medium.pdf").to_string(),
             ],
             enable_ocr: false,
             force_ocr: false,
@@ -1191,7 +1206,7 @@ mod tests {
     async fn test_detect_mime_type_with_valid_file() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let params = DetectMimeTypeParams {
-            path: "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf".to_string(),
+            path: get_test_path("pdfs_with_tables/tiny.pdf").to_string(),
             use_content: true,
         };
 
@@ -1215,7 +1230,7 @@ mod tests {
     async fn test_detect_mime_type_without_content_detection() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let params = DetectMimeTypeParams {
-            path: "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf".to_string(),
+            path: get_test_path("pdfs_with_tables/tiny.pdf").to_string(),
             use_content: false,
         };
 
@@ -1621,7 +1636,7 @@ mod tests {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
         // Read a real PDF file
-        let pdf_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf";
+        let pdf_path = get_test_path("pdfs_with_tables/tiny.pdf");
 
         if std::path::Path::new(pdf_path).exists() {
             let pdf_bytes = std::fs::read(pdf_path).unwrap();
@@ -1668,8 +1683,8 @@ mod tests {
     async fn test_batch_extract_preserves_file_order() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        let file1 = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf";
-        let file2 = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/medium.pdf";
+        let file1 = get_test_path("pdfs_with_tables/tiny.pdf");
+        let file2 = get_test_path("pdfs_with_tables/medium.pdf");
 
         if std::path::Path::new(file1).exists() && std::path::Path::new(file2).exists() {
             let params = BatchExtractFilesParams {
@@ -1792,7 +1807,7 @@ mod tests {
     async fn test_response_includes_metadata() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        let test_file = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf";
+        let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
         if std::path::Path::new(test_file).exists() {
             let params = ExtractFileParams {
@@ -1821,7 +1836,7 @@ mod tests {
     async fn test_response_includes_content_length() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        let test_file = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf";
+        let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
         if std::path::Path::new(test_file).exists() {
             let params = ExtractFileParams {
@@ -1946,7 +1961,7 @@ mod tests {
 
         let server = KreuzbergMcp::with_config(custom_config);
 
-        let test_file = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf";
+        let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
         if std::path::Path::new(test_file).exists() {
             let params = ExtractFileParams {
@@ -1968,7 +1983,7 @@ mod tests {
     async fn test_batch_extract_with_single_file() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        let test_file = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf";
+        let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
         if std::path::Path::new(test_file).exists() {
             let params = BatchExtractFilesParams {
@@ -1990,7 +2005,7 @@ mod tests {
     async fn test_detect_mime_type_with_extension_only() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        let test_file = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf";
+        let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
         if std::path::Path::new(test_file).exists() {
             let params = DetectMimeTypeParams {
@@ -2015,7 +2030,7 @@ mod tests {
     async fn test_detect_mime_type_with_content_analysis() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        let test_file = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs_with_tables/tiny.pdf";
+        let test_file = get_test_path("pdfs_with_tables/tiny.pdf");
 
         if std::path::Path::new(test_file).exists() {
             let params = DetectMimeTypeParams {

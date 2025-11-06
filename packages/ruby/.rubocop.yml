@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-plugins:
+require:
   - rubocop-rspec
 
 AllCops:
@@ -66,6 +66,9 @@ RSpec/NestedGroups:
 RSpec/SpecFilePathFormat:
   Enabled: false
 
+RSpec/FilePath:
+  Enabled: false
+
 RSpec/PendingWithoutReason:
   Enabled: false
 
@@ -82,4 +85,8 @@ RSpec/DescribeClass:
   Enabled: false
 
 RSpec/PredicateMatcher:
+  Enabled: false
+
+# Disable Capybara/RSpec/PredicateMatcher due to crashes with rubocop-rspec 2.31.0
+Capybara/RSpec/PredicateMatcher:
   Enabled: false

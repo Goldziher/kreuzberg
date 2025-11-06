@@ -136,6 +136,7 @@ __all__ = [
     "extract_bytes_sync",
     "extract_file",
     "extract_file_sync",
+    "register_ocr_backend",
     "register_post_processor",
     "register_validator",
     "unregister_post_processor",

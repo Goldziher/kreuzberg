@@ -569,6 +569,9 @@ jobs:
         with:
           cache-key-prefix: rust-validation
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
       - name: Install Task
         uses: go-task/setup-task@v1
         with:
@@ -589,8 +592,8 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
+          # Windows excluded due to rb-sys POSIX header limitations (strings.h not available on Windows)
+          # Ruby gem builds and Ruby tests on Windows work fine - only Rust unit tests are affected
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -619,6 +622,9 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: rust-e2e
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
 
       - name: Install Task
         uses: go-task/setup-task@v1

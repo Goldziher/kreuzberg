@@ -378,7 +378,9 @@ jobs:
         run: |
           $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
           $rubydir = "$workspace/packages/ruby"
-          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && RUBY_PLATFORM=\$(ruby -e 'puts Gem::Platform.local.to_s') && bundle exec rake native:kreuzberg:\${RUBY_PLATFORM}"
+          # Get Ruby platform in PowerShell first to avoid bash escaping issues
+          $rubyPlatform = ruby -e "puts Gem::Platform.local.to_s"
+          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle exec rake native:kreuzberg:$rubyPlatform"
 
       - name: Build source gem
         if: matrix.build_source_gem
