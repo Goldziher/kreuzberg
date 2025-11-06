@@ -158,7 +158,7 @@ describe("Edge Cases and Coverage", () => {
 			const { __version__ } = await import("../../src/index.js");
 
 			expect(typeof __version__).toBe("string");
-			expect(__version__).toMatch(/^\d+\.\d+\.\d+$/);
+			expect(__version__).toMatch(/^\d+\.\d+\.\d+(-[\w.]+)?$/);
 		});
 	});
 

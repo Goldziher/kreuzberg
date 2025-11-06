@@ -601,6 +601,9 @@ jobs:
           target: ${{ matrix.target }}
           cache-key-prefix: rust-unit-${{ matrix.os }}
 
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
       - name: Run unit tests (no default features)
         run: cargo test --workspace --exclude kreuzberg-e2e-generator
 

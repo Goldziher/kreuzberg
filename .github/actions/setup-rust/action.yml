@@ -5,6 +5,10 @@ inputs:
     description: Comma-separated list of Rust components to install
     required: false
     default: rustfmt, clippy, llvm-tools-preview
+  target:
+    description: Target triple to install
+    required: false
+    default: ''
   cache-key-prefix:
     description: Prefix for cache keys
     required: false
@@ -47,6 +51,7 @@ runs:
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         components: ${{ inputs.components }}
+        target: ${{ inputs.target }}
 
     - name: Cache Rust build artifacts
       id: cache-rust
