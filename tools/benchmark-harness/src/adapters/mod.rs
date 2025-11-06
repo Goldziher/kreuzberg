@@ -9,7 +9,8 @@ pub mod ruby;
 pub mod subprocess;
 
 pub use external::{
-    create_docling_adapter, create_extractous_python_adapter, create_markitdown_adapter, create_unstructured_adapter,
+    create_docling_adapter, create_docling_batch_adapter, create_extractous_python_adapter, create_markitdown_adapter,
+    create_unstructured_adapter,
 };
 pub use kreuzberg::{
     create_node_async_adapter, create_node_batch_adapter, create_python_async_adapter, create_python_batch_adapter,

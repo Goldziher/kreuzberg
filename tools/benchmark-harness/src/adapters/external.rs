@@ -1,13 +1,29 @@
 use crate::{adapters::subprocess::SubprocessAdapter, error::Result};
 use std::{env, path::PathBuf};
 
-/// Creates a subprocess adapter for Docling framework
+/// Creates a subprocess adapter for Docling framework (single-file mode)
 pub fn create_docling_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("docling_extract.py")?;
     let (command, mut args) = find_python_with_framework("docling")?;
     args.push(script_path.to_string_lossy().to_string());
+    args.push("sync".to_string());
 
     Ok(SubprocessAdapter::new("docling", command, args, vec![]))
+}
+
+/// Creates a subprocess adapter for Docling framework (batch mode)
+pub fn create_docling_batch_adapter() -> Result<SubprocessAdapter> {
+    let script_path = get_script_path("docling_extract.py")?;
+    let (command, mut args) = find_python_with_framework("docling")?;
+    args.push(script_path.to_string_lossy().to_string());
+    args.push("batch".to_string());
+
+    Ok(SubprocessAdapter::with_batch_support(
+        "docling-batch",
+        command,
+        args,
+        vec![],
+    ))
 }
 
 /// Creates a subprocess adapter for Unstructured framework

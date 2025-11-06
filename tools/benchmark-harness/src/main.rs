@@ -211,12 +211,15 @@ async fn main() -> Result<()> {
 
             // Register external framework adapters
             use benchmark_harness::adapters::external::{
-                create_docling_adapter, create_extractous_python_adapter, create_markitdown_adapter,
-                create_unstructured_adapter,
+                create_docling_adapter, create_docling_batch_adapter, create_extractous_python_adapter,
+                create_markitdown_adapter, create_unstructured_adapter,
             };
 
             // Try to register each external adapter, ignore errors if not available
             if let Ok(adapter) = create_docling_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_docling_batch_adapter() {
                 let _ = registry.register(Arc::new(adapter));
             }
             if let Ok(adapter) = create_extractous_python_adapter() {
