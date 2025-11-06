@@ -247,12 +247,10 @@ fn clean_tests(dir: &Utf8Path) -> Result<()> {
 
     for entry in fs::read_dir(dir.as_std_path())? {
         let entry = entry?;
-        if let Some(ext) = entry.path().extension() {
-            if ext == "py" {
-                let name = entry.file_name().to_string_lossy().to_string();
-                if name.starts_with("test_") || name == "helpers.py" {
-                    fs::remove_file(entry.path())?;
-                }
+        if entry.path().extension().is_some_and(|ext| ext == "py") {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with("test_") || name == "helpers.py" {
+                fs::remove_file(entry.path())?;
             }
         }
     }

@@ -393,10 +393,8 @@ fn clean_ts_files(dir: &Utf8Path) -> Result<()> {
         if entry.path().file_name().is_some_and(|name| name == "helpers.ts") {
             continue;
         }
-        if let Some(ext) = entry.path().extension() {
-            if ext == "ts" {
-                fs::remove_file(entry.path())?;
-            }
+        if entry.path().extension().is_some_and(|ext| ext == "ts") {
+            fs::remove_file(entry.path())?;
         }
     }
 
@@ -440,7 +438,7 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
 fn render_test(fixture: &Fixture) -> Result<String> {
     let mut body = String::new();
 
-    let test_name = format!("{}", fixture.id);
+    let test_name = fixture.id.clone();
     writeln!(body, "  it(\"{test_name}\", () => {{")?;
 
     writeln!(
@@ -595,16 +593,16 @@ fn render_optional_string(value: Option<&String>) -> String {
 }
 
 fn collect_requirements(fixture: &Fixture) -> Vec<String> {
-    let mut requirements: BTreeSet<String> = fixture
+    fixture
         .skip
         .requires_feature
         .iter()
         .chain(fixture.document.requires_external_tool.iter())
-        .cloned()
-        .collect();
-
-    requirements.retain(|value| !value.is_empty());
-    requirements.into_iter().collect()
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
 }
 
 fn sanitize_identifier(input: &str) -> String {

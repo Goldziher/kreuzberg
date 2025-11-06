@@ -40,10 +40,8 @@ fn clean_rs_files(dir: &Utf8Path) -> Result<()> {
 
     for entry in fs::read_dir(dir.as_std_path())? {
         let entry = entry?;
-        if let Some(ext) = entry.path().extension() {
-            if ext == "rs" {
-                fs::remove_file(entry.path())?;
-            }
+        if entry.path().extension().is_some_and(|ext| ext == "rs") {
+            fs::remove_file(entry.path())?;
         }
     }
 
@@ -219,11 +217,7 @@ fn render_assertions(assertions: &Assertions) -> String {
 }
 
 fn render_json_expression(value: &serde_json::Value) -> String {
-    if value.is_object() || value.is_array() {
-        format!("serde_json::json!({})", value)
-    } else {
-        format!("serde_json::json!({})", value)
-    }
+    format!("serde_json::json!({})", value)
 }
 
 fn render_string_slice(values: &[String]) -> String {

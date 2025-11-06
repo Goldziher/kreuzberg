@@ -272,10 +272,8 @@ fn clean_spec_files(spec_dir: &Utf8Path) -> Result<()> {
         {
             continue;
         }
-        if let Some(ext) = entry.path().extension() {
-            if ext == "rb" {
-                fs::remove_file(entry.path())?;
-            }
+        if entry.path().extension().is_some_and(|ext| ext == "rb") {
+            fs::remove_file(entry.path())?;
         }
     }
 
@@ -367,14 +365,14 @@ fn render_assertions(assertions: &Assertions) -> String {
     if let Some(min) = assertions.min_content_length {
         buffer.push_str(&format!(
             "      E2ERuby::Assertions.assert_min_content_length(result, {})\n",
-            render_numeric_literal(min)
+            render_numeric_literal(min as u64)
         ));
     }
 
     if let Some(max) = assertions.max_content_length {
         buffer.push_str(&format!(
             "      E2ERuby::Assertions.assert_max_content_length(result, {})\n",
-            render_numeric_literal(max)
+            render_numeric_literal(max as u64)
         ));
     }
 
@@ -393,8 +391,14 @@ fn render_assertions(assertions: &Assertions) -> String {
     }
 
     if let Some(tables) = assertions.tables.as_ref() {
-        let min_literal = tables.min.map(render_numeric_literal).unwrap_or_else(|| "nil".into());
-        let max_literal = tables.max.map(render_numeric_literal).unwrap_or_else(|| "nil".into());
+        let min_literal = tables
+            .min
+            .map(|value| render_numeric_literal(value as u64))
+            .unwrap_or_else(|| "nil".into());
+        let max_literal = tables
+            .max
+            .map(|value| render_numeric_literal(value as u64))
+            .unwrap_or_else(|| "nil".into());
         buffer.push_str(&format!(
             "      E2ERuby::Assertions.assert_table_count(result, {min}, {max})\n",
             min = min_literal,
@@ -533,32 +537,30 @@ fn render_ruby_object(map: &Map<String, Value>) -> String {
     format!("{{ {pairs} }}")
 }
 
-fn render_numeric_literal(value: usize) -> String {
+fn render_numeric_literal(value: u64) -> String {
     let digits = value.to_string();
     if digits.len() <= 3 {
         return digits;
     }
 
     let mut output = String::with_capacity(digits.len() + digits.len() / 3);
-    let mut count = 0;
-    for ch in digits.chars().rev() {
-        if count != 0 && count % 3 == 0 {
+    for (idx, ch) in digits.chars().rev().enumerate() {
+        if idx != 0 && idx % 3 == 0 {
             output.push('_');
         }
         output.push(ch);
-        count += 1;
     }
     output.chars().rev().collect()
 }
 
 fn render_number_value(number: &serde_json::Number) -> String {
     if let Some(value) = number.as_u64() {
-        render_numeric_literal(value as usize)
+        render_numeric_literal(value)
     } else if let Some(value) = number.as_i64() {
         if value >= 0 {
-            render_numeric_literal(value as usize)
+            render_numeric_literal(value as u64)
         } else {
-            let positive = render_numeric_literal(value.abs() as usize);
+            let positive = render_numeric_literal(value.unsigned_abs());
             format!("-{positive}")
         }
     } else if let Some(value) = number.as_f64() {
@@ -595,7 +597,7 @@ fn collect_requirements(fixture: &Fixture) -> Vec<String> {
         .requires_feature
         .iter()
         .chain(fixture.document.requires_external_tool.iter())
-        .cloned()
         .filter(|value| !value.is_empty())
+        .map(|value| value.to_string())
         .collect()
 }
