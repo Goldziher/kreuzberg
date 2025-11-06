@@ -1050,7 +1050,8 @@ fn extract_all_notes(container: &mut PptxContainer) -> Result<HashMap<u32, Strin
         if let Ok(notes_xml) = container.read_file(&notes_path)
             && let Ok(note_text) = extract_notes_text(&notes_xml)
         {
-            notes.insert((i + 1) as u32, note_text); // FIXME: check value is used after being moved
+            // Intentional ownership transfer: note_text is moved into the HashMap
+            notes.insert((i + 1) as u32, note_text);
         }
     }
 
@@ -1168,7 +1169,7 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
             && let Ok(image_data) = iterator.get_slide_images(&slide)
         {
             for (_, data) in image_data {
-                // FIXME: check value is used after being moved
+                // Intentional ownership transfer: data is moved into ExtractedImage struct
                 let format = detect_image_format(&data);
                 let image_index = extracted_images.len();
 

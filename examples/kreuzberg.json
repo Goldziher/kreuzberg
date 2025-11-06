@@ -1,0 +1,63 @@
+{
+	"$comment": "Kreuzberg Configuration File (JSON). This file demonstrates all available configuration options for Kreuzberg. Place this file in one of the following locations: 1. Current directory: ./kreuzberg.json, 2. User config: ~/.config/kreuzberg/config.json, 3. System config: /etc/kreuzberg/config.json. Documentation: https://kreuzberg.goldziher.dev/guides/configuration/",
+	"use_cache": true,
+	"enable_quality_processing": true,
+	"force_ocr": false,
+	"ocr": {
+		"backend": "tesseract",
+		"language": "eng",
+		"tesseract_config": {
+			"psm": 3,
+			"oem": 3,
+			"min_confidence": 0.0,
+			"output_format": "text",
+			"enable_table_detection": false,
+			"table_min_confidence": 0.5,
+			"table_column_threshold": 50,
+			"table_row_threshold_ratio": 0.5,
+			"use_cache": true,
+			"preprocessing": {
+				"target_dpi": 300,
+				"auto_rotate": true,
+				"deskew": true,
+				"denoise": true,
+				"contrast_enhance": true,
+				"binarization_method": "otsu",
+				"invert_colors": false
+			}
+		}
+	},
+	"pdf_options": {
+		"extract_images": true,
+		"extract_metadata": true
+	},
+	"images": {
+		"extract_images": true,
+		"target_dpi": 300,
+		"max_image_dimension": 4096,
+		"auto_adjust_dpi": true,
+		"min_dpi": 72,
+		"max_dpi": 600
+	},
+	"chunking": {
+		"max_chars": 1000,
+		"max_overlap": 200,
+		"embedding": {
+			"normalize": true,
+			"batch_size": 32,
+			"show_download_progress": true
+		}
+	},
+	"token_reduction": {
+		"mode": "off",
+		"preserve_important_words": true
+	},
+	"language_detection": {
+		"enabled": true,
+		"min_confidence": 0.8,
+		"detect_multiple": false
+	},
+	"postprocessor": {
+		"enabled": true
+	}
+}

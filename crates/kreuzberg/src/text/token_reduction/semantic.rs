@@ -179,7 +179,8 @@ impl SemanticAnalyzer {
                 if token.importance_score < LOW_IMPORTANCE_THRESHOLD
                     && let Some(hypernym) = self.get_hypernym(&token.token)
                 {
-                    token.token = hypernym; // FIXME: check value is used after being moved
+                    // Field reassignment: replacing token.token with hypernym (owned String)
+                    token.token = hypernym;
                 }
             }
         }
