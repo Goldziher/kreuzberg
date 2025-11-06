@@ -100,9 +100,12 @@ pub fn create_python_batch_adapter() -> Result<SubprocessAdapter> {
     args.push(script_path.to_string_lossy().to_string());
     args.push("batch".to_string());
 
-    // Note: Batch mode is handled at the script level
-    // The adapter will pass multiple files and get results back
-    Ok(SubprocessAdapter::new("kreuzberg-python-batch", command, args, vec![]))
+    Ok(SubprocessAdapter::with_batch_support(
+        "kreuzberg-python-batch",
+        command,
+        args,
+        vec![],
+    ))
 }
 
 // =============================================================================
@@ -128,7 +131,12 @@ pub fn create_node_batch_adapter() -> Result<SubprocessAdapter> {
     args.push(script_path.to_string_lossy().to_string());
     args.push("batch".to_string());
 
-    Ok(SubprocessAdapter::new("kreuzberg-node-batch", command, args, vec![]))
+    Ok(SubprocessAdapter::with_batch_support(
+        "kreuzberg-node-batch",
+        command,
+        args,
+        vec![],
+    ))
 }
 
 // =============================================================================
@@ -154,7 +162,12 @@ pub fn create_ruby_batch_adapter() -> Result<SubprocessAdapter> {
     args.push(script_path.to_string_lossy().to_string());
     args.push("batch".to_string());
 
-    Ok(SubprocessAdapter::new("kreuzberg-ruby-batch", command, args, vec![]))
+    Ok(SubprocessAdapter::with_batch_support(
+        "kreuzberg-ruby-batch",
+        command,
+        args,
+        vec![],
+    ))
 }
 
 #[cfg(test)]

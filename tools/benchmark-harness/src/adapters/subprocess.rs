@@ -24,6 +24,7 @@ pub struct SubprocessAdapter {
     command: PathBuf,
     args: Vec<String>,
     env: Vec<(String, String)>,
+    supports_batch: bool,
 }
 
 impl SubprocessAdapter {
@@ -45,6 +46,32 @@ impl SubprocessAdapter {
             command: command.into(),
             args,
             env,
+            supports_batch: false,
+        }
+    }
+
+    /// Create a new subprocess adapter with batch support
+    ///
+    /// This adapter will call `extract_batch()` with all files at once,
+    /// allowing the subprocess to use its native batch API for parallel processing.
+    ///
+    /// # Arguments
+    /// * `name` - Framework name (e.g., "kreuzberg-python-batch")
+    /// * `command` - Path to executable (e.g., "python3", "node")
+    /// * `args` - Base arguments (e.g., ["-m", "kreuzberg"])
+    /// * `env` - Environment variables
+    pub fn with_batch_support(
+        name: impl Into<String>,
+        command: impl Into<PathBuf>,
+        args: Vec<String>,
+        env: Vec<(String, String)>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            command: command.into(),
+            args,
+            env,
+            supports_batch: true,
         }
     }
 
@@ -91,6 +118,65 @@ impl SubprocessAdapter {
         if !output.status.success() {
             return Err(Error::Benchmark(format!(
                 "Subprocess failed with exit code {:?}\nstderr: {}",
+                output.status.code(),
+                stderr
+            )));
+        }
+
+        Ok((stdout, stderr, duration))
+    }
+
+    /// Execute batch extraction subprocess with multiple files
+    async fn execute_subprocess_batch(
+        &self,
+        file_paths: &[&Path],
+        timeout: Duration,
+    ) -> Result<(String, String, Duration)> {
+        let start = Instant::now();
+
+        // Build command with all file paths as arguments
+        let mut cmd = Command::new(&self.command);
+        cmd.args(&self.args);
+
+        // Add all file paths
+        for path in file_paths {
+            cmd.arg(path.to_string_lossy().as_ref());
+        }
+
+        // Set environment variables
+        for (key, value) in &self.env {
+            cmd.env(key, value);
+        }
+
+        // Configure stdio
+        cmd.stdin(Stdio::null());
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
+
+        // Spawn process
+        let child = cmd
+            .spawn()
+            .map_err(|e| Error::Benchmark(format!("Failed to spawn batch subprocess: {}", e)))?;
+
+        // Wait for completion with timeout
+        let output = match tokio::time::timeout(timeout, child.wait_with_output()).await {
+            Ok(Ok(output)) => output,
+            Ok(Err(e)) => {
+                return Err(Error::Benchmark(format!("Failed to wait for batch subprocess: {}", e)));
+            }
+            Err(_) => {
+                return Err(Error::Timeout(format!("Batch subprocess exceeded {:?}", timeout)));
+            }
+        };
+
+        let duration = start.elapsed();
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+        if !output.status.success() {
+            return Err(Error::Benchmark(format!(
+                "Batch subprocess failed with exit code {:?}\nstderr: {}",
                 output.status.code(),
                 stderr
             )));
@@ -265,6 +351,183 @@ impl FrameworkAdapter for SubprocessAdapter {
         // Try to get version from subprocess
         // This is a best-effort attempt
         "unknown".to_string()
+    }
+
+    fn supports_batch(&self) -> bool {
+        self.supports_batch
+    }
+
+    async fn extract_batch(&self, file_paths: &[&Path], timeout: Duration) -> Result<Vec<BenchmarkResult>> {
+        if !self.supports_batch {
+            // Fall back to default sequential extraction
+            let mut results = Vec::new();
+            for path in file_paths {
+                results.push(self.extract(path, timeout).await?);
+            }
+            return Ok(results);
+        }
+
+        // Calculate total file size for throughput
+        let total_file_size: u64 = file_paths
+            .iter()
+            .filter_map(|p| std::fs::metadata(p).ok().map(|m| m.len()))
+            .sum();
+
+        // Start resource monitoring
+        let monitor = ResourceMonitor::new();
+        monitor.start(Duration::from_millis(10)).await;
+
+        // Execute batch subprocess
+        let (stdout, _stderr, duration) = match self.execute_subprocess_batch(file_paths, timeout).await {
+            Ok(result) => result,
+            Err(e) => {
+                // Stop monitoring and collect samples
+                let samples = monitor.stop().await;
+                let resource_stats = ResourceMonitor::calculate_stats(&samples);
+
+                // Return error results for all files
+                return Ok(file_paths
+                    .iter()
+                    .map(|path| {
+                        let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+                        BenchmarkResult {
+                            framework: self.name.clone(),
+                            file_path: path.to_path_buf(),
+                            file_size,
+                            success: false,
+                            error_message: Some(e.to_string()),
+                            duration: Duration::from_secs(0),
+                            extraction_duration: None,
+                            subprocess_overhead: None,
+                            metrics: PerformanceMetrics {
+                                peak_memory_bytes: resource_stats.peak_memory_bytes,
+                                avg_cpu_percent: resource_stats.avg_cpu_percent,
+                                throughput_bytes_per_sec: 0.0,
+                                p50_memory_bytes: resource_stats.p50_memory_bytes,
+                                p95_memory_bytes: resource_stats.p95_memory_bytes,
+                                p99_memory_bytes: resource_stats.p99_memory_bytes,
+                            },
+                            quality: None,
+                            iterations: vec![],
+                            statistics: None,
+                        }
+                    })
+                    .collect());
+            }
+        };
+
+        // Stop monitoring and collect samples
+        let samples = monitor.stop().await;
+        let resource_stats = ResourceMonitor::calculate_stats(&samples);
+
+        // Parse output - expect JSON array for multiple files, or single object for one file
+        let parsed: serde_json::Value = match serde_json::from_str(&stdout) {
+            Ok(v) => v,
+            Err(e) => {
+                return Ok(file_paths
+                    .iter()
+                    .map(|path| {
+                        let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+                        BenchmarkResult {
+                            framework: self.name.clone(),
+                            file_path: path.to_path_buf(),
+                            file_size,
+                            success: false,
+                            error_message: Some(format!("Failed to parse batch output: {}", e)),
+                            duration,
+                            extraction_duration: None,
+                            subprocess_overhead: None,
+                            metrics: PerformanceMetrics {
+                                peak_memory_bytes: resource_stats.peak_memory_bytes,
+                                avg_cpu_percent: resource_stats.avg_cpu_percent,
+                                throughput_bytes_per_sec: 0.0,
+                                p50_memory_bytes: resource_stats.p50_memory_bytes,
+                                p95_memory_bytes: resource_stats.p95_memory_bytes,
+                                p99_memory_bytes: resource_stats.p99_memory_bytes,
+                            },
+                            quality: None,
+                            iterations: vec![],
+                            statistics: None,
+                        }
+                    })
+                    .collect());
+            }
+        };
+
+        // Handle single file vs multiple files
+        let results_array = if file_paths.len() == 1 {
+            vec![parsed]
+        } else {
+            parsed
+                .as_array()
+                .ok_or_else(|| Error::Benchmark("Expected JSON array for batch results".to_string()))?
+                .clone()
+        };
+
+        if results_array.len() != file_paths.len() {
+            return Err(Error::Benchmark(format!(
+                "Batch result count mismatch: expected {}, got {}",
+                file_paths.len(),
+                results_array.len()
+            )));
+        }
+
+        // Calculate batch-level throughput
+        let batch_throughput = if duration.as_secs_f64() > 0.0 {
+            total_file_size as f64 / duration.as_secs_f64()
+        } else {
+            0.0
+        };
+
+        // Map results to BenchmarkResult structs
+        let mut benchmark_results = Vec::new();
+        for (path, result_json) in file_paths.iter().zip(results_array.iter()) {
+            let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+
+            // Extract internal timing if available
+            let extraction_duration = result_json
+                .get("_extraction_time_ms")
+                .and_then(|v| v.as_f64())
+                .map(|ms| Duration::from_secs_f64(ms / 1000.0));
+
+            // Calculate per-file throughput or use batch throughput
+            let throughput = if let Some(ext_dur) = extraction_duration {
+                if ext_dur.as_secs_f64() > 0.0 {
+                    file_size as f64 / ext_dur.as_secs_f64()
+                } else {
+                    batch_throughput
+                }
+            } else {
+                batch_throughput
+            };
+
+            // Use subprocess overhead if available
+            let subprocess_overhead = extraction_duration.map(|ext| duration.saturating_sub(ext));
+
+            benchmark_results.push(BenchmarkResult {
+                framework: self.name.clone(),
+                file_path: path.to_path_buf(),
+                file_size,
+                success: true,
+                error_message: None,
+                duration,
+                extraction_duration,
+                subprocess_overhead,
+                metrics: PerformanceMetrics {
+                    peak_memory_bytes: resource_stats.peak_memory_bytes,
+                    avg_cpu_percent: resource_stats.avg_cpu_percent,
+                    throughput_bytes_per_sec: throughput,
+                    p50_memory_bytes: resource_stats.p50_memory_bytes,
+                    p95_memory_bytes: resource_stats.p95_memory_bytes,
+                    p99_memory_bytes: resource_stats.p99_memory_bytes,
+                },
+                quality: None,
+                iterations: vec![],
+                statistics: None,
+            });
+        }
+
+        Ok(benchmark_results)
     }
 
     async fn setup(&self) -> Result<()> {
