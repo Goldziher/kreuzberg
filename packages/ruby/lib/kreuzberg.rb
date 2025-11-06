@@ -14,6 +14,9 @@ module Kreuzberg
   autoload :APIProxy, 'kreuzberg/api_proxy'
   autoload :MCPProxy, 'kreuzberg/mcp_proxy'
   autoload :Errors, 'kreuzberg/errors'
+  autoload :PostProcessorProtocol, 'kreuzberg/post_processor_protocol'
+  autoload :ValidatorProtocol, 'kreuzberg/validator_protocol'
+  autoload :OcrBackendProtocol, 'kreuzberg/ocr_backend_protocol'
 
   class << self
     # Store native methods as private methods
@@ -132,6 +135,148 @@ module Kreuzberg
 
   module_function :clear_cache
   module_function :cache_stats
+
+  # Register a custom post-processor.
+  #
+  # Post-processors enrich extraction results by adding metadata, transforming content,
+  # or performing additional analysis. They are called after extraction completes.
+  #
+  # @param name [String] Unique name for the post-processor
+  # @param processor [Proc, #call] Callable that implements the post-processor protocol
+  # @return [void]
+  #
+  # @example Register a post-processor as a Proc
+  #   Kreuzberg.register_post_processor("upcase", ->(result) {
+  #     result["content"] = result["content"].upcase
+  #     result
+  #   })
+  #
+  # @example Register a post-processor class
+  #   class EntityExtractor
+  #     def call(result)
+  #       entities = extract_entities(result["content"])
+  #       result["metadata"]["entities"] = entities
+  #       result
+  #     end
+  #   end
+  #
+  #   Kreuzberg.register_post_processor("entities", EntityExtractor.new)
+  #
+  # @see PostProcessorProtocol for detailed protocol requirements
+  module_function :register_post_processor
+
+  # Unregister a post-processor by name.
+  #
+  # @param name [String] Name of the post-processor to unregister
+  # @return [void]
+  #
+  # @example
+  #   Kreuzberg.unregister_post_processor("upcase")
+  module_function :unregister_post_processor
+
+  # Clear all registered post-processors.
+  #
+  # @return [void]
+  #
+  # @example
+  #   Kreuzberg.clear_post_processors
+  module_function :clear_post_processors
+
+  # Register a custom validator.
+  #
+  # Validators are called before extraction to validate input files or configurations.
+  # If validation fails, the validator should raise a Kreuzberg::Errors::ValidationError.
+  #
+  # @param name [String] Unique name for the validator
+  # @param validator [Proc, #call] Callable that implements the validator protocol
+  # @return [void]
+  #
+  # @example Register a validator as a Proc
+  #   Kreuzberg.register_validator("file_size", ->(result) {
+  #     if result["content"].length < 10
+  #       raise Kreuzberg::Errors::ValidationError.new("Content too short")
+  #     end
+  #   })
+  #
+  # @example Register a validator class
+  #   class FileSizeValidator
+  #     def call(result)
+  #       if result["content"].length < 10
+  #         raise Kreuzberg::Errors::ValidationError.new("Content too short")
+  #       end
+  #     end
+  #   end
+  #
+  #   Kreuzberg.register_validator("file_size", FileSizeValidator.new)
+  #
+  # @see ValidatorProtocol for detailed protocol requirements
+  module_function :register_validator
+
+  # Unregister a validator by name.
+  #
+  # @param name [String] Name of the validator to unregister
+  # @return [void]
+  #
+  # @example
+  #   Kreuzberg.unregister_validator("file_size")
+  module_function :unregister_validator
+
+  # Clear all registered validators.
+  #
+  # @return [void]
+  #
+  # @example
+  #   Kreuzberg.clear_validators
+  module_function :clear_validators
+
+  # Register a custom OCR backend.
+  #
+  # OCR backends implement optical character recognition for images and scanned documents.
+  # They must implement the OcrBackendProtocol interface.
+  #
+  # @param name [String] Unique name for the OCR backend
+  # @param backend [#process_image, #name] Object implementing the OcrBackendProtocol
+  # @return [void]
+  #
+  # @example Register a custom OCR backend
+  #   class CustomOcrBackend
+  #     def name
+  #       "custom-ocr"
+  #     end
+  #
+  #     def process_image(image_bytes, config)
+  #       # Perform OCR on image_bytes
+  #       text = my_ocr_engine.recognize(image_bytes)
+  #       text
+  #     end
+  #   end
+  #
+  #   Kreuzberg.register_ocr_backend("custom-ocr", CustomOcrBackend.new)
+  #
+  # @see OcrBackendProtocol for detailed protocol requirements
+  module_function :register_ocr_backend
+
+  # Batch extract content from multiple byte arrays (synchronous).
+  #
+  # @param data_array [Array<String>] Array of binary data to extract
+  # @param mime_types [Array<String>] Array of MIME types (must match data_array length)
+  # @param config [Hash, Config::Extraction, nil] Extraction configuration
+  # @return [Array<Result>] Array of extraction result objects
+  #
+  # @example
+  #   data1 = File.binread("doc1.pdf")
+  #   data2 = File.binread("doc2.docx")
+  #   results = Kreuzberg.batch_extract_bytes_sync([data1, data2], ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"])
+  #   results.each { |r| puts r.content }
+  module_function :batch_extract_bytes_sync
+
+  # Batch extract content from multiple byte arrays (asynchronous via Tokio runtime).
+  #
+  # @param data_array [Array<String>] Array of binary data to extract
+  # @param mime_types [Array<String>] Array of MIME types (must match data_array length)
+  # @param config [Hash, Config::Extraction, nil] Extraction configuration
+  # @return [Array<Result>] Array of extraction result objects
+  module_function :batch_extract_bytes
 
   # Normalize config from Hash or Config object to keyword arguments
   # @api private

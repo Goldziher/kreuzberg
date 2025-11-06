@@ -4,8 +4,9 @@
 //! Provides extraction, OCR, chunking, and language detection for 30+ file formats.
 
 use kreuzberg::{
-    ChunkingConfig, ExtractionConfig, ExtractionResult as RustExtractionResult, KreuzbergError,
-    LanguageDetectionConfig, OcrConfig, PdfConfig,
+    ChunkingConfig, ExtractionConfig, ExtractionResult as RustExtractionResult,
+    ImageExtractionConfig, ImagePreprocessingConfig, KreuzbergError, LanguageDetectionConfig,
+    OcrConfig, PdfConfig, PostProcessorConfig, TokenReductionConfig,
 };
 use magnus::prelude::*;
 use magnus::{Error, RArray, RHash, Ruby, Symbol, TryConvert, Value, function, scan_args::scan_args};
@@ -167,6 +168,174 @@ fn parse_pdf_config(ruby: &Ruby, hash: RHash) -> Result<PdfConfig, Error> {
     Ok(config)
 }
 
+/// Parse ImageExtractionConfig from Ruby Hash
+fn parse_image_extraction_config(ruby: &Ruby, hash: RHash) -> Result<ImageExtractionConfig, Error> {
+    let extract_images = if let Some(val) = get_kw(ruby, hash, "extract_images") {
+        bool::try_convert(val)?
+    } else {
+        true
+    };
+
+    let target_dpi = if let Some(val) = get_kw(ruby, hash, "target_dpi") {
+        i32::try_convert(val)?
+    } else {
+        300
+    };
+
+    let max_image_dimension = if let Some(val) = get_kw(ruby, hash, "max_image_dimension") {
+        i32::try_convert(val)?
+    } else {
+        4096
+    };
+
+    let auto_adjust_dpi = if let Some(val) = get_kw(ruby, hash, "auto_adjust_dpi") {
+        bool::try_convert(val)?
+    } else {
+        true
+    };
+
+    let min_dpi = if let Some(val) = get_kw(ruby, hash, "min_dpi") {
+        i32::try_convert(val)?
+    } else {
+        72
+    };
+
+    let max_dpi = if let Some(val) = get_kw(ruby, hash, "max_dpi") {
+        i32::try_convert(val)?
+    } else {
+        600
+    };
+
+    let config = ImageExtractionConfig {
+        extract_images,
+        target_dpi,
+        max_image_dimension,
+        auto_adjust_dpi,
+        min_dpi,
+        max_dpi,
+    };
+
+    Ok(config)
+}
+
+/// Parse ImagePreprocessingConfig from Ruby Hash
+///
+/// Note: Currently not used in ExtractionConfig but provided for completeness.
+/// ImagePreprocessingConfig is typically used in OCR operations.
+#[allow(dead_code)]
+fn parse_image_preprocessing_config(ruby: &Ruby, hash: RHash) -> Result<ImagePreprocessingConfig, Error> {
+    let target_dpi = if let Some(val) = get_kw(ruby, hash, "target_dpi") {
+        i32::try_convert(val)?
+    } else {
+        300
+    };
+
+    let auto_rotate = if let Some(val) = get_kw(ruby, hash, "auto_rotate") {
+        bool::try_convert(val)?
+    } else {
+        true
+    };
+
+    let deskew = if let Some(val) = get_kw(ruby, hash, "deskew") {
+        bool::try_convert(val)?
+    } else {
+        true
+    };
+
+    let denoise = if let Some(val) = get_kw(ruby, hash, "denoise") {
+        bool::try_convert(val)?
+    } else {
+        false
+    };
+
+    let contrast_enhance = if let Some(val) = get_kw(ruby, hash, "contrast_enhance") {
+        bool::try_convert(val)?
+    } else {
+        false
+    };
+
+    let binarization_method = if let Some(val) = get_kw(ruby, hash, "binarization_method") {
+        symbol_to_string(val)?
+    } else {
+        "otsu".to_string()
+    };
+
+    let invert_colors = if let Some(val) = get_kw(ruby, hash, "invert_colors") {
+        bool::try_convert(val)?
+    } else {
+        false
+    };
+
+    let config = ImagePreprocessingConfig {
+        target_dpi,
+        auto_rotate,
+        deskew,
+        denoise,
+        contrast_enhance,
+        binarization_method,
+        invert_colors,
+    };
+
+    Ok(config)
+}
+
+/// Parse PostProcessorConfig from Ruby Hash
+fn parse_postprocessor_config(ruby: &Ruby, hash: RHash) -> Result<PostProcessorConfig, Error> {
+    let enabled = if let Some(val) = get_kw(ruby, hash, "enabled") {
+        bool::try_convert(val)?
+    } else {
+        true
+    };
+
+    let enabled_processors = if let Some(val) = get_kw(ruby, hash, "enabled_processors")
+        && !val.is_nil()
+    {
+        let arr = RArray::try_convert(val)?;
+        Some(arr.to_vec::<String>()?)
+    } else {
+        None
+    };
+
+    let disabled_processors = if let Some(val) = get_kw(ruby, hash, "disabled_processors")
+        && !val.is_nil()
+    {
+        let arr = RArray::try_convert(val)?;
+        Some(arr.to_vec::<String>()?)
+    } else {
+        None
+    };
+
+    let config = PostProcessorConfig {
+        enabled,
+        enabled_processors,
+        disabled_processors,
+    };
+
+    Ok(config)
+}
+
+/// Parse TokenReductionConfig from Ruby Hash
+fn parse_token_reduction_config(ruby: &Ruby, hash: RHash) -> Result<TokenReductionConfig, Error> {
+    let mode = if let Some(val) = get_kw(ruby, hash, "mode") {
+        symbol_to_string(val)?
+    } else {
+        "off".to_string()
+    };
+
+    let preserve_important_words = if let Some(val) = get_kw(ruby, hash, "preserve_important_words") {
+        bool::try_convert(val)?
+    } else {
+        true
+    };
+
+    let config = TokenReductionConfig {
+        mode,
+        preserve_important_words,
+    };
+
+    Ok(config)
+}
+
 /// Parse ExtractionConfig from Ruby Hash
 fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<ExtractionConfig, Error> {
     let mut config = ExtractionConfig::default();
@@ -217,6 +386,34 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
         {
             let pdf_hash = RHash::try_convert(val)?;
             config.pdf_options = Some(parse_pdf_config(ruby, pdf_hash)?);
+        }
+
+        // images (Hash)
+        if let Some(val) = get_kw(ruby, hash, "images")
+            && !val.is_nil()
+        {
+            let images_hash = RHash::try_convert(val)?;
+            config.images = Some(parse_image_extraction_config(ruby, images_hash)?);
+        }
+
+        // image_preprocessing (Hash)
+        // Note: This field doesn't exist in ExtractionConfig, but would be part of OcrConfig
+        // Skipping for now as it's not in the top-level config
+
+        // postprocessor (Hash)
+        if let Some(val) = get_kw(ruby, hash, "postprocessor")
+            && !val.is_nil()
+        {
+            let postprocessor_hash = RHash::try_convert(val)?;
+            config.postprocessor = Some(parse_postprocessor_config(ruby, postprocessor_hash)?);
+        }
+
+        // token_reduction (Hash)
+        if let Some(val) = get_kw(ruby, hash, "token_reduction")
+            && !val.is_nil()
+        {
+            let token_reduction_hash = RHash::try_convert(val)?;
+            config.token_reduction = Some(parse_token_reduction_config(ruby, token_reduction_hash)?);
         }
     }
 
@@ -1064,6 +1261,8 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_ruby_clear_cache_clears_directory() {
         use std::fs;
@@ -1174,5 +1373,104 @@ mod tests {
 
         // Clean up
         let _ = fs::remove_dir_all(&cache_dir);
+    }
+
+    #[test]
+    fn test_image_extraction_config_conversion() {
+        // Test that ImageExtractionConfig struct has the expected fields
+        let config = ImageExtractionConfig {
+            extract_images: true,
+            target_dpi: 300,
+            max_image_dimension: 4096,
+            auto_adjust_dpi: true,
+            min_dpi: 72,
+            max_dpi: 600,
+        };
+
+        assert!(config.extract_images);
+        assert_eq!(config.target_dpi, 300);
+        assert_eq!(config.max_image_dimension, 4096);
+        assert!(config.auto_adjust_dpi);
+        assert_eq!(config.min_dpi, 72);
+        assert_eq!(config.max_dpi, 600);
+    }
+
+    #[test]
+    fn test_image_preprocessing_config_conversion() {
+        // Test that ImagePreprocessingConfig struct has the expected fields
+        let config = ImagePreprocessingConfig {
+            target_dpi: 300,
+            auto_rotate: true,
+            deskew: true,
+            denoise: false,
+            contrast_enhance: false,
+            binarization_method: "otsu".to_string(),
+            invert_colors: false,
+        };
+
+        assert_eq!(config.target_dpi, 300);
+        assert!(config.auto_rotate);
+        assert!(config.deskew);
+        assert!(!config.denoise);
+        assert!(!config.contrast_enhance);
+        assert_eq!(config.binarization_method, "otsu");
+        assert!(!config.invert_colors);
+    }
+
+    #[test]
+    fn test_postprocessor_config_conversion() {
+        // Test that PostProcessorConfig struct has the expected fields
+        let config = PostProcessorConfig {
+            enabled: true,
+            enabled_processors: Some(vec!["processor1".to_string(), "processor2".to_string()]),
+            disabled_processors: None,
+        };
+
+        assert!(config.enabled);
+        assert!(config.enabled_processors.is_some());
+        assert_eq!(config.enabled_processors.unwrap().len(), 2);
+        assert!(config.disabled_processors.is_none());
+    }
+
+    #[test]
+    fn test_token_reduction_config_conversion() {
+        // Test that TokenReductionConfig struct has the expected fields
+        let config = TokenReductionConfig {
+            mode: "moderate".to_string(),
+            preserve_important_words: true,
+        };
+
+        assert_eq!(config.mode, "moderate");
+        assert!(config.preserve_important_words);
+    }
+
+    #[test]
+    fn test_extraction_config_with_new_fields() {
+        // Test that ExtractionConfig can hold the new configuration fields
+        let mut config = ExtractionConfig::default();
+
+        config.images = Some(ImageExtractionConfig {
+            extract_images: true,
+            target_dpi: 300,
+            max_image_dimension: 4096,
+            auto_adjust_dpi: true,
+            min_dpi: 72,
+            max_dpi: 600,
+        });
+
+        config.postprocessor = Some(PostProcessorConfig {
+            enabled: true,
+            enabled_processors: None,
+            disabled_processors: None,
+        });
+
+        config.token_reduction = Some(TokenReductionConfig {
+            mode: "light".to_string(),
+            preserve_important_words: true,
+        });
+
+        assert!(config.images.is_some());
+        assert!(config.postprocessor.is_some());
+        assert!(config.token_reduction.is_some());
     }
 }
