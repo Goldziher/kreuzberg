@@ -26,6 +26,7 @@ from kreuzberg import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     from typing import Any
 
 
@@ -54,6 +55,12 @@ class SimplePostProcessor:
     def processing_stage(self) -> Literal["early", "middle", "late"]:
         return "middle"
 
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
 
 class ContentModifier:
     """Postprocessor that modifies content."""
@@ -71,6 +78,12 @@ class ContentModifier:
     def processing_stage(self) -> Literal["early", "middle", "late"]:
         return "late"
 
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
 
 class EarlyStageProcessor:
     """Processor that runs in early stage."""
@@ -87,6 +100,12 @@ class EarlyStageProcessor:
     def processing_stage(self) -> Literal["early", "middle", "late"]:
         return "early"
 
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
 
 class LateStageProcessor:
     """Processor that runs in late stage."""
@@ -102,6 +121,12 @@ class LateStageProcessor:
 
     def processing_stage(self) -> Literal["early", "middle", "late"]:
         return "late"
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
 
 
 class StatefulProcessor:
@@ -123,6 +148,12 @@ class StatefulProcessor:
     def processing_stage(self) -> Literal["early", "middle", "late"]:
         return "middle"
 
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
 
 class ErrorProcessor:
     """Processor that raises an error."""
@@ -137,12 +168,18 @@ class ErrorProcessor:
     def processing_stage(self) -> Literal["early", "middle", "late"]:
         return "middle"
 
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
 
 # Fixtures
 
 
 @pytest.fixture(autouse=True)
-def _cleanup_processors() -> None:
+def _cleanup_processors() -> Generator[None, None, None]:
     """Cleanup all processors before and after each test."""
     clear_post_processors()
     yield
@@ -193,6 +230,12 @@ def test_postprocessor_receives_extraction_result() -> None:
         def processing_stage(self) -> Literal["early", "middle", "late"]:
             return "middle"
 
+        def initialize(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
+
     register_post_processor(InspectorProcessor())
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.metadata.get("inspector_passed") is True
@@ -208,7 +251,7 @@ def test_postprocessor_modifies_content() -> None:
     assert result.content.isupper()
 
 
-def test_multiple_postprocessors_stage_order() -> None:
+def test_multiple_postprocessors_stage_order() -> None:  # noqa: C901
     """Test multiple postprocessors execute in stage order."""
     execution_order: list[str] = []
 
@@ -224,6 +267,12 @@ def test_multiple_postprocessors_stage_order() -> None:
         def processing_stage(self) -> Literal["early", "middle", "late"]:
             return "early"
 
+        def initialize(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
+
     class OrderTrackerMiddle:
         def name(self) -> str:
             return "middle_tracker"
@@ -236,6 +285,12 @@ def test_multiple_postprocessors_stage_order() -> None:
         def processing_stage(self) -> Literal["early", "middle", "late"]:
             return "middle"
 
+        def initialize(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
+
     class OrderTrackerLate:
         def name(self) -> str:
             return "late_tracker"
@@ -247,6 +302,12 @@ def test_multiple_postprocessors_stage_order() -> None:
 
         def processing_stage(self) -> Literal["early", "middle", "late"]:
             return "late"
+
+        def initialize(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
 
     # Register in reverse order to test stage ordering
     register_post_processor(OrderTrackerLate())
@@ -384,6 +445,12 @@ def test_postprocessor_function_registration() -> None:
         def processing_stage(self) -> Literal["early", "middle", "late"]:
             return "middle"
 
+        def initialize(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
+
     register_post_processor(FunctionProcessor())
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.metadata.get("function_processor_executed") is True
@@ -414,7 +481,7 @@ async def test_concurrent_extraction_with_stateful_processor() -> None:
     results = await asyncio.gather(*tasks)
 
     # All should have been processed
-    call_counts = [r.metadata.get("call_count") for r in results]
+    call_counts: list[int] = [r.metadata.get("call_count") for r in results]  # type: ignore[misc]
     assert all(count is not None for count in call_counts)
     assert len(set(call_counts)) == 5  # All should be unique
     assert sorted(call_counts) == [1, 2, 3, 4, 5]
@@ -434,6 +501,12 @@ def test_postprocessor_with_empty_content() -> None:
 
         def processing_stage(self) -> Literal["early", "middle", "late"]:
             return "middle"
+
+        def initialize(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
 
     register_post_processor(EmptyContentProcessor())
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
@@ -455,6 +528,12 @@ def test_postprocessor_duplicate_names() -> None:
         def processing_stage(self) -> Literal["early", "middle", "late"]:
             return "middle"
 
+        def initialize(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
+
     class Proc2:
         def name(self) -> str:
             return "duplicate"
@@ -465,6 +544,12 @@ def test_postprocessor_duplicate_names() -> None:
 
         def processing_stage(self) -> Literal["early", "middle", "late"]:
             return "middle"
+
+        def initialize(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
 
     register_post_processor(Proc1())
     register_post_processor(Proc2())

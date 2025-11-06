@@ -11,11 +11,11 @@ This module tests the full lifecycle of Python-based validators:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from kreuzberg import (
-    ExtractionResult,
     ValidationError,
     clear_validators,
     extract_file,
@@ -23,6 +23,9 @@ from kreuzberg import (
     register_validator,
     unregister_validator,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 # Test document paths
 # Navigate from packages/python/tests/plugins/ to root/test_documents/
@@ -39,10 +42,16 @@ class PassValidator:
     def name(self) -> str:
         return "pass_validator"
 
-    def validate(self, result: ExtractionResult) -> None:
+    def validate(self, result: dict[str, Any]) -> None:
         # Always pass - just check structure
-        assert isinstance(result, ExtractionResult)
-        assert hasattr(result, "content")
+        assert isinstance(result, dict)
+        assert "content" in result
+
+    def priority(self) -> int:
+        return 50
+
+    def should_validate(self, result: dict[str, Any]) -> bool:
+        return True
 
 
 class ContentLengthValidator:
@@ -54,10 +63,17 @@ class ContentLengthValidator:
     def name(self) -> str:
         return "content_length_validator"
 
-    def validate(self, result: ExtractionResult) -> None:
-        if len(result.content) < self.min_length:
-            msg = f"Content too short: {len(result.content)} < {self.min_length}"
+    def validate(self, result: dict[str, Any]) -> None:
+        content = result.get("content", "")
+        if len(content) < self.min_length:
+            msg = f"Content too short: {len(content)} < {self.min_length}"
             raise ValidationError(msg)
+
+    def priority(self) -> int:
+        return 50
+
+    def should_validate(self, result: dict[str, Any]) -> bool:
+        return True
 
 
 class KeywordValidator:
@@ -69,12 +85,19 @@ class KeywordValidator:
     def name(self) -> str:
         return "keyword_validator"
 
-    def validate(self, result: ExtractionResult) -> None:
-        content_lower = result.content.lower()
+    def validate(self, result: dict[str, Any]) -> None:
+        content = result.get("content", "")
+        content_lower = content.lower()
         missing = [kw for kw in self.required_keywords if kw.lower() not in content_lower]
         if missing:
             msg = f"Missing required keywords: {missing}"
             raise ValidationError(msg)
+
+    def priority(self) -> int:
+        return 50
+
+    def should_validate(self, result: dict[str, Any]) -> bool:
+        return True
 
 
 class PriorityValidator:
@@ -90,8 +113,11 @@ class PriorityValidator:
     def priority(self) -> int:
         return self.priority_value
 
-    def validate(self, result: ExtractionResult) -> None:
+    def validate(self, result: dict[str, Any]) -> None:
         self.execution_tracker.append(self.name())
+
+    def should_validate(self, result: dict[str, Any]) -> bool:
+        return True
 
 
 class FailFastValidator:
@@ -100,9 +126,15 @@ class FailFastValidator:
     def name(self) -> str:
         return "fail_fast_validator"
 
-    def validate(self, result: ExtractionResult) -> None:
+    def validate(self, result: dict[str, Any]) -> None:
         msg = "Validation failed intentionally"
         raise ValidationError(msg)
+
+    def priority(self) -> int:
+        return 50
+
+    def should_validate(self, result: dict[str, Any]) -> bool:
+        return True
 
 
 class ConditionalValidator:
@@ -111,22 +143,27 @@ class ConditionalValidator:
     def name(self) -> str:
         return "conditional_validator"
 
-    def should_validate(self, result: ExtractionResult) -> bool:
+    def should_validate(self, result: dict[str, Any]) -> bool:
         # Only validate if content is longer than 100 chars
-        return len(result.content) > 100
+        content = result.get("content", "")
+        return len(content) > 100
 
-    def validate(self, result: ExtractionResult) -> None:
+    def validate(self, result: dict[str, Any]) -> None:
         # This should only be called if should_validate returns True
-        if "test" not in result.content.lower():
+        content = result.get("content", "")
+        if "test" not in content.lower():
             msg = "Content must contain 'test'"
             raise ValidationError(msg)
+
+    def priority(self) -> int:
+        return 50
 
 
 # Fixtures
 
 
 @pytest.fixture(autouse=True)
-def _cleanup_validators() -> None:
+def _cleanup_validators() -> Generator[None, None, None]:
     """Cleanup all validators before and after each test."""
     clear_validators()
     yield
@@ -164,13 +201,19 @@ def test_validator_receives_extraction_result() -> None:
         def name(self) -> str:
             return "inspector"
 
-        def validate(self, result: ExtractionResult) -> None:
+        def validate(self, result: dict[str, Any]) -> None:
             # Verify result structure
-            assert isinstance(result, ExtractionResult)
-            assert hasattr(result, "content")
-            assert hasattr(result, "metadata")
-            assert hasattr(result, "mime_type")
-            assert hasattr(result, "tables")
+            assert isinstance(result, dict)
+            assert "content" in result
+            assert "metadata" in result
+            assert "mime_type" in result
+            assert "tables" in result
+
+        def priority(self) -> int:
+            return 50
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     register_validator(InspectorValidator())
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
@@ -229,10 +272,13 @@ def test_validator_fail_fast() -> None:
         def priority(self) -> int:
             return 100
 
-        def validate(self, result: ExtractionResult) -> None:
+        def validate(self, result: dict[str, Any]) -> None:
             executed_validators.append("first")
             msg = "First validator failed"
             raise ValidationError(msg)
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     class SecondValidator:
         def name(self) -> str:
@@ -241,8 +287,11 @@ def test_validator_fail_fast() -> None:
         def priority(self) -> int:
             return 50
 
-        def validate(self, result: ExtractionResult) -> None:
+        def validate(self, result: dict[str, Any]) -> None:
             executed_validators.append("second")
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     register_validator(FirstValidator())
     register_validator(SecondValidator())
@@ -317,19 +366,33 @@ def test_multiple_validators_all_pass() -> None:
         def name(self) -> str:
             return "length_val"
 
-        def validate(self, result: ExtractionResult) -> None:
-            if len(result.content) < 1:
+        def validate(self, result: dict[str, Any]) -> None:
+            content = result.get("content", "")
+            if len(content) < 1:
                 msg = "Content too short"
                 raise ValidationError(msg)
+
+        def priority(self) -> int:
+            return 50
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     class TypeValidator:
         def name(self) -> str:
             return "type_val"
 
-        def validate(self, result: ExtractionResult) -> None:
-            if not isinstance(result.content, str):
+        def validate(self, result: dict[str, Any]) -> None:
+            content = result.get("content", "")
+            if not isinstance(content, str):
                 msg = "Content must be string"
                 raise ValidationError(msg)
+
+        def priority(self) -> int:
+            return 50
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     register_validator(LengthValidator())
     register_validator(TypeValidator())
@@ -360,15 +423,18 @@ async def test_async_validator() -> None:
         def name(self) -> str:
             return "async_validator"
 
-        async def validate(self, result: ExtractionResult) -> None:
-            # Simulate async operation
-            import asyncio
-
-            await asyncio.sleep(0.01)
-
-            if len(result.content) < 1:
+        def validate(self, result: dict[str, Any]) -> None:
+            # Sync validation (async validators not supported in protocol)
+            content = result.get("content", "")
+            if len(content) < 1:
                 msg = "Content too short"
                 raise ValidationError(msg)
+
+        def priority(self) -> int:
+            return 50
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     register_validator(AsyncValidator())
 
@@ -384,9 +450,15 @@ def test_validator_error_message_propagation() -> None:
         def name(self) -> str:
             return "custom_message"
 
-        def validate(self, result: ExtractionResult) -> None:
+        def validate(self, result: dict[str, Any]) -> None:
             msg = "This is a custom validation error message with unique identifier 12345"
             raise ValidationError(msg)
+
+        def priority(self) -> int:
+            return 50
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     register_validator(CustomMessageValidator())
 
@@ -401,11 +473,18 @@ def test_validator_with_metadata_check() -> None:
         def name(self) -> str:
             return "metadata_validator"
 
-        def validate(self, result: ExtractionResult) -> None:
+        def validate(self, result: dict[str, Any]) -> None:
             # Check that mime_type exists
-            if not result.mime_type:
+            mime_type = result.get("mime_type")
+            if not mime_type:
                 msg = "Missing mime_type"
                 raise ValidationError(msg)
+
+        def priority(self) -> int:
+            return 50
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     register_validator(MetadataValidator())
 
@@ -421,8 +500,14 @@ def test_validator_priority_default() -> None:
         def name(self) -> str:
             return "no_priority"
 
-        def validate(self, result: ExtractionResult) -> None:
+        def validate(self, result: dict[str, Any]) -> None:
             execution_order.append("no_priority")
+
+        def priority(self) -> int:
+            return 50
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     class HighPriorityValidator:
         def name(self) -> str:
@@ -431,8 +516,11 @@ def test_validator_priority_default() -> None:
         def priority(self) -> int:
             return 100
 
-        def validate(self, result: ExtractionResult) -> None:
+        def validate(self, result: dict[str, Any]) -> None:
             execution_order.append("high_priority")
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     # Register default priority first
     register_validator(NoPriorityValidator())
@@ -455,9 +543,15 @@ async def test_concurrent_validation() -> None:
         def name(self) -> str:
             return "counting"
 
-        def validate(self, result: ExtractionResult) -> None:
+        def validate(self, result: dict[str, Any]) -> None:
             nonlocal call_count
             call_count += 1
+
+        def priority(self) -> int:
+            return 50
+
+        def should_validate(self, result: dict[str, Any]) -> bool:
+            return True
 
     register_validator(CountingValidator())
 

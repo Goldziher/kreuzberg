@@ -62,6 +62,21 @@ class MockOcrBackend:
             "tables": [],
         }
 
+    def process_file(self, path: str, language: str) -> dict[str, Any]:
+        from pathlib import Path
+
+        with Path(path).open("rb") as f:
+            return self.process_image(f.read(), language)
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
+    def version(self) -> str:
+        return "1.0.0"
+
 
 class DetailedMockOcrBackend:
     """Mock OCR backend that returns detailed metadata."""
@@ -85,6 +100,21 @@ class DetailedMockOcrBackend:
             },
             "tables": [],
         }
+
+    def process_file(self, path: str, language: str) -> dict[str, Any]:
+        from pathlib import Path
+
+        with Path(path).open("rb") as f:
+            return self.process_image(f.read(), language)
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
+    def version(self) -> str:
+        return "1.0.0"
 
 
 class OcrBackendWithTables:
@@ -111,6 +141,21 @@ class OcrBackendWithTables:
                 }
             ],
         }
+
+    def process_file(self, path: str, language: str) -> dict[str, Any]:
+        from pathlib import Path
+
+        with Path(path).open("rb") as f:
+            return self.process_image(f.read(), language)
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
+    def version(self) -> str:
+        return "1.0.0"
 
 
 class InitializableOcrBackend:
@@ -141,6 +186,15 @@ class InitializableOcrBackend:
             "tables": [],
         }
 
+    def process_file(self, path: str, language: str) -> dict[str, Any]:
+        from pathlib import Path
+
+        with Path(path).open("rb") as f:
+            return self.process_image(f.read(), language)
+
+    def version(self) -> str:
+        return "1.0.0"
+
 
 class ErrorOcrBackend:
     """Mock OCR backend that raises errors."""
@@ -154,6 +208,21 @@ class ErrorOcrBackend:
     def process_image(self, image_bytes: bytes, language: str) -> dict[str, Any]:
         msg = "Intentional OCR error for testing"
         raise RuntimeError(msg)
+
+    def process_file(self, path: str, language: str) -> dict[str, Any]:
+        from pathlib import Path
+
+        with Path(path).open("rb") as f:
+            return self.process_image(f.read(), language)
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
+    def version(self) -> str:
+        return "1.0.0"
 
 
 # Tests
@@ -253,7 +322,7 @@ def test_ocr_backend_returns_correct_format() -> None:
     assert isinstance(result.content, str)
     assert result.metadata is not None
     assert "backend" in result.metadata
-    assert result.metadata["backend"] == "detailed_mock_ocr"
+    assert result.metadata.get("backend") == "detailed_mock_ocr"
 
 
 def test_ocr_backend_with_tables() -> None:
