@@ -19,10 +19,12 @@ pub struct NativeAdapter {
 
 impl NativeAdapter {
     /// Create a new native adapter with default configuration
+    ///
+    /// NOTE: Cache is explicitly disabled for accurate benchmarking
     pub fn new() -> Self {
-        Self {
-            config: ExtractionConfig::default(),
-        }
+        let mut config = ExtractionConfig::default();
+        config.use_cache = false; // Disable cache for benchmarking
+        Self { config }
     }
 
     /// Create a new native adapter with custom configuration
