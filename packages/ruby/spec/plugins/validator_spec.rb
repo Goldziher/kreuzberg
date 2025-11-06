@@ -12,7 +12,7 @@ RSpec.describe 'Validator Plugin System' do
   describe 'registering validator as Proc' do
     it 'registers and executes Proc validator during extraction' do
       validator_called = false
-      validator = lambda do |result|
+      validator = lambda do |_result|
         validator_called = true
       end
 
@@ -37,7 +37,7 @@ RSpec.describe 'Validator Plugin System' do
     it 'prevents extraction when validator raises ValidationError' do
       validator = lambda do |result|
         if result['content'].length < 10_000_000
-          raise Kreuzberg::Errors::ValidationError.new('Content too short for this test')
+          raise Kreuzberg::Errors::ValidationError, 'Content too short for this test'
         end
       end
 
@@ -59,11 +59,9 @@ RSpec.describe 'Validator Plugin System' do
         end
 
         def call(result)
-          if result['content'].length < @min_length
-            raise Kreuzberg::Errors::ValidationError.new(
-              "Content too short: #{result['content'].length} < #{@min_length}"
-            )
-          end
+          return unless result['content'].length < @min_length
+
+          raise Kreuzberg::Errors::ValidationError, "Content too short: #{result['content'].length} < #{@min_length}"
         end
       end
 
@@ -80,9 +78,9 @@ RSpec.describe 'Validator Plugin System' do
         include Kreuzberg::ValidatorProtocol
 
         def call(result)
-          if result['content'].strip.empty?
-            raise Kreuzberg::Errors::ValidationError.new('Content cannot be empty')
-          end
+          return unless result['content'].strip.empty?
+
+          raise Kreuzberg::Errors::ValidationError, 'Content cannot be empty'
         end
       end
 
@@ -129,11 +127,11 @@ RSpec.describe 'Validator Plugin System' do
       validator1_called = false
       validator2_called = false
 
-      validator1 = lambda do |result|
+      validator1 = lambda do |_result|
         validator1_called = true
       end
 
-      validator2 = lambda do |result|
+      validator2 = lambda do |_result|
         validator2_called = true
       end
 
@@ -146,11 +144,11 @@ RSpec.describe 'Validator Plugin System' do
     end
 
     it 'stops execution if any validator fails' do
-      validator1 = lambda do |result|
-        raise Kreuzberg::Errors::ValidationError.new('First validator failed')
+      validator1 = lambda do |_result|
+        raise Kreuzberg::Errors::ValidationError, 'First validator failed'
       end
 
-      validator2 = lambda do |result|
+      validator2 = lambda do |_result|
         raise StandardError, 'This should not be reached'
       end
 
@@ -165,8 +163,8 @@ RSpec.describe 'Validator Plugin System' do
 
   describe 'unregister_validator' do
     it 'removes a registered validator by name' do
-      validator = lambda do |result|
-        raise Kreuzberg::Errors::ValidationError.new('Should not be called')
+      validator = lambda do |_result|
+        raise Kreuzberg::Errors::ValidationError, 'Should not be called'
       end
 
       Kreuzberg.register_validator('removable', validator)
@@ -181,15 +179,15 @@ RSpec.describe 'Validator Plugin System' do
       validator1_called = false
       validator3_called = false
 
-      validator1 = lambda do |result|
+      validator1 = lambda do |_result|
         validator1_called = true
       end
 
-      validator2 = lambda do |result|
-        raise Kreuzberg::Errors::ValidationError.new('Should not be called')
+      validator2 = lambda do |_result|
+        raise Kreuzberg::Errors::ValidationError, 'Should not be called'
       end
 
-      validator3 = lambda do |result|
+      validator3 = lambda do |_result|
         validator3_called = true
       end
 
@@ -207,12 +205,12 @@ RSpec.describe 'Validator Plugin System' do
 
   describe 'clear_validators' do
     it 'removes all registered validators' do
-      validator1 = lambda do |result|
-        raise Kreuzberg::Errors::ValidationError.new('Should not be called 1')
+      validator1 = lambda do |_result|
+        raise Kreuzberg::Errors::ValidationError, 'Should not be called 1'
       end
 
-      validator2 = lambda do |result|
-        raise Kreuzberg::Errors::ValidationError.new('Should not be called 2')
+      validator2 = lambda do |_result|
+        raise Kreuzberg::Errors::ValidationError, 'Should not be called 2'
       end
 
       Kreuzberg.register_validator('val1', validator1)

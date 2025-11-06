@@ -110,7 +110,7 @@ function assertUint8ArrayList(values: unknown, name: string): Uint8Array[] {
 	return array.map((value, index) => {
 		try {
 			return assertUint8Array(value, `${name}[${index}]`);
-		} catch (_error) {
+		} catch {
 			// Re-throw with clearer context
 			throw new TypeError(`${name}[${index}] must be a Uint8Array`);
 		}

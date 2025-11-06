@@ -3,7 +3,9 @@
 require 'spec_helper'
 
 RSpec.describe 'Cache Management' do
-  let(:test_pdf) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf' }
+  let(:test_pdf) do
+    '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf'
+  end
   let(:test_text) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/text/contract_test.txt' }
   let(:test_docx) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/documents/contract.docx' }
 
@@ -135,13 +137,13 @@ RSpec.describe 'Cache Management' do
     it 'second extraction of same file may use cache' do
       Kreuzberg.clear_cache
 
-      start_time1 = Time.now
+      Time.now
       result1 = Kreuzberg.extract_file_sync(test_pdf)
-      duration1 = Time.now - start_time1
+      Time.now
 
-      start_time2 = Time.now
+      Time.now
       result2 = Kreuzberg.extract_file_sync(test_pdf)
-      duration2 = Time.now - start_time2
+      Time.now
 
       expect(result1.content).to eq(result2.content)
       expect(result1.mime_type).to eq(result2.mime_type)
@@ -177,10 +179,10 @@ RSpec.describe 'Cache Management' do
       )
 
       result1 = Kreuzberg.extract_file_sync(test_text, config: config1)
-      stats_after_first = Kreuzberg.cache_stats
+      Kreuzberg.cache_stats
 
       result2 = Kreuzberg.extract_file_sync(test_text, config: config2)
-      stats_after_second = Kreuzberg.cache_stats
+      Kreuzberg.cache_stats
 
       expect(result1.chunks).not_to be_nil
       expect(result2.chunks).not_to be_nil
@@ -203,7 +205,7 @@ RSpec.describe 'Cache Management' do
       Kreuzberg.clear_cache
 
       Kreuzberg.extract_file_sync(test_pdf)
-      stats1 = Kreuzberg.cache_stats
+      Kreuzberg.cache_stats
 
       Kreuzberg.clear_cache
 

@@ -279,6 +279,6 @@ class PaddleOCRBackend:
         try:
             import paddle  # noqa: PLC0415
 
-            return paddle.device.is_compiled_with_cuda()
+            return bool(paddle.device.is_compiled_with_cuda())
         except (ImportError, AttributeError):
             return False

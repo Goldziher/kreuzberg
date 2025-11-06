@@ -3,7 +3,9 @@
 require 'spec_helper'
 
 RSpec.describe 'Byte Extraction APIs' do
-  let(:test_pdf) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf' }
+  let(:test_pdf) do
+    '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf'
+  end
   let(:test_text) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/text/contract_test.txt' }
   let(:test_docx) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/documents/contract.docx' }
 

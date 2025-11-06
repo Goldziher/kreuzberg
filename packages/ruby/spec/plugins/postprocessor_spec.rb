@@ -82,9 +82,7 @@ RSpec.describe 'PostProcessor Plugin System' do
         end
 
         def call(result)
-          if result['content'].length > @max_length
-            result['content'] = result['content'][0...@max_length] + '...'
-          end
+          result['content'] = "#{result['content'][0...@max_length]}..." if result['content'].length > @max_length
           result
         end
       end

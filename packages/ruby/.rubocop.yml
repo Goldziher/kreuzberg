@@ -32,6 +32,8 @@ Layout/LineLength:
   Max: 120
   AllowedPatterns:
     - '\A\s*#' # Allow long comment lines
+  Exclude:
+    - 'spec/**/*'
 
 Metrics/BlockLength:
   Exclude:
@@ -55,7 +57,7 @@ Naming/FileName:
     - 'Rakefile'
 
 RSpec/ExampleLength:
-  Max: 20
+  Max: 25
 
 RSpec/MultipleExpectations:
   Max: 10
@@ -72,11 +74,31 @@ RSpec/FilePath:
 RSpec/PendingWithoutReason:
   Enabled: false
 
+RSpec/LeakyConstantDeclaration:
+  Enabled: false
+
+RSpec/UnspecifiedException:
+  Enabled: false
+
+Lint/ConstantDefinitionInBlock:
+  Exclude:
+    - 'spec/**/*'
+
+RSpec/InstanceVariable:
+  Enabled: false
+
 Gemspec/DevelopmentDependencies:
   Enabled: false
 
 Metrics/ParameterLists:
   Max: 7
+  Exclude:
+    - 'lib/kreuzberg/config.rb'
+
+Metrics/CyclomaticComplexity:
+  Max: 7
+  Exclude:
+    - 'lib/kreuzberg/config.rb'
 
 RSpec/RepeatedExampleGroupBody:
   Enabled: false
