@@ -130,31 +130,8 @@ module Kreuzberg
     hashes.map { |hash| Result.new(hash) }
   end
 
-  # Clear the extraction cache.
-  #
-  # @return [void]
-  #
-  # @example
-  #   Kreuzberg.clear_cache
-  #
-  def clear_cache
-    # TODO: Implement cache clearing in Rust FFI
-    nil
-  end
-
-  # Get cache statistics.
-  #
-  # @return [Hash] Cache statistics with :total_entries and :total_size_bytes
-  #
-  # @example
-  #   stats = Kreuzberg.cache_stats
-  #   puts "Cache entries: #{stats[:total_entries]}"
-  #   puts "Cache size: #{stats[:total_size_bytes]} bytes"
-  #
-  def cache_stats
-    # TODO: Implement cache stats in Rust FFI
-    { total_entries: 0, total_size_bytes: 0 }
-  end
+  module_function :clear_cache
+  module_function :cache_stats
 
   # Normalize config from Hash or Config object to keyword arguments
   # @api private
