@@ -383,7 +383,7 @@ jobs:
       - name: Build source gem
         if: matrix.build_source_gem
         working-directory: packages/ruby
-        run: bundle exec rake gem
+        run: bundle exec rake build
 
       - name: Cleanup Rust cache before save
         if: always()
