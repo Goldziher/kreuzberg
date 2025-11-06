@@ -4,9 +4,9 @@
 //! Provides extraction, OCR, chunking, and language detection for 30+ file formats.
 
 use kreuzberg::{
-    ChunkingConfig, ExtractionConfig, ExtractionResult as RustExtractionResult,
-    ImageExtractionConfig, ImagePreprocessingConfig, KreuzbergError, LanguageDetectionConfig,
-    OcrConfig, PdfConfig, PostProcessorConfig, TokenReductionConfig,
+    ChunkingConfig, ExtractionConfig, ExtractionResult as RustExtractionResult, ImageExtractionConfig,
+    ImagePreprocessingConfig, KreuzbergError, LanguageDetectionConfig, OcrConfig, PdfConfig, PostProcessorConfig,
+    TokenReductionConfig,
 };
 use magnus::prelude::*;
 use magnus::{Error, RArray, RHash, Ruby, Symbol, TryConvert, Value, function, scan_args::scan_args};
