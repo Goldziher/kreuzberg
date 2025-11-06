@@ -2,9 +2,9 @@
 """Kreuzberg Python extraction wrapper for benchmark harness.
 
 Supports three modes:
-- sync: extract_file() - synchronous extraction
-- async: extract_file_async() - asynchronous extraction
-- batch: batch_extract_file() - batch extraction for multiple files
+- sync: extract_file_sync() - synchronous extraction
+- async: extract_file() - asynchronous extraction
+- batch: batch_extract_files_sync() - synchronous batch extraction
 """
 
 from __future__ import annotations
