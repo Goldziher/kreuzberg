@@ -20,12 +20,12 @@ def main() -> None:
     try:
         extractor = Extractor()
         start = time.perf_counter()
-        result = extractor.extract_file(file_path)
+        text, metadata = extractor.extract_file_to_string(file_path)
         duration_ms = (time.perf_counter() - start) * 1000.0
 
         payload = {
-            "content": result or "",
-            "metadata": {"framework": "extractous"},
+            "content": text or "",
+            "metadata": metadata or {"framework": "extractous"},
             "_extraction_time_ms": duration_ms,
         }
         print(json.dumps(payload), end="")
