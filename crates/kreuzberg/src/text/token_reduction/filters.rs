@@ -212,14 +212,6 @@ impl FilterPipeline {
         (prefix, core, suffix)
     }
 
-    #[allow(dead_code)]
-    fn extract_word_core(&self, word: &str) -> String {
-        word.chars()
-            .filter(|c| c.is_ascii_alphabetic())
-            .collect::<String>()
-            .to_lowercase()
-    }
-
     fn preserve_markdown_structure(&self, text: &str) -> String {
         let lines: Vec<&str> = text.lines().collect();
         let mut processed_lines = Vec::new();

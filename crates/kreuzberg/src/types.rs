@@ -7,8 +7,6 @@ use crate::pdf::metadata::PdfMetadata;
 // ============================================================================
 // ============================================================================
 
-// TODO: sort types meant for external consumption alphabetically and adxd doc strings as required
-
 /// General extraction result used by the core extraction API.
 ///
 /// This is the main result type returned by all extraction functions.

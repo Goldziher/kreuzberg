@@ -1,57 +1,12 @@
 use ahash::AHashMap;
 use std::cmp::Ordering;
 
-// Semantic scoring weight constants
-/// Weight multiplier applied when compressing tokens with hypernyms
-const HYPERNYM_IMPORTANCE_MULTIPLIER: f32 = 0.8;
-
-/// Threshold below which tokens are considered low importance
-const LOW_IMPORTANCE_THRESHOLD: f32 = 0.5;
-
-/// Default base importance score for unknown words
-const BASE_IMPORTANCE_DEFAULT: f32 = 0.3;
-
-/// Multiplier for word length contribution to importance (per character)
-const WORD_LENGTH_BONUS_MULTIPLIER: f32 = 0.02;
-
-/// Maximum bonus that can be added from word length
-const MAX_WORD_LENGTH_BONUS: f32 = 0.2;
-
-/// Bonus added for words starting with uppercase (proper nouns, names)
-const CAPITALIZATION_BONUS: f32 = 0.2;
-
-/// Bonus added for words containing numeric characters
-const NUMERIC_CONTENT_BONUS: f32 = 0.15;
-
-/// Bonus added for technical terms (long words with special patterns)
-const TECHNICAL_TERM_BONUS: f32 = 0.25;
-
-/// Minimum word length to be considered a technical term
-const MIN_TECHNICAL_TERM_LENGTH: usize = 6;
-
-/// Context boost for tokens at the beginning or end of text
-const EDGE_POSITION_CONTEXT_BOOST: f32 = 0.1;
-
-/// Number of words before/after current word to consider for context
-const CONTEXT_WINDOW_SIZE: usize = 2;
-
-/// Maximum context boost that can be accumulated from surrounding words
-const MAX_CONTEXT_BOOST: f32 = 0.3;
-
-/// Multiplier for term frequency score contribution
-const FREQUENCY_SCORE_MULTIPLIER: f32 = 0.1;
-
-/// Contextual weight when both words are technical terms
-const TECHNICAL_TERM_CONTEXTUAL_WEIGHT: f32 = 0.05;
-
-/// Contextual weight when neighboring word is capitalized
-const CAPITALIZED_WORD_CONTEXTUAL_WEIGHT: f32 = 0.02;
-
 #[derive(Debug, Clone)]
 struct ScoredToken {
     token: String,
     position: usize,
     importance_score: f32,
+    // Components used to calculate importance_score, stored for debugging/analysis
     #[allow(dead_code)]
     context_boost: f32,
     #[allow(dead_code)]
@@ -81,17 +36,14 @@ impl Ord for ScoredToken {
 }
 
 pub struct SemanticAnalyzer {
-    #[allow(dead_code)]
-    language: String,
     importance_weights: AHashMap<String, f32>,
     hypernyms: AHashMap<String, String>,
     semantic_clusters: AHashMap<String, Vec<String>>,
 }
 
 impl SemanticAnalyzer {
-    pub fn new(language: &str) -> Self {
+    pub fn new(_language: &str) -> Self {
         let mut analyzer = Self {
-            language: language.to_string(),
             importance_weights: AHashMap::new(),
             hypernyms: AHashMap::new(),
             semantic_clusters: AHashMap::new(),
@@ -169,17 +121,16 @@ impl SemanticAnalyzer {
             for token in result.iter_mut().skip(target_count) {
                 if let Some(hypernym) = self.get_hypernym(&token.token) {
                     token.token = hypernym;
-                    token.importance_score *= HYPERNYM_IMPORTANCE_MULTIPLIER;
+                    token.importance_score *= 0.8;
                 }
             }
 
             result.truncate(target_count.max(1));
         } else {
             for token in &mut result {
-                if token.importance_score < LOW_IMPORTANCE_THRESHOLD
+                if token.importance_score < 0.5
                     && let Some(hypernym) = self.get_hypernym(&token.token)
                 {
-                    // Field reassignment: replacing token.token with hypernym (owned String)
                     token.token = hypernym;
                 }
             }
@@ -202,20 +153,20 @@ impl SemanticAnalyzer {
             return weight;
         }
 
-        let mut score = BASE_IMPORTANCE_DEFAULT;
+        let mut score = 0.3;
 
-        score += (word.len() as f32 * WORD_LENGTH_BONUS_MULTIPLIER).min(MAX_WORD_LENGTH_BONUS);
+        score += (word.len() as f32 * 0.02).min(0.2);
 
         if word.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
-            score += CAPITALIZATION_BONUS;
+            score += 0.2;
         }
 
         if word.chars().any(|c| c.is_numeric()) {
-            score += NUMERIC_CONTENT_BONUS;
+            score += 0.15;
         }
 
         if self.is_technical_term(word) {
-            score += TECHNICAL_TERM_BONUS;
+            score += 0.25;
         }
 
         score.min(1.0)
@@ -225,10 +176,10 @@ impl SemanticAnalyzer {
         let mut boost = 0.0;
 
         if position == 0 || position == words.len() - 1 {
-            boost += EDGE_POSITION_CONTEXT_BOOST;
+            boost += 0.1;
         }
 
-        let window = CONTEXT_WINDOW_SIZE;
+        let window = 2;
         let start = position.saturating_sub(window);
         let end = (position + window + 1).min(words.len());
 
@@ -238,14 +189,14 @@ impl SemanticAnalyzer {
             }
         }
 
-        boost.min(MAX_CONTEXT_BOOST)
+        boost.min(0.3)
     }
 
     fn calculate_frequency_score(&self, word: &str, word_freq: &AHashMap<String, i32>, total_words: usize) -> f32 {
         if let Some(&freq) = word_freq.get(word) {
             let tf = freq as f32 / total_words as f32;
 
-            (tf.ln() + 1.0) * FREQUENCY_SCORE_MULTIPLIER
+            (tf.ln() + 1.0) * 0.1
         } else {
             0.0
         }
@@ -253,16 +204,16 @@ impl SemanticAnalyzer {
 
     fn calculate_contextual_weight(&self, word: &str, context_word: &str) -> f32 {
         if self.is_technical_term(word) && self.is_technical_term(context_word) {
-            TECHNICAL_TERM_CONTEXTUAL_WEIGHT
+            0.05
         } else if context_word.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
-            CAPITALIZED_WORD_CONTEXTUAL_WEIGHT
+            0.02
         } else {
             0.0
         }
     }
 
     fn is_technical_term(&self, word: &str) -> bool {
-        word.len() > MIN_TECHNICAL_TERM_LENGTH
+        word.len() > 6
             && (word.contains("_")
                 || word.chars().filter(|&c| c.is_uppercase()).count() > 1
                 || word.ends_with("tion")
