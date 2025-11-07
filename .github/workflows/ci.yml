@@ -1,0 +1,680 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/typescript/**'
+      - 'packages/python/**'
+      - 'packages/ruby/**'
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-node/**'
+      - 'crates/kreuzberg-py/**'
+      - 'crates/kreuzberg-rb/**'
+      - 'v3/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'Taskfile.yml'
+      - 'fixtures/**'
+      - '.github/workflows/ci.yml'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/actions/setup-python-env/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cleanup-rust-cache/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/typescript/**'
+      - 'packages/python/**'
+      - 'packages/ruby/**'
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-node/**'
+      - 'crates/kreuzberg-py/**'
+      - 'crates/kreuzberg-rb/**'
+      - 'v3/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'Taskfile.yml'
+      - 'fixtures/**'
+      - '.github/workflows/ci.yml'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/actions/setup-python-env/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cleanup-rust-cache/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/install-system-deps/**'
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PDFIUM_VERSION: "7455"
+  ORT_VERSION: "1.23.2"
+
+jobs:
+  ts-test:
+    name: TypeScript Tests (Node ${{ matrix.node-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: ['20', '22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+        with:
+          version: '3.45.4'
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: typescript-${{ matrix.os }}-${{ matrix.node-version }}
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Prepare Pdfium runtime for Node bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          platform="$(uname -s)"
+          case "$platform" in
+            Linux*) platform_id="linux" ;;
+            Darwin*) platform_id="mac" ;;
+            MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
+            *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
+          esac
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64|amd64) arch_id="x64" ;;
+            arm64|aarch64) arch_id="arm64" ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+          version="${PDFIUM_VERSION:-7455}"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL -o "$tmpdir/pdfium.tgz" "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
+          mkdir -p "$tmpdir/extracted"
+          tar -xzf "$tmpdir/pdfium.tgz" -C "$tmpdir/extracted"
+          dest="$RUNNER_TEMP/pdfium-prebuilt"
+          rm -rf "$dest"
+          mv "$tmpdir/extracted" "$dest"
+          rm -rf "$tmpdir"
+          echo "KREUZBERG_PDFIUM_PREBUILT=$dest" >> "$GITHUB_ENV"
+
+      - name: Stage Pdfium runtime artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
+            echo "KREUZBERG_PDFIUM_PREBUILT is not set" >&2
+            exit 1
+          fi
+          mkdir -p crates/kreuzberg-node packages/python/kreuzberg
+          case "${RUNNER_OS:-unknown}" in
+            Windows)
+              bin_dir="$KREUZBERG_PDFIUM_PREBUILT/bin"
+              lib_dir="$KREUZBERG_PDFIUM_PREBUILT/lib"
+              cp -f "$bin_dir/pdfium.dll" "crates/kreuzberg-node/pdfium.dll"
+              if [ -f "$lib_dir/pdfium.dll.lib" ]; then
+                cp -f "$lib_dir/pdfium.dll.lib" "$lib_dir/pdfium.lib"
+              fi
+              echo "$GITHUB_WORKSPACE/crates/kreuzberg-node" >> "$GITHUB_PATH"
+              ;;
+            macOS)
+              lib_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.dylib"
+              cp -f "$lib_path" "crates/kreuzberg-node/libpdfium.dylib"
+              ;;
+            Linux)
+              lib_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.so"
+              cp -f "$lib_path" "crates/kreuzberg-node/libpdfium.so"
+              ;;
+            *)
+              echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Prepare ONNX Runtime (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ort_version="${ORT_VERSION:-1.23.2}"
+          archive="onnxruntime-linux-x64-${ort_version}.tgz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+          extract_dir="$RUNNER_TEMP/onnxruntime"
+          mkdir -p "$extract_dir"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+          ort_root="$extract_dir/onnxruntime-linux-x64-${ort_version}"
+          if [ ! -d "$ort_root/lib" ]; then
+            echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
+            exit 1
+          fi
+          cp -f "$ort_root/lib/"*.so* "crates/kreuzberg-node/"
+          echo "ORT_LIB_LOCATION=$ort_root" >> "$GITHUB_ENV"
+          echo "ORT_PREFER_DYNAMIC_LINK=1" >> "$GITHUB_ENV"
+          echo "ORT_SKIP_DOWNLOAD=1" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/crates/kreuzberg-node:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
+      - name: Prepare ONNX Runtime (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ort_version="${ORT_VERSION:-1.23.2}"
+          archive="onnxruntime-osx-arm64-${ort_version}.tgz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+          extract_dir="$RUNNER_TEMP/onnxruntime"
+          mkdir -p "$extract_dir"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+          ort_root="$extract_dir/onnxruntime-osx-arm64-${ort_version}"
+          if [ ! -d "$ort_root/lib" ]; then
+            echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
+            exit 1
+          fi
+          cp -f "$ort_root/lib/"libonnxruntime*.dylib "crates/kreuzberg-node/"
+          echo "ORT_LIB_LOCATION=$ort_root" >> "$GITHUB_ENV"
+          echo "ORT_PREFER_DYNAMIC_LINK=1" >> "$GITHUB_ENV"
+          echo "ORT_SKIP_DOWNLOAD=1" >> "$GITHUB_ENV"
+          echo "DYLD_LIBRARY_PATH=$GITHUB_WORKSPACE/crates/kreuzberg-node:${DYLD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
+      - name: Prepare ONNX Runtime (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $OrtVersion = if ($Env:ORT_VERSION) { $Env:ORT_VERSION } else { '1.23.2' }
+          $Archive = "onnxruntime-win-x64-$OrtVersion.zip"
+          $DownloadPath = Join-Path $env:TEMP $Archive
+          Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v$OrtVersion/$Archive" -OutFile $DownloadPath -UseBasicParsing
+          $ExtractRoot = Join-Path $env:TEMP "onnxruntime"
+          New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+          Expand-Archive -Path $DownloadPath -DestinationPath $ExtractRoot -Force
+          $OrtRoot = Join-Path $ExtractRoot "onnxruntime-win-x64-$OrtVersion"
+          if (!(Test-Path (Join-Path $OrtRoot 'lib'))) {
+            Write-Error "ONNX Runtime lib directory missing at $OrtRoot\lib"
+            exit 1
+          }
+          $NodeLibDir = Join-Path $env:GITHUB_WORKSPACE 'crates' 'kreuzberg-node'
+          Copy-Item -Path (Join-Path $OrtRoot 'lib' 'onnxruntime.dll') -Destination $NodeLibDir -Force
+          Copy-Item -Path (Join-Path $OrtRoot 'lib' 'onnxruntime.lib') -Destination $NodeLibDir -Force
+          if (Test-Path (Join-Path $OrtRoot 'lib' 'onnxruntime.pdb')) {
+            Copy-Item -Path (Join-Path $OrtRoot 'lib' 'onnxruntime.pdb') -Destination $NodeLibDir -Force
+          }
+          "ORT_LIB_LOCATION=$OrtRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ORT_PREFER_DYNAMIC_LINK=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ORT_SKIP_DOWNLOAD=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PATH=$NodeLibDir;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Setup Node workspace
+        uses: ./.github/actions/setup-node-workspace
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build NAPI-RS bindings
+        working-directory: crates/kreuzberg-node
+        run: pnpm run build
+
+      - name: Link built NAPI bindings to workspace
+        run: pnpm install
+
+      - name: Verify TypeScript E2E suite
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        run: task e2e:ts:verify
+
+      - name: Ensure TypeScript E2E generated artifacts are clean
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        run: git diff --exit-code
+
+      - name: Run tests (Linux, Node 20 - with coverage)
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        working-directory: packages/typescript
+        run: pnpm test:coverage
+
+      - name: Run tests (other platforms/versions)
+        if: matrix.os != 'ubuntu-latest' || matrix.node-version != '20'
+        working-directory: packages/typescript
+        run: pnpm test
+
+      - name: Cleanup Rust cache before save
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+      - name: Upload coverage artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        uses: actions/upload-artifact@v4
+        with:
+          name: typescript-coverage-${{ github.sha }}
+          path: packages/typescript/coverage/
+          retention-days: 7
+
+  ts-lint:
+    name: TypeScript Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node workspace
+        uses: ./.github/actions/setup-node-workspace
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run biome check
+        working-directory: packages/typescript
+        run: pnpm exec biome check
+
+  py-test:
+    name: Python Tests (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      HF_HOME: ~/.cache/huggingface
+      TRANSFORMERS_CACHE: ~/.cache/huggingface
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.10', '3.13']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+        with:
+          version: '3.45.4'
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: python-${{ matrix.os }}-${{ matrix.python-version }}
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Build and install Python package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd packages/python
+          uv run maturin develop --release
+          cd ..
+          cargo build -p kreuzberg-cli --release --features all
+
+      - name: Install SpaCy model (Linux only)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        run: uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+
+      - name: Verify Python E2E suite
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        run: task e2e:python:verify
+
+      - name: Ensure Python E2E generated artifacts are clean
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        run: git diff --exit-code
+
+      - name: Run tests (Linux, Python 3.10 - with coverage)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        run: uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
+
+      - name: Run tests (other platforms/versions)
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.10'
+        run: uv run pytest -vv --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
+
+      - name: Cleanup Rust cache before save
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+      - name: Upload coverage artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage-${{ github.sha }}
+          path: |
+            coverage.lcov
+            .coverage
+          retention-days: 7
+
+      - name: Upload coverage to DeepSource
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10' && env.DEEPSOURCE_DSN != ''
+        env:
+          DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
+        shell: bash
+        run: |
+          curl -fsSL https://deepsource.io/cli | sh
+          ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.lcov
+
+  py-lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '3.13'
+
+      - name: Run ruff format check
+        run: uv run ruff format --check
+
+      - name: Run ruff lint
+        run: uv run ruff check
+
+      - name: Run mypy
+        run: uv run mypy
+
+  v3-test:
+    name: V3 Tests (Python 3.10, ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      HF_HOME: ~/.cache/huggingface
+      TRANSFORMERS_CACHE: ~/.cache/huggingface
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check for v3 changes
+        id: check-v3
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^v3/'; then
+            echo "v3_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "v3_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Python environment
+        if: steps.check-v3.outputs.v3_changed == 'true'
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '3.10'
+
+      - name: Install system dependencies
+        if: steps.check-v3.outputs.v3_changed == 'true'
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install v3 dependencies
+        if: steps.check-v3.outputs.v3_changed == 'true'
+        working-directory: v3
+        run: uv sync --all-extras
+
+      - name: Run v3 tests
+        if: steps.check-v3.outputs.v3_changed == 'true'
+        working-directory: v3
+        run: uv run pytest -vv --reruns 1 --reruns-delay 1 tests/
+
+  ruby-test:
+    name: Ruby Tests (Ruby ${{ matrix.ruby-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        ruby-version: ['3.3', '3.4']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+        with:
+          version: '3.45.4'
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: false
+
+      - name: Setup MSYS2 (Windows)
+        id: setup-msys2
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        continue-on-error: true
+        with:
+          path-type: inherit
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-x86_64-gcc
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: ruby-${{ matrix.os }}-${{ matrix.ruby-version }}
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Download Pdfium binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          platform="$(uname -s)"
+          case "$platform" in
+            Linux*) platform_id="linux" ;;
+            Darwin*) platform_id="mac" ;;
+            MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
+            *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
+          esac
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64|amd64) arch_id="x64" ;;
+            arm64|aarch64) arch_id="arm64" ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+          version="${PDFIUM_VERSION:-7455}"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL -o "$tmpdir/pdfium.tgz" "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
+          mkdir -p "$tmpdir/extracted"
+          tar -xzf "$tmpdir/pdfium.tgz" -C "$tmpdir/extracted"
+          dest="$RUNNER_TEMP/pdfium"
+          rm -rf "$dest"
+          mv "$tmpdir/extracted" "$dest"
+          rm -rf "$tmpdir"
+
+      - name: Stage Pdfium runtime artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${RUNNER_OS:-unknown}" in
+            Windows)
+              src="$RUNNER_TEMP/pdfium/bin/pdfium.dll"
+              cp -f "$src" "crates/kreuzberg-rb/pdfium.dll"
+              cp -f "$src" "packages/ruby/pdfium.dll"
+              ;;
+            macOS)
+              src="$RUNNER_TEMP/pdfium/lib/libpdfium.dylib"
+              cp -f "$src" "crates/kreuzberg-rb/libpdfium.dylib"
+              cp -f "$src" "packages/ruby/libpdfium.dylib"
+              ;;
+            Linux)
+              src="$RUNNER_TEMP/pdfium/lib/libpdfium.so"
+              cp -f "$src" "crates/kreuzberg-rb/libpdfium.so"
+              cp -f "$src" "packages/ruby/libpdfium.so"
+              ;;
+            *)
+              echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Check Windows build requirements
+        if: runner.os == 'Windows' && steps.setup-msys2.outcome != 'success'
+        run: |
+          echo "::warning::Skipping Windows build - MSYS2 setup failed. Ruby native extensions require MSYS2 on Windows."
+          echo "::warning::Windows support for Ruby bindings is experimental."
+
+      - name: Install Ruby dependencies
+        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
+        working-directory: packages/ruby
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+
+      - name: Build Ruby native extension
+        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
+        working-directory: packages/ruby
+        run: bundle exec rake compile
+
+      - name: Verify Ruby E2E suite
+        if: matrix.os == 'ubuntu-latest' && matrix.ruby-version == '3.4' && (runner.os != 'Windows' || steps.setup-msys2.outcome == 'success')
+        run: task e2e:ruby:verify
+
+      - name: Ensure Ruby E2E generated artifacts are clean
+        if: matrix.os == 'ubuntu-latest' && matrix.ruby-version == '3.4' && (runner.os != 'Windows' || steps.setup-msys2.outcome == 'success')
+        run: git diff --exit-code
+
+      - name: Run tests
+        if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
+        working-directory: packages/ruby
+        run: bundle exec rspec --format documentation
+
+  ruby-lint:
+    name: Ruby Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - name: Install Ruby gems
+        working-directory: packages/ruby
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Run RuboCop
+        working-directory: packages/ruby
+        run: bundle exec rubocop
+
+  rust-validate:
+    name: Rust Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-validation
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+        with:
+          version: '3.45.4'
+
+      - name: Run validation (prek)
+        run: task lint
+
+  rust-unit:
+    name: Rust Unit Tests (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          # Windows excluded due to rb-sys POSIX header limitations (strings.h not available on Windows)
+          # Ruby gem builds and Ruby tests on Windows work fine - only Rust unit tests are affected
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          target: ${{ matrix.target }}
+          cache-key-prefix: rust-unit-${{ matrix.os }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Run unit tests (no default features)
+        run: cargo test --workspace --exclude kreuzberg-e2e-generator
+
+  rust-e2e:
+    name: Rust E2E Tests (release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-e2e
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+        with:
+          version: '3.45.4'
+
+      - name: Verify Rust E2E suite
+        run: task e2e:rust:verify
+
+      - name: Ensure Rust E2E generated artifacts are clean
+        run: git diff --exit-code

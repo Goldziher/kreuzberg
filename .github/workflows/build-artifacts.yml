@@ -1,0 +1,586 @@
+name: Build Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (skip actual artifact uploads)"
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'packages/**'
+      - '.github/workflows/build-artifacts.yml'
+      - '.github/actions/**'
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  PDFIUM_VERSION: "7455"
+
+jobs:
+  build-wheels:
+    name: Build Python wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Build wheels
+        uses: ./.github/actions/build-wheels
+        with:
+          python-version: "3.13"
+
+      - name: List built wheels
+        shell: bash
+        run: |
+          echo "📦 Built wheels:"
+          ls -lh ./wheelhouse/*.whl || echo "No wheels found"
+
+  build-sdist:
+    name: Build Python sdist
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13"
+          cache-prefix: python-sdist
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build sdist
+        working-directory: packages/python
+        run: uv run maturin sdist --out ../../dist/
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-sdist
+          path: dist/*.tar.gz
+          retention-days: 7
+
+      - name: List built sdist
+        run: |
+          echo "📦 Built sdist:"
+          ls -lh dist/*.tar.gz
+
+  build-napi-bindings:
+    name: Build NAPI ${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          # Linux native build
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          # Linux musl (use zigbuild for cross-compilation)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use_zigbuild: true
+          # macOS: use native runners for each architecture (ONNX runtime doesn't cross-compile)
+          - os: macos-13  # Intel
+            target: x86_64-apple-darwin
+          - os: macos-latest  # Apple Silicon
+            target: aarch64-apple-darwin
+          # Windows
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Prepare ONNX Runtime (macOS)
+        if: startsWith(matrix.settings.target, 'aarch64-apple-darwin') || startsWith(matrix.settings.target, 'x86_64-apple-darwin')
+        run: |
+          set -euo pipefail
+          case "${{ matrix.settings.target }}" in
+            aarch64-apple-darwin)
+              ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/aarch64-apple-darwin.tgz"
+              ;;
+            x86_64-apple-darwin)
+              ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/x86_64-apple-darwin.tgz"
+              ;;
+            *)
+              echo "Unsupported macOS target: ${{ matrix.settings.target }}" >&2
+              exit 1
+              ;;
+          esac
+          ort_dir="${RUNNER_TEMP}/onnxruntime/${{ matrix.settings.target }}"
+          if [ ! -f "${ort_dir}/onnxruntime/lib/libonnxruntime.a" ]; then
+            mkdir -p "${ort_dir}"
+            curl -fsSL "${ort_url}" | tar -xz -C "${ort_dir}"
+          fi
+          {
+            echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime"
+            echo "ORT_SKIP_DOWNLOAD=1"
+            echo "ORT_PREFER_DYNAMIC_LINK=0"
+          } >> "${GITHUB_ENV}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.settings.os }}-cargo-napi-${{ matrix.settings.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+      # Install Zig for cross-compilation on Linux
+      - name: Setup Zig (Linux cross-compilation)
+        if: matrix.settings.use_zigbuild
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Configure Zig toolchain for musl target
+        if: matrix.settings.use_zigbuild
+        run: |
+          {
+            echo "CC_x86_64_unknown_linux_musl=zig cc -target x86_64-linux-musl"
+            echo "CXX_x86_64_unknown_linux_musl=zig c++ -target x86_64-linux-musl"
+            echo "AR_x86_64_unknown_linux_musl=zig ar"
+            echo "RANLIB_x86_64_unknown_linux_musl=zig ranlib"
+          } >> "${GITHUB_ENV}"
+
+      - name: Install cargo-zigbuild (Linux cross-compilation)
+        if: matrix.settings.use_zigbuild
+        run: cargo install cargo-zigbuild --locked
+
+      - name: Build NAPI-RS bindings (with zigbuild)
+        if: matrix.settings.use_zigbuild
+        working-directory: crates/kreuzberg-node
+        env:
+          # Tell NAPI-RS to use cargo-zigbuild
+          NAPI_RS_CARGO: cargo-zigbuild
+        run: |
+          pnpm install
+          pnpm run build --target ${{ matrix.settings.target }}
+
+      - name: Build NAPI-RS bindings (native)
+        if: ${{ !matrix.settings.use_zigbuild }}
+        working-directory: crates/kreuzberg-node
+        run: |
+          pnpm install
+          pnpm run build --target ${{ matrix.settings.target }}
+
+      - name: Cleanup Rust cache before save
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+      - name: Upload NAPI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: napi-${{ matrix.settings.target }}
+          path: crates/kreuzberg-node/*.node
+          retention-days: 7
+
+      - name: List built bindings
+        shell: bash
+        run: |
+          echo "📦 Built NAPI binding for ${{ matrix.settings.target }}:"
+          ls -lh crates/kreuzberg-node/*.node || echo "No .node files found"
+
+  build-ruby-gems:
+    name: Build Ruby gem (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      RB_SYS_CARGO_PROFILE: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86_64
+            platform: x86_64-linux
+            build_source_gem: true
+          - os: ubuntu-latest
+            label: linux-aarch64
+            platform: aarch64-linux
+            build_source_gem: false
+          - os: macos-13
+            label: macos-x86_64
+            platform: x86_64-darwin
+            build_source_gem: false
+          - os: macos-14
+            label: macos-arm64
+            platform: arm64-darwin
+            build_source_gem: false
+          - os: windows-latest
+            label: windows-x64
+            platform: x64-mingw32
+            build_source_gem: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: ruby-${{ matrix.label }}
+
+      - name: Install MSYS2 toolchain (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ridk exec pacman -S --needed --noconfirm base-devel mingw-w64-ucrt-x86_64-toolchain
+
+      - name: Install Rust GNU toolchain (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: rustup toolchain install stable-gnu --profile minimal --no-self-update
+
+      - name: Configure bindgen sysroot (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "BINDGEN_EXTRA_CLANG_ARGS=--target=x86_64-pc-windows-gnu --sysroot=${RI_DEVKIT//\\/\/}$MSYSTEM_PREFIX" >> "$GITHUB_ENV"
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: false
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download Pdfium binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          platform="$(uname -s)"
+          case "$platform" in
+            Linux*) platform_id="linux" ;;
+            Darwin*) platform_id="mac" ;;
+            MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
+            *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
+          esac
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64|amd64) arch_id="x64" ;;
+            arm64|aarch64) arch_id="arm64" ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+          version="${PDFIUM_VERSION:-7455}"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL -o "$tmpdir/pdfium.tgz" "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
+          mkdir -p "$tmpdir/extracted"
+          tar -xzf "$tmpdir/pdfium.tgz" -C "$tmpdir/extracted"
+          dest="$RUNNER_TEMP/pdfium"
+          rm -rf "$dest"
+          mv "$tmpdir/extracted" "$dest"
+          rm -rf "$tmpdir"
+
+      - name: Stage Pdfium runtime artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${RUNNER_OS:-unknown}" in
+            Windows)
+              src="$RUNNER_TEMP/pdfium/bin/pdfium.dll"
+              cp -f "$src" "crates/kreuzberg-rb/pdfium.dll"
+              cp -f "$src" "packages/ruby/pdfium.dll"
+              ;;
+            macOS)
+              src="$RUNNER_TEMP/pdfium/lib/libpdfium.dylib"
+              cp -f "$src" "crates/kreuzberg-rb/libpdfium.dylib"
+              cp -f "$src" "packages/ruby/libpdfium.dylib"
+              ;;
+            Linux)
+              src="$RUNNER_TEMP/pdfium/lib/libpdfium.so"
+              cp -f "$src" "crates/kreuzberg-rb/libpdfium.so"
+              cp -f "$src" "packages/ruby/libpdfium.so"
+              ;;
+            *)
+              echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Install Ruby dependencies (Unix)
+        if: runner.os != 'Windows'
+        working-directory: packages/ruby
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+
+      - name: Install Ruby dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $rubydir = "$workspace/packages/ruby"
+          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle config set --local path 'vendor/bundle' && bundle install --jobs 4 --retry 3"
+
+      - name: Build native gem (Unix)
+        if: runner.os != 'Windows'
+        working-directory: packages/ruby
+        run: |
+          RUBY_ARCH=$(ruby -e "require 'rbconfig'; print RbConfig::CONFIG['arch']")
+          bundle exec rake native:kreuzberg:${RUBY_ARCH}
+
+      - name: Build native gem (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $rubydir = "$workspace/packages/ruby"
+          # Get Ruby platform in PowerShell first to avoid bash escaping issues
+          $rubyPlatform = ruby -e "puts Gem::Platform.local.to_s"
+          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle exec rake native:kreuzberg:$rubyPlatform"
+
+      - name: Build source gem
+        if: matrix.build_source_gem
+        working-directory: packages/ruby
+        run: bundle exec rake build
+
+      - name: Cleanup Rust cache before save
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+      - name: Upload native gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gem-${{ matrix.label }}
+          path: packages/ruby/pkg/*.gem
+          retention-days: 7
+
+      - name: List built gems
+        shell: bash
+        run: |
+          echo "📦 Built Ruby gem for ${{ matrix.label }}:"
+          ls -lh packages/ruby/pkg/*.gem || echo "No gems found"
+
+  build-cli-binaries:
+    name: Build CLI ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: kreuzberg
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: kreuzberg.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: kreuzberg
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: kreuzberg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-cli-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build CLI binary
+        run: cargo build --release --target ${{ matrix.target }} --package kreuzberg-cli
+
+      - name: Create tar.gz for Unix-like systems
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf kreuzberg-${{ matrix.target }}.tar.gz ${{ matrix.artifact_name }}
+          mv kreuzberg-${{ matrix.target }}.tar.gz ../../../
+
+      - name: Create zip for Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          7z a -tzip kreuzberg-${{ matrix.target }}.zip ${{ matrix.artifact_name }}
+          mv kreuzberg-${{ matrix.target }}.zip ../../../
+
+      - name: Cleanup Rust cache before save
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+      - name: Upload CLI binary artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.target }}
+          path: |
+            kreuzberg-${{ matrix.target }}.tar.gz
+            kreuzberg-${{ matrix.target }}.zip
+          retention-days: 7
+
+      - name: List built binaries
+        shell: bash
+        run: |
+          echo "📦 Built CLI binary for ${{ matrix.target }}:"
+          ls -lh kreuzberg-${{ matrix.target }}.* || echo "No archives found"
+
+  summarize:
+    name: Build Summary
+    needs:
+      - build-wheels
+      - build-sdist
+      - build-napi-bindings
+      - build-ruby-gems
+      - build-cli-binaries
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Generate build summary
+        run: |
+          echo "# 🏗️ Build Artifacts Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Wheels | ${{ needs.build-wheels.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Sdist | ${{ needs.build-sdist.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| NAPI Bindings | ${{ needs.build-napi-bindings.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ruby Gems | ${{ needs.build-ruby-gems.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CLI Binaries | ${{ needs.build-cli-binaries.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Built Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Python Wheels
+          echo "### Python Wheels" >> $GITHUB_STEP_SUMMARY
+          wheel_count=$(find artifacts/wheels-* -name "*.whl" 2>/dev/null | wc -l || echo "0")
+          echo "- **Count**: $wheel_count wheels" >> $GITHUB_STEP_SUMMARY
+          if [ "$wheel_count" -gt 0 ]; then
+            echo "- **Files**:" >> $GITHUB_STEP_SUMMARY
+            find artifacts/wheels-* -name "*.whl" -exec basename {} \; 2>/dev/null | sort | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY || true
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Python Sdist
+          echo "### Python Sdist" >> $GITHUB_STEP_SUMMARY
+          sdist_count=$(find artifacts/python-sdist -name "*.tar.gz" 2>/dev/null | wc -l || echo "0")
+          echo "- **Count**: $sdist_count sdist" >> $GITHUB_STEP_SUMMARY
+          if [ "$sdist_count" -gt 0 ]; then
+            echo "- **Files**:" >> $GITHUB_STEP_SUMMARY
+            find artifacts/python-sdist -name "*.tar.gz" -exec basename {} \; 2>/dev/null | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY || true
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # NAPI Bindings
+          echo "### NAPI Bindings" >> $GITHUB_STEP_SUMMARY
+          napi_count=$(find artifacts/napi-* -name "*.node" 2>/dev/null | wc -l || echo "0")
+          echo "- **Count**: $napi_count bindings" >> $GITHUB_STEP_SUMMARY
+          if [ "$napi_count" -gt 0 ]; then
+            echo "- **Targets**:" >> $GITHUB_STEP_SUMMARY
+            find artifacts/napi-* -type d -name "napi-*" -exec basename {} \; 2>/dev/null | sed 's/napi-/  - /' | sort >> $GITHUB_STEP_SUMMARY || true
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Ruby Gems
+          echo "### Ruby Gems" >> $GITHUB_STEP_SUMMARY
+          gem_count=$(find artifacts/gem-* -name "*.gem" 2>/dev/null | wc -l || echo "0")
+          echo "- **Count**: $gem_count gems" >> $GITHUB_STEP_SUMMARY
+          if [ "$gem_count" -gt 0 ]; then
+            echo "- **Files**:" >> $GITHUB_STEP_SUMMARY
+            find artifacts/gem-* -name "*.gem" -exec basename {} \; 2>/dev/null | sort | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY || true
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # CLI Binaries
+          echo "### CLI Binaries" >> $GITHUB_STEP_SUMMARY
+          cli_count=$(find artifacts/cli-* \( -name "*.tar.gz" -o -name "*.zip" \) 2>/dev/null | wc -l || echo "0")
+          echo "- **Count**: $cli_count binaries" >> $GITHUB_STEP_SUMMARY
+          if [ "$cli_count" -gt 0 ]; then
+            echo "- **Files**:" >> $GITHUB_STEP_SUMMARY
+            find artifacts/cli-* \( -name "*.tar.gz" -o -name "*.zip" \) -exec basename {} \; 2>/dev/null | sort | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY || true
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Overall status
+          if [ "${{ needs.build-wheels.result }}" = "success" ] && \
+             [ "${{ needs.build-sdist.result }}" = "success" ] && \
+             [ "${{ needs.build-napi-bindings.result }}" = "success" ] && \
+             [ "${{ needs.build-ruby-gems.result }}" = "success" ] && \
+             [ "${{ needs.build-cli-binaries.result }}" = "success" ]; then
+            echo "## ✅ All builds succeeded!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All artifacts are ready for release." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ⚠️ Some builds failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the job details above for more information." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Dry run notice
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "---" >> $GITHUB_STEP_SUMMARY
+            echo "**Note**: This was a dry run. No artifacts were published." >> $GITHUB_STEP_SUMMARY
+          fi
