@@ -12,5 +12,12 @@
     "aliases": [
       "v3"
     ]
+  },
+  {
+    "version": "v4-rc1",
+    "title": "4.0-rc1 (Release Candidate)",
+    "aliases": [
+      "4.0-rc1"
+    ]
   }
 ]
