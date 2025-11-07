@@ -189,6 +189,7 @@ nav:
       - Extraction Basics: guides/extraction.md
       - Configuration: guides/configuration.md
       - OCR: guides/ocr.md
+      - Structured Extraction: guides/structured_extraction.md
       - Advanced Features: guides/advanced.md
       - Docker Deployment: guides/docker.md
       - Creating Plugins: guides/plugins.md

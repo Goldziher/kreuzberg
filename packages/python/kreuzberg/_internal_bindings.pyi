@@ -59,6 +59,18 @@ class ValidatorProtocol(Protocol):
     def priority(self) -> int: ...
     def should_validate(self, result: dict[str, Any]) -> bool: ...
 
+<<<<<<< HEAD
+=======
+def extract_structured_json(
+    images: list[bytes],
+    prompt: str,
+    extractor: Any,
+    schema_json: str,
+    max_retries: int = ...,
+    include_error_in_retry: bool = ...,
+) -> Awaitable[bytes]: ...
+
+>>>>>>> f1ac478 (feat: add documentation and examples for structured extraction)
 class ExtractionConfig:
     use_cache: bool
     enable_quality_processing: bool
