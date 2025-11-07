@@ -170,24 +170,11 @@ struct Slide {
     slide_number: u32,
     elements: Vec<SlideElement>,
     images: Vec<ImageReference>,
-    /// Image data cache for extracted images
-    ///
-    /// Reserved for future implementation where Slide owns its image data.
-    /// Currently images are extracted on-demand via SlideIterator.get_slide_images().
-    #[allow(dead_code)]
-    image_data: HashMap<String, Vec<u8>>,
 }
 
 #[derive(Debug, Clone)]
 struct ParserConfig {
     extract_images: bool,
-    /// Maximum cache size in megabytes
-    ///
-    /// Reserved for future parsed slide caching implementation.
-    /// Will enable memory-bounded caching of parsed slide data to improve
-    /// performance when re-extracting the same presentation.
-    #[allow(dead_code)]
-    max_cache_size_mb: usize,
     include_slide_comment: bool,
 }
 
@@ -195,7 +182,6 @@ impl Default for ParserConfig {
     fn default() -> Self {
         Self {
             extract_images: true,
-            max_cache_size_mb: 256,
             include_slide_comment: false,
         }
     }
@@ -421,7 +407,6 @@ impl Slide {
             slide_number,
             elements,
             images,
-            image_data: HashMap::new(),
         })
     }
 
@@ -501,24 +486,15 @@ impl Slide {
 
 struct SlideIterator {
     container: PptxContainer,
-    /// Parser configuration for future slide-level processing
-    ///
-    /// Reserved for future implementation where SlideIterator applies
-    /// config-based processing during iteration (e.g., filtering slides,
-    /// conditional image extraction). Currently config is passed separately
-    /// during extraction.
-    #[allow(dead_code)]
-    config: ParserConfig,
     current_index: usize,
     total_slides: usize,
 }
 
 impl SlideIterator {
-    fn new(container: PptxContainer, config: ParserConfig) -> Self {
+    fn new(container: PptxContainer) -> Self {
         let total_slides = container.slide_paths().len();
         Self {
             container,
-            config,
             current_index: 0,
             total_slides,
         }
@@ -1160,7 +1136,7 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
 
     let notes = extract_all_notes(&mut container)?;
 
-    let mut iterator = SlideIterator::new(container, config.clone());
+    let mut iterator = SlideIterator::new(container);
     let slide_count = iterator.slide_count();
 
     let estimated_capacity = slide_count * 1024;
@@ -1799,7 +1775,6 @@ mod tests {
     fn test_parser_config_default() {
         let config = ParserConfig::default();
         assert!(config.extract_images);
-        assert_eq!(config.max_cache_size_mb, 256);
         assert!(!config.include_slide_comment);
     }
 

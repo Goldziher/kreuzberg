@@ -70,13 +70,6 @@ const DEFAULT_PORT: u16 = 3030;
 /// Default timeout for conversions (seconds)
 const DEFAULT_TIMEOUT: u64 = 120;
 
-/// Health check interval (seconds)
-///
-/// Reserved for future server health monitoring implementation.
-/// Will be used to periodically check pandoc-server responsiveness.
-#[allow(dead_code)]
-const HEALTH_CHECK_INTERVAL: u64 = 30;
-
 /// Maximum retries for failed requests
 const MAX_RETRIES: usize = 3;
 
@@ -100,13 +93,6 @@ enum PandocResponse {
         output: String,
         #[serde(default)]
         base64: bool,
-        /// Pandoc warning/info messages
-        ///
-        /// Reserved for future logging/diagnostics implementation.
-        /// Will capture conversion warnings and informational messages.
-        #[serde(default)]
-        #[allow(dead_code)]
-        messages: Vec<Value>,
     },
     Error {
         error: String,
@@ -396,11 +382,7 @@ impl PandocServer {
                         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse server response: {}", e)))?;
 
                     match pandoc_response {
-                        PandocResponse::Success {
-                            output,
-                            base64,
-                            messages: _,
-                        } => {
+                        PandocResponse::Success { output, base64 } => {
                             if base64 {
                                 // Decode base64 if needed
                                 let decoded = base64_simd::STANDARD.decode_to_vec(output.as_bytes()).map_err(|e| {
