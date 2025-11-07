@@ -1,0 +1,162 @@
+[build-system]
+build-backend = "uv_build"
+requires = [ "uv-build" ]
+
+[project]
+name = "kreuzberg-v3"
+version = "3.21.0"
+description = "Document intelligence framework for Python - Extract text, metadata, and structured data from diverse file formats (v3 LTS)"
+readme = "README.md"
+keywords = [
+  "async",
+  "document-analysis",
+  "document-classification",
+  "document-intelligence",
+  "document-processing",
+  "extensible",
+  "information-extraction",
+  "mcp",
+  "metadata-extraction",
+  "model-context-protocol",
+  "ocr",
+  "pandoc",
+  "pdf-extraction",
+  "pdfium",
+  "plugin-architecture",
+  "rag",
+  "retrieval-augmented-generation",
+  "structured-data",
+  "table-extraction",
+  "tesseract",
+  "text-extraction",
+]
+license = { text = "MIT" }
+authors = [ { name = "Na'aman Hirschfeld", email = "nhirschfed@gmail.com" } ]
+requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Database",
+  "Topic :: Multimedia :: Graphics :: Capture :: Scanners",
+  "Topic :: Office/Business :: Office Suites",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Text Processing :: General",
+  "Typing :: Typed",
+]
+
+dependencies = [
+  "anyio>=4.11",
+  "chardetng-py>=0.3.5",
+  "exceptiongroup>=1.2.2; python_version<'3.11'",
+  "html-to-markdown>=2.5.6",
+  "langcodes>=3.5",
+  "mcp>=1.20",
+  "msgspec>=0.18",
+  "numpy>=2.1",
+  "playa-pdf>=0.7",
+  "polars>=1.35.1",
+  "psutil>=7.1.3",
+  "pypdfium2==4.30",
+  "python-calamine>=0.5.4",
+  "python-pptx>=1.0.2",
+  "transformers>=4.57.1",
+  "typing-extensions>=4.15; python_version<'3.12'",
+]
+
+optional-dependencies.additional-extensions = [
+  "mailparse>=1.0.15",
+  "tomli>=2; python_version<'3.11'",
+]
+optional-dependencies.all = [
+  "kreuzberg-v3[additional-extensions,api,chunking,cli,crypto,document-classification,easyocr,entity-extraction,gmft,langdetect,paddleocr]",
+]
+optional-dependencies.api = [
+  "litestar[opentelemetry,standard,structlog]>=2.18",
+]
+optional-dependencies.chunking = [ "semantic-text-splitter>=0.28" ]
+optional-dependencies.cli = [
+  "click>=8.3",
+  "rich>=14.2",
+  "tomli>=2; python_version<'3.11'",
+]
+optional-dependencies.crypto = [ "playa-pdf[crypto]>=0.7" ]
+optional-dependencies.document-classification = [ "deep-translator>=1.11.4" ]
+optional-dependencies.easyocr = [ "easyocr>=1.7.2; python_version<'3.14'" ]
+optional-dependencies.entity-extraction = [ "keybert>=0.9", "spacy>=3.8.7; python_version<'3.14'" ]
+optional-dependencies.gmft = [ "gmft>=0.4.2", "transformers>=4.57.1" ]
+optional-dependencies.langdetect = [ "fast-langdetect>=1" ]
+optional-dependencies.paddleocr = [
+  "paddleocr>=3.1; python_version<'3.14'",
+  "paddlepaddle>=3.1,<3.3; python_version<'3.14'",
+  "setuptools>=80.9",
+]
+scripts.kreuzberg = "kreuzberg.cli:cli"
+
+[tool.uv.build]
+src-dir = "."
+package = "kreuzberg"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+src = [ "kreuzberg" ]
+format.docstring-code-line-length = 120
+format.docstring-code-format = true
+lint.select = [ "ALL" ]
+lint.ignore = [
+  "ANN401",
+  "COM812",
+  "D100",
+  "D104",
+  "D107",
+  "D205",
+  "E501",
+  "EM",
+  "FBT",
+  "FIX",
+  "ISC001",
+  "PLR2004",
+  "PLW0603",
+  "S110",
+  "S603",
+  "TD",
+  "TRY",
+]
+lint.per-file-ignores."**/tests/**/*.*" = [
+  "A005",
+  "ANN",
+  "ARG001",
+  "ARG002",
+  "BLE001",
+  "D",
+  "ERA001",
+  "N802",
+  "PLC0415",
+  "PLC2701",
+  "PLR0913",
+  "PLR0917",
+  "PLR2004",
+  "PLR6301",
+  "PT006",
+  "PT011",
+  "PT012",
+  "S101",
+  "S105",
+  "S106",
+  "S301",
+  "S311",
+  "SLF001",
+  "T201",
+]
