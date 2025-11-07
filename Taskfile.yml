@@ -83,6 +83,7 @@ tasks:
       - echo "Updating Python dependencies..."
       - uv run uv-bump --pyproject-toml pyproject.toml
       - uv run uv-bump --pyproject-toml packages/python/pyproject.toml
+      - uv run uv-bump --pyproject-toml v3/pyproject.toml
       - uv sync --all-packages --all-extras --upgrade
   ruby:install:
     desc: Install Ruby dependencies
