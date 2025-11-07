@@ -1,69 +1,16 @@
 use memchr::{memchr, memchr3};
 
-pub struct SimdTextProcessor {
-    #[allow(dead_code)]
-    chunk_size: usize,
-}
+pub struct SimdTextProcessor;
 
 impl Default for SimdTextProcessor {
     fn default() -> Self {
-        Self { chunk_size: 64 }
+        Self
     }
 }
 
 impl SimdTextProcessor {
-    // TODO: we should use SIMD acceleration not only in token reduction, but also in other text processing, lets see if we can generalize this - inspect for refactor
     pub fn new() -> Self {
-        Self::default()
-    }
-
-    #[allow(dead_code)]
-    pub fn normalize_whitespace(&self, text: &str) -> String {
-        // TODO: check this - is this dead code?
-
-        let bytes = text.as_bytes();
-        let mut result = Vec::with_capacity(text.len());
-        let mut i = 0;
-        let mut in_whitespace = false;
-
-        while i + self.chunk_size <= bytes.len() {
-            let chunk = &bytes[i..i + self.chunk_size];
-
-            if let Some(ws_pos) = self.find_whitespace_simd(chunk) {
-                let prefix_end = i + ws_pos;
-                if !in_whitespace && i < prefix_end {
-                    result.extend_from_slice(&bytes[i..prefix_end]);
-                }
-
-                i = self.skip_whitespace_sequence(bytes, prefix_end);
-                if !in_whitespace {
-                    result.push(b' ');
-                }
-                in_whitespace = true;
-            } else {
-                if !in_whitespace {
-                    result.extend_from_slice(chunk);
-                }
-                i += self.chunk_size;
-                in_whitespace = false;
-            }
-        }
-
-        while i < bytes.len() {
-            let byte = bytes[i];
-            if self.is_whitespace(byte) {
-                if !in_whitespace {
-                    result.push(b' ');
-                }
-                in_whitespace = true;
-            } else {
-                result.push(byte);
-                in_whitespace = false;
-            }
-            i += 1;
-        }
-
-        String::from_utf8(result).unwrap_or_else(|_| text.to_string())
+        Self
     }
 
     pub fn clean_punctuation(&self, text: &str) -> String {
@@ -106,30 +53,9 @@ impl SimdTextProcessor {
         String::from_utf8(result).unwrap_or_else(|_| text.to_string())
     }
 
-    #[allow(dead_code)]
-    #[inline]
-    fn find_whitespace_simd(&self, chunk: &[u8]) -> Option<usize> {
-        memchr3(b' ', b'\t', b'\n', chunk)
-    }
-
-    #[allow(dead_code)]
-    #[inline]
-    fn is_whitespace(&self, byte: u8) -> bool {
-        matches!(byte, b' ' | b'\t' | b'\n' | b'\r')
-    }
-
     #[inline]
     fn is_repeated_punctuation(&self, byte: u8) -> bool {
         matches!(byte, b'!' | b'?' | b'.' | b',')
-    }
-
-    #[allow(dead_code)]
-    fn skip_whitespace_sequence(&self, bytes: &[u8], start: usize) -> usize {
-        let mut i = start;
-        while i < bytes.len() && self.is_whitespace(bytes[i]) {
-            i += 1;
-        }
-        i
     }
 
     fn find_complex_punctuation_sequence_end(&self, bytes: &[u8], start: usize) -> usize {
@@ -191,14 +117,6 @@ pub fn chunk_text_for_parallel(text: &str, target_chunks: usize) -> Vec<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_normalize_whitespace() {
-        let processor = SimdTextProcessor::new();
-        let input = "Hello   \t\n  world!";
-        let result = processor.normalize_whitespace(input);
-        assert_eq!(result, "Hello world!");
-    }
 
     #[test]
     fn test_clean_punctuation() {

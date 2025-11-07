@@ -1,20 +1,16 @@
 use memchr::{memchr, memchr3};
 
-pub struct SimdTextProcessor {
-    #[allow(dead_code)]
-    chunk_size: usize,
-}
+pub struct SimdTextProcessor;
 
 impl Default for SimdTextProcessor {
     fn default() -> Self {
-        Self { chunk_size: 64 }
+        Self
     }
 }
 
 impl SimdTextProcessor {
-    // TODO: we should use SIMD acceleration not only in token reduction, but also in other text processing, lets see if we can generalize this - inspect for refactor
     pub fn new() -> Self {
-        Self::default()
+        Self
     }
 
     pub fn clean_punctuation(&self, text: &str) -> String {
@@ -54,8 +50,6 @@ impl SimdTextProcessor {
             i = sequence_end;
         }
 
-        // Fallback to original text if UTF-8 conversion fails - this is safe because input is valid UTF-8 ~keep
-        // Punctuation removal should preserve UTF-8 validity, but fallback ensures robustness
         String::from_utf8(result).unwrap_or_else(|_| text.to_string())
     }
 
