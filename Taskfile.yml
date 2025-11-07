@@ -3,6 +3,10 @@ vars:
   RUST_LOG: info
   V3_TAG: v3.20.2
 tasks:
+  sync-versions:
+    desc: Sync version from Cargo.toml to all package manifests
+    cmds:
+      - uv run python scripts/sync_versions.py
   setup:
     desc: Install dependencies for all languages
     cmds:
