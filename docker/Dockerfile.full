@@ -1,0 +1,155 @@
+# =============================================================================
+# Builder Stage - Build Rust binary with all dependencies
+# =============================================================================
+FROM rust:1.90-trixie AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        cmake \
+        g++ \
+        pkg-config \
+        libssl-dev \
+        libleptonica-dev \
+        libtesseract-dev \
+        clang \
+        curl \
+        file \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set pdfium version (can be overridden via build-arg)
+ARG PDFIUM_VERSION=7469
+ARG TARGETARCH
+ENV PDFIUM_VERSION=${PDFIUM_VERSION}
+
+# Download and extract pdfium to a location that can be reused
+# TARGETARCH is automatically set by Docker: amd64, arm64, etc.
+RUN mkdir -p /build/pdfium && \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        PDFIUM_ARCH="arm64"; \
+    else \
+        PDFIUM_ARCH="x64"; \
+    fi && \
+    curl -fL "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${PDFIUM_VERSION}/pdfium-linux-${PDFIUM_ARCH}.tgz" \
+        -o /build/pdfium.tgz && \
+    tar -xzf /build/pdfium.tgz -C /build/pdfium && \
+    rm /build/pdfium.tgz
+
+# Set environment variable to use prebuilt pdfium
+ENV KREUZBERG_PDFIUM_PREBUILT=/build/pdfium
+
+# Copy workspace manifests and crates
+COPY Cargo.toml Cargo.lock ./
+COPY crates/kreuzberg/ crates/kreuzberg/
+COPY crates/kreuzberg-cli/ crates/kreuzberg-cli/
+
+# Remove workspace members that aren't included (Ruby, Node, Python)
+RUN sed -i '/kreuzberg-py/d; /kreuzberg-rb/d; /kreuzberg-node/d; /benchmark-harness/d' Cargo.toml
+
+# Build release binary with server features (api + full format support)
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/build/target \
+    cargo build --release --package kreuzberg-cli --features api && \
+    cp target/release/kreuzberg /build/kreuzberg && \
+    strip /build/kreuzberg
+
+# =============================================================================
+# Runtime Stage - Minimal runtime environment
+# =============================================================================
+FROM debian:trixie-slim
+
+WORKDIR /app
+
+# Download and install dependencies
+ARG PANDOC_VERSION=3.6.3
+ARG LIBREOFFICE_VERSION=25.8.2
+ARG TARGETARCH
+
+# Install runtime dependencies and download binaries
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        tesseract-ocr-osd \
+        tesseract-ocr-spa \
+        tesseract-ocr-fra \
+        tesseract-ocr-deu \
+        tesseract-ocr-ita \
+        tesseract-ocr-por \
+        tesseract-ocr-chi-sim \
+        tesseract-ocr-chi-tra \
+        tesseract-ocr-jpn \
+        tesseract-ocr-ara \
+        tesseract-ocr-rus \
+        tesseract-ocr-hin \
+        fontconfig \
+        libxinerama1 \
+        libgl1 \
+        libxrender1 \
+        libsm6 \
+        && \
+    # Download and install Pandoc (arch-aware)
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        PANDOC_ARCH="arm64"; \
+        LO_ARCH="aarch64"; \
+        LO_FILE_ARCH="aarch64"; \
+    else \
+        PANDOC_ARCH="amd64"; \
+        LO_ARCH="x86_64"; \
+        LO_FILE_ARCH="x86-64"; \
+    fi && \
+    curl -fL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-${PANDOC_ARCH}.tar.gz" \
+        -o /tmp/pandoc.tar.gz && \
+    tar -xzf /tmp/pandoc.tar.gz -C /tmp && \
+    cp /tmp/pandoc-${PANDOC_VERSION}/bin/pandoc /usr/local/bin/ && \
+    rm -rf /tmp/pandoc* && \
+    # Download and install LibreOffice (arch-aware)
+    curl -fL "https://download.documentfoundation.org/libreoffice/stable/${LIBREOFFICE_VERSION}/deb/${LO_ARCH}/LibreOffice_${LIBREOFFICE_VERSION}_Linux_${LO_FILE_ARCH}_deb.tar.gz" \
+        -o /tmp/libreoffice.tar.gz && \
+    mkdir -p /tmp/libreoffice && \
+    tar -xzf /tmp/libreoffice.tar.gz -C /tmp/libreoffice --strip-components=1 && \
+    dpkg -i /tmp/libreoffice/DEBS/*.deb || apt-get install -f -y && \
+    rm -rf /tmp/libreoffice* && \
+    # Clean up
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Copy pdfium library from builder
+COPY --from=builder /build/pdfium/lib/libpdfium.so /usr/local/lib/
+RUN ldconfig
+
+# Copy binary from builder
+COPY --from=builder /build/kreuzberg /usr/local/bin/kreuzberg
+RUN chmod +x /usr/local/bin/kreuzberg
+
+# Create non-root user
+RUN groupadd -r kreuzberg && \
+    useradd -r -g kreuzberg -d /app -s /sbin/nologin kreuzberg && \
+    mkdir -p /app/.kreuzberg && \
+    chown -R kreuzberg:kreuzberg /app
+
+# Environment configuration
+ENV KREUZBERG_CACHE_DIR=/app/.kreuzberg \
+    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata \
+    RUST_LOG=info \
+    LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
+
+USER kreuzberg
+
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD ["/usr/local/bin/kreuzberg", "--version"]
+
+# Set kreuzberg as entrypoint for flexible command usage
+# Default: Start API server (can be overridden for CLI or MCP mode)
+ENTRYPOINT ["kreuzberg"]
+CMD ["serve", "--host", "0.0.0.0", "--port", "8000"]
