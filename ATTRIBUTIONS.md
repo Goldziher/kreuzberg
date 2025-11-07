@@ -1,21 +1,40 @@
-# Third-Party Attributions
+# Third-Party Code Attributions
 
-This file contains attributions for third-party code, data, and libraries used in Kreuzberg.
+This file documents third-party code that has been vendored, adapted, or incorporated into Kreuzberg.
 
-## Stopwords Data
+---
 
-The stopwords data in `kreuzberg/_token_reduction/stop_words.json` is derived from the [stopwords-iso](https://github.com/stopwords-iso/stopwords-iso) project.
+## pptx-to-md
 
-**Original Author:** Gene Diaz and contributors
-**License:** MIT License
-**Source:** <https://github.com/stopwords-iso/stopwords-iso>
+**Original Project**: pptx-to-md (pptx-parser)
+**Repository**: https://github.com/nilskruthoff/pptx-parser
+**Version**: Based on v0.4.0 (July 2025)
+**Author**: Nils Kruthoff
+**License**: MIT OR Apache-2.0
+**Used in**: `crates/kreuzberg/src/extraction/pptx.rs`
 
-### MIT License (stopwords-iso)
+### Description
 
-```text
-MIT License
+PowerPoint (PPTX) parsing and extraction functionality. The original library provides comprehensive parsing of PPTX files including text, tables, lists, and embedded images.
 
-Copyright (c) stopwords-iso contributors
+### Modifications
+
+The code has been adapted and integrated into Kreuzberg with the following changes:
+
+- Integrated with Kreuzberg's error handling system (`KreuzbergError`)
+- Added custom Office metadata extraction using Kreuzberg's office metadata module
+- Integrated with Kreuzberg's image extraction pipeline (`ExtractedImage` types)
+- Adapted for Kreuzberg's configuration system (`ExtractionConfig`)
+- Modified to work with Kreuzberg's plugin architecture
+- Maintained core parsing logic for text, tables, lists, and images
+- Added streaming iterator support for memory-efficient processing
+
+### Original License
+
+#### MIT License
+
+```
+Copyright (c) 2025 Nils Kruthoff
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -36,12 +55,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Changes Made
+#### Apache License 2.0
 
-The original stopwords-iso data was used as-is with no modifications to the word lists themselves. The data was packaged into Kreuzberg's `_token_reduction` module for use in the token reduction feature.
+The original project is also licensed under Apache-2.0. The full text of the Apache License 2.0 can be found at: http://www.apache.org/licenses/LICENSE-2.0
 
-______________________________________________________________________
+---
 
-## Other Third-Party Dependencies
-
-All other third-party dependencies are listed in `pyproject.toml` with their respective licenses. This section is specifically for bundled/vendored code and data.
+*This file will be updated as additional third-party code is incorporated into the project.*
