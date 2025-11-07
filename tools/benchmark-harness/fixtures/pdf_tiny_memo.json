@@ -1,0 +1,11 @@
+{
+	"document": "../../../test_documents/pdfs/fake_memo.pdf",
+	"file_type": "pdf",
+	"file_size": 13312,
+	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "Tiny PDF memo - 13KB searchable text document",
+		"category": "pdf-tiny",
+		"size_class": "tiny"
+	}
+}

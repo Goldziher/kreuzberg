@@ -1,0 +1,10 @@
+{
+	"document": "../../../test_documents/web/simple_table.html",
+	"file_type": "html",
+	"file_size": 1490,
+	"expected_frameworks": ["kreuzberg", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "Simple HTML with table",
+		"category": "web"
+	}
+}

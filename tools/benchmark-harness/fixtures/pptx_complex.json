@@ -1,0 +1,11 @@
+{
+	"document": "../../../test_documents/presentations/powerpoint_sample.pptx",
+	"file_type": "pptx",
+	"file_size": 46080,
+	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "Complex PowerPoint presentation - 45KB slides with mixed content",
+		"category": "pptx-complex",
+		"size_class": "small"
+	}
+}
