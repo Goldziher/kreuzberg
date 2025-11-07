@@ -1,0 +1,13 @@
+[package]
+name = "e2e-rust"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+kreuzberg = { path = "../../crates/kreuzberg", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+tokio = { version = "1.48", features = ["macros", "rt-multi-thread"] }

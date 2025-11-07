@@ -1,0 +1,42 @@
+# frozen_string_literal: true
+
+# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength
+require_relative 'spec_helper'
+
+RSpec.describe 'html fixtures' do
+  it 'html_complex_layout' do
+    E2ERuby.run_fixture(
+      'html_complex_layout',
+      'web/taylor_swift.html',
+      nil,
+      requirements: [],
+      notes: nil,
+      skip_if_missing: true
+    ) do |result|
+      E2ERuby::Assertions.assert_expected_mime(
+        result,
+        ['text/html']
+      )
+      E2ERuby::Assertions.assert_min_content_length(result, 1_000)
+    end
+  end
+
+  it 'html_simple_table' do
+    E2ERuby.run_fixture(
+      'html_simple_table',
+      'web/simple_table.html',
+      nil,
+      requirements: [],
+      notes: nil,
+      skip_if_missing: true
+    ) do |result|
+      E2ERuby::Assertions.assert_expected_mime(
+        result,
+        ['text/html']
+      )
+      E2ERuby::Assertions.assert_min_content_length(result, 20)
+      E2ERuby::Assertions.assert_content_contains_all(result, ['|'])
+    end
+  end
+end
+# rubocop:enable RSpec/DescribeClass, RSpec/ExampleLength
