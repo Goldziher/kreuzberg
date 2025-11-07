@@ -1,0 +1,902 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build (e.g., v4.0.0-rc.1)"
+        required: true
+        type: string
+      dry_run:
+        description: "Prepare artifacts without publishing"
+        required: false
+        type: boolean
+        default: false
+      ref:
+        description: "Git ref (branch, tag, or commit) to build; defaults to the tag"
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ (github.event_name == 'workflow_dispatch' && (github.event.inputs.ref || github.event.inputs.tag)) || github.ref || github.run_id }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  PDFIUM_VERSION: "7455"
+
+jobs:
+  prepare:
+    name: Prepare metadata
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      ref: ${{ steps.meta.outputs.ref }}
+      dry_run: ${{ steps.meta.outputs.dry_run }}
+      checkout_ref: ${{ steps.meta.outputs.checkout_ref }}
+      target_sha: ${{ steps.meta.outputs.target_sha }}
+      matrix_ref: ${{ steps.meta.outputs.matrix_ref }}
+      is_tag: ${{ steps.meta.outputs.is_tag }}
+    steps:
+      - name: Validate tag and compute version
+        id: meta
+        run: |
+          event="${{ github.event_name }}"
+          if [[ "$event" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+            dry_run_input="${{ inputs.dry_run }}"
+            ref_input="${{ inputs.ref }}"
+          elif [[ "$event" == "repository_dispatch" ]]; then
+            tag="${{ github.event.client_payload.tag }}"
+            dry_run_input="${{ github.event.client_payload.dry_run }}"
+            ref_input="${{ github.event.client_payload.ref }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+            dry_run_input="false"
+            ref_input=""
+            if [[ "$tag" == *-pre* || "$tag" == *-rc* ]]; then
+              dry_run_input="true"
+            fi
+          fi
+          if [[ -z "$tag" ]]; then
+            echo "Release tag could not be determined" >&2
+            exit 1
+          fi
+          if [[ "$tag" != v* ]]; then
+            echo "Tag must start with 'v' (e.g., v4.0.0-rc.1)" >&2
+            exit 1
+          fi
+          version="${tag#v}"
+          if [[ -n "$ref_input" ]]; then
+            ref="$ref_input"
+          else
+            ref="refs/tags/${tag}"
+          fi
+          if [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+            checkout_ref="refs/heads/main"
+            target_sha="$ref"
+          elif [[ "$ref" =~ ^refs/ ]]; then
+            checkout_ref="$ref"
+            target_sha=""
+          else
+            checkout_ref="refs/heads/${ref}"
+            target_sha=""
+          fi
+          if [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+            matrix_ref="main"
+          elif [[ "$ref" =~ ^refs/heads/(.+)$ ]]; then
+            matrix_ref="${BASH_REMATCH[1]}"
+          elif [[ "$ref" =~ ^refs/tags/(.+)$ ]]; then
+            matrix_ref="${BASH_REMATCH[1]}"
+          else
+            matrix_ref="$ref"
+          fi
+          dry_run="$dry_run_input"
+
+          if [[ "$ref" =~ ^refs/tags/ ]]; then
+            is_tag="true"
+          else
+            is_tag="false"
+          fi
+
+          cat <<JSON > release-metadata.json
+          {
+            "tag": "$tag",
+            "version": "$version",
+            "ref": "$ref",
+            "checkout_ref": "$checkout_ref",
+            "target_sha": "$target_sha",
+            "matrix_ref": "$matrix_ref",
+            "dry_run": ${dry_run:-false},
+            "is_tag": $is_tag
+          }
+          JSON
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "dry_run=${dry_run:-false}" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$checkout_ref" >> "$GITHUB_OUTPUT"
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+          echo "matrix_ref=$matrix_ref" >> "$GITHUB_OUTPUT"
+          echo "is_tag=$is_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v5
+        with:
+          name: release-metadata
+          path: release-metadata.json
+          retention-days: 14
+
+  python-wheels:
+    name: Build Python wheels (${{ matrix.os }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Build wheels
+        uses: ./.github/actions/build-wheels
+        with:
+          python-version: "3.13"
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v5
+        with:
+          name: python-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+          retention-days: 14
+
+  python-sdist:
+    name: Build Python sdist
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13"
+          cache-prefix: python-sdist
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build sdist
+        working-directory: packages/python
+        run: uv run maturin sdist --out ../../dist/
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v5
+        with:
+          name: python-sdist
+          path: dist/*.tar.gz
+          retention-days: 14
+
+  node-bindings:
+    name: Build Node bindings (${{ matrix.settings.target }})
+    needs: prepare
+    runs-on: ${{ matrix.settings.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - os: macos-14
+            target: aarch64-apple-darwin
+            rust_target: ""
+            use_cross: false
+            use_napi_cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            rust_target: ""
+            use_cross: false
+            use_napi_cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            rust_target: x86_64-unknown-linux-musl
+            use_cross: true
+            use_napi_cross: false
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            rust_target: aarch64-unknown-linux-gnu
+            use_cross: false
+            use_napi_cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            rust_target: aarch64-unknown-linux-musl
+            use_cross: true
+            use_napi_cross: false
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf
+            rust_target: armv7-unknown-linux-gnueabihf
+            use_cross: false
+            use_napi_cross: true
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            rust_target: ""
+            use_cross: false
+            use_napi_cross: false
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            rust_target: aarch64-pc-windows-msvc
+            use_cross: false
+            use_napi_cross: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Rust target
+        if: ${{ matrix.settings.rust_target != '' }}
+        run: rustup target add ${{ matrix.settings.rust_target }}
+
+      - name: Install cross
+        if: ${{ matrix.settings.use_cross }}
+        run: cargo install cross --git https://github.com/cross-rs/cross --locked
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          check-latest: true
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install Node dependencies
+        run: pnpm install --filter kreuzberg-node...
+
+      - name: Clean npm directory
+        if: runner.os != 'Windows'
+        run: rm -rf crates/kreuzberg-node/npm
+
+      - name: Clean npm directory (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Remove-Item -Recurse -Force crates/kreuzberg-node\npm -ErrorAction SilentlyContinue
+
+      - name: Create npm package structure
+        run: pnpm --filter kreuzberg-node exec napi create-npm-dirs
+
+      - name: Build native module
+        if: runner.os != 'Windows'
+        env:
+          TARGET: ${{ matrix.settings.target }}
+          USE_CROSS: ${{ matrix.settings.use_cross }}
+          USE_NAPI_CROSS: ${{ matrix.settings.use_napi_cross }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--platform --release --target "$TARGET" --output-dir ./artifacts)
+          if [ "${USE_NAPI_CROSS}" = "true" ]; then
+            args+=(--use-napi-cross)
+          fi
+          if [ "${USE_CROSS}" = "true" ]; then
+            args+=(--use-cross)
+          fi
+          pnpm --filter kreuzberg-node exec napi build "${args[@]}"
+
+      - name: Build native module (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          TARGET: ${{ matrix.settings.target }}
+          USE_CROSS: ${{ matrix.settings.use_cross }}
+          USE_NAPI_CROSS: ${{ matrix.settings.use_napi_cross }}
+        run: |
+          $args = @('--platform', '--release', '--target', $env:TARGET, '--output-dir', './artifacts')
+          if ($env:USE_NAPI_CROSS -eq 'true') { $args += '--use-napi-cross' }
+          if ($env:USE_CROSS -eq 'true') { $args += '--use-cross' }
+          pnpm --filter kreuzberg-node exec napi build @args
+
+      - name: Package artifacts
+        if: runner.os != 'Windows'
+        env:
+          TARGET: ${{ matrix.settings.target }}
+        run: |
+          pnpm --filter kreuzberg-node exec napi artifacts --output-dir ./artifacts
+          test -d crates/kreuzberg-node/npm || { echo "npm artifact directory missing"; exit 1; }
+          tar -czf node-bindings-$TARGET.tar.gz -C crates/kreuzberg-node npm
+
+      - name: Package artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          TARGET: ${{ matrix.settings.target }}
+        run: |
+          pnpm --filter kreuzberg-node exec napi artifacts --output-dir ./artifacts
+          if (-Not (Test-Path crates/kreuzberg-node\npm)) { throw "npm artifact directory missing" }
+          tar -czf node-bindings-$env:TARGET.tar.gz -C crates/kreuzberg-node npm
+
+      - name: Upload Node artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: node-bindings-${{ matrix.settings.target }}
+          path: node-bindings-${{ matrix.settings.target }}.tar.gz
+          retention-days: 14
+
+  cli-binaries:
+    name: Build CLI binaries (${{ matrix.target }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            use_cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use_cross: false
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            use_cross: false
+          - os: macos-14
+            target: aarch64-apple-darwin
+            use_cross: false
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            use_cross: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Add compilation target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          case "${{ matrix.target }}" in
+            x86_64-unknown-linux-musl)
+              sudo apt-get install -y musl-tools
+              ;;
+            aarch64-unknown-linux-gnu)
+              sudo apt-get install -y gcc-aarch64-linux-gnu
+              ;;
+          esac
+
+      - name: Configure cross linker
+        if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
+        run: |
+          {
+            echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc"
+            echo "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++"
+            echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar"
+            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc"
+          } >> "$GITHUB_ENV"
+
+      - name: Build CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --release --target ${{ matrix.target }} --package kreuzberg-cli
+
+      - name: Package CLI artifact
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ matrix.target }}"
+          stage="kreuzberg-cli-${target}"
+          rm -rf "$stage"
+          mkdir -p "$stage"
+          cp "target/${target}/release/kreuzberg" "$stage/"
+          cp LICENSE "$stage/"
+          cp README.md "$stage/"
+          tar -czf "${stage}.tar.gz" "$stage"
+          rm -rf "$stage"
+
+      - name: Package CLI artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $target = '${{ matrix.target }}'
+          $stage = "kreuzberg-cli-$target"
+          Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          Copy-Item "target/$target/release/kreuzberg.exe" $stage
+          Copy-Item LICENSE $stage
+          Copy-Item README.md $stage
+          Compress-Archive -Path "$stage/*" -DestinationPath "$stage.zip" -Force
+          Remove-Item -Recurse -Force $stage
+
+      - name: Upload CLI artifact
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v5
+        with:
+          name: cli-${{ matrix.target }}
+          path: kreuzberg-cli-${{ matrix.target }}.tar.gz
+          retention-days: 14
+
+      - name: Upload CLI artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v5
+        with:
+          name: cli-${{ matrix.target }}
+          path: kreuzberg-cli-${{ matrix.target }}.zip
+          retention-days: 14
+
+  ruby-gem:
+    name: Build Ruby gem (${{ matrix.label }})
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux
+          - os: macos-14
+            label: macos-arm64
+          - os: windows-latest
+            label: windows-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      RB_SYS_CARGO_PROFILE: release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Install MSYS2 toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ridk exec pacman -S --needed --noconfirm base-devel mingw-w64-ucrt-x86_64-toolchain
+
+      - name: Install Rust (GNU on Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: rustup toolchain install stable-gnu --profile minimal --no-self-update
+
+      - name: Configure bindgen sysroot (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "BINDGEN_EXTRA_CLANG_ARGS=--target=x86_64-pc-windows-gnu --sysroot=${RI_DEVKIT//\\/\/}$MSYSTEM_PREFIX" >> "$GITHUB_ENV"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler: "2.5.12"
+          bundler-cache: false
+
+      - name: Install Ruby dependencies (Unix)
+        if: runner.os != 'Windows'
+        run: bundle _2.5.12_ install --jobs 4 --retry 3
+        working-directory: packages/ruby
+
+      - name: Install Ruby dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $gemdir = "$workspace/packages/ruby"
+          ridk exec bash -lc "cd $gemdir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle _2.5.12_ install --jobs 4 --retry 3"
+
+      - name: Build gem (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: packages/ruby
+        run: |
+          set -euo pipefail
+          bundle _2.5.12_ exec rake clean
+          bundle _2.5.12_ exec rake build
+
+      - name: Build gem (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $gemdir = "$workspace/packages/ruby"
+          ridk exec bash -lc "cd $gemdir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle _2.5.12_ exec rake clean && bundle _2.5.12_ exec rake build"
+
+      - name: Upload gem artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: rubygems-${{ matrix.label }}
+          path: packages/ruby/pkg/*.gem
+          retention-days: 14
+
+  cargo-packages:
+    name: Package Rust crates
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Package crates
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          cargo package -p kreuzberg --allow-dirty
+
+          cli_packaged=0
+          cli_status=0
+          cargo package -p kreuzberg-cli --allow-dirty --no-verify || cli_status=$?
+
+          if [ "$cli_status" -eq 0 ]; then
+            cli_packaged=1
+          else
+            echo "::warning::Skipping kreuzberg-cli crate packaging; kreuzberg ${RELEASE_VERSION:-unknown} is not yet available on crates.io."
+          fi
+
+          mkdir -p crate-artifacts
+          cp target/package/kreuzberg-*.crate crate-artifacts/
+          if [ "$cli_packaged" -eq 1 ]; then
+            cp target/package/kreuzberg-cli-*.crate crate-artifacts/
+          fi
+
+      - name: Upload crate packages
+        uses: actions/upload-artifact@v5
+        with:
+          name: cargo-crates
+          path: crate-artifacts/*.crate
+          retention-days: 14
+
+  create-release:
+    name: Create GitHub Release
+    needs: [prepare, python-wheels, python-sdist, node-bindings, cli-binaries, ruby-gem, cargo-packages]
+    if: ${{ needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Download CLI artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: cli-*
+          path: dist/cli
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ needs.prepare.outputs.tag }} \
+            --title "${{ needs.prepare.outputs.tag }}" \
+            --generate-notes
+
+      - name: Upload CLI binaries to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob
+          files=(dist/cli/kreuzberg-cli-*)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No CLI artifacts to upload" >&2
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            gh release upload ${{ needs.prepare.outputs.tag }} "$file" --clobber
+          done
+
+  publish-crates:
+    name: Publish crates.io packages
+    needs: [prepare, create-release]
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify Cargo.toml version matches tag
+        run: |
+          cargo_version=$(grep '^\[workspace.package\]' -A 10 Cargo.toml | grep '^version = ' | head -1 | sed -E 's/version = "(.*)"/\1/')
+          tag_version="${{ needs.prepare.outputs.version }}"
+          if [ "$cargo_version" != "$tag_version" ]; then
+            echo "Version mismatch! Cargo: $cargo_version, tag: $tag_version" >&2
+            exit 1
+          fi
+          echo "Cargo.toml version matches tag: $cargo_version"
+
+      - name: Check crates.io for existing release
+        id: crate_check
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import sys
+          import urllib.request
+          version = os.environ["VERSION"]
+          crates = [
+              ("kreuzberg", "core_exists"),
+              ("kreuzberg-cli", "cli_exists"),
+          ]
+          for crate, key in crates:
+              url = f"https://crates.io/api/v1/crates/{crate}"
+              try:
+                  with urllib.request.urlopen(url) as resp:
+                      data = json.load(resp)
+              except Exception as exc:
+                  print(f"::warning::{crate}: failed to query crates.io ({exc})", file=sys.stderr)
+                  exists = False
+              else:
+                  versions = [item.get("num") for item in data.get("versions", [])]
+                  exists = version in versions
+                  message = "already" if exists else "not yet"
+                  print(f"::notice::{crate} {version} {message} published", file=sys.stderr)
+              print(f"{key}={'true' if exists else 'false'}")
+          PY
+
+      - name: Publish kreuzberg
+        if: ${{ steps.crate_check.outputs.core_exists != 'true' }}
+        run: cargo publish -p kreuzberg --token ${{ secrets.CARGO_TOKEN }}
+
+      - name: Wait for indexing
+        if: ${{ steps.crate_check.outputs.core_exists != 'true' }}
+        run: sleep 30
+
+      - name: Publish kreuzberg-cli
+        if: ${{ steps.crate_check.outputs.cli_exists != 'true' }}
+        run: cargo publish -p kreuzberg-cli --token ${{ secrets.CARGO_TOKEN }}
+
+  publish-pypi:
+    name: Publish Python packages to PyPI
+    needs: [prepare, create-release]
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: python-wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: Download sdist artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: python-sdist
+          path: dist
+
+      - name: List artifacts
+        run: ls -R dist
+
+      - name: Publish to PyPI
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+
+      - name: Dry run summary
+        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        run: |
+          echo "Dry run requested; artifacts staged for PyPI:" >> $GITHUB_STEP_SUMMARY
+          ls -1 dist >> $GITHUB_STEP_SUMMARY
+
+  publish-rubygems:
+    name: Publish Ruby gems
+    needs: [prepare, create-release]
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Download Ruby gem artifacts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: rubygems-*
+          path: dist
+          merge-multiple: true
+
+      - name: Configure trusted publishing credentials
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        uses: rubygems/configure-rubygems-credentials@v1.0.0
+
+      - name: Publish gems
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          gems=($(ls kreuzberg-*.gem | sort))
+          if [ ${#gems[@]} -eq 0 ]; then
+            echo "No gem artifacts found" >&2
+            exit 1
+          fi
+          for gem in "${gems[@]}"; do
+            echo "Pushing ${gem}"
+            gem push "$gem"
+          done
+
+      - name: Dry run summary
+        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        working-directory: dist
+        run: |
+          echo "Dry run requested; gem artifacts ready:" >> $GITHUB_STEP_SUMMARY
+          ls -1 kreuzberg-*.gem >> $GITHUB_STEP_SUMMARY
+
+  publish-node:
+    name: Publish Node packages
+    needs: [prepare, create-release]
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Download Node artifacts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: node-bindings-*
+          path: node-artifacts
+          merge-multiple: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Prepare artifact directory
+        run: |
+          rm -rf crates/kreuzberg-node/npm
+          mkdir -p crates/kreuzberg-node
+          for pkg in node-artifacts/*.tar.gz; do
+            tar -xzf "$pkg" -C crates/kreuzberg-node
+          done
+
+      - name: Install workspace dependencies
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        run: pnpm install --filter kreuzberg-node...
+
+      - name: Pack platform packages
+        run: |
+          cd crates/kreuzberg-node/npm
+          for dir in */; do
+            if [ -f "$dir/package.json" ]; then
+              (cd "$dir" && npm pack && mv *.tgz ..)
+            fi
+          done
+
+      - name: Publish native binary packages
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for pkg in crates/kreuzberg-node/npm/*.tgz; do
+            echo "Publishing $pkg"
+            npm publish "$pkg" --access public --ignore-scripts
+          done
+
+      - name: Publish main Node package
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd crates/kreuzberg-node
+          pnpm publish --access public --no-git-checks
+
+  publish-homebrew:
+    name: Update Homebrew formula
+    needs: [prepare, create-release]
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract release info
+        id: release
+        run: |
+          tag="${{ needs.prepare.outputs.tag }}"
+          version="${{ needs.prepare.outputs.version }}"
+          url="https://github.com/Goldziher/kreuzberg/archive/$tag.tar.gz"
+
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "url=$url" >> $GITHUB_OUTPUT
+
+          echo "Release info:"
+          echo "  Tag: $tag"
+          echo "  Version: $version"
+          echo "  URL: $url"
+
+      - name: Update Homebrew formula
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          formula-name: kreuzberg
+          formula-path: Formula/kreuzberg.rb
+          homebrew-tap: Goldziher/homebrew-tap
+          download-url: ${{ steps.release.outputs.url }}
+          commit-message: |
+            chore(homebrew): update kreuzberg to ${{ steps.release.outputs.version }}
+
+            Auto-update from release ${{ steps.release.outputs.tag }}
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}
