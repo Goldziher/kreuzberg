@@ -364,7 +364,7 @@ class EasyOCRBackend:
     @staticmethod
     def _is_cuda_available() -> bool:
         try:
-            import torch  # type: ignore[import-not-found]  # noqa: PLC0415
+            import torch  # noqa: PLC0415
 
             return bool(torch.cuda.is_available())
         except ImportError:
