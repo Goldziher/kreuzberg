@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from PIL import Image
-
 from kreuzberg._types import ExtractionResult
 from kreuzberg._utils._ocr_cache import (
     build_cache_kwargs,
@@ -20,6 +18,7 @@ from kreuzberg._utils._ocr_cache import (
     handle_cache_lookup_sync,
     mark_processing_complete,
 )
+from PIL import Image
 
 if TYPE_CHECKING:
     from collections.abc import Generator

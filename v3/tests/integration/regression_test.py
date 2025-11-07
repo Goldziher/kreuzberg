@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 
 import pytest
-
 from kreuzberg import batch_extract_file, extract_file
 from kreuzberg._types import ExtractionConfig, PSMMode, TesseractConfig
 from kreuzberg.extraction import extract_file_sync

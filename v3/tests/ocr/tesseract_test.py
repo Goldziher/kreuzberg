@@ -6,14 +6,13 @@ from unittest.mock import Mock, patch
 
 import anyio
 import pytest
-from PIL import Image
-
 from kreuzberg import PSMMode
 from kreuzberg._ocr._tesseract import (
     TesseractBackend,
 )
 from kreuzberg._types import ExtractionResult
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
+from PIL import Image
 
 if TYPE_CHECKING:
     from PIL.ImageFont import FreeTypeFont

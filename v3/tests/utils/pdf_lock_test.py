@@ -6,7 +6,6 @@ import time
 from pathlib import Path
 
 import pytest
-
 from kreuzberg._utils._pdf_lock import (
     _get_file_key,
     _get_file_lock,

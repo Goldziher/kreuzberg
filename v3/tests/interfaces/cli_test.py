@@ -7,7 +7,6 @@ from unittest.mock import Mock, patch
 import click
 import pytest
 from click.testing import CliRunner
-
 from kreuzberg import ExtractionResult
 from kreuzberg.cli import (
     OcrBackendParamType,

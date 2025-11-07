@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from kreuzberg._chunker import get_chunker
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE
 from kreuzberg.exceptions import MissingDependencyError

@@ -5,14 +5,13 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
 import pytest
-from PIL import Image
-
 from kreuzberg import EasyOCRConfig
 from kreuzberg._ocr._easyocr import (
     EasyOCRBackend,
 )
 from kreuzberg._types import ExtractionResult
 from kreuzberg.exceptions import MissingDependencyError, OCRError, ValidationError
+from PIL import Image
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -164,16 +163,15 @@ def test_is_gpu_available() -> None:
 
 @pytest.mark.anyio
 async def test_init_easyocr_missing_dependency() -> None:
-    with patch("kreuzberg._ocr._easyocr.HAS_EASYOCR", False):
-        with patch("kreuzberg._ocr._easyocr.easyocr", None):
-            backend = EasyOCRBackend()
-            with pytest.raises(MissingDependencyError) as excinfo:
-                await backend._init_easyocr(language="en")
+    with patch("kreuzberg._ocr._easyocr.HAS_EASYOCR", False), patch("kreuzberg._ocr._easyocr.easyocr", None):
+        backend = EasyOCRBackend()
+        with pytest.raises(MissingDependencyError) as excinfo:
+            await backend._init_easyocr(language="en")
 
-            error_message = str(excinfo.value)
-            assert "easyocr" in error_message
-            assert "required" in error_message
-            assert "kreuzberg" in error_message
+        error_message = str(excinfo.value)
+        assert "easyocr" in error_message
+        assert "required" in error_message
+        assert "kreuzberg" in error_message
 
 
 @pytest.mark.anyio

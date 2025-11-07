@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 
 import polars as pl
 import pytest
-
 from kreuzberg._document_classification import (
     _get_translated_text,
     auto_detect_document_type,

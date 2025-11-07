@@ -6,12 +6,11 @@ from pathlib import Path as SyncPath
 from typing import TYPE_CHECKING, Any
 
 import pytest
-from python_calamine import CalamineWorkbook
-
 from kreuzberg import ExtractionResult, ParsingError
 from kreuzberg._extractors._spread_sheet import SpreadSheetExtractor
 from kreuzberg._mime_types import MARKDOWN_MIME_TYPE
 from kreuzberg.extraction import DEFAULT_CONFIG
+from python_calamine import CalamineWorkbook
 
 if sys.version_info < (3, 11):  # pragma: no cover
     from exceptiongroup import ExceptionGroup  # type: ignore[import-not-found]
@@ -20,9 +19,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
     from pathlib import Path
 
-    from pytest_mock import MockerFixture
-
     from kreuzberg._types import Metadata
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture

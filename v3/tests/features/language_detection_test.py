@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 import pytest
-
 from kreuzberg._language_detection import detect_languages
 from kreuzberg._types import LanguageDetectionConfig
 from kreuzberg.exceptions import MissingDependencyError
@@ -167,9 +166,8 @@ def test_detect_languages_exception_handling() -> None:
 
     mock_detect = Mock(side_effect=RuntimeError("Detection failed"))
 
-    with patch("fast_langdetect.detect", mock_detect):
-        with pytest.raises(RuntimeError):
-            detect_languages(text)
+    with patch("fast_langdetect.detect", mock_detect), pytest.raises(RuntimeError):
+        detect_languages(text)
 
 
 def test_detect_languages_multilingual_exception_handling() -> None:

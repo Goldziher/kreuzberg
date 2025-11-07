@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from kreuzberg._ocr._tesseract import TesseractBackend
 from kreuzberg._types import PSMMode, TesseractConfig
 

@@ -5,14 +5,13 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import pytest
-from PIL import Image
-
 from kreuzberg._ocr._tesseract import (
     TesseractProcessPool,
     _process_image_bytes_with_tesseract,
     _process_image_with_tesseract,
 )
 from kreuzberg._types import TesseractConfig
+from PIL import Image
 
 if TYPE_CHECKING:
     from pathlib import Path

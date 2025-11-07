@@ -5,7 +5,6 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg.extraction import DEFAULT_CONFIG
 

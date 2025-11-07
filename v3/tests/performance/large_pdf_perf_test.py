@@ -4,7 +4,6 @@ import os
 from typing import TYPE_CHECKING
 
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg.extraction import extract_file
 

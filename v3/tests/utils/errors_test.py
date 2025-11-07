@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
-
 from kreuzberg._utils._errors import (
     BatchExtractionResult,
     create_error_context,

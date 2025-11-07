@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
-
 from kreuzberg._types import ExtractionResult
 from kreuzberg._utils._cache import (
     KreuzbergCache,

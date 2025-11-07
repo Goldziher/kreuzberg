@@ -109,6 +109,7 @@ def _get_max_upload_size() -> int:
 
     Environment Variables:
         KREUZBERG_MAX_UPLOAD_SIZE: Maximum upload size in bytes (default: 1073741824 = 1GB)
+
     """
     default_size = 1024 * 1024 * 1024
     try:
@@ -126,6 +127,7 @@ def _is_opentelemetry_enabled() -> bool:
 
     Environment Variables:
         KREUZBERG_ENABLE_OPENTELEMETRY: Enable OpenTelemetry tracing (true/false) (default: true)
+
     """
     return os.environ.get("KREUZBERG_ENABLE_OPENTELEMETRY", "true").lower() in ("true", "1", "yes", "on")
 
@@ -189,6 +191,7 @@ def _create_dimension_tuple(width: int | None, height: int | None) -> tuple[int,
 
     Returns:
         Tuple of (width, height) if both values are not None, otherwise None
+
     """
     if width is not None and height is not None:
         return (width, height)
@@ -310,6 +313,7 @@ async def handle_files_upload(  # noqa: PLR0913
         image_ocr_min_height: Minimum image height for OCR eligibility
         image_ocr_max_width: Maximum image width for OCR eligibility
         image_ocr_max_height: Maximum image height for OCR eligibility
+
     """
     static_config = discover_config_cached()
 
@@ -375,6 +379,7 @@ async def health_check() -> HealthResponse:
 
     Returns:
         Simple status response indicating the API is operational
+
     """
     return {"status": "ok"}
 
@@ -388,6 +393,7 @@ async def get_configuration() -> ConfigurationResponse:
 
     Returns:
         Configuration data with status message
+
     """
     config = discover_config()
     if config is None:

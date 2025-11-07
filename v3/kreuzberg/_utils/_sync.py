@@ -49,6 +49,7 @@ async def run_taskgroup_batched(
 
     Returns:
         List of results in the same order as input tasks
+
     """
     if not async_tasks:
         return []

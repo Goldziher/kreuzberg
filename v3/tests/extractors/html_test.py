@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-
 from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg.extraction import DEFAULT_CONFIG
 

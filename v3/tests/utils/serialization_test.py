@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Any
 
 import pytest
-
 from kreuzberg._utils._serialization import (
     deserialize,
     encode_hook,

@@ -14,8 +14,6 @@ from unittest.mock import MagicMock, patch
 import anyio
 import polars as pl
 import pytest
-from PIL import Image
-
 from kreuzberg._gmft import (
     _extract_tables_in_process,
 )
@@ -27,6 +25,7 @@ from kreuzberg._gmft import (
 )
 from kreuzberg._types import GMFTConfig
 from kreuzberg.exceptions import ParsingError
+from PIL import Image
 
 if TYPE_CHECKING:
     from collections.abc import Generator

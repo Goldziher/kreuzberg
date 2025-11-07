@@ -1,7 +1,6 @@
 from typing import Any, cast
 
 import pytest
-
 from kreuzberg._extractors._pandoc import (
     BLOCK_PARA,
     META_BLOCKS,

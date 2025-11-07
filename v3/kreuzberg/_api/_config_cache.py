@@ -46,6 +46,7 @@ def discover_config_cached(search_path: Path | str | None = None) -> ExtractionC
 
     Returns:
         ExtractionConfig if found, None otherwise
+
     """
     search_path = Path.cwd() if search_path is None else Path(search_path)
 
@@ -126,6 +127,7 @@ def create_ocr_config_cached(
 
     Returns:
         Configured OCR config object
+
     """
     if not ocr_backend:
         return TesseractConfig()
@@ -166,6 +168,7 @@ def parse_header_config_cached(header_value: str) -> dict[str, Any]:
 
     Returns:
         Parsed configuration dictionary
+
     """
     return _cached_parse_header_config(header_value)
 

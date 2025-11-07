@@ -3,7 +3,6 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._types import ExtractedImage, ExtractionResult, ImageOCRResult

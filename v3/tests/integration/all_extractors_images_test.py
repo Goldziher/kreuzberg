@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._extractors._html import HTMLExtractor

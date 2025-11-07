@@ -36,6 +36,7 @@ def _validate_file_path(file_path: str) -> Path:
 
     Raises:
         ValidationError: If path traversal is detected or path is invalid
+
     """
     try:
         path = Path(file_path).resolve()
@@ -89,6 +90,7 @@ def _validate_base64_content(content_base64: str, context_info: str | None = Non
 
     Raises:
         ValidationError: If the base64 content is invalid
+
     """
     if not content_base64:
         raise ValidationError(

@@ -4,7 +4,6 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._types import ExtractedImage, ExtractionResult

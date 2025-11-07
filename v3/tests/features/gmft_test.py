@@ -9,8 +9,6 @@ from unittest.mock import AsyncMock, Mock, patch
 import numpy as np
 import polars as pl
 import pytest
-from PIL import Image
-
 from kreuzberg._gmft import (
     _dataframe_to_csv,
     _dataframe_to_markdown,
@@ -24,6 +22,7 @@ from kreuzberg._gmft import (
 )
 from kreuzberg._types import GMFTConfig, TableData
 from kreuzberg.exceptions import MissingDependencyError, ParsingError
+from PIL import Image
 
 
 def test_pandas_to_polars_with_none() -> None:

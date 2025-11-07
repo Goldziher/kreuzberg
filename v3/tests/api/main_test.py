@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from kreuzberg._api.main import exception_handler
 from kreuzberg.exceptions import OCRError, ParsingError, ValidationError
 
@@ -637,7 +636,6 @@ async def test_exception_handlers_registered() -> None:
 @pytest.mark.anyio
 async def test_msgspec_serialization_deterministic(test_client: AsyncTestClient[Any]) -> None:
     import msgspec
-
     from kreuzberg import ExtractionConfig
 
     config = ExtractionConfig(

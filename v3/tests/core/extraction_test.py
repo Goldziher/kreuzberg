@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from kreuzberg import ExtractionConfig, ExtractionResult, LanguageDetectionConfig
 from kreuzberg.exceptions import ValidationError
 from kreuzberg.extraction import (

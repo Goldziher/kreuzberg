@@ -1,5 +1,4 @@
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._structured import StructuredDataExtractor
 from kreuzberg._mime_types import JSON_MIME_TYPE, TOML_MIME_TYPE, YAML_MIME_TYPE

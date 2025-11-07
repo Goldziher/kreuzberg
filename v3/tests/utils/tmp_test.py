@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-
 from kreuzberg._utils._tmp import create_temp_file
 
 if TYPE_CHECKING:

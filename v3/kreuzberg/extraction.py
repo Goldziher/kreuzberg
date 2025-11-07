@@ -219,6 +219,7 @@ async def extract_bytes(content: bytes, mime_type: str, config: ExtractionConfig
 
     Returns:
         The extracted content and the mime type of the content.
+
     """
     mime_type = validate_mime_type(mime_type=mime_type)
     if extractor := ExtractorRegistry.get_extractor(mime_type=mime_type, config=config):
@@ -249,6 +250,7 @@ async def extract_file(
 
     Raises:
         ValidationError: If the file path or configuration is invalid.
+
     """
     cache = get_document_cache()
     path = Path(file_path)
@@ -296,6 +298,7 @@ async def batch_extract_file(
 
     Returns:
         A list of extraction results in the same order as the input paths.
+
     """
     if not file_paths:
         return []
@@ -345,6 +348,7 @@ async def batch_extract_bytes(
 
     Returns:
         A list of extraction results in the same order as the input contents.
+
     """
     if not contents:
         return []
@@ -390,6 +394,7 @@ def _attempt_basic_extraction(
 
     Returns:
         A basic ExtractionResult with whatever could be extracted
+
     """
     if (
         isinstance(original_error, (ValueError, TypeError, ValidationError))
@@ -502,6 +507,7 @@ def extract_bytes_sync(content: bytes, mime_type: str, config: ExtractionConfig 
 
     Returns:
         The extracted content and the mime type of the content.
+
     """
     mime_type = validate_mime_type(mime_type=mime_type)
     if extractor := ExtractorRegistry.get_extractor(mime_type=mime_type, config=config):
@@ -532,6 +538,7 @@ def extract_file_sync(
 
     Raises:
         ValidationError: If the file path or configuration is invalid.
+
     """
     cache = get_document_cache()
     path = Path(file_path)
@@ -589,6 +596,7 @@ def batch_extract_file_sync(
 
     Returns:
         A list of extraction results in the same order as the input paths.
+
     """
     if len(file_paths) <= 1:
         return [extract_file_sync(file_path=Path(file_path), mime_type=None, config=config) for file_path in file_paths]
@@ -637,6 +645,7 @@ def batch_extract_bytes_sync(
 
     Returns:
         A list of extraction results in the same order as the input contents.
+
     """
     if len(contents) <= 1:
         return [

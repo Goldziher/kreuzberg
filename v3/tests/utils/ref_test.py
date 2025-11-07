@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from kreuzberg._utils._ref import Ref
 
 

@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._html import HTMLExtractor
 from kreuzberg._extractors._pdf import PDFExtractor

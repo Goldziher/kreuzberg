@@ -78,6 +78,7 @@ class MissingDependencyError(KreuzbergError):
         Returns:
             MissingDependencyError: A customized error indicating the missing
             dependency and how to resolve it.
+
         """
         return MissingDependencyError(
             f"The package '{package_name}' is required to use {functionality}. You can install using the provided optional dependency group by installing `kreuzberg['{dependency_group}']`."

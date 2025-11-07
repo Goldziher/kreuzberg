@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import anyio
 import pytest
-
 from kreuzberg._utils._sync import (
     run_maybe_async,
     run_maybe_sync,
@@ -202,7 +201,7 @@ async def test_run_taskgroup_with_exception() -> None:
         await anyio.sleep(0.01)
         raise ValueError("Task failed")
 
-    with pytest.raises(BaseException) as exc_info:  # noqa: PT011
+    with pytest.raises(BaseException) as exc_info:
         await run_taskgroup(good_task(), bad_task())
 
     if hasattr(exc_info.value, "exceptions"):

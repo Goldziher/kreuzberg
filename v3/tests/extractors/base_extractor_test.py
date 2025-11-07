@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
 from kreuzberg._extractors._base import Extractor
 from kreuzberg._types import (
     ExtractedImage,

@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 import polars as pl
 import pytest
-
 from kreuzberg._utils._table import (
     enhance_table_markdown,
     export_table_to_csv,

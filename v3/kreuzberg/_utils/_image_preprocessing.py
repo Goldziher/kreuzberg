@@ -31,6 +31,7 @@ def calculate_optimal_dpi(
 
     Returns:
         Optimal DPI value that keeps image within max_dimension
+
     """
     width_inches = page_width / PDF_POINTS_PER_INCH
     height_inches = page_height / PDF_POINTS_PER_INCH
@@ -120,6 +121,7 @@ def normalize_image_dpi(
     Note:
         If auto_adjust_dpi is False, uses target_dpi directly.
         If True, calculates optimal DPI based on image dimensions and constraints.
+
     """
     original_width, original_height = image.size
     original_dpi, current_dpi = _extract_image_dpi(image)
@@ -231,6 +233,7 @@ def get_dpi_adjustment_heuristics(
 
     Returns:
         Dictionary with adjustment recommendations and rationale
+
     """
     recommendations: list[str] = []
     heuristics = {
@@ -295,6 +298,7 @@ def estimate_processing_time(
 
     Returns:
         Dictionary with time estimates in seconds
+
     """
     total_pixels = width * height
     megapixels = total_pixels / 1_000_000

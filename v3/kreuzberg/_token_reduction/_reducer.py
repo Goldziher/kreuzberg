@@ -141,6 +141,7 @@ def reduce_tokens(
 
     Raises:
         ValidationError: If inputs are invalid.
+
     """
     if config is None:
         raise ValidationError("Config cannot be None")
@@ -319,6 +320,7 @@ def _apply_stopword_reduction_plain(text: str, *, stopwords: set[str]) -> str:
     Args:
         text: Text to process
         stopwords: Pre-lowercased stopwords set for faster comparison
+
     """
     words = WORD_SPLIT_PATTERN.findall(text)
     if not words:
@@ -408,6 +410,7 @@ def get_reduction_stats(original: str, reduced: str) -> ReductionStats:
 
     Raises:
         ValidationError: If inputs are invalid.
+
     """
     if original is None:
         raise ValidationError("Original text cannot be None")

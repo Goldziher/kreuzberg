@@ -4,7 +4,6 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-
 from kreuzberg._api._config_cache import (
     clear_all_caches,
     create_gmft_config_cached,

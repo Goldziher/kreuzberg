@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg._config import (
     _build_ocr_config_from_cli,
@@ -467,9 +466,8 @@ def test_find_config_file_pyproject_toml_read_error(tmp_path: Path) -> None:
     config_file = tmp_path / "pyproject.toml"
     config_file.touch()
 
-    with patch("pathlib.Path.open", side_effect=OSError("Read error")):
-        with pytest.raises(ValidationError) as exc_info:
-            find_config_file(tmp_path)
+    with patch("pathlib.Path.open", side_effect=OSError("Read error")), pytest.raises(ValidationError) as exc_info:
+        find_config_file(tmp_path)
     assert "Failed to read pyproject.toml" in str(exc_info.value)
 
 
@@ -551,9 +549,8 @@ def test_discover_and_load_config(tmp_path: Path) -> None:
 
 
 def test_discover_and_load_config_not_found() -> None:
-    with patch("kreuzberg._config.find_config_file", return_value=None):
-        with pytest.raises(ValidationError) as exc_info:
-            discover_and_load_config()
+    with patch("kreuzberg._config.find_config_file", return_value=None), pytest.raises(ValidationError) as exc_info:
+        discover_and_load_config()
     assert "No configuration file found" in str(exc_info.value)
 
 

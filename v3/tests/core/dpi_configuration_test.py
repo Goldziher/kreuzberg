@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from PIL import Image
-
 from kreuzberg._types import ExtractionConfig
 from kreuzberg._utils._image_preprocessing import (
     calculate_optimal_dpi,
@@ -11,6 +9,7 @@ from kreuzberg._utils._image_preprocessing import (
     normalize_image_dpi,
 )
 from kreuzberg.exceptions import ValidationError
+from PIL import Image
 
 
 class TestDPIConfiguration:

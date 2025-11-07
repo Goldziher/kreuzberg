@@ -3,7 +3,6 @@ from __future__ import annotations
 from unittest.mock import Mock, patch
 
 import pytest
-
 from kreuzberg._playa import (
     extract_pdf_metadata,
     extract_pdf_metadata_sync,

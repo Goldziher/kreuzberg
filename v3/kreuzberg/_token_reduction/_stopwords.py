@@ -66,6 +66,7 @@ class StopwordsManager:
 
         Args:
             custom_stopwords: Additional stopwords per language.
+
         """
         self._custom_stopwords: dict[str, set[str]] = {}
 

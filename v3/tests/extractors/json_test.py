@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from kreuzberg import ExtractionConfig, JSONExtractionConfig
 from kreuzberg._extractors._structured import StructuredDataExtractor
 from kreuzberg._mime_types import JSON_MIME_TYPE

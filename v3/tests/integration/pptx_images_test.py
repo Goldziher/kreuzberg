@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg.extraction import extract_file
 

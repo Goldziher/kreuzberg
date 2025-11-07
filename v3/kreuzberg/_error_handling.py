@@ -21,6 +21,7 @@ def should_exception_bubble_up(exception: Exception, context: ErrorContextType =
 
     Returns:
         True if the exception should bubble up, False if it should be handled gracefully
+
     """
     if isinstance(exception, (SystemExit, KeyboardInterrupt, MemoryError, OSError, RuntimeError)):
         return True
@@ -94,6 +95,7 @@ def safe_feature_execution(
 
     Returns:
         Either the successful result or the default value
+
     """
     try:
         return execution_func()
@@ -134,6 +136,7 @@ def preserve_result_with_errors(
 
     Returns:
         The result with error information added to metadata
+
     """
     for error in errors:
         _add_processing_error(result, error)
@@ -157,6 +160,7 @@ def create_error_result(
 
     Returns:
         An ExtractionResult with error information
+
     """
     metadata: Metadata = {
         "error": f"Multiple processing errors occurred: {len(errors)} errors",

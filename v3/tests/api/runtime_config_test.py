@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from kreuzberg import ExtractionConfig, ExtractionResult
 from kreuzberg._api.main import merge_configs
 
@@ -269,12 +268,11 @@ async def test_extract_query_params_with_static_config(
 ) -> None:
     static_config = ExtractionConfig(chunk_content=False, max_chars=1000)
 
-    with patch("kreuzberg._api.main.discover_config", return_value=static_config):
-        with searchable_pdf.open("rb") as f:
-            response = await test_client.post(
-                "/extract?chunk_content=true&max_chars=200",
-                files=[("data", (searchable_pdf.name, f.read(), "application/pdf"))],
-            )
+    with patch("kreuzberg._api.main.discover_config", return_value=static_config), searchable_pdf.open("rb") as f:
+        response = await test_client.post(
+            "/extract?chunk_content=true&max_chars=200",
+            files=[("data", (searchable_pdf.name, f.read(), "application/pdf"))],
+        )
 
     assert response.status_code == 201
     data = response.json()

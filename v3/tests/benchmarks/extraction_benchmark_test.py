@@ -4,10 +4,10 @@ import os
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
 from kreuzberg import extract_file_sync
 from kreuzberg._types import ExtractionConfig, TesseractConfig
 from kreuzberg._utils._cache import clear_all_caches
+
 from tests.benchmarks.files_test import get_benchmark_files
 
 pytestmark = pytest.mark.skipif(

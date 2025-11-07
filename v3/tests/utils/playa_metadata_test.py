@@ -5,7 +5,6 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-
 from kreuzberg._playa import (
     _collect_document_permissions,
     _extract_author_metadata,

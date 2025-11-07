@@ -6,7 +6,6 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-
 from kreuzberg import ExtractionConfig, ExtractionResult
 from kreuzberg.extraction import (
     batch_extract_bytes,

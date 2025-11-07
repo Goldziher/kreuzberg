@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-
 from kreuzberg._token_reduction import StopwordsManager, get_reduction_stats, reduce_tokens
 from kreuzberg._types import TokenReductionConfig
 from kreuzberg.exceptions import ValidationError

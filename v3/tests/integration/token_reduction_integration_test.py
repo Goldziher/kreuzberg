@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Literal
 
 import pytest
-
 from kreuzberg import extract_bytes_sync
 from kreuzberg._types import ExtractionConfig, TokenReductionConfig
 

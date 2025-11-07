@@ -8,14 +8,14 @@ from unittest.mock import patch
 
 import polars as pl
 import pytest
-from PIL.Image import Image
-from pytest import MonkeyPatch
-
 from kreuzberg import ExtractionResult
 from kreuzberg._extractors._pdf import PDFExtractor
 from kreuzberg._types import ExtractionConfig
 from kreuzberg.exceptions import ParsingError
 from kreuzberg.extraction import DEFAULT_CONFIG
+from PIL.Image import Image
+from pytest import MonkeyPatch
+
 from tests.conftest import pdfs_with_tables
 
 if TYPE_CHECKING:

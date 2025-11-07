@@ -66,6 +66,7 @@ class ExtractorRegistry:
 
         Returns:
             An extractor instance if one supports the MIME type, None otherwise.
+
         """
         extractors: list[type[Extractor]] = [
             *cls._registered_extractors,
@@ -84,6 +85,7 @@ class ExtractorRegistry:
 
         Args:
             extractor: The extractor class to add to the registry.
+
         """
         cls._registered_extractors.append(extractor)
         cls.get_extractor.cache_clear()
@@ -94,6 +96,7 @@ class ExtractorRegistry:
 
         Args:
             extractor: The extractor class to remove from the registry.
+
         """
         try:
             cls._registered_extractors.remove(extractor)

@@ -242,7 +242,6 @@ def test_extraction_result_to_markdown() -> None:
 
 def test_extraction_result_table_export_methods() -> None:
     import polars as pl
-
     from kreuzberg._types import ExtractionResult, TableData
 
     df = pl.DataFrame({"name": ["Alice", "Bob"], "age": [25, 30]})
@@ -287,7 +286,6 @@ def test_extraction_config_to_dict_with_nested_objects() -> None:
 
 def test_json_extraction_config_post_init_validation() -> None:
     import pytest
-
     from kreuzberg._types import JSONExtractionConfig
     from kreuzberg.exceptions import ValidationError
 
@@ -310,7 +308,6 @@ def test_json_extraction_config_post_init_validation() -> None:
 
 def test_extraction_config_validation_errors() -> None:
     import pytest
-
     from kreuzberg._types import EasyOCRConfig, ExtractionConfig, TesseractConfig
     from kreuzberg.exceptions import ValidationError
 

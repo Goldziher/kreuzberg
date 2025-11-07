@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from PIL import Image
-
 from kreuzberg import extract_file
 from kreuzberg._types import ExtractionConfig
+from PIL import Image
 
 if TYPE_CHECKING:
     from pathlib import Path

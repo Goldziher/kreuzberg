@@ -3,7 +3,6 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._email import EmailExtractor
 from kreuzberg._mime_types import EML_MIME_TYPE, MSG_MIME_TYPE
@@ -271,20 +270,19 @@ def test_missing_mailparse_dependency() -> None:
 
 
 def test_email_with_html_body_without_html2text(email_extractor: EmailExtractor) -> None:
-    with patch("kreuzberg._extractors._email.html2text", None):
-        with patch("mailparse.EmailDecode.load") as mock_load:
-            mock_load.return_value = {
-                "from": "sender@example.com",
-                "to": "recipient@example.com",
-                "subject": "HTML Email",
-                "html": "<html><body><p>Hello <b>World</b> &amp; Friends</p></body></html>",
-            }
+    with patch("kreuzberg._extractors._email.html2text", None), patch("mailparse.EmailDecode.load") as mock_load:
+        mock_load.return_value = {
+            "from": "sender@example.com",
+            "to": "recipient@example.com",
+            "subject": "HTML Email",
+            "html": "<html><body><p>Hello <b>World</b> &amp; Friends</p></body></html>",
+        }
 
-            result = email_extractor.extract_bytes_sync(b"dummy")
+        result = email_extractor.extract_bytes_sync(b"dummy")
 
-            assert "Hello World & Friends" in result.content
-            assert "<p>" not in result.content
-            assert "&amp;" not in result.content
+        assert "Hello World & Friends" in result.content
+        assert "<p>" not in result.content
+        assert "&amp;" not in result.content
 
 
 def test_email_text_preferred_over_html(email_extractor: EmailExtractor) -> None:

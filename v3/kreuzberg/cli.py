@@ -53,6 +53,7 @@ def format_extraction_result(result: ExtractionResult, show_metadata: bool, outp
 
     Returns:
         Formatted string.
+
     """
     if output_format == "json":
         output_data: dict[str, Any] = {
@@ -236,6 +237,7 @@ def handle_error(error: Exception, verbose: bool) -> None:  # pragma: no cover
     Args:
         error: The exception to handle.
         verbose: Whether to show full stack trace.
+
     """
     if isinstance(error, MissingDependencyError):
         console.print(f"[red]Missing dependency:[/red] {error}", style="bold")

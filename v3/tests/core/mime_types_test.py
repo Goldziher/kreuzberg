@@ -5,7 +5,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
 from kreuzberg._mime_types import (
     DOCX_MIME_TYPE,
     EXCEL_MIME_TYPE,

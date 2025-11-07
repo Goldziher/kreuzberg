@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
 from kreuzberg import ExtractionConfig
 from kreuzberg._extractors._presentation import PresentationExtractor
 from kreuzberg.extraction import DEFAULT_CONFIG

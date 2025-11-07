@@ -3,7 +3,6 @@ from __future__ import annotations
 from unittest.mock import Mock, patch
 
 import pytest
-
 from kreuzberg._entity_extraction import (
     extract_entities,
     extract_keywords,
@@ -169,9 +168,8 @@ def test_extract_entities_mixed_patterns_and_spacy() -> None:
 def test_extract_entities_missing_spacy() -> None:
     text = "Test text"
 
-    with patch.dict("sys.modules", {"spacy": None}):
-        with pytest.raises(MissingDependencyError, match="spacy"):
-            extract_entities(text)
+    with patch.dict("sys.modules", {"spacy": None}), pytest.raises(MissingDependencyError, match="spacy"):
+        extract_entities(text)
 
 
 def test_extract_keywords_success() -> None:
@@ -211,9 +209,8 @@ def test_extract_keywords_runtime_error() -> None:
     mock_keybert_module = Mock()
     mock_keybert_module.KeyBERT = mock_keybert_class
 
-    with patch.dict("sys.modules", {"keybert": mock_keybert_module}):
-        with pytest.raises(RuntimeError):
-            extract_keywords(text)
+    with patch.dict("sys.modules", {"keybert": mock_keybert_module}), pytest.raises(RuntimeError):
+        extract_keywords(text)
 
 
 def test_extract_keywords_os_error() -> None:
@@ -252,9 +249,8 @@ def test_extract_keywords_value_error() -> None:
 def test_extract_keywords_missing_keybert() -> None:
     text = "Test text"
 
-    with patch.dict("sys.modules", {"keybert": None}):
-        with pytest.raises(MissingDependencyError, match="keybert"):
-            extract_keywords(text)
+    with patch.dict("sys.modules", {"keybert": None}), pytest.raises(MissingDependencyError, match="keybert"):
+        extract_keywords(text)
 
 
 def test_get_spacy_model_url() -> None:

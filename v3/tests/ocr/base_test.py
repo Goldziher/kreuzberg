@@ -4,10 +4,9 @@ from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
 import pytest
-from PIL import Image
-
 from kreuzberg._ocr._base import OCRBackend
 from kreuzberg._types import ExtractionResult
+from PIL import Image
 
 if TYPE_CHECKING:
     from pathlib import Path

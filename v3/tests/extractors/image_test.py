@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from kreuzberg._extractors._image import ImageExtractor
 from kreuzberg._types import ExtractionConfig, ExtractionResult
 from kreuzberg.exceptions import ValidationError

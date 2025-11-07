@@ -32,6 +32,7 @@ def get_spacy_model_url(model_name: str, version: str = "3.8.0") -> str:
 
     Returns:
         Direct download URL for the model
+
     """
     return f"https://github.com/explosion/spacy-models/releases/download/{model_name}-{version}/{model_name}-{version}-py3-none-any.whl"
 
@@ -44,6 +45,7 @@ async def install_spacy_model_with_uv(model_name: str) -> subprocess.CompletedPr
 
     Returns:
         Completed process result
+
     """
     model_url = get_spacy_model_url(model_name)
     return await run_sync(
@@ -63,6 +65,7 @@ async def install_spacy_model_with_spacy(model_name: str) -> bool:
 
     Returns:
         True if successful, False otherwise
+
     """
     try:
         import spacy.cli.download  # noqa: PLC0415

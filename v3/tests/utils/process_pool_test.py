@@ -5,8 +5,6 @@ from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
-from PIL import Image
-
 from kreuzberg._utils._process_pool import (
     _POOL_SIZE,
     _extract_pdf_images_worker,
@@ -17,6 +15,7 @@ from kreuzberg._utils._process_pool import (
     shutdown_process_pool,
     submit_to_process_pool,
 )
+from PIL import Image
 
 if TYPE_CHECKING:
     from pathlib import Path
