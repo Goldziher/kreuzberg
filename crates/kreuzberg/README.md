@@ -1,8 +1,12 @@
-# Kreuzberg
+# Kreuzberg (Rust Core)
 
 [![Crates.io](https://img.shields.io/crates/v/kreuzberg)](https://crates.io/crates/kreuzberg)
-[![Documentation](https://docs.rs/kreuzberg/badge.svg)](https://docs.rs/kreuzberg)
+[![PyPI](https://img.shields.io/pypi/v/kreuzberg)](https://pypi.org/project/kreuzberg/)
+[![npm](https://img.shields.io/npm/v/@goldziher/kreuzberg)](https://www.npmjs.com/package/@goldziher/kreuzberg)
+[![RubyGems](https://img.shields.io/gem/v/kreuzberg)](https://rubygems.org/gems/kreuzberg)
+[![docs.rs](https://docs.rs/kreuzberg/badge.svg)](https://docs.rs/kreuzberg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev)
 
 High-performance document intelligence library for Rust. Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats.
 
