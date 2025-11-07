@@ -477,7 +477,7 @@ impl OcrBackend for PythonOcrBackend {
             })?;
 
             // Convert Python result to Rust ExtractionResult
-            Python::attach(|py| dict_to_extraction_result(py, &result.bind(py)))
+            Python::attach(|py| dict_to_extraction_result(py, result.bind(py)))
         } else {
             // Fallback path: Use spawn_blocking for sync Python functions
             let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
@@ -586,7 +586,7 @@ impl OcrBackend for PythonOcrBackend {
                 })?;
 
                 // Convert Python result to Rust ExtractionResult
-                Python::attach(|py| dict_to_extraction_result(py, &result.bind(py)))
+                Python::attach(|py| dict_to_extraction_result(py, result.bind(py)))
             } else {
                 // Fallback path: Use spawn_blocking for sync Python functions
                 let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));

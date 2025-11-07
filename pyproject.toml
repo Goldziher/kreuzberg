@@ -3,6 +3,7 @@ dev = [
   "covdefaults>=2.3.0",
   "maturin>=1.9.6",
   "mypy>=1.18.2",
+  "numpy>=2.1",
   "prek>=0.2.13",
   "pytest>=8.4.2",
   "pytest-asyncio>=0.25.0",
@@ -11,6 +12,7 @@ dev = [
   "pytest-rerunfailures>=16.1",
   "pytest-timeout>=2.4.0",
   "ruff>=0.14.4",
+  "types-pillow>=10.2",
   "types-psutil>=7.0.0.20251001",
   "uv-bump",
 ]
@@ -219,6 +221,7 @@ strict = true
 module = [
   "keybert",
   "easyocr",
+  "paddle",
   "paddleocr",
   "kreuzberg._internal_bindings",
   "extractous",

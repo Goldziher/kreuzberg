@@ -22,8 +22,10 @@ impl NativeAdapter {
     ///
     /// NOTE: Cache is explicitly disabled for accurate benchmarking
     pub fn new() -> Self {
-        let mut config = ExtractionConfig::default();
-        config.use_cache = false; // Disable cache for benchmarking
+        let config = ExtractionConfig {
+            use_cache: false, // Disable cache for benchmarking
+            ..Default::default()
+        };
         Self { config }
     }
 

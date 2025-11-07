@@ -40,7 +40,7 @@ fn init_async_runtime() -> PyResult<()> {
         let event_loop = asyncio.call_method0("new_event_loop")?;
         asyncio.call_method1("set_event_loop", (event_loop.clone(),))?;
 
-        TASK_LOCALS.get_or_init(|| TaskLocals::new(event_loop.into()));
+        TASK_LOCALS.get_or_init(|| TaskLocals::new(event_loop));
 
         Ok(())
     })

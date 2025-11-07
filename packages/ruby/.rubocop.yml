@@ -39,16 +39,19 @@ Metrics/BlockLength:
   Exclude:
     - 'spec/**/*'
     - '*.gemspec'
+    - 'examples/**/*'
 
 Metrics/MethodLength:
   Max: 20
   Exclude:
     - 'spec/**/*'
+    - 'examples/**/*'
 
 Metrics/AbcSize:
   Max: 20
   Exclude:
     - 'spec/**/*'
+    - 'examples/**/*'
 
 Naming/FileName:
   Enabled: true

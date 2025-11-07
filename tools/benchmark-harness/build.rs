@@ -33,7 +33,7 @@ fn main() {
     };
 
     // Search for pdfium library in the kreuzberg build directories
-    if let Ok(entries) = fs::read_dir(&target_dir.join("build")) {
+    if let Ok(entries) = fs::read_dir(target_dir.join("build")) {
         for entry in entries.flatten() {
             if entry.file_name().to_string_lossy().starts_with("kreuzberg-") {
                 let pdfium_lib = entry.path().join("out/pdfium/lib").join(lib_name);

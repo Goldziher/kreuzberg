@@ -139,7 +139,8 @@ end
 # ============================================================================
 
 # Example ActiveJob for async processing in Rails
-class DocumentExtractionJob # < ApplicationJob
+# < ApplicationJob
+class DocumentExtractionJob
   # queue_as :default
 
   def perform(file_path)
@@ -274,34 +275,34 @@ def main
   puts '=== Basic Sync Extraction ==='
   basic_sync_extraction
 
-  puts "\n=== Basic Async Extraction (Blocks GVL) ==="
+  puts '\n=== Basic Async Extraction (Blocks GVL) ==='
   basic_async_extraction
 
-  puts "\n=== Concurrent with Ruby Threads ==="
+  puts '\n=== Concurrent with Ruby Threads ==='
   concurrent_with_threads
 
-  puts "\n=== Batch Processing (Preferred) ==="
+  puts '\n=== Batch Processing (Preferred) ==='
   batch_processing
 
-  puts "\n=== Extraction with Config ==="
+  puts '\n=== Extraction with Config ==='
   extraction_with_config
 
-  puts "\n=== Extract from Bytes ==='
+  puts '\n=== Extract from Bytes ==='
   extract_from_bytes
 
-  puts "\n=== Error Handling ==="
+  puts '\n=== Error Handling ==='
   error_handling
 
-  puts "\n=== Sequential Processing ==="
+  puts '\n=== Sequential Processing ==='
   sequential_processing
 
-  puts "\n=== Extraction with Timeout ==="
+  puts '\n=== Extraction with Timeout ==='
   extraction_with_timeout('large_document.pdf', 30)
 
-  puts "\n=== Custom PostProcessor ==="
+  puts '\n=== Custom PostProcessor ==='
   register_postprocessor
 
-  puts "\n=== Custom Validator ==="
+  puts '\n=== Custom Validator ==='
   register_validator
 end
 
