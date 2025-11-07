@@ -3,7 +3,7 @@ build-backend = "uv_build"
 requires = [ "uv-build" ]
 
 [project]
-name = "kreuzberg-v3"
+name = "kreuzberg"
 version = "3.21.0"
 description = "Document intelligence framework for Python - Extract text, metadata, and structured data from diverse file formats (v3 LTS)"
 readme = "README.md"
@@ -80,7 +80,7 @@ optional-dependencies.additional-extensions = [
   "tomli>=2; python_version<'3.11'",
 ]
 optional-dependencies.all = [
-  "kreuzberg-v3[additional-extensions,api,chunking,cli,crypto,document-classification,easyocr,entity-extraction,gmft,langdetect,paddleocr]",
+  "kreuzberg[additional-extensions,api,chunking,cli,crypto,document-classification,easyocr,entity-extraction,gmft,langdetect,paddleocr]",
 ]
 optional-dependencies.api = [
   "litestar[opentelemetry,standard,structlog]>=2.18",

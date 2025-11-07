@@ -44,7 +44,7 @@ cache-keys = [
 ]
 
 [tool.uv.workspace]
-members = [ "packages/python", "v3" ]
+members = [ "packages/python" ]
 
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }

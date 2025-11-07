@@ -56,7 +56,7 @@ pub fn extract_keywords_yake(text: &str, config: &KeywordConfig) -> Result<Vec<K
         })
         .map(|item| {
             let normalized_score = if item.score > 0.0 {
-                (1.0 / (1.0 + item.score)).clamp(0.0, 1.0)
+                (1.0_f64 / (1.0 + item.score)).clamp(0.0, 1.0)
             } else {
                 1.0
             };
