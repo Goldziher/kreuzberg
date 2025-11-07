@@ -182,16 +182,6 @@ jobs:
         with:
           version: 0.13.0
 
-      - name: Configure Zig toolchain for musl target
-        if: matrix.settings.use_zigbuild
-        run: |
-          {
-            echo "CC_x86_64_unknown_linux_musl=zig cc -target x86_64-linux-musl"
-            echo "CXX_x86_64_unknown_linux_musl=zig c++ -target x86_64-linux-musl"
-            echo "AR_x86_64_unknown_linux_musl=zig ar"
-            echo "RANLIB_x86_64_unknown_linux_musl=zig ranlib"
-          } >> "${GITHUB_ENV}"
-
       - name: Install cargo-zigbuild (Linux cross-compilation)
         if: matrix.settings.use_zigbuild
         run: cargo install cargo-zigbuild --locked

@@ -46,18 +46,6 @@ fn init_async_runtime() -> PyResult<()> {
     })
 }
 
-/// Get or initialize the global task locals
-pub(crate) fn get_task_locals() -> PyResult<&'static TaskLocals> {
-    TASK_LOCALS.get_or_try_init(|| {
-        Python::attach(|py| {
-            let asyncio = py.import("asyncio")?;
-            let event_loop = asyncio.call_method0("new_event_loop")?;
-            asyncio.call_method1("set_event_loop", (event_loop.clone(),))?;
-            Ok(TaskLocals::new(event_loop.into()))
-        })
-    })
-}
-
 /// Internal bindings module for Kreuzberg
 #[pymodule]
 fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
