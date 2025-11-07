@@ -1,0 +1,57 @@
+{
+	"name": "kreuzberg-node",
+	"version": "4.0.0-rc.1",
+	"description": "Kreuzberg document intelligence - Node.js native bindings",
+	"main": "index.js",
+	"types": "index.d.ts",
+	"repository": "https://github.com/Goldziher/kreuzberg",
+	"license": "MIT",
+	"keywords": [
+		"document",
+		"extraction",
+		"ocr",
+		"pdf",
+		"rust",
+		"napi",
+		"native"
+	],
+	"files": [
+		"index.js",
+		"*.cjs",
+		"*.d.ts",
+		"*.node",
+		"README.md"
+	],
+	"napi": {
+		"binaryName": "kreuzberg-node",
+		"targets": [
+			"x86_64-apple-darwin",
+			"aarch64-apple-darwin",
+			"x86_64-pc-windows-msvc",
+			"aarch64-pc-windows-msvc",
+			"x86_64-unknown-linux-gnu",
+			"x86_64-unknown-linux-musl",
+			"aarch64-unknown-linux-gnu",
+			"aarch64-unknown-linux-musl",
+			"armv7-unknown-linux-gnueabihf"
+		]
+	},
+	"engines": {
+		"node": ">= 18"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org/",
+		"access": "public"
+	},
+	"scripts": {
+		"artifacts": "napi artifacts",
+		"build": "napi build --platform --release",
+		"build:debug": "napi build --platform",
+		"universal": "napi universal",
+		"version": "napi version"
+	},
+	"devDependencies": {
+		"@napi-rs/cli": "^3.4.1",
+		"@types/node": "^24.10.0"
+	}
+}

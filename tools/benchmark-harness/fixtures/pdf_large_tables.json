@@ -1,0 +1,11 @@
+{
+	"document": "../../../test_documents/pdfs_with_tables/large.pdf",
+	"file_type": "pdf",
+	"file_size": 2621440,
+	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "Large PDF with extensive tables - 2.5MB comprehensive document",
+		"category": "pdf-tables",
+		"size_class": "large"
+	}
+}

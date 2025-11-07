@@ -1,0 +1,10 @@
+{
+	"document": "../../../test_documents/documents/lorem_ipsum.docx",
+	"file_type": "docx",
+	"file_size": 14336,
+	"expected_frameworks": ["kreuzberg", "docling", "markitdown", "unstructured"],
+	"metadata": {
+		"description": "Simple DOCX - Lorem ipsum text",
+		"category": "text"
+	}
+}

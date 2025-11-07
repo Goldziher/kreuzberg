@@ -1,0 +1,21 @@
+{
+	"id": "office_ppt_legacy",
+	"category": "office",
+	"description": "Legacy PowerPoint .ppt file requiring LibreOffice conversion.",
+	"document": {
+		"path": "legacy_office/simple.ppt",
+		"media_type": "application/vnd.ms-powerpoint",
+		"requires_external_tool": ["libreoffice"]
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.ms-powerpoint",
+		"min_content_length": 10
+	},
+	"skip": {
+		"requires_feature": ["libreoffice"],
+		"notes": "Skip if LibreOffice conversion is unavailable."
+	}
+}

@@ -1,0 +1,16 @@
+{
+	"id": "office_docx_fake",
+	"category": "office",
+	"description": "Simple DOCX document to verify baseline extraction.",
+	"document": {
+		"path": "documents/fake.docx",
+		"media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		"min_content_length": 20
+	}
+}

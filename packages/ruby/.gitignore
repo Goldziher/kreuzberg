@@ -1,0 +1,8 @@
+tmp/
+lib/*.bundle
+lib/*.dylib
+lib/*.so
+lib/*.dll
+lib/*.dylib
+lib/*.so
+lib/*.dll

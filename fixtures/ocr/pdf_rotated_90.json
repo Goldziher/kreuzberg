@@ -1,0 +1,27 @@
+{
+	"id": "ocr_pdf_rotated_90",
+	"category": "ocr",
+	"description": "Rotated page PDF requiring OCR to verify orientation handling.",
+	"document": {
+		"path": "pdfs/ocr_test_rotated_90.pdf",
+		"media_type": "application/pdf",
+		"requires_external_tool": ["tesseract"]
+	},
+	"extraction": {
+		"config": {
+			"ocr": {
+				"backend": "tesseract",
+				"language": "eng"
+			},
+			"force_ocr": true
+		}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 10
+	},
+	"skip": {
+		"requires_feature": ["tesseract"],
+		"notes": "Skip automatically when OCR backend is missing."
+	}
+}

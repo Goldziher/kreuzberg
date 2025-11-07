@@ -1,0 +1,12 @@
+{
+	"document": "../../../test_documents/pdfs/scanned.pdf",
+	"file_type": "pdf",
+	"file_size": 69632,
+	"expected_frameworks": ["kreuzberg"],
+	"metadata": {
+		"description": "Scanned PDF requiring OCR - 68KB non-searchable document",
+		"category": "pdf-scanned",
+		"size_class": "small",
+		"requires_ocr": true
+	}
+}

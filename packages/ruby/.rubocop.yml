@@ -1,0 +1,117 @@
+# frozen_string_literal: true
+
+require:
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'vendor/**/*'
+    - 'tmp/**/*'
+    - 'lib/**/*.bundle'
+    - 'ext/**/*'
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: single_quotes
+
+Style/StringLiteralsInInterpolation:
+  Enabled: true
+  EnforcedStyle: single_quotes
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: always
+
+Style/Documentation:
+  Enabled: false # We use YARD for documentation
+
+Layout/LineLength:
+  Max: 120
+  AllowedPatterns:
+    - '\A\s*#' # Allow long comment lines
+  Exclude:
+    - 'spec/**/*'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+    - '*.gemspec'
+    - 'examples/**/*'
+
+Metrics/MethodLength:
+  Max: 20
+  Exclude:
+    - 'spec/**/*'
+    - 'examples/**/*'
+
+Metrics/AbcSize:
+  Max: 20
+  Exclude:
+    - 'spec/**/*'
+    - 'examples/**/*'
+
+Naming/FileName:
+  Enabled: true
+  Exclude:
+    - 'Gemfile'
+    - 'Rakefile'
+
+RSpec/ExampleLength:
+  Max: 25
+
+RSpec/MultipleExpectations:
+  Max: 10
+
+RSpec/NestedGroups:
+  Max: 5
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/FilePath:
+  Enabled: false
+
+RSpec/PendingWithoutReason:
+  Enabled: false
+
+RSpec/LeakyConstantDeclaration:
+  Enabled: false
+
+RSpec/UnspecifiedException:
+  Enabled: false
+
+Lint/ConstantDefinitionInBlock:
+  Exclude:
+    - 'spec/**/*'
+
+RSpec/InstanceVariable:
+  Enabled: false
+
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
+Metrics/ParameterLists:
+  Max: 7
+  Exclude:
+    - 'lib/kreuzberg/config.rb'
+
+Metrics/CyclomaticComplexity:
+  Max: 7
+  Exclude:
+    - 'lib/kreuzberg/config.rb'
+
+RSpec/RepeatedExampleGroupBody:
+  Enabled: false
+
+RSpec/DescribeClass:
+  Enabled: false
+
+RSpec/PredicateMatcher:
+  Enabled: false
+
+# Disable Capybara/RSpec/PredicateMatcher due to crashes with rubocop-rspec 2.31.0
+Capybara/RSpec/PredicateMatcher:
+  Enabled: false

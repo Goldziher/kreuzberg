@@ -1,0 +1,28 @@
+{
+	"id": "ocr_image_hello_world",
+	"category": "ocr",
+	"description": "PNG image with visible English text for OCR validation.",
+	"document": {
+		"path": "images/test_hello_world.png",
+		"media_type": "image/png",
+		"requires_external_tool": ["tesseract"]
+	},
+	"extraction": {
+		"config": {
+			"ocr": {
+				"backend": "tesseract",
+				"language": "eng"
+			},
+			"force_ocr": true
+		}
+	},
+	"assertions": {
+		"expected_mime": "image/png",
+		"min_content_length": 5,
+		"content_contains_any": ["hello", "world"]
+	},
+	"skip": {
+		"requires_feature": ["tesseract"],
+		"notes": "Requires Tesseract OCR for image text extraction."
+	}
+}

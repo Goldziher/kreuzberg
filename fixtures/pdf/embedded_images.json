@@ -1,0 +1,19 @@
+{
+	"id": "pdf_embedded_images",
+	"category": "pdf",
+	"description": "PDF with embedded images should extract text and tables when present.",
+	"document": {
+		"path": "pdfs/embedded_images_tables.pdf",
+		"media_type": "application/pdf"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 50,
+		"tables": {
+			"min": 0
+		}
+	}
+}

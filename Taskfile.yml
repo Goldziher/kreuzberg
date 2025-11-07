@@ -1,50 +1,361 @@
 version: "3"
-
-env:
-  DOCKER_BUILDKIT: 1
-  BUILDKIT_PROGRESS: plain
-
+vars:
+  RUST_LOG: info
+  V3_TAG: v3.20.2
 tasks:
   setup:
-    desc: "Install dependencies with uv"
+    desc: Install dependencies for all languages
     cmds:
-      - uv sync --all-packages --all-extras --all-groups
-      - prek install && prek install --hook-type commit-msg
-
-  update:
-    desc: "Update the dependencies"
+      - task: python:install
+      - task: typescript:install
+      - task: ruby:install
+      - task: rust:build
+  lint:
+    desc: Run linters for all languages
     cmds:
-      - uv run uv-bump
-      - cd comparative-benchmarks && uv run uv-bump && cd -
-      - uv sync --all-packages --all-extras --all-groups --upgrade
-      - prek autoupdate
-
-  test:
-    desc: "Run tests with pytest"
+      - task: rust:check
+      - task: python:lint
+      - task: ruby:lint
+      - task: typescript:lint
+  rust:build:
+    desc: Build all Rust crates
+    cmds:
+      - cargo build --release --workspace
+  rust:test:
+    desc: Run all Rust tests
+    cmds:
+      - cargo test --workspace --release
+  rust:check:
+    desc: Check Rust code
+    cmds:
+      - cargo check --workspace
+      - cargo clippy --workspace -- -D warnings
+  rust:fmt:
+    desc: Format Rust code
+    cmds:
+      - cargo fmt --all
+  rust:doc:
+    desc: Generate Rust documentation
+    cmds:
+      - cargo doc --no-deps --open
+  rust:update:
+    desc: Update Rust dependencies
+    cmds:
+      - echo "Updating Rust dependencies..."
+      - cargo upgrade --incompatible
+      - cargo update
+  python:install:
+    desc: Install Python dependencies
+    dir: packages/python
+    cmds:
+      - uv sync --all-extras
+  python:test:
+    desc: Run Python tests
+    dir: packages/python
     cmds:
       - uv run pytest
-
-  test:cov:
-    desc: "Run tests with coverage"
+  python:test:coverage:
+    desc: Run Python tests with coverage
+    dir: packages/python
     cmds:
-      - uv run pytest --cov
-
-  lint:
-    desc: "Lint code with ruff and docs with markdownlint"
+      - uv run pytest --cov --cov-report=html
+  python:lint:
+    desc: Lint Python code
+    dir: packages/python
+    cmds:
+      - uv run ruff check
+      - uv run ruff format --check
+      - uv run mypy
+  python:format:
+    desc: Format Python code
+    dir: packages/python
+    cmds:
+      - uv run ruff check --fix
+      - uv run ruff format
+  python:build:
+    desc: Build Python wheel
+    dir: packages/python
+    cmds:
+      - maturin develop --release
+  python:update:
+    desc: Update Python dependencies
+    cmds:
+      - echo "Updating Python dependencies..."
+      - uv run uv-bump --pyproject-toml pyproject.toml
+      - uv run uv-bump --pyproject-toml packages/python/pyproject.toml
+      - uv run uv-bump --pyproject-toml v3/pyproject.toml
+      - uv sync --all-packages --all-extras --upgrade
+  ruby:install:
+    desc: Install Ruby dependencies
+    dir: packages/ruby
+    cmds:
+      - bundle install
+  ruby:build:
+    desc: Build Ruby extension
+    dir: packages/ruby
+    cmds:
+      - bundle exec rake compile
+  ruby:update:
+    desc: Update Ruby dependencies
+    dir: packages/ruby
+    cmds:
+      - bundle update
+  ruby:test:
+    desc: Run Ruby tests
+    dir: packages/ruby
+    cmds:
+      - bundle exec rspec
+  ruby:test:verbose:
+    desc: Run Ruby tests with detailed output
+    dir: packages/ruby
+    cmds:
+      - bundle exec rspec --format documentation --color
+  ruby:lint:
+    desc: Lint Ruby code
+    dir: packages/ruby
+    cmds:
+      - bundle exec rubocop
+  ruby:lint:fix:
+    desc: Auto-fix Ruby lint issues
+    dir: packages/ruby
+    cmds:
+      - bundle exec rubocop --autocorrect-all
+  ruby:console:
+    desc: Open Ruby console with Kreuzberg loaded
+    dir: packages/ruby
+    cmds:
+      - bundle exec pry -r ./lib/kreuzberg
+  typescript:install:
+    desc: Install TypeScript dependencies
+    dir: packages/typescript
+    cmds:
+      - pnpm install
+  typescript:build:
+    desc: Build TypeScript package
+    dir: packages/typescript
+    cmds:
+      - pnpm build
+  typescript:test:
+    desc: Run TypeScript tests
+    dir: packages/typescript
+    cmds:
+      - pnpm test
+  typescript:lint:
+    desc: Lint TypeScript code
+    dir: packages/typescript
+    cmds:
+      - pnpm lint
+  typescript:format:
+    desc: Format TypeScript code
+    dir: packages/typescript
+    cmds:
+      - pnpm format
+  typescript:update:
+    desc: Update TypeScript dependencies
+    cmds:
+      - echo "Updating TypeScript dependencies..."
+      - pnpm up --latest -r
+  e2e:rust:generate:
+    desc: Generate Rust E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang rust --fixtures fixtures
+        --output e2e
+  e2e:rust:fmt:
+    desc: Format generated Rust E2E sources
+    cmds:
+      - cargo fmt --manifest-path e2e/rust/Cargo.toml
+  e2e:rust:lint:
+    desc: Lint Rust E2E crate with clippy
+    cmds:
+      - cargo clippy -p e2e-rust -- -D warnings
+  e2e:rust:test:
+    desc: Run Rust E2E tests
+    cmds:
+      - cargo test -p e2e-rust --release
+  e2e:rust:verify:
+    desc: Regenerate and validate Rust E2E suite (generate + fmt + lint + test)
+    cmds:
+      - task: e2e:rust:generate
+      - task: e2e:rust:fmt
+      - task: e2e:rust:lint
+      - task: e2e:rust:test
+  e2e:python:generate:
+    desc: Generate Python E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang python --fixtures fixtures
+        --output e2e
+  e2e:python:lint:
+    desc: Lint generated Python E2E suite (ruff + mypy)
+    dir: packages/python
+    cmds:
+      - uv run ruff check ../../e2e/python/tests
+      - uv run ruff format ../../e2e/python/tests
+      - uv run ruff format --check ../../e2e/python/tests
+      - uv run mypy ../../e2e/python/tests
+  e2e:python:test:
+    desc: Run Python E2E tests
+    dir: packages/python
+    cmds:
+      - uv run pytest ../../e2e/python/tests
+  e2e:python:verify:
+    desc: Regenerate and validate Python E2E suite (generate + lint + test)
+    cmds:
+      - task: e2e:python:generate
+      - task: e2e:python:lint
+      - task: e2e:python:test
+  e2e:ts:generate:
+    desc: Generate TypeScript E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang typescript --fixtures
+        fixtures --output e2e
+      - pnpm biome format --write e2e/typescript/tests
+      - pnpm biome check e2e/typescript/tests
+  e2e:ts:lint:
+    desc: Lint generated TypeScript E2E suite (biome)
+    cmds:
+      - pnpm biome format --write e2e/typescript/tests
+      - pnpm biome check e2e/typescript/tests
+  e2e:ts:test:
+    desc: Run TypeScript E2E tests
+    dir: packages/typescript
+    cmds:
+      - pnpm --filter kreuzberg-node build
+      - pnpm vitest run --root ../../e2e/typescript/tests
+  e2e:ts:verify:
+    desc: Regenerate and validate TypeScript E2E suite (generate + lint + test)
+    cmds:
+      - task: e2e:ts:generate
+      - task: e2e:ts:lint
+      - task: e2e:ts:test
+  e2e:ruby:generate:
+    desc: Generate Ruby E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang ruby --fixtures fixtures --output e2e
+  e2e:ruby:lint:
+    desc: Lint generated Ruby E2E suite
+    dir: packages/ruby
+    cmds:
+      - bundle exec rubocop ../../e2e/ruby/spec
+  e2e:ruby:test:
+    desc: Run Ruby E2E tests
+    dir: packages/ruby
+    cmds:
+      - bundle exec rspec ../../e2e/ruby/spec
+  e2e:ruby:verify:
+    desc: Regenerate and validate Ruby E2E suite (generate + lint + test)
+    cmds:
+      - task: e2e:ruby:generate
+      - task: e2e:ruby:lint
+      - task: e2e:ruby:test
+  cli:build:
+    desc: Build CLI binary
+    cmds:
+      - cargo build --release --package kreuzberg-cli
+  cli:install:
+    desc: Install CLI binary
+    cmds:
+      - cargo install --path crates/kreuzberg-cli
+  dev:install:
+    desc: Install all dependencies
+    cmds:
+      - task: setup
+  dev:test:
+    desc: Run all tests
+    cmds:
+      - task: rust:test
+      - task: python:test
+      - task: ruby:test
+      - task: typescript:test
+  dev:lint:
+    desc: Lint all code
+    cmds:
+      - task: lint
+  dev:format:
+    desc: Format all code
+    cmds:
+      - task: rust:fmt
+      - task: python:format
+      - task: ruby:lint:fix
+      - task: typescript:format
+  pre-commit:install:
+    desc: Install pre-commit hooks
+    cmds:
+      - prek install
+      - prek install --hook-type commit-msg
+  pre-commit:run:
+    desc: Run pre-commit on all files
     cmds:
       - prek run --all-files
-
   docs:build:
-    desc: "Build documentation"
+    desc: Build documentation
     cmds:
       - uv run mkdocs build --clean --strict
-
   docs:serve:
-    desc: "Serve documentation locally"
+    desc: Serve documentation locally
     cmds:
       - uv run mkdocs serve
-
-  default:
-    desc: "Show available tasks"
+  docs:serve:versioned:
+    desc: Serve versioned documentation with mike
     cmds:
-      - task --list
+      - uv run mike serve
+  docs:deploy:v4:
+    desc: Deploy v4 documentation with mike
+    cmds:
+      - uv run mike deploy --update-aliases 4.0 latest
+      - uv run mike set-default latest
+  docs:deploy:v3:
+    desc: Deploy v3 documentation from tagged release
+    cmds:
+      - echo "Creating git worktree for v3 docs ({{.V3_TAG}})..."
+      - git worktree remove --force /tmp/kreuzberg-v3-build 2>/dev/null || true
+      - git worktree add /tmp/kreuzberg-v3-build {{.V3_TAG}}
+      - echo "Disabling social plugin (requires cairo)..."
+      - "sed -i.bak 's/^  - social$/  # - social/' /tmp/kreuzberg-v3-build/mkdocs.yaml"
+      - echo "Building and deploying v3 docs..."
+      - cd /tmp/kreuzberg-v3-build && uv sync --group doc && uv pip install mike
+      - cd /tmp/kreuzberg-v3-build && uv run mike deploy 3.0 v3
+      - echo "Cleaning up worktree..."
+      - git worktree remove --force /tmp/kreuzberg-v3-build || true
+  docs:deploy:all:
+    desc: Deploy both v3 and v4 documentation
+    cmds:
+      - task: docs:deploy:v4
+      - task: docs:deploy:v3
+  docs:publish:
+    desc: Publish documentation to GitHub Pages
+    cmds:
+      - uv run mike deploy --push 4.0 latest
+  update:
+    desc: Update all dependencies to latest versions
+    cmds:
+      - task: rust:update
+      - task: typescript:update
+      - task: ruby:update
+      - task: python:update
+      - "echo \"\u2713 All dependencies updated\""
+  clean:rust:
+    desc: Clean Rust build artifacts
+    cmds:
+      - cargo clean
+  clean:python:
+    desc: Clean Python build artifacts
+    dir: packages/python
+    cmds:
+      - rm -rf build/ dist/ *.egg-info .pytest_cache .ruff_cache .mypy_cache
+  clean:ruby:
+    desc: Clean Ruby build artifacts
+    dir: packages/ruby
+    cmds:
+      - rm -rf lib/*.bundle lib/*.so pkg/ tmp/
+  clean:typescript:
+    desc: Clean TypeScript build artifacts
+    dir: packages/typescript
+    cmds:
+      - rm -rf dist/ node_modules/
+  clean:
+    desc: Clean all build artifacts
+    cmds:
+      - task: clean:rust
+      - task: clean:python
+      - task: clean:ruby
+      - task: clean:typescript
