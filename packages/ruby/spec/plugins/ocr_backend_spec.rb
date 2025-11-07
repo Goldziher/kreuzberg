@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 RSpec.describe 'OCR Backend Plugin System' do
-  let(:test_image) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/images/invoice_image.png' }
+  let(:test_image) { test_document_path('images/invoice_image.png') }
 
   describe 'registering custom OCR backend' do
     it 'registers and uses custom OCR backend class' do

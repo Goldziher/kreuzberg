@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 RSpec.describe 'PostProcessor Plugin System' do
-  let(:test_pdf) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/text/contract_test.txt' }
+  let(:test_pdf) { test_document_path('text/contract_test.txt') }
 
   after do
     Kreuzberg.clear_post_processors

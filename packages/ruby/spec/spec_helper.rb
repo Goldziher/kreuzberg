@@ -28,6 +28,11 @@ RSpec.configure do |config|
       File.join(__dir__, 'fixtures', filename)
     end
 
+    def test_document_path(relative_path)
+      # Go up from packages/ruby/spec to project root, then into test_documents
+      File.join(__dir__, '..', '..', '..', 'test_documents', relative_path)
+    end
+
     def create_test_file(content, filename: 'test.txt')
       path = File.join(Dir.tmpdir, filename)
       File.write(path, content)

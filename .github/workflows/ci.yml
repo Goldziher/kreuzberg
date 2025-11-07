@@ -620,7 +620,7 @@ jobs:
           version: '3.45.4'
 
       - name: Run validation (prek)
-        run: task lint
+        run: task rust:check && task python:lint
 
   rust-unit:
     name: Rust Unit Tests (${{ matrix.target }})

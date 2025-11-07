@@ -4,10 +4,10 @@ require 'spec_helper'
 
 RSpec.describe 'Byte Extraction APIs' do
   let(:test_pdf) do
-    '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf'
+    test_document_path('pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf')
   end
-  let(:test_text) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/text/contract_test.txt' }
-  let(:test_docx) { '/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/documents/contract.docx' }
+  let(:test_text) { test_document_path('text/contract_test.txt') }
+  let(:test_docx) { test_document_path('documents/contract.docx') }
 
   describe 'extract_bytes_sync' do
     it 'extracts content from PDF bytes' do

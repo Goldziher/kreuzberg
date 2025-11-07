@@ -21,7 +21,7 @@ LICENSE
 tests/
 benchmarks/
 test_documents/
-tools/
+tools/benchmark-harness/
 
 # Python
 packages/python/
