@@ -55,6 +55,7 @@ uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
 target-version = "py310"
 line-length = 120
 src = [ "packages/python/*" ]
+extend-exclude = [ "benchmarks", "crates", "scripts", "v3" ]
 format.docstring-code-line-length = 120
 format.docstring-code-format = true
 lint.select = [ "ALL" ]
@@ -211,7 +212,7 @@ exclude_lines = [
 
 [tool.mypy]
 packages = [ "kreuzberg" ]
-exclude = [ "examples" ]
+exclude = [ "examples", "v3", "benchmarks", "crates" ]
 python_version = "3.10"
 implicit_reexport = false
 show_error_codes = true
@@ -228,5 +229,6 @@ module = [
   "docling.*",
   "markitdown",
   "unstructured.*",
+  "httpx",
 ]
 ignore_missing_imports = true
