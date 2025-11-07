@@ -1,0 +1,99 @@
+{
+	"name": "@goldziher/kreuzberg",
+	"version": "4.0.0-rc.1",
+	"description": "High-performance document intelligence library for TypeScript/Node.js. Extract text, metadata, and structured data from PDFs, Office documents, images, and 50+ formats. Powered by Rust core for 10-50x speed improvements.",
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		},
+		"./cli": {
+			"types": "./dist/cli.d.ts",
+			"import": "./dist/cli.mjs",
+			"require": "./dist/cli.js"
+		}
+	},
+	"bin": {
+		"kreuzberg": "./dist/cli.js"
+	},
+	"scripts": {
+		"build": "tsup",
+		"test": "pnpm test:unit && pnpm test:integration",
+		"test:unit": "vitest run tests/unit/",
+		"test:integration": "vitest run tests/integration/",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage tests/unit/ tests/integration/pdf.spec.ts tests/integration/ocr.spec.ts",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check src && oxlint src",
+		"lint:fix": "biome check --write src",
+		"format": "biome format --write src",
+		"clean": "rm -rf dist node_modules"
+	},
+	"keywords": [
+		"document-intelligence",
+		"document-extraction",
+		"text-extraction",
+		"pdf-extraction",
+		"ocr",
+		"pdf",
+		"docx",
+		"xlsx",
+		"pptx",
+		"office-documents",
+		"table-extraction",
+		"metadata-extraction",
+		"rust",
+		"napi",
+		"performance",
+		"typescript",
+		"nodejs",
+		"document-parsing",
+		"tesseract",
+		"markdown",
+		"html",
+		"xml"
+	],
+	"author": {
+		"name": "Na'aman Hirschfeld",
+		"email": "nhirschfeld@gmail.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Goldziher/kreuzberg"
+	},
+	"homepage": "https://kreuzberg.dev",
+	"bugs": {
+		"url": "https://github.com/Goldziher/kreuzberg/issues"
+	},
+	"license": "MIT",
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"dependencies": {
+		"kreuzberg-node": "workspace:*",
+		"which": "^5.0.0"
+	},
+	"optionalDependencies": {
+		"@gutenye/ocr-node": "^1.4.8",
+		"sharp": "^0.34.5"
+	},
+	"devDependencies": {
+		"@types/archiver": "^7.0.0",
+		"@types/node": "^24.10.0",
+		"@types/which": "^3.0.4",
+		"@vitest/coverage-v8": "^4.0.7",
+		"archiver": "^7.0.1",
+		"oxlint": "^1.26.0",
+		"tsup": "^8.5.0",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.7"
+	},
+	"engines": {
+		"node": ">=18"
+	}
+}
