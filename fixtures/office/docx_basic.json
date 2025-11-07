@@ -1,0 +1,16 @@
+{
+	"id": "office_docx_basic",
+	"category": "office",
+	"description": "DOCX document extraction baseline.",
+	"document": {
+		"path": "office/document.docx",
+		"media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		"min_content_length": 10
+	}
+}

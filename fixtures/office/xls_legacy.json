@@ -1,0 +1,16 @@
+{
+	"id": "office_xls_legacy",
+	"category": "office",
+	"description": "Legacy XLS spreadsheet to ensure backward compatibility.",
+	"document": {
+		"path": "spreadsheets/test_excel.xls",
+		"media_type": "application/vnd.ms-excel"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.ms-excel",
+		"min_content_length": 10
+	}
+}

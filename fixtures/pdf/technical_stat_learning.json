@@ -1,0 +1,22 @@
+{
+	"id": "pdf_technical_stat_learning",
+	"category": "pdf",
+	"description": "Technical statistical learning PDF requiring substantial extraction.",
+	"document": {
+		"path": "pdfs/an_introduction_to_statistical_learning_with_applications_in_r_islr_sixth_printing.pdf",
+		"media_type": "application/pdf"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 10000,
+		"content_contains_any": ["statistical", "regression", "learning"],
+		"metadata": {
+			"format_type": {
+				"eq": "pdf"
+			}
+		}
+	}
+}

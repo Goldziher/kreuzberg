@@ -1,0 +1,16 @@
+{
+	"id": "html_complex_layout",
+	"category": "html",
+	"description": "Large Wikipedia HTML page to validate complex conversion.",
+	"document": {
+		"path": "web/taylor_swift.html",
+		"media_type": "text/html"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "text/html",
+		"min_content_length": 1000
+	}
+}

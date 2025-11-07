@@ -1,0 +1,32 @@
+{
+	"id": "ocr_pdf_image_only_german",
+	"category": "ocr",
+	"description": "Image-only German PDF requiring OCR to extract text.",
+	"document": {
+		"path": "pdfs/image_only_german_pdf.pdf",
+		"media_type": "application/pdf",
+		"requires_external_tool": ["tesseract"]
+	},
+	"extraction": {
+		"config": {
+			"ocr": {
+				"backend": "tesseract",
+				"language": "eng"
+			},
+			"force_ocr": true
+		}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 20,
+		"metadata": {
+			"format_type": {
+				"eq": "pdf"
+			}
+		}
+	},
+	"skip": {
+		"requires_feature": ["tesseract"],
+		"notes": "Skip if OCR backend unavailable."
+	}
+}
