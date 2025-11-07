@@ -1,0 +1,34 @@
+[workspace]
+members = [
+    "crates/kreuzberg",
+    "crates/kreuzberg-py",
+    "crates/kreuzberg-rb",
+    "crates/kreuzberg-cli",
+    "crates/kreuzberg-node",
+    "tools/benchmark-harness",
+    "tools/e2e-generator",
+    "e2e/rust",
+]
+default-members = [
+    "crates/kreuzberg",
+    "crates/kreuzberg-cli",
+]
+resolver = "2"
+
+[workspace.package]
+version = "4.0.0-rc.1"
+edition = "2024"
+authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Goldziher/kreuzberg"
+homepage = "https://kreuzberg.dev"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
