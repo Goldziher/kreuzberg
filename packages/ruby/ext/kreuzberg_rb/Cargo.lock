@@ -680,6 +680,7 @@ dependencies = [
 name = "kreuzberg-rb"
 version = "4.0.0-rc.1"
 dependencies = [
+ "async-trait",
  "kreuzberg",
  "magnus",
  "serde_json",
