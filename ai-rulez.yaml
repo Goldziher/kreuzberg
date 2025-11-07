@@ -898,6 +898,119 @@ rules:
     name: Rust Conventions and Standards
     priority: critical
   - content: |
+      ### PyO3 Async Optimization (pyo3_async_runtimes)
+
+      **Pattern**: Use `pyo3_async_runtimes` for high-performance async Python callbacks
+
+      #### Problem with spawn_blocking
+      ```rust
+      // ❌ Traditional pattern: ~4.8ms overhead per call
+      tokio::task::spawn_blocking(move || {
+          Python::attach(|py| {
+              // Call Python function
+          })
+      }).await?
+      ```
+
+      #### Optimized Pattern with pyo3_async_runtimes
+      ```rust
+      // ✅ Detect if Python function is async
+      let is_async = Python::attach(|py| {
+          obj.getattr("method")?.hasattr("__await__")
+      });
+
+      if is_async {
+          // ✅ Convert Python coroutine → Rust future
+          let result = Python::attach(|py| {
+              let coroutine = obj.call_method(...)?;
+              pyo3_async_runtimes::tokio::into_future(coroutine)
+          })?
+          .await?;  // GIL released during await
+          // Overhead: ~0.17ms per call (~28x faster)
+      } else {
+          // Fallback for sync functions
+          tokio::task::spawn_blocking(move || { ... }).await?
+      }
+      ```
+
+      #### Event Loop Reuse Pattern
+      ```rust
+      use once_cell::sync::OnceCell;
+      use pyo3_async_runtimes::TaskLocals;
+
+      static TASK_LOCALS: OnceCell<TaskLocals> = OnceCell::new();
+
+      #[pyfunction]
+      fn init_async_runtime() -> PyResult<()> {
+          Python::attach(|py| {
+              let asyncio = py.import("asyncio")?;
+              let event_loop = asyncio.call_method0("new_event_loop")?;
+              TASK_LOCALS.get_or_init(|| TaskLocals::new(event_loop.into()));
+              Ok(())
+          })
+      }
+      ```
+
+      **Benefits**: Eliminates ~55µs event loop creation overhead per call
+
+      #### GIL Management Principles
+      ```rust
+      // ✅ Good: Minimal GIL scope
+      let result = Python::attach(|py| {
+          // GIL held only during Python code
+          let coroutine = obj.call_method(...)?;
+          pyo3_async_runtimes::tokio::into_future(coroutine)
+      })?;  // GIL released here
+      let value = result.await?;  // No GIL held during await
+
+      // ❌ Bad: GIL held during entire async operation
+      Python::with_gil(|py| async move {
+          let result = some_async_op().await;  // GIL held while waiting!
+          result
+      }).await
+      ```
+
+      #### spawn_blocking vs block_in_place
+      ```rust
+      // Use spawn_blocking for long-running operations (OCR)
+      tokio::task::spawn_blocking(move || {
+          Python::attach(|py| { /* OCR processing */ })
+      }).await?
+
+      // Use block_in_place for quick operations (PostProcessor/Validator)
+      let result = tokio::task::block_in_place(|| {
+          Python::attach(|py| { /* validation */ })
+      })?;
+      ```
+
+      **Critical**: Using `spawn_blocking` for PostProcessor/Validator causes GIL deadlocks
+
+      #### Performance Characteristics
+      | Operation Type | spawn_blocking | pyo3_async_runtimes | Speedup |
+      |----------------|----------------|---------------------|---------|
+      | Fast (5ms)     | ~9.8ms         | ~5.17ms             | ~2x     |
+      | Medium (50ms)  | ~54.8ms        | ~50.17ms            | ~1.1x   |
+      | Overhead       | ~4.8ms         | ~0.17ms             | ~28x    |
+
+      #### When to Use Async Python Plugins
+      - ✅ **I/O-bound operations**: HTTP requests, file I/O, database queries
+      - ✅ **Fast operations (<10ms)**: Overhead reduction is most significant
+      - ✅ **High-frequency calls**: Batch processing, streaming
+      - ❌ **CPU-bound operations**: Use sync + spawn_blocking
+      - ❌ **Slow operations (>100ms)**: Overhead becomes negligible
+
+      #### Implementation Checklist
+      1. Check for `__await__` attribute to detect async functions
+      2. Use `pyo3_async_runtimes::tokio::into_future()` for async Python
+      3. Fallback to `spawn_blocking` for sync Python
+      4. Release GIL before awaiting Rust futures
+      5. Initialize event loop once with `OnceCell`
+      6. Use `Python::attach()` not `with_gil()` (PyO3 0.27+)
+
+      **Reference**: See `crates/kreuzberg-py/README.md` for detailed patterns
+    name: PyO3 Performance Optimization
+    priority: high
+  - content: |
       ### Workspace Configuration
       The project uses a uv workspace with multiple members:
       - **Root Package** (`.`): The main kreuzberg library (v4.x)

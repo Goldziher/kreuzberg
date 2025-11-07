@@ -12,13 +12,51 @@
 
 #![deny(unsafe_code)]
 
+use once_cell::sync::OnceCell;
 use pyo3::prelude::*;
+use pyo3_async_runtimes::TaskLocals;
 
 mod config;
 mod core;
 mod error;
 mod plugins;
 mod types;
+
+/// Global Python event loop task locals for async handlers
+/// Initialized once at startup to avoid ~55µs overhead per call
+static TASK_LOCALS: OnceCell<TaskLocals> = OnceCell::new();
+
+/// Initialize Python event loop for async plugin callbacks
+///
+/// This should be called once after Python initialization to set up
+/// the event loop that will be used for all async Python plugin calls.
+/// Avoids ~55µs overhead of creating event loops per call.
+///
+/// Based on spikard's high-performance async patterns.
+#[pyfunction]
+fn init_async_runtime() -> PyResult<()> {
+    Python::attach(|py| {
+        let asyncio = py.import("asyncio")?;
+        let event_loop = asyncio.call_method0("new_event_loop")?;
+        asyncio.call_method1("set_event_loop", (event_loop.clone(),))?;
+
+        TASK_LOCALS.get_or_init(|| TaskLocals::new(event_loop.into()));
+
+        Ok(())
+    })
+}
+
+/// Get or initialize the global task locals
+pub(crate) fn get_task_locals() -> PyResult<&'static TaskLocals> {
+    TASK_LOCALS.get_or_try_init(|| {
+        Python::attach(|py| {
+            let asyncio = py.import("asyncio")?;
+            let event_loop = asyncio.call_method0("new_event_loop")?;
+            asyncio.call_method1("set_event_loop", (event_loop.clone(),))?;
+            Ok(TaskLocals::new(event_loop.into()))
+        })
+    })
+}
 
 /// Internal bindings module for Kreuzberg
 #[pymodule]
@@ -74,6 +112,8 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(plugins::register_validator, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::unregister_validator, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::clear_validators, m)?)?;
+
+    m.add_function(wrap_pyfunction!(init_async_runtime, m)?)?;
 
     Ok(())
 }

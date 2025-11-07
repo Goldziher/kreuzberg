@@ -11,6 +11,7 @@ on:
       - 'crates/kreuzberg-node/**'
       - 'crates/kreuzberg-py/**'
       - 'crates/kreuzberg-rb/**'
+      - 'v3/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -36,6 +37,7 @@ on:
       - 'crates/kreuzberg-node/**'
       - 'crates/kreuzberg-py/**'
       - 'crates/kreuzberg-rb/**'
+      - 'v3/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -400,6 +402,46 @@ jobs:
 
       - name: Run mypy
         run: uv run mypy
+
+  v3-test:
+    name: V3 Tests (Python 3.10, ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      HF_HOME: ~/.cache/huggingface
+      TRANSFORMERS_CACHE: ~/.cache/huggingface
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check for v3 changes
+        id: check-v3
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^v3/'; then
+            echo "v3_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "v3_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Python environment
+        if: steps.check-v3.outputs.v3_changed == 'true'
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '3.10'
+
+      - name: Install system dependencies
+        if: steps.check-v3.outputs.v3_changed == 'true'
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install v3 dependencies
+        if: steps.check-v3.outputs.v3_changed == 'true'
+        working-directory: v3
+        run: uv sync --all-extras
+
+      - name: Run v3 tests
+        if: steps.check-v3.outputs.v3_changed == 'true'
+        working-directory: v3
+        run: uv run pytest -vv --reruns 1 --reruns-delay 1 tests/
 
   ruby-test:
     name: Ruby Tests (Ruby ${{ matrix.ruby-version }}, ${{ matrix.os }})

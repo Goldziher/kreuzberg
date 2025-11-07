@@ -2844,6 +2844,7 @@ version = "4.0.0-rc.1"
 dependencies = [
  "async-trait",
  "kreuzberg",
+ "once_cell",
  "pyo3",
  "pyo3-async-runtimes",
  "serde_json",
