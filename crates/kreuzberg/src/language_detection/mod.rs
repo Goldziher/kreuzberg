@@ -2,8 +2,6 @@
 //!
 //! Provides fast language detection for extracted text content.
 
-// TODO: move this file into its own folder - same as other features
-
 use crate::Result;
 use crate::core::config::LanguageDetectionConfig;
 use whatlang::{Lang, detect};

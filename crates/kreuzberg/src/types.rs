@@ -742,7 +742,6 @@ pub struct TesseractConfig {
 }
 
 impl Default for TesseractConfig {
-    // TODO: check for duplication - we have this in multiple places and should centralize
     fn default() -> Self {
         Self {
             language: "eng".to_string(),
