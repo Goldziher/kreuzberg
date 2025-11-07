@@ -20,8 +20,8 @@ This directory should contain real Microsoft Outlook MSG files for testing.
 
 1. **From Microsoft Outlook**: Drag and drop emails from Outlook to desktop
 1. **From GitHub repositories**:
-    - TeamMsgExtractor/msg-extractor (check example-msg-files directory)
-    - tutao/oxmsg (check test directories)
+   - TeamMsgExtractor/msg-extractor (check example-msg-files directory)
+   - tutao/oxmsg (check test directories)
 1. **Create programmatically**: Use libraries like msg-extractor or oxmsg
 1. **Download samples**: From file format documentation sites
 
