@@ -5,7 +5,9 @@ site_author: Kreuzberg Contributors
 repo_name: Goldziher/kreuzberg
 repo_url: https://github.com/Goldziher/kreuzberg
 edit_uri: edit/main/docs/
-copyright: Copyright &copy; 2023-2025 Kreuzberg Contributors
+copyright: |
+  Copyright &copy; 2023-2025 Kreuzberg Contributors<br>
+  <a href="#__consent">Change cookie settings</a>
 
 theme:
   name: material
@@ -14,24 +16,29 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: lime
+      primary: deep-purple
+      accent: cyan
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
-      accent: lime
+      primary: deep-purple
+      accent: cyan
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
   font:
-    text: Roboto
-    code: Roboto Mono
+    text: Inter
+    code: JetBrains Mono
   features:
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.prune
     - navigation.indexes
     - navigation.sections
     - navigation.tabs
@@ -43,6 +50,7 @@ theme:
     - search.share
     - search.suggest
     - toc.follow
+    - toc.integrate
     - announce.dismiss
   icon:
     repo: fontawesome/brands/github
@@ -62,13 +70,15 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
-      linenums: true
+      linenums: false
       use_pygments: true
   - pymdownx.inlinehilite
   - pymdownx.keys
   - pymdownx.mark
   - pymdownx.smartsymbols
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -76,6 +86,10 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.tasklist:
       custom_checkbox: true
   - tables
@@ -85,14 +99,26 @@ markdown_extensions:
 
 plugins:
   - search
-  - social
+  # TODO: Add Algolia DocSearch for enhanced search
+  # Requires manual setup with Algolia DocSearch (https://docsearch.algolia.com/)
+  # Configuration format:
+  # - search:
+  #     lang: en
+  # Then add to extra section:
+  # extra:
+  #   search:
+  #     provider: algolia
+  #     api_key: YOUR_API_KEY
+  #     index_name: YOUR_INDEX_NAME
+  # - social  # Disabled: requires cairo library
+  - tags
   - minify:
       minify_html: true
   - mkdocstrings:
       default_handler: python
       handlers:
         python:
-          paths: [.]
+          paths: [packages/python]
           options:
             show_source: true
             show_root_heading: true
@@ -106,55 +132,77 @@ plugins:
   - git-revision-date-localized:
       enable_creation_date: true
       type: timeago
+      fallback_to_build_date: true
+      enable_creation_date: true
+      enabled: true
 
 extra:
+  # Announcement bar - uncomment and customize when needed
+  # announcement:
+  #   content: |
+  #     <strong>🎉 Kreuzberg v4.0 is now available!</strong> Check out the <a href="/migration/v3-to-v4">migration guide</a>.
+  #   dismiss: true
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/Goldziher/kreuzberg
+      name: View on GitHub
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/kreuzberg/
+      name: View on PyPI
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/goldziher/kreuzberg
+      name: View on Docker Hub
+    - icon: fontawesome/brands/npm
+      link: https://www.npmjs.com/package/kreuzberg
+      name: View on npm
+    - icon: fontawesome/brands/rust
+      link: https://crates.io/crates/kreuzberg
+      name: View on crates.io
   version:
     provider: mike
     default: latest
+  analytics:
+    provider: google
+    property: !ENV [GOOGLE_ANALYTICS_KEY, ""]
+  status:
+    new: Recently added
+    deprecated: Deprecated
+  repo:
+    stars: true
+    forks: true
 
 extra_css:
   - css/extra.css
 
 nav:
   - Home: index.md
-  - Getting Started:
-      - getting-started/index.md
-      - Installation: getting-started/installation.md
-      - Quick Start: getting-started/quick-start.md
-  - User Guide:
-      - user-guide/index.md
-      - Basic Usage: user-guide/basic-usage.md
-      - Extraction Configuration: user-guide/extraction-configuration.md
-      - Metadata Extraction: user-guide/metadata-extraction.md
-      - Content Chunking: user-guide/chunking.md
-      - OCR Configuration: user-guide/ocr-configuration.md
-      - OCR Backends: user-guide/ocr-backends.md
-      - Document Classification: user-guide/document-classification.md
-      - Supported Formats: user-guide/supported-formats.md
-      - Performance Analysis: advanced/performance.md
-      - MCP Server: user-guide/mcp-server.md
-      - API Server: user-guide/api-server.md
-      - Docker: user-guide/docker.md
-  - CLI Guide: cli.md
-  - Examples:
-      - examples/index.md
-      - Extraction Examples: examples/extraction-examples.md
+  - Installation: getting-started/installation.md
+  - Quick Start: getting-started/quickstart.md
+  - Features: features.md
+  - Concepts:
+      - Architecture: concepts/architecture.md
+      - Extraction Pipeline: concepts/extraction-pipeline.md
+      - Plugin System: concepts/plugin-system.md
+      - MIME Detection: concepts/mime-detection.md
+      - Performance: concepts/performance.md
+  - Guides:
+      - Extraction Basics: guides/extraction.md
+      - Configuration: guides/configuration.md
+      - OCR: guides/ocr.md
+      - Advanced Features: guides/advanced.md
+      - Docker Deployment: guides/docker.md
+      - Creating Plugins: guides/plugins.md
+  - CLI: cli/usage.md
+  - API Server: guides/api-server.md
   - API Reference:
-      - api-reference/index.md
-      - Extraction Functions: api-reference/extraction-functions.md
-      - Types: api-reference/types.md
-      - OCR Configuration: api-reference/ocr-configuration.md
-      - Extractor Registry: api-reference/extractor-registry.md
-      - Exceptions: api-reference/exceptions.md
-  - Advanced:
-      - advanced/index.md
-      - Performance Guide: advanced/performance.md
-      - Error Handling: advanced/error-handling.md
-      - Custom Hooks: advanced/custom-hooks.md
-      - Custom Extractors: advanced/custom-extractors.md
+      - Python: reference/api-python.md
+      - TypeScript: reference/api-typescript.md
+      - Rust: reference/api-rust.md
+      - Ruby: reference/api-ruby.md
+      - Configuration: reference/configuration.md
+      - Format Support: reference/formats.md
+      - Types: reference/types.md
+      - Errors: reference/errors.md
+  - Migration Guide: migration/v3-to-v4.md
+  - Changelog: changelog.md
   - Contributing: contributing.md
