@@ -59,7 +59,6 @@ pub struct TokenReducer {
     filter_pipeline: FilterPipeline,
     semantic_analyzer: Option<SemanticAnalyzer>,
     cjk_tokenizer: CjkTokenizer,
-    #[allow(dead_code)]
     language: String,
 }
 
@@ -88,6 +87,11 @@ impl TokenReducer {
             cjk_tokenizer: CjkTokenizer::new(),
             language,
         })
+    }
+
+    /// Get the language code being used for stopwords and semantic analysis.
+    pub fn language(&self) -> &str {
+        &self.language
     }
 
     pub fn reduce(&self, text: &str) -> String {

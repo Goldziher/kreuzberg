@@ -24,9 +24,7 @@ static MARKDOWN_LISTS_REGEX: Lazy<Regex> =
 pub struct FilterPipeline {
     config: Arc<TokenReductionConfig>,
     stopwords: AHashSet<String>,
-    #[allow(dead_code)]
     preserve_patterns: Vec<Regex>,
-    #[allow(dead_code)]
     language: String,
 }
 
@@ -144,6 +142,12 @@ impl FilterPipeline {
                 continue;
             }
 
+            // Check if word matches any preserve pattern
+            if self.should_preserve_word(word) {
+                filtered_words.push(word);
+                continue;
+            }
+
             if word.len() > 1 && word.bytes().all(|b| b.is_ascii_uppercase() || !b.is_ascii_alphabetic()) {
                 filtered_words.push(word);
                 continue;
@@ -191,7 +195,24 @@ impl FilterPipeline {
         filtered_words.join(" ")
     }
 
-    #[allow(dead_code)]
+    /// Get the language code for this filter pipeline.
+    ///
+    /// Primarily useful for testing and debugging to verify language configuration.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn language(&self) -> &str {
+        &self.language
+    }
+
+    /// Check if a word should be preserved based on configured patterns.
+    fn should_preserve_word(&self, word: &str) -> bool {
+        self.preserve_patterns.iter().any(|pattern| pattern.is_match(word))
+    }
+
+    /// Split a word into prefix (non-alphanumeric), core (alphanumeric), and suffix (non-alphanumeric).
+    ///
+    /// This is useful for handling punctuation-wrapped words like "(hello)" or "world!".
+    /// Currently used in tests; reserved for future word boundary-aware filtering.
+    #[cfg_attr(not(test), allow(dead_code))]
     fn split_word_boundaries(&self, word: &str) -> (String, String, String) {
         let chars: Vec<char> = word.chars().collect();
         let mut start = 0;
@@ -708,5 +729,207 @@ mod tests {
         assert!(restored.contains("`b`"));
         assert!(restored.contains("`c`"));
         assert_eq!(restored, "Text `a` and `b` and `c` here");
+    }
+
+    #[test]
+    fn test_preserve_patterns_regex() {
+        let config = TokenReductionConfig {
+            preserve_patterns: vec![
+                r"\b[A-Z]{2,}\b".to_string(),     // All caps words like "NASA", "HTTP"
+                r"\b\d+\.\d+\.\d+\b".to_string(), // Version numbers like "1.2.3"
+                r"@\w+".to_string(),              // Mentions like "@user"
+            ],
+            ..Default::default()
+        };
+
+        let config = Arc::new(config);
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "The NASA and HTTP protocols version 1.2.3 by @john";
+        let result = pipeline.remove_stopwords(input);
+
+        // Preserved patterns should remain
+        assert!(result.contains("NASA"));
+        assert!(result.contains("HTTP"));
+        assert!(result.contains("1.2.3"));
+        assert!(result.contains("@john"));
+
+        // Stopwords should be removed
+        assert!(!result.contains(" the "));
+        assert!(!result.contains(" and "));
+        assert!(!result.contains(" by "));
+    }
+
+    #[test]
+    fn test_language_specific_stopwords() {
+        // Test English stopwords
+        let config_en = Arc::new(TokenReductionConfig::default());
+        let pipeline_en = FilterPipeline::new(&config_en, "en").unwrap();
+        assert_eq!(pipeline_en.language(), "en");
+
+        let input_en = "the quick brown fox";
+        let result_en = pipeline_en.remove_stopwords(input_en);
+        assert!(!result_en.contains(" the "));
+
+        // Test German stopwords
+        let config_de = Arc::new(TokenReductionConfig::default());
+        let pipeline_de = FilterPipeline::new(&config_de, "de").unwrap();
+        assert_eq!(pipeline_de.language(), "de");
+
+        let input_de = "der schnelle braune fuchs";
+        let result_de = pipeline_de.remove_stopwords(input_de);
+        // "der" is a German stopword and should be removed
+        assert!(!result_de.contains(" der "));
+        assert!(result_de.contains("schnelle"));
+    }
+
+    #[test]
+    fn test_language_fallback_to_english() {
+        let config = Arc::new(TokenReductionConfig::default());
+
+        // Use an unsupported language - should fall back to English
+        let pipeline = FilterPipeline::new(&config, "unsupported_lang").unwrap();
+        assert_eq!(pipeline.language(), "unsupported_lang");
+
+        let input = "the quick brown fox";
+        let result = pipeline.remove_stopwords(input);
+
+        // Should use English stopwords as fallback
+        assert!(!result.contains(" the "));
+        assert!(result.contains("quick"));
+    }
+
+    #[test]
+    fn test_split_word_boundaries() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        // Test word with punctuation
+        let (prefix, core, suffix) = pipeline.split_word_boundaries("(hello)");
+        assert_eq!(prefix, "(");
+        assert_eq!(core, "hello");
+        assert_eq!(suffix, ")");
+
+        // Test word with trailing punctuation
+        let (prefix2, core2, suffix2) = pipeline.split_word_boundaries("world!");
+        assert_eq!(prefix2, "");
+        assert_eq!(core2, "world");
+        assert_eq!(suffix2, "!");
+
+        // Test word with leading punctuation
+        let (prefix3, core3, suffix3) = pipeline.split_word_boundaries("'test");
+        assert_eq!(prefix3, "'");
+        assert_eq!(core3, "test");
+        assert_eq!(suffix3, "");
+
+        // Test word with no punctuation
+        let (prefix4, core4, suffix4) = pipeline.split_word_boundaries("simple");
+        assert_eq!(prefix4, "");
+        assert_eq!(core4, "simple");
+        assert_eq!(suffix4, "");
+
+        // Test complex case
+        let (prefix5, core5, suffix5) = pipeline.split_word_boundaries("\"example!!!\"");
+        assert_eq!(prefix5, "\"");
+        assert_eq!(core5, "example");
+        assert_eq!(suffix5, "!!!\"");
+    }
+
+    #[test]
+    fn test_split_word_boundaries_edge_cases() {
+        let config = Arc::new(TokenReductionConfig::default());
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        // Only punctuation
+        let (prefix, core, suffix) = pipeline.split_word_boundaries("!!!");
+        assert_eq!(prefix, "!!!");
+        assert_eq!(core, "");
+        assert_eq!(suffix, "");
+
+        // Empty string
+        let (prefix2, core2, suffix2) = pipeline.split_word_boundaries("");
+        assert_eq!(prefix2, "");
+        assert_eq!(core2, "");
+        assert_eq!(suffix2, "");
+
+        // Single character
+        let (prefix3, core3, suffix3) = pipeline.split_word_boundaries("a");
+        assert_eq!(prefix3, "");
+        assert_eq!(core3, "a");
+        assert_eq!(suffix3, "");
+
+        // Unicode characters
+        let (prefix4, core4, suffix4) = pipeline.split_word_boundaries("(café)");
+        assert_eq!(prefix4, "(");
+        assert_eq!(core4, "café");
+        assert_eq!(suffix4, ")");
+    }
+
+    #[test]
+    fn test_custom_stopwords_with_preserve_patterns() {
+        use std::collections::HashMap;
+
+        let mut custom_stopwords = HashMap::new();
+        custom_stopwords.insert("en".to_string(), vec!["custom".to_string(), "stopword".to_string()]);
+
+        let config = TokenReductionConfig {
+            custom_stopwords: Some(custom_stopwords),
+            ..Default::default()
+        };
+
+        let config = Arc::new(config);
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "this is a custom stopword test";
+        let result = pipeline.remove_stopwords(input);
+
+        // Custom stopwords should be removed
+        assert!(!result.contains(" custom "));
+        assert!(!result.contains(" stopword "));
+        // Regular stopwords also removed
+        assert!(!result.contains(" is "));
+        assert!(!result.contains(" a "));
+        // Non-stopwords preserved
+        assert!(result.contains("test"));
+    }
+
+    #[test]
+    fn test_preserve_patterns_empty() {
+        let config = TokenReductionConfig {
+            preserve_patterns: vec![],
+            ..Default::default()
+        };
+
+        let config = Arc::new(config);
+        let pipeline = FilterPipeline::new(&config, "en").unwrap();
+
+        let input = "The quick brown fox";
+        let result = pipeline.remove_stopwords(input);
+
+        // With no preserve patterns, normal stopword removal applies
+        assert!(!result.contains(" The "));
+        assert!(result.contains("quick"));
+    }
+
+    #[test]
+    fn test_invalid_preserve_pattern() {
+        let config = TokenReductionConfig {
+            preserve_patterns: vec!["[invalid".to_string()],
+            ..Default::default()
+        };
+
+        let config = Arc::new(config);
+        let result = FilterPipeline::new(&config, "en");
+
+        // Should return validation error for invalid regex
+        assert!(result.is_err());
+        if let Err(e) = result {
+            match e {
+                KreuzbergError::Validation { message, .. } => {
+                    assert!(message.contains("Invalid regex pattern"));
+                }
+                _ => panic!("Expected ValidationError"),
+            }
+        }
     }
 }
