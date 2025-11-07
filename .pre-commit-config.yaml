@@ -1,79 +1,55 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
 repos:
-  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: v9.23.0
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.3.0
     hooks:
-      - id: commitlint
+      - id: conventional-pre-commit
         stages: [commit-msg]
-        additional_dependencies: ["@commitlint/config-conventional"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
-      - id: name-tests-test
-        args:
-          - --pytest
-        exclude: factories|test_utils|completion.py|test_data|docker_e2e.py|pandoc_helpers.py
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-toml
       - id: check-case-conflict
-      - id: detect-private-key
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.24.1
     hooks:
       - id: validate-pyproject
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 1.0.0
-    hooks:
-      - id: mdformat
-        exclude: ^test_documents
-        additional_dependencies:
-          - mdformat-mkdocs==4.1.0
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.45.0
-    hooks:
-      - id: markdownlint-fix
-        exclude: ^test_documents
-  - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.20.0
-    hooks:
-      - id: blacken-docs
-        args: ["--pyi", "--line-length", "130"]
-        exclude: tests/features/token_reduction_test.py
-        additional_dependencies:
-          - black==25.1.0
-  - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.6.2
-    hooks:
-      - id: prettier
-        exclude: ^tests|^.idea|^migrations|^.git|README.md|^docs
   - repo: https://github.com/tox-dev/pyproject-fmt
     rev: v2.11.0
     hooks:
       - id: pyproject-fmt
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.3.2 # Use the sha / tag you want to point at
+    hooks:
+      - id: biome-check
+  - repo: https://github.com/oxc-project/mirrors-oxlint
+    rev: v1.24.0
+    hooks:
+      - id: oxlint
+        args: ["--fix"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.3
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
       - id: ruff-format
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
     hooks:
-      - id: codespell
-        exclude: ^tests|^scripts|^kreuzberg/_tesseract|^kreuzberg/_mime_types|^test_documents
-        additional_dependencies:
-          - tomli==2.2.1
-  - repo: https://github.com/jsh9/pydoclint
-    rev: 0.8.1
+      - id: fmt
+      - id: cargo-check
+      - id: clippy
+  - repo: https://github.com/rubocop/rubocop
+    rev: v1.81.7
     hooks:
-      - id: pydoclint
-        args:
-          [
-            --style=google,
-            --check-return-types=False,
-            --arg-type-hints-in-docstring=False,
-          ]
-        exclude: ^benchmarks/|^kreuzberg/_|^tests/|^scripts/|^run_benchmarks\.py
+      - id: rubocop
+        args: ["--autocorrect", "--config", "packages/ruby/.rubocop.yml"]
+        files: ^packages/ruby/
   - repo: local
     hooks:
       - id: mypy
@@ -82,4 +58,4 @@ repos:
         require_serial: true
         language: system
         types: [python]
-        exclude: ^scripts/|^comparative-benchmarks/
+        exclude: ^scripts/|^examples/
