@@ -18,6 +18,10 @@ mod config;
 mod core;
 mod error;
 mod plugins;
+<<<<<<< HEAD
+=======
+mod structured;
+>>>>>>> f1ac478 (feat: add documentation and examples for structured extraction)
 mod types;
 
 /// Internal bindings module for Kreuzberg
@@ -75,5 +79,11 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(plugins::unregister_validator, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::clear_validators, m)?)?;
 
+<<<<<<< HEAD
+=======
+    // Structured extraction orchestrator
+    m.add_function(wrap_pyfunction!(structured::extract_structured_json, m)?)?;
+
+>>>>>>> f1ac478 (feat: add documentation and examples for structured extraction)
     Ok(())
 }

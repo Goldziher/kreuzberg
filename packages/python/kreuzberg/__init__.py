@@ -95,13 +95,10 @@ from kreuzberg.exceptions import (
 )
 from kreuzberg.postprocessors.protocol import PostProcessorProtocol
 from kreuzberg.types import Metadata
-<<<<<<< HEAD
-=======
 from kreuzberg.structured import (
     extract_structured_async,
     extract_structured,
 )
->>>>>>> f1ac478 (feat: add documentation and examples for structured extraction)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -147,11 +144,8 @@ __all__ = [
     "register_validator",
     "unregister_post_processor",
     "unregister_validator",
-<<<<<<< HEAD
-=======
     "extract_structured_async",
     "extract_structured",
->>>>>>> f1ac478 (feat: add documentation and examples for structured extraction)
 ]
 
 

@@ -1,1 +1,8 @@
-error: manifest path `C:\Users\amiku\Downloads\kreuzberg\Cargo.toml` does not exist
+error: invalid key
+  --> crates\kreuzberg-py\Cargo.toml:24:1
+   |
+24 | <<<<<<< HEAD
+   | ^
+   |
+error: failed to load manifest for workspace member `C:\Users\amiku\Downloads\kreuzberg\crates\kreuzberg-py`
+referenced by workspace at `C:\Users\amiku\Downloads\kreuzberg\Cargo.toml`
