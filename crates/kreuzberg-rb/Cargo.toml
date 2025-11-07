@@ -1,0 +1,30 @@
+[package]
+name = "kreuzberg-rb"
+version = "4.0.0-rc.1"
+edition = "2024"
+authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Goldziher/kreuzberg"
+homepage = "https://github.com/Goldziher/kreuzberg"
+documentation = "https://docs.rs/kreuzberg"
+readme = "README.md"
+description = "Ruby bindings (Magnus) for Kreuzberg - high-performance document intelligence framework"
+keywords = ["document", "extraction", "ocr", "pdf", "ruby"]
+categories = ["api-bindings"]
+
+[lib]
+name = "kreuzberg_rb"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+
+[dependencies]
+async-trait = "0.1"
+kreuzberg = { version = "4.0.0-rc.1", path = "../kreuzberg", features = ["full"] }
+magnus = { git = "https://github.com/matsadler/magnus", rev = "f6db11769efb517427bf7f121f9c32e18b059b38", features = ["rb-sys"] }
+serde_json = "1.0"
+tokio = { version = "1.48", features = ["rt", "macros"] }
+
+[dev-dependencies]
+pretty_assertions = "1.4"
