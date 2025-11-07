@@ -71,6 +71,9 @@ const DEFAULT_PORT: u16 = 3030;
 const DEFAULT_TIMEOUT: u64 = 120;
 
 /// Health check interval (seconds)
+///
+/// Reserved for future server health monitoring implementation.
+/// Will be used to periodically check pandoc-server responsiveness.
 #[allow(dead_code)]
 const HEALTH_CHECK_INTERVAL: u64 = 30;
 
@@ -97,6 +100,10 @@ enum PandocResponse {
         output: String,
         #[serde(default)]
         base64: bool,
+        /// Pandoc warning/info messages
+        ///
+        /// Reserved for future logging/diagnostics implementation.
+        /// Will capture conversion warnings and informational messages.
         #[serde(default)]
         #[allow(dead_code)]
         messages: Vec<Value>,

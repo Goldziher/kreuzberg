@@ -170,14 +170,23 @@ struct Slide {
     slide_number: u32,
     elements: Vec<SlideElement>,
     images: Vec<ImageReference>,
-    #[allow(dead_code)] // Infrastructure for future image extraction feature
+    /// Image data cache for extracted images
+    ///
+    /// Reserved for future implementation where Slide owns its image data.
+    /// Currently images are extracted on-demand via SlideIterator.get_slide_images().
+    #[allow(dead_code)]
     image_data: HashMap<String, Vec<u8>>,
 }
 
 #[derive(Debug, Clone)]
 struct ParserConfig {
     extract_images: bool,
-    #[allow(dead_code)] // Infrastructure for future caching feature
+    /// Maximum cache size in megabytes
+    ///
+    /// Reserved for future parsed slide caching implementation.
+    /// Will enable memory-bounded caching of parsed slide data to improve
+    /// performance when re-extracting the same presentation.
+    #[allow(dead_code)]
     max_cache_size_mb: usize,
     include_slide_comment: bool,
 }
@@ -492,7 +501,13 @@ impl Slide {
 
 struct SlideIterator {
     container: PptxContainer,
-    #[allow(dead_code)] // Infrastructure for future configuration-based processing
+    /// Parser configuration for future slide-level processing
+    ///
+    /// Reserved for future implementation where SlideIterator applies
+    /// config-based processing during iteration (e.g., filtering slides,
+    /// conditional image extraction). Currently config is passed separately
+    /// during extraction.
+    #[allow(dead_code)]
     config: ParserConfig,
     current_index: usize,
     total_slides: usize,
