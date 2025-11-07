@@ -1,0 +1,83 @@
+name: Setup Rust Environment
+description: Install Rust toolchain with caching for build artifacts
+inputs:
+  components:
+    description: Comma-separated list of Rust components to install
+    required: false
+    default: rustfmt, clippy, llvm-tools-preview
+  target:
+    description: Target triple to install
+    required: false
+    default: ''
+  cache-key-prefix:
+    description: Prefix for cache keys
+    required: false
+    default: rust-build
+  cache-cargo-home:
+    description: Whether to cache cargo home directory
+    required: false
+    default: 'true'
+  maximize-build-space:
+    description: Whether to maximize build space on Linux (removes .NET, Android, etc.)
+    required: false
+    default: 'true'
+outputs:
+  cache-hit:
+    description: Whether the Rust cache was restored
+    value: ${{ steps.cache-rust.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - name: Maximize build space (Linux only)
+      if: runner.os == 'Linux' && inputs.maximize-build-space == 'true'
+      shell: bash
+      run: |
+        echo "Freeing up disk space on Linux runner..."
+        # Remove .NET runtime (~17 GB)
+        sudo rm -rf /usr/share/dotnet
+        # Remove Android SDK (~11 GB)
+        sudo rm -rf /usr/local/lib/android
+        # Remove Haskell (~2.7 GB)
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/.ghcup
+        # Remove CodeQL (~5.4 GB)
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        # Remove Docker images (~3 GB)
+        docker system prune -af 2>/dev/null || true
+        echo "Disk space freed successfully"
+        df -h
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        components: ${{ inputs.components }}
+        target: ${{ inputs.target }}
+
+    - name: Cache Rust build artifacts
+      id: cache-rust
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          target/
+        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: |
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-
+
+    - name: Cache cargo-llvm-cov
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin/cargo-llvm-cov
+        key: cargo-llvm-cov-${{ runner.os }}
+
+    - name: Install cargo-llvm-cov if not cached
+      shell: bash
+      run: |
+        if ! command -v cargo-llvm-cov &> /dev/null; then
+          echo "Installing cargo-llvm-cov..."
+          cargo install cargo-llvm-cov
+        else
+          echo "cargo-llvm-cov already installed"
+        fi
