@@ -47,8 +47,8 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/kreuzberg/ crates/kreuzberg/
 COPY crates/kreuzberg-cli/ crates/kreuzberg-cli/
 
-# Remove workspace members that aren't included (Ruby, Node, Python)
-RUN sed -i '/kreuzberg-py/d; /kreuzberg-rb/d; /kreuzberg-node/d; /benchmark-harness/d' Cargo.toml
+# Remove workspace members that aren't included (Ruby, Node, Python, tools, e2e)
+RUN sed -i '/kreuzberg-py/d; /kreuzberg-rb/d; /kreuzberg-node/d; /benchmark-harness/d; /e2e-generator/d; /e2e\/rust/d' Cargo.toml
 
 # Build release binary with server features (api + full format support)
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
