@@ -242,16 +242,16 @@ impl GenericCache {
         self.save_metadata(cache_key, source_file);
 
         let count = self.write_counter.fetch_add(1, Ordering::Relaxed);
-        if count.is_multiple_of(100) {
-            if let Some(cache_path_str) = self.cache_dir.to_str() {
-                // Cache cleanup failure - safe to ignore, cache is optional fallback ~keep
-                let _ = smart_cleanup_cache(
-                    cache_path_str,
-                    self.max_age_days,
-                    self.max_cache_size_mb,
-                    self.min_free_space_mb,
-                );
-            }
+        if count.is_multiple_of(100)
+            && let Some(cache_path_str) = self.cache_dir.to_str()
+        {
+            // Cache cleanup failure - safe to ignore, cache is optional fallback ~keep
+            let _ = smart_cleanup_cache(
+                cache_path_str,
+                self.max_age_days,
+                self.max_cache_size_mb,
+                self.min_free_space_mb,
+            );
         }
 
         Ok(())

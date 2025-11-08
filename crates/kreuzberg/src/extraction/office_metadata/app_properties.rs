@@ -235,14 +235,14 @@ pub fn extract_pptx_app_properties<R: Read + std::io::Seek>(archive: &mut ZipArc
 fn extract_titles_of_parts(root: Node) -> Vec<String> {
     let mut titles = Vec::new();
 
-    if let Some(titles_node) = root.descendants().find(|n| n.has_tag_name("TitlesOfParts")) {
-        if let Some(vector_node) = titles_node.descendants().find(|n| n.has_tag_name("vector")) {
-            for lpstr_node in vector_node.descendants().filter(|n| n.has_tag_name("lpstr")) {
-                if let Some(text) = lpstr_node.text() {
-                    let text = text.trim();
-                    if !text.is_empty() {
-                        titles.push(text.to_string());
-                    }
+    if let Some(titles_node) = root.descendants().find(|n| n.has_tag_name("TitlesOfParts"))
+        && let Some(vector_node) = titles_node.descendants().find(|n| n.has_tag_name("vector"))
+    {
+        for lpstr_node in vector_node.descendants().filter(|n| n.has_tag_name("lpstr")) {
+            if let Some(text) = lpstr_node.text() {
+                let text = text.trim();
+                if !text.is_empty() {
+                    titles.push(text.to_string());
                 }
             }
         }

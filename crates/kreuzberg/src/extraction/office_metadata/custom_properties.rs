@@ -68,10 +68,10 @@ pub fn extract_custom_properties<R: Read + std::io::Seek>(archive: &mut ZipArchi
     let mut properties = HashMap::new();
 
     for property_node in root.descendants().filter(|n| n.has_tag_name("property")) {
-        if let Some(name) = property_node.attribute("name") {
-            if let Some(value) = extract_vt_value(property_node) {
-                properties.insert(name.to_string(), value);
-            }
+        if let Some(name) = property_node.attribute("name")
+            && let Some(value) = extract_vt_value(property_node)
+        {
+            properties.insert(name.to_string(), value);
         }
     }
 

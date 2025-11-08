@@ -239,12 +239,10 @@ pub fn get_stopwords(lang: &str) -> Option<&'static AHashSet<String>> {
 
     let lang_code = if let Some(pos) = normalized.find(&['-', '_'][..]) {
         &normalized[..pos]
+    } else if normalized.len() >= 2 {
+        &normalized[..2]
     } else {
-        if normalized.len() >= 2 {
-            &normalized[..2]
-        } else {
-            &normalized
-        }
+        &normalized
     };
 
     STOPWORDS.get(lang_code)

@@ -126,7 +126,8 @@ def test_setup_linux_paths_adds_to_empty_ld_path(tmp_path: Path) -> None:
         _setup_linux_paths(package_dir)
 
         assert os.environ["LD_LIBRARY_PATH"] == str(package_dir)
-        mock_cdll.assert_called_once_with(str(pdfium_lib))
+        # CDLL may be called multiple times (e.g., ctypes init), verify last call is pdfium
+        assert mock_cdll.call_args_list[-1] == ((str(pdfium_lib),),)
 
 
 def test_setup_linux_paths_appends_to_existing_ld_path() -> None:

@@ -82,10 +82,10 @@ fn detect_multiple_languages(text: &str, config: &LanguageDetectionConfig) -> Re
     let threshold = config.min_confidence.min(0.35);
 
     for chunk in &chunk_strings {
-        if let Some(info) = detect(chunk) {
-            if info.confidence() >= threshold {
-                *lang_counts.entry(info.lang()).or_insert(0) += 1;
-            }
+        if let Some(info) = detect(chunk)
+            && info.confidence() >= threshold
+        {
+            *lang_counts.entry(info.lang()).or_insert(0) += 1;
         }
     }
 
