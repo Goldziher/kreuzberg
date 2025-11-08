@@ -159,7 +159,6 @@ async fn main() -> Result<()> {
 
             config.validate()?;
 
-            // Create extraction config with OCR if enabled
             let extraction_config = if ocr {
                 ExtractionConfig {
                     ocr: Some(OcrConfig {
@@ -173,20 +172,16 @@ async fn main() -> Result<()> {
                 ExtractionConfig::default()
             };
 
-            // Create registry and register adapters
             let mut registry = AdapterRegistry::new();
 
-            // Register native adapter with OCR config
             registry.register(Arc::new(NativeAdapter::with_config(extraction_config)))?;
 
-            // Register Kreuzberg language binding adapters
             use benchmark_harness::adapters::{
                 create_node_async_adapter, create_node_batch_adapter, create_python_async_adapter,
                 create_python_batch_adapter, create_python_sync_adapter, create_ruby_batch_adapter,
                 create_ruby_sync_adapter,
             };
 
-            // Try to register each Kreuzberg binding adapter, ignore errors if not available
             if let Ok(adapter) = create_python_sync_adapter() {
                 let _ = registry.register(Arc::new(adapter));
             }
@@ -209,13 +204,11 @@ async fn main() -> Result<()> {
                 let _ = registry.register(Arc::new(adapter));
             }
 
-            // Register external framework adapters
             use benchmark_harness::adapters::external::{
                 create_docling_adapter, create_docling_batch_adapter, create_extractous_python_adapter,
                 create_markitdown_adapter, create_unstructured_adapter,
             };
 
-            // Try to register each external adapter, ignore errors if not available
             if let Ok(adapter) = create_docling_adapter() {
                 let _ = registry.register(Arc::new(adapter));
             }
@@ -232,7 +225,6 @@ async fn main() -> Result<()> {
                 let _ = registry.register(Arc::new(adapter));
             }
 
-            // Create runner and load fixtures
             let mut runner = BenchmarkRunner::new(config, registry);
             runner.load_fixtures(&fixtures)?;
 
@@ -245,13 +237,11 @@ async fn main() -> Result<()> {
                 return Ok(());
             }
 
-            // Run benchmarks
             println!("\nRunning benchmarks...");
             let results = runner.run(&frameworks).await?;
 
             println!("\nCompleted {} benchmark(s)", results.len());
 
-            // Print summary
             let mut success_count = 0;
             let mut failure_count = 0;
 
@@ -268,7 +258,6 @@ async fn main() -> Result<()> {
             println!("  Failed: {}", failure_count);
             println!("  Total: {}", results.len());
 
-            // Write results to JSON file
             use benchmark_harness::write_json;
             let output_file = output.join("results.json");
             write_json(&results, &output_file)?;

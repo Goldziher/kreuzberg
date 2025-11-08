@@ -12,7 +12,6 @@ use kreuzberg::{KreuzbergError, Result, extract_file_sync};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
-// Validator that rejects content shorter than minimum length
 struct MinLengthValidator {
     name: String,
     min_length: usize,
@@ -58,7 +57,6 @@ impl Validator for MinLengthValidator {
     }
 }
 
-// Validator that always passes
 struct PassingValidator {
     name: String,
     initialized: AtomicBool,
@@ -91,7 +89,6 @@ impl Validator for PassingValidator {
     }
 }
 
-// Validator that checks for specific MIME type
 struct MimeTypeValidator {
     name: String,
     allowed_mime: String,
@@ -133,7 +130,6 @@ impl Validator for MimeTypeValidator {
     }
 }
 
-// Validator that checks metadata
 struct MetadataValidator {
     name: String,
     required_key: String,
@@ -171,11 +167,10 @@ impl Validator for MetadataValidator {
     }
 
     fn priority(&self) -> i32 {
-        100 // High priority
+        100
     }
 }
 
-// Validator that always fails
 struct FailingValidator {
     name: String,
 }
@@ -257,7 +252,7 @@ fn test_validator_called_during_extraction() {
 
     let validator = Arc::new(MinLengthValidator {
         name: "call-test-validator".to_string(),
-        min_length: 1, // Will pass for most files
+        min_length: 1,
         call_count: AtomicUsize::new(0),
     });
 
@@ -293,10 +288,9 @@ fn test_validator_can_reject_invalid_input() {
         reg.shutdown_all().unwrap();
     }
 
-    // Set unreasonably high minimum length to trigger rejection
     let validator = Arc::new(MinLengthValidator {
         name: "reject-validator".to_string(),
-        min_length: 1_000_000, // 1MB - will fail for our test file
+        min_length: 1_000_000,
         call_count: AtomicUsize::new(0),
     });
 
@@ -335,7 +329,7 @@ fn test_validator_can_pass_valid_input() {
 
     let validator = Arc::new(MinLengthValidator {
         name: "pass-validator".to_string(),
-        min_length: 10, // Reasonable minimum
+        min_length: 10,
         call_count: AtomicUsize::new(0),
     });
 
@@ -401,7 +395,7 @@ fn test_validator_rejects_wrong_mime_type() {
 
     let validator = Arc::new(MimeTypeValidator {
         name: "strict-mime-validator".to_string(),
-        allowed_mime: "application/pdf".to_string(), // Wrong MIME type for .txt file
+        allowed_mime: "application/pdf".to_string(),
     });
 
     {
@@ -458,7 +452,6 @@ fn test_unregister_validator() {
 
     assert!(!list.contains(&"unregister-test".to_string()));
 
-    // Should now pass since the failing validator is removed
     let test_file = "../../test_documents/text/fake_text.txt";
     let config = ExtractionConfig::default();
     let result = extract_file_sync(test_file, None, &config);
@@ -509,7 +502,6 @@ fn test_clear_all_validators() {
 
     assert!(list.is_empty(), "Registry was not cleared");
 
-    // Should now pass since all validators are cleared
     let test_file = "../../test_documents/text/fake_text.txt";
     let config = ExtractionConfig::default();
     let result = extract_file_sync(test_file, None, &config);
@@ -527,7 +519,7 @@ fn test_validator_invalid_name() {
     }
 
     let validator = Arc::new(PassingValidator {
-        name: "invalid name".to_string(), // Contains space - invalid
+        name: "invalid name".to_string(),
         initialized: AtomicBool::new(false),
     });
 
@@ -634,13 +626,11 @@ fn test_validator_priority_execution_order() {
         reg.shutdown_all().unwrap();
     }
 
-    // High priority validator - will run first and fail if key missing
     let high_priority = Arc::new(MetadataValidator {
         name: "high-priority-validator".to_string(),
         required_key: "nonexistent_key".to_string(),
     });
 
-    // Low priority validator - would pass but shouldn't run
     let low_priority = Arc::new(PassingValidator {
         name: "low-priority-validator".to_string(),
         initialized: AtomicBool::new(false),
@@ -648,14 +638,13 @@ fn test_validator_priority_execution_order() {
 
     {
         let mut reg = registry.write().unwrap();
-        reg.register(high_priority as Arc<dyn Validator>).unwrap(); // Priority 100 (high)
-        reg.register(low_priority as Arc<dyn Validator>).unwrap(); // Priority 50 (default)
+        reg.register(high_priority as Arc<dyn Validator>).unwrap();
+        reg.register(low_priority as Arc<dyn Validator>).unwrap();
     }
 
     let config = ExtractionConfig::default();
     let result = extract_file_sync(test_file, None, &config);
 
-    // Should fail at high-priority validator
     assert!(result.is_err(), "Expected high-priority validator to fail");
 
     match result.err().unwrap() {

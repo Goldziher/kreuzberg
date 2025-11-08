@@ -7,8 +7,6 @@ use crate::types::{ExtractionResult, Metadata};
 use async_trait::async_trait;
 use std::path::Path;
 
-#[cfg(feature = "ocr")]
-use crate::ocr::OcrProcessor;
 #[cfg(feature = "pdf")]
 use crate::pdf::error::PdfError;
 #[cfg(feature = "ocr")]
@@ -152,6 +150,7 @@ impl PdfExtractor {
     /// Renders all pages to images and processes them with OCR.
     #[cfg(feature = "ocr")]
     async fn extract_with_ocr(&self, content: &[u8], config: &ExtractionConfig) -> Result<String> {
+        use crate::plugins::registry::get_ocr_backend_registry;
         use image::ImageEncoder;
         use image::codecs::png::PngEncoder;
         use std::io::Cursor;
@@ -161,7 +160,14 @@ impl PdfExtractor {
             source: None,
         })?;
 
-        let tess_config = ocr_config.tesseract_config.as_ref().cloned().unwrap_or_default();
+        let backend = {
+            let registry = get_ocr_backend_registry();
+            let registry = registry.read().map_err(|e| crate::KreuzbergError::Plugin {
+                message: format!("Failed to acquire read lock on OCR backend registry: {}", e),
+                plugin_name: "ocr-registry".to_string(),
+            })?;
+            registry.get(&ocr_config.backend)?
+        };
 
         let images = {
             let render_options = PageRenderOptions::default();
@@ -194,26 +200,8 @@ impl PdfExtractor {
                 })?;
 
             let image_data = image_bytes.into_inner();
-            let tess_config_clone = tess_config.clone();
 
-            let ocr_result = tokio::task::spawn_blocking(move || {
-                let cache_dir = std::env::var("KREUZBERG_CACHE_DIR").ok().map(std::path::PathBuf::from);
-
-                let proc = OcrProcessor::new(cache_dir)?;
-
-                let ocr_tess_config: crate::ocr::types::TesseractConfig = (&tess_config_clone).into();
-
-                proc.process_image(&image_data, &ocr_tess_config)
-            })
-            .await
-            .map_err(|e| crate::KreuzbergError::Ocr {
-                message: format!("OCR task failed: {}", e),
-                source: None,
-            })?
-            .map_err(|e| crate::KreuzbergError::Ocr {
-                message: format!("OCR processing failed: {}", e),
-                source: None,
-            })?;
+            let ocr_result = backend.process_image(&image_data, ocr_config).await?;
 
             page_texts.push(ocr_result.content);
         }
@@ -308,7 +296,6 @@ impl DocumentExtractor for PdfExtractor {
         #[cfg(not(feature = "ocr"))]
         let text = native_text;
 
-        // Extract images if configured
         let images = if config.images.is_some() {
             match crate::pdf::images::extract_images_from_pdf(content) {
                 Ok(pdf_images) => Some(
@@ -333,7 +320,7 @@ impl DocumentExtractor for PdfExtractor {
                         })
                         .collect(),
                 ),
-                Err(_) => None, // If image extraction fails, continue without images
+                Err(_) => None,
             }
         } else {
             None

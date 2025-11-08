@@ -80,7 +80,6 @@ def cleanup_build_artifacts() -> None:
         if not (package_dir.exists() and package_dir.is_dir()):
             continue
 
-        # Remove stale native module files
         for pattern in ["*.pyd", "*.so", "_internal_bindings.*.so"]:
             for file in package_dir.glob(pattern):
                 with suppress(Exception):

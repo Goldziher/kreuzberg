@@ -52,7 +52,7 @@ impl Default for BenchmarkConfig {
         Self {
             max_file_size: None,
             file_types: None,
-            timeout: Duration::from_secs(1800), // 30 minutes
+            timeout: Duration::from_secs(1800),
             max_concurrent: num_cpus::get(),
             output_dir: PathBuf::from("results"),
             measure_quality: false,
@@ -83,7 +83,6 @@ impl BenchmarkConfig {
             return Err(crate::Error::Config("benchmark_iterations must be > 0".to_string()));
         }
 
-        // Single-file mode requires max_concurrent=1
         if self.benchmark_mode == BenchmarkMode::SingleFile && self.max_concurrent != 1 {
             return Err(crate::Error::Config(
                 "single-file mode requires max_concurrent=1".to_string(),

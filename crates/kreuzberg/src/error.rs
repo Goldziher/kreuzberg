@@ -393,7 +393,6 @@ mod tests {
 
     #[test]
     fn test_io_error_bubbles_unchanged() {
-        // Test that io::Error converts to KreuzbergError::Io via ? operator
         fn read_file() -> Result<String> {
             let content = std::fs::read_to_string("/nonexistent/file.txt")?;
             Ok(content)
@@ -422,12 +421,10 @@ mod tests {
 
     #[test]
     fn test_io_error_invalid_data_vs_parsing() {
-        // InvalidData from io::Error should still be Io variant
         let io_err = std::io::Error::new(std::io::ErrorKind::InvalidData, "corrupted data");
         let krz_err: KreuzbergError = io_err.into();
         assert!(matches!(krz_err, KreuzbergError::Io(_)));
 
-        // But parsing errors are different
         let parse_err = KreuzbergError::parsing("corrupted format");
         assert!(matches!(parse_err, KreuzbergError::Parsing { .. }));
     }

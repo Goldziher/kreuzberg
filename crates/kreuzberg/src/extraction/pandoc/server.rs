@@ -118,10 +118,8 @@ impl PandocServer {
         let port = port.unwrap_or(DEFAULT_PORT);
         let timeout_secs = timeout_secs.unwrap_or(DEFAULT_TIMEOUT);
 
-        // Locate pandoc binary
         let pandoc_path = Self::find_pandoc().await?;
 
-        // Check if we need to create a symlink for server mode
         let server_symlink = if pandoc_path.file_name() == Some(std::ffi::OsStr::new("pandoc")) {
             Some(Self::create_server_symlink(&pandoc_path).await?)
         } else {
@@ -139,7 +137,6 @@ impl PandocServer {
 
     /// Check if pandoc-server is available (pandoc 3.8+)
     pub async fn is_server_available() -> bool {
-        // Check for pandoc-server binary directly
         if let Ok(output) = Command::new("which").arg("pandoc-server").output().await
             && output.status.success()
         {
@@ -147,7 +144,6 @@ impl PandocServer {
             return true;
         }
 
-        // Check if pandoc supports server mode by looking for version 3.8+
         if let Ok(output) = Command::new("pandoc").arg("--version").output().await
             && let Ok(version_str) = String::from_utf8(output.stdout)
             && let Some(version_line) = version_str.lines().next()
@@ -208,10 +204,8 @@ impl PandocServer {
             let temp_dir = std::env::temp_dir();
             let symlink_path = temp_dir.join(format!("pandoc-server-{}", std::process::id()));
 
-            // Remove existing symlink if present
             let _ = tokio::fs::remove_file(&symlink_path).await;
 
-            // Create symlink
             tokio::fs::symlink(pandoc_path, &symlink_path).await.map_err(|e| {
                 KreuzbergError::Io(std::io::Error::other(format!(
                     "Failed to create pandoc-server symlink: {}",
@@ -224,7 +218,7 @@ impl PandocServer {
 
         #[cfg(not(unix))]
         {
-            let _ = pandoc_path; // Suppress unused variable warning
+            let _ = pandoc_path;
             Err(KreuzbergError::validation(
                 "Pandoc server mode requires Unix-like system for symlinks",
             ))
@@ -235,15 +229,12 @@ impl PandocServer {
     pub async fn start(&self) -> Result<()> {
         let mut process_lock = self.process.write().await;
 
-        // Stop existing process if running
         if let Some(mut child) = process_lock.take() {
             let _ = child.kill().await;
         }
 
-        // Determine which command to use
         let command_path = self.server_symlink.as_ref().unwrap_or(&self.pandoc_path);
 
-        // Start server process
         let mut child = Command::new(command_path)
             .arg("--port")
             .arg(self.port.to_string())
@@ -254,7 +245,6 @@ impl PandocServer {
             .spawn()
             .map_err(|e| KreuzbergError::Io(std::io::Error::other(format!("Failed to start pandoc-server: {}", e))))?;
 
-        // Wait for server to be ready
         let stdout = child
             .stdout
             .take()
@@ -262,7 +252,6 @@ impl PandocServer {
 
         let mut reader = BufReader::new(stdout).lines();
 
-        // Read startup message with timeout
         match timeout(Duration::from_secs(5), reader.next_line()).await {
             Ok(Ok(Some(line))) if line.contains("Starting server") => {
                 *process_lock = Some(child);
@@ -287,7 +276,6 @@ impl PandocServer {
             })?;
         }
 
-        // Cleanup symlink if we created one
         if let Some(symlink) = &self.server_symlink {
             let _ = tokio::fs::remove_file(symlink).await;
         }
@@ -354,7 +342,6 @@ impl PandocServer {
             .build()
             .map_err(|e| KreuzbergError::Io(std::io::Error::other(format!("Failed to create HTTP client: {}", e))))?;
 
-        // Retry logic for transient failures
         for attempt in 0..MAX_RETRIES {
             let response = client
                 .post(&url)
@@ -384,7 +371,6 @@ impl PandocServer {
                     match pandoc_response {
                         PandocResponse::Success { output, base64 } => {
                             if base64 {
-                                // Decode base64 if needed
                                 let decoded = base64_simd::STANDARD.decode_to_vec(output.as_bytes()).map_err(|e| {
                                     KreuzbergError::parsing(format!("Failed to decode base64 output: {}", e))
                                 })?;
@@ -401,7 +387,6 @@ impl PandocServer {
                 }
                 Err(e) => {
                     if attempt < MAX_RETRIES - 1 {
-                        // Transient network error, retry
                         sleep(Duration::from_millis(100 * (attempt as u64 + 1))).await;
                         continue;
                     }
@@ -426,13 +411,11 @@ impl PandocServer {
         content: &str,
         from_format: &str,
     ) -> Result<(String, HashMap<String, Value>)> {
-        // Use the existing JSON extraction + parsing logic
         let json_output = self.convert(content, from_format, "json").await?;
 
         let json_data: Value = serde_json::from_str(&json_output)
             .map_err(|e| KreuzbergError::parsing(format!("Failed to parse JSON from server: {}", e)))?;
 
-        // Reuse existing extraction functions from subprocess.rs
         let content = super::subprocess::extract_content_from_json(&json_data)?;
         let metadata = super::subprocess::extract_metadata_from_json(&json_data)?;
 
@@ -442,7 +425,6 @@ impl PandocServer {
 
 impl Drop for PandocServer {
     fn drop(&mut self) {
-        // Best-effort cleanup on drop
         if let Some(symlink) = &self.server_symlink {
             let _ = std::fs::remove_file(symlink);
         }
@@ -467,26 +449,21 @@ mod tests {
     async fn test_server_lifecycle() {
         let server = PandocServer::new(Some(3032), Some(120)).await;
         if server.is_err() {
-            // Pandoc not installed, skip test
             return;
         }
 
         let server = server.unwrap();
 
-        // Start server
         let start_result = server.start().await;
         if start_result.is_err() {
-            // Server mode not available, skip
             return;
         }
 
         assert!(server.is_running().await);
 
-        // Health check
         let version = server.health_check().await;
         assert!(version.is_ok());
 
-        // Stop server
         let stop_result = server.stop().await;
         assert!(stop_result.is_ok());
         assert!(!server.is_running().await);
@@ -505,12 +482,10 @@ mod tests {
             return;
         }
 
-        // Test conversion
         let result = server
             .convert("# Hello World\n\nTest paragraph.", "markdown", "html")
             .await;
 
-        // Cleanup
         let _ = server.stop().await;
 
         if let Ok(html) = result {

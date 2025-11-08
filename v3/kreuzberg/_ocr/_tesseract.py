@@ -301,8 +301,6 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
             "OFF",
         ]
 
-        # Handle output format - use config option for HOCR to ensure Windows compatibility
-        # Windows Tesseract 5.5.0 doesn't respect 'hocr' configfile, needs explicit config
         tesseract_format = run_config["tesseract_format"]
         if tesseract_format == "hocr":
             command.extend(["-c", "tessedit_create_hocr=1"])
@@ -519,7 +517,7 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
             table_column_threshold,
             table_row_threshold_ratio,
             table_min_confidence,
-        )  # parameters retained for compatibility but handled internally by html-to-markdown
+        )
 
         config = html_to_markdown_config or HTMLToMarkdownConfig()
         conversion_options, _ = config.to_options()
@@ -545,7 +543,7 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
         )
 
     def _process_hocr_to_markdown_sync(self, hocr_content: str, config: TesseractConfig) -> ExtractionResult:
-        _ = config  # retained for interface compatibility
+        _ = config
 
         html_config = HTMLToMarkdownConfig()
         conversion_options, _ = html_config.to_options()
@@ -914,8 +912,6 @@ class TesseractBackend(OCRBackend[TesseractConfig]):
             "OFF",
         ]
 
-        # Handle output format - use config option for HOCR to ensure Windows compatibility
-        # Windows Tesseract 5.5.0 doesn't respect 'hocr' configfile, needs explicit config
         if output_format == "hocr":
             command.extend(["-c", "tessedit_create_hocr=1"])
         elif output_format == "tsv":
@@ -996,7 +992,6 @@ def _process_image_with_tesseract(
             language = config_dict.get("language", "eng")
             psm = config_dict.get("psm", 3)
 
-            # Convert PSM enum to integer value if needed
             psm_value = psm.value if hasattr(psm, "value") else psm
 
             command = [
@@ -1052,7 +1047,6 @@ def _process_image_with_tesseract(
             with Path(output_file).open(encoding="utf-8") as f:
                 text = f.read()
 
-            # Process based on output format
             if output_format == "markdown" and tesseract_format == "hocr":
                 html_config = HTMLToMarkdownConfig(heading_style="atx")
                 options, _ = html_config.to_options()

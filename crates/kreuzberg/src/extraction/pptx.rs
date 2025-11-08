@@ -52,17 +52,9 @@ use crate::extraction::office_metadata::{
 #[cfg(feature = "office")]
 use serde_json::Value;
 
-// ============================================================================
-// SECTION: XML Namespace Constants
-// ============================================================================
-
 const P_NAMESPACE: &str = "http://schemas.openxmlformats.org/presentationml/2006/main";
 const A_NAMESPACE: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
 const RELS_NAMESPACE: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-
-// ============================================================================
-// SECTION: Data Structures
-// ============================================================================
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 struct ElementPosition {
@@ -187,10 +179,6 @@ impl Default for ParserConfig {
     }
 }
 
-// ============================================================================
-// SECTION: Content Builder - Markdown Generation
-// ============================================================================
-
 struct ContentBuilder {
     content: String,
 }
@@ -296,10 +284,6 @@ fn html_escape(text: &str) -> String {
         .replace('\'', "&#x27;")
 }
 
-// ============================================================================
-// SECTION: ZIP Container Management
-// ============================================================================
-
 struct PptxContainer {
     archive: ZipArchive<File>,
     slide_paths: Vec<String>,
@@ -389,10 +373,6 @@ impl PptxContainer {
     }
 }
 
-// ============================================================================
-// SECTION: Slide Processing
-// ============================================================================
-
 impl Slide {
     fn from_xml(slide_number: u32, xml_data: &[u8], rels_data: Option<&[u8]>) -> Result<Self> {
         let elements = parse_slide_xml(xml_data)?;
@@ -417,11 +397,10 @@ impl Slide {
             builder.add_slide_header(self.slide_number);
         }
 
-        // Memory-efficient sorting: sort by reference, not clone
         let mut element_indices: Vec<usize> = (0..self.elements.len()).collect();
         element_indices.sort_by_key(|&i| {
             let pos = self.elements[i].position();
-            (pos.y, pos.x) // Y primary, X secondary
+            (pos.y, pos.x)
         });
 
         for &idx in &element_indices {
@@ -460,9 +439,7 @@ impl Slide {
                 SlideElement::Image(img_ref, _) => {
                     builder.add_image(&img_ref.id, self.slide_number);
                 }
-                SlideElement::Unknown => {
-                    // Skip unknown elements
-                }
+                SlideElement::Unknown => {}
             }
         }
 
@@ -539,10 +516,6 @@ impl SlideIterator {
         Ok(image_data)
     }
 }
-
-// ============================================================================
-// SECTION: XML Parsing
-// ============================================================================
 
 use roxmltree::{Document, Node};
 
@@ -765,7 +738,7 @@ fn parse_list(tx_body_node: &Node) -> Result<ListElement> {
 }
 
 fn parse_list_properties(p_node: &Node) -> Result<(u32, bool)> {
-    let mut level = 1; // Default to level 1 (1-indexed for rendering)
+    let mut level = 1;
     let mut is_ordered = false;
 
     if let Some(p_pr_node) = p_node
@@ -773,7 +746,6 @@ fn parse_list_properties(p_node: &Node) -> Result<(u32, bool)> {
         .find(|n| n.is_element() && n.tag_name().name() == "pPr" && n.tag_name().namespace() == Some(A_NAMESPACE))
     {
         if let Some(lvl_attr) = p_pr_node.attribute("lvl") {
-            // lvl attribute is 0-indexed in XML, convert to 1-indexed
             level = lvl_attr.parse::<u32>().unwrap_or(0) + 1;
         }
 
@@ -900,8 +872,6 @@ fn parse_presentation_rels(rels_data: &[u8]) -> Result<Vec<String>> {
             && !rel_type.contains("slideMaster")
             && let Some(target) = node.attribute("Target")
         {
-            // Normalize path: strip leading slash (some PPTX have /ppt/slides/slide1.xml)
-            // Ensure it starts with "ppt/" after normalization
             let normalized_target = target.strip_prefix('/').unwrap_or(target);
             let final_path = if normalized_target.starts_with("ppt/") {
                 normalized_target.to_string()
@@ -915,17 +885,12 @@ fn parse_presentation_rels(rels_data: &[u8]) -> Result<Vec<String>> {
     Ok(slide_paths)
 }
 
-// ============================================================================
-// SECTION: Metadata Extraction
-// ============================================================================
-
 /// Extract comprehensive metadata from PPTX using office_metadata module
 fn extract_metadata(archive: &mut ZipArchive<File>) -> PptxMetadata {
     #[cfg(feature = "office")]
     {
         let mut metadata_map = HashMap::new();
 
-        // Extract core properties (Dublin Core metadata)
         if let Ok(core) = extract_core_properties(archive) {
             if let Some(title) = core.title {
                 metadata_map.insert("title".to_string(), title);
@@ -961,7 +926,6 @@ fn extract_metadata(archive: &mut ZipArchive<File>) -> PptxMetadata {
             }
         }
 
-        // Extract app properties (PPTX-specific metadata)
         if let Ok(app) = extract_pptx_app_properties(archive) {
             if let Some(slides) = app.slides {
                 metadata_map.insert("slide_count".to_string(), slides.to_string());
@@ -989,10 +953,8 @@ fn extract_metadata(archive: &mut ZipArchive<File>) -> PptxMetadata {
             }
         }
 
-        // Extract custom properties (optional)
         if let Ok(custom) = extract_custom_properties(archive) {
             for (key, value) in custom {
-                // Convert Value to String
                 let value_str = match value {
                     Value::String(s) => s,
                     Value::Number(n) => n.to_string(),
@@ -1004,7 +966,6 @@ fn extract_metadata(archive: &mut ZipArchive<File>) -> PptxMetadata {
             }
         }
 
-        // Convert to PptxMetadata struct
         PptxMetadata {
             title: metadata_map.get("title").cloned(),
             author: metadata_map.get("author").cloned(),
@@ -1016,7 +977,6 @@ fn extract_metadata(archive: &mut ZipArchive<File>) -> PptxMetadata {
 
     #[cfg(not(feature = "office"))]
     {
-        // Return empty metadata when office feature is disabled
         PptxMetadata {
             title: None,
             author: None,
@@ -1026,10 +986,6 @@ fn extract_metadata(archive: &mut ZipArchive<File>) -> PptxMetadata {
         }
     }
 }
-
-// ============================================================================
-// SECTION: Notes Extraction
-// ============================================================================
 
 fn extract_all_notes(container: &mut PptxContainer) -> Result<HashMap<u32, String>> {
     let mut notes = HashMap::new();
@@ -1041,7 +997,6 @@ fn extract_all_notes(container: &mut PptxContainer) -> Result<HashMap<u32, Strin
         if let Ok(notes_xml) = container.read_file(&notes_path)
             && let Ok(note_text) = extract_notes_text(&notes_xml)
         {
-            // Intentional ownership transfer: note_text is moved into the HashMap
             notes.insert((i + 1) as u32, note_text);
         }
     }
@@ -1069,10 +1024,6 @@ fn extract_notes_text(notes_xml: &[u8]) -> Result<String> {
 
     Ok(text_parts.join(" "))
 }
-
-// ============================================================================
-// SECTION: Helper Functions
-// ============================================================================
 
 fn get_slide_rels_path(slide_path: &str) -> String {
     let parts: Vec<&str> = slide_path.rsplitn(2, '/').collect();
@@ -1119,10 +1070,6 @@ fn detect_image_format(data: &[u8]) -> String {
     }
 }
 
-// ============================================================================
-// SECTION: Public API - Main Extraction Functions
-// ============================================================================
-
 pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxExtractionResult> {
     let config = ParserConfig {
         extract_images,
@@ -1131,7 +1078,6 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
 
     let mut container = PptxContainer::open(path)?;
 
-    // Extract comprehensive metadata using office_metadata module
     let metadata = extract_metadata(&mut container.archive);
 
     let notes = extract_all_notes(&mut container)?;
@@ -1160,7 +1106,6 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
             && let Ok(image_data) = iterator.get_slide_images(&slide)
         {
             for (_, data) in image_data {
-                // Intentional ownership transfer: data is moved into ExtractedImage struct
                 let format = detect_image_format(&data);
                 let image_index = extracted_images.len();
 
@@ -1209,10 +1154,6 @@ pub fn extract_pptx_from_bytes(data: &[u8], extract_images: bool) -> Result<Pptx
 
     result
 }
-
-// ============================================================================
-// SECTION: Tests
-// ============================================================================
 
 #[cfg(test)]
 mod tests {
@@ -1778,10 +1719,6 @@ mod tests {
         assert!(!config.include_slide_comment);
     }
 
-    // ============================================================================
-    // SECTION: Advanced Test Helpers for Complex Structures
-    // ============================================================================
-
     fn create_pptx_with_table(rows: Vec<Vec<&str>>) -> Vec<u8> {
         use std::io::Write;
         use zip::write::{SimpleFileOptions, ZipWriter};
@@ -1791,7 +1728,6 @@ mod tests {
             let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buffer));
             let options = SimpleFileOptions::default();
 
-            // Content Types
             zip.start_file("[Content_Types].xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1802,11 +1738,9 @@ mod tests {
             )
             .unwrap();
 
-            // Presentation
             zip.start_file("ppt/presentation.xml", options).unwrap();
             zip.write_all(b"<?xml version=\"1.0\"?><presentation/>").unwrap();
 
-            // Root rels
             zip.start_file("_rels/.rels", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1816,7 +1750,6 @@ mod tests {
             )
             .unwrap();
 
-            // Presentation rels
             zip.start_file("ppt/_rels/presentation.xml.rels", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1826,7 +1759,6 @@ mod tests {
             )
             .unwrap();
 
-            // Build table XML
             let mut table_xml = String::from(
                 r#"<a:tbl>
                 <a:tblGrid>"#,
@@ -1858,7 +1790,6 @@ mod tests {
             }
             table_xml.push_str("</a:tbl>");
 
-            // Slide with table
             let slide_xml = format!(
                 r#"<?xml version="1.0" encoding="UTF-8"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -1885,7 +1816,6 @@ mod tests {
             zip.start_file("ppt/slides/slide1.xml", options).unwrap();
             zip.write_all(slide_xml.as_bytes()).unwrap();
 
-            // Core properties
             zip.start_file("docProps/core.xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1910,7 +1840,6 @@ mod tests {
             let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buffer));
             let options = SimpleFileOptions::default();
 
-            // Content Types
             zip.start_file("[Content_Types].xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1921,11 +1850,9 @@ mod tests {
             )
             .unwrap();
 
-            // Presentation
             zip.start_file("ppt/presentation.xml", options).unwrap();
             zip.write_all(b"<?xml version=\"1.0\"?><presentation/>").unwrap();
 
-            // Root rels
             zip.start_file("_rels/.rels", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1935,7 +1862,6 @@ mod tests {
             )
             .unwrap();
 
-            // Presentation rels
             zip.start_file("ppt/_rels/presentation.xml.rels", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1945,11 +1871,10 @@ mod tests {
             )
             .unwrap();
 
-            // Build list items
             let mut list_xml = String::new();
             for (level, is_ordered, text) in list_items {
                 let indent = (level - 1) * 457200;
-                let lvl_attr = level - 1; // lvl attribute is 0-indexed
+                let lvl_attr = level - 1;
                 let bullet_section = if is_ordered {
                     format!(
                         r#"<a:pPr lvl="{}"><a:buAutoNum type="arabicPeriod"/></a:pPr>"#,
@@ -1985,7 +1910,6 @@ mod tests {
                 ));
             }
 
-            // Slide with lists
             let slide_xml = format!(
                 r#"<?xml version="1.0" encoding="UTF-8"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -2002,7 +1926,6 @@ mod tests {
             zip.start_file("ppt/slides/slide1.xml", options).unwrap();
             zip.write_all(slide_xml.as_bytes()).unwrap();
 
-            // Core properties
             zip.start_file("docProps/core.xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2027,7 +1950,6 @@ mod tests {
             let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buffer));
             let options = SimpleFileOptions::default();
 
-            // Content Types
             zip.start_file("[Content_Types].xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2040,11 +1962,9 @@ mod tests {
             )
             .unwrap();
 
-            // Presentation
             zip.start_file("ppt/presentation.xml", options).unwrap();
             zip.write_all(b"<?xml version=\"1.0\"?><presentation/>").unwrap();
 
-            // Root rels
             zip.start_file("_rels/.rels", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2054,7 +1974,6 @@ mod tests {
             )
             .unwrap();
 
-            // Presentation rels
             zip.start_file("ppt/_rels/presentation.xml.rels", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2064,7 +1983,6 @@ mod tests {
             )
             .unwrap();
 
-            // Slide rels (link images)
             zip.start_file("ppt/slides/_rels/slide1.xml.rels", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2075,7 +1993,6 @@ mod tests {
             )
             .unwrap();
 
-            // Slide with images
             let slide_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
        xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -2117,32 +2034,21 @@ mod tests {
             zip.start_file("ppt/slides/slide1.xml", options).unwrap();
             zip.write_all(slide_xml.as_bytes()).unwrap();
 
-            // PNG image (minimal valid PNG)
             let png_bytes: Vec<u8> = vec![
-                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
-                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length
-                0x49, 0x48, 0x44, 0x52, // IHDR
-                0x00, 0x00, 0x00, 0x01, // width: 1
-                0x00, 0x00, 0x00, 0x01, // height: 1
-                0x08, 0x02, 0x00, 0x00, 0x00, // bit depth, color type, etc.
-                0x90, 0x77, 0x53, 0xDE, // CRC
-                0x00, 0x00, 0x00, 0x00, // IEND chunk length
-                0x49, 0x45, 0x4E, 0x44, // IEND
-                0xAE, 0x42, 0x60, 0x82, // CRC
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+                0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, 0x00,
+                0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
             ];
             zip.start_file("ppt/media/image1.png", options).unwrap();
             zip.write_all(&png_bytes).unwrap();
 
-            // JPEG image (minimal valid JPEG)
             let jpeg_bytes: Vec<u8> = vec![
-                0xFF, 0xD8, 0xFF, 0xE0, // JPEG SOI + APP0
-                0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, // JFIF marker
-                0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xD9, // EOI
+                0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00,
+                0x01, 0x00, 0x00, 0xFF, 0xD9,
             ];
             zip.start_file("ppt/media/image2.jpeg", options).unwrap();
             zip.write_all(&jpeg_bytes).unwrap();
 
-            // Core properties
             zip.start_file("docProps/core.xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2167,7 +2073,6 @@ mod tests {
             let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buffer));
             let options = SimpleFileOptions::default();
 
-            // Content Types
             zip.start_file("[Content_Types].xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2178,11 +2083,9 @@ mod tests {
             )
             .unwrap();
 
-            // Presentation
             zip.start_file("ppt/presentation.xml", options).unwrap();
             zip.write_all(b"<?xml version=\"1.0\"?><presentation/>").unwrap();
 
-            // Root rels
             zip.start_file("_rels/.rels", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2192,7 +2095,6 @@ mod tests {
             )
             .unwrap();
 
-            // Presentation rels
             zip.start_file("ppt/_rels/presentation.xml.rels", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2202,7 +2104,6 @@ mod tests {
             )
             .unwrap();
 
-            // Slide with formatted text
             let slide_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
        xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
@@ -2279,7 +2180,6 @@ mod tests {
             zip.start_file("ppt/slides/slide1.xml", options).unwrap();
             zip.write_all(slide_xml.as_bytes()).unwrap();
 
-            // Core properties
             zip.start_file("docProps/core.xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2294,10 +2194,6 @@ mod tests {
         }
         buffer
     }
-
-    // ============================================================================
-    // SECTION: Table Extraction Tests
-    // ============================================================================
 
     #[test]
     fn test_table_extraction_with_headers_succeeds() {
@@ -2346,7 +2242,6 @@ mod tests {
         assert!(result.content.contains("A1"), "Should contain first row data");
         assert!(result.content.contains("D4"), "Should contain last row data");
 
-        // Verify markdown table structure
         let tr_count = result.content.matches("<tr>").count();
         assert_eq!(tr_count, 4, "Should have 4 table rows");
     }
@@ -2369,7 +2264,6 @@ mod tests {
 
         let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
 
-        // Verify table is rendered correctly
         assert!(result.content.contains("<table>"), "Should contain table tag");
         assert!(
             result.content.contains("<th>Header with ampersand</th>"),
@@ -2386,15 +2280,9 @@ mod tests {
         let pptx_bytes = create_pptx_with_table(vec![]);
         let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
 
-        // Even an empty table structure is detected as a table
         assert_eq!(result.table_count, 1, "Empty table structure should be detected");
-        // But it shouldn't render any content
         assert!(!result.content.contains("<td>"), "Empty table should have no cells");
     }
-
-    // ============================================================================
-    // SECTION: List Extraction Tests
-    // ============================================================================
 
     #[test]
     fn test_list_extraction_ordered_list_succeeds() {
@@ -2450,7 +2338,6 @@ mod tests {
 
         let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
 
-        // Check indentation (2 spaces per level)
         assert!(
             result.content.contains("- Level 1 Item"),
             "Should have level 1 with no indent"
@@ -2494,10 +2381,6 @@ mod tests {
         );
     }
 
-    // ============================================================================
-    // SECTION: Image Extraction Tests
-    // ============================================================================
-
     #[test]
     fn test_image_extraction_from_slide_xml_succeeds() {
         let pptx_bytes = create_pptx_with_images();
@@ -2514,7 +2397,6 @@ mod tests {
 
         assert_eq!(result.images.len(), 2, "Should load 2 images");
 
-        // Check that images have data
         for (i, img) in result.images.iter().enumerate() {
             assert!(!img.data.is_empty(), "Image {} should have non-empty data", i);
         }
@@ -2529,7 +2411,6 @@ mod tests {
 
         let formats: Vec<&str> = result.images.iter().map(|img| img.format.as_str()).collect();
 
-        // One should be PNG, one should be JPEG
         assert!(formats.contains(&"png"), "Should detect PNG format");
         assert!(formats.contains(&"jpeg"), "Should detect JPEG format");
     }
@@ -2563,15 +2444,10 @@ mod tests {
         assert_eq!(result.slide_count, 1, "Should have 1 slide");
         assert_eq!(result.image_count, 2, "Single slide should contain 2 images");
 
-        // Verify both images have valid indices
         let indices: Vec<usize> = result.images.iter().map(|img| img.image_index).collect();
         assert_eq!(indices.len(), 2, "Should have 2 images with indices");
         assert_eq!(indices, vec![0, 1], "Should have sequential image indices");
     }
-
-    // ============================================================================
-    // SECTION: Formatting Tests
-    // ============================================================================
 
     #[test]
     fn test_formatting_bold_text_renders_as_markdown_bold() {
@@ -2650,22 +2526,16 @@ mod tests {
         assert!(rendered.contains("all formats"), "Should contain original text");
     }
 
-    // ============================================================================
-    // SECTION: Integration Tests
-    // ============================================================================
-
     #[test]
     fn test_integration_complete_pptx_with_mixed_content_succeeds() {
         use std::io::Write;
         use zip::write::{SimpleFileOptions, ZipWriter};
 
-        // Create a comprehensive PPTX with tables, lists, images, and formatted text
         let mut buffer = Vec::new();
         {
             let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buffer));
             let options = SimpleFileOptions::default();
 
-            // Content Types
             zip.start_file("[Content_Types].xml", options).unwrap();
             zip.write_all(
                 br#"<?xml version="1.0" encoding="UTF-8"?>
@@ -2707,7 +2577,6 @@ mod tests {
             )
             .unwrap();
 
-            // Complex slide with mixed content
             let slide_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
        xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -2821,7 +2690,6 @@ mod tests {
             zip.start_file("ppt/slides/slide1.xml", options).unwrap();
             zip.write_all(slide_xml.as_bytes()).unwrap();
 
-            // PNG image
             let png_bytes: Vec<u8> = vec![
                 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
                 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, 0x00,
@@ -2845,7 +2713,6 @@ mod tests {
 
         let result = extract_pptx_from_bytes(&buffer, true).unwrap();
 
-        // Verify all content types are present
         assert!(
             result.content.contains("**Title with Bold"),
             "Should contain formatted title"
@@ -2855,7 +2722,6 @@ mod tests {
         assert!(result.content.contains("Header A"), "Should contain table header");
         assert!(result.content.contains("Data 1"), "Should contain table data");
 
-        // Verify counts
         assert_eq!(result.slide_count, 1, "Should have 1 slide");
         assert_eq!(result.table_count, 1, "Should detect 1 table");
         assert_eq!(result.image_count, 1, "Should detect 1 image");
@@ -2903,7 +2769,6 @@ mod tests {
             )
             .unwrap();
 
-            // Slide with elements in specific positions (Y-primary, X-secondary sorting)
             let slide_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
        xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
@@ -2987,8 +2852,6 @@ mod tests {
 
         let result = extract_pptx_from_bytes(&buffer, false).unwrap();
 
-        // Elements should be sorted by Y position first, then X position
-        // Expected order: Top Left, Top Right, Bottom Left, Bottom Right
         let content = result.content;
         let top_left_pos = content.find("Top Left").unwrap();
         let top_right_pos = content.find("Top Right").unwrap();

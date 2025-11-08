@@ -106,6 +106,7 @@ pub struct PostProcessorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcrConfig {
     /// OCR backend: tesseract, easyocr, paddleocr
+    #[serde(default = "default_tesseract_backend")]
     pub backend: String,
 
     /// Language code (e.g., "eng", "deu")
@@ -272,6 +273,9 @@ fn default_true() -> bool {
 }
 fn default_eng() -> String {
     "eng".to_string()
+}
+fn default_tesseract_backend() -> String {
+    "tesseract".to_string()
 }
 fn default_chunk_size() -> usize {
     1000

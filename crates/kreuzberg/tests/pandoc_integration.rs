@@ -138,8 +138,6 @@ Some content in a subsection.
         extraction.content.contains("Test Document"),
         "Should extract document title"
     );
-    // Note: Author extraction from LaTeX varies by pandoc version and configuration
-    // The critical test is that content is extracted, not specific metadata fields
 
     assert!(
         extraction.content.contains("Introduction"),

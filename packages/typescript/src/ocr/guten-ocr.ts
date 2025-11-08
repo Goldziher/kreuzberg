@@ -14,8 +14,8 @@ import type { OcrBackendProtocol } from "../types.js";
  */
 interface TextLine {
 	text: string;
-	mean: number; // Confidence score (0-1)
-	box: number[][]; // Bounding box coordinates
+	mean: number;
+	box: number[][];
 }
 
 /**
@@ -164,9 +164,6 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 	 * @returns Array of ISO 639-1/2 language codes
 	 */
 	supportedLanguages(): string[] {
-		// Guten OCR uses PaddleOCR models which support multiple languages
-		// The exact list depends on the model configuration
-		// Default models support English and Chinese
 		return ["en", "eng", "ch_sim", "ch_tra", "chinese"];
 	}
 
@@ -191,7 +188,6 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		}
 
 		try {
-			// Dynamic import to handle optional dependency
 			this.ocrModule = await import("@gutenye/ocr-node").then((m) => m.default || m);
 		} catch (e) {
 			const error = e as Error;
@@ -279,21 +275,16 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		}
 
 		try {
-			// Import sharp for image metadata
 			const sharp = await import("sharp").then((m: any) => m.default || m);
 
-			// Get image dimensions for metadata
 			const image = sharp(Buffer.from(imageBytes));
 			const metadata = await image.metadata();
 
-			// Run OCR detection - Guten OCR accepts image buffers directly
 			const result = await this.ocr.detect(Buffer.from(imageBytes));
 
-			// Process detected text lines
 			const textLines = result.map((line) => line.text);
 			const content = textLines.join("\n");
 
-			// Calculate average confidence
 			const avgConfidence = result.length > 0 ? result.reduce((sum, line) => sum + line.mean, 0) / result.length : 0;
 
 			return {

@@ -45,11 +45,9 @@ function profileExtraction(
 	console.log(`Iterations: ${iterations}`);
 	console.log("=".repeat(70));
 
-	// Warm up
 	func(filePath);
 	forceGc();
 
-	// Start profiling
 	const startMem = getMemoryMb();
 	const startTime = performance.now();
 
@@ -64,7 +62,6 @@ function profileExtraction(
 	const endTime = performance.now();
 	const endMem = getMemoryMb();
 
-	// Force GC
 	forceGc();
 	const gcMem = getMemoryMb();
 

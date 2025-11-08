@@ -44,8 +44,6 @@ def test_extract_file_sync_with_bytes(tmp_path: Path) -> None:
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test content from bytes")
 
-    # v4 converts bytes to str via str(bytes) which creates 'b"/path"'
-    # This is not supported - use .decode() instead
     result = extract_file_sync(bytes(str(test_file), "utf-8").decode("utf-8"))
 
     assert result.content == "Test content from bytes"
@@ -85,7 +83,6 @@ async def test_extract_file_async_with_bytes(tmp_path: Path) -> None:
     test_file = tmp_path / "test.txt"
     test_file.write_text("Async test content from bytes")
 
-    # v4 doesn't support raw bytes paths - decode first
     result = await extract_file(bytes(str(test_file), "utf-8").decode("utf-8"))
 
     assert result.content == "Async test content from bytes"
@@ -113,10 +110,8 @@ def test_invalid_path_type() -> None:
     Invalid types like int/None get stringified and fail with "file not found".
     This is acceptable behavior - the error message is still clear.
     """
-    # v4 converts to str, so 12345 becomes "12345" and fails as file not found
     with pytest.raises((ValueError, ValidationError), match="File does not exist"):
         extract_file_sync(cast("Any", 12345))
 
-    # None becomes "None" and fails similarly
     with pytest.raises((ValueError, TypeError, ValidationError)):
         extract_file_sync(cast("Any", None))

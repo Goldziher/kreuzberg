@@ -62,11 +62,23 @@ pub struct OcrBackendRegistry {
 }
 
 impl OcrBackendRegistry {
-    /// Create a new empty OCR backend registry.
+    /// Create a new OCR backend registry with default backends.
+    ///
+    /// Registers the Tesseract backend by default if the "ocr" feature is enabled.
     pub fn new() -> Self {
-        Self {
+        let mut registry = Self {
             backends: HashMap::new(),
+        };
+
+        #[cfg(feature = "ocr")]
+        {
+            use crate::ocr::tesseract_backend::TesseractBackend;
+            if let Ok(backend) = TesseractBackend::new() {
+                let _ = registry.register(Arc::new(backend));
+            }
         }
+
+        registry
     }
 
     /// Register an OCR backend.
@@ -237,14 +249,12 @@ impl DocumentExtractorRegistry {
     ///
     /// The highest priority extractor, or an error if none found.
     pub fn get(&self, mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
-        // Try exact match first
         if let Some(priority_map) = self.extractors.get(mime_type)
             && let Some((_priority, extractor)) = priority_map.iter().next_back()
         {
             return Ok(Arc::clone(extractor));
         }
 
-        // Try prefix match (e.g., "image/*" matches "image/png")
         let mut best_match: Option<(i32, Arc<dyn DocumentExtractor>)> = None;
 
         for (registered_mime, priority_map) in &self.extractors {
@@ -282,7 +292,7 @@ impl DocumentExtractorRegistry {
     pub fn remove(&mut self, name: &str) -> Result<()> {
         let index_entries = match self.name_index.remove(name) {
             Some(entries) => entries,
-            None => return Ok(()), // Not registered, nothing to remove
+            None => return Ok(()),
         };
 
         let mut extractor_to_shutdown: Option<Arc<dyn DocumentExtractor>> = None;
@@ -403,7 +413,7 @@ impl PostProcessorRegistry {
     pub fn remove(&mut self, name: &str) -> Result<()> {
         let (stage, priority) = match self.name_index.remove(name) {
             Some(location) => location,
-            None => return Ok(()), // Not registered, nothing to remove
+            None => return Ok(()),
         };
 
         let processor_to_shutdown = if let Some(priority_map) = self.processors.get_mut(&stage) {

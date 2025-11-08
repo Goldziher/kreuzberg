@@ -172,7 +172,6 @@ def _perform_extraction(file: Path | None, extraction_config: ExtractionConfig, 
             input_text = sys.stdin.read()
             input_bytes = input_text.encode("utf-8")
 
-        # Detect MIME type from content
         content_str = input_bytes.decode("utf-8", errors="ignore").lower()
         if "<html" in content_str or "<!doctype html" in content_str or "<body" in content_str:
             mime_type = "text/html"
@@ -185,7 +184,6 @@ def _perform_extraction(file: Path | None, extraction_config: ExtractionConfig, 
         else:
             mime_type = "text/plain"
 
-        # Use progress display if possible, fallback to simple extraction on Windows issues
         try:
             with Progress(
                 SpinnerColumn(),
@@ -196,10 +194,8 @@ def _perform_extraction(file: Path | None, extraction_config: ExtractionConfig, 
                 progress.add_task("Extracting text...", total=None)
                 return extract_bytes_sync(input_bytes, mime_type, config=extraction_config)
         except (OSError, RuntimeError):  # pragma: no cover
-            # Fallback for Windows console issues
             return extract_bytes_sync(input_bytes, mime_type, config=extraction_config)
     else:
-        # Use progress display if possible, fallback to simple extraction on Windows issues
         try:
             with Progress(
                 SpinnerColumn(),
@@ -210,7 +206,6 @@ def _perform_extraction(file: Path | None, extraction_config: ExtractionConfig, 
                 progress.add_task(f"Extracting text from {file.name}...", total=None)
                 return extract_file_sync(str(file), config=extraction_config)
         except (OSError, RuntimeError):  # pragma: no cover
-            # Fallback for Windows console issues
             return extract_file_sync(str(file), config=extraction_config)
 
 

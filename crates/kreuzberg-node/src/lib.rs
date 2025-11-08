@@ -41,57 +41,45 @@ fn convert_error(err: kreuzberg::KreuzbergError) -> napi::Error {
     use kreuzberg::KreuzbergError;
 
     match err {
-        // IO errors - system-level file access issues
         KreuzbergError::Io(e) => Error::new(Status::GenericFailure, format!("IO error: {}", e)),
 
-        // Parsing errors - invalid document format, corrupt files
         KreuzbergError::Parsing { message, .. } => {
             Error::new(Status::InvalidArg, format!("Parsing error: {}", message))
         }
 
-        // OCR errors - OCR processing failures
         KreuzbergError::Ocr { message, .. } => Error::new(Status::GenericFailure, format!("OCR error: {}", message)),
 
-        // Validation errors - invalid configuration or parameters
         KreuzbergError::Validation { message, .. } => {
             Error::new(Status::InvalidArg, format!("Validation error: {}", message))
         }
 
-        // Cache errors - non-fatal cache operations
         KreuzbergError::Cache { message, .. } => {
             Error::new(Status::GenericFailure, format!("Cache error: {}", message))
         }
 
-        // Image processing errors
         KreuzbergError::ImageProcessing { message, .. } => {
             Error::new(Status::GenericFailure, format!("Image processing error: {}", message))
         }
 
-        // Serialization errors - JSON/MessagePack failures
         KreuzbergError::Serialization { message, .. } => {
             Error::new(Status::InvalidArg, format!("Serialization error: {}", message))
         }
 
-        // Missing dependency errors - missing system tools (tesseract, pandoc, etc.)
         KreuzbergError::MissingDependency(dep) => {
             Error::new(Status::GenericFailure, format!("Missing dependency: {}", dep))
         }
 
-        // Plugin errors - plugin-specific failures
         KreuzbergError::Plugin { message, plugin_name } => Error::new(
             Status::GenericFailure,
             format!("Plugin error in '{}': {}", plugin_name, message),
         ),
 
-        // Lock poisoned errors - should not happen in normal operation
         KreuzbergError::LockPoisoned(msg) => Error::new(Status::GenericFailure, format!("Lock poisoned: {}", msg)),
 
-        // Unsupported format errors - invalid or unsupported MIME types
         KreuzbergError::UnsupportedFormat(format) => {
             Error::new(Status::InvalidArg, format!("Unsupported format: {}", format))
         }
 
-        // Other errors - catch-all
         KreuzbergError::Other(msg) => Error::new(Status::GenericFailure, msg),
     }
 }
@@ -496,11 +484,7 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
     type Error = napi::Error;
 
     fn try_from(val: JsExtractionResult) -> Result<Self> {
-        // Custom metadata deserialization to handle JavaScript post-processor additions
-        // Post-processors can add arbitrary fields to metadata, so we need to preserve them
-        // in the `additional` HashMap while also properly deserializing known fields.
         let metadata = {
-            // Parse metadata as a generic map to access all fields
             let mut metadata_map: std::collections::HashMap<String, serde_json::Value> =
                 serde_json::from_value(val.metadata.clone()).map_err(|e| {
                     Error::new(
@@ -509,7 +493,6 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                     )
                 })?;
 
-            // Extract the top-level known fields
             let language = metadata_map
                 .remove("language")
                 .and_then(|v| serde_json::from_value(v).ok());
@@ -525,11 +508,8 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                 .remove("error")
                 .and_then(|v| serde_json::from_value(v).ok());
 
-            // Extract format metadata if present (it's flattened, so fields are at top level)
-            // Format-specific fields - collect all that match known format types
             let known_format_fields: std::collections::HashSet<&str> = [
                 "format_type",
-                // PDF fields
                 "title",
                 "author",
                 "keywords",
@@ -538,10 +518,8 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                 "creation_date",
                 "modification_date",
                 "page_count",
-                // Excel fields
                 "sheet_count",
                 "sheet_names",
-                // Email fields
                 "from_email",
                 "from_name",
                 "to_emails",
@@ -549,31 +527,25 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                 "bcc_emails",
                 "message_id",
                 "attachments",
-                // PowerPoint fields
                 "description",
                 "summary",
                 "fonts",
-                // Archive fields
                 "format",
                 "file_count",
                 "file_list",
                 "total_size",
                 "compressed_size",
-                // Image fields
                 "width",
                 "height",
                 "exif",
-                // XML fields
                 "element_count",
                 "unique_elements",
-                // Text fields
                 "line_count",
                 "word_count",
                 "character_count",
                 "headers",
                 "links",
                 "code_blocks",
-                // HTML fields
                 "canonical",
                 "base_href",
                 "og_title",
@@ -591,7 +563,6 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                 "link_author",
                 "link_license",
                 "link_alternate",
-                // OCR fields
                 "psm",
                 "output_format",
                 "table_count",
@@ -602,7 +573,6 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
             .copied()
             .collect();
 
-            // Build a JSON object with just the format fields for deserialization
             let mut format_fields = serde_json::Map::new();
             for key in known_format_fields.iter() {
                 if let Some(value) = metadata_map.remove(*key) {
@@ -610,14 +580,12 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                 }
             }
 
-            // Try to deserialize the format metadata
             let format = if !format_fields.is_empty() {
                 serde_json::from_value(serde_json::Value::Object(format_fields)).ok()
             } else {
                 None
             };
 
-            // Everything remaining in metadata_map is a custom field from post-processors
             let additional = metadata_map;
 
             kreuzberg::Metadata {
@@ -1077,8 +1045,6 @@ pub async fn batch_extract_bytes(
         .and_then(|results| results.into_iter().map(JsExtractionResult::try_from).collect())
 }
 
-// JavaScript PostProcessor bridge implementation using ThreadsafeFunction
-
 use async_trait::async_trait;
 use kreuzberg::plugins::{Plugin, PostProcessor as RustPostProcessor, ProcessingStage};
 use napi::bindgen_prelude::Promise;
@@ -1107,14 +1073,6 @@ struct JsPostProcessor {
     stage: ProcessingStage,
 }
 
-// SAFETY: ThreadsafeFunction from napi-rs is designed to be Send + Sync.
-// - ThreadsafeFunction uses internal synchronization primitives to safely call JavaScript from any thread
-// - NAPI-RS guarantees thread-safe execution of callbacks by marshaling all JavaScript interactions
-//   through the Node.js event loop via a callback queue
-// - The JavaScript function reference is managed by the Node.js runtime and protected by NAPI-RS
-// - No raw JavaScript values (napi_value) are stored directly; only the ThreadsafeFunction wrapper
-// - The Arc<ThreadsafeFunction<...>> wrapper provides shared ownership with atomic reference counting
-// - All cross-thread access goes through ThreadsafeFunction::call_async which handles synchronization
 unsafe impl Send for JsPostProcessor {}
 unsafe impl Sync for JsPostProcessor {}
 
@@ -1149,7 +1107,6 @@ impl RustPostProcessor for JsPostProcessor {
             result.metadata.additional.keys().collect::<Vec<_>>()
         );
 
-        // Convert Rust ExtractionResult to JS format and serialize to JSON
         let js_result =
             JsExtractionResult::try_from(result.clone()).map_err(|e| kreuzberg::KreuzbergError::Plugin {
                 message: format!("Failed to convert result for JavaScript PostProcessor: {}", e),
@@ -1165,9 +1122,6 @@ impl RustPostProcessor for JsPostProcessor {
             &json_input.chars().take(500).collect::<String>()
         );
 
-        // Call JavaScript process function with JSON string
-        // We're already in an async context, so we can directly await the ThreadsafeFunction
-        // No spawn_blocking needed - this allows the Node.js event loop to process the callback naturally
         let json_output = self
             .process_fn
             .call_async(json_input)
@@ -1187,7 +1141,6 @@ impl RustPostProcessor for JsPostProcessor {
             &json_output.chars().take(500).collect::<String>()
         );
 
-        // Deserialize the JSON result
         let updated: JsExtractionResult =
             serde_json::from_str(&json_output).map_err(|e| kreuzberg::KreuzbergError::Plugin {
                 message: format!(
@@ -1197,7 +1150,6 @@ impl RustPostProcessor for JsPostProcessor {
                 plugin_name: self.name.clone(),
             })?;
 
-        // Update the result in-place by converting from JS format
         let rust_result =
             kreuzberg::ExtractionResult::try_from(updated).map_err(|e| kreuzberg::KreuzbergError::Plugin {
                 message: format!("Failed to convert result from JavaScript PostProcessor: {}", e),
@@ -1254,10 +1206,8 @@ impl RustPostProcessor for JsPostProcessor {
 /// ```
 #[napi]
 pub fn register_post_processor(_env: Env, processor: Object) -> Result<()> {
-    // Validate required methods exist
     validate_plugin_object(&processor, "PostProcessor", &["name", "process"])?;
 
-    // Get processor name
     let name_fn: Function<(), String> = processor.get_named_property("name")?;
     let name: String = name_fn.call(())?;
 
@@ -1268,7 +1218,6 @@ pub fn register_post_processor(_env: Env, processor: Object) -> Result<()> {
         ));
     }
 
-    // Get processing stage (optional, defaults to Middle)
     let stage = if let Ok(stage_fn) = processor.get_named_property::<Function<(), String>>("processingStage") {
         let stage_str: String = stage_fn.call(())?;
         match stage_str.to_lowercase().as_str() {
@@ -1281,26 +1230,18 @@ pub fn register_post_processor(_env: Env, processor: Object) -> Result<()> {
         ProcessingStage::Middle
     };
 
-    // Get process function and create ThreadsafeFunction
-    // The JS function is async and returns Promise<String>
     let process_fn: Function<String, Promise<String>> = processor.get_named_property("process")?;
 
-    // Build ThreadsafeFunction with callback to properly pass arguments to JS
-    // The JS function is async and returns a Promise, so we use build_callback
-    // to transform the argument passing (wrapping in an array)
-    let tsfn = process_fn.build_threadsafe_function().build_callback(|ctx| {
-        // Return the value wrapped in a vec so JS receives it as ...args
-        Ok(vec![ctx.value])
-    })?;
+    let tsfn = process_fn
+        .build_threadsafe_function()
+        .build_callback(|ctx| Ok(vec![ctx.value]))?;
 
-    // Create the Rust wrapper
     let js_processor = JsPostProcessor {
         name: name.clone(),
         process_fn: Arc::new(tsfn),
         stage,
     };
 
-    // Register with the Rust registry
     let arc_processor: Arc<dyn RustPostProcessor> = Arc::new(js_processor);
     let registry = get_post_processor_registry();
     let mut registry = registry.write().map_err(|e| {
@@ -1331,7 +1272,6 @@ pub fn unregister_post_processor(name: String) -> Result<()> {
         )
     })?;
 
-    // Remove processor from the internal HashMap
     registry.remove(&name).map_err(|e| {
         Error::new(
             Status::GenericFailure,
@@ -1352,7 +1292,6 @@ pub fn clear_post_processors() -> Result<()> {
         )
     })?;
 
-    // Clear all processors from the internal HashMap
     *registry = Default::default();
     Ok(())
 }
@@ -1370,8 +1309,6 @@ pub fn list_post_processors() -> Result<Vec<String>> {
 
     Ok(registry.list())
 }
-
-// JavaScript Validator bridge implementation using ThreadsafeFunction
 
 use kreuzberg::plugins::Validator as RustValidator;
 
@@ -1397,14 +1334,6 @@ struct JsValidator {
     priority: i32,
 }
 
-// SAFETY: ThreadsafeFunction from napi-rs is designed to be Send + Sync.
-// - ThreadsafeFunction uses internal synchronization primitives to safely call JavaScript from any thread
-// - NAPI-RS guarantees thread-safe execution of callbacks by marshaling all JavaScript interactions
-//   through the Node.js event loop via a callback queue
-// - The JavaScript function reference is managed by the Node.js runtime and protected by NAPI-RS
-// - No raw JavaScript values (napi_value) are stored directly; only the ThreadsafeFunction wrapper
-// - The Arc<ThreadsafeFunction<...>> wrapper provides shared ownership with atomic reference counting
-// - All cross-thread access goes through ThreadsafeFunction::call_async which handles synchronization
 unsafe impl Send for JsValidator {}
 unsafe impl Sync for JsValidator {}
 
@@ -1433,7 +1362,6 @@ impl RustValidator for JsValidator {
         result: &kreuzberg::ExtractionResult,
         _config: &kreuzberg::ExtractionConfig,
     ) -> std::result::Result<(), kreuzberg::KreuzbergError> {
-        // Convert Rust ExtractionResult to JS format and serialize to JSON
         let js_result =
             JsExtractionResult::try_from(result.clone()).map_err(|e| kreuzberg::KreuzbergError::Plugin {
                 message: format!("Failed to convert result for JavaScript Validator: {}", e),
@@ -1444,15 +1372,11 @@ impl RustValidator for JsValidator {
             plugin_name: self.name.clone(),
         })?;
 
-        // Call JavaScript validate function with JSON string
-        // We're already in an async context, so we can directly await the ThreadsafeFunction
-        // No spawn_blocking needed - this allows the Node.js event loop to process the callback naturally
         self.validate_fn
             .call_async(json_input)
             .await
             .map_err(|e| {
                 let err_msg = e.to_string();
-                // Check if the error message contains "ValidationError" to determine error type
                 if err_msg.contains("ValidationError") || err_msg.contains("validation") {
                     kreuzberg::KreuzbergError::Validation {
                         message: err_msg,
@@ -1468,7 +1392,6 @@ impl RustValidator for JsValidator {
             .await
             .map_err(|e| {
                 let err_msg = e.to_string();
-                // Check if the error message contains "ValidationError" to determine error type
                 if err_msg.contains("ValidationError") || err_msg.contains("validation") {
                     kreuzberg::KreuzbergError::Validation {
                         message: err_msg,
@@ -1482,7 +1405,6 @@ impl RustValidator for JsValidator {
                 }
             })?;
 
-        // Validation passed (empty string returned)
         Ok(())
     }
 
@@ -1528,10 +1450,8 @@ impl RustValidator for JsValidator {
 /// ```
 #[napi]
 pub fn register_validator(_env: Env, validator: Object) -> Result<()> {
-    // Validate required methods exist
     validate_plugin_object(&validator, "Validator", &["name", "validate"])?;
 
-    // Get validator name
     let name_fn: Function<(), String> = validator.get_named_property("name")?;
     let name: String = name_fn.call(())?;
 
@@ -1542,33 +1462,24 @@ pub fn register_validator(_env: Env, validator: Object) -> Result<()> {
         ));
     }
 
-    // Get priority (optional, defaults to 50)
     let priority = if let Ok(priority_fn) = validator.get_named_property::<Function<(), i32>>("priority") {
         priority_fn.call(())?
     } else {
         50
     };
 
-    // Get validate function and create ThreadsafeFunction
-    // The JS function is async and returns Promise<String>
     let validate_fn: Function<String, Promise<String>> = validator.get_named_property("validate")?;
 
-    // Build ThreadsafeFunction with callback to properly pass arguments to JS
-    // The JS function is async and returns a Promise, so we use build_callback
-    // to transform the argument passing (wrapping in an array)
-    let tsfn = validate_fn.build_threadsafe_function().build_callback(|ctx| {
-        // Return the value wrapped in a vec so JS receives it as ...args
-        Ok(vec![ctx.value])
-    })?;
+    let tsfn = validate_fn
+        .build_threadsafe_function()
+        .build_callback(|ctx| Ok(vec![ctx.value]))?;
 
-    // Create the Rust wrapper
     let js_validator = JsValidator {
         name: name.clone(),
         validate_fn: Arc::new(tsfn),
         priority,
     };
 
-    // Register with the Rust registry
     let arc_validator: Arc<dyn RustValidator> = Arc::new(js_validator);
     let registry = get_validator_registry();
     let mut registry = registry.write().map_err(|e| {
@@ -1599,7 +1510,6 @@ pub fn unregister_validator(name: String) -> Result<()> {
         )
     })?;
 
-    // Remove validator from the internal HashMap
     registry.remove(&name).map_err(|e| {
         Error::new(
             Status::GenericFailure,
@@ -1620,7 +1530,6 @@ pub fn clear_validators() -> Result<()> {
         )
     })?;
 
-    // Clear all validators from the internal HashMap
     *registry = Default::default();
     Ok(())
 }
@@ -1638,8 +1547,6 @@ pub fn list_validators() -> Result<Vec<String>> {
 
     Ok(registry.list())
 }
-
-// JavaScript OCR Backend bridge implementation using ThreadsafeFunction
 
 use kreuzberg::plugins::registry::get_ocr_backend_registry;
 use kreuzberg::plugins::{OcrBackend as RustOcrBackend, OcrBackendType};
@@ -1669,14 +1576,6 @@ struct JsOcrBackend {
     process_image_fn: ProcessImageFn,
 }
 
-// SAFETY: ThreadsafeFunction from napi-rs is designed to be Send + Sync.
-// - ThreadsafeFunction uses internal synchronization primitives to safely call JavaScript from any thread
-// - NAPI-RS guarantees thread-safe execution of callbacks by marshaling all JavaScript interactions
-//   through the Node.js event loop via a callback queue
-// - The JavaScript function reference is managed by the Node.js runtime and protected by NAPI-RS
-// - No raw JavaScript values (napi_value) are stored directly; only the ThreadsafeFunction wrapper
-// - The Arc<ThreadsafeFunction<...>> wrapper provides shared ownership with atomic reference counting
-// - All cross-thread access goes through ThreadsafeFunction::call_async which handles synchronization
 unsafe impl Send for JsOcrBackend {}
 unsafe impl Sync for JsOcrBackend {}
 
@@ -1705,13 +1604,10 @@ impl RustOcrBackend for JsOcrBackend {
         image_bytes: &[u8],
         config: &kreuzberg::OcrConfig,
     ) -> std::result::Result<kreuzberg::ExtractionResult, kreuzberg::KreuzbergError> {
-        // Convert image bytes to Buffer and language to String
         let buffer = Buffer::from(image_bytes);
         let language = config.language.clone();
         let backend_name = self.name.clone();
 
-        // Call JavaScript processImage function with Buffer and language string
-        // Double await: first for the ThreadsafeFunction call, second for the Promise returned by JS
         let json_output = self
             .process_image_fn
             .call_async((buffer, language))
@@ -1726,7 +1622,6 @@ impl RustOcrBackend for JsOcrBackend {
                 source: Some(Box::new(e)),
             })?;
 
-        // Deserialize the JSON result
         let wire_result: serde_json::Value =
             serde_json::from_str(&json_output).map_err(|e| kreuzberg::KreuzbergError::Ocr {
                 message: format!(
@@ -1736,7 +1631,6 @@ impl RustOcrBackend for JsOcrBackend {
                 source: Some(Box::new(e)),
             })?;
 
-        // Convert wire format to ExtractionResult
         let content = wire_result
             .get("content")
             .and_then(|v| v.as_str())
@@ -1862,10 +1756,8 @@ impl RustOcrBackend for JsOcrBackend {
 /// ```
 #[napi]
 pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
-    // Validate required methods exist
     validate_plugin_object(&backend, "OCR Backend", &["name", "supportedLanguages", "processImage"])?;
 
-    // Get backend name
     let name_fn: Function<(), String> = backend.get_named_property("name")?;
     let name: String = name_fn.call(())?;
 
@@ -1876,7 +1768,6 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
         ));
     }
 
-    // Get supported languages
     let supported_languages_fn: Function<(), Vec<String>> = backend.get_named_property("supportedLanguages")?;
     let supported_languages: Vec<String> = supported_languages_fn.call(())?;
 
@@ -1887,26 +1778,18 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
         ));
     }
 
-    // Get processImage function and create ThreadsafeFunction
-    // The JS function is async and returns Promise<String>
     let process_image_fn: Function<(Buffer, String), Promise<String>> = backend.get_named_property("processImage")?;
 
-    // Build ThreadsafeFunction with callback to properly pass arguments to JS
-    // The JS function is async and returns a Promise, so we use build_callback
-    // to transform the argument passing (wrapping in a vec)
-    let tsfn = process_image_fn.build_threadsafe_function().build_callback(|ctx| {
-        // Return the value wrapped in a vec so JS receives it as separate arguments
-        Ok(vec![ctx.value])
-    })?;
+    let tsfn = process_image_fn
+        .build_threadsafe_function()
+        .build_callback(|ctx| Ok(vec![ctx.value]))?;
 
-    // Create the Rust wrapper
     let js_ocr_backend = JsOcrBackend {
         name: name.clone(),
         supported_languages,
         process_image_fn: Arc::new(tsfn),
     };
 
-    // Register with the Rust registry
     let arc_backend: Arc<dyn RustOcrBackend> = Arc::new(js_ocr_backend);
     let registry = get_ocr_backend_registry();
     let mut registry = registry.write().map_err(|e| {

@@ -26,7 +26,6 @@ impl TempFile {
 
 impl Drop for TempFile {
     fn drop(&mut self) {
-        // Best-effort cleanup - use blocking remove since Drop can't be async
         let path = self.path.clone();
         tokio::spawn(async move {
             let _ = fs::remove_file(&path).await;
@@ -47,7 +46,6 @@ impl TempDir {
 
 impl Drop for TempDir {
     fn drop(&mut self) {
-        // Best-effort cleanup - use blocking remove since Drop can't be async
         let path = self.path.clone();
         tokio::spawn(async move {
             let _ = fs::remove_dir_all(&path).await;
@@ -69,8 +67,6 @@ pub async fn extract_file(path: &Path, from_format: &str) -> Result<PandocExtrac
 
     let (content, mut metadata) = subprocess::extract_with_pandoc(path, from_format).await?;
 
-    // For DOCX files, extract comprehensive Office metadata and merge with Pandoc metadata
-    // If metadata extraction fails, continue with Pandoc metadata only (non-blocking)
     if from_format == "docx"
         && let Ok(office_metadata) = extract_docx_metadata(path).await
     {
@@ -156,7 +152,7 @@ pub async fn extract_images(path: &Path, from_format: &str) -> Result<Vec<Extrac
         Err(_) => {
             // Timeout - kill the process to prevent zombie ~keep
             let _ = child.kill().await;
-            return Ok(images); // Return empty images on timeout
+            return Ok(images);
         }
     };
 
@@ -239,7 +235,6 @@ async fn extract_docx_metadata(path: &Path) -> Result<HashMap<String, Value>> {
 
     let mut metadata = HashMap::new();
 
-    // Extract core properties
     if let Ok(core) = extract_core_properties(&mut archive) {
         if let Some(title) = core.title {
             metadata.insert("title".to_string(), Value::String(title));
@@ -283,7 +278,6 @@ async fn extract_docx_metadata(path: &Path) -> Result<HashMap<String, Value>> {
         }
     }
 
-    // Extract app properties
     if let Ok(app) = extract_docx_app_properties(&mut archive) {
         if let Some(pages) = app.pages {
             metadata.insert("page_count".to_string(), Value::Number(pages.into()));
@@ -314,7 +308,6 @@ async fn extract_docx_metadata(path: &Path) -> Result<HashMap<String, Value>> {
         }
     }
 
-    // Extract custom properties (optional)
     if let Ok(custom) = extract_custom_properties(&mut archive) {
         for (key, value) in custom {
             metadata.insert(format!("custom_{}", key), value);
@@ -329,7 +322,6 @@ async fn extract_docx_metadata(path: &Path) -> Result<HashMap<String, Value>> {
 /// Pandoc metadata takes precedence in case of conflicts.
 fn merge_metadata(pandoc_metadata: &mut HashMap<String, Value>, office_metadata: HashMap<String, Value>) {
     for (key, value) in office_metadata {
-        // Only insert if Pandoc didn't already provide this field
         pandoc_metadata.entry(key).or_insert(value);
     }
 }

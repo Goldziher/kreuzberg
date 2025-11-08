@@ -71,7 +71,11 @@ pub fn extract_file_sync(
 ) -> PyResult<ExtractionResult> {
     let path_str = extract_path_string(path)?;
     let rust_config = config.into();
-    let result = kreuzberg::extract_file_sync(&path_str, mime_type.as_deref(), &rust_config).map_err(to_py_err)?;
+
+    let result = py
+        .allow_threads(|| kreuzberg::extract_file_sync(&path_str, mime_type.as_deref(), &rust_config))
+        .map_err(to_py_err)?;
+
     ExtractionResult::from_rust(result, py)
 }
 
@@ -104,7 +108,11 @@ pub fn extract_bytes_sync(
     config: ExtractionConfig,
 ) -> PyResult<ExtractionResult> {
     let rust_config = config.into();
-    let result = kreuzberg::extract_bytes_sync(&data, &mime_type, &rust_config).map_err(to_py_err)?;
+
+    let result = py
+        .allow_threads(|| kreuzberg::extract_bytes_sync(&data, &mime_type, &rust_config))
+        .map_err(to_py_err)?;
+
     ExtractionResult::from_rust(result, py)
 }
 
@@ -145,7 +153,10 @@ pub fn batch_extract_files_sync(
     let path_strings = path_strings?;
 
     let rust_config = config.into();
-    let results = kreuzberg::batch_extract_file_sync(path_strings, &rust_config).map_err(to_py_err)?;
+
+    let results = py
+        .allow_threads(|| kreuzberg::batch_extract_file_sync(path_strings, &rust_config))
+        .map_err(to_py_err)?;
 
     let list = PyList::empty(py);
     for result in results {
@@ -197,7 +208,9 @@ pub fn batch_extract_bytes_sync(
         .map(|(data, mime)| (data.as_slice(), mime.as_str()))
         .collect();
 
-    let results = kreuzberg::batch_extract_bytes_sync(contents, &rust_config).map_err(to_py_err)?;
+    let results = py
+        .allow_threads(|| kreuzberg::batch_extract_bytes_sync(contents, &rust_config))
+        .map_err(to_py_err)?;
 
     let list = PyList::empty(py);
     for result in results {

@@ -44,8 +44,6 @@ use crate::extraction::office_metadata::{
 use serde_json::Value;
 
 pub fn read_excel_file(file_path: &str) -> Result<ExcelWorkbook> {
-    // Extract Office metadata for XLSX files before opening with calamine
-    // If extraction fails, continue without Office metadata (non-blocking)
     #[cfg(feature = "office")]
     let office_metadata = if file_path.to_lowercase().ends_with(".xlsx")
         || file_path.to_lowercase().ends_with(".xlsm")
@@ -80,8 +78,6 @@ pub fn read_excel_file(file_path: &str) -> Result<ExcelWorkbook> {
 }
 
 pub fn read_excel_bytes(data: &[u8], file_extension: &str) -> Result<ExcelWorkbook> {
-    // Extract Office metadata for XLSX files before opening with calamine
-    // If extraction fails, continue without Office metadata (non-blocking)
     #[cfg(feature = "office")]
     let office_metadata = match file_extension.to_lowercase().as_str() {
         ".xlsx" | ".xlsm" | ".xlam" | ".xltm" => extract_xlsx_office_metadata_from_bytes(data).ok(),
@@ -297,7 +293,6 @@ where
 
     let _workbook_metadata = workbook.metadata();
 
-    // Merge Office metadata if available (Office metadata takes precedence for overlapping fields)
     if let Some(office_meta) = office_metadata {
         for (key, value) in office_meta {
             metadata.insert(key, value);
@@ -354,7 +349,6 @@ fn extract_xlsx_office_metadata_from_archive<R: std::io::Read + std::io::Seek>(
 ) -> Result<HashMap<String, String>> {
     let mut metadata = HashMap::new();
 
-    // Extract core properties
     if let Ok(core) = extract_core_properties(archive) {
         if let Some(title) = core.title {
             metadata.insert("title".to_string(), title);
@@ -395,7 +389,6 @@ fn extract_xlsx_office_metadata_from_archive<R: std::io::Read + std::io::Seek>(
         }
     }
 
-    // Extract app properties
     if let Ok(app) = extract_xlsx_app_properties(archive) {
         if !app.worksheet_names.is_empty() {
             metadata.insert("worksheet_names".to_string(), app.worksheet_names.join(", "));
@@ -411,10 +404,8 @@ fn extract_xlsx_office_metadata_from_archive<R: std::io::Read + std::io::Seek>(
         }
     }
 
-    // Extract custom properties (optional)
     if let Ok(custom) = extract_custom_properties(archive) {
         for (key, value) in custom {
-            // Convert Value to String
             let value_str = match value {
                 Value::String(s) => s,
                 Value::Number(n) => n.to_string(),

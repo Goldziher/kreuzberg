@@ -23,10 +23,6 @@ import {
 } from "../../src/index.js";
 import { createMockExtractionBinding } from "./helpers/mock-binding.js";
 
-// ============================================================================
-// Test Processors
-// ============================================================================
-
 class EarlyStageProcessor implements PostProcessorProtocol {
 	name(): string {
 		return "early_processor";
@@ -231,10 +227,6 @@ class MinimalProcessor implements PostProcessorProtocol {
 	}
 }
 
-// ============================================================================
-// Tests
-// ============================================================================
-
 beforeEach(() => {
 	const mockBinding = createMockExtractionBinding();
 	__setBindingForTests(mockBinding);
@@ -246,7 +238,6 @@ afterEach(() => {
 });
 
 describe("Plugin System - PostProcessors", () => {
-	// Clear processors before each test
 	beforeEach(() => {
 		clearPostProcessors();
 	});
@@ -292,7 +283,6 @@ describe("Plugin System - PostProcessors", () => {
 			const middleProc = new MiddleStageProcessor();
 			const earlyProc = new EarlyStageProcessor();
 
-			// Register in reverse order to test stage ordering
 			registerPostProcessor(lateProc);
 			registerPostProcessor(middleProc);
 			registerPostProcessor(earlyProc);
@@ -420,13 +410,11 @@ describe("Plugin System - PostProcessors", () => {
 
 			const testContent = "Test with postprocessing enabled.";
 
-			// With postprocessing enabled
 			const resultEnabled = await extractBytes(Buffer.from(testContent), "text/plain", {
 				postprocessor: { enabled: true },
 			});
 			expect(resultEnabled.metadata?.word_count).toBeDefined();
 
-			// With postprocessing disabled
 			const resultDisabled = await extractBytes(Buffer.from(testContent), "text/plain", {
 				postprocessor: { enabled: false },
 			});
@@ -522,7 +510,6 @@ describe("Plugin System - PostProcessors", () => {
 			const testContent = "Test duplicate names.";
 			const result = await extractBytes(Buffer.from(testContent), "text/plain");
 
-			// One of them should have run
 			const hasWordCount = result.metadata?.word_count !== undefined;
 			const hasDuplicate = result.metadata?.duplicate !== undefined;
 			expect(hasWordCount || hasDuplicate).toBe(true);

@@ -9,7 +9,6 @@ use kreuzberg::{
 
 #[tokio::main]
 async fn main() -> kreuzberg::Result<()> {
-    // Synchronous extraction - simplest approach
     println!("=== Synchronous Extraction ===");
     let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default())?;
     println!("Content length: {} characters", result.content.len());
@@ -19,7 +18,6 @@ async fn main() -> kreuzberg::Result<()> {
         &result.content[..200.min(result.content.len())]
     );
 
-    // With configuration
     println!("\n=== With Configuration ===");
     let config = ExtractionConfig {
         enable_quality_processing: true,
@@ -29,24 +27,20 @@ async fn main() -> kreuzberg::Result<()> {
     let result = extract_file_sync("document.pdf", None, &config)?;
     println!("Extracted {} characters with quality processing", result.content.len());
 
-    // Async extraction - for I/O-bound workloads
     println!("\n=== Async Extraction ===");
     let result = extract_file("document.pdf", None, &ExtractionConfig::default()).await?;
     println!("Async extracted: {} characters", result.content.len());
 
-    // Extract from bytes
     println!("\n=== Extract from Bytes ===");
     let data = std::fs::read("document.pdf")?;
     let result = extract_bytes_sync(&data, "application/pdf", &ExtractionConfig::default())?;
     println!("Extracted from bytes: {} characters", result.content.len());
 
-    // Extract from bytes (async)
     println!("\n=== Extract from Bytes (Async) ===");
     let data = tokio::fs::read("document.pdf").await?;
     let result = extract_bytes(&data, "application/pdf", &ExtractionConfig::default()).await?;
     println!("Async extracted from bytes: {} characters", result.content.len());
 
-    // Access metadata
     println!("\n=== Metadata ===");
     let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default())?;
     if let Some(pdf_metadata) = &result.metadata.pdf {
@@ -59,7 +53,6 @@ async fn main() -> kreuzberg::Result<()> {
         }
     }
 
-    // OCR extraction
     println!("\n=== OCR Extraction ===");
     let ocr_config = ExtractionConfig {
         ocr: Some(OcrConfig {
@@ -72,7 +65,6 @@ async fn main() -> kreuzberg::Result<()> {
     let result = extract_file_sync("scanned_document.pdf", None, &ocr_config)?;
     println!("OCR extracted: {} characters", result.content.len());
 
-    // Batch processing
     println!("\n=== Batch Processing ===");
     let files = vec!["document1.pdf", "document2.docx", "document3.txt"];
     let results = batch_extract_files_sync(&files, &ExtractionConfig::default())?;
@@ -80,13 +72,11 @@ async fn main() -> kreuzberg::Result<()> {
         println!("{}: {} chars", file, result.content.len());
     }
 
-    // Async batch processing
     println!("\n=== Async Batch Processing ===");
     let files = vec!["document1.pdf", "document2.docx"];
     let results = batch_extract_files(&files, &ExtractionConfig::default()).await?;
     println!("Processed {} files asynchronously", results.len());
 
-    // Chunking
     println!("\n=== Content Chunking ===");
     let chunking_config = ExtractionConfig {
         chunking: Some(ChunkingConfig {
@@ -103,7 +93,6 @@ async fn main() -> kreuzberg::Result<()> {
         }
     }
 
-    // Error handling
     println!("\n=== Error Handling ===");
     match extract_file_sync("nonexistent.pdf", None, &ExtractionConfig::default()) {
         Ok(_) => println!("File extracted successfully"),

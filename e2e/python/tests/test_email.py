@@ -1,4 +1,3 @@
-# Auto-generated tests for email fixtures.
 from __future__ import annotations
 
 import pytest

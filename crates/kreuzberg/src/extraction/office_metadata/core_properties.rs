@@ -81,7 +81,6 @@ pub struct CoreProperties {
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn extract_core_properties<R: Read + std::io::Seek>(archive: &mut ZipArchive<R>) -> Result<CoreProperties> {
-    // Try to find and read docProps/core.xml
     let mut xml_content = String::new();
 
     match archive.by_name("docProps/core.xml") {
@@ -90,18 +89,15 @@ pub fn extract_core_properties<R: Read + std::io::Seek>(archive: &mut ZipArchive
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to read core.xml: {}", e)))?;
         }
         Err(_) => {
-            // core.xml is optional - return empty properties
             return Ok(CoreProperties::default());
         }
     }
 
-    // Parse XML
     let doc = roxmltree::Document::parse(&xml_content)
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse core.xml: {}", e)))?;
 
     let root = doc.root_element();
 
-    // Extract Dublin Core elements (dc: namespace)
     let title = super::parse_xml_text(root, "title");
     let subject = super::parse_xml_text(root, "subject");
     let creator = super::parse_xml_text(root, "creator");
@@ -109,7 +105,6 @@ pub fn extract_core_properties<R: Read + std::io::Seek>(archive: &mut ZipArchive
     let language = super::parse_xml_text(root, "language");
     let identifier = super::parse_xml_text(root, "identifier");
 
-    // Extract Core Properties elements (cp: namespace)
     let keywords = super::parse_xml_text(root, "keywords");
     let last_modified_by = super::parse_xml_text(root, "lastModifiedBy");
     let revision = super::parse_xml_text(root, "revision");
@@ -117,7 +112,6 @@ pub fn extract_core_properties<R: Read + std::io::Seek>(archive: &mut ZipArchive
     let content_status = super::parse_xml_text(root, "contentStatus");
     let version = super::parse_xml_text(root, "version");
 
-    // Extract Dublin Core Terms elements (dcterms: namespace)
     let created = super::parse_xml_text(root, "created");
     let modified = super::parse_xml_text(root, "modified");
     let last_printed = super::parse_xml_text(root, "lastPrinted");
@@ -226,7 +220,7 @@ mod tests {
         let mut archive = create_test_zip_with_core_xml(core_xml);
         let props = extract_core_properties(&mut archive).unwrap();
 
-        assert_eq!(props.title, None); // Empty elements return None
+        assert_eq!(props.title, None);
         assert_eq!(props.creator, Some("Bob".to_string()));
     }
 

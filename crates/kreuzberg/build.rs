@@ -43,8 +43,6 @@ fn main() {
         tracing::debug!("Pdfium library already present at {}", runtime_lib_path.display());
     }
 
-    // On Windows, ensure pdfium.dll.lib is renamed to pdfium.lib
-    // This handles both fresh downloads and cached versions
     if target.contains("windows") {
         let lib_dir = pdfium_dir.join("lib");
         let dll_lib = lib_dir.join("pdfium.dll.lib");
@@ -100,7 +98,6 @@ fn get_latest_version(repo: &str) -> String {
     {
         let json = String::from_utf8_lossy(&output.stdout);
         if let Some(start) = json.find("\"tag_name\":") {
-            // Find the opening quote after "tag_name":
             let after_colon = &json[start + "\"tag_name\":".len()..];
             if let Some(opening_quote) = after_colon.find('"')
                 && let Some(closing_quote) = after_colon[opening_quote + 1..].find('"')
@@ -112,7 +109,6 @@ fn get_latest_version(repo: &str) -> String {
         }
     }
 
-    // Fallback to recent versions (October 2025)
     if repo.contains("bblanchon") {
         "7455".to_string()
     } else {
@@ -122,7 +118,6 @@ fn get_latest_version(repo: &str) -> String {
 
 fn get_pdfium_url_and_lib(target: &str) -> (String, String) {
     if target.contains("wasm") {
-        // Check environment variable first, then try GitHub API, then fallback
         let version = env::var("PDFIUM_WASM_VERSION")
             .ok()
             .filter(|v| !v.is_empty())
@@ -164,7 +159,6 @@ fn get_pdfium_url_and_lib(target: &str) -> (String, String) {
         panic!("Unsupported target platform: {}", target);
     };
 
-    // Check environment variable first, then try GitHub API, then fallback
     let version = env::var("PDFIUM_VERSION")
         .ok()
         .filter(|v| !v.is_empty())
@@ -199,7 +193,6 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &Path) {
         );
     }
 
-    // Verify the downloaded file is a gzip archive
     let file_type = Command::new("file")
         .arg(archive_path.to_str().unwrap())
         .output()
@@ -229,8 +222,6 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &Path) {
 
     fs::remove_file(&archive_path).ok();
 
-    // On Windows, bblanchon/pdfium-binaries names the import library pdfium.dll.lib
-    // but the linker expects pdfium.lib. Rename it after extraction.
     let target = env::var("TARGET").unwrap();
     if target.contains("windows") {
         let lib_dir = dest_dir.join("lib");

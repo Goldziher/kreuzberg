@@ -25,14 +25,12 @@ class MetadataEnricher:
         """Add statistical metadata to the result."""
         content = result.content
 
-        # Calculate statistics
         result.metadata["processed_at"] = datetime.now().isoformat()
         result.metadata["word_count"] = len(content.split())
         result.metadata["char_count"] = len(content)
         result.metadata["line_count"] = len(content.splitlines())
         result.metadata["has_content"] = bool(content.strip())
 
-        # Content type hints
         result.metadata["has_urls"] = bool(re.search(r"https?://", content))
         result.metadata["has_emails"] = bool(re.search(r"\S+@\S+\.\S+", content))
         result.metadata["has_phone_numbers"] = bool(re.search(r"\d{3}[-.]?\d{3}[-.]?\d{4}", content))
@@ -50,17 +48,13 @@ class PIIRedactor:
         """Redact PII from content."""
         content = result.content
 
-        # Redact emails
         content = re.sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "[EMAIL REDACTED]", content)
 
-        # Redact phone numbers (various formats)
         content = re.sub(r"\(\d{3}\)\s*\d{3}[-.]?\d{4}", "[PHONE REDACTED]", content)
         content = re.sub(r"\d{3}[-.]?\d{3}[-.]?\d{4}", "[PHONE REDACTED]", content)
 
-        # Redact SSN
         content = re.sub(r"\b\d{3}-\d{2}-\d{4}\b", "[SSN REDACTED]", content)
 
-        # Redact credit card numbers
         content = re.sub(r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b", "[CARD REDACTED]", content)
 
         result.content = content
@@ -79,15 +73,12 @@ class TextNormalizer:
         """Normalize text formatting."""
         content = result.content
 
-        # Normalize whitespace
-        content = re.sub(r" +", " ", content)  # Multiple spaces -> single space
-        content = re.sub(r"\n{3,}", "\n\n", content)  # Multiple newlines -> max 2
+        content = re.sub(r" +", " ", content)
+        content = re.sub(r"\n{3,}", "\n\n", content)
 
-        # Remove empty lines
         lines = [line for line in content.splitlines() if line.strip()]
         content = "\n".join(lines)
 
-        # Normalize Unicode
         content = content.strip()
 
         result.content = content
@@ -110,14 +101,6 @@ class LanguageTranslator:
 
     def process(self, result: ExtractionResult) -> ExtractionResult:
         """Translate content to target language."""
-        # In production: use translation API
-        # from googletrans import Translator
-        # translator = Translator()
-        # result.content = translator.translate(
-        #     result.content,
-        #     dest=self.target_language
-        # ).text
-
         result.metadata["translated_to"] = self.target_language
         result.metadata["original_language"] = result.detected_languages[0] if result.detected_languages else "unknown"
 
@@ -137,10 +120,8 @@ class SummaryGenerator:
         """Generate content summary."""
         content = result.content
 
-        # Simple extractive summarization
         summary = content[: self.max_summary_length]
 
-        # Try to break at sentence boundary
         if len(content) > self.max_summary_length:
             last_period = summary.rfind(".")
             last_newline = summary.rfind("\n")
@@ -165,10 +146,8 @@ class KeywordExtractor:
 
     def process(self, result: ExtractionResult) -> ExtractionResult:
         """Extract keywords from content."""
-        # Simple word frequency-based keyword extraction
         content = result.content.lower()
 
-        # Remove common words (stopwords)
         stopwords = {
             "the",
             "a",
@@ -192,16 +171,13 @@ class KeywordExtractor:
             "being",
         }
 
-        # Extract words
         words = re.findall(r"\b[a-z]{4,}\b", content)
 
-        # Count word frequencies
         word_freq: dict[str, int] = {}
         for word in words:
             if word not in stopwords:
                 word_freq[word] = word_freq.get(word, 0) + 1
 
-        # Get top 10 keywords
         keywords = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
         result.metadata["keywords"] = [word for word, _ in keywords]
 
@@ -209,7 +185,6 @@ class KeywordExtractor:
 
 
 def main() -> None:
-    # Register post-processors
     register_post_processor(MetadataEnricher())
     register_post_processor(PIIRedactor())
     register_post_processor(TextNormalizer())
@@ -217,20 +192,16 @@ def main() -> None:
     register_post_processor(SummaryGenerator(max_summary_length=300))
     register_post_processor(KeywordExtractor())
 
-    # Extract with all post-processors
     extract_file_sync("document.pdf")
 
-    # Unregister specific post-processor
     unregister_post_processor("pii_redactor")
 
     extract_file_sync("document.pdf")
 
-    # Clear all post-processors
     clear_post_processors()
 
     extract_file_sync("document.pdf")
 
-    # Register selective post-processors
     register_post_processor(MetadataEnricher())
     register_post_processor(SummaryGenerator(max_summary_length=200))
 

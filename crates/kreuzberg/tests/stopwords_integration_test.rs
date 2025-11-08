@@ -16,7 +16,6 @@ use kreuzberg::keywords::{KeywordConfig, extract_keywords};
 
 use std::collections::HashMap;
 
-// Helper to count stopwords in text
 fn count_stopwords(text: &str, lang: &str) -> usize {
     let stopwords = get_stopwords(lang).expect("Stopwords must exist for language");
     let words: Vec<&str> = text.split_whitespace().collect();
@@ -35,7 +34,6 @@ fn count_stopwords(text: &str, lang: &str) -> usize {
         .count()
 }
 
-// Helper to extract content words (non-stopwords)
 fn extract_content_words(text: &str, lang: &str) -> Vec<String> {
     let stopwords = get_stopwords(lang).expect("Stopwords must exist for language");
     let words: Vec<&str> = text.split_whitespace().collect();
@@ -58,10 +56,6 @@ fn extract_content_words(text: &str, lang: &str) -> Vec<String> {
         .collect()
 }
 
-// ============================================================================
-// Token Reduction Integration Tests
-// ============================================================================
-
 #[test]
 fn test_stopwords_removed_during_moderate_token_reduction() {
     let config = TokenReductionConfig {
@@ -71,16 +65,13 @@ fn test_stopwords_removed_during_moderate_token_reduction() {
         ..Default::default()
     };
 
-    // Real-world text with common English stopwords
     let input = "The quick brown fox is jumping over the lazy dog and running through the forest";
     let result = reduce_tokens(input, &config, Some("en")).unwrap();
 
-    // Verify stopwords are removed
     assert!(!result.contains(" the "), "Should remove 'the'. Result: {}", result);
     assert!(!result.contains(" is "), "Should remove 'is'. Result: {}", result);
     assert!(!result.contains(" and "), "Should remove 'and'. Result: {}", result);
 
-    // Verify content words are preserved
     assert!(result.contains("quick"), "Should preserve 'quick'. Result: {}", result);
     assert!(result.contains("brown"), "Should preserve 'brown'. Result: {}", result);
     assert!(result.contains("fox"), "Should preserve 'fox'. Result: {}", result);
@@ -91,7 +82,6 @@ fn test_stopwords_removed_during_moderate_token_reduction() {
     );
     assert!(result.contains("lazy"), "Should preserve 'lazy'. Result: {}", result);
 
-    // Verify significant reduction
     let original_stopwords = count_stopwords(input, "en");
     let result_stopwords = count_stopwords(&result, "en");
 
@@ -107,7 +97,6 @@ fn test_stopwords_removed_during_moderate_token_reduction() {
 fn test_stopwords_across_reduction_levels() {
     let text = "The machine learning model is trained on the large dataset and achieves good performance";
 
-    // Light reduction - should NOT remove stopwords
     let light_config = TokenReductionConfig {
         level: ReductionLevel::Light,
         use_simd: false,
@@ -118,7 +107,6 @@ fn test_stopwords_across_reduction_levels() {
     let light_stopwords = count_stopwords(&light_result, "en");
     assert!(light_stopwords > 0, "Light reduction should preserve some stopwords");
 
-    // Moderate reduction - SHOULD remove stopwords
     let moderate_config = TokenReductionConfig {
         level: ReductionLevel::Moderate,
         use_simd: false,
@@ -134,7 +122,6 @@ fn test_stopwords_across_reduction_levels() {
         moderate_stopwords
     );
 
-    // Aggressive reduction - should remove even more
     let aggressive_config = TokenReductionConfig {
         level: ReductionLevel::Aggressive,
         use_simd: false,
@@ -160,7 +147,6 @@ fn test_stopwords_preserve_semantic_meaning() {
         "The artificial intelligence system is processing the natural language text for extracting meaningful insights";
     let result = reduce_tokens(input, &config, Some("en")).unwrap();
 
-    // Key semantic terms should be preserved
     let content_words = extract_content_words(&result, "en");
 
     assert!(
@@ -192,7 +178,6 @@ fn test_stopwords_preserve_semantic_meaning() {
 
 #[test]
 fn test_stopwords_with_multiple_languages() {
-    // Test English
     let en_config = TokenReductionConfig {
         level: ReductionLevel::Moderate,
         use_simd: false,
@@ -208,7 +193,6 @@ fn test_stopwords_with_multiple_languages() {
         "English stopwords should be removed"
     );
 
-    // Test Spanish
     let es_config = TokenReductionConfig {
         level: ReductionLevel::Moderate,
         use_simd: false,
@@ -224,14 +208,12 @@ fn test_stopwords_with_multiple_languages() {
         "Spanish stopwords should be removed"
     );
 
-    // Verify Spanish content words preserved
     assert!(
         es_result.contains("programa") || es_result.contains("ciencias") || es_result.contains("computación"),
         "Should preserve Spanish content words. Result: {}",
         es_result
     );
 
-    // Test German
     let de_config = TokenReductionConfig {
         level: ReductionLevel::Moderate,
         use_simd: false,
@@ -256,11 +238,9 @@ fn test_language_fallback_to_english_stopwords() {
         ..Default::default()
     };
 
-    // Use unsupported language - should fallback to English
     let input = "The system is processing the data with the algorithm";
     let result = reduce_tokens(input, &config, Some("xyz")).unwrap();
 
-    // Should still remove English stopwords (fallback behavior)
     let original_stopwords = count_stopwords(input, "en");
     let result_stopwords = count_stopwords(&result, "en");
 
@@ -288,7 +268,6 @@ fn test_custom_stopwords_integration() {
     let input = "The algorithm processes the data in the system efficiently";
     let result = reduce_tokens(input, &config, Some("en")).unwrap();
 
-    // Custom stopwords should be removed
     assert!(
         !result.contains("algorithm"),
         "Should remove custom stopword 'algorithm'. Result: {}",
@@ -305,17 +284,12 @@ fn test_custom_stopwords_integration() {
         result
     );
 
-    // Regular content words should be preserved
     assert!(
         result.contains("processes") || result.contains("efficiently"),
         "Should preserve non-stopword content. Result: {}",
         result
     );
 }
-
-// ============================================================================
-// CJK Text Integration Tests
-// ============================================================================
 
 #[test]
 fn test_stopwords_with_chinese_text() {
@@ -325,18 +299,15 @@ fn test_stopwords_with_chinese_text() {
         ..Default::default()
     };
 
-    // Chinese text: "This artificial intelligence system can process natural language"
     let input = "这个人工智能系统可以处理自然语言";
     let result = reduce_tokens(input, &config, Some("zh")).unwrap();
 
-    // Result should not be empty
     assert!(
         !result.is_empty(),
         "Chinese text should be processed. Result: {}",
         result
     );
 
-    // Should preserve important technical terms (人工智能 = AI, 自然语言 = natural language)
     assert!(
         result.contains("人工") || result.contains("智能") || result.contains("语言"),
         "Should preserve important Chinese terms. Result: {}",
@@ -352,25 +323,21 @@ fn test_stopwords_with_mixed_cjk_english() {
         ..Default::default()
     };
 
-    // Mixed English and Chinese
     let input = "The machine learning model 机器学习模型 is processing data efficiently";
     let result = reduce_tokens(input, &config, Some("en")).unwrap();
 
-    // English stopwords should be removed
     assert!(
         !result.contains(" the ") && !result.contains("The "),
         "Should remove English 'the'. Result: {}",
         result
     );
 
-    // English content words should be preserved
     assert!(
         result.contains("machine") || result.contains("learning"),
         "Should preserve English content. Result: {}",
         result
     );
 
-    // Chinese characters should be preserved
     assert!(
         result.contains("机器") || result.contains("学习") || result.contains("模型"),
         "Should preserve Chinese content. Result: {}",
@@ -386,7 +353,6 @@ fn test_stopwords_with_japanese_text() {
         ..Default::default()
     };
 
-    // Japanese text
     let input = "人工知能技術の研究開発";
     let result = reduce_tokens(input, &config, Some("ja")).unwrap();
 
@@ -405,7 +371,6 @@ fn test_stopwords_with_korean_text() {
         ..Default::default()
     };
 
-    // Korean text
     let input = "인공 지능 기술 개발";
     let result = reduce_tokens(input, &config, Some("ko")).unwrap();
 
@@ -415,10 +380,6 @@ fn test_stopwords_with_korean_text() {
         result
     );
 }
-
-// ============================================================================
-// Keywords Extraction Integration Tests
-// ============================================================================
 
 #[cfg(feature = "keywords-rake")]
 #[test]
@@ -433,13 +394,11 @@ fn test_stopwords_excluded_from_rake_keywords() {
 
     assert!(!keywords.is_empty(), "Should extract keywords");
 
-    // Verify no keywords are pure stopwords
     let en_stopwords = get_stopwords("en").expect("English stopwords must exist");
 
     for keyword in &keywords {
         let words: Vec<&str> = keyword.text.split_whitespace().collect();
 
-        // Multi-word keywords should not be ALL stopwords
         let all_stopwords = words.iter().all(|word| {
             let clean = word
                 .chars()
@@ -456,10 +415,8 @@ fn test_stopwords_excluded_from_rake_keywords() {
         );
     }
 
-    // Verify extracted keywords are meaningful
     let keyword_texts: Vec<String> = keywords.iter().map(|k| k.text.to_lowercase()).collect();
 
-    // Should contain technical terms, not stopwords
     assert!(
         keyword_texts.iter().any(|k| k.contains("machine learning")
             || k.contains("neural networks")
@@ -485,11 +442,9 @@ fn test_stopwords_excluded_from_yake_keywords() {
 
     assert!(!keywords.is_empty(), "Should extract keywords");
 
-    // Verify keywords contain content words, not just stopwords
     let en_stopwords = get_stopwords("en").expect("English stopwords must exist");
 
     for keyword in &keywords {
-        // At least one word in the keyword should NOT be a stopword
         let has_content_word = keyword.text.split_whitespace().any(|word| {
             let clean = word
                 .chars()
@@ -510,7 +465,6 @@ fn test_stopwords_excluded_from_yake_keywords() {
 #[cfg(feature = "keywords-rake")]
 #[test]
 fn test_keywords_respect_language_specific_stopwords() {
-    // Spanish text
     let spanish_text = "El aprendizaje automático es una rama de la inteligencia artificial. \
                         Los modelos de aprendizaje profundo logran un rendimiento excepcional. \
                         Estos sistemas pueden procesar grandes cantidades de datos.";
@@ -521,7 +475,6 @@ fn test_keywords_respect_language_specific_stopwords() {
 
     assert!(!keywords.is_empty(), "Should extract Spanish keywords");
 
-    // Verify Spanish stopwords are not in keywords
     let es_stopwords = get_stopwords("es").expect("Spanish stopwords must exist");
 
     for keyword in &keywords {
@@ -542,7 +495,6 @@ fn test_keywords_respect_language_specific_stopwords() {
         );
     }
 
-    // Should extract meaningful Spanish terms
     let keyword_texts: Vec<String> = keywords.iter().map(|k| k.text.to_lowercase()).collect();
     assert!(
         keyword_texts.iter().any(|k| k.contains("aprendizaje")
@@ -554,10 +506,6 @@ fn test_keywords_respect_language_specific_stopwords() {
     );
 }
 
-// ============================================================================
-// Edge Cases and Boundary Tests
-// ============================================================================
-
 #[test]
 fn test_all_stopwords_text_reduction() {
     let config = TokenReductionConfig {
@@ -566,11 +514,9 @@ fn test_all_stopwords_text_reduction() {
         ..Default::default()
     };
 
-    // Text composed entirely of stopwords
     let input = "the is a an and or but of to in for on at by";
     let result = reduce_tokens(input, &config, Some("en")).unwrap();
 
-    // Result might be very short or empty, but shouldn't crash
     assert!(
         result.len() < input.len(),
         "Text of all stopwords should be significantly reduced"
@@ -585,11 +531,9 @@ fn test_no_stopwords_text_reduction() {
         ..Default::default()
     };
 
-    // Technical text with minimal stopwords
     let input = "PyTorch TensorFlow CUDA GPU optimization benchmark performance metrics";
     let result = reduce_tokens(input, &config, Some("en")).unwrap();
 
-    // Should preserve most/all content since there are no stopwords
     let input_words: Vec<&str> = input.split_whitespace().collect();
     let result_lower = result.to_lowercase();
 
@@ -615,7 +559,6 @@ fn test_mixed_case_stopwords_removal() {
     let input = "The SYSTEM Is Processing The DATA With The ALGORITHM";
     let result = reduce_tokens(input, &config, Some("en")).unwrap();
 
-    // Lowercase stopwords should be removed
     let result_words: Vec<&str> = result.split_whitespace().collect();
     assert!(
         !result_words.contains(&"the"),
@@ -628,7 +571,6 @@ fn test_mixed_case_stopwords_removal() {
         result
     );
 
-    // Uppercase technical terms should be preserved
     assert!(
         result.contains("SYSTEM"),
         "Should preserve 'SYSTEM'. Result: {}",
@@ -653,7 +595,6 @@ fn test_reduce_tokens_function_with_stopwords() {
     let text = "The artificial intelligence system processes the natural language efficiently";
     let result = reduce_tokens(text, &config, Some("en")).unwrap();
 
-    // Verify stopwords removed
     let original_stopwords = count_stopwords(text, "en");
     let result_stopwords = count_stopwords(&result, "en");
 
@@ -664,7 +605,6 @@ fn test_reduce_tokens_function_with_stopwords() {
         result_stopwords
     );
 
-    // Verify content preserved
     assert!(
         result.contains("artificial") || result.contains("intelligence"),
         "Should preserve content words. Result: {}",
@@ -683,14 +623,12 @@ fn test_stopwords_with_punctuation() {
     let input = "The system, which is processing the data, uses the algorithm.";
     let result = reduce_tokens(input, &config, Some("en")).unwrap();
 
-    // Stopwords should be removed even with punctuation
     assert!(
         !result.contains(" the ") || result.split_whitespace().filter(|w| w.contains("the")).count() < 3,
         "Should remove most instances of 'the'. Result: {}",
         result
     );
 
-    // Content words with punctuation should be preserved
     assert!(
         result.contains("system") || result.contains("processing") || result.contains("algorithm"),
         "Should preserve content words. Result: {}",
@@ -709,7 +647,6 @@ fn test_stopwords_with_numbers() {
     let input = "The model has 100 layers and processes the data in 10 seconds";
     let result = reduce_tokens(input, &config, Some("en")).unwrap();
 
-    // Numbers should be preserved
     assert!(
         result.contains("100"),
         "Should preserve number '100'. Result: {}",
@@ -717,17 +654,12 @@ fn test_stopwords_with_numbers() {
     );
     assert!(result.contains("10"), "Should preserve number '10'. Result: {}", result);
 
-    // Content words should be preserved
     assert!(
         result.contains("model") || result.contains("layers") || result.contains("processes"),
         "Should preserve content words. Result: {}",
         result
     );
 }
-
-// ============================================================================
-// Performance and Consistency Tests
-// ============================================================================
 
 #[test]
 fn test_stopwords_removal_consistency_across_calls() {
@@ -739,7 +671,6 @@ fn test_stopwords_removal_consistency_across_calls() {
 
     let input = "The machine learning model is trained on the dataset";
 
-    // Multiple calls should produce identical results
     let result1 = reduce_tokens(input, &config, Some("en")).unwrap();
     let result2 = reduce_tokens(input, &config, Some("en")).unwrap();
     let result3 = reduce_tokens(input, &config, Some("en")).unwrap();
@@ -757,7 +688,6 @@ fn test_stopwords_with_long_text() {
         ..Default::default()
     };
 
-    // Generate longer text with repetitive stopwords
     let paragraph = "The machine learning model is trained on the large dataset. \
                      The training process uses the neural network architecture. \
                      The system processes the data efficiently and achieves the best performance. ";
@@ -765,7 +695,6 @@ fn test_stopwords_with_long_text() {
 
     let result = reduce_tokens(&input, &config, Some("en")).unwrap();
 
-    // Should reduce stopword-heavy text
     assert!(
         result.len() < input.len(),
         "Long stopword-heavy text should be reduced. Input: {} chars, Result: {} chars",
@@ -786,7 +715,6 @@ fn test_stopwords_with_long_text() {
 
 #[test]
 fn test_get_stopwords_with_fallback_in_reduction() {
-    // Verify the fallback mechanism works correctly
     let primary_stopwords = get_stopwords_with_fallback("xyz", "en");
     assert!(primary_stopwords.is_some(), "Should fallback to English");
 
@@ -797,7 +725,6 @@ fn test_get_stopwords_with_fallback_in_reduction() {
         "Fallback should return English stopwords"
     );
 
-    // Test with token reduction
     let config = TokenReductionConfig {
         level: ReductionLevel::Moderate,
         use_simd: false,
@@ -807,7 +734,6 @@ fn test_get_stopwords_with_fallback_in_reduction() {
     let input = "The system is processing the data";
     let result = reduce_tokens(input, &config, Some("xyz")).unwrap();
 
-    // Should still remove stopwords using fallback
     assert!(
         !result.contains(" the ") && !result.contains(" is "),
         "Should use fallback stopwords. Result: {}",
@@ -817,14 +743,11 @@ fn test_get_stopwords_with_fallback_in_reduction() {
 
 #[test]
 fn test_stopwords_registry_completeness() {
-    // Verify all 64 languages are loaded
     assert_eq!(STOPWORDS.len(), 64, "Should have exactly 64 language stopword sets");
 
-    // Verify English stopwords are comprehensive
     let en_stopwords = get_stopwords("en").expect("English stopwords must exist");
     assert!(en_stopwords.len() >= 70, "English should have at least 70 stopwords");
 
-    // Verify common English stopwords are present
     assert!(en_stopwords.contains("the"), "Should contain 'the'");
     assert!(en_stopwords.contains("is"), "Should contain 'is'");
     assert!(en_stopwords.contains("and"), "Should contain 'and'");
@@ -901,7 +824,6 @@ fn demo_stopwords_effectiveness() {
     use kreuzberg::stopwords::get_stopwords;
     use kreuzberg::text::token_reduction::{ReductionLevel, TokenReductionConfig, reduce_tokens};
 
-    // Example 1: English text with stopwords
     let en_text = "The machine learning model is trained on the large dataset and achieves good performance";
     let en_config = TokenReductionConfig {
         level: ReductionLevel::Moderate,
@@ -920,7 +842,6 @@ fn demo_stopwords_effectiveness() {
     );
     println!("{}", en_result);
 
-    // Example 2: CJK text
     let zh_text = "这个人工智能系统可以处理自然语言";
     let zh_config = TokenReductionConfig {
         level: ReductionLevel::Moderate,
@@ -933,7 +854,6 @@ fn demo_stopwords_effectiveness() {
     println!("BEFORE: {}", zh_text);
     println!("AFTER:  {}", zh_result);
 
-    // Example 3: Multi-level comparison
     let text = "The artificial intelligence system processes the natural language efficiently";
 
     println!("\n=== Reduction Level Comparison ===");
@@ -960,7 +880,6 @@ fn demo_stopwords_effectiveness() {
         println!("  {}", result);
     }
 
-    // Example 4: Stopwords stats
     let stopwords = get_stopwords("en").unwrap();
     println!("\n=== Stopwords Stats ===");
     println!("English stopwords: {}", stopwords.len());

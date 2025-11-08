@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Docling extraction wrapper for benchmark harness.
 
 Supports two modes:
@@ -38,12 +37,10 @@ def extract_batch(file_paths: list[str]) -> list[dict[str, Any]]:
     results = converter.convert_all(file_paths, raises_on_error=False)
     total_duration_ms = (time.perf_counter() - start) * 1000.0
 
-    # Calculate per-file duration (approximate)
     per_file_duration_ms = total_duration_ms / len(file_paths) if file_paths else 0
 
     outputs = []
     for result in results:
-        # Check if conversion was successful
         if result.status.name == "SUCCESS":
             markdown = result.document.export_to_markdown()
             outputs.append(
@@ -55,7 +52,6 @@ def extract_batch(file_paths: list[str]) -> list[dict[str, Any]]:
                 }
             )
         else:
-            # Include error information for failed conversions
             outputs.append(
                 {
                     "content": "",
@@ -94,12 +90,10 @@ def main() -> None:
                 print("Error: batch mode requires at least one file", file=sys.stderr)
                 sys.exit(1)
 
-            # For single file in batch mode, return single result
             if len(file_paths) == 1:
                 results = extract_batch(file_paths)
                 print(json.dumps(results[0]), end="")
             else:
-                # For multiple files, return array
                 results = extract_batch(file_paths)
                 print(json.dumps(results), end="")
 

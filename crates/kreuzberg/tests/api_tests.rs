@@ -456,7 +456,6 @@ async fn test_extract_missing_content_type() {
         .await
         .unwrap();
 
-    // Should fail - no multipart/form-data content-type
     assert!(response.status() == StatusCode::BAD_REQUEST || response.status() == StatusCode::UNSUPPORTED_MEDIA_TYPE);
 }
 
@@ -529,7 +528,6 @@ async fn test_extract_unsupported_mime_type() {
         .await
         .unwrap();
 
-    // Should return an error response (422 or 500)
     assert!(
         response.status() == StatusCode::UNPROCESSABLE_ENTITY || response.status() == StatusCode::INTERNAL_SERVER_ERROR
     );
@@ -565,7 +563,6 @@ async fn test_extract_without_filename() {
         .await
         .unwrap();
 
-    // Should still succeed - filename is optional
     assert_eq!(response.status(), StatusCode::OK);
 }
 
@@ -589,7 +586,6 @@ async fn test_extract_malformed_multipart() {
         .await
         .unwrap();
 
-    // Should return an error
     assert!(response.status().is_client_error() || response.status().is_server_error());
 }
 
@@ -605,7 +601,6 @@ async fn test_cors_headers() {
 
     assert_eq!(response.status(), StatusCode::OK);
 
-    // CORS headers should be present (tower-http CORS layer)
     let headers = response.headers();
     assert!(headers.contains_key("access-control-allow-origin") || headers.contains_key("Access-Control-Allow-Origin"));
 }
@@ -628,7 +623,6 @@ async fn test_cors_preflight() {
         .await
         .unwrap();
 
-    // Preflight should succeed
     assert!(response.status().is_success() || response.status() == StatusCode::NO_CONTENT);
 }
 
@@ -725,7 +719,6 @@ async fn test_extract_large_file() {
     let app = create_router(ExtractionConfig::default());
 
     let boundary = "----boundary";
-    // Create a 1MB text file
     let large_content = "A".repeat(1024 * 1024);
 
     let body_content = format!(
@@ -933,7 +926,6 @@ async fn test_extract_unknown_multipart_field() {
         .await
         .unwrap();
 
-    // Should succeed - unknown fields are ignored
     assert_eq!(response.status(), StatusCode::OK);
 }
 
@@ -966,7 +958,6 @@ async fn test_extract_default_mime_type() {
         .await
         .unwrap();
 
-    // Should handle default MIME type
     assert!(
         response.status() == StatusCode::OK
             || response.status() == StatusCode::UNPROCESSABLE_ENTITY

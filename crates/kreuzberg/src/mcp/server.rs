@@ -98,7 +98,6 @@ fn default_use_content() -> bool {
 #[doc(hidden)]
 pub fn map_kreuzberg_error_to_mcp(error: KreuzbergError) -> McpError {
     match error {
-        // Validation errors map to INVALID_PARAMS - client provided bad input
         KreuzbergError::Validation { message, source } => {
             let mut error_message = format!("Validation error: {}", message);
             if let Some(src) = source {
@@ -107,12 +106,10 @@ pub fn map_kreuzberg_error_to_mcp(error: KreuzbergError) -> McpError {
             McpError::invalid_params(error_message, None)
         }
 
-        // Unsupported format is also a client parameter issue
         KreuzbergError::UnsupportedFormat(mime_type) => {
             McpError::invalid_params(format!("Unsupported format: {}", mime_type), None)
         }
 
-        // Missing dependency - client tried to use unavailable feature
         KreuzbergError::MissingDependency(dep) => McpError::invalid_params(
             format!(
                 "Missing required dependency: {}. Please install it to use this feature.",
@@ -121,7 +118,6 @@ pub fn map_kreuzberg_error_to_mcp(error: KreuzbergError) -> McpError {
             None,
         ),
 
-        // Parsing errors map to PARSE_ERROR - document format issues
         KreuzbergError::Parsing { message, source } => {
             let mut error_message = format!("Parsing error: {}", message);
             if let Some(src) = source {
@@ -130,11 +126,9 @@ pub fn map_kreuzberg_error_to_mcp(error: KreuzbergError) -> McpError {
             McpError::parse_error(error_message, None)
         }
 
-        // I/O errors MUST bubble up as internal errors - these are system issues
         // OSError/RuntimeError must bubble up - system errors need user reports ~keep
         KreuzbergError::Io(io_err) => McpError::internal_error(format!("System I/O error: {}", io_err), None),
 
-        // OCR errors are internal processing failures
         KreuzbergError::Ocr { message, source } => {
             let mut error_message = format!("OCR processing error: {}", message);
             if let Some(src) = source {
@@ -143,7 +137,6 @@ pub fn map_kreuzberg_error_to_mcp(error: KreuzbergError) -> McpError {
             McpError::internal_error(error_message, None)
         }
 
-        // Cache errors are internal issues (though usually non-fatal)
         KreuzbergError::Cache { message, source } => {
             let mut error_message = format!("Cache error: {}", message);
             if let Some(src) = source {
@@ -152,7 +145,6 @@ pub fn map_kreuzberg_error_to_mcp(error: KreuzbergError) -> McpError {
             McpError::internal_error(error_message, None)
         }
 
-        // Image processing errors are internal failures
         KreuzbergError::ImageProcessing { message, source } => {
             let mut error_message = format!("Image processing error: {}", message);
             if let Some(src) = source {
@@ -161,7 +153,6 @@ pub fn map_kreuzberg_error_to_mcp(error: KreuzbergError) -> McpError {
             McpError::internal_error(error_message, None)
         }
 
-        // Serialization errors are internal issues
         KreuzbergError::Serialization { message, source } => {
             let mut error_message = format!("Serialization error: {}", message);
             if let Some(src) = source {
@@ -170,15 +161,12 @@ pub fn map_kreuzberg_error_to_mcp(error: KreuzbergError) -> McpError {
             McpError::internal_error(error_message, None)
         }
 
-        // Plugin errors are internal issues
         KreuzbergError::Plugin { message, plugin_name } => {
             McpError::internal_error(format!("Plugin '{}' error: {}", plugin_name, message), None)
         }
 
-        // Lock poisoning should never happen in normal operation
         KreuzbergError::LockPoisoned(msg) => McpError::internal_error(format!("Internal lock poisoned: {}", msg), None),
 
-        // Generic errors default to internal error
         KreuzbergError::Other(msg) => McpError::internal_error(msg, None),
     }
 }
@@ -571,22 +559,16 @@ mod tests {
 
     #[test]
     fn test_with_config_stores_provided_config() {
-        // Create a custom config with specific settings
         let custom_config = ExtractionConfig {
             force_ocr: true,
             use_cache: false,
             ..Default::default()
         };
 
-        // Create server with custom config
         let server = KreuzbergMcp::with_config(custom_config);
 
-        // The server's default_config should match the provided config
         assert!(server.default_config.force_ocr);
         assert!(!server.default_config.use_cache);
-
-        // Note: build_config() overlays request params, so request params take precedence
-        // This test verifies the config is stored, not that it's never overridden
     }
 
     #[test]
@@ -594,7 +576,7 @@ mod tests {
         let error = KreuzbergError::validation("invalid file path");
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32602); // INVALID_PARAMS
+        assert_eq!(mcp_error.code.0, -32602);
         assert!(mcp_error.message.contains("Validation error"));
         assert!(mcp_error.message.contains("invalid file path"));
     }
@@ -605,7 +587,7 @@ mod tests {
         let error = KreuzbergError::validation_with_source("invalid configuration", source);
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32602); // INVALID_PARAMS
+        assert_eq!(mcp_error.code.0, -32602);
         assert!(mcp_error.message.contains("Validation error"));
         assert!(mcp_error.message.contains("invalid configuration"));
         assert!(mcp_error.message.contains("caused by"));
@@ -616,7 +598,7 @@ mod tests {
         let error = KreuzbergError::UnsupportedFormat("application/unknown".to_string());
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32602); // INVALID_PARAMS
+        assert_eq!(mcp_error.code.0, -32602);
         assert!(mcp_error.message.contains("Unsupported format"));
         assert!(mcp_error.message.contains("application/unknown"));
     }
@@ -626,7 +608,7 @@ mod tests {
         let error = KreuzbergError::MissingDependency("tesseract".to_string());
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32602); // INVALID_PARAMS
+        assert_eq!(mcp_error.code.0, -32602);
         assert!(mcp_error.message.contains("Missing required dependency"));
         assert!(mcp_error.message.contains("tesseract"));
         assert!(mcp_error.message.contains("Please install"));
@@ -637,7 +619,7 @@ mod tests {
         let error = KreuzbergError::parsing("corrupt PDF file");
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32700); // PARSE_ERROR
+        assert_eq!(mcp_error.code.0, -32700);
         assert!(mcp_error.message.contains("Parsing error"));
         assert!(mcp_error.message.contains("corrupt PDF file"));
     }
@@ -648,7 +630,7 @@ mod tests {
         let error = KreuzbergError::parsing_with_source("failed to parse document", source);
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32700); // PARSE_ERROR
+        assert_eq!(mcp_error.code.0, -32700);
         assert!(mcp_error.message.contains("Parsing error"));
         assert!(mcp_error.message.contains("failed to parse document"));
         assert!(mcp_error.message.contains("caused by"));
@@ -660,7 +642,7 @@ mod tests {
         let error = KreuzbergError::Io(io_error);
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32603); // INTERNAL_ERROR
+        assert_eq!(mcp_error.code.0, -32603);
         assert!(mcp_error.message.contains("System I/O error"));
         assert!(mcp_error.message.contains("file not found"));
     }
@@ -670,7 +652,7 @@ mod tests {
         let error = KreuzbergError::ocr("tesseract failed");
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32603); // INTERNAL_ERROR
+        assert_eq!(mcp_error.code.0, -32603);
         assert!(mcp_error.message.contains("OCR processing error"));
         assert!(mcp_error.message.contains("tesseract failed"));
     }
@@ -680,7 +662,7 @@ mod tests {
         let error = KreuzbergError::cache("cache write failed");
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32603); // INTERNAL_ERROR
+        assert_eq!(mcp_error.code.0, -32603);
         assert!(mcp_error.message.contains("Cache error"));
         assert!(mcp_error.message.contains("cache write failed"));
     }
@@ -690,7 +672,7 @@ mod tests {
         let error = KreuzbergError::image_processing("resize failed");
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32603); // INTERNAL_ERROR
+        assert_eq!(mcp_error.code.0, -32603);
         assert!(mcp_error.message.contains("Image processing error"));
         assert!(mcp_error.message.contains("resize failed"));
     }
@@ -700,7 +682,7 @@ mod tests {
         let error = KreuzbergError::serialization("JSON encode failed");
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32603); // INTERNAL_ERROR
+        assert_eq!(mcp_error.code.0, -32603);
         assert!(mcp_error.message.contains("Serialization error"));
         assert!(mcp_error.message.contains("JSON encode failed"));
     }
@@ -713,7 +695,7 @@ mod tests {
         };
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32603); // INTERNAL_ERROR
+        assert_eq!(mcp_error.code.0, -32603);
         assert!(mcp_error.message.contains("Plugin 'pdf-extractor' error"));
         assert!(mcp_error.message.contains("extraction failed"));
     }
@@ -723,7 +705,7 @@ mod tests {
         let error = KreuzbergError::LockPoisoned("registry lock poisoned".to_string());
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32603); // INTERNAL_ERROR
+        assert_eq!(mcp_error.code.0, -32603);
         assert!(mcp_error.message.contains("Internal lock poisoned"));
         assert!(mcp_error.message.contains("registry lock poisoned"));
     }
@@ -733,13 +715,12 @@ mod tests {
         let error = KreuzbergError::Other("unexpected error".to_string());
         let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-        assert_eq!(mcp_error.code.0, -32603); // INTERNAL_ERROR
+        assert_eq!(mcp_error.code.0, -32603);
         assert!(mcp_error.message.contains("unexpected error"));
     }
 
     #[test]
     fn test_error_type_differentiation() {
-        // Verify that different error types map to different MCP error codes
         let validation = KreuzbergError::validation("test");
         let parsing = KreuzbergError::parsing("test");
         let io = KreuzbergError::Io(std::io::Error::other("test"));
@@ -748,18 +729,14 @@ mod tests {
         let parse_mcp = map_kreuzberg_error_to_mcp(parsing);
         let io_mcp = map_kreuzberg_error_to_mcp(io);
 
-        // Different error codes
-        assert_eq!(val_mcp.code.0, -32602); // INVALID_PARAMS
-        assert_eq!(parse_mcp.code.0, -32700); // PARSE_ERROR
-        assert_eq!(io_mcp.code.0, -32603); // INTERNAL_ERROR
+        assert_eq!(val_mcp.code.0, -32602);
+        assert_eq!(parse_mcp.code.0, -32700);
+        assert_eq!(io_mcp.code.0, -32603);
 
-        // Codes should be different from each other
         assert_ne!(val_mcp.code.0, parse_mcp.code.0);
         assert_ne!(val_mcp.code.0, io_mcp.code.0);
         assert_ne!(parse_mcp.code.0, io_mcp.code.0);
     }
-
-    // ========== FORMAT EXTRACTION RESULT TESTS ==========
 
     #[test]
     fn test_format_extraction_result_with_content() {
@@ -854,8 +831,6 @@ mod tests {
         assert!(!formatted.contains("Tables"));
     }
 
-    // ========== EXTRACT FILE TOOL TESTS ==========
-
     #[tokio::test]
     async fn test_extract_file_sync_with_valid_pdf() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
@@ -864,7 +839,7 @@ mod tests {
             mime_type: None,
             enable_ocr: false,
             force_ocr: false,
-            r#async: true, // Use async in tokio::test context
+            r#async: true,
         };
 
         let result = server.extract_file(Parameters(params)).await;
@@ -926,7 +901,6 @@ mod tests {
 
         assert!(result.is_err());
         let error = result.unwrap_err();
-        // File not found can be either validation error or I/O error depending on implementation
         assert!(error.code.0 == -32602 || error.code.0 == -32603);
     }
 
@@ -959,7 +933,6 @@ mod tests {
 
         let result = server.extract_file(Parameters(params)).await;
 
-        // Should succeed or fail with OCR error depending on tesseract availability
         assert!(result.is_ok() || result.is_err());
     }
 
@@ -976,17 +949,13 @@ mod tests {
 
         let result = server.extract_file(Parameters(params)).await;
 
-        // Should succeed or fail with OCR error
         assert!(result.is_ok() || result.is_err());
     }
-
-    // ========== EXTRACT BYTES TOOL TESTS ==========
 
     #[tokio::test]
     async fn test_extract_bytes_sync_with_valid_data() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        // Simple text content encoded as base64
         let text_content = b"Hello, world!";
         let encoded = BASE64_STANDARD.encode(text_content);
 
@@ -1050,7 +1019,7 @@ mod tests {
 
         assert!(result.is_err());
         let error = result.unwrap_err();
-        assert_eq!(error.code.0, -32602); // INVALID_PARAMS
+        assert_eq!(error.code.0, -32602);
         assert!(error.message.contains("Invalid base64"));
     }
 
@@ -1069,10 +1038,8 @@ mod tests {
             r#async: true,
         };
 
-        // Should attempt to auto-detect MIME type
         let result = server.extract_bytes(Parameters(params)).await;
 
-        // May succeed or fail depending on content detection
         assert!(result.is_ok() || result.is_err());
     }
 
@@ -1095,8 +1062,6 @@ mod tests {
 
         assert!(result.is_ok() || result.is_err());
     }
-
-    // ========== BATCH EXTRACT FILES TOOL TESTS ==========
 
     #[tokio::test]
     async fn test_batch_extract_files_sync_with_valid_files() {
@@ -1172,7 +1137,6 @@ mod tests {
         if let Some(content) = call_result.content.first() {
             match &content.raw {
                 RawContent::Text(text) => {
-                    // Should handle empty list gracefully
                     assert!(text.text.is_empty() || text.text.trim().is_empty());
                 }
                 _ => panic!("Expected text content"),
@@ -1194,13 +1158,8 @@ mod tests {
 
         let result = server.batch_extract_files(Parameters(params)).await;
 
-        // Batch extraction may succeed but return partial results or fail completely
-        // The behavior depends on whether batch operations are all-or-nothing
-        // For now, we accept either behavior
         assert!(result.is_ok() || result.is_err());
     }
-
-    // ========== DETECT MIME TYPE TOOL TESTS ==========
 
     #[tokio::test]
     async fn test_detect_mime_type_with_valid_file() {
@@ -1251,11 +1210,8 @@ mod tests {
 
         assert!(result.is_err());
         let error = result.unwrap_err();
-        // File not found can be either validation error or I/O error depending on implementation
         assert!(error.code.0 == -32602 || error.code.0 == -32603);
     }
-
-    // ========== CACHE STATS TOOL TESTS ==========
 
     #[tokio::test]
     async fn test_cache_stats_returns_statistics() {
@@ -1281,8 +1237,6 @@ mod tests {
         }
     }
 
-    // ========== CACHE CLEAR TOOL TESTS ==========
-
     #[tokio::test]
     async fn test_cache_clear_returns_result() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
@@ -1305,8 +1259,6 @@ mod tests {
             panic!("Expected content in result");
         }
     }
-
-    // ========== SERVER CONFIGURATION TESTS ==========
 
     #[test]
     fn test_new_creates_server_with_default_config() {
@@ -1349,7 +1301,6 @@ mod tests {
 
         let config = build_config(&default_config, false, false);
 
-        // Should preserve non-OCR settings from default config
         assert!(!config.use_cache);
     }
 
@@ -1374,8 +1325,6 @@ mod tests {
         assert_eq!(ocr_config.backend, "tesseract");
         assert_eq!(ocr_config.language, "eng");
     }
-
-    // ========== PARAMETER STRUCT TESTS ==========
 
     #[test]
     fn test_extract_file_params_defaults() {
@@ -1418,7 +1367,7 @@ mod tests {
         let params: DetectMimeTypeParams = serde_json::from_str(json).unwrap();
 
         assert_eq!(params.path, "/test.pdf");
-        assert!(params.use_content); // default_use_content() returns true
+        assert!(params.use_content);
     }
 
     #[test]
@@ -1429,14 +1378,11 @@ mod tests {
         assert!(!params.use_content);
     }
 
-    // ========== MCP PROTOCOL COMPLIANCE TESTS ==========
-
     #[test]
     fn test_mcp_server_info_protocol_version() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let info = server.get_info();
 
-        // MCP protocol version should be set
         assert_eq!(info.protocol_version, ProtocolVersion::default());
     }
 
@@ -1445,11 +1391,9 @@ mod tests {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let info = server.get_info();
 
-        // Required server info fields
         assert!(!info.server_info.name.is_empty());
         assert!(!info.server_info.version.is_empty());
 
-        // Optional but expected fields
         assert!(info.server_info.title.is_some());
         assert!(info.server_info.website_url.is_some());
         assert!(info.instructions.is_some());
@@ -1460,7 +1404,6 @@ mod tests {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let info = server.get_info();
 
-        // Server must declare tools capability
         assert!(info.capabilities.tools.is_some());
     }
 
@@ -1469,7 +1412,6 @@ mod tests {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let info = server.get_info();
 
-        // Server name should follow MCP naming conventions (lowercase, hyphenated)
         assert_eq!(info.server_info.name, "kreuzberg-mcp");
         assert!(!info.server_info.name.contains('_'));
         assert!(!info.server_info.name.contains(' '));
@@ -1480,7 +1422,6 @@ mod tests {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
         let info = server.get_info();
 
-        // Version should match package version
         assert_eq!(info.server_info.version, env!("CARGO_PKG_VERSION"));
     }
 
@@ -1491,19 +1432,15 @@ mod tests {
 
         let instructions = info.instructions.expect("Instructions should be present");
 
-        // Instructions should mention key features
         assert!(instructions.contains("extract") || instructions.contains("Extract"));
         assert!(instructions.contains("OCR") || instructions.contains("ocr"));
         assert!(instructions.contains("document"));
     }
 
-    // ========== TOOL REGISTRATION AND LISTING TESTS ==========
-
     #[tokio::test]
     async fn test_all_tools_are_registered() {
         let router = KreuzbergMcp::tool_router();
 
-        // Verify all expected tools are registered
         let expected_tools = vec![
             "extract_file",
             "extract_bytes",
@@ -1523,7 +1460,6 @@ mod tests {
         let router = KreuzbergMcp::tool_router();
         let tools = router.list_all();
 
-        // Should have exactly 6 tools
         assert_eq!(tools.len(), 6, "Expected 6 tools, found {}", tools.len());
     }
 
@@ -1553,10 +1489,8 @@ mod tests {
             .find(|t| t.name == "extract_file")
             .expect("extract_file tool should exist");
 
-        // Should have description
         assert!(extract_file_tool.description.is_some());
 
-        // Should have input schema (Arc<Map> is always an object)
         assert!(!extract_file_tool.input_schema.is_empty());
     }
 
@@ -1574,8 +1508,6 @@ mod tests {
         }
     }
 
-    // ========== ADDITIONAL CONFIGURATION TESTS ==========
-
     #[test]
     fn test_server_creation_with_custom_config() {
         let custom_config = ExtractionConfig {
@@ -1591,7 +1523,6 @@ mod tests {
 
         let server = KreuzbergMcp::with_config(custom_config.clone());
 
-        // Server should store the config
         assert_eq!(server.default_config.force_ocr, custom_config.force_ocr);
         assert_eq!(server.default_config.use_cache, custom_config.use_cache);
     }
@@ -1606,17 +1537,13 @@ mod tests {
         let server1 = KreuzbergMcp::with_config(custom_config);
         let server2 = server1.clone();
 
-        // Cloned server should have same config
         assert_eq!(server1.default_config.force_ocr, server2.default_config.force_ocr);
     }
-
-    // ========== EDGE CASE TESTS ==========
 
     #[tokio::test]
     async fn test_extract_bytes_with_empty_data() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        // Empty base64 string
         let params = ExtractBytesParams {
             data: String::new(),
             mime_type: Some("text/plain".to_string()),
@@ -1627,7 +1554,6 @@ mod tests {
 
         let result = server.extract_bytes(Parameters(params)).await;
 
-        // Should handle empty data gracefully (may succeed with empty content or fail)
         assert!(result.is_ok() || result.is_err());
     }
 
@@ -1635,7 +1561,6 @@ mod tests {
     async fn test_extract_bytes_with_valid_pdf_bytes() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        // Read a real PDF file
         let pdf_path = get_test_path("pdfs_with_tables/tiny.pdf");
 
         if std::path::Path::new(&pdf_path).exists() {
@@ -1667,7 +1592,7 @@ mod tests {
 
         let params = ExtractBytesParams {
             data: encoded,
-            mime_type: None, // No MIME type hint
+            mime_type: None,
             enable_ocr: false,
             force_ocr: false,
             r#async: true,
@@ -1675,7 +1600,6 @@ mod tests {
 
         let result = server.extract_bytes(Parameters(params)).await;
 
-        // Should attempt auto-detection
         assert!(result.is_ok() || result.is_err());
     }
 
@@ -1701,11 +1625,9 @@ mod tests {
                 if let Some(content) = call_result.content.first()
                     && let RawContent::Text(text) = &content.raw
                 {
-                    // Output should reference documents in order
                     assert!(text.text.contains("Document 1"));
                     assert!(text.text.contains("Document 2"));
 
-                    // Document 1 should appear before Document 2
                     let doc1_pos = text.text.find("Document 1");
                     let doc2_pos = text.text.find("Document 2");
                     if let (Some(pos1), Some(pos2)) = (doc1_pos, doc2_pos) {
@@ -1720,11 +1642,9 @@ mod tests {
     async fn test_cache_clear_is_idempotent() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        // Clear cache first time
         let result1 = server.cache_clear(Parameters(()));
         assert!(result1.is_ok());
 
-        // Clear cache second time (should still succeed even if empty)
         let result2 = server.cache_clear(Parameters(()));
         assert!(result2.is_ok());
     }
@@ -1740,17 +1660,13 @@ mod tests {
         if let Some(content) = call_result.content.first()
             && let RawContent::Text(text) = &content.raw
         {
-            // Should report removed files and freed space
             assert!(text.text.contains("Removed files:"));
             assert!(text.text.contains("Freed space:"));
         }
     }
 
-    // ========== ERROR HANDLING TESTS ==========
-
     #[test]
     fn test_error_mapping_preserves_error_context() {
-        // Test that error messages include contextual information
         let validation_error = KreuzbergError::validation("invalid file path");
         let mcp_error = map_kreuzberg_error_to_mcp(validation_error);
 
@@ -1764,14 +1680,12 @@ mod tests {
         let kreuzberg_error = KreuzbergError::Io(io_error);
         let mcp_error = map_kreuzberg_error_to_mcp(kreuzberg_error);
 
-        // I/O errors should map to INTERNAL_ERROR
         assert_eq!(mcp_error.code.0, -32603);
         assert!(mcp_error.message.contains("System I/O error"));
     }
 
     #[test]
     fn test_all_error_variants_have_mappings() {
-        // Ensure all error types can be mapped to MCP errors
         let errors = vec![
             KreuzbergError::validation("test"),
             KreuzbergError::UnsupportedFormat("test/unknown".to_string()),
@@ -1793,15 +1707,11 @@ mod tests {
         for error in errors {
             let mcp_error = map_kreuzberg_error_to_mcp(error);
 
-            // Should have valid error code
             assert!(mcp_error.code.0 < 0, "Error code should be negative");
 
-            // Should have non-empty message
             assert!(!mcp_error.message.is_empty());
         }
     }
-
-    // ========== RESPONSE FORMAT TESTS ==========
 
     #[tokio::test]
     async fn test_response_includes_metadata() {
@@ -1826,7 +1736,6 @@ mod tests {
             if let Some(content) = call_result.content.first()
                 && let RawContent::Text(text) = &content.raw
             {
-                // Response should include metadata section
                 assert!(text.text.contains("Metadata:"));
             }
         }
@@ -1855,20 +1764,16 @@ mod tests {
             if let Some(content) = call_result.content.first()
                 && let RawContent::Text(text) = &content.raw
             {
-                // Response should mention content length
                 assert!(text.text.contains("characters"));
                 assert!(text.text.contains("Content"));
             }
         }
     }
 
-    // ========== CONCURRENT ACCESS TESTS ==========
-
     #[tokio::test]
     async fn test_server_is_thread_safe() {
         let server = KreuzbergMcp::with_config(ExtractionConfig::default());
 
-        // Verify server can be cloned and used across threads
         let server1 = server.clone();
         let server2 = server.clone();
 
@@ -1881,8 +1786,6 @@ mod tests {
 
         assert_eq!(info1.server_info.name, info2.server_info.name);
     }
-
-    // ========== PARAMETER SERIALIZATION TESTS ==========
 
     #[test]
     fn test_extract_file_params_serialization() {
@@ -1950,8 +1853,6 @@ mod tests {
         assert_eq!(params.use_content, deserialized.use_content);
     }
 
-    // ========== TOOL INVOCATION WITH VARIOUS CONFIGS ==========
-
     #[tokio::test]
     async fn test_extract_file_respects_custom_default_config() {
         let custom_config = ExtractionConfig {
@@ -1974,7 +1875,6 @@ mod tests {
 
             let result = server.extract_file(Parameters(params)).await;
 
-            // Should use the custom config (cache disabled)
             assert!(result.is_ok() || result.is_err());
         }
     }
@@ -2020,7 +1920,6 @@ mod tests {
             if let Some(content) = call_result.content.first()
                 && let RawContent::Text(text) = &content.raw
             {
-                // Should detect PDF based on extension
                 assert!(text.text.contains("pdf") || text.text.contains("PDF"));
             }
         }
@@ -2055,7 +1954,6 @@ mod tests {
         if let Some(content) = call_result.content.first()
             && let RawContent::Text(text) = &content.raw
         {
-            // Should contain all expected fields
             assert!(text.text.contains("Cache Statistics"));
             assert!(text.text.contains("Directory:"));
             assert!(text.text.contains("Total files:"));

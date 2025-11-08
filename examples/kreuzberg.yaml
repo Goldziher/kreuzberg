@@ -1,225 +1,106 @@
-# Kreuzberg Configuration File (YAML)
-#
-# This file demonstrates all available configuration options for Kreuzberg.
-# Place this file in one of the following locations:
-#   1. Current directory: ./kreuzberg.yaml
-#   2. User config: ~/.config/kreuzberg/config.yaml
-#   3. System config: /etc/kreuzberg/config.yaml
-#
-# Documentation: https://kreuzberg.goldziher.dev/guides/configuration/
 
-# ==============================================================================
-# Extraction Configuration
-# ==============================================================================
 
-# Enable caching of extraction results (default: true)
 use_cache: true
 
-# Enable quality post-processing to improve extracted text (default: true)
 enable_quality_processing: true
 
-# Force OCR even for text-based PDFs (default: false)
 force_ocr: false
 
-# Maximum number of concurrent extractions in batch operations (default: number of CPU cores)
-# max_concurrent_extractions: 8
 
-# ==============================================================================
-# OCR Configuration
-# ==============================================================================
 
 ocr:
-  # OCR backend: "tesseract", "easyocr", "paddleocr" (default: "tesseract")
   backend: tesseract
 
-  # Language code(s) for OCR, e.g., "eng", "eng+fra", "deu" (default: "eng")
   language: eng
 
   tesseract_config:
-    # Page segmentation mode (0-13, default: 3 - fully automatic)
-    # 0: Orientation and script detection only
-    # 1: Automatic page segmentation with OSD
-    # 3: Fully automatic page segmentation (default)
-    # 6: Single uniform block of text
-    # 11: Sparse text, no particular order
     psm: 3
 
-    # OCR engine mode (0-3, default: 3 - default based on what's available)
-    # 0: Legacy engine only
-    # 1: Neural nets LSTM engine only
-    # 3: Default based on what's available (default)
     oem: 3
 
-    # Minimum confidence threshold for OCR results (0.0-1.0, default: 0.0)
     min_confidence: 0.0
 
-    # Output format: "text" or "hocr" (default: "text")
     output_format: text
 
-    # Enable table detection and extraction (default: false)
     enable_table_detection: false
 
-    # Minimum confidence for table cells (default: 0.5)
     table_min_confidence: 0.5
 
-    # Pixel threshold for column detection (default: 50)
     table_column_threshold: 50
 
-    # Row threshold ratio (default: 0.5)
     table_row_threshold_ratio: 0.5
 
-    # Enable OCR result caching (default: true)
     use_cache: true
 
-    # Character whitelist - only these characters will be recognized (default: empty)
-    # tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?"
 
-    # Character blacklist - these characters will be ignored (default: empty)
-    # tessedit_char_blacklist: ""
 
-    # Advanced Tesseract variables (typically left at defaults)
-    # classify_use_pre_adapted_templates: false
-    # language_model_ngram_on: false
-    # tessedit_dont_blkrej_good_wds: false
-    # tessedit_dont_rowrej_good_wds: false
-    # tessedit_enable_dict_correction: false
-    # tessedit_use_primary_params_model: false
-    # textord_space_size_is_variable: false
-    # thresholding_method: false
 
     preprocessing:
-      # Target DPI for OCR processing (default: 300)
       target_dpi: 300
 
-      # Automatically rotate images based on orientation (default: true)
       auto_rotate: true
 
-      # Apply deskewing to straighten tilted text (default: true)
       deskew: true
 
-      # Apply denoising filter (default: true)
       denoise: true
 
-      # Enhance image contrast (default: true)
       contrast_enhance: true
 
-      # Binarization method: "otsu", "adaptive", "none" (default: "otsu")
       binarization_method: otsu
 
-      # Invert image colors - useful for white-on-black text (default: false)
       invert_colors: false
 
-# ==============================================================================
-# PDF Configuration
-# ==============================================================================
 
 pdf_options:
-  # Extract embedded images from PDF (default: true)
   extract_images: true
 
-  # Extract PDF metadata (title, author, etc.) (default: true)
   extract_metadata: true
 
-  # List of passwords to try for encrypted PDFs (default: empty)
-  # passwords:
-  #   - password1
-  #   - password2
 
-# ==============================================================================
-# Image Extraction Configuration
-# ==============================================================================
 
 images:
-  # Extract images from documents (default: true)
   extract_images: true
 
-  # Target DPI for extracted images (default: 300)
   target_dpi: 300
 
-  # Maximum image dimension (width or height) in pixels (default: 4096)
   max_image_dimension: 4096
 
-  # Automatically adjust DPI based on image size (default: true)
   auto_adjust_dpi: true
 
-  # Minimum DPI when auto-adjusting (default: 72)
   min_dpi: 72
 
-  # Maximum DPI when auto-adjusting (default: 600)
   max_dpi: 600
 
-# ==============================================================================
-# Text Chunking Configuration
-# ==============================================================================
 
 chunking:
-  # Maximum chunk size in characters (default: 1000)
   max_chars: 1000
 
-  # Overlap between chunks in characters (default: 200)
   max_overlap: 200
 
-  # Chunking preset: "small", "medium", "large" (default: none)
-  # preset: medium
 
   embedding:
-    # Normalize embeddings to unit length (default: true)
     normalize: true
 
-    # Batch size for embedding generation (default: 32)
     batch_size: 32
 
-    # Show download progress for models (default: true)
     show_download_progress: true
 
-    # Custom cache directory for models (default: system cache)
-    # cache_dir: /path/to/cache
 
-    # Model configuration - using preset model (default: "all-MiniLM-L6-v2")
-    # Available presets:
-    #   - "all-MiniLM-L6-v2": Fast, 384-dimensional embeddings (default)
-    #   - "all-mpnet-base-v2": High quality, 768-dimensional embeddings
-    #   - "paraphrase-multilingual-MiniLM-L12-v2": Multilingual support
-    # Note: Model configuration in YAML is complex. Use programmatic API for custom models.
 
-# ==============================================================================
-# Token Reduction Configuration
-# ==============================================================================
 
 token_reduction:
-  # Reduction mode: "off", "moderate", "aggressive" (default: "off")
   mode: off
 
-  # Preserve important words during reduction (default: true)
   preserve_important_words: true
 
-# ==============================================================================
-# Language Detection Configuration
-# ==============================================================================
 
 language_detection:
-  # Enable automatic language detection (default: true)
   enabled: true
 
-  # Minimum confidence threshold for detection (0.0-1.0, default: 0.8)
   min_confidence: 0.8
 
-  # Detect multiple languages vs. dominant only (default: false)
   detect_multiple: false
 
-# ==============================================================================
-# Post-Processing Configuration
-# ==============================================================================
 
 postprocessor:
-  # Enable post-processing pipeline (default: true)
   enabled: true
-
-  # Specific processors to enable (default: all enabled)
-  # enabled_processors:
-  #   - deduplication
-  #   - whitespace_normalization
-
-  # Specific processors to disable (default: none)
-  # disabled_processors:
-  #   - mojibake_fix

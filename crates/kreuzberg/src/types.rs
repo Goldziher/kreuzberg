@@ -236,7 +236,6 @@ pub struct HtmlMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub base_href: Option<String>,
 
-    // Open Graph metadata
     #[serde(skip_serializing_if = "Option::is_none")]
     pub og_title: Option<String>,
 
@@ -255,7 +254,6 @@ pub struct HtmlMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub og_site_name: Option<String>,
 
-    // Twitter Card metadata
     #[serde(skip_serializing_if = "Option::is_none")]
     pub twitter_card: Option<String>,
 
@@ -274,7 +272,6 @@ pub struct HtmlMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub twitter_creator: Option<String>,
 
-    // Link relations
     #[serde(skip_serializing_if = "Option::is_none")]
     pub link_author: Option<String>,
 

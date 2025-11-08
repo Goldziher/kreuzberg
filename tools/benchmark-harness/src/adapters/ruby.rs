@@ -19,13 +19,11 @@ impl RubyAdapter {
     pub fn new(ruby_path: impl Into<PathBuf>, gem_path: Option<PathBuf>) -> Self {
         let mut env = vec![];
 
-        // Add gem path to RUBYLIB if specified
         if let Some(path) = gem_path {
             let lib_path = path.join("lib");
             env.push(("RUBYLIB".to_string(), lib_path.to_string_lossy().to_string()));
         }
 
-        // Ruby script to extract content and output JSON
         let script = r#"
 require 'kreuzberg'
 require 'json'
@@ -62,13 +60,10 @@ puts JSON.generate(output)
 
     /// Create adapter using bundle exec
     pub fn with_bundle(gem_path: Option<PathBuf>) -> Self {
-        // For bundle exec, we need to use 'bundle' command
-        // Add 'exec ruby' prefix - this is handled by modifying the args
         Self::new("bundle", gem_path)
     }
 }
 
-// Delegate all trait methods to inner SubprocessAdapter
 impl std::ops::Deref for RubyAdapter {
     type Target = SubprocessAdapter;
 

@@ -19,12 +19,10 @@ impl NodeAdapter {
     pub fn new(node_path: impl Into<PathBuf>, package_path: Option<PathBuf>) -> Self {
         let mut env = vec![];
 
-        // Add package path to NODE_PATH if specified
         if let Some(path) = package_path {
             env.push(("NODE_PATH".to_string(), path.to_string_lossy().to_string()));
         }
 
-        // JavaScript code to extract content and output JSON
         let script = r#"
 const { extractFile } = require('@goldziher/kreuzberg');
 
@@ -63,7 +61,6 @@ extractFile(filePath)
     }
 }
 
-// Delegate all trait methods to inner SubprocessAdapter
 impl std::ops::Deref for NodeAdapter {
     type Target = SubprocessAdapter;
 

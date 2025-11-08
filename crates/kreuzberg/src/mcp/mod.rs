@@ -28,6 +28,5 @@ pub use server::{start_mcp_server, start_mcp_server_with_config};
 
 pub use server::{BatchExtractFilesParams, DetectMimeTypeParams, ExtractBytesParams, ExtractFileParams, KreuzbergMcp};
 
-// Re-export for testing
 #[doc(hidden)]
 pub use server::map_kreuzberg_error_to_mcp;

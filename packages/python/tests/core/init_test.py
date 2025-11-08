@@ -14,7 +14,6 @@ def test_version() -> None:
     """Test that __version__ is available and well-formed."""
     assert hasattr(kreuzberg, "__version__")
     assert isinstance(kreuzberg.__version__, str)
-    # Version should be in format X.Y.Z or similar
     assert "." in kreuzberg.__version__
 
 
@@ -24,7 +23,6 @@ def test_all_attribute() -> None:
     assert isinstance(kreuzberg.__all__, list)
     assert "__version__" in kreuzberg.__all__
 
-    # Verify all items in __all__ are actually importable
     for name in kreuzberg.__all__:
         assert hasattr(kreuzberg, name), f"Item in __all__ not importable: {name}"
 

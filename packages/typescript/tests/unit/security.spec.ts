@@ -16,8 +16,7 @@ import { createZip } from "../helpers/integration-helpers.js";
 describe("Security Validation Tests", () => {
 	describe("Archive Attacks", () => {
 		it("should handle zip bomb gracefully", async () => {
-			// Create a ZIP with highly compressible content (simulates zip bomb)
-			const largeContent = Buffer.alloc(10 * 1024 * 1024, 0); // 10MB of zeros
+			const largeContent = Buffer.alloc(10 * 1024 * 1024, 0);
 			const zipBytes = await createZip({
 				"large.txt": largeContent,
 			});
@@ -49,7 +48,6 @@ describe("Security Validation Tests", () => {
 				"/tmp/malicious.txt": "malicious content",
 			});
 
-			// Should not throw - either succeeds or fails gracefully
 			await expect(extractBytes(zipBytes, "application/zip")).resolves.toBeDefined();
 		});
 
@@ -60,7 +58,6 @@ describe("Security Validation Tests", () => {
 
 			const zipBytes = await createZip(files);
 
-			// Should handle deep nesting without crashing
 			await expect(extractBytes(zipBytes, "application/zip")).resolves.toBeDefined();
 		});
 
@@ -90,7 +87,6 @@ describe("Security Validation Tests", () => {
 ]>
 <lolz>&lol3;</lolz>`;
 
-			// Should not hang or consume excessive memory
 			await expect(extractBytes(Buffer.from(billionLaughs), "application/xml")).resolves.toBeDefined();
 		});
 
@@ -113,7 +109,6 @@ describe("Security Validation Tests", () => {
 
 			const result = await extractBytes(Buffer.from(xxeAttack), "application/xml");
 
-			// Should not contain system file contents
 			expect(result.content).not.toContain("root:");
 			expect(result.content).not.toContain("/bin/bash");
 		});
@@ -182,7 +177,6 @@ describe("Security Validation Tests", () => {
 		it("should handle malformed XML structure", async () => {
 			const malformedXml = '<?xml version="1.0"?><root><item>test</item>';
 
-			// May succeed with partial content or fail gracefully
 			await expect(extractBytes(Buffer.from(malformedXml), "application/xml")).resolves.toBeDefined();
 		});
 
@@ -197,7 +191,6 @@ describe("Security Validation Tests", () => {
 				0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0xff, 0xfe, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64,
 			]);
 
-			// Should handle gracefully (replace invalid sequences or error)
 			await expect(extractBytes(invalidUtf8, "text/plain")).resolves.toBeDefined();
 		});
 
@@ -217,12 +210,10 @@ describe("Security Validation Tests", () => {
 		it("should handle minimal valid PDF", async () => {
 			const minimalPdf = Buffer.from("%PDF-1.4\nThis is a very minimal PDF structure for security testing.\n%%EOF");
 
-			// May succeed or fail depending on PDF validation strictness
 			try {
 				const result = await extractBytes(minimalPdf, "application/pdf");
 				expect(result).toBeDefined();
 			} catch (error) {
-				// Failure is acceptable for invalid PDF structure
 				expect(error).toBeDefined();
 			}
 		});
@@ -241,7 +232,6 @@ describe("Security Validation Tests", () => {
 >>
 endobj`);
 
-			// May succeed with partial content or fail gracefully
 			try {
 				const result = await extractBytes(truncatedPdf, "application/pdf");
 				expect(result).toBeDefined();
@@ -272,7 +262,6 @@ endobj`);
 
 			if (result.metadata.archive) {
 				for (const path of result.metadata.archive.file_list) {
-					// Paths should be normalized/sanitized
 					expect(path).not.toMatch(/\.\.\//);
 					expect(path.startsWith("/")).toBe(false);
 				}
@@ -292,13 +281,11 @@ endobj`);
 
 	describe("Decompression Ratio Validation", () => {
 		it("should detect extreme decompression ratios", async () => {
-			// Create highly compressible content
-			const highlyCompressible = Buffer.alloc(50 * 1024 * 1024, 0); // 50MB zeros
+			const highlyCompressible = Buffer.alloc(50 * 1024 * 1024, 0);
 			const zipBytes = await createZip({
 				"bomb.txt": highlyCompressible,
 			});
 
-			// Should handle without exhausting memory
 			await expect(extractBytes(zipBytes, "application/zip")).resolves.toBeDefined();
 		});
 	});

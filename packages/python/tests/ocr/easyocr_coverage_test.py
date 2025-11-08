@@ -48,12 +48,10 @@ def test_easyocr_initialize_idempotent() -> None:
         backend.initialize()
         first_reader = backend._reader
 
-        # Second call should return early
         backend.initialize()
         second_reader = backend._reader
 
         assert first_reader is second_reader
-        # Reader should only be constructed once
         easyocr.Reader.assert_called_once()
 
 
@@ -80,7 +78,6 @@ def test_easyocr_process_image_reader_none_after_init() -> None:
 
     backend = EasyOCRBackend(languages=["en"], use_gpu=False)
 
-    # Mock initialize to succeed but leave _reader as None
     with patch.object(backend, "initialize"):
         backend._reader = None
 
@@ -98,7 +95,6 @@ def test_easyocr_process_image_unsupported_language() -> None:
 
     backend = EasyOCRBackend(languages=["en"], use_gpu=False)
 
-    # Set reader to bypass initialization
     backend._reader = Mock()
 
     with pytest.raises(ValidationError) as exc_info:
@@ -122,17 +118,15 @@ def test_easyocr_process_easyocr_result_two_item_format() -> None:
     """Test _process_easyocr_result with 2-item format (text, confidence)."""
     from kreuzberg.ocr.easyocr import EasyOCRBackend
 
-    # 2-item format: [(text, confidence), ...]
     result = [
         ("Hello", 0.95),
         ("World", 0.90),
-        ("", 0.85),  # Empty text should be skipped from text_parts but confidence still added
+        ("", 0.85),
     ]
 
     content, confidence, text_regions = EasyOCRBackend._process_easyocr_result(result)
 
     assert content == "Hello\nWorld"
-    # Confidence only adds for non-empty text but divides by total count
     assert confidence == pytest.approx((0.95 + 0.90) / 3)
     assert text_regions == 3
 
@@ -141,13 +135,9 @@ def test_easyocr_process_easyocr_result_line_grouping() -> None:
     """Test _process_easyocr_result line grouping logic."""
     from kreuzberg.ocr.easyocr import EasyOCRBackend
 
-    # 3-item format: [(box, text, confidence), ...]
-    # Create items with different y-coordinates to test line grouping
     result = [
-        # Line 1 (y ~ 10)
         ([[0, 10], [50, 10], [50, 30], [0, 30]], "Hello", 0.95),
         ([[60, 10], [110, 10], [110, 30], [60, 30]], "World", 0.90),
-        # Line 2 (y ~ 50) - more than 20 pixels away
         ([[0, 50], [50, 50], [50, 70], [0, 70]], "Second", 0.88),
         ([[60, 50], [110, 50], [110, 70], [60, 70]], "Line", 0.87),
     ]
@@ -156,7 +146,7 @@ def test_easyocr_process_easyocr_result_line_grouping() -> None:
 
     assert "Hello World" in content
     assert "Second Line" in content
-    assert content.count("\n") >= 1  # At least one line break
+    assert content.count("\n") >= 1
     assert confidence > 0
     assert text_regions == 4
 
@@ -165,7 +155,6 @@ def test_easyocr_process_easyocr_result_single_line_group() -> None:
     """Test _process_easyocr_result with single line group."""
     from kreuzberg.ocr.easyocr import EasyOCRBackend
 
-    # All items on same line (y ~ 10)
     result = [
         ([[0, 10], [50, 10], [50, 30], [0, 30]], "One", 0.95),
         ([[60, 12], [110, 12], [110, 32], [60, 32]], "Line", 0.90),
@@ -184,14 +173,13 @@ def test_easyocr_process_easyocr_result_empty_text_in_line() -> None:
 
     result = [
         ([[0, 10], [50, 10], [50, 30], [0, 30]], "Hello", 0.95),
-        ([[60, 10], [110, 10], [110, 30], [60, 30]], "", 0.90),  # Empty text
+        ([[60, 10], [110, 10], [110, 30], [60, 30]], "", 0.90),
         ([[120, 10], [170, 10], [170, 30], [120, 30]], "World", 0.88),
     ]
 
     content, confidence, text_regions = EasyOCRBackend._process_easyocr_result(result)
 
     assert content == "Hello World"
-    # Confidence includes empty text item
     assert confidence == pytest.approx((0.95 + 0.88) / 2)
     assert text_regions == 2
 

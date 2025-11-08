@@ -57,7 +57,6 @@ pub fn extract_custom_properties<R: Read + std::io::Seek>(archive: &mut ZipArchi
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to read custom.xml: {}", e)))?;
         }
         Err(_) => {
-            // custom.xml is optional
             return Ok(HashMap::new());
         }
     }
@@ -68,11 +67,8 @@ pub fn extract_custom_properties<R: Read + std::io::Seek>(archive: &mut ZipArchi
     let root = doc.root_element();
     let mut properties = HashMap::new();
 
-    // Iterate over all <property> elements
     for property_node in root.descendants().filter(|n| n.has_tag_name("property")) {
-        // Get property name from attribute
         if let Some(name) = property_node.attribute("name") {
-            // Extract value based on VT type
             if let Some(value) = extract_vt_value(property_node) {
                 properties.insert(name.to_string(), value);
             }
@@ -86,23 +82,19 @@ pub fn extract_custom_properties<R: Read + std::io::Seek>(archive: &mut ZipArchi
 ///
 /// Handles various VT types and converts them to appropriate JSON values.
 fn extract_vt_value(node: roxmltree::Node) -> Option<Value> {
-    // Check for different VT type elements
     for child in node.children().filter(|n| n.is_element()) {
         let tag = child.tag_name().name();
 
         match tag {
             "lpwstr" | "lpstr" => {
-                // Unicode or ANSI string
                 return child.text().map(|s| Value::String(s.to_string()));
             }
             "i4" => {
-                // 32-bit signed integer
                 return child
                     .text()
                     .and_then(|s| s.trim().parse::<i64>().ok().map(|n| Value::Number(n.into())));
             }
             "r8" => {
-                // 64-bit float
                 return child.text().and_then(|s| {
                     s.trim()
                         .parse::<f64>()
@@ -111,7 +103,6 @@ fn extract_vt_value(node: roxmltree::Node) -> Option<Value> {
                 });
             }
             "bool" => {
-                // Boolean
                 return child.text().and_then(|s| match s.trim().to_lowercase().as_str() {
                     "true" | "1" => Some(Value::Bool(true)),
                     "false" | "0" => Some(Value::Bool(false)),
@@ -119,11 +110,9 @@ fn extract_vt_value(node: roxmltree::Node) -> Option<Value> {
                 });
             }
             "filetime" => {
-                // File time (convert to string for now)
                 return child.text().map(|s| Value::String(s.to_string()));
             }
             _ => {
-                // Unknown VT type - skip
                 continue;
             }
         }

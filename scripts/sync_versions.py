@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Sync version from Cargo.toml workspace to all package manifests.
 
@@ -51,12 +50,10 @@ def update_package_json(file_path: Path, version: str) -> Tuple[bool, str, str]:
     old_version = data.get("version", "N/A")
     changed = False
 
-    # Update main version
     if data.get("version") != version:
         data["version"] = version
         changed = True
 
-    # Update optionalDependencies for kreuzberg platform packages
     if "optionalDependencies" in data:
         for dep in data["optionalDependencies"]:
             if dep.startswith("@goldziher/kreuzberg-"):
@@ -131,7 +128,6 @@ def update_cargo_toml(file_path: Path, version: str) -> Tuple[bool, str, str]:
     if old_version == version:
         return False, old_version, version
 
-    # Update the version field
     new_content = re.sub(
         r'^(version\s*=\s*)"[^"]+"',
         rf'\1"{version}"',
@@ -158,9 +154,7 @@ def main():
     updated_files: List[str] = []
     unchanged_files: List[str] = []
 
-    # Update package.json files (excluding dist/, node_modules/, .git/, target/)
     for pkg_json in repo_root.rglob("package.json"):
-        # Skip build artifacts and dependencies
         if any(part in pkg_json.parts for part in ["node_modules", ".git", "target", "dist"]):
             continue
 
@@ -173,7 +167,6 @@ def main():
         else:
             unchanged_files.append(str(rel_path))
 
-    # Update Python pyproject.toml files
     for pyproject in [
         repo_root / "packages/python/pyproject.toml",
     ]:
@@ -187,7 +180,6 @@ def main():
             else:
                 unchanged_files.append(str(rel_path))
 
-    # Update Ruby version file
     ruby_version = repo_root / "packages/ruby/lib/kreuzberg/version.rb"
     if ruby_version.exists():
         changed, old_ver, new_ver = update_ruby_version(ruby_version, version)
@@ -199,18 +191,14 @@ def main():
         else:
             unchanged_files.append(str(rel_path))
 
-    # Update Cargo.toml files that don't use workspace version
     print()
     for cargo_toml in repo_root.rglob("Cargo.toml"):
-        # Skip the workspace Cargo.toml
         if cargo_toml == repo_root / "Cargo.toml":
             continue
-        # Skip target directories
         if "target" in cargo_toml.parts:
             continue
 
         content = cargo_toml.read_text()
-        # Only process if it has a hardcoded version (not workspace)
         if re.search(r'^version\s*=\s*"[^"]+"', content, re.MULTILINE):
             if "version.workspace = true" not in content and "workspace = true" not in content:
                 changed, old_ver, new_ver = update_cargo_toml(cargo_toml, version)
@@ -222,7 +210,6 @@ def main():
                 else:
                     unchanged_files.append(str(rel_path))
 
-    # Summary
     print(f"\n📊 Summary:")
     print(f"   Updated: {len(updated_files)} files")
     print(f"   Unchanged: {len(unchanged_files)} files")

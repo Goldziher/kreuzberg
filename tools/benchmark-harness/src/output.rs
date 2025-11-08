@@ -14,16 +14,13 @@ use std::path::Path;
 /// * `results` - Vector of benchmark results to write
 /// * `output_path` - Path to output JSON file
 pub fn write_json(results: &[BenchmarkResult], output_path: &Path) -> Result<()> {
-    // Create parent directory if it doesn't exist
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent).map_err(Error::Io)?;
     }
 
-    // Serialize to pretty JSON
     let json = serde_json::to_string_pretty(results)
         .map_err(|e| Error::Benchmark(format!("Failed to serialize results: {}", e)))?;
 
-    // Write to file
     fs::write(output_path, json).map_err(Error::Io)?;
 
     Ok(())
@@ -68,7 +65,6 @@ mod tests {
 
         assert!(output_path.exists());
 
-        // Verify we can read it back
         let contents = fs::read_to_string(&output_path).unwrap();
         let parsed: Vec<BenchmarkResult> = serde_json::from_str(&contents).unwrap();
         assert_eq!(parsed.len(), 1);

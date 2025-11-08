@@ -8,8 +8,6 @@ use std::collections::VecDeque;
 use std::env;
 use std::sync::RwLock;
 
-// ============================================================================
-
 static CONTROL_CHARS: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]")
         .expect("Control chars regex pattern is valid and should compile")
@@ -63,7 +61,6 @@ impl EncodingCache {
 
         if let Some(pos) = self.order.iter().position(|existing| existing == &key) {
             self.order.remove(pos);
-            // The key already exists in the order queue; `entries` will be updated below, so adjust bytes now.
             self.current_bytes = self.current_bytes.saturating_sub(key_len);
         }
 
@@ -182,7 +179,6 @@ pub fn safe_decode(byte_data: &[u8], encoding: Option<&str>) -> String {
         Err(e) => {
             // Lock poisoning should never happen in normal operation ~keep
             tracing::debug!(error = %e, "encoding cache read lock poisoned; continuing without cache");
-            // Continue without cache - will detect encoding fresh
         }
     }
 
@@ -198,7 +194,6 @@ pub fn safe_decode(byte_data: &[u8], encoding: Option<&str>) -> String {
         Err(e) => {
             // Lock poisoning should never happen in normal operation ~keep
             tracing::debug!(error = %e, "encoding cache write lock poisoned; continuing without cache");
-            // Continue without caching - extraction will still succeed
         }
     }
 

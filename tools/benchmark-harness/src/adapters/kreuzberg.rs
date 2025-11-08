@@ -12,7 +12,6 @@ use std::path::PathBuf;
 
 /// Get the path to a script in the scripts directory
 fn get_script_path(script_name: &str) -> Result<PathBuf> {
-    // Try to find script relative to cargo manifest dir
     if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
         let script_path = PathBuf::from(manifest_dir).join("scripts").join(script_name);
         if script_path.exists() {
@@ -20,7 +19,6 @@ fn get_script_path(script_name: &str) -> Result<PathBuf> {
         }
     }
 
-    // Try relative to current directory
     let script_path = PathBuf::from("tools/benchmark-harness/scripts").join(script_name);
     if script_path.exists() {
         return Ok(script_path);
@@ -42,12 +40,10 @@ fn find_python() -> Result<(PathBuf, Vec<String>)> {
 
 /// Helper to find Node/TypeScript interpreter (tsx)
 fn find_node() -> Result<(PathBuf, Vec<String>)> {
-    // Try tsx first (for TypeScript)
     if which::which("tsx").is_ok() {
         return Ok((PathBuf::from("tsx"), vec![]));
     }
 
-    // Fallback to node with ts-node
     if which::which("ts-node").is_ok() {
         return Ok((PathBuf::from("ts-node"), vec![]));
     }
@@ -65,10 +61,6 @@ fn find_ruby() -> Result<(PathBuf, Vec<String>)> {
         Err(crate::Error::Config("Ruby not found".to_string()))
     }
 }
-
-// =============================================================================
-// Python Adapters
-// =============================================================================
 
 /// Create Python sync adapter (extract_file)
 pub fn create_python_sync_adapter() -> Result<SubprocessAdapter> {
@@ -108,10 +100,6 @@ pub fn create_python_batch_adapter() -> Result<SubprocessAdapter> {
     ))
 }
 
-// =============================================================================
-// TypeScript/Node Adapters
-// =============================================================================
-
 /// Create Node async adapter (extractFile)
 pub fn create_node_async_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("kreuzberg_extract.ts")?;
@@ -138,10 +126,6 @@ pub fn create_node_batch_adapter() -> Result<SubprocessAdapter> {
         vec![],
     ))
 }
-
-// =============================================================================
-// Ruby Adapters
-// =============================================================================
 
 /// Create Ruby sync adapter (extract_file)
 pub fn create_ruby_sync_adapter() -> Result<SubprocessAdapter> {
@@ -176,7 +160,6 @@ mod tests {
 
     #[test]
     fn test_get_script_path() {
-        // This will succeed if scripts exist
         let result = get_script_path("kreuzberg_extract.py");
         if result.is_ok() {
             assert!(result.unwrap().exists());
@@ -185,7 +168,6 @@ mod tests {
 
     #[test]
     fn test_find_python() {
-        // Should find either uv or python3
         let result = find_python();
         assert!(result.is_ok() || which::which("python3").is_err());
     }

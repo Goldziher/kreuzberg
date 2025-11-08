@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Extractous extraction wrapper for benchmark harness."""
 
 from __future__ import annotations

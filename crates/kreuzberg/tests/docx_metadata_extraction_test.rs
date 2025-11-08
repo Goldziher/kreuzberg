@@ -6,13 +6,11 @@ use kreuzberg::extraction::pandoc::extract_file;
 
 #[tokio::test]
 async fn test_docx_full_metadata_extraction() {
-    // Skip if pandoc is not available
     if kreuzberg::extraction::pandoc::validate_pandoc_version().await.is_err() {
         println!("Skipping test: Pandoc not available");
         return;
     }
 
-    // Compute path from workspace root (crates/kreuzberg -> workspace root)
     let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
@@ -29,14 +27,12 @@ async fn test_docx_full_metadata_extraction() {
         .await
         .expect("Should extract DOCX successfully");
 
-    // Verify content extraction
     assert!(!result.content.is_empty(), "Content should not be empty");
     assert!(
         result.content.to_lowercase().contains("swim"),
         "Content should contain 'swim'"
     );
 
-    // Verify core properties
     assert_eq!(
         result.metadata.get("created_by").and_then(|v| v.as_str()),
         Some("Christoph Auer"),
@@ -58,7 +54,6 @@ async fn test_docx_full_metadata_extraction() {
         "Should have revision number"
     );
 
-    // Verify app properties
     assert_eq!(
         result.metadata.get("page_count").and_then(|v| v.as_i64()),
         Some(2),
@@ -91,13 +86,11 @@ async fn test_docx_full_metadata_extraction() {
 
 #[tokio::test]
 async fn test_docx_minimal_metadata_extraction() {
-    // Skip if pandoc is not available
     if kreuzberg::extraction::pandoc::validate_pandoc_version().await.is_err() {
         println!("Skipping test: Pandoc not available");
         return;
     }
 
-    // Compute path from workspace root
     let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
@@ -114,10 +107,8 @@ async fn test_docx_minimal_metadata_extraction() {
         .await
         .expect("Should extract DOCX successfully");
 
-    // Verify content extraction
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // This file has empty core properties, but should have app properties
     assert_eq!(
         result.metadata.get("page_count").and_then(|v| v.as_i64()),
         Some(1),

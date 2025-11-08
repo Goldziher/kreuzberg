@@ -79,27 +79,22 @@ impl SubprocessAdapter {
     async fn execute_subprocess(&self, file_path: &Path, timeout: Duration) -> Result<(String, String, Duration)> {
         let start = Instant::now();
 
-        // Build command with file path argument
         let mut cmd = Command::new(&self.command);
         cmd.args(&self.args);
         cmd.arg(file_path.to_string_lossy().as_ref());
 
-        // Set environment variables
         for (key, value) in &self.env {
             cmd.env(key, value);
         }
 
-        // Configure stdio
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
-        // Spawn process
         let child = cmd
             .spawn()
             .map_err(|e| Error::Benchmark(format!("Failed to spawn subprocess: {}", e)))?;
 
-        // Wait for completion with timeout
         let output = match tokio::time::timeout(timeout, child.wait_with_output()).await {
             Ok(Ok(output)) => output,
             Ok(Err(e)) => {
@@ -134,31 +129,25 @@ impl SubprocessAdapter {
     ) -> Result<(String, String, Duration)> {
         let start = Instant::now();
 
-        // Build command with all file paths as arguments
         let mut cmd = Command::new(&self.command);
         cmd.args(&self.args);
 
-        // Add all file paths
         for path in file_paths {
             cmd.arg(path.to_string_lossy().as_ref());
         }
 
-        // Set environment variables
         for (key, value) in &self.env {
             cmd.env(key, value);
         }
 
-        // Configure stdio
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
-        // Spawn process
         let child = cmd
             .spawn()
             .map_err(|e| Error::Benchmark(format!("Failed to spawn batch subprocess: {}", e)))?;
 
-        // Wait for completion with timeout
         let output = match tokio::time::timeout(timeout, child.wait_with_output()).await {
             Ok(Ok(output)) => output,
             Ok(Err(e)) => {
@@ -200,8 +189,6 @@ impl FrameworkAdapter for SubprocessAdapter {
     }
 
     fn supports_format(&self, file_type: &str) -> bool {
-        // Assume subprocess adapters support the same formats as native
-        // Subclasses can override for specific limitations
         matches!(
             file_type.to_lowercase().as_str(),
             "pdf"
@@ -236,19 +223,15 @@ impl FrameworkAdapter for SubprocessAdapter {
     async fn extract(&self, file_path: &Path, timeout: Duration) -> Result<BenchmarkResult> {
         let file_size = std::fs::metadata(file_path).map_err(Error::Io)?.len();
 
-        // Start resource monitoring
         let monitor = ResourceMonitor::new();
         monitor.start(Duration::from_millis(10)).await;
 
-        // Execute subprocess
         let (stdout, _stderr, duration) = match self.execute_subprocess(file_path, timeout).await {
             Ok(result) => result,
             Err(e) => {
-                // Stop monitoring and collect samples
                 let samples = monitor.stop().await;
                 let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-                // Return error result with resource stats
                 return Ok(BenchmarkResult {
                     framework: self.name.clone(),
                     file_path: file_path.to_path_buf(),
@@ -273,11 +256,9 @@ impl FrameworkAdapter for SubprocessAdapter {
             }
         };
 
-        // Stop monitoring and collect samples
         let samples = monitor.stop().await;
         let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-        // Parse output and extract internal timing if available
         let parsed = match self.parse_output(&stdout) {
             Ok(value) => value,
             Err(e) => {
@@ -305,23 +286,19 @@ impl FrameworkAdapter for SubprocessAdapter {
             }
         };
 
-        // Extract internal timing if available from _extraction_time_ms
         let extraction_duration = parsed
             .get("_extraction_time_ms")
             .and_then(|v| v.as_f64())
             .map(|ms| Duration::from_secs_f64(ms / 1000.0));
 
-        // Calculate subprocess overhead if we have internal timing
         let subprocess_overhead = extraction_duration.map(|ext| duration.saturating_sub(ext));
 
-        // Calculate throughput
         let throughput = if duration.as_secs_f64() > 0.0 {
             file_size as f64 / duration.as_secs_f64()
         } else {
             0.0
         };
 
-        // Metrics with resource stats
         let metrics = PerformanceMetrics {
             peak_memory_bytes: resource_stats.peak_memory_bytes,
             avg_cpu_percent: resource_stats.avg_cpu_percent,
@@ -348,8 +325,6 @@ impl FrameworkAdapter for SubprocessAdapter {
     }
 
     fn version(&self) -> String {
-        // Try to get version from subprocess
-        // This is a best-effort attempt
         "unknown".to_string()
     }
 
@@ -359,7 +334,6 @@ impl FrameworkAdapter for SubprocessAdapter {
 
     async fn extract_batch(&self, file_paths: &[&Path], timeout: Duration) -> Result<Vec<BenchmarkResult>> {
         if !self.supports_batch {
-            // Fall back to default sequential extraction
             let mut results = Vec::new();
             for path in file_paths {
                 results.push(self.extract(path, timeout).await?);
@@ -367,25 +341,20 @@ impl FrameworkAdapter for SubprocessAdapter {
             return Ok(results);
         }
 
-        // Calculate total file size for throughput
         let total_file_size: u64 = file_paths
             .iter()
             .filter_map(|p| std::fs::metadata(p).ok().map(|m| m.len()))
             .sum();
 
-        // Start resource monitoring
         let monitor = ResourceMonitor::new();
         monitor.start(Duration::from_millis(10)).await;
 
-        // Execute batch subprocess
         let (stdout, _stderr, duration) = match self.execute_subprocess_batch(file_paths, timeout).await {
             Ok(result) => result,
             Err(e) => {
-                // Stop monitoring and collect samples
                 let samples = monitor.stop().await;
                 let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-                // Return error results for all files
                 return Ok(file_paths
                     .iter()
                     .map(|path| {
@@ -416,11 +385,9 @@ impl FrameworkAdapter for SubprocessAdapter {
             }
         };
 
-        // Stop monitoring and collect samples
         let samples = monitor.stop().await;
         let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-        // Parse output - expect JSON array for multiple files, or single object for one file
         let parsed: serde_json::Value = match serde_json::from_str(&stdout) {
             Ok(v) => v,
             Err(e) => {
@@ -454,7 +421,6 @@ impl FrameworkAdapter for SubprocessAdapter {
             }
         };
 
-        // Handle single file vs multiple files
         let results_array = if file_paths.len() == 1 {
             vec![parsed]
         } else {
@@ -472,25 +438,21 @@ impl FrameworkAdapter for SubprocessAdapter {
             )));
         }
 
-        // Calculate batch-level throughput
         let batch_throughput = if duration.as_secs_f64() > 0.0 {
             total_file_size as f64 / duration.as_secs_f64()
         } else {
             0.0
         };
 
-        // Map results to BenchmarkResult structs
         let mut benchmark_results = Vec::new();
         for (path, result_json) in file_paths.iter().zip(results_array.iter()) {
             let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
 
-            // Extract internal timing if available
             let extraction_duration = result_json
                 .get("_extraction_time_ms")
                 .and_then(|v| v.as_f64())
                 .map(|ms| Duration::from_secs_f64(ms / 1000.0));
 
-            // Calculate per-file throughput or use batch throughput
             let throughput = if let Some(ext_dur) = extraction_duration {
                 if ext_dur.as_secs_f64() > 0.0 {
                     file_size as f64 / ext_dur.as_secs_f64()
@@ -501,7 +463,6 @@ impl FrameworkAdapter for SubprocessAdapter {
                 batch_throughput
             };
 
-            // Use subprocess overhead if available
             let subprocess_overhead = extraction_duration.map(|ext| duration.saturating_sub(ext));
 
             benchmark_results.push(BenchmarkResult {
@@ -531,7 +492,6 @@ impl FrameworkAdapter for SubprocessAdapter {
     }
 
     async fn setup(&self) -> Result<()> {
-        // Verify command exists
         which::which(&self.command)
             .map_err(|e| Error::Benchmark(format!("Command '{}' not found: {}", self.command.display(), e)))?;
 

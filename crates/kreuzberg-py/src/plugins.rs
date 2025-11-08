@@ -342,7 +342,6 @@ impl PythonOcrBackend {
     pub fn new(py: Python<'_>, python_obj: Py<PyAny>) -> PyResult<Self> {
         let obj = python_obj.bind(py);
 
-        // Validate required methods exist
         validate_plugin_object(obj, "OCR backend", &["name", "supported_languages", "process_image"])?;
 
         let name: String = obj.call_method0("name")?.extract()?;
@@ -419,7 +418,6 @@ impl OcrBackend for PythonOcrBackend {
         let language = config.language.clone();
         let backend_name = self.name.clone();
 
-        // Check if Python backend has async process_image method
         let is_async = Python::attach(|py| {
             let obj = self.python_obj.bind(py);
             obj.getattr("process_image")
@@ -428,15 +426,12 @@ impl OcrBackend for PythonOcrBackend {
         });
 
         if is_async {
-            // Optimized path: Use pyo3_async_runtimes for async Python functions
-            // Eliminates ~4.8ms spawn_blocking overhead (~25-30x speedup)
             let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
             let result = Python::attach(|py| {
                 let obj = python_obj.bind(py);
                 let py_bytes = PyBytes::new(py, &image_bytes);
 
-                // Call Python async function - returns a coroutine
                 let coroutine = obj
                     .call_method1("process_image", (py_bytes, language.as_str()))
                     .map_err(|e| KreuzbergError::Ocr {
@@ -447,7 +442,6 @@ impl OcrBackend for PythonOcrBackend {
                         source: Some(Box::new(e)),
                     })?;
 
-                // Verify it's a coroutine
                 if !coroutine.hasattr("__await__").unwrap_or(false) {
                     return Err(KreuzbergError::Ocr {
                         message: format!(
@@ -458,7 +452,6 @@ impl OcrBackend for PythonOcrBackend {
                     });
                 }
 
-                // Convert Python coroutine to Rust future
                 pyo3_async_runtimes::tokio::into_future(coroutine).map_err(|e| KreuzbergError::Ocr {
                     message: format!(
                         "Failed to convert Python coroutine to Rust future for OCR backend '{}': {}",
@@ -476,10 +469,8 @@ impl OcrBackend for PythonOcrBackend {
                 source: Some(Box::new(e)),
             })?;
 
-            // Convert Python result to Rust ExtractionResult
             Python::attach(|py| dict_to_extraction_result(py, result.bind(py)))
         } else {
-            // Fallback path: Use spawn_blocking for sync Python functions
             let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
             tokio::task::spawn_blocking(move || {
@@ -510,7 +501,6 @@ impl OcrBackend for PythonOcrBackend {
     }
 
     async fn process_file(&self, path: &Path, config: &OcrConfig) -> Result<ExtractionResult> {
-        // Check if Python backend implements custom process_file method
         // If hasattr fails due to GIL error, log and fall back to process_image ~keep
         let backend_name = self.name.clone();
         let has_process_file = Python::attach(|py| {
@@ -532,7 +522,6 @@ impl OcrBackend for PythonOcrBackend {
             let language = config.language.clone();
             let backend_name = self.name.clone();
 
-            // Check if process_file is async
             let is_async = Python::attach(|py| {
                 let obj = self.python_obj.bind(py);
                 obj.getattr("process_file")
@@ -541,14 +530,12 @@ impl OcrBackend for PythonOcrBackend {
             });
 
             if is_async {
-                // Optimized path: Use pyo3_async_runtimes for async Python functions
                 let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
                 let result = Python::attach(|py| {
                     let obj = python_obj.bind(py);
                     let py_path = PyString::new(py, &path_str);
 
-                    // Call Python async function - returns a coroutine
                     let coroutine = obj
                         .call_method1("process_file", (py_path, language.as_str()))
                         .map_err(|e| KreuzbergError::Ocr {
@@ -559,7 +546,6 @@ impl OcrBackend for PythonOcrBackend {
                             source: Some(Box::new(e)),
                         })?;
 
-                    // Verify it's a coroutine
                     if !coroutine.hasattr("__await__").unwrap_or(false) {
                         return Err(KreuzbergError::Ocr {
                             message: format!(
@@ -570,7 +556,6 @@ impl OcrBackend for PythonOcrBackend {
                         });
                     }
 
-                    // Convert Python coroutine to Rust future
                     pyo3_async_runtimes::tokio::into_future(coroutine).map_err(|e| KreuzbergError::Ocr {
                         message: format!(
                             "Failed to convert Python coroutine to Rust future for OCR backend '{}': {}",
@@ -585,10 +570,8 @@ impl OcrBackend for PythonOcrBackend {
                     source: Some(Box::new(e)),
                 })?;
 
-                // Convert Python result to Rust ExtractionResult
                 Python::attach(|py| dict_to_extraction_result(py, result.bind(py)))
             } else {
-                // Fallback path: Use spawn_blocking for sync Python functions
                 let python_obj = Python::attach(|py| self.python_obj.clone_ref(py));
 
                 tokio::task::spawn_blocking(move || {
@@ -727,7 +710,6 @@ fn extract_metadata(obj: &Bound<'_, PyAny>) -> Result<HashMap<String, serde_json
 /// ]
 /// ```
 fn extract_tables(obj: &Bound<'_, PyAny>) -> Result<Vec<Table>> {
-    // Convert Python object to list
     let list = obj
         .cast::<pyo3::types::PyList>()
         .map_err(|_| KreuzbergError::Validation {
@@ -738,13 +720,11 @@ fn extract_tables(obj: &Bound<'_, PyAny>) -> Result<Vec<Table>> {
     let mut tables = Vec::new();
 
     for (index, item) in list.iter().enumerate() {
-        // Each table should be a dict
         let table_dict = item.cast::<PyDict>().map_err(|_| KreuzbergError::Validation {
             message: format!("Table at index {} must be a dict", index),
             source: None,
         })?;
 
-        // Extract cells (required field)
         let cells_val = table_dict
             .get_item("cells")
             .map_err(|e| KreuzbergError::Validation {
@@ -793,7 +773,6 @@ fn extract_tables(obj: &Bound<'_, PyAny>) -> Result<Vec<Table>> {
             cells.push(row);
         }
 
-        // Extract markdown (required field)
         let markdown_val = table_dict
             .get_item("markdown")
             .map_err(|e| KreuzbergError::Validation {
@@ -817,7 +796,6 @@ fn extract_tables(obj: &Bound<'_, PyAny>) -> Result<Vec<Table>> {
             source: None,
         })?;
 
-        // Extract page_number (required field)
         let page_num_val = table_dict
             .get_item("page_number")
             .map_err(|e| KreuzbergError::Validation {
@@ -1004,7 +982,6 @@ impl PythonPostProcessor {
     pub fn new(py: Python<'_>, python_obj: Py<PyAny>) -> PyResult<Self> {
         let obj = python_obj.bind(py);
 
-        // Validate required methods exist
         validate_plugin_object(obj, "PostProcessor", &["name", "process"])?;
 
         let name: String = obj.call_method0("name")?.extract()?;
@@ -1084,7 +1061,6 @@ impl PostProcessor for PythonPostProcessor {
     async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
         let processor_name = self.name.clone();
 
-        // Use block_in_place to run blocking Python code without thread pool deadlock
         let updated_result = tokio::task::block_in_place(|| {
             Python::attach(|py| {
                 let obj = self.python_obj.bind(py);
@@ -1380,7 +1356,6 @@ impl PythonValidator {
     pub fn new(py: Python<'_>, python_obj: Py<PyAny>) -> PyResult<Self> {
         let obj = python_obj.bind(py);
 
-        // Validate required methods exist
         validate_plugin_object(obj, "Validator", &["name", "validate"])?;
 
         let name: String = obj.call_method0("name")?.extract()?;
@@ -1393,7 +1368,7 @@ impl PythonValidator {
         let priority = if obj.hasattr("priority")? {
             obj.call_method0("priority")?.extract()?
         } else {
-            50 // Default priority
+            50
         };
 
         Ok(Self {
@@ -1454,7 +1429,6 @@ impl Validator for PythonValidator {
     async fn validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
         let validator_name = self.name.clone();
 
-        // Use block_in_place to run blocking Python code without thread pool deadlock
         tokio::task::block_in_place(|| {
             Python::attach(|py| {
                 let obj = self.python_obj.bind(py);
@@ -1466,7 +1440,6 @@ impl Validator for PythonValidator {
 
                 let py_result = result_dict.bind(py);
                 obj.call_method1("validate", (py_result,)).map_err(|e| {
-                    // Check if it's a ValidationError from Python
                     let is_validation_error = e.is_instance_of::<pyo3::exceptions::PyValueError>(py)
                         || e.get_type(py)
                             .name()
@@ -1500,7 +1473,6 @@ impl Validator for PythonValidator {
         Python::attach(|py| {
             let obj = self.python_obj.bind(py);
 
-            // Check if Python validator implements custom should_validate method
             // If hasattr fails due to GIL error, log and default to true ~keep
             let has_should_validate = obj
                 .hasattr("should_validate")

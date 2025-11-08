@@ -97,7 +97,6 @@ macro_rules! embed_stopwords {
                         $map.insert($lang.to_string(), set);
                     }
                     Err(e) => {
-                        // Panic on JSON parse errors - corrupted embedded data is unrecoverable
                         panic!(
                             "Failed to parse embedded stopwords for language '{}': {}. \
                             This indicates corrupted or malformed JSON in the embedded stopwords data. \
@@ -147,7 +146,6 @@ macro_rules! embed_stopwords {
 pub static STOPWORDS: Lazy<AHashMap<String, AHashSet<String>>> = Lazy::new(|| {
     let mut map = AHashMap::new();
 
-    // Embed all 64 language stopword files
     embed_stopwords!(
         map, "af", "ar", "bg", "bn", "br", "ca", "cs", "da", "de", "el", "en", "eo", "es", "et", "eu", "fa", "fi",
         "fr", "ga", "gl", "gu", "ha", "he", "hi", "hr", "hu", "hy", "id", "it", "ja", "kn", "ko", "ku", "la", "lt",
@@ -237,17 +235,11 @@ fn apply_stopword_whitelist(map: &mut AHashMap<String, AHashSet<String>>) {
 ///
 /// Total overhead is negligible (~10-50ns on modern CPUs).
 pub fn get_stopwords(lang: &str) -> Option<&'static AHashSet<String>> {
-    // Normalize the language code:
-    // 1. Convert to lowercase for case-insensitive matching
-    // 2. Take first 2 characters to handle locale codes (en-US → en, es_ES → es)
     let normalized = lang.to_lowercase();
 
-    // Extract the language code (first 2 chars before any separator)
     let lang_code = if let Some(pos) = normalized.find(&['-', '_'][..]) {
-        // Found separator, take everything before it
         &normalized[..pos]
     } else {
-        // No separator, take first 2 characters (or entire string if shorter)
         if normalized.len() >= 2 {
             &normalized[..2]
         } else {
@@ -433,11 +425,8 @@ mod tests {
         assert!(STOPWORDS.get("unknown").is_none());
     }
 
-    // Tests for get_stopwords() normalization function
-
     #[test]
     fn test_get_stopwords_lowercase() {
-        // Basic lowercase language codes should work
         assert!(get_stopwords("en").is_some());
         assert!(get_stopwords("es").is_some());
         assert!(get_stopwords("de").is_some());
@@ -446,20 +435,17 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_uppercase() {
-        // Uppercase variants should normalize to lowercase
         let en_upper = get_stopwords("EN");
         let en_lower = get_stopwords("en");
 
         assert!(en_upper.is_some());
         assert!(en_lower.is_some());
 
-        // Should return the exact same reference (pointer equality)
         assert_eq!(en_upper.unwrap().len(), en_lower.unwrap().len());
     }
 
     #[test]
     fn test_get_stopwords_mixed_case() {
-        // Mixed case should work
         assert!(get_stopwords("En").is_some());
         assert!(get_stopwords("eN").is_some());
         assert!(get_stopwords("ES").is_some());
@@ -470,7 +456,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_locale_hyphen() {
-        // Locale codes with hyphens should normalize
         let en_us = get_stopwords("en-US");
         let en_gb = get_stopwords("en-GB");
         let en = get_stopwords("en");
@@ -478,14 +463,12 @@ mod tests {
         assert!(en_us.is_some());
         assert!(en_gb.is_some());
 
-        // All should point to the same English stopwords
         assert_eq!(en_us.unwrap().len(), en.unwrap().len());
         assert_eq!(en_gb.unwrap().len(), en.unwrap().len());
     }
 
     #[test]
     fn test_get_stopwords_locale_underscore() {
-        // Locale codes with underscores should normalize
         let es_es = get_stopwords("es_ES");
         let es_mx = get_stopwords("es_MX");
         let es = get_stopwords("es");
@@ -493,14 +476,12 @@ mod tests {
         assert!(es_es.is_some());
         assert!(es_mx.is_some());
 
-        // All should point to the same Spanish stopwords
         assert_eq!(es_es.unwrap().len(), es.unwrap().len());
         assert_eq!(es_mx.unwrap().len(), es.unwrap().len());
     }
 
     #[test]
     fn test_get_stopwords_locale_uppercase() {
-        // Uppercase locale codes should work
         let en_us_upper = get_stopwords("EN-US");
         let es_es_upper = get_stopwords("ES_ES");
         let pt_br_mixed = get_stopwords("Pt-BR");
@@ -509,7 +490,6 @@ mod tests {
         assert!(es_es_upper.is_some());
         assert!(pt_br_mixed.is_some());
 
-        // Verify they map to correct languages
         assert!(en_us_upper.unwrap().contains("the"));
         assert!(es_es_upper.unwrap().contains("el"));
         assert!(pt_br_mixed.unwrap().contains("o"));
@@ -517,7 +497,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_all_supported_languages() {
-        // All 64 languages should be accessible via get_stopwords
         let languages = [
             "af", "ar", "bg", "bn", "br", "ca", "cs", "da", "de", "el", "en", "eo", "es", "et", "eu", "fa", "fi", "fr",
             "ga", "gl", "gu", "ha", "he", "hi", "hr", "hu", "hy", "id", "it", "ja", "kn", "ko", "ku", "la", "lt", "lv",
@@ -536,7 +515,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_unsupported_language() {
-        // Unsupported languages should return None
         assert!(get_stopwords("xx").is_none());
         assert!(get_stopwords("zz").is_none());
         assert!(get_stopwords("xyz").is_none());
@@ -545,53 +523,44 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_empty_string() {
-        // Empty string should return None
         assert!(get_stopwords("").is_none());
     }
 
     #[test]
     fn test_get_stopwords_single_char() {
-        // Single character codes should return None
         assert!(get_stopwords("e").is_none());
         assert!(get_stopwords("z").is_none());
     }
 
     #[test]
     fn test_get_stopwords_long_locale() {
-        // Longer locale codes should still work
         let zh_cn_hans = get_stopwords("zh-CN-Hans");
         let pt_br_utf8 = get_stopwords("pt_BR.UTF-8");
 
-        // Should normalize to first 2 chars before separator
         assert!(zh_cn_hans.is_some());
         assert!(pt_br_utf8.is_some());
 
-        // Verify correct language
         assert_eq!(zh_cn_hans.unwrap().len(), get_stopwords("zh").unwrap().len());
         assert_eq!(pt_br_utf8.unwrap().len(), get_stopwords("pt").unwrap().len());
     }
 
     #[test]
     fn test_get_stopwords_content_verification() {
-        // Verify English stopwords
         let en = get_stopwords("en").expect("English stopwords should exist");
         assert!(en.contains("the"));
         assert!(en.contains("is"));
         assert!(en.contains("and"));
 
-        // Verify Spanish stopwords
         let es = get_stopwords("es").expect("Spanish stopwords should exist");
         assert!(es.contains("el"));
         assert!(es.contains("la"));
         assert!(es.contains("es"));
 
-        // Verify German stopwords
         let de = get_stopwords("de").expect("German stopwords should exist");
         assert!(de.contains("der"));
         assert!(de.contains("die"));
         assert!(de.contains("und"));
 
-        // Verify French stopwords
         let fr = get_stopwords("fr").expect("French stopwords should exist");
         assert!(fr.contains("le"));
         assert!(fr.contains("de"));
@@ -600,24 +569,18 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_vs_direct_access() {
-        // get_stopwords should return the same reference as direct STOPWORDS access
         let en_normalized = get_stopwords("en").unwrap();
         let en_direct = STOPWORDS.get("en").unwrap();
 
-        // Should be exact same set (pointer equality)
         assert_eq!(en_normalized.len(), en_direct.len());
 
-        // All elements should be identical
         for word in en_direct {
             assert!(en_normalized.contains(word));
         }
     }
 
-    // Tests for get_stopwords_with_fallback()
-
     #[test]
     fn test_get_stopwords_with_fallback_primary_available() {
-        // When primary language is available, it should be used
         let result = get_stopwords_with_fallback("en", "es");
         assert!(result.is_some());
         let stopwords = result.unwrap();
@@ -627,7 +590,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_use_fallback() {
-        // When primary language is not available, fallback should be used
         let result = get_stopwords_with_fallback("xx", "en");
         assert!(result.is_some());
         let stopwords = result.unwrap();
@@ -636,14 +598,12 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_both_unavailable() {
-        // When both languages are unavailable, should return None
         let result = get_stopwords_with_fallback("xx", "zz");
         assert!(result.is_none());
     }
 
     #[test]
     fn test_get_stopwords_with_fallback_case_insensitive() {
-        // Should handle case-insensitive language codes
         let result1 = get_stopwords_with_fallback("EN", "es");
         let result2 = get_stopwords_with_fallback("xx", "ES");
         assert!(result1.is_some());
@@ -652,7 +612,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_locale_codes() {
-        // Should handle locale codes for both primary and fallback
         let result = get_stopwords_with_fallback("es-MX", "en-US");
         assert!(result.is_some());
         let stopwords = result.unwrap();
@@ -661,27 +620,22 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_esperanto_to_english() {
-        // Real-world scenario: supported language with English fallback
         let result = get_stopwords_with_fallback("eo", "en");
         assert!(result.is_some());
         let stopwords = result.unwrap();
-        // Should use Esperanto stopwords (primary)
         assert!(stopwords.contains("la"));
     }
 
     #[test]
     fn test_get_stopwords_with_fallback_unknown_to_english() {
-        // Real-world scenario: unknown language with English fallback
         let result = get_stopwords_with_fallback("xyz", "en");
         assert!(result.is_some());
         let stopwords = result.unwrap();
-        // Should use English stopwords (fallback)
         assert!(stopwords.contains("the"));
     }
 
     #[test]
     fn test_get_stopwords_with_fallback_same_as_chained_or_else() {
-        // Verify behavior matches what users would write manually
         let manual = get_stopwords("xx").or_else(|| get_stopwords("en"));
         let helper = get_stopwords_with_fallback("xx", "en");
         assert_eq!(manual.is_some(), helper.is_some());
@@ -690,11 +644,8 @@ mod tests {
         }
     }
 
-    // Negative test cases for error handling
-
     #[test]
     fn test_get_stopwords_invalid_language_codes() {
-        // Invalid language codes should return None, not panic
         assert!(get_stopwords("invalid_lang").is_none());
         assert!(get_stopwords("xyz").is_none());
         assert!(get_stopwords("zzzz").is_none());
@@ -704,7 +655,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_edge_case_empty_and_whitespace() {
-        // Empty strings and whitespace should return None
         assert!(get_stopwords("").is_none());
         assert!(get_stopwords(" ").is_none());
         assert!(get_stopwords("  ").is_none());
@@ -714,27 +664,22 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_special_characters() {
-        // Special characters alone should return None
         assert!(get_stopwords("@#").is_none());
         assert!(get_stopwords("$%").is_none());
         assert!(get_stopwords("!!!").is_none());
 
-        // Valid language code with special characters extracts the valid part
-        // "en!" -> extracts "en" -> returns English stopwords
         let result = get_stopwords("en!");
         assert!(result.is_some());
         if let Some(stopwords) = result {
             assert!(stopwords.contains("the"));
         }
 
-        // "es@" -> extracts "es" -> returns Spanish stopwords
         let result = get_stopwords("es@");
         assert!(result.is_some());
         if let Some(stopwords) = result {
             assert!(stopwords.contains("el"));
         }
 
-        // "de#fr" -> extracts "de" -> returns German stopwords
         let result = get_stopwords("de#fr");
         assert!(result.is_some());
         if let Some(stopwords) = result {
@@ -744,7 +689,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_numeric_codes() {
-        // Numeric codes should return None
         assert!(get_stopwords("12").is_none());
         assert!(get_stopwords("99").is_none());
         assert!(get_stopwords("123").is_none());
@@ -753,7 +697,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_single_character_edge_cases() {
-        // Single character codes should return None (languages are 2+ chars)
         assert!(get_stopwords("a").is_none());
         assert!(get_stopwords("e").is_none());
         assert!(get_stopwords("z").is_none());
@@ -763,7 +706,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_invalid_locale_formats() {
-        // Invalid locale formats should return None
         assert!(get_stopwords("xx-YY").is_none());
         assert!(get_stopwords("zz_ZZ").is_none());
         assert!(get_stopwords("invalid-US").is_none());
@@ -772,31 +714,25 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_mixed_valid_invalid() {
-        // Mixing valid prefix with invalid suffix should handle correctly
-        // "en123" -> normalizes to "en" (first 2 chars) -> should work
         let result = get_stopwords("en123");
         assert!(result.is_some(), "Should extract 'en' from 'en123'");
 
-        // But truly invalid prefixes should return None
         assert!(get_stopwords("12en").is_none());
         assert!(get_stopwords("@@en").is_none());
     }
 
     #[test]
     fn test_get_stopwords_case_sensitivity_validation() {
-        // Verify case normalization works correctly for edge cases
         let lower = get_stopwords("en");
         let upper = get_stopwords("EN");
         let mixed1 = get_stopwords("En");
         let mixed2 = get_stopwords("eN");
 
-        // All should return Some with same length
         assert!(lower.is_some());
         assert!(upper.is_some());
         assert!(mixed1.is_some());
         assert!(mixed2.is_some());
 
-        // Verify they all point to same data
         if let (Some(l), Some(u), Some(m1), Some(m2)) = (lower, upper, mixed1, mixed2) {
             assert_eq!(l.len(), u.len());
             assert_eq!(l.len(), m1.len());
@@ -806,11 +742,9 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_none_return_safety() {
-        // Verify None returns don't cause panics when chained
         let result = get_stopwords("invalid").and_then(|_| get_stopwords("also_invalid"));
         assert!(result.is_none());
 
-        // Multiple None chains should be safe
         let chained = get_stopwords("xxx")
             .or_else(|| get_stopwords("yyy"))
             .or_else(|| get_stopwords("zzz"));
@@ -819,7 +753,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_both_invalid() {
-        // Both primary and fallback invalid should return None
         assert!(get_stopwords_with_fallback("invalid", "also_invalid").is_none());
         assert!(get_stopwords_with_fallback("xxx", "yyy").is_none());
         assert!(get_stopwords_with_fallback("", "").is_none());
@@ -828,7 +761,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_invalid_primary_valid_fallback() {
-        // Invalid primary, valid fallback should use fallback
         let result = get_stopwords_with_fallback("invalid_lang", "en");
         assert!(result.is_some());
         if let Some(stopwords) = result {
@@ -844,7 +776,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_valid_primary_invalid_fallback() {
-        // Valid primary, invalid fallback should use primary
         let result = get_stopwords_with_fallback("en", "invalid_fallback");
         assert!(result.is_some());
         if let Some(stopwords) = result {
@@ -860,7 +791,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_empty_strings() {
-        // Empty strings should be handled gracefully
         assert!(get_stopwords_with_fallback("", "en").is_some());
         assert!(get_stopwords_with_fallback("en", "").is_some());
         assert!(get_stopwords_with_fallback("", "").is_none());
@@ -868,7 +798,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_special_characters() {
-        // Special characters should be handled without panic
         assert!(get_stopwords_with_fallback("@#$", "en").is_some());
         assert!(get_stopwords_with_fallback("en", "!!!").is_some());
         assert!(get_stopwords_with_fallback("@#$", "!!!").is_none());
@@ -876,7 +805,6 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_with_fallback_case_insensitive_validation() {
-        // Verify case-insensitive handling for both parameters
         let result1 = get_stopwords_with_fallback("INVALID", "en");
         let result2 = get_stopwords_with_fallback("invalid", "EN");
         let result3 = get_stopwords_with_fallback("INVALID", "EN");
@@ -885,7 +813,6 @@ mod tests {
         assert!(result2.is_some());
         assert!(result3.is_some());
 
-        // All should return English stopwords
         if let (Some(r1), Some(r2), Some(r3)) = (result1, result2, result3) {
             assert!(r1.contains("the"));
             assert!(r2.contains("the"));
@@ -895,17 +822,15 @@ mod tests {
 
     #[test]
     fn test_direct_stopwords_access_invalid_keys() {
-        // Direct STOPWORDS access should return None for invalid keys
         assert!(STOPWORDS.get("invalid").is_none());
-        assert!(STOPWORDS.get("EN").is_none()); // Case-sensitive!
-        assert!(STOPWORDS.get("en-US").is_none()); // No locale codes!
+        assert!(STOPWORDS.get("EN").is_none());
+        assert!(STOPWORDS.get("en-US").is_none());
         assert!(STOPWORDS.get("xyz").is_none());
         assert!(STOPWORDS.get("").is_none());
     }
 
     #[test]
     fn test_stopwords_case_sensitivity_direct_vs_normalized() {
-        // Direct access is case-sensitive, normalized is not
         assert!(STOPWORDS.get("EN").is_none());
         assert!(get_stopwords("EN").is_some());
 
@@ -918,79 +843,59 @@ mod tests {
 
     #[test]
     fn test_get_stopwords_unicode_characters() {
-        // Unicode characters in language codes
         // NOTE: Current implementation has a limitation - it uses byte slicing which can panic
-        // on multi-byte UTF-8 characters. This is a known issue that should be fixed to use
-        // character-based slicing instead.
 
-        // Safe test cases that won't panic:
-
-        // 1. ASCII prefix with Unicode suffix - extracts ASCII part
         let result = get_stopwords("zh-中文");
-        assert!(result.is_some()); // Should extract "zh"
+        assert!(result.is_some());
 
         let result = get_stopwords("ar-العربية");
-        assert!(result.is_some()); // Should extract "ar"
+        assert!(result.is_some());
 
         let result = get_stopwords("ja_日本");
-        assert!(result.is_some()); // Should extract "ja"
+        assert!(result.is_some());
 
-        // 2. Pure ASCII non-language codes
         assert!(get_stopwords("xx").is_none());
         assert!(get_stopwords("yy").is_none());
 
         // NOTE: The following would panic due to byte slicing on multi-byte chars:
-        // get_stopwords("中文")  // Would panic trying to slice at byte 2 inside '中'
-        // get_stopwords("العربية")  // Would panic on byte slicing
-        // These cases should be handled gracefully in future versions
     }
 
     #[test]
     fn test_get_stopwords_very_long_strings() {
-        // Very long strings should be handled gracefully
         let long_string = "x".repeat(1000);
         assert!(get_stopwords(&long_string).is_none());
 
-        // Long locale code
         let long_locale = "en-".to_string() + &"X".repeat(100);
         let result = get_stopwords(&long_locale);
-        // Should extract "en" and return English stopwords
         assert!(result.is_some());
     }
 
     #[test]
     fn test_get_stopwords_null_bytes() {
-        // Null bytes should be handled without panic
         assert!(get_stopwords("\0").is_none());
-        assert!(get_stopwords("en\0").is_some()); // "en" is valid
-        assert!(get_stopwords("\0en").is_none()); // Starts with null
+        assert!(get_stopwords("en\0").is_some());
+        assert!(get_stopwords("\0en").is_none());
     }
 
     #[test]
     fn test_get_stopwords_boundary_conditions() {
-        // Test boundary conditions for string length
-        assert!(get_stopwords("e").is_none()); // 1 char
-        assert!(get_stopwords("en").is_some()); // 2 chars (valid)
-        assert!(get_stopwords("eng").is_some()); // 3 chars (extracts "en")
+        assert!(get_stopwords("e").is_none());
+        assert!(get_stopwords("en").is_some());
+        assert!(get_stopwords("eng").is_some());
 
-        // Locale with exactly 2 chars before separator
         let result = get_stopwords("en-");
         assert!(result.is_some());
     }
 
     #[test]
     fn test_get_stopwords_multiple_separators() {
-        // Multiple separators should use first one
         assert!(get_stopwords("en-US-utf8").is_some());
         assert!(get_stopwords("es_MX_special").is_some());
         assert!(get_stopwords("pt-BR_variant").is_some());
     }
 
-    // Comprehensive language coverage tests - diverse language families
-
     #[test]
     fn test_romance_languages() {
-        // Romance language family: French, Spanish, Portuguese, Italian, Romanian
         let fr = get_stopwords("fr").expect("French stopwords should exist");
         assert!(fr.contains("le"), "French should contain 'le'");
         assert!(fr.contains("et"), "French should contain 'et'");
@@ -1018,7 +923,6 @@ mod tests {
 
     #[test]
     fn test_germanic_languages() {
-        // Germanic language family: German, English, Dutch, Swedish, Norwegian, Danish
         let de = get_stopwords("de").expect("German stopwords should exist");
         assert!(de.contains("der"), "German should contain 'der'");
         assert!(de.contains("die"), "German should contain 'die'");
@@ -1048,7 +952,6 @@ mod tests {
 
     #[test]
     fn test_slavic_languages() {
-        // Slavic language family: Russian, Polish, Czech, Slovak, Bulgarian, Ukrainian, Croatian, Slovenian
         let ru = get_stopwords("ru").expect("Russian stopwords should exist");
         assert!(!ru.is_empty(), "Russian should have stopwords");
         assert!(ru.len() >= 100, "Russian should have substantial stopwords");
@@ -1078,7 +981,6 @@ mod tests {
 
     #[test]
     fn test_asian_languages() {
-        // Asian languages: Chinese, Japanese, Korean, Hindi, Bengali, Thai, Vietnamese
         let zh = get_stopwords("zh").expect("Chinese stopwords should exist");
         assert!(!zh.is_empty(), "Chinese should have stopwords");
         assert!(zh.len() >= 50, "Chinese should have substantial stopwords");
@@ -1106,7 +1008,6 @@ mod tests {
 
     #[test]
     fn test_african_languages() {
-        // African languages: Afrikaans, Swahili, Yoruba, Zulu, Hausa, Somali, Sesotho
         let af = get_stopwords("af").expect("Afrikaans stopwords should exist");
         assert!(!af.is_empty(), "Afrikaans should have stopwords");
 
@@ -1131,7 +1032,6 @@ mod tests {
 
     #[test]
     fn test_indic_languages() {
-        // Indic language family: Hindi, Bengali, Gujarati, Kannada, Malayalam, Marathi, Tamil, Telugu, Urdu, Nepali, Sinhala
         let hi = get_stopwords("hi").expect("Hindi stopwords should exist");
         assert!(!hi.is_empty(), "Hindi should have stopwords");
 
@@ -1168,7 +1068,6 @@ mod tests {
 
     #[test]
     fn test_middle_eastern_languages() {
-        // Middle Eastern languages: Arabic, Persian, Hebrew, Turkish, Kurdish
         let ar = get_stopwords("ar").expect("Arabic stopwords should exist");
         assert!(!ar.is_empty(), "Arabic should have stopwords");
         assert!(ar.len() >= 100, "Arabic should have substantial stopwords");
@@ -1188,7 +1087,6 @@ mod tests {
 
     #[test]
     fn test_other_languages() {
-        // Other languages: Armenian, Basque, Breton, Catalan, Esperanto, Estonian, Finnish, Galician, Georgian, Hungarian, Indonesian, Irish, Korean, Latin, Lithuanian, Latvian, Malay, Tagalog
         let hy = get_stopwords("hy").expect("Armenian stopwords should exist");
         assert!(!hy.is_empty(), "Armenian should have stopwords");
 
@@ -1241,33 +1139,25 @@ mod tests {
 
     #[test]
     fn test_language_code_variants() {
-        // Test ISO 639-1 two-letter vs three-letter codes
-        // Note: Our system uses two-letter codes, but users might try three-letter
-
-        // "eng" should normalize to "en" (first 2 chars)
         let eng = get_stopwords("eng");
         let en = get_stopwords("en");
         assert!(eng.is_some(), "'eng' should extract to 'en'");
         assert!(en.is_some());
         assert_eq!(eng.unwrap().len(), en.unwrap().len());
 
-        // "spa" should normalize to "sp" (not a valid language)
         let spa = get_stopwords("spa");
         assert!(spa.is_none(), "'spa' extracts to 'sp' which is invalid");
 
-        // "deu" should normalize to "de"
         let deu = get_stopwords("deu");
         let de = get_stopwords("de");
         assert!(deu.is_some(), "'deu' should extract to 'de'");
         assert_eq!(deu.unwrap().len(), de.unwrap().len());
 
-        // "fra" should normalize to "fr"
         let fra = get_stopwords("fra");
         let fr = get_stopwords("fr");
         assert!(fra.is_some(), "'fra' should extract to 'fr'");
         assert_eq!(fra.unwrap().len(), fr.unwrap().len());
 
-        // "zho" should normalize to "zh"
         let zho = get_stopwords("zho");
         let zh = get_stopwords("zh");
         assert!(zho.is_some(), "'zho' should extract to 'zh'");
@@ -1276,7 +1166,6 @@ mod tests {
 
     #[test]
     fn test_stopword_set_sizes() {
-        // Verify stopword sets have reasonable sizes (no empty sets, no outliers)
         let mut sizes: Vec<(String, usize)> = Vec::new();
 
         for (lang, stopwords) in STOPWORDS.iter() {
@@ -1296,10 +1185,8 @@ mod tests {
             );
         }
 
-        // Verify we have exactly 64 languages
         assert_eq!(sizes.len(), 64, "Should have exactly 64 languages");
 
-        // Verify some specific size ranges for major languages
         let en_size = STOPWORDS.get("en").unwrap().len();
         assert!(
             (70..=1500).contains(&en_size),
@@ -1317,9 +1204,6 @@ mod tests {
 
     #[test]
     fn test_stopword_content_quality() {
-        // Verify common stopwords are present for major languages
-
-        // English common stopwords
         let en = get_stopwords("en").expect("English stopwords");
         let english_common = vec![
             "the", "is", "are", "was", "were", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of",
@@ -1329,7 +1213,6 @@ mod tests {
             assert!(en.contains(word), "English missing common stopword: {}", word);
         }
 
-        // Spanish common stopwords
         let es = get_stopwords("es").expect("Spanish stopwords");
         let spanish_common = vec![
             "el", "la", "los", "las", "un", "una", "de", "en", "y", "o", "por", "para",
@@ -1338,7 +1221,6 @@ mod tests {
             assert!(es.contains(word), "Spanish missing common stopword: {}", word);
         }
 
-        // German common stopwords
         let de = get_stopwords("de").expect("German stopwords");
         let german_common = vec![
             "der", "die", "das", "den", "dem", "des", "und", "oder", "in", "auf", "mit", "von",
@@ -1347,7 +1229,6 @@ mod tests {
             assert!(de.contains(word), "German missing common stopword: {}", word);
         }
 
-        // French common stopwords
         let fr = get_stopwords("fr").expect("French stopwords");
         let french_common = vec![
             "le", "la", "les", "un", "une", "de", "en", "et", "ou", "pour", "avec", "dans",
@@ -1359,7 +1240,6 @@ mod tests {
 
     #[test]
     fn test_stopword_deduplication() {
-        // Verify no duplicate stopwords within each language set
         for (lang, stopwords) in STOPWORDS.iter() {
             let original_len = stopwords.len();
             let unique_len = stopwords.iter().collect::<AHashSet<_>>().len();
@@ -1369,7 +1249,6 @@ mod tests {
 
     #[test]
     fn test_case_normalization_comprehensive() {
-        // Test all case variants for multiple languages
         let test_cases = vec![
             ("en", "EN", "En", "eN"),
             ("es", "ES", "Es", "eS"),
@@ -1390,7 +1269,6 @@ mod tests {
             assert!(title_result.is_some(), "{} should be valid", title);
             assert!(mixed_result.is_some(), "{} should be valid", mixed);
 
-            // All should return the same size
             let len = lower_result.unwrap().len();
             assert_eq!(upper_result.unwrap().len(), len);
             assert_eq!(title_result.unwrap().len(), len);
@@ -1400,7 +1278,6 @@ mod tests {
 
     #[test]
     fn test_locale_code_normalization_comprehensive() {
-        // Test various locale formats for multiple languages
         let test_cases = vec![
             ("en-US", "en_US", "en-GB", "en_GB", "en"),
             ("es-ES", "es_ES", "es-MX", "es_MX", "es"),
@@ -1422,7 +1299,6 @@ mod tests {
             assert!(h2.is_some(), "{} should be valid", hyphen2);
             assert!(u2.is_some(), "{} should be valid", underscore2);
 
-            // All should return the same size as base
             let len = base_result.len();
             assert_eq!(h1.unwrap().len(), len, "{} should match {}", hyphen1, base);
             assert_eq!(u1.unwrap().len(), len, "{} should match {}", underscore1, base);
@@ -1433,12 +1309,11 @@ mod tests {
 
     #[test]
     fn test_fallback_chains() {
-        // Test complex fallback scenarios
         let scenarios = vec![
-            ("en", "es", true, "en"), // Primary available
-            ("xx", "en", true, "en"), // Primary unavailable, fallback available
-            ("xx", "yy", false, ""),  // Both unavailable
-            ("es", "xx", true, "es"), // Primary available, fallback unavailable
+            ("en", "es", true, "en"),
+            ("xx", "en", true, "en"),
+            ("xx", "yy", false, ""),
+            ("es", "xx", true, "es"),
         ];
 
         for (primary, fallback, should_succeed, expected_lang) in scenarios {
@@ -1467,7 +1342,6 @@ mod tests {
 
     #[test]
     fn test_stopword_string_types() {
-        // Verify all stopwords are valid UTF-8 strings
         for (lang, stopwords) in STOPWORDS.iter() {
             for word in stopwords {
                 assert!(!word.is_empty(), "Language {} has empty stopword", lang);
@@ -1478,7 +1352,6 @@ mod tests {
                     word,
                     word.len()
                 );
-                // Should be valid UTF-8 (guaranteed by String type, but verify)
                 assert!(word.chars().count() > 0, "Language {} has invalid UTF-8 stopword", lang);
             }
         }
@@ -1486,7 +1359,6 @@ mod tests {
 
     #[test]
     fn test_concurrent_access() {
-        // Verify thread-safe concurrent access to STOPWORDS
         use std::thread;
 
         let languages = vec!["en", "es", "de", "fr", "zh", "ar", "ru", "ja"];
@@ -1509,14 +1381,11 @@ mod tests {
 
     #[test]
     fn test_stopwords_immutability() {
-        // Verify stopwords are immutable across calls
         let en1 = get_stopwords("en").unwrap();
         let en2 = get_stopwords("en").unwrap();
 
-        // Should return the same reference (pointer equality)
         assert_eq!(en1.len(), en2.len());
 
-        // Verify contents are identical
         for word in en1 {
             assert!(
                 en2.contains(word),
@@ -1528,15 +1397,14 @@ mod tests {
 
     #[test]
     fn test_edge_case_separator_positions() {
-        // Test separators at various positions
         let test_cases = vec![
-            ("en-", true),    // Separator at end
-            ("-en", false),   // Separator at start
-            ("e-n", false),   // Separator in middle of short code
-            ("en--US", true), // Double separator
-            ("en_-US", true), // Mixed separators
-            ("_en", false),   // Underscore at start
-            ("en_", true),    // Underscore at end
+            ("en-", true),
+            ("-en", false),
+            ("e-n", false),
+            ("en--US", true),
+            ("en_-US", true),
+            ("_en", false),
+            ("en_", true),
         ];
 
         for (code, should_find_en) in test_cases {
@@ -1551,7 +1419,6 @@ mod tests {
                     );
                 }
             } else {
-                // May or may not find something, but shouldn't panic
                 let _ = result;
             }
         }
@@ -1559,13 +1426,10 @@ mod tests {
 
     #[test]
     fn test_performance_characteristics() {
-        // Verify performance characteristics (should be fast)
         use std::time::Instant;
 
-        // Warm up (ensure lazy initialization is done)
         let _ = get_stopwords("en");
 
-        // Test lookup performance
         let start = Instant::now();
         for _ in 0..10000 {
             let _ = get_stopwords("en");
@@ -1574,7 +1438,6 @@ mod tests {
         }
         let duration = start.elapsed();
 
-        // 30,000 lookups should be very fast (< 10ms on modern hardware)
         assert!(
             duration.as_millis() < 100,
             "30,000 lookups took too long: {:?}",
@@ -1584,7 +1447,6 @@ mod tests {
 
     #[test]
     fn test_language_completeness() {
-        // Verify all documented languages are present
         let documented = vec![
             "af", "ar", "bg", "bn", "br", "ca", "cs", "da", "de", "el", "en", "eo", "es", "et", "eu", "fa", "fi", "fr",
             "ga", "gl", "gu", "ha", "he", "hi", "hr", "hu", "hy", "id", "it", "ja", "kn", "ko", "ku", "la", "lt", "lv",

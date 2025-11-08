@@ -129,7 +129,6 @@ impl BatchExtractor {
             return Ok(vec![]);
         }
 
-        // Use server mode if available and beneficial (>3 files)
         if self.use_server && paths.len() > 3 {
             self.extract_with_server(paths, formats).await
         } else {
@@ -145,7 +144,6 @@ impl BatchExtractor {
     ) -> Result<Vec<Result<PandocExtractionResult>>> {
         let mut server_lock = self.server.lock().await;
 
-        // Start server if not already running
         if server_lock.is_none() {
             match PandocServer::new(None, None).await {
                 Ok(server) => {
@@ -179,7 +177,6 @@ impl BatchExtractor {
         for (i, (path, format)) in paths.iter().zip(formats.iter()).enumerate() {
             tracing::debug!("Extracting file {}/{} via server: {:?}", i + 1, paths.len(), path);
 
-            // Read file content
             let content = match tokio::fs::read(path).await {
                 Ok(c) => c,
                 Err(e) => {
@@ -188,23 +185,19 @@ impl BatchExtractor {
                 }
             };
 
-            // Convert using server
             let result = match server.convert(&String::from_utf8_lossy(&content), format, "json").await {
-                Ok(json_output) => {
-                    // Parse JSON and extract content/metadata
-                    match serde_json::from_str::<Value>(&json_output) {
-                        Ok(json_data) => {
-                            let content = subprocess::extract_content_from_json(&json_data)?;
-                            let metadata = subprocess::extract_metadata_from_json(&json_data)?;
+                Ok(json_output) => match serde_json::from_str::<Value>(&json_output) {
+                    Ok(json_data) => {
+                        let content = subprocess::extract_content_from_json(&json_data)?;
+                        let metadata = subprocess::extract_metadata_from_json(&json_data)?;
 
-                            Ok(PandocExtractionResult { content, metadata })
-                        }
-                        Err(e) => Err(KreuzbergError::parsing(format!(
-                            "Failed to parse JSON from server: {}",
-                            e
-                        ))),
+                        Ok(PandocExtractionResult { content, metadata })
                     }
-                }
+                    Err(e) => Err(KreuzbergError::parsing(format!(
+                        "Failed to parse JSON from server: {}",
+                        e
+                    ))),
+                },
                 Err(e) => Err(e),
             };
 
@@ -247,7 +240,6 @@ impl BatchExtractor {
 
 impl Drop for BatchExtractor {
     fn drop(&mut self) {
-        // Best-effort cleanup
         if let Some(server) = self.server.try_lock().ok().and_then(|mut s| s.take()) {
             tokio::spawn(async move {
                 let _ = server.stop().await;
@@ -263,7 +255,6 @@ mod tests {
     #[tokio::test]
     async fn test_batch_extractor_creation() {
         let extractor = BatchExtractor::new().await;
-        // Should not panic
         assert!(extractor.server.lock().await.is_none());
     }
 

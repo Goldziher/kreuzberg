@@ -5,7 +5,6 @@ fn demonstrate_correct_offset_calculation() {
 
     println!("\n=== Demonstrating Correct Chunking Offset Calculation ===\n");
 
-    // Test case 1: With overlap
     let config_with_overlap = ChunkingConfig {
         max_characters: 20,
         overlap: 5,
@@ -33,7 +32,6 @@ fn demonstrate_correct_offset_calculation() {
         );
     }
 
-    // Verify overlaps
     println!("\nOverlap verification:");
     for i in 0..result.chunks.len() - 1 {
         let current = &result.chunks[i];
@@ -47,14 +45,12 @@ fn demonstrate_correct_offset_calculation() {
             next.metadata.char_start,
             current.metadata.char_end
         );
-        // Verify correct overlap calculation
         assert!(
             overlap_size > 0 && overlap_size <= config_with_overlap.overlap + 10,
             "Overlap should exist and be reasonable"
         );
     }
 
-    // Test case 2: Without overlap
     println!("\n\n=== Without Overlap ===\n");
     let config_no_overlap = ChunkingConfig {
         max_characters: 20,
@@ -89,7 +85,6 @@ fn demonstrate_correct_offset_calculation() {
             next.metadata.char_start,
             current.metadata.char_end
         );
-        // Verify no overlap
         assert!(gap >= 0, "Should have no overlap (gap >= 0)");
     }
 

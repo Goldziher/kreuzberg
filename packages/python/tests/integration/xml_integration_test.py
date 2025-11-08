@@ -20,7 +20,6 @@ def test_extract_xml_via_bytes_sync() -> None:
 
     assert "Test Book" in result.content
     assert "Test Author" in result.content
-    # v4 uses flat metadata structure with format_type discriminator
     assert result.metadata.get("format_type") == "xml"
     assert result.metadata["element_count"] > 0
 
@@ -35,7 +34,6 @@ def test_extract_xml_via_file_sync() -> None:
     assert "Tove" in result.content
     assert "Jani" in result.content
     assert "Reminder" in result.content
-    # v4 uses flat metadata structure with format_type discriminator
     assert result.metadata["element_count"] == 5
 
 
@@ -66,7 +64,6 @@ async def test_extract_xml_via_file_async() -> None:
     result = await extract_file(test_file)
 
     assert result.content
-    # v4 uses flat metadata structure with format_type discriminator
     assert result.metadata["element_count"] > 10
 
 

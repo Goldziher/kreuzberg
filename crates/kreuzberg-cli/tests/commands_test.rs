@@ -36,10 +36,6 @@ fn build_binary() {
     assert!(status.success(), "Failed to build kreuzberg binary");
 }
 
-// ============================================================================
-// Extract Command Tests
-// ============================================================================
-
 #[test]
 fn test_extract_text_file() {
     build_binary();
@@ -88,11 +84,9 @@ fn test_extract_with_json_output() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Verify it's valid JSON
     let json_result: serde_json::Result<serde_json::Value> = serde_json::from_str(&stdout);
     assert!(json_result.is_ok(), "Output should be valid JSON, got: {}", stdout);
 
-    // Verify JSON has expected fields
     let json = json_result.unwrap();
     assert!(json.get("content").is_some(), "JSON should have 'content' field");
     assert!(json.get("mime_type").is_some(), "JSON should have 'mime_type' field");
@@ -131,14 +125,9 @@ fn test_extract_with_chunking() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).expect("Should be valid JSON");
 
-    // Verify chunks field exists and is an array
     assert!(json.get("chunks").is_some(), "JSON should have 'chunks' field");
     assert!(json["chunks"].is_array(), "'chunks' should be an array");
 }
-
-// ============================================================================
-// Extract Command - Validation Tests
-// ============================================================================
 
 #[test]
 fn test_extract_file_not_found() {
@@ -263,10 +252,6 @@ fn test_extract_invalid_overlap_equals_chunk_size() {
     );
 }
 
-// ============================================================================
-// Detect Command Tests
-// ============================================================================
-
 #[test]
 fn test_detect_mime_type() {
     build_binary();
@@ -320,11 +305,9 @@ fn test_detect_with_json_output() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Verify it's valid JSON
     let json_result: serde_json::Result<serde_json::Value> = serde_json::from_str(&stdout);
     assert!(json_result.is_ok(), "Output should be valid JSON, got: {}", stdout);
 
-    // Verify JSON has expected fields
     let json = json_result.unwrap();
     assert!(json.get("mime_type").is_some(), "JSON should have 'mime_type' field");
     assert!(json.get("path").is_some(), "JSON should have 'path' field");
@@ -349,16 +332,12 @@ fn test_detect_file_not_found() {
     );
 }
 
-// ============================================================================
-// Batch Command Tests
-// ============================================================================
-
 #[test]
 fn test_batch_multiple_files() {
     build_binary();
 
     let file1 = get_test_file("text/simple.txt");
-    let file2 = get_test_file("text/simple.txt"); // Use same file twice for simplicity
+    let file2 = get_test_file("text/simple.txt");
 
     if !PathBuf::from(&file1).exists() {
         tracing::debug!("Skipping test: {} not found", file1);
@@ -378,7 +357,6 @@ fn test_batch_multiple_files() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Verify it's valid JSON array
     let json_result: serde_json::Result<serde_json::Value> = serde_json::from_str(&stdout);
     assert!(json_result.is_ok(), "Output should be valid JSON, got: {}", stdout);
 
@@ -412,10 +390,6 @@ fn test_batch_with_missing_file() {
         stderr
     );
 }
-
-// ============================================================================
-// Help Command Tests
-// ============================================================================
 
 #[test]
 fn test_extract_help() {

@@ -170,7 +170,6 @@ pub fn extract_xlsx_app_properties<R: Read + std::io::Seek>(archive: &mut ZipArc
 
     let root = doc.root_element();
 
-    // Extract worksheet names from TitlesOfParts vector
     let worksheet_names = extract_titles_of_parts(root);
 
     Ok(XlsxAppProperties {
@@ -207,10 +206,8 @@ pub fn extract_pptx_app_properties<R: Read + std::io::Seek>(archive: &mut ZipArc
 
     let root = doc.root_element();
 
-    // Extract slide titles from TitlesOfParts vector
     let slide_titles = extract_titles_of_parts(root);
 
-    // Extract presentation format from PresentationFormat element
     let presentation_format = super::parse_xml_text(root, "PresentationFormat");
 
     Ok(PptxAppProperties {
@@ -238,11 +235,8 @@ pub fn extract_pptx_app_properties<R: Read + std::io::Seek>(archive: &mut ZipArc
 fn extract_titles_of_parts(root: Node) -> Vec<String> {
     let mut titles = Vec::new();
 
-    // Find TitlesOfParts element
     if let Some(titles_node) = root.descendants().find(|n| n.has_tag_name("TitlesOfParts")) {
-        // Find vt:vector element
         if let Some(vector_node) = titles_node.descendants().find(|n| n.has_tag_name("vector")) {
-            // Extract all vt:lpstr elements
             for lpstr_node in vector_node.descendants().filter(|n| n.has_tag_name("lpstr")) {
                 if let Some(text) = lpstr_node.text() {
                     let text = text.trim();
@@ -372,7 +366,6 @@ mod tests {
 
     #[test]
     fn test_extract_app_properties_missing_file() {
-        // Test DOCX
         let buffer = Vec::new();
         let cursor = Cursor::new(buffer);
         let zip = zip::ZipWriter::new(cursor);
@@ -382,7 +375,6 @@ mod tests {
         let docx = extract_docx_app_properties(&mut archive).unwrap();
         assert_eq!(docx, DocxAppProperties::default());
 
-        // Test XLSX with a fresh archive
         let buffer = Vec::new();
         let cursor = Cursor::new(buffer);
         let zip = zip::ZipWriter::new(cursor);

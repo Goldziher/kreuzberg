@@ -312,7 +312,6 @@ mod tests {
     #[async_trait]
     impl PostProcessor for MockPostProcessor {
         async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
-            // Add processing metadata
             result
                 .metadata
                 .additional
@@ -392,7 +391,6 @@ mod tests {
 
         let config = ExtractionConfig::default();
 
-        // Default implementation always returns true
         assert!(processor.should_process(&result, &config));
     }
 
@@ -435,7 +433,6 @@ mod tests {
             stage: ProcessingStage::Middle,
         };
 
-        // Test Plugin trait methods
         assert_eq!(processor.name(), "mock-processor");
         assert_eq!(processor.version(), "1.0.0");
         assert!(processor.initialize().is_ok());
@@ -490,12 +487,10 @@ mod tests {
         let config = ExtractionConfig::default();
         processor.process(&mut result, &config).await.unwrap();
 
-        // Should preserve existing metadata
         assert_eq!(
             result.metadata.additional.get("existing_key").unwrap(),
             &serde_json::json!("existing_value")
         );
-        // And add new metadata
         assert!(result.metadata.additional.contains_key("processed_by"));
     }
 
@@ -515,13 +510,11 @@ mod tests {
             images: None,
         };
 
-        // Default implementation returns 0
         assert_eq!(processor.estimated_duration_ms(&result), 0);
     }
 
     #[test]
     fn test_post_processor_should_process_conditional() {
-        // Create a processor that only processes PDFs
         struct PdfOnlyProcessor;
 
         impl Plugin for PdfOnlyProcessor {
@@ -608,7 +601,6 @@ mod tests {
         let config = ExtractionConfig::default();
         processor.process(&mut result, &config).await.unwrap();
 
-        // Should preserve tables
         assert_eq!(result.tables.len(), 1);
         assert_eq!(result.tables[0].cells.len(), 1);
     }

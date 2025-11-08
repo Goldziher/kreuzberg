@@ -27,13 +27,8 @@ from kreuzberg import (
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-# Test document paths
-# Navigate from packages/python/tests/plugins/ to root/test_documents/
 TEST_DOCS_DIR = Path(__file__).parent.parent.parent.parent.parent / "test_documents"
 SIMPLE_TEXT_FILE = TEST_DOCS_DIR / "text" / "contract.txt"
-
-
-# Test validator classes
 
 
 class PassValidator:
@@ -43,7 +38,6 @@ class PassValidator:
         return "pass_validator"
 
     def validate(self, result: dict[str, Any]) -> None:
-        # Always pass - just check structure
         assert isinstance(result, dict)
         assert "content" in result
 
@@ -144,12 +138,10 @@ class ConditionalValidator:
         return "conditional_validator"
 
     def should_validate(self, result: dict[str, Any]) -> bool:
-        # Only validate if content is longer than 100 chars
         content = result.get("content", "")
         return len(content) > 100
 
     def validate(self, result: dict[str, Any]) -> None:
-        # This should only be called if should_validate returns True
         content = result.get("content", "")
         if "test" not in content.lower():
             msg = "Content must contain 'test'"
@@ -157,9 +149,6 @@ class ConditionalValidator:
 
     def priority(self) -> int:
         return 50
-
-
-# Fixtures
 
 
 @pytest.fixture(autouse=True)
@@ -170,15 +159,11 @@ def _cleanup_validators() -> Generator[None, None, None]:
     clear_validators()
 
 
-# Tests
-
-
 def test_register_simple_validator() -> None:
     """Test registering a Python validator that passes."""
     validator = PassValidator()
     register_validator(validator)
 
-    # Should not raise
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.content is not None
 
@@ -189,7 +174,6 @@ async def test_validator_async_extraction() -> None:
     validator = PassValidator()
     register_validator(validator)
 
-    # Should not raise
     result = await extract_file(str(SIMPLE_TEXT_FILE))
     assert result.content is not None
 
@@ -202,7 +186,6 @@ def test_validator_receives_extraction_result() -> None:
             return "inspector"
 
         def validate(self, result: dict[str, Any]) -> None:
-            # Verify result structure
             assert isinstance(result, dict)
             assert "content" in result
             assert "metadata" in result
@@ -222,22 +205,20 @@ def test_validator_receives_extraction_result() -> None:
 
 def test_validator_can_raise_validation_error() -> None:
     """Test validator can raise ValidationError to fail extraction."""
-    validator = ContentLengthValidator(min_length=1000000)  # Impossibly high
+    validator = ContentLengthValidator(min_length=1000000)
     register_validator(validator)
 
     with pytest.raises((ValidationError, Exception)) as exc_info:
         extract_file_sync(str(SIMPLE_TEXT_FILE))
 
-    # Check error message contains validation info
     assert "too short" in str(exc_info.value).lower() or "validation" in str(exc_info.value).lower()
 
 
 def test_validator_passes_validation() -> None:
     """Test validator allows extraction when validation passes."""
-    validator = ContentLengthValidator(min_length=1)  # Very low threshold
+    validator = ContentLengthValidator(min_length=1)
     register_validator(validator)
 
-    # Should not raise
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.content is not None
 
@@ -250,14 +231,12 @@ def test_multiple_validators_priority_order() -> None:
     medium_priority = PriorityValidator(50, execution_order)
     low_priority = PriorityValidator(10, execution_order)
 
-    # Register in wrong order to test priority sorting
     register_validator(low_priority)
     register_validator(high_priority)
     register_validator(medium_priority)
 
     extract_file_sync(str(SIMPLE_TEXT_FILE))
 
-    # Should execute in priority order (high to low)
     assert execution_order == ["priority_100", "priority_50", "priority_10"]
 
 
@@ -299,7 +278,6 @@ def test_validator_fail_fast() -> None:
     with pytest.raises((ValidationError, Exception)):
         extract_file_sync(str(SIMPLE_TEXT_FILE))
 
-    # Second validator should not have been called
     assert "first" in executed_validators
     assert "second" not in executed_validators
 
@@ -309,11 +287,9 @@ def test_unregister_validator() -> None:
     validator = FailFastValidator()
     register_validator(validator)
 
-    # Should fail
     with pytest.raises((ValidationError, Exception)):
         extract_file_sync(str(SIMPLE_TEXT_FILE))
 
-    # Unregister and verify it's not called
     unregister_validator("fail_fast_validator")
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.content is not None
@@ -324,11 +300,9 @@ def test_clear_all_validators() -> None:
     register_validator(FailFastValidator())
     register_validator(ContentLengthValidator(min_length=1000000))
 
-    # Should fail with validators
     with pytest.raises((ValidationError, Exception)):
         extract_file_sync(str(SIMPLE_TEXT_FILE))
 
-    # Clear and verify extraction succeeds
     clear_validators()
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.content is not None
@@ -336,7 +310,6 @@ def test_clear_all_validators() -> None:
 
 def test_validator_with_keyword_check() -> None:
     """Test validator that checks for required keywords."""
-    # This should fail because "required_keyword_xyz" is not in the file
     validator = KeywordValidator(["required_keyword_xyz"])
     register_validator(validator)
 
@@ -348,13 +321,11 @@ def test_validator_with_keyword_check() -> None:
 
 def test_validator_conditional_execution() -> None:
     """Test validator with should_validate method."""
-    # Use short text file
     short_file = SIMPLE_TEXT_FILE
 
     validator = ConditionalValidator()
     register_validator(validator)
 
-    # Should not raise because should_validate returns False for short content
     result = extract_file_sync(str(short_file))
     assert result is not None
 
@@ -397,7 +368,6 @@ def test_multiple_validators_all_pass() -> None:
     register_validator(LengthValidator())
     register_validator(TypeValidator())
 
-    # Both should pass
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.content is not None
 
@@ -424,7 +394,6 @@ async def test_async_validator() -> None:
             return "async_validator"
 
         def validate(self, result: dict[str, Any]) -> None:
-            # Sync validation (async validators not supported in protocol)
             content = result.get("content", "")
             if len(content) < 1:
                 msg = "Content too short"
@@ -438,7 +407,6 @@ async def test_async_validator() -> None:
 
     register_validator(AsyncValidator())
 
-    # Should work with async extraction
     result = await extract_file(str(SIMPLE_TEXT_FILE))
     assert result.content is not None
 
@@ -474,7 +442,6 @@ def test_validator_with_metadata_check() -> None:
             return "metadata_validator"
 
         def validate(self, result: dict[str, Any]) -> None:
-            # Check that mime_type exists
             mime_type = result.get("mime_type")
             if not mime_type:
                 msg = "Missing mime_type"
@@ -522,13 +489,11 @@ def test_validator_priority_default() -> None:
         def should_validate(self, result: dict[str, Any]) -> bool:
             return True
 
-    # Register default priority first
     register_validator(NoPriorityValidator())
     register_validator(HighPriorityValidator())
 
     extract_file_sync(str(SIMPLE_TEXT_FILE))
 
-    # High priority should execute first
     assert execution_order[0] == "high_priority"
 
 

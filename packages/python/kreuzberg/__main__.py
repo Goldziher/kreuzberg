@@ -98,10 +98,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not first.startswith("-"):
             requested_subcommand = first
 
-    # Try to find the CLI binary on PATH first (production mode)
     cli_path = shutil.which("kreuzberg-cli")
 
-    # In development mode, look for the binary in target/release
     if cli_path is None:
         cli_path = _discover_dev_cli_binary(requested_subcommand)
 

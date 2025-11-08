@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 
 require:
   - rubocop-rspec
@@ -26,12 +25,12 @@ Style/FrozenStringLiteralComment:
   EnforcedStyle: always
 
 Style/Documentation:
-  Enabled: false # We use YARD for documentation
+  Enabled: false
 
 Layout/LineLength:
   Max: 120
   AllowedPatterns:
-    - '\A\s*#' # Allow long comment lines
+    - '\A\s*#'
   Exclude:
     - 'spec/**/*'
 
@@ -112,6 +111,5 @@ RSpec/DescribeClass:
 RSpec/PredicateMatcher:
   Enabled: false
 
-# Disable Capybara/RSpec/PredicateMatcher due to crashes with rubocop-rspec 2.31.0
 Capybara/RSpec/PredicateMatcher:
   Enabled: false

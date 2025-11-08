@@ -30,13 +30,8 @@ if TYPE_CHECKING:
     from typing import Any
 
 
-# Test document paths
-# Navigate from packages/python/tests/plugins/ to root/test_documents/
 TEST_DOCS_DIR = Path(__file__).parent.parent.parent.parent.parent / "test_documents"
 SIMPLE_TEXT_FILE = TEST_DOCS_DIR / "text" / "contract.txt"
-
-
-# Test postprocessor classes
 
 
 class SimplePostProcessor:
@@ -175,9 +170,6 @@ class ErrorProcessor:
         pass
 
 
-# Fixtures
-
-
 @pytest.fixture(autouse=True)
 def _cleanup_processors() -> Generator[None, None, None]:
     """Cleanup all processors before and after each test."""
@@ -186,15 +178,11 @@ def _cleanup_processors() -> Generator[None, None, None]:
     clear_post_processors()
 
 
-# Tests
-
-
 def test_register_simple_postprocessor_class() -> None:
     """Test registering a Python class as postprocessor."""
     processor = SimplePostProcessor()
     register_post_processor(processor)
 
-    # Verify processor is called during extraction
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.metadata.get("simple_processor_executed") is True
     assert result.metadata.get("processor_name") == "simple_test_processor"
@@ -218,7 +206,6 @@ def test_postprocessor_receives_extraction_result() -> None:
             return "inspector"
 
         def process(self, result: dict[str, Any]) -> dict[str, Any]:
-            # Verify result structure
             assert isinstance(result, (dict, ExtractionResult))
             assert "content" in result
             assert "metadata" in result
@@ -247,7 +234,6 @@ def test_postprocessor_modifies_content() -> None:
 
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.metadata.get("content_modified") is True
-    # Content should be uppercase
     assert result.content.isupper()
 
 
@@ -309,7 +295,6 @@ def test_multiple_postprocessors_stage_order() -> None:  # noqa: C901
         def shutdown(self) -> None:
             pass
 
-    # Register in reverse order to test stage ordering
     register_post_processor(OrderTrackerLate())
     register_post_processor(OrderTrackerMiddle())
     register_post_processor(OrderTrackerEarly())
@@ -327,11 +312,9 @@ def test_unregister_postprocessor() -> None:
     processor = SimplePostProcessor()
     register_post_processor(processor)
 
-    # Verify processor is called
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.metadata.get("simple_processor_executed") is True
 
-    # Unregister and verify it's not called
     unregister_post_processor("simple_test_processor")
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.metadata.get("simple_processor_executed") is None
@@ -342,12 +325,10 @@ def test_clear_all_postprocessors() -> None:
     register_post_processor(SimplePostProcessor())
     register_post_processor(ContentModifier())
 
-    # Verify both are called
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.metadata.get("simple_processor_executed") is True
     assert result.metadata.get("content_modified") is True
 
-    # Clear all and verify none are called
     clear_post_processors()
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result.metadata.get("simple_processor_executed") is None
@@ -358,9 +339,7 @@ def test_postprocessor_error_propagation() -> None:
     """Test postprocessor error handling."""
     register_post_processor(ErrorProcessor())
 
-    # Error should propagate (or be captured in metadata)
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
-    # Check if error is captured in metadata
     error_keys = [k for k in result.metadata if "error" in k.lower()]
     assert len(error_keys) > 0
 
@@ -384,11 +363,9 @@ def test_postprocessor_with_disabled_config() -> None:
     """Test postprocessor is skipped when disabled in config."""
     register_post_processor(SimplePostProcessor())
 
-    # With postprocessor enabled (default)
     result_enabled = extract_file_sync(str(SIMPLE_TEXT_FILE))
     assert result_enabled.metadata.get("simple_processor_executed") is True
 
-    # With postprocessor disabled
     config = ExtractionConfig(postprocessor=PostProcessorConfig(enabled=False))
     result_disabled = extract_file_sync(str(SIMPLE_TEXT_FILE), config=config)
     assert result_disabled.metadata.get("simple_processor_executed") is None
@@ -399,7 +376,6 @@ def test_postprocessor_whitelist() -> None:
     register_post_processor(SimplePostProcessor())
     register_post_processor(ContentModifier())
 
-    # Only enable simple_test_processor
     config = ExtractionConfig(
         postprocessor=PostProcessorConfig(
             enabled=True,
@@ -417,7 +393,6 @@ def test_postprocessor_blacklist() -> None:
     register_post_processor(SimplePostProcessor())
     register_post_processor(ContentModifier())
 
-    # Disable content_modifier
     config = ExtractionConfig(
         postprocessor=PostProcessorConfig(
             enabled=True,
@@ -476,14 +451,12 @@ async def test_concurrent_extraction_with_stateful_processor() -> None:
     processor = StatefulProcessor()
     register_post_processor(processor)
 
-    # Run 5 concurrent extractions
     tasks = [extract_file(str(SIMPLE_TEXT_FILE)) for _ in range(5)]
     results = await asyncio.gather(*tasks)
 
-    # All should have been processed
     call_counts: list[int] = [r.metadata.get("call_count") for r in results]  # type: ignore[misc]
     assert all(count is not None for count in call_counts)
-    assert len(set(call_counts)) == 5  # All should be unique
+    assert len(set(call_counts)) == 5
     assert sorted(call_counts) == [1, 2, 3, 4, 5]
 
 
@@ -555,5 +528,4 @@ def test_postprocessor_duplicate_names() -> None:
     register_post_processor(Proc2())
 
     result = extract_file_sync(str(SIMPLE_TEXT_FILE))
-    # Second processor should override
     assert result.metadata.get("proc_version") is not None

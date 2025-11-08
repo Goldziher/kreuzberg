@@ -156,7 +156,6 @@ impl BenchmarkRunner {
     /// For now, filtering is done during execution based on adapter support
     pub fn filter_fixtures(&mut self, _file_types: &[String]) {
         // TODO: Implement fixture filtering if needed
-        // For now, we filter during execution based on adapter.supports_format()
     }
 
     /// Get count of loaded fixtures
@@ -181,27 +180,22 @@ impl BenchmarkRunner {
         let total_iterations = config.warmup_iterations + config.benchmark_iterations;
         let mut all_results = Vec::new();
 
-        // Run all iterations (warmup + benchmark)
         for iteration in 0..total_iterations {
             let result = adapter.extract(file_path, config.timeout).await?;
 
-            // Only keep benchmark iterations (skip warmup)
             if iteration >= config.warmup_iterations {
                 all_results.push(result);
             }
         }
 
-        // If only 1 benchmark iteration, return it directly without aggregation
         if config.benchmark_iterations == 1 && !all_results.is_empty() {
             return Ok(all_results.into_iter().next().unwrap());
         }
 
-        // Aggregate multiple iterations
         if all_results.is_empty() {
             return Err(Error::Benchmark("No successful iterations".to_string()));
         }
 
-        // Extract iteration results
         let iterations: Vec<IterationResult> = all_results
             .iter()
             .enumerate()
@@ -213,13 +207,10 @@ impl BenchmarkRunner {
             })
             .collect();
 
-        // Calculate statistics
         let statistics = calculate_statistics(&iterations);
 
-        // Aggregate metrics
         let aggregated_metrics = aggregate_metrics(&iterations);
 
-        // Calculate average extraction_duration if available
         let extraction_durations: Vec<Duration> = all_results.iter().filter_map(|r| r.extraction_duration).collect();
 
         let avg_extraction_duration = if !extraction_durations.is_empty() {
@@ -231,10 +222,8 @@ impl BenchmarkRunner {
             None
         };
 
-        // Calculate subprocess overhead from mean duration and avg extraction duration
         let subprocess_overhead = avg_extraction_duration.map(|ext| statistics.mean.saturating_sub(ext));
 
-        // Use first result as template for aggregated result
         let first_result = &all_results[0];
 
         Ok(BenchmarkResult {
@@ -270,33 +259,26 @@ impl BenchmarkRunner {
         let total_iterations = config.warmup_iterations + config.benchmark_iterations;
         let mut all_batch_results = Vec::new();
 
-        // Run all iterations (warmup + benchmark)
         for iteration in 0..total_iterations {
             let refs: Vec<&std::path::Path> = file_paths.iter().map(|p| p.as_path()).collect();
             let batch_results = adapter.extract_batch(&refs, config.timeout).await?;
 
-            // Only keep benchmark iterations (skip warmup)
             if iteration >= config.warmup_iterations {
                 all_batch_results.push(batch_results);
             }
         }
 
-        // If only 1 benchmark iteration, return it directly
         if config.benchmark_iterations == 1 && !all_batch_results.is_empty() {
             return Ok(all_batch_results.into_iter().next().unwrap());
         }
 
-        // Aggregate multiple iterations
-        // For each file, aggregate across iterations
         let file_count = file_paths.len();
         let mut aggregated_results = Vec::new();
 
         for file_idx in 0..file_count {
-            // Collect results for this file across all iterations
             let file_iterations: Vec<&BenchmarkResult> =
                 all_batch_results.iter().map(|batch| &batch[file_idx]).collect();
 
-            // Extract iteration data
             let iterations: Vec<IterationResult> = file_iterations
                 .iter()
                 .enumerate()
@@ -308,13 +290,10 @@ impl BenchmarkRunner {
                 })
                 .collect();
 
-            // Calculate statistics
             let statistics = calculate_statistics(&iterations);
 
-            // Aggregate metrics
             let aggregated_metrics = aggregate_metrics(&iterations);
 
-            // Calculate average extraction_duration if available
             let extraction_durations: Vec<Duration> =
                 file_iterations.iter().filter_map(|r| r.extraction_duration).collect();
 
@@ -327,10 +306,8 @@ impl BenchmarkRunner {
                 None
             };
 
-            // Calculate subprocess overhead from mean duration and avg extraction duration
             let subprocess_overhead = avg_extraction_duration.map(|ext| statistics.mean.saturating_sub(ext));
 
-            // Use first result as template
             let first_result = file_iterations[0];
 
             aggregated_results.push(BenchmarkResult {
@@ -360,16 +337,13 @@ impl BenchmarkRunner {
     /// # Returns
     /// Vector of benchmark results
     pub async fn run(&self, framework_names: &[String]) -> Result<Vec<BenchmarkResult>> {
-        // Determine which frameworks to benchmark
         let frameworks = if framework_names.is_empty() {
-            // Use all registered adapters
             self.registry
                 .adapter_names()
                 .into_iter()
                 .filter_map(|name| self.registry.get(&name))
                 .collect::<Vec<_>>()
         } else {
-            // Use specified adapters
             framework_names
                 .iter()
                 .filter_map(|name| self.registry.get(name))
@@ -380,31 +354,25 @@ impl BenchmarkRunner {
             return Err(Error::Benchmark("No frameworks available for benchmarking".to_string()));
         }
 
-        // Setup all frameworks
         for adapter in &frameworks {
             adapter.setup().await?;
         }
 
         let mut results = Vec::new();
 
-        // Check if we should use batch extraction
         let use_batch = matches!(self.config.benchmark_mode, BenchmarkMode::Batch);
 
         if use_batch {
-            // Batch mode: Group files by adapter and use batch extraction if supported
             use std::collections::HashMap;
 
-            // Group files by adapter
             let mut adapter_files: HashMap<String, Vec<PathBuf>> = HashMap::new();
 
             for (fixture_path, fixture) in self.fixtures.fixtures() {
                 for adapter in &frameworks {
-                    // Check if adapter supports this format
                     if !adapter.supports_format(&fixture.file_type) {
                         continue;
                     }
 
-                    // Resolve document path relative to fixture directory
                     let fixture_dir = fixture_path.parent().unwrap_or_else(|| std::path::Path::new("."));
                     let document_path = fixture.resolve_document_path(fixture_dir);
 
@@ -415,10 +383,8 @@ impl BenchmarkRunner {
                 }
             }
 
-            // Clone config data needed for async blocks
             let config = self.config.clone();
 
-            // Process each adapter
             for adapter in &frameworks {
                 let adapter_name = adapter.name();
 
@@ -428,7 +394,6 @@ impl BenchmarkRunner {
                     }
 
                     if adapter.supports_batch() {
-                        // Use native batch extraction
                         let adapter = Arc::clone(adapter);
                         let file_paths = file_paths.clone();
                         let config = config.clone();
@@ -442,7 +407,6 @@ impl BenchmarkRunner {
                             }
                         }
                     } else {
-                        // Fall back to sequential extraction
                         for file_path in file_paths {
                             let adapter = Arc::clone(adapter);
                             let file_path = file_path.clone();
@@ -461,17 +425,14 @@ impl BenchmarkRunner {
                 }
             }
         } else {
-            // SingleFile mode: Sequential execution for fair latency comparison
             let mut task_queue: Vec<(PathBuf, String, Arc<dyn FrameworkAdapter>)> = Vec::new();
 
             for (fixture_path, fixture) in self.fixtures.fixtures() {
                 for adapter in &frameworks {
-                    // Check if adapter supports this format
                     if !adapter.supports_format(&fixture.file_type) {
                         continue;
                     }
 
-                    // Resolve document path relative to fixture directory
                     let fixture_dir = fixture_path.parent().unwrap_or_else(|| std::path::Path::new("."));
                     let document_path = fixture.resolve_document_path(fixture_dir);
 
@@ -479,10 +440,8 @@ impl BenchmarkRunner {
                 }
             }
 
-            // Clone config data needed for async blocks
             let config = self.config.clone();
 
-            // Process tasks sequentially
             for (file_path, _framework_name, adapter) in task_queue {
                 match Self::run_iterations_static(&file_path, adapter, &config).await {
                     Ok(result) => {
@@ -495,7 +454,6 @@ impl BenchmarkRunner {
             }
         }
 
-        // Teardown all frameworks
         for adapter in &frameworks {
             adapter.teardown().await?;
         }
@@ -542,7 +500,6 @@ mod tests {
 
         let runner = BenchmarkRunner::new(config, registry);
 
-        // Running with no fixtures should return empty results
         let results = runner.run(&[]).await.unwrap();
         assert_eq!(results.len(), 0);
     }

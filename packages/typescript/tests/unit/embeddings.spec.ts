@@ -282,7 +282,6 @@ describe("Embedding Generation Integration", () => {
 				},
 			};
 
-			// Just verify configuration is accepted
 			expect(config.chunking?.embedding?.model?.value).toBe(preset);
 		}
 	});
@@ -304,7 +303,6 @@ describe("Embedding Generation Integration", () => {
 			},
 		};
 
-		// Verify configuration structure
 		expect(config.chunking?.embedding?.model?.modelType).toBe("fastembed");
 		expect(config.chunking?.embedding?.model?.value).toBe("BGEBaseENV15");
 		expect(config.chunking?.embedding?.model?.dimensions).toBe(768);
@@ -456,7 +454,6 @@ describe("Embedding Configuration Edge Cases", () => {
 		const chunkSizes = [50, 100, 500, 1000, 2000];
 
 		for (const maxChars of chunkSizes) {
-			// Use 20% overlap, ensuring it's less than chunk size
 			const maxOverlap = Math.min(Math.floor(maxChars * 0.2), maxChars - 1);
 			const config: ExtractionConfig = {
 				chunking: {

@@ -27,7 +27,6 @@ def user_config() -> ExtractionConfig:
     return ExtractionConfig(ocr=OcrConfig(backend="tesseract", language="eng"))
 
 
-# Test document fixtures - these reference files in test_source_files/
 TEST_SOURCE_FILES = Path(__file__).parent / "test_source_files"
 
 
@@ -70,7 +69,6 @@ def german_image_pdf() -> Path:
 @pytest.fixture
 def docx_document() -> Path:
     """Path to DOCX test file."""
-    # Use root-level test_documents directory
     path = Path(__file__).parent.parent.parent.parent / "test_documents" / "documents" / "lorem_ipsum.docx"
     if not path.exists():
         pytest.skip(f"Test file not found: {path}")

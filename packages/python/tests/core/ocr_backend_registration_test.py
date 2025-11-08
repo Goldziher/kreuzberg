@@ -95,7 +95,7 @@ def test_ensure_ocr_backend_registers_easyocr_once(monkeypatch: pytest.MonkeyPat
     assert created[0].kwargs["languages"] == ["fra"]
 
     kreuzberg._ensure_ocr_backend_registered(config, {}, {})
-    assert len(registrations) == 1  # cache hit, no new registration
+    assert len(registrations) == 1
 
 
 def test_ensure_ocr_backend_registers_paddleocr(monkeypatch: pytest.MonkeyPatch) -> None:

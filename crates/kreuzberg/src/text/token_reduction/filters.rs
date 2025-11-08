@@ -30,8 +30,6 @@ pub struct FilterPipeline {
 
 impl FilterPipeline {
     pub fn new(config: &Arc<TokenReductionConfig>, language: &str) -> Result<Self> {
-        // Try requested language first, fall back to English (which is always available in the embedded stopwords).
-        // If English stopwords are missing, it indicates a build/compilation issue that must be exposed.
         let mut stopwords = STOPWORDS.get(language).cloned().unwrap_or_else(|| {
             STOPWORDS
                 .get("en")
@@ -142,7 +140,6 @@ impl FilterPipeline {
                 continue;
             }
 
-            // Check if word matches any preserve pattern
             if self.should_preserve_word(word) {
                 filtered_words.push(word);
                 continue;
@@ -259,7 +256,6 @@ impl FilterPipeline {
         let mut code_block_id = 0;
         let mut inline_code_id = 0;
 
-        // Extract code blocks and store in HashMap with unique placeholders
         result = MARKDOWN_CODE_BLOCK_REGEX
             .replace_all(&result, |caps: &regex::Captures| {
                 let code_block = caps[0].to_string();
@@ -270,7 +266,6 @@ impl FilterPipeline {
             })
             .to_string();
 
-        // Extract inline code and store in HashMap with unique placeholders
         result = MARKDOWN_INLINE_CODE_REGEX
             .replace_all(&result, |caps: &regex::Captures| {
                 let inline_code = caps[0].to_string();
@@ -287,7 +282,6 @@ impl FilterPipeline {
     fn restore_preserved_blocks(&self, text: &str, preserved: &AHashMap<String, String>) -> String {
         let mut result = text.to_string();
 
-        // Replace all placeholders with their original content from HashMap
         for (placeholder, original_content) in preserved {
             result = result.replace(placeholder, original_content);
         }
@@ -679,26 +673,22 @@ mod tests {
         });
         let pipeline = FilterPipeline::new(&config, "en").unwrap();
 
-        // Test with multiple code blocks and inline code mixed
         let input =
             "Start ```rust\nlet x = 1;\n``` middle `inline1` text ```python\nprint('hi')\n``` and `inline2` end";
         let mut preserved = AHashMap::new();
         let result = pipeline.extract_and_preserve_code(input, &mut preserved);
 
-        // Verify all blocks are preserved with unique IDs
         assert_eq!(preserved.len(), 4);
         assert!(preserved.contains_key("__CODEBLOCK_0__"));
         assert!(preserved.contains_key("__CODEBLOCK_1__"));
         assert!(preserved.contains_key("__INLINECODE_0__"));
         assert!(preserved.contains_key("__INLINECODE_1__"));
 
-        // Verify content is correct
         assert_eq!(preserved.get("__CODEBLOCK_0__").unwrap(), "```rust\nlet x = 1;\n```");
         assert_eq!(preserved.get("__CODEBLOCK_1__").unwrap(), "```python\nprint('hi')\n```");
         assert_eq!(preserved.get("__INLINECODE_0__").unwrap(), "`inline1`");
         assert_eq!(preserved.get("__INLINECODE_1__").unwrap(), "`inline2`");
 
-        // Verify restoration works correctly
         let restored = pipeline.restore_preserved_blocks(&result, &preserved);
         assert!(restored.contains("```rust\nlet x = 1;\n```"));
         assert!(restored.contains("```python\nprint('hi')\n```"));
@@ -716,12 +706,10 @@ mod tests {
         });
         let pipeline = FilterPipeline::new(&config, "en").unwrap();
 
-        // Test that order doesn't matter with HashMap approach
         let input = "Text `a` and `b` and `c` here";
         let mut preserved = AHashMap::new();
         let result = pipeline.extract_and_preserve_code(input, &mut preserved);
 
-        // All inline codes should be preserved regardless of iteration order
         assert_eq!(preserved.len(), 3);
         let restored = pipeline.restore_preserved_blocks(&result, &preserved);
 
@@ -735,9 +723,9 @@ mod tests {
     fn test_preserve_patterns_regex() {
         let config = TokenReductionConfig {
             preserve_patterns: vec![
-                r"\b[A-Z]{2,}\b".to_string(),     // All caps words like "NASA", "HTTP"
-                r"\b\d+\.\d+\.\d+\b".to_string(), // Version numbers like "1.2.3"
-                r"@\w+".to_string(),              // Mentions like "@user"
+                r"\b[A-Z]{2,}\b".to_string(),
+                r"\b\d+\.\d+\.\d+\b".to_string(),
+                r"@\w+".to_string(),
             ],
             ..Default::default()
         };
@@ -748,13 +736,11 @@ mod tests {
         let input = "The NASA and HTTP protocols version 1.2.3 by @john";
         let result = pipeline.remove_stopwords(input);
 
-        // Preserved patterns should remain
         assert!(result.contains("NASA"));
         assert!(result.contains("HTTP"));
         assert!(result.contains("1.2.3"));
         assert!(result.contains("@john"));
 
-        // Stopwords should be removed
         assert!(!result.contains(" the "));
         assert!(!result.contains(" and "));
         assert!(!result.contains(" by "));
@@ -762,7 +748,6 @@ mod tests {
 
     #[test]
     fn test_language_specific_stopwords() {
-        // Test English stopwords
         let config_en = Arc::new(TokenReductionConfig::default());
         let pipeline_en = FilterPipeline::new(&config_en, "en").unwrap();
         assert_eq!(pipeline_en.language(), "en");
@@ -771,14 +756,12 @@ mod tests {
         let result_en = pipeline_en.remove_stopwords(input_en);
         assert!(!result_en.contains(" the "));
 
-        // Test German stopwords
         let config_de = Arc::new(TokenReductionConfig::default());
         let pipeline_de = FilterPipeline::new(&config_de, "de").unwrap();
         assert_eq!(pipeline_de.language(), "de");
 
         let input_de = "der schnelle braune fuchs";
         let result_de = pipeline_de.remove_stopwords(input_de);
-        // "der" is a German stopword and should be removed
         assert!(!result_de.contains(" der "));
         assert!(result_de.contains("schnelle"));
     }
@@ -787,14 +770,12 @@ mod tests {
     fn test_language_fallback_to_english() {
         let config = Arc::new(TokenReductionConfig::default());
 
-        // Use an unsupported language - should fall back to English
         let pipeline = FilterPipeline::new(&config, "unsupported_lang").unwrap();
         assert_eq!(pipeline.language(), "unsupported_lang");
 
         let input = "the quick brown fox";
         let result = pipeline.remove_stopwords(input);
 
-        // Should use English stopwords as fallback
         assert!(!result.contains(" the "));
         assert!(result.contains("quick"));
     }
@@ -804,31 +785,26 @@ mod tests {
         let config = Arc::new(TokenReductionConfig::default());
         let pipeline = FilterPipeline::new(&config, "en").unwrap();
 
-        // Test word with punctuation
         let (prefix, core, suffix) = pipeline.split_word_boundaries("(hello)");
         assert_eq!(prefix, "(");
         assert_eq!(core, "hello");
         assert_eq!(suffix, ")");
 
-        // Test word with trailing punctuation
         let (prefix2, core2, suffix2) = pipeline.split_word_boundaries("world!");
         assert_eq!(prefix2, "");
         assert_eq!(core2, "world");
         assert_eq!(suffix2, "!");
 
-        // Test word with leading punctuation
         let (prefix3, core3, suffix3) = pipeline.split_word_boundaries("'test");
         assert_eq!(prefix3, "'");
         assert_eq!(core3, "test");
         assert_eq!(suffix3, "");
 
-        // Test word with no punctuation
         let (prefix4, core4, suffix4) = pipeline.split_word_boundaries("simple");
         assert_eq!(prefix4, "");
         assert_eq!(core4, "simple");
         assert_eq!(suffix4, "");
 
-        // Test complex case
         let (prefix5, core5, suffix5) = pipeline.split_word_boundaries("\"example!!!\"");
         assert_eq!(prefix5, "\"");
         assert_eq!(core5, "example");
@@ -840,25 +816,21 @@ mod tests {
         let config = Arc::new(TokenReductionConfig::default());
         let pipeline = FilterPipeline::new(&config, "en").unwrap();
 
-        // Only punctuation
         let (prefix, core, suffix) = pipeline.split_word_boundaries("!!!");
         assert_eq!(prefix, "!!!");
         assert_eq!(core, "");
         assert_eq!(suffix, "");
 
-        // Empty string
         let (prefix2, core2, suffix2) = pipeline.split_word_boundaries("");
         assert_eq!(prefix2, "");
         assert_eq!(core2, "");
         assert_eq!(suffix2, "");
 
-        // Single character
         let (prefix3, core3, suffix3) = pipeline.split_word_boundaries("a");
         assert_eq!(prefix3, "");
         assert_eq!(core3, "a");
         assert_eq!(suffix3, "");
 
-        // Unicode characters
         let (prefix4, core4, suffix4) = pipeline.split_word_boundaries("(café)");
         assert_eq!(prefix4, "(");
         assert_eq!(core4, "café");
@@ -883,13 +855,10 @@ mod tests {
         let input = "this is a custom stopword test";
         let result = pipeline.remove_stopwords(input);
 
-        // Custom stopwords should be removed
         assert!(!result.contains(" custom "));
         assert!(!result.contains(" stopword "));
-        // Regular stopwords also removed
         assert!(!result.contains(" is "));
         assert!(!result.contains(" a "));
-        // Non-stopwords preserved
         assert!(result.contains("test"));
     }
 
@@ -906,7 +875,6 @@ mod tests {
         let input = "The quick brown fox";
         let result = pipeline.remove_stopwords(input);
 
-        // With no preserve patterns, normal stopword removal applies
         assert!(!result.contains(" The "));
         assert!(result.contains("quick"));
     }
@@ -921,7 +889,6 @@ mod tests {
         let config = Arc::new(config);
         let result = FilterPipeline::new(&config, "en");
 
-        // Should return validation error for invalid regex
         assert!(result.is_err());
         if let Err(e) = result {
             match e {

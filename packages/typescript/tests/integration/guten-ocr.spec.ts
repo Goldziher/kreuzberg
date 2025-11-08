@@ -9,7 +9,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { extractBytes, registerOcrBackend } from "../../src/index.js";
 import { GutenOcrBackend } from "../../src/ocr/guten-ocr.js";
 
-// Skip tests if @gutenye/ocr-node is not installed
 const isGutenOcrAvailable = async (): Promise<boolean> => {
 	try {
 		await import("@gutenye/ocr-node");
@@ -57,8 +56,6 @@ describe("Guten OCR Backend Integration", () => {
 	it("should extract text from a simple test image", async () => {
 		if (!gutenOcrAvailable) return;
 
-		// Create a simple test image with text (white background with black text)
-		// We'll use sharp to create this programmatically to avoid dependency on test images
 		const sharp = await import("sharp").then((m) => m.default || m);
 
 		const svgImage = Buffer.from(`
@@ -70,7 +67,6 @@ describe("Guten OCR Backend Integration", () => {
 
 		const imageBytes = await sharp(svgImage).png().toBuffer();
 
-		// Test processImage directly
 		const result = await backend.processImage(imageBytes, "en");
 
 		expect(result).toHaveProperty("content");
@@ -106,7 +102,6 @@ describe("Guten OCR Backend Integration", () => {
 		});
 
 		expect(result.content).toBeTruthy();
-		// OCR keeps the original MIME type to reflect the source document
 		expect(result.mimeType).toBe("image/png");
 	});
 
@@ -124,8 +119,6 @@ describe("Guten OCR Backend Integration", () => {
 
 		const imageBytes = await sharp(svgImage).png().toBuffer();
 
-		// This should still work even with an unsupported language code
-		// The backend will use its default language
 		const result = await backend.processImage(imageBytes, "unsupported_lang");
 		expect(result).toHaveProperty("content");
 	});
@@ -135,7 +128,6 @@ describe("Guten OCR Backend Integration", () => {
 
 		const sharp = await import("sharp").then((m) => m.default || m);
 
-		// Create a blank white image
 		const imageBytes = await sharp({
 			create: {
 				width: 100,
@@ -151,19 +143,16 @@ describe("Guten OCR Backend Integration", () => {
 
 		expect(result).toHaveProperty("content");
 		expect(result.mime_type).toBe("text/plain");
-		// Empty image should have 0 text regions
 		expect(result.metadata.text_regions).toBe(0);
 	});
 
 	it("should initialize only once", async () => {
 		if (!gutenOcrAvailable) return;
 
-		// Calling initialize multiple times should be safe
 		await backend.initialize();
 		await backend.initialize();
 		await backend.initialize();
 
-		// Backend should still work
 		expect(backend.name()).toBe("guten-ocr");
 	});
 
@@ -184,14 +173,12 @@ describe("Guten OCR Backend Integration", () => {
 			.png()
 			.toBuffer();
 
-		// This should auto-initialize
 		const result = await newBackend.processImage(imageBytes, "en");
 		expect(result).toHaveProperty("content");
 	});
 
 	it("should throw error when @gutenye/ocr-node is not installed", async () => {
 		if (gutenOcrAvailable) {
-			// Skip this test if guten-ocr IS installed
 			return;
 		}
 
@@ -253,7 +240,6 @@ describe("Guten OCR Backend - Advanced Features", () => {
 		const image2 = await createTestImage("Image 2");
 		const image3 = await createTestImage("Image 3");
 
-		// Process multiple images concurrently
 		const results = await Promise.all([
 			backend.processImage(image1, "en"),
 			backend.processImage(image2, "en"),

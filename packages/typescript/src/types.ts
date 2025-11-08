@@ -204,15 +204,12 @@ export interface ErrorMetadata {
  * This structure matches the Rust serialization with serde's tagged enum flattening.
  */
 export interface Metadata {
-	// Common fields
 	language?: string | null;
 	date?: string | null;
 	subject?: string | null;
 
-	// Discriminator field - indicates which format-specific fields are present
 	format_type?: "pdf" | "excel" | "email" | "pptx" | "archive" | "image" | "xml" | "text" | "html" | "ocr";
 
-	// PDF format fields (when format_type === "pdf")
 	title?: string | null;
 	author?: string | null;
 	keywords?: string | null;
@@ -222,11 +219,9 @@ export interface Metadata {
 	modification_date?: string | null;
 	page_count?: number;
 
-	// Excel format fields (when format_type === "excel")
 	sheet_count?: number;
 	sheet_names?: string[];
 
-	// Email format fields (when format_type === "email")
 	from_email?: string | null;
 	from_name?: string | null;
 	to_emails?: string[];
@@ -235,28 +230,23 @@ export interface Metadata {
 	message_id?: string | null;
 	attachments?: string[];
 
-	// PowerPoint format fields (when format_type === "pptx")
 	description?: string | null;
 	summary?: string | null;
 	fonts?: string[];
 
-	// Archive format fields (when format_type === "archive")
 	format?: string;
 	file_count?: number;
 	file_list?: string[];
 	total_size?: number;
 	compressed_size?: number | null;
 
-	// Image format fields (when format_type === "image")
 	width?: number;
 	height?: number;
 	exif?: Record<string, string>;
 
-	// XML format fields (when format_type === "xml")
 	element_count?: number;
 	unique_elements?: string[];
 
-	// Text format fields (when format_type === "text")
 	line_count?: number;
 	word_count?: number;
 	character_count?: number;
@@ -264,7 +254,6 @@ export interface Metadata {
 	links?: [string, string][] | null;
 	code_blocks?: [string, string][] | null;
 
-	// HTML format fields (when format_type === "html")
 	canonical?: string | null;
 	base_href?: string | null;
 	og_title?: string | null;
@@ -283,20 +272,16 @@ export interface Metadata {
 	link_license?: string | null;
 	link_alternate?: string | null;
 
-	// OCR format fields (when format_type === "ocr")
 	psm?: number;
 	output_format?: string;
 	table_count?: number;
 	table_rows?: number | null;
 	table_cols?: number | null;
 
-	// Image preprocessing metadata (when OCR preprocessing was applied)
 	image_preprocessing?: ImagePreprocessingMetadata | null;
 
-	// JSON schema (for structured data extraction)
 	json_schema?: Record<string, unknown> | null;
 
-	// Error metadata (for batch operations)
 	error?: ErrorMetadata | null;
 
 	// biome-ignore lint/suspicious/noExplicitAny: Postprocessors can add arbitrary metadata fields

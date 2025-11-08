@@ -1,12 +1,9 @@
-// Auto-generated tests for email fixtures.
 #![allow(clippy::too_many_lines)]
 use e2e_rust::{assertions, resolve_document};
 use kreuzberg::core::config::ExtractionConfig;
 
 #[test]
 fn test_email_sample_eml() {
-    // Sample EML email file to verify email parsing.
-
     let document_path = resolve_document("email/sample.eml");
     if !document_path.exists() {
         println!(

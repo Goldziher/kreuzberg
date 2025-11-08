@@ -1,4 +1,3 @@
-// Auto-generated tests for html fixtures.
 #![allow(clippy::too_many_lines)]
 use e2e_rust::{assertions, resolve_document};
 use kreuzberg::core::config::ExtractionConfig;
@@ -28,8 +27,6 @@ fn test_html_complex_layout() {
 
 #[test]
 fn test_html_simple_table() {
-    // HTML table converted to markdown should retain structure.
-
     let document_path = resolve_document("web/simple_table.html");
     if !document_path.exists() {
         println!(

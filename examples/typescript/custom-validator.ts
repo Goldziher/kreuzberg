@@ -32,7 +32,7 @@ class MinLengthValidator implements ValidatorProtocol {
 	}
 
 	priority(): number {
-		return 100; // High priority - run first
+		return 100;
 	}
 }
 
@@ -57,7 +57,7 @@ class MetadataValidator implements ValidatorProtocol {
 	}
 
 	priority(): number {
-		return 90; // Run after basic validation
+		return 90;
 	}
 
 	private getNestedProperty(obj: any, path: string): any {
@@ -79,7 +79,6 @@ class PDFValidator implements ValidatorProtocol {
 	}
 
 	validate(result: ExtractionResult): void {
-		// Only validate PDFs
 		if (result.mimeType !== "application/pdf") {
 			return;
 		}
@@ -102,7 +101,7 @@ class PDFValidator implements ValidatorProtocol {
 	}
 
 	priority(): number {
-		return 80; // Run after metadata validation
+		return 80;
 	}
 }
 
@@ -132,7 +131,7 @@ class LanguageValidator implements ValidatorProtocol {
 	}
 
 	priority(): number {
-		return 75; // Run before content-specific validators
+		return 75;
 	}
 }
 
@@ -147,18 +146,15 @@ class QualityValidator implements ValidatorProtocol {
 	validate(result: ExtractionResult): void {
 		const content = result.content.trim();
 
-		// Check for empty content
 		if (content.length === 0) {
 			throw new Error("ValidationError: Content is empty");
 		}
 
-		// Check word count
 		const words = content.split(/\s+/).filter((w) => w.length > 0);
 		if (words.length < 5) {
 			throw new Error(`ValidationError: Too few words (${words.length} < 5)`);
 		}
 
-		// Check for suspicious patterns (e.g., OCR errors)
 		const nonAlphanumericRatio = (content.match(/[^a-zA-Z0-9\s]/g) || []).length / content.length;
 		if (nonAlphanumericRatio > 0.5) {
 			throw new Error(
@@ -170,7 +166,7 @@ class QualityValidator implements ValidatorProtocol {
 	}
 
 	priority(): number {
-		return 70; // Run after format-specific validators
+		return 70;
 	}
 }
 
@@ -191,35 +187,12 @@ class ExternalValidator implements ValidatorProtocol {
 		try {
 			console.log(`[ExternalValidator] Calling validation API: ${this.apiUrl}`);
 
-			// Mock API call - in production, use fetch
-			// const response = await fetch(this.apiUrl, {
-			//     method: 'POST',
-			//     headers: {
-			//         'Authorization': `Bearer ${this.apiKey}`,
-			//         'Content-Type': 'application/json',
-			//     },
-			//     body: JSON.stringify({
-			//         content: result.content.substring(0, 5000),
-			//         metadata: result.metadata,
-			//     }),
-			// });
-			//
-			// if (!response.ok) {
-			//     throw new Error(`API returned ${response.status}`);
-			// }
-			//
-			// const data = await response.json();
-			// if (!data.valid) {
-			//     throw new Error(`ValidationError: ${data.reason}`);
-			// }
-
 			console.log("[ExternalValidator] ✓ External validation passed");
 		} catch (error) {
 			if (error instanceof Error && error.message.includes("ValidationError")) {
-				throw error; // Re-throw validation errors
+				throw error;
 			}
 
-			// Handle network/API errors
 			throw new Error(
 				`ValidationError: External validation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 			);
@@ -227,12 +200,11 @@ class ExternalValidator implements ValidatorProtocol {
 	}
 
 	priority(): number {
-		return 50; // Default priority
+		return 50;
 	}
 }
 
 async function main() {
-	// Register validators
 	console.log("=== Registering Validators ===");
 	registerValidator(new MinLengthValidator(50));
 	registerValidator(new MetadataValidator(["mime_type", "pdf.pageCount"]));
@@ -243,7 +215,6 @@ async function main() {
 
 	console.log("Registered 6 validators\n");
 
-	// Extract with all validators - this will pass
 	console.log("=== Extraction with Validators (Pass) ===");
 	try {
 		const result = await extractFile("document.pdf");
@@ -252,7 +223,6 @@ async function main() {
 		console.error(`\n✗ Validation failed: ${error instanceof Error ? error.message : error}`);
 	}
 
-	// Extract with validators - this will fail
 	console.log("\n=== Extraction with Validators (Fail) ===");
 	try {
 		const result = extractFileSync("short_document.pdf");
@@ -261,7 +231,6 @@ async function main() {
 		console.error(`✗ Validation failed: ${error instanceof Error ? error.message : error}`);
 	}
 
-	// Unregister specific validator
 	console.log("\n=== Unregister Validator ===");
 	unregisterValidator("min_length_validator");
 	console.log("Unregistered: min_length_validator");
@@ -273,7 +242,6 @@ async function main() {
 		console.error(`✗ Still failed: ${error instanceof Error ? error.message : error}`);
 	}
 
-	// Clear all validators
 	console.log("\n=== Clear All Validators ===");
 	clearValidators();
 	console.log("Cleared all validators");
@@ -281,7 +249,6 @@ async function main() {
 	const result = extractFileSync("document.pdf");
 	console.log(`✓ No validation: ${result.content.length} chars extracted`);
 
-	// Register selective validators
 	console.log("\n=== Selective Validation ===");
 	registerValidator(new QualityValidator());
 	registerValidator(new MinLengthValidator(100));

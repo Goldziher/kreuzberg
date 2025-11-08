@@ -11,14 +11,14 @@ import {
 describe("FFI Boundary Tests", () => {
 	describe("Large data handling", () => {
 		it("should handle large byte arrays (sync)", () => {
-			const data = new Uint8Array(1024 * 1024); // 1MB of zeros
+			const data = new Uint8Array(1024 * 1024);
 			expect(() => {
 				extractBytesSync(data, "application/pdf", null);
-			}).toThrow(); // Should fail because data is not a valid PDF
+			}).toThrow();
 		});
 
 		it("should handle large byte arrays (async)", async () => {
-			const data = new Uint8Array(1024 * 1024); // 1MB of zeros
+			const data = new Uint8Array(1024 * 1024);
 			await expect(extractBytes(data, "application/pdf", null)).rejects.toThrow();
 		});
 
@@ -26,7 +26,7 @@ describe("FFI Boundary Tests", () => {
 			const data = new Uint8Array(0);
 			expect(() => {
 				extractBytesSync(data, "text/plain", null);
-			}).not.toThrow(); // Empty text file is valid
+			}).not.toThrow();
 		});
 
 		it("should handle empty byte arrays (async)", async () => {
@@ -41,7 +41,7 @@ describe("FFI Boundary Tests", () => {
 			const unicodePath = "/nonexistent/文件/файл.pdf";
 			expect(() => {
 				extractFileSync(unicodePath, null, null);
-			}).toThrow(); // File doesn't exist, but path should be handled correctly
+			}).toThrow();
 		});
 
 		it("should handle Unicode file paths (async)", async () => {
@@ -82,7 +82,7 @@ describe("FFI Boundary Tests", () => {
 			const data = new Uint8Array([1, 2, 3]);
 			expect(() => {
 				extractBytesSync(data, "application/pdf", null);
-			}).toThrow(); // Invalid PDF, but null config should be handled
+			}).toThrow();
 		});
 
 		it("should handle null config (async)", async () => {
@@ -129,10 +129,8 @@ describe("FFI Boundary Tests", () => {
 
 			const result = extractBytesSync(data, "text/plain", null);
 
-			// Modify original buffer
 			data[0] = 0;
 
-			// Result should not be affected
 			expect(result.content).toBe("Test content");
 		});
 
@@ -143,10 +141,8 @@ describe("FFI Boundary Tests", () => {
 
 			const result = await extractBytes(data, "text/plain", null);
 
-			// Modify original buffer
 			data[0] = 0;
 
-			// Result should not be affected
 			expect(result.content).toBe("Test content");
 		});
 
@@ -158,7 +154,6 @@ describe("FFI Boundary Tests", () => {
 
 			const result1 = extractBytesSync(data, "text/plain", null);
 
-			// Reuse the same buffer reference with different content
 			const data2 = encoder.encode(text2);
 
 			const result2 = extractBytesSync(data2, "text/plain", null);
@@ -175,7 +170,6 @@ describe("FFI Boundary Tests", () => {
 
 			const result1 = await extractBytes(data, "text/plain", null);
 
-			// Reuse the same buffer reference with different content
 			const data2 = encoder.encode(text2);
 
 			const result2 = await extractBytes(data2, "text/plain", null);

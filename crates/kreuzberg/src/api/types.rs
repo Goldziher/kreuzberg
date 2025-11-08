@@ -53,10 +53,7 @@ pub struct ApiSizeLimits {
 impl Default for ApiSizeLimits {
     fn default() -> Self {
         Self {
-            // 100 MB default for request body - handles most document processing workloads
-            // including large PDFs, scanned documents, and batch uploads
             max_request_body_bytes: 100 * 1024 * 1024,
-            // 100 MB default for individual multipart fields - allows large single documents
             max_multipart_field_bytes: 100 * 1024 * 1024,
         }
     }

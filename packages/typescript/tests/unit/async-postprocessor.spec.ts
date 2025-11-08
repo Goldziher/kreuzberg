@@ -20,17 +20,12 @@ import {
 } from "../../src/index.js";
 import { createMockExtractionBinding } from "./helpers/mock-binding.js";
 
-// ============================================================================
-// Async Test Processors
-// ============================================================================
-
 class AsyncWordCountProcessor implements PostProcessorProtocol {
 	name(): string {
 		return "async_word_counter";
 	}
 
 	async process(result: ExtractionResult): Promise<ExtractionResult> {
-		// Simulate async operation
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		const wordCount = result.content.split(/\s+/).filter((w) => w).length;
@@ -69,10 +64,8 @@ class MetadataManipulationProcessor implements PostProcessorProtocol {
 	}
 
 	process(result: ExtractionResult): ExtractionResult {
-		// Verify metadata is already parsed as an object
 		expect(typeof result.metadata).toBe("object");
 
-		// Add nested metadata
 		result.metadata.custom = {
 			nested: {
 				value: "test",
@@ -91,11 +84,9 @@ class CaseConversionTestProcessor implements PostProcessorProtocol {
 	}
 
 	process(result: ExtractionResult): ExtractionResult {
-		// Verify TypeScript camelCase properties are available
 		expect(result.mimeType).toBeDefined();
 		expect(typeof result.mimeType).toBe("string");
 
-		// Verify detectedLanguages (camelCase) if present
 		if (result.detectedLanguages !== null && result.detectedLanguages !== undefined) {
 			expect(Array.isArray(result.detectedLanguages)).toBe(true);
 		}
@@ -138,10 +129,6 @@ class ChainedAsyncProcessor implements PostProcessorProtocol {
 		return "late" as const;
 	}
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
 
 describe("Async PostProcessor Support", () => {
 	beforeEach(() => {
@@ -201,7 +188,6 @@ describe("Async PostProcessor Support", () => {
 
 			const result = await extractBytes(Buffer.from("Test metadata parsing"), "text/plain");
 
-			// Verify metadata was manipulated as object
 			expect(result.metadata.custom).toBeDefined();
 			expect(result.metadata.custom.nested.value).toBe("test");
 			expect(result.metadata.custom.nested.count).toBe(42);
@@ -217,7 +203,6 @@ describe("Async PostProcessor Support", () => {
 
 			const result = await extractBytes(Buffer.from("Test metadata preservation"), "text/plain");
 
-			// Both processors' metadata should be present
 			expect(result.metadata.sync_word_count).toBeDefined();
 			expect(result.metadata.custom).toBeDefined();
 		});
@@ -240,14 +225,12 @@ describe("Async PostProcessor Support", () => {
 				}
 
 				process(result: ExtractionResult): ExtractionResult {
-					// Verify all properties are accessible with correct casing
 					expect(result.content).toBeDefined();
 					expect(result.mimeType).toBeDefined();
 					expect(result.metadata).toBeDefined();
 					expect(result.tables).toBeDefined();
 					expect(Array.isArray(result.tables)).toBe(true);
 
-					// detectedLanguages and chunks may be null
 					expect(result.detectedLanguages === null || Array.isArray(result.detectedLanguages)).toBe(true);
 					expect(result.chunks === null || result.chunks === undefined || Array.isArray(result.chunks)).toBe(true);
 
@@ -272,7 +255,6 @@ describe("Async PostProcessor Support", () => {
 
 			const result = await extractBytes(Buffer.from("Test async error handling"), "text/plain");
 
-			// Error should be captured in metadata
 			const errorKey = Object.keys(result.metadata).find((k) => k.includes("error"));
 			expect(errorKey).toBeDefined();
 		});
@@ -281,13 +263,11 @@ describe("Async PostProcessor Support", () => {
 			const errorProc = new AsyncErrorProcessor();
 			const wordProc = new AsyncWordCountProcessor();
 
-			// Register error processor first
 			registerPostProcessor(errorProc);
 			registerPostProcessor(wordProc);
 
 			const result = await extractBytes(Buffer.from("Test error recovery one two three"), "text/plain");
 
-			// Word counter should still execute
 			expect(result.metadata.async_word_count).toBeDefined();
 		});
 	});
@@ -347,14 +327,10 @@ describe("Async PostProcessor Support", () => {
 			const result = await extractBytes(Buffer.from("Concurrent test"), "text/plain");
 			const duration = Date.now() - start;
 
-			// All processors should have executed
 			for (let i = 0; i < 5; i++) {
 				expect(result.metadata[`proc_${i}_executed`]).toBe(true);
 			}
 
-			// Should complete reasonably fast (not sequentially)
-			// With 5 processors each taking ~10ms, sequential would be ~50ms+
-			// Parallel should be much faster
 			console.log(`Concurrent execution took ${duration}ms`);
 		});
 	});

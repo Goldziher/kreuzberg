@@ -15,15 +15,11 @@ import which from "which";
 function main(argv: string[]): number {
 	const args = argv.slice(2);
 
-	// Try to find the CLI binary on PATH first (production mode)
 	let cliPath: string | undefined;
 	try {
 		cliPath = which.sync("kreuzberg-cli");
-	} catch {
-		// Not found on PATH
-	}
+	} catch {}
 
-	// In development mode, look for the binary in target/release
 	if (!cliPath) {
 		const __dirname = typeof __filename !== "undefined" ? dirname(__filename) : dirname(fileURLToPath(import.meta.url));
 		const devBinary = join(__dirname, "..", "..", "..", "target", "release", "kreuzberg");

@@ -24,7 +24,6 @@ impl TempFile {
 
 impl Drop for TempFile {
     fn drop(&mut self) {
-        // Best-effort cleanup - use blocking remove since Drop can't be async
         let path = self.path.clone();
         tokio::spawn(async move {
             let _ = fs::remove_file(&path).await;
@@ -286,8 +285,6 @@ pub(crate) fn extract_metadata_from_json(json: &Value) -> Result<HashMap<String,
 pub(crate) fn extract_content_from_json(json: &Value) -> Result<String> {
     let mut content = String::new();
 
-    // If there's a title in metadata, render it as a level-1 header
-    // This matches the behavior of `pandoc --to=markdown`
     if let Some(meta) = json.get("meta").and_then(|m| m.as_object())
         && let Some(title_node) = meta.get("title")
         && let Some(title_value) = extract_meta_value(title_node)
@@ -318,13 +315,11 @@ fn extract_block_text(block: &Value) -> Option<String> {
 
     match block_type {
         "Para" | "Plain" => {
-            // Paragraph or plain text block
             if let Some(inlines) = content.and_then(|c| c.as_array()) {
                 return extract_inlines(inlines).and_then(|v| v.as_str().map(String::from));
             }
         }
         "Header" => {
-            // Header block: [level, attrs, inlines]
             if let Some(arr) = content.and_then(|c| c.as_array())
                 && arr.len() >= 3
                 && let Some(level) = arr[0].as_u64()
@@ -336,7 +331,6 @@ fn extract_block_text(block: &Value) -> Option<String> {
             }
         }
         "CodeBlock" => {
-            // Code block: [attrs, code]
             if let Some(arr) = content.and_then(|c| c.as_array())
                 && arr.len() >= 2
                 && let Some(code) = arr[1].as_str()
@@ -345,7 +339,6 @@ fn extract_block_text(block: &Value) -> Option<String> {
             }
         }
         "BlockQuote" => {
-            // Block quote: [blocks]
             if let Some(blocks) = content.and_then(|c| c.as_array()) {
                 let mut quote_text = String::new();
                 for inner_block in blocks {
@@ -359,7 +352,6 @@ fn extract_block_text(block: &Value) -> Option<String> {
             }
         }
         "BulletList" => {
-            // Bullet list: [[blocks], [blocks], ...]
             if let Some(items) = content.and_then(|c| c.as_array()) {
                 let mut list_text = String::new();
                 for item in items {
@@ -377,7 +369,6 @@ fn extract_block_text(block: &Value) -> Option<String> {
             }
         }
         "OrderedList" => {
-            // Ordered list: [attrs, [[blocks], [blocks], ...]]
             if let Some(arr) = content.and_then(|c| c.as_array())
                 && arr.len() >= 2
                 && let Some(items) = arr[1].as_array()
@@ -604,8 +595,6 @@ fn extract_citations_from_blocks(blocks: &[Value], citations: &mut Vec<String>) 
 
 /// Wrapper functions for backwards compatibility
 pub async fn extract_with_pandoc(path: &Path, from_format: &str) -> Result<(String, HashMap<String, Value>)> {
-    // Extract JSON once and parse both content and metadata from it
-    // This reduces subprocess spawns by 50% (1 call instead of 2)
     let child = Command::new("pandoc")
         .arg(path)
         .arg(format!("--from={}", from_format))
@@ -658,7 +647,6 @@ pub async fn extract_with_pandoc(path: &Path, from_format: &str) -> Result<(Stri
     let json_data: Value = serde_json::from_str(&json_content)
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse pandoc JSON: {}", e)))?;
 
-    // Extract both content and metadata from the same JSON AST
     let content = extract_content_from_json(&json_data)?;
     let metadata = extract_metadata_from_json(&json_data)?;
 
@@ -1167,20 +1155,16 @@ mod tests {
             return;
         }
 
-        // Test that TempFile cleanup happens even when function returns early with error
         let temp_path = std::env::temp_dir().join(format!("test_raii_{}.md", uuid::Uuid::new_v4()));
 
         {
             let _guard = TempFile::new(temp_path.clone());
             fs::write(&temp_path, b"test content").await.unwrap();
             assert!(temp_path.exists());
-            // Guard dropped here, cleanup scheduled
         }
 
-        // Give tokio time to run the cleanup task
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // File should be cleaned up
         assert!(!temp_path.exists());
     }
 
@@ -1192,14 +1176,10 @@ mod tests {
             return;
         }
 
-        // Create a file that pandoc can process, but with artificially low timeout
-        // This is difficult to test reliably, so we just verify the timeout mechanism exists
-        // by checking the code has the timeout logic
         let temp_dir = std::env::temp_dir();
         let test_file = temp_dir.join(format!("test_timeout_{}.md", uuid::Uuid::new_v4()));
         fs::write(&test_file, b"# Test\n\nContent").await.unwrap();
 
-        // Normal extraction should succeed
         let result = extract_content(&test_file, "markdown").await;
         assert!(result.is_ok());
 

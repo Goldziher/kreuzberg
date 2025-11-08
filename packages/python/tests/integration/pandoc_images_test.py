@@ -15,7 +15,6 @@ async def test_docx_image_extraction_smoke(docx_document: Any) -> None:
     cfg = ExtractionConfig(images=ImageExtractionConfig())
     result = await extract_file(str(docx_document), config=cfg)
     assert result is not None
-    # Images may be None or empty list if file has no images
     assert result.images is None or isinstance(result.images, list)
 
 

@@ -59,7 +59,6 @@ impl PptxExtractor {
 
             match ocr_result {
                 Ok(ocr_extraction) => {
-                    // Create ExtractionResult from OCR output
                     let extraction_result = ExtractionResult {
                         content: ocr_extraction.content,
                         mime_type: image.format.clone(),
@@ -72,7 +71,6 @@ impl PptxExtractor {
                     image.ocr_result = Some(Box::new(extraction_result));
                 }
                 Err(_) => {
-                    // OCR failed for this image, continue with others
                     image.ocr_result = None;
                 }
             }

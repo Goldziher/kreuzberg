@@ -31,7 +31,6 @@ use crate::types::ExtractionResult;
 /// - Post-processor errors are caught and recorded in metadata
 /// - System errors (IO, RuntimeError equivalents) always bubble up
 pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfig) -> Result<ExtractionResult> {
-    // Run post-processors FIRST so validators can check the processed result
     let pp_config = config.postprocessor.as_ref();
     let postprocessing_enabled = pp_config.is_none_or(|c| c.enabled);
 
@@ -129,7 +128,6 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                     );
                 }
 
-                // Generate embeddings if configured
                 #[cfg(feature = "embeddings")]
                 if let Some(ref embedding_config) = chunking_config.embedding
                     && let Some(ref mut chunks) = result.chunks
@@ -198,7 +196,6 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
         );
     }
 
-    // Run validators LAST, after all processing is complete
     {
         let validator_registry = crate::plugins::registry::get_validator_registry();
         let validators = {
@@ -536,9 +533,6 @@ Natural language processing enables computers to understand human language.
         assert!(!processed.metadata.additional.contains_key("keywords"));
     }
 
-    // ===== POST-PROCESSOR AND VALIDATOR INTERACTION TESTS =====
-    // These tests validate the critical behavior of post-processors running BEFORE validators
-
     #[tokio::test]
     async fn test_postprocessor_runs_before_validator() {
         let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
@@ -546,7 +540,6 @@ Natural language processing enables computers to understand human language.
         use async_trait::async_trait;
         use std::sync::Arc;
 
-        // Create a post-processor that adds metadata
         struct TestPostProcessor;
         impl Plugin for TestPostProcessor {
             fn name(&self) -> &str {
@@ -578,7 +571,6 @@ Natural language processing enables computers to understand human language.
             }
         }
 
-        // Create a validator that checks for the metadata added by the post-processor
         struct TestValidator;
         impl Plugin for TestValidator {
             fn name(&self) -> &str {
@@ -598,7 +590,6 @@ Natural language processing enables computers to understand human language.
         #[async_trait]
         impl Validator for TestValidator {
             async fn validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
-                // This should pass if post-processor ran first
                 let processed = result
                     .metadata
                     .additional
@@ -616,7 +607,6 @@ Natural language processing enables computers to understand human language.
             }
         }
 
-        // Register both plugins
         let pp_registry = crate::plugins::registry::get_post_processor_registry();
         {
             let mut registry = pp_registry.write().unwrap();
@@ -629,7 +619,6 @@ Natural language processing enables computers to understand human language.
             registry.register(Arc::new(TestValidator)).unwrap();
         }
 
-        // Run pipeline
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
@@ -643,7 +632,6 @@ Natural language processing enables computers to understand human language.
         let config = ExtractionConfig::default();
         let processed = run_pipeline(result, &config).await;
 
-        // Clean up
         {
             let mut registry = pp_registry.write().unwrap();
             registry.remove("test-processor").unwrap();
@@ -653,7 +641,6 @@ Natural language processing enables computers to understand human language.
             registry.remove("test-validator").unwrap();
         }
 
-        // Validation should pass if post-processor ran first
         assert!(processed.is_ok(), "Validator should have seen post-processor metadata");
         let processed = processed.unwrap();
         assert_eq!(
@@ -671,7 +658,6 @@ Natural language processing enables computers to understand human language.
         use async_trait::async_trait;
         use std::sync::Arc;
 
-        // Create a validator that checks for quality_score
         struct QualityValidator;
         impl Plugin for QualityValidator {
             fn name(&self) -> &str {
@@ -701,14 +687,12 @@ Natural language processing enables computers to understand human language.
             }
         }
 
-        // Register validator
         let val_registry = crate::plugins::registry::get_validator_registry();
         {
             let mut registry = val_registry.write().unwrap();
             registry.register(Arc::new(QualityValidator)).unwrap();
         }
 
-        // Run pipeline with quality processing enabled
         let result = ExtractionResult {
             content: "This is meaningful test content for quality scoring.".to_string(),
             mime_type: "text/plain".to_string(),
@@ -726,13 +710,11 @@ Natural language processing enables computers to understand human language.
 
         let processed = run_pipeline(result, &config).await;
 
-        // Clean up
         {
             let mut registry = val_registry.write().unwrap();
             registry.remove("quality-validator").unwrap();
         }
 
-        // Validation should pass if quality processing ran first
         assert!(processed.is_ok(), "Validator should have seen quality_score");
     }
 
@@ -743,7 +725,6 @@ Natural language processing enables computers to understand human language.
         use async_trait::async_trait;
         use std::sync::Arc;
 
-        // Early stage processor
         struct EarlyProcessor;
         impl Plugin for EarlyProcessor {
             fn name(&self) -> &str {
@@ -783,7 +764,6 @@ Natural language processing enables computers to understand human language.
             }
         }
 
-        // Late stage processor
         struct LateProcessor;
         impl Plugin for LateProcessor {
             fn name(&self) -> &str {
@@ -823,7 +803,6 @@ Natural language processing enables computers to understand human language.
             }
         }
 
-        // Validator that checks execution order
         struct OrderValidator;
         impl Plugin for OrderValidator {
             fn name(&self) -> &str {
@@ -853,7 +832,6 @@ Natural language processing enables computers to understand human language.
                         source: None,
                     })?;
 
-                // Should have both "early" and "late"
                 if order.len() != 2 {
                     return Err(crate::KreuzbergError::Validation {
                         message: format!("Expected 2 processors to run, got {}", order.len()),
@@ -861,7 +839,6 @@ Natural language processing enables computers to understand human language.
                     });
                 }
 
-                // Early should come before Late
                 if order[0] != "early" || order[1] != "late" {
                     return Err(crate::KreuzbergError::Validation {
                         message: format!("Wrong execution order: {:?}", order),
@@ -873,7 +850,6 @@ Natural language processing enables computers to understand human language.
             }
         }
 
-        // Register plugins
         let pp_registry = crate::plugins::registry::get_post_processor_registry();
         {
             let mut registry = pp_registry.write().unwrap();
@@ -887,7 +863,6 @@ Natural language processing enables computers to understand human language.
             registry.register(Arc::new(OrderValidator)).unwrap();
         }
 
-        // Run pipeline
         let result = ExtractionResult {
             content: "test".to_string(),
             mime_type: "text/plain".to_string(),
@@ -901,7 +876,6 @@ Natural language processing enables computers to understand human language.
         let config = ExtractionConfig::default();
         let processed = run_pipeline(result, &config).await;
 
-        // Clean up
         {
             let mut registry = pp_registry.write().unwrap();
             registry.remove("early-proc").unwrap();
@@ -912,7 +886,6 @@ Natural language processing enables computers to understand human language.
             registry.remove("order-validator").unwrap();
         }
 
-        // Should pass if all processors ran in order before validator
         assert!(processed.is_ok(), "All processors should run before validator");
     }
 }

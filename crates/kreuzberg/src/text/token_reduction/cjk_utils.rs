@@ -28,8 +28,6 @@ pub struct CjkTokenizer {
 impl CjkTokenizer {
     pub fn new() -> Self {
         Self {
-            // CJK Unified Ideographs: U+4E00-U+9FFF
-            // Covers common Chinese characters and Japanese Kanji
             cjk_range: 0x4E00..=0x9FFF,
         }
     }

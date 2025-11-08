@@ -49,7 +49,6 @@ def mock_run_process(mocker: MockerFixture) -> Mock:
 5\t1\t1\t1\t1\t2\t160\t50\t60\t30\t94.0\tOCR
 5\t1\t1\t1\t1\t3\t230\t50\t60\t30\t96.0\ttext"""
                 Path(f"{output_file}.tsv").write_text(tsv_content)
-            # Check for HOCR format (either old configfile or new config option approach)
             elif "hocr" in command or "tessedit_create_hocr=1" in " ".join(command):
                 hocr_content = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -313,7 +312,6 @@ async def test_process_file_linux(
             result.stdout = b"tesseract 5.0.0"
         elif len(command) >= 3 and command[0].endswith("tesseract"):
             output_base = command[2]
-            # Check for HOCR format (either old configfile or new config option approach)
             if "hocr" in command or "tessedit_create_hocr=1" in " ".join(command):
                 hocr_content = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -900,7 +898,6 @@ async def test_tesseract_environment_variables_linux_omp_thread_limit(
             result.stdout = b"tesseract 5.0.0"
         elif len(command) >= 3 and command[0].endswith("tesseract"):
             output_base = command[2]
-            # Check for HOCR format (either old configfile or new config option approach)
             if "hocr" in command or "tessedit_create_hocr=1" in " ".join(command):
                 hocr_content = """<?xml version="1.0" encoding="UTF-8"?>
 <html>
@@ -1212,7 +1209,6 @@ async def test_markdown_no_excessive_escaping(backend: TesseractBackend, tmp_pat
     assert r"\[" not in result.content
     assert r"\]" not in result.content
 
-    # OCR may misread -- as ~ or other similar characters, so check for either
     assert "--" in result.content or "~" in result.content
     assert "|" in result.content or "I" in result.content
     assert "=" in result.content

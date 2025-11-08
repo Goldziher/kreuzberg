@@ -357,7 +357,6 @@ async fn main() -> Result<()> {
             detect_language,
             r#async,
         } => {
-            // Validate input parameters
             validate_file_exists(&path)?;
             validate_chunk_params(chunk_size, chunk_overlap)?;
 
@@ -470,7 +469,6 @@ async fn main() -> Result<()> {
             quality,
             r#async,
         } => {
-            // Validate input parameters
             validate_batch_paths(&paths)?;
 
             let mut config = load_config(config_path)?;
@@ -542,7 +540,6 @@ async fn main() -> Result<()> {
         }
 
         Commands::Detect { path, format } => {
-            // Validate input parameters
             validate_file_exists(&path)?;
 
             let path_str = path.to_string_lossy().to_string();
@@ -725,7 +722,6 @@ async fn main() -> Result<()> {
 fn load_config(config_path: Option<PathBuf>) -> Result<ExtractionConfig> {
     if let Some(path) = config_path {
         let path_str = path.to_string_lossy();
-        // Use case-insensitive extension matching for better cross-platform compatibility
         let path_lower = path_str.to_lowercase();
         let config = if path_lower.ends_with(".toml") {
             ExtractionConfig::from_toml_file(&path)

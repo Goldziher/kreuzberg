@@ -109,7 +109,7 @@ jobs:
           name: docker-image-${{ matrix.variant }}
           path: /tmp/kreuzberg-${{ matrix.variant }}.tar.gz
           retention-days: 7
-          compression-level: 0  # Already gzipped
+          compression-level: 0
 
       - name: Upload test results
         if: always() && !inputs.skip_tests

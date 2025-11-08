@@ -100,17 +100,6 @@ markdown_extensions:
 plugins:
   - search
   # TODO: Add Algolia DocSearch for enhanced search
-  # Requires manual setup with Algolia DocSearch (https://docsearch.algolia.com/)
-  # Configuration format:
-  # - search:
-  #     lang: en
-  # Then add to extra section:
-  # extra:
-  #   search:
-  #     provider: algolia
-  #     api_key: YOUR_API_KEY
-  #     index_name: YOUR_INDEX_NAME
-  # - social  # Disabled: requires cairo library
   - tags
   - minify:
       minify_html: true
@@ -137,11 +126,6 @@ plugins:
       enabled: true
 
 extra:
-  # Announcement bar - uncomment and customize when needed
-  # announcement:
-  #   content: |
-  #     <strong>🎉 Kreuzberg v4.0 is now available!</strong> Check out the <a href="/migration/v3-to-v4">migration guide</a>.
-  #   dismiss: true
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/Goldziher/kreuzberg

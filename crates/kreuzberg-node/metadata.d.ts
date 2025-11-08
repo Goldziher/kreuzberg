@@ -56,8 +56,6 @@ export type BinarizationMethod = "otsu" | "adaptive" | "sauvola";
  */
 export type ProcessingStage = "early" | "middle" | "late";
 
-// ===== EXIF Metadata Interface =====
-
 /**
  * Common EXIF metadata fields from images.
  * Based on standard EXIF 2.3 specification.
@@ -124,8 +122,6 @@ export interface ExifMetadata {
 	/** Exposure program */
 	ExposureProgram?: number;
 }
-
-// ===== Format-Specific Metadata Interfaces =====
 
 export interface PdfMetadata {
 	title?: string;
@@ -203,21 +199,18 @@ export interface HtmlMetadata {
 	author?: string;
 	canonical?: string;
 	baseHref?: string;
-	// Open Graph
 	ogTitle?: string;
 	ogDescription?: string;
 	ogImage?: string;
 	ogUrl?: string;
 	ogType?: string;
 	ogSiteName?: string;
-	// Twitter Card
 	twitterCard?: string;
 	twitterTitle?: string;
 	twitterDescription?: string;
 	twitterImage?: string;
 	twitterSite?: string;
 	twitterCreator?: string;
-	// Link relations
 	linkAuthor?: string;
 	linkLicense?: string;
 	linkAlternate?: string;
@@ -252,8 +245,6 @@ export interface ErrorMetadata {
 	message: string;
 }
 
-// ===== Core Metadata Interface =====
-
 /**
  * Discriminated union type for format-specific metadata.
  * The `formatType` field indicates which format-specific fields are present.
@@ -285,15 +276,12 @@ export type FormatType = "pdf" | "excel" | "email" | "pptx" | "archive" | "image
  * Use the generic `Metadata<T>` type to extend with custom fields.
  */
 export interface BaseMetadata {
-	// Common fields
 	language?: string;
 	date?: string;
 	subject?: string;
 
-	// Discriminator field - indicates which format-specific fields are present
 	formatType?: FormatType;
 
-	// PDF format fields (when formatType === 'pdf')
 	title?: string;
 	author?: string;
 	keywords?: string;
@@ -308,11 +296,9 @@ export interface BaseMetadata {
 	height?: number;
 	summary?: string;
 
-	// Excel format fields (when formatType === 'excel')
 	sheetCount?: number;
 	sheetNames?: string[];
 
-	// Email format fields (when formatType === 'email')
 	fromEmail?: string;
 	fromName?: string;
 	toEmails?: string[];
@@ -321,25 +307,20 @@ export interface BaseMetadata {
 	messageId?: string;
 	attachments?: string[];
 
-	// PowerPoint format fields (when formatType === 'pptx')
 	description?: string;
 	fonts?: string[];
 
-	// Archive format fields (when formatType === 'archive')
 	format?: string;
 	fileCount?: number;
 	fileList?: string[];
 	totalSize?: number;
 	compressedSize?: number;
 
-	// Image format fields (when formatType === 'image')
 	exif?: ExifMetadata;
 
-	// XML format fields (when formatType === 'xml')
 	elementCount?: number;
 	uniqueElements?: string[];
 
-	// Text/Markdown format fields (when formatType === 'text')
 	lineCount?: number;
 	wordCount?: number;
 	characterCount?: number;
@@ -347,7 +328,6 @@ export interface BaseMetadata {
 	links?: Array<[string, string]>;
 	codeBlocks?: Array<[string, string]>;
 
-	// HTML format fields (when formatType === 'html')
 	canonical?: string;
 	baseHref?: string;
 	ogTitle?: string;
@@ -366,14 +346,12 @@ export interface BaseMetadata {
 	linkLicense?: string;
 	linkAlternate?: string;
 
-	// OCR format fields (when formatType === 'ocr')
 	psm?: PSMMode;
 	outputFormat?: OcrOutputFormat;
 	tableCount?: number;
 	tableRows?: number;
 	tableCols?: number;
 
-	// Other metadata fields
 	imagePreprocessing?: ImagePreprocessingMetadata;
 	jsonSchema?: Record<string, unknown>;
 	error?: ErrorMetadata;
@@ -464,8 +442,6 @@ export interface ExtractedTable {
 	/** Page number where table was found (1-indexed) */
 	pageNumber: number;
 }
-
-// ===== Type Guards =====
 
 /**
  * Type guard to check if metadata is for a specific format type.

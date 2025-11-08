@@ -4,8 +4,6 @@
 
 use pyo3::{IntoPyObject, exceptions::*, prelude::*, types::PyModule};
 
-// Create Python-specific exception types that mirror the Rust error hierarchy
-// These exceptions are exported to Python and used throughout the library.
 pyo3::create_exception!(
     kreuzberg,
     ValidationError,

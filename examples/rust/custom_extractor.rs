@@ -43,7 +43,6 @@ impl CSVExtractor {
             return delim;
         }
 
-        // Try common delimiters and pick the one with most consistent occurrence
         let delimiters = [',', ';', '\t', '|'];
         let lines: Vec<&str> = sample.lines().take(5).collect();
 
@@ -51,7 +50,6 @@ impl CSVExtractor {
             .iter()
             .max_by_key(|&&delim| {
                 let counts: Vec<usize> = lines.iter().map(|line| line.matches(delim).count()).collect();
-                // Return consistency score
                 if counts.is_empty() {
                     0
                 } else {
@@ -79,7 +77,7 @@ impl DocumentExtractor for CSVExtractor {
     }
 
     fn priority(&self) -> i32 {
-        100 // Higher priority than built-in extractor
+        100
     }
 
     async fn extract(
@@ -88,16 +86,13 @@ impl DocumentExtractor for CSVExtractor {
         _mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult, KreuzbergError> {
-        // Convert bytes to string
         let content = String::from_utf8(data.to_vec()).map_err(|e| KreuzbergError::Parsing {
             message: format!("Invalid UTF-8 in CSV file: {}", e),
             source: None,
         })?;
 
-        // Detect delimiter
         let delimiter = self.detect_delimiter(&content);
 
-        // Parse CSV
         let mut lines = content.lines();
         let mut rows = Vec::new();
         let mut headers = Vec::new();
@@ -113,7 +108,6 @@ impl DocumentExtractor for CSVExtractor {
             rows.push(row);
         }
 
-        // Convert to markdown table
         let mut markdown = String::new();
 
         if !headers.is_empty() {
@@ -134,11 +128,9 @@ impl DocumentExtractor for CSVExtractor {
             markdown.push_str(" |\n");
         }
 
-        // Build metadata
         let mut metadata = Metadata::default();
         metadata.format = Some("csv".to_string());
 
-        // Create custom CSV metadata
         let csv_metadata = serde_json::json!({
             "delimiter": delimiter.to_string(),
             "has_headers": self.has_headers,
@@ -146,9 +138,7 @@ impl DocumentExtractor for CSVExtractor {
             "column_count": if !rows.is_empty() { rows[0].len() } else { 0 },
         });
 
-        // Add to metadata (would normally use a proper metadata struct)
         if let Ok(json_str) = serde_json::to_string(&csv_metadata) {
-            // Store as string in metadata - in production, use typed metadata
             metadata.format = Some(json_str);
         }
 
@@ -168,8 +158,6 @@ impl DocumentExtractor for CSVExtractor {
         mime_type: &str,
         config: &ExtractionConfig,
     ) -> Result<ExtractionResult, KreuzbergError> {
-        // Synchronous implementation - just call async version synchronously
-        // In production, implement true sync version
         tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(self.extract(data, mime_type, config))
@@ -199,7 +187,6 @@ impl DocumentExtractor for BinaryFormatExtractor {
         _mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult, KreuzbergError> {
-        // Example: Read magic bytes
         if data.len() < 4 {
             return Err(KreuzbergError::Parsing {
                 message: "File too small".to_string(),
@@ -207,7 +194,6 @@ impl DocumentExtractor for BinaryFormatExtractor {
             });
         }
 
-        // Check magic bytes
         if &data[0..4] != b"CUST" {
             return Err(KreuzbergError::Parsing {
                 message: "Invalid magic bytes".to_string(),
@@ -215,8 +201,6 @@ impl DocumentExtractor for BinaryFormatExtractor {
             });
         }
 
-        // Parse binary format (simplified example)
-        // In production: implement proper binary parsing
         let content = format!("Binary file parsed: {} bytes", data.len());
 
         Ok(ExtractionResult {
@@ -243,7 +227,6 @@ impl DocumentExtractor for BinaryFormatExtractor {
 
 #[tokio::main]
 async fn main() -> kreuzberg::Result<()> {
-    // Register custom CSV extractor
     println!("=== Registering Custom CSV Extractor ===");
     let csv_extractor = Arc::new(CSVExtractor::new().with_headers(true)) as Arc<dyn DocumentExtractor>;
 
@@ -254,13 +237,11 @@ async fn main() -> kreuzberg::Result<()> {
     }
     println!("✓ Registered CSV extractor with priority 100");
 
-    // Use custom CSV extractor
     println!("\n=== Extracting CSV File ===");
     let result = extract_file_sync("data.csv", None, &ExtractionConfig::default())?;
     println!("Extracted CSV as markdown table:");
     println!("{}", &result.content[..result.content.len().min(500)]);
 
-    // Register binary format extractor
     println!("\n=== Registering Binary Format Extractor ===");
     let binary_extractor = Arc::new(BinaryFormatExtractor) as Arc<dyn DocumentExtractor>;
 
@@ -270,7 +251,6 @@ async fn main() -> kreuzberg::Result<()> {
     }
     println!("✓ Registered binary format extractor");
 
-    // Use binary format extractor
     println!("\n=== Extracting Binary File ===");
     match extract_file(
         "custom.bin",
@@ -286,7 +266,6 @@ async fn main() -> kreuzberg::Result<()> {
         Err(e) => eprintln!("Binary extraction error: {}", e),
     }
 
-    // List registered extractors
     println!("\n=== Registered Extractors ===");
     let registry = registry.read().unwrap();
     println!("Total extractors: {}", registry.len());

@@ -7,9 +7,6 @@ use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{ExtractionResult, Metadata};
 use async_trait::async_trait;
 
-#[cfg(feature = "ocr")]
-use crate::ocr::OcrProcessor;
-
 /// Image extractor for various image formats.
 ///
 /// Supports: PNG, JPEG, WebP, BMP, TIFF, GIF.
@@ -25,37 +22,25 @@ impl ImageExtractor {
 
     /// Extract text from image using OCR.
     #[cfg(feature = "ocr")]
-    async fn extract_with_ocr(&self, content: &[u8], config: &ExtractionConfig) -> Result<String> {
+    async fn extract_with_ocr(&self, content: &[u8], config: &ExtractionConfig) -> Result<ExtractionResult> {
+        use crate::plugins::registry::get_ocr_backend_registry;
+
         let ocr_config = config.ocr.as_ref().ok_or_else(|| crate::KreuzbergError::Parsing {
             message: "OCR config required for image OCR".to_string(),
             source: None,
         })?;
 
-        let tess_config = ocr_config.tesseract_config.as_ref().cloned().unwrap_or_default();
+        let backend = {
+            let registry = get_ocr_backend_registry();
+            let registry = registry.read().map_err(|e| crate::KreuzbergError::Plugin {
+                message: format!("Failed to acquire read lock on OCR backend registry: {}", e),
+                plugin_name: "ocr-registry".to_string(),
+            })?;
+            registry.get(&ocr_config.backend)?
+        };
 
-        let tess_config_clone = tess_config.clone();
-        let image_data = content.to_vec();
-
-        let ocr_result = tokio::task::spawn_blocking(move || {
-            let cache_dir = std::env::var("KREUZBERG_CACHE_DIR").ok().map(std::path::PathBuf::from);
-
-            let proc = OcrProcessor::new(cache_dir)?;
-
-            let ocr_tess_config: crate::ocr::types::TesseractConfig = (&tess_config_clone).into();
-
-            proc.process_image(&image_data, &ocr_tess_config)
-        })
-        .await
-        .map_err(|e| crate::KreuzbergError::Ocr {
-            message: format!("OCR task failed: {}", e),
-            source: None,
-        })?
-        .map_err(|e| crate::KreuzbergError::Ocr {
-            message: format!("OCR processing failed: {}", e),
-            source: None,
-        })?;
-
-        Ok(ocr_result.content)
+        // Process image using the backend - returns full ExtractionResult with tables/metadata
+        backend.process_image(content, ocr_config).await
     }
 }
 
@@ -108,27 +93,46 @@ impl DocumentExtractor for ImageExtractor {
             exif: extraction_metadata.exif_data,
         };
 
-        let content_text = if config.ocr.is_some() {
+        // If OCR is enabled, use OCR result (which includes tables and OCR-specific metadata)
+        if config.ocr.is_some() {
             #[cfg(feature = "ocr")]
             {
-                self.extract_with_ocr(content, config).await?
+                let mut ocr_result = self.extract_with_ocr(content, config).await?;
+
+                // Add image metadata to the OCR result
+                ocr_result.metadata.format = Some(crate::types::FormatMetadata::Image(image_metadata));
+                ocr_result.mime_type = mime_type.to_string();
+
+                return Ok(ocr_result);
             }
             #[cfg(not(feature = "ocr"))]
             {
-                format!(
+                let content_text = format!(
                     "Image: {} {}x{}",
                     extraction_metadata.format, extraction_metadata.width, extraction_metadata.height
-                )
+                );
+
+                return Ok(ExtractionResult {
+                    content: content_text,
+                    mime_type: mime_type.to_string(),
+                    metadata: Metadata {
+                        format: Some(crate::types::FormatMetadata::Image(image_metadata)),
+                        ..Default::default()
+                    },
+                    tables: vec![],
+                    detected_languages: None,
+                    chunks: None,
+                    images: None,
+                });
             }
-        } else {
-            format!(
+        }
+
+        // No OCR - just return image dimensions
+        Ok(ExtractionResult {
+            content: format!(
                 "Image: {} {}x{}",
                 extraction_metadata.format, extraction_metadata.width, extraction_metadata.height
-            )
-        };
-
-        Ok(ExtractionResult {
-            content: content_text,
+            ),
             mime_type: mime_type.to_string(),
             metadata: Metadata {
                 format: Some(crate::types::FormatMetadata::Image(image_metadata)),

@@ -37,7 +37,6 @@ describe("CSV Integration Tests", () => {
 				expect(result.content).toContain("25");
 				expect(result.content).toContain("LA");
 			} catch (_error) {
-				// Pandoc may not be installed - skip test
 				console.log("Skipping test: Pandoc may not be installed");
 			}
 		});
@@ -186,14 +185,13 @@ describe("CSV Integration Tests", () => {
 			} catch (_error) {
 				console.log("Skipping test: Pandoc may not be installed");
 			}
-		}, 10000); // Extended timeout for large file
+		}, 10000);
 	});
 
 	describe("Malformed CSV", () => {
 		it("should handle malformed CSV with inconsistent columns", async () => {
 			const csvContent = Buffer.from("Name,Age,City\nAlice,30\nBob,25,LA,Extra\nCarlos,35,SF");
 
-			// Should handle gracefully (succeed or fail, but not crash)
 			try {
 				const result = await extractBytes(csvContent, "text/csv");
 				expect(result.content.length).toBeGreaterThan(0);
@@ -207,7 +205,6 @@ describe("CSV Integration Tests", () => {
 		it("should handle empty CSV file", async () => {
 			const emptyCSV = Buffer.from("");
 
-			// Should handle gracefully
 			try {
 				await extractBytes(emptyCSV, "text/csv");
 			} catch (error) {
@@ -290,8 +287,6 @@ describe("CSV Integration Tests", () => {
 
 	describe("Synchronous Extraction", () => {
 		it("should extract CSV synchronously", () => {
-			// Note: Sync extraction not tested as it's covered by async tests
-			// and Pandoc availability is optional
 			expect(true).toBe(true);
 		});
 	});

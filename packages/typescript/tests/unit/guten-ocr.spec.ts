@@ -58,19 +58,16 @@ describe("GutenOcrBackend", () => {
 		it("should initialize successfully", async () => {
 			const backend = new GutenOcrBackend();
 
-			// Mock the dynamic import
 			vi.doMock("@gutenye/ocr-node", () => ({
 				default: mockOcrModule,
 			}));
 
 			await backend.initialize();
-			// Should succeed without throwing
 		});
 
 		it("should throw error if @gutenye/ocr-node is not installed", async () => {
 			const backend = new GutenOcrBackend();
 
-			// Mock import failure
 			vi.doMock("@gutenye/ocr-node", () => {
 				throw new Error("MODULE_NOT_FOUND");
 			});
@@ -130,7 +127,6 @@ describe("GutenOcrBackend", () => {
 		it("should cleanup resources", async () => {
 			const backend = new GutenOcrBackend();
 			await backend.shutdown();
-			// Should not throw
 		});
 	});
 
@@ -142,7 +138,6 @@ describe("GutenOcrBackend", () => {
 		beforeEach(() => {
 			vi.resetModules();
 
-			// Mock OCR result - Guten OCR returns an array directly
 			mockOcrInstance = {
 				detect: vi.fn().mockResolvedValue([
 					{
@@ -172,7 +167,6 @@ describe("GutenOcrBackend", () => {
 				create: vi.fn().mockResolvedValue(mockOcrInstance),
 			};
 
-			// Mock sharp
 			const mockImageInstance = {
 				metadata: vi.fn().mockResolvedValue({
 					width: 800,
@@ -203,7 +197,7 @@ describe("GutenOcrBackend", () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
 
-			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]); // PNG header
+			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 			const result = await backend.processImage(imageBytes, "en");
 
 			expect(result.content).toBe("Hello\nWorld");

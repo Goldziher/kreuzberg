@@ -118,9 +118,6 @@ impl GenericCache {
             && let Ok(modified) = metadata.modified()
             && let Ok(elapsed) = SystemTime::now().duration_since(modified)
         {
-            // Convert Duration to days for cache age comparison
-            // Note: Loses sub-second precision, but acceptable since max_age_days is typically measured in whole days
-            // Cache expiration doesn't require millisecond-level accuracy (e.g., 7.0 days vs 7.000001 days)
             let age_days = elapsed.as_secs() as f64 / (24.0 * 3600.0);
             if age_days > self.max_age_days {
                 return false;
@@ -128,15 +125,12 @@ impl GenericCache {
         }
 
         if let Some(source_path) = source_file {
-            // Extract file stem - skip validation if invalid UTF-8 or missing (cache is invalid)
             let Some(file_stem) = cache_path.file_stem().and_then(|s| s.to_str()) else {
                 return false;
             };
             let meta_path = self.get_metadata_path(file_stem);
 
             if meta_path.exists() {
-                // Security: Check file size BEFORE reading to prevent memory exhaustion from malicious oversized .meta files
-                // Metadata format is always exactly 16 bytes (8 bytes size + 8 bytes mtime)
                 if let Ok(meta_metadata) = fs::metadata(&meta_path)
                     && meta_metadata.len() == 16
                     && let Ok(cached_meta_bytes) = fs::read(&meta_path)
@@ -164,7 +158,6 @@ impl GenericCache {
 
                     if let Ok(source_metadata) = fs::metadata(source_path) {
                         let current_size = source_metadata.len();
-                        // If mtime is unavailable, cache is considered invalid (safer than fallback)
                         let Some(current_mtime) = source_metadata
                             .modified()
                             .ok()
@@ -189,7 +182,6 @@ impl GenericCache {
             && let Ok(metadata) = fs::metadata(source_path)
         {
             let size = metadata.len();
-            // If mtime is unavailable, skip metadata save (cache validation will fail safely)
             let Some(mtime) = metadata
                 .modified()
                 .ok()
@@ -249,10 +241,8 @@ impl GenericCache {
 
         self.save_metadata(cache_key, source_file);
 
-        // Trigger cleanup every 100 writes using atomic counter (guarantees periodic cleanup)
         let count = self.write_counter.fetch_add(1, Ordering::Relaxed);
         if count.is_multiple_of(100) {
-            // Cache directory path must be valid UTF-8, or cleanup is skipped
             if let Some(cache_path_str) = self.cache_dir.to_str() {
                 // Cache cleanup failure - safe to ignore, cache is optional fallback ~keep
                 let _ = smart_cleanup_cache(
@@ -508,27 +498,15 @@ pub fn get_available_disk_space(path: &str) -> Result<f64> {
             .ok_or_else(|| KreuzbergError::validation("Path contains invalid UTF-8".to_string()))?;
         let c_path = CString::new(path_str).map_err(|e| KreuzbergError::validation(format!("Invalid path: {}", e)))?;
 
-        // SAFETY: statvfs requires a zeroed statvfs struct as per POSIX specification.
-        // The struct will be fully initialized by the statvfs syscall before use.
-        // All fields are valid when zero-initialized.
         let mut stat: statvfs_struct = unsafe { std::mem::zeroed() };
 
-        // SAFETY: c_path is a valid null-terminated C string created from CString.
-        // stat is a valid mutable reference to a properly initialized statvfs struct.
-        // The syscall will write to stat if successful.
         let result = unsafe { statvfs(c_path.as_ptr(), &mut stat) };
 
         if result == 0 {
             #[allow(clippy::unnecessary_cast)]
             let available_bytes = stat.f_bavail as u64 * stat.f_frsize as u64;
-            // Convert bytes to MB for cache size comparison
-            // Note: Loses sub-megabyte precision, but acceptable since cache limits are typically in hundreds of MB
-            // Cache cleanup doesn't require byte-level accuracy (e.g., 500.0 MB vs 500.5 MB)
             Ok(available_bytes as f64 / (1024.0 * 1024.0))
         } else {
-            // Fallback: Return 10GB when statvfs fails (permission issues, filesystem not mounted, etc.)
-            // Rationale: Large value prevents over-aggressive cache cleanup on error
-            // Cache cleanup is best-effort; better to clean less than risk data loss
             tracing::debug!("Failed to get disk stats for {}: errno {}", path_str, result);
             Ok(10000.0)
         }
@@ -536,9 +514,6 @@ pub fn get_available_disk_space(path: &str) -> Result<f64> {
 
     #[cfg(not(unix))]
     {
-        // Windows/non-Unix fallback: Return 10GB as placeholder
-        // Rationale: Cache cleanup is best-effort; large value prevents over-aggressive cleanup
-        // Future: Could use GetDiskFreeSpaceEx on Windows for real disk space
         let _ = path;
         Ok(10000.0)
     }
@@ -560,7 +535,6 @@ fn scan_cache_directory(cache_dir: &str) -> Result<CacheScanResult> {
         });
     }
 
-    // System time should always be after UNIX_EPOCH; use 0.0 as fallback if clock is broken
     let current_time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
@@ -647,7 +621,6 @@ pub fn cleanup_cache(
         return Ok((0, 0.0));
     }
 
-    // System time should always be after UNIX_EPOCH; use 0.0 as fallback if clock is broken
     let current_time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
@@ -748,7 +721,6 @@ pub fn filter_old_cache_entries(cache_times: &[f64], current_time: f64, max_age_
 }
 
 pub fn sort_cache_by_access_time(mut entries: Vec<(String, f64)>) -> Vec<String> {
-    // Handle NaN values by treating them as equal - maintain stable sort order
     entries.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
     entries.into_iter().map(|(key, _)| key).collect()
 }

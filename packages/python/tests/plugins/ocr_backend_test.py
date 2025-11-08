@@ -23,13 +23,8 @@ from kreuzberg import (
     register_ocr_backend,
 )
 
-# Test document paths
-# Navigate from packages/python/tests/plugins/ to root/test_documents/
 TEST_DOCS_DIR = Path(__file__).parent.parent.parent.parent.parent / "test_documents"
 TEST_IMAGE = TEST_DOCS_DIR / "images" / "test_hello_world.png"
-
-
-# Mock OCR backend implementations
 
 
 class MockOcrBackend:
@@ -225,15 +220,11 @@ class ErrorOcrBackend:
         return "1.0.0"
 
 
-# Tests
-
-
 def test_register_custom_ocr_backend() -> None:
     """Test registering a custom OCR backend class."""
     backend = MockOcrBackend()
     register_ocr_backend(backend)
 
-    # Verify registration succeeds (no exception)
     assert backend.call_count == 0
 
 
@@ -252,7 +243,6 @@ def test_ocr_backend_called_for_image_extraction() -> None:
 
     extract_file_sync(str(TEST_IMAGE), config=config)
 
-    # Verify backend was called
     assert backend.call_count > 0
     assert backend.last_language == "en"
     assert backend.last_image_bytes is not None
@@ -275,7 +265,6 @@ async def test_ocr_backend_async_extraction() -> None:
 
     await extract_file(str(TEST_IMAGE), config=config)
 
-    # Verify backend was called
     assert backend.call_count > 0
     assert backend.last_language == "de"
 
@@ -295,7 +284,6 @@ def test_ocr_backend_receives_correct_parameters() -> None:
 
     extract_file_sync(str(TEST_IMAGE), config=config)
 
-    # Check parameters
     assert backend.last_language == "fr"
     assert backend.last_image_bytes is not None
     assert isinstance(backend.last_image_bytes, bytes)
@@ -317,12 +305,10 @@ def test_ocr_backend_returns_correct_format() -> None:
 
     result = extract_file_sync(str(TEST_IMAGE), config=config)
 
-    # Verify result structure
     assert result.content is not None
     assert isinstance(result.content, str)
+    assert result.content == "Detailed mock text"
     assert result.metadata is not None
-    assert "backend" in result.metadata
-    assert result.metadata.get("backend") == "detailed_mock_ocr"
 
 
 def test_ocr_backend_with_tables() -> None:
@@ -340,7 +326,6 @@ def test_ocr_backend_with_tables() -> None:
 
     result = extract_file_sync(str(TEST_IMAGE), config=config)
 
-    # Verify tables are returned
     assert result.tables is not None
     assert len(result.tables) > 0
 
@@ -349,13 +334,11 @@ def test_ocr_backend_initialization() -> None:
     """Test OCR backend initialization and shutdown."""
     backend = InitializableOcrBackend()
 
-    # Initialize before registration
     backend.initialize()
     assert backend.initialized is True
 
     register_ocr_backend(backend)
 
-    # Shutdown
     backend.shutdown()
     assert backend.shutdown_called is True
 
@@ -373,7 +356,6 @@ def test_ocr_backend_error_handling() -> None:
         force_ocr=True,
     )
 
-    # Error should propagate
     with pytest.raises(Exception, match=r"(?i)(error|ocr)"):
         extract_file_sync(str(TEST_IMAGE), config=config)
 
@@ -383,22 +365,18 @@ def test_ocr_backend_with_unsupported_language() -> None:
     if not TEST_IMAGE.exists():
         pytest.skip("Test image not found")
 
-    backend = MockOcrBackend()  # Supports en, de, fr, es
+    backend = MockOcrBackend()
     register_ocr_backend(backend)
 
     config = ExtractionConfig(
-        ocr=OcrConfig(backend="mock_test_ocr", language="zh"),  # Chinese not supported
+        ocr=OcrConfig(backend="mock_test_ocr", language="zh"),
         force_ocr=True,
     )
 
-    # Should either fallback or raise an error
-    # Behavior depends on implementation
     try:
         result = extract_file_sync(str(TEST_IMAGE), config=config)
-        # If it succeeds, check that something was extracted
         assert result.content is not None
     except Exception:
-        # Expected if language validation is strict
         pass
 
 
@@ -433,10 +411,8 @@ def test_ocr_backend_stateful_tracking() -> None:
         force_ocr=True,
     )
 
-    # Call multiple times
     for i in range(3):
         extract_file_sync(str(TEST_IMAGE), config=config)
-        # Backend should track calls
         assert backend.call_count == i + 1
 
 
@@ -475,7 +451,6 @@ def test_ocr_backend_metadata_propagation() -> None:
 
     result = extract_file_sync(str(TEST_IMAGE), config=config)
 
-    # Check metadata from backend
     assert "width" in result.metadata
     assert "height" in result.metadata
     assert "confidence" in result.metadata
@@ -530,7 +505,6 @@ def test_ocr_backend_with_pdf_force_ocr() -> None:
 
     extract_file_sync(str(pdf_file), config=config)
 
-    # Backend should have been called for PDF pages
     assert backend.call_count > 0
 
 
@@ -558,11 +532,9 @@ def test_ocr_backend_process_image_return_structure() -> None:
     """Test OCR backend process_image returns correct structure."""
     backend = MockOcrBackend()
 
-    # Call directly (not through extraction)
     test_bytes = b"fake_image_data"
     result = backend.process_image(test_bytes, "en")
 
-    # Verify structure
     assert isinstance(result, dict)
     assert "content" in result
     assert "metadata" in result

@@ -63,7 +63,6 @@ def test_extract_with_balanced_preset_generates_correct_dimensions() -> None:
     assert result.chunks is not None
     assert len(result.chunks) > 0
 
-    # Balanced preset should produce 768-dim embeddings
     for chunk in result.chunks:
         assert chunk["embedding"] is not None
         assert len(chunk["embedding"]) == 768, "Balanced preset should produce 768-dim embeddings"
@@ -98,7 +97,6 @@ def test_extract_with_quality_preset_generates_correct_dimensions() -> None:
 @pytest.mark.slow
 def test_extract_with_multilingual_preset() -> None:
     """Test multilingual preset with various language text."""
-    # Mix of English, Spanish, and French
     text = (
         "Hello world. This is an English sentence. "
         "Hola mundo. Esta es una oración en español. "
@@ -147,7 +145,6 @@ def test_embedding_normalization_flag() -> None:
     text = "Test normalization. " * 10
     text_bytes = text.encode("utf-8")
 
-    # With normalization
     normalized_config = EmbeddingConfig(model=EmbeddingModelType.preset("fast"), normalize=True, batch_size=32)
 
     chunking_config_normalized = ChunkingConfig(max_chars=100, max_overlap=20, embedding=normalized_config)
@@ -160,7 +157,6 @@ def test_embedding_normalization_flag() -> None:
     assert len(result_normalized.chunks) > 0
     assert result_normalized.chunks[0]["embedding"] is not None
 
-    # Check that normalized embeddings have L2 norm close to 1
     embedding = result_normalized.chunks[0]["embedding"]
     magnitude = sum(x * x for x in embedding) ** 0.5
     assert abs(magnitude - 1.0) < 0.01, "Normalized embeddings should have magnitude close to 1"
@@ -178,7 +174,6 @@ def test_batch_size_configuration() -> None:
         model=EmbeddingModelType.preset("balanced"), normalize=True, batch_size=128
     )
 
-    # Both should work
     for emb_config in [embedding_config_small, embedding_config_large]:
         chunking_config = ChunkingConfig(max_chars=50, max_overlap=10, embedding=emb_config)
         config = ExtractionConfig(chunking=chunking_config)
@@ -200,7 +195,6 @@ def test_embeddings_with_different_chunk_sizes() -> None:
     for chunk_size in chunk_sizes:
         embedding_config = EmbeddingConfig(model=EmbeddingModelType.preset("fast"), normalize=True)
 
-        # Use 20% overlap, ensuring it's less than chunk size
         overlap = min(int(chunk_size * 0.2), chunk_size - 1)
         chunking_config = ChunkingConfig(max_chars=chunk_size, max_overlap=overlap, embedding=embedding_config)
 
@@ -228,7 +222,6 @@ def test_fastembed_model_type_custom_dimensions() -> None:
 
     config = ExtractionConfig(chunking=chunking_config)
 
-    # Just test that configuration is created successfully
     assert config is not None
     assert config.chunking is not None
     assert config.chunking.embedding is not None

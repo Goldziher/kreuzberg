@@ -12,7 +12,6 @@ use kreuzberg::{KreuzbergError, Result, extract_file_sync};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-// Simple mock OCR backend that returns fixed text
 struct MockOcrBackend {
     name: String,
     return_text: String,
@@ -46,10 +45,8 @@ impl OcrBackend for MockOcrBackend {
     async fn process_image(&self, image_bytes: &[u8], config: &OcrConfig) -> Result<ExtractionResult> {
         self.call_count.fetch_add(1, Ordering::SeqCst);
 
-        // Store the language for verification
         *self.last_language.lock().unwrap() = config.language.clone();
 
-        // Verify we received image data
         if image_bytes.is_empty() {
             return Err(KreuzbergError::validation("Empty image data".to_string()));
         }
@@ -78,7 +75,6 @@ impl OcrBackend for MockOcrBackend {
     }
 }
 
-// OCR backend that fails during processing
 struct FailingOcrBackend {
     name: String,
 }
@@ -116,7 +112,6 @@ impl OcrBackend for FailingOcrBackend {
     }
 }
 
-// OCR backend that validates image size
 struct ValidatingOcrBackend {
     name: String,
     min_size: usize,
@@ -171,7 +166,6 @@ impl OcrBackend for ValidatingOcrBackend {
     }
 }
 
-// OCR backend that adds metadata
 struct MetadataOcrBackend {
     name: String,
 }
@@ -352,7 +346,7 @@ fn test_ocr_backend_receives_correct_parameters() {
 
     let ocr_config = OcrConfig {
         backend: "param-test-ocr".to_string(),
-        language: "deu".to_string(), // German language
+        language: "deu".to_string(),
         tesseract_config: None,
     };
 
@@ -366,7 +360,6 @@ fn test_ocr_backend_receives_correct_parameters() {
 
     assert!(result.is_ok());
 
-    // Verify language parameter was passed correctly
     let last_lang = backend.last_language.lock().unwrap();
     assert_eq!(*last_lang, "deu", "Language parameter not passed correctly");
 
@@ -416,7 +409,6 @@ fn test_ocr_backend_returns_correct_format() {
 
     let extraction_result = result.unwrap();
 
-    // Verify result format
     assert!(!extraction_result.content.is_empty());
     assert_eq!(extraction_result.mime_type, "text/plain");
     assert!(extraction_result.metadata.additional.contains_key("ocr_backend"));
@@ -489,7 +481,7 @@ fn test_ocr_backend_validation_error() {
 
     let backend = Arc::new(ValidatingOcrBackend {
         name: "validating-ocr".to_string(),
-        min_size: 1_000_000, // 1MB - will fail for our test image
+        min_size: 1_000_000,
     });
 
     {
@@ -558,7 +550,6 @@ fn test_switching_between_ocr_backends() {
         reg.register(Arc::clone(&backend2) as Arc<dyn OcrBackend>).unwrap();
     }
 
-    // Test with backend 1
     let ocr_config1 = OcrConfig {
         backend: "backend-1".to_string(),
         language: "eng".to_string(),
@@ -577,7 +568,6 @@ fn test_switching_between_ocr_backends() {
     assert_eq!(backend1.call_count.load(Ordering::SeqCst), 1);
     assert_eq!(backend2.call_count.load(Ordering::SeqCst), 0);
 
-    // Test with backend 2
     let ocr_config2 = OcrConfig {
         backend: "backend-2".to_string(),
         language: "eng".to_string(),
@@ -624,7 +614,6 @@ fn test_ocr_backend_language_support() {
         reg.register(Arc::clone(&backend) as Arc<dyn OcrBackend>).unwrap();
     }
 
-    // Test supported languages
     assert!(backend.supports_language("eng"));
     assert!(backend.supports_language("deu"));
     assert!(backend.supports_language("fra"));
@@ -665,7 +654,7 @@ fn test_ocr_backend_invalid_name() {
     }
 
     let backend = Arc::new(MockOcrBackend {
-        name: "invalid name".to_string(), // Contains space - invalid
+        name: "invalid name".to_string(),
         return_text: "Test".to_string(),
         call_count: AtomicUsize::new(0),
         last_language: Mutex::new(String::new()),

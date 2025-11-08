@@ -84,7 +84,6 @@ pub async fn extract_handler(
     }
 
     if files.len() == 1 {
-        // Safe to expect: files.len() == 1 guarantees exactly one element exists
         let (data, mime_type, _file_name) = files
             .into_iter()
             .next()
@@ -144,8 +143,6 @@ pub async fn cache_stats_handler() -> Result<Json<CacheStatsResponse>, ApiError>
         })?
         .join(".kreuzberg");
 
-    // Return error if path contains non-UTF8 characters instead of silently falling back
-    // Non-UTF8 paths would cause cache operations to fail or operate on wrong directory
     let cache_dir_str = cache_dir.to_str().ok_or_else(|| {
         ApiError::internal(crate::error::KreuzbergError::Other(format!(
             "Cache directory path contains non-UTF8 characters: {}",
@@ -185,8 +182,6 @@ pub async fn cache_clear_handler() -> Result<Json<CacheClearResponse>, ApiError>
         })?
         .join(".kreuzberg");
 
-    // Return error if path contains non-UTF8 characters instead of silently falling back
-    // Non-UTF8 paths would cause cache operations to fail or operate on wrong directory
     let cache_dir_str = cache_dir.to_str().ok_or_else(|| {
         ApiError::internal(crate::error::KreuzbergError::Other(format!(
             "Cache directory path contains non-UTF8 characters: {}",

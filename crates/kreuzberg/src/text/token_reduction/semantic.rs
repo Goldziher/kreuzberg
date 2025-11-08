@@ -6,7 +6,6 @@ struct ScoredToken {
     token: String,
     position: usize,
     importance_score: f32,
-    // Components used to calculate importance_score, stored for debugging/analysis
     #[allow(dead_code)]
     context_boost: f32,
     #[allow(dead_code)]

@@ -51,12 +51,10 @@ pub fn detect_languages(text: &str, config: &LanguageDetectionConfig) -> Result<
 fn detect_single_language(text: &str, config: &LanguageDetectionConfig) -> Result<Option<Vec<String>>> {
     match detect(text) {
         Some(info) => {
-            // Apply confidence threshold from config
             if info.confidence() >= config.min_confidence {
                 let lang_code = lang_to_iso639_3(info.lang());
                 Ok(Some(vec![lang_code]))
             } else {
-                // Detection confidence below threshold
                 Ok(None)
             }
         }
@@ -85,7 +83,6 @@ fn detect_multiple_languages(text: &str, config: &LanguageDetectionConfig) -> Re
 
     for chunk in &chunk_strings {
         if let Some(info) = detect(chunk) {
-            // Apply confidence threshold from config
             if info.confidence() >= threshold {
                 *lang_counts.entry(info.lang()).or_insert(0) += 1;
             }
@@ -221,19 +218,16 @@ mod tests {
 
     #[test]
     fn test_detect_multiple_languages() {
-        // Use longer text chunks for better confidence
         let text = "Hello world! This is English text. The quick brown fox jumps over the lazy dog. \
                     Hola mundo! Este es texto en español. El rápido zorro marrón salta sobre el perro perezoso. \
                     Bonjour le monde! Ceci est un texte en français. Le renard brun rapide saute par-dessus le chien paresseux.";
         let config = LanguageDetectionConfig {
             enabled: true,
-            min_confidence: 0.3, // Lower threshold for robustness
+            min_confidence: 0.3,
             detect_multiple: true,
         };
 
         let result = detect_languages(text, &config).unwrap();
-        // Result may be Some or None depending on whatlang confidence scores
-        // Just verify it doesn't panic and returns a valid result
         if let Some(langs) = result {
             assert!(
                 !langs.is_empty(),
@@ -279,7 +273,6 @@ mod tests {
 
     #[test]
     fn test_confidence_threshold_filters_low_confidence() {
-        // Short ambiguous text that will have lower confidence
         let text = "ok yes no";
         let high_confidence_config = LanguageDetectionConfig {
             enabled: true,
@@ -288,13 +281,11 @@ mod tests {
         };
 
         let result = detect_languages(text, &high_confidence_config).unwrap();
-        // Should return None because confidence is below 0.99
         assert!(result.is_none());
     }
 
     #[test]
     fn test_confidence_threshold_accepts_high_confidence() {
-        // Clear English text that will have high confidence
         let text = "The quick brown fox jumps over the lazy dog. This is definitely English text with clear patterns.";
         let low_confidence_config = LanguageDetectionConfig {
             enabled: true,
@@ -303,7 +294,6 @@ mod tests {
         };
 
         let result = detect_languages(text, &low_confidence_config).unwrap();
-        // Should return Some(["eng"]) because confidence is above 0.5
         assert!(result.is_some());
         let langs = result.unwrap();
         assert_eq!(langs.len(), 1);
@@ -312,7 +302,6 @@ mod tests {
 
     #[test]
     fn test_confidence_threshold_boundary_low() {
-        // Clear text with high confidence
         let text =
             "This is a comprehensive English sentence with multiple words to ensure accurate language detection.";
         let very_low_threshold = LanguageDetectionConfig {
@@ -330,7 +319,6 @@ mod tests {
 
     #[test]
     fn test_confidence_threshold_boundary_high() {
-        // Even clear text might not reach 1.0 confidence
         let text = "The quick brown fox jumps over the lazy dog.";
         let max_threshold = LanguageDetectionConfig {
             enabled: true,
@@ -339,8 +327,6 @@ mod tests {
         };
 
         let result = detect_languages(text, &max_threshold).unwrap();
-        // Depending on whatlang's confidence, this might be None
-        // This test verifies the threshold is respected
         if let Some(langs) = result {
             assert_eq!(langs.len(), 1);
         }
@@ -348,7 +334,6 @@ mod tests {
 
     #[test]
     fn test_confidence_threshold_multiple_languages() {
-        // Mixed language text with longer phrases for better confidence
         let text = format!(
             "{}{}",
             "Hello world! This is English text. The quick brown fox jumps over the lazy dog. ".repeat(10),
@@ -356,19 +341,16 @@ mod tests {
         );
         let high_confidence_config = LanguageDetectionConfig {
             enabled: true,
-            min_confidence: 0.5, // Lower threshold for robustness
+            min_confidence: 0.5,
             detect_multiple: true,
         };
 
         let result = detect_languages(&text, &high_confidence_config).unwrap();
-        // Should detect languages but only those with confidence >= 0.5
-        // Result may vary based on whatlang's confidence scoring
         if let Some(langs) = result {
             assert!(
                 !langs.is_empty(),
                 "If detection succeeds, should find at least one language"
             );
-            // Verify at least one of the expected languages was detected
             let has_expected = langs.contains(&"eng".to_string())
                 || langs.contains(&"spa".to_string())
                 || langs.contains(&"fra".to_string());
@@ -378,7 +360,6 @@ mod tests {
 
     #[test]
     fn test_confidence_threshold_filters_all_chunks() {
-        // Ambiguous short chunks that won't meet threshold
         let text = "a b c d e f g h i j k ".repeat(50);
         let high_confidence_config = LanguageDetectionConfig {
             enabled: true,
@@ -387,35 +368,27 @@ mod tests {
         };
 
         let result = detect_languages(&text, &high_confidence_config).unwrap();
-        // Should return None because all chunks have low confidence
-        // or Some([]) if no chunks meet threshold
         assert!(result.is_none() || result.unwrap().is_empty());
     }
 
     #[test]
     fn test_default_confidence_threshold() {
-        // Test with a reasonable confidence threshold - use longer text for better confidence
         let text = "This is a clear English sentence. The quick brown fox jumps over the lazy dog. \
                     English text is easy to detect when there is sufficient content to analyze. \
                     Language detection works best with longer text passages that provide more context.";
         let config = LanguageDetectionConfig {
             enabled: true,
-            min_confidence: 0.5, // More reasonable threshold for testing
+            min_confidence: 0.5,
             detect_multiple: false,
         };
 
         let result = detect_languages(text, &config).unwrap();
-        // Should detect English, but allow for confidence variance
         if let Some(langs) = result {
             assert_eq!(langs.len(), 1, "Single language mode should return one language");
             assert_eq!(langs[0], "eng", "Should detect English");
         } else {
-            // If None, the confidence was below threshold - that's also valid behavior
-            // Just verify the function executed without panicking
         }
     }
-
-    // ========== Multi-language document tests ==========
 
     #[test]
     fn test_english_spanish_document() {
@@ -434,7 +407,6 @@ mod tests {
         assert!(result.is_some());
         let langs = result.unwrap();
         assert!(!langs.is_empty());
-        // Should detect both English and Spanish
         assert!(langs.contains(&"eng".to_string()) || langs.contains(&"spa".to_string()));
     }
 
@@ -455,7 +427,6 @@ mod tests {
         assert!(result.is_some());
         let langs = result.unwrap();
         assert!(!langs.is_empty());
-        // Should detect Chinese and/or English
         assert!(langs.contains(&"cmn".to_string()) || langs.contains(&"eng".to_string()));
     }
 
@@ -497,11 +468,8 @@ mod tests {
         assert!(!langs.is_empty());
     }
 
-    // ========== Different language family tests ==========
-
     #[test]
     fn test_romance_languages() {
-        // Italian, Portuguese, Spanish
         let text = "L'Italia è famosa per la sua arte e architettura. O português é falado em vários países. El español es uno de los idiomas más hablados del mundo. ".repeat(3);
         let config = LanguageDetectionConfig {
             enabled: true,
@@ -517,7 +485,6 @@ mod tests {
 
     #[test]
     fn test_germanic_languages() {
-        // German, Dutch, Swedish
         let text = "Deutschland hat eine reiche Kulturgeschichte. Nederland is bekend om zijn tulpen en windmolens. Sverige är känt för sina skogar och innovationer. ".repeat(3);
         let config = LanguageDetectionConfig {
             enabled: true,
@@ -533,7 +500,6 @@ mod tests {
 
     #[test]
     fn test_slavic_languages() {
-        // Polish, Czech, Bulgarian
         let text = "Polska jest krajem w Europie Środkowej. Česká republika má bohatou historii. България е страна на Балканския полуостров. ".repeat(3);
         let config = LanguageDetectionConfig {
             enabled: true,
@@ -549,7 +515,6 @@ mod tests {
 
     #[test]
     fn test_cjk_languages() {
-        // Chinese, Japanese, Korean
         let text = "中国是一个历史悠久的国家。日本は美しい桜の国です。한국은 아시아의 선진국입니다。".repeat(3);
         let config = LanguageDetectionConfig {
             enabled: true,
@@ -565,7 +530,6 @@ mod tests {
 
     #[test]
     fn test_arabic_persian() {
-        // Arabic and Persian use similar scripts but are different languages
         let text = "اللغة العربية هي واحدة من أقدم اللغات في العالم. زبان فارسی زبانی زیبا و شاعرانه است. ".repeat(5);
         let config = LanguageDetectionConfig {
             enabled: true,
@@ -579,8 +543,6 @@ mod tests {
         assert!(!langs.is_empty());
     }
 
-    // ========== Short vs long text tests ==========
-
     #[test]
     fn test_very_short_text() {
         let text = "Hello";
@@ -591,8 +553,6 @@ mod tests {
         };
 
         let result = detect_languages(text, &config).unwrap();
-        // Short text may or may not be detected reliably
-        // Just verify it doesn't panic
         if let Some(langs) = result {
             assert!(!langs.is_empty());
         }
@@ -616,7 +576,6 @@ mod tests {
 
     #[test]
     fn test_very_long_text() {
-        // Generate 5000+ characters of English text
         let paragraph = "The advancement of technology in the twenty-first century has transformed how we live, work, and communicate. \
                         From smartphones to artificial intelligence, these innovations have created unprecedented opportunities and challenges. \
                         Understanding the implications of technological progress requires careful consideration of ethical, social, and economic factors. ";
@@ -634,8 +593,6 @@ mod tests {
         assert_eq!(langs[0], "eng");
     }
 
-    // ========== Edge cases ==========
-
     #[test]
     fn test_numbers_only() {
         let text = "123456789 0123456789 987654321";
@@ -646,7 +603,6 @@ mod tests {
         };
 
         let result = detect_languages(text, &config).unwrap();
-        // Should return None or have very low confidence
         assert!(result.is_none());
     }
 
@@ -721,8 +677,6 @@ mod tests {
         assert_eq!(langs[0], "eng");
     }
 
-    // ========== Code-heavy document tests ==========
-
     #[test]
     fn test_code_with_comments() {
         let text = r#"
@@ -744,8 +698,6 @@ mod tests {
         };
 
         let result = detect_languages(text, &config).unwrap();
-        // May detect English from comments or return None due to code syntax
-        // Just verify it doesn't panic
         if let Some(langs) = result {
             assert!(!langs.is_empty());
         }
@@ -771,8 +723,6 @@ mod tests {
         };
 
         let result = detect_languages(text, &config).unwrap();
-        // Code without much natural language should have low confidence
-        // or not be detected
         assert!(result.is_none() || result.as_ref().unwrap().is_empty() || result.as_ref().unwrap().len() <= 1);
     }
 
@@ -801,8 +751,6 @@ mod tests {
         let langs = result.unwrap();
         assert_eq!(langs[0], "eng");
     }
-
-    // ========== Technical jargon tests ==========
 
     #[test]
     fn test_medical_terminology() {
@@ -854,8 +802,6 @@ mod tests {
         let langs = result.unwrap();
         assert_eq!(langs[0], "eng");
     }
-
-    // ========== Mixed script tests ==========
 
     #[test]
     fn test_latin_cyrillic_mix() {
@@ -914,22 +860,18 @@ mod tests {
         assert!(!langs.is_empty());
     }
 
-    // ========== Performance and edge case tests ==========
-
     #[test]
     fn test_single_word_detection() {
         let words = vec![("hello", "eng"), ("bonjour", "fra"), ("hola", "spa"), ("привет", "rus")];
 
         let config = LanguageDetectionConfig {
             enabled: true,
-            min_confidence: 0.3, // Lower threshold for single words
+            min_confidence: 0.3,
             detect_multiple: false,
         };
 
         for (word, _expected_lang) in words {
             let result = detect_languages(word, &config).unwrap();
-            // Single words may or may not be detected reliably
-            // Just verify no panic
             if let Some(langs) = result {
                 assert!(!langs.is_empty());
             }
@@ -946,7 +888,6 @@ mod tests {
         };
 
         let result = detect_languages(&text, &config).unwrap();
-        // Repetitive text should still be detectable
         if let Some(langs) = result {
             assert!(!langs.is_empty());
         }
@@ -954,7 +895,6 @@ mod tests {
 
     #[test]
     fn test_detection_consistency() {
-        // Same text should produce same result
         let text = "This is a consistent test of language detection capabilities across multiple runs.";
         let config = LanguageDetectionConfig {
             enabled: true,
@@ -970,7 +910,6 @@ mod tests {
 
     #[test]
     fn test_chunk_size_boundary() {
-        // Test with text exactly at and around chunk size (500 chars)
         let chunk_text = "a".repeat(500);
         let config = LanguageDetectionConfig {
             enabled: true,
@@ -979,10 +918,9 @@ mod tests {
         };
 
         let result = detect_languages(&chunk_text, &config).unwrap();
-        // May or may not detect, just verify no panic
         assert!(result.is_none() || result.is_some());
 
-        let over_chunk = "This is English text. ".repeat(30); // Over 500 chars
+        let over_chunk = "This is English text. ".repeat(30);
         let result2 = detect_languages(&over_chunk, &config).unwrap();
         assert!(result2.is_none() || result2.is_some());
     }

@@ -335,9 +335,9 @@ class TextMetadata(TypedDict, total=False):
     line_count: int
     word_count: int
     character_count: int
-    headers: list[str]  # Markdown only
-    links: list[tuple[str, str]]  # Markdown only
-    code_blocks: list[tuple[str, str]]  # Markdown only
+    headers: list[str]
+    links: list[tuple[str, str]]
+    code_blocks: list[tuple[str, str]]
 
 class HtmlMetadata(TypedDict, total=False):
     title: str
@@ -346,21 +346,18 @@ class HtmlMetadata(TypedDict, total=False):
     author: str
     canonical: str
     base_href: str
-    # Open Graph
     og_title: str
     og_description: str
     og_image: str
     og_url: str
     og_type: str
     og_site_name: str
-    # Twitter Card
     twitter_card: str
     twitter_title: str
     twitter_description: str
     twitter_image: str
     twitter_site: str
     twitter_creator: str
-    # Link relations
     link_author: str
     link_license: str
     link_alternate: str
@@ -392,96 +389,83 @@ class ErrorMetadata(TypedDict, total=False):
     message: str
 
 class Metadata(TypedDict, total=False):
-    # Common fields
     language: str
     date: str
     subject: str
 
-    # Discriminator field - indicates which format-specific fields are present
     format_type: Literal["pdf", "excel", "email", "pptx", "archive", "image", "xml", "text", "html", "ocr"]
 
-    # PDF format fields (when format_type == "pdf")
-    title: str  # PDF
-    authors: list[str]  # PDF
-    keywords: list[str]  # PDF
-    created_at: str  # PDF
-    modified_at: str  # PDF
-    created_by: str  # PDF
-    producer: str  # PDF
-    page_count: int  # PDF
-    pdf_version: str  # PDF
-    is_encrypted: bool  # PDF
-    width: int  # PDF
-    height: int  # PDF
-    summary: str  # PDF
+    title: str
+    authors: list[str]
+    keywords: list[str]
+    created_at: str
+    modified_at: str
+    created_by: str
+    producer: str
+    page_count: int
+    pdf_version: str
+    is_encrypted: bool
+    width: int
+    height: int
+    summary: str
 
-    # Excel format fields (when format_type == "excel")
-    sheet_count: int  # Excel
-    sheet_names: list[str]  # Excel
+    sheet_count: int
+    sheet_names: list[str]
 
-    # Email format fields (when format_type == "email")
-    from_email: str  # Email
-    from_name: str  # Email
-    to_emails: list[str]  # Email
-    cc_emails: list[str]  # Email
-    bcc_emails: list[str]  # Email
-    message_id: str  # Email
-    attachments: list[str]  # Email
+    from_email: str
+    from_name: str
+    to_emails: list[str]
+    cc_emails: list[str]
+    bcc_emails: list[str]
+    message_id: str
+    attachments: list[str]
 
-    # PowerPoint format fields (when format_type == "pptx")
-    author: str  # PPTX
-    description: str  # PPTX
-    fonts: list[str]  # PPTX
+    author: str
+    description: str
+    fonts: list[str]
 
-    # Archive format fields (when format_type == "archive")
-    format: str  # Archive
-    file_count: int  # Archive
-    file_list: list[str]  # Archive
-    total_size: int  # Archive
-    compressed_size: int  # Archive
+    format: str
+    file_count: int
+    file_list: list[str]
+    total_size: int
+    compressed_size: int
 
-    # Image format fields (when format_type == "image")
-    exif: dict[str, str]  # Image
+    exif: dict[str, str]
 
-    # XML format fields (when format_type == "xml")
-    element_count: int  # XML
-    unique_elements: list[str]  # XML
+    element_count: int
+    unique_elements: list[str]
 
-    # Text/Markdown format fields (when format_type == "text")
-    line_count: int  # Text
-    word_count: int  # Text
-    character_count: int  # Text
-    headers: list[str]  # Text (Markdown only)
-    links: list[tuple[str, str]]  # Text (Markdown only)
-    code_blocks: list[tuple[str, str]]  # Text (Markdown only)
+    line_count: int
+    word_count: int
+    character_count: int
+    headers: list[str]
+    links: list[tuple[str, str]]
+    code_blocks: list[tuple[str, str]]
 
-    # HTML format fields (when format_type == "html")
-    canonical: str  # HTML
-    base_href: str  # HTML
-    og_title: str  # HTML Open Graph
-    og_description: str  # HTML Open Graph
-    og_image: str  # HTML Open Graph
-    og_url: str  # HTML Open Graph
-    og_type: str  # HTML Open Graph
-    og_site_name: str  # HTML Open Graph
-    twitter_card: str  # HTML Twitter Card
-    twitter_title: str  # HTML Twitter Card
-    twitter_description: str  # HTML Twitter Card
-    twitter_image: str  # HTML Twitter Card
-    twitter_site: str  # HTML Twitter Card
-    twitter_creator: str  # HTML Twitter Card
-    link_author: str  # HTML Link Relations
-    link_license: str  # HTML Link Relations
-    link_alternate: str  # HTML Link Relations
+    canonical: str
+    base_href: str
+    og_title: str
+    og_description: str
+    og_image: str
+    og_url: str
+    og_type: str
+    og_site_name: str
+    twitter_card: str
+    twitter_title: str
+    twitter_description: str
+    twitter_image: str
+    twitter_site: str
+    twitter_creator: str
+    link_author: str
+    link_license: str
+    link_alternate: str
 
-    # OCR format fields (when format_type == "ocr")
-    psm: int  # OCR
-    output_format: str  # OCR
-    table_count: int  # OCR
-    table_rows: int  # OCR
-    table_cols: int  # OCR
+    psm: int
+    output_format: str
+    table_count: int
+    table_rows: int
+    table_cols: int
 
-    # Other metadata fields
     image_preprocessing: ImagePreprocessingMetadata
     json_schema: dict[str, Any]
     error: ErrorMetadata
@@ -497,7 +481,7 @@ class ExtractedImage(TypedDict, total=False):
     bits_per_component: int
     is_mask: bool
     description: str
-    ocr_result: ExtractionResult  # Recursive - nested OCR result if image was OCRed
+    ocr_result: ExtractionResult
 
 class Chunk(TypedDict, total=False):
     content: str
@@ -570,8 +554,6 @@ def batch_extract_bytes(
     mime_types: list[str],
     config: ExtractionConfig = ...,
 ) -> Awaitable[list[ExtractionResult]]: ...
-
-# Plugin registration functions
 def register_ocr_backend(backend: OcrBackendProtocol) -> None: ...
 def register_post_processor(processor: PostProcessorProtocol) -> None: ...
 def clear_post_processors() -> None: ...

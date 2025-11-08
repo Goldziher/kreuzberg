@@ -45,10 +45,6 @@ static JS_FUNCTION_PATTERN: Lazy<Regex> = Lazy::new(|| {
 static CSS_RULES_PATTERN: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)\.[a-zA-Z][\w-]*\s*\{[^}]*\}").expect("CSS rules regex pattern is valid and should compile")
 });
-// SAFETY: These patterns use `.*?` which can be slow with backtracking, but:
-// 1. They operate on already-extracted document text (quality scoring context)
-// 2. The `.*?` is bounded by HTML closing tags which limits backtracking
-// 3. For quality scoring, worst-case performance on malformed HTML is acceptable
 static SCRIPT_TAG_PATTERN: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?is)<script[^>]*>.*?</script>").expect("Script tag regex pattern is valid and should compile")
 });

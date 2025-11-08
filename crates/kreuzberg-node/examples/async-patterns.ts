@@ -151,10 +151,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
 
 async function extractionWithTimeout(): Promise<void> {
 	try {
-		const result = await withTimeout(
-			extractFile("large-document.pdf", null, null),
-			30000, // 30 second timeout
-		);
+		const result = await withTimeout(extractFile("large-document.pdf", null, null), 30000);
 		console.log("Extracted:", result.content);
 	} catch (error) {
 		console.error("Extraction timed out or failed:", error);
@@ -190,7 +187,6 @@ async function main(): Promise<void> {
 	await extractionWithTimeout();
 }
 
-// Run if executed directly
 if (require.main === module) {
 	main().catch(console.error);
 }

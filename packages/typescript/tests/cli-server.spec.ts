@@ -32,16 +32,13 @@ describe("CLI Server Commands", () => {
 	it("API server starts and responds to HTTP requests", async () => {
 		const port = 18005;
 
-		// Start server in background
 		const process = spawn("npx", ["kreuzberg", "serve", "-H", "127.0.0.1", "-p", port.toString()], {
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 
 		try {
-			// Wait for server to start
 			await new Promise((resolve) => setTimeout(resolve, 5000));
 
-			// Test health endpoint
 			const healthResponse = await fetch(`http://127.0.0.1:${port}/health`);
 			expect(healthResponse.status).toBe(200);
 
@@ -49,14 +46,12 @@ describe("CLI Server Commands", () => {
 			expect(healthData.status).toBe("healthy");
 			expect(healthData.version).toBeDefined();
 
-			// Test info endpoint
 			const infoResponse = await fetch(`http://127.0.0.1:${port}/info`);
 			expect(infoResponse.status).toBe(200);
 
 			const infoData = await infoResponse.json();
 			expect(infoData.rust_backend).toBe(true);
 		} finally {
-			// Kill server
 			process.kill("SIGTERM");
 			await new Promise((resolve) => {
 				process.on("exit", resolve);
@@ -72,7 +67,6 @@ describe("CLI Server Commands", () => {
 		const port = 18006;
 		const configPath = "test_server_config.toml";
 
-		// Create test config
 		writeFileSync(
 			configPath,
 			`
@@ -85,20 +79,16 @@ language = "eng"
 `,
 		);
 
-		// Start server with config
 		const process = spawn("npx", ["kreuzberg", "serve", "-H", "127.0.0.1", "-p", port.toString(), "-c", configPath], {
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 
 		try {
-			// Wait for server to start
 			await new Promise((resolve) => setTimeout(resolve, 5000));
 
-			// Test health endpoint
 			const response = await fetch(`http://127.0.0.1:${port}/health`);
 			expect(response.status).toBe(200);
 		} finally {
-			// Kill server
 			process.kill("SIGTERM");
 			await new Promise((resolve) => {
 				process.on("exit", resolve);
@@ -108,34 +98,27 @@ language = "eng"
 				}, 5000);
 			});
 
-			// Cleanup
 			try {
 				unlinkSync(configPath);
-			} catch {
-				// Ignore cleanup errors
-			}
+			} catch {}
 		}
 	}, 60000);
 
 	it("server extract endpoint works", async () => {
 		const port = 18007;
 
-		// Start server
 		const process = spawn("npx", ["kreuzberg", "serve", "-H", "127.0.0.1", "-p", port.toString()], {
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 
 		try {
-			// Wait for server to start
 			await new Promise((resolve) => setTimeout(resolve, 5000));
 
-			// Create test file
 			const testContent = "Hello, Kreuzberg API from TypeScript!";
 			const formData = new FormData();
 			const blob = new Blob([testContent], { type: "text/plain" });
 			formData.append("files", blob, "test.txt");
 
-			// Test extract endpoint
 			const response = await fetch(`http://127.0.0.1:${port}/extract`, {
 				method: "POST",
 				body: formData,
@@ -147,7 +130,6 @@ language = "eng"
 			expect(results).toHaveLength(1);
 			expect(results[0].content).toContain(testContent);
 		} finally {
-			// Kill server
 			process.kill("SIGTERM");
 			await new Promise((resolve) => {
 				process.on("exit", resolve);

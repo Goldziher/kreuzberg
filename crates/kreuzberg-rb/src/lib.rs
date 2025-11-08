@@ -341,22 +341,18 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
     let mut config = ExtractionConfig::default();
 
     if let Some(hash) = opts {
-        // use_cache
         if let Some(val) = get_kw(ruby, hash, "use_cache") {
             config.use_cache = bool::try_convert(val)?;
         }
 
-        // enable_quality_processing
         if let Some(val) = get_kw(ruby, hash, "enable_quality_processing") {
             config.enable_quality_processing = bool::try_convert(val)?;
         }
 
-        // force_ocr
         if let Some(val) = get_kw(ruby, hash, "force_ocr") {
             config.force_ocr = bool::try_convert(val)?;
         }
 
-        // ocr (Hash)
         if let Some(val) = get_kw(ruby, hash, "ocr")
             && !val.is_nil()
         {
@@ -364,7 +360,6 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
             config.ocr = Some(parse_ocr_config(ruby, ocr_hash)?);
         }
 
-        // chunking (Hash)
         if let Some(val) = get_kw(ruby, hash, "chunking")
             && !val.is_nil()
         {
@@ -372,7 +367,6 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
             config.chunking = Some(parse_chunking_config(ruby, chunking_hash)?);
         }
 
-        // language_detection (Hash)
         if let Some(val) = get_kw(ruby, hash, "language_detection")
             && !val.is_nil()
         {
@@ -380,7 +374,6 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
             config.language_detection = Some(parse_language_detection_config(ruby, lang_hash)?);
         }
 
-        // pdf_options (Hash)
         if let Some(val) = get_kw(ruby, hash, "pdf_options")
             && !val.is_nil()
         {
@@ -388,7 +381,6 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
             config.pdf_options = Some(parse_pdf_config(ruby, pdf_hash)?);
         }
 
-        // images (Hash)
         if let Some(val) = get_kw(ruby, hash, "images")
             && !val.is_nil()
         {
@@ -396,11 +388,6 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
             config.images = Some(parse_image_extraction_config(ruby, images_hash)?);
         }
 
-        // image_preprocessing (Hash)
-        // Note: This field doesn't exist in ExtractionConfig, but would be part of OcrConfig
-        // Skipping for now as it's not in the top-level config
-
-        // postprocessor (Hash)
         if let Some(val) = get_kw(ruby, hash, "postprocessor")
             && !val.is_nil()
         {
@@ -408,7 +395,6 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
             config.postprocessor = Some(parse_postprocessor_config(ruby, postprocessor_hash)?);
         }
 
-        // token_reduction (Hash)
         if let Some(val) = get_kw(ruby, hash, "token_reduction")
             && !val.is_nil()
         {
@@ -424,23 +410,18 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
 fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Result<RHash, Error> {
     let hash = ruby.hash_new();
 
-    // content (String)
     hash.aset(ruby.intern("content"), result.content)?;
 
-    // mime_type (String)
     hash.aset(ruby.intern("mime_type"), result.mime_type)?;
 
-    // metadata (Hash) - serialize to JSON string for simplicity
     let metadata_json = serde_json::to_string(&result.metadata)
         .map_err(|e| runtime_error(format!("Failed to serialize metadata: {}", e)))?;
     hash.aset(ruby.intern("metadata_json"), metadata_json)?;
 
-    // tables (Array of Hashes)
     let tables_array = ruby.ary_new();
     for table in result.tables {
         let table_hash = ruby.hash_new();
 
-        // cells (Array of Arrays of Strings)
         let cells_array = ruby.ary_new();
         for row in table.cells {
             let row_array = ruby.ary_from_vec(row);
@@ -448,17 +429,14 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
         }
         table_hash.aset(ruby.intern("cells"), cells_array)?;
 
-        // markdown (String)
         table_hash.aset(ruby.intern("markdown"), table.markdown)?;
 
-        // page_number (Integer)
         table_hash.aset(ruby.intern("page_number"), table.page_number)?;
 
         tables_array.push(table_hash)?;
     }
     hash.aset(ruby.intern("tables"), tables_array)?;
 
-    // detected_languages (Array of Strings or nil)
     if let Some(langs) = result.detected_languages {
         let langs_array = ruby.ary_from_vec(langs);
         hash.aset(ruby.intern("detected_languages"), langs_array)?;
@@ -466,7 +444,6 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
         hash.aset(ruby.intern("detected_languages"), ruby.qnil())?;
     }
 
-    // chunks (Array of Hashes or nil)
     if let Some(chunks) = result.chunks {
         let chunks_array = ruby.ary_new();
         for chunk in chunks {
@@ -558,7 +535,6 @@ fn batch_extract_files_sync(args: &[Value]) -> Result<RArray, Error> {
 
     let config = parse_extraction_config(&ruby, opts)?;
 
-    // Convert Ruby array to Vec<String>
     let paths: Vec<String> = paths_array.to_vec::<String>()?;
 
     let results = kreuzberg::batch_extract_file_sync(paths, &config).map_err(kreuzberg_error)?;
@@ -590,7 +566,6 @@ fn extract_file(args: &[Value]) -> Result<RHash, Error> {
 
     let config = parse_extraction_config(&ruby, opts)?;
 
-    // Use Tokio runtime to block on async function
     let runtime =
         tokio::runtime::Runtime::new().map_err(|e| runtime_error(format!("Failed to create Tokio runtime: {}", e)))?;
 
@@ -677,11 +652,9 @@ fn batch_extract_bytes_sync(args: &[Value]) -> Result<RArray, Error> {
 
     let config = parse_extraction_config(&ruby, opts)?;
 
-    // Convert Ruby arrays to Vecs
     let bytes_vec: Vec<String> = bytes_array.to_vec::<String>()?;
     let mime_types: Vec<String> = mime_types_array.to_vec::<String>()?;
 
-    // Validate that arrays have the same length
     if bytes_vec.len() != mime_types.len() {
         return Err(runtime_error(format!(
             "bytes_array and mime_types must have the same length: {} vs {}",
@@ -690,7 +663,6 @@ fn batch_extract_bytes_sync(args: &[Value]) -> Result<RArray, Error> {
         )));
     }
 
-    // Convert to Vec<(&[u8], &str)> format expected by kreuzberg
     let contents: Vec<(&[u8], &str)> = bytes_vec
         .iter()
         .zip(mime_types.iter())
@@ -722,11 +694,9 @@ fn batch_extract_bytes(args: &[Value]) -> Result<RArray, Error> {
 
     let config = parse_extraction_config(&ruby, opts)?;
 
-    // Convert Ruby arrays to Vecs
     let bytes_vec: Vec<String> = bytes_array.to_vec::<String>()?;
     let mime_types: Vec<String> = mime_types_array.to_vec::<String>()?;
 
-    // Validate that arrays have the same length
     if bytes_vec.len() != mime_types.len() {
         return Err(runtime_error(format!(
             "bytes_array and mime_types must have the same length: {} vs {}",
@@ -735,7 +705,6 @@ fn batch_extract_bytes(args: &[Value]) -> Result<RArray, Error> {
         )));
     }
 
-    // Convert to Vec<(&[u8], &str)> format expected by kreuzberg
     let contents: Vec<(&[u8], &str)> = bytes_vec
         .iter()
         .zip(mime_types.iter())
@@ -804,15 +773,11 @@ fn ruby_cache_stats() -> Result<RHash, Error> {
 
     let hash = ruby.hash_new();
     hash.aset(ruby.intern("total_entries"), stats.total_files)?;
-    // Convert MB to bytes for consistency with Ruby API
-    // Note: Loses sub-byte precision, but acceptable since stats are approximate
     let total_size_bytes = (stats.total_size_mb * 1024.0 * 1024.0) as u64;
     hash.aset(ruby.intern("total_size_bytes"), total_size_bytes)?;
 
     Ok(hash)
 }
-
-// Plugin system functions
 
 /// Register a post-processor plugin.
 ///
@@ -835,24 +800,19 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
     let (priority,) = args.optional;
     let priority = priority.unwrap_or(50);
 
-    // Validate that processor is callable
     if !processor.respond_to("call", true)? {
         return Err(runtime_error("Post-processor must be a Proc or respond to 'call'"));
     }
 
-    // Create Ruby-backed PostProcessor wrapper
     use async_trait::async_trait;
     use kreuzberg::plugins::{Plugin, PostProcessor, ProcessingStage};
     use std::sync::Arc;
 
-    // SAFETY: We mark this as Send+Sync because Ruby Global VM Lock (GVL)
-    // ensures thread safety. Magnus::Value is thread-safe under GVL.
     struct RubyPostProcessor {
         name: String,
         processor: magnus::Value,
     }
 
-    // SAFETY: Ruby operations are protected by the Global VM Lock
     unsafe impl Send for RubyPostProcessor {}
     unsafe impl Sync for RubyPostProcessor {}
 
@@ -881,7 +841,6 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
             result: &mut kreuzberg::ExtractionResult,
             _config: &kreuzberg::ExtractionConfig,
         ) -> kreuzberg::Result<()> {
-            // Convert Rust result to Ruby hash
             let ruby = Ruby::get().expect("Ruby not initialized");
             let result_hash =
                 extraction_result_to_ruby(&ruby, result.clone()).map_err(|e| kreuzberg::KreuzbergError::Plugin {
@@ -889,7 +848,6 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
                     plugin_name: self.name.clone(),
                 })?;
 
-            // Call Ruby Proc with result hash
             let modified = self
                 .processor
                 .funcall::<_, _, magnus::Value>("call", (result_hash,))
@@ -898,14 +856,12 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
                     plugin_name: self.name.clone(),
                 })?;
 
-            // Convert modified hash back to Rust result
             let modified_hash =
                 magnus::RHash::try_convert(modified).map_err(|e| kreuzberg::KreuzbergError::Plugin {
                     message: format!("Post-processor must return a Hash: {}", e),
                     plugin_name: self.name.clone(),
                 })?;
 
-            // Update result content (only field that processors typically modify)
             if let Some(content_val) = get_kw(&ruby, modified_hash, "content") {
                 let new_content = String::try_convert(content_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
                     message: format!("Failed to convert content: {}", e),
@@ -918,11 +874,10 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
         }
 
         fn processing_stage(&self) -> ProcessingStage {
-            ProcessingStage::Late // Custom Ruby processors run last
+            ProcessingStage::Late
         }
     }
 
-    // Register with Rust core
     let processor_impl = Arc::new(RubyPostProcessor {
         name: name.clone(),
         processor,
@@ -958,25 +913,20 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
     let (priority,) = args.optional;
     let priority = priority.unwrap_or(50);
 
-    // Validate that validator is callable
     if !validator.respond_to("call", true)? {
         return Err(runtime_error("Validator must be a Proc or respond to 'call'"));
     }
 
-    // Create Ruby-backed Validator wrapper
     use async_trait::async_trait;
     use kreuzberg::plugins::{Plugin, Validator};
     use std::sync::Arc;
 
-    // SAFETY: We mark this as Send+Sync because Ruby Global VM Lock (GVL)
-    // ensures thread safety. Magnus::Value is thread-safe under GVL.
     struct RubyValidator {
         name: String,
         validator: magnus::Value,
         priority: i32,
     }
 
-    // SAFETY: Ruby operations are protected by the Global VM Lock
     unsafe impl Send for RubyValidator {}
     unsafe impl Sync for RubyValidator {}
 
@@ -1005,7 +955,6 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
             result: &kreuzberg::ExtractionResult,
             _config: &kreuzberg::ExtractionConfig,
         ) -> kreuzberg::Result<()> {
-            // Convert Rust result to Ruby hash
             let ruby = Ruby::get().expect("Ruby not initialized");
             let result_hash =
                 extraction_result_to_ruby(&ruby, result.clone()).map_err(|e| kreuzberg::KreuzbergError::Plugin {
@@ -1013,7 +962,6 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
                     plugin_name: self.name.clone(),
                 })?;
 
-            // Call Ruby Proc with result hash
             self.validator
                 .funcall::<_, _, magnus::Value>("call", (result_hash,))
                 .map_err(|e| kreuzberg::KreuzbergError::Validation {
@@ -1029,7 +977,6 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
         }
     }
 
-    // Register with Rust core
     let validator_impl = Arc::new(RubyValidator {
         name: name.clone(),
         validator,
@@ -1068,7 +1015,6 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
 /// Kreuzberg.register_ocr_backend("custom", CustomOcr.new)
 /// ```
 fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
-    // Validate that backend has required methods
     if !backend.respond_to("process_image", true)? {
         return Err(runtime_error("OCR backend must respond to 'process_image'"));
     }
@@ -1076,19 +1022,15 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
         return Err(runtime_error("OCR backend must respond to 'supports_language?'"));
     }
 
-    // Create Ruby-backed OcrBackend wrapper
     use async_trait::async_trait;
     use kreuzberg::plugins::{OcrBackend, OcrBackendType, Plugin};
     use std::sync::Arc;
 
-    // SAFETY: We mark this as Send+Sync because Ruby Global VM Lock (GVL)
-    // ensures thread safety. Magnus::Value is thread-safe under GVL.
     struct RubyOcrBackend {
         name: String,
         backend: magnus::Value,
     }
 
-    // SAFETY: Ruby operations are protected by the Global VM Lock
     unsafe impl Send for RubyOcrBackend {}
     unsafe impl Sync for RubyOcrBackend {}
 
@@ -1117,11 +1059,9 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
             image_bytes: &[u8],
             config: &kreuzberg::OcrConfig,
         ) -> kreuzberg::Result<kreuzberg::ExtractionResult> {
-            // Convert image bytes to Ruby string
             let ruby = Ruby::get().expect("Ruby not initialized");
             let image_str = ruby.str_from_slice(image_bytes);
 
-            // Call Ruby backend's process_image method
             let text = self
                 .backend
                 .funcall::<_, _, String>("process_image", (image_str, config.language.clone()))
@@ -1152,7 +1092,6 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
         }
     }
 
-    // Register with Rust core
     let backend_impl = Arc::new(RubyOcrBackend {
         name: name.clone(),
         backend,
@@ -1231,23 +1170,19 @@ fn clear_validators() -> Result<(), Error> {
 fn init(ruby: &Ruby) -> Result<(), Error> {
     let module = ruby.define_module("Kreuzberg")?;
 
-    // Synchronous extraction functions
     module.define_module_function("extract_file_sync", function!(extract_file_sync, -1))?;
     module.define_module_function("extract_bytes_sync", function!(extract_bytes_sync, -1))?;
     module.define_module_function("batch_extract_files_sync", function!(batch_extract_files_sync, -1))?;
     module.define_module_function("batch_extract_bytes_sync", function!(batch_extract_bytes_sync, -1))?;
 
-    // Asynchronous extraction functions (use Tokio runtime internally)
     module.define_module_function("extract_file", function!(extract_file, -1))?;
     module.define_module_function("extract_bytes", function!(extract_bytes, -1))?;
     module.define_module_function("batch_extract_files", function!(batch_extract_files, -1))?;
     module.define_module_function("batch_extract_bytes", function!(batch_extract_bytes, -1))?;
 
-    // Cache management functions
     module.define_module_function("clear_cache", function!(ruby_clear_cache, 0))?;
     module.define_module_function("cache_stats", function!(ruby_cache_stats, 0))?;
 
-    // Plugin system functions
     module.define_module_function("register_post_processor", function!(register_post_processor, -1))?;
     module.define_module_function("register_validator", function!(register_validator, -1))?;
     module.define_module_function("register_ocr_backend", function!(register_ocr_backend, 2))?;
@@ -1268,24 +1203,18 @@ mod tests {
         use std::fs;
         use std::path::PathBuf;
 
-        // Create unique test cache directory using thread ID
         let thread_id = std::thread::current().id();
         let cache_dir = PathBuf::from(format!("/tmp/kreuzberg_test_clear_{:?}", thread_id));
 
-        // Clean up any existing test directory
         let _ = fs::remove_dir_all(&cache_dir);
 
-        // Ensure directory exists
         fs::create_dir_all(&cache_dir).expect("Failed to create cache directory");
 
-        // Create a test cache file
         let test_file = cache_dir.join("test_cache.msgpack");
         fs::write(&test_file, b"test data").expect("Failed to write test file");
 
-        // Verify file exists
         assert!(test_file.exists(), "Test file should exist before clear");
 
-        // Clear cache using the function logic (without Ruby runtime)
         let cache_dir_str = cache_dir.to_str().expect("Cache dir must be valid UTF-8");
         let result = kreuzberg::cache::clear_cache_directory(cache_dir_str);
 
@@ -1293,10 +1222,8 @@ mod tests {
         let (removed, _) = result.unwrap();
         assert_eq!(removed, 1, "Should remove one file");
 
-        // Verify file is removed
         assert!(!test_file.exists(), "Test file should be removed after clear");
 
-        // Clean up
         let _ = fs::remove_dir_all(&cache_dir);
     }
 
@@ -1305,23 +1232,18 @@ mod tests {
         use std::fs;
         use std::path::PathBuf;
 
-        // Create unique test cache directory using thread ID
         let thread_id = std::thread::current().id();
         let cache_dir = PathBuf::from(format!("/tmp/kreuzberg_test_stats_{:?}", thread_id));
 
-        // Clean up any existing test directory
         let _ = fs::remove_dir_all(&cache_dir);
 
-        // Ensure directory exists
         fs::create_dir_all(&cache_dir).expect("Failed to create cache directory");
 
-        // Create test cache files
         let test_file1 = cache_dir.join("test1.msgpack");
         let test_file2 = cache_dir.join("test2.msgpack");
         fs::write(&test_file1, b"test data 1").expect("Failed to write test file 1");
         fs::write(&test_file2, b"test data 2").expect("Failed to write test file 2");
 
-        // Get stats using the function logic (without Ruby runtime)
         let cache_dir_str = cache_dir.to_str().expect("Cache dir must be valid UTF-8");
         let stats = kreuzberg::cache::get_cache_metadata(cache_dir_str);
 
@@ -1335,14 +1257,12 @@ mod tests {
             "Available space should be greater than 0"
         );
 
-        // Clean up
         let _ = fs::remove_dir_all(&cache_dir);
     }
 
     #[test]
     fn test_ruby_cache_stats_converts_mb_to_bytes() {
-        // Test the conversion logic
-        let size_mb = 1.5; // 1.5 MB
+        let size_mb = 1.5;
         let size_bytes = (size_mb * 1024.0 * 1024.0) as u64;
         assert_eq!(size_bytes, 1_572_864, "Should convert MB to bytes correctly");
     }
@@ -1352,17 +1272,13 @@ mod tests {
         use std::fs;
         use std::path::PathBuf;
 
-        // Create unique test cache directory using thread ID
         let thread_id = std::thread::current().id();
         let cache_dir = PathBuf::from(format!("/tmp/kreuzberg_test_empty_{:?}", thread_id));
 
-        // Clean up any existing test directory
         let _ = fs::remove_dir_all(&cache_dir);
 
-        // Ensure directory exists but is empty
         fs::create_dir_all(&cache_dir).expect("Failed to create cache directory");
 
-        // Clear empty cache
         let cache_dir_str = cache_dir.to_str().expect("Cache dir must be valid UTF-8");
         let result = kreuzberg::cache::clear_cache_directory(cache_dir_str);
 
@@ -1371,13 +1287,11 @@ mod tests {
         assert_eq!(removed, 0, "Should remove 0 files from empty directory");
         assert_eq!(freed, 0.0, "Should free 0 MB from empty directory");
 
-        // Clean up
         let _ = fs::remove_dir_all(&cache_dir);
     }
 
     #[test]
     fn test_image_extraction_config_conversion() {
-        // Test that ImageExtractionConfig struct has the expected fields
         let config = ImageExtractionConfig {
             extract_images: true,
             target_dpi: 300,
@@ -1397,7 +1311,6 @@ mod tests {
 
     #[test]
     fn test_image_preprocessing_config_conversion() {
-        // Test that ImagePreprocessingConfig struct has the expected fields
         let config = ImagePreprocessingConfig {
             target_dpi: 300,
             auto_rotate: true,
@@ -1419,7 +1332,6 @@ mod tests {
 
     #[test]
     fn test_postprocessor_config_conversion() {
-        // Test that PostProcessorConfig struct has the expected fields
         let config = PostProcessorConfig {
             enabled: true,
             enabled_processors: Some(vec!["processor1".to_string(), "processor2".to_string()]),
@@ -1434,7 +1346,6 @@ mod tests {
 
     #[test]
     fn test_token_reduction_config_conversion() {
-        // Test that TokenReductionConfig struct has the expected fields
         let config = TokenReductionConfig {
             mode: "moderate".to_string(),
             preserve_important_words: true,
@@ -1446,7 +1357,6 @@ mod tests {
 
     #[test]
     fn test_extraction_config_with_new_fields() {
-        // Test that ExtractionConfig can hold the new configuration fields
         let mut config = ExtractionConfig::default();
 
         config.images = Some(ImageExtractionConfig {

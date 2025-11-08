@@ -120,8 +120,6 @@ pub fn chunk_text(text: &str, config: &ChunkingConfig) -> Result<ChunkingResult>
             let chunk_length = chunk_text.chars().count();
             let char_end = char_start + chunk_length;
 
-            // Advance offset by chunk length minus overlap to account for overlapping regions.
-            // For the last chunk, advance by full length since there's no next chunk to overlap with.
             let overlap_chars = if index < total_chunks - 1 {
                 config.overlap.min(chunk_length)
             } else {
@@ -514,19 +512,15 @@ mod tests {
             trim: false,
             chunker_type: ChunkerType::Text,
         };
-        // Create a simple text where we can verify exact positions
         let text = "AAAAA BBBBB CCCCC DDDDD EEEEE FFFFF";
         let result = chunk_text(text, &config).unwrap();
 
-        // Should have multiple chunks with overlap
         assert!(result.chunks.len() >= 2, "Expected at least 2 chunks");
 
-        // Verify that chunks have correct offsets
         for i in 0..result.chunks.len() {
             let chunk = &result.chunks[i];
             let metadata = &chunk.metadata;
 
-            // Verify char_end - char_start equals chunk length
             assert_eq!(
                 metadata.char_end - metadata.char_start,
                 chunk.content.chars().count(),
@@ -534,17 +528,14 @@ mod tests {
                 i
             );
 
-            // Verify chunk index matches
             assert_eq!(metadata.chunk_index, i);
             assert_eq!(metadata.total_chunks, result.chunks.len());
         }
 
-        // Verify overlaps between consecutive chunks
         for i in 0..result.chunks.len() - 1 {
             let current_chunk = &result.chunks[i];
             let next_chunk = &result.chunks[i + 1];
 
-            // The next chunk should start before the current chunk ends (overlap)
             assert!(
                 next_chunk.metadata.char_start < current_chunk.metadata.char_end,
                 "Chunk {} and {} don't overlap: next starts at {} but current ends at {}",
@@ -554,10 +545,9 @@ mod tests {
                 current_chunk.metadata.char_end
             );
 
-            // The overlap should be approximately config.overlap characters
             let overlap_size = current_chunk.metadata.char_end - next_chunk.metadata.char_start;
             assert!(
-                overlap_size <= config.overlap + 10, // Allow some flexibility due to word boundaries
+                overlap_size <= config.overlap + 10,
                 "Overlap between chunks {} and {} is too large: {}",
                 i,
                 i + 1,
@@ -577,12 +567,10 @@ mod tests {
         let text = "AAAAA BBBBB CCCCC DDDDD EEEEE FFFFF";
         let result = chunk_text(text, &config).unwrap();
 
-        // With no overlap, consecutive chunks should be adjacent
         for i in 0..result.chunks.len() - 1 {
             let current_chunk = &result.chunks[i];
             let next_chunk = &result.chunks[i + 1];
 
-            // Next chunk should start at or after current chunk ends
             assert!(
                 next_chunk.metadata.char_start >= current_chunk.metadata.char_end,
                 "Chunk {} and {} overlap when they shouldn't: next starts at {} but current ends at {}",
@@ -607,18 +595,15 @@ mod tests {
 
         assert!(result.chunks.len() >= 2, "Expected multiple chunks");
 
-        // First chunk should start at 0
         assert_eq!(
             result.chunks[0].metadata.char_start, 0,
             "First chunk should start at position 0"
         );
 
-        // Verify no gaps in coverage (considering overlap)
         for i in 0..result.chunks.len() - 1 {
             let current_chunk = &result.chunks[i];
             let next_chunk = &result.chunks[i + 1];
 
-            // Next chunk should start before or at the current chunk's end
             assert!(
                 next_chunk.metadata.char_start <= current_chunk.metadata.char_end,
                 "Gap detected between chunk {} (ends at {}) and chunk {} (starts at {})",
@@ -639,10 +624,9 @@ mod tests {
                 trim: false,
                 chunker_type: ChunkerType::Text,
             };
-            let text = "Word ".repeat(30); // 150 characters
+            let text = "Word ".repeat(30);
             let result = chunk_text(&text, &config).unwrap();
 
-            // Verify all chunks have valid offsets
             for chunk in &result.chunks {
                 assert!(
                     chunk.metadata.char_end > chunk.metadata.char_start,
@@ -653,7 +637,6 @@ mod tests {
                 );
             }
 
-            // Verify offsets are reasonable
             for chunk in &result.chunks {
                 assert!(
                     chunk.metadata.char_start < text.chars().count(),
@@ -681,13 +664,11 @@ mod tests {
         let last_chunk = result.chunks.last().unwrap();
         let second_to_last = &result.chunks[result.chunks.len() - 2];
 
-        // Last chunk should have proper overlap with previous chunk
         assert!(
             last_chunk.metadata.char_start < second_to_last.metadata.char_end,
             "Last chunk should overlap with previous chunk"
         );
 
-        // Verify the last chunk covers the end of the text
         let expected_end = text.chars().count();
         let last_chunk_covers_end =
             last_chunk.content.trim_end() == text.trim_end() || last_chunk.metadata.char_end >= expected_end - 5;

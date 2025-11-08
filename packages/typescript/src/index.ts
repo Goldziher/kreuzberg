@@ -111,7 +111,6 @@ function assertUint8ArrayList(values: unknown, name: string): Uint8Array[] {
 		try {
 			return assertUint8Array(value, `${name}[${index}]`);
 		} catch {
-			// Re-throw with clearer context
 			throw new TypeError(`${name}[${index}] must be a Uint8Array`);
 		}
 	});
@@ -527,13 +526,10 @@ export async function batchExtractBytes(
 export function registerPostProcessor(processor: PostProcessorProtocol): void {
 	const binding = getBinding();
 
-	// Wrap the processor to handle JSON serialization required by NAPI
 	const wrappedProcessor = {
 		name: processor.name.bind(processor),
 		processingStage: processor.processingStage?.bind(processor),
 		async process(...args: unknown[]): Promise<string> {
-			// With build_callback returning vec![value], NAPI wraps it in ANOTHER array
-			// So JavaScript receives [[json_string]], and we need args[0][0]
 			const wrappedValue = args[0] as unknown[];
 			const jsonString = wrappedValue[0] as string;
 
@@ -546,7 +542,6 @@ export function registerPostProcessor(processor: PostProcessorProtocol): void {
 				chunks?: unknown[];
 			};
 
-			// Convert from snake_case (Rust) to camelCase (TypeScript) and parse metadata
 			const result: ExtractionResult = {
 				content: wireResult.content,
 				mimeType: wireResult.mime_type,
@@ -556,11 +551,8 @@ export function registerPostProcessor(processor: PostProcessorProtocol): void {
 				chunks: wireResult.chunks as string[] | null | undefined,
 			};
 
-			// Call user's processor with parsed object (may be sync or async)
 			const updated = await processor.process(result);
 
-			// Convert from camelCase (TypeScript) back to snake_case (Rust)
-			// Metadata should be an object, not a stringified JSON
 			const wireUpdated = {
 				content: updated.content,
 				mime_type: updated.mimeType,
@@ -570,7 +562,6 @@ export function registerPostProcessor(processor: PostProcessorProtocol): void {
 				chunks: updated.chunks,
 			};
 
-			// Return as JSON string
 			return JSON.stringify(wireUpdated);
 		},
 	};
@@ -684,10 +675,8 @@ export function registerValidator(validator: ValidatorProtocol): void {
 		name: validator.name.bind(validator),
 		priority: validator.priority?.bind(validator),
 		async validate(...args: unknown[]): Promise<string> {
-			// Validators receive result as first argument (unlike postprocessors which use args[1])
 			const jsonString = args[0] as string;
 
-			// Guard against undefined/null
 			if (!jsonString || jsonString === "undefined") {
 				throw new Error("Validator received invalid JSON string");
 			}
@@ -703,7 +692,7 @@ export function registerValidator(validator: ValidatorProtocol): void {
 			};
 
 			await Promise.resolve(validator.validate(result));
-			return ""; // Return empty string on success
+			return "";
 		},
 	};
 
@@ -841,16 +830,12 @@ export function listValidators(): string[] {
 export function registerOcrBackend(backend: OcrBackendProtocol): void {
 	const binding = getBinding();
 
-	// Wrap the backend to handle the NAPI bridge requirements
 	const wrappedBackend = {
 		name: backend.name.bind(backend),
 		supportedLanguages: backend.supportedLanguages.bind(backend),
-		// processImage receives (Buffer, String) and must return Promise<String> (JSON)
 		async processImage(imageBytes: Buffer, language: string): Promise<string> {
-			// Call user's backend with Uint8Array
 			const result = await backend.processImage(new Uint8Array(imageBytes), language);
 
-			// Return as JSON string
 			return JSON.stringify(result);
 		},
 	};

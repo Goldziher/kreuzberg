@@ -45,9 +45,6 @@ use std::collections::HashMap;
 #[cfg(feature = "embeddings")]
 use lazy_static::lazy_static;
 
-// Global model cache to avoid redundant downloads and initialization.
-// Models are expensive to initialize and download, so we cache them by model name.
-// We use Arc<Mutex<TextEmbedding>> because TextEmbedding::embed() requires &mut self.
 #[cfg(feature = "embeddings")]
 lazy_static! {
     static ref MODEL_CACHE: RwLock<HashMap<String, Arc<Mutex<TextEmbedding>>>> = RwLock::new(HashMap::new());
@@ -62,8 +59,6 @@ pub fn get_or_init_model(
     model: EmbeddingModel,
     cache_dir: Option<std::path::PathBuf>,
 ) -> crate::Result<Arc<Mutex<TextEmbedding>>> {
-    // Determine cache directory upfront
-    // Default to .kreuzberg/embeddings if not specified (following OCR cache pattern)
     let cache_directory = cache_dir.unwrap_or_else(|| {
         let mut path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         path.push(".kreuzberg");
@@ -73,7 +68,6 @@ pub fn get_or_init_model(
 
     let model_key = format!("{:?}_{}", model, cache_directory.display());
 
-    // Fast path: check if model is already cached
     {
         let cache = MODEL_CACHE.read().map_err(|e| crate::KreuzbergError::Plugin {
             message: format!("Failed to acquire model cache read lock: {}", e),
@@ -85,19 +79,16 @@ pub fn get_or_init_model(
         }
     }
 
-    // Slow path: initialize model and cache it
     {
         let mut cache = MODEL_CACHE.write().map_err(|e| crate::KreuzbergError::Plugin {
             message: format!("Failed to acquire model cache write lock: {}", e),
             plugin_name: "embeddings".to_string(),
         })?;
 
-        // Double-check in case another thread initialized while we waited for write lock
         if let Some(cached_model) = cache.get(&model_key) {
             return Ok(Arc::clone(cached_model));
         }
 
-        // Initialize model with cache directory
         let mut init_options = InitOptions::new(model);
         init_options = init_options.with_cache_dir(cache_directory);
 
@@ -223,10 +214,8 @@ pub fn generate_embeddings_for_chunks(
         return Ok(());
     }
 
-    // Convert EmbeddingModelType to fastembed::EmbeddingModel
     let fastembed_model = match &config.model {
         crate::core::config::EmbeddingModelType::Preset { name } => {
-            // Look up the preset and use its model
             let preset = get_preset(name).ok_or_else(|| crate::KreuzbergError::Plugin {
                 message: format!("Unknown embedding preset: {}", name),
                 plugin_name: "embeddings".to_string(),
@@ -234,22 +223,18 @@ pub fn generate_embeddings_for_chunks(
             preset.model.clone()
         }
         #[cfg(feature = "embeddings")]
-        crate::core::config::EmbeddingModelType::FastEmbed { model, .. } => {
-            // Parse the model string to fastembed model enum
-            // For now, match against known model names
-            match model.as_str() {
-                "AllMiniLML6V2Q" => fastembed::EmbeddingModel::AllMiniLML6V2Q,
-                "BGEBaseENV15" => fastembed::EmbeddingModel::BGEBaseENV15,
-                "BGELargeENV15" => fastembed::EmbeddingModel::BGELargeENV15,
-                "MultilingualE5Base" => fastembed::EmbeddingModel::MultilingualE5Base,
-                _ => {
-                    return Err(crate::KreuzbergError::Plugin {
-                        message: format!("Unknown fastembed model: {}", model),
-                        plugin_name: "embeddings".to_string(),
-                    });
-                }
+        crate::core::config::EmbeddingModelType::FastEmbed { model, .. } => match model.as_str() {
+            "AllMiniLML6V2Q" => fastembed::EmbeddingModel::AllMiniLML6V2Q,
+            "BGEBaseENV15" => fastembed::EmbeddingModel::BGEBaseENV15,
+            "BGELargeENV15" => fastembed::EmbeddingModel::BGELargeENV15,
+            "MultilingualE5Base" => fastembed::EmbeddingModel::MultilingualE5Base,
+            _ => {
+                return Err(crate::KreuzbergError::Plugin {
+                    message: format!("Unknown fastembed model: {}", model),
+                    plugin_name: "embeddings".to_string(),
+                });
             }
-        }
+        },
         crate::core::config::EmbeddingModelType::Custom { .. } => {
             return Err(crate::KreuzbergError::Plugin {
                 message: "Custom ONNX models are not yet supported for embedding generation".to_string(),
@@ -258,14 +243,10 @@ pub fn generate_embeddings_for_chunks(
         }
     };
 
-    // Get or initialize the model from cache
     let model = get_or_init_model(fastembed_model, config.cache_dir.clone())?;
 
-    // Extract text from all chunks for batch processing
     let texts: Vec<String> = chunks.iter().map(|chunk| chunk.content.clone()).collect();
 
-    // Generate embeddings in batch
-    // Lock the model for embedding generation
     let embeddings_result = {
         let mut locked_model = model.lock().map_err(|e| crate::KreuzbergError::Plugin {
             message: format!("Failed to acquire model lock: {}", e),
@@ -280,9 +261,7 @@ pub fn generate_embeddings_for_chunks(
             })?
     };
 
-    // Update chunks with generated embeddings
     for (chunk, mut embedding) in chunks.iter_mut().zip(embeddings_result.into_iter()) {
-        // Normalize embeddings if requested
         if config.normalize {
             let magnitude: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
             if magnitude > 0.0 {

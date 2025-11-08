@@ -233,7 +233,6 @@ describe("Plugin Integration Tests - Post-Processors", () => {
 				}
 			}
 
-			// Register in reverse order to test stage ordering
 			registerPostProcessor(new LateProcessor());
 			registerPostProcessor(new MiddleProcessor());
 			registerPostProcessor(new EarlyProcessor());
@@ -631,7 +630,6 @@ describe("Plugin Integration Tests - Validators", () => {
 				}
 			}
 
-			// Register in wrong order
 			registerValidator(new LowPriorityValidator());
 			registerValidator(new HighPriorityValidator());
 			registerValidator(new MediumPriorityValidator());

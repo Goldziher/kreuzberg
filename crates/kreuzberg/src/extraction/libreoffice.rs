@@ -67,7 +67,6 @@ impl TempDir {
 
 impl Drop for TempDir {
     fn drop(&mut self) {
-        // Best-effort cleanup - use blocking remove since Drop can't be async
         let path = self.path.clone();
         tokio::spawn(async move {
             let _ = fs::remove_dir_all(&path).await;
@@ -503,32 +502,25 @@ mod tests {
 
         fs::write(&input_path, b"test content").await.unwrap();
 
-        // Use a very short timeout to trigger timeout condition
         let result = convert_office_doc(&input_path, &output_dir, "pdf", 0).await;
 
-        // Should timeout and return error
         assert!(result.is_err());
 
-        // Cleanup
         let _ = fs::remove_file(&input_path).await;
         let _ = fs::remove_dir_all(&output_dir).await;
     }
 
     #[tokio::test]
     async fn test_tempdir_raii_cleanup_on_error() {
-        // Test that TempDir cleanup happens even when function returns early with error
         let temp_path = std::env::temp_dir().join(format!("test_raii_{}", uuid::Uuid::new_v4()));
 
         {
             let _guard = TempDir::new(temp_path.clone()).await.unwrap();
             assert!(temp_path.exists());
-            // Guard dropped here, cleanup scheduled
         }
 
-        // Give tokio time to run the cleanup task
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Directory should be cleaned up
         assert!(!temp_path.exists() || fs::read_dir(&temp_path).await.is_err());
     }
 }

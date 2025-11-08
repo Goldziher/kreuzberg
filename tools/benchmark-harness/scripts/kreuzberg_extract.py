@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Kreuzberg Python extraction wrapper for benchmark harness.
 
 Supports three modes:
@@ -50,7 +49,6 @@ def extract_batch_sync(file_paths: list[str]) -> list[dict[str, Any]]:
     results = batch_extract_files_sync(file_paths)  # type: ignore[arg-type]
     total_duration_ms = (time.perf_counter() - start) * 1000.0
 
-    # Calculate per-file duration (approximate)
     per_file_duration_ms = total_duration_ms / len(file_paths) if file_paths else 0
 
     return [
@@ -93,12 +91,10 @@ def main() -> None:
                 print("Error: batch mode requires at least one file", file=sys.stderr)
                 sys.exit(1)
 
-            # For single file in batch mode, return single result
             if len(file_paths) == 1:
                 results = extract_batch_sync(file_paths)
                 print(json.dumps(results[0]), end="")
             else:
-                # For multiple files, return array
                 results = extract_batch_sync(file_paths)
                 print(json.dumps(results), end="")
 

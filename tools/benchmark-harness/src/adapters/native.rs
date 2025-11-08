@@ -23,7 +23,7 @@ impl NativeAdapter {
     /// NOTE: Cache is explicitly disabled for accurate benchmarking
     pub fn new() -> Self {
         let config = ExtractionConfig {
-            use_cache: false, // Disable cache for benchmarking
+            use_cache: false,
             ..Default::default()
         };
         Self { config }
@@ -48,7 +48,6 @@ impl FrameworkAdapter for NativeAdapter {
     }
 
     fn supports_format(&self, file_type: &str) -> bool {
-        // Kreuzberg supports a wide range of formats
         matches!(
             file_type.to_lowercase().as_str(),
             "pdf"
@@ -83,13 +82,11 @@ impl FrameworkAdapter for NativeAdapter {
     async fn extract(&self, file_path: &Path, timeout: Duration) -> Result<BenchmarkResult> {
         let file_size = std::fs::metadata(file_path).map_err(Error::Io)?.len();
 
-        // Start resource monitoring
         let monitor = ResourceMonitor::new();
         monitor.start(Duration::from_millis(10)).await;
 
         let start = Instant::now();
 
-        // Execute extraction with timeout
         let extraction_result = tokio::time::timeout(timeout, extract_file(file_path, None, &self.config))
             .await
             .map_err(|_| Error::Timeout(format!("Extraction exceeded {:?}", timeout)))?
@@ -97,18 +94,15 @@ impl FrameworkAdapter for NativeAdapter {
 
         let duration = start.elapsed();
 
-        // Stop monitoring and collect samples
         let samples = monitor.stop().await;
         let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-        // Calculate throughput
         let throughput = if duration.as_secs_f64() > 0.0 {
             file_size as f64 / duration.as_secs_f64()
         } else {
             0.0
         };
 
-        // Handle extraction failure
         if let Err(e) = extraction_result {
             return Ok(BenchmarkResult {
                 framework: self.name().to_string(),
@@ -133,7 +127,6 @@ impl FrameworkAdapter for NativeAdapter {
             });
         }
 
-        // Success - return metrics with resource stats
         let metrics = PerformanceMetrics {
             peak_memory_bytes: resource_stats.peak_memory_bytes,
             avg_cpu_percent: resource_stats.avg_cpu_percent,
@@ -160,16 +153,13 @@ impl FrameworkAdapter for NativeAdapter {
     }
 
     async fn extract_batch(&self, file_paths: &[&Path], timeout: Duration) -> Result<Vec<BenchmarkResult>> {
-        // Start resource monitoring for the entire batch
         let monitor = ResourceMonitor::new();
         monitor.start(Duration::from_millis(10)).await;
 
         let start = Instant::now();
 
-        // Convert paths for batch extraction
         let paths: Vec<PathBuf> = file_paths.iter().map(|p| p.to_path_buf()).collect();
 
-        // Execute batch extraction with timeout using Kreuzberg's batch API
         let batch_result = tokio::time::timeout(timeout, batch_extract_file(paths.clone(), &self.config))
             .await
             .map_err(|_| Error::Timeout(format!("Batch extraction exceeded {:?}", timeout)))?
@@ -177,13 +167,10 @@ impl FrameworkAdapter for NativeAdapter {
 
         let total_duration = start.elapsed();
 
-        // Stop monitoring and collect samples
         let samples = monitor.stop().await;
         let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-        // Handle batch extraction failure
         if let Err(e) = batch_result {
-            // Return error results for all files
             return Ok(file_paths
                 .iter()
                 .map(|path| {
@@ -208,24 +195,18 @@ impl FrameworkAdapter for NativeAdapter {
 
         let extraction_results = batch_result.unwrap();
 
-        // Convert Kreuzberg results to BenchmarkResults
         let mut benchmark_results = Vec::new();
         for (path, _extraction_result) in paths.iter().zip(extraction_results.iter()) {
             let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
 
-            // Approximate per-file duration (total / count)
             let per_file_duration = Duration::from_secs_f64(total_duration.as_secs_f64() / paths.len() as f64);
 
-            // Approximate throughput per file
             let throughput = if per_file_duration.as_secs_f64() > 0.0 {
                 file_size as f64 / per_file_duration.as_secs_f64()
             } else {
                 0.0
             };
 
-            // Use resource stats from the overall batch
-            // In a real benchmark, you'd want per-file resource tracking,
-            // but for batch operations this gives the overall profile
             let metrics = PerformanceMetrics {
                 peak_memory_bytes: resource_stats.peak_memory_bytes,
                 avg_cpu_percent: resource_stats.avg_cpu_percent,
@@ -239,7 +220,7 @@ impl FrameworkAdapter for NativeAdapter {
                 framework: self.name().to_string(),
                 file_path: path.clone(),
                 file_size,
-                success: true, // batch_extract_file returns Vec<ExtractionResult> only on success
+                success: true,
                 error_message: None,
                 duration: per_file_duration,
                 extraction_duration: None,
@@ -255,7 +236,7 @@ impl FrameworkAdapter for NativeAdapter {
     }
 
     fn supports_batch(&self) -> bool {
-        true // Kreuzberg has native batch support via batch_extract_file()
+        true
     }
 
     fn version(&self) -> String {
@@ -263,12 +244,10 @@ impl FrameworkAdapter for NativeAdapter {
     }
 
     async fn setup(&self) -> Result<()> {
-        // No setup required for native adapter
         Ok(())
     }
 
     async fn teardown(&self) -> Result<()> {
-        // No cleanup required for native adapter
         Ok(())
     }
 }

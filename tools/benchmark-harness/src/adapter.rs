@@ -50,7 +50,6 @@ pub trait FrameworkAdapter: Send + Sync {
     /// * `Ok(Vec<BenchmarkResult>)` - Results for all files
     /// * `Err(Error)` - Batch extraction failed
     async fn extract_batch(&self, file_paths: &[&Path], timeout: Duration) -> Result<Vec<BenchmarkResult>> {
-        // Default: sequential extraction
         let mut results = Vec::new();
         for path in file_paths {
             results.push(self.extract(path, timeout).await?);

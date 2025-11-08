@@ -22,7 +22,6 @@ describe("OCR Backend Registration", () => {
 			}),
 		};
 
-		// Should not throw
 		expect(() => registerOcrBackend(mockBackend)).not.toThrow();
 	});
 
@@ -66,12 +65,8 @@ describe("OCR Backend Registration", () => {
 				metadata: {},
 				tables: [],
 			}),
-			initialize: async () => {
-				// Optional initialization
-			},
-			shutdown: async () => {
-				// Optional cleanup
-			},
+			initialize: async () => {},
+			shutdown: async () => {},
 		};
 
 		expect(() => registerOcrBackend(backendWithOptionals)).not.toThrow();
@@ -85,7 +80,6 @@ describe("OCR Backend Registration", () => {
 			name: () => "mock-ocr",
 			supportedLanguages: () => ["en"],
 			processImage: async (imageBytes: Uint8Array, language: string) => {
-				// Verify we receive Uint8Array
 				expect(imageBytes).toBeInstanceOf(Uint8Array);
 				expect(language).toBe("en");
 
@@ -99,9 +93,6 @@ describe("OCR Backend Registration", () => {
 		};
 
 		registerOcrBackend(mockBackend);
-
-		// The wrapped backend should exist now
-		// (actual extraction test would require a full integration test)
 	});
 });
 
@@ -125,7 +116,7 @@ describe("OCR Backend Protocol Interface", () => {
 			},
 		};
 
-		const testBytes = new Uint8Array([0xff, 0xd8, 0xff]); // JPEG magic bytes
+		const testBytes = new Uint8Array([0xff, 0xd8, 0xff]);
 		const result = await backend.processImage(testBytes, "en");
 
 		expect(result.content).toBe("extracted text");

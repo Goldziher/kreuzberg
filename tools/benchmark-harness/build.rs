@@ -5,7 +5,6 @@ use std::path::PathBuf;
 fn main() {
     let target = env::var("TARGET").unwrap();
 
-    // Set rpath for macOS/Linux to find pdfium library
     if target.contains("darwin") {
         println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path");
         println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path/.");
@@ -14,7 +13,6 @@ fn main() {
         println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN/.");
     }
 
-    // Find the kreuzberg crate's OUT_DIR which contains the pdfium library
     let target_dir = PathBuf::from(env::var("OUT_DIR").unwrap())
         .ancestors()
         .nth(3)
@@ -32,7 +30,6 @@ fn main() {
         "libpdfium.so"
     };
 
-    // Search for pdfium library in the kreuzberg build directories
     if let Ok(entries) = fs::read_dir(target_dir.join("build")) {
         for entry in entries.flatten() {
             if entry.file_name().to_string_lossy().starts_with("kreuzberg-") {
@@ -49,12 +46,8 @@ fn main() {
                     } else {
                         println!("cargo:warning=Copied {} to {}", pdfium_lib.display(), dest.display());
 
-                        // On macOS, fix the pdfium library reference in the benchmark-harness binary
-                        // The binary links to ./libpdfium.dylib but we need @rpath/libpdfium.dylib
                         if target.contains("darwin") {
                             let binary_path = bin_dir.join("benchmark-harness");
-                            // This runs after the binary is built via a post-build script approach
-                            // We create a marker file that the binary can check for
                             let marker = bin_dir.join(".fix_pdfium_path");
                             fs::write(&marker, binary_path.to_string_lossy().as_bytes()).ok();
                         }

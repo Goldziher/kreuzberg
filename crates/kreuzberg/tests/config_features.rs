@@ -506,12 +506,10 @@ async fn test_chunking_with_embeddings() {
         .await
         .expect("Should extract successfully");
 
-    // Verify chunks are present
     assert!(result.chunks.is_some(), "Chunks should be present");
     let chunks = result.chunks.unwrap();
     assert!(chunks.len() > 1, "Should have multiple chunks");
 
-    // Verify embeddings were generated
     println!("Metadata: {:?}", result.metadata.additional);
 
     if let Some(error) = result.metadata.additional.get("embedding_error") {
@@ -527,18 +525,15 @@ async fn test_chunking_with_embeddings() {
         &serde_json::Value::Bool(true)
     );
 
-    // Verify each chunk has an embedding with correct dimensions
     for chunk in &chunks {
         assert!(chunk.embedding.is_some(), "Each chunk should have an embedding");
         let embedding = chunk.embedding.as_ref().unwrap();
-        // Default config uses balanced preset (BGEBaseENV15) with 768 dimensions
         assert_eq!(
             embedding.len(),
             768,
             "Embedding should have 768 dimensions for balanced preset"
         );
 
-        // Verify embeddings are normalized
         let magnitude: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!(
             (magnitude - 1.0).abs() < 0.01,
@@ -578,7 +573,6 @@ async fn test_chunking_with_fast_embeddings() {
     let chunks = result.chunks.expect("Should have chunks");
     assert!(chunks.len() > 0, "Should have at least one chunk");
 
-    // Verify embeddings have correct dimensions for fast preset (384)
     for chunk in &chunks {
         let embedding = chunk.embedding.as_ref().expect("Should have embedding");
         assert_eq!(embedding.len(), 384, "Fast preset should produce 384-dim embeddings");

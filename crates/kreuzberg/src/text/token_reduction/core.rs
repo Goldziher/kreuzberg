@@ -19,7 +19,6 @@ static REPEATED_QUESTION: Lazy<Regex> =
 static REPEATED_COMMA: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"[,]{2,}").expect("Repeated comma regex pattern is valid and should compile"));
 
-// Sentence importance scoring weight constants
 /// Bonus added for sentences at the beginning or end of the document
 const SENTENCE_EDGE_POSITION_BONUS: f32 = 0.3;
 
@@ -95,9 +94,6 @@ impl TokenReducer {
     }
 
     pub fn reduce(&self, text: &str) -> String {
-        // Early return for empty strings and disabled reduction
-        // Note: Whitespace-only strings are intentionally processed through the pipeline
-        // to apply consistent normalization and whitespace handling rules
         if text.is_empty() || matches!(self.config.level, ReductionLevel::Off) {
             return text.to_string();
         }
@@ -466,9 +462,6 @@ impl TokenReducer {
 
         let mut char_freq = std::collections::HashMap::new();
         for &ch in &chars {
-            // SAFETY: to_lowercase() always returns at least one character for valid Unicode chars.
-            // If to_lowercase() returns an empty iterator, it indicates a serious Unicode processing bug
-            // in the standard library that should be exposed rather than silently handled.
             let lowercase_ch = ch
                 .to_lowercase()
                 .next()

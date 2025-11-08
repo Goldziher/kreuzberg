@@ -12,7 +12,6 @@ use kreuzberg::{KreuzbergError, Result, extract_file_sync};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
-// Simple post-processor that appends text to content
 struct AppendTextProcessor {
     name: String,
     text_to_append: String,
@@ -50,7 +49,6 @@ impl PostProcessor for AppendTextProcessor {
     }
 }
 
-// Post-processor that adds metadata
 struct MetadataAddingProcessor {
     name: String,
     initialized: AtomicBool,
@@ -95,7 +93,6 @@ impl PostProcessor for MetadataAddingProcessor {
     }
 }
 
-// Post-processor that modifies content
 struct UppercaseProcessor {
     name: String,
 }
@@ -130,7 +127,6 @@ impl PostProcessor for UppercaseProcessor {
     }
 }
 
-// Post-processor that fails
 struct FailingProcessor {
     name: String,
 }
@@ -429,8 +425,6 @@ fn test_postprocessor_error_handling() {
     let result = extract_file_sync(test_file, None, &config);
 
     // NOTE: In the current implementation, processor errors are caught and handled
-    // gracefully, so extraction still succeeds. This is by design to make the pipeline
-    // resilient to processor failures.
     assert!(result.is_ok(), "Extraction should succeed even with failing processor");
 
     {
@@ -449,7 +443,7 @@ fn test_postprocessor_invalid_name() {
     }
 
     let processor = Arc::new(AppendTextProcessor {
-        name: "invalid name".to_string(), // Contains space - invalid
+        name: "invalid name".to_string(),
         text_to_append: " [TEST]".to_string(),
         call_count: AtomicUsize::new(0),
     });
@@ -473,18 +467,15 @@ fn test_multiple_postprocessors_execution_order() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_post_processor_registry();
 
-    // Early stage - adds metadata
     let early_processor = Arc::new(MetadataAddingProcessor {
         name: "early-processor".to_string(),
         initialized: AtomicBool::new(false),
     });
 
-    // Middle stage - uppercases content
     let middle_processor = Arc::new(UppercaseProcessor {
         name: "middle-processor".to_string(),
     });
 
-    // Late stage - appends text
     let late_processor = Arc::new(AppendTextProcessor {
         name: "late-processor".to_string(),
         text_to_append: " [LATE]".to_string(),
@@ -505,7 +496,6 @@ fn test_multiple_postprocessors_execution_order() {
 
     let extraction_result = result.unwrap();
 
-    // Verify all processors ran
     assert!(extraction_result.metadata.additional.contains_key("processed_by"));
     assert!(!extraction_result.content.chars().any(|c| c.is_lowercase()));
     assert!(extraction_result.content.contains("[LATE]"));

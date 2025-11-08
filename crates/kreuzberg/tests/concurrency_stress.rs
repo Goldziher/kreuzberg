@@ -269,11 +269,6 @@ fn test_concurrent_ocr_cache_stress() {
     }
 
     let hits = cache_hit_count.load(Ordering::Relaxed);
-    // Lowered from 40 to 30, then to 20 to account for CI environments where:
-    // - Slower I/O can delay cache writes beyond the timing threshold
-    // - Concurrent execution may interleave reads/writes unpredictably
-    // - Even successful cached operations may exceed 500ms timing threshold
-    // A 40% hit rate (20/50) still validates caching works while being more realistic for CI
     assert!(
         hits >= 20,
         "At least 20/50 requests should hit cache, got {} hits",
@@ -448,13 +443,8 @@ async fn test_extraction_throughput_scales() {
         sequential_duration.as_secs_f64() / parallel_duration.as_secs_f64()
     );
 
-    // For very small tasks, parallelism overhead can exceed benefits
-    // This test verifies that parallel execution doesn't regress significantly
-    // Rather than guaranteeing speedup on all systems/loads
     let speedup = sequential_duration.as_secs_f64() / parallel_duration.as_secs_f64();
 
-    // Just verify parallel doesn't make things significantly worse (> 2x slower)
-    // Small tasks may not benefit from parallelism due to overhead
     assert!(
         speedup > 0.5,
         "Parallel execution should not be significantly slower than sequential. Sequential: {:?}, Parallel: {:?}, Speedup: {:.2}x",

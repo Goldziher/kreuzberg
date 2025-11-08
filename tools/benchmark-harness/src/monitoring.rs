@@ -46,7 +46,6 @@ impl ResourceMonitor {
     /// * `sample_interval` - How often to sample (e.g., Duration::from_millis(10))
     pub async fn start(&self, sample_interval: Duration) {
         if self.running.swap(true, Ordering::SeqCst) {
-            // Already running
             return;
         }
 
@@ -58,11 +57,9 @@ impl ResourceMonitor {
             let mut system = System::new();
             let start = std::time::Instant::now();
 
-            // Use faster refresh - only update what we need
             let refresh_kind = ProcessRefreshKind::nothing().with_memory().with_cpu();
 
             while running.load(Ordering::SeqCst) {
-                // Refresh only the specific process
                 system.refresh_processes_specifics(ProcessesToUpdate::Some(&[pid]), false, refresh_kind);
 
                 if let Some(process) = system.process(pid) {
@@ -84,7 +81,6 @@ impl ResourceMonitor {
     pub async fn stop(&self) -> Vec<ResourceSample> {
         self.running.store(false, Ordering::SeqCst);
 
-        // Give the background task a moment to finish
         tokio::time::sleep(Duration::from_millis(20)).await;
 
         let samples = self.samples.lock().await;
@@ -162,7 +158,7 @@ mod tests {
 
         assert_eq!(ResourceMonitor::calculate_percentile(values.clone(), 0.0), 1);
         assert_eq!(ResourceMonitor::calculate_percentile(values.clone(), 0.5), 5);
-        assert_eq!(ResourceMonitor::calculate_percentile(values.clone(), 0.95), 9); // p95 of 10 values = index 8
+        assert_eq!(ResourceMonitor::calculate_percentile(values.clone(), 0.95), 9);
         assert_eq!(ResourceMonitor::calculate_percentile(values, 1.0), 10);
     }
 
@@ -186,7 +182,6 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(50)).await;
         let samples = monitor.stop().await;
 
-        // Should have collected some samples
         assert!(!samples.is_empty(), "Should have collected samples");
         assert!(samples.len() >= 3, "Should have at least 3 samples");
     }

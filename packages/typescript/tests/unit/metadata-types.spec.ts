@@ -15,15 +15,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-// Import from NAPI bindings (crates/kreuzberg-node)
-// This will break at compile time if the import fails
 import type {
 	ExcelMetadata as NapiExcelMetadata,
 	HtmlMetadata as NapiHtmlMetadata,
 	Metadata as NapiMetadata,
 	PdfMetadata as NapiPdfMetadata,
 } from "../../../../crates/kreuzberg-node/metadata";
-// Import from local types (packages/typescript/src/types.ts)
 import type {
 	ArchiveMetadata,
 	EmailMetadata,
@@ -40,13 +37,6 @@ import type {
 	XmlMetadata,
 } from "../../src/types";
 
-// ============================================================================
-// Type Compatibility Tests (Compile-Time)
-// ============================================================================
-
-// These type assertions will fail to compile if types are incompatible
-
-// Test that local types are assignable to NAPI types (and vice versa)
 type AssertMetadataCompatible = Metadata extends NapiMetadata ? true : never;
 type AssertNapiMetadataCompatible = NapiMetadata extends Metadata ? true : never;
 
@@ -59,7 +49,6 @@ type AssertNapiPdfMetadataCompatible = NapiPdfMetadata extends PdfMetadata ? tru
 type AssertExcelMetadataCompatible = ExcelMetadata extends NapiExcelMetadata ? true : never;
 type AssertNapiExcelMetadataCompatible = NapiExcelMetadata extends ExcelMetadata ? true : never;
 
-// Verify all compatibility checks pass (will not compile if any fail)
 const _compatibilityTests: [
 	AssertMetadataCompatible,
 	AssertNapiMetadataCompatible,
@@ -71,11 +60,6 @@ const _compatibilityTests: [
 	AssertNapiExcelMetadataCompatible,
 ] = [true, true, true, true, true, true, true, true];
 
-// ============================================================================
-// Type Structure Tests (Compile-Time)
-// ============================================================================
-
-// Test that Metadata has all required format-specific fields
 type AssertMetadataHasPdf = "pdf" extends keyof Metadata ? true : never;
 type AssertMetadataHasExcel = "excel" extends keyof Metadata ? true : never;
 type AssertMetadataHasEmail = "email" extends keyof Metadata ? true : never;
@@ -102,7 +86,6 @@ const _metadataStructureTests: [
 	AssertMetadataHasImagePreprocessing,
 ] = [true, true, true, true, true, true, true, true, true, true, true];
 
-// Test that HtmlMetadata has all required fields
 type AssertHtmlHasTitle = "title" extends keyof HtmlMetadata ? true : never;
 type AssertHtmlHasDescription = "description" extends keyof HtmlMetadata ? true : never;
 type AssertHtmlHasKeywords = "keywords" extends keyof HtmlMetadata ? true : never;
@@ -129,14 +112,9 @@ const _htmlMetadataStructureTests: [
 	AssertHtmlHasTwitterTitle,
 ] = [true, true, true, true, true, true, true, true, true, true, true];
 
-// ============================================================================
-// Runtime Tests
-// ============================================================================
-
 describe("Metadata Types", () => {
 	describe("Type Exports", () => {
 		it("should export Metadata type from local package", () => {
-			// This will fail at compile time if Metadata is not exported
 			const metadata: Metadata = {
 				language: "en",
 				date: "2025-01-01",
@@ -145,7 +123,6 @@ describe("Metadata Types", () => {
 		});
 
 		it("should export HtmlMetadata type from local package", () => {
-			// This will fail at compile time if HtmlMetadata is not exported
 			const htmlMetadata: HtmlMetadata = {
 				title: "Test Page",
 				description: "Test description",
@@ -158,7 +135,6 @@ describe("Metadata Types", () => {
 		});
 
 		it("should export all metadata types from local package", () => {
-			// This will fail at compile time if any type is missing
 			const pdf: PdfMetadata = { title: "Test", pageCount: 10 };
 			const excel: ExcelMetadata = { sheetCount: 1, sheetNames: ["Sheet1"] };
 			const email: EmailMetadata = { toEmails: [], ccEmails: [], bccEmails: [], attachments: [] };
@@ -204,7 +180,6 @@ describe("Metadata Types", () => {
 				},
 			};
 
-			// TypeScript will ensure html field exists and has correct type
 			expect(metadata.html).toBeDefined();
 			expect(metadata.html?.title).toBe("Test");
 		});
@@ -234,7 +209,6 @@ describe("Metadata Types", () => {
 				linkAlternate: "https://example.com/alt",
 			};
 
-			// Verify all fields are accessible
 			expect(html.title).toBe("Title");
 			expect(html.description).toBe("Description");
 			expect(html.keywords).toBe("keywords");
@@ -288,7 +262,6 @@ describe("Metadata Types", () => {
 
 	describe("NAPI Bindings Compatibility", () => {
 		it("should import Metadata from NAPI bindings", () => {
-			// This will fail at compile time if NAPI types are not exported
 			const napiMetadata: NapiMetadata = {
 				language: "en",
 			};
@@ -296,7 +269,6 @@ describe("Metadata Types", () => {
 		});
 
 		it("should import HtmlMetadata from NAPI bindings", () => {
-			// This will fail at compile time if NAPI HtmlMetadata is not exported
 			const napiHtml: NapiHtmlMetadata = {
 				title: "Test",
 			};
@@ -309,7 +281,6 @@ describe("Metadata Types", () => {
 				html: { title: "Test" },
 			};
 
-			// This will fail at compile time if types are incompatible
 			const napiMetadata: NapiMetadata = localMetadata;
 			expect(napiMetadata).toBeDefined();
 		});
@@ -320,7 +291,6 @@ describe("Metadata Types", () => {
 				html: { title: "Test" },
 			};
 
-			// This will fail at compile time if types are incompatible
 			const localMetadata: Metadata = napiMetadata;
 			expect(localMetadata).toBeDefined();
 		});

@@ -281,18 +281,16 @@ describe("Archive Integration Tests", () => {
 		it("should handle corrupted TAR gracefully", async () => {
 			const corruptedTar = new Uint8Array(512);
 			corruptedTar.fill(0xff);
-			corruptedTar[0] = 0x66; // 'f'
-			corruptedTar[1] = 0x69; // 'i'
-			corruptedTar[2] = 0x6c; // 'l'
-			corruptedTar[3] = 0x65; // 'e'
+			corruptedTar[0] = 0x66;
+			corruptedTar[1] = 0x69;
+			corruptedTar[2] = 0x6c;
+			corruptedTar[3] = 0x65;
 			corruptedTar[4] = 0x00;
 
-			// Corrupted TAR should error or handle gracefully
 			try {
 				const result = await extractBytes(corruptedTar, "application/x-tar");
 				expect(result).toBeDefined();
 			} catch (error) {
-				// Error is expected for corrupted TAR
 				expect(error).toBeDefined();
 			}
 		});

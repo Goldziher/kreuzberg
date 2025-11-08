@@ -28,9 +28,7 @@ describe("Validator Plugin System", () => {
 				return "always_pass";
 			}
 
-			validate(_result: ExtractionResult): void {
-				// Validation passes
-			}
+			validate(_result: ExtractionResult): void {}
 		}
 
 		registerValidator(new AlwaysPassValidator());
@@ -90,7 +88,6 @@ describe("Validator Plugin System", () => {
 			}
 		}
 
-		// Register in reverse order
 		registerValidator(new LowPriorityValidator());
 		registerValidator(new HighPriorityValidator());
 
@@ -113,7 +110,6 @@ describe("Validator Plugin System", () => {
 		registerValidator(new FailValidator());
 		unregisterValidator("fail_validator");
 
-		// Should not throw because validator was unregistered
 		const result = await extractBytes(Buffer.from("Test"), "text/plain", null);
 		expect(result.content).toBe("Test");
 	});
@@ -132,7 +128,6 @@ describe("Validator Plugin System", () => {
 		registerValidator(new FailValidator());
 		clearValidators();
 
-		// Should not throw because validators were cleared
 		const result = await extractBytes(Buffer.from("Test"), "text/plain", null);
 		expect(result.content).toBe("Test");
 	});
@@ -210,15 +205,12 @@ describe("Validator Plugin System", () => {
 	});
 
 	it("should handle invalid JSON in validator wrapper gracefully", async () => {
-		// This tests the edge case at line 671-672 in src/index.ts
-		// where the validator wrapper receives invalid/undefined JSON
 		class TestValidator implements ValidatorProtocol {
 			name(): string {
 				return "test_validator";
 			}
 
 			validate(result: ExtractionResult): void {
-				// Validation logic
 				expect(result).toBeDefined();
 				expect(result.content).toBeDefined();
 			}
@@ -226,7 +218,6 @@ describe("Validator Plugin System", () => {
 
 		registerValidator(new TestValidator());
 
-		// Normal execution should work fine
 		const result = await extractBytes(Buffer.from("Test content"), "text/plain", null);
 		expect(result.content).toBe("Test content");
 	});

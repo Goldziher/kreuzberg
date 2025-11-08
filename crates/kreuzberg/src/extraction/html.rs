@@ -33,7 +33,6 @@ use html_to_markdown_rs::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-// Re-export library types for user configuration
 pub use html_to_markdown_rs::{
     CodeBlockStyle, HeadingStyle, HighlightStyle, ListIndentType, NewlineStyle, PreprocessingOptions,
     PreprocessingPreset, WhitespaceMode,
@@ -174,54 +173,43 @@ pub fn process_html(
 ///
 /// Returns a tuple of (HtmlMetadata, content_without_frontmatter).
 pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, String)> {
-    // Check if markdown starts with YAML frontmatter delimiter
     if !markdown.starts_with("---\n") && !markdown.starts_with("---\r\n") {
         return Ok((None, markdown.to_string()));
     }
 
-    // Find the closing delimiter
     let after_opening = if let Some(stripped) = markdown.strip_prefix("---\r\n") {
         stripped
     } else if let Some(stripped) = markdown.strip_prefix("---\n") {
         stripped
     } else {
-        // Shouldn't happen due to check above, but handle it gracefully
         return Ok((None, markdown.to_string()));
     };
 
-    // Check for closing delimiter at the start (empty frontmatter) or after content
     let (yaml_content, remaining_content) = if after_opening.starts_with("---\n") {
-        // Empty frontmatter: ---\n---\n
         let content = after_opening.strip_prefix("---\n").unwrap_or(after_opening);
         ("", content)
     } else if after_opening.starts_with("---\r\n") {
-        // Empty frontmatter with CRLF: ---\r\n---\r\n
         let content = after_opening.strip_prefix("---\r\n").unwrap_or(after_opening);
         ("", content)
     } else if let Some(pos) = after_opening
         .find("\n---\n")
         .or_else(|| after_opening.find("\r\n---\r\n"))
     {
-        // Frontmatter with content
         let yaml = &after_opening[..pos];
         let content_start = pos + if after_opening[pos..].starts_with("\r\n") { 7 } else { 5 };
         let content = &after_opening[content_start..];
         (yaml, content)
     } else {
-        // No closing delimiter found, treat as no frontmatter
         return Ok((None, markdown.to_string()));
     };
 
-    // If yaml_content is empty, return None for metadata
     if yaml_content.is_empty() {
         return Ok((None, remaining_content.to_string()));
     }
 
-    // Parse YAML using serde_yaml_ng
     let yaml_value: serde_json::Value = serde_yaml_ng::from_str(yaml_content)
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse YAML frontmatter: {}", e)))?;
 
-    // Extract metadata fields
     let mut metadata = HtmlMetadata::default();
 
     if let serde_json::Value::Object(mapping) = yaml_value {
@@ -253,13 +241,12 @@ pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, Stri
                     "link-author" => metadata.link_author = Some(value_str),
                     "link-license" => metadata.link_license = Some(value_str),
                     "link-alternate" => metadata.link_alternate = Some(value_str),
-                    _ => {} // Ignore unknown fields
+                    _ => {}
                 }
             }
         }
     }
 
-    // Check if any metadata was extracted
     let has_metadata = metadata.title.is_some()
         || metadata.description.is_some()
         || metadata.keywords.is_some()
@@ -456,7 +443,6 @@ mod tests {
         let markdown = "---\ntitle: Test\n\nNo closing delimiter";
         let (metadata, content) = parse_html_metadata(markdown).unwrap();
 
-        // Should treat as no frontmatter when closing delimiter is missing
         assert!(metadata.is_none());
         assert_eq!(content, markdown);
     }

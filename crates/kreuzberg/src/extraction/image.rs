@@ -100,7 +100,6 @@ mod tests {
     use image::{ImageBuffer, ImageFormat, Rgb, RgbImage};
     use std::io::Cursor;
 
-    // Helper function to create a test image in a specific format
     fn create_test_image(width: u32, height: u32, format: ImageFormat) -> Vec<u8> {
         let img: RgbImage = ImageBuffer::from_fn(width, height, |x, y| {
             let r = ((x as f32 / width as f32) * 255.0) as u8;
@@ -114,10 +113,6 @@ mod tests {
         img.write_to(&mut cursor, format).unwrap();
         bytes
     }
-
-    // ======================
-    // Image Format Tests (7)
-    // ======================
 
     #[test]
     fn test_extract_png_image_returns_correct_metadata() {
@@ -193,7 +188,6 @@ mod tests {
 
     #[test]
     fn test_extract_image_extreme_aspect_ratio() {
-        // Test extremely wide image (panoramic)
         let bytes = create_test_image(1000, 10, ImageFormat::Png);
         let result = extract_image_metadata(&bytes);
 
@@ -201,12 +195,8 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 1000);
         assert_eq!(metadata.height, 10);
-        assert!(metadata.width / metadata.height >= 100); // Very wide aspect ratio
+        assert!(metadata.width / metadata.height >= 100);
     }
-
-    // ===========================
-    // Metadata Extraction Tests (4)
-    // ===========================
 
     #[test]
     fn test_extract_image_dimensions_correctly() {
@@ -233,7 +223,6 @@ mod tests {
 
     #[test]
     fn test_extract_image_without_exif_returns_empty_map() {
-        // PNG created programmatically won't have EXIF data
         let bytes = create_test_image(100, 100, ImageFormat::Png);
         let result = extract_image_metadata(&bytes);
 
@@ -244,20 +233,13 @@ mod tests {
 
     #[test]
     fn test_extract_exif_data_from_jpeg_with_exif() {
-        // Create a JPEG with minimal EXIF data
-        // Note: Programmatically created JPEGs won't have EXIF, so we test the empty case
         let bytes = create_test_image(100, 100, ImageFormat::Jpeg);
         let result = extract_image_metadata(&bytes);
 
         assert!(result.is_ok());
         let metadata = result.unwrap();
-        // EXIF map should exist (even if empty) for JPEG
         assert_eq!(metadata.exif_data.len(), 0);
     }
-
-    // ======================
-    // Error Handling Tests (4)
-    // ======================
 
     #[test]
     fn test_extract_image_metadata_invalid_returns_error() {
@@ -268,9 +250,7 @@ mod tests {
 
     #[test]
     fn test_extract_image_corrupted_data_returns_error() {
-        // Start with valid PNG header but corrupt the rest
         let mut bytes = create_test_image(100, 100, ImageFormat::Png);
-        // Corrupt the middle of the image data
         if bytes.len() > 50 {
             for byte in bytes.iter_mut().take(50).skip(20) {
                 *byte = 0xFF;
@@ -278,8 +258,6 @@ mod tests {
         }
 
         let result = extract_image_metadata(&bytes);
-        // This might still succeed with partial data, or fail depending on corruption
-        // The important thing is we handle it gracefully
         assert!(result.is_ok() || result.is_err());
     }
 
@@ -292,19 +270,10 @@ mod tests {
 
     #[test]
     fn test_extract_image_unsupported_format_returns_error() {
-        // Create bytes that look like an image header but aren't a supported format
-        let unsupported_bytes = vec![
-            0x00, 0x00, 0x00, 0x0C, // Fake header
-            0x6A, 0x50, 0x20, 0x20, // "jP  "
-            0x0D, 0x0A, 0x87, 0x0A, // CR LF signature
-        ];
+        let unsupported_bytes = vec![0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A];
         let result = extract_image_metadata(&unsupported_bytes);
         assert!(result.is_err());
     }
-
-    // ================
-    // Edge Cases Tests (3)
-    // ================
 
     #[test]
     fn test_extract_very_small_image_1x1_pixel() {
@@ -320,7 +289,6 @@ mod tests {
 
     #[test]
     fn test_extract_large_image_dimensions() {
-        // Test with a reasonably large image (not too large to slow down tests)
         let bytes = create_test_image(2048, 1536, ImageFormat::Png);
         let result = extract_image_metadata(&bytes);
 
@@ -332,7 +300,6 @@ mod tests {
 
     #[test]
     fn test_extract_image_with_no_metadata_has_empty_exif() {
-        // Programmatically created images won't have EXIF metadata
         let bytes = create_test_image(100, 100, ImageFormat::Png);
         let result = extract_image_metadata(&bytes);
 
@@ -340,10 +307,6 @@ mod tests {
         let metadata = result.unwrap();
         assert!(metadata.exif_data.is_empty());
     }
-
-    // ============================
-    // Additional Coverage Tests (3)
-    // ============================
 
     #[test]
     fn test_extract_exif_data_returns_empty_map_for_non_jpeg() {
@@ -361,7 +324,7 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 400);
         assert_eq!(metadata.height, 800);
-        assert!(metadata.height > metadata.width); // Portrait orientation
+        assert!(metadata.height > metadata.width);
     }
 
     #[test]
@@ -373,12 +336,8 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 800);
         assert_eq!(metadata.height, 400);
-        assert!(metadata.width > metadata.height); // Landscape orientation
+        assert!(metadata.width > metadata.height);
     }
-
-    // ================================
-    // Format-Specific Edge Cases (2)
-    // ================================
 
     #[test]
     fn test_extract_square_image_equal_dimensions() {
@@ -389,7 +348,7 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 512);
         assert_eq!(metadata.height, 512);
-        assert_eq!(metadata.width, metadata.height); // Square
+        assert_eq!(metadata.width, metadata.height);
     }
 
     #[test]
@@ -402,7 +361,6 @@ mod tests {
         let jpeg_meta = extract_image_metadata(&jpeg_bytes).unwrap();
         let webp_meta = extract_image_metadata(&webp_bytes).unwrap();
 
-        // Format strings should match the Debug representation
         assert_eq!(png_meta.format, "Png");
         assert_eq!(jpeg_meta.format, "Jpeg");
         assert_eq!(webp_meta.format, "WebP");

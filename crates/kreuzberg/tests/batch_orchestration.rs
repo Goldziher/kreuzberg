@@ -448,8 +448,6 @@ async fn test_batch_scales_with_cpu_count() {
     );
 
     if cpu_count > 1 {
-        // In CI environments with limited resources, parallel execution may have overhead
-        // that makes it slower. Allow up to 5x slower to account for noisy CI environments.
         let slowdown_ratio = duration_full.as_secs_f64() / duration_1.as_secs_f64();
         assert!(
             slowdown_ratio <= 5.0,

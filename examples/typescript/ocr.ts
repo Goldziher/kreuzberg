@@ -7,12 +7,11 @@
 import { ExtractionConfig, extractFile, extractFileSync, OcrConfig, TesseractConfig } from "@goldziher/kreuzberg";
 
 async function main() {
-	// Basic OCR extraction
 	console.log("=== Basic OCR ===");
 	const config = new ExtractionConfig({
 		ocr: new OcrConfig({
-			backend: "tesseract", // Default backend
-			language: "eng", // English
+			backend: "tesseract",
+			language: "eng",
 		}),
 	});
 
@@ -20,32 +19,29 @@ async function main() {
 	console.log(`Extracted: ${result.content.length} characters`);
 	console.log(`First 200 chars: ${result.content.substring(0, 200)}...`);
 
-	// OCR with custom language
 	console.log("\n=== OCR with German ===");
 	const germanConfig = new ExtractionConfig({
 		ocr: new OcrConfig({
 			backend: "tesseract",
-			language: "deu", // German
+			language: "deu",
 		}),
 	});
 
 	const germanResult = extractFileSync("german_document.pdf", null, germanConfig);
 	console.log(`Extracted German text: ${germanResult.content.length} characters`);
 
-	// Force OCR even for text-based PDFs
 	console.log("\n=== Force OCR ===");
 	const forceConfig = new ExtractionConfig({
 		ocr: new OcrConfig({
 			backend: "tesseract",
 			language: "eng",
 		}),
-		forceOcr: true, // Extract images and run OCR even if PDF has text
+		forceOcr: true,
 	});
 
 	const forcedResult = extractFileSync("mixed_document.pdf", null, forceConfig);
 	console.log(`Forced OCR extraction: ${forcedResult.content.length} characters`);
 
-	// OCR from image
 	console.log("\n=== OCR from Image ===");
 	const imageConfig = new ExtractionConfig({
 		ocr: new OcrConfig({
@@ -57,13 +53,11 @@ async function main() {
 	const imageResult = extractFileSync("screenshot.png", null, imageConfig);
 	console.log(`Extracted from image: ${imageResult.content.length} characters`);
 
-	// Check OCR metadata
 	if (imageResult.metadata.ocr) {
 		console.log(`OCR Language: ${imageResult.metadata.ocr.language}`);
 		console.log(`Table Count: ${imageResult.metadata.ocr.tableCount}`);
 	}
 
-	// Extract tables from OCR
 	console.log("\n=== OCR Table Extraction ===");
 	const tableConfig = new ExtractionConfig({
 		ocr: new OcrConfig({
@@ -85,19 +79,17 @@ async function main() {
 		console.log(`  Markdown:\n${table.markdown.substring(0, 200)}...`);
 	});
 
-	// Async OCR extraction
 	console.log("\n=== Async OCR ===");
 	const asyncResult = await extractFile("scanned_document.pdf", null, config);
 	console.log(`Async OCR extracted: ${asyncResult.content.length} characters`);
 
-	// OCR with custom PSM mode
 	console.log("\n=== Custom PSM Mode ===");
 	const psmConfig = new ExtractionConfig({
 		ocr: new OcrConfig({
 			backend: "tesseract",
 			language: "eng",
 			tesseractConfig: new TesseractConfig({
-				psm: 6, // Assume uniform block of text
+				psm: 6,
 			}),
 		}),
 	});

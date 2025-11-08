@@ -5,7 +5,6 @@
 async fn test_fastembed_initialization() {
     use fastembed::TextEmbedding;
 
-    // Test initializing the smallest/fastest model
     let model = TextEmbedding::try_new(Default::default());
 
     assert!(model.is_ok(), "Failed to initialize fastembed model: {:?}", model.err());
@@ -16,10 +15,8 @@ async fn test_fastembed_initialization() {
 async fn test_fastembed_embedding_generation() {
     use fastembed::TextEmbedding;
 
-    // Initialize model
     let mut model = TextEmbedding::try_new(Default::default()).expect("Failed to initialize model");
 
-    // Generate embeddings for sample texts
     let texts = vec![
         "Hello world, this is a test.",
         "Fastembed is a Rust embedding library.",
@@ -32,11 +29,9 @@ async fn test_fastembed_embedding_generation() {
     let embeddings = result.unwrap();
     assert_eq!(embeddings.len(), 3, "Expected 3 embeddings");
 
-    // Verify embedding dimensions (AllMiniLML6V2Q produces 384-dim embeddings)
     for (i, embedding) in embeddings.iter().enumerate() {
         assert_eq!(embedding.len(), 384, "Embedding {} has wrong dimensions", i);
 
-        // Verify embeddings are not all zeros
         let sum: f32 = embedding.iter().sum();
         assert!(sum.abs() > 0.0001, "Embedding {} appears to be all zeros", i);
     }
@@ -54,7 +49,6 @@ async fn test_fastembed_batch_processing() {
 
     let mut model = TextEmbedding::try_new(Default::default()).expect("Failed to initialize model");
 
-    // Test with a larger batch
     let texts: Vec<String> = (0..50)
         .map(|i| {
             format!(
@@ -65,7 +59,7 @@ async fn test_fastembed_batch_processing() {
         .collect();
 
     let start = std::time::Instant::now();
-    let result = model.embed(texts.clone(), Some(32)); // batch_size=32
+    let result = model.embed(texts.clone(), Some(32));
     let duration = start.elapsed();
 
     assert!(result.is_ok(), "Batch embedding failed: {:?}", result.err());
@@ -115,7 +109,6 @@ async fn test_fastembed_different_models() {
             }
             Err(e) => {
                 println!("  ⚠ Failed to initialize {}: {:?}", description, e);
-                // Don't fail the test - model download might fail in CI
             }
         }
     }
@@ -126,26 +119,18 @@ async fn test_fastembed_different_models() {
 async fn test_fastembed_error_handling() {
     use fastembed::TextEmbedding;
 
-    // Test empty input
     let mut model = TextEmbedding::try_new(Default::default()).expect("Failed to initialize model");
 
     let empty_texts: Vec<String> = vec![];
     let result = model.embed(empty_texts, None);
 
-    // fastembed should handle empty input gracefully
     match result {
         Ok(embeddings) => assert_eq!(embeddings.len(), 0, "Empty input should produce empty output"),
         Err(_) => {
-            // Also acceptable if it returns an error
             println!("  ℹ fastembed returns error for empty input (acceptable)");
         }
     }
 }
-
-// ========================================================================================
-// KREUZBERG WRAPPER FUNCTION TESTS
-// The following tests verify the generate_embeddings_for_chunks() wrapper function
-// ========================================================================================
 
 #[cfg(feature = "embeddings")]
 #[tokio::test]
@@ -154,7 +139,6 @@ async fn test_generate_embeddings_for_chunks_basic() {
     use kreuzberg::embeddings::generate_embeddings_for_chunks;
     use kreuzberg::types::{Chunk, ChunkMetadata};
 
-    // Create test chunks
     let mut chunks = vec![
         Chunk {
             content: "Hello world, this is the first chunk.".to_string(),
@@ -191,7 +175,6 @@ async fn test_generate_embeddings_for_chunks_basic() {
         },
     ];
 
-    // Use "fast" preset (AllMiniLML6V2Q, 384 dimensions)
     let config = EmbeddingConfig {
         model: EmbeddingModelType::Preset {
             name: "fast".to_string(),
@@ -202,18 +185,15 @@ async fn test_generate_embeddings_for_chunks_basic() {
         cache_dir: None,
     };
 
-    // Generate embeddings
     let result = generate_embeddings_for_chunks(&mut chunks, &config);
     assert!(result.is_ok(), "Failed to generate embeddings: {:?}", result.err());
 
-    // Verify all chunks have embeddings
     for (i, chunk) in chunks.iter().enumerate() {
         assert!(chunk.embedding.is_some(), "Chunk {} missing embedding", i);
 
         let embedding = chunk.embedding.as_ref().unwrap();
         assert_eq!(embedding.len(), 384, "Chunk {} has wrong embedding dimensions", i);
 
-        // Verify embeddings are not all zeros
         let sum: f32 = embedding.iter().sum();
         assert!(sum.abs() > 0.0001, "Chunk {} embedding appears to be all zeros", i);
     }
@@ -230,7 +210,6 @@ async fn test_generate_embeddings_for_chunks_normalization() {
 
     let test_text = "This is a test sentence for normalization testing.";
 
-    // Test with normalization disabled
     let mut chunks_no_norm = vec![Chunk {
         content: test_text.to_string(),
         embedding: None,
@@ -256,7 +235,6 @@ async fn test_generate_embeddings_for_chunks_normalization() {
     generate_embeddings_for_chunks(&mut chunks_no_norm, &config_no_norm)
         .expect("Failed to generate non-normalized embeddings");
 
-    // Test with normalization enabled
     let mut chunks_norm = vec![Chunk {
         content: test_text.to_string(),
         embedding: None,
@@ -281,24 +259,18 @@ async fn test_generate_embeddings_for_chunks_normalization() {
 
     generate_embeddings_for_chunks(&mut chunks_norm, &config_norm).expect("Failed to generate normalized embeddings");
 
-    // Verify normalization
     let embedding_no_norm = chunks_no_norm[0].embedding.as_ref().unwrap();
     let embedding_norm = chunks_norm[0].embedding.as_ref().unwrap();
 
-    // Calculate magnitudes
     let magnitude_no_norm: f32 = embedding_no_norm.iter().map(|x| x * x).sum::<f32>().sqrt();
     let magnitude_norm: f32 = embedding_norm.iter().map(|x| x * x).sum::<f32>().sqrt();
 
-    // Note: The "fast" model (fastembed) always returns normalized embeddings
-    // regardless of the normalize flag, so both should be close to 1.0
-    // We just verify that both are valid embeddings with reasonable magnitudes
     assert!(
         magnitude_no_norm > 0.9 && magnitude_no_norm < 1.1,
         "Embedding magnitude should be reasonable (got {})",
         magnitude_no_norm
     );
 
-    // Normalized should have magnitude ≈ 1.0
     assert!(
         (magnitude_norm - 1.0).abs() < 0.001,
         "Normalized embedding should have unit magnitude (got {})",
@@ -318,7 +290,6 @@ async fn test_generate_embeddings_for_chunks_empty_input() {
     use kreuzberg::embeddings::generate_embeddings_for_chunks;
     use kreuzberg::types::Chunk;
 
-    // Test with empty chunks array
     let mut empty_chunks: Vec<Chunk> = vec![];
 
     let config = EmbeddingConfig {
@@ -331,7 +302,6 @@ async fn test_generate_embeddings_for_chunks_empty_input() {
         cache_dir: None,
     };
 
-    // Should handle empty input gracefully
     let result = generate_embeddings_for_chunks(&mut empty_chunks, &config);
     assert!(result.is_ok(), "Empty input should be handled gracefully");
 
@@ -345,7 +315,6 @@ async fn test_generate_embeddings_for_chunks_model_caching() {
     use kreuzberg::embeddings::generate_embeddings_for_chunks;
     use kreuzberg::types::{Chunk, ChunkMetadata};
 
-    // First call - should initialize model
     let mut chunks1 = vec![Chunk {
         content: "First batch of text.".to_string(),
         embedding: None,
@@ -372,7 +341,6 @@ async fn test_generate_embeddings_for_chunks_model_caching() {
     generate_embeddings_for_chunks(&mut chunks1, &config).expect("First call failed");
     let duration1 = start1.elapsed();
 
-    // Second call - should use cached model (much faster)
     let mut chunks2 = vec![Chunk {
         content: "Second batch of text.".to_string(),
         embedding: None,
@@ -389,14 +357,11 @@ async fn test_generate_embeddings_for_chunks_model_caching() {
     generate_embeddings_for_chunks(&mut chunks2, &config).expect("Second call failed");
     let duration2 = start2.elapsed();
 
-    // Second call should be significantly faster (at least 2x)
-    // Note: This is a heuristic - model initialization takes ~100ms, embedding ~10ms
     println!(
         "✓ Model caching works: first call={:?}, second call={:?}",
         duration1, duration2
     );
 
-    // Both should have valid embeddings
     assert!(chunks1[0].embedding.is_some());
     assert!(chunks2[0].embedding.is_some());
 }
@@ -430,7 +395,6 @@ async fn test_generate_embeddings_for_chunks_invalid_preset() {
         cache_dir: None,
     };
 
-    // Should return error for unknown preset
     let result = generate_embeddings_for_chunks(&mut chunks, &config);
     assert!(result.is_err(), "Should return error for unknown preset");
 
@@ -475,7 +439,6 @@ async fn test_generate_embeddings_for_chunks_unknown_model() {
         cache_dir: None,
     };
 
-    // Should return error for unknown model string
     let result = generate_embeddings_for_chunks(&mut chunks, &config);
     assert!(result.is_err(), "Should return error for unknown model");
 
@@ -520,7 +483,6 @@ async fn test_generate_embeddings_for_chunks_custom_model_not_supported() {
         cache_dir: None,
     };
 
-    // Should return error for custom models (not yet supported)
     let result = generate_embeddings_for_chunks(&mut chunks, &config);
     assert!(result.is_err(), "Should return error for custom models");
 
@@ -542,7 +504,6 @@ async fn test_generate_embeddings_for_chunks_batch_size() {
     use kreuzberg::embeddings::generate_embeddings_for_chunks;
     use kreuzberg::types::{Chunk, ChunkMetadata};
 
-    // Create 10 chunks
     let mut chunks: Vec<Chunk> = (0..10)
         .map(|i| Chunk {
             content: format!("This is test chunk number {}.", i),
@@ -557,8 +518,6 @@ async fn test_generate_embeddings_for_chunks_batch_size() {
         })
         .collect();
 
-    // Note: The "fast" model uses dynamic quantization which doesn't support batching
-    // Use batch_size=10 (same as chunk count) to process all chunks at once
     let config = EmbeddingConfig {
         model: EmbeddingModelType::Preset {
             name: "fast".to_string(),
@@ -572,7 +531,6 @@ async fn test_generate_embeddings_for_chunks_batch_size() {
     let result = generate_embeddings_for_chunks(&mut chunks, &config);
     assert!(result.is_ok(), "Processing failed: {:?}", result.err());
 
-    // Verify all chunks have embeddings
     for (i, chunk) in chunks.iter().enumerate() {
         assert!(
             chunk.embedding.is_some(),
@@ -597,13 +555,11 @@ async fn test_generate_embeddings_chunking_integration() {
     use kreuzberg::core::config::{EmbeddingConfig, EmbeddingModelType};
     use kreuzberg::embeddings::generate_embeddings_for_chunks;
 
-    // Create a longer text document
     let text = "This is a test document. It has multiple sentences. \
                 Each sentence should be chunked appropriately. \
                 The chunking system should create overlapping chunks. \
                 Finally, we will generate embeddings for each chunk.";
 
-    // First, chunk the text
     let chunking_config = ChunkingConfig {
         max_characters: 50,
         overlap: 10,
@@ -618,7 +574,6 @@ async fn test_generate_embeddings_chunking_integration() {
     );
     println!("✓ Created {} chunks from text", chunking_result.chunks.len());
 
-    // Now generate embeddings for the chunks
     let embedding_config = EmbeddingConfig {
         model: EmbeddingModelType::Preset {
             name: "fast".to_string(),
@@ -632,14 +587,12 @@ async fn test_generate_embeddings_chunking_integration() {
     let result = generate_embeddings_for_chunks(&mut chunking_result.chunks, &embedding_config);
     assert!(result.is_ok(), "Embedding generation failed: {:?}", result.err());
 
-    // Verify all chunks have normalized embeddings
     for (i, chunk) in chunking_result.chunks.iter().enumerate() {
         assert!(chunk.embedding.is_some(), "Chunk {} missing embedding", i);
 
         let embedding = chunk.embedding.as_ref().unwrap();
         assert_eq!(embedding.len(), 384, "Chunk {} has wrong embedding dimensions", i);
 
-        // Verify normalization
         let magnitude: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!(
             (magnitude - 1.0).abs() < 0.001,

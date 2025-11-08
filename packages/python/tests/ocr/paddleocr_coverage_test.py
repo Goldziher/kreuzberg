@@ -48,12 +48,10 @@ def test_paddleocr_initialize_idempotent() -> None:
         backend.initialize()
         first_ocr = backend._ocr
 
-        # Second call should return early
         backend.initialize()
         second_ocr = backend._ocr
 
         assert first_ocr is second_ocr
-        # PaddleOCR should only be constructed once
         paddleocr.PaddleOCR.assert_called_once()
 
 
@@ -80,7 +78,6 @@ def test_paddleocr_process_image_reader_none_after_init() -> None:
 
     backend = PaddleOCRBackend(lang="en", use_gpu=False)
 
-    # Mock initialize to succeed but leave _ocr as None
     with patch.object(backend, "initialize"):
         backend._ocr = None
 
@@ -98,7 +95,6 @@ def test_paddleocr_process_file_reader_none_after_init() -> None:
 
     backend = PaddleOCRBackend(lang="en", use_gpu=False)
 
-    # Mock initialize to succeed but leave _ocr as None
     with patch.object(backend, "initialize"):
         backend._ocr = None
 
@@ -116,7 +112,6 @@ def test_paddleocr_process_image_unsupported_language() -> None:
 
     backend = PaddleOCRBackend(lang="en", use_gpu=False)
 
-    # Set _ocr to bypass initialization
     backend._ocr = Mock()
 
     with pytest.raises(ValidationError) as exc_info:
@@ -151,7 +146,6 @@ def test_paddleocr_process_paddleocr_result_normal() -> None:
     """Test _process_paddleocr_result with normal PaddleOCR output."""
     from kreuzberg.ocr.paddleocr import PaddleOCRBackend
 
-    # PaddleOCR format: [[[box_coords], (text, confidence)], ...]
     result = [
         [
             [[[0, 0], [100, 0], [100, 30], [0, 30]], ("Hello", 0.95)],
@@ -173,7 +167,7 @@ def test_paddleocr_process_paddleocr_result_empty_text() -> None:
     result = [
         [
             [[[0, 0], [100, 0], [100, 30], [0, 30]], ("Hello", 0.95)],
-            [[[0, 40], [100, 40], [100, 70], [0, 70]], ("", 0.90)],  # Empty text
+            [[[0, 40], [100, 40], [100, 70], [0, 70]], ("", 0.90)],
             [[[0, 80], [100, 80], [100, 110], [0, 110]], ("World", 0.88)],
         ]
     ]
@@ -181,7 +175,6 @@ def test_paddleocr_process_paddleocr_result_empty_text() -> None:
     content, confidence, text_regions = PaddleOCRBackend._process_paddleocr_result(result)
 
     assert content == "Hello\nWorld"
-    # Only non-empty text contributes to confidence
     assert confidence == pytest.approx((0.95 + 0.88) / 2)
     assert text_regions == 2
 
@@ -190,7 +183,6 @@ def test_paddleocr_process_paddleocr_result_invalid_structure() -> None:
     """Test _process_paddleocr_result with invalid line structure (not list/tuple)."""
     from kreuzberg.ocr.paddleocr import PaddleOCRBackend
 
-    # Invalid structure: line is not a list/tuple
     result = [["invalid_structure"]]
 
     content, confidence, text_regions = PaddleOCRBackend._process_paddleocr_result(result)
@@ -204,7 +196,6 @@ def test_paddleocr_process_paddleocr_result_invalid_text_info() -> None:
     """Test _process_paddleocr_result with invalid text_info structure."""
     from kreuzberg.ocr.paddleocr import PaddleOCRBackend
 
-    # text_info is not a list/tuple with 2 elements
     result = [[["box"], "invalid_text_info"]]
 
     content, confidence, text_regions = PaddleOCRBackend._process_paddleocr_result(result)
@@ -229,9 +220,8 @@ def test_paddleocr_is_cuda_available_attribute_error() -> None:
     """Test _is_cuda_available handles AttributeError gracefully."""
     from kreuzberg.ocr.paddleocr import PaddleOCRBackend
 
-    # Mock paddle module without is_compiled_with_cuda
-    mock_paddle = Mock(spec=[])  # Empty spec, no attributes
-    del mock_paddle.device  # Ensure device doesn't exist
+    mock_paddle = Mock(spec=[])
+    del mock_paddle.device
 
     with patch.dict("sys.modules", {"paddle": mock_paddle}):
         available = PaddleOCRBackend._is_cuda_available()

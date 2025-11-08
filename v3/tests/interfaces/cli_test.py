@@ -330,7 +330,6 @@ def test_perform_extraction_from_stdin() -> None:
 
         result = _perform_extraction(None, mock_config, verbose=True)
         assert result == mock_result
-        # MIME type detection now uses simple content inspection
         mock_extract.assert_called_once_with(b"Test input", "text/plain", config=mock_config)
 
 
@@ -364,7 +363,6 @@ def test_perform_extraction_stdin_detect_html() -> None:
 
         result = _perform_extraction(Path("-"), mock_config, verbose=False)
         assert result == mock_result
-        # HTML detection now works through content inspection
         mock_extract.assert_called_once_with(b"<html><body>Test</body></html>", "text/html", config=mock_config)
 
 
@@ -381,7 +379,6 @@ def test_perform_extraction_stdin_detect_json() -> None:
 
         result = _perform_extraction(Path("-"), mock_config, verbose=False)
         assert result == mock_result
-        # JSON detection now works through content inspection
         mock_extract.assert_called_once_with(b'{"test": "data"}', "application/json", config=mock_config)
 
 

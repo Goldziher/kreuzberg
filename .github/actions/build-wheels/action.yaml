@@ -25,7 +25,6 @@ runs:
         cache-prefix: python-build-wheels
 
     - name: Prepare ONNX Runtime caches
-      # cibuildwheel runs separate builds per architecture; preload static libraries so ort-sys can link without downloading
       if: runner.os == 'Linux' || runner.os == 'macOS'
       shell: bash
       run: |

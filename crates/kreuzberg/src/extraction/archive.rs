@@ -372,8 +372,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // Archive Format Tests
-
     #[test]
     fn test_extract_zip_metadata_with_directories() {
         let mut cursor = Cursor::new(Vec::new());
@@ -453,8 +451,6 @@ mod tests {
             tar.finish().unwrap();
         }
 
-        // Test that we can extract metadata from the uncompressed TAR
-        // (gzip decompression would happen before archive extraction in real usage)
         let metadata = extract_tar_metadata(&tar_data).unwrap();
         assert_eq!(metadata.format, "TAR");
         assert_eq!(metadata.file_count, 1);
@@ -491,8 +487,6 @@ mod tests {
         assert_eq!(metadata.file_count, 2);
         assert!(metadata.total_size > 0);
     }
-
-    // Nested Archive Tests
 
     #[test]
     fn test_extract_zip_within_zip() {
@@ -578,8 +572,6 @@ mod tests {
         assert!(archive_entry.is_some());
     }
 
-    // Error Handling Tests
-
     #[test]
     fn test_extract_zip_corrupted_data() {
         let mut valid_cursor = Cursor::new(Vec::new());
@@ -660,8 +652,6 @@ mod tests {
         assert_eq!(metadata.total_size, 0);
         assert_eq!(metadata.file_list.len(), 0);
     }
-
-    // Content Extraction Tests
 
     #[test]
     fn test_extract_zip_multiple_text_files() {
@@ -763,8 +753,6 @@ mod tests {
         assert!(paths.contains(&"root/sub1/file2.txt"));
         assert!(paths.contains(&"root/sub2/file3.txt"));
     }
-
-    // Edge Cases Tests
 
     #[test]
     fn test_extract_zip_with_large_file() {

@@ -98,7 +98,6 @@ pub fn extract_text_from_pdf_document(document: &PdfDocument<'_>) -> Result<Stri
             .map_err(|e| PdfError::TextExtractionFailed(format!("Page text extraction failed: {}", e)))?;
 
         let page_text = text.all();
-        // Reserve space incrementally to avoid frequent reallocations.
         content.reserve(page_text.len() + 2);
 
         if !content.is_empty() {

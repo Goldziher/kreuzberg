@@ -135,10 +135,7 @@ pub fn create_router_with_limits(config: ExtractionConfig, limits: ApiSizeLimits
         default_config: Arc::new(config),
     };
 
-    // Configure CORS based on environment variable
     // SECURITY WARNING: The default allows all origins for development convenience,
-    // but this permits CSRF attacks. For production deployments, set KREUZBERG_CORS_ORIGINS
-    // to a comma-separated list of allowed origins (e.g., "https://app.example.com,https://api.example.com")
     let cors_layer = if let Ok(origins_str) = std::env::var("KREUZBERG_CORS_ORIGINS") {
         let origins: Vec<_> = origins_str
             .split(',')
@@ -168,8 +165,6 @@ pub fn create_router_with_limits(config: ExtractionConfig, limits: ApiSizeLimits
         CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any)
     };
 
-    // Apply request body size limit to all routes
-    // This protects against excessively large uploads that could cause memory issues
     Router::new()
         .route("/extract", post(extract_handler))
         .route("/health", get(health_handler))
@@ -245,7 +240,6 @@ pub async fn serve(host: impl AsRef<str>, port: u16) -> Result<()> {
         }
     };
 
-    // Parse upload size limit from environment variable
     let limits = parse_size_limits_from_env();
 
     serve_with_config_and_limits(host, port, config, limits).await

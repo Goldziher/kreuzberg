@@ -8,7 +8,6 @@ use pyo3::types::{PyDict, PyList};
 use crate::plugins::json_value_to_py;
 
 // ============================================================================
-// ============================================================================
 
 /// Extraction result containing content, metadata, and tables.
 ///
@@ -147,7 +146,6 @@ impl ExtractionResult {
                     img_dict.set_item("description", desc)?;
                 }
 
-                // Recursively convert nested OCR result
                 if let Some(ocr) = img.ocr_result {
                     let ocr_py = Self::from_rust(*ocr, py)?;
                     img_dict.set_item("ocr_result", ocr_py)?;
@@ -166,7 +164,6 @@ impl ExtractionResult {
                 let chunk_dict = PyDict::new(py);
                 chunk_dict.set_item("content", &chunk.content)?;
 
-                // Add embedding if present
                 if let Some(embedding) = chunk.embedding {
                     let emb_list = PyList::new(py, embedding)?;
                     chunk_dict.set_item("embedding", emb_list)?;
@@ -174,7 +171,6 @@ impl ExtractionResult {
                     chunk_dict.set_item("embedding", py.None())?;
                 }
 
-                // Add metadata
                 let chunk_metadata_json = serde_json::to_value(&chunk.metadata).map_err(|e| {
                     PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
                         "Failed to serialize chunk metadata: {}",

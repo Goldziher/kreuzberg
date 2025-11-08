@@ -33,7 +33,6 @@ async function extractBatch(filePaths: string[]): Promise<ExtractionOutput[]> {
 	const results = await batchExtractFile(filePaths);
 	const totalDurationMs = performance.now() - start;
 
-	// Calculate per-file duration (approximate)
 	const perFileDurationMs = filePaths.length > 0 ? totalDurationMs / filePaths.length : 0;
 
 	return results.map((result) => ({
@@ -72,11 +71,9 @@ async function main(): Promise<void> {
 
 			const results = await extractBatch(filePaths);
 
-			// For single file in batch mode, return single result
 			if (filePaths.length === 1) {
 				console.log(JSON.stringify(results[0]));
 			} else {
-				// For multiple files, return array
 				console.log(JSON.stringify(results));
 			}
 		} else {

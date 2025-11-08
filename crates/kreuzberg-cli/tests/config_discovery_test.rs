@@ -39,10 +39,6 @@ fn get_test_file(relative_path: &str) -> String {
         .to_string()
 }
 
-// ============================================================================
-// Config Discovery Tests - .kreuzberg.* files
-// ============================================================================
-
 #[test]
 fn test_discover_kreuzberg_toml_in_current_directory() {
     build_binary();
@@ -50,7 +46,6 @@ fn test_discover_kreuzberg_toml_in_current_directory() {
     let dir = tempdir().unwrap();
     let config_path = dir.path().join(".kreuzberg.toml");
 
-    // Create a config file with recognizable settings
     fs::write(
         &config_path,
         r#"
@@ -66,14 +61,12 @@ enable_quality_processing = false
         return;
     }
 
-    // Run extract command from the directory containing .kreuzberg.toml
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
         .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should succeed - config file should be discovered and loaded
     assert!(
         output.status.success(),
         "Command failed: {}",
@@ -88,7 +81,6 @@ fn test_discover_kreuzberg_yaml_in_current_directory() {
     let dir = tempdir().unwrap();
     let config_path = dir.path().join(".kreuzberg.yaml");
 
-    // Create a config file with recognizable settings
     fs::write(
         &config_path,
         r#"
@@ -104,14 +96,12 @@ enable_quality_processing: false
         return;
     }
 
-    // Run extract command from the directory containing .kreuzberg.yaml
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
         .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should succeed - config file should be discovered and loaded
     assert!(
         output.status.success(),
         "Command failed: {}",
@@ -126,7 +116,6 @@ fn test_discover_kreuzberg_yml_in_current_directory() {
     let dir = tempdir().unwrap();
     let config_path = dir.path().join(".kreuzberg.yml");
 
-    // Create a config file with recognizable settings
     fs::write(
         &config_path,
         r#"
@@ -142,14 +131,12 @@ enable_quality_processing: false
         return;
     }
 
-    // Run extract command from the directory containing .kreuzberg.yml
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
         .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should succeed - config file should be discovered and loaded
     assert!(
         output.status.success(),
         "Command failed: {}",
@@ -164,7 +151,6 @@ fn test_discover_kreuzberg_json_in_current_directory() {
     let dir = tempdir().unwrap();
     let config_path = dir.path().join(".kreuzberg.json");
 
-    // Create a config file with recognizable settings
     fs::write(
         &config_path,
         r#"{
@@ -180,24 +166,18 @@ fn test_discover_kreuzberg_json_in_current_directory() {
         return;
     }
 
-    // Run extract command from the directory containing .kreuzberg.json
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
         .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should succeed - config file should be discovered and loaded
     assert!(
         output.status.success(),
         "Command failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
 }
-
-// ============================================================================
-// Case-Insensitive Extension Tests
-// ============================================================================
 
 #[test]
 fn test_case_insensitive_toml_extension() {
@@ -343,10 +323,6 @@ fn test_case_insensitive_json_extension() {
     );
 }
 
-// ============================================================================
-// Explicit --config Flag Tests
-// ============================================================================
-
 #[test]
 fn test_explicit_config_path_toml() {
     build_binary();
@@ -455,10 +431,6 @@ fn test_explicit_config_path_json() {
     );
 }
 
-// ============================================================================
-// Error Handling Tests
-// ============================================================================
-
 #[test]
 fn test_invalid_config_extension() {
     build_binary();
@@ -481,7 +453,6 @@ fn test_invalid_config_extension() {
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should fail with unsupported extension error
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -498,7 +469,6 @@ fn test_malformed_toml_config() {
     let dir = tempdir().unwrap();
     let config_path = dir.path().join("bad_config.toml");
 
-    // Invalid TOML syntax
     fs::write(&config_path, "use_cache = [[[[[").unwrap();
 
     let test_file = get_test_file("text/simple.txt");
@@ -514,7 +484,6 @@ fn test_malformed_toml_config() {
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should fail with parsing error
     assert!(!output.status.success());
 }
 
@@ -525,7 +494,6 @@ fn test_malformed_yaml_config() {
     let dir = tempdir().unwrap();
     let config_path = dir.path().join("bad_config.yaml");
 
-    // Invalid YAML syntax
     fs::write(&config_path, "use_cache: [[[[[").unwrap();
 
     let test_file = get_test_file("text/simple.txt");
@@ -541,7 +509,6 @@ fn test_malformed_yaml_config() {
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should fail with parsing error
     assert!(!output.status.success());
 }
 
@@ -552,7 +519,6 @@ fn test_malformed_json_config() {
     let dir = tempdir().unwrap();
     let config_path = dir.path().join("bad_config.json");
 
-    // Invalid JSON syntax
     fs::write(&config_path, r#"{"use_cache": [[[[[}"#).unwrap();
 
     let test_file = get_test_file("text/simple.txt");
@@ -568,7 +534,6 @@ fn test_malformed_json_config() {
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should fail with parsing error
     assert!(!output.status.success());
 }
 
@@ -592,13 +557,8 @@ fn test_nonexistent_config_file() {
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should fail - cannot read nonexistent file
     assert!(!output.status.success());
 }
-
-// ============================================================================
-// Default Config Tests
-// ============================================================================
 
 #[test]
 fn test_default_config_when_no_file_found() {
@@ -612,24 +572,18 @@ fn test_default_config_when_no_file_found() {
         return;
     }
 
-    // Run from empty directory - should use default config
     let output = Command::new(get_binary_path())
         .current_dir(dir.path())
         .args(["extract", test_file.as_str()])
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should succeed with default config
     assert!(
         output.status.success(),
         "Command failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
 }
-
-// ============================================================================
-// Config Validation Tests
-// ============================================================================
 
 #[test]
 fn test_invalid_config_values() {
@@ -638,7 +592,6 @@ fn test_invalid_config_values() {
     let dir = tempdir().unwrap();
     let config_path = dir.path().join("invalid.toml");
 
-    // Invalid config value (negative max_pages)
     fs::write(
         &config_path,
         r#"
@@ -660,6 +613,5 @@ max_pages = -1
         .output()
         .expect("Failed to execute kreuzberg");
 
-    // Should fail with validation error
     assert!(!output.status.success());
 }

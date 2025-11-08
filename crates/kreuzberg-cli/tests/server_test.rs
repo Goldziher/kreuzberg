@@ -9,9 +9,8 @@ use std::time::Duration;
 
 #[cfg(not(coverage))]
 #[test]
-#[ignore] // Run with --ignored flag for manual testing
+#[ignore]
 fn test_serve_command_starts() {
-    // Build the binary with all features
     let status = Command::new("cargo")
         .args(&["build", "--bin", "kreuzberg", "--features", "all"])
         .status()
@@ -19,18 +18,15 @@ fn test_serve_command_starts() {
 
     assert!(status.success(), "Failed to build kreuzberg binary");
 
-    // Start the server in background
     let mut child = Command::new("./target/debug/kreuzberg")
-        .args(&["serve", "-H", "127.0.0.1", "-p", "18000"]) // Use non-standard port
+        .args(&["serve", "-H", "127.0.0.1", "-p", "18000"])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
         .expect("Failed to start server");
 
-    // Wait for server to start
     thread::sleep(Duration::from_secs(3));
 
-    // Test health endpoint
     let mut health_response = ureq::get("http://127.0.0.1:18000/health")
         .call()
         .expect("Failed to call health endpoint");
@@ -45,7 +41,6 @@ fn test_serve_command_starts() {
     assert_eq!(health_json["status"], "healthy");
     assert!(health_json["version"].is_string());
 
-    // Test info endpoint
     let mut info_response = ureq::get("http://127.0.0.1:18000/info")
         .call()
         .expect("Failed to call info endpoint");
@@ -59,18 +54,16 @@ fn test_serve_command_starts() {
 
     assert!(info_json["rust_backend"].as_bool().unwrap_or(false));
 
-    // Kill the server
     child.kill().expect("Failed to kill server");
     child.wait().expect("Failed to wait for server");
 }
 
 #[cfg(not(coverage))]
 #[test]
-#[ignore] // Run with --ignored flag for manual testing
+#[ignore]
 fn test_serve_command_with_config() {
     use std::fs;
 
-    // Create a test config file
     let config_content = r#"
 use_cache = true
 enable_quality_processing = true
@@ -82,7 +75,6 @@ language = "eng"
 
     fs::write("test_config.toml", config_content).expect("Failed to write test config");
 
-    // Start server with config
     let mut child = Command::new("./target/debug/kreuzberg")
         .args(&["serve", "-H", "127.0.0.1", "-p", "18001", "-c", "test_config.toml"])
         .stdout(Stdio::piped())
@@ -90,26 +82,21 @@ language = "eng"
         .spawn()
         .expect("Failed to start server");
 
-    // Wait for server to start
     thread::sleep(Duration::from_secs(3));
 
-    // Test health endpoint
     let health_response = ureq::get("http://127.0.0.1:18001/health").call();
 
     assert!(health_response.is_ok(), "Server should be running with custom config");
 
-    // Kill the server
     child.kill().expect("Failed to kill server");
     child.wait().expect("Failed to wait for server");
 
-    // Cleanup
     fs::remove_file("test_config.toml").ok();
 }
 
 #[cfg(not(coverage))]
 #[test]
 fn test_serve_command_help() {
-    // Build the binary first
     let build_status = Command::new("cargo")
         .args(&["build", "--bin", "kreuzberg", "--features", "all"])
         .status()
@@ -140,7 +127,6 @@ fn test_serve_command_help() {
 #[cfg(not(coverage))]
 #[test]
 fn test_mcp_command_help() {
-    // Build the binary first
     let build_status = Command::new("cargo")
         .args(&["build", "--bin", "kreuzberg", "--features", "all"])
         .status()

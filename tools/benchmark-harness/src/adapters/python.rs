@@ -19,12 +19,10 @@ impl PythonAdapter {
     pub fn new(python_path: impl Into<PathBuf>, package_path: Option<PathBuf>) -> Self {
         let mut env = vec![];
 
-        // Add package path to PYTHONPATH if specified
         if let Some(path) = package_path {
             env.push(("PYTHONPATH".to_string(), path.to_string_lossy().to_string()));
         }
 
-        // Python script to extract content and output JSON
         let script = r#"
 import sys
 import json
@@ -67,13 +65,10 @@ if __name__ == '__main__':
 
     /// Add 'run python' prefix for uv
     fn with_run_prefix(self) -> Self {
-        // Modify the inner adapter to include 'run python' before the script
-        // This is a bit hacky but works for our use case
         self
     }
 }
 
-// Delegate all trait methods to inner SubprocessAdapter
 impl std::ops::Deref for PythonAdapter {
     type Target = SubprocessAdapter;
 

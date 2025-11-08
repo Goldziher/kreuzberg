@@ -73,7 +73,6 @@ impl Fixture {
 
     /// Validate the fixture
     fn validate(&self, fixture_path: &Path) -> Result<()> {
-        // Check document path is not absolute
         if self.document.is_absolute() {
             return Err(Error::InvalidFixture {
                 path: fixture_path.to_path_buf(),
@@ -81,7 +80,6 @@ impl Fixture {
             });
         }
 
-        // Check file_type is not empty
         if self.file_type.is_empty() {
             return Err(Error::InvalidFixture {
                 path: fixture_path.to_path_buf(),
@@ -89,7 +87,6 @@ impl Fixture {
             });
         }
 
-        // Validate ground truth if present
         if let Some(gt) = &self.ground_truth {
             if gt.text_file.is_absolute() {
                 return Err(Error::InvalidFixture {
@@ -160,7 +157,6 @@ impl FixtureManager {
             if path.is_dir() {
                 self.load_fixtures_from_dir(&path)?;
             } else if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                // Ignore errors for individual files, just skip them
                 let _ = self.load_fixture(&path);
             }
         }
@@ -220,7 +216,6 @@ mod tests {
 
     #[test]
     fn test_absolute_path_rejected() {
-        // Use platform-specific absolute paths to ensure the test works on all platforms
         #[cfg(windows)]
         let absolute_path = PathBuf::from("C:\\absolute\\path\\test.pdf");
         #[cfg(not(windows))]
