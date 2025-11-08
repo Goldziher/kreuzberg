@@ -146,6 +146,7 @@ jobs:
             curl -fsSL "${ort_url}" | tar -xz -C "${ort_dir}"
           fi
           {
+            echo "ORT_STRATEGY=system"
             echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime"
             echo "ORT_SKIP_DOWNLOAD=1"
             echo "ORT_PREFER_DYNAMIC_LINK=0"
