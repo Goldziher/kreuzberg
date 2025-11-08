@@ -1,0 +1,9 @@
+inherit_from: ../../packages/ruby/.rubocop.yml
+
+# Disable buggy cop that causes crashes
+Capybara/RSpec/PredicateMatcher:
+  Enabled: false
+
+# E2E tests are smoke tests that may not have explicit expectations
+RSpec/NoExpectationExample:
+  Enabled: false

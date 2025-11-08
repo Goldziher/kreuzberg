@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength
 require_relative 'spec_helper'
 
 RSpec.describe 'html fixtures' do
@@ -39,4 +38,4 @@ RSpec.describe 'html fixtures' do
     end
   end
 end
-# rubocop:enable RSpec/DescribeClass, RSpec/ExampleLength
+# rubocop:enable RSpec/DescribeClass
