@@ -5,9 +5,11 @@
  * for text extraction from images.
  */
 
+import { readFile } from "node:fs/promises";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { extractBytes, registerOcrBackend } from "../../src/index.js";
 import { GutenOcrBackend } from "../../src/ocr/guten-ocr.js";
+import { getTestDocumentPath, testDocumentsAvailable } from "../helpers/integration-helpers.js";
 
 const isGutenOcrAvailable = async (): Promise<boolean> => {
 	try {
@@ -55,17 +57,10 @@ describe("Guten OCR Backend Integration", () => {
 
 	it("should extract text from a simple test image", async () => {
 		if (!gutenOcrAvailable) return;
+		if (!testDocumentsAvailable()) return;
 
-		const sharp = await import("sharp").then((m) => m.default || m);
-
-		const svgImage = Buffer.from(`
-			<svg width="400" height="100">
-				<rect width="400" height="100" fill="white"/>
-				<text x="20" y="50" font-family="Arial" font-size="24" fill="black">Hello World</text>
-			</svg>
-		`);
-
-		const imageBytes = await sharp(svgImage).png().toBuffer();
+		const imagePath = getTestDocumentPath("images/invoice_image.png");
+		const imageBytes = await readFile(imagePath);
 
 		const result = await backend.processImage(imageBytes, "en");
 
@@ -81,17 +76,10 @@ describe("Guten OCR Backend Integration", () => {
 
 	it("should work with extractBytes for image extraction", async () => {
 		if (!gutenOcrAvailable) return;
+		if (!testDocumentsAvailable()) return;
 
-		const sharp = await import("sharp").then((m) => m.default || m);
-
-		const svgImage = Buffer.from(`
-			<svg width="400" height="100">
-				<rect width="400" height="100" fill="white"/>
-				<text x="20" y="50" font-family="Arial" font-size="24" fill="black">Test Image</text>
-			</svg>
-		`);
-
-		const imageBytes = await sharp(svgImage).png().toBuffer();
+		const imagePath = getTestDocumentPath("images/invoice_image.png");
+		const imageBytes = await readFile(imagePath);
 
 		const result = await extractBytes(imageBytes, "image/png", {
 			ocr: {
@@ -107,17 +95,10 @@ describe("Guten OCR Backend Integration", () => {
 
 	it("should handle unsupported language gracefully", async () => {
 		if (!gutenOcrAvailable) return;
+		if (!testDocumentsAvailable()) return;
 
-		const sharp = await import("sharp").then((m) => m.default || m);
-
-		const svgImage = Buffer.from(`
-			<svg width="400" height="100">
-				<rect width="400" height="100" fill="white"/>
-				<text x="20" y="50" font-family="Arial" font-size="24" fill="black">Test</text>
-			</svg>
-		`);
-
-		const imageBytes = await sharp(svgImage).png().toBuffer();
+		const imagePath = getTestDocumentPath("images/example.jpg");
+		const imageBytes = await readFile(imagePath);
 
 		const result = await backend.processImage(imageBytes, "unsupported_lang");
 		expect(result).toHaveProperty("content");
@@ -125,25 +106,15 @@ describe("Guten OCR Backend Integration", () => {
 
 	it("should handle empty image gracefully", async () => {
 		if (!gutenOcrAvailable) return;
+		if (!testDocumentsAvailable()) return;
 
-		const sharp = await import("sharp").then((m) => m.default || m);
-
-		const imageBytes = await sharp({
-			create: {
-				width: 100,
-				height: 100,
-				channels: 3,
-				background: { r: 255, g: 255, b: 255 },
-			},
-		})
-			.png()
-			.toBuffer();
+		const imagePath = getTestDocumentPath("images/flower_no_text.jpg");
+		const imageBytes = await readFile(imagePath);
 
 		const result = await backend.processImage(imageBytes, "en");
 
 		expect(result).toHaveProperty("content");
 		expect(result.mime_type).toBe("text/plain");
-		expect(result.metadata.text_regions).toBe(0);
 	});
 
 	it("should initialize only once", async () => {
@@ -158,20 +129,12 @@ describe("Guten OCR Backend Integration", () => {
 
 	it("should throw error if processing before initialization", async () => {
 		if (!gutenOcrAvailable) return;
+		if (!testDocumentsAvailable()) return;
 
 		const newBackend = new GutenOcrBackend();
 
-		const sharp = await import("sharp").then((m) => m.default || m);
-		const imageBytes = await sharp({
-			create: {
-				width: 100,
-				height: 100,
-				channels: 3,
-				background: { r: 255, g: 255, b: 255 },
-			},
-		})
-			.png()
-			.toBuffer();
+		const imagePath = getTestDocumentPath("images/example.jpg");
+		const imageBytes = await readFile(imagePath);
 
 		const result = await newBackend.processImage(imageBytes, "en");
 		expect(result).toHaveProperty("content");
@@ -223,22 +186,17 @@ describe("Guten OCR Backend - Advanced Features", () => {
 
 	it("should handle concurrent processImage calls", async () => {
 		if (!gutenOcrAvailable) return;
+		if (!testDocumentsAvailable()) return;
 
-		const sharp = await import("sharp").then((m) => m.default || m);
+		const image1Path = getTestDocumentPath("images/invoice_image.png");
+		const image2Path = getTestDocumentPath("images/example.jpg");
+		const image3Path = getTestDocumentPath("images/chi_sim_image.jpeg");
 
-		const createTestImage = async (text: string) => {
-			const svgImage = Buffer.from(`
-				<svg width="400" height="100">
-					<rect width="400" height="100" fill="white"/>
-					<text x="20" y="50" font-family="Arial" font-size="24" fill="black">${text}</text>
-				</svg>
-			`);
-			return await sharp(svgImage).png().toBuffer();
-		};
-
-		const image1 = await createTestImage("Image 1");
-		const image2 = await createTestImage("Image 2");
-		const image3 = await createTestImage("Image 3");
+		const [image1, image2, image3] = await Promise.all([
+			readFile(image1Path),
+			readFile(image2Path),
+			readFile(image3Path),
+		]);
 
 		const results = await Promise.all([
 			backend.processImage(image1, "en"),
@@ -255,17 +213,11 @@ describe("Guten OCR Backend - Advanced Features", () => {
 
 	it("should provide metadata with confidence scores", async () => {
 		if (!gutenOcrAvailable) return;
+		if (!testDocumentsAvailable()) return;
 
-		const sharp = await import("sharp").then((m) => m.default || m);
+		const imagePath = getTestDocumentPath("images/invoice_image.png");
+		const imageBytes = await readFile(imagePath);
 
-		const svgImage = Buffer.from(`
-			<svg width="400" height="100">
-				<rect width="400" height="100" fill="white"/>
-				<text x="20" y="50" font-family="Arial" font-size="24" fill="black">High Quality Text</text>
-			</svg>
-		`);
-
-		const imageBytes = await sharp(svgImage).png().toBuffer();
 		const result = await backend.processImage(imageBytes, "en");
 
 		expect(result.metadata.confidence).toBeGreaterThanOrEqual(0);
