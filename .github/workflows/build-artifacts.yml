@@ -172,22 +172,16 @@ jobs:
             target
           key: ${{ matrix.settings.os }}-cargo-napi-${{ matrix.settings.target }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Setup Zig (Linux cross-compilation)
+      - name: Install cross (Linux cross-compilation)
         if: matrix.settings.use_zigbuild
-        uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: 0.13.0
+        run: cargo install cross --git https://github.com/cross-rs/cross --locked
 
-      - name: Install cargo-zigbuild (Linux cross-compilation)
-        if: matrix.settings.use_zigbuild
-        run: cargo install cargo-zigbuild --locked
-
-      - name: Build NAPI-RS bindings (with zigbuild)
+      - name: Build NAPI-RS bindings (with cross)
         if: matrix.settings.use_zigbuild
         working-directory: crates/kreuzberg-node
         run: |
           pnpm install
-          pnpm run build --target ${{ matrix.settings.target }} --cross-compile
+          pnpm run build --target ${{ matrix.settings.target }} --use-cross
 
       - name: Build NAPI-RS bindings (native)
         if: ${{ !matrix.settings.use_zigbuild }}
