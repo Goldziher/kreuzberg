@@ -2,8 +2,7 @@
 	"name": "kreuzberg-root",
 	"private": true,
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.4",
-		"patch-package": "^8.0.0"
+		"@biomejs/biome": "^2.3.4"
 	},
 	"version": "4.0.0-rc.1"
 }
