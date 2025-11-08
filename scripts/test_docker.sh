@@ -709,8 +709,9 @@ start_test "Security: Container runs as non-root user"
 container=$(random_container_name)
 user_output=$(docker run --rm \
     --name "$container" \
+    --entrypoint /bin/sh \
     "$IMAGE_NAME" \
-    whoami 2>&1 || echo "root")
+    -c "whoami" 2>&1 || echo "root")
 
 if [ "$user_output" = "kreuzberg" ]; then
     pass_test
@@ -730,8 +731,9 @@ echo "test" > "${tmpdir}/test.txt"
 write_attempt=$(docker run --rm \
     --name "$container" \
     -v "${tmpdir}:/data:ro" \
+    --entrypoint /bin/sh \
     "$IMAGE_NAME" \
-    sh -c "echo 'attempt' > /data/test2.txt 2>&1 || echo 'READ_ONLY'" || echo "READ_ONLY")
+    -c "echo 'attempt' > /data/test2.txt 2>&1 || echo 'READ_ONLY'" || echo "READ_ONLY")
 
 rm -rf "$tmpdir"
 
@@ -751,8 +753,9 @@ result=$(docker run --rm \
     --name "$container" \
     --memory 128m \
     --memory-swap 128m \
+    --entrypoint /bin/sh \
     "$IMAGE_NAME" \
-    sh -c "echo 'Memory limit test passed'" 2>&1 || true)
+    -c "echo 'Memory limit test passed'" 2>&1 || true)
 
 if echo "$result" | grep -q "Memory limit test passed"; then
     pass_test
