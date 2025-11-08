@@ -46,8 +46,8 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use kreuzberg::{
-    ChunkingConfig, ExtractionConfig, LanguageDetectionConfig, OcrConfig, batch_extract_file, batch_extract_file_sync,
-    detect_mime_type, extract_file, extract_file_sync,
+    ChunkingConfig, ExtractionConfig, LanguageDetectionConfig, OcrConfig, batch_extract_file_sync, detect_mime_type,
+    extract_file_sync,
 };
 use serde_json::json;
 use std::path::{Path, PathBuf};
@@ -112,10 +112,6 @@ enum Commands {
         /// Enable language detection (overrides config file)
         #[arg(long)]
         detect_language: Option<bool>,
-
-        /// Use async extraction
-        #[arg(long)]
-        r#async: bool,
     },
 
     /// Batch extract from multiple documents
@@ -146,10 +142,6 @@ enum Commands {
         /// Enable quality processing (overrides config file)
         #[arg(long)]
         quality: Option<bool>,
-
-        /// Use async extraction
-        #[arg(long)]
-        r#async: bool,
     },
 
     /// Detect MIME type of a file
@@ -332,8 +324,7 @@ fn validate_batch_paths(paths: &[PathBuf]) -> Result<()> {
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .with_writer(std::io::stderr)
@@ -355,7 +346,6 @@ async fn main() -> Result<()> {
             chunk_overlap,
             quality,
             detect_language,
-            r#async,
         } => {
             validate_file_exists(&path)?;
             validate_chunk_params(chunk_size, chunk_overlap)?;
@@ -417,23 +407,12 @@ async fn main() -> Result<()> {
 
             let path_str = path.to_string_lossy().to_string();
 
-            let result = if r#async {
-                extract_file(&path_str, mime_type.as_deref(), &config)
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Failed to extract file '{}'. Ensure the file is readable and the format is supported.",
-                            path.display()
-                        )
-                    })?
-            } else {
-                extract_file_sync(&path_str, mime_type.as_deref(), &config).with_context(|| {
-                    format!(
-                        "Failed to extract file '{}'. Ensure the file is readable and the format is supported.",
-                        path.display()
-                    )
-                })?
-            };
+            let result = extract_file_sync(&path_str, mime_type.as_deref(), &config).with_context(|| {
+                format!(
+                    "Failed to extract file '{}'. Ensure the file is readable and the format is supported.",
+                    path.display()
+                )
+            })?;
 
             match format {
                 OutputFormat::Text => {
@@ -467,7 +446,6 @@ async fn main() -> Result<()> {
             force_ocr,
             no_cache,
             quality,
-            r#async,
         } => {
             validate_batch_paths(&paths)?;
 
@@ -496,14 +474,8 @@ async fn main() -> Result<()> {
 
             let path_strs: Vec<String> = paths.iter().map(|p| p.to_string_lossy().to_string()).collect();
 
-            let results = if r#async {
-                batch_extract_file(path_strs, &config)
-                    .await
-                    .with_context(|| format!("Failed to batch extract {} documents. Check that all files are readable and formats are supported.", paths.len()))?
-            } else {
-                batch_extract_file_sync(path_strs, &config)
-                    .with_context(|| format!("Failed to batch extract {} documents. Check that all files are readable and formats are supported.", paths.len()))?
-            };
+            let results = batch_extract_file_sync(path_strs, &config)
+                .with_context(|| format!("Failed to batch extract {} documents. Check that all files are readable and formats are supported.", paths.len()))?;
 
             match format {
                 OutputFormat::Text => {
@@ -599,8 +571,8 @@ async fn main() -> Result<()> {
             let config = load_config(config_path)?;
 
             println!("Starting Kreuzberg API server on http://{}:{}...", host, port);
-            kreuzberg::api::serve_with_config(&host, port, config)
-                .await
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(kreuzberg::api::serve_with_config(&host, port, config))
                 .with_context(|| format!("Failed to start API server on {}:{}. Ensure the port is not already in use and you have permission to bind to this address.", host, port))?;
         }
 
@@ -609,8 +581,8 @@ async fn main() -> Result<()> {
             let config = load_config(config_path)?;
 
             tracing::debug!("Starting Kreuzberg MCP server...");
-            kreuzberg::mcp::start_mcp_server_with_config(config)
-                .await
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(kreuzberg::mcp::start_mcp_server_with_config(config))
                 .map_err(|e| anyhow::anyhow!("Failed to start MCP server: {}", e))?;
         }
 

@@ -383,7 +383,7 @@ pub async fn batch_extract_bytes(
 /// For async code, use `extract_file` directly.
 ///
 /// Uses the global Tokio runtime for 100x+ performance improvement over creating
-/// a new runtime per call.
+/// a new runtime per call. Always uses the global runtime to avoid nested runtime issues.
 pub fn extract_file_sync(
     path: impl AsRef<Path>,
     mime_type: Option<&str>,

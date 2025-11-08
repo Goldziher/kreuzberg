@@ -250,8 +250,21 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
         return;
     }
 
+    // Fix install_name on macOS to use @rpath
+    if target.contains("darwin") {
+        fix_macos_install_name(&src_lib, &runtime_lib_name);
+    }
+
     let crate_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let workspace_root = crate_dir.parent().unwrap().parent().unwrap();
+
+    // Copy to target directory for CLI binary
+    if let Ok(profile) = env::var("PROFILE") {
+        let target_dir = workspace_root.join("target").join(profile);
+        if target_dir.exists() {
+            copy_lib_if_needed(&src_lib, &target_dir.join(&runtime_lib_name), "CLI target directory");
+        }
+    }
 
     let python_dest_dir = workspace_root.join("packages").join("python").join("kreuzberg");
     if python_dest_dir.exists() {
@@ -327,4 +340,31 @@ fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn fix_macos_install_name(lib_path: &Path, lib_name: &str) {
+    use std::process::Command;
+
+    // Change install_name from ./libpdfium.dylib to @rpath/libpdfium.dylib
+    let new_install_name = format!("@rpath/{}", lib_name);
+
+    tracing::debug!("Fixing install_name for {} to {}", lib_path.display(), new_install_name);
+
+    let status = Command::new("install_name_tool")
+        .arg("-id")
+        .arg(&new_install_name)
+        .arg(lib_path)
+        .status();
+
+    match status {
+        Ok(s) if s.success() => {
+            tracing::debug!("Successfully updated install_name");
+        }
+        Ok(s) => {
+            tracing::debug!("install_name_tool failed with status: {}", s);
+        }
+        Err(e) => {
+            tracing::debug!("Failed to run install_name_tool: {}", e);
+        }
+    }
 }
