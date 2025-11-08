@@ -186,7 +186,7 @@ pub async fn convert_office_doc(
 
     fs::create_dir_all(output_dir).await?;
 
-    let mut child = Command::new(&soffice_path)
+    let child = Command::new(&soffice_path)
         .arg("--headless")
         .arg("--convert-to")
         .arg(target_format)
@@ -206,8 +206,8 @@ pub async fn convert_office_doc(
 
     let child_id = child.id();
 
-    let status = match timeout(Duration::from_secs(timeout_seconds), child.wait()).await {
-        Ok(Ok(status)) => status,
+    let output = match timeout(Duration::from_secs(timeout_seconds), child.wait_with_output()).await {
+        Ok(Ok(output)) => output,
         Ok(Err(e)) => {
             return Err(KreuzbergError::parsing(format!(
                 "Failed to wait for LibreOffice: {}",
@@ -215,20 +215,12 @@ pub async fn convert_office_doc(
             )));
         }
         Err(_) => {
-            // Timeout - kill the process to prevent zombie ~keep
-            let _ = child.kill().await;
+            // Timeout occurred - wait_with_output was cancelled, child is dropped and killed automatically ~keep
             return Err(KreuzbergError::parsing(format!(
                 "LibreOffice conversion timed out after {} seconds (PID: {:?})",
                 timeout_seconds, child_id
             )));
         }
-    };
-
-    // Collect stdout/stderr after wait completes
-    let output = std::process::Output {
-        status,
-        stdout: Vec::new(),
-        stderr: Vec::new(),
     };
 
     if !output.status.success() {
