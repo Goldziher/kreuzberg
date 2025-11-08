@@ -66,7 +66,13 @@ impl OcrBackendRegistry {
     ///
     /// Registers the Tesseract backend by default if the "ocr" feature is enabled.
     pub fn new() -> Self {
+        #[cfg(feature = "ocr")]
         let mut registry = Self {
+            backends: HashMap::new(),
+        };
+
+        #[cfg(not(feature = "ocr"))]
+        let registry = Self {
             backends: HashMap::new(),
         };
 
