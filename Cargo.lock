@@ -2104,9 +2104,9 @@ dependencies = [
 
 [[package]]
 name = "html-to-markdown-rs"
-version = "2.6.2"
+version = "2.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3c30d88dfee58b2e822991df0ec1f7ef1326a05e1b503d8e87c808fd23dceb3"
+checksum = "ca28d676a43c3940788c5bd52f97e66890ca43accf85998a64f9a253f91fed2f"
 dependencies = [
  "ammonia",
  "base64 0.22.1",
@@ -2802,7 +2802,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "ureq 3.1.2",
+ "ureq 3.1.3",
 ]
 
 [[package]]
@@ -3806,9 +3806,9 @@ dependencies = [
 
 [[package]]
 name = "openssl"
-version = "0.10.74"
+version = "0.10.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24ad14dd45412269e1a30f52ad8f0664f0f4f4a89ee8fe28c3b3527021ebb654"
+checksum = "08838db121398ad17ab8531ce9de97b244589089e290a384c900cb9ff7434328"
 dependencies = [
  "bitflags 2.10.0",
  "cfg-if",
@@ -3838,9 +3838,9 @@ checksum = "d05e27ee213611ffe7d6348b942e8f942b37114c00cc03cec254295a4a17852e"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.110"
+version = "0.9.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a9f0075ba3c21b09f8e8b2026584b1d18d49388648f2fbbf3c97ea8deced8e2"
+checksum = "82cab2d520aa75e3c58898289429321eb788c3106963d0dc886ec7a5f4adc321"
 dependencies = [
  "cc",
  "libc",
@@ -3876,7 +3876,7 @@ dependencies = [
  "pkg-config",
  "sha2",
  "tar",
- "ureq 3.1.2",
+ "ureq 3.1.3",
 ]
 
 [[package]]
@@ -5443,15 +5443,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustls-pemfile"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dce314e5fee3f39953d46bb63bb8a46d40c2f8fb7cc5a3b6cab2bde9721d6e50"
-dependencies = [
- "rustls-pki-types",
-]
-
-[[package]]
 name = "rustls-pki-types"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6827,9 +6818,9 @@ dependencies = [
 
 [[package]]
 name = "ureq"
-version = "3.1.2"
+version = "3.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99ba1025f18a4a3fc3e9b48c868e9beb4f24f4b4b1a325bada26bd4119f46537"
+checksum = "c42979584bacf4cff2f090f93b6a5348b9d5aad9107f41688956b88442b93331"
 dependencies = [
  "base64 0.22.1",
  "cookie_store",
@@ -6839,7 +6830,6 @@ dependencies = [
  "native-tls",
  "percent-encoding",
  "rustls",
- "rustls-pemfile",
  "rustls-pki-types",
  "serde",
  "serde_json",
@@ -7150,9 +7140,9 @@ dependencies = [
 
 [[package]]
 name = "weezl"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a751b3277700db47d3e574514de2eced5e54dc8a5436a3bf7a0b248b2cee16f3"
+checksum = "009936b22a61d342859b5f0ea64681cbb35a358ab548e2a44a8cf0dac2d980b8"
 
 [[package]]
 name = "whatlang"
