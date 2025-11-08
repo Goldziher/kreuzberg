@@ -23,6 +23,15 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        framework:
+          - kreuzberg-native
+          - docling
+          - markitdown
+          - unstructured
+          - extractous-python
 
     steps:
       - name: Checkout repository
@@ -69,7 +78,7 @@ jobs:
       - name: Build benchmark harness
         run: cargo build --manifest-path tools/benchmark-harness/Cargo.toml --release
 
-      - name: Run benchmark harness
+      - name: Run benchmark harness for ${{ matrix.framework }}
         env:
           ITERATIONS: ${{ github.event.inputs.iterations }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
@@ -78,7 +87,7 @@ jobs:
           OUTPUT_DIR="benchmark-results"
           rm -rf "${OUTPUT_DIR}"
 
-          echo "Running benchmarks with ${ITERATIONS:-5} iterations and ${TIMEOUT:-300}s timeout..."
+          echo "Running benchmarks for ${{ matrix.framework }} with ${ITERATIONS:-5} iterations and ${TIMEOUT:-300}s timeout..."
 
           cargo run \
             --manifest-path tools/benchmark-harness/Cargo.toml \
@@ -86,7 +95,7 @@ jobs:
             --bin benchmark-harness \
             -- run \
             --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-native,docling,markitdown,unstructured,extractous-python" \
+            --frameworks "${{ matrix.framework }}" \
             --output "${OUTPUT_DIR}" \
             --iterations "${ITERATIONS:-5}" \
             --timeout "${TIMEOUT:-300}"
@@ -140,6 +149,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: comparative-benchmark-${{ github.run_id }}
+          name: benchmark-${{ matrix.framework }}-${{ github.run_id }}
           path: benchmark-results/
           retention-days: 30
