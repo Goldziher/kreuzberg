@@ -184,11 +184,9 @@ jobs:
       - name: Build NAPI-RS bindings (with zigbuild)
         if: matrix.settings.use_zigbuild
         working-directory: crates/kreuzberg-node
-        env:
-          NAPI_RS_CARGO: cargo-zigbuild
         run: |
           pnpm install
-          pnpm run build --target ${{ matrix.settings.target }}
+          pnpm run build --target ${{ matrix.settings.target }} --cross-compile
 
       - name: Build NAPI-RS bindings (native)
         if: ${{ !matrix.settings.use_zigbuild }}
