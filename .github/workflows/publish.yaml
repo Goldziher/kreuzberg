@@ -282,6 +282,34 @@ jobs:
       - name: Enable corepack
         run: corepack enable
 
+      - name: Prepare ONNX Runtime (macOS)
+        if: startsWith(matrix.settings.target, 'aarch64-apple-darwin') || startsWith(matrix.settings.target, 'x86_64-apple-darwin')
+        run: |
+          set -euo pipefail
+          case "${{ matrix.settings.target }}" in
+            aarch64-apple-darwin)
+              ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/aarch64-apple-darwin.tgz"
+              ;;
+            x86_64-apple-darwin)
+              ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/x86_64-apple-darwin.tgz"
+              ;;
+            *)
+              echo "Unsupported macOS target: ${{ matrix.settings.target }}" >&2
+              exit 1
+              ;;
+          esac
+          ort_dir="${RUNNER_TEMP}/onnxruntime/${{ matrix.settings.target }}"
+          if [ ! -f "${ort_dir}/onnxruntime/lib/libonnxruntime.a" ]; then
+            mkdir -p "${ort_dir}"
+            curl -fsSL "${ort_url}" | tar -xz -C "${ort_dir}"
+          fi
+          {
+            echo "ORT_STRATEGY=system"
+            echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime"
+            echo "ORT_SKIP_DOWNLOAD=1"
+            echo "ORT_PREFER_DYNAMIC_LINK=0"
+          } >> "${GITHUB_ENV}"
+
       - name: Install Node dependencies
         run: pnpm install --filter kreuzberg-node...
 
