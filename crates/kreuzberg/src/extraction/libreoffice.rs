@@ -226,6 +226,22 @@ pub async fn convert_office_doc(
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 
+        // Build detailed error message with both stdout and stderr
+        let mut error_details = format!(
+            "LibreOffice process failed with return code {}",
+            output.status.code().unwrap_or(-1)
+        );
+
+        if !stderr.is_empty() {
+            error_details.push_str(&format!("\nSTDERR: {}", stderr.trim()));
+        }
+        if !stdout.is_empty() {
+            error_details.push_str(&format!("\nSTDOUT: {}", stdout.trim()));
+        }
+        if stderr.is_empty() && stdout.is_empty() {
+            error_details.push_str("\n(no output from LibreOffice process)");
+        }
+
         // Subprocess error analysis - wrap only if format/parsing error detected ~keep
         let stderr_lower = stderr.to_lowercase();
         let stdout_lower = stdout.to_lowercase();
@@ -235,18 +251,11 @@ pub async fn convert_office_doc(
             .iter()
             .any(|k| stderr_lower.contains(k) || stdout_lower.contains(k))
         {
-            return Err(KreuzbergError::parsing(format!(
-                "LibreOffice conversion failed: {}",
-                if !stderr.is_empty() { &stderr } else { &stdout }
-            )));
+            return Err(KreuzbergError::parsing(error_details));
         }
 
         // True system error - bubble up for user reporting ~keep
-        return Err(KreuzbergError::Io(std::io::Error::other(format!(
-            "LibreOffice process failed with return code {}: {}",
-            output.status.code().unwrap_or(-1),
-            if !stderr.is_empty() { stderr } else { stdout }
-        ))));
+        return Err(KreuzbergError::Io(std::io::Error::other(error_details)));
     }
 
     let input_stem = input_path

@@ -30,11 +30,19 @@ runs:
         sudo apt-get install -y \
           pandoc \
           libreoffice \
-          tesseract-ocr
+          libreoffice-writer \
+          libreoffice-calc \
+          libreoffice-impress \
+          tesseract-ocr \
+          fonts-liberation \
+          fonts-dejavu-core \
+          fonts-noto-core
         echo "Verifying Linux installations..."
         pandoc --version
         soffice --version
         tesseract --version
+        echo "Testing LibreOffice headless mode..."
+        soffice --headless --version || echo "Warning: LibreOffice headless version check failed"
 
     - name: Cache LibreOffice (Windows)
       if: runner.os == 'Windows'
