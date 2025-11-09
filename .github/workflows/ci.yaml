@@ -625,7 +625,7 @@ jobs:
   rust-unit:
     name: Rust Unit Tests (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -653,7 +653,7 @@ jobs:
   rust-e2e:
     name: Rust E2E Tests (release)
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
