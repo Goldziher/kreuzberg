@@ -529,16 +529,19 @@ jobs:
               src="$RUNNER_TEMP/pdfium/bin/pdfium.dll"
               cp -f "$src" "crates/kreuzberg-rb/pdfium.dll"
               cp -f "$src" "packages/ruby/pdfium.dll"
+              cp -f "$src" "packages/ruby/lib/pdfium.dll"
               ;;
             macOS)
               src="$RUNNER_TEMP/pdfium/lib/libpdfium.dylib"
               cp -f "$src" "crates/kreuzberg-rb/libpdfium.dylib"
               cp -f "$src" "packages/ruby/libpdfium.dylib"
+              cp -f "$src" "packages/ruby/lib/libpdfium.dylib"
               ;;
             Linux)
               src="$RUNNER_TEMP/pdfium/lib/libpdfium.so"
               cp -f "$src" "crates/kreuzberg-rb/libpdfium.so"
               cp -f "$src" "packages/ruby/libpdfium.so"
+              cp -f "$src" "packages/ruby/lib/libpdfium.so"
               ;;
             *)
               echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
