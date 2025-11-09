@@ -79,4 +79,24 @@ pub trait FrameworkAdapter: Send + Sync {
     async fn teardown(&self) -> Result<()> {
         Ok(())
     }
+
+    /// Warm up the framework by performing a test extraction
+    ///
+    /// This is called once before benchmarking to get the framework into a warm state.
+    /// It measures the cold start time (framework load + first extraction).
+    ///
+    /// The default implementation performs a single extraction on the provided warmup file.
+    ///
+    /// # Arguments
+    /// * `warmup_file` - Path to a small test file for warmup
+    /// * `timeout` - Maximum time to wait for warmup
+    ///
+    /// # Returns
+    /// * `Ok(Duration)` - Cold start duration (framework load + first extraction)
+    /// * `Err(Error)` - Warmup failed
+    async fn warmup(&self, warmup_file: &Path, timeout: Duration) -> Result<Duration> {
+        let start = std::time::Instant::now();
+        let _ = self.extract(warmup_file, timeout).await?;
+        Ok(start.elapsed())
+    }
 }

@@ -47,6 +47,11 @@ pub struct BenchmarkResult {
     /// Statistical analysis of durations across iterations
     /// Only present when multiple iterations were run
     pub statistics: Option<DurationStatistics>,
+
+    /// Cold start duration: Time from framework not loaded to ready and warm state
+    /// This is measured during the first warmup extraction and represents the
+    /// initial framework load time (imports, initializations, etc.)
+    pub cold_start_duration: Option<Duration>,
 }
 
 /// Performance metrics collected during extraction

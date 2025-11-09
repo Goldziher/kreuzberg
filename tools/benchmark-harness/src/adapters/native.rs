@@ -124,6 +124,7 @@ impl FrameworkAdapter for NativeAdapter {
                 quality: None,
                 iterations: vec![],
                 statistics: None,
+                cold_start_duration: None,
             });
         }
 
@@ -149,6 +150,7 @@ impl FrameworkAdapter for NativeAdapter {
             quality: None,
             iterations: vec![],
             statistics: None,
+            cold_start_duration: None,
         })
     }
 
@@ -192,6 +194,7 @@ impl FrameworkAdapter for NativeAdapter {
                 quality: None,
                 iterations: vec![],
                 statistics: None,
+                cold_start_duration: None,
             }]);
         }
 
@@ -224,6 +227,7 @@ impl FrameworkAdapter for NativeAdapter {
             quality: None,
             iterations: vec![],
             statistics: None,
+            cold_start_duration: None,
         }])
     }
 

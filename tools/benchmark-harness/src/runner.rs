@@ -129,6 +129,7 @@ pub struct BenchmarkRunner {
     config: BenchmarkConfig,
     registry: AdapterRegistry,
     fixtures: FixtureManager,
+    cold_start_durations: std::collections::HashMap<String, Duration>,
 }
 
 impl BenchmarkRunner {
@@ -138,6 +139,7 @@ impl BenchmarkRunner {
             config,
             registry,
             fixtures: FixtureManager::new(),
+            cold_start_durations: std::collections::HashMap::new(),
         }
     }
 
@@ -169,6 +171,7 @@ impl BenchmarkRunner {
     /// * `file_path` - Path to file to extract
     /// * `adapter` - Framework adapter to use
     /// * `config` - Benchmark configuration
+    /// * `cold_start_duration` - Optional cold start duration for this framework
     ///
     /// # Returns
     /// Aggregated benchmark result with iterations and statistics
@@ -176,6 +179,7 @@ impl BenchmarkRunner {
         file_path: &Path,
         adapter: Arc<dyn FrameworkAdapter>,
         config: &BenchmarkConfig,
+        cold_start_duration: Option<Duration>,
     ) -> Result<BenchmarkResult> {
         let total_iterations = config.warmup_iterations + config.benchmark_iterations;
         let mut all_results = Vec::new();
@@ -189,7 +193,9 @@ impl BenchmarkRunner {
         }
 
         if config.benchmark_iterations == 1 && !all_results.is_empty() {
-            return Ok(all_results.into_iter().next().unwrap());
+            let mut result = all_results.into_iter().next().unwrap();
+            result.cold_start_duration = cold_start_duration;
+            return Ok(result);
         }
 
         if all_results.is_empty() {
@@ -239,6 +245,7 @@ impl BenchmarkRunner {
             quality: first_result.quality.clone(),
             iterations,
             statistics: Some(statistics),
+            cold_start_duration,
         })
     }
 
@@ -248,6 +255,7 @@ impl BenchmarkRunner {
     /// * `file_paths` - Paths to files to extract in batch
     /// * `adapter` - Framework adapter to use
     /// * `config` - Benchmark configuration
+    /// * `cold_start_duration` - Optional cold start duration for this framework
     ///
     /// # Returns
     /// Vector of aggregated benchmark results (one per file) with iterations and statistics
@@ -255,6 +263,7 @@ impl BenchmarkRunner {
         file_paths: Vec<PathBuf>,
         adapter: Arc<dyn FrameworkAdapter>,
         config: &BenchmarkConfig,
+        cold_start_duration: Option<Duration>,
     ) -> Result<Vec<BenchmarkResult>> {
         let total_iterations = config.warmup_iterations + config.benchmark_iterations;
         let mut all_batch_results = Vec::new();
@@ -269,9 +278,13 @@ impl BenchmarkRunner {
         }
 
         // For batch extraction, each iteration returns a single result for the entire batch
-        // If only one iteration, return that batch result directly
+        // If only one iteration, return that batch result directly with cold_start_duration
         if config.benchmark_iterations == 1 && !all_batch_results.is_empty() {
-            return Ok(all_batch_results.into_iter().next().unwrap());
+            let mut result = all_batch_results.into_iter().next().unwrap();
+            for r in &mut result {
+                r.cold_start_duration = cold_start_duration;
+            }
+            return Ok(result);
         }
 
         // For multiple iterations, aggregate the batch results
@@ -322,6 +335,7 @@ impl BenchmarkRunner {
             quality: first_result.quality.clone(),
             iterations,
             statistics: Some(statistics),
+            cold_start_duration,
         }];
 
         Ok(aggregated_results)
@@ -334,7 +348,7 @@ impl BenchmarkRunner {
     ///
     /// # Returns
     /// Vector of benchmark results
-    pub async fn run(&self, framework_names: &[String]) -> Result<Vec<BenchmarkResult>> {
+    pub async fn run(&mut self, framework_names: &[String]) -> Result<Vec<BenchmarkResult>> {
         let frameworks = if framework_names.is_empty() {
             self.registry
                 .adapter_names()
@@ -354,6 +368,30 @@ impl BenchmarkRunner {
 
         for adapter in &frameworks {
             adapter.setup().await?;
+        }
+
+        // Warm up frameworks and record cold start duration
+        // Pick the first fixture as a warmup file
+        if let Some((fixture_path, fixture)) = self.fixtures.fixtures().first() {
+            let fixture_dir = fixture_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+            let warmup_file = fixture.resolve_document_path(fixture_dir);
+
+            for adapter in &frameworks {
+                if !adapter.supports_format(&fixture.file_type) {
+                    continue;
+                }
+
+                println!("Warming up {} with {}...", adapter.name(), warmup_file.display());
+                match adapter.warmup(&warmup_file, self.config.timeout).await {
+                    Ok(cold_start) => {
+                        println!("  Cold start: {:?}", cold_start);
+                        self.cold_start_durations.insert(adapter.name().to_string(), cold_start);
+                    }
+                    Err(e) => {
+                        eprintln!("  Warning: Warmup failed for {}: {}", adapter.name(), e);
+                    }
+                }
+            }
         }
 
         let mut results = Vec::new();
@@ -395,8 +433,9 @@ impl BenchmarkRunner {
                         let adapter = Arc::clone(adapter);
                         let file_paths = file_paths.clone();
                         let config = config.clone();
+                        let cold_start = self.cold_start_durations.get(adapter_name).copied();
 
-                        match Self::run_batch_iterations_static(file_paths, adapter, &config).await {
+                        match Self::run_batch_iterations_static(file_paths, adapter, &config, cold_start).await {
                             Ok(batch_results) => {
                                 results.extend(batch_results);
                             }
@@ -409,8 +448,9 @@ impl BenchmarkRunner {
                             let adapter = Arc::clone(adapter);
                             let file_path = file_path.clone();
                             let config = config.clone();
+                            let cold_start = self.cold_start_durations.get(adapter_name).copied();
 
-                            match Self::run_iterations_static(&file_path, adapter, &config).await {
+                            match Self::run_iterations_static(&file_path, adapter, &config, cold_start).await {
                                 Ok(result) => {
                                     results.push(result);
                                 }
@@ -440,8 +480,9 @@ impl BenchmarkRunner {
 
             let config = self.config.clone();
 
-            for (file_path, _framework_name, adapter) in task_queue {
-                match Self::run_iterations_static(&file_path, adapter, &config).await {
+            for (file_path, framework_name, adapter) in task_queue {
+                let cold_start = self.cold_start_durations.get(&framework_name).copied();
+                match Self::run_iterations_static(&file_path, adapter, &config, cold_start).await {
                     Ok(result) => {
                         results.push(result);
                     }

@@ -252,6 +252,7 @@ impl FrameworkAdapter for SubprocessAdapter {
                     quality: None,
                     iterations: vec![],
                     statistics: None,
+                    cold_start_duration: None,
                 });
             }
         };
@@ -282,6 +283,7 @@ impl FrameworkAdapter for SubprocessAdapter {
                     quality: None,
                     iterations: vec![],
                     statistics: None,
+                    cold_start_duration: None,
                 });
             }
         };
@@ -321,6 +323,7 @@ impl FrameworkAdapter for SubprocessAdapter {
             quality: None,
             iterations: vec![],
             statistics: None,
+            cold_start_duration: None,
         })
     }
 
@@ -375,6 +378,7 @@ impl FrameworkAdapter for SubprocessAdapter {
                     quality: None,
                     iterations: vec![],
                     statistics: None,
+                    cold_start_duration: None,
                 }]);
             }
         };
@@ -412,6 +416,7 @@ impl FrameworkAdapter for SubprocessAdapter {
             quality: None,
             iterations: vec![],
             statistics: None,
+            cold_start_duration: None,
         }])
     }
 
