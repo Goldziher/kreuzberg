@@ -109,7 +109,7 @@ ndarray = { version = "0.17.1", optional = true }
 kamadak-exif = { version = "0.6.1", optional = true }
 whatlang = { version = "0.18.0", optional = true }
 text-splitter = { version = "0.28.0", features = ["markdown"], optional = true }
-fastembed = { git = "https://github.com/kreuzberg-dev/fastembed-rs.git", rev = "4030244ace66cca1ecab360c361edebe8e0cf491", default-features = false, features = ["hf-hub", "hf-hub-rustls-tls", "ort-download-binaries"], optional = true }
+fastembed = { git = "https://github.com/kreuzberg-dev/fastembed-rs.git", default-features = false, features = ["hf-hub", "hf-hub-rustls-tls", "ort-download-binaries"], optional = true }
 unicode-normalization = { version = "0.1.25", optional = true }
 chardetng = { version = "0.1.17", optional = true }
 encoding_rs = { version = "0.8.35", optional = true }

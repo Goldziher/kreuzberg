@@ -1639,7 +1639,7 @@ dependencies = [
 [[package]]
 name = "fastembed"
 version = "5.2.0"
-source = "git+https://github.com/kreuzberg-dev/fastembed-rs.git?rev=4030244ace66cca1ecab360c361edebe8e0cf491#4030244ace66cca1ecab360c361edebe8e0cf491"
+source = "git+https://github.com/kreuzberg-dev/fastembed-rs.git#4030244ace66cca1ecab360c361edebe8e0cf491"
 dependencies = [
  "anyhow",
  "hf-hub",
@@ -3843,7 +3843,7 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 [[package]]
 name = "ort"
 version = "2.0.0-rc.10"
-source = "git+https://github.com/kreuzberg-dev/ort.git#fad14439cded4d7a1d6b9453dee8fc47ed13cbb0"
+source = "git+https://github.com/kreuzberg-dev/ort.git#fc609e83c6aee0270ef7e18b5ea9646ac862d920"
 dependencies = [
  "ndarray",
  "ort-sys",
@@ -3855,7 +3855,7 @@ dependencies = [
 [[package]]
 name = "ort-sys"
 version = "2.0.0-rc.10"
-source = "git+https://github.com/kreuzberg-dev/ort.git#fad14439cded4d7a1d6b9453dee8fc47ed13cbb0"
+source = "git+https://github.com/kreuzberg-dev/ort.git#fc609e83c6aee0270ef7e18b5ea9646ac862d920"
 dependencies = [
  "flate2",
  "hmac-sha256",
