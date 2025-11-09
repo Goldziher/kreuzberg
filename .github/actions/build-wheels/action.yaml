@@ -97,7 +97,7 @@ runs:
 
         CIBW_BEFORE_BUILD_LINUX: |
           python -m pip install --upgrade pip maturin build
-          ARCH="${CIBUILDWHEEL_ARCH:-x86_64}"
+          ARCH="${CIBW_ARCH:-${CIBUILDWHEEL_ARCH:-x86_64}}"
           ORT_DIR="/tmp/onnxruntime/linux/${ARCH}"
           export ORT_STRATEGY=system
           export ORT_LIB_LOCATION="${ORT_DIR}/onnxruntime"
@@ -105,7 +105,7 @@ runs:
           export ORT_PREFER_DYNAMIC_LINK=0
         CIBW_BEFORE_BUILD_MACOS: |
           python -m pip install --upgrade pip maturin build
-          ARCH="${CIBUILDWHEEL_ARCH:-$(uname -m)}"
+          ARCH="${CIBW_ARCH:-${CIBUILDWHEEL_ARCH:-$(uname -m)}}"
           ORT_DIR="/tmp/onnxruntime/macos/${ARCH}"
           export ORT_STRATEGY=system
           export ORT_LIB_LOCATION="${ORT_DIR}/onnxruntime"
@@ -115,9 +115,9 @@ runs:
           python -m pip install --upgrade pip maturin build &&
           python scripts/prepare_wheel.py
 
-        CIBW_ENVIRONMENT: MATURIN_BUILD_ARGS="--compatibility linux" ORT_STRATEGY=system ORT_LIB_LOCATION=/tmp/onnxruntime/linux/${CIBUILDWHEEL_ARCH}/onnxruntime ORT_SKIP_DOWNLOAD=1 ORT_PREFER_DYNAMIC_LINK=0
+        CIBW_ENVIRONMENT: MATURIN_BUILD_ARGS="--compatibility linux"
         CIBW_ENVIRONMENT_WINDOWS: MATURIN_BUILD_ARGS=""
-        CIBW_ENVIRONMENT_MACOS: 'MATURIN_BUILD_ARGS="" MACOSX_DEPLOYMENT_TARGET=10.12 ORT_STRATEGY=system ORT_LIB_LOCATION=/tmp/onnxruntime/macos/${CIBUILDWHEEL_ARCH}/onnxruntime ORT_SKIP_DOWNLOAD=1 ORT_PREFER_DYNAMIC_LINK=0'
+        CIBW_ENVIRONMENT_MACOS: 'MATURIN_BUILD_ARGS="" MACOSX_DEPLOYMENT_TARGET=14.0'
 
         CIBW_SKIP: "*-win32 *-manylinux_i686"
 

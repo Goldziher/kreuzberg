@@ -60,6 +60,7 @@ concurrency:
 env:
   PDFIUM_VERSION: "7455"
   ORT_VERSION: "1.23.2"
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
 
 jobs:
   ts-test:
@@ -69,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-14, windows-latest]
         node-version: ['20', '22']
     steps:
       - name: Checkout
@@ -174,7 +175,7 @@ jobs:
           echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/crates/kreuzberg-node:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
 
       - name: Prepare ONNX Runtime (macOS)
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-14'
         shell: bash
         run: |
           set -euo pipefail
@@ -300,7 +301,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-14, windows-latest]
         python-version: ['3.10', '3.13']
     steps:
       - name: Checkout
@@ -450,7 +451,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-14, windows-latest]
         ruby-version: ['3.3', '3.4']
     steps:
       - name: Checkout
@@ -632,7 +633,7 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: macos-latest
+          - os: macos-14
             target: aarch64-apple-darwin
     steps:
       - name: Checkout
