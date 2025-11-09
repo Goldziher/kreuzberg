@@ -48,7 +48,7 @@ RSpec.describe 'PostProcessor Plugin System' do
       result = Kreuzberg.extract_file_sync(test_pdf)
 
       expect(result.metadata['custom_field']).to eq('custom_value')
-      expect(result.metadata['word_count']).to be > 0
+      expect(result.metadata['word_count']).to be_positive
     end
   end
 
@@ -69,7 +69,7 @@ RSpec.describe 'PostProcessor Plugin System' do
       Kreuzberg.register_post_processor('word_count', processor)
       result = Kreuzberg.extract_file_sync(test_pdf)
 
-      expect(result.metadata['word_count']).to be > 0
+      expect(result.metadata['word_count']).to be_positive
       expect(result.metadata['processor_name']).to eq('WordCountProcessor')
     end
 

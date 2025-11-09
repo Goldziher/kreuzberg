@@ -1,5 +1,5 @@
 
-require:
+plugins:
   - rubocop-rspec
 
 AllCops:
@@ -69,8 +69,7 @@ RSpec/NestedGroups:
 
 RSpec/SpecFilePathFormat:
   Enabled: false
-
-RSpec/FilePath:
+RSpec/SpecFilePathSuffix:
   Enabled: false
 
 RSpec/PendingWithoutReason:
@@ -109,7 +108,4 @@ RSpec/DescribeClass:
   Enabled: false
 
 RSpec/PredicateMatcher:
-  Enabled: false
-
-Capybara/RSpec/PredicateMatcher:
   Enabled: false

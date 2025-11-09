@@ -107,7 +107,7 @@ RSpec.describe 'OCR Backend Plugin System' do
       received_bytes = BytesCapturingBackend.instance_variable_get(:@received_bytes)
       expect(received_bytes).to be_a(String)
       expect(received_bytes.encoding).to eq(Encoding::BINARY)
-      expect(received_bytes.length).to be > 0
+      expect(received_bytes.length).to be_positive
     end
 
     it 'backend can return extracted text' do
