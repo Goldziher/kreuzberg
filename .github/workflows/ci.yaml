@@ -169,7 +169,7 @@ jobs:
             exit 1
           fi
           cp -f "$ort_root/lib/"*.so* "crates/kreuzberg-node/"
-          echo "ORT_LIB_LOCATION=$ort_root" >> "$GITHUB_ENV"
+          echo "ORT_LIB_LOCATION=$ort_root/lib" >> "$GITHUB_ENV"
           echo "ORT_PREFER_DYNAMIC_LINK=1" >> "$GITHUB_ENV"
           echo "ORT_SKIP_DOWNLOAD=1" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/crates/kreuzberg-node:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
@@ -191,7 +191,7 @@ jobs:
             exit 1
           fi
           cp -f "$ort_root/lib/"libonnxruntime*.dylib "crates/kreuzberg-node/"
-          echo "ORT_LIB_LOCATION=$ort_root" >> "$GITHUB_ENV"
+          echo "ORT_LIB_LOCATION=$ort_root/lib" >> "$GITHUB_ENV"
           echo "ORT_PREFER_DYNAMIC_LINK=1" >> "$GITHUB_ENV"
           echo "ORT_SKIP_DOWNLOAD=1" >> "$GITHUB_ENV"
           echo "DYLD_LIBRARY_PATH=$GITHUB_WORKSPACE/crates/kreuzberg-node:${DYLD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
@@ -218,7 +218,7 @@ jobs:
           if (Test-Path (Join-Path $OrtRoot 'lib' 'onnxruntime.pdb')) {
             Copy-Item -Path (Join-Path $OrtRoot 'lib' 'onnxruntime.pdb') -Destination $NodeLibDir -Force
           }
-          "ORT_LIB_LOCATION=$OrtRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ORT_LIB_LOCATION=$OrtRoot\\lib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "ORT_PREFER_DYNAMIC_LINK=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "ORT_SKIP_DOWNLOAD=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "PATH=$NodeLibDir;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
