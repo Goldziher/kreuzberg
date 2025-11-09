@@ -702,7 +702,7 @@ jobs:
   create-release:
     name: Create GitHub Release
     needs: [prepare, python-wheels, python-sdist, node-bindings, cli-binaries, ruby-gem, cargo-packages]
-    if: ${{ needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -720,6 +720,7 @@ jobs:
           merge-multiple: true
 
       - name: Create GitHub Release
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -728,6 +729,7 @@ jobs:
             --generate-notes
 
       - name: Upload CLI binaries to release
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -741,10 +743,16 @@ jobs:
             gh release upload ${{ needs.prepare.outputs.tag }} "$file" --clobber
           done
 
+      - name: Release dry-run summary
+        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        run: |
+          echo "Dry run requested. Release artifacts ready for upload:" >> "$GITHUB_STEP_SUMMARY"
+          find dist/cli -type f -maxdepth 1 -print >> "$GITHUB_STEP_SUMMARY"
+
   publish-crates:
     name: Publish crates.io packages
     needs: [prepare, create-release]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -797,21 +805,26 @@ jobs:
           PY
 
       - name: Publish kreuzberg
-        if: ${{ steps.crate_check.outputs.core_exists != 'true' }}
+        if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         run: cargo publish -p kreuzberg --token ${{ secrets.CARGO_TOKEN }}
 
       - name: Wait for indexing
-        if: ${{ steps.crate_check.outputs.core_exists != 'true' }}
+        if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         run: sleep 30
 
       - name: Publish kreuzberg-cli
-        if: ${{ steps.crate_check.outputs.cli_exists != 'true' }}
+        if: ${{ steps.crate_check.outputs.cli_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         run: cargo publish -p kreuzberg-cli --token ${{ secrets.CARGO_TOKEN }}
+
+      - name: Crates dry-run summary
+        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        run: |
+          echo "Dry run requested; cargo publish skipped." >> "$GITHUB_STEP_SUMMARY"
 
   publish-pypi:
     name: Publish Python packages to PyPI
     needs: [prepare, create-release]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -890,7 +903,7 @@ jobs:
   publish-node:
     name: Publish Node packages
     needs: [prepare, create-release]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -904,6 +917,13 @@ jobs:
           pattern: node-bindings-*
           path: node-artifacts
           merge-multiple: true
+
+      - name: Download TypeScript definitions
+        uses: actions/download-artifact@v6
+        with:
+          name: node-typescript-defs
+          path: typescript-defs
+          if-no-files-found: ignore
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -921,6 +941,15 @@ jobs:
           for pkg in node-artifacts/*.tar.gz; do
             tar -xzf "$pkg" -C crates/kreuzberg-node
           done
+          if [ -d typescript-defs ]; then
+            cp typescript-defs/index.js typescript-defs/index.d.ts crates/kreuzberg-node/ || true
+          fi
+
+      - name: Node artifacts summary
+        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        run: |
+          echo "Dry run requested; Node binding tarballs staged:" >> "$GITHUB_STEP_SUMMARY"
+          find node-artifacts -name '*.tar.gz' -print >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install workspace dependencies
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
