@@ -108,7 +108,19 @@ impl DocumentExtractor for PptxExtractor {
     ) -> Result<ExtractionResult> {
         let extract_images = config.images.as_ref().is_some_and(|img| img.extract_images);
 
-        let pptx_result = crate::extraction::pptx::extract_pptx_from_bytes(content, extract_images)?;
+        // Extract PPTX content
+        let pptx_result = if config._internal_batch_mode {
+            // Batch mode: Use spawn_blocking for parallelism
+            let content_owned = content.to_vec();
+            tokio::task::spawn_blocking(move || {
+                crate::extraction::pptx::extract_pptx_from_bytes(&content_owned, extract_images)
+            })
+            .await
+            .map_err(|e| crate::error::KreuzbergError::parsing(format!("PPTX extraction task failed: {}", e)))??
+        } else {
+            // Single-file mode: Direct extraction (no spawn overhead)
+            crate::extraction::pptx::extract_pptx_from_bytes(content, extract_images)?
+        };
 
         let mut additional = std::collections::HashMap::new();
         additional.insert("slide_count".to_string(), serde_json::json!(pptx_result.slide_count));

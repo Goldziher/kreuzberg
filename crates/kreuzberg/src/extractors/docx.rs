@@ -63,21 +63,41 @@ impl DocumentExtractor for DocxExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        _config: &ExtractionConfig,
+        config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         // Extract text with docx-lite
-        let text = docx::extract_text(content)?;
+        let text = if config._internal_batch_mode {
+            // Batch mode: Use spawn_blocking for parallelism
+            let content_for_text = content.to_vec();
+            tokio::task::spawn_blocking(move || docx::extract_text(&content_for_text))
+                .await
+                .map_err(|e| {
+                    crate::error::KreuzbergError::parsing(format!("DOCX text extraction task failed: {}", e))
+                })??
+        } else {
+            // Single-file mode: Direct extraction (no spawn overhead)
+            docx::extract_text(content)?
+        };
 
         // Extract metadata using existing office_metadata module
-        // Clone content for metadata extraction (relatively small for DOCX files)
-        let content_owned = content.to_vec();
-        let mut archive = tokio::task::spawn_blocking(move || {
+        let mut archive = if config._internal_batch_mode {
+            // Batch mode: Use spawn_blocking for parallelism
+            let content_owned = content.to_vec();
+            tokio::task::spawn_blocking(move || -> crate::error::Result<_> {
+                let cursor = Cursor::new(content_owned);
+                zip::ZipArchive::new(cursor)
+                    .map_err(|e| crate::error::KreuzbergError::parsing(format!("Failed to open ZIP archive: {}", e)))
+            })
+            .await
+            .map_err(|e| crate::error::KreuzbergError::parsing(format!("Task join error: {}", e)))??
+        } else {
+            // Single-file mode: Direct extraction (no spawn overhead)
+            // Note: We still need to clone for ZipArchive type consistency with batch mode
+            let content_owned = content.to_vec();
             let cursor = Cursor::new(content_owned);
             zip::ZipArchive::new(cursor)
-                .map_err(|e| std::io::Error::other(format!("Failed to open ZIP archive: {}", e)))
-        })
-        .await
-        .map_err(|e| crate::error::KreuzbergError::parsing(format!("Task join error: {}", e)))??;
+                .map_err(|e| crate::error::KreuzbergError::parsing(format!("Failed to open ZIP archive: {}", e)))?
+        };
 
         let mut metadata_map = std::collections::HashMap::new();
 

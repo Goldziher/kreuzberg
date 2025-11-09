@@ -48,7 +48,7 @@ impl DocumentExtractor for ExcelExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        _config: &ExtractionConfig,
+        config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let extension = match mime_type {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => ".xlsx",
@@ -62,7 +62,20 @@ impl DocumentExtractor for ExcelExtractor {
             _ => ".xlsx",
         };
 
-        let workbook = crate::extraction::excel::read_excel_bytes(content, extension)?;
+        // Extract workbook
+        let workbook = if config._internal_batch_mode {
+            // Batch mode: Use spawn_blocking for parallelism
+            let content_owned = content.to_vec();
+            let extension_owned = extension.to_string();
+            tokio::task::spawn_blocking(move || {
+                crate::extraction::excel::read_excel_bytes(&content_owned, &extension_owned)
+            })
+            .await
+            .map_err(|e| crate::error::KreuzbergError::parsing(format!("Excel extraction task failed: {}", e)))??
+        } else {
+            // Single-file mode: Direct extraction (no spawn overhead)
+            crate::extraction::excel::read_excel_bytes(content, extension)?
+        };
 
         let markdown = crate::extraction::excel::excel_to_markdown(&workbook);
 

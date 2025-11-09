@@ -224,7 +224,9 @@ pub async fn batch_extract_file(
         return Ok(vec![]);
     }
 
-    let config = Arc::new(config.clone());
+    let mut batch_config = config.clone();
+    batch_config._internal_batch_mode = true;
+    let config = Arc::new(batch_config);
 
     let max_concurrent = config.max_concurrent_extractions.unwrap_or_else(|| num_cpus::get() * 2);
     let semaphore = Arc::new(Semaphore::new(max_concurrent));
@@ -312,7 +314,9 @@ pub async fn batch_extract_bytes(
         return Ok(vec![]);
     }
 
-    let config = Arc::new(config.clone());
+    let mut batch_config = config.clone();
+    batch_config._internal_batch_mode = true;
+    let config = Arc::new(batch_config);
 
     let max_concurrent = config.max_concurrent_extractions.unwrap_or_else(|| num_cpus::get() * 2);
     let semaphore = Arc::new(Semaphore::new(max_concurrent));

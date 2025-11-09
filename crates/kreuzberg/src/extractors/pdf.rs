@@ -237,7 +237,34 @@ impl DocumentExtractor for PdfExtractor {
         config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         #[cfg(feature = "pdf")]
-        let (pdf_metadata, native_text) = {
+        let (pdf_metadata, native_text) = if config._internal_batch_mode {
+            // Batch mode: Move PDF extraction to blocking thread pool to enable parallelism
+            let content_owned = content.to_vec();
+            tokio::task::spawn_blocking(move || {
+                let bindings = Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./"))
+                    .or_else(|_| Pdfium::bind_to_system_library())
+                    .map_err(|e| PdfError::MetadataExtractionFailed(format!("Failed to initialize Pdfium: {}", e)))?;
+
+                let pdfium = Pdfium::new(bindings);
+
+                let document = pdfium.load_pdf_from_byte_slice(&content_owned, None).map_err(|e| {
+                    let err_msg = e.to_string();
+                    if err_msg.contains("password") || err_msg.contains("Password") {
+                        PdfError::PasswordRequired
+                    } else {
+                        PdfError::InvalidPdf(err_msg)
+                    }
+                })?;
+
+                let metadata = crate::pdf::metadata::extract_metadata_from_document(&document)?;
+                let native_text = crate::pdf::text::extract_text_from_pdf_document(&document)?;
+
+                Ok::<_, crate::error::KreuzbergError>((metadata, native_text))
+            })
+            .await
+            .map_err(|e| crate::error::KreuzbergError::Other(format!("PDF extraction task failed: {}", e)))??
+        } else {
+            // Single-file mode: Direct extraction (no spawn overhead)
             let bindings = Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./"))
                 .or_else(|_| Pdfium::bind_to_system_library())
                 .map_err(|e| PdfError::MetadataExtractionFailed(format!("Failed to initialize Pdfium: {}", e)))?;
