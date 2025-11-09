@@ -38,16 +38,27 @@ module Kreuzberg
 
       output, status = Open3.capture2('otool', '-L', bundle)
       return unless status.success?
-      return if output.include?('@loader_path/libpdfium.dylib')
 
-      if output.include?('./libpdfium.dylib')
+      replacements = {
+        './libpdfium.dylib' => '@loader_path/libpdfium.dylib',
+        '@rpath/libpdfium.dylib' => '@loader_path/libpdfium.dylib'
+      }
+
+      replacements.each do |current, desired|
+        next unless output.include?(current)
+
         Open3.capture2(
           'install_name_tool',
           '-change',
-          './libpdfium.dylib',
-          '@loader_path/libpdfium.dylib',
+          current,
+          desired,
           bundle
         )
+      end
+
+      rpath_output, rpath_status = Open3.capture2('otool', '-l', bundle)
+      if rpath_status.success? && !rpath_output.include?('@loader_path')
+        Open3.capture2('install_name_tool', '-add_rpath', '@loader_path', bundle)
       end
     rescue Errno::ENOENT, IOError
       # Tool not available (e.g., on CI). The dynamic loader can still use the updated env vars.

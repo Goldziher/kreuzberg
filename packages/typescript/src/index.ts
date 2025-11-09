@@ -46,11 +46,19 @@
  */
 
 import type {
+	ChunkingConfig,
 	ExtractionConfig,
 	ExtractionResult,
+	ImageExtractionConfig,
+	LanguageDetectionConfig,
 	OcrBackendProtocol,
+	OcrConfig,
+	PdfConfig,
+	PostProcessorConfig,
 	PostProcessorProtocol,
 	Table,
+	TesseractConfig,
+	TokenReductionConfig,
 	ValidatorProtocol,
 } from "./types.js";
 
@@ -175,6 +183,171 @@ function convertResult(rawResult: any): ExtractionResult {
 	};
 }
 
+type NativeExtractionConfig = Record<string, unknown>;
+
+function setIfDefined<T>(target: NativeExtractionConfig, key: string, value: T | undefined): void {
+	if (value !== undefined) {
+		target[key] = value;
+	}
+}
+
+function normalizeTesseractConfig(config?: TesseractConfig) {
+	if (!config) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "psm", config.psm);
+	setIfDefined(normalized, "enable_table_detection", config.enableTableDetection);
+	setIfDefined(normalized, "tessedit_char_whitelist", config.tesseditCharWhitelist);
+	return normalized;
+}
+
+function normalizeOcrConfig(ocr?: OcrConfig): NativeExtractionConfig | undefined {
+	if (!ocr) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {
+		backend: ocr.backend,
+	};
+	setIfDefined(normalized, "language", ocr.language);
+
+	const tesseract = normalizeTesseractConfig(ocr.tesseractConfig);
+	if (tesseract) {
+		normalized.tesseract_config = tesseract;
+	}
+
+	return normalized;
+}
+
+function normalizeChunkingConfig(chunking?: ChunkingConfig): NativeExtractionConfig | undefined {
+	if (!chunking) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "max_chars", chunking.maxChars);
+	setIfDefined(normalized, "max_overlap", chunking.maxOverlap);
+	setIfDefined(normalized, "preset", (chunking as any).preset);
+	setIfDefined(normalized, "embedding", (chunking as any).embedding);
+	setIfDefined(normalized, "enabled", (chunking as any).enabled);
+	return normalized;
+}
+
+function normalizeImageExtractionConfig(images?: ImageExtractionConfig): NativeExtractionConfig | undefined {
+	if (!images) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "extract_images", images.extractImages);
+	setIfDefined(normalized, "target_dpi", images.targetDpi);
+	setIfDefined(normalized, "max_image_dimension", images.maxImageDimension);
+	setIfDefined(normalized, "auto_adjust_dpi", images.autoAdjustDpi);
+	setIfDefined(normalized, "min_dpi", images.minDpi);
+	setIfDefined(normalized, "max_dpi", images.maxDpi);
+	return normalized;
+}
+
+function normalizePdfConfig(pdf?: PdfConfig): NativeExtractionConfig | undefined {
+	if (!pdf) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "extract_images", pdf.extractImages);
+	setIfDefined(normalized, "passwords", pdf.passwords);
+	setIfDefined(normalized, "extract_metadata", pdf.extractMetadata);
+	return normalized;
+}
+
+function normalizeTokenReductionConfig(tokenReduction?: TokenReductionConfig): NativeExtractionConfig | undefined {
+	if (!tokenReduction) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "mode", tokenReduction.mode);
+	setIfDefined(normalized, "preserve_important_words", tokenReduction.preserveImportantWords);
+	return normalized;
+}
+
+function normalizeLanguageDetectionConfig(
+	languageDetection?: LanguageDetectionConfig,
+): NativeExtractionConfig | undefined {
+	if (!languageDetection) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "enabled", languageDetection.enabled);
+	setIfDefined(normalized, "min_confidence", languageDetection.minConfidence);
+	setIfDefined(normalized, "detect_multiple", languageDetection.detectMultiple);
+	return normalized;
+}
+
+function normalizePostProcessorConfig(postprocessor?: PostProcessorConfig): NativeExtractionConfig | undefined {
+	if (!postprocessor) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "enabled", postprocessor.enabled);
+	setIfDefined(normalized, "enabled_processors", postprocessor.enabledProcessors);
+	setIfDefined(normalized, "disabled_processors", postprocessor.disabledProcessors);
+	return normalized;
+}
+
+function normalizeExtractionConfig(config: ExtractionConfig | null): NativeExtractionConfig | null {
+	if (!config) {
+		return null;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "use_cache", config.useCache);
+	setIfDefined(normalized, "enable_quality_processing", config.enableQualityProcessing);
+	setIfDefined(normalized, "force_ocr", config.forceOcr);
+	setIfDefined(normalized, "max_concurrent_extractions", config.maxConcurrentExtractions);
+
+	const ocr = normalizeOcrConfig(config.ocr);
+	if (ocr) {
+		normalized.ocr = ocr;
+	}
+
+	const chunking = normalizeChunkingConfig(config.chunking);
+	if (chunking) {
+		normalized.chunking = chunking;
+	}
+
+	const images = normalizeImageExtractionConfig(config.images);
+	if (images) {
+		normalized.images = images;
+	}
+
+	const pdf = normalizePdfConfig(config.pdfOptions);
+	if (pdf) {
+		normalized.pdf_options = pdf;
+	}
+
+	const tokenReduction = normalizeTokenReductionConfig(config.tokenReduction);
+	if (tokenReduction) {
+		normalized.token_reduction = tokenReduction;
+	}
+
+	const languageDetection = normalizeLanguageDetectionConfig(config.languageDetection);
+	if (languageDetection) {
+		normalized.language_detection = languageDetection;
+	}
+
+	const postprocessor = normalizePostProcessorConfig(config.postprocessor);
+	if (postprocessor) {
+		normalized.postprocessor = postprocessor;
+	}
+
+	return normalized;
+}
+
 /**
  * Extract content from a single file (synchronous).
  *
@@ -213,7 +386,8 @@ export function extractFileSync(
 	mimeType: string | null = null,
 	config: ExtractionConfig | null = null,
 ): ExtractionResult {
-	const rawResult = getBinding().extractFileSync(filePath, mimeType, config);
+	const normalizedConfig = normalizeExtractionConfig(config);
+	const rawResult = getBinding().extractFileSync(filePath, mimeType, normalizedConfig);
 	return convertResult(rawResult);
 }
 
@@ -252,7 +426,8 @@ export async function extractFile(
 	mimeType: string | null = null,
 	config: ExtractionConfig | null = null,
 ): Promise<ExtractionResult> {
-	const rawResult = await getBinding().extractFile(filePath, mimeType, config);
+	const normalizedConfig = normalizeExtractionConfig(config);
+	const rawResult = await getBinding().extractFile(filePath, mimeType, normalizedConfig);
 	return convertResult(rawResult);
 }
 
@@ -283,7 +458,8 @@ export function extractBytesSync(
 	config: ExtractionConfig | null = null,
 ): ExtractionResult {
 	const validated = assertUint8Array(data, "data");
-	const rawResult = getBinding().extractBytesSync(Buffer.from(validated), mimeType, config);
+	const normalizedConfig = normalizeExtractionConfig(config);
+	const rawResult = getBinding().extractBytesSync(Buffer.from(validated), mimeType, normalizedConfig);
 	return convertResult(rawResult);
 }
 
@@ -314,7 +490,8 @@ export async function extractBytes(
 	config: ExtractionConfig | null = null,
 ): Promise<ExtractionResult> {
 	const validated = assertUint8Array(data, "data");
-	const rawResult = await getBinding().extractBytes(Buffer.from(validated), mimeType, config);
+	const normalizedConfig = normalizeExtractionConfig(config);
+	const rawResult = await getBinding().extractBytes(Buffer.from(validated), mimeType, normalizedConfig);
 	return convertResult(rawResult);
 }
 
@@ -346,7 +523,8 @@ export async function extractBytes(
  * ```
  */
 export function batchExtractFilesSync(paths: string[], config: ExtractionConfig | null = null): ExtractionResult[] {
-	const rawResults = getBinding().batchExtractFilesSync(paths, config);
+	const normalizedConfig = normalizeExtractionConfig(config);
+	const rawResults = getBinding().batchExtractFilesSync(paths, normalizedConfig);
 	return rawResults.map(convertResult);
 }
 
@@ -384,7 +562,8 @@ export async function batchExtractFiles(
 	paths: string[],
 	config: ExtractionConfig | null = null,
 ): Promise<ExtractionResult[]> {
-	const rawResults = await getBinding().batchExtractFiles(paths, config);
+	const normalizedConfig = normalizeExtractionConfig(config);
+	const rawResults = await getBinding().batchExtractFiles(paths, normalizedConfig);
 	return rawResults.map(convertResult);
 }
 
@@ -430,7 +609,8 @@ export function batchExtractBytesSync(
 		throw new TypeError("dataList and mimeTypes must have the same length");
 	}
 
-	const rawResults = getBinding().batchExtractBytesSync(buffers, mimeTypes, config);
+	const normalizedConfig = normalizeExtractionConfig(config);
+	const rawResults = getBinding().batchExtractBytesSync(buffers, mimeTypes, normalizedConfig);
 	return rawResults.map(convertResult);
 }
 
@@ -480,7 +660,8 @@ export async function batchExtractBytes(
 		throw new TypeError("dataList and mimeTypes must have the same length");
 	}
 
-	const rawResults = await getBinding().batchExtractBytes(buffers, mimeTypes, config);
+	const normalizedConfig = normalizeExtractionConfig(config);
+	const rawResults = await getBinding().batchExtractBytes(buffers, mimeTypes, normalizedConfig);
 	return rawResults.map(convertResult);
 }
 

@@ -35,27 +35,36 @@ module Kreuzberg
     #   chunking = Chunking.new(max_chars: 1000, max_overlap: 200)
     #
     class Chunking
-      attr_reader :max_chars, :max_overlap, :preset, :embedding
+      attr_reader :max_chars, :max_overlap, :preset, :embedding, :enabled
 
       def initialize(
-        max_chars: 1000,
-        max_overlap: 200,
+        max_chars: nil,
+        max_overlap: nil,
         preset: nil,
-        embedding: nil
+        embedding: nil,
+        chunk_size: nil,
+        chunk_overlap: nil,
+        enabled: true
       )
-        @max_chars = max_chars.to_i
-        @max_overlap = max_overlap.to_i
+        resolved_size = chunk_size || max_chars || 1000
+        resolved_overlap = chunk_overlap || max_overlap || 200
+
+        @max_chars = resolved_size.to_i
+        @max_overlap = resolved_overlap.to_i
         @preset = preset&.to_s
         @embedding = embedding
+        @enabled = enabled.nil? ? nil : !!enabled
       end
 
       def to_h
-        {
+        config = {
           max_chars: @max_chars,
           max_overlap: @max_overlap,
           preset: @preset,
           embedding: @embedding
         }.compact
+        config[:enabled] = @enabled unless @enabled.nil?
+        config
       end
     end
 

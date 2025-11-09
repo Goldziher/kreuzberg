@@ -63,10 +63,10 @@ impl DocumentExtractor for DocxExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        config: &ExtractionConfig,
+        _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         // Extract text with docx-lite
-        let text = if config._internal_batch_mode {
+        let text = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Use spawn_blocking for parallelism
             let content_for_text = content.to_vec();
             tokio::task::spawn_blocking(move || docx::extract_text(&content_for_text))
@@ -80,7 +80,7 @@ impl DocumentExtractor for DocxExtractor {
         };
 
         // Extract metadata using existing office_metadata module
-        let mut archive = if config._internal_batch_mode {
+        let mut archive = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
             tokio::task::spawn_blocking(move || -> crate::error::Result<_> {

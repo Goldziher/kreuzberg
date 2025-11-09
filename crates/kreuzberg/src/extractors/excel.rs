@@ -48,7 +48,7 @@ impl DocumentExtractor for ExcelExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        config: &ExtractionConfig,
+        _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let extension = match mime_type {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => ".xlsx",
@@ -63,7 +63,7 @@ impl DocumentExtractor for ExcelExtractor {
         };
 
         // Extract workbook
-        let workbook = if config._internal_batch_mode {
+        let workbook = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
             let extension_owned = extension.to_string();

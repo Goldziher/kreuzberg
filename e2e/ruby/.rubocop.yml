@@ -7,3 +7,7 @@ Capybara/RSpec/PredicateMatcher:
 # E2E tests are smoke tests that may not have explicit expectations
 RSpec/NoExpectationExample:
   Enabled: false
+
+Lint/RedundantCopDisableDirective:
+  Exclude:
+    - 'spec/**/*.rb'

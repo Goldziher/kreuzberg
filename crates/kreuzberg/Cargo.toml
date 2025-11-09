@@ -19,7 +19,6 @@ crate-type = ["rlib"]
 default = []
 
 profiling = ["dep:pprof"]
-vendored-openssl = ["dep:openssl", "openssl/vendored"]
 
 # Format extractors
 pdf = ["dep:pdfium-render", "dep:lopdf", "dep:image"]
@@ -85,7 +84,6 @@ tracing = "0.1"
 pprof = { version = "0.15.0", features = ["flamegraph"], optional = true }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 base64-simd = "0.8"
-openssl = { version = "0.10", optional = true }
 
 # Format extractors (optional)
 pdfium-render = { version = "0.8.36", features = ["thread_safe", "image"], optional = true }

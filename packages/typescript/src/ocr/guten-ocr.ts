@@ -275,12 +275,23 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		}
 
 		try {
-			const sharp = await import("sharp").then((m: any) => m.default || m);
+			const buffer = Buffer.from(imageBytes);
 
-			const image = sharp(Buffer.from(imageBytes));
-			const metadata = await image.metadata();
+			let width = 0;
+			let height = 0;
 
-			const result = await this.ocr.detect(Buffer.from(imageBytes));
+			try {
+				const sharp = await import("sharp").then((m: any) => m.default || m);
+				const image = sharp(buffer);
+				const metadata = await image.metadata();
+				width = metadata.width ?? 0;
+				height = metadata.height ?? 0;
+			} catch (metadataError) {
+				const error = metadataError as Error;
+				console.warn(`[Guten OCR] Unable to read image metadata via sharp: ${error.message}`);
+			}
+
+			const result = await this.ocr.detect(buffer);
 
 			const textLines = result.map((line) => line.text);
 			const content = textLines.join("\n");
@@ -291,8 +302,8 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 				content,
 				mime_type: "text/plain",
 				metadata: {
-					width: metadata.width ?? 0,
-					height: metadata.height ?? 0,
+					width,
+					height,
 					confidence: avgConfidence,
 					text_regions: result.length,
 					language,

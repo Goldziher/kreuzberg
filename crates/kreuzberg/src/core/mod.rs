@@ -28,6 +28,7 @@
 //! # }
 //! ```
 
+pub(crate) mod batch_mode;
 pub mod config;
 pub mod extractor;
 pub mod io;

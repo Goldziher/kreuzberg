@@ -12,7 +12,7 @@ description = "Kreuzberg document intelligence - Node.js native bindings"
 crate-type = ["cdylib"]
 
 [dependencies]
-kreuzberg = { path = "../kreuzberg", features = ["full", "vendored-openssl"] }
+kreuzberg = { path = "../kreuzberg", features = ["full"] }
 napi = { version = "3", default-features = false, features = ["napi8", "async", "serde-json"] }
 napi-derive = "3"
 tokio = { version = "1.48.0", features = ["rt", "macros"] }

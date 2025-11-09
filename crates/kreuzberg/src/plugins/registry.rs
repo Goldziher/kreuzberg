@@ -1035,6 +1035,7 @@ mod tests {
     #[test]
     fn test_ocr_backend_registry_shutdown_all() {
         let mut registry = OcrBackendRegistry::new();
+        let baseline = registry.list().len();
 
         let backend1 = Arc::new(MockOcrBackend {
             name: "backend1".to_string(),
@@ -1049,7 +1050,7 @@ mod tests {
         registry.register(backend1).unwrap();
         registry.register(backend2).unwrap();
 
-        assert_eq!(registry.list().len(), 2);
+        assert_eq!(registry.list().len(), baseline + 2);
 
         registry.shutdown_all().unwrap();
         assert_eq!(registry.list().len(), 0);
@@ -1152,6 +1153,12 @@ mod tests {
     #[test]
     fn test_ocr_backend_registry_default() {
         let registry = OcrBackendRegistry::default();
+        #[cfg(feature = "ocr")]
+        assert!(
+            registry.list().len() >= 1,
+            "expected at least one default OCR backend when the 'ocr' feature is enabled"
+        );
+        #[cfg(not(feature = "ocr"))]
         assert_eq!(registry.list().len(), 0);
     }
 

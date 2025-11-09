@@ -97,7 +97,20 @@ runs:
 
         CIBW_BEFORE_BUILD_LINUX: |
           python -m pip install --upgrade pip maturin build
-          ARCH="${CIBW_ARCH:-${CIBUILDWHEEL_ARCH:-x86_64}}"
+          determine_arch() {
+            if [ -n "${CIBW_BUILD:-}" ]; then
+              case "${CIBW_BUILD}" in
+                *-manylinux*_aarch64*|*-musllinux*_aarch64*) echo "aarch64"; return ;;
+                *-manylinux*_x86_64*|*-musllinux*_x86_64*) echo "x86_64"; return ;;
+              esac
+            fi
+            if [ -n "${CIBUILDWHEEL_ARCH:-}" ]; then
+              echo "${CIBUILDWHEEL_ARCH}"
+              return
+            fi
+            echo "$(uname -m)"
+          }
+          ARCH="$(determine_arch)"
           ORT_DIR="/tmp/onnxruntime/linux/${ARCH}"
           export ORT_STRATEGY=system
           export ORT_LIB_LOCATION="${ORT_DIR}/onnxruntime"
@@ -105,7 +118,21 @@ runs:
           export ORT_PREFER_DYNAMIC_LINK=0
         CIBW_BEFORE_BUILD_MACOS: |
           python -m pip install --upgrade pip maturin build
-          ARCH="${CIBW_ARCH:-${CIBUILDWHEEL_ARCH:-$(uname -m)}}"
+          determine_arch() {
+            if [ -n "${CIBW_BUILD:-}" ]; then
+              case "${CIBW_BUILD}" in
+                *-macosx_arm64*) echo "arm64"; return ;;
+                *-macosx_x86_64*) echo "x86_64"; return ;;
+                *-macosx_universal2*) echo "arm64"; return ;;
+              esac
+            fi
+            if [ -n "${CIBUILDWHEEL_ARCH:-}" ]; then
+              echo "${CIBUILDWHEEL_ARCH}"
+              return
+            fi
+            echo "$(uname -m)"
+          }
+          ARCH="$(determine_arch)"
           ORT_DIR="/tmp/onnxruntime/macos/${ARCH}"
           export ORT_STRATEGY=system
           export ORT_LIB_LOCATION="${ORT_DIR}/onnxruntime"

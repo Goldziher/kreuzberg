@@ -23,6 +23,11 @@ export interface OcrConfig {
 export interface ChunkingConfig {
 	maxChars?: number;
 	maxOverlap?: number;
+	chunkSize?: number;
+	chunkOverlap?: number;
+	preset?: string;
+	embedding?: Record<string, unknown>;
+	enabled?: boolean;
 }
 
 export interface LanguageDetectionConfig {
