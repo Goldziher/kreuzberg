@@ -237,7 +237,7 @@ impl DocumentExtractor for PdfExtractor {
         config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         #[cfg(feature = "pdf")]
-        let (pdf_metadata, native_text) = if config._internal_batch_mode {
+        let (pdf_metadata, native_text) = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Move PDF extraction to blocking thread pool to enable parallelism
             let content_owned = content.to_vec();
             tokio::task::spawn_blocking(move || {

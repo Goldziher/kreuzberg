@@ -109,7 +109,7 @@ impl DocumentExtractor for PptxExtractor {
         let extract_images = config.images.as_ref().is_some_and(|img| img.extract_images);
 
         // Extract PPTX content
-        let pptx_result = if config._internal_batch_mode {
+        let pptx_result = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
             tokio::task::spawn_blocking(move || {

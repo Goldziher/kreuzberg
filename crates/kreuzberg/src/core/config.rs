@@ -84,15 +84,6 @@ pub struct ExtractionConfig {
     /// large batches. Defaults to twice the number of CPU cores.
     #[serde(default)]
     pub max_concurrent_extractions: Option<usize>,
-
-    /// Internal flag indicating batch processing mode.
-    ///
-    /// When true, extractors use `spawn_blocking` for CPU-intensive work to enable
-    /// parallelism. When false (single-file mode), extractors run directly to avoid
-    /// spawn overhead.
-    #[doc(hidden)]
-    #[serde(skip)]
-    pub _internal_batch_mode: bool,
 }
 
 /// Post-processor configuration.
@@ -335,7 +326,6 @@ impl Default for ExtractionConfig {
             #[cfg(feature = "html")]
             html_options: None,
             max_concurrent_extractions: None,
-            _internal_batch_mode: false,
         }
     }
 }
