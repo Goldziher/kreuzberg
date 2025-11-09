@@ -19,7 +19,7 @@ crate-type = ["rlib"]
 default = []
 
 profiling = ["dep:pprof"]
-vendored-openssl = ["openssl/vendored"]
+vendored-openssl = ["dep:openssl", "openssl/vendored"]
 
 # Format extractors
 pdf = ["dep:pdfium-render", "dep:lopdf", "dep:image"]
