@@ -17,6 +17,9 @@ pub mod excel;
 pub mod html;
 
 #[cfg(feature = "office")]
+pub mod docx;
+
+#[cfg(feature = "office")]
 pub mod libreoffice;
 
 #[cfg(feature = "office")]

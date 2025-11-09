@@ -27,6 +27,9 @@ pub mod excel;
 pub mod html;
 
 #[cfg(feature = "office")]
+pub mod docx;
+
+#[cfg(feature = "office")]
 pub mod pandoc;
 
 #[cfg(feature = "pdf")]
@@ -55,6 +58,9 @@ pub use excel::ExcelExtractor;
 
 #[cfg(feature = "html")]
 pub use html::HtmlExtractor;
+
+#[cfg(feature = "office")]
+pub use docx::DocxExtractor;
 
 #[cfg(feature = "office")]
 pub use pandoc::PandocExtractor;
@@ -130,6 +136,7 @@ pub fn register_default_extractors() -> Result<()> {
 
     #[cfg(feature = "office")]
     {
+        registry.register(Arc::new(DocxExtractor::new()))?;
         registry.register(Arc::new(PptxExtractor::new()))?;
         registry.register(Arc::new(PandocExtractor::new()))?;
     }
@@ -203,7 +210,8 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 2;
+            expected_count += 3;
+            assert!(extractor_names.contains(&"docx-extractor".to_string()));
             assert!(extractor_names.contains(&"pptx-extractor".to_string()));
             assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
         }

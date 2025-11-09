@@ -571,7 +571,7 @@ async fn test_chunking_with_fast_embeddings() {
         .expect("Should extract successfully");
 
     let chunks = result.chunks.expect("Should have chunks");
-    assert!(chunks.len() > 0, "Should have at least one chunk");
+    assert!(!chunks.is_empty(), "Should have at least one chunk");
 
     for chunk in &chunks {
         let embedding = chunk.embedding.as_ref().expect("Should have embedding");

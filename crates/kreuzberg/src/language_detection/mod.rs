@@ -386,7 +386,6 @@ mod tests {
         if let Some(langs) = result {
             assert_eq!(langs.len(), 1, "Single language mode should return one language");
             assert_eq!(langs[0], "eng", "Should detect English");
-        } else {
         }
     }
 

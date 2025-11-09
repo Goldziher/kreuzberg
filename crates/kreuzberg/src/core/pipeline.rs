@@ -535,7 +535,9 @@ Natural language processing enables computers to understand human language.
 
     #[tokio::test]
     async fn test_postprocessor_runs_before_validator() {
-        let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+        {
+            let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+        } // Drop guard before async operations
         use crate::plugins::{Plugin, PostProcessor, ProcessingStage, Validator};
         use async_trait::async_trait;
         use std::sync::Arc;
@@ -653,7 +655,9 @@ Natural language processing enables computers to understand human language.
     #[tokio::test]
     #[cfg(feature = "quality")]
     async fn test_quality_processing_runs_before_validator() {
-        let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+        {
+            let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+        } // Drop guard before async operations
         use crate::plugins::{Plugin, Validator};
         use async_trait::async_trait;
         use std::sync::Arc;
@@ -720,7 +724,9 @@ Natural language processing enables computers to understand human language.
 
     #[tokio::test]
     async fn test_multiple_postprocessors_run_before_validator() {
-        let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+        {
+            let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+        } // Drop guard before async operations
         use crate::plugins::{Plugin, PostProcessor, ProcessingStage, Validator};
         use async_trait::async_trait;
         use std::sync::Arc;
