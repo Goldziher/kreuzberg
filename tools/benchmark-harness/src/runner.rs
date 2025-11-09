@@ -268,63 +268,61 @@ impl BenchmarkRunner {
             }
         }
 
+        // For batch extraction, each iteration returns a single result for the entire batch
+        // If only one iteration, return that batch result directly
         if config.benchmark_iterations == 1 && !all_batch_results.is_empty() {
             return Ok(all_batch_results.into_iter().next().unwrap());
         }
 
-        let file_count = file_paths.len();
-        let mut aggregated_results = Vec::new();
+        // For multiple iterations, aggregate the batch results
+        let batch_iterations: Vec<&BenchmarkResult> = all_batch_results
+            .iter()
+            .map(|batch| &batch[0]) // Each batch has only one result now
+            .collect();
 
-        for file_idx in 0..file_count {
-            let file_iterations: Vec<&BenchmarkResult> =
-                all_batch_results.iter().map(|batch| &batch[file_idx]).collect();
+        let iterations: Vec<IterationResult> = batch_iterations
+            .iter()
+            .enumerate()
+            .map(|(idx, result)| IterationResult {
+                iteration: idx + 1,
+                duration: result.duration,
+                extraction_duration: result.extraction_duration,
+                metrics: result.metrics.clone(),
+            })
+            .collect();
 
-            let iterations: Vec<IterationResult> = file_iterations
-                .iter()
-                .enumerate()
-                .map(|(idx, result)| IterationResult {
-                    iteration: idx + 1,
-                    duration: result.duration,
-                    extraction_duration: result.extraction_duration,
-                    metrics: result.metrics.clone(),
-                })
-                .collect();
+        let statistics = calculate_statistics(&iterations);
+        let aggregated_metrics = aggregate_metrics(&iterations);
 
-            let statistics = calculate_statistics(&iterations);
+        let extraction_durations: Vec<Duration> =
+            batch_iterations.iter().filter_map(|r| r.extraction_duration).collect();
 
-            let aggregated_metrics = aggregate_metrics(&iterations);
+        let avg_extraction_duration = if !extraction_durations.is_empty() {
+            let total_ms: f64 = extraction_durations.iter().map(|d| d.as_secs_f64() * 1000.0).sum();
+            Some(Duration::from_secs_f64(
+                total_ms / extraction_durations.len() as f64 / 1000.0,
+            ))
+        } else {
+            None
+        };
 
-            let extraction_durations: Vec<Duration> =
-                file_iterations.iter().filter_map(|r| r.extraction_duration).collect();
+        let subprocess_overhead = avg_extraction_duration.map(|ext| statistics.mean.saturating_sub(ext));
+        let first_result = batch_iterations[0];
 
-            let avg_extraction_duration = if !extraction_durations.is_empty() {
-                let total_ms: f64 = extraction_durations.iter().map(|d| d.as_secs_f64() * 1000.0).sum();
-                Some(Duration::from_secs_f64(
-                    total_ms / extraction_durations.len() as f64 / 1000.0,
-                ))
-            } else {
-                None
-            };
-
-            let subprocess_overhead = avg_extraction_duration.map(|ext| statistics.mean.saturating_sub(ext));
-
-            let first_result = file_iterations[0];
-
-            aggregated_results.push(BenchmarkResult {
-                framework: first_result.framework.clone(),
-                file_path: first_result.file_path.clone(),
-                file_size: first_result.file_size,
-                success: true,
-                error_message: None,
-                duration: statistics.mean,
-                extraction_duration: avg_extraction_duration,
-                subprocess_overhead,
-                metrics: aggregated_metrics,
-                quality: first_result.quality.clone(),
-                iterations,
-                statistics: Some(statistics),
-            });
-        }
+        let aggregated_results = vec![BenchmarkResult {
+            framework: first_result.framework.clone(),
+            file_path: first_result.file_path.clone(),
+            file_size: first_result.file_size,
+            success: true,
+            error_message: None,
+            duration: statistics.mean,
+            extraction_duration: avg_extraction_duration,
+            subprocess_overhead,
+            metrics: aggregated_metrics,
+            quality: first_result.quality.clone(),
+            iterations,
+            statistics: Some(statistics),
+        }];
 
         Ok(aggregated_results)
     }

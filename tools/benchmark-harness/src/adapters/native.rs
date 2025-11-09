@@ -170,69 +170,61 @@ impl FrameworkAdapter for NativeAdapter {
         let samples = monitor.stop().await;
         let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
+        // Calculate total file size for throughput
+        let total_file_size: u64 = file_paths
+            .iter()
+            .filter_map(|path| std::fs::metadata(path).ok())
+            .map(|m| m.len())
+            .sum();
+
+        // On error, return single batch result representing failure
         if let Err(e) = batch_result {
-            return Ok(file_paths
-                .iter()
-                .map(|path| {
-                    let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-                    BenchmarkResult {
-                        framework: self.name().to_string(),
-                        file_path: path.to_path_buf(),
-                        file_size,
-                        success: false,
-                        error_message: Some(e.to_string()),
-                        duration: total_duration,
-                        extraction_duration: None,
-                        subprocess_overhead: None,
-                        metrics: PerformanceMetrics::default(),
-                        quality: None,
-                        iterations: vec![],
-                        statistics: None,
-                    }
-                })
-                .collect());
-        }
-
-        let extraction_results = batch_result.unwrap();
-
-        let mut benchmark_results = Vec::new();
-        for (path, _extraction_result) in paths.iter().zip(extraction_results.iter()) {
-            let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-
-            let per_file_duration = Duration::from_secs_f64(total_duration.as_secs_f64() / paths.len() as f64);
-
-            let throughput = if per_file_duration.as_secs_f64() > 0.0 {
-                file_size as f64 / per_file_duration.as_secs_f64()
-            } else {
-                0.0
-            };
-
-            let metrics = PerformanceMetrics {
-                peak_memory_bytes: resource_stats.peak_memory_bytes,
-                avg_cpu_percent: resource_stats.avg_cpu_percent,
-                throughput_bytes_per_sec: throughput,
-                p50_memory_bytes: resource_stats.p50_memory_bytes,
-                p95_memory_bytes: resource_stats.p95_memory_bytes,
-                p99_memory_bytes: resource_stats.p99_memory_bytes,
-            };
-
-            benchmark_results.push(BenchmarkResult {
+            return Ok(vec![BenchmarkResult {
                 framework: self.name().to_string(),
-                file_path: path.clone(),
-                file_size,
-                success: true,
-                error_message: None,
-                duration: per_file_duration,
+                file_path: PathBuf::from(format!("batch-{}-files", paths.len())),
+                file_size: total_file_size,
+                success: false,
+                error_message: Some(e.to_string()),
+                duration: total_duration,
                 extraction_duration: None,
                 subprocess_overhead: None,
-                metrics,
+                metrics: PerformanceMetrics::default(),
                 quality: None,
                 iterations: vec![],
                 statistics: None,
-            });
+            }]);
         }
 
-        Ok(benchmark_results)
+        // Return single batch result with total duration
+        let throughput = if total_duration.as_secs_f64() > 0.0 {
+            total_file_size as f64 / total_duration.as_secs_f64()
+        } else {
+            0.0
+        };
+
+        let metrics = PerformanceMetrics {
+            peak_memory_bytes: resource_stats.peak_memory_bytes,
+            avg_cpu_percent: resource_stats.avg_cpu_percent,
+            throughput_bytes_per_sec: throughput,
+            p50_memory_bytes: resource_stats.p50_memory_bytes,
+            p95_memory_bytes: resource_stats.p95_memory_bytes,
+            p99_memory_bytes: resource_stats.p99_memory_bytes,
+        };
+
+        Ok(vec![BenchmarkResult {
+            framework: self.name().to_string(),
+            file_path: PathBuf::from(format!("batch-{}-files", paths.len())),
+            file_size: total_file_size,
+            success: true,
+            error_message: None,
+            duration: total_duration,
+            extraction_duration: None,
+            subprocess_overhead: None,
+            metrics,
+            quality: None,
+            iterations: vec![],
+            statistics: None,
+        }])
     }
 
     fn supports_batch(&self) -> bool {

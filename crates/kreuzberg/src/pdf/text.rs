@@ -90,7 +90,20 @@ pub fn extract_text_from_pdf_with_passwords(pdf_bytes: &[u8], passwords: &[&str]
 }
 
 pub fn extract_text_from_pdf_document(document: &PdfDocument<'_>) -> Result<String> {
-    let mut content = String::new();
+    // Note: pdfium-render types are not Send, so we must extract page text sequentially
+    // even though the underlying pdfium library is thread-safe.
+    // The parallelization happens at the document level (batch processing),
+    // not at the page level within a single document.
+    extract_text_sequential(document)
+}
+
+fn extract_text_sequential(document: &PdfDocument<'_>) -> Result<String> {
+    let page_count = document.pages().len() as usize;
+
+    // Pre-allocate capacity based on estimated page size (average 2KB per page)
+    // This reduces memory reallocations during string concatenation
+    let estimated_size = page_count * 2048;
+    let mut content = String::with_capacity(estimated_size);
 
     for page in document.pages().iter() {
         let text = page
@@ -98,13 +111,15 @@ pub fn extract_text_from_pdf_document(document: &PdfDocument<'_>) -> Result<Stri
             .map_err(|e| PdfError::TextExtractionFailed(format!("Page text extraction failed: {}", e)))?;
 
         let page_text = text.all();
-        content.reserve(page_text.len() + 2);
 
         if !content.is_empty() {
             content.push_str("\n\n");
         }
         content.push_str(&page_text);
     }
+
+    // Shrink to actual size to free unused capacity
+    content.shrink_to_fit();
 
     Ok(content)
 }

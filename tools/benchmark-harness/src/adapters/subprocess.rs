@@ -349,94 +349,41 @@ impl FrameworkAdapter for SubprocessAdapter {
         let monitor = ResourceMonitor::new();
         monitor.start(Duration::from_millis(10)).await;
 
-        let (stdout, _stderr, duration) = match self.execute_subprocess_batch(file_paths, timeout).await {
+        let (_stdout, _stderr, duration) = match self.execute_subprocess_batch(file_paths, timeout).await {
             Ok(result) => result,
             Err(e) => {
                 let samples = monitor.stop().await;
                 let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-                return Ok(file_paths
-                    .iter()
-                    .map(|path| {
-                        let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-                        BenchmarkResult {
-                            framework: self.name.clone(),
-                            file_path: path.to_path_buf(),
-                            file_size,
-                            success: false,
-                            error_message: Some(e.to_string()),
-                            duration: Duration::from_secs(0),
-                            extraction_duration: None,
-                            subprocess_overhead: None,
-                            metrics: PerformanceMetrics {
-                                peak_memory_bytes: resource_stats.peak_memory_bytes,
-                                avg_cpu_percent: resource_stats.avg_cpu_percent,
-                                throughput_bytes_per_sec: 0.0,
-                                p50_memory_bytes: resource_stats.p50_memory_bytes,
-                                p95_memory_bytes: resource_stats.p95_memory_bytes,
-                                p99_memory_bytes: resource_stats.p99_memory_bytes,
-                            },
-                            quality: None,
-                            iterations: vec![],
-                            statistics: None,
-                        }
-                    })
-                    .collect());
+                return Ok(vec![BenchmarkResult {
+                    framework: self.name.clone(),
+                    file_path: PathBuf::from(format!("batch-{}-files", file_paths.len())),
+                    file_size: total_file_size,
+                    success: false,
+                    error_message: Some(e.to_string()),
+                    duration: Duration::from_secs(0),
+                    extraction_duration: None,
+                    subprocess_overhead: None,
+                    metrics: PerformanceMetrics {
+                        peak_memory_bytes: resource_stats.peak_memory_bytes,
+                        avg_cpu_percent: resource_stats.avg_cpu_percent,
+                        throughput_bytes_per_sec: 0.0,
+                        p50_memory_bytes: resource_stats.p50_memory_bytes,
+                        p95_memory_bytes: resource_stats.p95_memory_bytes,
+                        p99_memory_bytes: resource_stats.p99_memory_bytes,
+                    },
+                    quality: None,
+                    iterations: vec![],
+                    statistics: None,
+                }]);
             }
         };
 
         let samples = monitor.stop().await;
         let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-        let parsed: serde_json::Value = match serde_json::from_str(&stdout) {
-            Ok(v) => v,
-            Err(e) => {
-                return Ok(file_paths
-                    .iter()
-                    .map(|path| {
-                        let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-                        BenchmarkResult {
-                            framework: self.name.clone(),
-                            file_path: path.to_path_buf(),
-                            file_size,
-                            success: false,
-                            error_message: Some(format!("Failed to parse batch output: {}", e)),
-                            duration,
-                            extraction_duration: None,
-                            subprocess_overhead: None,
-                            metrics: PerformanceMetrics {
-                                peak_memory_bytes: resource_stats.peak_memory_bytes,
-                                avg_cpu_percent: resource_stats.avg_cpu_percent,
-                                throughput_bytes_per_sec: 0.0,
-                                p50_memory_bytes: resource_stats.p50_memory_bytes,
-                                p95_memory_bytes: resource_stats.p95_memory_bytes,
-                                p99_memory_bytes: resource_stats.p99_memory_bytes,
-                            },
-                            quality: None,
-                            iterations: vec![],
-                            statistics: None,
-                        }
-                    })
-                    .collect());
-            }
-        };
-
-        let results_array = if file_paths.len() == 1 {
-            vec![parsed]
-        } else {
-            parsed
-                .as_array()
-                .ok_or_else(|| Error::Benchmark("Expected JSON array for batch results".to_string()))?
-                .clone()
-        };
-
-        if results_array.len() != file_paths.len() {
-            return Err(Error::Benchmark(format!(
-                "Batch result count mismatch: expected {}, got {}",
-                file_paths.len(),
-                results_array.len()
-            )));
-        }
+        // For batch, we don't parse individual file results - we just measure total batch time
+        // The JSON parsing was used for per-file breakdown which we no longer need
 
         let batch_throughput = if duration.as_secs_f64() > 0.0 {
             total_file_size as f64 / duration.as_secs_f64()
@@ -444,51 +391,28 @@ impl FrameworkAdapter for SubprocessAdapter {
             0.0
         };
 
-        let mut benchmark_results = Vec::new();
-        for (path, result_json) in file_paths.iter().zip(results_array.iter()) {
-            let file_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-
-            let extraction_duration = result_json
-                .get("_extraction_time_ms")
-                .and_then(|v| v.as_f64())
-                .map(|ms| Duration::from_secs_f64(ms / 1000.0));
-
-            let throughput = if let Some(ext_dur) = extraction_duration {
-                if ext_dur.as_secs_f64() > 0.0 {
-                    file_size as f64 / ext_dur.as_secs_f64()
-                } else {
-                    batch_throughput
-                }
-            } else {
-                batch_throughput
-            };
-
-            let subprocess_overhead = extraction_duration.map(|ext| duration.saturating_sub(ext));
-
-            benchmark_results.push(BenchmarkResult {
-                framework: self.name.clone(),
-                file_path: path.to_path_buf(),
-                file_size,
-                success: true,
-                error_message: None,
-                duration,
-                extraction_duration,
-                subprocess_overhead,
-                metrics: PerformanceMetrics {
-                    peak_memory_bytes: resource_stats.peak_memory_bytes,
-                    avg_cpu_percent: resource_stats.avg_cpu_percent,
-                    throughput_bytes_per_sec: throughput,
-                    p50_memory_bytes: resource_stats.p50_memory_bytes,
-                    p95_memory_bytes: resource_stats.p95_memory_bytes,
-                    p99_memory_bytes: resource_stats.p99_memory_bytes,
-                },
-                quality: None,
-                iterations: vec![],
-                statistics: None,
-            });
-        }
-
-        Ok(benchmark_results)
+        // For batch extraction, return single result for the entire batch operation
+        Ok(vec![BenchmarkResult {
+            framework: self.name.clone(),
+            file_path: PathBuf::from(format!("batch-{}-files", file_paths.len())),
+            file_size: total_file_size,
+            success: true,
+            error_message: None,
+            duration,
+            extraction_duration: None,
+            subprocess_overhead: None,
+            metrics: PerformanceMetrics {
+                peak_memory_bytes: resource_stats.peak_memory_bytes,
+                avg_cpu_percent: resource_stats.avg_cpu_percent,
+                throughput_bytes_per_sec: batch_throughput,
+                p50_memory_bytes: resource_stats.p50_memory_bytes,
+                p95_memory_bytes: resource_stats.p95_memory_bytes,
+                p99_memory_bytes: resource_stats.p99_memory_bytes,
+            },
+            quality: None,
+            iterations: vec![],
+            statistics: None,
+        }])
     }
 
     async fn setup(&self) -> Result<()> {
