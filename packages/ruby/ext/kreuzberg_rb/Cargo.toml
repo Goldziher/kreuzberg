@@ -17,7 +17,7 @@ crate-type = ["cdylib"]
 [workspace]
 
 [dependencies]
-kreuzberg = { version = "4.0.0-rc.1", path = "../../../../crates/kreuzberg" }
+kreuzberg = { version = "4.0.0-rc.1", path = "../../../../crates/kreuzberg", features = ["full"] }
 magnus = { git = "https://github.com/matsadler/magnus", rev = "f6db11769efb517427bf7f121f9c32e18b059b38", features = ["rb-sys"] }
 serde_json = "1.0"
 tokio = { version = "1.48", features = ["rt", "macros"] }
