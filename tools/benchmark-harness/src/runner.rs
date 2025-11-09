@@ -524,7 +524,7 @@ mod tests {
     async fn test_run_with_no_frameworks() {
         let config = BenchmarkConfig::default();
         let registry = AdapterRegistry::new();
-        let runner = BenchmarkRunner::new(config, registry);
+        let mut runner = BenchmarkRunner::new(config, registry);
 
         let result = runner.run(&[]).await;
         assert!(result.is_err());
@@ -537,7 +537,7 @@ mod tests {
         let mut registry = AdapterRegistry::new();
         registry.register(Arc::new(NativeAdapter::new())).unwrap();
 
-        let runner = BenchmarkRunner::new(config, registry);
+        let mut runner = BenchmarkRunner::new(config, registry);
 
         let results = runner.run(&[]).await.unwrap();
         assert_eq!(results.len(), 0);

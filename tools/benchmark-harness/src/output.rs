@@ -59,6 +59,7 @@ mod tests {
             quality: None,
             iterations: vec![],
             statistics: None,
+            cold_start_duration: None,
         }];
 
         write_json(&results, &output_path).unwrap();
