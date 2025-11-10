@@ -87,6 +87,15 @@ impl OcrBackendRegistry {
         registry
     }
 
+    /// Create a new empty OCR backend registry without default backends.
+    ///
+    /// This is useful for testing or when you want full control over backend registration.
+    pub fn new_empty() -> Self {
+        Self {
+            backends: HashMap::new(),
+        }
+    }
+
     /// Register an OCR backend.
     ///
     /// # Arguments
@@ -758,7 +767,7 @@ mod tests {
 
     #[test]
     fn test_ocr_backend_registry() {
-        let mut registry = OcrBackendRegistry::new();
+        let mut registry = OcrBackendRegistry::new_empty();
 
         let backend = Arc::new(MockOcrBackend {
             name: "test-ocr".to_string(),

@@ -225,6 +225,22 @@ impl OcrProcessor {
             format!("version={}", TesseractAPI::version())
         });
 
+        // Validate language file exists before initializing to prevent segfault ~keep
+        // tesseract-rs can crash if language file is missing instead of returning error
+        if !tessdata_path.is_empty() && !config.language.is_empty() {
+            let languages: Vec<&str> = config.language.split('+').collect();
+            for lang in languages {
+                let traineddata_path = Path::new(&tessdata_path).join(format!("{}.traineddata", lang));
+                if !traineddata_path.exists() {
+                    return Err(OcrError::TesseractInitializationFailed(format!(
+                        "Language '{}' not found. Traineddata file does not exist: {}",
+                        lang,
+                        traineddata_path.display()
+                    )));
+                }
+            }
+        }
+
         let init_result = api.init(&tessdata_path, &config.language);
         log_ci_debug(ci_debug_enabled, "init", || match &init_result {
             Ok(_) => format!("language={} datapath='{}'", config.language, tessdata_path),
