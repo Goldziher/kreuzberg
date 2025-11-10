@@ -104,7 +104,7 @@ jobs:
 
       - name: Upload Docker image artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: docker-image-${{ matrix.variant }}
           path: /tmp/kreuzberg-${{ matrix.variant }}.tar.gz
@@ -113,7 +113,7 @@ jobs:
 
       - name: Upload test results
         if: always() && !inputs.skip_tests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: docker-test-results-${{ matrix.variant }}
           path: /tmp/kreuzberg-docker-test-results.json
@@ -140,7 +140,7 @@ jobs:
 
       - name: Upload Docker logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: docker-logs-${{ matrix.variant }}
           path: /tmp/docker-logs/
