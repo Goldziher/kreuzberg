@@ -1,0 +1,53 @@
+name: Download Pdfium Runtime
+description: Download Pdfium binaries for the current platform and expose the location via KREUZBERG_PDFIUM_PREBUILT
+inputs:
+  pdfium-version:
+    description: Pdfium version to download
+    required: true
+outputs:
+  pdfium-path:
+    description: Path to the extracted Pdfium runtime
+    value: ${{ steps.set-env.outputs.pdfium-path }}
+runs:
+  using: composite
+  steps:
+    - name: Download Pdfium runtime
+      id: download
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        platform="$(uname -s)"
+        case "$platform" in
+          Linux*) platform_id="linux" ;;
+          Darwin*) platform_id="mac" ;;
+          MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
+          *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
+        esac
+
+        arch="$(uname -m)"
+        case "$arch" in
+          x86_64|amd64) arch_id="x64" ;;
+          arm64|aarch64) arch_id="arm64" ;;
+          *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+        esac
+
+        version="${PDFIUM_VERSION:-${{ inputs.pdfium-version }}}"
+        tmpdir="$(mktemp -d)"
+        curl -fsSL -o "$tmpdir/pdfium.tgz" "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
+        mkdir -p "$tmpdir/extracted"
+        tar -xzf "$tmpdir/pdfium.tgz" -C "$tmpdir/extracted"
+
+        dest="$RUNNER_TEMP/pdfium-prebuilt"
+        rm -rf "$dest"
+        mv "$tmpdir/extracted" "$dest"
+        rm -rf "$tmpdir"
+
+        echo "pdfium_path=$dest" >> "$GITHUB_OUTPUT"
+
+    - name: Export Pdfium path
+      id: set-env
+      shell: bash
+      run: |
+        echo "KREUZBERG_PDFIUM_PREBUILT=${{ steps.download.outputs.pdfium_path }}" >> "$GITHUB_ENV"
+        echo "pdfium-path=${{ steps.download.outputs.pdfium_path }}" >> "$GITHUB_OUTPUT"

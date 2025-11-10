@@ -139,31 +139,9 @@ jobs:
 
       - name: Prepare ONNX Runtime (macOS)
         if: startsWith(matrix.settings.target, 'aarch64-apple-darwin') || startsWith(matrix.settings.target, 'x86_64-apple-darwin')
-        run: |
-          set -euo pipefail
-          case "${{ matrix.settings.target }}" in
-            aarch64-apple-darwin)
-              ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/aarch64-apple-darwin.tgz"
-              ;;
-            x86_64-apple-darwin)
-              ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/x86_64-apple-darwin.tgz"
-              ;;
-            *)
-              echo "Unsupported macOS target: ${{ matrix.settings.target }}" >&2
-              exit 1
-              ;;
-          esac
-          ort_dir="${RUNNER_TEMP}/onnxruntime/${{ matrix.settings.target }}"
-          if [ ! -f "${ort_dir}/onnxruntime/lib/libonnxruntime.a" ]; then
-            mkdir -p "${ort_dir}"
-            curl -fsSL "${ort_url}" | tar -xz -C "${ort_dir}"
-          fi
-          {
-            echo "ORT_STRATEGY=system"
-            echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime/lib"
-            echo "ORT_SKIP_DOWNLOAD=1"
-            echo "ORT_PREFER_DYNAMIC_LINK=1"
-          } >> "${GITHUB_ENV}"
+        uses: ./.github/actions/setup-prebuilt-onnx
+        with:
+          target: ${{ matrix.settings.target }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -283,50 +261,32 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
-      - name: Download Pdfium binaries
-        shell: bash
-        run: |
-          set -euo pipefail
-          platform="$(uname -s)"
-          case "$platform" in
-            Linux*) platform_id="linux" ;;
-            Darwin*) platform_id="mac" ;;
-            MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
-            *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
-          esac
-          arch="$(uname -m)"
-          case "$arch" in
-            x86_64|amd64) arch_id="x64" ;;
-            arm64|aarch64) arch_id="arm64" ;;
-            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
-          esac
-          version="${PDFIUM_VERSION:-7455}"
-          tmpdir="$(mktemp -d)"
-          curl -fsSL -o "$tmpdir/pdfium.tgz" "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
-          mkdir -p "$tmpdir/extracted"
-          tar -xzf "$tmpdir/pdfium.tgz" -C "$tmpdir/extracted"
-          dest="$RUNNER_TEMP/pdfium"
-          rm -rf "$dest"
-          mv "$tmpdir/extracted" "$dest"
-          rm -rf "$tmpdir"
+      - name: Download Pdfium runtime
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Stage Pdfium runtime artifacts
         shell: bash
         run: |
           set -euo pipefail
+          if [ -z "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
+            echo "KREUZBERG_PDFIUM_PREBUILT is not set" >&2
+            exit 1
+          fi
           case "${RUNNER_OS:-unknown}" in
             Windows)
-              src="$RUNNER_TEMP/pdfium/bin/pdfium.dll"
+              src="$KREUZBERG_PDFIUM_PREBUILT/bin/pdfium.dll"
               cp -f "$src" "crates/kreuzberg-rb/pdfium.dll"
               cp -f "$src" "packages/ruby/pdfium.dll"
               ;;
             macOS)
-              src="$RUNNER_TEMP/pdfium/lib/libpdfium.dylib"
+              src="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.dylib"
               cp -f "$src" "crates/kreuzberg-rb/libpdfium.dylib"
               cp -f "$src" "packages/ruby/libpdfium.dylib"
               ;;
             Linux)
-              src="$RUNNER_TEMP/pdfium/lib/libpdfium.so"
+              src="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.so"
               cp -f "$src" "crates/kreuzberg-rb/libpdfium.so"
               cp -f "$src" "packages/ruby/libpdfium.so"
               ;;

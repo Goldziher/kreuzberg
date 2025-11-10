@@ -1,0 +1,90 @@
+name: Setup ONNX Runtime
+description: Download and stage ONNX Runtime libraries for bindings
+inputs:
+  ort-version:
+    description: ONNX Runtime version to download
+    required: true
+  dest-dir:
+    description: Directory (relative to workspace) where libraries should be copied
+    required: false
+    default: crates/kreuzberg-node
+runs:
+  using: composite
+  steps:
+    - name: Prepare ONNX Runtime (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        ort_version="${{ inputs.ort-version }}"
+        archive="onnxruntime-linux-x64-${ort_version}.tgz"
+        curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+        extract_dir="$RUNNER_TEMP/onnxruntime"
+        mkdir -p "$extract_dir"
+        tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+        ort_root="$extract_dir/onnxruntime-linux-x64-${ort_version}"
+        if [ ! -d "$ort_root/lib" ]; then
+          echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
+          exit 1
+        fi
+        dest="$GITHUB_WORKSPACE/${{ inputs.dest-dir }}"
+        mkdir -p "$dest"
+        cp -f "$ort_root/lib/"*.so* "$dest/"
+        {
+          echo "ORT_LIB_LOCATION=$ort_root/lib"
+          echo "ORT_PREFER_DYNAMIC_LINK=1"
+          echo "ORT_SKIP_DOWNLOAD=1"
+          echo "LD_LIBRARY_PATH=$dest:${LD_LIBRARY_PATH:-}"
+        } >> "$GITHUB_ENV"
+
+    - name: Prepare ONNX Runtime (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        ort_version="${{ inputs.ort-version }}"
+        archive="onnxruntime-osx-arm64-${ort_version}.tgz"
+        curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+        extract_dir="$RUNNER_TEMP/onnxruntime"
+        mkdir -p "$extract_dir"
+        tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+        ort_root="$extract_dir/onnxruntime-osx-arm64-${ort_version}"
+        if [ ! -d "$ort_root/lib" ]; then
+          echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
+          exit 1
+        fi
+        dest="$GITHUB_WORKSPACE/${{ inputs.dest-dir }}"
+        mkdir -p "$dest"
+        cp -f "$ort_root/lib/"libonnxruntime*.dylib "$dest/"
+        {
+          echo "ORT_LIB_LOCATION=$ort_root/lib"
+          echo "ORT_PREFER_DYNAMIC_LINK=1"
+          echo "ORT_SKIP_DOWNLOAD=1"
+          echo "DYLD_LIBRARY_PATH=$dest:${DYLD_LIBRARY_PATH:-}"
+        } >> "$GITHUB_ENV"
+
+    - name: Prepare ONNX Runtime (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $OrtVersion = "${{ inputs.ort-version }}"
+        $Archive = "onnxruntime-win-x64-$OrtVersion.zip"
+        $DownloadPath = Join-Path $env:TEMP $Archive
+        Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v$OrtVersion/$Archive" -OutFile $DownloadPath -UseBasicParsing
+        $ExtractRoot = Join-Path $env:TEMP "onnxruntime"
+        New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+        Expand-Archive -Path $DownloadPath -DestinationPath $ExtractRoot -Force
+        $OrtRoot = Join-Path $ExtractRoot "onnxruntime-win-x64-$OrtVersion"
+        if (!(Test-Path (Join-Path $OrtRoot 'lib'))) {
+          Write-Error "ONNX Runtime lib directory missing at $OrtRoot\lib"
+          exit 1
+        }
+        $Dest = Join-Path $env:GITHUB_WORKSPACE "${{ inputs.dest-dir }}"
+        New-Item -ItemType Directory -Path $Dest -Force | Out-Null
+        Copy-Item -Path (Join-Path $OrtRoot 'lib' '*') -Destination $Dest -Force
+        @(
+          "ORT_LIB_LOCATION=$OrtRoot\lib"
+          "ORT_PREFER_DYNAMIC_LINK=1"
+          "ORT_SKIP_DOWNLOAD=1"
+          "PATH=$Dest;$env:PATH"
+        ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

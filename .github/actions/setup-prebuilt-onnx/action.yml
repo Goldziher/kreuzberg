@@ -1,0 +1,39 @@
+name: Setup Prebuilt ONNX Runtime
+description: Download prebuilt ONNX Runtime static libraries for Apple targets
+inputs:
+  target:
+    description: Target triple determining which archive to download
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Prepare ONNX Runtime archive
+      shell: bash
+      run: |
+        set -euo pipefail
+        target="${{ inputs.target }}"
+        case "$target" in
+          aarch64-apple-darwin)
+            ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/aarch64-apple-darwin.tgz"
+            ;;
+          x86_64-apple-darwin)
+            ort_url="https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/x86_64-apple-darwin.tgz"
+            ;;
+          *)
+            echo "setup-prebuilt-onnx does not support target $target" >&2
+            exit 1
+            ;;
+        esac
+
+        ort_dir="${RUNNER_TEMP}/onnxruntime/${target}"
+        if [ ! -f "${ort_dir}/onnxruntime/lib/libonnxruntime.a" ]; then
+          mkdir -p "${ort_dir}"
+          curl -fsSL "${ort_url}" | tar -xz -C "${ort_dir}"
+        fi
+
+        {
+          echo "ORT_STRATEGY=system"
+          echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime/lib"
+          echo "ORT_SKIP_DOWNLOAD=1"
+          echo "ORT_PREFER_DYNAMIC_LINK=1"
+        } >> "${GITHUB_ENV}"

@@ -1,0 +1,14 @@
+name: Setup Task
+description: Install go-task with a pinned version
+inputs:
+  version:
+    description: go-task version to install
+    required: false
+    default: "3.45.4"
+runs:
+  using: composite
+  steps:
+    - name: Install Task
+      uses: go-task/setup-task@v1
+      with:
+        version: ${{ inputs.version }}

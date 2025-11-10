@@ -1,0 +1,26 @@
+name: Run Command And Ensure Clean Tree
+description: Execute a command and fail if the working tree is dirty afterwards
+inputs:
+  run:
+    description: Command to execute
+    required: true
+  working-directory:
+    description: Directory in which to run the command
+    required: false
+    default: .
+  shell:
+    description: Shell to use
+    required: false
+    default: bash
+runs:
+  using: composite
+  steps:
+    - name: Run command
+      shell: ${{ inputs.shell }}
+      working-directory: ${{ inputs.working-directory }}
+      run: ${{ inputs.run }}
+
+    - name: Ensure clean working tree
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: git diff --exit-code
