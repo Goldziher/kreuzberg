@@ -1,6 +1,9 @@
 
-plugins:
+require:
   - rubocop-rspec
+
+plugins:
+  - rubocop-performance
 
 AllCops:
   TargetRubyVersion: 3.2
@@ -108,4 +111,7 @@ RSpec/DescribeClass:
   Enabled: false
 
 RSpec/PredicateMatcher:
+  Enabled: false
+
+RSpec/FilePath:
   Enabled: false

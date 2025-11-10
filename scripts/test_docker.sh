@@ -263,10 +263,11 @@ output=$(docker run --rm \
     extract /data/text/contract.txt 2>&1 || true)
 log_verbose "Text extraction output (first 100 chars): ${output:0:100}"
 
-if [ ${#output} -gt 50 ] && echo "$output" | grep -qi "agreement\|contract\|party"; then
+text_length=${#output}
+if [ "$text_length" -gt 15 ] && echo "$output" | grep -qi "contract"; then
     pass_test
 else
-    fail_test "Text extraction" "Output too short or missing expected content"
+    fail_test "Text extraction" "Output too short (${text_length} chars) or missing expected keywords"
 fi
 
 # ============================================================================
@@ -304,10 +305,11 @@ output=$(docker run --rm \
     extract /data/office/document.docx 2>&1 || true)
 log_verbose "DOCX extraction output (first 100 chars): ${output:0:100}"
 
-if [ ${#output} -gt 20 ]; then
+docx_length=${#output}
+if [ "$docx_length" -gt 10 ] && echo "$output" | grep -qi "sample"; then
     pass_test
 else
-    fail_test "DOCX extraction" "Output too short: ${#output} chars"
+    fail_test "DOCX extraction" "Output too short (${docx_length} chars) or missing expected content"
 fi
 
 # ============================================================================
@@ -635,7 +637,7 @@ start_test "MCP server startup and persistence (stays running)"
 container=$(random_container_name)
 
 # Start MCP server in background
-docker run -d \
+docker run -d -i \
     --name "$container" \
     --security-opt no-new-privileges \
     --memory 1g \

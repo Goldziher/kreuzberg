@@ -4,8 +4,6 @@ All Kreuzberg exceptions inherit from KreuzbergError and support optional contex
 for debugging information.
 """
 
-from __future__ import annotations
-
 import json
 from typing import Any
 
@@ -114,7 +112,7 @@ class MissingDependencyError(KreuzbergError):
         dependency_group: str,
         functionality: str,
         package_name: str,
-    ) -> MissingDependencyError:
+    ) -> "MissingDependencyError":
         """Create a MissingDependencyError for a missing package.
 
         This is a convenience method for creating standardized error messages

@@ -91,11 +91,21 @@ export function createMockExtractionBinding() {
 	const processors: RegisteredProcessor[] = [];
 
 	const buildProcessorList = (config: Record<string, unknown> | null) => {
-		const postConfig = (config?.postprocessor ?? null) as {
+		const rawPostConfig = (config?.postprocessor ?? null) as {
 			enabled?: boolean;
 			enabledProcessors?: string[];
+			enabled_processors?: string[];
 			disabledProcessors?: string[];
+			disabled_processors?: string[];
 		} | null;
+
+		const postConfig = rawPostConfig
+			? {
+					enabled: rawPostConfig.enabled,
+					enabledProcessors: rawPostConfig.enabledProcessors ?? rawPostConfig.enabled_processors,
+					disabledProcessors: rawPostConfig.disabledProcessors ?? rawPostConfig.disabled_processors,
+				}
+			: null;
 
 		if (postConfig && postConfig.enabled === false) {
 			return [] as RegisteredProcessor[];

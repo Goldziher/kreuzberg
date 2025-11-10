@@ -306,7 +306,7 @@ describe("GutenOcrBackend", () => {
 			await expect(backend.processImage(imageBytes, "en")).rejects.toThrow(/Guten OCR processing failed/);
 		});
 
-		it("should throw error if sharp processing fails", async () => {
+		it("should continue if sharp processing fails", async () => {
 			const failingSharp = vi.fn().mockImplementation(() => {
 				throw new Error("Invalid image");
 			});
@@ -317,7 +317,11 @@ describe("GutenOcrBackend", () => {
 			vi.doMock("sharp", () => ({ default: failingSharp }));
 
 			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-			await expect(backend.processImage(imageBytes, "en")).rejects.toThrow(/Guten OCR processing failed/);
+			const result = await backend.processImage(imageBytes, "en");
+
+			expect(result.metadata.width).toBe(0);
+			expect(result.metadata.height).toBe(0);
+			expect(result.content).toContain("Hello");
 		});
 
 		it("should throw error if OCR instance is null after initialization", async () => {

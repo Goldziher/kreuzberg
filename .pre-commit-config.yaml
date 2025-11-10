@@ -20,20 +20,20 @@ repos:
     hooks:
       - id: validate-pyproject
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.11.0
+    rev: v2.11.1
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.3.2
+    rev: v2.3.4
     hooks:
       - id: biome-check
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v1.24.0
+    rev: v1.25.0
     hooks:
       - id: oxlint
         args: ["--fix"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.3
+    rev: v0.14.4
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
