@@ -236,6 +236,9 @@ jobs:
 
       - name: Build NAPI-RS bindings
         working-directory: crates/kreuzberg-node
+        env:
+          # Ensure proper SDK and deployment target for ONNX Runtime on macOS
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || env.MACOSX_DEPLOYMENT_TARGET }}
         run: pnpm run build
 
       - name: Link built NAPI bindings to workspace
@@ -484,6 +487,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: ruby-${{ matrix.os }}-${{ matrix.ruby-version }}
+          target: ${{ runner.os == 'Windows' && 'x86_64-pc-windows-gnu' || '' }}
 
       - name: Cache Pdfium binaries
         uses: ./.github/actions/cache-pdfium
@@ -565,6 +569,8 @@ jobs:
       - name: Build Ruby native extension
         if: runner.os != 'Windows' || steps.setup-msys2.outcome == 'success'
         working-directory: packages/ruby
+        env:
+          CARGO_BUILD_TARGET: ${{ runner.os == 'Windows' && 'x86_64-pc-windows-gnu' || '' }}
         run: bundle exec rake compile
 
       - name: Verify Ruby E2E suite
