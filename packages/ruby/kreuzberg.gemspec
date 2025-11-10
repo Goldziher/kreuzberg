@@ -2,6 +2,35 @@
 
 require_relative 'lib/kreuzberg/version'
 
+repo_root = File.expand_path('../..', __dir__)
+crate_prefix = 'packages/ruby/'
+git_cmd = %(git -C "#{repo_root}" ls-files -z #{crate_prefix})
+git_files =
+  `#{git_cmd}`.split("\x0")
+              .select { |path| path.start_with?(crate_prefix) }
+              .map { |path| path.delete_prefix(crate_prefix) }
+fallback_files = Dir.chdir(__dir__) do
+  Dir.glob(
+    %w[
+      README.md
+      LICENSE
+      ext/**/*.rs
+      ext/**/*.rb
+      ext/**/*.toml
+      ext/**/*.lock
+      ext/**/*.md
+      ext/**/build.rs
+      ext/**/Cargo.*
+      exe/*
+      lib/**/*.rb
+      spec/**/*.rb
+      vendor/**/*.rb
+    ],
+    File::FNM_DOTMATCH
+  )
+end
+files = git_files.empty? ? fallback_files : git_files
+
 Gem::Specification.new do |spec|
   spec.name = 'kreuzberg'
   spec.version = Kreuzberg::VERSION
@@ -27,12 +56,7 @@ Gem::Specification.new do |spec|
     'rubygems_mfa_required' => 'true'
   }
 
-  spec.files = Dir[
-    'lib/**/*.rb',
-    'ext/**/*.{rb,toml,lock}',
-    'LICENSE',
-    'README.md'
-  ]
+  spec.files = files
   spec.bindir = 'exe'
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
@@ -47,8 +71,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake-compiler', '~> 1.2'
   spec.add_development_dependency 'rb_sys', '~> 0.9'
   spec.add_development_dependency 'rspec', '~> 3.12'
-  spec.add_development_dependency 'rubocop', '~> 1.50'
-  spec.add_development_dependency 'rubocop-performance', '~> 1.18'
-  spec.add_development_dependency 'rubocop-rspec', '~> 2.22'
+  spec.add_development_dependency 'rubocop', '~> 1.66'
+  spec.add_development_dependency 'rubocop-performance', '~> 1.21'
+  spec.add_development_dependency 'rubocop-rspec', '~> 3.0'
   spec.add_development_dependency 'yard', '~> 0.9'
 end

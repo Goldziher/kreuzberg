@@ -13,7 +13,7 @@ This crate provides Ruby bindings to the Rust core library (`crates/kreuzberg`) 
 ```
 Ruby Package (packages/ruby/)
     ↓
-Magnus Bindings (crates/kreuzberg-rb) ← This crate
+Magnus Bindings (packages/ruby/ext/kreuzberg_rb/native) ← This crate
     ↓
 Rust Core (crates/kreuzberg)
 ```

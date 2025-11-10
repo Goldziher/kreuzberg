@@ -252,7 +252,7 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 	 * ```
 	 */
 	async processImage(
-		imageBytes: Uint8Array,
+		imageBytes: Uint8Array | string,
 		language: string,
 	): Promise<{
 		content: string;
@@ -275,7 +275,22 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		}
 
 		try {
-			const buffer = Buffer.from(imageBytes);
+			const buffer = typeof imageBytes === "string" ? Buffer.from(imageBytes, "base64") : Buffer.from(imageBytes);
+
+			if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
+				const header = Array.from(buffer.subarray(0, 8));
+				console.log("[Guten OCR] Debug input header:", header);
+				console.log(
+					"[Guten OCR] Buffer?",
+					Buffer.isBuffer(buffer),
+					"constructor",
+					imageBytes?.constructor?.name,
+					"length",
+					buffer.length,
+					"type",
+					typeof imageBytes,
+				);
+			}
 
 			let width = 0;
 			let height = 0;

@@ -2103,9 +2103,9 @@ dependencies = [
 
 [[package]]
 name = "html-to-markdown-rs"
-version = "2.6.5"
+version = "2.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca28d676a43c3940788c5bd52f97e66890ca43accf85998a64f9a253f91fed2f"
+checksum = "f74a45a44e1a3ab45dbf10d6096e1ed7522dc81662305a0bc3a3746818c61d5a"
 dependencies = [
  "ammonia",
  "base64 0.22.1",
@@ -2828,6 +2828,7 @@ name = "kreuzberg-node"
 version = "4.0.0-rc.1"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "kreuzberg",
  "mimalloc-rust",
  "napi",

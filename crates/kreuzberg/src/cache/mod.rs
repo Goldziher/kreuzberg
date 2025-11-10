@@ -242,7 +242,7 @@ impl GenericCache {
         self.save_metadata(cache_key, source_file);
 
         let count = self.write_counter.fetch_add(1, Ordering::Relaxed);
-        if count.is_multiple_of(100)
+        if count % 100 == 0
             && let Some(cache_path_str) = self.cache_dir.to_str()
         {
             // Cache cleanup failure - safe to ignore, cache is optional fallback ~keep

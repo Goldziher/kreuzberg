@@ -2,6 +2,7 @@
 name = "kreuzberg-cli"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "Command-line interface for Kreuzberg document intelligence"
 license.workspace = true
 authors.workspace = true

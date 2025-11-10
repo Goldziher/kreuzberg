@@ -336,5 +336,5 @@ main if __FILE__ == $PROGRAM_NAME
 # ❌ Real-time processing (use Node.js/NAPI-RS instead)
 # ❌ I/O-bound workloads (use Python/PyO3 or Node.js/NAPI-RS)
 #
-# See crates/kreuzberg-rb/README.md for detailed async runtime documentation.
+# See packages/ruby/ext/kreuzberg_rb/native/README.md for detailed async runtime documentation.
 # ============================================================================

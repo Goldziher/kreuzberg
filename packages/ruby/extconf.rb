@@ -24,5 +24,5 @@ default_profile = ENV.fetch('CARGO_PROFILE', 'release')
 
 create_rust_makefile('kreuzberg_rb') do |config|
   config.profile = default_profile.to_sym
-  config.ext_dir = '../../crates/kreuzberg-rb'
+  config.ext_dir = File.expand_path('ext/kreuzberg_rb/native', __dir__)
 end

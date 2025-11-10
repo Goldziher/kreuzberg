@@ -861,6 +861,13 @@ pub async fn extract_bytes(
 ) -> Result<JsExtractionResult> {
     let rust_config: kreuzberg::ExtractionConfig = config.map(Into::into).unwrap_or_default();
     let owned_data = data.to_vec();
+    #[cfg(debug_assertions)]
+    {
+        if std::env::var("KREUZBERG_DEBUG_GUTEN").as_deref() == Ok("1") && mime_type.starts_with("image/") {
+            let header: Vec<u8> = owned_data.iter().take(8).copied().collect();
+            eprintln!("[Rust Binding] Debug input header: {:?}", header);
+        }
+    }
 
     kreuzberg::extract_bytes(&owned_data, &mime_type, &rust_config)
         .await
@@ -1046,6 +1053,7 @@ pub async fn batch_extract_bytes(
 }
 
 use async_trait::async_trait;
+use base64::Engine;
 use kreuzberg::plugins::{Plugin, PostProcessor as RustPostProcessor, ProcessingStage};
 use napi::bindgen_prelude::Promise;
 use napi::threadsafe_function::ThreadsafeFunction;
@@ -1558,17 +1566,17 @@ use kreuzberg::plugins::{OcrBackend as RustOcrBackend, OcrBackendType};
 ///
 /// Wrapper that holds the ThreadsafeFunction to call JavaScript from Rust.
 /// The processImage_fn is an async JavaScript function that:
-/// - Takes: (Buffer, String) - image bytes and language code
+/// - Takes: (String, String) - base64-encoded image bytes and language code
 /// - Returns: Promise<String> (JSON-serialized ExtractionResult)
 ///
 /// Type parameters:
-/// - Input: (Buffer, String)
+/// - Input: (String, String)
 /// - Return: Promise<String>
-/// - CallJsBackArgs: Vec<(Buffer, String)> (because build_callback returns vec![value])
+/// - CallJsBackArgs: Vec<(String, String)> (because build_callback returns vec![value])
 /// - ErrorStatus: napi::Status
 /// - CalleeHandled: false (default with build_callback)
 type ProcessImageFn =
-    Arc<ThreadsafeFunction<(Buffer, String), Promise<String>, Vec<(Buffer, String)>, napi::Status, false>>;
+    Arc<ThreadsafeFunction<(String, String), Promise<String>, Vec<(String, String)>, napi::Status, false>>;
 
 struct JsOcrBackend {
     name: String,
@@ -1604,13 +1612,20 @@ impl RustOcrBackend for JsOcrBackend {
         image_bytes: &[u8],
         config: &kreuzberg::OcrConfig,
     ) -> std::result::Result<kreuzberg::ExtractionResult, kreuzberg::KreuzbergError> {
-        let buffer = Buffer::from(image_bytes);
+        #[cfg(debug_assertions)]
+        {
+            if std::env::var("KREUZBERG_DEBUG_GUTEN").as_deref() == Ok("1") {
+                let header: Vec<u8> = image_bytes.iter().take(8).copied().collect();
+                eprintln!("[Rust OCR] Debug input header: {:?}", header);
+            }
+        }
+        let encoded = base64::engine::general_purpose::STANDARD.encode(image_bytes);
         let language = config.language.clone();
         let backend_name = self.name.clone();
 
         let json_output = self
             .process_image_fn
-            .call_async((buffer, language))
+            .call_async((encoded, language))
             .await
             .map_err(|e| kreuzberg::KreuzbergError::Ocr {
                 message: format!("JavaScript OCR backend '{}' failed: {}", backend_name, e),
@@ -1716,12 +1731,12 @@ impl RustOcrBackend for JsOcrBackend {
 /// * `backend` - JavaScript object with the following interface:
 ///   - `name(): string` - Unique backend name
 ///   - `supportedLanguages(): string[]` - Array of supported ISO 639-2/3 language codes
-///   - `processImage(imageBytes: Buffer, language: string): Promise<result>` - Process image and return extraction result
+///   - `processImage(imageBytes: string, language: string): Promise<result>` - Process image and return extraction result
 ///
 /// # Implementation Notes
 ///
 /// Due to NAPI ThreadsafeFunction limitations, the processImage function receives:
-/// - `imageBytes` as Buffer (first argument)
+/// - `imageBytes` as a Base64 string (first argument)
 /// - `language` as string (second argument)
 ///
 /// And must return a Promise resolving to a JSON-serializable object with:
@@ -1743,8 +1758,8 @@ impl RustOcrBackend for JsOcrBackend {
 ///   name: () => "my-ocr",
 ///   supportedLanguages: () => ["eng", "deu", "fra"],
 ///   processImage: async (imageBytes, language) => {
-///     // Perform OCR on imageBytes
-///     const text = await myOcrLibrary.process(imageBytes, language);
+///     const buffer = Buffer.from(imageBytes, "base64");
+///     const text = await myOcrLibrary.process(buffer, language);
 ///     return {
 ///       content: text,
 ///       mime_type: "text/plain",
@@ -1778,7 +1793,7 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
         ));
     }
 
-    let process_image_fn: Function<(Buffer, String), Promise<String>> = backend.get_named_property("processImage")?;
+    let process_image_fn: Function<(String, String), Promise<String>> = backend.get_named_property("processImage")?;
 
     let tsfn = process_image_fn
         .build_threadsafe_function()

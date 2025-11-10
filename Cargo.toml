@@ -2,7 +2,7 @@
 members = [
     "crates/kreuzberg",
     "crates/kreuzberg-py",
-    "crates/kreuzberg-rb",
+    "packages/ruby/ext/kreuzberg_rb/native",
     "crates/kreuzberg-cli",
     "crates/kreuzberg-node",
     "tools/benchmark-harness",
@@ -15,9 +15,13 @@ default-members = [
 ]
 resolver = "2"
 
+[patch.crates-io]
+kreuzberg = { path = "crates/kreuzberg" }
+
 [workspace.package]
 version = "4.0.0-rc.1"
 edition = "2024"
+rust-version = "1.85"
 authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/Goldziher/kreuzberg"

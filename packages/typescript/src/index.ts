@@ -198,8 +198,8 @@ function normalizeTesseractConfig(config?: TesseractConfig) {
 
 	const normalized: NativeExtractionConfig = {};
 	setIfDefined(normalized, "psm", config.psm);
-	setIfDefined(normalized, "enable_table_detection", config.enableTableDetection);
-	setIfDefined(normalized, "tessedit_char_whitelist", config.tesseditCharWhitelist);
+	setIfDefined(normalized, "enableTableDetection", config.enableTableDetection);
+	setIfDefined(normalized, "tesseditCharWhitelist", config.tesseditCharWhitelist);
 	return normalized;
 }
 
@@ -215,7 +215,7 @@ function normalizeOcrConfig(ocr?: OcrConfig): NativeExtractionConfig | undefined
 
 	const tesseract = normalizeTesseractConfig(ocr.tesseractConfig);
 	if (tesseract) {
-		normalized.tesseract_config = tesseract;
+		normalized.tesseractConfig = tesseract;
 	}
 
 	return normalized;
@@ -227,11 +227,11 @@ function normalizeChunkingConfig(chunking?: ChunkingConfig): NativeExtractionCon
 	}
 
 	const normalized: NativeExtractionConfig = {};
-	setIfDefined(normalized, "max_chars", chunking.maxChars);
-	setIfDefined(normalized, "max_overlap", chunking.maxOverlap);
-	setIfDefined(normalized, "preset", (chunking as any).preset);
-	setIfDefined(normalized, "embedding", (chunking as any).embedding);
-	setIfDefined(normalized, "enabled", (chunking as any).enabled);
+	setIfDefined(normalized, "maxChars", chunking.maxChars);
+	setIfDefined(normalized, "maxOverlap", chunking.maxOverlap);
+	setIfDefined(normalized, "preset", chunking.preset);
+	setIfDefined(normalized, "embedding", chunking.embedding);
+	setIfDefined(normalized, "enabled", chunking.enabled);
 	return normalized;
 }
 
@@ -241,12 +241,12 @@ function normalizeImageExtractionConfig(images?: ImageExtractionConfig): NativeE
 	}
 
 	const normalized: NativeExtractionConfig = {};
-	setIfDefined(normalized, "extract_images", images.extractImages);
-	setIfDefined(normalized, "target_dpi", images.targetDpi);
-	setIfDefined(normalized, "max_image_dimension", images.maxImageDimension);
-	setIfDefined(normalized, "auto_adjust_dpi", images.autoAdjustDpi);
-	setIfDefined(normalized, "min_dpi", images.minDpi);
-	setIfDefined(normalized, "max_dpi", images.maxDpi);
+	setIfDefined(normalized, "extractImages", images.extractImages);
+	setIfDefined(normalized, "targetDpi", images.targetDpi);
+	setIfDefined(normalized, "maxImageDimension", images.maxImageDimension);
+	setIfDefined(normalized, "autoAdjustDpi", images.autoAdjustDpi);
+	setIfDefined(normalized, "minDpi", images.minDpi);
+	setIfDefined(normalized, "maxDpi", images.maxDpi);
 	return normalized;
 }
 
@@ -256,9 +256,9 @@ function normalizePdfConfig(pdf?: PdfConfig): NativeExtractionConfig | undefined
 	}
 
 	const normalized: NativeExtractionConfig = {};
-	setIfDefined(normalized, "extract_images", pdf.extractImages);
+	setIfDefined(normalized, "extractImages", pdf.extractImages);
 	setIfDefined(normalized, "passwords", pdf.passwords);
-	setIfDefined(normalized, "extract_metadata", pdf.extractMetadata);
+	setIfDefined(normalized, "extractMetadata", pdf.extractMetadata);
 	return normalized;
 }
 
@@ -269,7 +269,7 @@ function normalizeTokenReductionConfig(tokenReduction?: TokenReductionConfig): N
 
 	const normalized: NativeExtractionConfig = {};
 	setIfDefined(normalized, "mode", tokenReduction.mode);
-	setIfDefined(normalized, "preserve_important_words", tokenReduction.preserveImportantWords);
+	setIfDefined(normalized, "preserveImportantWords", tokenReduction.preserveImportantWords);
 	return normalized;
 }
 
@@ -282,8 +282,8 @@ function normalizeLanguageDetectionConfig(
 
 	const normalized: NativeExtractionConfig = {};
 	setIfDefined(normalized, "enabled", languageDetection.enabled);
-	setIfDefined(normalized, "min_confidence", languageDetection.minConfidence);
-	setIfDefined(normalized, "detect_multiple", languageDetection.detectMultiple);
+	setIfDefined(normalized, "minConfidence", languageDetection.minConfidence);
+	setIfDefined(normalized, "detectMultiple", languageDetection.detectMultiple);
 	return normalized;
 }
 
@@ -294,8 +294,8 @@ function normalizePostProcessorConfig(postprocessor?: PostProcessorConfig): Nati
 
 	const normalized: NativeExtractionConfig = {};
 	setIfDefined(normalized, "enabled", postprocessor.enabled);
-	setIfDefined(normalized, "enabled_processors", postprocessor.enabledProcessors);
-	setIfDefined(normalized, "disabled_processors", postprocessor.disabledProcessors);
+	setIfDefined(normalized, "enabledProcessors", postprocessor.enabledProcessors);
+	setIfDefined(normalized, "disabledProcessors", postprocessor.disabledProcessors);
 	return normalized;
 }
 
@@ -305,10 +305,10 @@ function normalizeExtractionConfig(config: ExtractionConfig | null): NativeExtra
 	}
 
 	const normalized: NativeExtractionConfig = {};
-	setIfDefined(normalized, "use_cache", config.useCache);
-	setIfDefined(normalized, "enable_quality_processing", config.enableQualityProcessing);
-	setIfDefined(normalized, "force_ocr", config.forceOcr);
-	setIfDefined(normalized, "max_concurrent_extractions", config.maxConcurrentExtractions);
+	setIfDefined(normalized, "useCache", config.useCache);
+	setIfDefined(normalized, "enableQualityProcessing", config.enableQualityProcessing);
+	setIfDefined(normalized, "forceOcr", config.forceOcr);
+	setIfDefined(normalized, "maxConcurrentExtractions", config.maxConcurrentExtractions);
 
 	const ocr = normalizeOcrConfig(config.ocr);
 	if (ocr) {
@@ -327,17 +327,17 @@ function normalizeExtractionConfig(config: ExtractionConfig | null): NativeExtra
 
 	const pdf = normalizePdfConfig(config.pdfOptions);
 	if (pdf) {
-		normalized.pdf_options = pdf;
+		normalized.pdfOptions = pdf;
 	}
 
 	const tokenReduction = normalizeTokenReductionConfig(config.tokenReduction);
 	if (tokenReduction) {
-		normalized.token_reduction = tokenReduction;
+		normalized.tokenReduction = tokenReduction;
 	}
 
 	const languageDetection = normalizeLanguageDetectionConfig(config.languageDetection);
 	if (languageDetection) {
-		normalized.language_detection = languageDetection;
+		normalized.languageDetection = languageDetection;
 	}
 
 	const postprocessor = normalizePostProcessorConfig(config.postprocessor);
@@ -490,6 +490,10 @@ export async function extractBytes(
 	config: ExtractionConfig | null = null,
 ): Promise<ExtractionResult> {
 	const validated = assertUint8Array(data, "data");
+	if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
+		// Helpful when debugging OCR pipelines that bridge through Rust/Node.
+		console.log("[TypeScript] Debug input header:", Array.from(validated.slice(0, 8)));
+	}
 	const normalizedConfig = normalizeExtractionConfig(config);
 	const rawResult = await getBinding().extractBytes(Buffer.from(validated), mimeType, normalizedConfig);
 	return convertResult(rawResult);
@@ -1008,14 +1012,79 @@ export function listValidators(): string[] {
  * registerOcrBackend(new MyOcrBackend());
  * ```
  */
+type OcrProcessPayload = Buffer | string;
+type OcrProcessTuple = [OcrProcessPayload, string];
+type NestedOcrProcessTuple = [OcrProcessTuple];
+
+function isOcrProcessTuple(value: unknown): value is OcrProcessTuple {
+	return (
+		Array.isArray(value) &&
+		value.length === 2 &&
+		typeof value[1] === "string" &&
+		(typeof value[0] === "string" || Buffer.isBuffer(value[0]) || value[0] instanceof Uint8Array)
+	);
+}
+
+function isNestedOcrProcessTuple(value: unknown): value is NestedOcrProcessTuple {
+	return Array.isArray(value) && value.length === 1 && isOcrProcessTuple(value[0]);
+}
+
+function describePayload(value: OcrProcessPayload) {
+	if (typeof value === "string") {
+		return { ctor: "String", length: value.length };
+	}
+
+	return { ctor: value.constructor?.name ?? "Buffer", length: value.length };
+}
+
 export function registerOcrBackend(backend: OcrBackendProtocol): void {
 	const binding = getBinding();
 
 	const wrappedBackend = {
 		name: backend.name.bind(backend),
 		supportedLanguages: backend.supportedLanguages.bind(backend),
-		async processImage(imageBytes: Buffer, language: string): Promise<string> {
-			const result = await backend.processImage(new Uint8Array(imageBytes), language);
+		async processImage(
+			...processArgs: [OcrProcessPayload | OcrProcessTuple | NestedOcrProcessTuple, string?]
+		): Promise<string> {
+			const [imagePayload, maybeLanguage] = processArgs;
+			if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
+				console.log("[registerOcrBackend] JS arguments", { length: processArgs.length });
+				console.log("[registerOcrBackend] Raw args", {
+					imagePayloadType: Array.isArray(imagePayload) ? "tuple" : typeof imagePayload,
+					maybeLanguageType: typeof maybeLanguage,
+					metadata: Array.isArray(imagePayload) ? { tupleLength: imagePayload.length } : describePayload(imagePayload),
+				});
+			}
+
+			let rawBytes: OcrProcessPayload;
+			let language = maybeLanguage;
+
+			if (isNestedOcrProcessTuple(imagePayload)) {
+				[rawBytes, language] = imagePayload[0];
+			} else if (isOcrProcessTuple(imagePayload)) {
+				[rawBytes, language] = imagePayload;
+			} else {
+				rawBytes = imagePayload;
+			}
+
+			if (typeof language !== "string") {
+				throw new Error("OCR backend did not receive a language parameter");
+			}
+
+			if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
+				const length = typeof rawBytes === "string" ? rawBytes.length : rawBytes.length;
+				console.log(
+					"[registerOcrBackend] Received payload",
+					Array.isArray(imagePayload) ? "tuple" : typeof rawBytes,
+					"ctor",
+					describePayload(rawBytes).ctor,
+					"length",
+					length,
+				);
+			}
+
+			const buffer = typeof rawBytes === "string" ? Buffer.from(rawBytes, "base64") : Buffer.from(rawBytes);
+			const result = await backend.processImage(new Uint8Array(buffer), language);
 
 			return JSON.stringify(result);
 		},

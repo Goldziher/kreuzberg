@@ -464,19 +464,20 @@ export interface OcrBackendProtocol {
 	 * - `metadata`: Additional information (confidence, dimensions, etc.)
 	 * - `tables`: Optional array of detected tables
 	 *
-	 * @param imageBytes - Raw image data (PNG, JPEG, TIFF, etc.)
+	 * @param imageBytes - Raw image data (Uint8Array) or Base64-encoded string (when called from Rust bindings)
 	 * @param language - Language code from supportedLanguages()
 	 * @returns Promise resolving to extraction result
 	 *
 	 * @example
 	 * ```typescript
-	 * async processImage(imageBytes: Uint8Array, language: string): Promise<{
+	 * async processImage(imageBytes: Uint8Array | string, language: string): Promise<{
 	 *   content: string;
 	 *   mime_type: string;
 	 *   metadata: Record<string, unknown>;
 	 *   tables: unknown[];
 	 * }> {
-	 *   const text = await myOcrEngine.recognize(imageBytes, language);
+	 *   const buffer = typeof imageBytes === "string" ? Buffer.from(imageBytes, "base64") : Buffer.from(imageBytes);
+	 *   const text = await myOcrEngine.recognize(buffer, language);
 	 *   return {
 	 *     content: text,
 	 *     mime_type: "text/plain",
@@ -487,7 +488,7 @@ export interface OcrBackendProtocol {
 	 * ```
 	 */
 	processImage(
-		imageBytes: Uint8Array,
+		imageBytes: Uint8Array | string,
 		language: string,
 	): Promise<{
 		content: string;

@@ -52,7 +52,7 @@ agents:
     name: ruby-engineer
     priority: high
     system_prompt: |
-      **Role**: Ruby bindings for Kreuzberg Rust core. Work on Magnus bridge (crates/kreuzberg-rb) and Ruby gem (packages/ruby).
+      **Role**: Ruby bindings for Kreuzberg Rust core. Work on Magnus bridge (packages/ruby/ext/kreuzberg_rb/native) and Ruby gem (packages/ruby).
 
       **Scope**: Magnus FFI, Ruby-idiomatic API, RSpec tests.
 
@@ -152,7 +152,7 @@ rules:
       **Language Bindings** (thin wrappers):
       - Python: crates/kreuzberg-py (PyO3) → packages/python/kreuzberg
       - TypeScript: crates/kreuzberg-node (NAPI-RS) → packages/typescript
-      - Ruby: crates/kreuzberg-rb (Magnus) → packages/ruby
+      - Ruby: packages/ruby/ext/kreuzberg_rb/native (Magnus) → packages/ruby
 
       **Key: ALL extraction logic lives in Rust core. Bindings provide language-idiomatic APIs only.**
     name: Architecture
@@ -202,7 +202,7 @@ rules:
     name: PyO3 Performance
     priority: high
   - content: |
-      **Rust workspace** (Cargo.toml): crates/{kreuzberg,kreuzberg-py,kreuzberg-node,kreuzberg-rb,kreuzberg-cli}, tools/{benchmark-harness,e2e-generator}, e2e/rust.
+      **Rust workspace** (Cargo.toml): crates/{kreuzberg,kreuzberg-py,kreuzberg-node,kreuzberg-cli}, packages/ruby/ext/kreuzberg_rb/native, tools/{benchmark-harness,e2e-generator}, e2e/rust.
 
       **Language packages**: packages/{python,typescript,ruby} - thin wrappers around Rust core.
 

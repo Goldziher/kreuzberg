@@ -1,7 +1,8 @@
 [package]
 name = "e2e-rust"
-version = "4.0.0-rc.1"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 publish = false
 
 [dependencies]

@@ -504,6 +504,6 @@ results = files.map { |file| Kreuzberg.extract_file_sync(file) }
 - **Lucchetto Documentation**: https://docs.rs/lucchetto
 - **Research Document**: `docs/ASYNC_RUNTIME_RESEARCH.md`
 - **Python Bindings README**: `crates/kreuzberg-py/README.md`
-- **Ruby Bindings README**: `crates/kreuzberg-rb/README.md`
+- **Ruby Bindings README**: `packages/ruby/ext/kreuzberg_rb/native/README.md`
 - **Node.js Examples**: `crates/kreuzberg-node/examples/async-patterns.ts`
 - **Ruby Examples**: `packages/ruby/examples/async_patterns.rb`
