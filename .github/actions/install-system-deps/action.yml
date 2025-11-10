@@ -36,7 +36,9 @@ runs:
           tesseract-ocr \
           fonts-liberation \
           fonts-dejavu-core \
-          fonts-noto-core
+          fonts-noto-core \
+          libssl-dev \
+          pkg-config
         echo "Verifying Linux installations..."
         pandoc --version
         soffice --version
