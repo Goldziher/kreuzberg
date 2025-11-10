@@ -771,7 +771,12 @@ fi
 
 # Get Docker image size
 IMAGE_SIZE=$(docker images "$IMAGE_NAME" --format "{{.Size}}" 2>/dev/null || echo "unknown")
-IMAGE_SIZE_BYTES=$(docker images "$IMAGE_NAME" --format "{{.VirtualSize}}" 2>/dev/null || echo "0")
+IMAGE_SIZE_BYTES_RAW=$(docker image inspect "$IMAGE_NAME" --format '{{.Size}}' 2>/dev/null || true)
+if [[ -n "${IMAGE_SIZE_BYTES_RAW:-}" && "$IMAGE_SIZE_BYTES_RAW" =~ ^[0-9]+$ ]]; then
+    IMAGE_SIZE_BYTES="$IMAGE_SIZE_BYTES_RAW"
+else
+    IMAGE_SIZE_BYTES="0" # ensure valid JSON numeric literal
+fi
 
 echo ""
 echo "========================================================================"
