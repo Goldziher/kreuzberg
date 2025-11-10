@@ -21,8 +21,9 @@ if RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
 end
 
 default_profile = ENV.fetch('CARGO_PROFILE', 'release')
+native_dir = 'native'
 
 create_rust_makefile('kreuzberg_rb') do |config|
   config.profile = default_profile.to_sym
-  config.ext_dir = File.expand_path('native', __dir__)
+  config.ext_dir = native_dir
 end
