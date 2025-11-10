@@ -30,7 +30,7 @@ xml = ["dep:quick-xml", "dep:roxmltree"]
 archives = ["dep:zip", "dep:tar", "dep:sevenz-rust"]
 
 # Processing features
-ocr = ["dep:tesseract-rs", "dep:image", "dep:fast_image_resize", "dep:ndarray", "dep:kamadak-exif"]
+ocr = ["dep:tesseract-rs", "dep:image", "dep:fast_image_resize", "dep:ndarray", "dep:kamadak-exif", "html"]
 language-detection = ["dep:whatlang"]
 chunking = ["dep:text-splitter"]
 embeddings = ["dep:fastembed", "chunking"]
