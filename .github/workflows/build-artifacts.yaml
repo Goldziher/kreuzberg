@@ -96,7 +96,7 @@ jobs:
         run: uv run maturin sdist --out ../../dist/
 
       - name: Upload sdist artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: python-sdist
           path: dist/*.tar.gz
@@ -186,7 +186,7 @@ jobs:
         uses: ./.github/actions/cleanup-rust-cache
 
       - name: Upload NAPI artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: napi-${{ matrix.settings.target }}
           path: crates/kreuzberg-node/*.node
@@ -362,7 +362,7 @@ jobs:
         uses: ./.github/actions/cleanup-rust-cache
 
       - name: Upload native gem artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gem-${{ matrix.label }}
           path: packages/ruby/pkg/*.gem
@@ -433,7 +433,7 @@ jobs:
         uses: ./.github/actions/cleanup-rust-cache
 
       - name: Upload CLI binary artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cli-${{ matrix.target }}
           path: |
