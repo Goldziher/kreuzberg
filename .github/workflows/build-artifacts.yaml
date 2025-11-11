@@ -43,24 +43,26 @@ jobs:
         include:
           - label: linux-x86_64
             os: ubuntu-latest
-            linux-archs: x86_64
             artifact: wheels-linux-x86_64
-            prefetch-image: quay.io/pypa/manylinux_2_28_x86_64:2025.10.10-1
+            rust_target: x86_64-unknown-linux-gnu
+            manylinux: auto
+            python: "3.10"
+            needs_qemu: false
           - label: linux-aarch64
             os: ubuntu-latest
-            linux-archs: aarch64
             artifact: wheels-linux-aarch64
-            prefetch-image: quay.io/pypa/manylinux_2_28_aarch64:2025.10.10-1
+            rust_target: aarch64-unknown-linux-gnu
+            manylinux: 2_28
+            python: "3.10"
+            needs_qemu: true
           - label: macos-universal
             os: macos-14
             macos-archs: "x86_64 arm64"
             artifact: wheels-macos
-            prefetch-image: ""
           - label: windows-amd64
             os: windows-latest
             windows-archs: AMD64
             artifact: wheels-windows
-            prefetch-image: ""
     steps:
       - name: Maximize build disk space
         if: matrix.os == 'ubuntu-latest'
@@ -81,12 +83,37 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Prefetch manylinux image
-        if: matrix.prefetch-image != ''
+      - name: Setup QEMU
+        if: matrix.os == 'ubuntu-latest' && matrix.needs_qemu
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - name: Build Linux wheels
+        if: matrix.os == 'ubuntu-latest'
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release -i python${{ matrix.python }} --out target/wheels
+          target: ${{ matrix.rust_target }}
+          manylinux: ${{ matrix.manylinux }}
+          working-directory: packages/python
+          sccache: true
+
+      - name: List Linux wheels
+        if: matrix.os == 'ubuntu-latest'
         shell: bash
-        run: docker pull ${{ matrix.prefetch-image }}
+        run: ls -lh packages/python/target/wheels
+
+      - name: Upload Linux wheel artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: packages/python/target/wheels/*.whl
 
       - name: Build wheels
+        if: matrix.os != 'ubuntu-latest'
         uses: ./.github/actions/build-wheels
         with:
           python-version: "3.13"
@@ -96,6 +123,7 @@ jobs:
           artifact-name: ${{ matrix.artifact }}
 
       - name: List built wheels
+        if: matrix.os != 'ubuntu-latest'
         shell: bash
         run: |
           echo "📦 Built wheels:"
@@ -327,23 +355,28 @@ jobs:
 
       - name: Download ONNX Runtime (Windows)
         if: runner.os == 'Windows'
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          ort_target="x86_64-pc-windows-gnu"
-          ort_dir="$RUNNER_TEMP/onnxruntime/${ort_target}"
-          if [ ! -f "${ort_dir}/onnxruntime/bin/onnxruntime.dll" ]; then
-            mkdir -p "${ort_dir}"
-            curl -fsSL "https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/${ort_target}.tgz" | tar -xz -C "${ort_dir}"
-          fi
-          {
-            echo "ORT_STRATEGY=system"
-            echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime/lib"
-            echo "ORT_SKIP_DOWNLOAD=1"
-            echo "ORT_PREFER_DYNAMIC_LINK=1"
-            echo "ORT_DYLIB_PATH=${ort_dir}/onnxruntime/bin"
-          } >> "$GITHUB_ENV"
-          echo "${ort_dir}/onnxruntime/bin" >> "$GITHUB_PATH"
+          $ortVersion = "1.18.1"
+          $ortDir = Join-Path $env:RUNNER_TEMP "onnxruntime\x86_64-pc-windows-gnu"
+          if (-Not (Test-Path (Join-Path $ortDir "onnxruntime-win-x64-$ortVersion\lib\onnxruntime.dll"))) {
+            New-Item -ItemType Directory -Force -Path $ortDir | Out-Null
+            $zipPath = Join-Path $ortDir "onnxruntime.zip"
+            $url = "https://github.com/microsoft/onnxruntime/releases/download/v$ortVersion/onnxruntime-win-x64-$ortVersion.zip"
+            Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
+            Expand-Archive -Path $zipPath -DestinationPath $ortDir -Force
+          }
+          $onnxRoot = Get-ChildItem -Path $ortDir -Directory | Where-Object { $_.Name -like "onnxruntime-win-x64-*" } | Select-Object -First 1
+          if (-not $onnxRoot) { throw "ONNX Runtime archive not found" }
+          $envLines = @(
+            "ORT_STRATEGY=system",
+            "ORT_LIB_LOCATION=$($onnxRoot.FullName)\lib",
+            "ORT_SKIP_DOWNLOAD=1",
+            "ORT_PREFER_DYNAMIC_LINK=1",
+            "ORT_DYLIB_PATH=$($onnxRoot.FullName)\lib"
+          )
+          $envLines | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $onnxRoot.FullName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install Ruby dependencies (Unix)
         if: runner.os != 'Windows'
@@ -400,6 +433,14 @@ jobs:
           $rubydir = "$workspace/packages/ruby"
           $rubyPlatform = ruby -e "puts Gem::Platform.local.to_s"
           ridk exec bash -lc "cd $rubydir && set -euo pipefail; mkdir -p pkg; stage_dir=\"tmp/$rubyPlatform/stage\"; if [ ! -f \"\$stage_dir/kreuzberg.gemspec\" ]; then echo \"Stage directory \$stage_dir missing\" >&2; exit 1; fi; (cd \"\$stage_dir\" && gem build kreuzberg.gemspec); mv \"\$stage_dir\"/kreuzberg-*.gem pkg/"
+
+      - name: Build source gem (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $rubydir = "$workspace/packages/ruby"
+          ridk exec bash -lc "cd $rubydir && bundle exec rake build"
 
       - name: Build source gem
         if: matrix.build_source_gem
