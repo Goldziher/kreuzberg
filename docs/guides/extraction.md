@@ -160,6 +160,29 @@ flowchart TD
     style UseSyncBatch fill:#90EE90
 ```
 
+## TypeScript / Node.js {#typescript-nodejs}
+
+All TypeScript/Node.js examples in this guide use the `@goldziher/kreuzberg` package. Import synchronous APIs from the root module and asynchronous helpers from the same namespace. See the [TypeScript API Reference](../reference/api-typescript.md) for complete type definitions.
+
+```typescript
+import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+
+const result = extractFileSync('document.pdf', null, new ExtractionConfig());
+console.log(result.content);
+```
+
+## Ruby {#ruby}
+
+Ruby bindings mirror the same function names (`extract_file_sync`, `extract_bytes`, `batch_extract_files`, etc.) under the `Kreuzberg` module. Configuration objects live under `Kreuzberg::Config`. See the [Ruby API Reference](../reference/api-ruby.md) for details.
+
+```ruby
+require 'kreuzberg'
+
+config = Kreuzberg::Config::Extraction.new(force_ocr: true)
+result = Kreuzberg.extract_file_sync('document.pdf', config: config)
+puts result.content
+```
+
 !!! tip "When to Use Async"
     Use async variants when you're already in an async context or processing multiple files concurrently. For simple scripts, sync variants are simpler and just as fast.
 

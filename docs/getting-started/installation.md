@@ -2,12 +2,12 @@
 
 Kreuzberg ships as a Rust crate plus native bindings for Python, TypeScript/Node.js, and Ruby. Choose the runtime(s) you need and follow the corresponding instructions below.
 
-> **System prerequisites**
->
-> - Rust toolchain (`rustup`) for building the core and bindings.
-> - C/C++ build tools (Xcode Command Line Tools on macOS, MSVC Build Tools on Windows, `build-essential` on Linux).
-> - Tesseract OCR (optional but recommended). Install via Homebrew (`brew install tesseract`), apt (`sudo apt install tesseract-ocr`), or Windows installers.
-> - Pdfium binaries are fetched automatically during builds; no manual steps required.
+## System Dependencies
+
+- Rust toolchain (`rustup`) for building the core and bindings.
+- C/C++ build tools (Xcode Command Line Tools on macOS, MSVC Build Tools on Windows, `build-essential` on Linux).
+- Tesseract OCR (optional but recommended). Install via Homebrew (`brew install tesseract`), apt (`sudo apt install tesseract-ocr`), or Windows installers.
+- Pdfium binaries are fetched automatically during builds; no manual steps required.
 
 ## Python
 

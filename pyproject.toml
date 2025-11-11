@@ -16,6 +16,14 @@ dev = [
   "types-psutil>=7.0.0.20251001",
   "uv-bump",
 ]
+docs = [
+  "mkdocs>=1.6.1",
+  "mkdocs-git-revision-date-localized-plugin>=1.5.0",
+  "mkdocs-material>=9.6.23",
+  "mkdocs-minify-plugin>=0.8.0",
+  "mkdocstrings>=0.30.1",
+  "mkdocstrings-python>=1.18.2",
+]
 doc = [
   "mike>=2.0.0",
   "mkdocs>=1.6.1",
