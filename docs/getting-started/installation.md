@@ -13,17 +13,19 @@ Kreuzberg ships as a Rust crate plus native bindings for Python, TypeScript/Node
 
 ```bash
 pip install kreuzberg
-# or
+```
+
+```bash
 uv pip install kreuzberg
 ```
 
 Optional extras:
 
 ```bash
-# EasyOCR backend
 pip install 'kreuzberg[easyocr]'
+```
 
-# PaddleOCR backend
+```bash
 pip install 'kreuzberg[paddleocr]'
 ```
 
@@ -33,9 +35,13 @@ Next steps: [Python Quick Start](quickstart.md) • [Python API Reference](../re
 
 ```bash
 npm install @goldziher/kreuzberg
-# or
+```
+
+```bash
 pnpm add @goldziher/kreuzberg
-# or
+```
+
+```bash
 yarn add @goldziher/kreuzberg
 ```
 
@@ -113,3 +119,8 @@ task dev:test   # full test matrix (Rust + Python + Ruby + TypeScript)
 ```
 
 See [Contributing](../contributing.md) for branch naming, coding conventions, and test expectations.
+Homebrew formula (installs the CLI plus shared dependencies):
+
+```bash
+brew install goldziher/tap/kreuzberg
+```
