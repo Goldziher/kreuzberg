@@ -1,7 +1,10 @@
 version: "3"
+env:
+  PATH: "{{.HOME}}/.rbenv/shims:{{.HOME}}/.rbenv/bin:{{.PATH}}"
 vars:
   RUST_LOG: info
   V3_TAG: v3.20.2
+  BUNDLE: "{{.HOME}}/.rbenv/shims/bundle"
 tasks:
   sync-versions:
     desc: Sync version from Cargo.toml to all package manifests
@@ -93,42 +96,42 @@ tasks:
     desc: Install Ruby dependencies
     dir: packages/ruby
     cmds:
-      - bundle install
+      - "{{.BUNDLE}} install"
   ruby:build:
     desc: Build Ruby extension
     dir: packages/ruby
     cmds:
-      - bundle exec rake compile
+      - "{{.BUNDLE}} exec rake compile"
   ruby:update:
     desc: Update Ruby dependencies
     dir: packages/ruby
     cmds:
-      - bundle update
+      - "{{.BUNDLE}} update"
   ruby:test:
     desc: Run Ruby tests
     dir: packages/ruby
     cmds:
-      - bundle exec rspec
+      - "{{.BUNDLE}} exec rspec"
   ruby:test:verbose:
     desc: Run Ruby tests with detailed output
     dir: packages/ruby
     cmds:
-      - bundle exec rspec --format documentation --color
+      - "{{.BUNDLE}} exec rspec --format documentation --color"
   ruby:lint:
     desc: Lint Ruby code
     dir: packages/ruby
     cmds:
-      - bundle exec rubocop
+      - "{{.BUNDLE}} exec rubocop"
   ruby:lint:fix:
     desc: Auto-fix Ruby lint issues
     dir: packages/ruby
     cmds:
-      - bundle exec rubocop --autocorrect-all
+      - "{{.BUNDLE}} exec rubocop --autocorrect-all"
   ruby:console:
     desc: Open Ruby console with Kreuzberg loaded
     dir: packages/ruby
     cmds:
-      - bundle exec pry -r ./lib/kreuzberg
+      - "{{.BUNDLE}} exec pry -r ./lib/kreuzberg"
   typescript:install:
     desc: Install TypeScript dependencies
     dir: packages/typescript
@@ -239,12 +242,12 @@ tasks:
     desc: Lint generated Ruby E2E suite
     dir: packages/ruby
     cmds:
-      - bundle exec rubocop ../../e2e/ruby/spec
+      - "{{.BUNDLE}} exec rubocop ../../e2e/ruby/spec"
   e2e:ruby:test:
     desc: Run Ruby E2E tests
     dir: packages/ruby
     cmds:
-      - bundle exec rspec ../../e2e/ruby/spec
+      - "{{.BUNDLE}} exec rspec ../../e2e/ruby/spec"
   e2e:ruby:verify:
     desc: Regenerate and validate Ruby E2E suite (generate + lint + test)
     cmds:

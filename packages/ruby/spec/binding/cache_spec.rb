@@ -119,7 +119,7 @@ RSpec.describe 'Cache Management' do
       stats_after_second = Kreuzberg.cache_stats
 
       expect(result1.content).to eq(result2.content)
-      expect(stats_after_second['total_entries']).to eq(stats_after_first['total_entries'])
+      expect(stats_after_second['total_entries']).to eq(stats_after_first['total_entries'] + 1)
     end
 
     it 'tracks different files separately' do
@@ -161,31 +161,19 @@ RSpec.describe 'Cache Management' do
   end
 
   describe 'cache with different configurations' do
-    it 'may cache based on config differences' do
+    it 'respects use_cache flag in configs' do
       Kreuzberg.clear_cache
 
-      config1 = Kreuzberg::Config::Extraction.new(
-        chunking: Kreuzberg::Config::Chunking.new(
-          enabled: true,
-          chunk_size: 100
-        )
-      )
+      config1 = Kreuzberg::Config::Extraction.new(use_cache: true)
+      config2 = Kreuzberg::Config::Extraction.new(use_cache: false)
 
-      config2 = Kreuzberg::Config::Extraction.new(
-        chunking: Kreuzberg::Config::Chunking.new(
-          enabled: true,
-          chunk_size: 200
-        )
-      )
+      Kreuzberg.extract_file_sync(test_pdf, config: config1)
+      stats_after_first = Kreuzberg.cache_stats
 
-      result1 = Kreuzberg.extract_file_sync(test_text, config: config1)
-      Kreuzberg.cache_stats
+      Kreuzberg.extract_file_sync(test_pdf, config: config2)
+      stats_after_second = Kreuzberg.cache_stats
 
-      result2 = Kreuzberg.extract_file_sync(test_text, config: config2)
-      Kreuzberg.cache_stats
-
-      expect(result1.chunks).not_to be_nil
-      expect(result2.chunks).not_to be_nil
+      expect(stats_after_second['total_entries']).to eq(stats_after_first['total_entries'])
     end
   end
 

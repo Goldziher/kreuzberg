@@ -74,8 +74,7 @@ module E2ERuby
 
     if skip_if_missing && !document_path.exist?
       warn "Skipping #{fixture_id}: missing document at #{document_path}"
-      RSpec.current_example.skip('missing document')
-      return
+      skip_example!('missing document')
     end
 
     config = build_config(config_hash)
@@ -84,8 +83,7 @@ module E2ERuby
       result = Kreuzberg.extract_file_sync(document_path.to_s, config: config)
     rescue StandardError => e
       if (reason = skip_reason_for(e, fixture_id, requirements, notes))
-        RSpec.current_example.skip(reason)
-        return
+        skip_example!(reason)
       end
       raise
     end
@@ -93,10 +91,13 @@ module E2ERuby
     yield result
   end
 
-  module Assertions
-    module_function
+  def skip_example!(message)
+    raise RSpec::Core::Pending::SkipDeclaredInExample, message
+  end
 
-    include RSpec::Matchers
+  module Assertions
+    extend RSpec::Matchers
+    module_function
 
     def assert_expected_mime(result, expected)
       return if expected.empty?

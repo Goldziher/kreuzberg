@@ -390,5 +390,8 @@ module Kreuzberg
         raise ArgumentError, "Expected #{klass}, Hash, or nil, got #{value.class}"
       end
     end
+
+    # Backwards compatibility aliases
+    Ocr = OCR
   end
 end

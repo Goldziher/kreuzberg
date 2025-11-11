@@ -8,24 +8,71 @@ use kreuzberg::{
     ImagePreprocessingConfig, KreuzbergError, LanguageDetectionConfig, OcrConfig, PdfConfig, PostProcessorConfig,
     TokenReductionConfig,
 };
-use magnus::prelude::*;
-use magnus::{Error, RArray, RHash, Ruby, Symbol, TryConvert, Value, function, scan_args::scan_args};
+use magnus::exception::ExceptionClass;
+use magnus::r_hash::ForEach;
+use magnus::value::ReprValue;
+use magnus::{Error, IntoValue, RArray, RHash, Ruby, Symbol, TryConvert, Value, function, scan_args::scan_args};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 /// Convert Kreuzberg errors to Ruby exceptions
 fn kreuzberg_error(err: KreuzbergError) -> Error {
     let ruby = Ruby::get().expect("Ruby not initialized");
+
+    let fetch_error_class = |name: &str| -> Option<ExceptionClass> {
+        ruby.eval::<ExceptionClass>(&format!("Kreuzberg::Errors::{}", name))
+            .ok()
+    };
+
     match err {
-        KreuzbergError::Validation { message, .. } => Error::new(ruby.exception_arg_error(), message),
+        KreuzbergError::Validation { message, .. } => {
+            if let Some(class) = fetch_error_class("ValidationError") {
+                Error::new(class, message)
+            } else {
+                Error::new(ruby.exception_arg_error(), message)
+            }
+        }
         KreuzbergError::Parsing { message, .. } => {
-            Error::new(ruby.exception_runtime_error(), format!("ParsingError: {}", message))
+            if let Some(class) = fetch_error_class("ParsingError") {
+                Error::new(class, message)
+            } else {
+                Error::new(ruby.exception_runtime_error(), format!("ParsingError: {}", message))
+            }
         }
         KreuzbergError::Ocr { message, .. } => {
-            Error::new(ruby.exception_runtime_error(), format!("OCRError: {}", message))
+            if let Some(class) = fetch_error_class("OCRError") {
+                Error::new(class, message)
+            } else {
+                Error::new(ruby.exception_runtime_error(), format!("OCRError: {}", message))
+            }
         }
-        KreuzbergError::MissingDependency(message) => Error::new(
-            ruby.exception_runtime_error(),
-            format!("MissingDependencyError: {}", message),
-        ),
+        KreuzbergError::MissingDependency(message) => {
+            if let Some(class) = fetch_error_class("MissingDependencyError") {
+                Error::new(class, message)
+            } else {
+                Error::new(
+                    ruby.exception_runtime_error(),
+                    format!("MissingDependencyError: {}", message),
+                )
+            }
+        }
+        KreuzbergError::Plugin { message, plugin_name } => {
+            if let Some(class) = fetch_error_class("PluginError") {
+                Error::new(class, format!("{}: {}", plugin_name, message))
+            } else {
+                Error::new(
+                    ruby.exception_runtime_error(),
+                    format!("Plugin error in '{}': {}", plugin_name, message),
+                )
+            }
+        }
+        KreuzbergError::Io(err) => {
+            if let Some(class) = fetch_error_class("IOError") {
+                Error::new(class, err.to_string())
+            } else {
+                Error::new(ruby.exception_runtime_error(), format!("IO error: {}", err))
+            }
+        }
         other => Error::new(ruby.exception_runtime_error(), other.to_string()),
     }
 }
@@ -46,8 +93,161 @@ fn symbol_to_string(value: Value) -> Result<String, Error> {
 
 /// Get keyword argument from hash (supports both symbol and string keys)
 fn get_kw(ruby: &Ruby, hash: RHash, name: &str) -> Option<Value> {
-    let sym = ruby.intern(name);
-    hash.get(sym).or_else(|| hash.get(name))
+    hash.get(name).or_else(|| {
+        let sym = ruby.intern(name);
+        hash.get(sym)
+    })
+}
+
+fn set_hash_entry(ruby: &Ruby, hash: &RHash, key: &str, value: Value) -> Result<(), Error> {
+    hash.aset(ruby.intern(key), value)?;
+    let string_key = ruby.str_new(key).into_value_with(ruby);
+    hash.aset(string_key, value)?;
+    Ok(())
+}
+
+fn ocr_config_to_ruby_hash(ruby: &Ruby, config: &kreuzberg::OcrConfig) -> Result<RHash, Error> {
+    let value =
+        serde_json::to_value(config).map_err(|e| runtime_error(format!("Failed to serialize OCR config: {}", e)))?;
+    let ruby_value = json_value_to_ruby(ruby, &value)?;
+    RHash::try_convert(ruby_value).map_err(|_| runtime_error("OCR config must return a Hash"))
+}
+
+fn cache_root_dir() -> Result<PathBuf, Error> {
+    std::env::current_dir()
+        .map(|dir| dir.join(".kreuzberg"))
+        .map_err(|e| runtime_error(format!("Failed to get current directory: {}", e)))
+}
+
+fn cache_directories(root: &Path) -> Result<Vec<PathBuf>, Error> {
+    if !root.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut dirs = vec![root.to_path_buf()];
+    let entries = fs::read_dir(root).map_err(|e| runtime_error(format!("Failed to read cache root: {}", e)))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| runtime_error(format!("Failed to read cache directory entry: {}", e)))?;
+        if entry
+            .file_type()
+            .map_err(|e| runtime_error(format!("Failed to determine cache entry type: {}", e)))?
+            .is_dir()
+        {
+            dirs.push(entry.path());
+        }
+    }
+
+    Ok(dirs)
+}
+
+fn json_value_to_ruby(ruby: &Ruby, value: &serde_json::Value) -> Result<Value, Error> {
+    Ok(match value {
+        serde_json::Value::Null => ruby.qnil().as_value(),
+        serde_json::Value::Bool(b) => {
+            if *b {
+                ruby.qtrue().as_value()
+            } else {
+                ruby.qfalse().as_value()
+            }
+        }
+        serde_json::Value::Number(num) => {
+            if let Some(i) = num.as_i64() {
+                ruby.integer_from_i64(i).into_value_with(ruby)
+            } else if let Some(u) = num.as_u64() {
+                ruby.integer_from_u64(u).into_value_with(ruby)
+            } else if let Some(f) = num.as_f64() {
+                ruby.float_from_f64(f).into_value_with(ruby)
+            } else {
+                ruby.qnil().as_value()
+            }
+        }
+        serde_json::Value::String(s) => ruby.str_new(s).into_value_with(ruby),
+        serde_json::Value::Array(items) => {
+            let ary = ruby.ary_new();
+            for item in items {
+                ary.push(json_value_to_ruby(ruby, item)?)?;
+            }
+            ary.into_value_with(ruby)
+        }
+        serde_json::Value::Object(map) => {
+            let hash = ruby.hash_new();
+            for (key, val) in map {
+                let key_value = ruby.str_new(key).into_value_with(ruby);
+                let val_value = json_value_to_ruby(ruby, val)?;
+                hash.aset(key_value, val_value)?;
+            }
+            hash.into_value_with(ruby)
+        }
+    })
+}
+
+fn ruby_key_to_string(value: Value) -> Result<String, Error> {
+    if let Ok(sym) = Symbol::try_convert(value) {
+        Ok(sym.name()?.to_string())
+    } else {
+        String::try_convert(value)
+    }
+}
+
+fn ruby_value_to_json(value: Value) -> Result<serde_json::Value, Error> {
+    let ruby = Ruby::get().expect("Ruby not initialized");
+
+    if value.is_nil() {
+        return Ok(serde_json::Value::Null);
+    }
+
+    if value.equal(ruby.qtrue())? {
+        return Ok(serde_json::Value::Bool(true));
+    }
+
+    if value.equal(ruby.qfalse())? {
+        return Ok(serde_json::Value::Bool(false));
+    }
+
+    if let Ok(integer) = i64::try_convert(value) {
+        return Ok(serde_json::Value::Number(integer.into()));
+    }
+
+    if let Ok(unsigned) = u64::try_convert(value) {
+        return Ok(serde_json::Value::Number(serde_json::Number::from(unsigned)));
+    }
+
+    if let Ok(float) = f64::try_convert(value) {
+        if let Some(num) = serde_json::Number::from_f64(float) {
+            return Ok(serde_json::Value::Number(num));
+        }
+    }
+
+    if let Ok(sym) = Symbol::try_convert(value) {
+        return Ok(serde_json::Value::String(sym.name()?.to_string()));
+    }
+
+    if let Ok(string) = String::try_convert(value) {
+        return Ok(serde_json::Value::String(string));
+    }
+
+    if let Ok(array) = RArray::try_convert(value) {
+        let mut values = Vec::with_capacity(array.len());
+        for item in array.into_iter() {
+            values.push(ruby_value_to_json(item)?);
+        }
+        return Ok(serde_json::Value::Array(values));
+    }
+
+    if let Ok(hash) = RHash::try_convert(value) {
+        let mut map = serde_json::Map::new();
+        hash.foreach(|key: Value, val: Value| {
+            let key_string = ruby_key_to_string(key)?;
+            let json_value = ruby_value_to_json(val)?;
+            map.insert(key_string, json_value);
+            Ok(ForEach::Continue)
+        })?;
+
+        return Ok(serde_json::Value::Object(map));
+    }
+
+    Err(runtime_error("Unsupported Ruby value for JSON conversion"))
 }
 
 /// Parse OcrConfig from Ruby Hash
@@ -410,13 +610,20 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
 fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Result<RHash, Error> {
     let hash = ruby.hash_new();
 
-    hash.aset(ruby.intern("content"), result.content)?;
+    let content_value = ruby.str_new(result.content.as_str()).into_value_with(ruby);
+    set_hash_entry(ruby, &hash, "content", content_value)?;
 
-    hash.aset(ruby.intern("mime_type"), result.mime_type)?;
+    let mime_value = ruby.str_new(result.mime_type.as_str()).into_value_with(ruby);
+    set_hash_entry(ruby, &hash, "mime_type", mime_value)?;
 
     let metadata_json = serde_json::to_string(&result.metadata)
         .map_err(|e| runtime_error(format!("Failed to serialize metadata: {}", e)))?;
-    hash.aset(ruby.intern("metadata_json"), metadata_json)?;
+    let metadata_json_value = ruby.str_new(&metadata_json).into_value_with(ruby);
+    set_hash_entry(ruby, &hash, "metadata_json", metadata_json_value)?;
+    let metadata_value = serde_json::to_value(&result.metadata)
+        .map_err(|e| runtime_error(format!("Failed to serialize metadata: {}", e)))?;
+    let metadata_hash = json_value_to_ruby(ruby, &metadata_value)?;
+    set_hash_entry(ruby, &hash, "metadata", metadata_hash)?;
 
     let tables_array = ruby.ary_new();
     for table in result.tables {
@@ -435,13 +642,15 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
 
         tables_array.push(table_hash)?;
     }
-    hash.aset(ruby.intern("tables"), tables_array)?;
+    let tables_value = tables_array.into_value_with(ruby);
+    set_hash_entry(ruby, &hash, "tables", tables_value)?;
 
     if let Some(langs) = result.detected_languages {
         let langs_array = ruby.ary_from_vec(langs);
-        hash.aset(ruby.intern("detected_languages"), langs_array)?;
+        let langs_value = langs_array.into_value_with(ruby);
+        set_hash_entry(ruby, &hash, "detected_languages", langs_value)?;
     } else {
-        hash.aset(ruby.intern("detected_languages"), ruby.qnil())?;
+        set_hash_entry(ruby, &hash, "detected_languages", ruby.qnil().as_value())?;
     }
 
     if let Some(chunks) = result.chunks {
@@ -456,9 +665,10 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
             }
             chunks_array.push(chunk_hash)?;
         }
-        hash.aset(ruby.intern("chunks"), chunks_array)?;
+        let chunks_value = chunks_array.into_value_with(ruby);
+        set_hash_entry(ruby, &hash, "chunks", chunks_value)?;
     } else {
-        hash.aset(ruby.intern("chunks"), ruby.qnil())?;
+        set_hash_entry(ruby, &hash, "chunks", ruby.qnil().as_value())?;
     }
 
     Ok(hash)
@@ -734,16 +944,19 @@ fn batch_extract_bytes(args: &[Value]) -> Result<RArray, Error> {
 ///   Kreuzberg.clear_cache
 ///
 fn ruby_clear_cache() -> Result<(), Error> {
-    let cache_dir = std::env::current_dir()
-        .map_err(|e| runtime_error(format!("Failed to get current directory: {}", e)))?
-        .join(".kreuzberg");
+    let cache_root = cache_root_dir()?;
+    if !cache_root.exists() {
+        return Ok(());
+    }
 
-    let cache_dir_str = cache_dir
-        .to_str()
-        .ok_or_else(|| runtime_error("Cache directory path contains non-UTF8 characters"))?;
+    for dir in cache_directories(&cache_root)? {
+        let Some(dir_str) = dir.to_str() else {
+            return Err(runtime_error("Cache directory path contains non-UTF8 characters"));
+        };
 
-    // OSError/RuntimeError must bubble up - system errors need user reports ~keep
-    kreuzberg::cache::clear_cache_directory(cache_dir_str).map_err(kreuzberg_error)?;
+        // OSError/RuntimeError must bubble up - system errors need user reports ~keep
+        kreuzberg::cache::clear_cache_directory(dir_str).map_err(kreuzberg_error)?;
+    }
 
     Ok(())
 }
@@ -760,21 +973,41 @@ fn ruby_clear_cache() -> Result<(), Error> {
 fn ruby_cache_stats() -> Result<RHash, Error> {
     let ruby = Ruby::get().expect("Ruby not initialized");
 
-    let cache_dir = std::env::current_dir()
-        .map_err(|e| runtime_error(format!("Failed to get current directory: {}", e)))?
-        .join(".kreuzberg");
-
-    let cache_dir_str = cache_dir
-        .to_str()
-        .ok_or_else(|| runtime_error("Cache directory path contains non-UTF8 characters"))?;
-
-    // OSError/RuntimeError must bubble up - system errors need user reports ~keep
-    let stats = kreuzberg::cache::get_cache_metadata(cache_dir_str).map_err(kreuzberg_error)?;
-
     let hash = ruby.hash_new();
-    hash.aset(ruby.intern("total_entries"), stats.total_files)?;
-    let total_size_bytes = (stats.total_size_mb * 1024.0 * 1024.0) as u64;
-    hash.aset(ruby.intern("total_size_bytes"), total_size_bytes)?;
+    let cache_root = cache_root_dir()?;
+
+    if !cache_root.exists() {
+        hash.aset(ruby.intern("total_entries"), 0)?;
+        hash.aset(ruby.intern("total_size_bytes"), 0)?;
+        return Ok(hash);
+    }
+
+    let mut total_entries: usize = 0;
+    let mut total_bytes: f64 = 0.0;
+
+    for dir in cache_directories(&cache_root)? {
+        let Some(dir_str) = dir.to_str() else {
+            return Err(runtime_error("Cache directory path contains non-UTF8 characters"));
+        };
+
+        // OSError/RuntimeError must bubble up - system errors need user reports ~keep
+        let stats = kreuzberg::cache::get_cache_metadata(dir_str).map_err(kreuzberg_error)?;
+        total_entries += stats.total_files;
+        total_bytes += stats.total_size_mb * 1024.0 * 1024.0;
+    }
+
+    set_hash_entry(
+        &ruby,
+        &hash,
+        "total_entries",
+        ruby.integer_from_u64(total_entries as u64).into_value_with(&ruby),
+    )?;
+    set_hash_entry(
+        &ruby,
+        &hash,
+        "total_size_bytes",
+        ruby.integer_from_u64(total_bytes.round() as u64).into_value_with(&ruby),
+    )?;
 
     Ok(hash)
 }
@@ -868,6 +1101,85 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
                     plugin_name: self.name.clone(),
                 })?;
                 result.content = new_content;
+            }
+
+            if let Some(mime_val) = get_kw(&ruby, modified_hash, "mime_type") {
+                let new_mime = String::try_convert(mime_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                    message: format!("Failed to convert mime_type: {}", e),
+                    plugin_name: self.name.clone(),
+                })?;
+                result.mime_type = new_mime;
+            }
+
+            if let Some(metadata_val) = get_kw(&ruby, modified_hash, "metadata") {
+                if metadata_val.is_nil() {
+                    result.metadata = kreuzberg::types::Metadata::default();
+                } else {
+                    let metadata_json =
+                        ruby_value_to_json(metadata_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                            message: format!("Metadata must be JSON-serializable: {}", e),
+                            plugin_name: self.name.clone(),
+                        })?;
+                    let metadata: kreuzberg::types::Metadata =
+                        serde_json::from_value(metadata_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                            message: format!("Failed to deserialize metadata: {}", e),
+                            plugin_name: self.name.clone(),
+                        })?;
+                    result.metadata = metadata;
+                }
+            }
+
+            if let Some(tables_val) = get_kw(&ruby, modified_hash, "tables") {
+                let tables_json = ruby_value_to_json(tables_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                    message: format!("Tables must be JSON-serializable: {}", e),
+                    plugin_name: self.name.clone(),
+                })?;
+                if tables_json.is_null() {
+                    result.tables.clear();
+                } else {
+                    let tables: Vec<kreuzberg::types::Table> =
+                        serde_json::from_value(tables_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                            message: format!("Failed to deserialize tables: {}", e),
+                            plugin_name: self.name.clone(),
+                        })?;
+                    result.tables = tables;
+                }
+            }
+
+            if let Some(languages_val) = get_kw(&ruby, modified_hash, "detected_languages") {
+                if languages_val.is_nil() {
+                    result.detected_languages = None;
+                } else {
+                    let langs_json =
+                        ruby_value_to_json(languages_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                            message: format!("detected_languages must be JSON-serializable: {}", e),
+                            plugin_name: self.name.clone(),
+                        })?;
+                    let languages: Vec<String> =
+                        serde_json::from_value(langs_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                            message: format!("Failed to deserialize detected_languages: {}", e),
+                            plugin_name: self.name.clone(),
+                        })?;
+                    result.detected_languages = Some(languages);
+                }
+            }
+
+            if let Some(chunks_val) = get_kw(&ruby, modified_hash, "chunks") {
+                if chunks_val.is_nil() {
+                    result.chunks = None;
+                } else {
+                    let chunks_json =
+                        ruby_value_to_json(chunks_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                            message: format!("Chunks must be JSON-serializable: {}", e),
+                            plugin_name: self.name.clone(),
+                        })?;
+                    let chunks: Vec<kreuzberg::types::Chunk> =
+                        serde_json::from_value(chunks_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                            message: format!("Failed to deserialize chunks: {}", e),
+                            plugin_name: self.name.clone(),
+                        })?;
+                    result.chunks = Some(chunks);
+                }
             }
 
             Ok(())
@@ -1015,11 +1327,11 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
 /// Kreuzberg.register_ocr_backend("custom", CustomOcr.new)
 /// ```
 fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
+    if !backend.respond_to("name", true)? {
+        return Err(runtime_error("OCR backend must respond to 'name'"));
+    }
     if !backend.respond_to("process_image", true)? {
         return Err(runtime_error("OCR backend must respond to 'process_image'"));
-    }
-    if !backend.respond_to("supports_language?", true)? {
-        return Err(runtime_error("OCR backend must respond to 'supports_language?'"));
     }
 
     use async_trait::async_trait;
@@ -1062,13 +1374,23 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
             let ruby = Ruby::get().expect("Ruby not initialized");
             let image_str = ruby.str_from_slice(image_bytes);
 
-            let text = self
+            let config_hash = ocr_config_to_ruby_hash(&ruby, config).map_err(|e| kreuzberg::KreuzbergError::Ocr {
+                message: format!("Failed to convert OCR config: {}", e),
+                source: None,
+            })?;
+
+            let response = self
                 .backend
-                .funcall::<_, _, String>("process_image", (image_str, config.language.clone()))
+                .funcall::<_, _, Value>("process_image", (image_str, config_hash.into_value_with(&ruby)))
                 .map_err(|e| kreuzberg::KreuzbergError::Ocr {
                     message: format!("Ruby OCR backend failed: {}", e),
                     source: None,
                 })?;
+
+            let text = String::try_convert(response).map_err(|e| kreuzberg::KreuzbergError::Ocr {
+                message: format!("OCR backend must return a String: {}", e),
+                source: None,
+            })?;
 
             Ok(kreuzberg::ExtractionResult {
                 content: text,
@@ -1082,9 +1404,13 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
         }
 
         fn supports_language(&self, lang: &str) -> bool {
-            self.backend
-                .funcall::<_, _, bool>("supports_language?", (lang,))
-                .unwrap_or(false)
+            match self.backend.respond_to("supports_language?", true) {
+                Ok(true) => self
+                    .backend
+                    .funcall::<_, _, bool>("supports_language?", (lang,))
+                    .unwrap_or(true),
+                _ => true,
+            }
         }
 
         fn backend_type(&self) -> OcrBackendType {

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 # Basic smoke tests to verify package structure and imports work
+require 'stringio'
 
 RSpec.describe 'Kreuzberg package' do
   describe 'import and structure' do
@@ -140,6 +141,26 @@ RSpec.describe 'Kreuzberg package' do
 
     it 'defines Kreuzberg::Errors as a module' do
       expect(Kreuzberg::Errors).to be_a(Module)
+    end
+  end
+
+  describe 'basic extraction smoke tests' do
+    it 'extracts inline text via bytes API' do
+      bytes = StringIO.new('Hello from Kreuzberg')
+      result = Kreuzberg.extract_bytes_sync(bytes.string, 'text/plain')
+
+      expect(result.content).to include('Hello')
+      expect(result.mime_type).to eq('text/plain')
+    end
+
+    it 'extracts from small temp file via sync API' do
+      file = create_test_file('Simple document for smoke testing')
+      result = Kreuzberg.extract_file_sync(file)
+
+      expect(result.content).to include('Simple document')
+      expect(result.mime_type).to eq('text/plain')
+    ensure
+      File.delete(file) if file && File.exist?(file)
     end
   end
 end
