@@ -65,15 +65,8 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                     true
                 };
 
-                if should_run
-                    && processor.should_process(&result, config)
-                    && let Err(e) = processor.process(&mut result, config).await
-                {
-                    let error_key = format!("processing_error_{}", processor_name);
-                    result
-                        .metadata
-                        .additional
-                        .insert(error_key, serde_json::Value::String(e.to_string()));
+                if should_run && processor.should_process(&result, config) {
+                    processor.process(&mut result, config).await?;
                 }
             }
         }

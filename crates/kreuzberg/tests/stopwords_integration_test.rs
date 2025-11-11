@@ -1,4 +1,5 @@
 //! Integration tests for stopwords with token reduction and keywords extraction.
+#![cfg(all(feature = "stopwords", feature = "quality"))]
 //!
 //! These tests verify that stopwords are properly integrated across different features:
 //! - Token reduction at all ReductionLevels

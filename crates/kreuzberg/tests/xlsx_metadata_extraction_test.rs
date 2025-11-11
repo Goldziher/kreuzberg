@@ -1,4 +1,5 @@
 //! End-to-end integration test for XLSX metadata extraction
+#![cfg(feature = "excel")]
 
 use kreuzberg::extraction::excel::read_excel_file;
 
