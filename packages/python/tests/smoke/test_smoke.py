@@ -1,5 +1,9 @@
 """Basic smoke tests to verify package structure and imports work."""
 
+from __future__ import annotations
+
+import pytest
+
 
 def test_import_kreuzberg() -> None:
     """Test that kreuzberg can be imported."""
@@ -49,3 +53,24 @@ def test_public_api_exports() -> None:
     assert hasattr(kreuzberg, "clear_post_processors")
 
     assert hasattr(kreuzberg, "__version__")
+
+
+def test_extract_bytes_sync_smoke() -> None:
+    """Ensure we can perform a simple synchronous extraction."""
+    from kreuzberg import extract_bytes_sync
+
+    result = extract_bytes_sync(b"Hello from smoke test!", "text/plain")
+
+    assert result.content.startswith("Hello")
+    assert result.mime_type == "text/plain"
+
+
+@pytest.mark.asyncio
+async def test_extract_bytes_async_smoke() -> None:
+    """Ensure we can perform a simple asynchronous extraction."""
+    from kreuzberg import extract_bytes
+
+    result = await extract_bytes(b"Hello from async smoke!", "text/plain")
+
+    assert result.content.startswith("Hello")
+    assert result.mime_type == "text/plain"

@@ -242,11 +242,11 @@ jobs:
 
       - name: Run tests (Linux, Python 3.10 - with coverage)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
-        run: uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
+        run: uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1
 
       - name: Run tests (other platforms/versions)
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.10'
-        run: uv run pytest -vv --reruns 1 --reruns-delay 1 --ignore=tests/benchmarks/
+        run: uv run pytest -vv --reruns 1 --reruns-delay 1
 
       - name: Cleanup Rust cache before save
         if: always()
