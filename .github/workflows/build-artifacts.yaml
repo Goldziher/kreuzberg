@@ -34,13 +34,33 @@ env:
 
 jobs:
   build-wheels:
-    name: Build Python wheels (${{ matrix.os }})
+    name: Build Python wheels (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-14]
+        include:
+          - label: linux-x86_64
+            os: ubuntu-latest
+            linux-archs: x86_64
+            artifact: wheels-linux-x86_64
+            prefetch-image: quay.io/pypa/manylinux_2_28_x86_64:2025.10.10-1
+          - label: linux-aarch64
+            os: ubuntu-latest
+            linux-archs: aarch64
+            artifact: wheels-linux-aarch64
+            prefetch-image: quay.io/pypa/manylinux_2_28_aarch64:2025.10.10-1
+          - label: macos-universal
+            os: macos-14
+            macos-archs: "x86_64 arm64"
+            artifact: wheels-macos
+            prefetch-image: ""
+          - label: windows-amd64
+            os: windows-latest
+            windows-archs: AMD64
+            artifact: wheels-windows
+            prefetch-image: ""
     steps:
       - name: Maximize build disk space
         if: matrix.os == 'ubuntu-latest'
@@ -61,10 +81,19 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Prefetch manylinux image
+        if: matrix.prefetch-image != ''
+        shell: bash
+        run: docker pull ${{ matrix.prefetch-image }}
+
       - name: Build wheels
         uses: ./.github/actions/build-wheels
         with:
           python-version: "3.13"
+          linux-archs: ${{ matrix.linux-archs || '' }}
+          macos-archs: ${{ matrix.macos-archs || '' }}
+          windows-archs: ${{ matrix.windows-archs || '' }}
+          artifact-name: ${{ matrix.artifact }}
 
       - name: List built wheels
         shell: bash
@@ -295,6 +324,26 @@ jobs:
               exit 1
               ;;
           esac
+
+      - name: Download ONNX Runtime (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ort_target="x86_64-pc-windows-gnu"
+          ort_dir="$RUNNER_TEMP/onnxruntime/${ort_target}"
+          if [ ! -f "${ort_dir}/onnxruntime/bin/onnxruntime.dll" ]; then
+            mkdir -p "${ort_dir}"
+            curl -fsSL "https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/${ort_target}.tgz" | tar -xz -C "${ort_dir}"
+          fi
+          {
+            echo "ORT_STRATEGY=system"
+            echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime/lib"
+            echo "ORT_SKIP_DOWNLOAD=1"
+            echo "ORT_PREFER_DYNAMIC_LINK=1"
+            echo "ORT_DYLIB_PATH=${ort_dir}/onnxruntime/bin"
+          } >> "$GITHUB_ENV"
+          echo "${ort_dir}/onnxruntime/bin" >> "$GITHUB_PATH"
 
       - name: Install Ruby dependencies (Unix)
         if: runner.os != 'Windows'

@@ -6,6 +6,22 @@ inputs:
     description: 'Python version to use'
     required: false
     default: '3.13'
+  linux-archs:
+    description: 'Override for CIBW_ARCHS_LINUX'
+    required: false
+    default: ''
+  macos-archs:
+    description: 'Override for CIBW_ARCHS_MACOS'
+    required: false
+    default: ''
+  windows-archs:
+    description: 'Override for CIBW_ARCHS_WINDOWS'
+    required: false
+    default: ''
+  artifact-name:
+    description: 'Custom artifact name for wheel uploads'
+    required: false
+    default: ''
 
 outputs:
   artifact-name:
@@ -76,9 +92,9 @@ runs:
       env:
         CIBW_BUILD: cp310-*
 
-        CIBW_ARCHS_LINUX: x86_64 aarch64
-        CIBW_ARCHS_MACOS: x86_64 arm64
-        CIBW_ARCHS_WINDOWS: AMD64
+        CIBW_ARCHS_LINUX: ${{ inputs.linux-archs != '' && inputs.linux-archs || 'x86_64 aarch64' }}
+        CIBW_ARCHS_MACOS: ${{ inputs.macos-archs != '' && inputs.macos-archs || 'x86_64 arm64' }}
+        CIBW_ARCHS_WINDOWS: ${{ inputs.windows-archs != '' && inputs.windows-archs || 'AMD64' }}
 
         CIBW_BUILD_FRONTEND: "build"
         CIBW_BUILD_VERBOSITY: 1
@@ -160,6 +176,6 @@ runs:
     - name: Upload wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ runner.os }}
+        name: ${{ inputs.artifact-name != '' && inputs.artifact-name || format('wheels-{0}', runner.os) }}
         path: ./wheelhouse/*.whl
         retention-days: 7
