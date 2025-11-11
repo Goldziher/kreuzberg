@@ -22,32 +22,23 @@ jobs:
           - name: linux-x86_64
             target: x86_64-unknown-linux-gnu
             manylinux: auto
-            args: "--release -i python3.10"
-            needs-qemu: false
-          - name: linux-aarch64
-            target: aarch64-unknown-linux-gnu
-            manylinux: 2_28
-            args: "--release -i python3.10"
-            needs-qemu: true
+            python: "3.10"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Setup QEMU
-        if: matrix.needs-qemu == true
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: all
 
       - name: Build wheels with maturin
         uses: PyO3/maturin-action@v1
         with:
           command: build
-          args: ${{ matrix.args }}
+          args: --release -i python${{ matrix.python }}
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
           sccache: true
+
+      - name: List wheels
+        run: ls -R packages/python/target/wheels
 
       - name: Upload wheels artifact
         uses: actions/upload-artifact@v4
@@ -108,23 +99,28 @@ jobs:
           cp -f "$src" "packages/ruby/pdfium.dll"
 
       - name: Download ONNX Runtime (Windows)
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          ort_target="x86_64-pc-windows-gnu"
-          ort_dir="$RUNNER_TEMP/onnxruntime/${ort_target}"
-          if [ ! -f "${ort_dir}/onnxruntime/bin/onnxruntime.dll" ]; then
-            mkdir -p "${ort_dir}"
-            curl -fsSL "https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/${ort_target}.tgz" | tar -xz -C "${ort_dir}"
-          fi
-          {
-            echo "ORT_STRATEGY=system"
-            echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime/lib"
-            echo "ORT_SKIP_DOWNLOAD=1"
-            echo "ORT_PREFER_DYNAMIC_LINK=1"
-            echo "ORT_DYLIB_PATH=${ort_dir}/onnxruntime/bin"
-          } >> "$GITHUB_ENV"
-          echo "${ort_dir}/onnxruntime/bin" >> "$GITHUB_PATH"
+          $ortVersion = "1.18.1"
+          $ortDir = Join-Path $env:RUNNER_TEMP "onnxruntime\x86_64-pc-windows-gnu"
+          if (-Not (Test-Path (Join-Path $ortDir "onnxruntime\bin\onnxruntime.dll"))) {
+            New-Item -ItemType Directory -Force -Path $ortDir | Out-Null
+            $zipPath = Join-Path $ortDir "onnxruntime.zip"
+            $url = "https://github.com/microsoft/onnxruntime/releases/download/v$ortVersion/onnxruntime-win-x64-$ortVersion.zip"
+            Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
+            Expand-Archive -Path $zipPath -DestinationPath $ortDir -Force
+          }
+          $onnxRoot = Get-ChildItem -Path $ortDir -Directory | Where-Object { $_.Name -like "onnxruntime-win-x64-*" } | Select-Object -First 1
+          if (-not $onnxRoot) { throw "ONNX Runtime archive not found" }
+          $envLines = @(
+            "ORT_STRATEGY=system",
+            "ORT_LIB_LOCATION=$($onnxRoot.FullName)\lib",
+            "ORT_SKIP_DOWNLOAD=1",
+            "ORT_PREFER_DYNAMIC_LINK=1",
+            "ORT_DYLIB_PATH=$($onnxRoot.FullName)\lib"
+          )
+          $envLines | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $onnxRoot.FullName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install Ruby dependencies
         shell: pwsh
