@@ -36,7 +36,7 @@ jobs:
   build-wheels:
     name: Build Python wheels (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -110,7 +110,7 @@ jobs:
   build-napi-bindings:
     name: Build NAPI ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.os }}
-    timeout-minutes: 90
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -201,7 +201,7 @@ jobs:
   build-ruby-gems:
     name: Build Ruby gem (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 180
     env:
       RB_SYS_CARGO_PROFILE: release
     strategy:
@@ -318,6 +318,21 @@ jobs:
           RUBY_ARCH=$(ruby -e "require 'rbconfig'; print RbConfig::CONFIG['arch']")
           bundle exec rake native:kreuzberg:${RUBY_ARCH}
 
+      - name: Package native gem (Unix)
+        if: runner.os != 'Windows'
+        working-directory: packages/ruby
+        run: |
+          set -euo pipefail
+          RUBY_ARCH=$(ruby -e "require 'rbconfig'; print RbConfig::CONFIG['arch']")
+          STAGE_DIR="tmp/${RUBY_ARCH}/stage"
+          mkdir -p pkg
+          if [ ! -f "${STAGE_DIR}/kreuzberg.gemspec" ]; then
+            echo "Stage directory ${STAGE_DIR} missing" >&2
+            exit 1
+          fi
+          (cd "${STAGE_DIR}" && gem build kreuzberg.gemspec)
+          mv "${STAGE_DIR}"/kreuzberg-*.gem pkg/
+
       - name: Build native gem (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -327,6 +342,15 @@ jobs:
           # Get Ruby platform in PowerShell first to avoid bash escaping issues
           $rubyPlatform = ruby -e "puts Gem::Platform.local.to_s"
           ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle exec rake native:kreuzberg:$rubyPlatform"
+
+      - name: Package native gem (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $rubydir = "$workspace/packages/ruby"
+          $rubyPlatform = ruby -e "puts Gem::Platform.local.to_s"
+          ridk exec bash -lc "cd $rubydir && set -euo pipefail; mkdir -p pkg; stage_dir=\"tmp/$rubyPlatform/stage\"; if [ ! -f \"\$stage_dir/kreuzberg.gemspec\" ]; then echo \"Stage directory \$stage_dir missing\" >&2; exit 1; fi; (cd \"\$stage_dir\" && gem build kreuzberg.gemspec); mv \"\$stage_dir\"/kreuzberg-*.gem pkg/"
 
       - name: Build source gem
         if: matrix.build_source_gem
@@ -353,7 +377,7 @@ jobs:
   build-cli-binaries:
     name: Build CLI ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
