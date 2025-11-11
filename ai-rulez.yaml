@@ -217,6 +217,6 @@ rules:
 
       Docker variants: goldziher/kreuzberg:v4.0.0-rc.1{,-easyocr,-paddle,-vision-tables,-all}.
 
-      Common issues: Use `git tag --sort=-version:refname | head -n1` for version, `uv sync --group doc` for mkdocs.
+      Common issues: Use `git tag --sort=-version:refname | head -n1` for version, `uv sync --group docs` for mkdocs.
     name: CI/CD
     priority: minimal

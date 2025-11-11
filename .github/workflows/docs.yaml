@@ -39,7 +39,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --group doc
+        run: uv sync --group docs
 
       - name: Configure Git for mike
         run: |
@@ -63,7 +63,7 @@ jobs:
           sed -i.bak 's/^  - social$/  # - social/' /tmp/kreuzberg-v3-build/mkdocs.yaml
 
           echo "Building and deploying v3 docs..."
-          cd /tmp/kreuzberg-v3-build && uv sync --group doc && uv pip install mike
+          cd /tmp/kreuzberg-v3-build && uv sync --group docs && uv pip install mike
           cd /tmp/kreuzberg-v3-build && uv run mike deploy 3.0 v3
 
           echo "Cleaning up worktree..."
