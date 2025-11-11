@@ -1,0 +1,156 @@
+name: Experimental Build Matrix
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/experimental-builds.yaml"
+      - "packages/python/**"
+      - "packages/ruby/**"
+      - "crates/**"
+
+jobs:
+  python-wheels:
+    name: Python Wheels (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            target: x86_64-unknown-linux-gnu
+            manylinux: auto
+            args: "--release -i python3.10"
+            needs-qemu: false
+          - name: linux-aarch64
+            target: aarch64-unknown-linux-gnu
+            manylinux: 2_28
+            args: "--release -i python3.10"
+            needs-qemu: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup QEMU
+        if: matrix.needs-qemu == true
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - name: Build wheels with maturin
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: ${{ matrix.args }}
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          working-directory: packages/python
+          sccache: true
+
+      - name: Upload wheels artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-${{ matrix.name }}-wheels
+          path: packages/python/target/wheels/*.whl
+
+  ruby-windows:
+    name: Ruby Gem (Windows x64)
+    runs-on: windows-latest
+    env:
+      PDFIUM_VERSION: "7455"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust (MSVC)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install MSYS2 toolchain
+        shell: pwsh
+        run: ridk exec pacman -S --needed --noconfirm base-devel mingw-w64-ucrt-x86_64-toolchain
+
+      - name: Install Rust GNU toolchain
+        shell: pwsh
+        run: rustup toolchain install stable-gnu --profile minimal --no-self-update
+
+      - name: Configure bindgen sysroot
+        shell: bash
+        run: echo "BINDGEN_EXTRA_CLANG_ARGS=--target=x86_64-pc-windows-gnu --sysroot=${RI_DEVKIT//\\/\/}$MSYSTEM_PREFIX" >> "$GITHUB_ENV"
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: false
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download Pdfium runtime
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage Pdfium runtime artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
+            echo "KREUZBERG_PDFIUM_PREBUILT is not set" >&2
+            exit 1
+          fi
+          src="$KREUZBERG_PDFIUM_PREBUILT/bin/pdfium.dll"
+          cp -f "$src" "packages/ruby/ext/kreuzberg_rb/native/pdfium.dll"
+          cp -f "$src" "packages/ruby/pdfium.dll"
+
+      - name: Download ONNX Runtime (Windows)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ort_target="x86_64-pc-windows-gnu"
+          ort_dir="$RUNNER_TEMP/onnxruntime/${ort_target}"
+          if [ ! -f "${ort_dir}/onnxruntime/bin/onnxruntime.dll" ]; then
+            mkdir -p "${ort_dir}"
+            curl -fsSL "https://cdn.pyke.io/0/pyke:ort-rs/ms@1.22.0/${ort_target}.tgz" | tar -xz -C "${ort_dir}"
+          fi
+          {
+            echo "ORT_STRATEGY=system"
+            echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime/lib"
+            echo "ORT_SKIP_DOWNLOAD=1"
+            echo "ORT_PREFER_DYNAMIC_LINK=1"
+            echo "ORT_DYLIB_PATH=${ort_dir}/onnxruntime/bin"
+          } >> "$GITHUB_ENV"
+          echo "${ort_dir}/onnxruntime/bin" >> "$GITHUB_PATH"
+
+      - name: Install Ruby dependencies
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $rubydir = "$workspace/packages/ruby"
+          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle config set --local path 'vendor/bundle' && bundle install --jobs 4 --retry 3"
+
+      - name: Build native gem
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $rubydir = "$workspace/packages/ruby"
+          $rubyPlatform = ruby -e "puts Gem::Platform.local.to_s"
+          ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle exec rake native:kreuzberg:$rubyPlatform"
+
+      - name: Package gem
+        shell: pwsh
+        run: |
+          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+          $rubydir = "$workspace/packages/ruby"
+          $rubyPlatform = ruby -e "puts Gem::Platform.local.to_s"
+          ridk exec bash -lc "cd $rubydir && set -euo pipefail; mkdir -p pkg; stage_dir=\"tmp/$rubyPlatform/stage\"; if [ ! -f \"\$stage_dir/kreuzberg.gemspec\" ]; then echo \"Stage directory \$stage_dir missing\" >&2; exit 1; fi; (cd \"\$stage_dir\" && gem build kreuzberg.gemspec); mv \"\$stage_dir\"/kreuzberg-*.gem pkg/"
+
+      - name: Upload Ruby gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruby-windows-gem
+          path: packages/ruby/pkg/*.gem
