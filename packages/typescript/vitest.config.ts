@@ -21,7 +21,7 @@ export default defineConfig({
 				"**/types.ts",
 				"**/cli.ts",
 				"tests/**/helpers/**",
-				"tests/unit/helpers/**",
+				"tests/binding/helpers/**",
 			],
 			thresholds: {
 				lines: 85,

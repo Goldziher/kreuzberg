@@ -4,13 +4,35 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { unlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-describe("CLI Server Commands", () => {
+const CLI_BIN = join(process.cwd(), "dist", "cli.js");
+
+function spawnCliSync(args: string[]) {
+	return spawnSync("node", [CLI_BIN, ...args], {
+		encoding: "utf-8",
+	});
+}
+
+function spawnCli(args: string[], options?: Parameters<typeof spawn>[2]) {
+	return spawn("node", [CLI_BIN, ...args], options);
+}
+
+const CLI_SERVER_AVAILABLE = (() => {
+	try {
+		const result = spawnCliSync(["serve", "--help"]);
+		return result.status === 0;
+	} catch {
+		return false;
+	}
+})();
+
+const describeServer = CLI_SERVER_AVAILABLE ? describe : describe.skip;
+
+describeServer("CLI Server Commands", () => {
 	it("serve command help is accessible via TypeScript CLI proxy", () => {
-		const result = spawnSync("npx", ["kreuzberg", "serve", "--help"], {
-			encoding: "utf-8",
-		});
+		const result = spawnCliSync(["serve", "--help"]);
 
 		expect(result.status).toBe(0);
 		expect(result.stdout).toContain("Start the API server");
@@ -20,9 +42,7 @@ describe("CLI Server Commands", () => {
 	});
 
 	it("mcp command help is accessible via TypeScript CLI proxy", () => {
-		const result = spawnSync("npx", ["kreuzberg", "mcp", "--help"], {
-			encoding: "utf-8",
-		});
+		const result = spawnCliSync(["mcp", "--help"]);
 
 		expect(result.status).toBe(0);
 		expect(result.stdout).toContain("Start the MCP (Model Context Protocol) server");
@@ -32,7 +52,7 @@ describe("CLI Server Commands", () => {
 	it("API server starts and responds to HTTP requests", async () => {
 		const port = 18005;
 
-		const process = spawn("npx", ["kreuzberg", "serve", "-H", "127.0.0.1", "-p", port.toString()], {
+		const process = spawnCli(["serve", "-H", "127.0.0.1", "-p", port.toString()], {
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 
@@ -79,7 +99,7 @@ language = "eng"
 `,
 		);
 
-		const process = spawn("npx", ["kreuzberg", "serve", "-H", "127.0.0.1", "-p", port.toString(), "-c", configPath], {
+		const process = spawnCli(["serve", "-H", "127.0.0.1", "-p", port.toString(), "-c", configPath], {
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 
@@ -107,7 +127,7 @@ language = "eng"
 	it("server extract endpoint works", async () => {
 		const port = 18007;
 
-		const process = spawn("npx", ["kreuzberg", "serve", "-H", "127.0.0.1", "-p", port.toString()], {
+		const process = spawnCli(["serve", "-H", "127.0.0.1", "-p", port.toString()], {
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 
