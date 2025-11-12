@@ -2,6 +2,8 @@ use std::env;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::Duration;
 
 fn main() {
     let target = env::var("TARGET").unwrap();
@@ -179,18 +181,63 @@ fn download_and_extract_pdfium(url: &str, dest_dir: &Path) {
     fs::create_dir_all(dest_dir).expect("Failed to create pdfium directory");
 
     let archive_path = dest_dir.join("pdfium.tar.gz");
+    let retries = env::var("KREUZBERG_PDFIUM_DOWNLOAD_RETRIES")
+        .ok()
+        .and_then(|value| value.parse::<u32>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(5);
+    let base_delay = env::var("KREUZBERG_PDFIUM_DOWNLOAD_BACKOFF_SECS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(2);
 
-    tracing::debug!("Downloading Pdfium archive from: {}", url);
-    let status = Command::new("curl")
-        .args(["-f", "-L", "-o", archive_path.to_str().unwrap(), url])
-        .status()
-        .expect("Failed to execute curl");
+    let archive_path_str = archive_path
+        .to_str()
+        .unwrap_or_else(|| panic!("Non-UTF8 path for archive: {}", archive_path.display()));
+    let mut last_error = String::new();
 
-    if !status.success() {
-        panic!(
-            "Failed to download Pdfium from {}. Check if the URL is valid and the version exists.",
-            url
+    for attempt in 1..=retries {
+        let _ = fs::remove_file(&archive_path);
+        tracing::debug!(
+            "Downloading Pdfium archive from: {} (attempt {}/{})",
+            url,
+            attempt,
+            retries
         );
+
+        let status = Command::new("curl")
+            .args(["-f", "-L", "-o", archive_path_str, url])
+            .status();
+
+        match status {
+            Ok(code) if code.success() => {
+                last_error.clear();
+                break;
+            }
+            Ok(code) => {
+                last_error = format!("curl exited with {:?}", code.code());
+            }
+            Err(err) => {
+                last_error = format!("failed to spawn curl: {err}");
+            }
+        }
+
+        if attempt == retries {
+            panic!(
+                "Failed to download Pdfium from {} after {} attempts. Last error: {}",
+                url, retries, last_error
+            );
+        }
+
+        let exponent = u32::min(attempt, 5);
+        let multiplier = 1u64 << exponent;
+        let delay_secs = base_delay.saturating_mul(multiplier).min(30);
+        println!(
+            "cargo:warning=Pdfium download failed (attempt {}/{}) - {}. Retrying in {}s",
+            attempt, retries, last_error, delay_secs
+        );
+        thread::sleep(Duration::from_secs(delay_secs));
     }
 
     let file_type = Command::new("file")

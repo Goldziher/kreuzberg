@@ -103,6 +103,11 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Prepare wheel staging directory
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: mkdir -p target/wheels
+
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
         uses: PyO3/maturin-action@v1

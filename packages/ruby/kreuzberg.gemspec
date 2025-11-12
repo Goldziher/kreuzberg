@@ -71,8 +71,10 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake-compiler', '~> 1.2'
   spec.add_development_dependency 'rb_sys', '~> 0.9'
   spec.add_development_dependency 'rspec', '~> 3.12'
-  spec.add_development_dependency 'rubocop', '~> 1.66'
-  spec.add_development_dependency 'rubocop-performance', '~> 1.21'
-  spec.add_development_dependency 'rubocop-rspec', '~> 3.0'
+  unless Gem.win_platform?
+    spec.add_development_dependency 'rubocop', '~> 1.66'
+    spec.add_development_dependency 'rubocop-performance', '~> 1.21'
+    spec.add_development_dependency 'rubocop-rspec', '~> 3.0'
+  end
   spec.add_development_dependency 'yard', '~> 0.9'
 end

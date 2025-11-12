@@ -241,4 +241,43 @@ describe("OCR backend bridge wiring", () => {
 		await wrapped.processImage(Buffer.from("header-test"), "en");
 		expect(consoleSpy).toHaveBeenCalled();
 	});
+
+	it("should describe string payloads when debug logging is enabled", async () => {
+		const mockBinding = createOcrBinding();
+		__setBindingForTests(mockBinding);
+		process.env.KREUZBERG_DEBUG_GUTEN = "1";
+
+		const processSpy = vi.fn().mockResolvedValue({
+			content: "tuple string content",
+			mime_type: "text/plain",
+			metadata: {},
+			tables: [],
+		});
+
+		const backend: OcrBackendProtocol = {
+			name: () => "tuple-string-ocr",
+			supportedLanguages: () => ["fr"],
+			processImage: processSpy,
+		};
+
+		registerOcrBackend(backend);
+		const wrapped = mockBinding.registerOcrBackend.mock.calls[0][0];
+
+		const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+		const base64Payload = Buffer.from("tuple-log").toString("base64");
+
+		await wrapped.processImage([[base64Payload, "fr"]]);
+
+		expect(processSpy).toHaveBeenCalledWith(expect.any(Uint8Array), "fr");
+
+		const receivedPayloadLog = consoleSpy.mock.calls.find(
+			(args) => args[0] === "[registerOcrBackend] Received payload",
+		);
+		expect(receivedPayloadLog).toBeDefined();
+		expect(receivedPayloadLog?.[2]).toBe("ctor");
+		expect(receivedPayloadLog?.[3]).toBe("String");
+		expect(receivedPayloadLog?.[4]).toBe("length");
+		expect(receivedPayloadLog?.[5]).toBe(base64Payload.length);
+		consoleSpy.mockRestore();
+	});
 });

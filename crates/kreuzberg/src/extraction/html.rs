@@ -114,16 +114,11 @@ fn inline_image_to_extracted(image: InlineImage) -> ExtractedInlineImage {
 /// - `extract_metadata = true` (parse YAML frontmatter)
 /// - `hocr_spatial_tables = false` (disable hOCR table detection)
 pub fn convert_html_to_markdown(html: &str, options: Option<ConversionOptions>) -> Result<String> {
-    let options_was_none = options.is_none();
-    let mut opts = options.unwrap_or_else(|| ConversionOptions {
+    let opts = options.unwrap_or_else(|| ConversionOptions {
         extract_metadata: true,
         hocr_spatial_tables: false,
         ..Default::default()
     });
-
-    if options_was_none {
-        opts.preprocessing.enabled = false;
-    }
 
     convert_html(html, Some(opts))
         .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown: {}", e)))
@@ -136,16 +131,11 @@ pub fn process_html(
     extract_images: bool,
     max_image_size: u64,
 ) -> Result<HtmlExtractionResult> {
-    let options_was_none = options.is_none();
-    let mut opts = options.unwrap_or_else(|| ConversionOptions {
+    let opts = options.unwrap_or_else(|| ConversionOptions {
         extract_metadata: true,
         hocr_spatial_tables: false,
         ..Default::default()
     });
-
-    if options_was_none {
-        opts.preprocessing.enabled = false;
-    }
 
     if extract_images {
         let mut img_config = LibInlineImageConfig::new(max_image_size);

@@ -1,6 +1,4 @@
 version: "3"
-env:
-  PATH: "{{.HOME}}/.rbenv/shims:{{.HOME}}/.rbenv/bin:{{.PATH}}"
 vars:
   RUST_LOG: info
   V3_TAG: v3.20.2
