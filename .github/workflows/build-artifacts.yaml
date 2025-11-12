@@ -96,7 +96,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: build
-          args: --release -i python${{ matrix.python }} --out target/wheels
+          args: --release -i python${{ matrix.python }} --out ../../target/wheels
           target: ${{ matrix.rust_target }}
           manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
@@ -149,6 +149,16 @@ jobs:
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download Pdfium runtime
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Build sdist
         working-directory: packages/python
