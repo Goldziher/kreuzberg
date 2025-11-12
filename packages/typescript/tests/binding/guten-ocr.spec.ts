@@ -336,5 +336,52 @@ describe("GutenOcrBackend", () => {
 			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 			await expect(backend.processImage(imageBytes, "en")).rejects.toThrow(/Guten OCR backend failed to initialize/);
 		});
+
+		it("should emit debug logs when KREUZBERG_DEBUG_GUTEN is enabled", async () => {
+			const backend = new GutenOcrBackend();
+			backend.ocr = {
+				detect: vi.fn().mockResolvedValue([
+					{
+						text: "debug",
+						mean: 0.5,
+						box: [
+							[0, 0],
+							[1, 0],
+							[1, 1],
+							[0, 1],
+						],
+					},
+				]),
+			};
+
+			vi.doMock("sharp", () => ({
+				default: vi.fn().mockReturnValue({
+					metadata: vi.fn().mockResolvedValue({ width: 1, height: 1 }),
+				}),
+			}));
+
+			process.env.KREUZBERG_DEBUG_GUTEN = "1";
+			const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+			await backend.processImage(Buffer.from("header-bytes"), "en");
+
+			expect(logSpy).toHaveBeenCalledWith(
+				expect.stringContaining("[Guten OCR] Debug input header:"),
+				expect.any(Array),
+			);
+			expect(logSpy).toHaveBeenCalledWith(
+				expect.stringContaining("[Guten OCR] Buffer?"),
+				expect.any(Boolean),
+				"constructor",
+				expect.any(String),
+				"length",
+				expect.any(Number),
+				"type",
+				expect.any(String),
+			);
+
+			process.env.KREUZBERG_DEBUG_GUTEN = undefined;
+			logSpy.mockRestore();
+		});
 	});
 });

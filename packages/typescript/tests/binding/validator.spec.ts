@@ -3,11 +3,14 @@
  * Tests custom validator registration, execution, and error handling
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	__resetBindingForTests,
+	__setBindingForTests,
 	clearValidators,
 	type ExtractionResult,
 	extractBytes,
+	listValidators,
 	registerValidator,
 	unregisterValidator,
 	type ValidatorProtocol,
@@ -220,5 +223,84 @@ describe("Validator Plugin System", () => {
 
 		const result = await extractBytes(Buffer.from("Test content"), "text/plain", null);
 		expect(result.content).toBe("Test content");
+	});
+});
+
+describe("Validator bridge wiring", () => {
+	const createValidatorBinding = () => ({
+		registerValidator: vi.fn(),
+		unregisterValidator: vi.fn(),
+		clearValidators: vi.fn(),
+		listValidators: vi.fn().mockReturnValue(["alpha", "beta"]),
+	});
+
+	afterEach(() => {
+		__resetBindingForTests();
+	});
+
+	it("should convert wire payloads before invoking validator", async () => {
+		const mockBinding = createValidatorBinding();
+		__setBindingForTests(mockBinding);
+
+		const validateSpy = vi.fn();
+		const validator: ValidatorProtocol = {
+			name: () => "wire-validator",
+			validate: validateSpy,
+		};
+
+		registerValidator(validator);
+		expect(mockBinding.registerValidator).toHaveBeenCalledTimes(1);
+
+		const wrapped = mockBinding.registerValidator.mock.calls[0][0];
+		const wirePayload = JSON.stringify({
+			content: "hello world",
+			mime_type: "text/plain",
+			metadata: JSON.stringify({ score: 0.99, nested: { value: 42 } }),
+			tables: [{ cells: [["a"]] }],
+			detected_languages: ["en"],
+			chunks: [{ id: 1 }],
+		});
+
+		await wrapped.validate(wirePayload);
+
+		expect(validateSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				content: "hello world",
+				mimeType: "text/plain",
+				metadata: { score: 0.99, nested: { value: 42 } },
+				tables: [{ cells: [["a"]] }],
+				detectedLanguages: ["en"],
+				chunks: [{ id: 1 }],
+			}),
+		);
+	});
+
+	it("should reject invalid wire payloads", async () => {
+		const mockBinding = createValidatorBinding();
+		__setBindingForTests(mockBinding);
+
+		const validator: ValidatorProtocol = {
+			name: () => "wire-validator",
+			validate: () => {},
+		};
+
+		registerValidator(validator);
+		const wrapped = mockBinding.registerValidator.mock.calls[0][0];
+
+		await expect(wrapped.validate("undefined")).rejects.toThrow(/invalid JSON string/i);
+	});
+
+	it("should forward registry helpers to the native binding", () => {
+		const mockBinding = createValidatorBinding();
+		__setBindingForTests(mockBinding);
+
+		unregisterValidator("foo");
+		clearValidators();
+		const names = listValidators();
+
+		expect(mockBinding.unregisterValidator).toHaveBeenCalledWith("foo");
+		expect(mockBinding.clearValidators).toHaveBeenCalledTimes(1);
+		expect(mockBinding.listValidators).toHaveBeenCalledTimes(1);
+		expect(names).toEqual(["alpha", "beta"]);
 	});
 });

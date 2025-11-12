@@ -5,8 +5,8 @@
  * registration process validates inputs correctly.
  */
 
-import { describe, expect, it } from "vitest";
-import { registerOcrBackend } from "../../src/index.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { __resetBindingForTests, __setBindingForTests, registerOcrBackend } from "../../src/index.js";
 import type { OcrBackendProtocol } from "../../src/types.js";
 
 describe("OCR Backend Registration", () => {
@@ -151,5 +151,94 @@ describe("OCR Backend Protocol Interface", () => {
 		const result = await backend.processImage(new Uint8Array(), "en");
 		expect(result.tables).toHaveLength(1);
 		expect(result.tables[0].cells).toHaveLength(2);
+	});
+});
+
+describe("OCR backend bridge wiring", () => {
+	const createOcrBinding = () => ({
+		registerOcrBackend: vi.fn(),
+	});
+
+	afterEach(() => {
+		__resetBindingForTests();
+		delete process.env.KREUZBERG_DEBUG_GUTEN;
+		vi.restoreAllMocks();
+	});
+
+	it("should unwrap tuple payloads and forward bytes", async () => {
+		const mockBinding = createOcrBinding();
+		__setBindingForTests(mockBinding);
+
+		const processSpy = vi.fn().mockResolvedValue({
+			content: "tuple result",
+			mime_type: "text/plain",
+			metadata: {},
+			tables: [],
+		});
+
+		const backend: OcrBackendProtocol = {
+			name: () => "tuple-ocr",
+			supportedLanguages: () => ["en"],
+			processImage: processSpy,
+		};
+
+		registerOcrBackend(backend);
+
+		const wrapped = mockBinding.registerOcrBackend.mock.calls[0][0];
+		const buffer = Buffer.from("abc");
+
+		await wrapped.processImage([[buffer, "en"]]);
+		await wrapped.processImage([buffer, "de"]);
+
+		expect(processSpy).toHaveBeenCalledWith(expect.any(Uint8Array), "en");
+		expect(processSpy).toHaveBeenCalledWith(expect.any(Uint8Array), "de");
+	});
+
+	it("should decode base64 payloads and require language", async () => {
+		const mockBinding = createOcrBinding();
+		__setBindingForTests(mockBinding);
+
+		const backend: OcrBackendProtocol = {
+			name: () => "base64-ocr",
+			supportedLanguages: () => ["en"],
+			processImage: vi.fn().mockResolvedValue({
+				content: "ok",
+				mime_type: "text/plain",
+				metadata: {},
+				tables: [],
+			}),
+		};
+
+		registerOcrBackend(backend);
+		const wrapped = mockBinding.registerOcrBackend.mock.calls[0][0];
+
+		const payload = Buffer.from("debug").toString("base64");
+		await wrapped.processImage(payload, "en");
+
+		await expect(wrapped.processImage(Buffer.from("raw-bytes"))).rejects.toThrow(/language parameter/);
+	});
+
+	it("should log debug information when enabled", async () => {
+		const mockBinding = createOcrBinding();
+		__setBindingForTests(mockBinding);
+		process.env.KREUZBERG_DEBUG_GUTEN = "1";
+
+		const backend: OcrBackendProtocol = {
+			name: () => "debug-ocr",
+			supportedLanguages: () => ["en"],
+			processImage: vi.fn().mockResolvedValue({
+				content: "ok",
+				mime_type: "text/plain",
+				metadata: {},
+				tables: [],
+			}),
+		};
+
+		registerOcrBackend(backend);
+		const wrapped = mockBinding.registerOcrBackend.mock.calls[0][0];
+
+		const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+		await wrapped.processImage(Buffer.from("header-test"), "en");
+		expect(consoleSpy).toHaveBeenCalled();
 	});
 });
