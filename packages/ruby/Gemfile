@@ -5,4 +5,7 @@ source 'https://rubygems.org'
 gemspec
 
 gem 'pry', '~> 0.14', group: :development
-gem 'pry-byebug', '~> 3.10', group: :development
+
+unless Gem.win_platform?
+  gem 'pry-byebug', '~> 3.10', group: :development
+end

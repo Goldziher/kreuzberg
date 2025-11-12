@@ -346,6 +346,13 @@ jobs:
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
+      - name: Install MSYS2 toolchain (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          ridk exec pacman -Sy --noconfirm
+          ridk exec pacman -S --needed --noconfirm base-devel mingw-w64-ucrt-x86_64-toolchain
+
       - name: Download Pdfium runtime
         uses: ./.github/actions/download-pdfium
         with:

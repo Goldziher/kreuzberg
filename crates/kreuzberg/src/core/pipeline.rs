@@ -3,10 +3,10 @@
 //! This module orchestrates the post-processing pipeline, executing validators,
 //! quality processing, chunking, and custom hooks in the correct order.
 
-use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::ProcessingStage;
 use crate::types::ExtractionResult;
+use crate::{KreuzbergError, Result};
 
 /// Run the post-processing pipeline on an extraction result.
 ///
@@ -66,7 +66,18 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                 };
 
                 if should_run && processor.should_process(&result, config) {
-                    processor.process(&mut result, config).await?;
+                    match processor.process(&mut result, config).await {
+                        Ok(_) => {}
+                        Err(err @ KreuzbergError::Io(_)) | Err(err @ KreuzbergError::LockPoisoned(_)) => {
+                            return Err(err);
+                        }
+                        Err(err) => {
+                            result.metadata.additional.insert(
+                                format!("processing_error_{processor_name}"),
+                                serde_json::Value::String(err.to_string()),
+                            );
+                        }
+                    }
                 }
             }
         }

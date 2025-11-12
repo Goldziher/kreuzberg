@@ -4,7 +4,7 @@ env:
 vars:
   RUST_LOG: info
   V3_TAG: v3.20.2
-  BUNDLE: "{{.HOME}}/.rbenv/shims/bundle"
+  BUNDLE: bundle
 tasks:
   sync-versions:
     desc: Sync version from Cargo.toml to all package manifests
