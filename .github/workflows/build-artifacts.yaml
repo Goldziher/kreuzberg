@@ -133,7 +133,7 @@ jobs:
 
       - name: Upload Linux wheel artifact
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact }}
           path: target/wheels/*.whl
