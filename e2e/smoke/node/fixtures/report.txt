@@ -1,0 +1,1 @@
+Kreuzberg node smoke fixture.

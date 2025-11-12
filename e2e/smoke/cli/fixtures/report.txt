@@ -1,0 +1,1 @@
+CLI smoke fixture for Kreuzberg.

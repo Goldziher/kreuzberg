@@ -573,6 +573,137 @@ jobs:
           echo "📦 Built CLI binary for ${{ matrix.target }}:"
           ls -lh kreuzberg-${{ matrix.target }}.* || echo "No archives found"
 
+  smoke-tests:
+    name: Smoke Tests (${{ matrix.flavor }})
+    needs:
+      - build-wheels
+      - build-napi-bindings
+      - build-ruby-gems
+      - build-cli-binaries
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: python
+            artifact: wheels-linux-x86_64
+          - flavor: node
+            artifact: napi-x86_64-unknown-linux-gnu
+          - flavor: ruby
+            artifact: gem-linux-x86_64
+          - flavor: cli
+            artifact: cli-x86_64-unknown-linux-gnu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Download artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ matrix.artifact }}
+          path: artifacts/${{ matrix.flavor }}
+
+      - name: Run Python smoke test
+        if: matrix.flavor == 'python'
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          rsync -a e2e/smoke/python/ "$tmp"/
+          pushd "$tmp" >/dev/null
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install artifacts/${{ matrix.flavor }}/*.whl
+          python main.py
+          popd >/dev/null
+
+      - name: Locate Node binding
+        id: node-binding
+        if: matrix.flavor == 'node'
+        run: |
+          binding=$(find artifacts/${{ matrix.flavor }} -name "*.node" | head -n1)
+          if [ -z "$binding" ]; then
+            echo "No .node binding found" >&2
+            exit 1
+          fi
+          echo "path=$binding" >> "$GITHUB_OUTPUT"
+
+      - name: Run Node smoke test
+        if: matrix.flavor == 'node'
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          rsync -a e2e/smoke/node/ "$tmp"/
+          pushd "$tmp" >/dev/null
+          pnpm install
+          KREUZBERG_NODE_BINDING_PATH=${{ steps.node-binding.outputs.path }} pnpm run check
+          popd >/dev/null
+
+      - name: Run Ruby smoke test
+        if: matrix.flavor == 'ruby'
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          rsync -a e2e/smoke/ruby/ "$tmp"/
+          pushd "$tmp" >/dev/null
+          gem install --no-document artifacts/${{ matrix.flavor }}/*.gem
+          ruby app.rb
+          popd >/dev/null
+
+      - name: Prepare CLI binary
+        id: cli-bin
+        if: matrix.flavor == 'cli'
+        shell: bash
+        run: |
+          archive=$(find artifacts/${{ matrix.flavor }} -name "*.tar.gz" -o -name "*.zip" | head -n1)
+          if [[ -z "$archive" ]]; then
+            echo "No CLI archive found" >&2
+            exit 1
+          fi
+          workdir=$(mktemp -d)
+          if [[ "$archive" == *.zip ]]; then
+            unzip -q "$archive" -d "$workdir"
+          else
+            tar -xzf "$archive" -C "$workdir"
+          fi
+          binary=$(find "$workdir" -type f -name "kreuzberg" -o -name "kreuzberg.exe" | head -n1)
+          if [[ -z "$binary" ]]; then
+            echo "CLI binary not found in archive" >&2
+            exit 1
+          fi
+          chmod +x "$binary"
+          echo "binary=$binary" >> "$GITHUB_OUTPUT"
+
+      - name: Run CLI smoke test
+        if: matrix.flavor == 'cli'
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          rsync -a e2e/smoke/cli/ "$tmp"/
+          pushd "$tmp" >/dev/null
+          KREUZBERG_CLI_BINARY=${{ steps.cli-bin.outputs.binary }} ./smoke.sh
+          popd >/dev/null
+
   summarize:
     name: Build Summary
     needs:
@@ -581,6 +712,7 @@ jobs:
       - build-napi-bindings
       - build-ruby-gems
       - build-cli-binaries
+      - smoke-tests
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -602,6 +734,7 @@ jobs:
           echo "| NAPI Bindings | ${{ needs.build-napi-bindings.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Ruby Gems | ${{ needs.build-ruby-gems.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| CLI Binaries | ${{ needs.build-cli-binaries.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Tests | ${{ needs.smoke-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📦 Built Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

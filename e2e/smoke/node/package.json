@@ -1,0 +1,8 @@
+{
+	"name": "kreuzberg-node-smoke",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"check": "node smoke.mjs"
+	}
+}

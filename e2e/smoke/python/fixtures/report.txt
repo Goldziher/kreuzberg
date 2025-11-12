@@ -1,0 +1,2 @@
+This is a small smoke-test document.
+It verifies that Kreuzberg returns meaningful text output.
