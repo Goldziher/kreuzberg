@@ -91,6 +91,18 @@ jobs:
         with:
           platforms: all
 
+      - name: Cache Pdfium binaries
+        if: matrix.os == 'ubuntu-latest' && matrix.needs_qemu
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download Pdfium runtime
+        if: matrix.os == 'ubuntu-latest' && matrix.needs_qemu
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
         uses: PyO3/maturin-action@v1
