@@ -108,9 +108,16 @@ jobs:
         shell: bash
         run: mkdir -p target/wheels
 
+      - name: Prepare Tesseract cache directory
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: mkdir -p .tesseract-cache/${{ matrix.label }}
+
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
         uses: PyO3/maturin-action@v1
+        env:
+          TESSERACT_RS_CACHE_DIR: /io/.tesseract-cache/${{ matrix.label }}
         with:
           command: build
           args: --release -i python${{ matrix.python }} --out ../../target/wheels
