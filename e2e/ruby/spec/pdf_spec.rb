@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# Auto-generated tests for pdf fixtures.
+
+# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength
 require_relative 'spec_helper'
 
 RSpec.describe 'pdf fixtures' do
@@ -257,4 +260,4 @@ RSpec.describe 'pdf fixtures' do
     end
   end
 end
-# rubocop:enable RSpec/DescribeClass
+# rubocop:enable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength

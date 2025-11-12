@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# Auto-generated tests for office fixtures.
+
+# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength
 require_relative 'spec_helper'
 
 RSpec.describe 'office fixtures' do
@@ -277,4 +280,4 @@ RSpec.describe 'office fixtures' do
     end
   end
 end
-# rubocop:enable RSpec/DescribeClass
+# rubocop:enable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength

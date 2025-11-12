@@ -37,6 +37,8 @@ jobs:
     name: Build Python wheels (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
+    env:
+      TESSERACT_RS_CACHE_DIR: ${{ github.workspace }}/.tesseract-cache/${{ matrix.label }}
     strategy:
       fail-fast: false
       matrix:
@@ -103,14 +105,14 @@ jobs:
       - name: List Linux wheels
         if: matrix.os == 'ubuntu-latest'
         shell: bash
-        run: ls -lh packages/python/target/wheels
+        run: ls -lh target/wheels
 
       - name: Upload Linux wheel artifact
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: packages/python/target/wheels/*.whl
+          path: target/wheels/*.whl
 
       - name: Build wheels
         if: matrix.os != 'ubuntu-latest'

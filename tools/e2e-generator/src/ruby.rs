@@ -294,7 +294,12 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     let mut buffer = String::new();
     writeln!(buffer, "# frozen_string_literal: true")?;
     writeln!(buffer)?;
-    writeln!(buffer, "# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength")?;
+    writeln!(buffer, "# Auto-generated tests for {category} fixtures.")?;
+    writeln!(buffer)?;
+    writeln!(
+        buffer,
+        "# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength"
+    )?;
     writeln!(buffer, "require_relative 'spec_helper'\n")?;
     writeln!(
         buffer,
@@ -308,7 +313,10 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     }
 
     writeln!(buffer, "end")?;
-    writeln!(buffer, "# rubocop:enable RSpec/DescribeClass, RSpec/ExampleLength")?;
+    writeln!(
+        buffer,
+        "# rubocop:enable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength"
+    )?;
     Ok(buffer)
 }
 

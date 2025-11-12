@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# Auto-generated tests for ocr fixtures.
+
+# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength
 require_relative 'spec_helper'
 
 RSpec.describe 'ocr fixtures' do
@@ -91,4 +94,4 @@ RSpec.describe 'ocr fixtures' do
     end
   end
 end
-# rubocop:enable RSpec/DescribeClass
+# rubocop:enable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength

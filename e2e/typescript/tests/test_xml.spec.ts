@@ -1,3 +1,5 @@
+// Auto-generated tests for xml fixtures.
+
 import { existsSync } from "node:fs";
 import { describe, it } from "vitest";
 import { extractFileSync } from "../../../packages/typescript/src/index.js";

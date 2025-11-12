@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Style/IfUnlessModifier, Layout/LineLength
+# rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/ParameterLists, Style/Documentation, Style/IfUnlessModifier, Layout/LineLength
 
 require 'json'
 require 'pathname'
@@ -74,7 +74,8 @@ module E2ERuby
 
     if skip_if_missing && !document_path.exist?
       warn "Skipping #{fixture_id}: missing document at #{document_path}"
-      skip_example!('missing document')
+      RSpec.current_example.skip('missing document')
+      return
     end
 
     config = build_config(config_hash)
@@ -83,7 +84,8 @@ module E2ERuby
       result = Kreuzberg.extract_file_sync(document_path.to_s, config: config)
     rescue StandardError => e
       if (reason = skip_reason_for(e, fixture_id, requirements, notes))
-        skip_example!(reason)
+        RSpec.current_example.skip(reason)
+        return
       end
       raise
     end
@@ -91,13 +93,10 @@ module E2ERuby
     yield result
   end
 
-  def skip_example!(message)
-    raise RSpec::Core::Pending::SkipDeclaredInExample, message
-  end
-
   module Assertions
-    extend RSpec::Matchers
     module_function
+
+    include RSpec::Matchers
 
     def assert_expected_mime(result, expected)
       return if expected.empty?
@@ -209,4 +208,4 @@ module E2ERuby
     private_class_method :convert_numeric
   end
 end
-# rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Style/Documentation, Style/IfUnlessModifier, Layout/LineLength
+# rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/ParameterLists, Style/Documentation, Style/IfUnlessModifier, Layout/LineLength
