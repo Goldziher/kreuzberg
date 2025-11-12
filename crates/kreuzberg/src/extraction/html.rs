@@ -114,11 +114,16 @@ fn inline_image_to_extracted(image: InlineImage) -> ExtractedInlineImage {
 /// - `extract_metadata = true` (parse YAML frontmatter)
 /// - `hocr_spatial_tables = false` (disable hOCR table detection)
 pub fn convert_html_to_markdown(html: &str, options: Option<ConversionOptions>) -> Result<String> {
-    let opts = options.unwrap_or_else(|| ConversionOptions {
+    let options_was_none = options.is_none();
+    let mut opts = options.unwrap_or_else(|| ConversionOptions {
         extract_metadata: true,
         hocr_spatial_tables: false,
         ..Default::default()
     });
+
+    if options_was_none {
+        opts.preprocessing.enabled = false;
+    }
 
     convert_html(html, Some(opts))
         .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown: {}", e)))
@@ -131,11 +136,16 @@ pub fn process_html(
     extract_images: bool,
     max_image_size: u64,
 ) -> Result<HtmlExtractionResult> {
-    let opts = options.unwrap_or_else(|| ConversionOptions {
+    let options_was_none = options.is_none();
+    let mut opts = options.unwrap_or_else(|| ConversionOptions {
         extract_metadata: true,
         hocr_spatial_tables: false,
         ..Default::default()
     });
+
+    if options_was_none {
+        opts.preprocessing.enabled = false;
+    }
 
     if extract_images {
         let mut img_config = LibInlineImageConfig::new(max_image_size);
@@ -457,5 +467,25 @@ mod tests {
         assert_eq!(meta.title, Some("Test".to_string()));
         assert_eq!(meta.author, Some("John Doe".to_string()));
         assert_eq!(content.trim(), "Content");
+    }
+
+    #[test]
+    fn test_preprocessing_keeps_main_content() {
+        let html = r#"
+<!DOCTYPE html>
+<html>
+  <body>
+    <nav><p>Skip me</p></nav>
+    <main id="content">
+      <article>
+        <h1>Taylor Swift</h1>
+        <p>Taylor Alison Swift is an American singer-songwriter.</p>
+      </article>
+    </main>
+  </body>
+</html>
+"#;
+        let markdown = convert_html_to_markdown(html, None).expect("conversion failed");
+        assert!(markdown.contains("Taylor Alison Swift"), "{markdown}");
     }
 }
