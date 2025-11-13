@@ -220,7 +220,7 @@ exclude_lines = [
 
 [tool.mypy]
 packages = [ "kreuzberg" ]
-exclude = [ "examples", "v3", "benchmarks", "crates" ]
+exclude = [ "examples", "v3", "benchmarks", "crates", "e2e/smoke" ]
 python_version = "3.10"
 implicit_reexport = false
 show_error_codes = true
