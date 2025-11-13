@@ -137,6 +137,8 @@ jobs:
     needs: prepare
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
+    env:
+      TESSERACT_RS_CACHE_DIR: ${{ github.workspace }}/.tesseract-cache/${{ matrix.label }}
     strategy:
       fail-fast: false
       matrix:

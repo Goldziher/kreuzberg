@@ -37,6 +37,8 @@ jobs:
     name: Build Python wheels (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
+    env:
+      TESSERACT_RS_CACHE_DIR: ${{ github.workspace }}/.tesseract-cache/${{ matrix.label }}
     strategy:
       fail-fast: false
       matrix:
