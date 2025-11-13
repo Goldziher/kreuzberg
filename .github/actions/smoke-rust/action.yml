@@ -1,0 +1,54 @@
+name: Smoke test Rust crate
+description: Tests Rust crate installation and functionality
+
+inputs:
+  source-path:
+    description: Path to the crate source (defaults to workspace root)
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Smoke test Rust crate
+      shell: bash
+      run: |
+        set -euo pipefail
+        tmp=$(mktemp -d)
+
+        # Create a minimal Cargo project that depends on kreuzberg
+        cat > "$tmp/Cargo.toml" <<'EOF'
+[package]
+name = "kreuzberg-smoke-test"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+EOF
+
+        if [[ -n "${{ inputs.source-path }}" ]]; then
+          # Use path dependency
+          echo "kreuzberg = { path = \"${{ inputs.source-path }}/crates/kreuzberg\" }" >> "$tmp/Cargo.toml"
+        else
+          # Use path dependency from workspace root
+          echo "kreuzberg = { path = \"${GITHUB_WORKSPACE}/crates/kreuzberg\" }" >> "$tmp/Cargo.toml"
+        fi
+
+        # Create a simple test program
+        mkdir -p "$tmp/src"
+        cat > "$tmp/src/main.rs" <<'EOF'
+use kreuzberg::ExtractionConfig;
+
+fn main() {
+    let config = ExtractionConfig::default();
+    println!("✓ Kreuzberg crate loaded successfully");
+    println!("Config: use_cache = {}", config.use_cache);
+}
+EOF
+
+        pushd "$tmp" >/dev/null
+        cargo build --release
+        ./target/release/kreuzberg-smoke-test
+        popd >/dev/null
+
+        echo "✓ Rust crate smoke test passed"

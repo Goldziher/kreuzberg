@@ -1,0 +1,60 @@
+name: Build Node.js bindings
+description: Builds NAPI-RS Node.js bindings for a specified target
+
+inputs:
+  target:
+    description: Rust target triple (e.g., x86_64-unknown-linux-gnu)
+    required: true
+  use-cross:
+    description: Whether to use cross for cross-compilation
+    required: false
+    default: "false"
+  pack-tarball:
+    description: Whether to pack the result as an npm tarball
+    required: false
+    default: "false"
+
+outputs:
+  binding-path:
+    description: Path to the built .node binding file
+    value: ${{ steps.build.outputs.binding-path }}
+  tarball:
+    description: Path to the packed tarball (if pack-tarball is true)
+    value: ${{ steps.pack.outputs.tarball }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build NAPI-RS bindings
+      id: build
+      shell: bash
+      working-directory: crates/kreuzberg-node
+      run: |
+        set -euo pipefail
+        pnpm install
+
+        if [[ "${{ inputs.use-cross }}" == "true" ]]; then
+          pnpm run build --target ${{ inputs.target }} --use-cross
+        else
+          pnpm run build --target ${{ inputs.target }}
+        fi
+
+        # Find the built .node file
+        binding=$(find . -name "*.node" -type f | head -n 1)
+        if [[ -z "$binding" ]]; then
+          echo "No .node binding file found" >&2
+          exit 1
+        fi
+        echo "binding-path=${GITHUB_WORKSPACE}/crates/kreuzberg-node/$binding" >> "$GITHUB_OUTPUT"
+
+    - name: Pack Node tarball
+      if: inputs.pack-tarball == 'true'
+      id: pack
+      shell: bash
+      run: |
+        set -euo pipefail
+        pushd crates/kreuzberg-node >/dev/null
+        NODE_TGZ=$(npm pack | tail -1 | tr -d '\r')
+        mv "$NODE_TGZ" "$GITHUB_WORKSPACE/$NODE_TGZ"
+        popd >/dev/null
+        echo "tarball=$GITHUB_WORKSPACE/$NODE_TGZ" >> "$GITHUB_OUTPUT"

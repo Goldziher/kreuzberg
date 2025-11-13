@@ -1,0 +1,60 @@
+name: Build Ruby gem (Windows)
+description: Builds Ruby native gem on Windows using MSYS2
+
+inputs:
+  platform:
+    description: Ruby platform (e.g., x64-mingw32)
+    required: true
+
+outputs:
+  gem-path:
+    description: Path to the built native gem
+    value: ${{ steps.package.outputs.gem-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install MSYS2 toolchain
+      shell: pwsh
+      run: ridk exec pacman -S --needed --noconfirm base-devel mingw-w64-ucrt-x86_64-toolchain
+
+    - name: Install Rust GNU toolchain
+      shell: pwsh
+      run: rustup toolchain install stable-gnu --profile minimal --no-self-update
+
+    - name: Configure bindgen sysroot
+      shell: bash
+      run: echo "BINDGEN_EXTRA_CLANG_ARGS=--target=x86_64-pc-windows-gnu --sysroot=${RI_DEVKIT//\\/\/}$MSYSTEM_PREFIX" >> "$GITHUB_ENV"
+
+    - name: Install Ruby dependencies
+      shell: pwsh
+      run: |
+        $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+        $rubydir = "$workspace/packages/ruby"
+        ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle config set --local path 'vendor/bundle' && bundle install --jobs 4 --retry 3"
+
+    - name: Build native gem
+      shell: pwsh
+      env:
+        RB_SYS_CARGO_PROFILE: release
+      run: |
+        $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+        $rubydir = "$workspace/packages/ruby"
+        $rubyPlatform = ruby -e "puts Gem::Platform.local.to_s"
+        ridk exec bash -lc "cd $rubydir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle exec rake native:kreuzberg:$rubyPlatform"
+
+    - name: Package native gem
+      id: package
+      shell: pwsh
+      run: |
+        $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
+        $rubydir = "$workspace/packages/ruby"
+        $rubyPlatform = ruby -e "puts Gem::Platform.local.to_s"
+        ridk exec bash -lc "cd $rubydir && set -euo pipefail; mkdir -p pkg; stage_dir=\"tmp/$rubyPlatform/stage\"; if [ ! -f \"\$stage_dir/kreuzberg.gemspec\" ]; then echo \"Stage directory \$stage_dir missing\" >&2; exit 1; fi; (cd \"\$stage_dir\" && gem build kreuzberg.gemspec); mv \"\$stage_dir\"/kreuzberg-*.gem pkg/"
+
+        $gemFile = Get-ChildItem -Path "packages\ruby\pkg" -Filter "kreuzberg-*.gem" | Select-Object -First 1
+        if ($null -eq $gemFile) {
+          Write-Error "No gem file found in packages/ruby/pkg"
+          exit 1
+        }
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "gem-path=$env:GITHUB_WORKSPACE\packages\ruby\pkg\$($gemFile.Name)"

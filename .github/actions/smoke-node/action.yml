@@ -1,0 +1,40 @@
+name: Smoke test Node.js package
+description: Tests Node.js package installation and functionality
+
+inputs:
+  package-tarball:
+    description: Path to the npm package tarball (.tgz file)
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Smoke test Node.js package
+      shell: bash
+      run: |
+        set -euo pipefail
+        tmp=$(mktemp -d)
+        cp -R e2e/smoke/node/. "$tmp"/
+        pushd "$tmp" >/dev/null
+
+        if [[ -n "${{ inputs.package-tarball }}" ]]; then
+          # Install from tarball
+          cp "${{ inputs.package-tarball }}" ./kreuzberg.tgz
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.dependencies = pkg.dependencies || {};
+            pkg.dependencies['@kreuzberg/node'] = 'file:./kreuzberg.tgz';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          rm -f pnpm-lock.yaml
+          pnpm install --no-frozen-lockfile
+        else
+          # Install from source
+          pnpm install
+        fi
+
+        pnpm run check
+        popd >/dev/null
+        echo "✓ Node.js package smoke test passed"

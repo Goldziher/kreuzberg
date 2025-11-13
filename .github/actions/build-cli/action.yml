@@ -1,0 +1,63 @@
+name: Build CLI binary
+description: Builds standalone Kreuzberg CLI binary for a specified target
+
+inputs:
+  target:
+    description: Rust target triple (e.g., x86_64-unknown-linux-gnu)
+    required: true
+  use-cross:
+    description: Whether to use cross for cross-compilation
+    required: false
+    default: "false"
+
+outputs:
+  archive-path:
+    description: Path to the packaged CLI archive (.tar.gz or .zip)
+    value: ${{ steps.package.outputs.archive-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build CLI binary
+      id: build
+      shell: bash
+      run: |
+        set -euo pipefail
+        target="${{ inputs.target }}"
+        if [[ "${{ inputs.use-cross }}" == "true" ]]; then
+          cross build --release --target "$target" --package kreuzberg-cli
+        else
+          cargo build --release --target "$target" --package kreuzberg-cli
+        fi
+
+    - name: Package CLI archive (Unix)
+      id: package
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        target="${{ inputs.target }}"
+        stage="cli-${target}"
+        rm -rf "$stage"
+        mkdir -p "$stage"
+        cp "target/${target}/release/kreuzberg" "$stage/"
+        cp LICENSE "$stage/"
+        cp README.md "$stage/"
+        tar -czf "${stage}.tar.gz" "$stage"
+        rm -rf "$stage"
+        echo "archive-path=${GITHUB_WORKSPACE}/${stage}.tar.gz" >> "$GITHUB_OUTPUT"
+
+    - name: Package CLI archive (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $target = '${{ inputs.target }}'
+        $stage = "cli-$target"
+        Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Path $stage | Out-Null
+        Copy-Item "target/$target/release/kreuzberg.exe" $stage
+        Copy-Item LICENSE $stage
+        Copy-Item README.md $stage
+        Compress-Archive -Path "$stage/*" -DestinationPath "$stage.zip" -Force
+        Remove-Item -Recurse -Force $stage
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "archive-path=$env:GITHUB_WORKSPACE/$stage.zip"

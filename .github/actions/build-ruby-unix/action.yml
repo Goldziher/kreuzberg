@@ -1,0 +1,62 @@
+name: Build Ruby gem (Unix)
+description: Builds Ruby native gem on Unix platforms (Linux/macOS)
+
+inputs:
+  platform:
+    description: Ruby platform (e.g., x86_64-linux, arm64-darwin)
+    required: true
+  build-source-gem:
+    description: Whether to also build a source gem
+    required: false
+    default: "false"
+
+outputs:
+  gem-path:
+    description: Path to the built native gem
+    value: ${{ steps.package.outputs.gem-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Ruby dependencies
+      shell: bash
+      working-directory: packages/ruby
+      run: |
+        bundle config set --local path 'vendor/bundle'
+        bundle install --jobs 4 --retry 3
+
+    - name: Build native gem
+      shell: bash
+      working-directory: packages/ruby
+      env:
+        RB_SYS_CARGO_PROFILE: release
+      run: |
+        RUBY_ARCH=$(ruby -e "require 'rbconfig'; print RbConfig::CONFIG['arch']")
+        bundle exec rake native:kreuzberg:${RUBY_ARCH}
+
+    - name: Package native gem
+      id: package
+      shell: bash
+      working-directory: packages/ruby
+      run: |
+        set -euo pipefail
+        RUBY_ARCH=$(ruby -e "require 'rbconfig'; print RbConfig::CONFIG['arch']")
+        STAGE_DIR="tmp/${RUBY_ARCH}/stage"
+        mkdir -p pkg
+
+        if [ ! -f "${STAGE_DIR}/kreuzberg.gemspec" ]; then
+          echo "Stage directory ${STAGE_DIR} missing" >&2
+          exit 1
+        fi
+
+        (cd "${STAGE_DIR}" && gem build kreuzberg.gemspec)
+        mv "${STAGE_DIR}"/kreuzberg-*.gem pkg/
+
+        gem_file=$(find pkg -name "kreuzberg-*.gem" -type f | head -n 1)
+        echo "gem-path=${GITHUB_WORKSPACE}/packages/ruby/$gem_file" >> "$GITHUB_OUTPUT"
+
+    - name: Build source gem
+      if: inputs.build-source-gem == 'true'
+      shell: bash
+      working-directory: packages/ruby
+      run: bundle exec rake build

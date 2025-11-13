@@ -1,0 +1,50 @@
+name: Smoke test Ruby gem
+description: Tests Ruby gem installation and functionality
+
+inputs:
+  gem-path:
+    description: Path to the Ruby gem file or directory containing gems
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Smoke test Ruby gem
+      shell: bash
+      run: |
+        set -euo pipefail
+        tmp=$(mktemp -d)
+        cp -R e2e/smoke/ruby/. "$tmp"/
+        pushd "$tmp" >/dev/null
+
+        bundle config set --local path vendor/bundle
+
+        if [[ -n "${{ inputs.gem-path }}" ]]; then
+          # Find gem file
+          if [[ -d "${{ inputs.gem-path }}" ]]; then
+            gem_file=$(find "${{ inputs.gem-path }}" -name "kreuzberg-*.gem" -type f | head -n 1)
+          else
+            gem_file="${{ inputs.gem-path }}"
+          fi
+
+          if [[ -z "$gem_file" || ! -f "$gem_file" ]]; then
+            echo "No gem found at ${{ inputs.gem-path }}" >&2
+            exit 1
+          fi
+
+          # Unpack gem and configure bundle to use it
+          mkdir -p vendor/local-gems
+          gem unpack "$gem_file" --target vendor/local-gems >/dev/null
+          gem_dir=$(find vendor/local-gems -maxdepth 1 -type d -name 'kreuzberg-*' | head -n 1)
+          if [[ -z "$gem_dir" ]]; then
+            echo "Failed to unpack gem" >&2
+            exit 1
+          fi
+          bundle config set --local local.kreuzberg "$gem_dir"
+        fi
+
+        bundle install
+        bundle exec ruby app.rb
+        popd >/dev/null
+        echo "✓ Ruby gem smoke test passed"

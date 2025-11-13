@@ -1,0 +1,49 @@
+name: Smoke test Python package
+description: Tests Python wheel installation and functionality
+
+inputs:
+  wheel-path:
+    description: Path to the Python wheel file or directory containing wheels
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Smoke test Python wheel
+      shell: bash
+      run: |
+        set -euo pipefail
+        tmp=$(mktemp -d)
+        cp -R e2e/smoke/python/. "$tmp"/
+        pushd "$tmp" >/dev/null
+
+        python -m venv .venv
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          VENV_PY=".venv/Scripts/python.exe"
+        else
+          VENV_PY=".venv/bin/python"
+        fi
+
+        "$VENV_PY" -m pip install --upgrade pip
+
+        if [[ -n "${{ inputs.wheel-path }}" ]]; then
+          # If wheel-path is a directory, find the wheel
+          if [[ -d "${{ inputs.wheel-path }}" ]]; then
+            wheel_file=$(find "${{ inputs.wheel-path }}" -name "*.whl" -type f | head -n 1)
+            if [[ -z "$wheel_file" ]]; then
+              echo "No wheel found in ${{ inputs.wheel-path }}" >&2
+              exit 1
+            fi
+            "$VENV_PY" -m pip install "$wheel_file"
+          else
+            "$VENV_PY" -m pip install "${{ inputs.wheel-path }}"
+          fi
+        else
+          # Install from source
+          "$VENV_PY" -m pip install "${GITHUB_WORKSPACE}/packages/python"
+        fi
+
+        "$VENV_PY" main.py
+        popd >/dev/null
+        echo "✓ Python package smoke test passed"
