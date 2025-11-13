@@ -164,9 +164,9 @@ jobs:
             artifact: python-wheels-macos
             needs_qemu: false
             python: "3.10"
-            rust_target: ""
+            rust_target: universal2-apple-darwin
             manylinux: ""
-            extra_args: "--universal2"
+            extra_args: ""
           - label: windows-amd64
             os: windows-latest
             artifact: python-wheels-windows
@@ -225,16 +225,19 @@ jobs:
         run: mkdir -p target/wheels
 
       - name: Prepare Tesseract cache directory
-        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: mkdir -p .tesseract-cache/${{ matrix.label }}
 
       - name: Prepare Tesseract home directory
-        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           mkdir -p .tesseract-home/${{ matrix.label }}
           mkdir -p .xdg-cache/${{ matrix.label }}
+
+      - name: Clean per-target Tesseract build cache
+        if: matrix.rust_target != ''
+        shell: bash
+        run: rm -rf target/${{ matrix.rust_target }}/tesseract-rs-cache
 
       - name: Install macOS Rust targets
         if: matrix.label == 'macos-universal'
@@ -244,10 +247,6 @@ jobs:
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
         uses: PyO3/maturin-action@v1
-        env:
-          TESSERACT_RS_CACHE_DIR: /io/.tesseract-cache/${{ matrix.label }}
-          XDG_CACHE_HOME: /io/.xdg-cache/${{ matrix.label }}
-          HOME: /io/.tesseract-home/${{ matrix.label }}
         with:
           command: build
           args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
@@ -255,10 +254,17 @@ jobs:
           manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
           sccache: true
+          container-env: |
+            TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ matrix.label }}
+            XDG_CACHE_HOME=/io/.xdg-cache/${{ matrix.label }}
+            HOME=/io/.tesseract-home/${{ matrix.label }}
 
       - name: Build wheels (native)
         if: matrix.os != 'ubuntu-latest'
         uses: PyO3/maturin-action@v1
+        env:
+          TESSERACT_RS_CACHE_DIR: ${{ github.workspace }}/.tesseract-cache/${{ matrix.label }}
+          XDG_CACHE_HOME: ${{ github.workspace }}/.xdg-cache/${{ matrix.label }}
         with:
           command: build
           args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
