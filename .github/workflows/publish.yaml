@@ -807,15 +807,22 @@ jobs:
           retention-days: 14
 
   release-smoke:
-    name: Release Smoke Tests
+    name: Release Smoke Tests (${{ matrix.os }})
     needs:
       - prepare
       - python-wheels
       - node-bindings
       - ruby-gem
       - cli-binaries
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -828,14 +835,14 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 20
           check-latest: true
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -843,126 +850,122 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Ruby
+        if: runner.os != 'Windows'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Determine Python wheel artifact name
+        id: python_artifact
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              echo "name=python-wheels-linux-x86_64" >> "$GITHUB_OUTPUT"
+              ;;
+            macos-latest)
+              echo "name=python-wheels-macos-universal" >> "$GITHUB_OUTPUT"
+              ;;
+            windows-latest)
+              echo "name=python-wheels-windows-amd64" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Determine Node artifact name
+        id: node_artifact
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              echo "name=node-bindings-x86_64-unknown-linux-gnu" >> "$GITHUB_OUTPUT"
+              ;;
+            macos-latest)
+              echo "name=node-bindings-aarch64-apple-darwin" >> "$GITHUB_OUTPUT"
+              ;;
+            windows-latest)
+              echo "name=node-bindings-x86_64-pc-windows-msvc" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Determine Ruby artifact name
+        id: ruby_artifact
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              echo "name=rubygems-linux" >> "$GITHUB_OUTPUT"
+              ;;
+            macos-latest)
+              echo "name=rubygems-macos-arm64" >> "$GITHUB_OUTPUT"
+              ;;
+            windows-latest)
+              echo "name=rubygems-windows-x64" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Determine CLI artifact name
+        id: cli_artifact
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              echo "name=cli-x86_64-unknown-linux-gnu" >> "$GITHUB_OUTPUT"
+              ;;
+            macos-latest)
+              echo "name=cli-aarch64-apple-darwin" >> "$GITHUB_OUTPUT"
+              ;;
+            windows-latest)
+              echo "name=cli-x86_64-pc-windows-msvc" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
       - name: Download Python wheels
         uses: actions/download-artifact@v6
         with:
-          name: python-wheels-linux-x86_64
+          name: ${{ steps.python_artifact.outputs.name }}
           path: artifacts/python
 
       - name: Download Node bindings
         uses: actions/download-artifact@v6
         with:
-          name: node-bindings-x86_64-unknown-linux-gnu
+          name: ${{ steps.node_artifact.outputs.name }}
           path: artifacts/node
 
       - name: Download Ruby gem
+        if: runner.os != 'Windows'
         uses: actions/download-artifact@v6
         with:
-          name: rubygems-linux
+          name: ${{ steps.ruby_artifact.outputs.name }}
           path: artifacts/ruby
 
       - name: Download CLI artifact
         uses: actions/download-artifact@v6
         with:
-          name: cli-x86_64-unknown-linux-gnu
+          name: ${{ steps.cli_artifact.outputs.name }}
           path: artifacts/cli
 
-      - name: Extract Node binding
-        id: node_binding
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          shopt -s nullglob
-          files=(artifacts/node/*.tar.gz artifacts/node/*.zip)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No node binding artifact found" >&2
-            exit 1
-          fi
-          archive="${files[0]}"
-          case "$archive" in
-            *.zip) unzip -q "$archive" -d "$tmp" ;;
-            *) tar -xzf "$archive" -C "$tmp" ;;
-          esac
-          binding=$(find "$tmp" -name "*.node" | head -n1)
-          if [ -z "$binding" ]; then
-            echo "Node binding (.node) not found in artifact" >&2
-            exit 1
-          fi
-          echo "path=$binding" >> "$GITHUB_OUTPUT"
+      - name: Smoke test Python wheel
+        uses: ./.github/actions/smoke-python
+        with:
+          wheel-path: artifacts/python
 
-      - name: Run Node smoke test
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          rsync -a e2e/smoke/node/ "$tmp"/
-          pushd "$tmp" >/dev/null
-          pnpm install
-          KREUZBERG_NODE_BINDING_PATH=${{ steps.node_binding.outputs.path }} pnpm run check
-          popd >/dev/null
+      - name: Smoke test Node.js package
+        uses: ./.github/actions/smoke-node
+        with:
+          package-tarball: ""
 
-      - name: Run Python smoke test
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          rsync -a e2e/smoke/python/ "$tmp"/
-          pushd "$tmp" >/dev/null
-          python -m venv .venv
-          . .venv/bin/activate
-          python -m pip install --upgrade pip
-          wheel=$(ls "$GITHUB_WORKSPACE"/artifacts/python/*.whl | head -n 1)
-          if [ -z "$wheel" ]; then
-            echo "No Python wheel found" >&2
-            exit 1
-          fi
-          python -m pip install "$wheel"
-          python main.py
-          popd >/dev/null
+      - name: Smoke test Ruby gem
+        if: runner.os != 'Windows'
+        uses: ./.github/actions/smoke-ruby
+        with:
+          gem-path: artifacts/ruby
 
-      - name: Run Ruby smoke test
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          rsync -a e2e/smoke/ruby/ "$tmp"/
-          pushd "$tmp" >/dev/null
-          gem install --no-document "$GITHUB_WORKSPACE"/artifacts/ruby/*.gem
-          ruby app.rb
-          popd >/dev/null
+      - name: Smoke test CLI binary
+        uses: ./.github/actions/smoke-cli
+        with:
+          cli-artifacts-dir: artifacts/cli
 
-      - name: Prepare CLI binary
-        id: cli_bin
-        run: |
-          set -euo pipefail
-          archive=$(find artifacts/cli -name "*.tar.gz" -o -name "*.zip" | head -n1)
-          if [ -z "$archive" ]; then
-            echo "CLI artifact not found" >&2
-            exit 1
-          fi
-          workdir=$(mktemp -d)
-          if [[ "$archive" == *.zip ]]; then
-            unzip -q "$archive" -d "$workdir"
-          else
-            tar -xzf "$archive" -C "$workdir"
-          fi
-          binary=$(find "$workdir" -type f -name "kreuzberg" | head -n1)
-          if [ -z "$binary" ]; then
-            echo "CLI binary not found in artifact" >&2
-            exit 1
-          fi
-          chmod +x "$binary"
-          echo "binary=$binary" >> "$GITHUB_OUTPUT"
-
-      - name: Run CLI smoke test
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          rsync -a e2e/smoke/cli/ "$tmp"/
-          pushd "$tmp" >/dev/null
-          KREUZBERG_CLI_BINARY=${{ steps.cli_bin.outputs.binary }} ./smoke.sh
-          popd >/dev/null
+      - name: Smoke test Rust crate
+        uses: ./.github/actions/smoke-rust
 
   publish-docker:
     name: Publish Docker image (${{ matrix.variant }})
