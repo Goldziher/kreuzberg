@@ -122,23 +122,11 @@ jobs:
         shell: bash
         run: mkdir -p .tesseract-cache/${{ matrix.label }}
 
-      - name: Clean Tesseract cache directory
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: rm -rf .tesseract-cache/${{ matrix.label }}/*
-
       - name: Prepare Tesseract home directory
         shell: bash
         run: |
           mkdir -p .tesseract-home/${{ matrix.label }}
           mkdir -p .xdg-cache/${{ matrix.label }}
-
-      - name: Clean Tesseract home cache
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          rm -rf .tesseract-home/${{ matrix.label }}/*
-          rm -rf .xdg-cache/${{ matrix.label }}/*
 
       - name: Clean per-target Tesseract build cache
         if: matrix.rust_target != ''

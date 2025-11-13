@@ -137,6 +137,8 @@ jobs:
     needs: prepare
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
+    env:
+      TESSERACT_RS_CACHE_DIR: ${{ github.workspace }}/.tesseract-cache/${{ matrix.label }}
     strategy:
       fail-fast: false
       matrix:
@@ -226,23 +228,11 @@ jobs:
         shell: bash
         run: mkdir -p .tesseract-cache/${{ matrix.label }}
 
-      - name: Clean Tesseract cache directory
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: rm -rf .tesseract-cache/${{ matrix.label }}/*
-
       - name: Prepare Tesseract home directory
         shell: bash
         run: |
           mkdir -p .tesseract-home/${{ matrix.label }}
           mkdir -p .xdg-cache/${{ matrix.label }}
-
-      - name: Clean Tesseract home cache
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          rm -rf .tesseract-home/${{ matrix.label }}/*
-          rm -rf .xdg-cache/${{ matrix.label }}/*
 
       - name: Clean per-target Tesseract build cache
         if: matrix.rust_target != ''
@@ -268,6 +258,10 @@ jobs:
             --env TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ matrix.label }}
             --env XDG_CACHE_HOME=/io/.xdg-cache/${{ matrix.label }}
             --env HOME=/io/.tesseract-home/${{ matrix.label }}
+          container-env: |
+            TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ matrix.label }}
+            XDG_CACHE_HOME=/io/.xdg-cache/${{ matrix.label }}
+            HOME=/io/.tesseract-home/${{ matrix.label }}
 
       - name: Build wheels (native)
         if: matrix.os != 'ubuntu-latest'
