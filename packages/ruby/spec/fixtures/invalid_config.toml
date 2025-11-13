@@ -1,0 +1,4 @@
+# Invalid TOML file for testing error handling
+use_cache = "not_a_boolean"
+[ocr
+backend = "tesseract"

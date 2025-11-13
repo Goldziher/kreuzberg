@@ -339,7 +339,27 @@ module Kreuzberg
     class Extraction
       attr_reader :use_cache, :enable_quality_processing, :force_ocr,
                   :ocr, :chunking, :language_detection, :pdf_options,
-                  :image_extraction, :image_preprocessing, :postprocessor
+                  :image_extraction, :image_preprocessing, :postprocessor,
+                  :token_reduction
+
+      # Load configuration from a file.
+      #
+      # Detects the file format from the extension (.toml, .yaml, .yml, .json)
+      # and loads the configuration accordingly.
+      #
+      # @param path [String] Path to the configuration file
+      # @return [Kreuzberg::Config::Extraction] Loaded configuration object
+      #
+      # @example Load from TOML
+      #   config = Kreuzberg::Config::Extraction.from_file("config.toml")
+      #
+      # @example Load from YAML
+      #   config = Kreuzberg::Config::Extraction.from_file("config.yaml")
+      #
+      def self.from_file(path)
+        hash = Kreuzberg._config_from_file_native(path)
+        new(**hash)
+      end
 
       def initialize(
         use_cache: true,
@@ -351,7 +371,8 @@ module Kreuzberg
         pdf_options: nil,
         image_extraction: nil,
         image_preprocessing: nil,
-        postprocessor: nil
+        postprocessor: nil,
+        token_reduction: nil
       )
         @use_cache = use_cache ? true : false
         @enable_quality_processing = enable_quality_processing ? true : false
@@ -363,6 +384,7 @@ module Kreuzberg
         @image_extraction = normalize_config(image_extraction, ImageExtraction)
         @image_preprocessing = normalize_config(image_preprocessing, ImagePreprocessing)
         @postprocessor = normalize_config(postprocessor, PostProcessor)
+        @token_reduction = normalize_config(token_reduction, TokenReduction)
       end
 
       def to_h
@@ -376,7 +398,8 @@ module Kreuzberg
           pdf_options: @pdf_options&.to_h,
           image_extraction: @image_extraction&.to_h,
           image_preprocessing: @image_preprocessing&.to_h,
-          postprocessor: @postprocessor&.to_h
+          postprocessor: @postprocessor&.to_h,
+          token_reduction: @token_reduction&.to_h
         }.compact
       end
 

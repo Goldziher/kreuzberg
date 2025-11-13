@@ -73,6 +73,16 @@ fn kreuzberg_error(err: KreuzbergError) -> Error {
                 Error::new(ruby.exception_runtime_error(), format!("IO error: {}", err))
             }
         }
+        KreuzbergError::UnsupportedFormat(message) => {
+            if let Some(class) = fetch_error_class("UnsupportedFormatError") {
+                Error::new(class, message)
+            } else {
+                Error::new(
+                    ruby.exception_runtime_error(),
+                    format!("UnsupportedFormatError: {}", message),
+                )
+            }
+        }
         other => Error::new(ruby.exception_runtime_error(), other.to_string()),
     }
 }
@@ -101,8 +111,6 @@ fn get_kw(ruby: &Ruby, hash: RHash, name: &str) -> Option<Value> {
 
 fn set_hash_entry(ruby: &Ruby, hash: &RHash, key: &str, value: Value) -> Result<(), Error> {
     hash.aset(ruby.intern(key), value)?;
-    let string_key = ruby.str_new(key).into_value_with(ruby);
-    hash.aset(string_key, value)?;
     Ok(())
 }
 
@@ -604,6 +612,287 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
     }
 
     Ok(config)
+}
+
+/// Convert ExtractionConfig to Ruby Hash for Config::Extraction.
+///
+/// This function converts a Rust ExtractionConfig into a Ruby hash that can be passed
+/// to Kreuzberg::Config::Extraction.new(**hash).
+fn extraction_config_to_ruby_hash(ruby: &Ruby, config: ExtractionConfig) -> Result<RHash, Error> {
+    let hash = ruby.hash_new();
+
+    set_hash_entry(
+        ruby,
+        &hash,
+        "use_cache",
+        if config.use_cache {
+            ruby.qtrue().as_value()
+        } else {
+            ruby.qfalse().as_value()
+        },
+    )?;
+    set_hash_entry(
+        ruby,
+        &hash,
+        "enable_quality_processing",
+        if config.enable_quality_processing {
+            ruby.qtrue().as_value()
+        } else {
+            ruby.qfalse().as_value()
+        },
+    )?;
+    set_hash_entry(
+        ruby,
+        &hash,
+        "force_ocr",
+        if config.force_ocr {
+            ruby.qtrue().as_value()
+        } else {
+            ruby.qfalse().as_value()
+        },
+    )?;
+
+    if let Some(ocr) = config.ocr {
+        let ocr_hash = ruby.hash_new();
+        set_hash_entry(
+            ruby,
+            &ocr_hash,
+            "backend",
+            ruby.str_new(&ocr.backend).into_value_with(ruby),
+        )?;
+        set_hash_entry(
+            ruby,
+            &ocr_hash,
+            "language",
+            ruby.str_new(&ocr.language).into_value_with(ruby),
+        )?;
+        if let Some(tesseract_config) = ocr.tesseract_config {
+            let tc_json = serde_json::to_value(&tesseract_config)
+                .map_err(|e| runtime_error(format!("Failed to serialize tesseract_config: {}", e)))?;
+            let tc_ruby = json_value_to_ruby(ruby, &tc_json)?;
+            set_hash_entry(ruby, &ocr_hash, "tesseract_config", tc_ruby)?;
+        }
+        set_hash_entry(ruby, &hash, "ocr", ocr_hash.into_value_with(ruby))?;
+    }
+
+    if let Some(chunking) = config.chunking {
+        let chunking_hash = ruby.hash_new();
+        set_hash_entry(
+            ruby,
+            &chunking_hash,
+            "max_chars",
+            ruby.integer_from_i64(chunking.max_chars as i64).into_value_with(ruby),
+        )?;
+        set_hash_entry(
+            ruby,
+            &chunking_hash,
+            "max_overlap",
+            ruby.integer_from_i64(chunking.max_overlap as i64).into_value_with(ruby),
+        )?;
+        if let Some(preset) = chunking.preset {
+            set_hash_entry(
+                ruby,
+                &chunking_hash,
+                "preset",
+                ruby.str_new(&preset).into_value_with(ruby),
+            )?;
+        }
+        set_hash_entry(ruby, &hash, "chunking", chunking_hash.into_value_with(ruby))?;
+    }
+
+    if let Some(lang_detection) = config.language_detection {
+        let lang_hash = ruby.hash_new();
+        set_hash_entry(
+            ruby,
+            &lang_hash,
+            "enabled",
+            if lang_detection.enabled {
+                ruby.qtrue().as_value()
+            } else {
+                ruby.qfalse().as_value()
+            },
+        )?;
+        set_hash_entry(
+            ruby,
+            &lang_hash,
+            "min_confidence",
+            ruby.float_from_f64(lang_detection.min_confidence).into_value_with(ruby),
+        )?;
+        set_hash_entry(ruby, &hash, "language_detection", lang_hash.into_value_with(ruby))?;
+    }
+
+    if let Some(pdf_options) = config.pdf_options {
+        let pdf_hash = ruby.hash_new();
+        set_hash_entry(
+            ruby,
+            &pdf_hash,
+            "extract_images",
+            if pdf_options.extract_images {
+                ruby.qtrue().as_value()
+            } else {
+                ruby.qfalse().as_value()
+            },
+        )?;
+        if let Some(passwords) = pdf_options.passwords {
+            let passwords_array = ruby.ary_from_vec(passwords);
+            set_hash_entry(ruby, &pdf_hash, "passwords", passwords_array.into_value_with(ruby))?;
+        }
+        set_hash_entry(
+            ruby,
+            &pdf_hash,
+            "extract_metadata",
+            if pdf_options.extract_metadata {
+                ruby.qtrue().as_value()
+            } else {
+                ruby.qfalse().as_value()
+            },
+        )?;
+        set_hash_entry(ruby, &hash, "pdf_options", pdf_hash.into_value_with(ruby))?;
+    }
+
+    if let Some(images) = config.images {
+        let images_hash = ruby.hash_new();
+        set_hash_entry(
+            ruby,
+            &images_hash,
+            "extract_images",
+            if images.extract_images {
+                ruby.qtrue().as_value()
+            } else {
+                ruby.qfalse().as_value()
+            },
+        )?;
+        set_hash_entry(
+            ruby,
+            &images_hash,
+            "target_dpi",
+            ruby.integer_from_i64(images.target_dpi as i64).into_value_with(ruby),
+        )?;
+        set_hash_entry(
+            ruby,
+            &images_hash,
+            "max_image_dimension",
+            ruby.integer_from_i64(images.max_image_dimension as i64)
+                .into_value_with(ruby),
+        )?;
+        set_hash_entry(
+            ruby,
+            &images_hash,
+            "auto_adjust_dpi",
+            if images.auto_adjust_dpi {
+                ruby.qtrue().as_value()
+            } else {
+                ruby.qfalse().as_value()
+            },
+        )?;
+        set_hash_entry(
+            ruby,
+            &images_hash,
+            "min_dpi",
+            ruby.integer_from_i64(images.min_dpi as i64).into_value_with(ruby),
+        )?;
+        set_hash_entry(
+            ruby,
+            &images_hash,
+            "max_dpi",
+            ruby.integer_from_i64(images.max_dpi as i64).into_value_with(ruby),
+        )?;
+        set_hash_entry(ruby, &hash, "image_extraction", images_hash.into_value_with(ruby))?;
+    }
+
+    if let Some(postprocessor) = config.postprocessor {
+        let pp_hash = ruby.hash_new();
+        set_hash_entry(
+            ruby,
+            &pp_hash,
+            "enabled",
+            if postprocessor.enabled {
+                ruby.qtrue().as_value()
+            } else {
+                ruby.qfalse().as_value()
+            },
+        )?;
+        if let Some(enabled_processors) = postprocessor.enabled_processors {
+            let enabled_array = ruby.ary_from_vec(enabled_processors);
+            set_hash_entry(
+                ruby,
+                &pp_hash,
+                "enabled_processors",
+                enabled_array.into_value_with(ruby),
+            )?;
+        }
+        if let Some(disabled_processors) = postprocessor.disabled_processors {
+            let disabled_array = ruby.ary_from_vec(disabled_processors);
+            set_hash_entry(
+                ruby,
+                &pp_hash,
+                "disabled_processors",
+                disabled_array.into_value_with(ruby),
+            )?;
+        }
+        set_hash_entry(ruby, &hash, "postprocessor", pp_hash.into_value_with(ruby))?;
+    }
+
+    if let Some(token_reduction) = config.token_reduction {
+        let tr_hash = ruby.hash_new();
+        set_hash_entry(
+            ruby,
+            &tr_hash,
+            "mode",
+            ruby.str_new(&token_reduction.mode).into_value_with(ruby),
+        )?;
+        set_hash_entry(
+            ruby,
+            &tr_hash,
+            "preserve_important_words",
+            if token_reduction.preserve_important_words {
+                ruby.qtrue().as_value()
+            } else {
+                ruby.qfalse().as_value()
+            },
+        )?;
+        set_hash_entry(ruby, &hash, "token_reduction", tr_hash.into_value_with(ruby))?;
+    }
+
+    Ok(hash)
+}
+
+/// Load extraction configuration from a file.
+///
+/// Detects the file format from the extension (.toml, .yaml, .yml, .json)
+/// and loads the configuration accordingly. Returns a hash to be used by Ruby.
+///
+/// @param path [String] Path to the configuration file
+/// @return [Hash] Configuration hash
+///
+/// @example Load from TOML
+///   hash = Kreuzberg._config_from_file_native("config.toml")
+///
+/// @example Load from YAML
+///   hash = Kreuzberg._config_from_file_native("config.yaml")
+///
+fn config_from_file(path: String) -> Result<RHash, Error> {
+    let ruby = Ruby::get().expect("Ruby not initialized");
+    let file_path = Path::new(&path);
+
+    let extension = file_path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .ok_or_else(|| runtime_error("File path must have an extension (.toml, .yaml, .yml, or .json)"))?;
+
+    let config = match extension {
+        "toml" => ExtractionConfig::from_toml_file(file_path).map_err(kreuzberg_error)?,
+        "yaml" | "yml" => ExtractionConfig::from_yaml_file(file_path).map_err(kreuzberg_error)?,
+        "json" => ExtractionConfig::from_json_file(file_path).map_err(kreuzberg_error)?,
+        _ => {
+            return Err(runtime_error(format!(
+                "Unsupported file extension '{}'. Supported: .toml, .yaml, .yml, .json",
+                extension
+            )));
+        }
+    };
+
+    extraction_config_to_ruby_hash(&ruby, config)
 }
 
 /// Convert Rust ExtractionResult to Ruby Hash
@@ -1491,6 +1780,54 @@ fn clear_validators() -> Result<(), Error> {
     Ok(())
 }
 
+/// Detect MIME type from a file path.
+///
+/// @param path [String] Path to the file
+/// @param check_exists [Boolean] Whether to verify file existence (default: true)
+/// @return [String] Detected MIME type
+///
+/// @example
+///   mime = Kreuzberg.detect_mime_type("document.pdf")
+///   #=> "application/pdf"
+///
+/// @example Skip existence check
+///   mime = Kreuzberg.detect_mime_type("/path/to/future/file.docx", check_exists: false)
+///   #=> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+///
+fn detect_mime_type_native(args: &[Value]) -> Result<String, Error> {
+    let ruby = Ruby::get().expect("Ruby not initialized");
+    let args = scan_args::<(String,), (), (), (), RHash, ()>(args)?;
+    let (path,) = args.required;
+    let opts = args.keywords;
+
+    let check_exists = if let Some(val) = get_kw(&ruby, opts, "check_exists") {
+        bool::try_convert(val)?
+    } else {
+        true
+    };
+
+    let mime_type = kreuzberg::detect_mime_type(&path, check_exists).map_err(kreuzberg_error)?;
+
+    Ok(mime_type)
+}
+
+/// Validate that a MIME type is supported.
+///
+/// @param mime_type [String] The MIME type to validate
+/// @return [String] The validated MIME type (may be normalized)
+///
+/// @example
+///   validated = Kreuzberg.validate_mime_type("application/pdf")
+///   #=> "application/pdf"
+///
+/// @example Validate image MIME type
+///   validated = Kreuzberg.validate_mime_type("image/jpeg")
+///   #=> "image/jpeg"
+///
+fn validate_mime_type_native(mime_type: String) -> Result<String, Error> {
+    kreuzberg::validate_mime_type(&mime_type).map_err(kreuzberg_error)
+}
+
 /// Initialize the Kreuzberg Ruby module
 #[magnus::init]
 fn init(ruby: &Ruby) -> Result<(), Error> {
@@ -1516,6 +1853,11 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     module.define_module_function("unregister_validator", function!(unregister_validator, 1))?;
     module.define_module_function("clear_post_processors", function!(clear_post_processors, 0))?;
     module.define_module_function("clear_validators", function!(clear_validators, 0))?;
+
+    module.define_module_function("_config_from_file_native", function!(config_from_file, 1))?;
+
+    module.define_module_function("detect_mime_type", function!(detect_mime_type_native, -1))?;
+    module.define_module_function("validate_mime_type", function!(validate_mime_type_native, 1))?;
 
     Ok(())
 }

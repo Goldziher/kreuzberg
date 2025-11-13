@@ -1,0 +1,39 @@
+# Test configuration file for Kreuzberg Ruby bindings
+
+use_cache = false
+enable_quality_processing = true
+force_ocr = true
+
+[ocr]
+backend = "tesseract"
+language = "deu"
+
+[chunking]
+max_chars = 500
+max_overlap = 100
+preset = "fast"
+
+[language_detection]
+enabled = true
+min_confidence = 0.9
+
+[pdf_options]
+extract_images = true
+passwords = ["secret", "backup"]
+extract_metadata = true
+
+[images]
+extract_images = true
+target_dpi = 600
+max_image_dimension = 2000
+auto_adjust_dpi = false
+min_dpi = 150
+max_dpi = 600
+
+[postprocessor]
+enabled = true
+enabled_processors = ["quality", "formatting"]
+
+[token_reduction]
+mode = "moderate"
+preserve_important_words = true

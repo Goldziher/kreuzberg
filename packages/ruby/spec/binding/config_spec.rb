@@ -116,6 +116,121 @@ RSpec.describe Kreuzberg::Config do
   end
 
   describe Kreuzberg::Config::Extraction do
+    describe '.from_file' do
+      it 'loads configuration from TOML file' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'config.toml')
+        config = described_class.from_file(config_path)
+
+        expect(config.use_cache).to be false
+        expect(config.enable_quality_processing).to be true
+        expect(config.force_ocr).to be true
+      end
+
+      it 'loads OCR config from TOML file' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'config.toml')
+        config = described_class.from_file(config_path)
+
+        expect(config.ocr).to be_a(Kreuzberg::Config::OCR)
+        expect(config.ocr.backend).to eq('tesseract')
+        expect(config.ocr.language).to eq('deu')
+      end
+
+      it 'loads chunking config from TOML file' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'config.toml')
+        config = described_class.from_file(config_path)
+
+        expect(config.chunking).to be_a(Kreuzberg::Config::Chunking)
+        expect(config.chunking.max_chars).to eq(500)
+        expect(config.chunking.max_overlap).to eq(100)
+        expect(config.chunking.preset).to eq('fast')
+      end
+
+      it 'loads language detection config from TOML file' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'config.toml')
+        config = described_class.from_file(config_path)
+
+        expect(config.language_detection).to be_a(Kreuzberg::Config::LanguageDetection)
+        expect(config.language_detection.enabled).to be true
+        expect(config.language_detection.min_confidence).to eq(0.9)
+      end
+
+      it 'loads PDF options from TOML file' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'config.toml')
+        config = described_class.from_file(config_path)
+
+        expect(config.pdf_options).to be_a(Kreuzberg::Config::PDF)
+        expect(config.pdf_options.extract_images).to be true
+        expect(config.pdf_options.passwords).to eq(%w[secret backup])
+        expect(config.pdf_options.extract_metadata).to be true
+      end
+
+      it 'loads configuration from YAML file' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'config.yaml')
+        config = described_class.from_file(config_path)
+
+        expect(config.use_cache).to be false
+        expect(config.enable_quality_processing).to be true
+        expect(config.force_ocr).to be true
+      end
+
+      it 'loads OCR config from YAML file' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'config.yaml')
+        config = described_class.from_file(config_path)
+
+        expect(config.ocr).to be_a(Kreuzberg::Config::OCR)
+        expect(config.ocr.backend).to eq('tesseract')
+        expect(config.ocr.language).to eq('fra')
+      end
+
+      it 'loads chunking config from YAML file' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'config.yaml')
+        config = described_class.from_file(config_path)
+
+        expect(config.chunking).to be_a(Kreuzberg::Config::Chunking)
+        expect(config.chunking.max_chars).to eq(750)
+        expect(config.chunking.max_overlap).to eq(150)
+        expect(config.chunking.preset).to eq('balanced')
+      end
+
+      it 'works with absolute paths' do
+        config_path = File.expand_path('../fixtures/config.toml', __dir__)
+        config = described_class.from_file(config_path)
+
+        expect(config.use_cache).to be false
+      end
+
+      it 'works with relative paths' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'config.yaml')
+        config = described_class.from_file(config_path)
+
+        expect(config.use_cache).to be false
+      end
+
+      it 'raises error for non-existent file' do
+        expect do
+          described_class.from_file('/path/to/nonexistent/config.toml')
+        end.to raise_error(Kreuzberg::Errors::ValidationError, /Failed to read config file/)
+      end
+
+      it 'raises error for invalid TOML file' do
+        config_path = File.join(__dir__, '..', 'fixtures', 'invalid_config.toml')
+        expect do
+          described_class.from_file(config_path)
+        end.to raise_error(Kreuzberg::Errors::ValidationError, /Invalid TOML/)
+      end
+
+      it 'detects file format from extension' do
+        toml_path = File.join(__dir__, '..', 'fixtures', 'config.toml')
+        yaml_path = File.join(__dir__, '..', 'fixtures', 'config.yaml')
+
+        toml_config = described_class.from_file(toml_path)
+        yaml_config = described_class.from_file(yaml_path)
+
+        expect(toml_config.ocr.language).to eq('deu')
+        expect(yaml_config.ocr.language).to eq('fra')
+      end
+    end
+
     it 'creates with default values' do
       config = described_class.new
 
@@ -182,6 +297,49 @@ RSpec.describe Kreuzberg::Config do
       expect do
         described_class.new(ocr: 'invalid')
       end.to raise_error(ArgumentError, /Expected.*OCR/)
+    end
+  end
+
+  describe 'ExtractionConfig alias' do
+    it 'exists at module level' do
+      expect(Kreuzberg.const_defined?(:ExtractionConfig)).to be true
+    end
+
+    it 'is the same class as Config::Extraction' do
+      expect(Kreuzberg::ExtractionConfig).to eq(Kreuzberg::Config::Extraction)
+    end
+
+    it 'can be instantiated using the alias' do
+      config = Kreuzberg::ExtractionConfig.new(use_cache: false)
+
+      expect(config).to be_a(Kreuzberg::Config::Extraction)
+      expect(config.use_cache).to be false
+    end
+
+    it 'supports all methods through the alias' do
+      config = Kreuzberg::ExtractionConfig.new(
+        use_cache: false,
+        force_ocr: true,
+        ocr: { backend: 'tesseract', language: 'eng' }
+      )
+
+      expect(config.use_cache).to be false
+      expect(config.force_ocr).to be true
+      expect(config.ocr).to be_a(Kreuzberg::Config::OCR)
+      expect(config.ocr.backend).to eq('tesseract')
+
+      hash = config.to_h
+      expect(hash[:use_cache]).to be false
+      expect(hash[:force_ocr]).to be true
+    end
+
+    it 'supports from_file through the alias' do
+      config_path = File.join(__dir__, '..', 'fixtures', 'config.toml')
+      config = Kreuzberg::ExtractionConfig.from_file(config_path)
+
+      expect(config).to be_a(Kreuzberg::Config::Extraction)
+      expect(config.use_cache).to be false
+      expect(config.enable_quality_processing).to be true
     end
   end
 end
