@@ -62,18 +62,18 @@ import type {
 	ValidatorProtocol,
 } from "./types.js";
 
-export { GutenOcrBackend } from "./ocr/guten-ocr.js";
-export * from "./types.js";
 export {
-	KreuzbergError,
-	ValidationError,
-	ParsingError,
-	OcrError,
 	CacheError,
 	ImageProcessingError,
-	PluginError,
+	KreuzbergError,
 	MissingDependencyError,
+	OcrError,
+	ParsingError,
+	PluginError,
+	ValidationError,
 } from "./errors.js";
+export { GutenOcrBackend } from "./ocr/guten-ocr.js";
+export * from "./types.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
 let binding: any = null;

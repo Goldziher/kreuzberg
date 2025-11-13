@@ -499,10 +499,12 @@ impl TryFrom<ExtractionConfig> for JsExtractionConfig {
 pub fn load_extraction_config_from_file(file_path: String) -> Result<JsExtractionConfig> {
     let path = std::path::Path::new(&file_path);
 
-    let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .ok_or_else(|| Error::new(Status::InvalidArg, "File path must have an extension (.toml, .yaml, .json)"))?;
+    let ext = path.extension().and_then(|e| e.to_str()).ok_or_else(|| {
+        Error::new(
+            Status::InvalidArg,
+            "File path must have an extension (.toml, .yaml, .json)",
+        )
+    })?;
 
     let rust_config = match ext.to_lowercase().as_str() {
         "toml" => ExtractionConfig::from_toml_file(path).map_err(convert_error)?,
@@ -515,7 +517,7 @@ pub fn load_extraction_config_from_file(file_path: String) -> Result<JsExtractio
                     "Unsupported file extension: '{}'. Supported: .toml, .yaml, .yml, .json",
                     ext
                 ),
-            ))
+            ));
         }
     };
 
@@ -2006,8 +2008,7 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
 pub fn detect_mime_type(path: String, check_exists: Option<bool>) -> Result<String> {
     let check = check_exists.unwrap_or(true);
 
-    kreuzberg::core::mime::detect_mime_type(&path, check)
-        .map_err(convert_error)
+    kreuzberg::core::mime::detect_mime_type(&path, check).map_err(convert_error)
 }
 
 /// Validate that a MIME type is supported by Kreuzberg.
@@ -2049,8 +2050,7 @@ pub fn detect_mime_type(path: String, check_exists: Option<bool>) -> Result<Stri
 /// ```
 #[napi]
 pub fn validate_mime_type(mime_type: String) -> Result<String> {
-    kreuzberg::core::mime::validate_mime_type(&mime_type)
-        .map_err(convert_error)
+    kreuzberg::core::mime::validate_mime_type(&mime_type).map_err(convert_error)
 }
 
 /// Embedding preset configuration for TypeScript bindings.

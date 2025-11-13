@@ -5,7 +5,7 @@
  * that automatically converts Rust async functions to JavaScript Promises.
  */
 
-import { readFile } from "fs/promises";
+import { readFile } from "node:fs/promises";
 import {
 	batchExtractBytes,
 	batchExtractFiles,
@@ -88,7 +88,7 @@ async function extractFromBytes(): Promise<void> {
 /**
  * Batch extraction from bytes
  */
-async function batchExtractFromBytes(): Promise<void> {
+async function _batchExtractFromBytes(): Promise<void> {
 	const files = ["doc1.pdf", "doc2.pdf"];
 	const buffers = await Promise.all(files.map((f) => readFile(f)));
 	const bytesArray = buffers.map((b) => new Uint8Array(b));
@@ -113,7 +113,7 @@ async function errorHandling(): Promise<void> {
 /**
  * Promise chaining (alternative to async/await)
  */
-function promiseChaining(): void {
+function _promiseChaining(): void {
 	extractFile("document.pdf", null, null)
 		.then((result) => {
 			console.log("Content:", result.content);

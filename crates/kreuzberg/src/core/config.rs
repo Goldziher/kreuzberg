@@ -410,15 +410,12 @@ impl ExtractionConfig {
     /// ```
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
-        let extension = path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .ok_or_else(|| {
-                KreuzbergError::validation(format!(
-                    "Cannot determine file format: no extension found in {}",
-                    path.display()
-                ))
-            })?;
+        let extension = path.extension().and_then(|ext| ext.to_str()).ok_or_else(|| {
+            KreuzbergError::validation(format!(
+                "Cannot determine file format: no extension found in {}",
+                path.display()
+            ))
+        })?;
 
         match extension.to_lowercase().as_str() {
             "toml" => Self::from_toml_file(path),

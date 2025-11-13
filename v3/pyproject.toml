@@ -98,7 +98,7 @@ optional-dependencies.entity-extraction = [ "keybert>=0.9", "spacy>=3.8.7; pytho
 optional-dependencies.gmft = [ "gmft>=0.4.2", "transformers>=4.57.1" ]
 optional-dependencies.langdetect = [ "fast-langdetect>=1" ]
 optional-dependencies.paddleocr = [
-  "paddleocr>=3.3.1; python_version<'3.14'",
+  "paddleocr>=3.3.2; python_version<'3.14'",
   "paddlepaddle>=3.2.1,<3.3; python_version<'3.14'",
   "setuptools>=80.9",
 ]

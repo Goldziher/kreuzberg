@@ -1828,6 +1828,85 @@ fn validate_mime_type_native(mime_type: String) -> Result<String, Error> {
     kreuzberg::validate_mime_type(&mime_type).map_err(kreuzberg_error)
 }
 
+/// List all available embedding preset names.
+///
+/// Returns an array of preset names that can be used with get_embedding_preset.
+///
+/// # Returns
+///
+/// Array of 4 preset names: ["fast", "balanced", "quality", "multilingual"]
+///
+/// # Example
+///
+/// ```ruby
+/// require 'kreuzberg'
+///
+/// presets = Kreuzberg.list_embedding_presets
+/// puts presets  # => ["fast", "balanced", "quality", "multilingual"]
+/// ```
+fn list_embedding_presets(ruby: &Ruby) -> Result<RArray, Error> {
+    let presets = kreuzberg::embeddings::list_presets();
+    let array = ruby.ary_new();
+    for name in presets {
+        array.push(name)?;
+    }
+    Ok(array)
+}
+
+/// Get a specific embedding preset by name.
+///
+/// Returns a preset configuration hash, or nil if the preset name is not found.
+///
+/// # Arguments
+///
+/// * `name` - The preset name (case-sensitive)
+///
+/// # Returns
+///
+/// Hash with preset configuration or nil if not found
+///
+/// Available presets:
+/// - "fast": AllMiniLML6V2Q (384 dimensions) - Quick prototyping, low-latency
+/// - "balanced": BGEBaseENV15 (768 dimensions) - General-purpose RAG
+/// - "quality": BGELargeENV15 (1024 dimensions) - High-quality embeddings
+/// - "multilingual": MultilingualE5Base (768 dimensions) - Multi-language support
+///
+/// # Example
+///
+/// ```ruby
+/// require 'kreuzberg'
+///
+/// preset = Kreuzberg.get_embedding_preset("balanced")
+/// if preset
+///   puts "Model: #{preset[:model_name]}, Dims: #{preset[:dimensions]}"
+///   # => Model: BGEBaseENV15, Dims: 768
+/// end
+/// ```
+fn get_embedding_preset(ruby: &Ruby, name: String) -> Result<Value, Error> {
+    let preset = kreuzberg::embeddings::get_preset(&name);
+
+    match preset {
+        Some(preset) => {
+            let hash = ruby.hash_new();
+
+            set_hash_entry(ruby, &hash, "name", ruby.str_new(preset.name).as_value())?;
+            set_hash_entry(ruby, &hash, "chunk_size", preset.chunk_size.into_value_with(ruby))?;
+            set_hash_entry(ruby, &hash, "overlap", preset.overlap.into_value_with(ruby))?;
+
+            // Note: When embeddings feature is enabled in kreuzberg, the model field is EmbeddingModel
+            // Since Ruby bindings typically build with all features, we use the model field and format it.
+            let model_name = format!("{:?}", preset.model);
+
+            set_hash_entry(ruby, &hash, "model_name", ruby.str_new(&model_name).as_value())?;
+            set_hash_entry(ruby, &hash, "dimensions", preset.dimensions.into_value_with(ruby))?;
+            set_hash_entry(ruby, &hash, "description", ruby.str_new(preset.description).as_value())?;
+
+            Ok(hash.as_value())
+        }
+        None => Ok(ruby.qnil().as_value()),
+    }
+}
+
 /// Initialize the Kreuzberg Ruby module
 #[magnus::init]
 fn init(ruby: &Ruby) -> Result<(), Error> {
@@ -1858,6 +1937,9 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
 
     module.define_module_function("detect_mime_type", function!(detect_mime_type_native, -1))?;
     module.define_module_function("validate_mime_type", function!(validate_mime_type_native, 1))?;
+
+    module.define_module_function("list_embedding_presets", function!(list_embedding_presets, 0))?;
+    module.define_module_function("get_embedding_preset", function!(get_embedding_preset, 1))?;
 
     Ok(())
 }

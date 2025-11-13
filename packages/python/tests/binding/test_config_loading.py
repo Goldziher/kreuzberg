@@ -6,7 +6,6 @@ import pytest
 
 from kreuzberg import ExtractionConfig
 
-
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
 
@@ -84,26 +83,20 @@ def test_from_file_toml_with_images() -> None:
 
 
 def test_from_file_nonexistent_file() -> None:
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception, match=r"(Failed to read config file|ValidationError)"):
         ExtractionConfig.from_file("/nonexistent/path/config.toml")
-
-    assert "Failed to read config file" in str(exc_info.value) or "ValidationError" in str(exc_info.value)
 
 
 def test_from_file_invalid_toml() -> None:
     config_path = FIXTURES_DIR / "invalid.toml"
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception, match=r"(Invalid TOML|ValidationError)"):
         ExtractionConfig.from_file(str(config_path))
-
-    assert "Invalid TOML" in str(exc_info.value) or "ValidationError" in str(exc_info.value)
 
 
 def test_from_file_invalid_yaml() -> None:
     config_path = FIXTURES_DIR / "invalid.yaml"
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception, match=r"(Invalid YAML|ValidationError)"):
         ExtractionConfig.from_file(str(config_path))
-
-    assert "Invalid YAML" in str(exc_info.value) or "ValidationError" in str(exc_info.value)
 
 
 def test_from_file_with_path_object() -> None:
@@ -116,8 +109,9 @@ def test_from_file_with_path_object() -> None:
 
 def test_from_file_relative_path() -> None:
     import os
+    from pathlib import Path
 
-    original_cwd = os.getcwd()
+    original_cwd = Path.cwd()
     try:
         os.chdir(FIXTURES_DIR)
         config = ExtractionConfig.from_file("config.toml")

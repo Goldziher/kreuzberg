@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	CacheError,
-	ImageProcessingError,
-	KreuzbergError,
-	PluginError,
-	extractFile,
-} from "../../src/index.js";
+import { CacheError, extractFile, ImageProcessingError, KreuzbergError, PluginError } from "../../src/index.js";
 
 /**
  * Integration tests for error handling in real-world scenarios.
@@ -153,7 +147,7 @@ describe("Error Integration", () => {
 
 			try {
 				await extractWithRetry("/nonexistent/file.pdf");
-			} catch (error) {
+			} catch (_error) {
 				// Should have attempted multiple times
 				expect(attempts).toBeGreaterThan(0);
 			}

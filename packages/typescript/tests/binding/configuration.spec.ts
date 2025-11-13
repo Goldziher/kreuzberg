@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { extractBytesSync, extractFileSync, ExtractionConfig } from "../../src/index.js";
+import { ExtractionConfig, extractBytesSync, extractFileSync } from "../../src/index.js";
 import type { ExtractionConfig as ExtractionConfigType } from "../../src/types.js";
 
 function getTestDocumentPath(relativePath: string): string {
@@ -348,9 +348,7 @@ describe("Configuration Options", () => {
 			expect(config.ocr?.language).toBe("eng");
 			expect(config.ocr?.tesseractConfig?.psm).toBe(6);
 			expect(config.ocr?.tesseractConfig?.enableTableDetection).toBe(true);
-			expect(config.ocr?.tesseractConfig?.tesseditCharWhitelist).toBe(
-				"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-			);
+			expect(config.ocr?.tesseractConfig?.tesseditCharWhitelist).toBe("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
 			expect(config.chunking).toBeDefined();
 			expect(config.chunking?.maxChars).toBe(1000);
@@ -380,10 +378,7 @@ describe("Configuration Options", () => {
 
 			expect(config.postprocessor).toBeDefined();
 			expect(config.postprocessor?.enabled).toBe(true);
-			expect(config.postprocessor?.enabledProcessors).toEqual([
-				"processor1",
-				"processor2",
-			]);
+			expect(config.postprocessor?.enabledProcessors).toEqual(["processor1", "processor2"]);
 			expect(config.postprocessor?.disabledProcessors).toEqual(["processor3"]);
 		});
 
@@ -402,9 +397,7 @@ describe("Configuration Options", () => {
 			expect(config.ocr?.language).toBe("deu");
 			expect(config.ocr?.tesseractConfig?.psm).toBe(3);
 			expect(config.ocr?.tesseractConfig?.enableTableDetection).toBe(false);
-			expect(config.ocr?.tesseractConfig?.tesseditCharWhitelist).toBe(
-				"0123456789",
-			);
+			expect(config.ocr?.tesseractConfig?.tesseditCharWhitelist).toBe("0123456789");
 
 			expect(config.chunking).toBeDefined();
 			expect(config.chunking?.maxChars).toBe(500);
@@ -435,10 +428,7 @@ describe("Configuration Options", () => {
 			expect(config.postprocessor).toBeDefined();
 			expect(config.postprocessor?.enabled).toBe(false);
 			expect(config.postprocessor?.enabledProcessors).toEqual([]);
-			expect(config.postprocessor?.disabledProcessors).toEqual([
-				"processor1",
-				"processor2",
-			]);
+			expect(config.postprocessor?.disabledProcessors).toEqual(["processor1", "processor2"]);
 		});
 
 		it("should use loaded config for extraction", () => {

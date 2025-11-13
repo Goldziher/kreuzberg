@@ -3,21 +3,19 @@ from pathlib import Path
 from typing import Any, Literal, Protocol, TypedDict, overload
 
 __all__ = [
-    "CacheError",
     "ChunkingConfig",
     "EmbeddingConfig",
     "EmbeddingModelType",
+    "EmbeddingPreset",
     "ExtractedTable",
     "ExtractionConfig",
     "ExtractionResult",
     "ImageExtractionConfig",
     "ImagePreprocessingConfig",
-    "ImageProcessingError",
     "LanguageDetectionConfig",
     "OcrBackendProtocol",
     "OcrConfig",
     "PdfConfig",
-    "PluginError",
     "PostProcessorConfig",
     "PostProcessorProtocol",
     "TesseractConfig",
@@ -33,6 +31,8 @@ __all__ = [
     "extract_bytes_sync",
     "extract_file",
     "extract_file_sync",
+    "get_embedding_preset",
+    "list_embedding_presets",
     "register_ocr_backend",
     "register_post_processor",
     "register_validator",
@@ -88,6 +88,8 @@ class ExtractionConfig:
         language_detection: LanguageDetectionConfig | None = None,
         postprocessor: PostProcessorConfig | None = None,
     ) -> None: ...
+    @staticmethod
+    def from_file(path: str | Path) -> ExtractionConfig: ...
 
 class OcrConfig:
     backend: str
@@ -126,6 +128,14 @@ class EmbeddingConfig:
         show_download_progress: bool | None = None,
         cache_dir: str | None = None,
     ) -> None: ...
+
+class EmbeddingPreset:
+    name: str
+    chunk_size: int
+    overlap: int
+    model_name: str
+    dimensions: int
+    description: str
 
 class ChunkingConfig:
     max_chars: int
@@ -564,3 +574,5 @@ def unregister_post_processor(name: str) -> None: ...
 def register_validator(validator: ValidatorProtocol) -> None: ...
 def clear_validators() -> None: ...
 def unregister_validator(name: str) -> None: ...
+def list_embedding_presets() -> list[str]: ...
+def get_embedding_preset(name: str) -> EmbeddingPreset | None: ...

@@ -8,21 +8,21 @@
     <meta charset="UTF-8" />
     <title>Sinthgunt - Wikipedia</title>
     <script>
-      (function () {
+      (() => {
         var className =
           "client-js vector-feature-language-in-header-enabled vector-feature-language-in-main-page-header-disabled vector-feature-page-tools-pinned-disabled vector-feature-toc-pinned-clientpref-1 vector-feature-main-menu-pinned-disabled vector-feature-limited-width-clientpref-1 vector-feature-limited-width-content-enabled vector-feature-custom-font-size-clientpref-1 vector-feature-appearance-pinned-clientpref-1 vector-feature-night-mode-enabled skin-theme-clientpref-day vector-sticky-header-enabled vector-toc-available";
         var cookie = document.cookie.match(
           /(?:^|; )enwikimwclientpreferences=([^;]+)/,
         );
         if (cookie) {
-          cookie[1].split("%2C").forEach(function (pref) {
+          cookie[1].split("%2C").forEach((pref) => {
             className = className.replace(
               new RegExp(
                 "(^| )" +
                   pref.replace(/-clientpref-\w+$|[^\w-]+/g, "") +
                   "-clientpref-\\w+( |$)",
               ),
-              "$1" + pref + "$2",
+              `$1${pref}$2`,
             );
           });
         }
@@ -178,19 +178,17 @@
       ];
     </script>
     <script>
-      (RLQ = window.RLQ || []).push(function () {
-        mw.loader.impl(function () {
-          return [
+      (RLQ = window.RLQ || []).push(() => {
+        mw.loader.impl(() => [
             "user.options@12s5i",
-            function ($, jQuery, require, module) {
+            (_$, _jQuery, _require, _module) => {
               mw.user.tokens.set({
                 patrolToken: "+\\",
                 watchToken: "+\\",
                 csrfToken: "+\\",
               });
             },
-          ];
-        });
+          ]);
       });
     </script>
     <link

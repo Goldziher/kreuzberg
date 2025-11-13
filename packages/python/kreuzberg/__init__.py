@@ -43,6 +43,9 @@ from typing import TYPE_CHECKING, Any
 from kreuzberg import _setup_lib_path  # noqa: F401
 from kreuzberg._internal_bindings import (
     ChunkingConfig,
+    EmbeddingConfig,
+    EmbeddingModelType,
+    EmbeddingPreset,
     ExtractedTable,
     ExtractionConfig,
     ExtractionResult,
@@ -56,6 +59,8 @@ from kreuzberg._internal_bindings import (
     TokenReductionConfig,
     clear_post_processors,
     clear_validators,
+    get_embedding_preset,
+    list_embedding_presets,
     register_ocr_backend,
     register_post_processor,
     register_validator,
@@ -111,6 +116,9 @@ __version__ = version("kreuzberg")
 __all__ = [
     "CacheError",
     "ChunkingConfig",
+    "EmbeddingConfig",
+    "EmbeddingModelType",
+    "EmbeddingPreset",
     "ExtractedTable",
     "ExtractionConfig",
     "ExtractionResult",
@@ -142,6 +150,8 @@ __all__ = [
     "extract_bytes_sync",
     "extract_file",
     "extract_file_sync",
+    "get_embedding_preset",
+    "list_embedding_presets",
     "register_ocr_backend",
     "register_post_processor",
     "register_validator",

@@ -8,21 +8,21 @@
     <meta charset="UTF-8" />
     <title>International emergency medicine - Wikipedia</title>
     <script>
-      (function () {
+      (() => {
         var className =
           "client-js vector-feature-language-in-header-enabled vector-feature-language-in-main-page-header-disabled vector-feature-page-tools-pinned-disabled vector-feature-toc-pinned-clientpref-1 vector-feature-main-menu-pinned-disabled vector-feature-limited-width-clientpref-1 vector-feature-limited-width-content-enabled vector-feature-custom-font-size-clientpref-1 vector-feature-appearance-pinned-clientpref-1 vector-feature-night-mode-enabled skin-theme-clientpref-day vector-sticky-header-enabled vector-toc-available";
         var cookie = document.cookie.match(
           /(?:^|; )enwikimwclientpreferences=([^;]+)/,
         );
         if (cookie) {
-          cookie[1].split("%2C").forEach(function (pref) {
+          cookie[1].split("%2C").forEach((pref) => {
             className = className.replace(
               new RegExp(
                 "(^| )" +
                   pref.replace(/-clientpref-\w+$|[^\w-]+/g, "") +
                   "-clientpref-\\w+( |$)",
               ),
-              "$1" + pref + "$2",
+              `$1${pref}$2`,
             );
           });
         }
@@ -178,19 +178,17 @@
       ];
     </script>
     <script>
-      (RLQ = window.RLQ || []).push(function () {
-        mw.loader.impl(function () {
-          return [
+      (RLQ = window.RLQ || []).push(() => {
+        mw.loader.impl(() => [
             "user.options@12s5i",
-            function ($, jQuery, require, module) {
+            (_$, _jQuery, _require, _module) => {
               mw.user.tokens.set({
                 patrolToken: "+\\",
                 watchToken: "+\\",
                 csrfToken: "+\\",
               });
             },
-          ];
-        });
+          ]);
       });
     </script>
     <link
@@ -1996,7 +1994,7 @@
                     }
                     @media print {
                       body.ns-0 .mw-parser-output .hatnote {
-                        display: none !important;
+                        display: none;
                       }
                     }
                   </style>
@@ -3463,17 +3461,17 @@
                     }
                     @media all and (max-width: 720px) {
                       .mw-parser-output .tmulti .thumbinner {
-                        width: 100% !important;
+                        width: 100%;
                         box-sizing: border-box;
-                        max-width: none !important;
+                        max-width: none;
                         align-items: center;
                       }
                       .mw-parser-output .tmulti .trow {
                         justify-content: center;
                       }
                       .mw-parser-output .tmulti .tsingle {
-                        float: none !important;
-                        max-width: 100% !important;
+                        float: none;
+                        max-width: 100%;
                         box-sizing: border-box;
                         text-align: center;
                       }
@@ -5565,12 +5563,12 @@
                         counter-increment: listitem;
                       }
                       .mw-parser-output .hlist ol > li::before {
-                        content: " " counter(listitem) "\a0 ";
+                        content: " " counter(listitem) "a0 ";
                       }
                       .mw-parser-output .hlist dd ol > li:first-child::before,
                       .mw-parser-output .hlist dt ol > li:first-child::before,
                       .mw-parser-output .hlist li ol > li:first-child::before {
-                        content: " (" counter(listitem) "\a0 ";
+                        content: " (" counter(listitem) "a0 ";
                       }</style
                     ><style data-mw-deduplicate="TemplateStyles:r1236075235">
                       .mw-parser-output .navbox {
@@ -5663,11 +5661,11 @@
                         .mw-parser-output
                         .navbox-image
                         img {
-                        max-width: none !important;
+                        max-width: none;
                       }
                       @media print {
                         body.ns-0 .mw-parser-output .navbox {
-                          display: none !important;
+                          display: none;
                         }
                       }
                     </style>
@@ -5747,7 +5745,7 @@
                                 li
                                 a
                                 abbr {
-                                color: var(--color-base) !important;
+                                color: var(--color-base);
                               }
                               @media (prefers-color-scheme: dark) {
                                 html.skin-theme-clientpref-os
@@ -5756,12 +5754,12 @@
                                   li
                                   a
                                   abbr {
-                                  color: var(--color-base) !important;
+                                  color: var(--color-base);
                                 }
                               }
                               @media print {
                                 .mw-parser-output .navbar {
-                                  display: none !important;
+                                  display: none;
                                 }
                               }
                             </style>
@@ -6853,7 +6851,7 @@ Transclusion expansion time report (%,ms,calls,template)
       <ul></ul>
     </div>
     <script>
-      (RLQ = window.RLQ || []).push(function () {
+      (RLQ = window.RLQ || []).push(() => {
         mw.config.set({
           wgHostname: "mw-web.eqiad.main-7cb49bdbd7-5bvp7",
           wgBackendResponseTime: 233,

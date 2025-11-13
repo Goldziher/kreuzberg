@@ -271,9 +271,8 @@ impl ExtractionConfig {
     ///     >>> config = ExtractionConfig.from_file(Path("kreuzberg.toml"))
     #[staticmethod]
     fn from_file(path: &str) -> PyResult<Self> {
-        let config = kreuzberg::ExtractionConfig::from_file(path).map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!("Failed to load config: {}", e))
-        })?;
+        let config = kreuzberg::ExtractionConfig::from_file(path)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Failed to load config: {}", e)))?;
         Ok(Self { inner: config })
     }
 }

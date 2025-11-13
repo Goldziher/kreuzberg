@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { detectMimeType, validateMimeType } from "../../src/index.js";
 
 describe("MIME Utility Functions", () => {
@@ -147,13 +147,7 @@ describe("MIME Utility Functions", () => {
 
 	describe("validateMimeType", () => {
 		it("should validate supported MIME types", () => {
-			const validTypes = [
-				"application/pdf",
-				"text/plain",
-				"text/html",
-				"application/json",
-				"text/markdown",
-			];
+			const validTypes = ["application/pdf", "text/plain", "text/html", "application/json", "text/markdown"];
 
 			for (const mimeType of validTypes) {
 				const result = validateMimeType(mimeType);
@@ -162,13 +156,7 @@ describe("MIME Utility Functions", () => {
 		});
 
 		it("should validate image MIME types", () => {
-			const imageTypes = [
-				"image/png",
-				"image/jpeg",
-				"image/gif",
-				"image/webp",
-				"image/tiff",
-			];
+			const imageTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/tiff"];
 
 			for (const mimeType of imageTypes) {
 				const result = validateMimeType(mimeType);
@@ -200,12 +188,7 @@ describe("MIME Utility Functions", () => {
 		});
 
 		it("should throw error for unsupported MIME types", () => {
-			const unsupportedTypes = [
-				"video/mp4",
-				"audio/mpeg",
-				"application/unknown",
-				"invalid/mime-type",
-			];
+			const unsupportedTypes = ["video/mp4", "audio/mpeg", "application/unknown", "invalid/mime-type"];
 
 			for (const mimeType of unsupportedTypes) {
 				expect(() => validateMimeType(mimeType)).toThrow(/unsupported format/i);
@@ -213,10 +196,7 @@ describe("MIME Utility Functions", () => {
 		});
 
 		it("should validate email MIME types", () => {
-			const emailTypes = [
-				"message/rfc822",
-				"application/vnd.ms-outlook",
-			];
+			const emailTypes = ["message/rfc822", "application/vnd.ms-outlook"];
 
 			for (const mimeType of emailTypes) {
 				const result = validateMimeType(mimeType);
