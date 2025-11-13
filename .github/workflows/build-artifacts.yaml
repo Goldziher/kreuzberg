@@ -38,7 +38,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
     env:
-      TESSERACT_RS_CACHE_DIR: ${{ github.workspace }}/.tesseract-cache/${{ matrix.label }}
+      TESSERACT_RS_CACHE_DIR: ${{ matrix.label != 'linux-aarch64' && format('{0}/.tesseract-cache/{1}', github.workspace, matrix.label) || '' }}
     strategy:
       fail-fast: false
       matrix:
