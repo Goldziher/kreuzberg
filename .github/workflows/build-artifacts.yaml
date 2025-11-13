@@ -119,17 +119,14 @@ jobs:
         run: mkdir -p target/wheels
 
       - name: Clean Tesseract cache directory
-        if: matrix.label != 'linux-aarch64'
         shell: bash
         run: rm -rf .tesseract-cache/${{ matrix.label }}
 
       - name: Prepare Tesseract cache directory
-        if: matrix.label != 'linux-aarch64'
         shell: bash
         run: mkdir -p .tesseract-cache/${{ matrix.label }}
 
       - name: Prepare Tesseract home directory
-        if: matrix.label != 'linux-aarch64'
         shell: bash
         run: |
           mkdir -p .tesseract-home/${{ matrix.label }}
@@ -155,14 +152,17 @@ jobs:
           manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
           sccache: true
-          docker-options: ${{ matrix.label != 'linux-aarch64' && format('--env TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/{0} --env XDG_CACHE_HOME=/io/.xdg-cache/{0} --env HOME=/io/.tesseract-home/{0}', matrix.label) || '' }}
+          docker-options: >-
+            --env TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ matrix.label }}
+            --env XDG_CACHE_HOME=/io/.xdg-cache/${{ matrix.label }}
+            --env HOME=/io/.tesseract-home/${{ matrix.label }}
 
       - name: Build wheels (native)
         if: matrix.os != 'ubuntu-latest'
         uses: PyO3/maturin-action@v1
         env:
-          TESSERACT_RS_CACHE_DIR: ${{ matrix.label != 'linux-aarch64' && format('{0}/.tesseract-cache/{1}', github.workspace, matrix.label) || '' }}
-          XDG_CACHE_HOME: ${{ matrix.label != 'linux-aarch64' && format('{0}/.xdg-cache/{1}', github.workspace, matrix.label) || '' }}
+          TESSERACT_RS_CACHE_DIR: ${{ github.workspace }}/.tesseract-cache/${{ matrix.label }}
+          XDG_CACHE_HOME: ${{ github.workspace }}/.xdg-cache/${{ matrix.label }}
         with:
           command: build
           args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
