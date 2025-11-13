@@ -624,13 +624,13 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 20
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -648,86 +648,29 @@ jobs:
           name: ${{ matrix.artifact }}
           path: artifacts/${{ matrix.flavor }}
 
-      - name: Run Python smoke test
+      - name: Smoke test Python wheel
         if: matrix.flavor == 'python'
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          rsync -a e2e/smoke/python/ "$tmp"/
-          pushd "$tmp" >/dev/null
-          python -m venv .venv
-          . .venv/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install artifacts/${{ matrix.flavor }}/*.whl
-          python main.py
-          popd >/dev/null
+        uses: ./.github/actions/smoke-python
+        with:
+          wheel-path: artifacts/${{ matrix.flavor }}
 
-      - name: Locate Node binding
-        id: node-binding
+      - name: Smoke test Node.js package
         if: matrix.flavor == 'node'
-        run: |
-          binding=$(find artifacts/${{ matrix.flavor }} -name "*.node" | head -n1)
-          if [ -z "$binding" ]; then
-            echo "No .node binding found" >&2
-            exit 1
-          fi
-          echo "path=$binding" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/smoke-node
+        with:
+          package-tarball: ""
 
-      - name: Run Node smoke test
-        if: matrix.flavor == 'node'
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          rsync -a e2e/smoke/node/ "$tmp"/
-          pushd "$tmp" >/dev/null
-          pnpm install
-          KREUZBERG_NODE_BINDING_PATH=${{ steps.node-binding.outputs.path }} pnpm run check
-          popd >/dev/null
-
-      - name: Run Ruby smoke test
+      - name: Smoke test Ruby gem
         if: matrix.flavor == 'ruby'
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          rsync -a e2e/smoke/ruby/ "$tmp"/
-          pushd "$tmp" >/dev/null
-          gem install --no-document artifacts/${{ matrix.flavor }}/*.gem
-          ruby app.rb
-          popd >/dev/null
+        uses: ./.github/actions/smoke-ruby
+        with:
+          gem-path: artifacts/${{ matrix.flavor }}
 
-      - name: Prepare CLI binary
-        id: cli-bin
+      - name: Smoke test CLI binary
         if: matrix.flavor == 'cli'
-        shell: bash
-        run: |
-          archive=$(find artifacts/${{ matrix.flavor }} -name "*.tar.gz" -o -name "*.zip" | head -n1)
-          if [[ -z "$archive" ]]; then
-            echo "No CLI archive found" >&2
-            exit 1
-          fi
-          workdir=$(mktemp -d)
-          if [[ "$archive" == *.zip ]]; then
-            unzip -q "$archive" -d "$workdir"
-          else
-            tar -xzf "$archive" -C "$workdir"
-          fi
-          binary=$(find "$workdir" -type f -name "kreuzberg" -o -name "kreuzberg.exe" | head -n1)
-          if [[ -z "$binary" ]]; then
-            echo "CLI binary not found in archive" >&2
-            exit 1
-          fi
-          chmod +x "$binary"
-          echo "binary=$binary" >> "$GITHUB_OUTPUT"
-
-      - name: Run CLI smoke test
-        if: matrix.flavor == 'cli'
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          rsync -a e2e/smoke/cli/ "$tmp"/
-          pushd "$tmp" >/dev/null
-          KREUZBERG_CLI_BINARY=${{ steps.cli-bin.outputs.binary }} ./smoke.sh
-          popd >/dev/null
+        uses: ./.github/actions/smoke-cli
+        with:
+          cli-artifacts-dir: artifacts/${{ matrix.flavor }}
 
   summarize:
     name: Build Summary
