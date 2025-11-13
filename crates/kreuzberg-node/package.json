@@ -2,18 +2,39 @@
 	"name": "kreuzberg-node",
 	"version": "4.0.0-rc.1",
 	"description": "Kreuzberg document intelligence - Node.js native bindings",
+	"author": {
+		"name": "Na'aman Hirschfeld",
+		"email": "nhirschfeld@gmail.com",
+		"url": "https://kreuzberg.dev"
+	},
+	"homepage": "https://kreuzberg.dev",
+	"bugs": {
+		"url": "https://github.com/Goldziher/kreuzberg/issues"
+	},
 	"main": "index.js",
 	"types": "index.d.ts",
-	"repository": "https://github.com/Goldziher/kreuzberg",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Goldziher/kreuzberg.git"
+	},
 	"license": "MIT",
 	"keywords": [
-		"document",
-		"extraction",
+		"document-intelligence",
+		"document-extraction",
+		"text-extraction",
+		"pdf-extraction",
 		"ocr",
 		"pdf",
+		"docx",
+		"xlsx",
+		"pptx",
+		"office-documents",
+		"table-extraction",
+		"metadata-extraction",
 		"rust",
 		"napi",
-		"native"
+		"native",
+		"nodejs"
 	],
 	"files": [
 		"index.js",

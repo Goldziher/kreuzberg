@@ -53,7 +53,8 @@ Gem::Specification.new do |spec|
     'changelog_uri' => 'https://github.com/Goldziher/kreuzberg/blob/main/CHANGELOG.md',
     'documentation_uri' => 'https://docs.kreuzberg.dev',
     'bug_tracker_uri' => 'https://github.com/Goldziher/kreuzberg/issues',
-    'rubygems_mfa_required' => 'true'
+    'rubygems_mfa_required' => 'true',
+    'keywords' => 'document-intelligence,document-extraction,ocr,rust,bindings'
   }
 
   spec.files = files
