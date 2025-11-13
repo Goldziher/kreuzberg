@@ -1,0 +1,48 @@
+# Test configuration file in YAML format
+use_cache: true
+enable_quality_processing: false
+force_ocr: true
+max_concurrent_extractions: 8
+
+ocr:
+  backend: tesseract
+  language: deu
+  tesseract_config:
+    psm: 3
+    enable_table_detection: false
+    tessedit_char_whitelist: "0123456789"
+
+chunking:
+  max_chars: 500
+  max_overlap: 100
+
+images:
+  extract_images: false
+  target_dpi: 150
+  max_image_dimension: 2048
+  auto_adjust_dpi: false
+  min_dpi: 100
+  max_dpi: 300
+
+pdf_options:
+  extract_images: false
+  extract_metadata: false
+  passwords:
+    - test123
+    - secret456
+
+token_reduction:
+  mode: "aggressive"
+  preserve_important_words: false
+
+language_detection:
+  enabled: false
+  min_confidence: 0.7
+  detect_multiple: true
+
+postprocessor:
+  enabled: false
+  enabled_processors: []
+  disabled_processors:
+    - processor1
+    - processor2

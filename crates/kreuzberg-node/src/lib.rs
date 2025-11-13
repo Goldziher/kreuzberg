@@ -378,6 +378,150 @@ impl From<JsExtractionConfig> for ExtractionConfig {
     }
 }
 
+impl TryFrom<ExtractionConfig> for JsExtractionConfig {
+    type Error = napi::Error;
+
+    fn try_from(val: ExtractionConfig) -> Result<Self> {
+        Ok(JsExtractionConfig {
+            use_cache: Some(val.use_cache),
+            enable_quality_processing: Some(val.enable_quality_processing),
+            ocr: val.ocr.map(|ocr| JsOcrConfig {
+                backend: ocr.backend,
+                language: Some(ocr.language),
+                tesseract_config: ocr.tesseract_config.map(|tc| JsTesseractConfig {
+                    psm: Some(tc.psm),
+                    enable_table_detection: Some(tc.enable_table_detection),
+                    tessedit_char_whitelist: if tc.tessedit_char_whitelist.is_empty() {
+                        None
+                    } else {
+                        Some(tc.tessedit_char_whitelist)
+                    },
+                }),
+            }),
+            force_ocr: Some(val.force_ocr),
+            chunking: val.chunking.map(|chunk| JsChunkingConfig {
+                max_chars: Some(chunk.max_chars as u32),
+                max_overlap: Some(chunk.max_overlap as u32),
+                embedding: chunk.embedding.map(|emb| JsEmbeddingConfig {
+                    model: Some(JsEmbeddingModelType {
+                        model_type: match emb.model {
+                            RustEmbeddingModelType::Preset { .. } => "preset".to_string(),
+                            RustEmbeddingModelType::FastEmbed { .. } => "fastembed".to_string(),
+                            RustEmbeddingModelType::Custom { .. } => "custom".to_string(),
+                        },
+                        value: match &emb.model {
+                            RustEmbeddingModelType::Preset { name } => name.clone(),
+                            RustEmbeddingModelType::FastEmbed { model, .. } => model.clone(),
+                            RustEmbeddingModelType::Custom { model_id, .. } => model_id.clone(),
+                        },
+                        dimensions: match emb.model {
+                            RustEmbeddingModelType::FastEmbed { dimensions, .. } => Some(dimensions as u32),
+                            RustEmbeddingModelType::Custom { dimensions, .. } => Some(dimensions as u32),
+                            _ => None,
+                        },
+                    }),
+                    normalize: Some(emb.normalize),
+                    batch_size: Some(emb.batch_size as u32),
+                    show_download_progress: Some(emb.show_download_progress),
+                    cache_dir: emb.cache_dir.and_then(|p| p.to_str().map(String::from)),
+                }),
+                preset: chunk.preset,
+            }),
+            images: val.images.map(|img| JsImageExtractionConfig {
+                extract_images: Some(img.extract_images),
+                target_dpi: Some(img.target_dpi),
+                max_image_dimension: Some(img.max_image_dimension),
+                auto_adjust_dpi: Some(img.auto_adjust_dpi),
+                min_dpi: Some(img.min_dpi),
+                max_dpi: Some(img.max_dpi),
+            }),
+            pdf_options: val.pdf_options.map(|pdf| JsPdfConfig {
+                extract_images: Some(pdf.extract_images),
+                passwords: pdf.passwords,
+                extract_metadata: Some(pdf.extract_metadata),
+            }),
+            token_reduction: val.token_reduction.map(|tr| JsTokenReductionConfig {
+                mode: Some(tr.mode),
+                preserve_important_words: Some(tr.preserve_important_words),
+            }),
+            language_detection: val.language_detection.map(|ld| JsLanguageDetectionConfig {
+                enabled: Some(ld.enabled),
+                min_confidence: Some(ld.min_confidence),
+                detect_multiple: Some(ld.detect_multiple),
+            }),
+            postprocessor: val.postprocessor.map(|pp| JsPostProcessorConfig {
+                enabled: Some(pp.enabled),
+                enabled_processors: pp.enabled_processors,
+                disabled_processors: pp.disabled_processors,
+            }),
+            max_concurrent_extractions: val.max_concurrent_extractions.map(|v| v as u32),
+        })
+    }
+}
+
+/// Load extraction configuration from a file.
+///
+/// Automatically detects the file format based on extension:
+/// - `.toml` - TOML format
+/// - `.yaml` or `.yml` - YAML format
+/// - `.json` - JSON format
+///
+/// # Parameters
+///
+/// * `file_path` - Path to the configuration file (absolute or relative)
+///
+/// # Returns
+///
+/// `JsExtractionConfig` object with loaded configuration.
+///
+/// # Errors
+///
+/// Throws an error if:
+/// - File does not exist or is not accessible
+/// - File content is not valid TOML/YAML/JSON
+/// - Configuration structure is invalid
+///
+/// # Example
+///
+/// ```typescript
+/// import { loadExtractionConfigFromFile } from '@goldziher/kreuzberg';
+///
+/// // Load from TOML file
+/// const config = loadExtractionConfigFromFile('kreuzberg.toml');
+///
+/// // Load from YAML file
+/// const config2 = loadExtractionConfigFromFile('./config.yaml');
+///
+/// // Use with extraction
+/// const result = await extractFile('document.pdf', null, config);
+/// ```
+#[napi(js_name = "loadExtractionConfigFromFile")]
+pub fn load_extraction_config_from_file(file_path: String) -> Result<JsExtractionConfig> {
+    let path = std::path::Path::new(&file_path);
+
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .ok_or_else(|| Error::new(Status::InvalidArg, "File path must have an extension (.toml, .yaml, .json)"))?;
+
+    let rust_config = match ext.to_lowercase().as_str() {
+        "toml" => ExtractionConfig::from_toml_file(path).map_err(convert_error)?,
+        "yaml" | "yml" => ExtractionConfig::from_yaml_file(path).map_err(convert_error)?,
+        "json" => ExtractionConfig::from_json_file(path).map_err(convert_error)?,
+        _ => {
+            return Err(Error::new(
+                Status::InvalidArg,
+                format!(
+                    "Unsupported file extension: '{}'. Supported: .toml, .yaml, .yml, .json",
+                    ext
+                ),
+            ))
+        }
+    };
+
+    JsExtractionConfig::try_from(rust_config)
+}
+
 #[napi(object)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct JsTable {
@@ -1822,6 +1966,181 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
     })?;
 
     Ok(())
+}
+
+/// Detect MIME type from a file path.
+///
+/// Uses file extension to determine MIME type. Falls back to `mime_guess` crate
+/// if extension-based detection fails.
+///
+/// # Parameters
+///
+/// * `path` - Path to the file (string)
+/// * `check_exists` - Whether to verify file existence (defaults to true)
+///
+/// # Returns
+///
+/// The detected MIME type string.
+///
+/// # Errors
+///
+/// Throws an error if:
+/// - File doesn't exist (when `check_exists` is true)
+/// - MIME type cannot be determined from path/extension
+/// - Extension is unknown
+///
+/// # Example
+///
+/// ```typescript
+/// import { detectMimeType } from '@goldziher/kreuzberg';
+///
+/// // Detect from existing file
+/// const mimeType = detectMimeType('document.pdf');
+/// console.log(mimeType); // 'application/pdf'
+///
+/// // Detect without checking file existence
+/// const mimeType2 = detectMimeType('document.docx', false);
+/// console.log(mimeType2); // 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+/// ```
+#[napi]
+pub fn detect_mime_type(path: String, check_exists: Option<bool>) -> Result<String> {
+    let check = check_exists.unwrap_or(true);
+
+    kreuzberg::core::mime::detect_mime_type(&path, check)
+        .map_err(convert_error)
+}
+
+/// Validate that a MIME type is supported by Kreuzberg.
+///
+/// Checks if a MIME type is in the list of supported formats. Note that any
+/// `image/*` MIME type is automatically considered valid.
+///
+/// # Parameters
+///
+/// * `mime_type` - The MIME type to validate (string)
+///
+/// # Returns
+///
+/// The validated MIME type (may be normalized).
+///
+/// # Errors
+///
+/// Throws an error if the MIME type is not supported.
+///
+/// # Example
+///
+/// ```typescript
+/// import { validateMimeType } from '@goldziher/kreuzberg';
+///
+/// // Validate supported type
+/// const validated = validateMimeType('application/pdf');
+/// console.log(validated); // 'application/pdf'
+///
+/// // Validate custom image type
+/// const validated2 = validateMimeType('image/custom-format');
+/// console.log(validated2); // 'image/custom-format' (any image/* is valid)
+///
+/// // Validate unsupported type (throws error)
+/// try {
+///   validateMimeType('video/mp4');
+/// } catch (err) {
+///   console.error(err); // Error: Unsupported format: video/mp4
+/// }
+/// ```
+#[napi]
+pub fn validate_mime_type(mime_type: String) -> Result<String> {
+    kreuzberg::core::mime::validate_mime_type(&mime_type)
+        .map_err(convert_error)
+}
+
+/// Embedding preset configuration for TypeScript bindings.
+///
+/// Contains all settings for a specific embedding model preset.
+#[napi(object)]
+pub struct EmbeddingPreset {
+    /// Name of the preset (e.g., "fast", "balanced", "quality", "multilingual")
+    pub name: String,
+    /// Recommended chunk size in characters
+    pub chunk_size: u32,
+    /// Recommended overlap in characters
+    pub overlap: u32,
+    /// Model identifier (e.g., "AllMiniLML6V2Q", "BGEBaseENV15")
+    pub model_name: String,
+    /// Embedding vector dimensions
+    pub dimensions: u32,
+    /// Human-readable description of the preset
+    pub description: String,
+}
+
+/// List all available embedding preset names.
+///
+/// Returns an array of preset names that can be used with `getEmbeddingPreset`.
+///
+/// # Returns
+///
+/// Array of 4 preset names: ["fast", "balanced", "quality", "multilingual"]
+///
+/// # Example
+///
+/// ```typescript
+/// import { listEmbeddingPresets } from '@goldziher/kreuzberg';
+///
+/// const presets = listEmbeddingPresets();
+/// console.log(presets); // ['fast', 'balanced', 'quality', 'multilingual']
+/// ```
+#[napi(js_name = "listEmbeddingPresets")]
+pub fn list_embedding_presets() -> Vec<String> {
+    kreuzberg::embeddings::list_presets()
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+/// Get a specific embedding preset by name.
+///
+/// Returns a preset configuration object, or null if the preset name is not found.
+///
+/// # Arguments
+///
+/// * `name` - The preset name (case-sensitive)
+///
+/// # Returns
+///
+/// An `EmbeddingPreset` object with the following properties:
+/// - `name`: string - Preset name
+/// - `chunkSize`: number - Recommended chunk size in characters
+/// - `overlap`: number - Recommended overlap in characters
+/// - `modelName`: string - Model identifier
+/// - `dimensions`: number - Embedding vector dimensions
+/// - `description`: string - Human-readable description
+///
+/// Returns `null` if preset name is not found.
+///
+/// # Example
+///
+/// ```typescript
+/// import { getEmbeddingPreset } from '@goldziher/kreuzberg';
+///
+/// const preset = getEmbeddingPreset('balanced');
+/// if (preset) {
+///   console.log(`Model: ${preset.modelName}, Dims: ${preset.dimensions}`);
+///   // Model: BGEBaseENV15, Dims: 768
+/// }
+/// ```
+#[napi(js_name = "getEmbeddingPreset")]
+pub fn get_embedding_preset(name: String) -> Option<EmbeddingPreset> {
+    let preset = kreuzberg::embeddings::get_preset(&name)?;
+
+    let model_name = format!("{:?}", preset.model);
+
+    Some(EmbeddingPreset {
+        name: preset.name.to_string(),
+        chunk_size: preset.chunk_size as u32,
+        overlap: preset.overlap as u32,
+        model_name,
+        dimensions: preset.dimensions as u32,
+        description: preset.description.to_string(),
+    })
 }
 
 // #[cfg(all(

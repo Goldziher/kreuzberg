@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { extractBytesSync, extractFileSync } from "../../src/index.js";
-import type { ExtractionConfig } from "../../src/types.js";
+import { extractBytesSync, extractFileSync, ExtractionConfig } from "../../src/index.js";
+import type { ExtractionConfig as ExtractionConfigType } from "../../src/types.js";
 
 function getTestDocumentPath(relativePath: string): string {
 	const workspaceRoot = join(process.cwd(), "../..");
@@ -15,25 +15,25 @@ describe("Configuration Options", () => {
 
 	describe("Basic configuration", () => {
 		it("should handle useCache: true", () => {
-			const config: ExtractionConfig = { useCache: true };
+			const config: ExtractionConfigType = { useCache: true };
 			const result = extractFileSync(pdfPath, null, config);
 			expect(result.content).toBeTruthy();
 		});
 
 		it("should handle useCache: false", () => {
-			const config: ExtractionConfig = { useCache: false };
+			const config: ExtractionConfigType = { useCache: false };
 			const result = extractFileSync(pdfPath, null, config);
 			expect(result.content).toBeTruthy();
 		});
 
 		it("should handle enableQualityProcessing: true", () => {
-			const config: ExtractionConfig = { enableQualityProcessing: true };
+			const config: ExtractionConfigType = { enableQualityProcessing: true };
 			const result = extractFileSync(pdfPath, null, config);
 			expect(result.content).toBeTruthy();
 		});
 
 		it("should handle enableQualityProcessing: false", () => {
-			const config: ExtractionConfig = { enableQualityProcessing: false };
+			const config: ExtractionConfigType = { enableQualityProcessing: false };
 			const result = extractFileSync(pdfPath, null, config);
 			expect(result.content).toBeTruthy();
 		});
@@ -41,7 +41,7 @@ describe("Configuration Options", () => {
 
 	describe("OCR configuration", () => {
 		it("should handle OCR with tesseract backend", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				ocr: {
 					backend: "tesseract",
 					language: "eng",
@@ -52,7 +52,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle OCR with tesseract config options", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				ocr: {
 					backend: "tesseract",
 					language: "eng",
@@ -68,7 +68,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle forceOcr: true", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				forceOcr: true,
 				ocr: {
 					backend: "tesseract",
@@ -80,7 +80,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle forceOcr: false", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				forceOcr: false,
 			};
 			const result = extractFileSync(pdfPath, null, config);
@@ -90,7 +90,7 @@ describe("Configuration Options", () => {
 
 	describe("Chunking configuration", () => {
 		it("should handle chunking with maxChars", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				chunking: {
 					maxChars: 1000,
 					maxOverlap: 100,
@@ -101,7 +101,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle chunking with different settings", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				chunking: {
 					maxChars: 500,
 					maxOverlap: 50,
@@ -114,7 +114,7 @@ describe("Configuration Options", () => {
 
 	describe("PDF options", () => {
 		it("should handle PDF extractImages: true", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				pdfOptions: {
 					extractImages: true,
 					extractMetadata: true,
@@ -125,7 +125,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle PDF extractImages: false", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				pdfOptions: {
 					extractImages: false,
 					extractMetadata: true,
@@ -136,7 +136,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle PDF password configuration", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				pdfOptions: {
 					passwords: ["test123", "password"],
 					extractMetadata: true,
@@ -149,7 +149,7 @@ describe("Configuration Options", () => {
 
 	describe("Image configuration", () => {
 		it("should handle image extraction config", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				images: {
 					extractImages: true,
 					targetDpi: 300,
@@ -164,7 +164,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle custom DPI settings", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				images: {
 					targetDpi: 150,
 					minDpi: 100,
@@ -178,7 +178,7 @@ describe("Configuration Options", () => {
 
 	describe("Token reduction", () => {
 		it("should handle token reduction: off", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				tokenReduction: {
 					mode: "off",
 					preserveImportantWords: true,
@@ -189,7 +189,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle token reduction: aggressive", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				tokenReduction: {
 					mode: "aggressive",
 					preserveImportantWords: false,
@@ -202,7 +202,7 @@ describe("Configuration Options", () => {
 
 	describe("Language detection", () => {
 		it("should handle language detection enabled", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				languageDetection: {
 					enabled: true,
 					minConfidence: 0.8,
@@ -214,7 +214,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle language detection with multiple languages", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				languageDetection: {
 					enabled: true,
 					minConfidence: 0.7,
@@ -228,7 +228,7 @@ describe("Configuration Options", () => {
 
 	describe("Postprocessor configuration", () => {
 		it("should handle postprocessor enabled: true", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				postprocessor: {
 					enabled: true,
 				},
@@ -238,7 +238,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle postprocessor enabled: false", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				postprocessor: {
 					enabled: false,
 				},
@@ -248,7 +248,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle enabled processors list", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				postprocessor: {
 					enabled: true,
 					enabledProcessors: ["processor1", "processor2"],
@@ -259,7 +259,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle disabled processors list", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				postprocessor: {
 					enabled: true,
 					disabledProcessors: ["processor3", "processor4"],
@@ -272,7 +272,7 @@ describe("Configuration Options", () => {
 
 	describe("Max concurrent extractions", () => {
 		it("should handle maxConcurrentExtractions setting", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				maxConcurrentExtractions: 4,
 			};
 			const result = extractFileSync(pdfPath, null, config);
@@ -280,7 +280,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle maxConcurrentExtractions: 1", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				maxConcurrentExtractions: 1,
 			};
 			const result = extractFileSync(pdfPath, null, config);
@@ -290,7 +290,7 @@ describe("Configuration Options", () => {
 
 	describe("Combined configurations", () => {
 		it("should handle complex configuration with multiple options", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				useCache: false,
 				enableQualityProcessing: true,
 				ocr: {
@@ -317,7 +317,7 @@ describe("Configuration Options", () => {
 		});
 
 		it("should handle configuration with bytes extraction", () => {
-			const config: ExtractionConfig = {
+			const config: ExtractionConfigType = {
 				useCache: false,
 				enableQualityProcessing: true,
 				pdfOptions: {
@@ -327,6 +327,165 @@ describe("Configuration Options", () => {
 			};
 			const result = extractBytesSync(pdfBytes, "application/pdf", config);
 			expect(result.content).toBeTruthy();
+		});
+	});
+
+	describe("Config file loading", () => {
+		const fixturesDir = join(process.cwd(), "tests", "fixtures");
+
+		it("should load config from TOML file", () => {
+			const configPath = join(fixturesDir, "config.toml");
+			const config = ExtractionConfig.fromFile(configPath);
+
+			expect(config).toBeDefined();
+			expect(config.useCache).toBe(false);
+			expect(config.enableQualityProcessing).toBe(true);
+			expect(config.forceOcr).toBe(false);
+			expect(config.maxConcurrentExtractions).toBe(4);
+
+			expect(config.ocr).toBeDefined();
+			expect(config.ocr?.backend).toBe("tesseract");
+			expect(config.ocr?.language).toBe("eng");
+			expect(config.ocr?.tesseractConfig?.psm).toBe(6);
+			expect(config.ocr?.tesseractConfig?.enableTableDetection).toBe(true);
+			expect(config.ocr?.tesseractConfig?.tesseditCharWhitelist).toBe(
+				"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+			);
+
+			expect(config.chunking).toBeDefined();
+			expect(config.chunking?.maxChars).toBe(1000);
+			expect(config.chunking?.maxOverlap).toBe(200);
+
+			expect(config.images).toBeDefined();
+			expect(config.images?.extractImages).toBe(true);
+			expect(config.images?.targetDpi).toBe(300);
+			expect(config.images?.maxImageDimension).toBe(4096);
+			expect(config.images?.autoAdjustDpi).toBe(true);
+			expect(config.images?.minDpi).toBe(72);
+			expect(config.images?.maxDpi).toBe(600);
+
+			expect(config.pdfOptions).toBeDefined();
+			expect(config.pdfOptions?.extractImages).toBe(true);
+			expect(config.pdfOptions?.extractMetadata).toBe(true);
+			expect(config.pdfOptions?.passwords).toEqual(["password1", "password2"]);
+
+			expect(config.tokenReduction).toBeDefined();
+			expect(config.tokenReduction?.mode).toBe("moderate");
+			expect(config.tokenReduction?.preserveImportantWords).toBe(true);
+
+			expect(config.languageDetection).toBeDefined();
+			expect(config.languageDetection?.enabled).toBe(true);
+			expect(config.languageDetection?.minConfidence).toBe(0.85);
+			expect(config.languageDetection?.detectMultiple).toBe(false);
+
+			expect(config.postprocessor).toBeDefined();
+			expect(config.postprocessor?.enabled).toBe(true);
+			expect(config.postprocessor?.enabledProcessors).toEqual([
+				"processor1",
+				"processor2",
+			]);
+			expect(config.postprocessor?.disabledProcessors).toEqual(["processor3"]);
+		});
+
+		it("should load config from YAML file", () => {
+			const configPath = join(fixturesDir, "config.yaml");
+			const config = ExtractionConfig.fromFile(configPath);
+
+			expect(config).toBeDefined();
+			expect(config.useCache).toBe(true);
+			expect(config.enableQualityProcessing).toBe(false);
+			expect(config.forceOcr).toBe(true);
+			expect(config.maxConcurrentExtractions).toBe(8);
+
+			expect(config.ocr).toBeDefined();
+			expect(config.ocr?.backend).toBe("tesseract");
+			expect(config.ocr?.language).toBe("deu");
+			expect(config.ocr?.tesseractConfig?.psm).toBe(3);
+			expect(config.ocr?.tesseractConfig?.enableTableDetection).toBe(false);
+			expect(config.ocr?.tesseractConfig?.tesseditCharWhitelist).toBe(
+				"0123456789",
+			);
+
+			expect(config.chunking).toBeDefined();
+			expect(config.chunking?.maxChars).toBe(500);
+			expect(config.chunking?.maxOverlap).toBe(100);
+
+			expect(config.images).toBeDefined();
+			expect(config.images?.extractImages).toBe(false);
+			expect(config.images?.targetDpi).toBe(150);
+			expect(config.images?.maxImageDimension).toBe(2048);
+			expect(config.images?.autoAdjustDpi).toBe(false);
+			expect(config.images?.minDpi).toBe(100);
+			expect(config.images?.maxDpi).toBe(300);
+
+			expect(config.pdfOptions).toBeDefined();
+			expect(config.pdfOptions?.extractImages).toBe(false);
+			expect(config.pdfOptions?.extractMetadata).toBe(false);
+			expect(config.pdfOptions?.passwords).toEqual(["test123", "secret456"]);
+
+			expect(config.tokenReduction).toBeDefined();
+			expect(config.tokenReduction?.mode).toBe("aggressive");
+			expect(config.tokenReduction?.preserveImportantWords).toBe(false);
+
+			expect(config.languageDetection).toBeDefined();
+			expect(config.languageDetection?.enabled).toBe(false);
+			expect(config.languageDetection?.minConfidence).toBe(0.7);
+			expect(config.languageDetection?.detectMultiple).toBe(true);
+
+			expect(config.postprocessor).toBeDefined();
+			expect(config.postprocessor?.enabled).toBe(false);
+			expect(config.postprocessor?.enabledProcessors).toEqual([]);
+			expect(config.postprocessor?.disabledProcessors).toEqual([
+				"processor1",
+				"processor2",
+			]);
+		});
+
+		it("should use loaded config for extraction", () => {
+			const configPath = join(fixturesDir, "config.toml");
+			const config = ExtractionConfig.fromFile(configPath);
+
+			const result = extractFileSync(pdfPath, null, config);
+			expect(result.content).toBeTruthy();
+		});
+
+		it("should throw error for non-existent file", () => {
+			const configPath = join(fixturesDir, "nonexistent.toml");
+
+			expect(() => {
+				ExtractionConfig.fromFile(configPath);
+			}).toThrow();
+		});
+
+		it("should throw error for invalid TOML file", () => {
+			const configPath = join(fixturesDir, "invalid-config.toml");
+
+			expect(() => {
+				ExtractionConfig.fromFile(configPath);
+			}).toThrow(/Invalid TOML|TOML/i);
+		});
+
+		it("should support both relative and absolute paths", () => {
+			const absolutePath = join(fixturesDir, "config.toml");
+			const config1 = ExtractionConfig.fromFile(absolutePath);
+			expect(config1).toBeDefined();
+
+			const relativePath = "tests/fixtures/config.yaml";
+			const config2 = ExtractionConfig.fromFile(relativePath);
+			expect(config2).toBeDefined();
+		});
+
+		it("should auto-detect file format based on extension", () => {
+			const tomlPath = join(fixturesDir, "config.toml");
+			const yamlPath = join(fixturesDir, "config.yaml");
+
+			const tomlConfig = ExtractionConfig.fromFile(tomlPath);
+			const yamlConfig = ExtractionConfig.fromFile(yamlPath);
+
+			expect(tomlConfig).toBeDefined();
+			expect(yamlConfig).toBeDefined();
+			expect(tomlConfig.useCache).toBe(false);
+			expect(yamlConfig.useCache).toBe(true);
 		});
 	});
 });
