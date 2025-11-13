@@ -118,6 +118,10 @@ jobs:
         shell: bash
         run: mkdir -p target/wheels
 
+      - name: Clean Tesseract cache directory
+        shell: bash
+        run: rm -rf .tesseract-cache/${{ matrix.label }}
+
       - name: Prepare Tesseract cache directory
         shell: bash
         run: mkdir -p .tesseract-cache/${{ matrix.label }}
