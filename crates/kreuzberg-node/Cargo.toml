@@ -23,7 +23,7 @@ async-trait = "0.1"
 base64 = "0.22"
 
 [build-dependencies]
-napi-build = "2.3"
+napi-build = "2.2"
 
 [target.'cfg(all(any(windows, unix), target_arch = "x86_64", not(target_env = "musl")))'.dependencies]
 mimalloc-rust = "0.2"

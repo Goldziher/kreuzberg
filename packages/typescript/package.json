@@ -90,7 +90,7 @@
 		"@vitest/coverage-v8": "^4.0.8",
 		"archiver": "^7.0.1",
 		"oxlint": "^1.28.0",
-		"tsup": "^8.5.0",
+		"tsup": "^8.5.1",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.8"
 	},
