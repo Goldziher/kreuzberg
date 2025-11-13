@@ -130,15 +130,6 @@ jobs:
           mkdir -p .tesseract-home/${{ matrix.label }}
           mkdir -p .xdg-cache/${{ matrix.label }}
 
-      - name: Link default Tesseract cache path
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          dest="/io/.tesseract-cache/${{ matrix.label }}"
-          mkdir -p "$dest"
-          rm -rf /root/.tesseract-rs
-          ln -s "$dest" /root/.tesseract-rs
-
       - name: Install macOS Rust targets
         if: matrix.label == 'macos-universal'
         shell: bash
