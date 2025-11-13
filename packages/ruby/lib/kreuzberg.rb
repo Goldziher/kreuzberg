@@ -18,6 +18,9 @@ module Kreuzberg
   autoload :ValidatorProtocol, 'kreuzberg/validator_protocol'
   autoload :OcrBackendProtocol, 'kreuzberg/ocr_backend_protocol'
 
+  # Alias for API consistency with other language bindings
+  ExtractionConfig = Config::Extraction
+
   @__cache_tracker = { entries: 0, bytes: 0 }
 
   class << self
