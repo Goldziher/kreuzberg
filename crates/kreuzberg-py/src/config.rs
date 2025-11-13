@@ -242,6 +242,40 @@ impl ExtractionConfig {
             self.inner.force_ocr
         )
     }
+
+    /// Load configuration from a file, auto-detecting format by extension.
+    ///
+    /// Supported formats:
+    /// - `.toml` - TOML format
+    /// - `.yaml`, `.yml` - YAML format
+    /// - `.json` - JSON format
+    ///
+    /// Args:
+    ///     path: Path to the configuration file (str or Path)
+    ///
+    /// Returns:
+    ///     ExtractionConfig: Loaded configuration
+    ///
+    /// Raises:
+    ///     ValidationError: If file doesn't exist, extension is not supported,
+    ///                      or file content is invalid for the detected format
+    ///
+    /// Example:
+    ///     >>> from kreuzberg import ExtractionConfig
+    ///     >>> # Auto-detects TOML format
+    ///     >>> config = ExtractionConfig.from_file("kreuzberg.toml")
+    ///     >>> # Auto-detects YAML format
+    ///     >>> config = ExtractionConfig.from_file("kreuzberg.yaml")
+    ///     >>> # Works with pathlib.Path objects
+    ///     >>> from pathlib import Path
+    ///     >>> config = ExtractionConfig.from_file(Path("kreuzberg.toml"))
+    #[staticmethod]
+    fn from_file(path: &str) -> PyResult<Self> {
+        let config = kreuzberg::ExtractionConfig::from_file(path).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Failed to load config: {}", e))
+        })?;
+        Ok(Self { inner: config })
+    }
 }
 
 impl From<ExtractionConfig> for kreuzberg::ExtractionConfig {

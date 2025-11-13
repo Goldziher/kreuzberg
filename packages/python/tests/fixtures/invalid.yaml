@@ -1,0 +1,5 @@
+# Invalid YAML file - bad indentation
+use_cache: true
+  bad_indent: value
+ocr:
+backend: "tesseract"

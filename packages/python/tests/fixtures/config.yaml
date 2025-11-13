@@ -1,0 +1,25 @@
+# Test configuration file for YAML format
+use_cache: true
+enable_quality_processing: false
+force_ocr: false
+
+ocr:
+  backend: "easyocr"
+  language: "deu"
+
+chunking:
+  max_chars: 2000
+  max_overlap: 400
+
+images:
+  extract_images: false
+  target_dpi: 150
+
+language_detection:
+  enabled: true
+  min_confidence: 0.9
+  detect_multiple: true
+
+token_reduction:
+  mode: "moderate"
+  preserve_important_words: false

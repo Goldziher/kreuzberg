@@ -1,0 +1,29 @@
+# Test configuration file for TOML format
+use_cache = false
+enable_quality_processing = true
+force_ocr = true
+
+[ocr]
+backend = "tesseract"
+language = "eng"
+
+[chunking]
+max_chars = 1500
+max_overlap = 300
+
+[images]
+extract_images = true
+target_dpi = 300
+max_image_dimension = 4096
+auto_adjust_dpi = true
+min_dpi = 72
+max_dpi = 600
+
+[pdf_options]
+extract_images = true
+passwords = ["test123", "secret"]
+extract_metadata = true
+
+[token_reduction]
+mode = "aggressive"
+preserve_important_words = true
