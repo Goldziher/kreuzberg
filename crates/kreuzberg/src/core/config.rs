@@ -379,6 +379,58 @@ impl ExtractionConfig {
             .map_err(|e| KreuzbergError::validation(format!("Invalid JSON in {}: {}", path.as_ref().display(), e)))
     }
 
+    /// Load configuration from a file, auto-detecting format by extension.
+    ///
+    /// Supported formats:
+    /// - `.toml` - TOML format
+    /// - `.yaml`, `.yml` - YAML format
+    /// - `.json` - JSON format
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the configuration file
+    ///
+    /// # Errors
+    ///
+    /// Returns `KreuzbergError::Validation` if:
+    /// - File doesn't exist
+    /// - File extension is not supported
+    /// - File content is invalid for the detected format
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use kreuzberg::core::config::ExtractionConfig;
+    ///
+    /// // Auto-detects TOML format
+    /// // let config = ExtractionConfig::from_file("kreuzberg.toml")?;
+    ///
+    /// // Auto-detects YAML format
+    /// // let config = ExtractionConfig::from_file("kreuzberg.yaml")?;
+    /// ```
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref();
+        let extension = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .ok_or_else(|| {
+                KreuzbergError::validation(format!(
+                    "Cannot determine file format: no extension found in {}",
+                    path.display()
+                ))
+            })?;
+
+        match extension.to_lowercase().as_str() {
+            "toml" => Self::from_toml_file(path),
+            "yaml" | "yml" => Self::from_yaml_file(path),
+            "json" => Self::from_json_file(path),
+            _ => Err(KreuzbergError::validation(format!(
+                "Unsupported config file format: .{}. Supported formats: .toml, .yaml, .yml, .json",
+                extension
+            ))),
+        }
+    }
+
     /// Discover configuration file in parent directories.
     ///
     /// Searches for `kreuzberg.toml` in current directory and parent directories.
@@ -438,6 +490,70 @@ enable_quality_processing = true
         let config = ExtractionConfig::from_toml_file(&config_path).unwrap();
         assert!(!config.use_cache);
         assert!(config.enable_quality_processing);
+    }
+
+    #[test]
+    fn test_from_file_auto_detects_toml() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg.toml");
+
+        fs::write(
+            &config_path,
+            r#"
+use_cache = false
+enable_quality_processing = true
+        "#,
+        )
+        .unwrap();
+
+        let config = ExtractionConfig::from_file(&config_path).unwrap();
+        assert!(!config.use_cache);
+        assert!(config.enable_quality_processing);
+    }
+
+    #[test]
+    fn test_from_file_auto_detects_yaml() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg.yaml");
+
+        fs::write(
+            &config_path,
+            r#"
+use_cache: true
+enable_quality_processing: false
+        "#,
+        )
+        .unwrap();
+
+        let config = ExtractionConfig::from_file(&config_path).unwrap();
+        assert!(config.use_cache);
+        assert!(!config.enable_quality_processing);
+    }
+
+    #[test]
+    fn test_from_file_unsupported_extension() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg.txt");
+
+        fs::write(&config_path, "use_cache = false").unwrap();
+
+        let result = ExtractionConfig::from_file(&config_path);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Unsupported config file format"));
+    }
+
+    #[test]
+    fn test_from_file_no_extension() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("kreuzberg");
+
+        fs::write(&config_path, "use_cache = false").unwrap();
+
+        let result = ExtractionConfig::from_file(&config_path);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("no extension found"));
     }
 
     #[test]
