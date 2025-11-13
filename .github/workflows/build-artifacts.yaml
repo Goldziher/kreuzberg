@@ -120,6 +120,15 @@ jobs:
           mkdir -p .tesseract-home/${{ matrix.label }}
           mkdir -p .xdg-cache/${{ matrix.label }}
 
+      - name: Link default Tesseract cache path
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          dest="/io/.tesseract-cache/${{ matrix.label }}"
+          mkdir -p "$dest"
+          rm -rf /root/.tesseract-rs
+          ln -s "$dest" /root/.tesseract-rs
+
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
         uses: PyO3/maturin-action@v1
