@@ -43,5 +43,8 @@ module Kreuzberg
 
     # Raised when plugin operations fail
     class PluginError < Error; end
+
+    # Raised when an unsupported file format or MIME type is encountered
+    class UnsupportedFormatError < Error; end
   end
 end
