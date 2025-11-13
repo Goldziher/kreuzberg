@@ -77,7 +77,7 @@
 	],
 	"dependencies": {
 		"kreuzberg-node": "workspace:*",
-		"which": "^5.0.0"
+		"which": "^6.0.0"
 	},
 	"optionalDependencies": {
 		"@gutenye/ocr-node": "^1.4.8",
@@ -85,11 +85,11 @@
 	},
 	"devDependencies": {
 		"@types/archiver": "^7.0.0",
-		"@types/node": "^24.10.0",
+		"@types/node": "^24.10.1",
 		"@types/which": "^3.0.4",
 		"@vitest/coverage-v8": "^4.0.8",
 		"archiver": "^7.0.1",
-		"oxlint": "^1.26.0",
+		"oxlint": "^1.28.0",
 		"tsup": "^8.5.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.8"

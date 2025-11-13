@@ -137,6 +137,8 @@ jobs:
     needs: prepare
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
+    env:
+      TESSERACT_RS_CACHE_DIR: ${{ github.workspace }}/.tesseract-cache/${{ matrix.label }}
     strategy:
       fail-fast: false
       matrix:
@@ -148,6 +150,7 @@ jobs:
             manylinux: auto
             python: "3.10"
             needs_qemu: false
+            extra_args: ""
           - label: linux-aarch64
             os: ubuntu-latest
             artifact: python-wheels-linux-aarch64
@@ -155,17 +158,38 @@ jobs:
             manylinux: 2_28
             python: "3.10"
             needs_qemu: true
+            extra_args: ""
           - label: macos-universal
             os: macos-14
-            macos_archs: "x86_64 arm64"
             artifact: python-wheels-macos
             needs_qemu: false
+            python: "3.10"
+            rust_target: ""
+            manylinux: ""
+            extra_args: "--universal2"
           - label: windows-amd64
             os: windows-latest
-            windows_archs: AMD64
             artifact: python-wheels-windows
             needs_qemu: false
+            python: "3.10"
+            rust_target: x86_64-pc-windows-msvc
+            manylinux: ""
+            extra_args: ""
     steps:
+      - name: Maximize build disk space
+        if: matrix.os == 'ubuntu-latest'
+        uses: easimon/maximize-build-space@v10
+        with:
+          root-reserve-mb: 2048
+          temp-reserve-mb: 512
+          swap-size-mb: 4096
+          overprovision-lvm: 'true'
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+
       - name: Checkout
         uses: actions/checkout@v5
         with:
@@ -183,45 +207,83 @@ jobs:
         with:
           platforms: all
 
+      - name: Cache Pdfium binaries
+        if: matrix.os == 'ubuntu-latest' && matrix.needs_qemu
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download Pdfium runtime
+        if: matrix.os == 'ubuntu-latest' && matrix.needs_qemu
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Prepare wheel staging directory
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: mkdir -p target/wheels
+
+      - name: Prepare Tesseract cache directory
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: mkdir -p .tesseract-cache/${{ matrix.label }}
+
+      - name: Prepare Tesseract home directory
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          mkdir -p .tesseract-home/${{ matrix.label }}
+          mkdir -p .xdg-cache/${{ matrix.label }}
+
+      - name: Link default Tesseract cache path
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          dest="/io/.tesseract-cache/${{ matrix.label }}"
+          mkdir -p "$dest"
+          rm -rf /root/.tesseract-rs
+          ln -s "$dest" /root/.tesseract-rs
+
+      - name: Install macOS Rust targets
+        if: matrix.label == 'macos-universal'
+        shell: bash
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
         uses: PyO3/maturin-action@v1
+        env:
+          TESSERACT_RS_CACHE_DIR: /io/.tesseract-cache/${{ matrix.label }}
+          XDG_CACHE_HOME: /io/.xdg-cache/${{ matrix.label }}
+          HOME: /io/.tesseract-home/${{ matrix.label }}
         with:
           command: build
-          args: --release -i python${{ matrix.python }} --out target/wheels
+          args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
           target: ${{ matrix.rust_target }}
           manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
           sccache: true
 
-      - name: List Linux wheels
-        if: matrix.os == 'ubuntu-latest'
+      - name: Build wheels (native)
+        if: matrix.os != 'ubuntu-latest'
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
+          target: ${{ matrix.rust_target }}
+          working-directory: packages/python
+          sccache: true
+
+      - name: List built wheels
         shell: bash
-        run: ls -lh packages/python/target/wheels
+        run: ls -lh target/wheels
 
-      - name: Upload Linux wheels
-        if: matrix.os == 'ubuntu-latest'
+      - name: Upload wheel artifact
         uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact }}
-          path: packages/python/target/wheels/*.whl
-          retention-days: 14
-
-      - name: Build wheels
-        if: matrix.os != 'ubuntu-latest'
-        uses: ./.github/actions/build-wheels
-        with:
-          python-version: "3.13"
-          macos-archs: ${{ matrix.macos_archs || '' }}
-          windows-archs: ${{ matrix.windows_archs || '' }}
-          artifact-name: ${{ matrix.artifact }}
-
-      - name: Upload wheels
-        if: matrix.os != 'ubuntu-latest'
-        uses: actions/upload-artifact@v5
-        with:
-          name: ${{ matrix.artifact }}
-          path: wheelhouse/*.whl
+          path: target/wheels/*.whl
           retention-days: 14
 
   python-sdist:

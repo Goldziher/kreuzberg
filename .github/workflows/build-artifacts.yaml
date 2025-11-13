@@ -50,6 +50,7 @@ jobs:
             manylinux: auto
             python: "3.10"
             needs_qemu: false
+            extra_args: ""
           - label: linux-aarch64
             os: ubuntu-latest
             artifact: wheels-linux-aarch64
@@ -57,14 +58,23 @@ jobs:
             manylinux: 2_28
             python: "3.10"
             needs_qemu: true
+            extra_args: ""
           - label: macos-universal
             os: macos-14
-            macos-archs: "x86_64 arm64"
             artifact: wheels-macos
+            python: "3.10"
+            needs_qemu: false
+            rust_target: ""
+            manylinux: ""
+            extra_args: "--universal2"
           - label: windows-amd64
             os: windows-latest
-            windows-archs: AMD64
             artifact: wheels-windows
+            python: "3.10"
+            rust_target: x86_64-pc-windows-msvc
+            manylinux: ""
+            needs_qemu: false
+            extra_args: ""
     steps:
       - name: Maximize build disk space
         if: matrix.os == 'ubuntu-latest'
@@ -129,6 +139,11 @@ jobs:
           rm -rf /root/.tesseract-rs
           ln -s "$dest" /root/.tesseract-rs
 
+      - name: Install macOS Rust targets
+        if: matrix.label == 'macos-universal'
+        shell: bash
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
         uses: PyO3/maturin-action@v1
@@ -138,40 +153,31 @@ jobs:
           HOME: /io/.tesseract-home/${{ matrix.label }}
         with:
           command: build
-          args: --release -i python${{ matrix.python }} --out ../../target/wheels
+          args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
           target: ${{ matrix.rust_target }}
           manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
           sccache: true
 
-      - name: List Linux wheels
-        if: matrix.os == 'ubuntu-latest'
+      - name: Build wheels (native)
+        if: matrix.os != 'ubuntu-latest'
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
+          target: ${{ matrix.rust_target }}
+          working-directory: packages/python
+          sccache: true
+
+      - name: List built wheels
         shell: bash
         run: ls -lh target/wheels
 
-      - name: Upload Linux wheel artifact
-        if: matrix.os == 'ubuntu-latest'
+      - name: Upload wheel artifact
         uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact }}
           path: target/wheels/*.whl
-
-      - name: Build wheels
-        if: matrix.os != 'ubuntu-latest'
-        uses: ./.github/actions/build-wheels
-        with:
-          python-version: "3.13"
-          linux-archs: ${{ matrix.linux-archs || '' }}
-          macos-archs: ${{ matrix.macos-archs || '' }}
-          windows-archs: ${{ matrix.windows-archs || '' }}
-          artifact-name: ${{ matrix.artifact }}
-
-      - name: List built wheels
-        if: matrix.os != 'ubuntu-latest'
-        shell: bash
-        run: |
-          echo "📦 Built wheels:"
-          ls -lh ./wheelhouse/*.whl || echo "No wheels found"
 
   build-sdist:
     name: Build Python sdist
