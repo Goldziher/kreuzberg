@@ -142,3 +142,37 @@ class MissingDependencyError(KreuzbergError):
             "install_command": install_cmd,
         }
         return cls(message, context=context)
+
+
+class CacheError(KreuzbergError):
+    """Raised when cache operations fail.
+
+    This includes errors during cache reads, writes, or invalidations.
+
+    Example:
+        >>> raise CacheError("Failed to write cache", context={"path": "/tmp/cache", "operation": "write"})
+
+    """
+
+
+class ImageProcessingError(KreuzbergError):
+    """Raised when image manipulation fails.
+
+    This includes errors during image resizing, format conversion, or other
+    image processing operations.
+
+    Example:
+        >>> raise ImageProcessingError("Failed to resize image", context={"width": 1920, "height": 1080})
+
+    """
+
+
+class PluginError(KreuzbergError):
+    """Raised when plugin operations fail.
+
+    This includes errors during plugin initialization, registration, or execution.
+
+    Example:
+        >>> raise PluginError("Plugin initialization failed", context={"plugin_name": "pdf-extractor"})
+
+    """

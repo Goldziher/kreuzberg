@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Literal, Protocol, TypedDict, overload
 
 __all__ = [
+    "CacheError",
     "ChunkingConfig",
     "EmbeddingConfig",
     "EmbeddingModelType",
@@ -11,10 +12,12 @@ __all__ = [
     "ExtractionResult",
     "ImageExtractionConfig",
     "ImagePreprocessingConfig",
+    "ImageProcessingError",
     "LanguageDetectionConfig",
     "OcrBackendProtocol",
     "OcrConfig",
     "PdfConfig",
+    "PluginError",
     "PostProcessorConfig",
     "PostProcessorProtocol",
     "TesseractConfig",

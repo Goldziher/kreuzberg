@@ -23,6 +23,24 @@ pyo3::create_exception!(
     PyException,
     "Raised when an optional dependency is missing (tesseract, pandoc, etc.)."
 );
+pyo3::create_exception!(
+    kreuzberg,
+    CacheError,
+    PyException,
+    "Raised when cache operations fail (reads, writes, invalidations)."
+);
+pyo3::create_exception!(
+    kreuzberg,
+    ImageProcessingError,
+    PyException,
+    "Raised when image manipulation fails (resize, format conversion, etc.)."
+);
+pyo3::create_exception!(
+    kreuzberg,
+    PluginError,
+    PyException,
+    "Raised when plugin operations fail (initialization, registration, execution)."
+);
 
 /// Format an error message with its source chain.
 ///
@@ -55,6 +73,9 @@ fn exception_from_module(name: &str, message: String) -> PyErr {
             "ParsingError" => PyErr::from_type(py.get_type::<ParsingError>(), (message,)),
             "OCRError" => PyErr::from_type(py.get_type::<OCRError>(), (message,)),
             "MissingDependencyError" => PyErr::from_type(py.get_type::<MissingDependencyError>(), (message,)),
+            "CacheError" => PyErr::from_type(py.get_type::<CacheError>(), (message,)),
+            "ImageProcessingError" => PyErr::from_type(py.get_type::<ImageProcessingError>(), (message,)),
+            "PluginError" => PyErr::from_type(py.get_type::<PluginError>(), (message,)),
             _ => PyRuntimeError::new_err(message),
         }
     })
@@ -68,10 +89,10 @@ fn exception_from_module(name: &str, message: String) -> PyErr {
 /// - `Parsing` → `ParsingError` (custom exception)
 /// - `Io` → `OSError` (system error - must bubble up!)
 /// - `Ocr` → `OCRError` (custom exception)
-/// - `Plugin` → `RuntimeError` (runtime error - must bubble up!)
+/// - `Plugin` → `PluginError` (custom exception)
 /// - `LockPoisoned` → `RuntimeError` (runtime error - must bubble up!)
-/// - `Cache` → `RuntimeError` (treated as system error)
-/// - `ImageProcessing` → `ParsingError` (document processing failure)
+/// - `Cache` → `CacheError` (custom exception)
+/// - `ImageProcessing` → `ImageProcessingError` (custom exception)
 /// - `Serialization` → `ParsingError` (document processing failure)
 /// - `MissingDependency` → `MissingDependencyError` (custom exception)
 /// - `Other` → `RuntimeError` (runtime error - must bubble up!)
@@ -98,16 +119,16 @@ pub fn to_py_err(error: kreuzberg::KreuzbergError) -> PyErr {
         KreuzbergError::Ocr { message, source } => {
             exception_from_module("OCRError", format_error_with_source(message, source))
         }
-        // RuntimeError must bubble up - system errors need user reports ~keep
         KreuzbergError::Plugin { message, plugin_name } => {
-            PyRuntimeError::new_err(format!("Plugin error in '{}': {}", plugin_name, message))
+            exception_from_module("PluginError", format!("Plugin error in '{}': {}", plugin_name, message))
         }
         // RuntimeError must bubble up - lock poisoning is a system error ~keep
         KreuzbergError::LockPoisoned(msg) => PyRuntimeError::new_err(format!("Lock poisoned: {}", msg)),
-        // Cache errors are treated as system errors ~keep
-        KreuzbergError::Cache { message, source } => PyRuntimeError::new_err(format_error_with_source(message, source)),
+        KreuzbergError::Cache { message, source } => {
+            exception_from_module("CacheError", format_error_with_source(message, source))
+        }
         KreuzbergError::ImageProcessing { message, source } => {
-            ParsingError::new_err(format_error_with_source(message, source))
+            exception_from_module("ImageProcessingError", format_error_with_source(message, source))
         }
         KreuzbergError::Serialization { message, source } => {
             exception_from_module("ParsingError", format_error_with_source(message, source))
@@ -227,7 +248,7 @@ mod tests {
             let err_msg = format!("{}", py_err);
             assert!(err_msg.contains("Plugin error in 'pdf-extractor'"));
             assert!(err_msg.contains("Extraction failed"));
-            assert!(err_msg.contains("RuntimeError"));
+            assert!(err_msg.contains("PluginError"));
         });
     }
 
@@ -244,7 +265,7 @@ mod tests {
             let err_msg = format!("{}", py_err);
             assert!(err_msg.contains("Cache write failed"));
             assert!(err_msg.contains("permission denied"));
-            assert!(err_msg.contains("RuntimeError"));
+            assert!(err_msg.contains("CacheError"));
         });
     }
 
@@ -261,7 +282,7 @@ mod tests {
             let err_msg = format!("{}", py_err);
             assert!(err_msg.contains("Image processing failed"));
             assert!(err_msg.contains("resize failed"));
-            assert!(err_msg.contains("ParsingError"));
+            assert!(err_msg.contains("ImageProcessingError"));
         });
     }
 

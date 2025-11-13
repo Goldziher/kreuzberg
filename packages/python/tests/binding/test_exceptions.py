@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 
 from kreuzberg.exceptions import (
+    CacheError,
+    ImageProcessingError,
     KreuzbergError,
     MissingDependencyError,
     OCRError,
     ParsingError,
+    PluginError,
     ValidationError,
 )
 
@@ -155,6 +158,70 @@ def test_error_context_json_serializable() -> None:
 
 def test_error_inheritance() -> None:
     errors = [ParsingError("test"), ValidationError("test"), MissingDependencyError("test"), OCRError("test")]
+
+    for error in errors:
+        assert isinstance(error, KreuzbergError)
+        assert isinstance(error, Exception)
+
+
+def test_cache_error() -> None:
+    error = CacheError("Cache write failed", context={"operation": "write", "path": "/tmp/cache"})
+    assert isinstance(error, KreuzbergError)
+    assert "CacheError" in str(error)
+    assert "Cache write failed" in str(error)
+
+
+def test_image_processing_error() -> None:
+    error = ImageProcessingError("Image resize failed", context={"width": 1920, "height": 1080})
+    assert isinstance(error, KreuzbergError)
+    assert "ImageProcessingError" in str(error)
+    assert "Image resize failed" in str(error)
+
+
+def test_plugin_error() -> None:
+    error = PluginError("Plugin initialization failed", context={"plugin_name": "pdf-extractor"})
+    assert isinstance(error, KreuzbergError)
+    assert "PluginError" in str(error)
+    assert "Plugin initialization failed" in str(error)
+
+
+def test_new_errors_importable_from_root() -> None:
+    from kreuzberg import CacheError as CacheErrorImport
+    from kreuzberg import ImageProcessingError as ImageProcessingErrorImport
+    from kreuzberg import PluginError as PluginErrorImport
+
+    assert CacheErrorImport is CacheError
+    assert ImageProcessingErrorImport is ImageProcessingError
+    assert PluginErrorImport is PluginError
+
+
+def test_new_errors_can_be_raised() -> None:
+    try:
+        raise CacheError("test cache error")
+    except CacheError as e:
+        assert str(e) == "CacheError: test cache error"
+
+    try:
+        raise ImageProcessingError("test image error")
+    except ImageProcessingError as e:
+        assert str(e) == "ImageProcessingError: test image error"
+
+    try:
+        raise PluginError("test plugin error")
+    except PluginError as e:
+        assert str(e) == "PluginError: test plugin error"
+
+
+def test_all_error_inheritance() -> None:
+    errors = [
+        ParsingError("test"),
+        ValidationError("test"),
+        MissingDependencyError("test"),
+        OCRError("test"),
+        CacheError("test"),
+        ImageProcessingError("test"),
+        PluginError("test"),
+    ]
 
     for error in errors:
         assert isinstance(error, KreuzbergError)

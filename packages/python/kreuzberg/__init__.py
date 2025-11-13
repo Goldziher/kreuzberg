@@ -87,10 +87,13 @@ from kreuzberg._internal_bindings import (
     extract_file_sync as extract_file_sync_impl,
 )
 from kreuzberg.exceptions import (
+    CacheError,
+    ImageProcessingError,
     KreuzbergError,
     MissingDependencyError,
     OCRError,
     ParsingError,
+    PluginError,
     ValidationError,
 )
 from kreuzberg.postprocessors.protocol import PostProcessorProtocol
@@ -106,12 +109,14 @@ __version__ = version("kreuzberg")
 
 
 __all__ = [
+    "CacheError",
     "ChunkingConfig",
     "ExtractedTable",
     "ExtractionConfig",
     "ExtractionResult",
     "ImageExtractionConfig",
     "ImagePreprocessingConfig",
+    "ImageProcessingError",
     "KreuzbergError",
     "LanguageDetectionConfig",
     "Metadata",
@@ -120,6 +125,7 @@ __all__ = [
     "OcrConfig",
     "ParsingError",
     "PdfConfig",
+    "PluginError",
     "PostProcessorConfig",
     "PostProcessorProtocol",
     "TesseractConfig",
