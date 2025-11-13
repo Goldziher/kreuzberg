@@ -254,6 +254,10 @@ jobs:
           manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
           sccache: true
+          docker-options: >-
+            --env TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ matrix.label }}
+            --env XDG_CACHE_HOME=/io/.xdg-cache/${{ matrix.label }}
+            --env HOME=/io/.tesseract-home/${{ matrix.label }}
           container-env: |
             TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ matrix.label }}
             XDG_CACHE_HOME=/io/.xdg-cache/${{ matrix.label }}

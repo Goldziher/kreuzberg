@@ -148,10 +148,10 @@ jobs:
           manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
           sccache: true
-          container-env: |
-            TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ matrix.label }}
-            XDG_CACHE_HOME=/io/.xdg-cache/${{ matrix.label }}
-            HOME=/io/.tesseract-home/${{ matrix.label }}
+          docker-options: >-
+            --env TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ matrix.label }}
+            --env XDG_CACHE_HOME=/io/.xdg-cache/${{ matrix.label }}
+            --env HOME=/io/.tesseract-home/${{ matrix.label }}
 
       - name: Build wheels (native)
         if: matrix.os != 'ubuntu-latest'
