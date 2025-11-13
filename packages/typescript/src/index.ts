@@ -47,7 +47,7 @@
 
 import type {
 	ChunkingConfig,
-	ExtractionConfig,
+	ExtractionConfig as ExtractionConfigType,
 	ExtractionResult,
 	ImageExtractionConfig,
 	LanguageDetectionConfig,
@@ -64,6 +64,16 @@ import type {
 
 export { GutenOcrBackend } from "./ocr/guten-ocr.js";
 export * from "./types.js";
+export {
+	KreuzbergError,
+	ValidationError,
+	ParsingError,
+	OcrError,
+	CacheError,
+	ImageProcessingError,
+	PluginError,
+	MissingDependencyError,
+} from "./errors.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
 let binding: any = null;
@@ -299,7 +309,7 @@ function normalizePostProcessorConfig(postprocessor?: PostProcessorConfig): Nati
 	return normalized;
 }
 
-function normalizeExtractionConfig(config: ExtractionConfig | null): NativeExtractionConfig | null {
+function normalizeExtractionConfig(config: ExtractionConfigType | null): NativeExtractionConfig | null {
 	if (!config) {
 		return null;
 	}
@@ -384,7 +394,7 @@ function normalizeExtractionConfig(config: ExtractionConfig | null): NativeExtra
 export function extractFileSync(
 	filePath: string,
 	mimeType: string | null = null,
-	config: ExtractionConfig | null = null,
+	config: ExtractionConfigType | null = null,
 ): ExtractionResult {
 	const normalizedConfig = normalizeExtractionConfig(config);
 	const rawResult = getBinding().extractFileSync(filePath, mimeType, normalizedConfig);
@@ -424,7 +434,7 @@ export function extractFileSync(
 export async function extractFile(
 	filePath: string,
 	mimeType: string | null = null,
-	config: ExtractionConfig | null = null,
+	config: ExtractionConfigType | null = null,
 ): Promise<ExtractionResult> {
 	const normalizedConfig = normalizeExtractionConfig(config);
 	const rawResult = await getBinding().extractFile(filePath, mimeType, normalizedConfig);
@@ -455,7 +465,7 @@ export async function extractFile(
 export function extractBytesSync(
 	data: Uint8Array,
 	mimeType: string,
-	config: ExtractionConfig | null = null,
+	config: ExtractionConfigType | null = null,
 ): ExtractionResult {
 	const validated = assertUint8Array(data, "data");
 	const normalizedConfig = normalizeExtractionConfig(config);
@@ -487,7 +497,7 @@ export function extractBytesSync(
 export async function extractBytes(
 	data: Uint8Array,
 	mimeType: string,
-	config: ExtractionConfig | null = null,
+	config: ExtractionConfigType | null = null,
 ): Promise<ExtractionResult> {
 	const validated = assertUint8Array(data, "data");
 	if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
@@ -526,7 +536,7 @@ export async function extractBytes(
  * });
  * ```
  */
-export function batchExtractFilesSync(paths: string[], config: ExtractionConfig | null = null): ExtractionResult[] {
+export function batchExtractFilesSync(paths: string[], config: ExtractionConfigType | null = null): ExtractionResult[] {
 	const normalizedConfig = normalizeExtractionConfig(config);
 	const rawResults = getBinding().batchExtractFilesSync(paths, normalizedConfig);
 	return rawResults.map(convertResult);
@@ -564,7 +574,7 @@ export function batchExtractFilesSync(paths: string[], config: ExtractionConfig 
  */
 export async function batchExtractFiles(
 	paths: string[],
-	config: ExtractionConfig | null = null,
+	config: ExtractionConfigType | null = null,
 ): Promise<ExtractionResult[]> {
 	const normalizedConfig = normalizeExtractionConfig(config);
 	const rawResults = await getBinding().batchExtractFiles(paths, normalizedConfig);
@@ -605,7 +615,7 @@ export async function batchExtractFiles(
 export function batchExtractBytesSync(
 	dataList: Uint8Array[],
 	mimeTypes: string[],
-	config: ExtractionConfig | null = null,
+	config: ExtractionConfigType | null = null,
 ): ExtractionResult[] {
 	const buffers = assertUint8ArrayList(dataList, "dataList").map((data) => Buffer.from(data));
 
@@ -656,7 +666,7 @@ export function batchExtractBytesSync(
 export async function batchExtractBytes(
 	dataList: Uint8Array[],
 	mimeTypes: string[],
-	config: ExtractionConfig | null = null,
+	config: ExtractionConfigType | null = null,
 ): Promise<ExtractionResult[]> {
 	const buffers = assertUint8ArrayList(dataList, "dataList").map((data) => Buffer.from(data));
 
@@ -1091,6 +1101,192 @@ export function registerOcrBackend(backend: OcrBackendProtocol): void {
 	};
 
 	binding.registerOcrBackend(wrappedBackend);
+}
+
+/**
+ * ExtractionConfig namespace with static methods for loading configuration from files.
+ *
+ * Provides a factory method to load extraction configuration from TOML, YAML, or JSON files.
+ * The file format is automatically detected based on the file extension.
+ *
+ * @example
+ * ```typescript
+ * import { ExtractionConfig, extractFile } from '@goldziher/kreuzberg';
+ *
+ * // Load configuration from file
+ * const config = ExtractionConfig.fromFile('config.toml');
+ *
+ * // Use with extraction
+ * const result = await extractFile('document.pdf', null, config);
+ * ```
+ */
+export const ExtractionConfig = {
+	/**
+	 * Load extraction configuration from a file.
+	 *
+	 * Automatically detects the file format based on extension:
+	 * - `.toml` - TOML format
+	 * - `.yaml` or `.yml` - YAML format
+	 * - `.json` - JSON format
+	 *
+	 * @param filePath - Path to the configuration file (absolute or relative)
+	 * @returns ExtractionConfig object loaded from the file
+	 *
+	 * @throws {Error} If file does not exist or is not accessible
+	 * @throws {Error} If file content is not valid TOML/YAML/JSON
+	 * @throws {Error} If configuration structure is invalid
+	 * @throws {Error} If file extension is not supported
+	 *
+	 * @example
+	 * ```typescript
+	 * import { ExtractionConfig } from '@goldziher/kreuzberg';
+	 *
+	 * // Load from TOML file
+	 * const config1 = ExtractionConfig.fromFile('kreuzberg.toml');
+	 *
+	 * // Load from YAML file
+	 * const config2 = ExtractionConfig.fromFile('./config.yaml');
+	 *
+	 * // Load from JSON file
+	 * const config3 = ExtractionConfig.fromFile('./config.json');
+	 * ```
+	 */
+	fromFile(filePath: string): ExtractionConfigType {
+		const binding = getBinding();
+		return binding.loadExtractionConfigFromFile(filePath);
+	},
+};
+
+/**
+ * Detect MIME type from a file path.
+ *
+ * Uses file extension to determine MIME type. Falls back to content-based
+ * detection if extension-based detection fails.
+ *
+ * @param path - Path to the file (string)
+ * @param checkExists - Whether to verify file existence (defaults to true)
+ * @returns The detected MIME type string
+ *
+ * @throws {Error} If file doesn't exist (when checkExists is true)
+ * @throws {Error} If MIME type cannot be determined
+ * @throws {Error} If extension is unknown
+ *
+ * @example
+ * ```typescript
+ * import { detectMimeType } from '@goldziher/kreuzberg';
+ *
+ * // Detect from existing file
+ * const mimeType = detectMimeType('document.pdf');
+ * console.log(mimeType); // 'application/pdf'
+ *
+ * // Detect without checking file existence
+ * const mimeType2 = detectMimeType('document.docx', false);
+ * console.log(mimeType2); // 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+ * ```
+ */
+export function detectMimeType(path: string, checkExists = true): string {
+	const binding = getBinding();
+	return binding.detectMimeType(path, checkExists);
+}
+
+/**
+ * Validate that a MIME type is supported by Kreuzberg.
+ *
+ * Checks if a MIME type is in the list of supported formats. Note that any
+ * `image/*` MIME type is automatically considered valid.
+ *
+ * @param mimeType - The MIME type to validate (string)
+ * @returns The validated MIME type (may be normalized)
+ *
+ * @throws {Error} If the MIME type is not supported
+ *
+ * @example
+ * ```typescript
+ * import { validateMimeType } from '@goldziher/kreuzberg';
+ *
+ * // Validate supported type
+ * const validated = validateMimeType('application/pdf');
+ * console.log(validated); // 'application/pdf'
+ *
+ * // Validate custom image type
+ * const validated2 = validateMimeType('image/custom-format');
+ * console.log(validated2); // 'image/custom-format' (any image/* is valid)
+ *
+ * // Validate unsupported type (throws error)
+ * try {
+ *   validateMimeType('video/mp4');
+ * } catch (err) {
+ *   console.error(err); // Error: Unsupported format: video/mp4
+ * }
+ * ```
+ */
+export function validateMimeType(mimeType: string): string {
+	const binding = getBinding();
+	return binding.validateMimeType(mimeType);
+}
+
+/**
+ * Embedding preset configuration.
+ *
+ * Contains all settings for a specific embedding model preset.
+ */
+export interface EmbeddingPreset {
+	/** Name of the preset (e.g., "fast", "balanced", "quality", "multilingual") */
+	name: string;
+	/** Recommended chunk size in characters */
+	chunkSize: number;
+	/** Recommended overlap in characters */
+	overlap: number;
+	/** Model identifier (e.g., "AllMiniLML6V2Q", "BGEBaseENV15") */
+	modelName: string;
+	/** Embedding vector dimensions */
+	dimensions: number;
+	/** Human-readable description of the preset */
+	description: string;
+}
+
+/**
+ * List all available embedding preset names.
+ *
+ * Returns an array of preset names that can be used with `getEmbeddingPreset`.
+ *
+ * @returns Array of 4 preset names: ["fast", "balanced", "quality", "multilingual"]
+ *
+ * @example
+ * ```typescript
+ * import { listEmbeddingPresets } from '@goldziher/kreuzberg';
+ *
+ * const presets = listEmbeddingPresets();
+ * console.log(presets); // ['fast', 'balanced', 'quality', 'multilingual']
+ * ```
+ */
+export function listEmbeddingPresets(): string[] {
+	const binding = getBinding();
+	return binding.listEmbeddingPresets();
+}
+
+/**
+ * Get a specific embedding preset by name.
+ *
+ * Returns a preset configuration object, or null if the preset name is not found.
+ *
+ * @param name - The preset name (case-sensitive)
+ * @returns An `EmbeddingPreset` object or `null` if not found
+ *
+ * @example
+ * ```typescript
+ * import { getEmbeddingPreset } from '@goldziher/kreuzberg';
+ *
+ * const preset = getEmbeddingPreset('balanced');
+ * if (preset) {
+ *   console.log(`Model: ${preset.modelName}, Dims: ${preset.dimensions}`);
+ *   // Model: BGEBaseENV15, Dims: 768
+ * }
+ * ```
+ */
+export function getEmbeddingPreset(name: string): EmbeddingPreset | null {
+	const binding = getBinding();
+	return binding.getEmbeddingPreset(name);
 }
 
 export const __version__ = "4.0.0-rc.1";
