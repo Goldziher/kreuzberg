@@ -1,0 +1,72 @@
+# Internal modules - not part of public API
+
+module Kreuzberg
+  module SetupLibPath
+    def self.configure: () -> void
+
+    private
+
+    def self.shared_lib_ext: () -> String
+    def self.arch: () -> String
+    def self.in_gem?: () -> bool
+    def self.vendored_lib_path: () -> String?
+    def self.system_libtesseract_version: () -> String?
+    def self.configure_lib_path: (String vendored_path) -> void
+  end
+
+  module CLI
+    def self.parse_config: (String? path) -> Hash[Symbol, untyped]
+    def self.load_dotenv: () -> void
+    def self.run_extract: (String path, ?config: Hash[Symbol, untyped]?) -> void
+    def self.run_batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?) -> void
+  end
+
+  module CLIProxy
+    class Error < Kreuzberg::Errors::Error
+    end
+
+    class MissingBinaryError < Error
+    end
+
+    class CLIExecutionError < Error
+      attr_reader exit_status: Integer
+
+      def initialize: (String message, Integer exit_status) -> void
+    end
+
+    def self.ensure_cli!: () -> String
+    def self.extract_file: (String path, ?mime_type: String?, ?config: Hash[Symbol, untyped]?) -> Kreuzberg::Result
+    def self.batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?) -> Array[Kreuzberg::Result]
+  end
+
+  module APIProxy
+    class Error < Kreuzberg::Errors::Error
+    end
+
+    class MissingBinaryError < Error
+    end
+
+    class ServerError < Error
+    end
+
+    class Server
+      attr_reader port: Integer
+      attr_reader process: Process::Status?
+
+      def initialize: (Integer port) -> void
+      def start: () -> void
+      def stop: () -> void
+      def running?: () -> bool
+      def health_check: () -> bool
+    end
+
+    def self.start_server: (?port: Integer?) -> Server
+    def self.extract_file: (String path, ?mime_type: String?, ?config: Hash[Symbol, untyped]?, ?server: Server?) -> Kreuzberg::Result
+    def self.batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?, ?server: Server?) -> Array[Kreuzberg::Result]
+  end
+
+  module MCPProxy
+    def self.extract_file: (String path, ?mime_type: String?, ?config: Hash[Symbol, untyped]?) -> Kreuzberg::Result
+    def self.batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?) -> Array[Kreuzberg::Result]
+  end
+end

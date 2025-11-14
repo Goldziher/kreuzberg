@@ -7,8 +7,24 @@ target :lib do
 
   check "lib"
 
-  # Core library - no inference needed
-  # library "pathname"
+  # Core library
+  library "pathname"
+  library "json"
+
+  # Ignore complex internal modules with many private helpers
+  # These are not part of the public API
+  ignore "lib/kreuzberg/setup_lib_path.rb"
+  ignore "lib/kreuzberg/cli_proxy.rb"
+  ignore "lib/kreuzberg/api_proxy.rb"
+  ignore "lib/kreuzberg/mcp_proxy.rb"
+  ignore "lib/kreuzberg/cli.rb"
+  ignore "lib/kreuzberg/cache_api.rb"
+  ignore "lib/kreuzberg/extraction_api.rb"
+  ignore "lib/kreuzberg/config.rb"
+
+  # Ignore result.rb due to steep limitation with Struct.new definitions
+  # The public API is properly typed in sig/kreuzberg.rbs
+  ignore "lib/kreuzberg/result.rb"
 
   # Ignore Rust extension methods (defined in native code)
   ignore "ext"

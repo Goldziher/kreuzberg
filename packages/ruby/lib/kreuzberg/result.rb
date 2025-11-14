@@ -32,7 +32,7 @@ module Kreuzberg
     #
     Table = Struct.new(:cells, :markdown, :page_number, keyword_init: true) do
       def to_h
-        { cells: cells, markdown: markdown, page_number: page_number }
+        { cells: self.cells, markdown: self.markdown, page_number: self.page_number }
       end
     end
 
@@ -49,7 +49,7 @@ module Kreuzberg
     #
     Chunk = Struct.new(:content, :char_start, :char_end, :token_count, keyword_init: true) do
       def to_h
-        { content: content, char_start: char_start, char_end: char_end, token_count: token_count }
+        { content: self.content, char_start: self.char_start, char_end: self.char_end, token_count: self.token_count }
       end
     end
 

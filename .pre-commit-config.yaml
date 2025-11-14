@@ -55,6 +55,13 @@ repos:
         files: ^packages/ruby/
   - repo: local
     hooks:
+      - id: steep
+        name: steep
+        entry: bash -c 'cd packages/ruby && bundle exec steep check'
+        require_serial: true
+        language: system
+        files: ^packages/ruby/(lib|sig)/.*\.(rb|rbs)$
+        pass_filenames: false
       - id: mypy
         name: mypy
         entry: uv run mypy

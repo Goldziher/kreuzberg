@@ -3,6 +3,30 @@
 module Kreuzberg
   VERSION: String
 
+  # Config namespace (defined in lib/kreuzberg/config.rb - not type checked)
+  module Config
+    class Extraction
+      def self.from_file: (String path) -> Extraction
+      def initialize: (
+        ?use_cache: bool,
+        ?enable_quality_processing: bool,
+        ?force_ocr: bool,
+        ?ocr: untyped,
+        ?chunking: untyped,
+        ?language_detection: untyped,
+        ?pdf_options: untyped,
+        ?image_extraction: untyped,
+        ?image_preprocessing: untyped,
+        ?postprocessor: untyped,
+        ?token_reduction: untyped
+      ) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+  end
+
+  # Alias for Config::Extraction (for API consistency with other language bindings)
+  ExtractionConfig: singleton(Config::Extraction)
+
   # Extraction result type
   type extraction_result_hash = {
     content: String,
@@ -150,22 +174,55 @@ module Kreuzberg
   end
 
   module Errors
-    class KreuzbergError < StandardError
+    class Error < StandardError
     end
 
-    class ValidationError < KreuzbergError
+    class ValidationError < Error
     end
 
-    class ParsingError < KreuzbergError
+    class ParsingError < Error
+      def initialize: (String message, ?context: Hash[untyped, untyped]?) -> void
     end
 
-    class OCRError < KreuzbergError
+    class OCRError < Error
+      def initialize: (String message, ?context: Hash[untyped, untyped]?) -> void
     end
 
-    class MissingDependencyError < KreuzbergError
+    class MissingDependencyError < Error
       attr_reader dependency: String?
 
       def initialize: (String message, ?dependency: String?) -> void
     end
+
+    class IOError < Error
+    end
+
+    class PluginError < Error
+    end
+
+    class UnsupportedFormatError < Error
+    end
+  end
+
+  # Internal modules (prepended to Kreuzberg singleton)
+  # These are not checked by steep - see Steepfile
+  module CacheAPI : Object
+  end
+
+  module ExtractionAPI : Object
+  end
+
+  module PostProcessorProtocol
+    def call: (extraction_result_hash result) -> extraction_result_hash
+  end
+
+  module ValidatorProtocol
+    def call: (extraction_result_hash result) -> void
+  end
+
+  module OcrBackendProtocol
+    def name: () -> String
+    def extract_text: (String file_path_or_bytes, Hash[Symbol, untyped] config) -> String
+    def process_image: (String file_path_or_bytes, Hash[Symbol, untyped] config) -> String
   end
 end
