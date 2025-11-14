@@ -102,37 +102,9 @@ jobs:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Stage Pdfium runtime artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
-            echo "KREUZBERG_PDFIUM_PREBUILT is not set" >&2
-            exit 1
-          fi
-          mkdir -p crates/kreuzberg-node packages/python/kreuzberg
-          case "${RUNNER_OS:-unknown}" in
-            Windows)
-              bin_dir="$KREUZBERG_PDFIUM_PREBUILT/bin"
-              lib_dir="$KREUZBERG_PDFIUM_PREBUILT/lib"
-              cp -f "$bin_dir/pdfium.dll" "crates/kreuzberg-node/pdfium.dll"
-              if [ -f "$lib_dir/pdfium.dll.lib" ]; then
-                cp -f "$lib_dir/pdfium.dll.lib" "$lib_dir/pdfium.lib"
-              fi
-              echo "$GITHUB_WORKSPACE/crates/kreuzberg-node" >> "$GITHUB_PATH"
-              ;;
-            macOS)
-              lib_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.dylib"
-              cp -f "$lib_path" "crates/kreuzberg-node/libpdfium.dylib"
-              ;;
-            Linux)
-              lib_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.so"
-              cp -f "$lib_path" "crates/kreuzberg-node/libpdfium.so"
-              ;;
-            *)
-              echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
-              exit 1
-              ;;
-          esac
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: crates/kreuzberg-node
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
@@ -359,37 +331,12 @@ jobs:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Stage Pdfium runtime artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
-            echo "KREUZBERG_PDFIUM_PREBUILT is not set" >&2
-            exit 1
-          fi
-          case "${RUNNER_OS:-unknown}" in
-            Windows)
-              src="$KREUZBERG_PDFIUM_PREBUILT/bin/pdfium.dll"
-              cp -f "$src" "packages/ruby/ext/kreuzberg_rb/native/pdfium.dll"
-              cp -f "$src" "packages/ruby/pdfium.dll"
-              cp -f "$src" "packages/ruby/lib/pdfium.dll"
-              ;;
-            macOS)
-              src="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.dylib"
-              cp -f "$src" "packages/ruby/ext/kreuzberg_rb/native/libpdfium.dylib"
-              cp -f "$src" "packages/ruby/libpdfium.dylib"
-              cp -f "$src" "packages/ruby/lib/libpdfium.dylib"
-              ;;
-            Linux)
-              src="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.so"
-              cp -f "$src" "packages/ruby/ext/kreuzberg_rb/native/libpdfium.so"
-              cp -f "$src" "packages/ruby/libpdfium.so"
-              cp -f "$src" "packages/ruby/lib/libpdfium.so"
-              ;;
-            *)
-              echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
-              exit 1
-              ;;
-          esac
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: packages/ruby/ext/kreuzberg_rb/native
+          additional-destinations: |
+            packages/ruby
+            packages/ruby/lib
 
       - name: Install Ruby dependencies
         working-directory: packages/ruby

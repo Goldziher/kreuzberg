@@ -1,0 +1,66 @@
+name: Stage Pdfium Runtime
+description: Copies Pdfium runtime libraries to destination directory
+
+inputs:
+  destination:
+    description: Primary destination directory (e.g., crates/kreuzberg-node or packages/ruby)
+    required: true
+  additional-destinations:
+    description: Additional destination directories (newline-separated)
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Stage Pdfium runtime artifacts
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -z "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
+          echo "KREUZBERG_PDFIUM_PREBUILT is not set" >&2
+          exit 1
+        fi
+
+        # Determine source and filename based on OS
+        case "${RUNNER_OS:-unknown}" in
+          Windows)
+            src_path="$KREUZBERG_PDFIUM_PREBUILT/bin/pdfium.dll"
+            filename="pdfium.dll"
+            lib_dir="$KREUZBERG_PDFIUM_PREBUILT/lib"
+            if [ -f "$lib_dir/pdfium.dll.lib" ]; then
+              cp -f "$lib_dir/pdfium.dll.lib" "$lib_dir/pdfium.lib"
+            fi
+            ;;
+          macOS)
+            src_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.dylib"
+            filename="libpdfium.dylib"
+            ;;
+          Linux)
+            src_path="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.so"
+            filename="libpdfium.so"
+            ;;
+          *)
+            echo "Unsupported RUNNER_OS: ${RUNNER_OS:-unknown}" >&2
+            exit 1
+            ;;
+        esac
+
+        # Copy to primary destination
+        mkdir -p "${{ inputs.destination }}"
+        cp -f "$src_path" "${{ inputs.destination }}/$filename"
+
+        # Copy to additional destinations if specified
+        if [ -n "${{ inputs.additional-destinations }}" ]; then
+          while IFS= read -r dest; do
+            if [ -n "$dest" ]; then
+              mkdir -p "$dest"
+              cp -f "$src_path" "$dest/$filename"
+            fi
+          done <<< "${{ inputs.additional-destinations }}"
+        fi
+
+        # Add primary destination to PATH for Windows
+        if [ "${RUNNER_OS:-unknown}" = "Windows" ]; then
+          echo "$GITHUB_WORKSPACE/${{ inputs.destination }}" >> "$GITHUB_PATH"
+        fi
