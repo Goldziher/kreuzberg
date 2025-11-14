@@ -14,6 +14,7 @@ tasks:
       - task: python:install
       - task: typescript:install
       - task: ruby:install
+      - task: java:install
       - task: rust:build
   lint:
     desc: Run linters for all languages
@@ -22,6 +23,7 @@ tasks:
       - task: python:lint
       - task: ruby:lint
       - task: typescript:lint
+      - task: java:lint
   rust:build:
     desc: Build all Rust crates
     cmds:
@@ -166,6 +168,34 @@ tasks:
     cmds:
       - echo "Updating TypeScript dependencies..."
       - pnpm up --latest -r
+  java:install:
+    desc: Install Java dependencies
+    dir: packages/java
+    cmds:
+      - mvn clean install -DskipTests
+  java:build:
+    desc: Build Java package
+    dir: packages/java
+    cmds:
+      - mvn clean package -DskipTests
+  java:test:
+    desc: Run Java tests
+    dir: packages/java
+    cmds:
+      - mvn test
+  java:lint:
+    desc: Lint Java code (checkstyle + PMD)
+    dir: packages/java
+    cmds:
+      - mvn checkstyle:check
+      - mvn pmd:check pmd:cpd-check
+  java:update:
+    desc: Update Java dependencies
+    dir: packages/java
+    cmds:
+      - echo "Checking for dependency updates..."
+      - mvn versions:display-dependency-updates
+      - mvn versions:display-plugin-updates
   e2e:rust:generate:
     desc: Generate Rust E2E tests from fixtures
     cmds:
@@ -277,6 +307,7 @@ tasks:
       - task: python:test
       - task: ruby:test
       - task: typescript:test
+      - task: java:test
   dev:lint:
     desc: Lint all code
     cmds:
@@ -343,6 +374,7 @@ tasks:
       - task: typescript:update
       - task: ruby:update
       - task: python:update
+      - task: java:update
       - prek autoupdate
       - "echo \"\u2713 All dependencies updated\""
   clean:rust:
@@ -364,6 +396,11 @@ tasks:
     dir: packages/typescript
     cmds:
       - rm -rf dist/ node_modules/
+  clean:java:
+    desc: Clean Java build artifacts
+    dir: packages/java
+    cmds:
+      - mvn clean
   clean:
     desc: Clean all build artifacts
     cmds:
@@ -371,3 +408,4 @@ tasks:
       - task: clean:python
       - task: clean:ruby
       - task: clean:typescript
+      - task: clean:java
