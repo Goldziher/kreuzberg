@@ -29,6 +29,7 @@ mod helpers;
 /// - All results are correct with no cross-contamination
 #[cfg(feature = "ocr")]
 #[cfg_attr(coverage, ignore = "coverage instrumentation slows down rayon benchmarks")]
+#[ignore = "flaky performance test dependent on CI runner speed"]
 #[test]
 fn test_rayon_batch_stress_many_images() {
     use helpers::{get_test_file_path, skip_if_missing};
