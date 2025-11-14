@@ -16,6 +16,9 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 kreuzberg = { path = "../kreuzberg", features = ["full"] }
+serde_json = "1.0.145"
+async-trait = "0.1.83"
+tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread"] }
 
 [build-dependencies]
 cbindgen = "0.29"

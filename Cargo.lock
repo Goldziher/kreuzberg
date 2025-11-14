@@ -2898,8 +2898,11 @@ dependencies = [
 name = "kreuzberg-ffi"
 version = "4.0.0-rc.1"
 dependencies = [
+ "async-trait",
  "cbindgen",
  "kreuzberg",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
