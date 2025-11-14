@@ -94,118 +94,116 @@ module E2ERuby
   end
 
   module Assertions
-    module_function
+    class << self
+      include RSpec::Matchers
 
-    include RSpec::Matchers
+      def assert_expected_mime(result, expected)
+        return if expected.empty?
 
-    def assert_expected_mime(result, expected)
-      return if expected.empty?
-
-      expect(expected.any? { |token| result.mime_type.include?(token) }).to be(true)
-    end
-
-    def assert_min_content_length(result, minimum)
-      expect(result.content.length).to be >= minimum
-    end
-
-    def assert_max_content_length(result, maximum)
-      expect(result.content.length).to be <= maximum
-    end
-
-    def assert_content_contains_any(result, snippets)
-      return if snippets.empty?
-
-      lowered = result.content.downcase
-      expect(snippets.any? { |snippet| lowered.include?(snippet.downcase) }).to be(true)
-    end
-
-    def assert_content_contains_all(result, snippets)
-      return if snippets.empty?
-
-      lowered = result.content.downcase
-      expect(snippets.all? { |snippet| lowered.include?(snippet.downcase) }).to be(true)
-    end
-
-    def assert_table_count(result, minimum, maximum)
-      tables = Array(result.tables)
-      expect(tables.length).to be >= minimum if minimum
-      expect(tables.length).to be <= maximum if maximum
-    end
-
-    def assert_detected_languages(result, expected, min_confidence)
-      return if expected.empty?
-
-      languages = result.detected_languages
-      expect(languages).not_to be_nil
-      expect(expected.all? { |lang| languages.include?(lang) }).to be(true)
-
-      return unless min_confidence
-
-      metadata = result.metadata || {}
-      confidence = metadata['confidence'] || metadata[:confidence]
-      expect(confidence).to be >= min_confidence if confidence
-    end
-
-    def assert_metadata_expectation(result, path, expectation)
-      metadata = result.metadata || {}
-      value = fetch_metadata_value(metadata, path)
-      raise "Metadata path '#{path}' missing in #{metadata.inspect}" if value.nil?
-
-      if expectation.key?(:eq)
-        expect(values_equal?(value, expectation[:eq])).to be(true)
+        expect(expected.any? { |token| result.mime_type.include?(token) }).to be(true)
       end
 
-      if expectation.key?(:gte)
-        expect(convert_numeric(value)).to be >= convert_numeric(expectation[:gte])
+      def assert_min_content_length(result, minimum)
+        expect(result.content.length).to be >= minimum
       end
 
-      if expectation.key?(:lte)
-        expect(convert_numeric(value)).to be <= convert_numeric(expectation[:lte])
+      def assert_max_content_length(result, maximum)
+        expect(result.content.length).to be <= maximum
       end
 
-      return unless expectation.key?(:contains)
+      def assert_content_contains_any(result, snippets)
+        return if snippets.empty?
 
-      contains = expectation[:contains]
-      if value.is_a?(String) && contains.is_a?(String)
-        expect(value.include?(contains)).to be(true)
-      elsif value.is_a?(Array) && contains.is_a?(Array)
-        expect(contains.all? { |item| value.include?(item) }).to be(true)
-      else
-        raise "Unsupported contains expectation for path '#{path}'"
+        lowered = result.content.downcase
+        expect(snippets.any? { |snippet| lowered.include?(snippet.downcase) }).to be(true)
+      end
+
+      def assert_content_contains_all(result, snippets)
+        return if snippets.empty?
+
+        lowered = result.content.downcase
+        expect(snippets.all? { |snippet| lowered.include?(snippet.downcase) }).to be(true)
+      end
+
+      def assert_table_count(result, minimum, maximum)
+        tables = Array(result.tables)
+        expect(tables.length).to be >= minimum if minimum
+        expect(tables.length).to be <= maximum if maximum
+      end
+
+      def assert_detected_languages(result, expected, min_confidence)
+        return if expected.empty?
+
+        languages = result.detected_languages
+        expect(languages).not_to be_nil
+        expect(expected.all? { |lang| languages.include?(lang) }).to be(true)
+
+        return unless min_confidence
+
+        metadata = result.metadata || {}
+        confidence = metadata['confidence'] || metadata[:confidence]
+        expect(confidence).to be >= min_confidence if confidence
+      end
+
+      def assert_metadata_expectation(result, path, expectation)
+        metadata = result.metadata || {}
+        value = fetch_metadata_value(metadata, path)
+        raise "Metadata path '#{path}' missing in #{metadata.inspect}" if value.nil?
+
+        if expectation.key?(:eq)
+          expect(values_equal?(value, expectation[:eq])).to be(true)
+        end
+
+        if expectation.key?(:gte)
+          expect(convert_numeric(value)).to be >= convert_numeric(expectation[:gte])
+        end
+
+        if expectation.key?(:lte)
+          expect(convert_numeric(value)).to be <= convert_numeric(expectation[:lte])
+        end
+
+        return unless expectation.key?(:contains)
+
+        contains = expectation[:contains]
+        if value.is_a?(String) && contains.is_a?(String)
+          expect(value.include?(contains)).to be(true)
+        elsif value.is_a?(Array) && contains.is_a?(Array)
+          expect(contains.all? { |item| value.include?(item) }).to be(true)
+        else
+          raise "Unsupported contains expectation for path '#{path}'"
+        end
+      end
+
+      private
+
+      def fetch_metadata_value(metadata, path)
+        current = metadata
+        path.split('.').each do |segment|
+          return nil unless current.is_a?(Hash)
+
+          current = current[segment] || current[segment.to_sym]
+        end
+        current
+      end
+
+      def values_equal?(lhs, rhs)
+        return lhs == rhs if lhs.is_a?(String) && rhs.is_a?(String)
+        return convert_numeric(lhs) == convert_numeric(rhs) if numeric_like?(lhs) && numeric_like?(rhs)
+        return lhs == rhs if lhs == rhs
+
+        lhs == rhs
+      end
+
+      def numeric_like?(value)
+        value.is_a?(Numeric) || value.respond_to?(:to_f)
+      end
+
+      def convert_numeric(value)
+        return value if value.is_a?(Numeric)
+
+        value.to_f
       end
     end
-
-    def fetch_metadata_value(metadata, path)
-      current = metadata
-      path.split('.').each do |segment|
-        return nil unless current.is_a?(Hash)
-
-        current = current[segment] || current[segment.to_sym]
-      end
-      current
-    end
-    private_class_method :fetch_metadata_value
-
-    def values_equal?(lhs, rhs)
-      return lhs == rhs if lhs.is_a?(String) && rhs.is_a?(String)
-      return convert_numeric(lhs) == convert_numeric(rhs) if numeric_like?(lhs) && numeric_like?(rhs)
-      return lhs == rhs if lhs == rhs
-
-      lhs == rhs
-    end
-    private_class_method :values_equal?
-
-    def numeric_like?(value)
-      value.is_a?(Numeric) || value.respond_to?(:to_f)
-    end
-    private_class_method :numeric_like?
-
-    def convert_numeric(value)
-      return value if value.is_a?(Numeric)
-
-      value.to_f
-    end
-    private_class_method :convert_numeric
   end
 end
 # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/ParameterLists, Style/Documentation, Style/IfUnlessModifier, Layout/LineLength
