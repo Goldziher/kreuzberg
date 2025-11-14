@@ -11,7 +11,7 @@ dev = [
   "pytest-mock>=3.15.1",
   "pytest-rerunfailures>=16.1",
   "pytest-timeout>=2.4.0",
-  "ruff>=0.14.4",
+  "ruff>=0.14.5",
   "types-pillow>=10.2",
   "types-psutil>=7.0.0.20251111",
   "uv-bump",
