@@ -524,6 +524,13 @@ jobs:
         with:
           ruby-version: '3.3'
 
+      - name: Setup ONNX Runtime (Windows)
+        if: runner.os == 'Windows'
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ONNXRUNTIME_VERSION }}
+          dest-dir: packages/ruby/lib
+
       - name: Build Ruby gem (Unix)
         if: runner.os != 'Windows'
         uses: ./.github/actions/build-ruby-unix
