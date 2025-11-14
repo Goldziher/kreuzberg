@@ -113,11 +113,19 @@ fn inline_image_to_extracted(image: InlineImage) -> ExtractedInlineImage {
 /// Uses sensible defaults if no configuration is provided:
 /// - `extract_metadata = true` (parse YAML frontmatter)
 /// - `hocr_spatial_tables = false` (disable hOCR table detection)
+/// - `preprocessing.enabled = false` (disable HTML preprocessing)
 pub fn convert_html_to_markdown(html: &str, options: Option<ConversionOptions>) -> Result<String> {
-    let opts = options.unwrap_or_else(|| ConversionOptions {
-        extract_metadata: true,
-        hocr_spatial_tables: false,
-        ..Default::default()
+    let opts = options.unwrap_or_else(|| {
+        use html_to_markdown_rs::options::PreprocessingOptions;
+        ConversionOptions {
+            extract_metadata: true,
+            hocr_spatial_tables: false,
+            preprocessing: PreprocessingOptions {
+                enabled: false, // Disable preprocessing by default
+                ..Default::default()
+            },
+            ..Default::default()
+        }
     });
 
     convert_html(html, Some(opts))
