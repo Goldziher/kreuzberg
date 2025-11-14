@@ -16,9 +16,9 @@ fn test_html_complex_layout() {
         return;
     }
 
-    // Run with increased stack size (8MB instead of default 2MB) to handle deeply nested HTML
+    // Run with increased stack size (16MB instead of default 2MB) to handle deeply nested HTML
     let result = std::thread::Builder::new()
-        .stack_size(8 * 1024 * 1024)
+        .stack_size(16 * 1024 * 1024)
         .spawn(move || {
             let config = ExtractionConfig::default();
             kreuzberg::extract_file_sync(&document_path, None, &config)
@@ -46,9 +46,19 @@ fn test_html_simple_table() {
         );
         return;
     }
-    let config = ExtractionConfig::default();
 
-    let result = match kreuzberg::extract_file_sync(&document_path, None, &config) {
+    // Run with increased stack size to handle HTML parsing
+    let result = std::thread::Builder::new()
+        .stack_size(16 * 1024 * 1024)
+        .spawn(move || {
+            let config = ExtractionConfig::default();
+            kreuzberg::extract_file_sync(&document_path, None, &config)
+        })
+        .expect("Failed to spawn thread")
+        .join()
+        .expect("Thread panicked");
+
+    let result = match result {
         Err(err) => panic!("Extraction failed for html_simple_table: {err:?}"),
         Ok(result) => result,
     };
