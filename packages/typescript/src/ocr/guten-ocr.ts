@@ -143,7 +143,9 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		debugOutputDir?: string;
 		onnxOptions?: unknown;
 	}) {
-		this.options = options;
+		if (options !== undefined) {
+			this.options = options;
+		}
 	}
 
 	/**
@@ -277,7 +279,7 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		try {
 			const buffer = typeof imageBytes === "string" ? Buffer.from(imageBytes, "base64") : Buffer.from(imageBytes);
 
-			if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
+			if (process.env["KREUZBERG_DEBUG_GUTEN"] === "1") {
 				const header = Array.from(buffer.subarray(0, 8));
 				console.log("[Guten OCR] Debug input header:", header);
 				console.log(

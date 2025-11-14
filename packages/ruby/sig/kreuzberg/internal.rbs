@@ -1,24 +1,20 @@
-# Internal modules - not part of public API
+# Internal modules - not part of public API but fully typed
 
 module Kreuzberg
   module SetupLibPath
     def self.configure: () -> void
-
-    private
-
-    def self.shared_lib_ext: () -> String
-    def self.arch: () -> String
-    def self.in_gem?: () -> bool
-    def self.vendored_lib_path: () -> String?
-    def self.system_libtesseract_version: () -> String?
-    def self.configure_lib_path: (String vendored_path) -> void
+    def self.prepend_env: (String key, String value, ?separator: String) -> void
+    def self.fix_macos_install_name: (String lib_dir) -> void
+    def self.macos_bundle: (String lib_dir) -> String?
+    def self.ensure_install_name: (String bundle) -> void
+    def self.ensure_loader_rpath: (String bundle) -> void
   end
 
   module CLI
-    def self.parse_config: (String? path) -> Hash[Symbol, untyped]
-    def self.load_dotenv: () -> void
-    def self.run_extract: (String path, ?config: Hash[Symbol, untyped]?) -> void
-    def self.run_batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?) -> void
+    def self.extract: (String path, ?output: String, ?ocr: bool) -> String
+    def self.detect: (String path) -> String
+    def self.version: () -> String
+    def self.help: () -> String
   end
 
   module CLIProxy
@@ -29,14 +25,18 @@ module Kreuzberg
     end
 
     class CLIExecutionError < Error
-      attr_reader exit_status: Integer
+      attr_reader stderr: String
+      attr_reader status: Integer
 
-      def initialize: (String message, Integer exit_status) -> void
+      def initialize: (String message, stderr: String, status: Integer) -> void
     end
 
-    def self.ensure_cli!: () -> String
-    def self.extract_file: (String path, ?mime_type: String?, ?config: Hash[Symbol, untyped]?) -> Kreuzberg::Result
-    def self.batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?) -> Array[Kreuzberg::Result]
+    def self.call: (Array[String] argv) -> String
+    def self.find_cli_binary: () -> Pathname
+    def self.root_path: () -> Pathname
+    def self.lib_path: () -> Pathname
+    def self.search_paths: (String binary_name) -> Array[Pathname]
+    def self.missing_binary_message: () -> String
   end
 
   module APIProxy
@@ -68,5 +68,49 @@ module Kreuzberg
   module MCPProxy
     def self.extract_file: (String path, ?mime_type: String?, ?config: Hash[Symbol, untyped]?) -> Kreuzberg::Result
     def self.batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?) -> Array[Kreuzberg::Result]
+  end
+
+  # Cache API module (prepended to Kreuzberg singleton class)
+  module CacheAPI
+    @__cache_tracker: Hash[Symbol, Integer]
+
+    def clear_cache: () -> void
+    def cache_stats: () -> Hash[Symbol | String, Integer]
+
+    private
+
+    def record_cache_entry!: (Kreuzberg::Result | Array[Kreuzberg::Result] results, Hash[Symbol, untyped] opts) -> void
+    def reset_cache_tracker!: () -> nil
+
+    # Native methods (defined in Rust)
+    def native_clear_cache: () -> void
+    def native_cache_stats: () -> Hash[Symbol | String, Integer]
+  end
+
+  # Extraction API module (prepended to Kreuzberg singleton class)
+  module ExtractionAPI
+    def extract_file_sync: (String | Pathname path, ?mime_type: String?, ?config: config_input?) -> Result
+    def extract_bytes_sync: (String data, String mime_type, ?config: config_input?) -> Result
+    def batch_extract_files_sync: (Array[String | Pathname] paths, ?config: config_input?) -> Array[Result]
+    def extract_file: (String | Pathname path, ?mime_type: String?, ?config: config_input?) -> Result
+    def extract_bytes: (String data, String mime_type, ?config: config_input?) -> Result
+    def batch_extract_files: (Array[String | Pathname] paths, ?config: config_input?) -> Array[Result]
+    def batch_extract_bytes_sync: (Array[String] data_array, Array[String] mime_types, ?config: config_input?) -> Array[Result]
+    def batch_extract_bytes: (Array[String] data_array, Array[String] mime_types, ?config: config_input?) -> Array[Result]
+
+    def normalize_config: (config_input? config) -> Hash[Symbol, untyped]
+
+    # Native methods (defined in Rust)
+    def native_extract_file_sync: (String path, ?String? mime_type, **untyped opts) -> extraction_result_hash
+    def native_extract_bytes_sync: (String data, String mime_type, **untyped opts) -> extraction_result_hash
+    def native_batch_extract_files_sync: (Array[String] paths, **untyped opts) -> Array[extraction_result_hash]
+    def native_extract_file: (String path, ?String? mime_type, **untyped opts) -> extraction_result_hash
+    def native_extract_bytes: (String data, String mime_type, **untyped opts) -> extraction_result_hash
+    def native_batch_extract_files: (Array[String] paths, **untyped opts) -> Array[extraction_result_hash]
+    def native_batch_extract_bytes_sync: (Array[String] data_array, Array[String] mime_types, **untyped opts) -> Array[extraction_result_hash]
+    def native_batch_extract_bytes: (Array[String] data_array, Array[String] mime_types, **untyped opts) -> Array[extraction_result_hash]
+
+    # Cache API methods (from prepended CacheAPI module)
+    def record_cache_entry!: (Kreuzberg::Result | Array[Kreuzberg::Result] results, Hash[Symbol, untyped] opts) -> void
   end
 end

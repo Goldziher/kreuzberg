@@ -8,7 +8,7 @@ module Kreuzberg
     module_function
 
     def configure
-      lib_dir = File.expand_path('..', __dir__)
+      lib_dir = File.expand_path('..', __dir__ || '.')
       host_os = RbConfig::CONFIG['host_os']
 
       case host_os

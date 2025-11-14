@@ -3,25 +3,142 @@
 module Kreuzberg
   VERSION: String
 
-  # Config namespace (defined in lib/kreuzberg/config.rb - not type checked)
+  # Config namespace (defined in lib/kreuzberg/config.rb)
   module Config
+    class OCR
+      attr_reader backend: String
+      attr_reader language: String
+      attr_reader tesseract_config: untyped
+
+      def initialize: (?backend: String, ?language: String, ?tesseract_config: untyped) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class Chunking
+      attr_reader max_chars: Integer
+      attr_reader max_overlap: Integer
+      attr_reader preset: String?
+      attr_reader embedding: untyped
+      attr_reader enabled: bool?
+
+      def initialize: (
+        ?max_chars: Integer?,
+        ?max_overlap: Integer?,
+        ?preset: String?,
+        ?embedding: untyped,
+        ?chunk_size: Integer?,
+        ?chunk_overlap: Integer?,
+        ?enabled: bool
+      ) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class LanguageDetection
+      attr_reader enabled: bool
+      attr_reader min_confidence: Float
+
+      def initialize: (?enabled: bool, ?min_confidence: Float) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class PDF
+      attr_reader extract_images: bool
+      attr_reader passwords: Array[String]?
+      attr_reader extract_metadata: bool
+
+      def initialize: (?extract_images: bool, ?passwords: (Array[String] | String)?, ?extract_metadata: bool) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class ImageExtraction
+      attr_reader extract_images: bool
+      attr_reader target_dpi: Integer
+      attr_reader max_image_dimension: Integer
+      attr_reader auto_adjust_dpi: bool
+      attr_reader min_dpi: Integer
+      attr_reader max_dpi: Integer
+
+      def initialize: (
+        ?extract_images: bool,
+        ?target_dpi: Integer,
+        ?max_image_dimension: Integer,
+        ?auto_adjust_dpi: bool,
+        ?min_dpi: Integer,
+        ?max_dpi: Integer
+      ) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class ImagePreprocessing
+      attr_reader target_dpi: Integer
+      attr_reader auto_rotate: bool
+      attr_reader deskew: bool
+      attr_reader denoise: bool
+      attr_reader contrast_enhance: bool
+      attr_reader binarization_method: String
+      attr_reader invert_colors: bool
+
+      def initialize: (
+        ?target_dpi: Integer,
+        ?auto_rotate: bool,
+        ?deskew: bool,
+        ?denoise: bool,
+        ?contrast_enhance: bool,
+        ?binarization_method: String,
+        ?invert_colors: bool
+      ) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class TokenReduction
+      attr_reader mode: String
+      attr_reader preserve_important_words: bool
+
+      def initialize: (?mode: String, ?preserve_important_words: bool) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class PostProcessor
+      attr_reader enabled: bool
+      attr_reader enabled_processors: Array[String]?
+      attr_reader disabled_processors: Array[String]?
+
+      def initialize: (?enabled: bool, ?enabled_processors: Array[String]?, ?disabled_processors: Array[String]?) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
     class Extraction
+      attr_reader use_cache: bool
+      attr_reader enable_quality_processing: bool
+      attr_reader force_ocr: bool
+      attr_reader ocr: OCR?
+      attr_reader chunking: Chunking?
+      attr_reader language_detection: LanguageDetection?
+      attr_reader pdf_options: PDF?
+      attr_reader image_extraction: ImageExtraction?
+      attr_reader image_preprocessing: ImagePreprocessing?
+      attr_reader postprocessor: PostProcessor?
+      attr_reader token_reduction: TokenReduction?
+
       def self.from_file: (String path) -> Extraction
       def initialize: (
         ?use_cache: bool,
         ?enable_quality_processing: bool,
         ?force_ocr: bool,
-        ?ocr: untyped,
-        ?chunking: untyped,
-        ?language_detection: untyped,
-        ?pdf_options: untyped,
-        ?image_extraction: untyped,
-        ?image_preprocessing: untyped,
-        ?postprocessor: untyped,
-        ?token_reduction: untyped
+        ?ocr: (OCR | Hash[Symbol, untyped])?,
+        ?chunking: (Chunking | Hash[Symbol, untyped])?,
+        ?language_detection: (LanguageDetection | Hash[Symbol, untyped])?,
+        ?pdf_options: (PDF | Hash[Symbol, untyped])?,
+        ?image_extraction: (ImageExtraction | Hash[Symbol, untyped])?,
+        ?image_preprocessing: (ImagePreprocessing | Hash[Symbol, untyped])?,
+        ?postprocessor: (PostProcessor | Hash[Symbol, untyped])?,
+        ?token_reduction: (TokenReduction | Hash[Symbol, untyped])?
       ) -> void
       def to_h: () -> Hash[Symbol, untyped]
     end
+
+    # Backwards compatibility alias
+    Ocr: singleton(OCR)
   end
 
   # Alias for Config::Extraction (for API consistency with other language bindings)
@@ -150,6 +267,9 @@ module Kreuzberg
   # Cache API
   def self.clear_cache: () -> void
   def self.cache_stats: () -> Hash[Symbol | String, Integer]
+
+  # Config loading (native method)
+  def self._config_from_file_native: (String path) -> Hash[Symbol, untyped]
 
   # Plugin registration
   def self.register_post_processor: (String name, _PostProcessor processor, ?stage: Symbol?) -> void

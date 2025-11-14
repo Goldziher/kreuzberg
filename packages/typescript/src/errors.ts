@@ -257,7 +257,7 @@ export class PluginError extends KreuzbergError {
 		Object.setPrototypeOf(this, PluginError.prototype);
 	}
 
-	toJSON() {
+	override toJSON() {
 		return {
 			name: this.name,
 			message: this.message,

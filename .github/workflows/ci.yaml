@@ -384,6 +384,8 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Run unit tests (no default features)
+        env:
+          RUST_MIN_STACK: 16777216  # 16MB stack size for HTML parsing
         run: cargo test --workspace --exclude kreuzberg-e2e-generator
 
   rust-e2e:
@@ -406,6 +408,8 @@ jobs:
         uses: ./.github/actions/setup-task
 
       - name: Verify Rust E2E suite
+        env:
+          RUST_MIN_STACK: 16777216  # 16MB stack size for HTML parsing
         uses: ./.github/actions/run-and-ensure-clean
         with:
           run: task e2e:rust:verify
