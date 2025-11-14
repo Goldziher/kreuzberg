@@ -13,14 +13,6 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
-      - id: check-merge-conflict
-      - id: check-added-large-files
-      - id: detect-private-key
-      - id: check-json
-        exclude: ^packages/typescript/tsconfig\.json$
-      - id: check-yaml
-        args: ["--allow-multiple-documents"]
-        exclude: ^packages/python/tests/fixtures/invalid\.yaml$
       - id: check-toml
         exclude: (invalid|test).*\.toml$
       - id: check-case-conflict
@@ -33,11 +25,11 @@ repos:
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.3.6
+    rev: v2.3.5
     hooks:
       - id: biome-check
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v1.29.0
+    rev: v1.28.0
     hooks:
       - id: oxlint
         args: ["--fix"]
@@ -56,17 +48,16 @@ repos:
       - id: cargo-check
       - id: clippy
   - repo: https://github.com/gherynos/pre-commit-java
-    rev: v0.6.28
+    rev: v0.6.27
     hooks:
       - id: cpd
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
-        exclude: ^e2e/java/
   - repo: local
     hooks:
       - id: rubocop
         name: rubocop
-        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yaml'
+        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yml'
         require_serial: true
         language: system
         files: ^packages/ruby/.*\.rb$

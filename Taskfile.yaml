@@ -1,22 +1,8 @@
 version: "3"
-env:
-  RUBY:
-    sh: |
-      if command -v rbenv >/dev/null 2>&1; then
-        rbenv which ruby
-      else
-        command -v ruby
-      fi
 vars:
   RUST_LOG: info
   V3_TAG: v3.20.2
-  BUNDLE:
-    sh: |
-      if command -v rbenv >/dev/null 2>&1; then
-        echo "rbenv exec bundle"
-      else
-        echo "bundle"
-      fi
+  BUNDLE: bundle
 tasks:
   sync-versions:
     desc: Sync version from Cargo.toml to all package manifests
@@ -113,8 +99,9 @@ tasks:
       - "{{.BUNDLE}} install"
   ruby:build:
     desc: Build Ruby extension
+    dir: packages/ruby
     cmds:
-      - bash scripts/build_ruby_extension.sh packages/ruby
+      - "{{.BUNDLE}} exec rake compile"
   ruby:update:
     desc: Update Ruby dependencies
     dir: packages/ruby
@@ -197,38 +184,16 @@ tasks:
     cmds:
       - mvn test
   java:lint:
-    desc: Lint Java code (Spotless + Checkstyle + PMD)
+    desc: Lint Java code (checkstyle + PMD)
     dir: packages/java
     cmds:
-      - mvn spotless:check
       - mvn checkstyle:check
       - mvn pmd:check pmd:cpd-check
-  java:format:
-    desc: Format Java code with Spotless
-    dir: packages/java
-    cmds:
-      - mvn spotless:apply
   java:update:
     desc: Update Java dependencies
-    cmds:
-      - task: java:update:dependencies
-      - task: java:update:dev-dependencies
-      - task: java:update:report
-  java:update:dependencies:
-    desc: Update Java runtime dependencies to newest stable releases
     dir: packages/java
     cmds:
-      - mvn versions:use-latest-releases -Dallowsnapshots=false -DgenerateBackupPoms=false
-  java:update:dev-dependencies:
-    desc: Update Maven plugins and dev-only dependencies
-    dir: packages/java
-    cmds:
-      - mvn versions:use-latest-versions -Dincludes=org.apache.maven.plugins:*,org.codehaus.mojo:* -DgenerateBackupPoms=false
-      - mvn versions:update-properties -DgenerateBackupPoms=false
-  java:update:report:
-    desc: Display pending dependency and plugin updates
-    dir: packages/java
-    cmds:
+      - echo "Checking for dependency updates..."
       - mvn versions:display-dependency-updates
       - mvn versions:display-plugin-updates
   e2e:rust:generate:
@@ -323,26 +288,6 @@ tasks:
       - task: e2e:ruby:generate
       - task: e2e:ruby:lint
       - task: e2e:ruby:test
-  e2e:java:generate:
-    desc: Generate Java E2E tests from fixtures
-    cmds:
-      - cargo run -p kreuzberg-e2e-generator -- generate --lang java --fixtures fixtures --output e2e
-  e2e:java:lint:
-    desc: Lint generated Java E2E suite
-    dir: e2e/java
-    cmds:
-      - mvn checkstyle:check
-  e2e:java:test:
-    desc: Run Java E2E tests
-    dir: e2e/java
-    cmds:
-      - mvn test
-  e2e:java:verify:
-    desc: Regenerate and validate Java E2E suite (generate + lint + test)
-    cmds:
-      - task: e2e:java:generate
-      - task: e2e:java:lint
-      - task: e2e:java:test
   cli:build:
     desc: Build CLI binary
     cmds:
@@ -374,7 +319,6 @@ tasks:
       - task: python:format
       - task: ruby:lint:fix
       - task: typescript:format
-      - task: java:format
   pre-commit:install:
     desc: Install pre-commit hooks
     cmds:
@@ -428,7 +372,6 @@ tasks:
     cmds:
       - task: rust:update
       - task: typescript:update
-      - corepack up
       - task: ruby:update
       - task: python:update
       - task: java:update
