@@ -86,4 +86,54 @@ public record ExtractionResult(
         }
         return str.substring(0, maxLength) + "...";
     }
+
+    /**
+     * Returns a new ExtractionResult with the specified content.
+     *
+     * @param newContent the new content
+     * @return a new ExtractionResult with updated content
+     */
+    public ExtractionResult withContent(String newContent) {
+        return new ExtractionResult(newContent, mimeType, language, date, subject);
+    }
+
+    /**
+     * Returns a new ExtractionResult with the specified MIME type.
+     *
+     * @param newMimeType the new MIME type
+     * @return a new ExtractionResult with updated MIME type
+     */
+    public ExtractionResult withMimeType(String newMimeType) {
+        return new ExtractionResult(content, newMimeType, language, date, subject);
+    }
+
+    /**
+     * Returns a new ExtractionResult with the specified language.
+     *
+     * @param newLanguage the new language (may be null)
+     * @return a new ExtractionResult with updated language
+     */
+    public ExtractionResult withLanguage(String newLanguage) {
+        return new ExtractionResult(content, mimeType, Optional.ofNullable(newLanguage), date, subject);
+    }
+
+    /**
+     * Returns a new ExtractionResult with the specified date.
+     *
+     * @param newDate the new date (may be null)
+     * @return a new ExtractionResult with updated date
+     */
+    public ExtractionResult withDate(String newDate) {
+        return new ExtractionResult(content, mimeType, language, Optional.ofNullable(newDate), subject);
+    }
+
+    /**
+     * Returns a new ExtractionResult with the specified subject.
+     *
+     * @param newSubject the new subject (may be null)
+     * @return a new ExtractionResult with updated subject
+     */
+    public ExtractionResult withSubject(String newSubject) {
+        return new ExtractionResult(content, mimeType, language, date, Optional.ofNullable(newSubject));
+    }
 }

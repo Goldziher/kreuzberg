@@ -43,6 +43,31 @@ typedef struct CExtractionResult {
 } CExtractionResult;
 
 /**
+ * Type alias for the OCR backend callback function.
+ *
+ * # Parameters
+ *
+ * - `image_bytes`: Pointer to image data
+ * - `image_length`: Length of image data in bytes
+ * - `config_json`: JSON-encoded OcrConfig (null-terminated string)
+ *
+ * # Returns
+ *
+ * Null-terminated string containing extracted text (must be freed by Rust via kreuzberg_free_string),
+ * or NULL on error.
+ *
+ * # Safety
+ *
+ * The callback must:
+ * - Not store the image_bytes pointer (it's only valid for the duration of the call)
+ * - Return a valid null-terminated UTF-8 string allocated by the caller
+ * - Return NULL on error (error message should be retrievable separately)
+ */
+typedef char *(*OcrBackendCallback)(const uint8_t *image_bytes,
+                                    uintptr_t image_length,
+                                    const char *config_json);
+
+/**
  * Extract text and metadata from a file (synchronous).
  *
  * # Safety
@@ -67,6 +92,31 @@ typedef struct CExtractionResult {
  * ```
  */
 struct CExtractionResult *kreuzberg_extract_file_sync(const char *file_path);
+
+/**
+ * Extract text and metadata from a file with custom configuration (synchronous).
+ *
+ * # Safety
+ *
+ * - `file_path` must be a valid null-terminated C string
+ * - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
+ * - The returned pointer must be freed with `kreuzberg_free_result`
+ * - Returns NULL on error (check `kreuzberg_last_error` for details)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * const char* path = "/path/to/document.pdf";
+ * const char* config = "{\"force_ocr\": true, \"ocr\": {\"language\": \"deu\"}}";
+ * CExtractionResult* result = kreuzberg_extract_file_sync_with_config(path, config);
+ * if (result != NULL && result->success) {
+ *     printf("Content: %s\n", result->content);
+ *     kreuzberg_free_result(result);
+ * }
+ * ```
+ */
+struct CExtractionResult *kreuzberg_extract_file_sync_with_config(const char *file_path,
+                                                                  const char *config_json);
 
 /**
  * Free a string returned by Kreuzberg functions.
@@ -147,5 +197,35 @@ const char *kreuzberg_last_error(void);
  * ```
  */
 const char *kreuzberg_version(void);
+
+/**
+ * Register a custom OCR backend via FFI callback.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - `callback` must be a valid function pointer that:
+ *   - Does not store the image_bytes pointer
+ *   - Returns a null-terminated UTF-8 string or NULL on error
+ *   - The returned string must be freeable by kreuzberg_free_string
+ * - Returns true on success, false on error (check kreuzberg_last_error)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * char* my_ocr_backend(const uint8_t* image_bytes, size_t image_length, const char* config_json) {
+ *     // Implement OCR logic here
+ *     // Return allocated string with result, or NULL on error
+ *     return strdup("Extracted text");
+ * }
+ *
+ * bool success = kreuzberg_register_ocr_backend("my-ocr", my_ocr_backend);
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to register: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_register_ocr_backend(const char *name, OcrBackendCallback callback);
 
 #endif  /* KREUZBERG_FFI_H */

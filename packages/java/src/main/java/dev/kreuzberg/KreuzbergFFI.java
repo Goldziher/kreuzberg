@@ -3,7 +3,9 @@ package dev.kreuzberg;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
+import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.StructLayout;
 import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
@@ -23,10 +25,12 @@ final class KreuzbergFFI {
 
     // Function handles
     static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC;
+    static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC_WITH_CONFIG;
     static final MethodHandle KREUZBERG_FREE_STRING;
     static final MethodHandle KREUZBERG_FREE_RESULT;
     static final MethodHandle KREUZBERG_LAST_ERROR;
     static final MethodHandle KREUZBERG_VERSION;
+    static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND;
 
     // Memory layouts
     static final StructLayout C_EXTRACTION_RESULT_LAYOUT = MemoryLayout.structLayout(
@@ -64,6 +68,11 @@ final class KreuzbergFFI {
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS)
             );
 
+            KREUZBERG_EXTRACT_FILE_SYNC_WITH_CONFIG = linkFunction(
+                "kreuzberg_extract_file_sync_with_config",
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+            );
+
             KREUZBERG_FREE_STRING = linkFunction(
                 "kreuzberg_free_string",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
@@ -82,6 +91,11 @@ final class KreuzbergFFI {
             KREUZBERG_VERSION = linkFunction(
                 "kreuzberg_version",
                 FunctionDescriptor.of(ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_REGISTER_OCR_BACKEND = linkFunction(
+                "kreuzberg_register_ocr_backend",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
             );
         } catch (Exception e) {
             throw new ExceptionInInitializerError(e);
