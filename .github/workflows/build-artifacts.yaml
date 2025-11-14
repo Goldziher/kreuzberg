@@ -622,6 +622,8 @@ jobs:
       - name: Setup pnpm
         if: matrix.flavor == 'node'
         uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Setup Node.js
         if: matrix.flavor == 'node'
