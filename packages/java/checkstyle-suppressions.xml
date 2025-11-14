@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+    <!-- FFI code patterns that require non-standard naming -->
+    <suppress checks="ConstantName" files="KreuzbergFFI\.java"/>
+    <suppress checks="MagicNumber" files="KreuzbergFFI\.java"/>
+
+    <!-- Test files can have more relaxed rules -->
+    <suppress checks="MagicNumber" files=".*Test\.java"/>
+    <suppress checks="MethodLength" files=".*Test\.java"/>
+</suppressions>

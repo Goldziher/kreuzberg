@@ -736,6 +736,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "cbindgen"
+version = "0.29.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "befbfd072a8e81c02f8c507aefce431fe5e7d051f83d48a23ffc9b9fe5a11799"
+dependencies = [
+ "clap",
+ "heck",
+ "indexmap",
+ "log",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "syn",
+ "tempfile",
+ "toml 0.9.8",
+]
+
+[[package]]
 name = "cc"
 version = "1.2.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2873,6 +2892,14 @@ dependencies = [
  "serde_yaml",
  "thiserror 2.0.17",
  "walkdir",
+]
+
+[[package]]
+name = "kreuzberg-ffi"
+version = "4.0.0-rc.1"
+dependencies = [
+ "cbindgen",
+ "kreuzberg",
 ]
 
 [[package]]

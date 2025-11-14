@@ -1,0 +1,21 @@
+[package]
+name = "kreuzberg-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
+description = "C FFI bindings for Kreuzberg document intelligence library"
+license = "MIT"
+repository = "https://github.com/Goldziher/kreuzberg"
+homepage = "https://kreuzberg.dev"
+documentation = "https://docs.rs/kreuzberg-ffi"
+readme = "README.md"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+kreuzberg = { path = "../kreuzberg", features = ["full"] }
+
+[build-dependencies]
+cbindgen = "0.29"

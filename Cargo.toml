@@ -3,6 +3,7 @@ members = [
     "crates/kreuzberg",
     "crates/kreuzberg-py",
     "crates/kreuzberg-tesseract",
+    "crates/kreuzberg-ffi",
     "packages/ruby/ext/kreuzberg_rb/native",
     "crates/kreuzberg-cli",
     "crates/kreuzberg-node",
