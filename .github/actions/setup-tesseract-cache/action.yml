@@ -28,11 +28,17 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Clean cache directories
+      shell: bash
+      run: |
+        rm -rf .tesseract-cache/${{ inputs.label }}
+        rm -rf .tesseract-home/${{ inputs.label }}
+        rm -rf .xdg-cache/${{ inputs.label }}
+
     - name: Setup cache directories
       if: inputs.enable-cache == 'true'
       shell: bash
       run: |
-        rm -rf .tesseract-cache/${{ inputs.label }}
         mkdir -p .tesseract-cache/${{ inputs.label }}
         mkdir -p .tesseract-home/${{ inputs.label }}
         mkdir -p .xdg-cache/${{ inputs.label }}
