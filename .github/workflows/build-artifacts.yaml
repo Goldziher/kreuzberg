@@ -151,7 +151,7 @@ jobs:
           target: ${{ matrix.rust_target }}
           manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
-          sccache: true
+          sccache: ${{ matrix.label != 'linux-aarch64' }}
           docker-options: ${{ matrix.label != 'linux-aarch64' && format('--env TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/{0} --env XDG_CACHE_HOME=/io/.xdg-cache/{0} --env HOME=/io/.tesseract-home/{0}', matrix.label) || '' }}
 
       - name: Build wheels (native)
