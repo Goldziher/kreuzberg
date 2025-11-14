@@ -1,4 +1,5 @@
 mod fixtures;
+mod java;
 mod python;
 mod ruby;
 mod rust;
@@ -44,6 +45,7 @@ enum Language {
     Python,
     Typescript,
     Ruby,
+    Java,
 }
 
 fn main() -> Result<()> {
@@ -57,6 +59,7 @@ fn main() -> Result<()> {
                 Language::Python => python::generate(&fixtures, output.as_path())?,
                 Language::Typescript => typescript::generate(&fixtures, output.as_path())?,
                 Language::Ruby => ruby::generate(&fixtures, output.as_path())?,
+                Language::Java => java::generate(&fixtures, output.as_path())?,
             };
         }
         Commands::List { fixtures } => {

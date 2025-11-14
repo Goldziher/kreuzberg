@@ -53,6 +53,7 @@ repos:
       - id: cpd
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
+        exclude: ^e2e/java/
   - repo: local
     hooks:
       - id: rubocop
