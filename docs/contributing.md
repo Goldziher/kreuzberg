@@ -18,6 +18,107 @@ task setup
 
 This runs language-specific installers (Python `uv sync`, `pnpm install`, `bundle install`) and builds the Rust workspace.
 
+## Building from Source
+
+### Build-Time Dependencies
+
+Kreuzberg requires certain system libraries at **build time** (not runtime):
+
+**OpenSSL** (required by fastembed for HTTPS downloads):
+- **macOS**: `brew install openssl@3`
+- **Ubuntu/Debian**: `apt-get install libssl-dev pkg-config`
+- **Fedora/RHEL**: `dnf install openssl-devel pkg-config`
+- **Windows**: OpenSSL is bundled with Rust's `windows-gnu` toolchain
+
+The fastembed dependency uses a maintained fork (`kreuzberg-dev/fastembed-rs`) with ONNX Runtime adjustments. OpenSSL is only needed during compilation for HTTPS model downloads via HuggingFace Hub.
+
+### Platform-Specific Requirements
+
+**Linux**:
+```bash
+# Ubuntu/Debian
+sudo apt-get install build-essential libssl-dev pkg-config
+
+# Fedora/RHEL
+sudo dnf groupinstall "Development Tools"
+sudo dnf install openssl-devel pkg-config
+```
+
+**macOS**:
+```bash
+brew install openssl@3
+# Ensure Xcode Command Line Tools are installed
+xcode-select --install
+```
+
+**Windows**:
+- Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) with C++ support
+- Or use MSYS2 with MinGW-w64: `pacman -S mingw-w64-x86_64-toolchain`
+
+### Building the Rust Core
+
+```bash
+# Build all workspace crates
+cargo build --workspace
+
+# Build with specific features
+cargo build -p kreuzberg --features full
+
+# Build release binaries
+cargo build --release --workspace
+```
+
+### Building Language Bindings
+
+**Python** (PyO3):
+```bash
+cd packages/python
+maturin develop  # Development build
+maturin build    # Wheel for distribution
+```
+
+**TypeScript** (NAPI-RS):
+```bash
+cd packages/typescript
+pnpm build       # Builds native module + TypeScript declarations
+```
+
+**Ruby** (Magnus):
+```bash
+cd packages/ruby
+bundle exec rake compile  # Compiles native extension
+bundle exec rake native:gem  # Builds platform gem
+```
+
+### Common Build Issues
+
+**OpenSSL not found**:
+```bash
+# macOS
+export OPENSSL_DIR=$(brew --prefix openssl@3)
+
+# Linux (if pkg-config fails)
+export OPENSSL_DIR=/usr
+export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
+export OPENSSL_INCLUDE_DIR=/usr/include/openssl
+```
+
+**Cross-compilation**:
+```bash
+# Install target
+rustup target add x86_64-unknown-linux-musl
+
+# Build with cross
+cargo install cross
+cross build --target x86_64-unknown-linux-musl
+```
+
+**Linker errors on Linux**:
+Ensure you have `gcc` and `binutils` installed:
+```bash
+sudo apt-get install build-essential
+```
+
 ## Development Workflow
 
 1. **Create a branch** off `main` with a descriptive name (e.g., `feat/python-config-alias`).
