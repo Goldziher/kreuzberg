@@ -1,0 +1,24 @@
+# frozen_string_literal: true
+
+# Steep configuration for Kreuzberg Ruby package
+
+target :lib do
+  signature "sig"
+
+  check "lib"
+
+  # Core library - no inference needed
+  # library "pathname"
+
+  # Ignore Rust extension methods (defined in native code)
+  ignore "ext"
+
+  # Ignore vendored code
+  ignore "vendor"
+
+  # Ignore test files
+  ignore "spec"
+
+  # Ignore examples
+  ignore "examples"
+end

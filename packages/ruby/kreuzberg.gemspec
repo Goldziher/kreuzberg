@@ -23,6 +23,7 @@ fallback_files = Dir.chdir(__dir__) do
       ext/**/Cargo.*
       exe/*
       lib/**/*.rb
+      sig/**/*.rbs
       spec/**/*.rb
       vendor/**/*.rb
     ],
@@ -71,7 +72,9 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', '~> 13.0'
   spec.add_development_dependency 'rake-compiler', '~> 1.2'
   spec.add_development_dependency 'rb_sys', '~> 0.9'
+  spec.add_development_dependency 'rbs', '~> 3.0'
   spec.add_development_dependency 'rspec', '~> 3.12'
+  spec.add_development_dependency 'steep', '~> 1.8'
   unless Gem.win_platform?
     spec.add_development_dependency 'rubocop', '~> 1.66'
     spec.add_development_dependency 'rubocop-performance', '~> 1.21'

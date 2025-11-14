@@ -116,15 +116,21 @@ tasks:
     cmds:
       - "{{.BUNDLE}} exec rspec --format documentation --color"
   ruby:lint:
-    desc: Lint Ruby code
+    desc: Lint Ruby code (rubocop + steep type checking)
     dir: packages/ruby
     cmds:
       - "{{.BUNDLE}} exec rubocop"
+      - "{{.BUNDLE}} exec steep check"
   ruby:lint:fix:
     desc: Auto-fix Ruby lint issues
     dir: packages/ruby
     cmds:
       - "{{.BUNDLE}} exec rubocop --autocorrect-all"
+  ruby:typecheck:
+    desc: Run steep type checking
+    dir: packages/ruby
+    cmds:
+      - "{{.BUNDLE}} exec steep check"
   ruby:console:
     desc: Open Ruby console with Kreuzberg loaded
     dir: packages/ruby

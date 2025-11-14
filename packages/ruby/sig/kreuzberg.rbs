@@ -1,0 +1,171 @@
+# Type signatures for Kreuzberg document intelligence framework
+
+module Kreuzberg
+  VERSION: String
+
+  # Extraction result type
+  type extraction_result_hash = {
+    content: String,
+    mime_type: String,
+    metadata_json: String,
+    tables: Array[table_hash]?,
+    detected_languages: Array[String]?,
+    chunks: Array[chunk_hash]?
+  }
+
+  type table_hash = {
+    cells: Array[Array[String]],
+    markdown: String,
+    page_number: Integer
+  }
+
+  type chunk_hash = {
+    content: String,
+    char_start: Integer,
+    char_end: Integer,
+    token_count: Integer?
+  }
+
+  type config_hash = Hash[Symbol, untyped]
+  type config_input = config_hash | _ToH
+
+  interface _ToH
+    def to_h: () -> config_hash
+  end
+
+  # Extraction result wrapper
+  class Result
+    # Table structure
+    class Table
+      attr_reader cells: Array[Array[String]]
+      attr_reader markdown: String
+      attr_reader page_number: Integer
+
+      def initialize: (cells: Array[Array[String]], markdown: String, page_number: Integer) -> void
+      def to_h: () -> table_hash
+    end
+
+    # Text chunk
+    class Chunk
+      attr_reader content: String
+      attr_reader char_start: Integer
+      attr_reader char_end: Integer
+      attr_reader token_count: Integer?
+
+      def initialize: (content: String, char_start: Integer, char_end: Integer, token_count: Integer?) -> void
+      def to_h: () -> chunk_hash
+    end
+
+    attr_reader content: String
+    attr_reader mime_type: String
+    attr_reader metadata: Hash[untyped, untyped]
+    attr_reader metadata_json: String
+    attr_reader tables: Array[Table]
+    attr_reader detected_languages: Array[String]?
+    attr_reader chunks: Array[Chunk]?
+
+    def initialize: (extraction_result_hash hash) -> void
+    def to_h: () -> Hash[Symbol, untyped]
+    def to_json: (*untyped) -> String
+
+    private
+
+    def parse_metadata: (String metadata_json) -> Hash[untyped, untyped]
+    def parse_tables: (Array[table_hash]? tables_data) -> Array[Table]
+    def parse_detected_languages: (Array[String]? langs_data) -> Array[String]?
+    def parse_chunks: (Array[chunk_hash]? chunks_data) -> Array[Chunk]?
+  end
+
+  # Module methods (extraction API)
+  def self.extract_file_sync: (
+    String | Pathname path,
+    ?mime_type: String?,
+    ?config: config_input?
+  ) -> Result
+
+  def self.extract_bytes_sync: (
+    String data,
+    String mime_type,
+    ?config: config_input?
+  ) -> Result
+
+  def self.batch_extract_files_sync: (
+    Array[String | Pathname] paths,
+    ?config: config_input?
+  ) -> Array[Result]
+
+  def self.batch_extract_bytes_sync: (
+    Array[String] data_array,
+    Array[String] mime_types,
+    ?config: config_input?
+  ) -> Array[Result]
+
+  def self.extract_file: (
+    String | Pathname path,
+    ?mime_type: String?,
+    ?config: config_input?
+  ) -> Result
+
+  def self.extract_bytes: (
+    String data,
+    String mime_type,
+    ?config: config_input?
+  ) -> Result
+
+  def self.batch_extract_files: (
+    Array[String | Pathname] paths,
+    ?config: config_input?
+  ) -> Array[Result]
+
+  def self.batch_extract_bytes: (
+    Array[String] data_array,
+    Array[String] mime_types,
+    ?config: config_input?
+  ) -> Array[Result]
+
+  # Cache API
+  def self.clear_cache: () -> void
+  def self.cache_stats: () -> Hash[Symbol | String, Integer]
+
+  # Plugin registration
+  def self.register_post_processor: (String name, _PostProcessor processor, ?stage: Symbol?) -> void
+  def self.unregister_post_processor: (String name) -> void
+  def self.clear_post_processors: () -> void
+  def self.register_validator: (String name, _Validator validator, ?priority: Integer?) -> void
+  def self.unregister_validator: (String name) -> void
+  def self.clear_validators: () -> void
+  def self.register_ocr_backend: (_OcrBackend backend) -> void
+
+  interface _PostProcessor
+    def call: (extraction_result_hash result) -> extraction_result_hash
+  end
+
+  interface _Validator
+    def call: (extraction_result_hash result) -> void
+  end
+
+  interface _OcrBackend
+    def name: () -> String
+    def extract_text: (String file_path_or_bytes, Hash[Symbol, untyped] config) -> String
+  end
+
+  module Errors
+    class KreuzbergError < StandardError
+    end
+
+    class ValidationError < KreuzbergError
+    end
+
+    class ParsingError < KreuzbergError
+    end
+
+    class OCRError < KreuzbergError
+    end
+
+    class MissingDependencyError < KreuzbergError
+      attr_reader dependency: String?
+
+      def initialize: (String message, ?dependency: String?) -> void
+    end
+  end
+end
