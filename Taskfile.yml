@@ -343,6 +343,7 @@ tasks:
       - task: typescript:update
       - task: ruby:update
       - task: python:update
+      - prek auotupdate
       - "echo \"\u2713 All dependencies updated\""
   clean:rust:
     desc: Clean Rust build artifacts
