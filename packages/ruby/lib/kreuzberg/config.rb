@@ -388,6 +388,7 @@ module Kreuzberg
         @token_reduction = normalize_config(token_reduction, TokenReduction)
       end
 
+      # rubocop:disable Metrics/PerceivedComplexity
       def to_h
         {
           use_cache: @use_cache,
@@ -403,6 +404,7 @@ module Kreuzberg
           token_reduction: @token_reduction&.to_h
         }.compact
       end
+      # rubocop:enable Metrics/PerceivedComplexity
 
       private
 
