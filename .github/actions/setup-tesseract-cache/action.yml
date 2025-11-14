@@ -1,0 +1,66 @@
+name: Setup Tesseract Cache
+description: Manages tesseract-rs build cache per architecture
+
+inputs:
+  label:
+    description: Platform label (e.g. linux-x86_64, linux-aarch64)
+    required: true
+  enable-cache:
+    description: Enable tesseract caching (disable for cross-arch builds)
+    required: false
+    default: "true"
+  rust-target:
+    description: Rust target triple for per-target cache cleanup
+    required: false
+    default: ""
+
+outputs:
+  cache-dir:
+    description: Tesseract cache directory path
+    value: ${{ steps.set-outputs.outputs.cache-dir }}
+  cache-enabled:
+    description: Whether caching is enabled (true/false)
+    value: ${{ steps.set-outputs.outputs.cache-enabled }}
+  docker-options:
+    description: Docker options for passing cache env vars
+    value: ${{ steps.set-outputs.outputs.docker-options }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup cache directories
+      if: inputs.enable-cache == 'true'
+      shell: bash
+      run: |
+        rm -rf .tesseract-cache/${{ inputs.label }}
+        mkdir -p .tesseract-cache/${{ inputs.label }}
+        mkdir -p .tesseract-home/${{ inputs.label }}
+        mkdir -p .xdg-cache/${{ inputs.label }}
+
+    - name: Clean per-target Tesseract cache
+      if: inputs.rust-target != ''
+      shell: bash
+      run: rm -rf target/${{ inputs.rust-target }}/tesseract-rs-cache
+
+    - name: Set outputs and environment
+      id: set-outputs
+      shell: bash
+      run: |
+        if [ "${{ inputs.enable-cache }}" = "true" ]; then
+          CACHE_DIR="${GITHUB_WORKSPACE}/.tesseract-cache/${{ inputs.label }}"
+          echo "TESSERACT_RS_CACHE_DIR=${CACHE_DIR}" >> $GITHUB_ENV
+          echo "XDG_CACHE_HOME=${GITHUB_WORKSPACE}/.xdg-cache/${{ inputs.label }}" >> $GITHUB_ENV
+          echo "cache-dir=${CACHE_DIR}" >> $GITHUB_OUTPUT
+          echo "cache-enabled=true" >> $GITHUB_OUTPUT
+
+          # Docker options for manylinux containers
+          DOCKER_OPTS="--env TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ inputs.label }}"
+          DOCKER_OPTS="${DOCKER_OPTS} --env XDG_CACHE_HOME=/io/.xdg-cache/${{ inputs.label }}"
+          DOCKER_OPTS="${DOCKER_OPTS} --env HOME=/io/.tesseract-home/${{ inputs.label }}"
+          echo "docker-options=${DOCKER_OPTS}" >> $GITHUB_OUTPUT
+        else
+          echo "TESSERACT_RS_CACHE_DIR=" >> $GITHUB_ENV
+          echo "cache-dir=" >> $GITHUB_OUTPUT
+          echo "cache-enabled=false" >> $GITHUB_OUTPUT
+          echo "docker-options=" >> $GITHUB_OUTPUT
+        fi
