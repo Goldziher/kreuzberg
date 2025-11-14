@@ -469,6 +469,7 @@ jobs:
   build-cli-binaries:
     name: Build CLI ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
     timeout-minutes: 180
     strategy:
       fail-fast: false
@@ -476,6 +477,9 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            artifact_name: kreuzberg
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
             artifact_name: kreuzberg
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -493,6 +497,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Install musl-tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Cache cargo
         uses: actions/cache@v4
