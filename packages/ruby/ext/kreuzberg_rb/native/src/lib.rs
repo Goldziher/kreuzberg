@@ -1363,114 +1363,130 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
             result: &mut kreuzberg::ExtractionResult,
             _config: &kreuzberg::ExtractionConfig,
         ) -> kreuzberg::Result<()> {
-            let ruby = Ruby::get().expect("Ruby not initialized");
-            let result_hash =
-                extraction_result_to_ruby(&ruby, result.clone()).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                    message: format!("Failed to convert result to Ruby: {}", e),
-                    plugin_name: self.name.clone(),
+            let processor_name = self.name.clone();
+            let processor = self.processor;
+            let result_clone = result.clone();
+
+            // Use block_in_place to avoid GVL deadlocks (same pattern as Python PostProcessor)
+            // See crates/kreuzberg-py/README.md:151-158 for explanation
+            // CRITICAL: spawn_blocking causes GVL deadlocks, must use block_in_place
+            let updated_result = tokio::task::block_in_place(|| {
+                let ruby = Ruby::get().expect("Ruby not initialized");
+                let result_hash = extraction_result_to_ruby(&ruby, result_clone.clone()).map_err(|e| {
+                    kreuzberg::KreuzbergError::Plugin {
+                        message: format!("Failed to convert result to Ruby: {}", e),
+                        plugin_name: processor_name.clone(),
+                    }
                 })?;
 
-            let modified = self
-                .processor
-                .funcall::<_, _, magnus::Value>("call", (result_hash,))
-                .map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                    message: format!("Ruby post-processor failed: {}", e),
-                    plugin_name: self.name.clone(),
-                })?;
+                let modified = processor
+                    .funcall::<_, _, magnus::Value>("call", (result_hash,))
+                    .map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                        message: format!("Ruby post-processor failed: {}", e),
+                        plugin_name: processor_name.clone(),
+                    })?;
 
-            let modified_hash =
-                magnus::RHash::try_convert(modified).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                    message: format!("Post-processor must return a Hash: {}", e),
-                    plugin_name: self.name.clone(),
-                })?;
+                let modified_hash =
+                    magnus::RHash::try_convert(modified).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                        message: format!("Post-processor must return a Hash: {}", e),
+                        plugin_name: processor_name.clone(),
+                    })?;
 
-            if let Some(content_val) = get_kw(&ruby, modified_hash, "content") {
-                let new_content = String::try_convert(content_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                    message: format!("Failed to convert content: {}", e),
-                    plugin_name: self.name.clone(),
-                })?;
-                result.content = new_content;
-            }
+                let mut updated_result = result_clone;
 
-            if let Some(mime_val) = get_kw(&ruby, modified_hash, "mime_type") {
-                let new_mime = String::try_convert(mime_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                    message: format!("Failed to convert mime_type: {}", e),
-                    plugin_name: self.name.clone(),
-                })?;
-                result.mime_type = new_mime;
-            }
-
-            if let Some(metadata_val) = get_kw(&ruby, modified_hash, "metadata") {
-                if metadata_val.is_nil() {
-                    result.metadata = kreuzberg::types::Metadata::default();
-                } else {
-                    let metadata_json =
-                        ruby_value_to_json(metadata_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                            message: format!("Metadata must be JSON-serializable: {}", e),
-                            plugin_name: self.name.clone(),
+                if let Some(content_val) = get_kw(&ruby, modified_hash, "content") {
+                    let new_content =
+                        String::try_convert(content_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                            message: format!("Failed to convert content: {}", e),
+                            plugin_name: processor_name.clone(),
                         })?;
-                    let metadata: kreuzberg::types::Metadata =
-                        serde_json::from_value(metadata_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                            message: format!("Failed to deserialize metadata: {}", e),
-                            plugin_name: self.name.clone(),
-                        })?;
-                    result.metadata = metadata;
+                    updated_result.content = new_content;
                 }
-            }
 
-            if let Some(tables_val) = get_kw(&ruby, modified_hash, "tables") {
-                let tables_json = ruby_value_to_json(tables_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                    message: format!("Tables must be JSON-serializable: {}", e),
-                    plugin_name: self.name.clone(),
-                })?;
-                if tables_json.is_null() {
-                    result.tables.clear();
-                } else {
-                    let tables: Vec<kreuzberg::types::Table> =
-                        serde_json::from_value(tables_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                            message: format!("Failed to deserialize tables: {}", e),
-                            plugin_name: self.name.clone(),
-                        })?;
-                    result.tables = tables;
+                if let Some(mime_val) = get_kw(&ruby, modified_hash, "mime_type") {
+                    let new_mime = String::try_convert(mime_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                        message: format!("Failed to convert mime_type: {}", e),
+                        plugin_name: processor_name.clone(),
+                    })?;
+                    updated_result.mime_type = new_mime;
                 }
-            }
 
-            if let Some(languages_val) = get_kw(&ruby, modified_hash, "detected_languages") {
-                if languages_val.is_nil() {
-                    result.detected_languages = None;
-                } else {
-                    let langs_json =
-                        ruby_value_to_json(languages_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                            message: format!("detected_languages must be JSON-serializable: {}", e),
-                            plugin_name: self.name.clone(),
-                        })?;
-                    let languages: Vec<String> =
-                        serde_json::from_value(langs_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                            message: format!("Failed to deserialize detected_languages: {}", e),
-                            plugin_name: self.name.clone(),
-                        })?;
-                    result.detected_languages = Some(languages);
+                if let Some(metadata_val) = get_kw(&ruby, modified_hash, "metadata") {
+                    if metadata_val.is_nil() {
+                        updated_result.metadata = kreuzberg::types::Metadata::default();
+                    } else {
+                        let metadata_json =
+                            ruby_value_to_json(metadata_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                                message: format!("Metadata must be JSON-serializable: {}", e),
+                                plugin_name: processor_name.clone(),
+                            })?;
+                        let metadata: kreuzberg::types::Metadata =
+                            serde_json::from_value(metadata_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                                message: format!("Failed to deserialize metadata: {}", e),
+                                plugin_name: processor_name.clone(),
+                            })?;
+                        updated_result.metadata = metadata;
+                    }
                 }
-            }
 
-            if let Some(chunks_val) = get_kw(&ruby, modified_hash, "chunks") {
-                if chunks_val.is_nil() {
-                    result.chunks = None;
-                } else {
-                    let chunks_json =
-                        ruby_value_to_json(chunks_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                            message: format!("Chunks must be JSON-serializable: {}", e),
-                            plugin_name: self.name.clone(),
+                if let Some(tables_val) = get_kw(&ruby, modified_hash, "tables") {
+                    let tables_json =
+                        ruby_value_to_json(tables_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                            message: format!("Tables must be JSON-serializable: {}", e),
+                            plugin_name: processor_name.clone(),
                         })?;
-                    let chunks: Vec<kreuzberg::types::Chunk> =
-                        serde_json::from_value(chunks_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                            message: format!("Failed to deserialize chunks: {}", e),
-                            plugin_name: self.name.clone(),
-                        })?;
-                    result.chunks = Some(chunks);
+                    if tables_json.is_null() {
+                        updated_result.tables.clear();
+                    } else {
+                        let tables: Vec<kreuzberg::types::Table> =
+                            serde_json::from_value(tables_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                                message: format!("Failed to deserialize tables: {}", e),
+                                plugin_name: processor_name.clone(),
+                            })?;
+                        updated_result.tables = tables;
+                    }
                 }
-            }
 
+                if let Some(languages_val) = get_kw(&ruby, modified_hash, "detected_languages") {
+                    if languages_val.is_nil() {
+                        updated_result.detected_languages = None;
+                    } else {
+                        let langs_json =
+                            ruby_value_to_json(languages_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                                message: format!("detected_languages must be JSON-serializable: {}", e),
+                                plugin_name: processor_name.clone(),
+                            })?;
+                        let languages: Vec<String> =
+                            serde_json::from_value(langs_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                                message: format!("Failed to deserialize detected_languages: {}", e),
+                                plugin_name: processor_name.clone(),
+                            })?;
+                        updated_result.detected_languages = Some(languages);
+                    }
+                }
+
+                if let Some(chunks_val) = get_kw(&ruby, modified_hash, "chunks") {
+                    if chunks_val.is_nil() {
+                        updated_result.chunks = None;
+                    } else {
+                        let chunks_json =
+                            ruby_value_to_json(chunks_val).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                                message: format!("Chunks must be JSON-serializable: {}", e),
+                                plugin_name: processor_name.clone(),
+                            })?;
+                        let chunks: Vec<kreuzberg::types::Chunk> =
+                            serde_json::from_value(chunks_json).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                                message: format!("Failed to deserialize chunks: {}", e),
+                                plugin_name: processor_name.clone(),
+                            })?;
+                        updated_result.chunks = Some(chunks);
+                    }
+                }
+
+                Ok::<kreuzberg::ExtractionResult, kreuzberg::KreuzbergError>(updated_result)
+            })?;
+
+            *result = updated_result;
             Ok(())
         }
 
@@ -1556,21 +1572,30 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
             result: &kreuzberg::ExtractionResult,
             _config: &kreuzberg::ExtractionConfig,
         ) -> kreuzberg::Result<()> {
-            let ruby = Ruby::get().expect("Ruby not initialized");
-            let result_hash =
-                extraction_result_to_ruby(&ruby, result.clone()).map_err(|e| kreuzberg::KreuzbergError::Plugin {
-                    message: format!("Failed to convert result to Ruby: {}", e),
-                    plugin_name: self.name.clone(),
-                })?;
+            let validator_name = self.name.clone();
+            let validator = self.validator;
+            let result_clone = result.clone();
 
-            self.validator
-                .funcall::<_, _, magnus::Value>("call", (result_hash,))
-                .map_err(|e| kreuzberg::KreuzbergError::Validation {
-                    message: format!("Validation failed: {}", e),
-                    source: None,
-                })?;
+            // Use block_in_place to avoid GVL deadlocks (same pattern as Python Validator)
+            // See crates/kreuzberg-py/README.md:151-158 for explanation
+            // CRITICAL: spawn_blocking causes GVL deadlocks, must use block_in_place
+            tokio::task::block_in_place(|| {
+                let ruby = Ruby::get().expect("Ruby not initialized");
+                let result_hash =
+                    extraction_result_to_ruby(&ruby, result_clone).map_err(|e| kreuzberg::KreuzbergError::Plugin {
+                        message: format!("Failed to convert result to Ruby: {}", e),
+                        plugin_name: validator_name.clone(),
+                    })?;
 
-            Ok(())
+                validator
+                    .funcall::<_, _, magnus::Value>("call", (result_hash,))
+                    .map_err(|e| kreuzberg::KreuzbergError::Validation {
+                        message: format!("Validation failed: {}", e),
+                        source: None,
+                    })?;
+
+                Ok(())
+            })
         }
 
         fn priority(&self) -> i32 {
