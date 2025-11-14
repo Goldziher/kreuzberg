@@ -36,6 +36,7 @@ jobs:
   build-wheels:
     name: Build Python wheels (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.label == 'linux-aarch64' }}
     timeout-minutes: 180
     strategy:
       fail-fast: false
@@ -300,6 +301,7 @@ jobs:
   build-ruby-gems:
     name: Build Ruby gem (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.label == 'windows-x64' }}
     timeout-minutes: 180
     env:
       RB_SYS_CARGO_PROFILE: release

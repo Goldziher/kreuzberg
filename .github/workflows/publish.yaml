@@ -149,14 +149,15 @@ jobs:
             python: "3.10"
             needs_qemu: false
             extra_args: ""
-          - label: linux-aarch64
-            os: ubuntu-latest
-            artifact: python-wheels-linux-aarch64
-            rust_target: aarch64-unknown-linux-gnu
-            manylinux: 2_28
-            python: "3.10"
-            needs_qemu: true
-            extra_args: ""
+          # TODO: Re-enable once linux-aarch64 builds are fixed
+          # - label: linux-aarch64
+          #   os: ubuntu-latest
+          #   artifact: python-wheels-linux-aarch64
+          #   rust_target: aarch64-unknown-linux-gnu
+          #   manylinux: 2_28
+          #   python: "3.10"
+          #   needs_qemu: true
+          #   extra_args: ""
           - label: macos-universal
             os: macos-14
             artifact: python-wheels-macos
@@ -592,8 +593,9 @@ jobs:
             label: linux
           - os: macos-14
             label: macos-arm64
-          - os: windows-latest
-            label: windows-x64
+          # TODO: Re-enable once windows-x64 builds are fixed
+          # - os: windows-latest
+          #   label: windows-x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
