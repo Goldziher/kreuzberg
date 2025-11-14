@@ -4,9 +4,11 @@ module Kreuzberg
   module ExtractionAPI
     def extract_file_sync(path, mime_type: nil, config: nil)
       opts = normalize_config(config)
-      args = [path.to_s]
-      args << mime_type.to_s if mime_type
-      hash = native_extract_file_sync(*args, **opts)
+      hash = if mime_type
+               native_extract_file_sync(path.to_s, mime_type.to_s, **opts)
+             else
+               native_extract_file_sync(path.to_s, **opts)
+             end
       result = Result.new(hash)
       record_cache_entry!(result, opts)
       result
@@ -30,9 +32,11 @@ module Kreuzberg
 
     def extract_file(path, mime_type: nil, config: nil)
       opts = normalize_config(config)
-      args = [path.to_s]
-      args << mime_type.to_s if mime_type
-      hash = native_extract_file(*args, **opts)
+      hash = if mime_type
+               native_extract_file(path.to_s, mime_type.to_s, **opts)
+             else
+               native_extract_file(path.to_s, **opts)
+             end
       result = Result.new(hash)
       record_cache_entry!(result, opts)
       result
@@ -73,8 +77,6 @@ module Kreuzberg
     def normalize_config(config)
       return {} if config.nil?
       return config if config.is_a?(Hash)
-
-      raise ArgumentError, 'config must be a Hash or respond to :to_h' unless config.respond_to?(:to_h)
 
       config.to_h
     end

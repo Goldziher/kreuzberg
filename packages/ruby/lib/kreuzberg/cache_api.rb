@@ -26,7 +26,9 @@ module Kreuzberg
       use_cache = opts.key?(:use_cache) ? opts[:use_cache] : true
       return unless use_cache
 
-      Array(results).each do |result|
+      results_array = results.is_a?(Array) ? results : [results]
+      results_array.each do |result|
+        # @type var result: Result
         next unless result.respond_to?(:content)
 
         @__cache_tracker[:entries] += 1

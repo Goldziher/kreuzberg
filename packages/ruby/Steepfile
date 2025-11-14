@@ -10,28 +10,28 @@ target :lib do
   # Core library
   library "pathname"
   library "json"
-  library "open3"
   library "fileutils"
+  library "open3"
 
-  # Strategic ignores for files with steep limitations but no actual bugs
-  # These files work correctly but steep has difficulty with certain Ruby patterns
+  # Strategic ignores for steep limitations (not fixable, safe to ignore):
 
-  # Struct.new with keyword_init - steep limitation
+  # 1. Struct.new with keyword_init - steep cannot understand implicit attr_readers
+  #    defined by Struct.new in blocks (Table and Chunk classes)
   ignore "lib/kreuzberg/result.rb"
 
-  # module_function pattern - steep doesn't handle private class methods well
-  ignore "lib/kreuzberg/setup_lib_path.rb"
-  ignore "lib/kreuzberg/cli.rb"
-  ignore "lib/kreuzberg/cli_proxy.rb"
-  ignore "lib/kreuzberg/api_proxy.rb"
-  ignore "lib/kreuzberg/mcp_proxy.rb"
+  # 2. Generic type parameters in normalize_config - steep has difficulty with
+  #    methods that take Class as parameter and return instances
+  ignore "lib/kreuzberg/config.rb"
 
-  # Module prepending with native method calls
-  ignore "lib/kreuzberg/cache_api.rb"
+  # 3. Interface types - steep doesn't recognize that all Ruby objects have nil? and is_a?
+  #    even for interface types like _ToH
   ignore "lib/kreuzberg/extraction_api.rb"
 
-  # Generic type parameters - steep limitation with generics
-  ignore "lib/kreuzberg/config.rb"
+  # 4. Open3 methods - steep's built-in Open3 RBS signatures incomplete
+  #    (capture2, capture3, popen3 are standard library methods)
+  ignore "lib/kreuzberg/setup_lib_path.rb"
+  ignore "lib/kreuzberg/cli_proxy.rb"
+  ignore "lib/kreuzberg/mcp_proxy.rb"
 
   # Ignore Rust extension methods (defined in native code)
   ignore "ext"

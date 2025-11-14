@@ -2,18 +2,32 @@
 
 module Kreuzberg
   module SetupLibPath
+    # Public method
+    def configure: () -> void
     def self.configure: () -> void
+
+    # Private methods (module_function makes them both instance and class methods)
+    def prepend_env: (String key, String value, ?separator: String) -> void
     def self.prepend_env: (String key, String value, ?separator: String) -> void
+    def fix_macos_install_name: (String lib_dir) -> void
     def self.fix_macos_install_name: (String lib_dir) -> void
+    def macos_bundle: (String lib_dir) -> String?
     def self.macos_bundle: (String lib_dir) -> String?
+    def ensure_install_name: (String bundle) -> void
     def self.ensure_install_name: (String bundle) -> void
+    def ensure_loader_rpath: (String bundle) -> void
     def self.ensure_loader_rpath: (String bundle) -> void
   end
 
   module CLI
+    # All methods are both instance and class methods due to module_function
+    def extract: (String path, ?output: String, ?ocr: bool) -> String
     def self.extract: (String path, ?output: String, ?ocr: bool) -> String
+    def detect: (String path) -> String
     def self.detect: (String path) -> String
+    def version: () -> String
     def self.version: () -> String
+    def help: () -> String
     def self.help: () -> String
   end
 
@@ -31,11 +45,18 @@ module Kreuzberg
       def initialize: (String message, stderr: String, status: Integer) -> void
     end
 
+    # All methods are both instance and class methods due to module_function
+    def call: (Array[String] argv) -> String
     def self.call: (Array[String] argv) -> String
+    def find_cli_binary: () -> Pathname
     def self.find_cli_binary: () -> Pathname
+    def root_path: () -> Pathname
     def self.root_path: () -> Pathname
+    def lib_path: () -> Pathname
     def self.lib_path: () -> Pathname
+    def search_paths: (String binary_name) -> Array[Pathname]
     def self.search_paths: (String binary_name) -> Array[Pathname]
+    def missing_binary_message: () -> String
     def self.missing_binary_message: () -> String
   end
 
@@ -51,23 +72,70 @@ module Kreuzberg
 
     class Server
       attr_reader port: Integer
+      attr_reader host: String
       attr_reader process: Process::Status?
 
-      def initialize: (Integer port) -> void
+      def initialize: (?port: Integer, ?host: String) -> void
       def start: () -> void
       def stop: () -> void
       def running?: () -> bool
       def health_check: () -> bool
     end
 
+    # Module function methods are both instance and class methods
+    def run: (?port: Integer, ?host: String) { (Server) -> untyped } -> untyped
+    def self.run: (?port: Integer, ?host: String) { (Server) -> untyped } -> untyped
+    def start_server: (?port: Integer?) -> Server
     def self.start_server: (?port: Integer?) -> Server
+    def extract_file: (String path, ?mime_type: String?, ?config: Hash[Symbol, untyped]?, ?server: Server?) -> Kreuzberg::Result
     def self.extract_file: (String path, ?mime_type: String?, ?config: Hash[Symbol, untyped]?, ?server: Server?) -> Kreuzberg::Result
+    def batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?, ?server: Server?) -> Array[Kreuzberg::Result]
     def self.batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?, ?server: Server?) -> Array[Kreuzberg::Result]
+    def find_api_binary: () -> Pathname
+    def self.find_api_binary: () -> Pathname
+    def missing_binary_message: () -> String
+    def self.missing_binary_message: () -> String
   end
 
   module MCPProxy
+    class Error < Kreuzberg::Errors::Error
+    end
+
+    class MissingBinaryError < Error
+    end
+
+    class ServerError < Error
+    end
+
+    class Server
+      attr_reader pid: Integer?
+      attr_reader transport: String
+
+      def initialize: (?transport: String) -> void
+      def start: () -> (Integer | nil)
+      def stop: () -> void
+      def running?: () -> bool
+      def send_message: (Hash[untyped, untyped] message) -> void
+      def read_message: () -> (Hash[untyped, untyped] | nil)
+
+      private
+
+      def start_stdio: (Pathname binary) -> nil
+      def start_sse: (Pathname binary) -> (Integer | nil)
+      def close_pipes: () -> void
+    end
+
+    # Module function methods are both instance and class methods
+    def run: (?transport: String) { (Server) -> untyped } -> untyped
+    def self.run: (?transport: String) { (Server) -> untyped } -> untyped
+    def extract_file: (String path, ?mime_type: String?, ?config: Hash[Symbol, untyped]?) -> Kreuzberg::Result
     def self.extract_file: (String path, ?mime_type: String?, ?config: Hash[Symbol, untyped]?) -> Kreuzberg::Result
+    def batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?) -> Array[Kreuzberg::Result]
     def self.batch_extract: (Array[String] paths, ?config: Hash[Symbol, untyped]?) -> Array[Kreuzberg::Result]
+    def find_mcp_binary: () -> Pathname
+    def self.find_mcp_binary: () -> Pathname
+    def missing_binary_message: () -> String
+    def self.missing_binary_message: () -> String
   end
 
   # Cache API module (prepended to Kreuzberg singleton class)

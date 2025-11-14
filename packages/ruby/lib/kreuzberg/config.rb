@@ -63,6 +63,7 @@ module Kreuzberg
           preset: @preset,
           embedding: @embedding
         }.compact
+        # @type var config: Hash[Symbol, untyped]
         config[:enabled] = @enabled unless @enabled.nil?
         config
       end

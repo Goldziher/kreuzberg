@@ -78,7 +78,7 @@ module Kreuzberg
     # @return [Pathname] Root path
     #
     def root_path
-      @root_path ||= Pathname(__dir__).join('../..').expand_path
+      @root_path ||= Pathname(__dir__ || '.').join('../..').expand_path
     end
 
     # Get the lib path
@@ -86,7 +86,7 @@ module Kreuzberg
     # @return [Pathname] Lib path
     #
     def lib_path
-      @lib_path ||= Pathname(__dir__).join('..').expand_path
+      @lib_path ||= Pathname(__dir__ || '.').join('..').expand_path
     end
 
     # Search paths for the CLI binary

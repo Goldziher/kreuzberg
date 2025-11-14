@@ -135,6 +135,10 @@ module Kreuzberg
         ?token_reduction: (TokenReduction | Hash[Symbol, untyped])?
       ) -> void
       def to_h: () -> Hash[Symbol, untyped]
+
+      private
+
+      def normalize_config: [T] (T | Hash[Symbol, untyped] | nil value, Class klass) -> T?
     end
 
     # Backwards compatibility alias
