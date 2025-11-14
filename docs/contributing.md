@@ -22,15 +22,9 @@ This runs language-specific installers (Python `uv sync`, `pnpm install`, `bundl
 
 ### Build-Time Dependencies
 
-Kreuzberg requires certain system libraries at **build time** (not runtime):
+Kreuzberg uses pure Rust dependencies and requires no system libraries beyond standard build tools.
 
-**OpenSSL** (required by fastembed for HTTPS downloads):
-- **macOS**: `brew install openssl@3`
-- **Ubuntu/Debian**: `apt-get install libssl-dev pkg-config`
-- **Fedora/RHEL**: `dnf install openssl-devel pkg-config`
-- **Windows**: OpenSSL is bundled with Rust's `windows-gnu` toolchain
-
-The fastembed dependency uses a maintained fork (`kreuzberg-dev/fastembed-rs`) with ONNX Runtime adjustments. OpenSSL is only needed during compilation for HTTPS model downloads via HuggingFace Hub.
+**Fastembed Fork**: We maintain a fork at `kreuzberg-dev/fastembed-rs` that uses `rustls` (pure Rust TLS) instead of `native-tls` (OpenSSL). This eliminates OpenSSL as a build dependency and simplifies cross-platform builds. The fork will be retired once upstream `ort` publishes rustls support to crates.io.
 
 ### Platform-Specific Requirements
 
@@ -91,17 +85,6 @@ bundle exec rake native:gem  # Builds platform gem
 ```
 
 ### Common Build Issues
-
-**OpenSSL not found**:
-```bash
-# macOS
-export OPENSSL_DIR=$(brew --prefix openssl@3)
-
-# Linux (if pkg-config fails)
-export OPENSSL_DIR=/usr
-export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
-export OPENSSL_INCLUDE_DIR=/usr/include/openssl
-```
 
 **Cross-compilation**:
 ```bash
