@@ -556,25 +556,63 @@ jobs:
           ls -lh kreuzberg-${{ matrix.target }}.* || echo "No archives found"
 
   smoke-tests:
-    name: Smoke Tests (${{ matrix.flavor }})
+    name: Smoke Tests (${{ matrix.flavor }} - ${{ matrix.os }})
     needs:
       - build-wheels
       - build-napi-bindings
       - build-ruby-gems
       - build-cli-binaries
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
+          # Python wheels
           - flavor: python
             artifact: wheels-linux-x86_64
+            os: ubuntu-latest
+            python-version: "3.10"
+          - flavor: python
+            artifact: wheels-macos
+            os: macos-14
+            python-version: "3.10"
+          - flavor: python
+            artifact: wheels-windows
+            os: windows-latest
+            python-version: "3.10"
+          # Node.js packages
           - flavor: node
             artifact: napi-x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - flavor: node
+            artifact: napi-aarch64-apple-darwin
+            os: macos-14
+          - flavor: node
+            artifact: napi-x86_64-pc-windows-msvc
+            os: windows-latest
+          # Ruby gems
           - flavor: ruby
             artifact: gem-linux-x86_64
+            os: ubuntu-latest
+            ruby-version: "3.3"
+          - flavor: ruby
+            artifact: gem-macos-arm64
+            os: macos-14
+            ruby-version: "3.3"
+          - flavor: ruby
+            artifact: gem-windows-x64
+            os: windows-latest
+            ruby-version: "3.3"
+          # CLI binaries
           - flavor: cli
             artifact: cli-x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - flavor: cli
+            artifact: cli-aarch64-apple-darwin
+            os: macos-14
+          - flavor: cli
+            artifact: cli-x86_64-pc-windows-msvc
+            os: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -582,22 +620,26 @@ jobs:
           submodules: recursive
 
       - name: Setup pnpm
+        if: matrix.flavor == 'node'
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
+        if: matrix.flavor == 'node'
         uses: actions/setup-node@v6
         with:
           node-version: 20
 
       - name: Setup Python
+        if: matrix.flavor == 'python'
         uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python-version }}
 
       - name: Setup Ruby
+        if: matrix.flavor == 'ruby'
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.3"
+          ruby-version: ${{ matrix.ruby-version }}
 
       - name: Download artifact
         uses: actions/download-artifact@v6
