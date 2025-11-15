@@ -83,6 +83,25 @@ Extract text, tables, and metadata from a file on disk.
     puts "Metadata: #{result.metadata}"
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+
+    try {
+        ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+
+        System.out.println(result.getContent());
+        System.out.println("Tables: " + result.getTables().size());
+        System.out.println("Metadata: " + result.getMetadata());
+    } catch (IOException | KreuzbergException e) {
+        e.printStackTrace();
+    }
+    ```
+
 ### Asynchronous
 
 === "Python"
@@ -131,6 +150,26 @@ Extract text, tables, and metadata from a file on disk.
 
     result = Kreuzberg.extract_file('document.pdf')
     puts result.content
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+
+    public class Example {
+        public static void main(String[] args) {
+            try {
+                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+                System.out.println(result.getContent());
+            } catch (IOException | KreuzbergException e) {
+                e.printStackTrace();
+            }
+        }
+    }
     ```
 
 ```mermaid
@@ -257,6 +296,29 @@ Extract from data already loaded in memory.
     puts result.content
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+    import java.nio.file.Files;
+    import java.nio.file.Paths;
+
+    try {
+        byte[] data = Files.readAllBytes(Paths.get("document.pdf"));
+
+        ExtractionResult result = Kreuzberg.extractBytesSync(
+            data,
+            "application/pdf"
+        );
+        System.out.println(result.getContent());
+    } catch (IOException | KreuzbergException e) {
+        e.printStackTrace();
+    }
+    ```
+
 ### Asynchronous
 
 === "Python"
@@ -333,6 +395,33 @@ Extract from data already loaded in memory.
     puts result.content
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+    import java.nio.file.Files;
+    import java.nio.file.Paths;
+
+    public class Example {
+        public static void main(String[] args) {
+            try {
+                byte[] data = Files.readAllBytes(Paths.get("document.pdf"));
+
+                ExtractionResult result = Kreuzberg.extractBytesSync(
+                    data,
+                    "application/pdf"
+                );
+                System.out.println(result.getContent());
+            } catch (IOException | KreuzbergException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    ```
+
 !!! note "MIME Type Detection"
     Kreuzberg automatically detects MIME types from file extensions. When extracting from bytes, you must provide the MIME type explicitly.
 
@@ -401,6 +490,30 @@ Process multiple files concurrently for better performance.
     results.each_with_index do |result, i|
         puts "File #{i+1}: #{result.content.length} characters"
     end
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+    import java.util.Arrays;
+    import java.util.List;
+
+    try {
+        List<String> files = Arrays.asList("doc1.pdf", "doc2.docx", "doc3.pptx");
+
+        List<ExtractionResult> results = Kreuzberg.batchExtractFilesSync(files);
+
+        for (int i = 0; i < results.size(); i++) {
+            ExtractionResult result = results.get(i);
+            System.out.println("File " + (i+1) + ": " + result.getContent().length() + " characters");
+        }
+    } catch (IOException | KreuzbergException e) {
+        e.printStackTrace();
+    }
     ```
 
 ### Batch Extract Bytes
@@ -508,6 +621,42 @@ Process multiple files concurrently for better performance.
     results.each_with_index do |result, i|
         puts "Document #{i+1}: #{result.content.length} characters"
     end
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.BytesWithMime;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+    import java.nio.file.Files;
+    import java.nio.file.Paths;
+    import java.util.ArrayList;
+    import java.util.Arrays;
+    import java.util.List;
+
+    try {
+        List<String> files = Arrays.asList("doc1.pdf", "doc2.docx");
+
+        List<BytesWithMime> dataList = new ArrayList<>();
+        for (String file : files) {
+            byte[] data = Files.readAllBytes(Paths.get(file));
+            String mimeType = file.endsWith(".pdf") ? "application/pdf" :
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            dataList.add(new BytesWithMime(data, mimeType));
+        }
+
+        List<ExtractionResult> results = Kreuzberg.batchExtractBytesSync(dataList);
+
+        for (int i = 0; i < results.size(); i++) {
+            ExtractionResult result = results.get(i);
+            System.out.println("Document " + (i+1) + ": " + result.getContent().length() + " characters");
+        }
+    } catch (IOException | KreuzbergException e) {
+        e.printStackTrace();
+    }
     ```
 
 ```mermaid
@@ -675,6 +824,36 @@ All extraction functions raise exceptions on failure:
     rescue StandardError => e
         puts "System error: #{e.message}"
     end
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import dev.kreuzberg.ValidationException;
+    import dev.kreuzberg.ParsingException;
+    import dev.kreuzberg.OcrException;
+    import dev.kreuzberg.MissingDependencyException;
+    import java.io.IOException;
+
+    try {
+        ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+        System.out.println(result.getContent());
+    } catch (ValidationException e) {
+        System.err.println("Invalid configuration: " + e.getMessage());
+    } catch (ParsingException e) {
+        System.err.println("Failed to parse document: " + e.getMessage());
+    } catch (OcrException e) {
+        System.err.println("OCR processing failed: " + e.getMessage());
+    } catch (MissingDependencyException e) {
+        System.err.println("Missing dependency: " + e.getMessage());
+    } catch (KreuzbergException e) {
+        System.err.println("Extraction error: " + e.getMessage());
+    } catch (IOException e) {
+        System.err.println("System error: " + e.getMessage());
+    }
     ```
 
 !!! warning "System Errors"

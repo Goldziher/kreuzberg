@@ -157,6 +157,17 @@ Kreuzberg automatically discovers configuration files in the following locations
     result = Kreuzberg.extract_file('document.pdf', config: config)
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder().build();
+    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
+    ```
+
 ## ExtractionConfig
 
 The main configuration object controlling extraction behavior.
@@ -224,6 +235,20 @@ The main configuration object controlling extraction behavior.
       enable_quality_processing: true
     )
     result = Kreuzberg.extract_file('document.pdf', config: config)
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .useCache(true)
+        .enableQualityProcessing(true)
+        .build();
+    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
     ```
 
 ## OcrConfig
@@ -296,6 +321,20 @@ Configuration for OCR processing. Set to enable OCR on images and scanned PDFs.
         tesseract_config: Kreuzberg::TesseractConfig.new(psm: 3)
       )
     )
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.OcrConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .ocr(OcrConfig.builder()
+            .backend("tesseract")
+            .language("eng+fra")
+            .build())
+        .build();
     ```
 
 ## TesseractConfig
@@ -431,6 +470,19 @@ Tesseract OCR engine configuration.
     )
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.OcrConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .ocr(OcrConfig.builder()
+            .language("eng+fra+deu")
+            .build())
+        .build();
+    ```
+
 ## ImagePreprocessingConfig
 
 Image preprocessing configuration for OCR.
@@ -531,6 +583,23 @@ Image preprocessing configuration for OCR.
     )
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ImagePreprocessingConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .imagePreprocessing(ImagePreprocessingConfig.builder()
+            .targetDpi(300)
+            .denoise(true)
+            .deskew(true)
+            .contrastEnhance(true)
+            .binarizationMethod("otsu")
+            .build())
+        .build();
+    ```
+
 ## PdfConfig
 
 PDF-specific extraction configuration.
@@ -598,6 +667,22 @@ PDF-specific extraction configuration.
         passwords: ['password1', 'password2']
       )
     )
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.PdfConfig;
+    import java.util.Arrays;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .pdfOptions(PdfConfig.builder()
+            .extractImages(true)
+            .extractMetadata(true)
+            .passwords(Arrays.asList("password1", "password2"))
+            .build())
+        .build();
     ```
 
 ## ImageExtractionConfig
@@ -677,6 +762,22 @@ Configuration for extracting images from documents.
     )
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ImageExtractionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .imageExtraction(ImageExtractionConfig.builder()
+            .extractImages(true)
+            .targetDpi(200)
+            .maxImageDimension(2048)
+            .autoAdjustDpi(true)
+            .build())
+        .build();
+    ```
+
 ## ChunkingConfig
 
 Text chunking configuration for splitting extracted text into chunks.
@@ -742,6 +843,20 @@ Text chunking configuration for splitting extracted text into chunks.
         max_overlap: 50
       )
     )
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ChunkingConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .chunking(ChunkingConfig.builder()
+            .maxChars(500)
+            .maxOverlap(50)
+            .build())
+        .build();
     ```
 
 ## EmbeddingConfig
@@ -848,6 +963,19 @@ Create embedding models using these factory methods:
     )
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ChunkingConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .chunking(ChunkingConfig.builder()
+            .maxChars(1000)
+            .build())
+        .build();
+    ```
+
 ## TokenReductionConfig
 
 Configuration for reducing token count in extracted text.
@@ -910,6 +1038,20 @@ Configuration for reducing token count in extracted text.
         preserve_important_words: true
       )
     )
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.TokenReductionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .tokenReduction(TokenReductionConfig.builder()
+            .mode("moderate")
+            .preserveImportantWords(true)
+            .build())
+        .build();
     ```
 
 ## LanguageDetectionConfig
@@ -979,6 +1121,20 @@ Configuration for automatic language detection.
         detect_multiple: true
       )
     )
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.LanguageDetectionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .languageDetection(LanguageDetectionConfig.builder()
+            .enabled(true)
+            .minConfidence(0.9)
+            .build())
+        .build();
     ```
 
 ## PostProcessorConfig
@@ -1051,6 +1207,22 @@ Configuration for post-processing pipeline.
         disabled_processors: ['mojibake_fix']
       )
     )
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.PostProcessorConfig;
+    import java.util.Arrays;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .postprocessor(PostProcessorConfig.builder()
+            .enabled(true)
+            .enabledProcessors(Arrays.asList("deduplication", "whitespace_normalization"))
+            .disabledProcessors(Arrays.asList("mojibake_fix"))
+            .build())
+        .build();
     ```
 
 ## Complete Example
@@ -1181,4 +1353,54 @@ Here's a complete example showing all configuration options together:
 
     [postprocessor]
     enabled = true
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.*;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .useCache(true)
+        .enableQualityProcessing(true)
+        .forceOcr(false)
+        .ocr(OcrConfig.builder()
+            .backend("tesseract")
+            .language("eng+fra")
+            .build())
+        .pdfOptions(PdfConfig.builder()
+            .extractImages(true)
+            .extractMetadata(true)
+            .build())
+        .imageExtraction(ImageExtractionConfig.builder()
+            .extractImages(true)
+            .targetDpi(150)
+            .maxImageDimension(4096)
+            .build())
+        .imagePreprocessing(ImagePreprocessingConfig.builder()
+            .targetDpi(300)
+            .denoise(true)
+            .deskew(true)
+            .contrastEnhance(true)
+            .build())
+        .chunking(ChunkingConfig.builder()
+            .maxChars(1000)
+            .maxOverlap(200)
+            .build())
+        .tokenReduction(TokenReductionConfig.builder()
+            .mode("moderate")
+            .preserveImportantWords(true)
+            .build())
+        .languageDetection(LanguageDetectionConfig.builder()
+            .enabled(true)
+            .minConfidence(0.8)
+            .build())
+        .postprocessor(PostProcessorConfig.builder()
+            .enabled(true)
+            .build())
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
     ```

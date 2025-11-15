@@ -93,6 +93,20 @@ Kreuzberg uses the `text-splitter` library with two chunking strategies:
     };
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ChunkingConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .chunking(ChunkingConfig.builder()
+            .maxChars(1000)
+            .maxOverlap(200)
+            .build())
+        .build();
+    ```
+
 !!! note "Ruby Support"
     Ruby bindings are currently under development and not yet production-ready.
 
@@ -204,6 +218,29 @@ Each chunk includes:
     }
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ChunkingConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .chunking(ChunkingConfig.builder()
+            .maxChars(500)
+            .maxOverlap(50)
+            .embedding("balanced")
+            .build())
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("research_paper.pdf", null, config);
+
+    // Note: Java bindings don't currently support chunks in the result
+    // This feature is planned for a future release
+    System.out.println("Content: " + result.getContent().substring(0, Math.min(100, result.getContent().length())) + "...");
+    ```
+
 ## Language Detection
 
 ```mermaid
@@ -289,6 +326,20 @@ Detect languages in extracted text using the fast `whatlang` library. Supports 6
     };
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.LanguageDetectionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .languageDetection(LanguageDetectionConfig.builder()
+            .enabled(true)
+            .minConfidence(0.8)
+            .build())
+        .build();
+    ```
+
 ### Detection Modes
 
 **Single Language** (`detect_multiple: false`):
@@ -371,6 +422,27 @@ ISO 639-3 codes including:
     // Output: Some(["eng", "fra", "deu"])
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.LanguageDetectionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .languageDetection(LanguageDetectionConfig.builder()
+            .enabled(true)
+            .minConfidence(0.8)
+            .build())
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("multilingual_document.pdf", null, config);
+
+    System.out.println("Detected languages: " + result.getDetectedLanguages());
+    // Output: [eng, fra, deu]
+    ```
+
 ## Embedding Generation
 
 Generate embeddings for vector databases, semantic search, and RAG systems using ONNX models via `fastembed-rs`.
@@ -447,6 +519,21 @@ Generate embeddings for vector databases, semantic search, and RAG systems using
         }),
         ..Default::default()
     };
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ChunkingConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .chunking(ChunkingConfig.builder()
+            .maxChars(1024)
+            .maxOverlap(100)
+            .embedding("balanced")
+            .build())
+        .build();
     ```
 
 ### Example: Vector Database Integration
@@ -557,6 +644,29 @@ Generate embeddings for vector databases, semantic search, and RAG systems using
     }
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ChunkingConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .chunking(ChunkingConfig.builder()
+            .maxChars(512)
+            .maxOverlap(50)
+            .embedding("balanced")
+            .build())
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
+
+    // Note: Java bindings don't currently support chunks/embeddings in the result
+    // This feature is planned for a future release
+    System.out.println("Extracted content: " + result.getContent().length() + " characters");
+    ```
+
 ## Token Reduction
 
 Intelligently reduce token count while preserving meaning. Removes stopwords, redundancy, and applies compression.
@@ -616,6 +726,20 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
         }),
         ..Default::default()
     };
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.TokenReductionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .tokenReduction(TokenReductionConfig.builder()
+            .mode("moderate")
+            .preserveImportantWords(true)
+            .build())
+        .build();
     ```
 
 ### Example
@@ -689,6 +813,32 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
     }
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.TokenReductionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .tokenReduction(TokenReductionConfig.builder()
+            .mode("moderate")
+            .preserveImportantWords(true)
+            .build())
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("verbose_document.pdf", null, config);
+
+    // Check reduction statistics in metadata
+    Object originalTokens = result.getMetadata().get("original_token_count");
+    Object reducedTokens = result.getMetadata().get("token_count");
+    Object reductionRatio = result.getMetadata().get("token_reduction_ratio");
+
+    System.out.println("Reduced from " + originalTokens + " to " + reducedTokens + " tokens");
+    System.out.println("Reduction: " + ((Number)reductionRatio).doubleValue() * 100 + "%");
+    ```
+
 ## Keyword Extraction
 
 Extract important keywords and phrases using YAKE or RAKE algorithms.
@@ -760,6 +910,13 @@ Extract important keywords and phrases using YAKE or RAKE algorithms.
     };
     ```
 
+=== "Java"
+
+    ```java
+    // Note: Keyword extraction is not yet available in Java bindings
+    // This feature requires the 'keywords' feature flag and is planned for a future release
+    ```
+
 ### Example
 
 === "Python"
@@ -829,6 +986,13 @@ Extract important keywords and phrases using YAKE or RAKE algorithms.
     }
     ```
 
+=== "Java"
+
+    ```java
+    // Note: Keyword extraction is not yet available in Java bindings
+    // This feature requires the 'keywords' feature flag and is planned for a future release
+    ```
+
 ## Quality Processing
 
 Automatic text quality scoring that detects OCR artifacts, script content, navigation elements, and evaluates document structure.
@@ -876,6 +1040,16 @@ Quality processing is enabled by default:
         enable_quality_processing: true,  // Default
         ..Default::default()
     };
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .enableQualityProcessing(true)  // Default
+        .build();
     ```
 
 ### Quality Score
@@ -942,6 +1116,30 @@ The quality score ranges from 0.0 (lowest quality) to 1.0 (highest quality):
         } else {
             println!("Quality score: {:.2}", score);
         }
+    }
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .enableQualityProcessing(true)
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("scanned_document.pdf", null, config);
+
+    Object qualityObj = result.getMetadata().get("quality_score");
+    double qualityScore = qualityObj != null ? ((Number)qualityObj).doubleValue() : 0.0;
+
+    if (qualityScore < 0.5) {
+        System.out.printf("Warning: Low quality extraction (%.2f)%n", qualityScore);
+        System.out.println("Consider re-scanning with higher DPI or adjusting OCR settings");
+    } else {
+        System.out.printf("Quality score: %.2f%n", qualityScore);
     }
     ```
 
@@ -1112,4 +1310,50 @@ Advanced features work seamlessly together:
             }
         }
     }
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ChunkingConfig;
+    import dev.kreuzberg.config.LanguageDetectionConfig;
+    import dev.kreuzberg.config.TokenReductionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        // Enable quality scoring
+        .enableQualityProcessing(true)
+
+        // Detect languages
+        .languageDetection(LanguageDetectionConfig.builder()
+            .enabled(true)
+            .minConfidence(0.8)
+            .build())
+
+        // Reduce tokens before chunking
+        .tokenReduction(TokenReductionConfig.builder()
+            .mode("moderate")
+            .preserveImportantWords(true)
+            .build())
+
+        // Chunk with embeddings
+        .chunking(ChunkingConfig.builder()
+            .maxChars(512)
+            .maxOverlap(50)
+            .embedding("balanced")
+            .build())
+
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
+
+    // Display results
+    Object qualityScore = result.getMetadata().get("quality_score");
+    System.out.printf("Quality: %.2f%n", ((Number)qualityScore).doubleValue());
+    System.out.println("Languages: " + result.getDetectedLanguages());
+    System.out.println("Content length: " + result.getContent().length() + " characters");
+
+    // Note: Chunks and keywords not yet available in Java bindings
     ```

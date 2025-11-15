@@ -63,6 +63,28 @@ A Model Context Protocol server that exposes Kreuzberg as tools for AI agents an
     }
     ```
 
+=== "Java"
+
+    ```java
+    import java.io.IOException;
+
+    public class ApiServer {
+        public static void main(String[] args) {
+            try {
+                // Start HTTP API server using CLI
+                ProcessBuilder pb = new ProcessBuilder(
+                    "kreuzberg", "serve", "-H", "0.0.0.0", "-p", "8000"
+                );
+                pb.inheritIO();
+                Process process = pb.start();
+                process.waitFor();
+            } catch (IOException | InterruptedException e) {
+                System.err.println("Failed to start server: " + e.getMessage());
+            }
+        }
+    }
+    ```
+
 === "Docker"
 
     ```bash
@@ -392,6 +414,50 @@ KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
     request.set_form form_data_with_config, 'multipart/form-data'
     ```
 
+=== "Java"
+
+    ```java
+    import java.net.URI;
+    import java.net.http.HttpClient;
+    import java.net.http.HttpRequest;
+    import java.net.http.HttpResponse;
+    import java.nio.file.Path;
+    import com.fasterxml.jackson.databind.ObjectMapper;
+
+    // Single file extraction
+    HttpClient client = HttpClient.newHttpClient();
+    String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
+
+    byte[] fileData = Files.readAllBytes(Path.of("document.pdf"));
+    String multipartBody = "--" + boundary + "\r\n"
+        + "Content-Disposition: form-data; name=\"files\"; filename=\"document.pdf\"\r\n"
+        + "Content-Type: application/pdf\r\n\r\n"
+        + new String(fileData, StandardCharsets.ISO_8859_1) + "\r\n"
+        + "--" + boundary + "--\r\n";
+
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:8000/extract"))
+        .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+        .POST(HttpRequest.BodyPublishers.ofString(multipartBody))
+        .build();
+
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    ObjectMapper mapper = new ObjectMapper();
+    Map[] results = mapper.readValue(response.body(), Map[].class);
+    System.out.println(results[0].get("content"));
+
+    // With configuration
+    String configJson = "{\"ocr\":{\"language\":\"eng\"},\"force_ocr\":true}";
+    String multipartWithConfig = "--" + boundary + "\r\n"
+        + "Content-Disposition: form-data; name=\"files\"; filename=\"scanned.pdf\"\r\n"
+        + "Content-Type: application/pdf\r\n\r\n"
+        + new String(fileData, StandardCharsets.ISO_8859_1) + "\r\n"
+        + "--" + boundary + "\r\n"
+        + "Content-Disposition: form-data; name=\"config\"\r\n\r\n"
+        + configJson + "\r\n"
+        + "--" + boundary + "--\r\n";
+    ```
+
 ### Error Handling
 
 **Error Response Format:**
@@ -415,19 +481,53 @@ KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 
 **Example:**
 
-```python
-import httpx
+=== "Python"
 
-try:
-    with httpx.Client() as client:
-        files = {"files": open("document.pdf", "rb")}
-        response = client.post("http://localhost:8000/extract", files=files)
-        response.raise_for_status()
-        results = response.json()
-except httpx.HTTPStatusError as e:
-    error = e.response.json()
-    print(f"Error: {error['error_type']}: {error['message']}")
-```
+    ```python
+    import httpx
+
+    try:
+        with httpx.Client() as client:
+            files = {"files": open("document.pdf", "rb")}
+            response = client.post("http://localhost:8000/extract", files=files)
+            response.raise_for_status()
+            results = response.json()
+    except httpx.HTTPStatusError as e:
+        error = e.response.json()
+        print(f"Error: {error['error_type']}: {error['message']}")
+    ```
+
+=== "Java"
+
+    ```java
+    import java.net.http.HttpClient;
+    import java.net.http.HttpRequest;
+    import java.net.http.HttpResponse;
+    import com.fasterxml.jackson.databind.ObjectMapper;
+
+    try {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:8000/extract"))
+            .POST(HttpRequest.BodyPublishers.ofString(multipartBody))
+            .build();
+
+        HttpResponse<String> response = client.send(request,
+            HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() >= 400) {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> error = mapper.readValue(response.body(), Map.class);
+            System.err.println("Error: " + error.get("error_type") +
+                ": " + error.get("message"));
+        } else {
+            Map[] results = mapper.readValue(response.body(), Map[].class);
+            // Process results
+        }
+    } catch (IOException | InterruptedException e) {
+        System.err.println("Request failed: " + e.getMessage());
+    }
+    ```
 
 ## MCP Server
 
@@ -464,6 +564,26 @@ The Model Context Protocol (MCP) server exposes Kreuzberg as tools for AI agents
         let config = ExtractionConfig::discover()?;
         start_mcp_server_with_config(config).await?;
         Ok(())
+    }
+    ```
+
+=== "Java"
+
+    ```java
+    import java.io.IOException;
+
+    public class McpServer {
+        public static void main(String[] args) {
+            try {
+                // Start MCP server using CLI
+                ProcessBuilder pb = new ProcessBuilder("kreuzberg", "mcp");
+                pb.inheritIO();
+                Process process = pb.start();
+                process.waitFor();
+            } catch (IOException | InterruptedException e) {
+                System.err.println("Failed to start MCP server: " + e.getMessage());
+            }
+        }
     }
     ```
 
@@ -665,6 +785,62 @@ Clear all cached files.
     )
 
     agent.run("Extract the content from contract.pdf and summarize it")
+    ```
+
+=== "Java"
+
+    ```java
+    import com.fasterxml.jackson.databind.ObjectMapper;
+    import java.io.*;
+    import java.util.Map;
+
+    public class McpClient {
+        private final Process mcpProcess;
+        private final BufferedWriter stdin;
+        private final BufferedReader stdout;
+        private final ObjectMapper mapper = new ObjectMapper();
+
+        public McpClient() throws IOException {
+            ProcessBuilder pb = new ProcessBuilder("kreuzberg", "mcp");
+            mcpProcess = pb.start();
+            stdin = new BufferedWriter(new OutputStreamWriter(mcpProcess.getOutputStream()));
+            stdout = new BufferedReader(new InputStreamReader(mcpProcess.getInputStream()));
+        }
+
+        public String extractFile(String path) throws IOException {
+            Map<String, Object> request = Map.of(
+                "method", "tools/call",
+                "params", Map.of(
+                    "name", "extract_file",
+                    "arguments", Map.of("path", path, "async", true)
+                )
+            );
+
+            stdin.write(mapper.writeValueAsString(request));
+            stdin.newLine();
+            stdin.flush();
+
+            String response = stdout.readLine();
+            Map<String, Object> result = mapper.readValue(response, Map.class);
+            Map<String, Object> resultData = (Map<String, Object>) result.get("result");
+            return (String) resultData.get("content");
+        }
+
+        public void close() throws IOException {
+            stdin.close();
+            stdout.close();
+            mcpProcess.destroy();
+        }
+
+        public static void main(String[] args) {
+            try (McpClient client = new McpClient()) {
+                String content = client.extractFile("contract.pdf");
+                System.out.println("Extracted content: " + content);
+            } catch (IOException e) {
+                System.err.println("Error: " + e.getMessage());
+            }
+        }
+    }
     ```
 
 ## Production Deployment

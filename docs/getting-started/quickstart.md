@@ -61,6 +61,30 @@ Extract text from any supported document format:
     puts result.tables    # Extracted tables
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+
+    public class Main {
+        public static void main(String[] args) {
+            try {
+                // Extract from a file
+                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+
+                System.out.println(result.getContent());  // Extracted text
+                System.out.println(result.getMetadata());  // Document metadata
+                System.out.println(result.getTables());    // Extracted tables
+            } catch (IOException | KreuzbergException e) {
+                System.err.println("Extraction failed: " + e.getMessage());
+            }
+        }
+    }
+    ```
+
 === "CLI"
 
     ```bash
@@ -126,6 +150,27 @@ For better performance with I/O-bound operations:
     # This uses a blocking Tokio runtime internally
     result = Kreuzberg.extract_file('document.pdf')
     puts result.content
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+
+    public class Main {
+        public static void main(String[] args) {
+            try {
+                // Java uses synchronous calls (async not supported in FFI)
+                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+                System.out.println(result.getContent());
+            } catch (IOException | KreuzbergException e) {
+                System.err.println("Extraction failed: " + e.getMessage());
+            }
+        }
+    }
     ```
 
 ## OCR Extraction
@@ -201,6 +246,35 @@ Extract text from images and scanned documents:
     puts result.content
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.OcrConfig;
+    import java.io.IOException;
+
+    public class Main {
+        public static void main(String[] args) {
+            try {
+                ExtractionConfig config = ExtractionConfig.builder()
+                    .ocr(OcrConfig.builder()
+                        .backend("tesseract")
+                        .language("eng")
+                        .build())
+                    .build();
+
+                ExtractionResult result = Kreuzberg.extractFileSync("scanned.pdf", null, config);
+                System.out.println(result.getContent());
+            } catch (IOException | KreuzbergException e) {
+                System.err.println("Extraction failed: " + e.getMessage());
+            }
+        }
+    }
+    ```
+
 === "CLI"
 
     ```bash
@@ -263,6 +337,32 @@ Process multiple files concurrently:
     results.each do |result|
       puts "Content length: #{result.content.length}"
     end
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+    import java.util.Arrays;
+    import java.util.List;
+
+    public class Main {
+        public static void main(String[] args) {
+            try {
+                List<String> files = Arrays.asList("doc1.pdf", "doc2.docx", "doc3.pptx");
+                List<ExtractionResult> results = Kreuzberg.batchExtractFilesSync(files);
+
+                for (ExtractionResult result : results) {
+                    System.out.println("Content length: " + result.getContent().length());
+                }
+            } catch (IOException | KreuzbergException e) {
+                System.err.println("Extraction failed: " + e.getMessage());
+            }
+        }
+    }
     ```
 
 === "CLI"
@@ -342,6 +442,33 @@ When you already have file content in memory:
       'application/pdf'
     )
     puts result.content
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+    import java.nio.file.Files;
+    import java.nio.file.Paths;
+
+    public class Main {
+        public static void main(String[] args) {
+            try {
+                byte[] data = Files.readAllBytes(Paths.get("document.pdf"));
+
+                ExtractionResult result = Kreuzberg.extractBytesSync(
+                    data,
+                    "application/pdf"
+                );
+                System.out.println(result.getContent());
+            } catch (IOException | KreuzbergException e) {
+                System.err.println("Extraction failed: " + e.getMessage());
+            }
+        }
+    }
     ```
 
 ## Advanced Configuration
@@ -562,6 +689,62 @@ Customize extraction behavior:
     end
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import dev.kreuzberg.config.*;
+    import java.io.IOException;
+
+    public class Main {
+        public static void main(String[] args) {
+            try {
+                ExtractionConfig config = ExtractionConfig.builder()
+                    // Enable OCR
+                    .ocr(OcrConfig.builder()
+                        .backend("tesseract")
+                        .language("eng+deu")  // Multiple languages
+                        .build())
+
+                    // Enable chunking for LLM processing
+                    .chunking(ChunkingConfig.builder()
+                        .maxChars(1000)
+                        .maxOverlap(100)
+                        .build())
+
+                    // Enable token reduction
+                    .tokenReduction(TokenReductionConfig.builder()
+                        .mode("moderate")
+                        .preserveImportantWords(true)
+                        .build())
+
+                    // Enable language detection
+                    .languageDetection(LanguageDetectionConfig.builder()
+                        .enabled(true)
+                        .build())
+
+                    // Enable caching
+                    .useCache(true)
+
+                    // Enable quality processing
+                    .enableQualityProcessing(true)
+                    .build();
+
+                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
+
+                // Access detected languages
+                if (!result.getDetectedLanguages().isEmpty()) {
+                    System.out.println("Languages: " + result.getDetectedLanguages());
+                }
+            } catch (IOException | KreuzbergException e) {
+                System.err.println("Extraction failed: " + e.getMessage());
+            }
+        }
+    }
+    ```
+
 ## Working with Metadata
 
 Access format-specific metadata from extracted documents:
@@ -675,6 +858,45 @@ Access format-specific metadata from extracted documents:
     end
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+    import java.util.Map;
+
+    public class Main {
+        public static void main(String[] args) {
+            try {
+                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+
+                // Access PDF metadata
+                @SuppressWarnings("unchecked")
+                Map<String, Object> pdfMeta = (Map<String, Object>) result.getMetadata().get("pdf");
+                if (pdfMeta != null) {
+                    System.out.println("Pages: " + pdfMeta.get("page_count"));
+                    System.out.println("Author: " + pdfMeta.get("author"));
+                    System.out.println("Title: " + pdfMeta.get("title"));
+                }
+
+                // Access HTML metadata
+                ExtractionResult htmlResult = Kreuzberg.extractFileSync("page.html");
+                @SuppressWarnings("unchecked")
+                Map<String, Object> htmlMeta = (Map<String, Object>) htmlResult.getMetadata().get("html");
+                if (htmlMeta != null) {
+                    System.out.println("Title: " + htmlMeta.get("title"));
+                    System.out.println("Description: " + htmlMeta.get("description"));
+                    System.out.println("Open Graph Image: " + htmlMeta.get("og_image"));
+                }
+            } catch (IOException | KreuzbergException e) {
+                System.err.println("Extraction failed: " + e.getMessage());
+            }
+        }
+    }
+    ```
+
 Kreuzberg extracts format-specific metadata for:
 - **PDF**: page count, title, author, subject, keywords, dates
 - **HTML**: 21 fields including SEO meta tags, Open Graph, Twitter Card
@@ -769,6 +991,38 @@ Extract and process tables from documents:
     end
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import dev.kreuzberg.Table;
+    import java.io.IOException;
+    import java.util.List;
+
+    public class Main {
+        public static void main(String[] args) {
+            try {
+                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+
+                // Iterate over tables
+                for (Table table : result.getTables()) {
+                    System.out.println("Table with " + table.cells().size() + " rows");
+                    System.out.println(table.markdown());  // Markdown representation
+
+                    // Access cells
+                    for (List<String> row : table.cells()) {
+                        System.out.println(row);
+                    }
+                }
+            } catch (IOException | KreuzbergException e) {
+                System.err.println("Extraction failed: " + e.getMessage());
+            }
+        }
+    }
+    ```
+
 ## Error Handling
 
 Handle extraction errors gracefully:
@@ -858,6 +1112,37 @@ Handle extraction errors gracefully:
     rescue StandardError => e
       puts "Extraction error: #{e.message}"
     end
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import dev.kreuzberg.ValidationException;
+    import dev.kreuzberg.ParsingException;
+    import dev.kreuzberg.OcrException;
+    import java.io.IOException;
+
+    public class Main {
+        public static void main(String[] args) {
+            try {
+                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+                System.out.println(result.getContent());
+            } catch (ValidationException e) {
+                System.err.println("Invalid configuration: " + e.getMessage());
+            } catch (ParsingException e) {
+                System.err.println("Failed to parse document: " + e.getMessage());
+            } catch (OcrException e) {
+                System.err.println("OCR processing failed: " + e.getMessage());
+            } catch (IOException e) {
+                System.err.println("File error: " + e.getMessage());
+            } catch (KreuzbergException e) {
+                System.err.println("Extraction error: " + e.getMessage());
+            }
+        }
+    }
     ```
 
 ## Next Steps
