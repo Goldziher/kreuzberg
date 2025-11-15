@@ -109,8 +109,8 @@ fn get_kw(ruby: &Ruby, hash: RHash, name: &str) -> Option<Value> {
     })
 }
 
-fn set_hash_entry(ruby: &Ruby, hash: &RHash, key: &str, value: Value) -> Result<(), Error> {
-    hash.aset(ruby.intern(key), value)?;
+fn set_hash_entry(_ruby: &Ruby, hash: &RHash, key: &str, value: Value) -> Result<(), Error> {
+    hash.aset(key, value)?;
     Ok(())
 }
 
@@ -923,11 +923,11 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
             let row_array = ruby.ary_from_vec(row);
             cells_array.push(row_array)?;
         }
-        table_hash.aset(ruby.intern("cells"), cells_array)?;
+        table_hash.aset("cells", cells_array)?;
 
-        table_hash.aset(ruby.intern("markdown"), table.markdown)?;
+        table_hash.aset("markdown", table.markdown)?;
 
-        table_hash.aset(ruby.intern("page_number"), table.page_number)?;
+        table_hash.aset("page_number", table.page_number)?;
 
         tables_array.push(table_hash)?;
     }
@@ -946,11 +946,11 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
         let chunks_array = ruby.ary_new();
         for chunk in chunks {
             let chunk_hash = ruby.hash_new();
-            chunk_hash.aset(ruby.intern("content"), chunk.content)?;
-            chunk_hash.aset(ruby.intern("char_start"), chunk.metadata.char_start)?;
-            chunk_hash.aset(ruby.intern("char_end"), chunk.metadata.char_end)?;
+            chunk_hash.aset("content", chunk.content)?;
+            chunk_hash.aset("char_start", chunk.metadata.char_start)?;
+            chunk_hash.aset("char_end", chunk.metadata.char_end)?;
             if let Some(token_count) = chunk.metadata.token_count {
-                chunk_hash.aset(ruby.intern("token_count"), token_count)?;
+                chunk_hash.aset("token_count", token_count)?;
             }
             chunks_array.push(chunk_hash)?;
         }
@@ -1266,8 +1266,8 @@ fn ruby_cache_stats() -> Result<RHash, Error> {
     let cache_root = cache_root_dir()?;
 
     if !cache_root.exists() {
-        hash.aset(ruby.intern("total_entries"), 0)?;
-        hash.aset(ruby.intern("total_size_bytes"), 0)?;
+        hash.aset("total_entries", 0)?;
+        hash.aset("total_size_bytes", 0)?;
         return Ok(hash);
     }
 

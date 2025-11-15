@@ -58,13 +58,13 @@ module Kreuzberg
     # @param hash [Hash] Hash returned from native extension
     #
     def initialize(hash)
-      @content = hash[:content] || ''
-      @mime_type = hash[:mime_type] || ''
-      @metadata_json = hash[:metadata_json] || '{}'
+      @content = hash['content'] || ''
+      @mime_type = hash['mime_type'] || ''
+      @metadata_json = hash['metadata_json'] || '{}'
       @metadata = parse_metadata(@metadata_json)
-      @tables = parse_tables(hash[:tables])
-      @detected_languages = parse_detected_languages(hash[:detected_languages])
-      @chunks = parse_chunks(hash[:chunks])
+      @tables = parse_tables(hash['tables'])
+      @detected_languages = parse_detected_languages(hash['detected_languages'])
+      @chunks = parse_chunks(hash['chunks'])
     end
 
     # Convert to hash
@@ -103,9 +103,9 @@ module Kreuzberg
 
       tables_data.map do |table_hash|
         Table.new(
-          cells: table_hash[:cells] || [],
-          markdown: table_hash[:markdown] || '',
-          page_number: table_hash[:page_number] || 0
+          cells: table_hash['cells'] || [],
+          markdown: table_hash['markdown'] || '',
+          page_number: table_hash['page_number'] || 0
         )
       end
     end
@@ -122,10 +122,10 @@ module Kreuzberg
 
       chunks_data.map do |chunk_hash|
         Chunk.new(
-          content: chunk_hash[:content],
-          char_start: chunk_hash[:char_start],
-          char_end: chunk_hash[:char_end],
-          token_count: chunk_hash[:token_count]
+          content: chunk_hash['content'],
+          char_start: chunk_hash['char_start'],
+          char_end: chunk_hash['char_end'],
+          token_count: chunk_hash['token_count']
         )
       end
     end
