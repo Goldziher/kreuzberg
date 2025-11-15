@@ -36,6 +36,10 @@ final class KreuzbergFFI {
     static final MethodHandle KREUZBERG_LAST_ERROR;
     static final MethodHandle KREUZBERG_VERSION;
     static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND;
+    static final MethodHandle KREUZBERG_REGISTER_POST_PROCESSOR;
+    static final MethodHandle KREUZBERG_UNREGISTER_POST_PROCESSOR;
+    static final MethodHandle KREUZBERG_REGISTER_VALIDATOR;
+    static final MethodHandle KREUZBERG_UNREGISTER_VALIDATOR;
 
     // Memory layouts
     static final StructLayout C_EXTRACTION_RESULT_LAYOUT = MemoryLayout.structLayout(
@@ -168,6 +172,36 @@ final class KreuzbergFFI {
             KREUZBERG_REGISTER_OCR_BACKEND = linkFunction(
                 "kreuzberg_register_ocr_backend",
                 FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_REGISTER_POST_PROCESSOR = linkFunction(
+                "kreuzberg_register_post_processor",
+                FunctionDescriptor.of(
+                    ValueLayout.JAVA_BOOLEAN,
+                    ValueLayout.ADDRESS,  // name
+                    ValueLayout.ADDRESS,  // callback
+                    ValueLayout.JAVA_INT  // priority
+                )
+            );
+
+            KREUZBERG_UNREGISTER_POST_PROCESSOR = linkFunction(
+                "kreuzberg_unregister_post_processor",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_REGISTER_VALIDATOR = linkFunction(
+                "kreuzberg_register_validator",
+                FunctionDescriptor.of(
+                    ValueLayout.JAVA_BOOLEAN,
+                    ValueLayout.ADDRESS,  // name
+                    ValueLayout.ADDRESS,  // callback
+                    ValueLayout.JAVA_INT  // priority
+                )
+            );
+
+            KREUZBERG_UNREGISTER_VALIDATOR = linkFunction(
+                "kreuzberg_unregister_validator",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS)
             );
         } catch (Exception e) {
             throw new ExceptionInInitializerError(e);

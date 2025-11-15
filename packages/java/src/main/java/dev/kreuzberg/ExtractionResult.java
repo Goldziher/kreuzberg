@@ -1,5 +1,7 @@
 package dev.kreuzberg;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.Optional;
  *
  * <p>Contains the extracted text content and metadata from a document.</p>
  */
+@JsonDeserialize(using = ExtractionResult.Deserializer.class)
+@com.fasterxml.jackson.databind.annotation.JsonSerialize(using = ExtractionResult.Serializer.class)
 public final class ExtractionResult {
     private final String content;
     private final String mimeType;
@@ -304,5 +308,168 @@ public final class ExtractionResult {
     public ExtractionResult withSubject(String newSubject) {
         return new ExtractionResult(content, mimeType, language, date, Optional.ofNullable(newSubject), tables,
                 detectedLanguages, metadata);
+    }
+
+    /**
+     * Custom deserializer for ExtractionResult that handles Rust FFI JSON format.
+     *
+     * <p>Rust serializes ExtractionResult with snake_case fields (mime_type) and nested metadata,
+     * while Java uses camelCase (mimeType) with flattened fields.</p>
+     */
+    static class Deserializer extends com.fasterxml.jackson.databind.JsonDeserializer<ExtractionResult> {
+        @Override
+        public ExtractionResult deserialize(
+                com.fasterxml.jackson.core.JsonParser p,
+                com.fasterxml.jackson.databind.DeserializationContext ctxt
+        ) throws java.io.IOException {
+            com.fasterxml.jackson.databind.JsonNode node = p.getCodec().readTree(p);
+
+            // Read top-level fields
+            String content = node.get("content").asText();
+            String mimeType = node.has("mime_type") ? node.get("mime_type").asText() : node.get("mimeType").asText();
+
+            // Read metadata fields (may be nested or flattened)
+            String language = null;
+            String date = null;
+            String subject = null;
+
+            if (node.has("metadata") && node.get("metadata").isObject()) {
+                // Rust format: nested metadata object
+                com.fasterxml.jackson.databind.JsonNode metadataNode = node.get("metadata");
+                if (metadataNode.has("language") && !metadataNode.get("language").isNull()) {
+                    language = metadataNode.get("language").asText();
+                }
+                if (metadataNode.has("date") && !metadataNode.get("date").isNull()) {
+                    date = metadataNode.get("date").asText();
+                }
+                if (metadataNode.has("subject") && !metadataNode.get("subject").isNull()) {
+                    subject = metadataNode.get("subject").asText();
+                }
+            } else {
+                // Java format: flattened fields
+                if (node.has("language") && !node.get("language").isNull()) {
+                    language = node.get("language").asText();
+                }
+                if (node.has("date") && !node.get("date").isNull()) {
+                    date = node.get("date").asText();
+                }
+                if (node.has("subject") && !node.get("subject").isNull()) {
+                    subject = node.get("subject").asText();
+                }
+            }
+
+            // Read tables
+            List<Table> tables = Collections.emptyList();
+            if (node.has("tables") && node.get("tables").isArray()) {
+                tables = new ArrayList<>();
+                for (com.fasterxml.jackson.databind.JsonNode tableNode : node.get("tables")) {
+                    // Parse each table - simplified for now
+                    tables.add(parseTable(tableNode));
+                }
+            }
+
+            // Read detected_languages
+            List<String> detectedLanguages = Collections.emptyList();
+            if (node.has("detected_languages") && node.get("detected_languages").isArray()) {
+                detectedLanguages = new ArrayList<>();
+                for (com.fasterxml.jackson.databind.JsonNode langNode : node.get("detected_languages")) {
+                    detectedLanguages.add(langNode.asText());
+                }
+            }
+
+            return new ExtractionResult(
+                content,
+                mimeType,
+                Optional.ofNullable(language),
+                Optional.ofNullable(date),
+                Optional.ofNullable(subject),
+                tables,
+                detectedLanguages,
+                Collections.emptyMap() // metadata map not used in callbacks
+            );
+        }
+
+        private Table parseTable(com.fasterxml.jackson.databind.JsonNode tableNode) {
+            List<List<String>> cells = new ArrayList<>();
+            if (tableNode.has("cells") && tableNode.get("cells").isArray()) {
+                for (com.fasterxml.jackson.databind.JsonNode rowNode : tableNode.get("cells")) {
+                    List<String> row = new ArrayList<>();
+                    if (rowNode.isArray()) {
+                        for (com.fasterxml.jackson.databind.JsonNode cellNode : rowNode) {
+                            row.add(cellNode.asText());
+                        }
+                    }
+                    cells.add(row);
+                }
+            }
+            String markdown = tableNode.has("markdown") ? tableNode.get("markdown").asText() : "";
+            int pageNumber = tableNode.has("page_number") ? tableNode.get("page_number").asInt() : 0;
+
+            return new Table(cells, markdown, pageNumber);
+        }
+    }
+
+    /**
+     * Custom serializer for ExtractionResult that produces Rust FFI JSON format.
+     *
+     * <p>Java uses camelCase (mimeType) with flattened fields, but Rust expects
+     * snake_case (mime_type) with nested metadata.</p>
+     */
+    static class Serializer extends com.fasterxml.jackson.databind.JsonSerializer<ExtractionResult> {
+        @Override
+        public void serialize(
+                ExtractionResult value,
+                com.fasterxml.jackson.core.JsonGenerator gen,
+                com.fasterxml.jackson.databind.SerializerProvider serializers
+        ) throws java.io.IOException {
+            gen.writeStartObject();
+
+            // Write top-level fields
+            gen.writeStringField("content", value.content);
+            gen.writeStringField("mime_type", value.mimeType);
+
+            // Write nested metadata object
+            gen.writeObjectFieldStart("metadata");
+            if (value.language.isPresent()) {
+                gen.writeStringField("language", value.language.get());
+            }
+            if (value.date.isPresent()) {
+                gen.writeStringField("date", value.date.get());
+            }
+            if (value.subject.isPresent()) {
+                gen.writeStringField("subject", value.subject.get());
+            }
+            gen.writeEndObject();
+
+            // Write tables array
+            gen.writeArrayFieldStart("tables");
+            for (Table table : value.tables) {
+                gen.writeStartObject();
+                gen.writeArrayFieldStart("cells");
+                for (List<String> row : table.cells()) {
+                    gen.writeStartArray();
+                    for (String cell : row) {
+                        gen.writeString(cell);
+                    }
+                    gen.writeEndArray();
+                }
+                gen.writeEndArray();
+                gen.writeStringField("markdown", table.markdown());
+                gen.writeNumberField("page_number", table.pageNumber());
+                gen.writeEndObject();
+            }
+            gen.writeEndArray();
+
+            // Write detected_languages if not empty
+            if (!value.detectedLanguages.isEmpty()) {
+                gen.writeArrayFieldStart("detected_languages");
+                for (String lang : value.detectedLanguages) {
+                    gen.writeString(lang);
+                }
+                gen.writeEndArray();
+            }
+
+            gen.writeEndObject();
+        }
     }
 }

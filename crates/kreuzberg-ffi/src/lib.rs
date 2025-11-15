@@ -1012,6 +1012,509 @@ pub unsafe extern "C" fn kreuzberg_register_ocr_backend(name: *const c_char, cal
     }
 }
 
+// ============================================================================
+// PostProcessor FFI
+// ============================================================================
+
+/// Type alias for the PostProcessor callback function.
+///
+/// # Parameters
+///
+/// - `result_json`: JSON-encoded ExtractionResult (null-terminated string)
+///
+/// # Returns
+///
+/// Null-terminated JSON string containing the processed ExtractionResult
+/// (must be freed by Rust via kreuzberg_free_string), or NULL on error.
+///
+/// # Safety
+///
+/// The callback must:
+/// - Not store the result_json pointer (it's only valid for the duration of the call)
+/// - Return a valid null-terminated UTF-8 JSON string allocated by the caller
+/// - Return NULL on error (error message should be retrievable separately)
+type PostProcessorCallback = unsafe extern "C" fn(result_json: *const c_char) -> *mut c_char;
+
+/// FFI wrapper for custom PostProcessors registered from Java/C.
+///
+/// This struct wraps a C function pointer and implements the PostProcessor trait,
+/// allowing custom post-processing implementations from FFI languages to be registered
+/// and used within the Rust extraction pipeline.
+struct FfiPostProcessor {
+    name: String,
+    callback: PostProcessorCallback,
+}
+
+impl FfiPostProcessor {
+    fn new(name: String, callback: PostProcessorCallback) -> Self {
+        Self { name, callback }
+    }
+}
+
+impl Plugin for FfiPostProcessor {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn version(&self) -> String {
+        "ffi-1.0.0".to_string()
+    }
+
+    fn initialize(&self) -> Result<()> {
+        Ok(())
+    }
+
+    fn shutdown(&self) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl kreuzberg::plugins::PostProcessor for FfiPostProcessor {
+    async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+        // Serialize the current result to JSON
+        let result_json = serde_json::to_string(&*result).map_err(|e| KreuzbergError::Validation {
+            message: format!("Failed to serialize ExtractionResult: {}", e),
+            source: Some(Box::new(e)),
+        })?;
+
+        // Call the FFI callback (blocking operation, so use spawn_blocking)
+        let callback = self.callback;
+        let processor_name = self.name.clone();
+        let result_json_owned = result_json.clone();
+
+        let processed_json = tokio::task::spawn_blocking(move || {
+            // Create C string inside the closure to ensure it's Send-safe
+            let result_cstring = CString::new(result_json_owned).map_err(|e| KreuzbergError::Validation {
+                message: format!("Failed to create C string from result JSON: {}", e),
+                source: Some(Box::new(e)),
+            })?;
+
+            // SAFETY: We're passing a valid pointer to the callback
+            // The callback contract requires it to not store this pointer
+            let processed_ptr = unsafe { callback(result_cstring.as_ptr()) };
+
+            if processed_ptr.is_null() {
+                return Err(KreuzbergError::Plugin {
+                    message: "PostProcessor returned NULL (operation failed)".to_string(),
+                    plugin_name: processor_name.clone(),
+                });
+            }
+
+            // SAFETY: The callback contract requires returning a valid null-terminated string
+            let processed_cstr = unsafe { CStr::from_ptr(processed_ptr) };
+            let json = processed_cstr
+                .to_str()
+                .map_err(|e| KreuzbergError::Plugin {
+                    message: format!("PostProcessor returned invalid UTF-8: {}", e),
+                    plugin_name: processor_name.clone(),
+                })?
+                .to_string();
+
+            // Free the string returned by the callback
+            unsafe { kreuzberg_free_string(processed_ptr) };
+
+            Ok(json)
+        })
+        .await
+        .map_err(|e| KreuzbergError::Plugin {
+            message: format!("PostProcessor task panicked: {}", e),
+            plugin_name: self.name.clone(),
+        })??;
+
+        // Deserialize the processed result
+        let processed_result: ExtractionResult =
+            serde_json::from_str(&processed_json).map_err(|e| KreuzbergError::Plugin {
+                message: format!("Failed to deserialize processed result: {}", e),
+                plugin_name: self.name.clone(),
+            })?;
+
+        // Update the result with the processed data
+        *result = processed_result;
+
+        Ok(())
+    }
+
+    fn processing_stage(&self) -> kreuzberg::plugins::ProcessingStage {
+        kreuzberg::plugins::ProcessingStage::Middle
+    }
+}
+
+/// Register a custom PostProcessor via FFI callback.
+///
+/// # Safety
+///
+/// - `name` must be a valid null-terminated C string
+/// - `callback` must be a valid function pointer that:
+///   - Does not store the result_json pointer
+///   - Returns a null-terminated UTF-8 JSON string or NULL on error
+///   - The returned string must be freeable by kreuzberg_free_string
+/// - `priority` determines the order of execution (higher priority runs first)
+/// - Returns true on success, false on error (check kreuzberg_last_error)
+///
+/// # Example (C)
+///
+/// ```c
+/// char* my_post_processor(const char* result_json) {
+///     // Parse result_json, modify it, return JSON string
+///     return strdup("{\"content\":\"PROCESSED\"}");
+/// }
+///
+/// bool success = kreuzberg_register_post_processor("my-processor", my_post_processor, 100);
+/// if (!success) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to register: %s\n", error);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_register_post_processor(
+    name: *const c_char,
+    callback: PostProcessorCallback,
+    priority: i32,
+) -> bool {
+    clear_last_error();
+
+    if name.is_null() {
+        set_last_error("PostProcessor name cannot be NULL".to_string());
+        return false;
+    }
+
+    // SAFETY: Caller must ensure name is a valid null-terminated C string
+    let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in PostProcessor name: {}", e));
+            return false;
+        }
+    };
+
+    let processor = Arc::new(FfiPostProcessor::new(name_str.to_string(), callback));
+
+    let registry = kreuzberg::plugins::registry::get_post_processor_registry();
+    let mut registry_guard = match registry.write() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry write lock: {}", e));
+            return false;
+        }
+    };
+
+    match registry_guard.register(processor, priority) {
+        Ok(()) => true,
+        Err(e) => {
+            set_last_error(format!("Failed to register PostProcessor: {}", e));
+            false
+        }
+    }
+}
+
+/// Unregister a PostProcessor by name.
+///
+/// # Safety
+///
+/// - `name` must be a valid null-terminated C string
+/// - Returns true on success, false on error (check kreuzberg_last_error)
+///
+/// # Example (C)
+///
+/// ```c
+/// bool success = kreuzberg_unregister_post_processor("my-processor");
+/// if (!success) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to unregister: %s\n", error);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_unregister_post_processor(name: *const c_char) -> bool {
+    clear_last_error();
+
+    if name.is_null() {
+        set_last_error("PostProcessor name cannot be NULL".to_string());
+        return false;
+    }
+
+    // SAFETY: Caller must ensure name is a valid null-terminated C string
+    let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in PostProcessor name: {}", e));
+            return false;
+        }
+    };
+
+    let registry = kreuzberg::plugins::registry::get_post_processor_registry();
+    let mut registry_guard = match registry.write() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry write lock: {}", e));
+            return false;
+        }
+    };
+
+    match registry_guard.remove(name_str) {
+        Ok(()) => true,
+        Err(e) => {
+            set_last_error(format!("Failed to remove PostProcessor: {}", e));
+            false
+        }
+    }
+}
+
+// ============================================================================
+// Validator FFI
+// ============================================================================
+
+/// Type alias for the Validator callback function.
+///
+/// # Parameters
+///
+/// - `result_json`: JSON-encoded ExtractionResult (null-terminated string)
+///
+/// # Returns
+///
+/// Null-terminated error message string if validation fails (must be freed by Rust
+/// via kreuzberg_free_string), or NULL if validation passes.
+///
+/// # Safety
+///
+/// The callback must:
+/// - Not store the result_json pointer (it's only valid for the duration of the call)
+/// - Return a valid null-terminated UTF-8 string (error message) if validation fails
+/// - Return NULL if validation passes
+/// - The returned string must be freeable by kreuzberg_free_string
+type ValidatorCallback = unsafe extern "C" fn(result_json: *const c_char) -> *mut c_char;
+
+/// FFI wrapper for custom Validators registered from Java/C.
+///
+/// This struct wraps a C function pointer and implements the Validator trait,
+/// allowing custom validation implementations from FFI languages to be registered
+/// and used within the Rust extraction pipeline.
+struct FfiValidator {
+    name: String,
+    callback: ValidatorCallback,
+    priority: i32,
+}
+
+impl FfiValidator {
+    fn new(name: String, callback: ValidatorCallback, priority: i32) -> Self {
+        Self {
+            name,
+            callback,
+            priority,
+        }
+    }
+}
+
+impl Plugin for FfiValidator {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn version(&self) -> String {
+        "ffi-1.0.0".to_string()
+    }
+
+    fn initialize(&self) -> Result<()> {
+        Ok(())
+    }
+
+    fn shutdown(&self) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl kreuzberg::plugins::Validator for FfiValidator {
+    fn priority(&self) -> i32 {
+        self.priority
+    }
+
+    async fn validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+        // Serialize the result to JSON
+        let result_json = serde_json::to_string(result).map_err(|e| KreuzbergError::Validation {
+            message: format!("Failed to serialize ExtractionResult: {}", e),
+            source: Some(Box::new(e)),
+        })?;
+
+        // Call the FFI callback (blocking operation, so use spawn_blocking)
+        let callback = self.callback;
+        let validator_name = self.name.clone();
+        let result_json_owned = result_json.clone();
+
+        let error_msg = tokio::task::spawn_blocking(move || {
+            // Create C string inside the closure to ensure it's Send-safe
+            let result_cstring = CString::new(result_json_owned).map_err(|e| KreuzbergError::Validation {
+                message: format!("Failed to create C string from result JSON: {}", e),
+                source: Some(Box::new(e)),
+            })?;
+
+            // SAFETY: We're passing a valid pointer to the callback
+            // The callback contract requires it to not store this pointer
+            let error_ptr = unsafe { callback(result_cstring.as_ptr()) };
+
+            if error_ptr.is_null() {
+                // Validation passed
+                return Ok::<Option<String>, KreuzbergError>(None);
+            }
+
+            // SAFETY: The callback contract requires returning a valid null-terminated string
+            let error_cstr = unsafe { CStr::from_ptr(error_ptr) };
+            let error_msg = error_cstr
+                .to_str()
+                .map_err(|e| KreuzbergError::Plugin {
+                    message: format!("Validator returned invalid UTF-8: {}", e),
+                    plugin_name: validator_name.clone(),
+                })?
+                .to_string();
+
+            // Free the string returned by the callback
+            unsafe { kreuzberg_free_string(error_ptr) };
+
+            Ok(Some(error_msg))
+        })
+        .await
+        .map_err(|e| KreuzbergError::Plugin {
+            message: format!("Validator task panicked: {}", e),
+            plugin_name: self.name.clone(),
+        })??;
+
+        // If there's an error message, validation failed
+        if let Some(msg) = error_msg {
+            return Err(KreuzbergError::Validation {
+                message: msg,
+                source: None,
+            });
+        }
+
+        Ok(())
+    }
+}
+
+/// Register a custom Validator via FFI callback.
+///
+/// # Safety
+///
+/// - `name` must be a valid null-terminated C string
+/// - `callback` must be a valid function pointer that:
+///   - Does not store the result_json pointer
+///   - Returns a null-terminated UTF-8 string (error message) if validation fails
+///   - Returns NULL if validation passes
+///   - The returned string must be freeable by kreuzberg_free_string
+/// - `priority` determines the order of validation (higher priority runs first)
+/// - Returns true on success, false on error (check kreuzberg_last_error)
+///
+/// # Example (C)
+///
+/// ```c
+/// char* my_validator(const char* result_json) {
+///     // Parse result_json, validate it
+///     // Return error message if validation fails, NULL if passes
+///     if (invalid) {
+///         return strdup("Validation failed: content too short");
+///     }
+///     return NULL;
+/// }
+///
+/// bool success = kreuzberg_register_validator("my-validator", my_validator, 100);
+/// if (!success) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to register: %s\n", error);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_register_validator(
+    name: *const c_char,
+    callback: ValidatorCallback,
+    priority: i32,
+) -> bool {
+    clear_last_error();
+
+    if name.is_null() {
+        set_last_error("Validator name cannot be NULL".to_string());
+        return false;
+    }
+
+    // SAFETY: Caller must ensure name is a valid null-terminated C string
+    let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in Validator name: {}", e));
+            return false;
+        }
+    };
+
+    let validator = Arc::new(FfiValidator::new(name_str.to_string(), callback, priority));
+
+    let registry = kreuzberg::plugins::registry::get_validator_registry();
+    let mut registry_guard = match registry.write() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry write lock: {}", e));
+            return false;
+        }
+    };
+
+    match registry_guard.register(validator) {
+        Ok(()) => true,
+        Err(e) => {
+            set_last_error(format!("Failed to register Validator: {}", e));
+            false
+        }
+    }
+}
+
+/// Unregister a Validator by name.
+///
+/// # Safety
+///
+/// - `name` must be a valid null-terminated C string
+/// - Returns true on success, false on error (check kreuzberg_last_error)
+///
+/// # Example (C)
+///
+/// ```c
+/// bool success = kreuzberg_unregister_validator("my-validator");
+/// if (!success) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to unregister: %s\n", error);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_unregister_validator(name: *const c_char) -> bool {
+    clear_last_error();
+
+    if name.is_null() {
+        set_last_error("Validator name cannot be NULL".to_string());
+        return false;
+    }
+
+    // SAFETY: Caller must ensure name is a valid null-terminated C string
+    let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in Validator name: {}", e));
+            return false;
+        }
+    };
+
+    let registry = kreuzberg::plugins::registry::get_validator_registry();
+    let mut registry_guard = match registry.write() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry write lock: {}", e));
+            return false;
+        }
+    };
+
+    match registry_guard.remove(name_str) {
+        Ok(()) => true,
+        Err(e) => {
+            set_last_error(format!("Failed to remove Validator: {}", e));
+            false
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

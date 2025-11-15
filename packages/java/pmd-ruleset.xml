@@ -8,16 +8,25 @@
         PMD ruleset for Kreuzberg Java bindings
     </description>
 
-    <!-- Use quickstart ruleset as base -->
+    <!-- Exclude Panama FFI files - PMD has issues analyzing Java 22 Foreign Function & Memory API -->
+    <exclude-pattern>.*/Kreuzberg\.java</exclude-pattern>
+
     <rule ref="category/java/bestpractices.xml">
-        <!-- Exclude LooseCoupling as Map is already an interface -->
         <exclude name="LooseCoupling"/>
     </rule>
-    <rule ref="category/java/codestyle.xml"/>
-    <rule ref="category/java/design.xml"/>
-    <rule ref="category/java/documentation.xml"/>
+    <rule ref="category/java/codestyle.xml">
+        <exclude name="AtLeastOneConstructor"/>
+        <exclude name="CommentDefaultAccessModifier"/>
+        <exclude name="OnlyOneReturn"/>
+    </rule>
+    <rule ref="category/java/design.xml">
+        <exclude name="LawOfDemeter"/>
+        <exclude name="DataClass"/>
+    </rule>
+    <rule ref="category/java/documentation.xml">
+        <exclude name="CommentSize"/>
+    </rule>
     <rule ref="category/java/errorprone.xml">
-        <!-- Allow empty catch blocks for library loading fallback -->
         <exclude name="EmptyCatchBlock"/>
     </rule>
     <rule ref="category/java/multithreading.xml"/>
