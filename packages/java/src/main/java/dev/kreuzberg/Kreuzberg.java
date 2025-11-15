@@ -1,5 +1,7 @@
 package dev.kreuzberg;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kreuzberg.config.ExtractionConfig;
 import java.io.IOException;
 import java.lang.foreign.Arena;
@@ -12,7 +14,9 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +47,7 @@ import java.util.Map;
  */
 public final class Kreuzberg {
     private static final Linker LINKER = Linker.nativeLinker();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private Kreuzberg() {
         // Private constructor to prevent instantiation
@@ -382,6 +387,12 @@ public final class Kreuzberg {
             MemorySegment languagePtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.LANGUAGE_OFFSET);
             MemorySegment datePtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.DATE_OFFSET);
             MemorySegment subjectPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.SUBJECT_OFFSET);
+            MemorySegment tablesJsonPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.TABLES_JSON_OFFSET);
+            MemorySegment detectedLanguagesJsonPtr = result.get(
+                ValueLayout.ADDRESS,
+                KreuzbergFFI.DETECTED_LANGUAGES_JSON_OFFSET
+            );
+            MemorySegment metadataJsonPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.METADATA_JSON_OFFSET);
 
             String content = KreuzbergFFI.readCString(contentPtr);
             String mimeType = KreuzbergFFI.readCString(mimeTypePtr);
@@ -389,7 +400,22 @@ public final class Kreuzberg {
             String date = KreuzbergFFI.readCString(datePtr);
             String subject = KreuzbergFFI.readCString(subjectPtr);
 
-            return ExtractionResult.of(content, mimeType, language, date, subject);
+            // Parse JSON fields
+            List<Table> tables = parseTables(KreuzbergFFI.readCString(tablesJsonPtr));
+            List<String> detectedLanguages = parseDetectedLanguages(KreuzbergFFI.readCString(detectedLanguagesJsonPtr));
+            Map<String, Object> metadata = parseMetadata(KreuzbergFFI.readCString(metadataJsonPtr));
+
+            // Create ExtractionResult with all fields
+            return new ExtractionResult(
+                content,
+                mimeType,
+                language != null ? java.util.Optional.of(language) : java.util.Optional.empty(),
+                date != null ? java.util.Optional.of(date) : java.util.Optional.empty(),
+                subject != null ? java.util.Optional.of(subject) : java.util.Optional.empty(),
+                tables,
+                detectedLanguages,
+                metadata
+            );
         } finally {
             // Free the result
             KreuzbergFFI.KREUZBERG_FREE_RESULT.invoke(resultPtr);
@@ -450,5 +476,79 @@ public final class Kreuzberg {
                   .replace("\n", "\\n")
                   .replace("\r", "\\r")
                   .replace("\t", "\\t");
+    }
+
+    /**
+     * Parses tables from JSON string.
+     *
+     * @param json the JSON string
+     * @return list of tables, or empty list if JSON is null or invalid
+     */
+    private static List<Table> parseTables(String json) {
+        if (json == null || json.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        try {
+            List<Map<String, Object>> rawTables = OBJECT_MAPPER.readValue(
+                json,
+                new TypeReference<List<Map<String, Object>>>() { }
+            );
+
+            List<Table> tables = new ArrayList<>(rawTables.size());
+            for (Map<String, Object> rawTable : rawTables) {
+                @SuppressWarnings("unchecked")
+                List<List<String>> cells = (List<List<String>>) rawTable.get("cells");
+                String markdown = (String) rawTable.get("markdown");
+                Number pageNumber = (Number) rawTable.get("page_number");
+
+                if (cells != null && markdown != null && pageNumber != null) {
+                    tables.add(new Table(cells, markdown, pageNumber.intValue()));
+                }
+            }
+            return tables;
+        } catch (Exception e) {
+            // Log error and return empty list
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Parses detected languages from JSON string.
+     *
+     * @param json the JSON string
+     * @return list of language codes, or empty list if JSON is null or invalid
+     */
+    private static List<String> parseDetectedLanguages(String json) {
+        if (json == null || json.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        try {
+            return OBJECT_MAPPER.readValue(json, new TypeReference<List<String>>() { });
+        } catch (Exception e) {
+            // Log error and return empty list
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Parses metadata from JSON string.
+     *
+     * @param json the JSON string
+     * @return metadata map, or empty map if JSON is null or invalid
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> parseMetadata(String json) {
+        if (json == null || json.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        try {
+            return OBJECT_MAPPER.readValue(json, new TypeReference<Map<String, Object>>() { });
+        } catch (Exception e) {
+            // Log error and return empty map
+            return Collections.emptyMap();
+        }
     }
 }

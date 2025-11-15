@@ -37,6 +37,18 @@ typedef struct CExtractionResult {
    */
   char *subject;
   /**
+   * Tables as JSON array (null-terminated string, or NULL if no tables, must be freed with kreuzberg_free_string)
+   */
+  char *tables_json;
+  /**
+   * Detected languages as JSON array (null-terminated string, or NULL if not available, must be freed with kreuzberg_free_string)
+   */
+  char *detected_languages_json;
+  /**
+   * Metadata as JSON object (null-terminated string, or NULL if no metadata, must be freed with kreuzberg_free_string)
+   */
+  char *metadata_json;
+  /**
    * Whether extraction was successful
    */
   bool success;
