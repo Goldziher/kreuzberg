@@ -8,11 +8,14 @@
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**A polyglot document intelligence framework with a high-performance Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats. Available for Rust, Python, Ruby, TypeScript/Node.js—or use via CLI, REST API, or MCP server.
+**A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats. Available for Rust, Python, Ruby, TypeScript/Node.js—or use via CLI, REST API, or MCP server.
+
+> **🚀 Version 4.0.0 Release Candidate**
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter. Help us make the stable release better!
 
 ## Why Kreuzberg
 
-- **High-performance Rust core** – 10-50x faster than pure-Python alternatives
+- **Rust-powered core** – High-performance native code for text extraction
 - **Truly polyglot** – Native bindings for Rust, Python, Ruby, and TypeScript/Node.js
 - **Production-ready** – Battle-tested with comprehensive error handling and validation
 - **50+ file format families** – PDF, Office documents, images, HTML, XML, emails, archives, and more
@@ -20,7 +23,7 @@
 - **Flexible deployment** – Use as library, CLI tool, REST API server, or MCP server
 - **Memory efficient** – Streaming parsers handle multi-GB files with constant memory usage
 
-📖 **[Complete Documentation](https://kreuzberg.dev/)** • 🚀 **[Installation Guides](#installation)** • 📊 **[Live Benchmarks](https://benchmarks.kreuzberg.dev/)**
+📖 **[Complete Documentation](https://kreuzberg.dev/)** • 🚀 **[Installation Guides](#installation)**
 
 ## Installation
 
@@ -176,18 +179,16 @@ All images support API server, CLI, and MCP server modes with automatic platform
 
 **[Docker Deployment Guide →](https://kreuzberg.dev/guides/docker/)**
 
-## Performance
+## Architecture
 
-Kreuzberg consistently ranks as the **fastest CPU-based document extraction framework**, with optimal resource efficiency and 100% reliability across tested formats.
+Kreuzberg is built with a Rust core for efficient document extraction and processing.
 
-**[View Live Benchmarks](https://benchmarks.kreuzberg.dev/)** • **[Benchmark Methodology](https://github.com/Goldziher/python-text-extraction-libs-benchmarks)**
+### Design Principles
 
-### Architecture Advantages
-
-- **Rust core** – Performance-critical operations in native code
-- **Async throughout** – True asynchronous processing with Tokio runtime
+- **Rust core** – Native code for text extraction and processing
+- **Async throughout** – Asynchronous processing with Tokio runtime
 - **Memory efficient** – Streaming parsers for large files
-- **Parallel batch processing** – Configurable concurrency
+- **Parallel batch processing** – Configurable concurrency for multiple documents
 - **Zero-copy operations** – Efficient data handling where possible
 
 ## Documentation

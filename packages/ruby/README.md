@@ -11,11 +11,14 @@ High-performance document intelligence for Ruby, powered by Rust.
 
 Extract text, tables, images, and metadata from 30+ file formats including PDF, DOCX, PPTX, XLSX, images, and more.
 
+> **🚀 Version 4.0.0 Release Candidate**
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter.
+
 ## Features
 
 - **30+ File Formats**: PDF, DOCX, PPTX, XLSX, images, HTML, Markdown, XML, JSON, and more
 - **OCR Support**: Built-in Tesseract OCR for scanned documents and images
-- **High Performance**: Rust-powered extraction with 10-50x speedup over pure Ruby solutions
+- **High Performance**: Rust-powered extraction for native-level performance
 - **Table Extraction**: Extract structured tables from documents
 - **Language Detection**: Automatic language detection for extracted text
 - **Text Chunking**: Split long documents into manageable chunks

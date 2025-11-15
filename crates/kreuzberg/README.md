@@ -10,7 +10,12 @@
 
 High-performance document intelligence library for Rust. Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats.
 
-This is the core Rust library that powers the Python and TypeScript bindings.
+This is the core Rust library that powers the Python, TypeScript, and Ruby bindings.
+
+> **🚀 Version 4.0.0 Release Candidate**
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter.
+>
+> **Note**: The Rust crate is not currently published to crates.io for this RC. Use git dependencies or language bindings (Python, TypeScript, Ruby) instead.
 
 ## Installation
 

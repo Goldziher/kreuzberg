@@ -10,7 +10,10 @@
 
 High-performance document intelligence for Python. Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats.
 
-**Powered by a Rust core** – 10-50x faster than pure-Python alternatives.
+**Powered by a Rust core** – Native performance for document extraction.
+
+> **🚀 Version 4.0.0 Release Candidate**
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter.
 
 ## Installation
 
