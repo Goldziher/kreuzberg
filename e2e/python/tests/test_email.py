@@ -11,7 +11,7 @@ from . import helpers
 def test_email_sample_eml() -> None:
     """Sample EML email file to verify email parsing."""
 
-    document_path = helpers.resolve_document("email/sample.eml")
+    document_path = helpers.resolve_document("email/sample_email.eml")
     if not document_path.exists():
         pytest.skip(f"Skipping email_sample_eml: missing document at {document_path}")
 

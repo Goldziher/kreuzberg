@@ -9,6 +9,7 @@ use kreuzberg::plugins::registry::get_post_processor_registry;
 use kreuzberg::plugins::{Plugin, PostProcessor, ProcessingStage};
 use kreuzberg::types::ExtractionResult;
 use kreuzberg::{KreuzbergError, Result, extract_file_sync};
+use serial_test::serial;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
@@ -163,6 +164,7 @@ impl PostProcessor for FailingProcessor {
     }
 }
 
+#[serial]
 #[test]
 fn test_register_custom_postprocessor() {
     let registry = get_post_processor_registry();
@@ -197,6 +199,7 @@ fn test_register_custom_postprocessor() {
     }
 }
 
+#[serial]
 #[test]
 fn test_postprocessor_called_during_extraction() {
     let test_file = "../../test_documents/text/fake_text.txt";
@@ -238,6 +241,7 @@ fn test_postprocessor_called_during_extraction() {
     }
 }
 
+#[serial]
 #[test]
 fn test_postprocessor_modifies_content() {
     let test_file = "../../test_documents/text/fake_text.txt";
@@ -268,6 +272,7 @@ fn test_postprocessor_modifies_content() {
     }
 }
 
+#[serial]
 #[test]
 fn test_postprocessor_adds_metadata() {
     let test_file = "../../test_documents/text/fake_text.txt";
@@ -319,6 +324,7 @@ fn test_postprocessor_adds_metadata() {
     );
 }
 
+#[serial]
 #[test]
 fn test_unregister_postprocessor() {
     let registry = get_post_processor_registry();
@@ -367,6 +373,7 @@ fn test_unregister_postprocessor() {
     }
 }
 
+#[serial]
 #[test]
 fn test_clear_all_postprocessors() {
     let registry = get_post_processor_registry();
@@ -407,6 +414,7 @@ fn test_clear_all_postprocessors() {
     assert!(list.is_empty(), "Registry was not cleared");
 }
 
+#[serial]
 #[test]
 fn test_postprocessor_error_handling() {
     let test_file = "../../test_documents/text/fake_text.txt";
@@ -424,8 +432,20 @@ fn test_postprocessor_error_handling() {
     let config = ExtractionConfig::default();
     let result = extract_file_sync(test_file, None, &config);
 
-    // NOTE: In the current implementation, processor errors are caught and handled
-    assert!(result.is_ok(), "Extraction should succeed even with failing processor");
+    // NOTE: Plugin errors now bubble up and fail the extraction (design change)
+    // Other error types (non-IO, non-Plugin) are caught and recorded in metadata
+    assert!(
+        result.is_err(),
+        "Extraction should fail when postprocessor returns Plugin error"
+    );
+
+    match result {
+        Err(KreuzbergError::Plugin { message, plugin_name }) => {
+            assert_eq!(plugin_name, "failing-processor");
+            assert_eq!(message, "Processor intentionally failed");
+        }
+        _ => panic!("Expected Plugin error"),
+    }
 
     {
         let mut reg = registry.write().unwrap();
@@ -433,6 +453,7 @@ fn test_postprocessor_error_handling() {
     }
 }
 
+#[serial]
 #[test]
 fn test_postprocessor_invalid_name() {
     let registry = get_post_processor_registry();
@@ -462,6 +483,7 @@ fn test_postprocessor_invalid_name() {
     }
 }
 
+#[serial]
 #[test]
 fn test_multiple_postprocessors_execution_order() {
     let test_file = "../../test_documents/text/fake_text.txt";
@@ -506,6 +528,7 @@ fn test_multiple_postprocessors_execution_order() {
     }
 }
 
+#[serial]
 #[test]
 fn test_postprocessor_preserves_mime_type() {
     let test_file = "../../test_documents/text/fake_text.txt";

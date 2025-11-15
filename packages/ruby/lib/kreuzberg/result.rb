@@ -59,13 +59,13 @@ module Kreuzberg
     #
     def initialize(hash)
       # Handle both string and symbol keys for flexibility
-      @content = hash['content'] || hash[:content] || ''
-      @mime_type = hash['mime_type'] || hash[:mime_type] || ''
-      @metadata_json = hash['metadata_json'] || hash[:metadata_json] || '{}'
+      @content = get_value(hash, 'content', '')
+      @mime_type = get_value(hash, 'mime_type', '')
+      @metadata_json = get_value(hash, 'metadata_json', '{}')
       @metadata = parse_metadata(@metadata_json)
-      @tables = parse_tables(hash['tables'] || hash[:tables])
-      @detected_languages = parse_detected_languages(hash['detected_languages'] || hash[:detected_languages])
-      @chunks = parse_chunks(hash['chunks'] || hash[:chunks])
+      @tables = parse_tables(get_value(hash, 'tables'))
+      @detected_languages = parse_detected_languages(get_value(hash, 'detected_languages'))
+      @chunks = parse_chunks(get_value(hash, 'chunks'))
     end
 
     # Convert to hash
@@ -92,6 +92,10 @@ module Kreuzberg
     end
 
     private
+
+    def get_value(hash, key, default = nil)
+      hash[key] || hash[key.to_sym] || default
+    end
 
     def parse_metadata(metadata_json)
       JSON.parse(metadata_json)

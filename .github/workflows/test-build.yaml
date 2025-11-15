@@ -1,27 +1,19 @@
-name: Build Artifacts
+name: Test Build
 
 on:
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: "Dry run (skip actual artifact uploads)"
-        required: false
-        type: boolean
-        default: false
   push:
     branches:
       - main
-    tags:
-      - 'v*'
   pull_request:
     paths:
       - 'crates/**'
       - 'packages/**'
-      - '.github/workflows/build-artifacts.yml'
+      - '.github/workflows/test-build.yaml'
       - '.github/actions/**'
 
 concurrency:
-  group: build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: test-build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -34,7 +26,7 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "14.0"
 
 jobs:
-  build-wheels:
+  python-wheels:
     name: Build Python wheels (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
@@ -163,7 +155,7 @@ jobs:
           name: ${{ matrix.artifact }}
           path: target/wheels/*.whl
 
-  build-sdist:
+  python-sdist:
     name: Build Python sdist
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -208,8 +200,8 @@ jobs:
           echo "📦 Built sdist:"
           ls -lh dist/*.tar.gz
 
-  build-napi-bindings:
-    name: Build NAPI ${{ matrix.settings.target }}
+  node-bindings:
+    name: Build Node bindings (${{ matrix.settings.target }})
     runs-on: ${{ matrix.settings.os }}
     timeout-minutes: 180
     strategy:
@@ -299,7 +291,7 @@ jobs:
           echo "📦 Built NAPI binding for ${{ matrix.settings.target }}:"
           ls -lh crates/kreuzberg-node/*.node || echo "No .node files found"
 
-  build-ruby-gems:
+  ruby-gem:
     name: Build Ruby gem (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.label == 'windows-x64' }}
@@ -489,8 +481,8 @@ jobs:
           echo "📦 Built Ruby gem for ${{ matrix.label }}:"
           ls -lh packages/ruby/pkg/*.gem || echo "No gems found"
 
-  build-cli-binaries:
-    name: Build CLI ${{ matrix.target }}
+  cli-binaries:
+    name: Build CLI binaries (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
     strategy:
@@ -570,64 +562,22 @@ jobs:
           echo "📦 Built CLI binary for ${{ matrix.target }}:"
           ls -lh kreuzberg-${{ matrix.target }}.* || echo "No archives found"
 
-  smoke-tests:
-    name: Smoke Tests (${{ matrix.flavor }} - ${{ matrix.os }})
+  release-smoke:
+    name: Release Smoke Tests (${{ matrix.os }})
     needs:
-      - build-wheels
-      - build-napi-bindings
-      - build-ruby-gems
-      - build-cli-binaries
+      - python-wheels
+      - node-bindings
+      - ruby-gem
+      - cli-binaries
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Python wheels
-          - flavor: python
-            artifact: wheels-linux-x86_64
-            os: ubuntu-latest
-            python-version: "3.10"
-          - flavor: python
-            artifact: wheels-macos
-            os: macos-14
-            python-version: "3.10"
-          - flavor: python
-            artifact: wheels-windows
-            os: windows-latest
-            python-version: "3.10"
-          # Node.js packages
-          - flavor: node
-            artifact: napi-x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - flavor: node
-            artifact: napi-aarch64-apple-darwin
-            os: macos-14
-          - flavor: node
-            artifact: napi-x86_64-pc-windows-msvc
-            os: windows-latest
-          # Ruby gems
-          - flavor: ruby
-            artifact: gem-linux-x86_64
-            os: ubuntu-latest
-            ruby-version: "3.3"
-          - flavor: ruby
-            artifact: gem-macos-arm64
-            os: macos-14
-            ruby-version: "3.3"
-          - flavor: ruby
-            artifact: gem-windows-x64
-            os: windows-latest
-            ruby-version: "3.3"
-          # CLI binaries
-          - flavor: cli
-            artifact: cli-x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - flavor: cli
-            artifact: cli-aarch64-apple-darwin
-            os: macos-14
-          - flavor: cli
-            artifact: cli-x86_64-pc-windows-msvc
-            os: windows-latest
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -635,68 +585,146 @@ jobs:
           submodules: recursive
 
       - name: Setup pnpm
-        if: matrix.flavor == 'node'
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
-        if: matrix.flavor == 'node'
         uses: actions/setup-node@v6
         with:
           node-version: 20
+          check-latest: true
 
       - name: Setup Python
-        if: matrix.flavor == 'python'
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.10"
 
       - name: Setup Ruby
-        if: matrix.flavor == 'ruby'
+        if: runner.os != 'Windows'
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby-version }}
+          ruby-version: "3.3"
 
-      - name: Download artifact
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Determine Python wheel artifact name
+        id: python_artifact
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              echo "name=wheels-linux-x86_64" >> "$GITHUB_OUTPUT"
+              ;;
+            macos-latest)
+              echo "name=wheels-macos" >> "$GITHUB_OUTPUT"
+              ;;
+            windows-latest)
+              echo "name=wheels-windows" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Determine Node artifact name
+        id: node_artifact
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              echo "name=napi-x86_64-unknown-linux-gnu" >> "$GITHUB_OUTPUT"
+              ;;
+            macos-latest)
+              echo "name=napi-aarch64-apple-darwin" >> "$GITHUB_OUTPUT"
+              ;;
+            windows-latest)
+              echo "name=napi-x86_64-pc-windows-msvc" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Determine Ruby artifact name
+        id: ruby_artifact
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              echo "name=gem-linux-x86_64" >> "$GITHUB_OUTPUT"
+              ;;
+            macos-latest)
+              echo "name=gem-macos-arm64" >> "$GITHUB_OUTPUT"
+              ;;
+            windows-latest)
+              echo "name=gem-windows-x64" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Determine CLI artifact name
+        id: cli_artifact
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              echo "name=cli-x86_64-unknown-linux-gnu" >> "$GITHUB_OUTPUT"
+              ;;
+            macos-latest)
+              echo "name=cli-aarch64-apple-darwin" >> "$GITHUB_OUTPUT"
+              ;;
+            windows-latest)
+              echo "name=cli-x86_64-pc-windows-msvc" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Download Python wheels
         uses: actions/download-artifact@v6
         with:
-          name: ${{ matrix.artifact }}
-          path: artifacts/${{ matrix.flavor }}
+          name: ${{ steps.python_artifact.outputs.name }}
+          path: artifacts/python
+
+      - name: Download Node bindings
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ steps.node_artifact.outputs.name }}
+          path: artifacts/node
+
+      - name: Download Ruby gem
+        if: runner.os != 'Windows'
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ steps.ruby_artifact.outputs.name }}
+          path: artifacts/ruby
+
+      - name: Download CLI artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ steps.cli_artifact.outputs.name }}
+          path: artifacts/cli
 
       - name: Smoke test Python wheel
-        if: matrix.flavor == 'python'
         uses: ./.github/actions/smoke-python
         with:
-          wheel-path: artifacts/${{ matrix.flavor }}
+          wheel-path: artifacts/python
 
       - name: Smoke test Node.js package
-        if: matrix.flavor == 'node'
         uses: ./.github/actions/smoke-node
         with:
           package-tarball: ""
 
       - name: Smoke test Ruby gem
-        if: matrix.flavor == 'ruby'
+        if: runner.os != 'Windows'
         uses: ./.github/actions/smoke-ruby
         with:
-          gem-path: artifacts/${{ matrix.flavor }}
+          gem-path: artifacts/ruby
 
       - name: Smoke test CLI binary
-        if: matrix.flavor == 'cli'
         uses: ./.github/actions/smoke-cli
         with:
-          cli-artifacts-dir: artifacts/${{ matrix.flavor }}
+          cli-artifacts-dir: artifacts/cli
+
+      - name: Smoke test Rust crate
+        uses: ./.github/actions/smoke-rust
 
   summarize:
     name: Build Summary
     needs:
-      - build-wheels
-      - build-sdist
-      - build-napi-bindings
-      - build-ruby-gems
-      - build-cli-binaries
-      - smoke-tests
+      - python-wheels
+      - python-sdist
+      - node-bindings
+      - ruby-gem
+      - cli-binaries
+      - release-smoke
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -713,12 +741,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Wheels | ${{ needs.build-wheels.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Sdist | ${{ needs.build-sdist.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| NAPI Bindings | ${{ needs.build-napi-bindings.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Ruby Gems | ${{ needs.build-ruby-gems.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CLI Binaries | ${{ needs.build-cli-binaries.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Smoke Tests | ${{ needs.smoke-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Wheels | ${{ needs.python-wheels.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Sdist | ${{ needs.python-sdist.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Node Bindings | ${{ needs.node-bindings.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ruby Gem | ${{ needs.ruby-gem.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CLI Binaries | ${{ needs.cli-binaries.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Tests | ${{ needs.release-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📦 Built Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -774,23 +802,16 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Overall status
-          if [ "${{ needs.build-wheels.result }}" = "success" ] && \
-             [ "${{ needs.build-sdist.result }}" = "success" ] && \
-             [ "${{ needs.build-napi-bindings.result }}" = "success" ] && \
-             [ "${{ needs.build-ruby-gems.result }}" = "success" ] && \
-             [ "${{ needs.build-cli-binaries.result }}" = "success" ]; then
+          if [ "${{ needs.python-wheels.result }}" = "success" ] && \
+             [ "${{ needs.python-sdist.result }}" = "success" ] && \
+             [ "${{ needs.node-bindings.result }}" = "success" ] && \
+             [ "${{ needs.ruby-gem.result }}" = "success" ] && \
+             [ "${{ needs.cli-binaries.result }}" = "success" ]; then
             echo "## ✅ All builds succeeded!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "All artifacts are ready for release." >> $GITHUB_STEP_SUMMARY
+            echo "All artifacts are ready for testing." >> $GITHUB_STEP_SUMMARY
           else
             echo "## ⚠️ Some builds failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Check the job details above for more information." >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Dry run notice
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "---" >> $GITHUB_STEP_SUMMARY
-            echo "**Note**: This was a dry run. No artifacts were published." >> $GITHUB_STEP_SUMMARY
           fi

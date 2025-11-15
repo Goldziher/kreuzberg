@@ -1,3 +1,4 @@
+// Auto-generated tests for html fixtures.
 #![allow(clippy::too_many_lines)]
 use e2e_rust::{assertions, resolve_document};
 use kreuzberg::core::config::ExtractionConfig;
@@ -5,7 +6,6 @@ use kreuzberg::core::config::ExtractionConfig;
 #[test]
 fn test_html_complex_layout() {
     // Large Wikipedia HTML page to validate complex conversion.
-    // Note: This test runs with increased stack size due to deep HTML nesting
 
     let document_path = resolve_document("web/taylor_swift.html");
     if !document_path.exists() {
@@ -15,19 +15,9 @@ fn test_html_complex_layout() {
         );
         return;
     }
+    let config = ExtractionConfig::default();
 
-    // Run with increased stack size (16MB instead of default 2MB) to handle deeply nested HTML
-    let result = std::thread::Builder::new()
-        .stack_size(16 * 1024 * 1024)
-        .spawn(move || {
-            let config = ExtractionConfig::default();
-            kreuzberg::extract_file_sync(&document_path, None, &config)
-        })
-        .expect("Failed to spawn thread")
-        .join()
-        .expect("Thread panicked");
-
-    let result = match result {
+    let result = match kreuzberg::extract_file_sync(&document_path, None, &config) {
         Err(err) => panic!("Extraction failed for html_complex_layout: {err:?}"),
         Ok(result) => result,
     };
@@ -38,6 +28,8 @@ fn test_html_complex_layout() {
 
 #[test]
 fn test_html_simple_table() {
+    // HTML table converted to markdown should retain structure.
+
     let document_path = resolve_document("web/simple_table.html");
     if !document_path.exists() {
         println!(
@@ -46,19 +38,9 @@ fn test_html_simple_table() {
         );
         return;
     }
+    let config = ExtractionConfig::default();
 
-    // Run with increased stack size to handle HTML parsing
-    let result = std::thread::Builder::new()
-        .stack_size(16 * 1024 * 1024)
-        .spawn(move || {
-            let config = ExtractionConfig::default();
-            kreuzberg::extract_file_sync(&document_path, None, &config)
-        })
-        .expect("Failed to spawn thread")
-        .join()
-        .expect("Thread panicked");
-
-    let result = match result {
+    let result = match kreuzberg::extract_file_sync(&document_path, None, &config) {
         Err(err) => panic!("Extraction failed for html_simple_table: {err:?}"),
         Ok(result) => result,
     };

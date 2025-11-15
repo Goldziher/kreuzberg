@@ -12,7 +12,7 @@ describe("email fixtures", () => {
 	it(
 		"email_sample_eml",
 		() => {
-			const documentPath = resolveDocument("email/sample.eml");
+			const documentPath = resolveDocument("email/sample_email.eml");
 			if (!existsSync(documentPath)) {
 				console.warn("Skipping email_sample_eml: missing document at", documentPath);
 				return;

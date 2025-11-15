@@ -3,45 +3,45 @@
 # Steep configuration for Kreuzberg Ruby package
 
 target :lib do
-  signature "sig"
+  signature 'sig'
 
-  check "lib"
+  check 'lib'
 
   # Core library
-  library "pathname"
-  library "json"
-  library "fileutils"
-  library "open3"
+  library 'pathname'
+  library 'json'
+  library 'fileutils'
+  library 'open3'
 
   # Strategic ignores for steep limitations (not fixable, safe to ignore):
 
   # 1. Struct.new with keyword_init - steep cannot understand implicit attr_readers
   #    defined by Struct.new in blocks (Table and Chunk classes)
-  ignore "lib/kreuzberg/result.rb"
+  ignore 'lib/kreuzberg/result.rb'
 
   # 2. Generic type parameters in normalize_config - steep has difficulty with
   #    methods that take Class as parameter and return instances
-  ignore "lib/kreuzberg/config.rb"
+  ignore 'lib/kreuzberg/config.rb'
 
   # 3. Interface types - steep doesn't recognize that all Ruby objects have nil? and is_a?
   #    even for interface types like _ToH
-  ignore "lib/kreuzberg/extraction_api.rb"
+  ignore 'lib/kreuzberg/extraction_api.rb'
 
   # 4. Open3 methods - steep's built-in Open3 RBS signatures incomplete
   #    (capture2, capture3, popen3 are standard library methods)
-  ignore "lib/kreuzberg/setup_lib_path.rb"
-  ignore "lib/kreuzberg/cli_proxy.rb"
-  ignore "lib/kreuzberg/mcp_proxy.rb"
+  ignore 'lib/kreuzberg/setup_lib_path.rb'
+  ignore 'lib/kreuzberg/cli_proxy.rb'
+  ignore 'lib/kreuzberg/mcp_proxy.rb'
 
   # Ignore Rust extension methods (defined in native code)
-  ignore "ext"
+  ignore 'ext'
 
   # Ignore vendored code
-  ignore "vendor"
+  ignore 'vendor'
 
   # Ignore test files
-  ignore "spec"
+  ignore 'spec'
 
   # Ignore examples
-  ignore "examples"
+  ignore 'examples'
 end
