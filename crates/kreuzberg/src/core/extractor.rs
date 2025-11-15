@@ -475,7 +475,6 @@ fn apply_libreoffice_metadata(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
     use std::fs::File;
     use std::io::Write;
     use tempfile::tempdir;
@@ -872,7 +871,6 @@ mod tests {
         assert_eq!(success_count, 50);
     }
 
-    #[serial]
     #[tokio::test]
     async fn test_concurrent_extractions_different_mimes() {
         use tokio::task::JoinSet;
