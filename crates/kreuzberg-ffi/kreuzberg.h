@@ -116,6 +116,49 @@ typedef char *(*OcrBackendCallback)(const uint8_t *image_bytes,
                                     const char *config_json);
 
 /**
+ * Type alias for the PostProcessor callback function.
+ *
+ * # Parameters
+ *
+ * - `result_json`: JSON-encoded ExtractionResult (null-terminated string)
+ *
+ * # Returns
+ *
+ * Null-terminated JSON string containing the processed ExtractionResult
+ * (must be freed by Rust via kreuzberg_free_string), or NULL on error.
+ *
+ * # Safety
+ *
+ * The callback must:
+ * - Not store the result_json pointer (it's only valid for the duration of the call)
+ * - Return a valid null-terminated UTF-8 JSON string allocated by the caller
+ * - Return NULL on error (error message should be retrievable separately)
+ */
+typedef char *(*PostProcessorCallback)(const char *result_json);
+
+/**
+ * Type alias for the Validator callback function.
+ *
+ * # Parameters
+ *
+ * - `result_json`: JSON-encoded ExtractionResult (null-terminated string)
+ *
+ * # Returns
+ *
+ * Null-terminated error message string if validation fails (must be freed by Rust
+ * via kreuzberg_free_string), or NULL if validation passes.
+ *
+ * # Safety
+ *
+ * The callback must:
+ * - Not store the result_json pointer (it's only valid for the duration of the call)
+ * - Return a valid null-terminated UTF-8 string (error message) if validation fails
+ * - Return NULL if validation passes
+ * - The returned string must be freeable by kreuzberg_free_string
+ */
+typedef char *(*ValidatorCallback)(const char *result_json);
+
+/**
  * Extract text and metadata from a file (synchronous).
  *
  * # Safety
@@ -377,5 +420,112 @@ const char *kreuzberg_version(void);
  * ```
  */
 bool kreuzberg_register_ocr_backend(const char *name, OcrBackendCallback callback);
+
+/**
+ * Register a custom PostProcessor via FFI callback.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - `callback` must be a valid function pointer that:
+ *   - Does not store the result_json pointer
+ *   - Returns a null-terminated UTF-8 JSON string or NULL on error
+ *   - The returned string must be freeable by kreuzberg_free_string
+ * - `priority` determines the order of execution (higher priority runs first)
+ * - Returns true on success, false on error (check kreuzberg_last_error)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * char* my_post_processor(const char* result_json) {
+ *     // Parse result_json, modify it, return JSON string
+ *     return strdup("{\"content\":\"PROCESSED\"}");
+ * }
+ *
+ * bool success = kreuzberg_register_post_processor("my-processor", my_post_processor, 100);
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to register: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_register_post_processor(const char *name,
+                                       PostProcessorCallback callback,
+                                       int32_t priority);
+
+/**
+ * Unregister a PostProcessor by name.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - Returns true on success, false on error (check kreuzberg_last_error)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * bool success = kreuzberg_unregister_post_processor("my-processor");
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to unregister: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_unregister_post_processor(const char *name);
+
+/**
+ * Register a custom Validator via FFI callback.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - `callback` must be a valid function pointer that:
+ *   - Does not store the result_json pointer
+ *   - Returns a null-terminated UTF-8 string (error message) if validation fails
+ *   - Returns NULL if validation passes
+ *   - The returned string must be freeable by kreuzberg_free_string
+ * - `priority` determines the order of validation (higher priority runs first)
+ * - Returns true on success, false on error (check kreuzberg_last_error)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * char* my_validator(const char* result_json) {
+ *     // Parse result_json, validate it
+ *     // Return error message if validation fails, NULL if passes
+ *     if (invalid) {
+ *         return strdup("Validation failed: content too short");
+ *     }
+ *     return NULL;
+ * }
+ *
+ * bool success = kreuzberg_register_validator("my-validator", my_validator, 100);
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to register: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_register_validator(const char *name, ValidatorCallback callback, int32_t priority);
+
+/**
+ * Unregister a Validator by name.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - Returns true on success, false on error (check kreuzberg_last_error)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * bool success = kreuzberg_unregister_validator("my-validator");
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to unregister: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_unregister_validator(const char *name);
 
 #endif  /* KREUZBERG_FFI_H */

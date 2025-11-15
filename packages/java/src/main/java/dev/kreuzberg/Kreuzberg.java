@@ -53,7 +53,19 @@ import java.util.Map;
  */
 public final class Kreuzberg {
     private static final Linker LINKER = Linker.nativeLinker();
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+            .registerModule(new com.fasterxml.jackson.module.paramnames.ParameterNamesModule())
+            .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    // Storage for registered processors/validators to prevent GC
+    private static final Map<String, PostProcessor> POST_PROCESSORS
+            = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, Validator> VALIDATORS
+            = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, MemorySegment> POST_PROCESSOR_STUBS
+            = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, MemorySegment> VALIDATOR_STUBS
+            = new java.util.concurrent.ConcurrentHashMap<>();
 
     private Kreuzberg() {
         // Private constructor to prevent instantiation
@@ -513,6 +525,256 @@ public final class Kreuzberg {
     }
 
     /**
+     * Register a custom PostProcessor for enriching extraction results.
+     *
+     * <p>PostProcessors are applied after the core extraction completes. They can transform content,
+     * add metadata, or perform additional analysis.</p>
+     *
+     * @param name the processor name (must be unique)
+     * @param processor the PostProcessor implementation
+     * @param priority the execution priority (higher values run first)
+     * @param arena the Arena that manages the callback lifecycle
+     * @throws IllegalArgumentException if name is null or empty
+     * @throws KreuzbergException if registration fails
+     *
+     * @since 4.0.0
+     */
+    public static void registerPostProcessor(String name, PostProcessor processor, int priority, Arena arena)
+            throws KreuzbergException {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Processor name cannot be null or empty");
+        }
+        if (processor == null) {
+            throw new IllegalArgumentException("Processor cannot be null");
+        }
+        if (arena == null) {
+            throw new IllegalArgumentException("Arena cannot be null");
+        }
+
+        try {
+            // Convert processor name to C string
+            MemorySegment nameSegment = KreuzbergFFI.allocateCString(arena, name);
+
+            // Create upcall stub for the processor
+            // The callback signature: (result_json: *const c_char) -> *mut c_char
+            FunctionDescriptor callbackDescriptor = FunctionDescriptor.of(
+                ValueLayout.ADDRESS,  // return: *mut c_char (modified result JSON)
+                ValueLayout.ADDRESS   // result_json: *const c_char
+            );
+
+            // Create a callback lambda that handles JSON serialization
+            PostProcessorCallback callback = (MemorySegment resultJsonPtr) -> {
+                try {
+                    // Deserialize input JSON to ExtractionResult
+                    String resultJson = KreuzbergFFI.readCString(resultJsonPtr);
+                    ExtractionResult result = OBJECT_MAPPER.readValue(resultJson, ExtractionResult.class);
+
+                    // Call the Java PostProcessor
+                    ExtractionResult processed = processor.process(result);
+
+                    // Serialize the processed result back to JSON
+                    String processedJson = OBJECT_MAPPER.writeValueAsString(processed);
+
+                    // Allocate C string for return value (using global arena since callback runs on FFI thread)
+                    return Arena.global().allocateFrom(processedJson);
+                } catch (Exception e) {
+                    // Return NULL on error
+                    return MemorySegment.NULL;
+                }
+            };
+
+            MethodHandle processorMethod = MethodHandles.lookup().findVirtual(
+                PostProcessorCallback.class,
+                "apply",
+                MethodType.methodType(MemorySegment.class, MemorySegment.class)
+            ).bindTo(callback);
+
+            MemorySegment callbackPointer = LINKER.upcallStub(processorMethod, callbackDescriptor, arena);
+
+            // Store processor and stub to prevent GC
+            POST_PROCESSORS.put(name, processor);
+            POST_PROCESSOR_STUBS.put(name, callbackPointer);
+
+            // Register with Rust
+            boolean success = (boolean) KreuzbergFFI.KREUZBERG_REGISTER_POST_PROCESSOR.invoke(
+                nameSegment,
+                callbackPointer,
+                priority
+            );
+
+            if (!success) {
+                POST_PROCESSORS.remove(name);
+                POST_PROCESSOR_STUBS.remove(name);
+                String error = getLastError();
+                throw new KreuzbergException("Failed to register PostProcessor: " + error);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error during PostProcessor registration", e);
+        }
+    }
+
+    /**
+     * Unregister a PostProcessor.
+     *
+     * @param name the processor name
+     * @throws KreuzbergException if unregistration fails
+     *
+     * @since 4.0.0
+     */
+    public static void unregisterPostProcessor(String name) throws KreuzbergException {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Processor name cannot be null or empty");
+        }
+
+        try {
+            try (Arena arena = Arena.ofConfined()) {
+                MemorySegment nameSegment = KreuzbergFFI.allocateCString(arena, name);
+                boolean success = (boolean) KreuzbergFFI.KREUZBERG_UNREGISTER_POST_PROCESSOR.invoke(nameSegment);
+
+                if (!success) {
+                    String error = getLastError();
+                    throw new KreuzbergException("Failed to unregister PostProcessor: " + error);
+                }
+            }
+
+            // Remove from storage
+            POST_PROCESSORS.remove(name);
+            POST_PROCESSOR_STUBS.remove(name);
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error during PostProcessor unregistration", e);
+        }
+    }
+
+    /**
+     * Register a custom Validator for validating extraction results.
+     *
+     * <p>Validators check extraction results for quality, completeness, or other criteria.
+     * If validation fails, they throw a ValidationException.</p>
+     *
+     * @param name the validator name (must be unique)
+     * @param validator the Validator implementation
+     * @param priority the execution priority (lower values run first)
+     * @param arena the Arena that manages the callback lifecycle
+     * @throws IllegalArgumentException if name is null or empty
+     * @throws KreuzbergException if registration fails
+     *
+     * @since 4.0.0
+     */
+    public static void registerValidator(String name, Validator validator, int priority, Arena arena)
+            throws KreuzbergException {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Validator name cannot be null or empty");
+        }
+        if (validator == null) {
+            throw new IllegalArgumentException("Validator cannot be null");
+        }
+        if (arena == null) {
+            throw new IllegalArgumentException("Arena cannot be null");
+        }
+
+        try {
+            // Convert validator name to C string
+            MemorySegment nameSegment = KreuzbergFFI.allocateCString(arena, name);
+
+            // Create upcall stub for the validator
+            // The callback signature: (result_json: *const c_char) -> *mut c_char (error message or NULL)
+            FunctionDescriptor callbackDescriptor = FunctionDescriptor.of(
+                ValueLayout.ADDRESS,  // return: *mut c_char (error message or NULL)
+                ValueLayout.ADDRESS   // result_json: *const c_char
+            );
+
+            // Create a callback lambda that handles JSON serialization
+            ValidatorCallback callback = (MemorySegment resultJsonPtr) -> {
+                try {
+                    // Deserialize input JSON to ExtractionResult
+                    String resultJson = KreuzbergFFI.readCString(resultJsonPtr);
+                    ExtractionResult result = OBJECT_MAPPER.readValue(resultJson, ExtractionResult.class);
+
+                    // Call the Java Validator
+                    validator.validate(result);
+
+                    // Return NULL on success (no error)
+                    return MemorySegment.NULL;
+                } catch (ValidationException e) {
+                    // Return error message (using global arena since callback runs on FFI thread)
+                    return Arena.global().allocateFrom(e.getMessage());
+                } catch (Exception e) {
+                    // Return generic error message (using global arena since callback runs on FFI thread)
+                    return Arena.global().allocateFrom("Validation failed: " + e.getMessage());
+                }
+            };
+
+            MethodHandle validatorMethod = MethodHandles.lookup().findVirtual(
+                ValidatorCallback.class,
+                "apply",
+                MethodType.methodType(MemorySegment.class, MemorySegment.class)
+            ).bindTo(callback);
+
+            MemorySegment callbackPointer = LINKER.upcallStub(validatorMethod, callbackDescriptor, arena);
+
+            // Store validator and stub to prevent GC
+            VALIDATORS.put(name, validator);
+            VALIDATOR_STUBS.put(name, callbackPointer);
+
+            // Register with Rust
+            boolean success = (boolean) KreuzbergFFI.KREUZBERG_REGISTER_VALIDATOR.invoke(
+                nameSegment,
+                callbackPointer,
+                priority
+            );
+
+            if (!success) {
+                VALIDATORS.remove(name);
+                VALIDATOR_STUBS.remove(name);
+                String error = getLastError();
+                throw new KreuzbergException("Failed to register Validator: " + error);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error during Validator registration", e);
+        }
+    }
+
+    /**
+     * Unregister a Validator.
+     *
+     * @param name the validator name
+     * @throws KreuzbergException if unregistration fails
+     *
+     * @since 4.0.0
+     */
+    public static void unregisterValidator(String name) throws KreuzbergException {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Validator name cannot be null or empty");
+        }
+
+        try {
+            try (Arena arena = Arena.ofConfined()) {
+                MemorySegment nameSegment = KreuzbergFFI.allocateCString(arena, name);
+                boolean success = (boolean) KreuzbergFFI.KREUZBERG_UNREGISTER_VALIDATOR.invoke(nameSegment);
+
+                if (!success) {
+                    String error = getLastError();
+                    throw new KreuzbergException("Failed to unregister Validator: " + error);
+                }
+            }
+
+            // Remove from storage
+            VALIDATORS.remove(name);
+            VALIDATOR_STUBS.remove(name);
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error during Validator unregistration", e);
+        }
+    }
+
+    /**
      * Gets the last error message from the native library.
      *
      * @return the error message, or a default message if none available
@@ -644,7 +906,7 @@ public final class Kreuzberg {
         // Check for null (error)
         if (resultPtr == null || resultPtr.address() == 0) {
             String error = getLastError();
-            throw new KreuzbergException("Extraction failed: " + error);
+            throwAppropriateException(error);
         }
 
         try {
@@ -654,7 +916,7 @@ public final class Kreuzberg {
             boolean success = result.get(ValueLayout.JAVA_BOOLEAN, KreuzbergFFI.SUCCESS_OFFSET);
             if (!success) {
                 String error = getLastError();
-                throw new KreuzbergException("Extraction failed: " + error);
+                throwAppropriateException(error);
             }
 
             return readExtractionResultFromMemory(result);
@@ -662,6 +924,22 @@ public final class Kreuzberg {
             // Free the result
             KreuzbergFFI.KREUZBERG_FREE_RESULT.invoke(resultPtr);
         }
+    }
+
+    /**
+     * Throws the appropriate exception type based on error message content.
+     *
+     * @param error the error message
+     * @throws ValidationException if error is a validation error
+     * @throws KreuzbergException for other errors
+     */
+    private static void throwAppropriateException(String error) throws KreuzbergException {
+        if (error != null && error.contains("Validation error")) {
+            // Extract the validation message (remove "Validation error: " prefix)
+            String validationMsg = error.replaceFirst(".*Validation error:\\s*", "");
+            throw new ValidationException(validationMsg);
+        }
+        throw new KreuzbergException("Extraction failed: " + error);
     }
 
     /**
@@ -792,5 +1070,21 @@ public final class Kreuzberg {
             // Log error and return empty map
             return Collections.emptyMap();
         }
+    }
+
+    /**
+     * Functional interface for PostProcessor callbacks.
+     */
+    @FunctionalInterface
+    private interface PostProcessorCallback {
+        MemorySegment apply(MemorySegment resultJsonPtr);
+    }
+
+    /**
+     * Functional interface for Validator callbacks.
+     */
+    @FunctionalInterface
+    private interface ValidatorCallback {
+        MemorySegment apply(MemorySegment resultJsonPtr);
     }
 }
