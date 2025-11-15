@@ -18,11 +18,11 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.kreuzberg</groupId>
+            <groupId>dev.kreuzberg</groupId>
             <artifactId>kreuzberg</artifactId>
-            <version>4.0.0-rc1</version>
+            <version>4.0.0-rc.1</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/../../../packages/java/target/kreuzberg-4.0.0-rc1.jar</systemPath>
+            <systemPath>/Users/naamanhirschfeld/workspace/kreuzberg/packages/java/target/kreuzberg-4.0.0-rc.1.jar</systemPath>
         </dependency>
 
         <dependency>
