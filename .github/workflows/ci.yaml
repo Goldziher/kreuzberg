@@ -52,7 +52,7 @@ jobs:
         run: bundle install --jobs 4 --retry 3
 
       - name: Install Python Dependencies
-        run: uv sync --all-extras --all-packages --all-groups
+        run: uv sync --all-extras --all-packages --all-groups --no-install-project
         shell: bash
 
       - name: Install prek
