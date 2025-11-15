@@ -16,7 +16,7 @@ test = false
 
 [dependencies]
 async-trait = "0.1.89"
-kreuzberg = { path = "../kreuzberg", features = ["full", "api", "mcp"] }
+kreuzberg = { path = "../kreuzberg", features = ["full", "api", "mcp", "embeddings"] }
 once_cell = "1.21"
 pyo3 = { version = "0.27.1", features = ["abi3-py310"] }
 pyo3-async-runtimes = { version = "0.27", features = ["tokio-runtime"] }

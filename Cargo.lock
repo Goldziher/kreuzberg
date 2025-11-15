@@ -2674,6 +2674,7 @@ dependencies = [
  "html-to-markdown-rs",
  "image",
  "kamadak-exif",
+ "kreuzberg-tesseract",
  "lazy_static",
  "libc",
  "lopdf",
@@ -2703,7 +2704,6 @@ dependencies = [
  "sevenz-rust",
  "tar",
  "tempfile",
- "tesseract-rs",
  "text-splitter",
  "thiserror 2.0.17",
  "tokio",
@@ -2790,6 +2790,20 @@ dependencies = [
  "pretty_assertions",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "kreuzberg-tesseract"
+version = "1.0.0-rc.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b30f3556047862787280ab85a021a387ff6cb6b8bf4ba3b33e4a2ceb70da948e"
+dependencies = [
+ "cc",
+ "cmake",
+ "libc",
+ "reqwest",
+ "thiserror 2.0.17",
+ "zip 6.0.0",
 ]
 
 [[package]]
@@ -5144,7 +5158,8 @@ dependencies = [
 [[package]]
 name = "rmcp"
 version = "0.8.5"
-source = "git+https://github.com/modelcontextprotocol/rust-sdk#03040f8b0bfb9ac43e73234189d409da67e1fe5b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5947688160b56fb6c827e3c20a72c90392a1d7e9dec74749197aa1780ac42ca"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -5164,7 +5179,8 @@ dependencies = [
 [[package]]
 name = "rmcp-macros"
 version = "0.8.5"
-source = "git+https://github.com/modelcontextprotocol/rust-sdk#03040f8b0bfb9ac43e73234189d409da67e1fe5b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01263441d3f8635c628e33856c468b96ebbce1af2d3699ea712ca71432d4ee7a"
 dependencies = [
  "darling 0.21.3",
  "proc-macro2",
@@ -6034,19 +6050,6 @@ name = "termtree"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
-
-[[package]]
-name = "tesseract-rs"
-version = "0.2.0"
-source = "git+https://github.com/kreuzberg-dev/tesseract-rs.git?branch=master#319d193f87dc057c2cfc6e023a9e6a9eea95d887"
-dependencies = [
- "cc",
- "cmake",
- "libc",
- "reqwest",
- "thiserror 2.0.17",
- "zip 6.0.0",
-]
 
 [[package]]
 name = "text-splitter"

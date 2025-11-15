@@ -5,7 +5,7 @@
 //!
 //! # Features
 //!
-//! - **Tesseract integration**: Native Tesseract backend via `tesseract-rs`
+//! - **Tesseract integration**: Native Tesseract backend via `kreuzberg-tesseract`
 //! - **Result caching**: Persistent cache for OCR results using file hashing
 //! - **Table reconstruction**: Extract and reconstruct tables from hOCR/TSV output
 //! - **hOCR to Markdown**: Convert hOCR format to clean Markdown

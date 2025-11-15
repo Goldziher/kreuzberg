@@ -106,7 +106,7 @@ impl Plugin for TesseractBackend {
     }
 
     fn version(&self) -> String {
-        tesseract_rs::TesseractAPI::version()
+        kreuzberg_tesseract::TesseractAPI::version()
     }
 
     fn initialize(&self) -> Result<()> {

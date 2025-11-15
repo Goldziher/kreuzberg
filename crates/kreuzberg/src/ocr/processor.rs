@@ -3,7 +3,7 @@ use std::env;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use tesseract_rs::{TessPageSegMode, TesseractAPI};
+use kreuzberg_tesseract::{TessPageSegMode, TesseractAPI};
 
 use super::cache::OcrCache;
 use super::error::OcrError;
