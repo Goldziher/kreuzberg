@@ -359,7 +359,8 @@ module Kreuzberg
       #
       def self.from_file(path)
         hash = Kreuzberg._config_from_file_native(path)
-        new(**hash)
+        # Convert string keys to symbols for keyword arguments
+        new(**hash.transform_keys(&:to_sym))
       end
 
       def initialize(
@@ -411,7 +412,8 @@ module Kreuzberg
       def normalize_config(value, klass)
         return nil if value.nil?
         return value if value.is_a?(klass)
-        return klass.new(**value) if value.is_a?(Hash)
+        # Convert string keys to symbols for keyword arguments
+        return klass.new(**value.transform_keys(&:to_sym)) if value.is_a?(Hash)
 
         raise ArgumentError, "Expected #{klass}, Hash, or nil, got #{value.class}"
       end
