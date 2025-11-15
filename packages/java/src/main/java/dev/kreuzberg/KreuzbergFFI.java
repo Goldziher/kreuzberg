@@ -155,6 +155,26 @@ final class KreuzbergFFI {
         if (resource != null) {
             // Library found in classpath, extract and load it
             try {
+                // On macOS/Linux, preload libpdfium if it exists (kreuzberg_ffi depends on it)
+                if (!osName.contains("win")) {
+                    String pdfiumName = osName.contains("mac") || osName.contains("darwin")
+                            ? "libpdfium.dylib" : "libpdfium.so";
+                    String pdfiumPath = "/" + pdfiumName;
+                    java.io.InputStream pdfiumIn = KreuzbergFFI.class.getResourceAsStream(pdfiumPath);
+                    if (pdfiumIn != null) {
+                        java.nio.file.Path tempPdfium = java.nio.file.Files.createTempFile("libpdfium", libExt);
+                        tempPdfium.toFile().deleteOnExit();
+                        java.nio.file.Files.copy(pdfiumIn, tempPdfium,
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        pdfiumIn.close();
+                        try {
+                            System.load(tempPdfium.toAbsolutePath().toString());
+                        } catch (UnsatisfiedLinkError e) {
+                            // Ignore if pdfium can't be loaded, main library load will fail if needed
+                        }
+                    }
+                }
+
                 java.io.InputStream in = KreuzbergFFI.class.getResourceAsStream(resourcePath);
                 java.nio.file.Path tempLib = java.nio.file.Files.createTempFile(libName, libExt);
                 tempLib.toFile().deleteOnExit();
@@ -172,6 +192,19 @@ final class KreuzbergFFI {
         java.nio.file.Path targetLib = java.nio.file.Path.of(projectRoot, "target", "classes", libName + libExt);
 
         if (java.nio.file.Files.exists(targetLib)) {
+            // On macOS/Linux, preload libpdfium if it exists (kreuzberg_ffi depends on it)
+            if (!osName.contains("win")) {
+                String pdfiumName = osName.contains("mac") || osName.contains("darwin")
+                        ? "libpdfium.dylib" : "libpdfium.so";
+                java.nio.file.Path pdfiumLib = java.nio.file.Path.of(projectRoot, "target", "classes", pdfiumName);
+                if (java.nio.file.Files.exists(pdfiumLib)) {
+                    try {
+                        System.load(pdfiumLib.toAbsolutePath().toString());
+                    } catch (UnsatisfiedLinkError e) {
+                        // Ignore if pdfium can't be loaded, main library load will fail if truly needed
+                    }
+                }
+            }
             System.load(targetLib.toAbsolutePath().toString());
             return;
         }
