@@ -2,10 +2,10 @@ package com.kreuzberg.e2e;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.kreuzberg.ExtractionResult;
-import dev.kreuzberg.Kreuzberg;
-import dev.kreuzberg.KreuzbergException;
-import dev.kreuzberg.Table;
+import com.kreuzberg.ExtractionResult;
+import com.kreuzberg.Kreuzberg;
+import com.kreuzberg.KreuzbergException;
+import com.kreuzberg.Table;
 import org.junit.jupiter.api.Assumptions;
 
 import java.nio.file.Files;

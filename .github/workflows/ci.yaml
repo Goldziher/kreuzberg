@@ -387,8 +387,17 @@ jobs:
         with:
           cache-key-prefix: java-${{ matrix.os }}-${{ matrix.java-version }}
 
+      - name: Install Task
+        uses: ./.github/actions/setup-task
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
+
+      - name: Verify Java E2E suite
+        if: matrix.os == 'ubuntu-latest' && matrix.java-version == '23'
+        uses: ./.github/actions/run-and-ensure-clean
+        with:
+          run: task e2e:java:verify
 
       - name: Build and test
         working-directory: packages/java
