@@ -37,7 +37,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --group doc --no-install-project
+        run: uv sync --group doc --no-install-workspace
 
       - name: Configure Git for mike
         run: |

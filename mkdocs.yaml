@@ -11,8 +11,8 @@ copyright: |
 
 theme:
   name: material
-  logo: assets/logo.png
-  favicon: assets/favicon.png
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -52,6 +52,8 @@ theme:
     - toc.follow
     - toc.integrate
     - announce.dismiss
+    - content.action.edit
+    - content.action.view
   icon:
     repo: fontawesome/brands/github
   language: en
@@ -145,6 +147,7 @@ extra:
   version:
     provider: mike
     default: latest
+    alias: true
   analytics:
     provider: google
     property: !ENV [GOOGLE_ANALYTICS_KEY, ""]

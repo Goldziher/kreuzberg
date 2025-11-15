@@ -73,7 +73,7 @@ jobs:
             uv.lock
 
       - name: Sync benchmark dependencies
-        run: uv sync --group benchmark
+        run: uv sync --group benchmark --no-install-workspace
 
       - name: Build benchmark harness
         run: cargo build --manifest-path tools/benchmark-harness/Cargo.toml --release
