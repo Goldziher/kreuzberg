@@ -14,9 +14,19 @@ runs:
       run: |
         set -euo pipefail
 
+        # Resolve to absolute path if relative
+        if [[ "${{ inputs.cli-artifacts-dir }}" == /* ]]; then
+          cli_artifacts_dir="${{ inputs.cli-artifacts-dir }}"
+        else
+          cli_artifacts_dir="${GITHUB_WORKSPACE}/${{ inputs.cli-artifacts-dir }}"
+        fi
+
+        echo "Looking for CLI artifacts in: $cli_artifacts_dir"
+        ls -la "$cli_artifacts_dir" || true
+
         # Find the CLI archive for this platform
         if [[ "$RUNNER_OS" == "Windows" ]]; then
-          cli_archive=$(find "${{ inputs.cli-artifacts-dir }}" -name "cli-x86_64-pc-windows-msvc.zip" | head -n 1)
+          cli_archive=$(find "$cli_artifacts_dir" -name "*.zip" -type f | head -n 1)
           if [ -z "$cli_archive" ]; then
             echo "CLI binary not found for Windows" >&2
             exit 1
@@ -25,7 +35,7 @@ runs:
           unzip -q "$cli_archive" -d "$tmp"
           cli_bin=$(find "$tmp" -name "kreuzberg.exe" | head -n 1)
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
-          cli_archive=$(find "${{ inputs.cli-artifacts-dir }}" -name "cli-aarch64-apple-darwin.tar.gz" | head -n 1)
+          cli_archive=$(find "$cli_artifacts_dir" -name "*.tar.gz" -type f | head -n 1)
           if [ -z "$cli_archive" ]; then
             echo "CLI binary not found for macOS" >&2
             exit 1
@@ -34,7 +44,7 @@ runs:
           tar -xzf "$cli_archive" -C "$tmp"
           cli_bin=$(find "$tmp" -name "kreuzberg" -type f | head -n 1)
         else
-          cli_archive=$(find "${{ inputs.cli-artifacts-dir }}" -name "cli-x86_64-unknown-linux-gnu.tar.gz" | head -n 1)
+          cli_archive=$(find "$cli_artifacts_dir" -name "*.tar.gz" -type f | head -n 1)
           if [ -z "$cli_archive" ]; then
             echo "CLI binary not found for Linux" >&2
             exit 1

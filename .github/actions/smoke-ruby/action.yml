@@ -21,17 +21,29 @@ runs:
         bundle config set --local path vendor/bundle
 
         if [[ -n "${{ inputs.gem-path }}" ]]; then
-          # Find gem file
-          if [[ -d "${{ inputs.gem-path }}" ]]; then
-            gem_file=$(find "${{ inputs.gem-path }}" -name "kreuzberg-*.gem" -type f | head -n 1)
+          # Resolve to absolute path if relative
+          if [[ "${{ inputs.gem-path }}" == /* ]]; then
+            gem_path="${{ inputs.gem-path }}"
           else
-            gem_file="${{ inputs.gem-path }}"
+            gem_path="${GITHUB_WORKSPACE}/${{ inputs.gem-path }}"
+          fi
+
+          echo "Looking for gems in: $gem_path"
+
+          # Find gem file
+          if [[ -d "$gem_path" ]]; then
+            gem_file=$(find "$gem_path" -name "*.gem" -type f | head -n 1)
+          else
+            gem_file="$gem_path"
           fi
 
           if [[ -z "$gem_file" || ! -f "$gem_file" ]]; then
-            echo "No gem found at ${{ inputs.gem-path }}" >&2
+            echo "No gem found at $gem_path" >&2
+            ls -la "$gem_path" >&2 || true
             exit 1
           fi
+
+          echo "Using gem: $gem_file"
 
           # Unpack gem and configure bundle to use it
           mkdir -p vendor/local-gems

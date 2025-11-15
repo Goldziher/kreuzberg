@@ -4,5 +4,8 @@
 	"type": "module",
 	"scripts": {
 		"check": "node smoke.mjs"
+	},
+	"dependencies": {
+		"@kreuzberg/node": "workspace:*"
 	}
 }

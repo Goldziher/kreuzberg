@@ -28,16 +28,31 @@ runs:
         "$VENV_PY" -m pip install --upgrade pip
 
         if [[ -n "${{ inputs.wheel-path }}" ]]; then
+          # Resolve to absolute path if relative
+          if [[ "${{ inputs.wheel-path }}" == /* ]]; then
+            wheel_path="${{ inputs.wheel-path }}"
+          else
+            wheel_path="${GITHUB_WORKSPACE}/${{ inputs.wheel-path }}"
+          fi
+
+          echo "Looking for wheels in: $wheel_path"
+
           # If wheel-path is a directory, find the wheel
-          if [[ -d "${{ inputs.wheel-path }}" ]]; then
-            wheel_file=$(find "${{ inputs.wheel-path }}" -name "*.whl" -type f | head -n 1)
+          if [[ -d "$wheel_path" ]]; then
+            wheel_file=$(find "$wheel_path" -name "*.whl" -type f | head -n 1)
             if [[ -z "$wheel_file" ]]; then
-              echo "No wheel found in ${{ inputs.wheel-path }}" >&2
+              echo "No wheel found in $wheel_path" >&2
+              ls -la "$wheel_path" >&2 || true
               exit 1
             fi
+            echo "Installing wheel: $wheel_file"
             "$VENV_PY" -m pip install "$wheel_file"
+          elif [[ -f "$wheel_path" ]]; then
+            echo "Installing wheel: $wheel_path"
+            "$VENV_PY" -m pip install "$wheel_path"
           else
-            "$VENV_PY" -m pip install "${{ inputs.wheel-path }}"
+            echo "Wheel path does not exist: $wheel_path" >&2
+            exit 1
           fi
         else
           # Install from source
