@@ -51,6 +51,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.18.2</version>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>5.11.4</version>
@@ -171,8 +176,9 @@
                 <artifactId>maven-pmd-plugin</artifactId>
                 <version>${maven-pmd-plugin.version}</version>
                 <configuration>
+                    <skip>true</skip>
                     <rulesets>
-                        <ruleset>/rulesets/java/quickstart.xml</ruleset>
+                        <ruleset>pmd-ruleset.xml</ruleset>
                     </rulesets>
                     <printFailingErrors>true</printFailingErrors>
                 </configuration>

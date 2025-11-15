@@ -45,8 +45,96 @@ pub struct CExtractionResult {
     pub date: *mut c_char,
     /// Document subject (null-terminated string, or NULL if not available, must be freed with kreuzberg_free_string)
     pub subject: *mut c_char,
+    /// Tables as JSON array (null-terminated string, or NULL if no tables, must be freed with kreuzberg_free_string)
+    pub tables_json: *mut c_char,
+    /// Detected languages as JSON array (null-terminated string, or NULL if not available, must be freed with kreuzberg_free_string)
+    pub detected_languages_json: *mut c_char,
+    /// Metadata as JSON object (null-terminated string, or NULL if no metadata, must be freed with kreuzberg_free_string)
+    pub metadata_json: *mut c_char,
     /// Whether extraction was successful
     pub success: bool,
+}
+
+/// Helper function to convert ExtractionResult to CExtractionResult
+fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut CExtractionResult, String> {
+    // Convert content to C string
+    let content = CString::new(result.content)
+        .map_err(|e| format!("Failed to convert content to C string: {}", e))?
+        .into_raw();
+
+    // Convert MIME type to C string
+    let mime_type = CString::new(result.mime_type)
+        .map(|s| s.into_raw())
+        .unwrap_or_else(|e| {
+            // SAFETY: Free the content we already allocated
+            unsafe { drop(CString::from_raw(content)) };
+            panic!("Failed to convert MIME type to C string: {}", e);
+        });
+
+    // Convert language to C string
+    let language = match &result.metadata.language {
+        Some(lang) => CString::new(lang.as_str())
+            .ok()
+            .map(|s| s.into_raw())
+            .unwrap_or(ptr::null_mut()),
+        None => ptr::null_mut(),
+    };
+
+    // Convert date to C string
+    let date = match &result.metadata.date {
+        Some(d) => CString::new(d.as_str())
+            .ok()
+            .map(|s| s.into_raw())
+            .unwrap_or(ptr::null_mut()),
+        None => ptr::null_mut(),
+    };
+
+    // Convert subject to C string
+    let subject = match &result.metadata.subject {
+        Some(subj) => CString::new(subj.as_str())
+            .ok()
+            .map(|s| s.into_raw())
+            .unwrap_or(ptr::null_mut()),
+        None => ptr::null_mut(),
+    };
+
+    // Serialize tables to JSON
+    let tables_json = if !result.tables.is_empty() {
+        match serde_json::to_string(&result.tables) {
+            Ok(json) => CString::new(json).ok().map(|s| s.into_raw()).unwrap_or(ptr::null_mut()),
+            Err(_) => ptr::null_mut(),
+        }
+    } else {
+        ptr::null_mut()
+    };
+
+    // Serialize detected languages to JSON
+    let detected_languages_json = match result.detected_languages {
+        Some(langs) if !langs.is_empty() => match serde_json::to_string(&langs) {
+            Ok(json) => CString::new(json).ok().map(|s| s.into_raw()).unwrap_or(ptr::null_mut()),
+            Err(_) => ptr::null_mut(),
+        },
+        _ => ptr::null_mut(),
+    };
+
+    // Serialize metadata to JSON
+    let metadata_json = match serde_json::to_string(&result.metadata) {
+        Ok(json) => CString::new(json).ok().map(|s| s.into_raw()).unwrap_or(ptr::null_mut()),
+        Err(_) => ptr::null_mut(),
+    };
+
+    // Allocate and return the result structure
+    Ok(Box::into_raw(Box::new(CExtractionResult {
+        content,
+        mime_type,
+        language,
+        date,
+        subject,
+        tables_json,
+        detected_languages_json,
+        metadata_json,
+        success: true,
+    })))
 }
 
 /// Extract text and metadata from a file (synchronous).
@@ -93,66 +181,15 @@ pub unsafe extern "C" fn kreuzberg_extract_file_sync(file_path: *const c_char) -
     let config = ExtractionConfig::default();
 
     match kreuzberg::extract_file_sync(path, None, &config) {
-        Ok(result) => {
-            // Convert content to C string
-            let content = match CString::new(result.content) {
-                Ok(s) => s.into_raw(),
-                Err(e) => {
-                    set_last_error(format!("Failed to convert content to C string: {}", e));
-                    return ptr::null_mut();
-                }
-            };
-
-            // Convert MIME type to C string
-            let mime_type = match CString::new(result.mime_type) {
-                Ok(s) => s.into_raw(),
-                Err(e) => {
-                    // SAFETY: Free the content we already allocated
-                    unsafe { drop(CString::from_raw(content)) };
-                    set_last_error(format!("Failed to convert MIME type to C string: {}", e));
-                    return ptr::null_mut();
-                }
-            };
-
-            // Convert language to C string
-            let language = match result.metadata.language {
-                Some(lang) => match CString::new(lang) {
-                    Ok(s) => s.into_raw(),
-                    Err(_) => ptr::null_mut(),
-                },
-                None => ptr::null_mut(),
-            };
-
-            // Convert date to C string
-            let date = match result.metadata.date {
-                Some(d) => match CString::new(d) {
-                    Ok(s) => s.into_raw(),
-                    Err(_) => ptr::null_mut(),
-                },
-                None => ptr::null_mut(),
-            };
-
-            // Convert subject to C string
-            let subject = match result.metadata.subject {
-                Some(subj) => match CString::new(subj) {
-                    Ok(s) => s.into_raw(),
-                    Err(_) => ptr::null_mut(),
-                },
-                None => ptr::null_mut(),
-            };
-
-            // Allocate and return the result structure
-            Box::into_raw(Box::new(CExtractionResult {
-                content,
-                mime_type,
-                language,
-                date,
-                subject,
-                success: true,
-            }))
-        }
+        Ok(result) => match to_c_extraction_result(result) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
         Err(e) => {
-            set_last_error(format!("Extraction failed: {}", e));
+            set_last_error(e.to_string());
             ptr::null_mut()
         }
     }
@@ -224,66 +261,15 @@ pub unsafe extern "C" fn kreuzberg_extract_file_sync_with_config(
     };
 
     match kreuzberg::extract_file_sync(path, None, &config) {
-        Ok(result) => {
-            // Convert content to C string
-            let content = match CString::new(result.content) {
-                Ok(s) => s.into_raw(),
-                Err(e) => {
-                    set_last_error(format!("Failed to convert content to C string: {}", e));
-                    return ptr::null_mut();
-                }
-            };
-
-            // Convert MIME type to C string
-            let mime_type = match CString::new(result.mime_type) {
-                Ok(s) => s.into_raw(),
-                Err(e) => {
-                    // SAFETY: Free the content we already allocated
-                    unsafe { drop(CString::from_raw(content)) };
-                    set_last_error(format!("Failed to convert MIME type to C string: {}", e));
-                    return ptr::null_mut();
-                }
-            };
-
-            // Convert language to C string
-            let language = match result.metadata.language {
-                Some(lang) => match CString::new(lang) {
-                    Ok(s) => s.into_raw(),
-                    Err(_) => ptr::null_mut(),
-                },
-                None => ptr::null_mut(),
-            };
-
-            // Convert date to C string
-            let date = match result.metadata.date {
-                Some(d) => match CString::new(d) {
-                    Ok(s) => s.into_raw(),
-                    Err(_) => ptr::null_mut(),
-                },
-                None => ptr::null_mut(),
-            };
-
-            // Convert subject to C string
-            let subject = match result.metadata.subject {
-                Some(subj) => match CString::new(subj) {
-                    Ok(s) => s.into_raw(),
-                    Err(_) => ptr::null_mut(),
-                },
-                None => ptr::null_mut(),
-            };
-
-            // Allocate and return the result structure
-            Box::into_raw(Box::new(CExtractionResult {
-                content,
-                mime_type,
-                language,
-                date,
-                subject,
-                success: true,
-            }))
-        }
+        Ok(result) => match to_c_extraction_result(result) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
         Err(e) => {
-            set_last_error(format!("Extraction failed: {}", e));
+            set_last_error(e.to_string());
             ptr::null_mut()
         }
     }
@@ -350,6 +336,15 @@ pub unsafe extern "C" fn kreuzberg_free_result(result: *mut CExtractionResult) {
         }
         if !result_box.subject.is_null() {
             unsafe { drop(CString::from_raw(result_box.subject)) };
+        }
+        if !result_box.tables_json.is_null() {
+            unsafe { drop(CString::from_raw(result_box.tables_json)) };
+        }
+        if !result_box.detected_languages_json.is_null() {
+            unsafe { drop(CString::from_raw(result_box.detected_languages_json)) };
+        }
+        if !result_box.metadata_json.is_null() {
+            unsafe { drop(CString::from_raw(result_box.metadata_json)) };
         }
 
         // Box drop will free the result struct itself

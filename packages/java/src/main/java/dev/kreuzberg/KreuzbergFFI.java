@@ -39,6 +39,9 @@ final class KreuzbergFFI {
         ValueLayout.ADDRESS.withName("language"),
         ValueLayout.ADDRESS.withName("date"),
         ValueLayout.ADDRESS.withName("subject"),
+        ValueLayout.ADDRESS.withName("tables_json"),
+        ValueLayout.ADDRESS.withName("detected_languages_json"),
+        ValueLayout.ADDRESS.withName("metadata_json"),
         ValueLayout.JAVA_BOOLEAN.withName("success"),
         MemoryLayout.paddingLayout(7) // Padding to align to 8 bytes
     );
@@ -53,6 +56,12 @@ final class KreuzbergFFI {
         MemoryLayout.PathElement.groupElement("date"));
     static final long SUBJECT_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
         MemoryLayout.PathElement.groupElement("subject"));
+    static final long TABLES_JSON_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
+        MemoryLayout.PathElement.groupElement("tables_json"));
+    static final long DETECTED_LANGUAGES_JSON_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
+        MemoryLayout.PathElement.groupElement("detected_languages_json"));
+    static final long METADATA_JSON_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
+        MemoryLayout.PathElement.groupElement("metadata_json"));
     static final long SUCCESS_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
         MemoryLayout.PathElement.groupElement("success"));
 
