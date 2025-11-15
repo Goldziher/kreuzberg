@@ -275,6 +275,428 @@ pub unsafe extern "C" fn kreuzberg_extract_file_sync_with_config(
     }
 }
 
+/// Extract text and metadata from byte array (synchronous).
+///
+/// # Safety
+///
+/// - `data` must be a valid pointer to a byte array of length `data_len`
+/// - `mime_type` must be a valid null-terminated C string
+/// - The returned pointer must be freed with `kreuzberg_free_result`
+/// - Returns NULL on error (check `kreuzberg_last_error` for details)
+///
+/// # Example (C)
+///
+/// ```c
+/// const uint8_t* data = ...; // Document bytes
+/// size_t len = ...;           // Length of data
+/// const char* mime = "application/pdf";
+/// CExtractionResult* result = kreuzberg_extract_bytes_sync(data, len, mime);
+/// if (result != NULL && result->success) {
+///     printf("Content: %s\n", result->content);
+///     kreuzberg_free_result(result);
+/// } else {
+///     const char* error = kreuzberg_last_error();
+///     printf("Error: %s\n", error);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_extract_bytes_sync(
+    data: *const u8,
+    data_len: usize,
+    mime_type: *const c_char,
+) -> *mut CExtractionResult {
+    clear_last_error();
+
+    if data.is_null() {
+        set_last_error("data cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    if mime_type.is_null() {
+        set_last_error("mime_type cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    // SAFETY: Caller must ensure data points to a valid byte array of length data_len
+    let bytes = unsafe { std::slice::from_raw_parts(data, data_len) };
+
+    // SAFETY: Caller must ensure mime_type is a valid null-terminated C string
+    let mime_str = match unsafe { CStr::from_ptr(mime_type) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in MIME type: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    let config = ExtractionConfig::default();
+
+    match kreuzberg::extract_bytes_sync(bytes, mime_str, &config) {
+        Ok(result) => match to_c_extraction_result(result) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Extract text and metadata from byte array with custom configuration (synchronous).
+///
+/// # Safety
+///
+/// - `data` must be a valid pointer to a byte array of length `data_len`
+/// - `mime_type` must be a valid null-terminated C string
+/// - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
+/// - The returned pointer must be freed with `kreuzberg_free_result`
+/// - Returns NULL on error (check `kreuzberg_last_error` for details)
+///
+/// # Example (C)
+///
+/// ```c
+/// const uint8_t* data = ...; // Document bytes
+/// size_t len = ...;           // Length of data
+/// const char* mime = "application/pdf";
+/// const char* config = "{\"force_ocr\": true, \"ocr\": {\"language\": \"deu\"}}";
+/// CExtractionResult* result = kreuzberg_extract_bytes_sync_with_config(data, len, mime, config);
+/// if (result != NULL && result->success) {
+///     printf("Content: %s\n", result->content);
+///     kreuzberg_free_result(result);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_extract_bytes_sync_with_config(
+    data: *const u8,
+    data_len: usize,
+    mime_type: *const c_char,
+    config_json: *const c_char,
+) -> *mut CExtractionResult {
+    clear_last_error();
+
+    if data.is_null() {
+        set_last_error("data cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    if mime_type.is_null() {
+        set_last_error("mime_type cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    // SAFETY: Caller must ensure data points to a valid byte array of length data_len
+    let bytes = unsafe { std::slice::from_raw_parts(data, data_len) };
+
+    // SAFETY: Caller must ensure mime_type is a valid null-terminated C string
+    let mime_str = match unsafe { CStr::from_ptr(mime_type) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in MIME type: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    // Parse config from JSON if provided, otherwise use default
+    let config = if config_json.is_null() {
+        ExtractionConfig::default()
+    } else {
+        // SAFETY: Caller must ensure config_json is a valid null-terminated C string
+        let config_str = match unsafe { CStr::from_ptr(config_json) }.to_str() {
+            Ok(s) => s,
+            Err(e) => {
+                set_last_error(format!("Invalid UTF-8 in config JSON: {}", e));
+                return ptr::null_mut();
+            }
+        };
+
+        match serde_json::from_str::<ExtractionConfig>(config_str) {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                set_last_error(format!("Failed to parse config JSON: {}", e));
+                return ptr::null_mut();
+            }
+        }
+    };
+
+    match kreuzberg::extract_bytes_sync(bytes, mime_str, &config) {
+        Ok(result) => match to_c_extraction_result(result) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+/// C-compatible structure for passing byte array with MIME type in batch operations
+#[repr(C)]
+pub struct CBytesWithMime {
+    /// Pointer to byte data
+    pub data: *const u8,
+    /// Length of byte data
+    pub data_len: usize,
+    /// MIME type as null-terminated C string
+    pub mime_type: *const c_char,
+}
+
+/// C-compatible structure for batch extraction results
+#[repr(C)]
+pub struct CBatchResult {
+    /// Array of extraction results
+    pub results: *mut *mut CExtractionResult,
+    /// Number of results
+    pub count: usize,
+    /// Whether batch operation was successful
+    pub success: bool,
+}
+
+/// Batch extract text and metadata from multiple files (synchronous).
+///
+/// # Safety
+///
+/// - `file_paths` must be a valid pointer to an array of null-terminated C strings
+/// - `count` must be the number of file paths in the array
+/// - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
+/// - The returned pointer must be freed with `kreuzberg_free_batch_result`
+/// - Returns NULL on error (check `kreuzberg_last_error` for details)
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_batch_extract_files_sync(
+    file_paths: *const *const c_char,
+    count: usize,
+    config_json: *const c_char,
+) -> *mut CBatchResult {
+    clear_last_error();
+
+    if file_paths.is_null() {
+        set_last_error("file_paths cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    // Parse config from JSON if provided, otherwise use default
+    let config = if config_json.is_null() {
+        ExtractionConfig::default()
+    } else {
+        let config_str = match unsafe { CStr::from_ptr(config_json) }.to_str() {
+            Ok(s) => s,
+            Err(e) => {
+                set_last_error(format!("Invalid UTF-8 in config JSON: {}", e));
+                return ptr::null_mut();
+            }
+        };
+
+        match serde_json::from_str::<ExtractionConfig>(config_str) {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                set_last_error(format!("Failed to parse config JSON: {}", e));
+                return ptr::null_mut();
+            }
+        }
+    };
+
+    // Convert C strings to Rust paths
+    let mut paths = Vec::with_capacity(count);
+    for i in 0..count {
+        let path_ptr = unsafe { *file_paths.add(i) };
+        if path_ptr.is_null() {
+            set_last_error(format!("File path at index {} is NULL", i));
+            return ptr::null_mut();
+        }
+
+        let path_str = match unsafe { CStr::from_ptr(path_ptr) }.to_str() {
+            Ok(s) => s,
+            Err(e) => {
+                set_last_error(format!("Invalid UTF-8 in file path at index {}: {}", i, e));
+                return ptr::null_mut();
+            }
+        };
+
+        paths.push(Path::new(path_str));
+    }
+
+    match kreuzberg::batch_extract_file_sync(paths, &config) {
+        Ok(results) => {
+            // Convert results to C structures
+            let mut c_results = Vec::with_capacity(results.len());
+            for result in results {
+                match to_c_extraction_result(result) {
+                    Ok(ptr) => c_results.push(ptr),
+                    Err(e) => {
+                        // Clean up already converted results
+                        for c_res in c_results {
+                            unsafe { kreuzberg_free_result(c_res) };
+                        }
+                        set_last_error(e);
+                        return ptr::null_mut();
+                    }
+                }
+            }
+
+            // Allocate array for result pointers
+            let results_array = c_results.into_boxed_slice();
+            let results_ptr = Box::into_raw(results_array) as *mut *mut CExtractionResult;
+
+            Box::into_raw(Box::new(CBatchResult {
+                results: results_ptr,
+                count,
+                success: true,
+            }))
+        }
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Batch extract text and metadata from multiple byte arrays (synchronous).
+///
+/// # Safety
+///
+/// - `items` must be a valid pointer to an array of CBytesWithMime structures
+/// - `count` must be the number of items in the array
+/// - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
+/// - The returned pointer must be freed with `kreuzberg_free_batch_result`
+/// - Returns NULL on error (check `kreuzberg_last_error` for details)
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
+    items: *const CBytesWithMime,
+    count: usize,
+    config_json: *const c_char,
+) -> *mut CBatchResult {
+    clear_last_error();
+
+    if items.is_null() {
+        set_last_error("items cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    // Parse config from JSON if provided, otherwise use default
+    let config = if config_json.is_null() {
+        ExtractionConfig::default()
+    } else {
+        let config_str = match unsafe { CStr::from_ptr(config_json) }.to_str() {
+            Ok(s) => s,
+            Err(e) => {
+                set_last_error(format!("Invalid UTF-8 in config JSON: {}", e));
+                return ptr::null_mut();
+            }
+        };
+
+        match serde_json::from_str::<ExtractionConfig>(config_str) {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                set_last_error(format!("Failed to parse config JSON: {}", e));
+                return ptr::null_mut();
+            }
+        }
+    };
+
+    // Convert C structures to Rust tuples
+    let mut contents = Vec::with_capacity(count);
+    for i in 0..count {
+        let item = unsafe { &*items.add(i) };
+
+        if item.data.is_null() {
+            set_last_error(format!("Data at index {} is NULL", i));
+            return ptr::null_mut();
+        }
+
+        if item.mime_type.is_null() {
+            set_last_error(format!("MIME type at index {} is NULL", i));
+            return ptr::null_mut();
+        }
+
+        let bytes = unsafe { std::slice::from_raw_parts(item.data, item.data_len) };
+
+        let mime_str = match unsafe { CStr::from_ptr(item.mime_type) }.to_str() {
+            Ok(s) => s,
+            Err(e) => {
+                set_last_error(format!("Invalid UTF-8 in MIME type at index {}: {}", i, e));
+                return ptr::null_mut();
+            }
+        };
+
+        contents.push((bytes, mime_str));
+    }
+
+    match kreuzberg::batch_extract_bytes_sync(contents, &config) {
+        Ok(results) => {
+            // Convert results to C structures
+            let mut c_results = Vec::with_capacity(results.len());
+            for result in results {
+                match to_c_extraction_result(result) {
+                    Ok(ptr) => c_results.push(ptr),
+                    Err(e) => {
+                        // Clean up already converted results
+                        for c_res in c_results {
+                            unsafe { kreuzberg_free_result(c_res) };
+                        }
+                        set_last_error(e);
+                        return ptr::null_mut();
+                    }
+                }
+            }
+
+            // Allocate array for result pointers
+            let results_array = c_results.into_boxed_slice();
+            let results_ptr = Box::into_raw(results_array) as *mut *mut CExtractionResult;
+
+            Box::into_raw(Box::new(CBatchResult {
+                results: results_ptr,
+                count,
+                success: true,
+            }))
+        }
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Free a batch result returned by batch extraction functions.
+///
+/// # Safety
+///
+/// - `batch_result` must be a pointer previously returned by a batch extraction function
+/// - `batch_result` can be NULL (no-op)
+/// - `batch_result` must not be used after this call
+/// - All results and strings within the batch result will be freed automatically
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_free_batch_result(batch_result: *mut CBatchResult) {
+    if !batch_result.is_null() {
+        let batch = unsafe { Box::from_raw(batch_result) };
+
+        if !batch.results.is_null() {
+            // Free each individual result
+            let results_slice = unsafe { std::slice::from_raw_parts_mut(batch.results, batch.count) };
+
+            for result_ptr in results_slice {
+                if !result_ptr.is_null() {
+                    unsafe { kreuzberg_free_result(*result_ptr) };
+                }
+            }
+
+            // Free the array itself
+            unsafe {
+                drop(Box::from_raw(std::slice::from_raw_parts_mut(
+                    batch.results,
+                    batch.count,
+                )))
+            };
+        }
+    }
+}
+
 /// Free a string returned by Kreuzberg functions.
 ///
 /// # Safety

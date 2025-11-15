@@ -15,7 +15,6 @@ import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -28,15 +27,22 @@ import java.util.Map;
  *
  * <h2>Basic Usage</h2>
  * <pre>{@code
- * ExtractionResult result = Kreuzberg.extractFile("document.pdf");
+ * ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
  * System.out.println(result.content());
  * System.out.println("Type: " + result.mimeType());
+ * }</pre>
+ *
+ * <h2>With Configuration</h2>
+ * <pre>{@code
+ * ExtractionConfig config = new ExtractionConfig();
+ * // Configure as needed
+ * ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
  * }</pre>
  *
  * <h2>Error Handling</h2>
  * <pre>{@code
  * try {
- *     ExtractionResult result = Kreuzberg.extractFile("document.pdf");
+ *     ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
  *     // Process result
  * } catch (KreuzbergException e) {
  *     System.err.println("Extraction failed: " + e.getMessage());
@@ -56,48 +62,375 @@ public final class Kreuzberg {
     /**
      * Extract text and metadata from a file.
      *
-     * @param path the path to the file to extract
-     * @return the extraction result
-     * @throws IOException if the file does not exist or cannot be read
-     * @throws KreuzbergException if the extraction fails
-     */
-    public static ExtractionResult extractFile(String path) throws IOException, KreuzbergException {
-        return extractFile(Path.of(path));
-    }
-
-    /**
-     * Extract text and metadata from a file.
+     * <p>This is the main extraction method used by the e2e tests.</p>
      *
-     * @param path the path to the file to extract
+     * @param filePath the path to the file to extract
+     * @param config the extraction configuration as a Map (uses defaults if null)
      * @return the extraction result
      * @throws IOException if the file does not exist or cannot be read
      * @throws KreuzbergException if the extraction fails
      */
-    public static ExtractionResult extractFile(Path path) throws IOException, KreuzbergException {
+    public static ExtractionResult extractFile(String filePath, Map<String, Object> config)
+            throws IOException, KreuzbergException {
         // Validate file exists
+        Path path = Path.of(filePath);
         if (!Files.exists(path)) {
-            throw new IOException("File not found: " + path);
+            throw new IOException("File not found: " + filePath);
         }
         if (!Files.isRegularFile(path)) {
-            throw new IOException("Not a regular file: " + path);
+            throw new IOException("Not a regular file: " + filePath);
         }
         if (!Files.isReadable(path)) {
-            throw new IOException("File not readable: " + path);
+            throw new IOException("File not readable: " + filePath);
         }
 
         try (Arena arena = Arena.ofConfined()) {
-            // Convert path to C string
-            MemorySegment pathSegment = KreuzbergFFI.allocateCString(arena, path.toString());
+            if (config == null || config.isEmpty()) {
+                // Call without config
+                MemorySegment pathSegment = KreuzbergFFI.allocateCString(arena, filePath);
+                MemorySegment resultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_EXTRACT_FILE_SYNC
+                    .invoke(pathSegment);
+                return processExtractionResult(resultPtr);
+            } else {
+                // Call with config - convert Map to JSON directly
+                String configJson = OBJECT_MAPPER.writeValueAsString(config);
+                MemorySegment pathSegment = KreuzbergFFI.allocateCString(arena, filePath);
+                MemorySegment configSegment = KreuzbergFFI.allocateCString(arena, configJson);
+                MemorySegment resultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_EXTRACT_FILE_SYNC_WITH_CONFIG
+                    .invoke(pathSegment, configSegment);
+                return processExtractionResult(resultPtr);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (IOException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error during extraction", e);
+        }
+    }
 
-            // Call C function
-            MemorySegment resultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_EXTRACT_FILE_SYNC
-                .invoke(pathSegment);
+    /**
+     * Extract text and metadata from a file (synchronous).
+     *
+     * @param filePath the path to the file to extract
+     * @return the extraction result
+     * @throws IOException if the file does not exist or cannot be read
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static ExtractionResult extractFileSync(String filePath) throws IOException, KreuzbergException {
+        return extractFileSync(filePath, null, null);
+    }
 
-            return processExtractionResult(resultPtr);
+    /**
+     * Extract text and metadata from a file (synchronous).
+     *
+     * @param filePath the path to the file to extract
+     * @return the extraction result
+     * @throws IOException if the file does not exist or cannot be read
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static ExtractionResult extractFileSync(Path filePath) throws IOException, KreuzbergException {
+        return extractFileSync(filePath, null, null);
+    }
+
+    /**
+     * Extract text and metadata from a file with optional MIME type hint (synchronous).
+     *
+     * @param filePath the path to the file to extract
+     * @param mimeType optional MIME type hint (auto-detected if null)
+     * @return the extraction result
+     * @throws IOException if the file does not exist or cannot be read
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static ExtractionResult extractFileSync(String filePath, String mimeType)
+            throws IOException, KreuzbergException {
+        return extractFileSync(filePath, mimeType, null);
+    }
+
+    /**
+     * Extract text and metadata from a file with optional MIME type hint (synchronous).
+     *
+     * @param filePath the path to the file to extract
+     * @param mimeType optional MIME type hint (auto-detected if null)
+     * @return the extraction result
+     * @throws IOException if the file does not exist or cannot be read
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static ExtractionResult extractFileSync(Path filePath, String mimeType)
+            throws IOException, KreuzbergException {
+        return extractFileSync(filePath, mimeType, null);
+    }
+
+    /**
+     * Extract text and metadata from a file with custom configuration (synchronous).
+     *
+     * @param filePath the path to the file to extract
+     * @param mimeType optional MIME type hint (auto-detected if null)
+     * @param config the extraction configuration (uses defaults if null)
+     * @return the extraction result
+     * @throws IOException if the file does not exist or cannot be read
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static ExtractionResult extractFileSync(String filePath, String mimeType, ExtractionConfig config)
+            throws IOException, KreuzbergException {
+        return extractFileSync(Path.of(filePath), mimeType, config);
+    }
+
+    /**
+     * Extract text and metadata from a file with custom configuration (synchronous).
+     *
+     * @param filePath the path to the file to extract
+     * @param mimeType optional MIME type hint (auto-detected if null)
+     * @param config the extraction configuration (uses defaults if null)
+     * @return the extraction result
+     * @throws IOException if the file does not exist or cannot be read
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static ExtractionResult extractFileSync(Path filePath, String mimeType, ExtractionConfig config)
+            throws IOException, KreuzbergException {
+        // Validate file exists
+        if (!Files.exists(filePath)) {
+            throw new IOException("File not found: " + filePath);
+        }
+        if (!Files.isRegularFile(filePath)) {
+            throw new IOException("Not a regular file: " + filePath);
+        }
+        if (!Files.isReadable(filePath)) {
+            throw new IOException("File not readable: " + filePath);
+        }
+
+        try (Arena arena = Arena.ofConfined()) {
+            if (config == null) {
+                // Call without config
+                MemorySegment pathSegment = KreuzbergFFI.allocateCString(arena, filePath.toString());
+                MemorySegment resultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_EXTRACT_FILE_SYNC
+                    .invoke(pathSegment);
+                return processExtractionResult(resultPtr);
+            } else {
+                // Call with config
+                String configJson = toJson(config.toMap());
+                MemorySegment pathSegment = KreuzbergFFI.allocateCString(arena, filePath.toString());
+                MemorySegment configSegment = KreuzbergFFI.allocateCString(arena, configJson);
+                MemorySegment resultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_EXTRACT_FILE_SYNC_WITH_CONFIG
+                    .invoke(pathSegment, configSegment);
+                return processExtractionResult(resultPtr);
+            }
         } catch (KreuzbergException e) {
             throw e;
         } catch (Throwable e) {
             throw new KreuzbergException("Unexpected error during extraction", e);
+        }
+    }
+
+    /**
+     * Extract text and metadata from a byte array (synchronous).
+     *
+     * @param data the document data as a byte array
+     * @param mimeType the MIME type of the data (e.g., "application/pdf")
+     * @return the extraction result
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static ExtractionResult extractBytesSync(byte[] data, String mimeType)
+            throws KreuzbergException {
+        return extractBytesSync(data, mimeType, null);
+    }
+
+    /**
+     * Extract text and metadata from a byte array with custom configuration (synchronous).
+     *
+     * @param data the document data as a byte array
+     * @param mimeType the MIME type of the data (e.g., "application/pdf")
+     * @param config the extraction configuration (uses defaults if null)
+     * @return the extraction result
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static ExtractionResult extractBytesSync(byte[] data, String mimeType, ExtractionConfig config)
+            throws KreuzbergException {
+        if (data == null || data.length == 0) {
+            throw new IllegalArgumentException("Data cannot be null or empty");
+        }
+        if (mimeType == null || mimeType.isEmpty()) {
+            throw new IllegalArgumentException("MIME type cannot be null or empty");
+        }
+
+        try (Arena arena = Arena.ofConfined()) {
+            // Allocate native memory for byte array
+            MemorySegment dataSegment = arena.allocate(data.length);
+            MemorySegment.copy(data, 0, dataSegment, ValueLayout.JAVA_BYTE, 0, data.length);
+
+            if (config == null) {
+                // Call without config
+                MemorySegment mimeSegment = KreuzbergFFI.allocateCString(arena, mimeType);
+                MemorySegment resultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_EXTRACT_BYTES_SYNC
+                    .invoke(dataSegment, (long) data.length, mimeSegment);
+                return processExtractionResult(resultPtr);
+            } else {
+                // Call with config
+                String configJson = toJson(config.toMap());
+                MemorySegment mimeSegment = KreuzbergFFI.allocateCString(arena, mimeType);
+                MemorySegment configSegment = KreuzbergFFI.allocateCString(arena, configJson);
+                MemorySegment resultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_EXTRACT_BYTES_SYNC_WITH_CONFIG
+                    .invoke(dataSegment, (long) data.length, mimeSegment, configSegment);
+                return processExtractionResult(resultPtr);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error during extraction", e);
+        }
+    }
+
+    /**
+     * Extract text and metadata from multiple files in batch (synchronous).
+     *
+     * @param filePaths list of file paths to extract
+     * @return list of extraction results (one per file)
+     * @throws IOException if any file does not exist or cannot be read
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static List<ExtractionResult> batchExtractFilesSync(List<String> filePaths)
+            throws IOException, KreuzbergException {
+        return batchExtractFilesSync(filePaths, null);
+    }
+
+    /**
+     * Extract text and metadata from multiple files in batch with custom configuration (synchronous).
+     *
+     * @param filePaths list of file paths to extract
+     * @param config the extraction configuration (uses defaults if null)
+     * @return list of extraction results (one per file)
+     * @throws IOException if any file does not exist or cannot be read
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static List<ExtractionResult> batchExtractFilesSync(
+            List<String> filePaths,
+            ExtractionConfig config
+    ) throws IOException, KreuzbergException {
+        if (filePaths == null || filePaths.isEmpty()) {
+            throw new IllegalArgumentException("File paths list cannot be null or empty");
+        }
+
+        // Validate all files exist and are readable
+        for (String filePath : filePaths) {
+            Path path = Path.of(filePath);
+            if (!Files.exists(path)) {
+                throw new IOException("File not found: " + filePath);
+            }
+            if (!Files.isRegularFile(path)) {
+                throw new IOException("Not a regular file: " + filePath);
+            }
+            if (!Files.isReadable(path)) {
+                throw new IOException("File not readable: " + filePath);
+            }
+        }
+
+        try (Arena arena = Arena.ofConfined()) {
+            // Allocate array of C string pointers
+            int count = filePaths.size();
+            MemorySegment pathsArray = arena.allocate(ValueLayout.ADDRESS, count);
+
+            // Convert each file path to C string and store pointer
+            for (int i = 0; i < count; i++) {
+                MemorySegment pathSegment = KreuzbergFFI.allocateCString(arena, filePaths.get(i));
+                pathsArray.setAtIndex(ValueLayout.ADDRESS, i, pathSegment);
+            }
+
+            MemorySegment batchResultPtr;
+            if (config == null) {
+                // Call without config
+                batchResultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_BATCH_EXTRACT_FILES_SYNC
+                    .invoke(pathsArray, (long) count, MemorySegment.NULL);
+            } else {
+                // Call with config
+                String configJson = toJson(config.toMap());
+                MemorySegment configSegment = KreuzbergFFI.allocateCString(arena, configJson);
+                batchResultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_BATCH_EXTRACT_FILES_SYNC
+                    .invoke(pathsArray, (long) count, configSegment);
+            }
+
+            return processBatchResult(batchResultPtr);
+        } catch (KreuzbergException | IOException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error during batch extraction", e);
+        }
+    }
+
+    /**
+     * Extract text and metadata from multiple byte arrays in batch (synchronous).
+     *
+     * @param dataList list of byte arrays with MIME types to extract
+     * @return list of extraction results (one per byte array)
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static List<ExtractionResult> batchExtractBytesSync(List<BytesWithMime> dataList)
+            throws KreuzbergException {
+        return batchExtractBytesSync(dataList, null);
+    }
+
+    /**
+     * Extract text and metadata from multiple byte arrays in batch with custom configuration (synchronous).
+     *
+     * @param dataList list of byte arrays with MIME types to extract
+     * @param config the extraction configuration (uses defaults if null)
+     * @return list of extraction results (one per byte array)
+     * @throws KreuzbergException if the extraction fails
+     */
+    public static List<ExtractionResult> batchExtractBytesSync(
+            List<BytesWithMime> dataList,
+            ExtractionConfig config
+    ) throws KreuzbergException {
+        if (dataList == null || dataList.isEmpty()) {
+            throw new IllegalArgumentException("Data list cannot be null or empty");
+        }
+
+        try (Arena arena = Arena.ofConfined()) {
+            int count = dataList.size();
+
+            // Allocate array of CBytesWithMime structures
+            long structSize = ValueLayout.ADDRESS.byteSize() + ValueLayout.JAVA_LONG.byteSize()
+                    + ValueLayout.ADDRESS.byteSize();
+            MemorySegment bytesArray = arena.allocate(structSize * count);
+
+            // Fill the array with data
+            for (int i = 0; i < count; i++) {
+                BytesWithMime item = dataList.get(i);
+                long offset = i * structSize;
+
+                // Allocate native memory for byte array
+                MemorySegment dataSegment = arena.allocate(item.data().length);
+                MemorySegment.copy(item.data(), 0, dataSegment, ValueLayout.JAVA_BYTE, 0, item.data().length);
+
+                // Allocate MIME type C string
+                MemorySegment mimeSegment = KreuzbergFFI.allocateCString(arena, item.mimeType());
+
+                // Fill CBytesWithMime structure
+                bytesArray.set(ValueLayout.ADDRESS, offset, dataSegment);
+                bytesArray.set(ValueLayout.JAVA_LONG, offset + ValueLayout.ADDRESS.byteSize(),
+                        (long) item.data().length);
+                bytesArray.set(ValueLayout.ADDRESS,
+                        offset + ValueLayout.ADDRESS.byteSize() + ValueLayout.JAVA_LONG.byteSize(),
+                        mimeSegment);
+            }
+
+            MemorySegment batchResultPtr;
+            if (config == null) {
+                // Call without config
+                batchResultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_BATCH_EXTRACT_BYTES_SYNC
+                    .invoke(bytesArray, (long) count, MemorySegment.NULL);
+            } else {
+                // Call with config
+                String configJson = toJson(config.toMap());
+                MemorySegment configSegment = KreuzbergFFI.allocateCString(arena, configJson);
+                batchResultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_BATCH_EXTRACT_BYTES_SYNC
+                    .invoke(bytesArray, (long) count, configSegment);
+            }
+
+            return processBatchResult(batchResultPtr);
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error during batch extraction", e);
         }
     }
 
@@ -113,167 +446,6 @@ public final class Kreuzberg {
         } catch (Throwable e) {
             throw new RuntimeException("Failed to get version", e);
         }
-    }
-
-    /**
-     * Extract text and metadata from a file with custom configuration.
-     *
-     * @param path the path to the file to extract
-     * @param config the extraction configuration
-     * @return the extraction result
-     * @throws IOException if the file does not exist or cannot be read
-     * @throws KreuzbergException if the extraction fails
-     */
-    public static ExtractionResult extractFile(String path, ExtractionConfig config)
-            throws IOException, KreuzbergException {
-        return extractFile(Path.of(path), config);
-    }
-
-    /**
-     * Extract text and metadata from a file with custom configuration.
-     *
-     * @param path the path to the file to extract
-     * @param config the extraction configuration
-     * @return the extraction result
-     * @throws IOException if the file does not exist or cannot be read
-     * @throws KreuzbergException if the extraction fails
-     */
-    public static ExtractionResult extractFile(Path path, ExtractionConfig config)
-            throws IOException, KreuzbergException {
-        // Validate file exists
-        if (!Files.exists(path)) {
-            throw new IOException("File not found: " + path);
-        }
-        if (!Files.isRegularFile(path)) {
-            throw new IOException("Not a regular file: " + path);
-        }
-        if (!Files.isReadable(path)) {
-            throw new IOException("File not readable: " + path);
-        }
-
-        // Serialize config to JSON
-        String configJson = toJson(config.toMap());
-
-        try (Arena arena = Arena.ofConfined()) {
-            // Convert path and config to C strings
-            MemorySegment pathSegment = KreuzbergFFI.allocateCString(arena, path.toString());
-            MemorySegment configSegment = KreuzbergFFI.allocateCString(arena, configJson);
-
-            // Call C function
-            MemorySegment resultPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_EXTRACT_FILE_SYNC_WITH_CONFIG
-                .invoke(pathSegment, configSegment);
-
-            return processExtractionResult(resultPtr);
-        } catch (KreuzbergException e) {
-            throw e;
-        } catch (Throwable e) {
-            throw new KreuzbergException("Unexpected error during extraction", e);
-        }
-    }
-
-    /**
-     * Extract text and metadata from a file with post-processors and validators.
-     *
-     * @param path the path to the file to extract
-     * @param config the extraction configuration (may be null for defaults)
-     * @param postProcessors list of post-processors to apply (may be null or empty)
-     * @param validators list of validators to run (may be null or empty)
-     * @return the extraction result after processing and validation
-     * @throws IOException if the file does not exist or cannot be read
-     * @throws KreuzbergException if the extraction fails
-     * @throws ValidationException if validation fails
-     */
-    public static ExtractionResult extractFile(
-            Path path,
-            ExtractionConfig config,
-            List<PostProcessor> postProcessors,
-            List<Validator> validators
-    ) throws IOException, KreuzbergException {
-        // Perform base extraction
-        ExtractionResult result = config != null
-            ? extractFile(path, config)
-            : extractFile(path);
-
-        // Apply post-processors
-        if (postProcessors != null && !postProcessors.isEmpty()) {
-            for (PostProcessor processor : postProcessors) {
-                result = processor.process(result);
-            }
-        }
-
-        // Run validators
-        if (validators != null && !validators.isEmpty()) {
-            for (Validator validator : validators) {
-                validator.validate(result);
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * Extract text and metadata from a file with post-processors.
-     *
-     * @param path the path to the file to extract
-     * @param postProcessors list of post-processors to apply
-     * @return the extraction result after processing
-     * @throws IOException if the file does not exist or cannot be read
-     * @throws KreuzbergException if the extraction fails
-     */
-    public static ExtractionResult extractFile(Path path, List<PostProcessor> postProcessors)
-            throws IOException, KreuzbergException {
-        return extractFile(path, null, postProcessors, null);
-    }
-
-    /**
-     * Extract text and metadata from a file with post-processors (varargs).
-     *
-     * @param path the path to the file to extract
-     * @param postProcessors post-processors to apply
-     * @return the extraction result after processing
-     * @throws IOException if the file does not exist or cannot be read
-     * @throws KreuzbergException if the extraction fails
-     */
-    public static ExtractionResult extractFile(Path path, PostProcessor... postProcessors)
-            throws IOException, KreuzbergException {
-        return extractFile(path, null, Arrays.asList(postProcessors), null);
-    }
-
-    /**
-     * Extract text and metadata from a file with post-processors and validators.
-     *
-     * @param path the path to the file to extract
-     * @param postProcessors list of post-processors to apply
-     * @param validators list of validators to run
-     * @return the extraction result after processing and validation
-     * @throws IOException if the file does not exist or cannot be read
-     * @throws KreuzbergException if the extraction fails
-     * @throws ValidationException if validation fails
-     */
-    public static ExtractionResult extractFileWithValidation(
-            Path path,
-            List<PostProcessor> postProcessors,
-            List<Validator> validators
-    ) throws IOException, KreuzbergException {
-        return extractFile(path, null, postProcessors, validators);
-    }
-
-    /**
-     * Extract text and metadata from a file with configuration and post-processors.
-     *
-     * @param path the path to the file to extract
-     * @param config the extraction configuration
-     * @param postProcessors list of post-processors to apply
-     * @return the extraction result after processing
-     * @throws IOException if the file does not exist or cannot be read
-     * @throws KreuzbergException if the extraction fails
-     */
-    public static ExtractionResult extractFile(
-            Path path,
-            ExtractionConfig config,
-            List<PostProcessor> postProcessors
-    ) throws IOException, KreuzbergException {
-        return extractFile(path, config, postProcessors, null);
     }
 
     /**
@@ -356,6 +528,110 @@ public final class Kreuzberg {
     }
 
     /**
+     * Reads an ExtractionResult from a C extraction result memory segment.
+     *
+     * @param result the memory segment containing the C extraction result
+     * @return the extraction result
+     */
+    private static ExtractionResult readExtractionResultFromMemory(MemorySegment result) {
+        // Read string fields
+        MemorySegment contentPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.CONTENT_OFFSET);
+        MemorySegment mimeTypePtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.MIME_TYPE_OFFSET);
+        MemorySegment languagePtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.LANGUAGE_OFFSET);
+        MemorySegment datePtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.DATE_OFFSET);
+        MemorySegment subjectPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.SUBJECT_OFFSET);
+        MemorySegment tablesJsonPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.TABLES_JSON_OFFSET);
+        MemorySegment detectedLanguagesJsonPtr = result.get(
+            ValueLayout.ADDRESS,
+            KreuzbergFFI.DETECTED_LANGUAGES_JSON_OFFSET
+        );
+        MemorySegment metadataJsonPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.METADATA_JSON_OFFSET);
+
+        String content = KreuzbergFFI.readCString(contentPtr);
+        String mimeType = KreuzbergFFI.readCString(mimeTypePtr);
+        String language = KreuzbergFFI.readCString(languagePtr);
+        String date = KreuzbergFFI.readCString(datePtr);
+        String subject = KreuzbergFFI.readCString(subjectPtr);
+
+        // Parse JSON fields
+        List<Table> tables = parseTables(KreuzbergFFI.readCString(tablesJsonPtr));
+        List<String> detectedLanguages = parseDetectedLanguages(
+                KreuzbergFFI.readCString(detectedLanguagesJsonPtr));
+        Map<String, Object> metadata = parseMetadata(KreuzbergFFI.readCString(metadataJsonPtr));
+
+        // Create ExtractionResult with all fields
+        return new ExtractionResult(
+            content,
+            mimeType,
+            language != null ? java.util.Optional.of(language) : java.util.Optional.empty(),
+            date != null ? java.util.Optional.of(date) : java.util.Optional.empty(),
+            subject != null ? java.util.Optional.of(subject) : java.util.Optional.empty(),
+            tables,
+            detectedLanguages,
+            metadata
+        );
+    }
+
+    /**
+     * Processes the batch extraction result from the native library.
+     *
+     * @param batchResultPtr the pointer to the C batch extraction result
+     * @return list of extraction results
+     * @throws KreuzbergException if extraction failed
+     * @throws Throwable if an unexpected error occurs
+     */
+    private static List<ExtractionResult> processBatchResult(MemorySegment batchResultPtr)
+            throws KreuzbergException, Throwable {
+        // Check for null (error)
+        if (batchResultPtr == null || batchResultPtr.address() == 0) {
+            String error = getLastError();
+            throw new KreuzbergException("Batch extraction failed: " + error);
+        }
+
+        try {
+            // Read batch result fields
+            MemorySegment batchResult = batchResultPtr.reinterpret(
+                    KreuzbergFFI.C_BATCH_RESULT_LAYOUT.byteSize());
+
+            boolean success = batchResult.get(ValueLayout.JAVA_BOOLEAN, KreuzbergFFI.BATCH_SUCCESS_OFFSET);
+            if (!success) {
+                String error = getLastError();
+                throw new KreuzbergException("Batch extraction failed: " + error);
+            }
+
+            long count = batchResult.get(ValueLayout.JAVA_LONG, KreuzbergFFI.BATCH_COUNT_OFFSET);
+            MemorySegment resultsPtr = batchResult.get(ValueLayout.ADDRESS, KreuzbergFFI.BATCH_RESULTS_OFFSET);
+
+            // Reinterpret resultsPtr as an array of pointers
+            long arraySize = count * ValueLayout.ADDRESS.byteSize();
+            MemorySegment resultsArray = resultsPtr.reinterpret(arraySize);
+
+            // Process each result
+            List<ExtractionResult> results = new ArrayList<>((int) count);
+            for (int i = 0; i < count; i++) {
+                // Get pointer to individual result
+                MemorySegment resultPtr = resultsArray.getAtIndex(ValueLayout.ADDRESS, i);
+
+                // Process the individual result (without freeing it, as batch cleanup handles that)
+                MemorySegment result = resultPtr.reinterpret(KreuzbergFFI.C_EXTRACTION_RESULT_LAYOUT.byteSize());
+
+                boolean resultSuccess = result.get(ValueLayout.JAVA_BOOLEAN, KreuzbergFFI.SUCCESS_OFFSET);
+                if (!resultSuccess) {
+                    String error = getLastError();
+                    throw new KreuzbergException("Extraction failed for item " + i + ": " + error);
+                }
+
+                results.add(readExtractionResultFromMemory(result));
+            }
+
+            return results;
+        } finally {
+            // Free the batch result (this frees all individual results too)
+            KreuzbergFFI.KREUZBERG_FREE_BATCH_RESULT.invoke(batchResultPtr);
+        }
+    }
+
+    /**
      * Processes the extraction result from the native library.
      *
      * @param resultPtr the pointer to the C extraction result
@@ -381,41 +657,7 @@ public final class Kreuzberg {
                 throw new KreuzbergException("Extraction failed: " + error);
             }
 
-            // Read string fields
-            MemorySegment contentPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.CONTENT_OFFSET);
-            MemorySegment mimeTypePtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.MIME_TYPE_OFFSET);
-            MemorySegment languagePtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.LANGUAGE_OFFSET);
-            MemorySegment datePtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.DATE_OFFSET);
-            MemorySegment subjectPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.SUBJECT_OFFSET);
-            MemorySegment tablesJsonPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.TABLES_JSON_OFFSET);
-            MemorySegment detectedLanguagesJsonPtr = result.get(
-                ValueLayout.ADDRESS,
-                KreuzbergFFI.DETECTED_LANGUAGES_JSON_OFFSET
-            );
-            MemorySegment metadataJsonPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.METADATA_JSON_OFFSET);
-
-            String content = KreuzbergFFI.readCString(contentPtr);
-            String mimeType = KreuzbergFFI.readCString(mimeTypePtr);
-            String language = KreuzbergFFI.readCString(languagePtr);
-            String date = KreuzbergFFI.readCString(datePtr);
-            String subject = KreuzbergFFI.readCString(subjectPtr);
-
-            // Parse JSON fields
-            List<Table> tables = parseTables(KreuzbergFFI.readCString(tablesJsonPtr));
-            List<String> detectedLanguages = parseDetectedLanguages(KreuzbergFFI.readCString(detectedLanguagesJsonPtr));
-            Map<String, Object> metadata = parseMetadata(KreuzbergFFI.readCString(metadataJsonPtr));
-
-            // Create ExtractionResult with all fields
-            return new ExtractionResult(
-                content,
-                mimeType,
-                language != null ? java.util.Optional.of(language) : java.util.Optional.empty(),
-                date != null ? java.util.Optional.of(date) : java.util.Optional.empty(),
-                subject != null ? java.util.Optional.of(subject) : java.util.Optional.empty(),
-                tables,
-                detectedLanguages,
-                metadata
-            );
+            return readExtractionResultFromMemory(result);
         } finally {
             // Free the result
             KreuzbergFFI.KREUZBERG_FREE_RESULT.invoke(resultPtr);
