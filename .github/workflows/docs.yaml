@@ -39,7 +39,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --group docs
+        run: uv sync --group doc --no-install-project
 
       - name: Configure Git for mike
         run: |
@@ -52,22 +52,18 @@ jobs:
           uv run mike set-default latest
 
       - name: Deploy v3 documentation with mike
-        env:
-          V3_TAG: v3.20.2
         run: |
-          echo "Creating git worktree for v3 docs (${V3_TAG})..."
-          git worktree remove --force /tmp/kreuzberg-v3-build 2>/dev/null || true
-          git worktree add /tmp/kreuzberg-v3-build ${V3_TAG}
+          echo "Building v3 docs from v3/ subdirectory..."
 
-          echo "Disabling social plugin (requires cairo)..."
-          sed -i.bak 's/^  - social$/  # - social/' /tmp/kreuzberg-v3-build/mkdocs.yaml
+          # Create temporary mkdocs config for v3
+          cp mkdocs.yaml mkdocs-v3.yaml
+          sed -i 's|paths: \[packages/python\]|paths: [v3]|g' mkdocs-v3.yaml
 
-          echo "Building and deploying v3 docs..."
-          cd /tmp/kreuzberg-v3-build && uv sync --group docs && uv pip install mike
-          cd /tmp/kreuzberg-v3-build && uv run mike deploy 3.0 v3
+          echo "Deploying v3 docs..."
+          uv run mike deploy --config-file mkdocs-v3.yaml 3.0 v3
 
-          echo "Cleaning up worktree..."
-          git worktree remove --force /tmp/kreuzberg-v3-build || true
+          echo "Cleaning up temporary config..."
+          rm -f mkdocs-v3.yaml
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
