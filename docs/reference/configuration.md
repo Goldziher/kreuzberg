@@ -19,7 +19,7 @@ Kreuzberg automatically discovers configuration files in this order:
 2. User config: `~/.config/kreuzberg/config.{toml,yaml,yml,json}`
 3. System config: `/etc/kreuzberg/config.{toml,yaml,yml,json}`
 
-For complete examples, see the [examples directory](../../examples/).
+For complete examples, see the [examples directory](https://github.com/Goldziher/kreuzberg/tree/main/examples).
 
 ---
 
@@ -896,7 +896,7 @@ postprocessor:
 }
 ```
 
-For complete working examples, see the [examples directory](../../examples/).
+For complete working examples, see the [examples directory](https://github.com/Goldziher/kreuzberg/tree/main/examples).
 
 ---
 
@@ -987,4 +987,4 @@ For complete working examples, see the [examples directory](../../examples/).
 
 - [Configuration Guide](../guides/configuration.md) - Usage guide with examples
 - [OCR Guide](../guides/ocr.md) - OCR-specific configuration and troubleshooting
-- [Examples Directory](../../examples/) - Complete working examples
+- [Examples Directory](https://github.com/Goldziher/kreuzberg/tree/main/examples) - Complete working examples
