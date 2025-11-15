@@ -668,6 +668,13 @@ The `serve` command starts a RESTful HTTP API server:
     npx kreuzberg serve --config production.toml
     ```
 
+=== "Java"
+
+    ```java
+    // Java bindings not yet available
+    // Use the Rust CLI or Docker for now
+    ```
+
 The server provides endpoints for:
 - `/extract` - Extract text from uploaded files
 - `/health` - Health check
@@ -709,6 +716,13 @@ The `mcp` command starts a Model Context Protocol server for AI integration:
 
     # With custom config
     npx kreuzberg mcp --config kreuzberg.toml
+    ```
+
+=== "Java"
+
+    ```java
+    // Java bindings not yet available
+    // Use the Rust CLI or Docker for now
     ```
 
 The MCP server provides tools for AI agents:
