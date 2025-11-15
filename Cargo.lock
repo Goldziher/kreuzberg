@@ -305,9 +305,9 @@ dependencies = [
 
 [[package]]
 name = "axum"
-version = "0.8.6"
+version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a18ed336352031311f4e0b4dd2ff392d4fbb370777c9d18d7fc9d7359f73871"
+checksum = "5b098575ebe77cb6d14fc7f32749631a6e44edbef6b796f89b020e99ba20d425"
 dependencies = [
  "axum-core",
  "axum-macros",
@@ -621,9 +621,9 @@ checksum = "8f1fe948ff07f4bd06c30984e69f5b4899c516a3ef74f34df92a2df2ab535495"
 
 [[package]]
 name = "bytes"
-version = "1.10.1"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
+checksum = "b35204fbdc0b3f4446b89fc1ac2cf84a8a68971995d0bf2e925ec7cd960f9cb3"
 dependencies = [
  "serde",
 ]
@@ -2042,9 +2042,9 @@ dependencies = [
 
 [[package]]
 name = "html-to-markdown-rs"
-version = "2.7.2"
+version = "2.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "733850a0be484268fb3cb3a1861f17c41e329d6fa358553cab174e4f37daf1ad"
+checksum = "37fc9162ba0d97eb347af14cfcc5e182bebf57b9968843d8a23aa2edc3fc281a"
 dependencies = [
  "base64 0.22.1",
  "html-escape",
@@ -3751,7 +3751,7 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 [[package]]
 name = "ort"
 version = "2.0.0-rc.10"
-source = "git+https://github.com/pykeio/ort#f60ed5f7f99c94402d1ad1d5e460171f929dee50"
+source = "git+https://github.com/pykeio/ort#d931f0ac509ec075cdc81f3c4872c09b7122d752"
 dependencies = [
  "ndarray",
  "ort-sys",
@@ -3763,7 +3763,7 @@ dependencies = [
 [[package]]
 name = "ort-sys"
 version = "2.0.0-rc.10"
-source = "git+https://github.com/pykeio/ort#f60ed5f7f99c94402d1ad1d5e460171f929dee50"
+source = "git+https://github.com/pykeio/ort#d931f0ac509ec075cdc81f3c4872c09b7122d752"
 dependencies = [
  "flate2",
  "hmac-sha256",
@@ -4864,9 +4864,9 @@ dependencies = [
 
 [[package]]
 name = "rangemap"
-version = "1.6.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f93e7e49bb0bf967717f7bd674458b3d6b0c5f48ec7e3038166026a69fc22223"
+checksum = "acbbbbea733ec66275512d0b9694f34102e7d5406fdbe2ad8d21b28dce92887c"
 
 [[package]]
 name = "rav1e"

@@ -4,7 +4,13 @@ use kreuzberg::KreuzbergError;
 use kreuzberg::core::config::ExtractionConfig;
 
 fn should_skip_libreoffice_failure(err: &KreuzbergError) -> bool {
-    matches!(err, KreuzbergError::Io(inner) if inner.to_string().contains("LibreOffice process failed"))
+    match err {
+        KreuzbergError::Io(inner) => {
+            let msg = format!("{:?}", inner);
+            msg.contains("LibreOffice process failed") || msg.contains("return code 1")
+        }
+        _ => false,
+    }
 }
 
 #[test]

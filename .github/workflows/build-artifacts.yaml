@@ -30,7 +30,7 @@ env:
   CARGO_PROFILE_DEV_DEBUG: 0
   RUST_BACKTRACE: short
   PDFIUM_VERSION: "7455"
-  ONNXRUNTIME_VERSION: "1.18.1"
+  ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
 
 jobs:
@@ -376,10 +376,31 @@ jobs:
 
       - name: Setup ONNX Runtime (Windows)
         if: runner.os == 'Windows'
-        uses: ./.github/actions/setup-onnx-runtime
-        with:
-          ort-version: ${{ env.ONNXRUNTIME_VERSION }}
-          dest-dir: packages/ruby/lib
+        shell: pwsh
+        run: |
+          $ortVersion = "${{ env.ORT_VERSION }}"
+          $ortDir = Join-Path $env:RUNNER_TEMP "onnxruntime\x86_64-pc-windows-gnu"
+          if (-Not (Test-Path (Join-Path $ortDir "onnxruntime-win-x64-$ortVersion\lib\onnxruntime.dll"))) {
+            New-Item -ItemType Directory -Force -Path $ortDir | Out-Null
+            $zipPath = Join-Path $ortDir "onnxruntime.zip"
+            $url = "https://github.com/microsoft/onnxruntime/releases/download/v$ortVersion/onnxruntime-win-x64-$ortVersion.zip"
+            Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
+            Expand-Archive -Path $zipPath -DestinationPath $ortDir -Force
+          }
+          $onnxRoot = Get-ChildItem -Path $ortDir -Directory | Where-Object { $_.Name -like "onnxruntime-win-x64-*" } | Select-Object -First 1
+          if (-not $onnxRoot) { throw "ONNX Runtime archive not found" }
+          $destDir = Join-Path $env:GITHUB_WORKSPACE "packages\ruby\lib"
+          New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+          Copy-Item -Path (Join-Path $onnxRoot.FullName "lib\*") -Destination $destDir -Force
+          $envLines = @(
+            "ORT_STRATEGY=system",
+            "ORT_LIB_LOCATION=$($onnxRoot.FullName)\lib",
+            "ORT_SKIP_DOWNLOAD=1",
+            "ORT_PREFER_DYNAMIC_LINK=1",
+            "ORT_DYLIB_PATH=$($onnxRoot.FullName)\lib"
+          )
+          $envLines | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $onnxRoot.FullName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install Ruby dependencies (Unix)
         if: runner.os != 'Windows'

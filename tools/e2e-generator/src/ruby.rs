@@ -82,8 +82,7 @@ module E2ERuby
 
     if skip_if_missing && !document_path.exist?
       warn "Skipping #{fixture_id}: missing document at #{document_path}"
-      RSpec.current_example.skip('missing document')
-      return
+      raise RSpec::Core::Pending::SkipDeclaredInExample, 'missing document'
     end
 
     config = build_config(config_hash)
@@ -92,8 +91,7 @@ module E2ERuby
       result = Kreuzberg.extract_file_sync(document_path.to_s, config: config)
     rescue StandardError => e
       if (reason = skip_reason_for(e, fixture_id, requirements, notes))
-        RSpec.current_example.skip(reason)
-        return
+        raise RSpec::Core::Pending::SkipDeclaredInExample, reason
       end
       raise
     end
@@ -102,45 +100,43 @@ module E2ERuby
   end
 
   module Assertions
-    module_function
+    extend RSpec::Matchers
 
-    include RSpec::Matchers
-
-    def assert_expected_mime(result, expected)
+    def self.assert_expected_mime(result, expected)
       return if expected.empty?
 
       expect(expected.any? { |token| result.mime_type.include?(token) }).to be(true)
     end
 
-    def assert_min_content_length(result, minimum)
+    def self.assert_min_content_length(result, minimum)
       expect(result.content.length).to be >= minimum
     end
 
-    def assert_max_content_length(result, maximum)
+    def self.assert_max_content_length(result, maximum)
       expect(result.content.length).to be <= maximum
     end
 
-    def assert_content_contains_any(result, snippets)
+    def self.assert_content_contains_any(result, snippets)
       return if snippets.empty?
 
       lowered = result.content.downcase
       expect(snippets.any? { |snippet| lowered.include?(snippet.downcase) }).to be(true)
     end
 
-    def assert_content_contains_all(result, snippets)
+    def self.assert_content_contains_all(result, snippets)
       return if snippets.empty?
 
       lowered = result.content.downcase
       expect(snippets.all? { |snippet| lowered.include?(snippet.downcase) }).to be(true)
     end
 
-    def assert_table_count(result, minimum, maximum)
+    def self.assert_table_count(result, minimum, maximum)
       tables = Array(result.tables)
       expect(tables.length).to be >= minimum if minimum
       expect(tables.length).to be <= maximum if maximum
     end
 
-    def assert_detected_languages(result, expected, min_confidence)
+    def self.assert_detected_languages(result, expected, min_confidence)
       return if expected.empty?
 
       languages = result.detected_languages
@@ -154,7 +150,7 @@ module E2ERuby
       expect(confidence).to be >= min_confidence if confidence
     end
 
-    def assert_metadata_expectation(result, path, expectation)
+    def self.assert_metadata_expectation(result, path, expectation)
       metadata = result.metadata || {}
       value = fetch_metadata_value(metadata, path)
       raise "Metadata path '#{path}' missing in #{metadata.inspect}" if value.nil?
@@ -183,37 +179,37 @@ module E2ERuby
       end
     end
 
-    def fetch_metadata_value(metadata, path)
-      current = metadata
-      path.split('.').each do |segment|
-        return nil unless current.is_a?(Hash)
+    class << self
+      private
 
-        current = current[segment] || current[segment.to_sym]
+      def fetch_metadata_value(metadata, path)
+        current = metadata
+        path.split('.').each do |segment|
+          return nil unless current.is_a?(Hash)
+
+          current = current[segment] || current[segment.to_sym]
+        end
+        current
       end
-      current
+
+      def values_equal?(lhs, rhs)
+        return lhs == rhs if lhs.is_a?(String) && rhs.is_a?(String)
+        return convert_numeric(lhs) == convert_numeric(rhs) if numeric_like?(lhs) && numeric_like?(rhs)
+        return lhs == rhs if lhs == rhs
+
+        lhs == rhs
+      end
+
+      def numeric_like?(value)
+        value.is_a?(Numeric) || value.respond_to?(:to_f)
+      end
+
+      def convert_numeric(value)
+        return value if value.is_a?(Numeric)
+
+        value.to_f
+      end
     end
-    private_class_method :fetch_metadata_value
-
-    def values_equal?(lhs, rhs)
-      return lhs == rhs if lhs.is_a?(String) && rhs.is_a?(String)
-      return convert_numeric(lhs) == convert_numeric(rhs) if numeric_like?(lhs) && numeric_like?(rhs)
-      return lhs == rhs if lhs == rhs
-
-      lhs == rhs
-    end
-    private_class_method :values_equal?
-
-    def numeric_like?(value)
-      value.is_a?(Numeric) || value.respond_to?(:to_f)
-    end
-    private_class_method :numeric_like?
-
-    def convert_numeric(value)
-      return value if value.is_a?(Numeric)
-
-      value.to_f
-    end
-    private_class_method :convert_numeric
   end
 end
 # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/ParameterLists, Style/Documentation, Style/IfUnlessModifier, Layout/LineLength

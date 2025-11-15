@@ -74,8 +74,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rbs', '~> 3.0'
   spec.add_development_dependency 'rb_sys', '~> 0.9'
   spec.add_development_dependency 'rspec', '~> 3.12'
-  spec.add_development_dependency 'steep', '~> 1.8'
   unless Gem.win_platform?
+    spec.add_development_dependency 'steep', '~> 1.8'
     spec.add_development_dependency 'rubocop', '~> 1.66'
     spec.add_development_dependency 'rubocop-performance', '~> 1.21'
     spec.add_development_dependency 'rubocop-rspec', '~> 3.0'

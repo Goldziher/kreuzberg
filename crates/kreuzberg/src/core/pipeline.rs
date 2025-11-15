@@ -397,6 +397,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_pipeline_empty_content() {
+        {
+            let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+        } // Drop guard before async operations
         let result = ExtractionResult {
             content: String::new(),
             mime_type: "text/plain".to_string(),

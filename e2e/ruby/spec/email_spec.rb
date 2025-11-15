@@ -9,7 +9,7 @@ RSpec.describe 'email fixtures' do
   it 'email_sample_eml' do
     E2ERuby.run_fixture(
       'email_sample_eml',
-      'email/sample.eml',
+      'email/sample_email.eml',
       nil,
       requirements: [],
       notes: nil,

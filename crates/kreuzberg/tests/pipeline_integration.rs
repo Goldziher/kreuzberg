@@ -572,13 +572,15 @@ async fn test_pipeline_early_stage_error_recorded() {
     };
     let config = ExtractionConfig::default();
 
-    let processed = run_pipeline(result, &config).await.unwrap();
-    assert!(
-        processed
-            .metadata
-            .additional
-            .contains_key("processing_error_early-failing")
-    );
+    let result = run_pipeline(result, &config).await;
+    assert!(result.is_err(), "Expected pipeline to return error");
+    match result {
+        Err(KreuzbergError::Plugin { message, plugin_name }) => {
+            assert_eq!(message, "Early error");
+            assert_eq!(plugin_name, "early-failing");
+        }
+        _ => panic!("Expected Plugin error"),
+    }
 }
 
 #[tokio::test]
@@ -611,13 +613,15 @@ async fn test_pipeline_middle_stage_error_propagation() {
     };
     let config = ExtractionConfig::default();
 
-    let processed = run_pipeline(result, &config).await.unwrap();
-    assert!(
-        processed
-            .metadata
-            .additional
-            .contains_key("processing_error_middle-failing")
-    );
+    let result = run_pipeline(result, &config).await;
+    assert!(result.is_err(), "Expected pipeline to return error");
+    match result {
+        Err(KreuzbergError::Plugin { message, plugin_name }) => {
+            assert_eq!(message, "Middle stage error");
+            assert_eq!(plugin_name, "middle-failing");
+        }
+        _ => panic!("Expected Plugin error"),
+    }
 }
 
 #[tokio::test]
@@ -680,14 +684,15 @@ async fn test_pipeline_late_stage_error_doesnt_affect_earlier_stages() {
     };
     let config = ExtractionConfig::default();
 
-    let processed = run_pipeline(result, &config).await.unwrap();
-    assert_eq!(processed.content, "start[early]");
-    assert!(
-        processed
-            .metadata
-            .additional
-            .contains_key("processing_error_late-failing")
-    );
+    let result = run_pipeline(result, &config).await;
+    assert!(result.is_err(), "Expected pipeline to return error");
+    match result {
+        Err(KreuzbergError::Plugin { message, plugin_name }) => {
+            assert_eq!(message, "Late error");
+            assert_eq!(plugin_name, "late-failing");
+        }
+        _ => panic!("Expected Plugin error"),
+    }
 }
 
 #[tokio::test]
@@ -766,9 +771,15 @@ async fn test_pipeline_processor_error_doesnt_stop_other_processors() {
     };
     let config = ExtractionConfig::default();
 
-    let processed = run_pipeline(result, &config).await.unwrap();
-    assert!(processed.content.contains("[p1]"));
-    assert!(processed.content.contains("[p3]"));
+    let result = run_pipeline(result, &config).await;
+    assert!(result.is_err(), "Expected pipeline to return error");
+    match result {
+        Err(KreuzbergError::Plugin { message, plugin_name }) => {
+            assert_eq!(message, "Test error");
+            assert_eq!(plugin_name, "p2-failing");
+        }
+        _ => panic!("Expected Plugin error"),
+    }
 }
 
 #[tokio::test]
@@ -837,10 +848,16 @@ async fn test_pipeline_multiple_processor_errors() {
     };
     let config = ExtractionConfig::default();
 
-    let processed = run_pipeline(result, &config).await.unwrap();
-    assert!(processed.metadata.additional.contains_key("processing_error_fail1"));
-    assert!(processed.metadata.additional.contains_key("processing_error_fail2"));
-    assert!(processed.metadata.additional.contains_key("processing_error_fail3"));
+    let result = run_pipeline(result, &config).await;
+    assert!(result.is_err(), "Expected pipeline to return error");
+    // First failing processor (fail1 in Early stage) will cause pipeline to fail
+    match result {
+        Err(KreuzbergError::Plugin { message, plugin_name }) => {
+            assert_eq!(message, "fail1 error");
+            assert_eq!(plugin_name, "fail1");
+        }
+        _ => panic!("Expected Plugin error"),
+    }
 }
 
 #[tokio::test]
@@ -873,15 +890,15 @@ async fn test_pipeline_error_context_preservation() {
     };
     let config = ExtractionConfig::default();
 
-    let processed = run_pipeline(result, &config).await.unwrap();
-
-    let error_value = processed
-        .metadata
-        .additional
-        .get("processing_error_context-test")
-        .unwrap();
-    let error_str = error_value.as_str().unwrap();
-    assert!(error_str.contains("Detailed error message with context"));
+    let result = run_pipeline(result, &config).await;
+    assert!(result.is_err(), "Expected pipeline to return error");
+    match result {
+        Err(KreuzbergError::Plugin { message, plugin_name }) => {
+            assert_eq!(message, "Detailed error message with context");
+            assert_eq!(plugin_name, "context-test");
+        }
+        _ => panic!("Expected Plugin error"),
+    }
 }
 
 #[tokio::test]

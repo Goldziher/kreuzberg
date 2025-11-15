@@ -3,7 +3,7 @@
 	"category": "email",
 	"description": "Sample EML email file to verify email parsing.",
 	"document": {
-		"path": "email/sample.eml",
+		"path": "email/sample_email.eml",
 		"media_type": "message/rfc822"
 	},
 	"extraction": {

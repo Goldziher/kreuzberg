@@ -27,6 +27,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   PDFIUM_VERSION: "7455"
+  ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
 
 jobs:
@@ -136,7 +137,6 @@ jobs:
     name: Build Python wheels (${{ matrix.label }})
     needs: prepare
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.label == 'linux-aarch64' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -150,14 +150,15 @@ jobs:
             python: "3.10"
             needs_qemu: false
             extra_args: ""
-          - label: linux-aarch64
-            os: ubuntu-latest
-            artifact: python-wheels-linux-aarch64
-            rust_target: aarch64-unknown-linux-gnu
-            manylinux: 2_28
-            python: "3.10"
-            needs_qemu: true
-            extra_args: ""
+          # TODO: Re-enable linux-aarch64 once build issues are resolved
+          # - label: linux-aarch64
+          #   os: ubuntu-latest
+          #   artifact: python-wheels-linux-aarch64
+          #   rust_target: aarch64-unknown-linux-gnu
+          #   manylinux: 2_28
+          #   python: "3.10"
+          #   needs_qemu: true
+          #   extra_args: ""
           - label: macos-universal
             os: macos-14
             artifact: python-wheels-macos
@@ -469,7 +470,6 @@ jobs:
     name: Build CLI binaries (${{ matrix.target }})
     needs: prepare
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -478,9 +478,10 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             use_cross: false
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            use_cross: false
+          # TODO: Re-enable x86_64-unknown-linux-musl once build issues are resolved
+          # - os: ubuntu-latest
+          #   target: x86_64-unknown-linux-musl
+          #   use_cross: false
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             use_cross: false
@@ -586,7 +587,6 @@ jobs:
   ruby-gem:
     name: Build Ruby gem (${{ matrix.label }})
     needs: prepare
-    continue-on-error: ${{ matrix.label == 'windows-x64' }}
     strategy:
       fail-fast: false
       matrix:
@@ -657,7 +657,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $ortVersion = "1.18.1"
+          $ortVersion = "${{ env.ORT_VERSION }}"
           $ortDir = Join-Path $env:RUNNER_TEMP "onnxruntime\x86_64-pc-windows-gnu"
           if (-Not (Test-Path (Join-Path $ortDir "onnxruntime-win-x64-$ortVersion\lib\onnxruntime.dll"))) {
             New-Item -ItemType Directory -Force -Path $ortDir | Out-Null
