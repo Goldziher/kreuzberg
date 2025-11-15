@@ -37,7 +37,6 @@ jobs:
   build-wheels:
     name: Build Python wheels (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.label == 'linux-aarch64' }}
     timeout-minutes: 180
     strategy:
       fail-fast: false
@@ -51,14 +50,15 @@ jobs:
             python: "3.10"
             needs_qemu: false
             extra_args: ""
-          - label: linux-aarch64
-            os: ubuntu-latest
-            artifact: wheels-linux-aarch64
-            rust_target: aarch64-unknown-linux-gnu
-            manylinux: auto
-            python: "3.10"
-            needs_qemu: true
-            extra_args: ""
+          # TODO: Re-enable linux-aarch64 once build issues are resolved
+          # - label: linux-aarch64
+          #   os: ubuntu-latest
+          #   artifact: wheels-linux-aarch64
+          #   rust_target: aarch64-unknown-linux-gnu
+          #   manylinux: auto
+          #   python: "3.10"
+          #   needs_qemu: true
+          #   extra_args: ""
           - label: macos-universal
             os: macos-14
             artifact: wheels-macos
@@ -314,10 +314,11 @@ jobs:
             label: linux-x86_64
             platform: x86_64-linux
             build_source_gem: true
-          - os: ubuntu-latest
-            label: linux-aarch64
-            platform: aarch64-linux
-            build_source_gem: false
+          # TODO: Re-enable linux-aarch64 once build issues are resolved
+          # - os: ubuntu-latest
+          #   label: linux-aarch64
+          #   platform: aarch64-linux
+          #   build_source_gem: false
           - os: macos-14
             label: macos-arm64
             platform: arm64-darwin
@@ -491,7 +492,6 @@ jobs:
   build-cli-binaries:
     name: Build CLI ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
     timeout-minutes: 180
     strategy:
       fail-fast: false
@@ -500,9 +500,10 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: kreuzberg
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            artifact_name: kreuzberg
+          # TODO: Re-enable x86_64-unknown-linux-musl once build issues are resolved
+          # - os: ubuntu-latest
+          #   target: x86_64-unknown-linux-musl
+          #   artifact_name: kreuzberg
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: kreuzberg.exe

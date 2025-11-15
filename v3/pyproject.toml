@@ -99,7 +99,7 @@ optional-dependencies.gmft = [ "gmft>=0.4.2", "transformers>=4.57.1" ]
 optional-dependencies.langdetect = [ "fast-langdetect>=1" ]
 optional-dependencies.paddleocr = [
   "paddleocr>=3.3.2; python_version<'3.14'",
-  "paddlepaddle>=3.2.2,<3.3; python_version<'3.14'",
+  "paddlepaddle>=3.2.2,<3.3; python_version<'3.14' and (sys_platform=='win32' or (sys_platform=='darwin' and platform_machine=='arm64'))",
   "setuptools>=80.9",
 ]
 scripts.kreuzberg = "kreuzberg.cli:cli"
