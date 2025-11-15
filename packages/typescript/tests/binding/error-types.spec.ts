@@ -10,6 +10,143 @@ import { describe, expect, it } from "vitest";
  * until the error types are properly exported from the TypeScript package.
  */
 describe("Error Types", () => {
+	describe("KreuzbergError", () => {
+		it("should be importable from the package", async () => {
+			const module = await import("../../src/index.js");
+			expect(module).toHaveProperty("KreuzbergError");
+		});
+
+		it("should be a proper Error subclass", async () => {
+			const { KreuzbergError } = await import("../../src/index.js");
+			const error = new KreuzbergError("test error");
+
+			expect(error).toBeInstanceOf(Error);
+			expect(error).toBeInstanceOf(KreuzbergError);
+			expect(error.name).toBe("KreuzbergError");
+			expect(error.message).toBe("test error");
+		});
+
+		it("should have a proper stack trace", async () => {
+			const { KreuzbergError } = await import("../../src/index.js");
+			const error = new KreuzbergError("test error");
+
+			expect(error.stack).toBeDefined();
+			expect(error.stack).toContain("KreuzbergError");
+			expect(error.stack).toContain("test error");
+		});
+
+		it("should serialize to JSON with toJSON method", async () => {
+			const { KreuzbergError } = await import("../../src/index.js");
+			const error = new KreuzbergError("test error");
+
+			const serialized = JSON.stringify(error);
+			const parsed = JSON.parse(serialized);
+
+			expect(parsed.message).toBe("test error");
+			expect(parsed.name).toBe("KreuzbergError");
+			expect(parsed.stack).toBeDefined();
+		});
+	});
+
+	describe("ValidationError", () => {
+		it("should be importable from the package", async () => {
+			const module = await import("../../src/index.js");
+			expect(module).toHaveProperty("ValidationError");
+		});
+
+		it("should be a proper Error subclass", async () => {
+			const { ValidationError } = await import("../../src/index.js");
+			const error = new ValidationError("test validation error");
+
+			expect(error).toBeInstanceOf(Error);
+			expect(error).toBeInstanceOf(ValidationError);
+			expect(error.name).toBe("ValidationError");
+			expect(error.message).toBe("test validation error");
+		});
+
+		it("should extend KreuzbergError", async () => {
+			const { ValidationError, KreuzbergError } = await import("../../src/index.js");
+			const error = new ValidationError("test message");
+
+			expect(error).toBeInstanceOf(KreuzbergError);
+		});
+
+		it("should have a proper stack trace", async () => {
+			const { ValidationError } = await import("../../src/index.js");
+			const error = new ValidationError("test validation error");
+
+			expect(error.stack).toBeDefined();
+			expect(error.stack).toContain("ValidationError");
+			expect(error.stack).toContain("test validation error");
+		});
+	});
+
+	describe("ParsingError", () => {
+		it("should be importable from the package", async () => {
+			const module = await import("../../src/index.js");
+			expect(module).toHaveProperty("ParsingError");
+		});
+
+		it("should be a proper Error subclass", async () => {
+			const { ParsingError } = await import("../../src/index.js");
+			const error = new ParsingError("test parsing error");
+
+			expect(error).toBeInstanceOf(Error);
+			expect(error).toBeInstanceOf(ParsingError);
+			expect(error.name).toBe("ParsingError");
+			expect(error.message).toBe("test parsing error");
+		});
+
+		it("should extend KreuzbergError", async () => {
+			const { ParsingError, KreuzbergError } = await import("../../src/index.js");
+			const error = new ParsingError("test message");
+
+			expect(error).toBeInstanceOf(KreuzbergError);
+		});
+
+		it("should have a proper stack trace", async () => {
+			const { ParsingError } = await import("../../src/index.js");
+			const error = new ParsingError("test parsing error");
+
+			expect(error.stack).toBeDefined();
+			expect(error.stack).toContain("ParsingError");
+			expect(error.stack).toContain("test parsing error");
+		});
+	});
+
+	describe("OcrError", () => {
+		it("should be importable from the package", async () => {
+			const module = await import("../../src/index.js");
+			expect(module).toHaveProperty("OcrError");
+		});
+
+		it("should be a proper Error subclass", async () => {
+			const { OcrError } = await import("../../src/index.js");
+			const error = new OcrError("test ocr error");
+
+			expect(error).toBeInstanceOf(Error);
+			expect(error).toBeInstanceOf(OcrError);
+			expect(error.name).toBe("OcrError");
+			expect(error.message).toBe("test ocr error");
+		});
+
+		it("should extend KreuzbergError", async () => {
+			const { OcrError, KreuzbergError } = await import("../../src/index.js");
+			const error = new OcrError("test message");
+
+			expect(error).toBeInstanceOf(KreuzbergError);
+		});
+
+		it("should have a proper stack trace", async () => {
+			const { OcrError } = await import("../../src/index.js");
+			const error = new OcrError("test ocr error");
+
+			expect(error.stack).toBeDefined();
+			expect(error.stack).toContain("OcrError");
+			expect(error.stack).toContain("test ocr error");
+		});
+	});
+
 	describe("CacheError", () => {
 		it("should be importable from the package", async () => {
 			// This test verifies that CacheError is exported
@@ -124,17 +261,72 @@ describe("Error Types", () => {
 		});
 	});
 
+	describe("MissingDependencyError", () => {
+		it("should be importable from the package", async () => {
+			const module = await import("../../src/index.js");
+			expect(module).toHaveProperty("MissingDependencyError");
+		});
+
+		it("should be a proper Error subclass", async () => {
+			const { MissingDependencyError } = await import("../../src/index.js");
+			const error = new MissingDependencyError("test dependency error");
+
+			expect(error).toBeInstanceOf(Error);
+			expect(error).toBeInstanceOf(MissingDependencyError);
+			expect(error.name).toBe("MissingDependencyError");
+			expect(error.message).toBe("test dependency error");
+		});
+
+		it("should extend KreuzbergError", async () => {
+			const { MissingDependencyError, KreuzbergError } = await import("../../src/index.js");
+			const error = new MissingDependencyError("test message");
+
+			expect(error).toBeInstanceOf(KreuzbergError);
+		});
+
+		it("should have a proper stack trace", async () => {
+			const { MissingDependencyError } = await import("../../src/index.js");
+			const error = new MissingDependencyError("test dependency error");
+
+			expect(error.stack).toBeDefined();
+			expect(error.stack).toContain("MissingDependencyError");
+			expect(error.stack).toContain("test dependency error");
+		});
+	});
+
 	describe("Error hierarchy", () => {
 		it("should have KreuzbergError as base class for all errors", async () => {
-			const { KreuzbergError, CacheError, ImageProcessingError, PluginError } = await import("../../src/index.js");
+			const {
+				KreuzbergError,
+				ValidationError,
+				ParsingError,
+				OcrError,
+				CacheError,
+				ImageProcessingError,
+				PluginError,
+				MissingDependencyError,
+			} = await import("../../src/index.js");
 
 			const baseError = new KreuzbergError("base error");
+			const validationError = new ValidationError("validation error");
+			const parsingError = new ParsingError("parsing error");
+			const ocrError = new OcrError("ocr error");
 			const cacheError = new CacheError("cache error");
 			const imageError = new ImageProcessingError("image error");
 			const pluginError = new PluginError("plugin error", "plugin");
+			const dependencyError = new MissingDependencyError("dependency error");
 
 			expect(baseError).toBeInstanceOf(Error);
 			expect(baseError).toBeInstanceOf(KreuzbergError);
+
+			expect(validationError).toBeInstanceOf(Error);
+			expect(validationError).toBeInstanceOf(KreuzbergError);
+
+			expect(parsingError).toBeInstanceOf(Error);
+			expect(parsingError).toBeInstanceOf(KreuzbergError);
+
+			expect(ocrError).toBeInstanceOf(Error);
+			expect(ocrError).toBeInstanceOf(KreuzbergError);
 
 			expect(cacheError).toBeInstanceOf(Error);
 			expect(cacheError).toBeInstanceOf(KreuzbergError);
@@ -144,10 +336,58 @@ describe("Error Types", () => {
 
 			expect(pluginError).toBeInstanceOf(Error);
 			expect(pluginError).toBeInstanceOf(KreuzbergError);
+
+			expect(dependencyError).toBeInstanceOf(Error);
+			expect(dependencyError).toBeInstanceOf(KreuzbergError);
 		});
 	});
 
 	describe("Error serialization", () => {
+		it("should serialize KreuzbergError to JSON with relevant fields", async () => {
+			const { KreuzbergError } = await import("../../src/index.js");
+			const error = new KreuzbergError("base error");
+
+			const serialized = JSON.stringify(error);
+			const parsed = JSON.parse(serialized);
+
+			expect(parsed.message).toBe("base error");
+			expect(parsed.name).toBe("KreuzbergError");
+			expect(parsed.stack).toBeDefined();
+		});
+
+		it("should serialize ValidationError to JSON with relevant fields", async () => {
+			const { ValidationError } = await import("../../src/index.js");
+			const error = new ValidationError("validation failed");
+
+			const serialized = JSON.stringify(error);
+			const parsed = JSON.parse(serialized);
+
+			expect(parsed.message).toBe("validation failed");
+			expect(parsed.name).toBe("ValidationError");
+		});
+
+		it("should serialize ParsingError to JSON with relevant fields", async () => {
+			const { ParsingError } = await import("../../src/index.js");
+			const error = new ParsingError("parsing failed");
+
+			const serialized = JSON.stringify(error);
+			const parsed = JSON.parse(serialized);
+
+			expect(parsed.message).toBe("parsing failed");
+			expect(parsed.name).toBe("ParsingError");
+		});
+
+		it("should serialize OcrError to JSON with relevant fields", async () => {
+			const { OcrError } = await import("../../src/index.js");
+			const error = new OcrError("ocr failed");
+
+			const serialized = JSON.stringify(error);
+			const parsed = JSON.parse(serialized);
+
+			expect(parsed.message).toBe("ocr failed");
+			expect(parsed.name).toBe("OcrError");
+		});
+
 		it("should serialize CacheError to JSON with relevant fields", async () => {
 			const { CacheError } = await import("../../src/index.js");
 			const error = new CacheError("cache write failed");
@@ -179,6 +419,17 @@ describe("Error Types", () => {
 
 			expect(parsed.pluginName).toBe("my-plugin");
 			expect(parsed.name).toBe("PluginError");
+		});
+
+		it("should serialize MissingDependencyError to JSON with relevant fields", async () => {
+			const { MissingDependencyError } = await import("../../src/index.js");
+			const error = new MissingDependencyError("dependency not found");
+
+			const serialized = JSON.stringify(error);
+			const parsed = JSON.parse(serialized);
+
+			expect(parsed.message).toBe("dependency not found");
+			expect(parsed.name).toBe("MissingDependencyError");
 		});
 	});
 });
