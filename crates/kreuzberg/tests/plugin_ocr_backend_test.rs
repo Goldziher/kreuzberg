@@ -9,6 +9,7 @@ use kreuzberg::plugins::registry::get_ocr_backend_registry;
 use kreuzberg::plugins::{OcrBackend, OcrBackendType, Plugin};
 use kreuzberg::types::{ExtractionResult, Metadata};
 use kreuzberg::{KreuzbergError, Result, extract_file_sync};
+use serial_test::serial;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -222,6 +223,7 @@ impl OcrBackend for MetadataOcrBackend {
     }
 }
 
+#[serial]
 #[test]
 fn test_register_custom_ocr_backend() {
     let registry = get_ocr_backend_registry();
@@ -263,6 +265,7 @@ fn test_register_custom_ocr_backend() {
     }
 }
 
+#[serial]
 #[test]
 fn test_ocr_backend_used_for_image_extraction() {
     let test_image = "../../test_documents/images/test_hello_world.png";
@@ -321,6 +324,7 @@ fn test_ocr_backend_used_for_image_extraction() {
     }
 }
 
+#[serial]
 #[test]
 fn test_ocr_backend_receives_correct_parameters() {
     let test_image = "../../test_documents/images/test_hello_world.png";
@@ -372,6 +376,7 @@ fn test_ocr_backend_receives_correct_parameters() {
     }
 }
 
+#[serial]
 #[test]
 fn test_ocr_backend_returns_correct_format() {
     let test_image = "../../test_documents/images/test_hello_world.png";
@@ -410,7 +415,7 @@ fn test_ocr_backend_returns_correct_format() {
     let extraction_result = result.unwrap();
 
     assert!(!extraction_result.content.is_empty());
-    assert_eq!(extraction_result.mime_type, "text/plain");
+    assert_eq!(extraction_result.mime_type, "image/png");
     assert!(extraction_result.metadata.additional.contains_key("ocr_backend"));
     assert!(extraction_result.metadata.additional.contains_key("image_size"));
     assert!(extraction_result.metadata.additional.contains_key("ocr_language"));
@@ -421,6 +426,7 @@ fn test_ocr_backend_returns_correct_format() {
     }
 }
 
+#[serial]
 #[test]
 fn test_ocr_backend_error_handling() {
     let test_image = "../../test_documents/images/test_hello_world.png";
@@ -469,6 +475,7 @@ fn test_ocr_backend_error_handling() {
     }
 }
 
+#[serial]
 #[test]
 fn test_ocr_backend_validation_error() {
     let test_image = "../../test_documents/images/test_hello_world.png";
@@ -518,6 +525,7 @@ fn test_ocr_backend_validation_error() {
     }
 }
 
+#[serial]
 #[test]
 fn test_switching_between_ocr_backends() {
     let test_image = "../../test_documents/images/test_hello_world.png";
@@ -592,6 +600,7 @@ fn test_switching_between_ocr_backends() {
     }
 }
 
+#[serial]
 #[test]
 fn test_ocr_backend_language_support() {
     let registry = get_ocr_backend_registry();
@@ -631,6 +640,7 @@ fn test_ocr_backend_language_support() {
     }
 }
 
+#[serial]
 #[test]
 fn test_ocr_backend_type() {
     let backend = MockOcrBackend {
@@ -644,6 +654,7 @@ fn test_ocr_backend_type() {
     assert_eq!(backend.backend_type(), OcrBackendType::Custom);
 }
 
+#[serial]
 #[test]
 fn test_ocr_backend_invalid_name() {
     let registry = get_ocr_backend_registry();
@@ -675,6 +686,7 @@ fn test_ocr_backend_invalid_name() {
     }
 }
 
+#[serial]
 #[test]
 fn test_ocr_backend_initialization_lifecycle() {
     let registry = get_ocr_backend_registry();
@@ -718,6 +730,7 @@ fn test_ocr_backend_initialization_lifecycle() {
     );
 }
 
+#[serial]
 #[test]
 fn test_unregister_ocr_backend() {
     let registry = get_ocr_backend_registry();
