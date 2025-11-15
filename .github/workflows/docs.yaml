@@ -11,16 +11,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -44,12 +42,12 @@ jobs:
       - name: Configure Git for mike
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Deploy v4 documentation with mike
         run: |
-          uv run mike deploy --update-aliases 4.0 latest
-          uv run mike set-default latest
+          uv run mike deploy --push --update-aliases 4.0 latest
+          uv run mike set-default --push latest
 
       - name: Deploy v3 documentation with mike
         run: |
@@ -60,26 +58,7 @@ jobs:
           sed -i 's|paths: \[packages/python\]|paths: [v3]|g' mkdocs-v3.yaml
 
           echo "Deploying v3 docs..."
-          uv run mike deploy --config-file mkdocs-v3.yaml 3.0 v3
+          uv run mike deploy --push --config-file mkdocs-v3.yaml 3.0 v3
 
           echo "Cleaning up temporary config..."
           rm -f mkdocs-v3.yaml
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./site
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
