@@ -68,7 +68,9 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                 if should_run && processor.should_process(&result, config) {
                     match processor.process(&mut result, config).await {
                         Ok(_) => {}
-                        Err(err @ KreuzbergError::Io(_)) | Err(err @ KreuzbergError::LockPoisoned(_)) => {
+                        Err(err @ KreuzbergError::Io(_))
+                        | Err(err @ KreuzbergError::LockPoisoned(_))
+                        | Err(err @ KreuzbergError::Plugin { .. }) => {
                             return Err(err);
                         }
                         Err(err) => {

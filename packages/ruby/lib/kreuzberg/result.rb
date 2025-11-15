@@ -58,13 +58,14 @@ module Kreuzberg
     # @param hash [Hash] Hash returned from native extension
     #
     def initialize(hash)
-      @content = hash['content'] || ''
-      @mime_type = hash['mime_type'] || ''
-      @metadata_json = hash['metadata_json'] || '{}'
+      # Handle both string and symbol keys for flexibility
+      @content = hash['content'] || hash[:content] || ''
+      @mime_type = hash['mime_type'] || hash[:mime_type] || ''
+      @metadata_json = hash['metadata_json'] || hash[:metadata_json] || '{}'
       @metadata = parse_metadata(@metadata_json)
-      @tables = parse_tables(hash['tables'])
-      @detected_languages = parse_detected_languages(hash['detected_languages'])
-      @chunks = parse_chunks(hash['chunks'])
+      @tables = parse_tables(hash['tables'] || hash[:tables])
+      @detected_languages = parse_detected_languages(hash['detected_languages'] || hash[:detected_languages])
+      @chunks = parse_chunks(hash['chunks'] || hash[:chunks])
     end
 
     # Convert to hash
