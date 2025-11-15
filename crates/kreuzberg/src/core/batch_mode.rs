@@ -19,6 +19,7 @@ task_local! {
 /// Check if we're currently in batch processing mode.
 ///
 /// Returns `false` if the task-local is not set (single-file mode).
+#[allow(dead_code)]
 pub fn is_batch_mode() -> bool {
     BATCH_MODE.try_with(|cell| cell.get()).unwrap_or(false)
 }
