@@ -8,12 +8,6 @@
     <property name="severity" value="error"/>
     <property name="fileExtensions" value="java"/>
 
-    <!-- Suppressions for FFI code patterns -->
-    <module name="SuppressionFilter">
-        <property name="file" value="packages/java/checkstyle-suppressions.xml"/>
-        <property name="optional" value="false"/>
-    </module>
-
     <!-- Size Violations -->
     <module name="LineLength">
         <property name="max" value="120"/>
