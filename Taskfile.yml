@@ -288,6 +288,26 @@ tasks:
       - task: e2e:ruby:generate
       - task: e2e:ruby:lint
       - task: e2e:ruby:test
+  e2e:java:generate:
+    desc: Generate Java E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang java --fixtures fixtures --output e2e
+  e2e:java:lint:
+    desc: Lint generated Java E2E suite
+    dir: e2e/java
+    cmds:
+      - mvn checkstyle:check
+  e2e:java:test:
+    desc: Run Java E2E tests
+    dir: e2e/java
+    cmds:
+      - mvn test
+  e2e:java:verify:
+    desc: Regenerate and validate Java E2E suite (generate + lint + test)
+    cmds:
+      - task: e2e:java:generate
+      - task: e2e:java:lint
+      - task: e2e:java:test
   cli:build:
     desc: Build CLI binary
     cmds:

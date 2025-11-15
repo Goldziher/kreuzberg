@@ -22,7 +22,7 @@ public class EmailTest {
         JsonNode config = null;
         E2EHelpers.runFixture(
             "email_sample_eml",
-            "email/sample.eml",
+            "email/sample_email.eml",
             config,
             Collections.emptyList(),
             null,
