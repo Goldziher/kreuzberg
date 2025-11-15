@@ -875,6 +875,41 @@ jobs:
           path: packages/ruby/pkg/*.gem
           retention-days: 14
 
+  java-package:
+    name: Build Java package
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '22'
+          cache: 'maven'
+
+      - name: Build and package
+        working-directory: packages/java
+        run: mvn clean package -DskipTests
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: maven-packages
+          path: packages/java/target/*.jar
+          retention-days: 14
+
   cargo-packages:
     name: Package Rust crates
     needs: prepare
@@ -1537,6 +1572,47 @@ jobs:
         run: |
           cd crates/kreuzberg-node
           pnpm publish --access public --no-git-checks
+
+  publish-maven:
+    name: Publish Maven packages
+    needs: [prepare, create-release]
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Download Maven artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: maven-packages
+          path: dist
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '22'
+          cache: 'maven'
+
+      - name: Dry run summary
+        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        run: |
+          echo "Dry run requested; Maven artifacts ready:" >> "$GITHUB_STEP_SUMMARY"
+          ls -1 dist/*.jar >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to Maven Central
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        uses: WasiqB/maven-publish-action@v2.0.1
+        with:
+          maven-goals: 'deploy'
+          maven-args: '-DskipTests'
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg_passphrase: ${{ secrets.GPP_PASSPHRASE }}
+          nexus_username: ${{ secrets.NEXUS_USERNAME }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
 
   publish-homebrew:
     name: Update Homebrew formula
