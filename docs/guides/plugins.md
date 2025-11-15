@@ -274,6 +274,49 @@ Post-processors execute in three stages:
     register_post_processor(WordCountProcessor())
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.*;
+    import java.lang.foreign.Arena;
+    import java.util.HashMap;
+    import java.util.Map;
+
+    public class WordCountExample {
+        public static void main(String[] args) {
+            try (Arena arena = Arena.ofConfined()) {
+                // Define post-processor
+                PostProcessor wordCount = result -> {
+                    long count = result.content().split("\\s+").length;
+
+                    Map<String, Object> metadata = new HashMap<>(result.getMetadata());
+                    metadata.put("word_count", count);
+
+                    return new ExtractionResult(
+                        result.content(),
+                        result.mimeType(),
+                        result.language(),
+                        result.date(),
+                        result.subject(),
+                        result.getTables(),
+                        result.getDetectedLanguages(),
+                        metadata
+                    );
+                };
+
+                // Register with priority 50 (default)
+                Kreuzberg.registerPostProcessor("word-count", wordCount, 50, arena);
+
+                // Use in extraction
+                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+                System.out.println("Word count: " + result.getMetadata().get("word_count"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    ```
+
 ### Conditional Processing
 
 === "Rust"
@@ -313,6 +356,32 @@ Post-processors execute in three stages:
 
         def should_process(self, result: ExtractionResult) -> bool:
             return result["mime_type"] == "application/pdf"
+    ```
+
+=== "Java"
+
+    ```java
+    PostProcessor pdfOnly = result -> {
+        // PDF-specific processing
+        if (!result.mimeType().equals("application/pdf")) {
+            return result;  // Skip non-PDF documents
+        }
+
+        // Perform PDF-specific enrichment
+        Map<String, Object> metadata = new HashMap<>(result.getMetadata());
+        metadata.put("pdf_processed", true);
+
+        return new ExtractionResult(
+            result.content(),
+            result.mimeType(),
+            result.language(),
+            result.date(),
+            result.subject(),
+            result.getTables(),
+            result.getDetectedLanguages(),
+            metadata
+        );
+    };
     ```
 
 ## OCR Backends
@@ -443,6 +512,69 @@ Integrate custom OCR engines or cloud services.
     register_ocr_backend(CloudOcrBackend(api_key="your-api-key"))
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.*;
+    import java.lang.foreign.Arena;
+    import java.lang.foreign.MemorySegment;
+    import java.lang.foreign.ValueLayout;
+    import java.net.http.*;
+    import java.net.URI;
+
+    public class CloudOcrExample {
+        public static void main(String[] args) {
+            Arena callbackArena = Arena.ofAuto();
+            String apiKey = "your-api-key";
+
+            OcrBackend cloudOcr = (imageBytes, imageLength, configJson) -> {
+                try {
+                    // Read image bytes from native memory
+                    byte[] image = imageBytes.reinterpret(imageLength)
+                        .toArray(ValueLayout.JAVA_BYTE);
+
+                    // Read config JSON
+                    String config = configJson.reinterpret(Long.MAX_VALUE)
+                        .getString(0);
+
+                    // Call cloud OCR API
+                    HttpClient client = HttpClient.newHttpClient();
+                    HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://api.example.com/ocr"))
+                        .header("Authorization", "Bearer " + apiKey)
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(image))
+                        .build();
+
+                    HttpResponse<String> response = client.send(request,
+                        HttpResponse.BodyHandlers.ofString());
+
+                    String text = parseTextFromResponse(response.body());
+
+                    // Return result as C string
+                    return callbackArena.allocateFrom(text);
+                } catch (Exception e) {
+                    return MemorySegment.NULL;
+                }
+            };
+
+            try (Arena arena = Arena.ofConfined()) {
+                Kreuzberg.registerOcrBackend("cloud-ocr", cloudOcr, arena);
+
+                // Use custom OCR backend in extraction
+                // Note: Requires ExtractionConfig with OCR enabled
+                ExtractionResult result = Kreuzberg.extractFileSync("scanned.pdf");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        private static String parseTextFromResponse(String json) {
+            // Parse JSON response and extract text field
+            return json; // Simplified
+        }
+    }
+    ```
+
 ## Validators
 
 Enforce quality requirements on extraction results.
@@ -532,6 +664,44 @@ Enforce quality requirements on extraction results.
     register_validator(MinLengthValidator(min_length=100))
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.*;
+    import java.lang.foreign.Arena;
+
+    public class MinLengthValidatorExample {
+        public static void main(String[] args) {
+            int minLength = 100;
+
+            try (Arena arena = Arena.ofConfined()) {
+                // Define validator
+                Validator minLengthValidator = result -> {
+                    if (result.content().length() < minLength) {
+                        throw new ValidationException(
+                            "Content too short: " + result.content().length() +
+                            " < " + minLength
+                        );
+                    }
+                };
+
+                // Register with priority 100 (run early - fast check)
+                Kreuzberg.registerValidator("min-length", minLengthValidator, 100, arena);
+
+                // Use in extraction - will throw ValidationException if content too short
+                try {
+                    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+                    System.out.println("Validation passed!");
+                } catch (ValidationException e) {
+                    System.err.println("Validation failed: " + e.getMessage());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    ```
+
 ### Quality Score Validator
 
 === "Rust"
@@ -573,6 +743,22 @@ Enforce quality requirements on extraction results.
                 raise ValidationError(
                     f"Quality score too low: {score:.2f} < 0.50"
                 )
+    ```
+
+=== "Java"
+
+    ```java
+    Validator qualityValidator = result -> {
+        double score = result.getMetadata().containsKey("quality_score")
+            ? ((Number) result.getMetadata().get("quality_score")).doubleValue()
+            : 0.0;
+
+        if (score < 0.5) {
+            throw new ValidationException(
+                String.format("Quality score too low: %.2f < 0.50", score)
+            );
+        }
+    };
     ```
 
 ## Plugin Management
@@ -621,6 +807,13 @@ Enforce quality requirements on extraction results.
     print("Validators:", list_validators())
     ```
 
+=== "Java"
+
+    ```java
+    // Java does not provide plugin listing functionality in v4.0.0
+    // Plugins are registered and managed through the FFI layer
+    ```
+
 ### Unregistering Plugins
 
 === "Rust"
@@ -649,6 +842,20 @@ Enforce quality requirements on extraction results.
     unregister_validator("min_length_validator")
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+
+    try {
+        // Unregister specific plugins
+        Kreuzberg.unregisterPostProcessor("word-count");
+        Kreuzberg.unregisterValidator("min-length");
+    } catch (KreuzbergException e) {
+        System.err.println("Failed to unregister: " + e.getMessage());
+    }
+    ```
+
 ### Clearing All Plugins
 
 === "Python"
@@ -664,6 +871,13 @@ Enforce quality requirements on extraction results.
     # Clear all plugins of a specific type
     clear_post_processors()
     clear_validators()
+    ```
+
+=== "Java"
+
+    ```java
+    // Java does not provide bulk clearing functionality in v4.0.0
+    // Unregister plugins individually using unregisterPostProcessor() and unregisterValidator()
     ```
 
 ## Thread Safety
@@ -747,6 +961,36 @@ All plugins must be thread-safe:
             return result
     ```
 
+=== "Java"
+
+    ```java
+    import java.util.concurrent.ConcurrentHashMap;
+    import java.util.concurrent.atomic.AtomicInteger;
+
+    class StatefulPlugin implements PostProcessor {
+        // Use atomic types for simple counters
+        private final AtomicInteger callCount = new AtomicInteger(0);
+
+        // Use concurrent collections for complex state
+        private final ConcurrentHashMap<String, String> cache = new ConcurrentHashMap<>();
+
+        @Override
+        public ExtractionResult process(ExtractionResult result) {
+            // Increment counter atomically
+            callCount.incrementAndGet();
+
+            // Update cache (thread-safe)
+            cache.put("last_mime", result.mimeType());
+
+            return result;
+        }
+
+        public int getCallCount() {
+            return callCount.get();
+        }
+    }
+    ```
+
 ## Best Practices
 
 ### Naming
@@ -801,6 +1045,29 @@ All plugins must be thread-safe:
             ) from e
 
         return result
+    ```
+
+=== "Java"
+
+    ```java
+    public ExtractionResult process(ExtractionResult result) throws KreuzbergException {
+        // Validate inputs
+        if (result.content().isEmpty()) {
+            throw new ValidationException("Empty content");
+        }
+
+        // Handle errors with context
+        try {
+            String processed = parseContent(result.content());
+
+            return result.withContent(processed);
+        } catch (Exception e) {
+            throw new ParsingException(
+                "Failed to parse " + result.mimeType() + ": " + e.getMessage(),
+                e
+            );
+        }
+    }
     ```
 
 ### Logging
@@ -873,6 +1140,31 @@ All plugins must be thread-safe:
             return result
     ```
 
+=== "Java"
+
+    ```java
+    import java.util.logging.Logger;
+    import java.util.logging.Level;
+
+    class MyPlugin implements PostProcessor {
+        private static final Logger logger = Logger.getLogger(MyPlugin.class.getName());
+
+        @Override
+        public ExtractionResult process(ExtractionResult result) {
+            logger.info("Processing " + result.mimeType() +
+                " (" + result.content().length() + " bytes)");
+
+            // Processing...
+
+            if (result.content().isEmpty()) {
+                logger.warning("Processing resulted in empty content");
+            }
+
+            return result;
+        }
+    }
+    ```
+
 ### Testing
 
 === "Rust"
@@ -915,6 +1207,51 @@ All plugins must be thread-safe:
 
         assert "Hello, world!" in result["content"]
         assert result["mime_type"] == "application/json"
+    ```
+
+=== "Java"
+
+    ```java
+    import org.junit.jupiter.api.Test;
+    import static org.junit.jupiter.api.Assertions.*;
+
+    class PostProcessorTest {
+        @Test
+        void testWordCountProcessor() {
+            PostProcessor processor = result -> {
+                long count = result.content().split("\\s+").length;
+
+                Map<String, Object> metadata = new HashMap<>(result.getMetadata());
+                metadata.put("word_count", count);
+
+                return new ExtractionResult(
+                    result.content(),
+                    result.mimeType(),
+                    result.language(),
+                    result.date(),
+                    result.subject(),
+                    result.getTables(),
+                    result.getDetectedLanguages(),
+                    metadata
+                );
+            };
+
+            ExtractionResult input = new ExtractionResult(
+                "Hello world test",
+                "text/plain",
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyMap()
+            );
+
+            ExtractionResult output = processor.process(input);
+
+            assertEquals(3, output.getMetadata().get("word_count"));
+        }
+    }
     ```
 
 ## Complete Example: PDF Metadata Extractor
@@ -1046,4 +1383,67 @@ All plugins must be thread-safe:
 
     # Register the processor
     register_post_processor(PdfMetadataExtractor())
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.*;
+    import java.lang.foreign.Arena;
+    import java.util.HashMap;
+    import java.util.Map;
+    import java.util.concurrent.atomic.AtomicInteger;
+    import java.util.logging.Logger;
+
+    public class PdfMetadataExtractorExample {
+        private static final Logger logger = Logger.getLogger(
+            PdfMetadataExtractorExample.class.getName()
+        );
+
+        public static void main(String[] args) {
+            try (Arena arena = Arena.ofConfined()) {
+                AtomicInteger processedCount = new AtomicInteger(0);
+
+                PostProcessor pdfMetadata = result -> {
+                    // Only process PDFs
+                    if (!result.mimeType().equals("application/pdf")) {
+                        return result;
+                    }
+
+                    processedCount.incrementAndGet();
+
+                    // Extract PDF-specific metadata
+                    Map<String, Object> metadata = new HashMap<>(result.getMetadata());
+                    metadata.put("pdf_processed", true);
+                    metadata.put("processing_timestamp", System.currentTimeMillis());
+
+                    logger.info("Processed PDF: " + processedCount.get());
+
+                    return new ExtractionResult(
+                        result.content(),
+                        result.mimeType(),
+                        result.language(),
+                        result.date(),
+                        result.subject(),
+                        result.getTables(),
+                        result.getDetectedLanguages(),
+                        metadata
+                    );
+                };
+
+                // Register with priority 50 (default)
+                Kreuzberg.registerPostProcessor("pdf-metadata-extractor", pdfMetadata, 50, arena);
+
+                logger.info("PDF metadata extractor initialized");
+
+                // Use in extraction
+                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+                System.out.println("PDF processed: " + result.getMetadata().get("pdf_processed"));
+
+                logger.info("Processed " + processedCount.get() + " PDFs");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
     ```

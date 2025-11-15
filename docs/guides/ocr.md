@@ -231,6 +231,25 @@ pip install "kreuzberg[paddleocr]"
     puts result.content
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.OcrConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .ocr(OcrConfig.builder()
+            .backend("tesseract")
+            .language("eng")
+            .build())
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("scanned.pdf", null, config);
+    System.out.println(result.content());
+    ```
+
 ### Multiple Languages
 
 === "Python"
@@ -302,6 +321,25 @@ pip install "kreuzberg[paddleocr]"
     puts result.content
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.OcrConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .ocr(OcrConfig.builder()
+            .backend("tesseract")
+            .language("eng+deu+fra")
+            .build())
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("multilingual.pdf", null, config);
+    System.out.println(result.content());
+    ```
+
 ### Force OCR on All Pages
 
 Process PDFs with OCR even when they have a text layer:
@@ -369,6 +407,25 @@ Process PDFs with OCR even when they have a text layer:
     puts result.content
     ```
 
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.OcrConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .ocr(OcrConfig.builder()
+            .backend("tesseract")
+            .build())
+        .forceOcr(true)
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
+    System.out.println(result.content());
+    ```
+
 ### Using EasyOCR (Python Only)
 
 === "Python"
@@ -427,6 +484,76 @@ Control image resolution for OCR processing:
     )
 
     result = extract_file_sync("scanned.pdf", config=config)
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { extractFileSync, ExtractionConfig, OcrConfig, PdfConfig } from 'kreuzberg';
+
+    const config = new ExtractionConfig({
+        ocr: new OcrConfig({ backend: 'tesseract' }),
+        pdf: new PdfConfig({ dpi: 300 })
+    });
+
+    const result = extractFileSync('scanned.pdf', null, config);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig, PdfConfig};
+
+    fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig {
+            ocr: Some(OcrConfig {
+                backend: "tesseract".to_string(),
+                ..Default::default()
+            }),
+            pdf_options: Some(PdfConfig {
+                dpi: Some(300),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let result = extract_file_sync("scanned.pdf", None, &config)?;
+        Ok(())
+    }
+    ```
+
+=== "Ruby"
+
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::Config::Extraction.new(
+        ocr: Kreuzberg::Config::OCR.new(backend: 'tesseract'),
+        pdf: Kreuzberg::Config::PDF.new(dpi: 300)
+    )
+
+    result = Kreuzberg.extract_file_sync('scanned.pdf', config: config)
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.OcrConfig;
+    import dev.kreuzberg.config.ImagePreprocessingConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder()
+        .ocr(OcrConfig.builder()
+            .backend("tesseract")
+            .build())
+        .imagePreprocessing(ImagePreprocessingConfig.builder()
+            .targetDpi(300)
+            .build())
+        .build();
+
+    ExtractionResult result = Kreuzberg.extractFileSync("scanned.pdf", null, config);
     ```
 
 !!! tip "DPI Recommendations"
