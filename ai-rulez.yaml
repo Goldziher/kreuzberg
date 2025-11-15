@@ -61,6 +61,26 @@ agents:
       **Critical**: Core logic lives in Rust. Ruby only for bindings/wrappers. If core logic needed, coordinate with rust-engineer.
     targets:
       - CLAUDE.md
+  - description: Java bindings engineer (FFM API + Maven)
+    id: java-engineer
+    name: java-engineer
+    priority: high
+    system_prompt: |
+      **Role**: Java bindings for Kreuzberg Rust core. Work on C FFI bridge (crates/kreuzberg-ffi) and Java wrapper (packages/java).
+
+      **Scope**: Java 22 Foreign Function & Memory API (FFM/Panama), Java-idiomatic API, JUnit 5 tests, Javadoc.
+
+      **Architecture**: Java FFM API → kreuzberg-ffi (C library) → Rust core. No JNI, modern Foreign Function API.
+
+      Commands: cd packages/java && mvn clean compile test, mvn checkstyle:check, mvn spotless:apply.
+
+      **E2E Tests**: Auto-generated from fixtures via tools/e2e-generator. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang java.
+
+      **Critical**: Core logic lives in Rust. Java only for FFI bindings/wrappers. If core logic needed, coordinate with rust-engineer.
+
+      **Key files**: Kreuzberg.java (high-level API), KreuzbergFFI.java (FFI bindings), config/* (builder pattern), KreuzbergException.java (exception hierarchy).
+    targets:
+      - CLAUDE.md
   - description: Test automation engineer (Rust + bindings)
     id: test-engineer
     name: test-engineer
@@ -110,14 +130,15 @@ agents:
     targets:
       - CLAUDE.md
 metadata:
-  description: "Rust document intelligence library. Core: crates/kreuzberg (standalone, edition 2024). Bindings: Python (PyO3), TypeScript (NAPI-RS), Ruby (Magnus). Supports PDFs, images, office docs, and more."
+  description: "Rust document intelligence library. Core: crates/kreuzberg (standalone, edition 2024). Bindings: Python (PyO3), TypeScript (NAPI-RS), Ruby (Magnus), Java (FFM API). Supports PDFs, images, office docs, and more."
   name: Kreuzberg
   version: 4.0.0-rc1
 presets: ["claude", "codex"]
 rules:
   - content: |
       **Rust core** (crates/kreuzberg): cargo build/test/clippy/fmt, 95% coverage.
-      **Bindings**: maturin develop (Python), pnpm build (TS), bundle exec rake compile (Ruby).
+      **Bindings**: maturin develop (Python), pnpm build (TS), bundle exec rake compile (Ruby), mvn clean install (Java).
+      **E2E tests**: Auto-generated via tools/e2e-generator. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang <rust|python|typescript|ruby|java>
       **Task runner**: task --list (Taskfile.yml).
       **Versions**: task sync-versions (syncs from Cargo.toml).
     name: Development Commands
@@ -135,6 +156,7 @@ rules:
       Python: NO docstrings in private/test files. Public API only. No redundant comments.
       Rust: Doc comments (`///`) for ALL public items, SAFETY comments for unsafe, ~keep suffix for error handling. Examples run as doctests.
       TypeScript: JSDoc for all exports with @param/@returns/@example.
+      Java: Javadoc for ALL public classes/methods with @param/@return/@throws/@since. No redundant comments.
     name: Documentation Standards
     priority: critical
   - content: |
@@ -153,6 +175,7 @@ rules:
       - Python: crates/kreuzberg-py (PyO3) → packages/python/kreuzberg
       - TypeScript: crates/kreuzberg-node (NAPI-RS) → packages/typescript
       - Ruby: packages/ruby/ext/kreuzberg_rb/native (Magnus) → packages/ruby
+      - Java: crates/kreuzberg-ffi (C FFI) → packages/java (Java 22 FFM API)
 
       **Key: ALL extraction logic lives in Rust core. Bindings provide language-idiomatic APIs only.**
     name: Architecture
@@ -202,9 +225,29 @@ rules:
     name: PyO3 Performance
     priority: high
   - content: |
-      **Rust workspace** (Cargo.toml): crates/{kreuzberg,kreuzberg-py,kreuzberg-node,kreuzberg-cli}, packages/ruby/ext/kreuzberg_rb/native, tools/{benchmark-harness,e2e-generator}, e2e/rust.
+      **Java 22+**: Modern Foreign Function & Memory API (FFM/Panama). No JNI overhead.
 
-      **Language packages**: packages/{python,typescript,ruby} - thin wrappers around Rust core.
+      **Naming**: PascalCase (classes), camelCase (methods/fields), SCREAMING_SNAKE_CASE (constants).
+
+      **FFI Pattern**: Java FFM API → kreuzberg-ffi (C library) → Rust core. Use Arena.ofConfined() for memory management.
+
+      **Error handling**: Checked exceptions (IOException, KreuzbergException). Never suppress exceptions. Specific exception types: MissingDependency, ParsingError, OcrError, PluginError.
+
+      **Configuration**: Builder pattern for all config classes. Immutable objects with withX() methods for modifications.
+
+      **Null safety**: Use Optional<T> for nullable fields. Never return null from public methods.
+
+      **Testing**: JUnit 5 only. @Test methods, Assertions.assert*. E2E tests auto-generated from fixtures.
+
+      **Code quality**: Zero Checkstyle/PMD warnings. Use mvn checkstyle:check and mvn spotless:apply.
+    name: Java Conventions
+    priority: high
+  - content: |
+      **Rust workspace** (Cargo.toml): crates/{kreuzberg,kreuzberg-py,kreuzberg-node,kreuzberg-ffi,kreuzberg-cli}, packages/ruby/ext/kreuzberg_rb/native, tools/{benchmark-harness,e2e-generator}, e2e/rust.
+
+      **Language packages**: packages/{python,typescript,ruby,java} - thin wrappers around Rust core.
+
+      **E2E tests**: Auto-generated from fixtures/ via tools/e2e-generator. Located in e2e/{rust,python,typescript,ruby,java}.
 
       **Benchmarking**: Rust harness in tools/benchmark-harness.
 

@@ -104,4 +104,109 @@ class KreuzbergTest {
         assertTrue(withDate.date().isPresent());
         assertEquals("2024-01-01", withDate.date().get());
     }
+
+    @Test
+    void testExtractBytesSync() throws KreuzbergException {
+        // Create test data
+        String content = "Hello, Kreuzberg from bytes!";
+        byte[] data = content.getBytes();
+
+        // Extract from bytes
+        ExtractionResult result = Kreuzberg.extractBytesSync(data, "text/plain");
+
+        // Verify
+        assertNotNull(result, "Result should not be null");
+        assertNotNull(result.content(), "Content should not be null");
+        assertTrue(result.content().contains("Hello"), "Content should contain test text");
+        assertNotNull(result.mimeType(), "MIME type should not be null");
+    }
+
+    @Test
+    void testExtractBytesSyncWithNullData() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            Kreuzberg.extractBytesSync(null, "text/plain");
+        }, "Should throw IllegalArgumentException for null data");
+    }
+
+    @Test
+    void testExtractBytesSyncWithEmptyData() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            Kreuzberg.extractBytesSync(new byte[0], "text/plain");
+        }, "Should throw IllegalArgumentException for empty data");
+    }
+
+    @Test
+    void testExtractBytesSyncWithNullMimeType() {
+        byte[] data = "test".getBytes();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Kreuzberg.extractBytesSync(data, null);
+        }, "Should throw IllegalArgumentException for null MIME type");
+    }
+
+    @Test
+    void testBatchExtractFilesSync(@TempDir Path tempDir) throws IOException, KreuzbergException {
+        // Create test files
+        Path file1 = tempDir.resolve("test1.txt");
+        Path file2 = tempDir.resolve("test2.txt");
+        Files.writeString(file1, "Content of file 1");
+        Files.writeString(file2, "Content of file 2");
+
+        // Batch extract
+        java.util.List<String> filePaths = java.util.List.of(
+            file1.toString(),
+            file2.toString()
+        );
+        java.util.List<ExtractionResult> results = Kreuzberg.batchExtractFilesSync(filePaths);
+
+        // Verify
+        assertNotNull(results, "Results should not be null");
+        assertEquals(2, results.size(), "Should have 2 results");
+        assertTrue(results.get(0).content().contains("file 1"), "First result should contain correct content");
+        assertTrue(results.get(1).content().contains("file 2"), "Second result should contain correct content");
+    }
+
+    @Test
+    void testBatchExtractFilesSyncWithEmptyList() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            Kreuzberg.batchExtractFilesSync(java.util.List.of());
+        }, "Should throw IllegalArgumentException for empty list");
+    }
+
+    @Test
+    void testBatchExtractFilesSyncWithNullList() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            Kreuzberg.batchExtractFilesSync(null);
+        }, "Should throw IllegalArgumentException for null list");
+    }
+
+    @Test
+    void testBatchExtractBytesSync() throws KreuzbergException {
+        // Create test data
+        BytesWithMime data1 = new BytesWithMime("Content 1".getBytes(), "text/plain");
+        BytesWithMime data2 = new BytesWithMime("Content 2".getBytes(), "text/plain");
+
+        // Batch extract
+        java.util.List<BytesWithMime> dataList = java.util.List.of(data1, data2);
+        java.util.List<ExtractionResult> results = Kreuzberg.batchExtractBytesSync(dataList);
+
+        // Verify
+        assertNotNull(results, "Results should not be null");
+        assertEquals(2, results.size(), "Should have 2 results");
+        assertTrue(results.get(0).content().contains("Content 1"), "First result should contain correct content");
+        assertTrue(results.get(1).content().contains("Content 2"), "Second result should contain correct content");
+    }
+
+    @Test
+    void testBatchExtractBytesSyncWithEmptyList() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            Kreuzberg.batchExtractBytesSync(java.util.List.of());
+        }, "Should throw IllegalArgumentException for empty list");
+    }
+
+    @Test
+    void testBatchExtractBytesSyncWithNullList() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            Kreuzberg.batchExtractBytesSync(null);
+        }, "Should throw IllegalArgumentException for null list");
+    }
 }

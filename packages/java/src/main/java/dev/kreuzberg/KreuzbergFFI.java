@@ -26,8 +26,13 @@ final class KreuzbergFFI {
     // Function handles
     static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC;
     static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC_WITH_CONFIG;
+    static final MethodHandle KREUZBERG_EXTRACT_BYTES_SYNC;
+    static final MethodHandle KREUZBERG_EXTRACT_BYTES_SYNC_WITH_CONFIG;
+    static final MethodHandle KREUZBERG_BATCH_EXTRACT_FILES_SYNC;
+    static final MethodHandle KREUZBERG_BATCH_EXTRACT_BYTES_SYNC;
     static final MethodHandle KREUZBERG_FREE_STRING;
     static final MethodHandle KREUZBERG_FREE_RESULT;
+    static final MethodHandle KREUZBERG_FREE_BATCH_RESULT;
     static final MethodHandle KREUZBERG_LAST_ERROR;
     static final MethodHandle KREUZBERG_VERSION;
     static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND;
@@ -65,6 +70,21 @@ final class KreuzbergFFI {
     static final long SUCCESS_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
         MemoryLayout.PathElement.groupElement("success"));
 
+    // Batch result layout
+    static final StructLayout C_BATCH_RESULT_LAYOUT = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("results"),
+        ValueLayout.JAVA_LONG.withName("count"),
+        ValueLayout.JAVA_BOOLEAN.withName("success"),
+        MemoryLayout.paddingLayout(7) // Padding to align to 8 bytes
+    );
+
+    static final long BATCH_RESULTS_OFFSET = C_BATCH_RESULT_LAYOUT.byteOffset(
+        MemoryLayout.PathElement.groupElement("results"));
+    static final long BATCH_COUNT_OFFSET = C_BATCH_RESULT_LAYOUT.byteOffset(
+        MemoryLayout.PathElement.groupElement("count"));
+    static final long BATCH_SUCCESS_OFFSET = C_BATCH_RESULT_LAYOUT.byteOffset(
+        MemoryLayout.PathElement.groupElement("success"));
+
     static {
         try {
             // Load the native library
@@ -82,6 +102,44 @@ final class KreuzbergFFI {
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
             );
 
+            KREUZBERG_EXTRACT_BYTES_SYNC = linkFunction(
+                "kreuzberg_extract_bytes_sync",
+                FunctionDescriptor.of(
+                    ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS
+                )
+            );
+
+            KREUZBERG_EXTRACT_BYTES_SYNC_WITH_CONFIG = linkFunction(
+                "kreuzberg_extract_bytes_sync_with_config",
+                FunctionDescriptor.of(
+                    ValueLayout.ADDRESS,
+                    ValueLayout.ADDRESS,
+                    ValueLayout.JAVA_LONG,
+                    ValueLayout.ADDRESS,
+                    ValueLayout.ADDRESS
+                )
+            );
+
+            KREUZBERG_BATCH_EXTRACT_FILES_SYNC = linkFunction(
+                "kreuzberg_batch_extract_files_sync",
+                FunctionDescriptor.of(
+                    ValueLayout.ADDRESS,
+                    ValueLayout.ADDRESS,
+                    ValueLayout.JAVA_LONG,
+                    ValueLayout.ADDRESS
+                )
+            );
+
+            KREUZBERG_BATCH_EXTRACT_BYTES_SYNC = linkFunction(
+                "kreuzberg_batch_extract_bytes_sync",
+                FunctionDescriptor.of(
+                    ValueLayout.ADDRESS,
+                    ValueLayout.ADDRESS,
+                    ValueLayout.JAVA_LONG,
+                    ValueLayout.ADDRESS
+                )
+            );
+
             KREUZBERG_FREE_STRING = linkFunction(
                 "kreuzberg_free_string",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
@@ -89,6 +147,11 @@ final class KreuzbergFFI {
 
             KREUZBERG_FREE_RESULT = linkFunction(
                 "kreuzberg_free_result",
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_FREE_BATCH_RESULT = linkFunction(
+                "kreuzberg_free_batch_result",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
             );
 

@@ -55,6 +55,42 @@ typedef struct CExtractionResult {
 } CExtractionResult;
 
 /**
+ * C-compatible structure for batch extraction results
+ */
+typedef struct CBatchResult {
+  /**
+   * Array of extraction results
+   */
+  struct CExtractionResult **results;
+  /**
+   * Number of results
+   */
+  uintptr_t count;
+  /**
+   * Whether batch operation was successful
+   */
+  bool success;
+} CBatchResult;
+
+/**
+ * C-compatible structure for passing byte array with MIME type in batch operations
+ */
+typedef struct CBytesWithMime {
+  /**
+   * Pointer to byte data
+   */
+  const uint8_t *data;
+  /**
+   * Length of byte data
+   */
+  uintptr_t data_len;
+  /**
+   * MIME type as null-terminated C string
+   */
+  const char *mime_type;
+} CBytesWithMime;
+
+/**
  * Type alias for the OCR backend callback function.
  *
  * # Parameters
@@ -129,6 +165,108 @@ struct CExtractionResult *kreuzberg_extract_file_sync(const char *file_path);
  */
 struct CExtractionResult *kreuzberg_extract_file_sync_with_config(const char *file_path,
                                                                   const char *config_json);
+
+/**
+ * Extract text and metadata from byte array (synchronous).
+ *
+ * # Safety
+ *
+ * - `data` must be a valid pointer to a byte array of length `data_len`
+ * - `mime_type` must be a valid null-terminated C string
+ * - The returned pointer must be freed with `kreuzberg_free_result`
+ * - Returns NULL on error (check `kreuzberg_last_error` for details)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * const uint8_t* data = ...; // Document bytes
+ * size_t len = ...;           // Length of data
+ * const char* mime = "application/pdf";
+ * CExtractionResult* result = kreuzberg_extract_bytes_sync(data, len, mime);
+ * if (result != NULL && result->success) {
+ *     printf("Content: %s\n", result->content);
+ *     kreuzberg_free_result(result);
+ * } else {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Error: %s\n", error);
+ * }
+ * ```
+ */
+struct CExtractionResult *kreuzberg_extract_bytes_sync(const uint8_t *data,
+                                                       uintptr_t data_len,
+                                                       const char *mime_type);
+
+/**
+ * Extract text and metadata from byte array with custom configuration (synchronous).
+ *
+ * # Safety
+ *
+ * - `data` must be a valid pointer to a byte array of length `data_len`
+ * - `mime_type` must be a valid null-terminated C string
+ * - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
+ * - The returned pointer must be freed with `kreuzberg_free_result`
+ * - Returns NULL on error (check `kreuzberg_last_error` for details)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * const uint8_t* data = ...; // Document bytes
+ * size_t len = ...;           // Length of data
+ * const char* mime = "application/pdf";
+ * const char* config = "{\"force_ocr\": true, \"ocr\": {\"language\": \"deu\"}}";
+ * CExtractionResult* result = kreuzberg_extract_bytes_sync_with_config(data, len, mime, config);
+ * if (result != NULL && result->success) {
+ *     printf("Content: %s\n", result->content);
+ *     kreuzberg_free_result(result);
+ * }
+ * ```
+ */
+struct CExtractionResult *kreuzberg_extract_bytes_sync_with_config(const uint8_t *data,
+                                                                   uintptr_t data_len,
+                                                                   const char *mime_type,
+                                                                   const char *config_json);
+
+/**
+ * Batch extract text and metadata from multiple files (synchronous).
+ *
+ * # Safety
+ *
+ * - `file_paths` must be a valid pointer to an array of null-terminated C strings
+ * - `count` must be the number of file paths in the array
+ * - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
+ * - The returned pointer must be freed with `kreuzberg_free_batch_result`
+ * - Returns NULL on error (check `kreuzberg_last_error` for details)
+ */
+struct CBatchResult *kreuzberg_batch_extract_files_sync(const char *const *file_paths,
+                                                        uintptr_t count,
+                                                        const char *config_json);
+
+/**
+ * Batch extract text and metadata from multiple byte arrays (synchronous).
+ *
+ * # Safety
+ *
+ * - `items` must be a valid pointer to an array of CBytesWithMime structures
+ * - `count` must be the number of items in the array
+ * - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
+ * - The returned pointer must be freed with `kreuzberg_free_batch_result`
+ * - Returns NULL on error (check `kreuzberg_last_error` for details)
+ */
+struct CBatchResult *kreuzberg_batch_extract_bytes_sync(const struct CBytesWithMime *items,
+                                                        uintptr_t count,
+                                                        const char *config_json);
+
+/**
+ * Free a batch result returned by batch extraction functions.
+ *
+ * # Safety
+ *
+ * - `batch_result` must be a pointer previously returned by a batch extraction function
+ * - `batch_result` can be NULL (no-op)
+ * - `batch_result` must not be used after this call
+ * - All results and strings within the batch result will be freed automatically
+ */
+void kreuzberg_free_batch_result(struct CBatchResult *batch_result);
 
 /**
  * Free a string returned by Kreuzberg functions.
