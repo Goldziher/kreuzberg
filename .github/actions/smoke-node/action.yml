@@ -12,6 +12,8 @@ runs:
   steps:
     - name: Smoke test Node.js package
       shell: bash
+      env:
+        KREUZBERG_NODE_PKG: ${{ github.workspace }}/crates/kreuzberg-node
       run: |
         set -euo pipefail
         tmp=$(mktemp -d)
@@ -19,20 +21,35 @@ runs:
         pushd "$tmp" >/dev/null
 
         if [[ -n "${{ inputs.package-tarball }}" ]]; then
-          # Install from tarball
+          # Install from tarball containing the published package
           cp "${{ inputs.package-tarball }}" ./kreuzberg.tgz
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.dependencies = pkg.dependencies || {};
-            pkg.dependencies['@kreuzberg/node'] = 'file:./kreuzberg.tgz';
+            pkg.dependencies['kreuzberg-node'] = 'file:./kreuzberg.tgz';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
           rm -f pnpm-lock.yaml
           pnpm install --no-frozen-lockfile
         else
-          # Install from source
-          pnpm install
+          # Install directly from the local workspace package
+          node <<'NODE'
+const fs = require('fs');
+const path = require('path');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+pkg.dependencies = pkg.dependencies || {};
+const workspacePath = process.env.KREUZBERG_NODE_PKG || '';
+if (!workspacePath) {
+  console.error('Missing KREUZBERG_NODE_PKG env var');
+  process.exit(1);
+}
+const normalized = workspacePath.replace(/\\/g, '/');
+pkg.dependencies['kreuzberg-node'] = `file:${normalized}`;
+fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+NODE
+          rm -f pnpm-lock.yaml
+          pnpm install --no-frozen-lockfile
         fi
 
         pnpm run check

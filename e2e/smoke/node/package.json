@@ -6,6 +6,6 @@
 		"check": "node smoke.mjs"
 	},
 	"dependencies": {
-		"@kreuzberg/node": "workspace:*"
+		"kreuzberg-node": "file:../../crates/kreuzberg-node"
 	}
 }
