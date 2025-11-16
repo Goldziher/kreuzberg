@@ -628,17 +628,25 @@ jobs:
         shell: pwsh
         run: rustup toolchain install stable-gnu --profile minimal --no-self-update
 
-      - name: Configure bindgen sysroot (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: echo "BINDGEN_EXTRA_CLANG_ARGS=--target=x86_64-pc-windows-gnu --sysroot=${RI_DEVKIT//\\/\/}$MSYSTEM_PREFIX" >> "$GITHUB_ENV"
-
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler: "2.5.12"
           bundler-cache: false
+
+      - name: Configure bindgen sysroot (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not $env:RI_DEVKIT) {
+            throw "RI_DEVKIT environment variable is not set"
+          }
+          $msysPrefix = ridk exec bash -lc 'printf %s "$MSYSTEM_PREFIX"'
+          $msysPrefix = $msysPrefix.Trim()
+          $riDevkit = $env:RI_DEVKIT -replace '\\','/'
+          $sysroot = "$riDevkit$msysPrefix"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=--target=x86_64-pc-windows-gnu --sysroot=$sysroot"
 
       - name: Cache Pdfium binaries
         uses: ./.github/actions/cache-pdfium
