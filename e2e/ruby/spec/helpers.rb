@@ -85,6 +85,7 @@ module E2ERuby
       if (reason = skip_reason_for(e, fixture_id, requirements, notes))
         raise RSpec::Core::Pending::SkipDeclaredInExample, reason
       end
+
       raise
     end
 

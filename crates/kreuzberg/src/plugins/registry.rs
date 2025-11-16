@@ -6,6 +6,7 @@
 
 use crate::plugins::{DocumentExtractor, OcrBackend, PostProcessor, ProcessingStage, Validator};
 use crate::{KreuzbergError, Result};
+use indexmap::IndexMap;
 use once_cell::sync::Lazy;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};
@@ -480,7 +481,7 @@ impl Default for PostProcessorRegistry {
 ///
 /// Manages validators with priority-based execution order.
 pub struct ValidatorRegistry {
-    validators: BTreeMap<i32, HashMap<String, Arc<dyn Validator>>>,
+    validators: BTreeMap<i32, IndexMap<String, Arc<dyn Validator>>>,
 }
 
 impl ValidatorRegistry {
@@ -540,7 +541,7 @@ impl ValidatorRegistry {
         let mut validator_to_shutdown: Option<Arc<dyn Validator>> = None;
 
         for validators in self.validators.values_mut() {
-            if let Some(validator) = validators.remove(name)
+            if let Some(validator) = validators.shift_remove(name)
                 && validator_to_shutdown.is_none()
             {
                 validator_to_shutdown = Some(validator);

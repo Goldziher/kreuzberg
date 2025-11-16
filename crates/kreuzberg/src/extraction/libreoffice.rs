@@ -86,6 +86,24 @@ If LibreOffice is installed in a custom location, set the KREUZBERG_LIBREOFFICE_
         .to_string()
 }
 
+fn path_to_file_uri(path: &Path) -> String {
+    let canonical = std_fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+
+    #[cfg(windows)]
+    {
+        let mut normalized = canonical.to_string_lossy().replace('\\', "/");
+        if !normalized.starts_with('/') {
+            normalized = format!("/{}", normalized);
+        }
+        format!("file://{}", normalized)
+    }
+
+    #[cfg(not(windows))]
+    {
+        format!("file://{}", canonical.to_string_lossy())
+    }
+}
+
 fn soffice_candidates() -> Vec<PathBuf> {
     let mut seen = HashSet::new();
     let mut candidates = Vec::new();
@@ -183,15 +201,26 @@ pub async fn convert_office_doc(
 ) -> Result<Vec<u8>> {
     let soffice_path = check_libreoffice_available().await?;
 
+    let profile_dir = std::env::temp_dir().join(format!("kreuzberg_lo_profile_{}", uuid::Uuid::new_v4()));
+    let _profile_guard = TempDir::new(profile_dir.clone()).await?;
+    let user_install_arg = format!("-env:UserInstallation={}", path_to_file_uri(&profile_dir));
+
     fs::create_dir_all(output_dir).await?;
 
-    let child = Command::new(&soffice_path)
+    let mut command = Command::new(&soffice_path);
+    command
         .arg("--headless")
+        .arg("--nologo")
+        .arg("--norestore")
+        .arg("--nolockcheck")
+        .arg(user_install_arg)
         .arg("--convert-to")
         .arg(target_format)
         .arg("--outdir")
         .arg(output_dir)
-        .arg(input_path)
+        .arg(input_path);
+
+    let child = command
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()

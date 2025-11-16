@@ -202,6 +202,37 @@ impl Validator for FailingValidator {
     }
 }
 
+struct TrackingValidator {
+    name: String,
+    called: AtomicBool,
+}
+
+impl Plugin for TrackingValidator {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn version(&self) -> String {
+        "1.0.0".to_string()
+    }
+
+    fn initialize(&self) -> Result<()> {
+        Ok(())
+    }
+
+    fn shutdown(&self) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl Validator for TrackingValidator {
+    async fn validate(&self, _result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
+        self.called.store(true, Ordering::Release);
+        Ok(())
+    }
+}
+
 #[test]
 fn test_register_custom_validator() {
     let registry = get_validator_registry();
@@ -690,6 +721,45 @@ fn test_validator_always_fails() {
         }
         other => panic!("Expected Validation error, got: {:?}", other),
     }
+
+    {
+        let mut reg = registry.write().unwrap();
+        reg.shutdown_all().unwrap();
+    }
+}
+
+#[test]
+fn test_validator_registration_order_preserved_for_same_priority() {
+    let test_file = "../../test_documents/text/fake_text.txt";
+    let registry = get_validator_registry();
+
+    {
+        let mut reg = registry.write().unwrap();
+        reg.shutdown_all().unwrap();
+    }
+
+    let tracker = Arc::new(TrackingValidator {
+        name: "order-second".to_string(),
+        called: AtomicBool::new(false),
+    });
+
+    {
+        let mut reg = registry.write().unwrap();
+        reg.register(Arc::new(FailingValidator {
+            name: "order-first".to_string(),
+        }) as Arc<dyn Validator>)
+            .unwrap();
+        reg.register(tracker.clone() as Arc<dyn Validator>).unwrap();
+    }
+
+    let config = ExtractionConfig::default();
+    let result = extract_file_sync(test_file, None, &config);
+
+    assert!(result.is_err(), "Expected first validator to fail");
+    assert!(
+        !tracker.called.load(Ordering::Acquire),
+        "Second validator should not run once the first validator fails"
+    );
 
     {
         let mut reg = registry.write().unwrap();
