@@ -368,6 +368,11 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -796,6 +801,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -825,10 +832,10 @@ jobs:
               echo "name=python-wheels-linux-x86_64" >> "$GITHUB_OUTPUT"
               ;;
             macos-latest)
-              echo "name=python-wheels-macos-universal" >> "$GITHUB_OUTPUT"
+              echo "name=python-wheels-macos" >> "$GITHUB_OUTPUT"
               ;;
             windows-latest)
-              echo "name=python-wheels-windows-amd64" >> "$GITHUB_OUTPUT"
+              echo "name=python-wheels-windows" >> "$GITHUB_OUTPUT"
               ;;
           esac
 
@@ -1256,6 +1263,11 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Download Node artifacts
         uses: actions/download-artifact@v6
