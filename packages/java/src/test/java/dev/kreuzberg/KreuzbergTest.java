@@ -6,6 +6,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -211,6 +213,62 @@ class KreuzbergTest {
         assertThrows(IllegalArgumentException.class, () -> {
             Kreuzberg.batchExtractBytesSync(null);
         }, "Should throw IllegalArgumentException for null list");
+    }
+
+    @Test
+    void testExtractFileAsync(@TempDir Path tempDir) throws Exception {
+        Path testFile = tempDir.resolve("async-file.txt");
+        Files.writeString(testFile, "Async hello world");
+
+        ExtractionResult result = Kreuzberg.extractFileAsync(testFile.toString()).join();
+        assertNotNull(result);
+        assertTrue(result.content().contains("Async hello world"));
+    }
+
+    @Test
+    void testExtractFileAsyncError() {
+        CompletionException exception = assertThrows(CompletionException.class, () -> {
+            Kreuzberg.extractFileAsync("/nonexistent/async/file.txt").join();
+        });
+        assertTrue(exception.getCause() instanceof IOException,
+                "Expected IOException as cause, got: " + exception.getCause());
+    }
+
+    @Test
+    void testExtractBytesAsync() {
+        byte[] data = "Hello async bytes".getBytes();
+        ExtractionResult result = Kreuzberg.extractBytesAsync(data, "text/plain").join();
+        assertNotNull(result);
+        assertTrue(result.content().contains("Hello async bytes"));
+    }
+
+    @Test
+    void testBatchExtractFilesAsync(@TempDir Path tempDir) throws Exception {
+        Path file1 = tempDir.resolve("async1.txt");
+        Path file2 = tempDir.resolve("async2.txt");
+        Files.writeString(file1, "Async file one");
+        Files.writeString(file2, "Async file two");
+
+        CompletableFuture<java.util.List<ExtractionResult>> future = Kreuzberg.batchExtractFilesAsync(
+                java.util.List.of(file1.toString(), file2.toString()));
+        java.util.List<ExtractionResult> results = future.join();
+
+        assertEquals(2, results.size());
+        assertTrue(results.get(0).content().contains("Async file"));
+        assertTrue(results.get(1).content().contains("Async file"));
+    }
+
+    @Test
+    void testBatchExtractBytesAsync() {
+        BytesWithMime data1 = new BytesWithMime("Async content 1".getBytes(), "text/plain");
+        BytesWithMime data2 = new BytesWithMime("Async content 2".getBytes(), "text/plain");
+
+        java.util.List<ExtractionResult> results = Kreuzberg.batchExtractBytesAsync(
+                java.util.List.of(data1, data2)).join();
+
+        assertEquals(2, results.size());
+        assertTrue(results.get(0).content().contains("Async content 1"));
+        assertTrue(results.get(1).content().contains("Async content 2"));
     }
 
     @Test

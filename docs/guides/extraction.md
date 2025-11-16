@@ -157,17 +157,17 @@ Extract text, tables, and metadata from a file on disk.
     ```java
     import dev.kreuzberg.Kreuzberg;
     import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
+    import java.util.concurrent.CompletableFuture;
 
     public class Example {
         public static void main(String[] args) {
-            try {
-                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+            CompletableFuture<ExtractionResult> future =
+                Kreuzberg.extractFileAsync("document.pdf");
+
+            future.thenAccept(result -> {
                 System.out.println(result.getContent());
-            } catch (IOException | KreuzbergException e) {
-                e.printStackTrace();
-            }
+                System.out.println("Tables: " + result.getTables().size());
+            }).join(); // Wait for completion (or compose further)
         }
     }
     ```

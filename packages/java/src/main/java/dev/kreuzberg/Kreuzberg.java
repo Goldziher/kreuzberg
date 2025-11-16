@@ -18,6 +18,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * High-level Java API for Kreuzberg document intelligence library.
@@ -56,6 +61,7 @@ public final class Kreuzberg {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .registerModule(new com.fasterxml.jackson.module.paramnames.ParameterNamesModule())
             .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ExecutorService ASYNC_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     // Storage for registered processors/validators to prevent GC
     private static final Map<String, PostProcessor> POST_PROCESSORS
@@ -67,8 +73,176 @@ public final class Kreuzberg {
     private static final Map<String, MemorySegment> VALIDATOR_STUBS
             = new java.util.concurrent.ConcurrentHashMap<>();
 
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(ASYNC_EXECUTOR::shutdown));
+    }
+
     private Kreuzberg() {
         // Private constructor to prevent instantiation
+    }
+
+    /**
+     * Extract text and metadata from a file asynchronously.
+     *
+     * <p>This method schedules the extraction on a dedicated executor backed by virtual threads.
+     * The returned {@link CompletableFuture} completes with the extraction result or exceptionally
+     * with the same errors thrown by {@link #extractFileSync(String, String, ExtractionConfig)}.</p>
+     *
+     * @param filePath the file path to extract
+     * @return future resolving to the extraction result
+     */
+    public static CompletableFuture<ExtractionResult> extractFileAsync(String filePath) {
+        return extractFileAsync(filePath, null, null);
+    }
+
+    /**
+     * Extract text and metadata from a file asynchronously with MIME hint.
+     *
+     * @param filePath the file path to extract
+     * @param mimeType optional MIME type hint
+     * @return future resolving to the extraction result
+     */
+    public static CompletableFuture<ExtractionResult> extractFileAsync(String filePath, String mimeType) {
+        return extractFileAsync(filePath, mimeType, null);
+    }
+
+    /**
+     * Extract text and metadata from a file asynchronously with configuration.
+     *
+     * @param filePath the file path to extract
+     * @param mimeType optional MIME type hint
+     * @param config extraction configuration (uses defaults if null)
+     * @return future resolving to the extraction result
+     */
+    public static CompletableFuture<ExtractionResult> extractFileAsync(
+            String filePath,
+            String mimeType,
+            ExtractionConfig config
+    ) {
+        Objects.requireNonNull(filePath, "filePath must not be null");
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return extractFileSync(filePath, mimeType, config);
+            } catch (IOException | KreuzbergException e) {
+                throw new CompletionException(e);
+            }
+        }, ASYNC_EXECUTOR);
+    }
+
+    /**
+     * Extract text and metadata from a file asynchronously (Path overload).
+     *
+     * @param filePath the path to the file
+     * @param mimeType optional MIME type hint
+     * @param config extraction configuration (uses defaults if null)
+     * @return future resolving to the extraction result
+     */
+    public static CompletableFuture<ExtractionResult> extractFileAsync(
+            Path filePath,
+            String mimeType,
+            ExtractionConfig config
+    ) {
+        Objects.requireNonNull(filePath, "filePath must not be null");
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return extractFileSync(filePath, mimeType, config);
+            } catch (IOException | KreuzbergException e) {
+                throw new CompletionException(e);
+            }
+        }, ASYNC_EXECUTOR);
+    }
+
+    /**
+     * Extract text and metadata from bytes asynchronously.
+     *
+     * @param data the document bytes
+     * @param mimeType the MIME type of the data
+     * @return future resolving to the extraction result
+     */
+    public static CompletableFuture<ExtractionResult> extractBytesAsync(byte[] data, String mimeType) {
+        return extractBytesAsync(data, mimeType, null);
+    }
+
+    /**
+     * Extract text and metadata from bytes asynchronously with configuration.
+     *
+     * @param data the document bytes
+     * @param mimeType the MIME type of the data
+     * @param config extraction configuration (uses defaults if null)
+     * @return future resolving to the extraction result
+     */
+    public static CompletableFuture<ExtractionResult> extractBytesAsync(
+            byte[] data,
+            String mimeType,
+            ExtractionConfig config
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return extractBytesSync(data, mimeType, config);
+            } catch (KreuzbergException e) {
+                throw new CompletionException(e);
+            }
+        }, ASYNC_EXECUTOR);
+    }
+
+    /**
+     * Batch extract multiple files asynchronously.
+     *
+     * @param filePaths list of file paths
+     * @return future resolving to the list of extraction results
+     */
+    public static CompletableFuture<List<ExtractionResult>> batchExtractFilesAsync(List<String> filePaths) {
+        return batchExtractFilesAsync(filePaths, null);
+    }
+
+    /**
+     * Batch extract multiple files asynchronously with configuration.
+     *
+     * @param filePaths list of file paths
+     * @param config extraction configuration (uses defaults if null)
+     * @return future resolving to the list of extraction results
+     */
+    public static CompletableFuture<List<ExtractionResult>> batchExtractFilesAsync(
+            List<String> filePaths,
+            ExtractionConfig config
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return batchExtractFilesSync(filePaths, config);
+            } catch (IOException | KreuzbergException e) {
+                throw new CompletionException(e);
+            }
+        }, ASYNC_EXECUTOR);
+    }
+
+    /**
+     * Batch extract multiple byte arrays asynchronously.
+     *
+     * @param dataList list of byte arrays with MIME info
+     * @return future resolving to the list of extraction results
+     */
+    public static CompletableFuture<List<ExtractionResult>> batchExtractBytesAsync(List<BytesWithMime> dataList) {
+        return batchExtractBytesAsync(dataList, null);
+    }
+
+    /**
+     * Batch extract multiple byte arrays asynchronously with configuration.
+     *
+     * @param dataList list of byte arrays with MIME info
+     * @param config extraction configuration (uses defaults if null)
+     * @return future resolving to the list of extraction results
+     */
+    public static CompletableFuture<List<ExtractionResult>> batchExtractBytesAsync(
+            List<BytesWithMime> dataList,
+            ExtractionConfig config
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return batchExtractBytesSync(dataList, config);
+            } catch (KreuzbergException e) {
+                throw new CompletionException(e);
+            }
+        }, ASYNC_EXECUTOR);
     }
 
     /**

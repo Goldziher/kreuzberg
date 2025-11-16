@@ -157,18 +157,19 @@ For better performance with I/O-bound operations:
     ```java
     import dev.kreuzberg.Kreuzberg;
     import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
+    import java.util.concurrent.CompletableFuture;
 
     public class Main {
         public static void main(String[] args) {
-            try {
-                // Java uses synchronous calls (async not supported in FFI)
-                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+            CompletableFuture<ExtractionResult> future =
+                Kreuzberg.extractFileAsync("document.pdf");
+
+            future.thenAccept(result -> {
                 System.out.println(result.getContent());
-            } catch (IOException | KreuzbergException e) {
-                System.err.println("Extraction failed: " + e.getMessage());
-            }
+            }).exceptionally(error -> {
+                System.err.println("Extraction failed: " + error.getMessage());
+                return null;
+            }).join();
         }
     }
     ```
