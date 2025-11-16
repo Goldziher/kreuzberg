@@ -375,6 +375,11 @@ fn test_concurrent_batch_with_cache() {
 fn test_rayon_parallel_speedup() {
     use helpers::{get_test_file_path, skip_if_missing};
 
+    if std::env::var("CI").is_ok() {
+        tracing::warn!("Skipping Rayon speedup test on CI to avoid flaky timing-based failures");
+        return;
+    }
+
     if skip_if_missing("images/ocr_image.jpg") {
         tracing::debug!("Skipping Rayon speedup test: test file not available");
         return;

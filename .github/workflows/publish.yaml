@@ -331,21 +331,22 @@ jobs:
             rust_target: x86_64-unknown-linux-musl
             use_cross: true
             use_napi_cross: false
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            rust_target: aarch64-unknown-linux-gnu
-            use_cross: false
-            use_napi_cross: true
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            rust_target: aarch64-unknown-linux-musl
-            use_cross: true
-            use_napi_cross: false
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-gnueabihf
-            rust_target: armv7-unknown-linux-gnueabihf
-            use_cross: false
-            use_napi_cross: true
+          # TODO: Re-enable additional Linux targets once cross-compilation pipeline matches test-build
+          # - os: ubuntu-latest
+          #   target: aarch64-unknown-linux-gnu
+          #   rust_target: aarch64-unknown-linux-gnu
+          #   use_cross: false
+          #   use_napi_cross: true
+          # - os: ubuntu-latest
+          #   target: aarch64-unknown-linux-musl
+          #   rust_target: aarch64-unknown-linux-musl
+          #   use_cross: true
+          #   use_napi_cross: false
+          # - os: ubuntu-latest
+          #   target: armv7-unknown-linux-gnueabihf
+          #   rust_target: armv7-unknown-linux-gnueabihf
+          #   use_cross: false
+          #   use_napi_cross: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             rust_target: ""
@@ -487,9 +488,10 @@ jobs:
           # - os: ubuntu-latest
           #   target: x86_64-unknown-linux-musl
           #   use_cross: false
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            use_cross: false
+          # TODO: Add aarch64-unknown-linux-gnu once test-build parity is restored
+          # - os: ubuntu-latest
+          #   target: aarch64-unknown-linux-gnu
+          #   use_cross: false
           - os: macos-14
             target: aarch64-apple-darwin
             use_cross: false
