@@ -20,34 +20,95 @@ runs:
         cp -R e2e/smoke/node/. "$tmp"/
         pushd "$tmp" >/dev/null
 
+        package_spec=""
         if [[ -n "${{ inputs.package-tarball }}" ]]; then
-          # Install from tarball containing the published package
-          cp "${{ inputs.package-tarball }}" ./kreuzberg.tgz
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.dependencies = pkg.dependencies || {};
-            pkg.dependencies['kreuzberg-node'] = 'file:./kreuzberg.tgz';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-          rm -f pnpm-lock.yaml
-          pnpm install --no-frozen-lockfile
+          tarball="${{ inputs.package-tarball }}"
+          if [[ "$tarball" != /* ]]; then
+            tarball="${GITHUB_WORKSPACE}/${{ inputs.package-tarball }}"
+          fi
+          if [[ ! -e "$tarball" ]]; then
+            echo "Provided Node artifact not found: $tarball" >&2
+            exit 1
+          fi
+          stage_dir="$tmp/node-artifact"
+          mkdir -p "$stage_dir"
+          case "$tarball" in
+            *.tar.gz|*.tgz)
+              tar -xzf "$tarball" -C "$stage_dir"
+              ;;
+            *)
+              cp "$tarball" "$stage_dir"/
+              ;;
+          esac
+
+          pkg_file=$(find "$stage_dir" -maxdepth 3 -name "*.tgz" -type f | head -n 1)
+          if [[ -n "$pkg_file" ]]; then
+            cp "$pkg_file" ./kreuzberg.tgz
+            package_spec="file:./kreuzberg.tgz"
+          else
+            search_root="$stage_dir"
+            if [[ -d "$stage_dir/npm" ]]; then
+              search_root="$stage_dir/npm"
+            fi
+            pkg_dir=$(find "$search_root" -mindepth 1 -maxdepth 1 -type d | head -n 1 || true)
+            if [[ -z "$pkg_dir" || ! -f "$pkg_dir/package.json" ]]; then
+              echo "Unable to determine Node package directory inside $tarball" >&2
+              ls -R "$stage_dir" >&2 || true
+              exit 1
+            fi
+            normalized_path=$(PKG_DIR="$pkg_dir" python - <<'PY'
+import os
+path = os.environ["PKG_DIR"]
+print(os.path.abspath(path).replace("\\", "/"))
+PY
+)
+            package_spec="file:${normalized_path}"
+          fi
         else
-          # Install directly from the local workspace package
+          workspacePath="${KREUZBERG_NODE_PKG:-}"
+          if [[ -z "$workspacePath" ]]; then
+            echo "Missing KREUZBERG_NODE_PKG env var" >&2
+            exit 1
+          fi
+          workspace_normalized=$(WORKSPACE_PATH="$workspacePath" python - <<'PY'
+import os
+path = os.environ["WORKSPACE_PATH"]
+print(os.path.abspath(path).replace("\\", "/"))
+PY
+)
+          package_spec="file:${workspace_normalized}"
+        fi
+
+        export KREUZBERG_NODE_SPEC="$package_spec"
+
+        if [[ -n "${{ inputs.package-tarball }}" ]]; then
+          rm -f pnpm-lock.yaml
           node <<'NODE'
             const fs = require('fs');
-            const path = require('path');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.dependencies = pkg.dependencies || {};
-            const workspacePath = process.env.KREUZBERG_NODE_PKG || '';
-            if (!workspacePath) {
-              console.error('Missing KREUZBERG_NODE_PKG env var');
+            const spec = process.env.KREUZBERG_NODE_SPEC || '';
+            if (!spec) {
+              console.error('KREUZBERG_NODE_SPEC missing for artifact install');
               process.exit(1);
             }
-            const normalized = workspacePath.replace(/\\/g, '/');
-            pkg.dependencies['kreuzberg-node'] = `file:${normalized}`;
+            pkg.dependencies = pkg.dependencies || {};
+            pkg.dependencies['kreuzberg-node'] = spec.replace(/\\/g, '/');
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-NODE
+          NODE
+          pnpm install --no-frozen-lockfile
+        else
+          node <<'NODE'
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const spec = process.env.KREUZBERG_NODE_SPEC || '';
+            if (!spec) {
+              console.error('KREUZBERG_NODE_SPEC missing for workspace install');
+              process.exit(1);
+            }
+            pkg.dependencies = pkg.dependencies || {};
+            pkg.dependencies['kreuzberg-node'] = spec.replace(/\\/g, '/');
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          NODE
           rm -f pnpm-lock.yaml
           pnpm install --no-frozen-lockfile
         fi

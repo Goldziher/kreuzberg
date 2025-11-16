@@ -16,6 +16,10 @@ on:
         description: "Git ref (branch, tag, or commit) to build; defaults to the tag"
         required: false
         type: string
+      targets:
+        description: "Comma-separated list of release targets (all, python, node, ruby, cli, crates, docker, homebrew)"
+        required: false
+        type: string
   push:
     tags:
       - "v*"
@@ -43,6 +47,15 @@ jobs:
       target_sha: ${{ steps.meta.outputs.target_sha }}
       matrix_ref: ${{ steps.meta.outputs.matrix_ref }}
       is_tag: ${{ steps.meta.outputs.is_tag }}
+      release_targets: ${{ steps.meta.outputs.release_targets }}
+      release_any: ${{ steps.meta.outputs.release_any }}
+      release_python: ${{ steps.meta.outputs.release_python }}
+      release_node: ${{ steps.meta.outputs.release_node }}
+      release_ruby: ${{ steps.meta.outputs.release_ruby }}
+      release_cli: ${{ steps.meta.outputs.release_cli }}
+      release_crates: ${{ steps.meta.outputs.release_crates }}
+      release_docker: ${{ steps.meta.outputs.release_docker }}
+      release_homebrew: ${{ steps.meta.outputs.release_homebrew }}
     steps:
       - name: Validate tag and compute version
         id: meta
@@ -52,14 +65,17 @@ jobs:
             tag="${{ inputs.tag }}"
             dry_run_input="${{ inputs.dry_run }}"
             ref_input="${{ inputs.ref }}"
+            targets_input="${{ inputs.targets }}"
           elif [[ "$event" == "repository_dispatch" ]]; then
             tag="${{ github.event.client_payload.tag }}"
             dry_run_input="${{ github.event.client_payload.dry_run }}"
             ref_input="${{ github.event.client_payload.ref }}"
+            targets_input="${{ github.event.client_payload.targets }}"
           else
             tag="${GITHUB_REF_NAME}"
             dry_run_input="false"
             ref_input=""
+            targets_input=""
             if [[ "$tag" == *-pre* || "$tag" == *-rc* ]]; then
               dry_run_input="true"
             fi
@@ -105,6 +121,117 @@ jobs:
             is_tag="false"
           fi
 
+          normalize_target_list() {
+            local raw="$1"
+            raw="${raw:-all}"
+            if [[ -z "$raw" ]]; then
+              echo "all"
+            else
+              echo "$raw"
+            fi
+          }
+
+          targets_value=$(normalize_target_list "$targets_input")
+          release_python=false
+          release_node=false
+          release_ruby=false
+          release_cli=false
+          release_crates=false
+          release_docker=false
+          release_homebrew=false
+
+          set_all_targets() {
+            release_python=true
+            release_node=true
+            release_ruby=true
+            release_cli=true
+            release_crates=true
+            release_docker=true
+            release_homebrew=true
+          }
+
+          mapfile -t requested_targets < <(echo "$targets_value" | tr ',' '\n')
+
+          processed_any=false
+          for raw_target in "${requested_targets[@]}"; do
+            trimmed=$(echo "$raw_target" | tr '[:upper:]' '[:lower:]' | xargs)
+            if [[ -z "$trimmed" ]]; then
+              continue
+            fi
+            processed_any=true
+            case "$trimmed" in
+              all|'*'|'default')
+                set_all_targets
+                break
+                ;;
+              python)
+                release_python=true
+                ;;
+              node)
+                release_node=true
+                ;;
+              ruby)
+                release_ruby=true
+                ;;
+              cli)
+                release_cli=true
+                ;;
+              crates)
+                release_crates=true
+                ;;
+              docker)
+                release_docker=true
+                ;;
+              homebrew)
+                release_homebrew=true
+                ;;
+              none)
+                release_python=false
+                release_node=false
+                release_ruby=false
+                release_cli=false
+                release_crates=false
+                release_docker=false
+                release_homebrew=false
+                ;;
+              *)
+                echo "Unknown release target '$trimmed'. Allowed: all, python, node, ruby, cli, crates, docker, homebrew." >&2
+                exit 1
+                ;;
+            esac
+          done
+
+          if [[ "$release_homebrew" == "true" ]]; then
+            release_cli=true
+          fi
+
+          if [[ "$processed_any" == "false" ]]; then
+            set_all_targets
+            requested_targets=("all")
+          fi
+
+          enabled_targets=()
+          if [[ "$release_python" == "true" ]]; then enabled_targets+=("python"); fi
+          if [[ "$release_node" == "true" ]]; then enabled_targets+=("node"); fi
+          if [[ "$release_ruby" == "true" ]]; then enabled_targets+=("ruby"); fi
+          if [[ "$release_cli" == "true" ]]; then enabled_targets+=("cli"); fi
+          if [[ "$release_crates" == "true" ]]; then enabled_targets+=("crates"); fi
+          if [[ "$release_docker" == "true" ]]; then enabled_targets+=("docker"); fi
+          if [[ "$release_homebrew" == "true" ]]; then enabled_targets+=("homebrew"); fi
+
+          if [[ ${#enabled_targets[@]} -eq 7 ]]; then
+            release_targets_summary="all"
+          elif [[ ${#enabled_targets[@]} -eq 0 ]]; then
+            release_targets_summary="none"
+          else
+            release_targets_summary=$(IFS=','; echo "${enabled_targets[*]}")
+          fi
+
+          release_any="false"
+          if [[ ${#enabled_targets[@]} -gt 0 ]]; then
+            release_any="true"
+          fi
+
           cat <<JSON > release-metadata.json
           {
             "tag": "$tag",
@@ -114,7 +241,16 @@ jobs:
             "target_sha": "$target_sha",
             "matrix_ref": "$matrix_ref",
             "dry_run": ${dry_run:-false},
-            "is_tag": $is_tag
+            "is_tag": $is_tag,
+            "release_targets": "$release_targets_summary",
+            "release_any": $release_any,
+            "release_python": $release_python,
+            "release_node": $release_node,
+            "release_ruby": $release_ruby,
+            "release_cli": $release_cli,
+            "release_crates": $release_crates,
+            "release_docker": $release_docker,
+            "release_homebrew": $release_homebrew
           }
           JSON
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -125,6 +261,15 @@ jobs:
           echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
           echo "matrix_ref=$matrix_ref" >> "$GITHUB_OUTPUT"
           echo "is_tag=$is_tag" >> "$GITHUB_OUTPUT"
+          echo "release_targets=$release_targets_summary" >> "$GITHUB_OUTPUT"
+          echo "release_any=$release_any" >> "$GITHUB_OUTPUT"
+          echo "release_python=$release_python" >> "$GITHUB_OUTPUT"
+          echo "release_node=$release_node" >> "$GITHUB_OUTPUT"
+          echo "release_ruby=$release_ruby" >> "$GITHUB_OUTPUT"
+          echo "release_cli=$release_cli" >> "$GITHUB_OUTPUT"
+          echo "release_crates=$release_crates" >> "$GITHUB_OUTPUT"
+          echo "release_docker=$release_docker" >> "$GITHUB_OUTPUT"
+          echo "release_homebrew=$release_homebrew" >> "$GITHUB_OUTPUT"
 
       - name: Upload release metadata
         uses: actions/upload-artifact@v5
@@ -896,52 +1041,59 @@ jobs:
           esac
 
       - name: Download Python wheels
+        if: ${{ needs.prepare.outputs.release_python == 'true' }}
         uses: actions/download-artifact@v6
         with:
           name: ${{ steps.python_artifact.outputs.name }}
           path: artifacts/python
 
       - name: Download Node bindings
+        if: ${{ needs.prepare.outputs.release_node == 'true' }}
         uses: actions/download-artifact@v6
         with:
           name: ${{ steps.node_artifact.outputs.name }}
           path: artifacts/node
 
       - name: Download Ruby gem
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && needs.prepare.outputs.release_ruby == 'true'
         uses: actions/download-artifact@v6
         with:
           name: ${{ steps.ruby_artifact.outputs.name }}
           path: artifacts/ruby
 
       - name: Download CLI artifact
+        if: ${{ needs.prepare.outputs.release_cli == 'true' }}
         uses: actions/download-artifact@v6
         with:
           name: ${{ steps.cli_artifact.outputs.name }}
           path: artifacts/cli
 
       - name: Smoke test Python wheel
+        if: ${{ needs.prepare.outputs.release_python == 'true' }}
         uses: ./.github/actions/smoke-python
         with:
           wheel-path: artifacts/python
 
       - name: Smoke test Node.js package
+        if: ${{ needs.prepare.outputs.release_node == 'true' }}
         uses: ./.github/actions/smoke-node
         with:
-          package-tarball: ""
+          package-tarball: artifacts/node/${{ steps.node_artifact.outputs.name }}.tar.gz
 
       - name: Smoke test Ruby gem
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && needs.prepare.outputs.release_ruby == 'true'
         uses: ./.github/actions/smoke-ruby
         with:
           gem-path: artifacts/ruby
 
       - name: Smoke test CLI binary
+        if: ${{ needs.prepare.outputs.release_cli == 'true' }}
         uses: ./.github/actions/smoke-cli
         with:
           cli-artifacts-dir: artifacts/cli
 
       - name: Smoke test Rust crate
+        if: ${{ needs.prepare.outputs.release_crates == 'true' }}
         uses: ./.github/actions/smoke-rust
 
   publish-docker:
@@ -969,7 +1121,13 @@ jobs:
             tag_suffix: ""
             extra_tag: "latest"
     steps:
+      - name: Skip Docker release
+        if: ${{ needs.prepare.outputs.release_docker != 'true' }}
+        run: |
+          echo "Docker release disabled via workflow targets (${{ needs.prepare.outputs.release_targets }})."
+
       - name: Free up disk space
+        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         run: |
           echo "Initial disk usage:"
           df -h /
@@ -983,6 +1141,7 @@ jobs:
           df -h /
 
       - name: Checkout
+        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         uses: actions/checkout@v5
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
@@ -990,16 +1149,19 @@ jobs:
           submodules: recursive
 
       - name: Ensure target commit
-        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
       - name: Set up QEMU
+        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
+        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         uses: docker/setup-buildx-action@v3
 
       - name: Build AMD64 test image
+        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         run: |
           docker build \
             -f ${{ matrix.dockerfile }} \
@@ -1008,6 +1170,7 @@ jobs:
             .
 
       - name: Run Docker feature tests
+        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         run: |
           ./scripts/test_docker.sh \
             --skip-build \
@@ -1016,14 +1179,14 @@ jobs:
             --verbose
 
       - name: Log in to Docker Hub
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Docker metadata
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' }}
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
@@ -1033,7 +1196,7 @@ jobs:
             type=raw,value=${{ matrix.extra_tag }}
 
       - name: Build and push multi-arch image
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -1046,12 +1209,12 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Docker dry-run summary
-        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run == 'true' }}
         run: |
           echo "Dry run requested; Docker image ${{ matrix.image }}:${{ needs.prepare.outputs.version }}${{ matrix.tag_suffix }} tested but not pushed." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Clean up local Docker images
-        if: always()
+        if: ${{ always() && needs.prepare.outputs.release_docker == 'true' }}
         run: docker rmi kreuzberg-publish:${{ matrix.variant }}-test || true
 
   create-release:
@@ -1077,6 +1240,7 @@ jobs:
           ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Download CLI artifacts
+        if: ${{ needs.prepare.outputs.release_cli == 'true' }}
         uses: actions/download-artifact@v6
         with:
           pattern: cli-*
@@ -1093,7 +1257,7 @@ jobs:
             --generate-notes
 
       - name: Upload CLI binaries to release
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        if: ${{ needs.prepare.outputs.release_cli == 'true' && needs.prepare.outputs.dry_run != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -1108,7 +1272,7 @@ jobs:
           done
 
       - name: Release dry-run summary
-        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        if: ${{ needs.prepare.outputs.release_cli == 'true' && needs.prepare.outputs.dry_run == 'true' }}
         run: |
           echo "Dry run requested. Release artifacts ready for upload:" >> "$GITHUB_STEP_SUMMARY"
           find dist/cli -type f -maxdepth 1 -print >> "$GITHUB_STEP_SUMMARY"
@@ -1116,7 +1280,7 @@ jobs:
   publish-crates:
     name: Publish crates.io packages
     needs: [prepare, create-release]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_crates == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -1188,7 +1352,7 @@ jobs:
   publish-pypi:
     name: Publish Python packages to PyPI
     needs: [prepare, create-release]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_python == 'true' }}
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -1225,7 +1389,7 @@ jobs:
   publish-rubygems:
     name: Publish Ruby gems
     needs: [prepare, create-release]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_ruby == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -1267,7 +1431,7 @@ jobs:
   publish-node:
     name: Publish Node packages
     needs: [prepare, create-release]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_node == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -1305,10 +1469,26 @@ jobs:
 
       - name: Prepare artifact directory
         run: |
+          set -euo pipefail
           rm -rf crates/kreuzberg-node/npm
-          mkdir -p crates/kreuzberg-node
+          mkdir -p crates/kreuzberg-node/npm
+          shopt -s nullglob
           for pkg in node-artifacts/*.tar.gz; do
-            tar -xzf "$pkg" -C crates/kreuzberg-node
+            echo "Unpacking $pkg"
+            tmpdir=$(mktemp -d)
+            tar -xzf "$pkg" -C "$tmpdir"
+            if [ ! -d "$tmpdir/npm" ]; then
+              echo "::warning::npm directory missing inside $pkg"
+              rm -rf "$tmpdir"
+              continue
+            fi
+            while IFS= read -r -d '' dir; do
+              name=$(basename "$dir")
+              dest="crates/kreuzberg-node/npm/$name"
+              rm -rf "$dest"
+              cp -R "$dir" "$dest"
+            done < <(find "$tmpdir/npm" -mindepth 1 -maxdepth 1 -type d -print0)
+            rm -rf "$tmpdir"
           done
           if [ -d typescript-defs ]; then
             cp typescript-defs/index.js typescript-defs/index.d.ts crates/kreuzberg-node/ || true
@@ -1356,7 +1536,7 @@ jobs:
   publish-homebrew:
     name: Update Homebrew formula
     needs: [prepare, create-release]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_homebrew == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Extract release info
