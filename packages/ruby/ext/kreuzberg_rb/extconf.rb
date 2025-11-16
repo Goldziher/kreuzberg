@@ -7,15 +7,21 @@ require 'rbconfig'
 if /mswin|mingw/.match?(RbConfig::CONFIG['host_os'])
   devkit = ENV.fetch('RI_DEVKIT', nil)
   prefix = ENV['MSYSTEM_PREFIX'] || '/ucrt64'
+  compat_include = File.expand_path('native/include/msvc_compat', __dir__).tr('\\', '/')
+
+  extra_args = []
+  extra_args << "-I#{compat_include}"
 
   if devkit
     sysroot = "#{devkit}#{prefix}".tr('\\\\', '/')
-    extra_args = [
+    extra_args.concat([
       '--target=x86_64-pc-windows-gnu',
       "--sysroot=#{sysroot}"
-    ]
+    ])
+  end
 
-    existing = ENV['BINDGEN_EXTRA_CLANG_ARGS'].to_s.split(/\s+/)
+  unless extra_args.empty?
+    existing = ENV['BINDGEN_EXTRA_CLANG_ARGS'].to_s.split(/\s+/).reject(&:empty?)
     ENV['BINDGEN_EXTRA_CLANG_ARGS'] = (existing + extra_args).uniq.join(' ')
   end
 end

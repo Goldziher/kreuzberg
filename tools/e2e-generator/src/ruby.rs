@@ -8,7 +8,7 @@ use std::fs;
 
 const RUBY_HELPERS_TEMPLATE: &str = r#"# frozen_string_literal: true
 
-# rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/ParameterLists, Style/Documentation, Style/IfUnlessModifier, Layout/LineLength
+# rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/ParameterLists, Style/Documentation, Style/IfUnlessModifier, Layout/LineLength, Layout/EmptyLineAfterGuardClause
 
 require 'json'
 require 'pathname'

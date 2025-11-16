@@ -9,6 +9,7 @@ use kreuzberg::plugins::registry::get_validator_registry;
 use kreuzberg::plugins::{Plugin, Validator};
 use kreuzberg::types::ExtractionResult;
 use kreuzberg::{KreuzbergError, Result, extract_file_sync};
+use serial_test::serial;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
@@ -234,6 +235,7 @@ impl Validator for TrackingValidator {
 }
 
 #[test]
+#[serial]
 fn test_register_custom_validator() {
     let registry = get_validator_registry();
 
@@ -272,6 +274,7 @@ fn test_register_custom_validator() {
 }
 
 #[test]
+#[serial]
 fn test_validator_called_during_extraction() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_validator_registry();
@@ -310,6 +313,7 @@ fn test_validator_called_during_extraction() {
 }
 
 #[test]
+#[serial]
 fn test_validator_can_reject_invalid_input() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_validator_registry();
@@ -349,6 +353,7 @@ fn test_validator_can_reject_invalid_input() {
 }
 
 #[test]
+#[serial]
 fn test_validator_can_pass_valid_input() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_validator_registry();
@@ -381,6 +386,7 @@ fn test_validator_can_pass_valid_input() {
 }
 
 #[test]
+#[serial]
 fn test_validator_receives_correct_parameters() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_validator_registry();
@@ -415,6 +421,7 @@ fn test_validator_receives_correct_parameters() {
 }
 
 #[test]
+#[serial]
 fn test_validator_rejects_wrong_mime_type() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_validator_registry();
@@ -454,6 +461,7 @@ fn test_validator_rejects_wrong_mime_type() {
 }
 
 #[test]
+#[serial]
 fn test_unregister_validator() {
     let registry = get_validator_registry();
 
@@ -499,6 +507,7 @@ fn test_unregister_validator() {
 }
 
 #[test]
+#[serial]
 fn test_clear_all_validators() {
     let registry = get_validator_registry();
 
@@ -541,6 +550,7 @@ fn test_clear_all_validators() {
 }
 
 #[test]
+#[serial]
 fn test_validator_invalid_name() {
     let registry = get_validator_registry();
 
@@ -569,6 +579,7 @@ fn test_validator_invalid_name() {
 }
 
 #[test]
+#[serial]
 fn test_validator_initialization_lifecycle() {
     let registry = get_validator_registry();
 
@@ -609,6 +620,7 @@ fn test_validator_initialization_lifecycle() {
 }
 
 #[test]
+#[serial]
 fn test_multiple_validators_execution() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_validator_registry();
@@ -648,6 +660,7 @@ fn test_multiple_validators_execution() {
 }
 
 #[test]
+#[serial]
 fn test_validator_priority_execution_order() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_validator_registry();
@@ -692,6 +705,7 @@ fn test_validator_priority_execution_order() {
 }
 
 #[test]
+#[serial]
 fn test_validator_always_fails() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_validator_registry();
@@ -729,6 +743,7 @@ fn test_validator_always_fails() {
 }
 
 #[test]
+#[serial]
 fn test_validator_registration_order_preserved_for_same_priority() {
     let test_file = "../../test_documents/text/fake_text.txt";
     let registry = get_validator_registry();
