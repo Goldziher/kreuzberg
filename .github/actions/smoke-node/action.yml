@@ -35,18 +35,18 @@ runs:
         else
           # Install directly from the local workspace package
           node <<'NODE'
-const fs = require('fs');
-const path = require('path');
-const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-pkg.dependencies = pkg.dependencies || {};
-const workspacePath = process.env.KREUZBERG_NODE_PKG || '';
-if (!workspacePath) {
-  console.error('Missing KREUZBERG_NODE_PKG env var');
-  process.exit(1);
-}
-const normalized = workspacePath.replace(/\\/g, '/');
-pkg.dependencies['kreuzberg-node'] = `file:${normalized}`;
-fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            const fs = require('fs');
+            const path = require('path');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.dependencies = pkg.dependencies || {};
+            const workspacePath = process.env.KREUZBERG_NODE_PKG || '';
+            if (!workspacePath) {
+              console.error('Missing KREUZBERG_NODE_PKG env var');
+              process.exit(1);
+            }
+            const normalized = workspacePath.replace(/\\/g, '/');
+            pkg.dependencies['kreuzberg-node'] = `file:${normalized}`;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
 NODE
           rm -f pnpm-lock.yaml
           pnpm install --no-frozen-lockfile
