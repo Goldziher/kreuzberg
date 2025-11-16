@@ -851,7 +851,7 @@ fn test_validator_remove_and_reregister() {
 
 #[test]
 fn test_multiple_registries_independence() {
-    let ocr_registry = OcrBackendRegistry::new();
+    let ocr_registry = OcrBackendRegistry::new_empty();
     let mut extractor_registry = DocumentExtractorRegistry::new();
     let mut processor_registry = PostProcessorRegistry::new();
     let mut validator_registry = ValidatorRegistry::new();
@@ -884,7 +884,7 @@ fn test_multiple_registries_independence() {
 
 #[test]
 fn test_shutdown_all_registries() {
-    let mut ocr_registry = OcrBackendRegistry::new();
+    let mut ocr_registry = OcrBackendRegistry::new_empty();
     let mut extractor_registry = DocumentExtractorRegistry::new();
     let mut processor_registry = PostProcessorRegistry::new();
     let mut validator_registry = ValidatorRegistry::new();
