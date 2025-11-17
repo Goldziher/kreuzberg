@@ -1054,7 +1054,7 @@ pub struct JsChunkMetadata {
 pub struct JsChunk {
     pub content: String,
     #[napi(ts_type = "number[] | undefined")]
-    pub embedding: Option<Vec<f32>>,
+    pub embedding: Option<Vec<f64>>,
     pub metadata: JsChunkMetadata,
 }
 
@@ -1158,9 +1158,13 @@ impl TryFrom<RustExtractionResult> for JsExtractionResult {
                         total_chunks: usize_to_u32(chunk.metadata.total_chunks, "chunks[].metadata.total_chunks")?,
                     };
 
+                    let embedding = chunk
+                        .embedding
+                        .map(|values| values.into_iter().map(f64::from).collect());
+
                     js_chunks.push(JsChunk {
                         content: chunk.content,
-                        embedding: chunk.embedding,
+                        embedding,
                         metadata,
                     });
                 }
@@ -1330,6 +1334,48 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
             None
         };
 
+        let chunks = if let Some(chunks) = val.chunks {
+            let mut rust_chunks = Vec::with_capacity(chunks.len());
+            for chunk in chunks {
+                let embedding = if let Some(values) = chunk.embedding {
+                    let mut normalized = Vec::with_capacity(values.len());
+                    for (idx, value) in values.into_iter().enumerate() {
+                        if !value.is_finite() {
+                            return Err(Error::new(
+                                Status::InvalidArg,
+                                format!("chunks[].embedding[{}] must be a finite number", idx),
+                            ));
+                        }
+                        if value > f32::MAX as f64 || value < -(f32::MAX as f64) {
+                            return Err(Error::new(
+                                Status::InvalidArg,
+                                format!("chunks[].embedding[{}] value {} exceeds f32 range", idx, value),
+                            ));
+                        }
+                        normalized.push(value as f32);
+                    }
+                    Some(normalized)
+                } else {
+                    None
+                };
+
+                rust_chunks.push(RustChunk {
+                    content: chunk.content,
+                    embedding,
+                    metadata: RustChunkMetadata {
+                        char_start: chunk.metadata.char_start as usize,
+                        char_end: chunk.metadata.char_end as usize,
+                        token_count: chunk.metadata.token_count.map(|v| v as usize),
+                        chunk_index: chunk.metadata.chunk_index as usize,
+                        total_chunks: chunk.metadata.total_chunks as usize,
+                    },
+                });
+            }
+            Some(rust_chunks)
+        } else {
+            None
+        };
+
         Ok(RustExtractionResult {
             content: val.content,
             mime_type: val.mime_type,
@@ -1344,22 +1390,7 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                 })
                 .collect(),
             detected_languages: val.detected_languages,
-            chunks: val.chunks.map(|chunks| {
-                chunks
-                    .into_iter()
-                    .map(|chunk| RustChunk {
-                        content: chunk.content,
-                        embedding: chunk.embedding,
-                        metadata: RustChunkMetadata {
-                            char_start: chunk.metadata.char_start as usize,
-                            char_end: chunk.metadata.char_end as usize,
-                            token_count: chunk.metadata.token_count.map(|v| v as usize),
-                            chunk_index: chunk.metadata.chunk_index as usize,
-                            total_chunks: chunk.metadata.total_chunks as usize,
-                        },
-                    })
-                    .collect()
-            }),
+            chunks,
             images,
         })
     }
