@@ -1,11 +1,22 @@
 version: "3"
 env:
   RUBY:
-    sh: rbenv which ruby
+    sh: |
+      if command -v rbenv >/dev/null 2>&1; then
+        rbenv which ruby
+      else
+        command -v ruby
+      fi
 vars:
   RUST_LOG: info
   V3_TAG: v3.20.2
-  BUNDLE: rbenv exec bundle
+  BUNDLE:
+    sh: |
+      if command -v rbenv >/dev/null 2>&1; then
+        echo "rbenv exec bundle"
+      else
+        echo "bundle"
+      fi
 tasks:
   sync-versions:
     desc: Sync version from Cargo.toml to all package manifests
@@ -102,9 +113,8 @@ tasks:
       - "{{.BUNDLE}} install"
   ruby:build:
     desc: Build Ruby extension
-    dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rake compile"
+      - bash scripts/build_ruby_extension.sh packages/ruby
   ruby:update:
     desc: Update Ruby dependencies
     dir: packages/ruby
@@ -418,6 +428,7 @@ tasks:
     cmds:
       - task: rust:update
       - task: typescript:update
+      - corepack up
       - task: ruby:update
       - task: python:update
       - task: java:update

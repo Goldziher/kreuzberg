@@ -24,6 +24,7 @@ Kreuzberg v4 represents a complete architectural rewrite, transforming from a Py
 - **Python**: PyO3 bindings (`crates/kreuzberg-py`) with native Python extensions
 - **TypeScript/Node.js**: NAPI-RS bindings (`crates/kreuzberg-node`) for native Node modules
 - **Ruby**: Magnus bindings (`packages/ruby/ext/kreuzberg_rb/native`) with native Ruby extensions
+- **Java**: Panama/FFM bindings (`packages/java`, `crates/kreuzberg-ffi`) delivering native access for JVM applications
 - **Rust**: Direct usage of `kreuzberg` crate in Rust applications
 - **CLI**: Rust-based CLI (`crates/kreuzberg-cli`) with improved performance
 

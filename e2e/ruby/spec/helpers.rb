@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/ParameterLists, Style/Documentation, Style/IfUnlessModifier, Layout/LineLength
+# rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/ParameterLists, Style/Documentation, Style/IfUnlessModifier, Layout/LineLength, Layout/EmptyLineAfterGuardClause
 
 require 'json'
 require 'pathname'
@@ -85,7 +85,6 @@ module E2ERuby
       if (reason = skip_reason_for(e, fixture_id, requirements, notes))
         raise RSpec::Core::Pending::SkipDeclaredInExample, reason
       end
-
       raise
     end
 

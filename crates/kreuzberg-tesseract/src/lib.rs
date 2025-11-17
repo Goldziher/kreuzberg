@@ -6,21 +6,21 @@
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 #![allow(clippy::cmp_null)]
 
-//! # tesseract-rs
+//! # kreuzberg-tesseract
 //!
-//! `tesseract-rs` provides safe Rust bindings for Tesseract OCR with built-in compilation
+//! `kreuzberg-tesseract` provides safe Rust bindings for Tesseract OCR with built-in compilation
 //! of Tesseract and Leptonica libraries. This crate aims to make OCR functionality
 //! easily accessible in Rust projects while handling the complexity of interfacing
 //! with the underlying C++ libraries.
 //!
 //! ## Usage
 //!
-//! Here's a basic example of how to use `tesseract-rs`:
+//! Here's a basic example of how to use `kreuzberg-tesseract`:
 //!
 //! ```rust
 //! use std::path::PathBuf;
 //! use std::error::Error;
-//! use tesseract_rs::TesseractAPI;
+//! use kreuzberg_tesseract::TesseractAPI;
 //!
 //! fn get_default_tessdata_dir() -> PathBuf {
 //!     if cfg!(target_os = "macos") {
