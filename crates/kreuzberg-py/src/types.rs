@@ -178,12 +178,10 @@ impl ExtractionResult {
                     ))
                 })?;
                 let chunk_metadata_py = json_value_to_py(py, &chunk_metadata_json)?;
-                let chunk_metadata_dict = chunk_metadata_py.downcast::<PyDict>()?.clone();
+                let chunk_metadata_dict: Bound<'_, PyDict> = chunk_metadata_py.cast::<PyDict>()?.clone();
 
-                if chunk.metadata.token_count.is_none() {
-                    if !chunk_metadata_dict.contains("token_count")? {
-                        chunk_metadata_dict.set_item("token_count", py.None())?;
-                    }
+                if chunk.metadata.token_count.is_none() && !chunk_metadata_dict.contains("token_count")? {
+                    chunk_metadata_dict.set_item("token_count", py.None())?;
                 }
 
                 chunk_dict.set_item("metadata", chunk_metadata_dict)?;

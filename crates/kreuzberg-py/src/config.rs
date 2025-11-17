@@ -26,6 +26,7 @@ use pyo3::types::PyDict;
 ///     ...     use_cache=True
 ///     ... )
 #[pyclass(name = "ExtractionConfig", module = "kreuzberg")]
+#[derive(Default)]
 pub struct ExtractionConfig {
     inner: kreuzberg::ExtractionConfig,
     html_options_dict: Option<Py<PyDict>>,
@@ -37,15 +38,6 @@ impl Clone for ExtractionConfig {
         Self {
             inner: self.inner.clone(),
             html_options_dict,
-        }
-    }
-}
-
-impl Default for ExtractionConfig {
-    fn default() -> Self {
-        Self {
-            inner: kreuzberg::ExtractionConfig::default(),
-            html_options_dict: None,
         }
     }
 }
@@ -498,7 +490,7 @@ fn parse_html_options(dict: &Bound<'_, PyDict>) -> PyResult<ConversionOptions> {
     }
 
     if let Some(value) = dict.get_item("preprocessing")? {
-        let pre_dict: Bound<'_, PyDict> = value.downcast::<PyDict>()?.clone();
+        let pre_dict: Bound<'_, PyDict> = value.cast::<PyDict>()?.clone();
         let mut preprocessing = opts.preprocessing.clone();
 
         if let Some(v) = pre_dict.get_item("enabled")? {

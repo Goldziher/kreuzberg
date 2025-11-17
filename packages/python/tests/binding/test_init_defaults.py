@@ -206,7 +206,7 @@ def test_extraction_config_html_options_roundtrip() -> None:
 
 
 def test_extraction_config_html_options_invalid_heading() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid heading_style"):
         ExtractionConfig(html_options={"heading_style": "invalid"})
 
 
