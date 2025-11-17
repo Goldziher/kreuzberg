@@ -373,15 +373,15 @@ jobs:
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
+      - name: Build and test
+        working-directory: packages/java
+        run: mvn clean verify
+
       - name: Verify Java E2E suite
         if: matrix.os == 'ubuntu-latest' && matrix.java-version == '23'
         uses: ./.github/actions/run-and-ensure-clean
         with:
           run: task e2e:java:verify
-
-      - name: Build and test
-        working-directory: packages/java
-        run: mvn clean verify
 
   rust-unit:
     name: Rust Unit Tests (${{ matrix.target }})

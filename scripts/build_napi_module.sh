@@ -16,4 +16,20 @@ if [[ "$USE_CROSS" == "true" ]]; then
   ARGS+=(--use-cross)
 fi
 pnpm --filter kreuzberg-node exec napi build "${ARGS[@]}"
+
+ARTIFACT_DIR="$ROOT/crates/kreuzberg-node/artifacts"
+if [[ ! -d "$ARTIFACT_DIR" ]]; then
+  echo "No NAPI artifacts directory found at $ARTIFACT_DIR" >&2
+  exit 1
+fi
+
+shopt -s nullglob
+NODE_OUTPUTS=("$ARTIFACT_DIR"/*.node)
+if [[ ${#NODE_OUTPUTS[@]} -eq 0 ]]; then
+  echo "No .node artifacts produced in $ARTIFACT_DIR" >&2
+  exit 1
+fi
+
+rm -f "$ROOT"/crates/kreuzberg-node/*.node
+cp "$ARTIFACT_DIR"/*.node "$ROOT"/crates/kreuzberg-node/
 popd >/dev/null

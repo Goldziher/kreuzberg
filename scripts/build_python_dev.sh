@@ -21,6 +21,26 @@ pushd "$PYTHON_DIR" >/dev/null
 uv build --wheel --out-dir "$WHEEL_DIR"
 LATEST_WHEEL="$(ls -t "$WHEEL_DIR"/*.whl | head -n1)"
 uv pip install --force-reinstall "$LATEST_WHEEL"
+
+INSTALLED_BINDINGS="$(python - <<'PY'
+import pathlib
+import importlib
+import kreuzberg
+for candidate in pathlib.Path(kreuzberg.__file__).parent.glob("_internal_bindings*"):
+    if candidate.is_file():
+        print(candidate)
+PY
+)"
+
+if [[ -z "$INSTALLED_BINDINGS" ]]; then
+  echo "Failed to locate installed kreuzberg bindings" >&2
+  exit 1
+fi
+
+while IFS= read -r binding; do
+  [[ -z "$binding" ]] && continue
+  cp "$binding" "$PYTHON_DIR/kreuzberg/"
+done <<< "$INSTALLED_BINDINGS"
 popd >/dev/null
 
 cargo build --release --package kreuzberg-cli --features all
