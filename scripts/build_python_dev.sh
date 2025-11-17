@@ -22,7 +22,7 @@ uv build --wheel --out-dir "$WHEEL_DIR"
 LATEST_WHEEL="$(ls -t "$WHEEL_DIR"/*.whl | head -n1)"
 uv pip install --force-reinstall "$LATEST_WHEEL"
 
-INSTALLED_BINDINGS="$(python - <<'PY'
+INSTALLED_BINDINGS="$(uv run python - <<'PY'
 import pathlib
 import importlib
 import kreuzberg
