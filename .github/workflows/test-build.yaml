@@ -185,8 +185,7 @@ jobs:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Build sdist
-        working-directory: packages/python
-        run: uv run maturin sdist --out ../../dist/
+        run: bash scripts/build_python_sdist.sh dist
 
       - name: Upload sdist artifact
         uses: actions/upload-artifact@v5
@@ -196,9 +195,7 @@ jobs:
           retention-days: 7
 
       - name: List built sdist
-        run: |
-          echo "📦 Built sdist:"
-          ls -lh dist/*.tar.gz
+        run: bash scripts/list_artifacts.sh dist "*.tar.gz" "sdist"
 
   node-bindings:
     name: Build Node bindings (${{ matrix.settings.target }})
@@ -262,17 +259,16 @@ jobs:
 
       - name: Build NAPI-RS bindings (with cross)
         if: matrix.settings.use_zigbuild
-        working-directory: crates/kreuzberg-node
-        run: |
-          pnpm install
-          pnpm run build --target ${{ matrix.settings.target }} --use-cross
+        env:
+          TARGET: ${{ matrix.settings.target }}
+          USE_CROSS: ${{ matrix.settings.use_zigbuild }}
+        run: bash scripts/build_napi_module.sh
 
       - name: Build NAPI-RS bindings (native)
         if: ${{ !matrix.settings.use_zigbuild }}
-        working-directory: crates/kreuzberg-node
-        run: |
-          pnpm install
-          pnpm run build --target ${{ matrix.settings.target }}
+        env:
+          TARGET: ${{ matrix.settings.target }}
+        run: bash scripts/build_napi_module.sh
 
       - name: Cleanup Rust cache before save
         if: always()
@@ -286,10 +282,7 @@ jobs:
           retention-days: 7
 
       - name: List built bindings
-        shell: bash
-        run: |
-          echo "📦 Built NAPI binding for ${{ matrix.settings.target }}:"
-          ls -lh crates/kreuzberg-node/*.node || echo "No .node files found"
+        run: bash scripts/list_artifacts.sh crates/kreuzberg-node "*.node" "NAPI bindings"
 
   ruby-gem:
     name: Build Ruby gem (${{ matrix.label }})
@@ -405,10 +398,7 @@ jobs:
 
       - name: Install Ruby dependencies (Unix)
         if: runner.os != 'Windows'
-        working-directory: packages/ruby
-        run: |
-          bundle config set --local path 'vendor/bundle'
-          bundle install --jobs 4 --retry 3
+        run: bash scripts/install_ruby_dependencies.sh packages/ruby
 
       - name: Install Ruby dependencies (Windows)
         if: runner.os == 'Windows'

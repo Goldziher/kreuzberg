@@ -155,8 +155,7 @@ runs:
           export ORT_SKIP_DOWNLOAD=1
           export ORT_PREFER_DYNAMIC_LINK=0
         CIBW_BEFORE_BUILD_WINDOWS: >
-          python -m pip install --upgrade pip maturin build &&
-          python scripts/prepare_wheel.py
+          python -m pip install --upgrade pip maturin build
 
         CIBW_ENVIRONMENT: MATURIN_BUILD_ARGS="--compatibility linux"
         CIBW_ENVIRONMENT_WINDOWS: MATURIN_BUILD_ARGS=""

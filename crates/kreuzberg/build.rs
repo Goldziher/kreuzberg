@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
@@ -89,8 +90,6 @@ fn main() {
 }
 
 fn get_latest_version(repo: &str) -> String {
-    use std::process::Command;
-
     let api_url = format!("https://api.github.com/repos/{}/releases/latest", repo);
 
     let output = Command::new("curl").args(["-s", &api_url]).output();
@@ -176,8 +175,6 @@ fn get_pdfium_url_and_lib(target: &str) -> (String, String) {
 }
 
 fn download_and_extract_pdfium(url: &str, dest_dir: &Path) {
-    use std::process::Command;
-
     fs::create_dir_all(dest_dir).expect("Failed to create pdfium directory");
 
     let archive_path = dest_dir.join("pdfium.tar.gz");
@@ -300,6 +297,7 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
     // Fix install_name on macOS to use @rpath
     if target.contains("darwin") {
         fix_macos_install_name(&src_lib, &runtime_lib_name);
+        codesign_if_needed(target, &src_lib);
     }
 
     let crate_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -309,33 +307,48 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
     if let Ok(profile) = env::var("PROFILE") {
         let target_dir = workspace_root.join("target").join(profile);
         if target_dir.exists() {
-            copy_lib_if_needed(&src_lib, &target_dir.join(&runtime_lib_name), "CLI target directory");
+            copy_lib_if_needed(
+                &src_lib,
+                &target_dir.join(&runtime_lib_name),
+                "CLI target directory",
+                target,
+            );
         }
     }
 
     let python_dest_dir = workspace_root.join("packages").join("python").join("kreuzberg");
     if python_dest_dir.exists() {
-        copy_lib_if_needed(&src_lib, &python_dest_dir.join(&runtime_lib_name), "Python package");
+        copy_lib_if_needed(
+            &src_lib,
+            &python_dest_dir.join(&runtime_lib_name),
+            "Python package",
+            target,
+        );
     } else {
         tracing::debug!("Python package directory not found, skipping Python library copy");
     }
 
     let node_dest_dir = workspace_root.join("crates").join("kreuzberg-node");
     if node_dest_dir.exists() {
-        copy_lib_if_needed(&src_lib, &node_dest_dir.join(&runtime_lib_name), "Node.js package");
+        copy_lib_if_needed(
+            &src_lib,
+            &node_dest_dir.join(&runtime_lib_name),
+            "Node.js package",
+            target,
+        );
     } else {
         tracing::debug!("Node.js package directory not found, skipping Node library copy");
     }
 
     let ruby_dest_dir = workspace_root.join("packages").join("ruby").join("lib");
     if ruby_dest_dir.exists() {
-        copy_lib_if_needed(&src_lib, &ruby_dest_dir.join(&runtime_lib_name), "Ruby package");
+        copy_lib_if_needed(&src_lib, &ruby_dest_dir.join(&runtime_lib_name), "Ruby package", target);
     } else {
         tracing::debug!("Ruby package directory not found, skipping Ruby library copy");
     }
 }
 
-fn copy_lib_if_needed(src: &Path, dest: &Path, package_name: &str) {
+fn copy_lib_if_needed(src: &Path, dest: &Path, package_name: &str, target: &str) {
     use std::fs;
 
     let should_copy = if dest.exists() {
@@ -351,8 +364,42 @@ fn copy_lib_if_needed(src: &Path, dest: &Path, package_name: &str) {
 
     if should_copy {
         match fs::copy(src, dest) {
-            Ok(_) => tracing::debug!("Copied {} to {} ({})", src.display(), dest.display(), package_name),
+            Ok(_) => {
+                tracing::debug!("Copied {} to {} ({})", src.display(), dest.display(), package_name);
+                codesign_if_needed(target, dest);
+            }
             Err(e) => tracing::debug!("Failed to copy library to {}: {}", package_name, e),
+        }
+    }
+}
+
+fn codesign_if_needed(target: &str, binary: &Path) {
+    if !target.contains("apple-darwin") || !binary.exists() {
+        return;
+    }
+
+    let identity = env::var("KREUZBERG_CODESIGN_IDENTITY").unwrap_or_else(|_| "-".to_string());
+    let status = Command::new("codesign")
+        .arg("--force")
+        .arg("--timestamp=none")
+        .arg("--sign")
+        .arg(identity)
+        .arg(binary)
+        .status();
+
+    match status {
+        Ok(result) if result.success() => {
+            tracing::debug!("Codesigned {}", binary.display());
+        }
+        Ok(result) => {
+            tracing::debug!(
+                "codesign exited with status {} while signing {}",
+                result,
+                binary.display()
+            );
+        }
+        Err(err) => {
+            tracing::debug!("Failed to run codesign for {}: {}", binary.display(), err);
         }
     }
 }

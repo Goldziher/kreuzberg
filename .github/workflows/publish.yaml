@@ -404,6 +404,17 @@ jobs:
           working-directory: packages/python
           sccache: ${{ steps.tesseract-cache.outputs.cache-enabled }}
 
+      - name: Install wheel CLI (macOS)
+        if: matrix.label == 'macos-universal'
+        run: uv pip install wheel
+
+      - name: Codesign macOS wheel binaries
+        if: matrix.label == 'macos-universal'
+        shell: bash
+        env:
+          MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+        run: uv run python scripts/sign_macos_wheels.py --wheel-dir target/wheels
+
       - name: List built wheels
         shell: bash
         run: ls -lh target/wheels
@@ -442,8 +453,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build sdist
-        working-directory: packages/python
-        run: uv run maturin sdist --out ../../dist/
+        run: bash scripts/build_python_sdist.sh dist
 
       - name: Upload sdist
         uses: actions/upload-artifact@v5
@@ -566,17 +576,7 @@ jobs:
           TARGET: ${{ matrix.settings.target }}
           USE_CROSS: ${{ matrix.settings.use_cross }}
           USE_NAPI_CROSS: ${{ matrix.settings.use_napi_cross }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          args=(--platform --release --target "$TARGET" --output-dir ./artifacts)
-          if [ "${USE_NAPI_CROSS}" = "true" ]; then
-            args+=(--use-napi-cross)
-          fi
-          if [ "${USE_CROSS}" = "true" ]; then
-            args+=(--use-cross)
-          fi
-          pnpm --filter kreuzberg-node exec napi build "${args[@]}"
+        run: bash scripts/build_napi_module.sh
 
       - name: Build native module (Windows)
         if: runner.os == 'Windows'
@@ -595,10 +595,7 @@ jobs:
         if: runner.os != 'Windows'
         env:
           TARGET: ${{ matrix.settings.target }}
-        run: |
-          pnpm --filter kreuzberg-node exec napi artifacts --output-dir ./artifacts
-          test -d crates/kreuzberg-node/npm || { echo "npm artifact directory missing"; exit 1; }
-          tar -czf node-bindings-$TARGET.tar.gz -C crates/kreuzberg-node npm
+        run: bash scripts/package_node_artifacts.sh
 
       - name: Package artifacts (Windows)
         if: runner.os == 'Windows'
@@ -686,25 +683,11 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Build CLI
-        shell: bash
-        run: |
-          set -euo pipefail
-          cargo build --release --target ${{ matrix.target }} --package kreuzberg-cli
+        run: bash scripts/build_cli_binary.sh ${{ matrix.target }}
 
       - name: Package CLI artifact
         if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          target="${{ matrix.target }}"
-          stage="kreuzberg-cli-${target}"
-          rm -rf "$stage"
-          mkdir -p "$stage"
-          cp "target/${target}/release/kreuzberg" "$stage/"
-          cp LICENSE "$stage/"
-          cp README.md "$stage/"
-          tar -czf "${stage}.tar.gz" "$stage"
-          rm -rf "$stage"
+        run: bash scripts/package_cli_artifact.sh ${{ matrix.target }}
 
       - name: Package CLI artifact (Windows)
         if: runner.os == 'Windows'
@@ -840,8 +823,10 @@ jobs:
 
       - name: Install Ruby dependencies (Unix)
         if: runner.os != 'Windows'
-        run: bundle _2.5.12_ install --jobs 4 --retry 3
-        working-directory: packages/ruby
+        env:
+          BUNDLE_CMD: "bundle _2.5.12_"
+          SKIP_BUNDLE_PATH: "true"
+        run: bash scripts/install_ruby_dependencies.sh packages/ruby
 
       - name: Install Ruby dependencies (Windows)
         if: runner.os == 'Windows'
