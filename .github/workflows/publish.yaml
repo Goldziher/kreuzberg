@@ -980,6 +980,11 @@ jobs:
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
+      - name: Download Pdfium runtime
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
       - name: Determine Python wheel artifact name
         id: python_artifact
         run: |

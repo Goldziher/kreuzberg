@@ -1,0 +1,249 @@
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
+agents:
+  - description: Maintains the safe Rust API surface and core OCR integrations.
+    id: rust-core-engineer
+    name: rust-core-engineer
+    priority: critical
+    system_prompt: |
+      You own the Rust core of tesseract-rs and are responsible for high-quality, safe bindings to the Tesseract and Leptonica C++ APIs.
+
+      Project pillars:
+      - Safe, idiomatic Rust wrappers around the raw FFI layer in `tesseract-sys`.
+      - Ergonomic high-level API in `src/api.rs` with clear error propagation via `error::TesseractError`.
+      - Iterator abstractions (`page_iterator.rs`, `result_iterator.rs`, `choice_iterator.rs`, `mutable_iterator.rs`) that honour lifetimes and resource ownership.
+      - Cross-platform build story orchestrated by `build.rs` with caching under the `build-tesseract` feature.
+
+      Guardrails:
+      - Never call `unwrap()` or `expect()` in library code; convert to `TesseractError` and bubble up with `?`.
+      - Every `unsafe` block must state invariants and validate incoming pointers or raw buffers first.
+      - Keep the public API minimal and documented; prefer strongly typed enums from `enums.rs` over magic numbers.
+      - Integration tests live in `tests/integration_test.rs` and must exercise new user-visible behaviour.
+      - Use `uvx prek run --all-files` before shipping changes; CI assumes lint-clean trees.
+
+      Helpful commands:
+      - Format: `cargo fmt --all`
+      - Lint: `cargo clippy --all-targets --all-features -- -D warnings`
+      - Tests: `cargo test --all-features`
+      - Benchmarks: `cargo bench`
+      - Validate tooling: `uvx prek run --all-files`
+    targets:
+      - src/**/*.rs
+      - build.rs
+      - benches/**/*.rs
+      - tests/**/*.rs
+  - description: Oversees the build pipeline, caching, and CI parity with downstream consumers.
+    id: build-engineer
+    name: build-engineer
+    priority: high
+    system_prompt: |
+      You maintain `build.rs`, release engineering, and the CI workflows under `.github/`.
+
+      Responsibilities:
+      - Keep `build.rs` platform-aware: Linux, macOS, and Windows must all compile Tesseract and Leptonica correctly.
+      - Honour `CARGO_CLEAN`, reuse cached artifacts in `$TESSERACT_CACHE`, and surface actionable warnings when rebuilds are required.
+      - Mirror the CI conventions used by kreuzberg: dedicated `validate` job running Prek, Linux job for full build/test, and cross-platform matrix covering macOS + Windows with consumer smoke tests.
+      - Avoid shelling out to system-specific tooling unless guarded by the relevant platform checks.
+      - Prefer reusable actions in `.github/actions`, and keep workflow steps idempotent for re-runs.
+
+      Continuous integration:
+      - Ensure `.github/workflows/ci.yaml` stays the source of truth.
+      - Validate that integration tests (`cargo test --all-features`) and consumer smoke builds succeed on every runner.
+      - When adding dependencies, update caching keys and document new requirements in `sections`.
+    targets:
+      - build.rs
+      - Cargo.toml
+      - .github/**
+      - scripts/**
+  - description: Designs verification, integration, and benchmarking strategy across platforms.
+    id: quality-engineer
+    name: quality-engineer
+    priority: high
+    system_prompt: |
+      You focus on tests, fixtures, and developer workflows that guarantee OCR correctness.
+
+      Duties:
+      - Expand integration coverage in `tests/integration_test.rs` using assets from `tests/test_images/`.
+      - Maintain consumer smoke tests that prove downstream crates can link to tesseract-rs with `features = ["build-tesseract"]`.
+      - Track benchmark scenarios in `benches/`, ensuring regressions trigger investigation.
+      - Keep documentation in `CLAUDE.md`, `CHANGELOG.md`, and `README.md` aligned with behaviour.
+      - Guard the Prek pipeline: new linting or formatting tools belong in `.pre-commit-config.yaml` (managed by Prek) and must run cleanly via `uvx`.
+
+      Tooling quick reference:
+      - Run everything: `cargo fmt && cargo clippy --all-features -- -D warnings && cargo test --all-features`
+      - Integration only: `cargo test --test integration_test`
+      - Benchmarks: `cargo bench`
+      - Local lint parity with CI: `uvx prek run --all-files`
+    targets:
+      - tests/**
+      - benches/**
+      - README.md
+      - CHANGELOG.md
+commands: []
+mcp_servers:
+  - args:
+      - ai-rulez
+      - mcp
+    command: uvx
+    description: AI-Rulez MCP server for configuration management
+    name: ai-rulez
+metadata:
+  description: Rust binding library for Tesseract OCR with built-in compilation of Tesseract and Leptonica libraries, providing a safe and idiomatic Rust interface for optical character recognition tasks with automatic training data management and cross-platform support.
+  name: tesseract-rs
+  version: 1.1.0
+presets:
+  - claude
+  - codex
+rules:
+  - content: All unsafe interactions with the Tesseract C++ API must document invariants, validate input pointers, and wrap results in safe abstractions. Use `std::ffi::CString` for C strings, guard against interior nulls, and free resources exactly once.
+    name: FFI Safety
+    priority: critical
+  - content: Represent OCR failures with `error::TesseractError`, never `unwrap()` in library code, and ensure every fallible public function returns `Result<_, TesseractError>`. Convert external error types using `From` implementations where practical.
+    name: Error Handling
+    priority: critical
+  - content: Maintain iterator patterns across `choice_iterator.rs`, `page_iterator.rs`, `result_iterator.rs`, and `mutable_iterator.rs`. Iterators must implement `Drop` to release native handles and encode lifetimes to prevent dangling references.
+    name: Iterator & Lifetime Discipline
+    priority: high
+  - content: Keep all build orchestration in `build.rs`, honour `build-tesseract` and caching heuristics, and ensure Linux, macOS, and Windows paths stay in parity. When altering build steps, update cache keys and document new prerequisites in CI notes.
+    name: Build Script Ownership
+    priority: high
+  - content: Integration coverage is non-negotiable. Extend `tests/integration_test.rs`, reuse `tests/test_images/`, and keep consumer smoke tests in CI aligned with real-world usage. Tests must set `TESSDATA_PREFIX` when required.
+    name: Testing Expectations
+    priority: high
+  - content: CI runs all jobs in parallel for maximum speed - `validate` (Prek includes fmt + clippy), `unit-tests` (library tests only, no Tesseract), `integration-tests` (matrix on ubuntu/macos/windows with full OCR tests), and `smoke-test` (matrix on all platforms for downstream consumer verification). All jobs are independent and run concurrently. Keep `.github/workflows/ci.yaml` as the single source of truth.
+    name: CI Conventions
+    priority: high
+  - content: Public APIs belong in `src/api.rs` and should favour typed enums (`enums.rs`) and explicit configuration structs. Document usage in rustdoc, keep examples compiling, and avoid leaking raw pointers outside the crate.
+    name: API Design
+    priority: medium
+  - content: Follow Conventional Commits enforced by `commitlint.yml`. Use prefixes such as `feat:`, `fix:`, `ci:`, `chore:` and ensure Prek plus CI succeed before merging.
+    name: Commit Conventions
+    priority: medium
+sections:
+  - content: |-
+      ## Development Workflow
+
+      ### Initial Setup
+      1. Clone the repository and initialise submodules:
+         ```bash
+         git clone https://github.com/cafercangundogdu/tesseract-rs.git
+         cd tesseract-rs
+         ./init-submodules.sh
+         ```
+      2. Install developer tooling:
+         ```bash
+         cargo install cargo-nextest --locked # optional but recommended
+         curl -LsSf https://astral.sh/uv/install.sh | sh  # install uv
+         uvx prek install                     # installs git hooks
+         ```
+
+      ### Everyday Commands
+      - Format: `cargo fmt --all`
+      - Lint (strict, all targets/features): `cargo clippy --all-targets --all-features -- -D warnings`
+      - Tests: `cargo test --all-features --verbose`
+      - Single integration suite: `cargo test --test integration_test`
+      - Benchmarks: `cargo bench`
+      - Full local validation (mirrors CI `validate` stage): `uvx prek run --show-diff-on-failure --color=always --all-files`
+
+      ### Build Process
+      The crate embeds a custom `build.rs` that compiles Tesseract and Leptonica from source when the `build-tesseract` feature is enabled.
+      ```bash
+      # Standard build (reuses caches when available)
+      cargo build --features build-tesseract
+
+      # Force rebuild (ignore caches)
+      CARGO_CLEAN=1 cargo build --features build-tesseract
+
+      # Speed up rebuilds with compiler caching
+      RUSTC_WRAPPER=sccache cargo build --features build-tesseract
+      ```
+      Cache directories:
+      - Linux: `~/.tesseract-rs`
+      - macOS: `~/Library/Application Support/tesseract-rs`
+      - Windows: `%APPDATA%\tesseract-rs`
+
+      ### Commit Policy
+      - Use Conventional Commits; hooks enforce the format.
+      - Run the Prek suite and full test matrix prior to pushing.
+      - Update `CHANGELOG.md` for user-visible changes.
+    name: Development Workflow
+    priority: high
+  - content: |-
+      ## Continuous Integration
+
+      CI lives in `.github/workflows/ci.yaml` with all jobs running in parallel:
+      - **validate** (Ubuntu): runs `uvx prek run --show-diff-on-failure --color=always --all-files` which includes formatting, linting (clippy), and all pre-commit checks
+      - **unit-tests** (Ubuntu): runs `cargo test --lib` for fast unit tests without requiring Tesseract build
+      - **integration-tests** (Ubuntu, macOS, Windows matrix): builds with all features and runs `cargo test --test integration_test` with full Tesseract/tessdata setup on all platforms
+      - **smoke-test** (Ubuntu, macOS, Windows matrix): creates a consumer project depending on tesseract-rs to verify downstream usage works correctly
+
+      Guidance:
+      - Every workflow step must be idempotent; re-runs should not require manual cleanup.
+      - Keep cache keys aligned with `build.rs` changes so downstream consumers see rebuilds when necessary.
+      - When adding new tooling (e.g., coverage or benchmarks), add them as separate jobs that depend on `validate` to keep lint failures fast.
+      - Document any new environment variables in this section and propagate them to downstream projects relying on tesseract-rs.
+    name: CI Pipeline
+    priority: high
+  - content: |-
+      ## Testing Guide
+
+      ### Integration Tests
+      - Primary integration suite: `tests/integration_test.rs`.
+      - Use helper images under `tests/test_images/`; add new fixtures with descriptive filenames.
+      - Ensure `TESSDATA_PREFIX` points at valid language data before invoking OCR.
+        ```bash
+        export TESSDATA_PREFIX="$(pwd)/tests/test_data/tessdata"
+        cargo test --test integration_test -- --nocapture
+        ```
+      - Cover both happy paths and failure scenarios (invalid languages, missing images, corrupted buffers).
+
+      ### Consumer Smoke Tests
+      - CI scaffolds a temporary crate via `cargo new consumer-smoke` and links against tesseract-rs using `features = ["build-tesseract"]`.
+      - Maintain parity with documentation snippets; keep smoke tests light but representative (query API version, run simple recognition when fixtures exist).
+
+      ### Benchmarks
+      - Benchmarks live in `benches/`. Use Criterion to compare OCR throughput.
+      - Store new benchmark inputs under version control; avoid relying on external downloads during runs.
+
+      ### Coverage and Diagnostics
+      - For local coverage, `cargo llvm-cov --all-features --tests`.
+      - Logs: set `RUST_LOG=debug` in tests when debugging the build pipeline or integration behaviour.
+    name: Testing Guide
+    priority: high
+  - content: |-
+      ## Architecture Overview
+
+      ### Layout
+      ```
+      tesseract-rs/
+      ├── src/
+      │   ├── lib.rs            # crate entry point
+      │   ├── api.rs            # safe high-level API
+      │   ├── error.rs          # error definitions
+      │   ├── enums.rs          # strongly typed wrappers for C enums
+      │   ├── page_iterator.rs  # page traversal iterator
+      │   ├── result_iterator.rs# word/character iterator
+      │   ├── choice_iterator.rs# alternative choice iterator
+      │   ├── mutable_iterator.rs
+      │   ├── monitor.rs        # progress monitoring callbacks
+      │   └── result_renderer.rs# output helpers (PDF, hOCR, etc.)
+      ├── build.rs              # orchestrates third-party builds + caching
+      ├── tests/integration_test.rs
+      ├── benches/ocr_benchmark.rs
+      └── CHANGELOG.md, README.md
+      ```
+
+      ### Key Components
+      - **FFI Layer (`tesseract-sys`)**: low-level bindings; changes here require careful review and documentation.
+      - **API Layer (`src/api.rs`)**: the primary surface area. Ensure thread-safety, minimal unsafe usage, and comprehensive docs.
+      - **Iterators**: Expose recognition results without leaking raw pointers. Each iterator wraps a corresponding native struct and frees resources in `Drop`.
+      - **Build System (`build.rs`)**: Detects platform toolchains, downloads sources, applies patches, and installs results into cache directories to avoid recompiling on every build.
+
+      ### External Dependencies
+      - Requires CMake, Ninja, a C++17 compiler, and pkg-config (Linux) to compile bundled Tesseract/Leptonica.
+      - Optional: `sccache` for faster rebuilds, `cargo-audit` for security checks.
+
+      ### Documentation
+      - Update `README.md` whenever API surface changes.
+      - Keep `CHANGELOG.md` chronological; mention CI-affecting changes explicitly.
+    name: Architecture Overview
+    priority: medium

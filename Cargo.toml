@@ -2,6 +2,7 @@
 members = [
     "crates/kreuzberg",
     "crates/kreuzberg-py",
+    "crates/kreuzberg-tesseract",
     "packages/ruby/ext/kreuzberg_rb/native",
     "crates/kreuzberg-cli",
     "crates/kreuzberg-node",
@@ -17,6 +18,7 @@ resolver = "2"
 
 [patch.crates-io]
 kreuzberg = { path = "crates/kreuzberg" }
+kreuzberg-tesseract = { path = "crates/kreuzberg-tesseract" }
 
 [workspace.package]
 version = "4.0.0-rc.1"

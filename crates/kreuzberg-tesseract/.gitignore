@@ -1,0 +1,26 @@
+# MacOS system files
+.DS_Store
+**/.DS_Store
+
+# Rust build artifacts
+/target
+**/*.rs.bk
+
+# IDE files
+.vscode/
+.idea/
+
+# Tesseract and Leptonica build artifacts
+/third_party/tesseract/build/
+/third_party/leptonica/build/
+
+# Node.js dependencies
+/node_modules
+package-lock.json
+
+# AI Rulez generated files
+CLAUDE.md
+.claude/agents/
+.gemini/
+.mcp.json
+AGENTS.md

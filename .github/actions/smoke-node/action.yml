@@ -56,9 +56,7 @@ runs:
               ls -R "$stage_dir" >&2 || true
               exit 1
             fi
-            normalized_path=$(
-              PKG_DIR="$pkg_dir" python -c "import os; print(os.path.abspath(os.environ['PKG_DIR']).replace('\\\\','/'))"
-            )
+            normalized_path=$(PKG_DIR="$pkg_dir" node -e "const path=require('path');process.stdout.write(path.resolve(process.env.PKG_DIR).replace(/\\\\/g,'/'))")
             package_spec="file:${normalized_path}"
           fi
         else
@@ -67,9 +65,7 @@ runs:
             echo "Missing KREUZBERG_NODE_PKG env var" >&2
             exit 1
           fi
-          workspace_normalized=$(
-            WORKSPACE_PATH="$workspacePath" python -c "import os; print(os.path.abspath(os.environ['WORKSPACE_PATH']).replace('\\\\','/'))"
-          )
+          workspace_normalized=$(WORKSPACE_PATH="$workspacePath" node -e "const path=require('path');process.stdout.write(path.resolve(process.env.WORKSPACE_PATH).replace(/\\\\/g,'/'))")
           package_spec="file:${workspace_normalized}"
         fi
 

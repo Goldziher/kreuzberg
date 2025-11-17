@@ -1,0 +1,36 @@
+name: Setup Rust Environment
+description: Install the Rust toolchain and configure caching for build artifacts.
+inputs:
+  toolchain:
+    description: Rust toolchain to install (e.g. stable, nightly)
+    required: false
+    default: stable
+  components:
+    description: Comma-separated list of Rust components to install
+    required: false
+    default: rustfmt, clippy
+  cache-key-prefix:
+    description: Prefix to use for Cargo cache keys
+    required: false
+    default: rust
+runs:
+  using: composite
+  steps:
+    - name: Install Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        components: ${{ inputs.components }}
+
+    - name: Cache Cargo artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          target/
+        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ inputs.toolchain }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ inputs.toolchain }}-

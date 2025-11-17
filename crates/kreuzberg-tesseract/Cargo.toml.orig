@@ -1,0 +1,56 @@
+[package]
+name = "kreuzberg-tesseract"
+version = "1.0.0-rc.1"
+edition = "2024"
+authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
+description = "Rust bindings for Tesseract OCR with cross-compilation, C++17, and caching improvements"
+license = "MIT"
+repository = "https://github.com/kreuzberg-dev/tesseract-rs"
+documentation = "https://docs.rs/kreuzberg-tesseract"
+readme = "README.md"
+keywords = [
+    "tesseract",
+    "ocr",
+    "bindings",
+    "computer-vision",
+    "text-recognition",
+]
+categories = ["external-ffi-bindings", "computer-vision", "text-processing"]
+build = "build.rs"
+links = "tesseract"
+rust-version = "1.85.0"
+exclude = ["tessdata/*", "third_party/*"]
+
+[dependencies]
+libc = "0.2.177"
+thiserror = "2.0.17"
+
+[dev-dependencies]
+image = "0.25.8"
+imageproc = "0.25.0"
+criterion = { version = "0.7.0", features = ["html_reports"] }
+
+[build-dependencies]
+cc = { version = "1.2.46", optional = true }
+cmake = { version = "0.1.54", optional = true }
+reqwest = { version = "0.12.24", default-features = false, features = ["blocking", "rustls-tls"], optional = true }
+zip = { version = "6.0.0", optional = true }
+
+
+[features]
+default = ["static-linking"]
+build-tesseract = ["cc", "cmake", "reqwest", "zip"]
+static-linking = ["build-tesseract"]
+dynamic-linking = []
+
+[package.metadata.docs.rs]
+features = ["docs-only"]
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lib]
+name = "kreuzberg_tesseract"
+crate-type = ["lib"]
+
+[[bench]]
+name = "ocr_benchmark"
+harness = false

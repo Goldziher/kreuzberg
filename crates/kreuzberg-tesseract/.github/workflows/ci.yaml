@@ -1,0 +1,417 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate (Prek)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+
+      - name: Run Prek validators
+        shell: bash
+        run: |
+          set -euxo pipefail
+          uvx prek run --show-diff-on-failure --color=always --all-files
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-unit-tests
+
+      - name: Run unit tests (library only)
+        shell: bash
+        run: cargo test --lib --all-features --verbose
+
+  integration-tests:
+    name: Integration Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-integration-${{ matrix.os }}
+
+      - name: Install build dependencies (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config clang
+
+      - name: Install build dependencies (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          brew update || true
+          brew install cmake ninja pkg-config || brew upgrade cmake ninja pkg-config || true
+
+      - name: Install build dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Install tools if not already present (continue on chocolatey errors as packages may already be installed)
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --no-progress -y --ignore-package-exit-codes
+          choco install ninja --no-progress -y --ignore-package-exit-codes
+          choco install visualstudio2022buildtools --no-progress -y --ignore-package-exit-codes
+          choco install visualstudio2022-workload-vctools --no-progress -y --ignore-package-exit-codes
+
+      - name: Determine Tesseract cache path (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: echo "TESSERACT_CACHE=$HOME/.tesseract-rs" >> "$GITHUB_ENV"
+
+      - name: Determine Tesseract cache path (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: printf 'TESSERACT_CACHE=%s\n' "$HOME/Library/Application Support/tesseract-rs" >> "$GITHUB_ENV"
+
+      - name: Determine Tesseract cache path (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $path = Join-Path $Env:APPDATA 'tesseract-rs'
+          echo "TESSERACT_CACHE=$path" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Cache Tesseract builds
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TESSERACT_CACHE }}
+          key: ${{ runner.os }}-tesseract-${{ hashFiles('build.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-tesseract-
+
+      - name: Setup MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Fix Windows link.exe conflict
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gitLinkPath = "C:\Program Files\Git\usr\bin\link.exe"
+          if (Test-Path $gitLinkPath) {
+            Rename-Item $gitLinkPath -NewName "link_git.exe" -Force
+          }
+
+      - name: Build with all features (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: cargo build --all-features --verbose
+
+      - name: Build with all features (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: cargo build --all-features --verbose
+
+      - name: Run integration tests (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          RUST_LOG: debug
+        run: cargo test --test integration_test --all-features --verbose
+
+      - name: Run integration tests (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $Env:RUST_LOG = 'debug'
+          cargo test --test integration_test --all-features --verbose
+
+  smoke-test:
+    name: Consumer Smoke Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-smoke-${{ matrix.os }}
+
+      - name: Install build dependencies (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config clang
+
+      - name: Install build dependencies (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          brew update || true
+          brew install cmake ninja pkg-config || brew upgrade cmake ninja pkg-config || true
+
+      - name: Install build dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Install tools if not already present (continue on chocolatey errors as packages may already be installed)
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --no-progress -y --ignore-package-exit-codes
+          choco install ninja --no-progress -y --ignore-package-exit-codes
+          choco install visualstudio2022buildtools --no-progress -y --ignore-package-exit-codes
+          choco install visualstudio2022-workload-vctools --no-progress -y --ignore-package-exit-codes
+
+      - name: Determine Tesseract cache path (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: echo "TESSERACT_CACHE=$HOME/.tesseract-rs" >> "$GITHUB_ENV"
+
+      - name: Determine Tesseract cache path (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: printf 'TESSERACT_CACHE=%s\n' "$HOME/Library/Application Support/tesseract-rs" >> "$GITHUB_ENV"
+
+      - name: Determine Tesseract cache path (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $path = Join-Path $Env:APPDATA 'tesseract-rs'
+          echo "TESSERACT_CACHE=$path" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Cache Tesseract builds
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TESSERACT_CACHE }}
+          key: ${{ runner.os }}-tesseract-${{ hashFiles('build.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-tesseract-
+
+      - name: Setup MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Fix Windows link.exe conflict
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gitLinkPath = "C:\Program Files\Git\usr\bin\link.exe"
+          if (Test-Path $gitLinkPath) {
+            Rename-Item $gitLinkPath -NewName "link_git.exe" -Force
+          }
+
+      - name: Run consumer smoke test (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cargo new --bin consumer-smoke --vcs none
+          echo 'tesseract-rs = { path = "..", features = ["build-tesseract"] }' >> consumer-smoke/Cargo.toml
+          echo 'image = "0.25"' >> consumer-smoke/Cargo.toml
+
+          # Copy test image for smoke test
+          mkdir -p consumer-smoke/test_images
+          cp tests/test_images/sample_text.png consumer-smoke/test_images/
+
+          cat <<'EOF' > consumer-smoke/src/main.rs
+          use std::path::PathBuf;
+
+          fn get_tessdata_dir() -> PathBuf {
+              if cfg!(target_os = "macos") {
+                  let home = std::env::var("HOME").expect("HOME not set");
+                  PathBuf::from(home).join("Library/Application Support/tesseract-rs/tessdata")
+              } else if cfg!(target_os = "linux") {
+                  let home = std::env::var("HOME").expect("HOME not set");
+                  PathBuf::from(home).join(".tesseract-rs/tessdata")
+              } else if cfg!(target_os = "windows") {
+                  let appdata = std::env::var("APPDATA").expect("APPDATA not set");
+                  PathBuf::from(appdata).join("tesseract-rs/tessdata")
+              } else {
+                  panic!("Unsupported OS");
+              }
+          }
+
+          fn main() {
+              // Test 1: Basic API creation and version
+              let version = tesseract_rs::TesseractAPI::version();
+              println!("✓ Tesseract version: {}", version);
+
+              // Test 2: API initialization (exercises TessBaseAPICreate, TessBaseAPIInit3)
+              let api = tesseract_rs::TesseractAPI::new();
+              println!("✓ API created successfully");
+
+              let tessdata_dir = get_tessdata_dir();
+              api.init(tessdata_dir, "eng")
+                  .expect("Failed to initialize Tesseract");
+              println!("✓ API initialized with eng language");
+
+              // Test 3: Set variables (exercises TessBaseAPISetVariable)
+              api.set_variable("debug_file", "/dev/null")
+                  .expect("Failed to set variable");
+              println!("✓ Variable set successfully");
+
+              // Test 4: Set page segmentation mode (exercises TessBaseAPISetPageSegMode)
+              api.set_page_seg_mode(tesseract_rs::TessPageSegMode::PSM_AUTO)
+                  .expect("Failed to set page seg mode");
+              println!("✓ Page segmentation mode set");
+
+              // Test 5: Load image and perform OCR (exercises TessBaseAPISetImage, TessBaseAPIGetUTF8Text)
+              let img = image::open("test_images/sample_text.png")
+                  .expect("Failed to open test image");
+              let rgb_img = img.to_rgb8();
+              let (width, height) = rgb_img.dimensions();
+
+              api.set_image(rgb_img.as_raw(), width as i32, height as i32, 3, (width * 3) as i32)
+                  .expect("Failed to set image");
+              println!("✓ Image set successfully");
+
+              let text = api.get_utf8_text().expect("Failed to get text");
+              println!("✓ OCR performed successfully, got {} chars of text", text.len());
+
+              // Test 6: Get TSV output (exercises TessBaseAPIGetTsvText, TessDeleteText)
+              let _tsv = api.get_tsv_text(0).expect("Failed to get TSV text");
+              println!("✓ TSV text retrieved successfully");
+
+              // Test 7: Get HOCR output (exercises TessBaseAPIGetHOCRText)
+              let _hocr = api.get_hocr_text(0).expect("Failed to get HOCR text");
+              println!("✓ HOCR text retrieved successfully");
+
+              println!("\n✅ All consumer smoke tests passed!");
+          }
+          EOF
+          (cd consumer-smoke && cargo run --quiet)
+
+      - name: Run consumer smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          cargo new --bin consumer-smoke --vcs none
+          Add-Content -Path consumer-smoke/Cargo.toml -Value 'tesseract-rs = { path = "..", features = ["build-tesseract"] }'
+          Add-Content -Path consumer-smoke/Cargo.toml -Value 'image = "0.25"'
+
+          # Copy test image for smoke test
+          New-Item -ItemType Directory -Force -Path consumer-smoke/test_images
+          Copy-Item tests/test_images/sample_text.png -Destination consumer-smoke/test_images/
+
+          @'
+          use std::path::PathBuf;
+
+          fn get_tessdata_dir() -> PathBuf {
+              if cfg!(target_os = "macos") {
+                  let home = std::env::var("HOME").expect("HOME not set");
+                  PathBuf::from(home).join("Library/Application Support/tesseract-rs/tessdata")
+              } else if cfg!(target_os = "linux") {
+                  let home = std::env::var("HOME").expect("HOME not set");
+                  PathBuf::from(home).join(".tesseract-rs/tessdata")
+              } else if cfg!(target_os = "windows") {
+                  let appdata = std::env::var("APPDATA").expect("APPDATA not set");
+                  PathBuf::from(appdata).join("tesseract-rs/tessdata")
+              } else {
+                  panic!("Unsupported OS");
+              }
+          }
+
+          fn main() {
+              // Test 1: Basic API creation and version
+              let version = tesseract_rs::TesseractAPI::version();
+              println!("✓ Tesseract version: {}", version);
+
+              // Test 2: API initialization (exercises TessBaseAPICreate, TessBaseAPIInit3)
+              let api = tesseract_rs::TesseractAPI::new();
+              println!("✓ API created successfully");
+
+              let tessdata_dir = get_tessdata_dir();
+              api.init(tessdata_dir, "eng")
+                  .expect("Failed to initialize Tesseract");
+              println!("✓ API initialized with eng language");
+
+              // Test 3: Set variables (exercises TessBaseAPISetVariable)
+              api.set_variable("debug_file", "NUL")
+                  .expect("Failed to set variable");
+              println!("✓ Variable set successfully");
+
+              // Test 4: Set page segmentation mode (exercises TessBaseAPISetPageSegMode)
+              api.set_page_seg_mode(tesseract_rs::TessPageSegMode::PSM_AUTO)
+                  .expect("Failed to set page seg mode");
+              println!("✓ Page segmentation mode set");
+
+              // Test 5: Load image and perform OCR (exercises TessBaseAPISetImage, TessBaseAPIGetUTF8Text)
+              let img = image::open("test_images/sample_text.png")
+                  .expect("Failed to open test image");
+              let rgb_img = img.to_rgb8();
+              let (width, height) = rgb_img.dimensions();
+
+              api.set_image(rgb_img.as_raw(), width as i32, height as i32, 3, (width * 3) as i32)
+                  .expect("Failed to set image");
+              println!("✓ Image set successfully");
+
+              let text = api.get_utf8_text().expect("Failed to get text");
+              println!("✓ OCR performed successfully, got {} chars of text", text.len());
+
+              // Test 6: Get TSV output (exercises TessBaseAPIGetTsvText, TessDeleteText)
+              let _tsv = api.get_tsv_text(0).expect("Failed to get TSV text");
+              println!("✓ TSV text retrieved successfully");
+
+              // Test 7: Get HOCR output (exercises TessBaseAPIGetHOCRText)
+              let _hocr = api.get_hocr_text(0).expect("Failed to get HOCR text");
+              println!("✓ HOCR text retrieved successfully");
+
+              println!("\n✅ All consumer smoke tests passed!");
+          }
+          '@ | Set-Content -Path consumer-smoke/src/main.rs
+          Push-Location consumer-smoke
+          cargo run --quiet
+          Pop-Location
