@@ -240,3 +240,10 @@ module = [
   "httpx",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "numpy",
+  "numpy.*",
+]
+ignore_errors = true

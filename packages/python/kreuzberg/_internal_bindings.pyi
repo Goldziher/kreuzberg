@@ -73,6 +73,8 @@ class ExtractionConfig:
     token_reduction: TokenReductionConfig | None
     language_detection: LanguageDetectionConfig | None
     postprocessor: PostProcessorConfig | None
+    max_concurrent_extractions: int | None
+    html_options: dict[str, Any] | None
 
     def __init__(
         self,
@@ -87,6 +89,8 @@ class ExtractionConfig:
         token_reduction: TokenReductionConfig | None = None,
         language_detection: LanguageDetectionConfig | None = None,
         postprocessor: PostProcessorConfig | None = None,
+        max_concurrent_extractions: int | None = None,
+        html_options: dict[str, Any] | None = None,
     ) -> None: ...
     @staticmethod
     def from_file(path: str | Path) -> ExtractionConfig: ...
