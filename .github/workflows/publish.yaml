@@ -527,7 +527,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          package_json_file: package.json
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -978,7 +978,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          package_json_file: package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -1467,7 +1467,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          package_json_file: package.json
 
       - name: Download Node artifacts
         uses: actions/download-artifact@v6

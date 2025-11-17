@@ -46,6 +46,7 @@ ENV KREUZBERG_PDFIUM_PREBUILT=/build/pdfium
 COPY Cargo.toml Cargo.lock ./
 COPY crates/kreuzberg/ crates/kreuzberg/
 COPY crates/kreuzberg-cli/ crates/kreuzberg-cli/
+COPY crates/kreuzberg-tesseract/ crates/kreuzberg-tesseract/
 
 # Remove workspace members that aren't included (Ruby, Node, Python, tools, e2e)
 RUN sed -i '/kreuzberg-py/d; /kreuzberg_rb/d; /kreuzberg-node/d; /benchmark-harness/d; /e2e-generator/d; /e2e\/rust/d' Cargo.toml

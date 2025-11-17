@@ -1,8 +1,10 @@
 use image::{DynamicImage, ImageBuffer, Luma};
 use imageproc::contrast::adaptive_threshold;
 use imageproc::filter::filter3x3;
+use kreuzberg_tesseract::{
+    TessOrientation, TessPageIteratorLevel, TessPageSegMode, TessWritingDirection, TesseractAPI,
+};
 use std::path::{Path, PathBuf};
-use tesseract_rs::{TessOrientation, TessPageIteratorLevel, TessPageSegMode, TessWritingDirection, TesseractAPI};
 
 fn get_default_tessdata_dir() -> PathBuf {
     if cfg!(target_os = "macos") {

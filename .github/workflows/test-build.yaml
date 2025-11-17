@@ -225,7 +225,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          package_json_file: package.json
 
       - name: Prepare ONNX Runtime (macOS)
         if: startsWith(matrix.settings.target, 'aarch64-apple-darwin') || startsWith(matrix.settings.target, 'x86_64-apple-darwin')
@@ -585,7 +585,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          package_json_file: package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

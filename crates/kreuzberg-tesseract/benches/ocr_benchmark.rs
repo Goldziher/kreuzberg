@@ -1,7 +1,7 @@
 use criterion::{Criterion, criterion_group, criterion_main};
+use kreuzberg_tesseract::TesseractAPI;
 use std::hint::black_box;
 use std::path::PathBuf;
-use tesseract_rs::TesseractAPI;
 
 fn get_default_tessdata_dir() -> PathBuf {
     if cfg!(target_os = "macos") {
