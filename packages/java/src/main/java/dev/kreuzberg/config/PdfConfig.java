@@ -86,4 +86,32 @@ public final class PdfConfig {
       return new PdfConfig(this);
     }
   }
+
+  static PdfConfig fromMap(Map<String, Object> map) {
+    if (map == null) {
+      return null;
+    }
+    Builder builder = builder();
+    Object extractImagesValue = map.get("extract_images");
+    if (extractImagesValue instanceof Boolean) {
+      builder.extractImages((Boolean) extractImagesValue);
+    }
+    Object passwordsValue = map.get("passwords");
+    if (passwordsValue instanceof Iterable) {
+      @SuppressWarnings("unchecked")
+      Iterable<Object> iterable = (Iterable<Object>) passwordsValue;
+      java.util.List<String> passwords = new java.util.ArrayList<>();
+      for (Object entry : iterable) {
+        if (entry instanceof String) {
+          passwords.add((String) entry);
+        }
+      }
+      builder.passwords(passwords);
+    }
+    Object extractMetadataValue = map.get("extract_metadata");
+    if (extractMetadataValue instanceof Boolean) {
+      builder.extractMetadata((Boolean) extractMetadataValue);
+    }
+    return builder.build();
+  }
 }

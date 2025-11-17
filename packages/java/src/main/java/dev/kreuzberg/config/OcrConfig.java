@@ -14,7 +14,7 @@ import java.util.Map;
 public final class OcrConfig {
   private final String backend;
   private final String language;
-  private final String tesseractConfig;
+  private final TesseractConfig tesseractConfig;
 
   private OcrConfig(Builder builder) {
     this.backend = builder.backend;
@@ -54,7 +54,7 @@ public final class OcrConfig {
    *
    * @return the tesseract config, or null if not set
    */
-  public String getTesseractConfig() {
+  public TesseractConfig getTesseractConfig() {
     return tesseractConfig;
   }
 
@@ -72,9 +72,29 @@ public final class OcrConfig {
       map.put("language", language);
     }
     if (tesseractConfig != null) {
-      map.put("tesseract_config", tesseractConfig);
+      map.put("tesseract_config", tesseractConfig.toMap());
     }
     return map;
+  }
+
+  static OcrConfig fromMap(Map<String, Object> map) {
+    if (map == null) {
+      return null;
+    }
+    Builder builder = builder();
+    Object backendValue = map.get("backend");
+    if (backendValue instanceof String) {
+      builder.backend((String) backendValue);
+    }
+    Object languageValue = map.get("language");
+    if (languageValue instanceof String) {
+      builder.language((String) languageValue);
+    }
+    Map<String, Object> tesseractMap = toMap(map.get("tesseract_config"));
+    if (tesseractMap != null) {
+      builder.tesseractConfig(TesseractConfig.fromMap(tesseractMap));
+    }
+    return builder.build();
   }
 
   /**
@@ -83,7 +103,7 @@ public final class OcrConfig {
   public static final class Builder {
     private String backend = "tesseract";
     private String language = "eng";
-    private String tesseractConfig;
+    private TesseractConfig tesseractConfig;
 
     private Builder() {
       // Use defaults
@@ -117,7 +137,7 @@ public final class OcrConfig {
      * @param tesseractConfig the tesseract config string
      * @return this builder
      */
-    public Builder tesseractConfig(String tesseractConfig) {
+    public Builder tesseractConfig(TesseractConfig tesseractConfig) {
       this.tesseractConfig = tesseractConfig;
       return this;
     }
@@ -130,5 +150,13 @@ public final class OcrConfig {
     public OcrConfig build() {
       return new OcrConfig(this);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> toMap(Object value) {
+    if (value instanceof Map) {
+      return (Map<String, Object>) value;
+    }
+    return null;
   }
 }

@@ -40,6 +40,7 @@ final class KreuzbergFFI {
     static final MethodHandle KREUZBERG_UNREGISTER_POST_PROCESSOR;
     static final MethodHandle KREUZBERG_REGISTER_VALIDATOR;
     static final MethodHandle KREUZBERG_UNREGISTER_VALIDATOR;
+    static final MethodHandle KREUZBERG_LOAD_EXTRACTION_CONFIG_FROM_FILE;
 
     // Memory layouts
     static final StructLayout C_EXTRACTION_RESULT_LAYOUT = MemoryLayout.structLayout(
@@ -51,6 +52,8 @@ final class KreuzbergFFI {
         ValueLayout.ADDRESS.withName("tables_json"),
         ValueLayout.ADDRESS.withName("detected_languages_json"),
         ValueLayout.ADDRESS.withName("metadata_json"),
+        ValueLayout.ADDRESS.withName("chunks_json"),
+        ValueLayout.ADDRESS.withName("images_json"),
         ValueLayout.JAVA_BOOLEAN.withName("success"),
         MemoryLayout.paddingLayout(7) // Padding to align to 8 bytes
     );
@@ -71,6 +74,10 @@ final class KreuzbergFFI {
         MemoryLayout.PathElement.groupElement("detected_languages_json"));
     static final long METADATA_JSON_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
         MemoryLayout.PathElement.groupElement("metadata_json"));
+    static final long CHUNKS_JSON_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
+        MemoryLayout.PathElement.groupElement("chunks_json"));
+    static final long IMAGES_JSON_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
+        MemoryLayout.PathElement.groupElement("images_json"));
     static final long SUCCESS_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
         MemoryLayout.PathElement.groupElement("success"));
 
@@ -202,6 +209,11 @@ final class KreuzbergFFI {
             KREUZBERG_UNREGISTER_VALIDATOR = linkFunction(
                 "kreuzberg_unregister_validator",
                 FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_LOAD_EXTRACTION_CONFIG_FROM_FILE = linkFunction(
+                "kreuzberg_load_extraction_config_from_file",
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS)
             );
         } catch (Exception e) {
             throw new ExceptionInInitializerError(e);

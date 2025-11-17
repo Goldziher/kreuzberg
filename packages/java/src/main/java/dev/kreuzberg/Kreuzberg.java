@@ -99,6 +99,57 @@ public final class Kreuzberg {
   }
 
   /**
+   * Load an extraction configuration file (TOML/YAML/JSON).
+   *
+   * @param configPath path to the configuration file
+   * @return parsed extraction configuration
+   * @throws IOException if the file cannot be read
+   * @throws KreuzbergException if the configuration is invalid
+   */
+  public static ExtractionConfig loadConfig(Path configPath) throws IOException, KreuzbergException {
+    Objects.requireNonNull(configPath, "configPath must not be null");
+    if (!Files.exists(configPath)) {
+      throw new IOException("Config file not found: " + configPath);
+    }
+    try (Arena arena = Arena.ofConfined()) {
+      MemorySegment pathSegment = KreuzbergFFI.allocateCString(arena, configPath.toString());
+      MemorySegment jsonPtr = (MemorySegment) KreuzbergFFI
+          .KREUZBERG_LOAD_EXTRACTION_CONFIG_FROM_FILE
+          .invoke(pathSegment);
+      if (jsonPtr == null || jsonPtr.address() == 0) {
+        String error = getLastError();
+        throwAppropriateException(error);
+      }
+      try {
+        String json = KreuzbergFFI.readCString(jsonPtr);
+        if (json == null || json.isEmpty()) {
+          throw new KreuzbergException("Loaded configuration was empty");
+        }
+        return ExtractionConfig.fromJson(json);
+      } finally {
+        KreuzbergFFI.KREUZBERG_FREE_STRING.invoke(jsonPtr);
+      }
+    } catch (KreuzbergException e) {
+      throw e;
+    } catch (Throwable e) {
+      throw new KreuzbergException("Failed to load configuration", e);
+    }
+  }
+
+  /**
+   * Load an extraction configuration file (String path overload).
+   *
+   * @param configPath path to the configuration file
+   * @return parsed extraction configuration
+   * @throws IOException if the file cannot be read
+   * @throws KreuzbergException if the configuration is invalid
+   */
+  public static ExtractionConfig loadConfig(String configPath) throws IOException, KreuzbergException {
+    Objects.requireNonNull(configPath, "configPath must not be null");
+    return loadConfig(Path.of(configPath));
+  }
+
+  /**
    * Extract text and metadata from a file asynchronously.
    *
    * <p>
@@ -1003,6 +1054,8 @@ public final class Kreuzberg {
         result.get(ValueLayout.ADDRESS, KreuzbergFFI.DETECTED_LANGUAGES_JSON_OFFSET);
     MemorySegment metadataJsonPtr =
         result.get(ValueLayout.ADDRESS, KreuzbergFFI.METADATA_JSON_OFFSET);
+    MemorySegment chunksJsonPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.CHUNKS_JSON_OFFSET);
+    MemorySegment imagesJsonPtr = result.get(ValueLayout.ADDRESS, KreuzbergFFI.IMAGES_JSON_OFFSET);
 
     String content = KreuzbergFFI.readCString(contentPtr);
     String mimeType = KreuzbergFFI.readCString(mimeTypePtr);
@@ -1015,13 +1068,15 @@ public final class Kreuzberg {
     List<String> detectedLanguages =
         parseDetectedLanguages(KreuzbergFFI.readCString(detectedLanguagesJsonPtr));
     Map<String, Object> metadata = parseMetadata(KreuzbergFFI.readCString(metadataJsonPtr));
+    List<Chunk> chunks = parseChunks(KreuzbergFFI.readCString(chunksJsonPtr));
+    List<ExtractedImage> images = parseImages(KreuzbergFFI.readCString(imagesJsonPtr));
 
     // Create ExtractionResult with all fields
     return new ExtractionResult(content, mimeType,
         language != null ? java.util.Optional.of(language) : java.util.Optional.empty(),
         date != null ? java.util.Optional.of(date) : java.util.Optional.empty(),
         subject != null ? java.util.Optional.of(subject) : java.util.Optional.empty(), tables,
-        detectedLanguages, metadata);
+        detectedLanguages, metadata, chunks, images);
   }
 
   /**
@@ -1258,6 +1313,14 @@ public final class Kreuzberg {
       // Log error and return empty map
       return Collections.emptyMap();
     }
+  }
+
+  private static List<Chunk> parseChunks(String json) {
+    return ExtractionResult.parseChunksJson(json, OBJECT_MAPPER);
+  }
+
+  private static List<ExtractedImage> parseImages(String json) {
+    return ExtractionResult.parseImagesJson(json, OBJECT_MAPPER);
   }
 
   /**

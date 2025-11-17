@@ -67,4 +67,18 @@ public final class TokenReductionConfig {
       return new TokenReductionConfig(this);
     }
   }
+
+  static TokenReductionConfig fromMap(Map<String, Object> map) {
+    if (map == null) {
+      return null;
+    }
+    Builder builder = builder();
+    if (map.get("mode") instanceof String) {
+      builder.mode((String) map.get("mode"));
+    }
+    if (map.get("preserve_important_words") instanceof Boolean) {
+      builder.preserveImportantWords((Boolean) map.get("preserve_important_words"));
+    }
+    return builder.build();
+  }
 }

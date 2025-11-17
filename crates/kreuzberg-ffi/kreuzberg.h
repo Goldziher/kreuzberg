@@ -49,6 +49,14 @@ typedef struct CExtractionResult {
    */
   char *metadata_json;
   /**
+   * Text chunks as JSON array (null-terminated string, or NULL if no chunks, must be freed with kreuzberg_free_string)
+   */
+  char *chunks_json;
+  /**
+   * Extracted images as JSON array (null-terminated string, or NULL if no images, must be freed with kreuzberg_free_string)
+   */
+  char *images_json;
+  /**
    * Whether extraction was successful
    */
   bool success;
@@ -350,6 +358,17 @@ void kreuzberg_free_string(char *s);
  * ```
  */
 void kreuzberg_free_result(struct CExtractionResult *result);
+
+/**
+ * Load an extraction configuration from a file (TOML/YAML/JSON) and return JSON.
+ *
+ * # Safety
+ *
+ * - `path` must be a valid null-terminated UTF-8 string
+ * - Returned pointer must be freed with `kreuzberg_free_string`
+ * - Returns NULL on error; call `kreuzberg_last_error` for details
+ */
+char *kreuzberg_load_extraction_config_from_file(const char *path);
 
 /**
  * Get the last error message from a failed operation.

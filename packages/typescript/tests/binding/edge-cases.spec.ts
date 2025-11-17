@@ -43,7 +43,7 @@ describe("Edge Cases and Coverage", () => {
 			expect(Array.isArray(result.tables)).toBe(true);
 		});
 
-		it("should handle undefined chunks field", async () => {
+		it("should handle null chunks field", async () => {
 			const { extractFileSync } = await import("../../src/index.js");
 			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
 
@@ -51,6 +51,17 @@ describe("Edge Cases and Coverage", () => {
 
 			if (result.chunks !== null) {
 				expect(Array.isArray(result.chunks)).toBe(true);
+			}
+		});
+
+		it("should handle null images field", async () => {
+			const { extractFileSync } = await import("../../src/index.js");
+			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+
+			const result = extractFileSync(pdfPath, null, null);
+
+			if (result.images !== null) {
+				expect(Array.isArray(result.images)).toBe(true);
 			}
 		});
 

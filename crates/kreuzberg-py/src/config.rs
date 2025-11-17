@@ -3,7 +3,13 @@
 //! Provides Python-friendly wrappers around the Rust configuration structs.
 //! All types support both construction and field access from Python.
 
+use html_to_markdown_rs::options::{
+    CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, ListIndentType, NewlineStyle, PreprocessingPreset,
+    WhitespaceMode,
+};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 
 // ============================================================================
 // ============================================================================
@@ -20,9 +26,28 @@ use pyo3::prelude::*;
 ///     ...     use_cache=True
 ///     ... )
 #[pyclass(name = "ExtractionConfig", module = "kreuzberg")]
-#[derive(Clone, Default)]
 pub struct ExtractionConfig {
     inner: kreuzberg::ExtractionConfig,
+    html_options_dict: Option<Py<PyDict>>,
+}
+
+impl Clone for ExtractionConfig {
+    fn clone(&self) -> Self {
+        let html_options_dict = Python::attach(|py| self.html_options_dict.as_ref().map(|dict| dict.clone_ref(py)));
+        Self {
+            inner: self.inner.clone(),
+            html_options_dict,
+        }
+    }
+}
+
+impl Default for ExtractionConfig {
+    fn default() -> Self {
+        Self {
+            inner: kreuzberg::ExtractionConfig::default(),
+            html_options_dict: None,
+        }
+    }
 }
 
 #[pymethods]
@@ -40,7 +65,9 @@ impl ExtractionConfig {
         token_reduction=None,
         language_detection=None,
         keywords=None,
-        postprocessor=None
+        postprocessor=None,
+        html_options=None,
+        max_concurrent_extractions=None
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -55,8 +82,11 @@ impl ExtractionConfig {
         language_detection: Option<LanguageDetectionConfig>,
         keywords: Option<KeywordConfig>,
         postprocessor: Option<PostProcessorConfig>,
-    ) -> Self {
-        Self {
+        html_options: Option<Bound<'_, PyDict>>,
+        max_concurrent_extractions: Option<usize>,
+    ) -> PyResult<Self> {
+        let (html_options_inner, html_options_dict) = parse_html_options_dict(html_options)?;
+        Ok(Self {
             inner: kreuzberg::ExtractionConfig {
                 use_cache: use_cache.unwrap_or(true),
                 enable_quality_processing: enable_quality_processing.unwrap_or(true),
@@ -69,10 +99,11 @@ impl ExtractionConfig {
                 language_detection: language_detection.map(Into::into),
                 keywords: keywords.map(Into::into),
                 postprocessor: postprocessor.map(Into::into),
-                html_options: None,
-                max_concurrent_extractions: None,
+                html_options: html_options_inner,
+                max_concurrent_extractions,
             },
-        }
+            html_options_dict,
+        })
     }
 
     #[new]
@@ -87,7 +118,9 @@ impl ExtractionConfig {
         pdf_options=None,
         token_reduction=None,
         language_detection=None,
-        postprocessor=None
+        postprocessor=None,
+        html_options=None,
+        max_concurrent_extractions=None
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -101,8 +134,11 @@ impl ExtractionConfig {
         token_reduction: Option<TokenReductionConfig>,
         language_detection: Option<LanguageDetectionConfig>,
         postprocessor: Option<PostProcessorConfig>,
-    ) -> Self {
-        Self {
+        html_options: Option<Bound<'_, PyDict>>,
+        max_concurrent_extractions: Option<usize>,
+    ) -> PyResult<Self> {
+        let (html_options_inner, html_options_dict) = parse_html_options_dict(html_options)?;
+        Ok(Self {
             inner: kreuzberg::ExtractionConfig {
                 use_cache: use_cache.unwrap_or(true),
                 enable_quality_processing: enable_quality_processing.unwrap_or(true),
@@ -115,10 +151,11 @@ impl ExtractionConfig {
                 language_detection: language_detection.map(Into::into),
                 keywords: None,
                 postprocessor: postprocessor.map(Into::into),
-                html_options: None,
-                max_concurrent_extractions: None,
+                html_options: html_options_inner,
+                max_concurrent_extractions,
             },
-        }
+            html_options_dict,
+        })
     }
 
     #[getter]
@@ -233,6 +270,29 @@ impl ExtractionConfig {
         self.inner.postprocessor = value.map(Into::into);
     }
 
+    #[getter]
+    fn max_concurrent_extractions(&self) -> Option<usize> {
+        self.inner.max_concurrent_extractions
+    }
+
+    #[setter]
+    fn set_max_concurrent_extractions(&mut self, value: Option<usize>) {
+        self.inner.max_concurrent_extractions = value;
+    }
+
+    #[getter]
+    fn html_options<'py>(&self, py: Python<'py>) -> Option<Bound<'py, PyDict>> {
+        self.html_options_dict.as_ref().map(|dict| dict.bind(py).clone())
+    }
+
+    #[setter]
+    fn set_html_options(&mut self, value: Option<Bound<'_, PyDict>>) -> PyResult<()> {
+        let (parsed, stored) = parse_html_options_dict(value)?;
+        self.inner.html_options = parsed;
+        self.html_options_dict = stored;
+        Ok(())
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "ExtractionConfig(use_cache={}, enable_quality_processing={}, ocr={}, force_ocr={})",
@@ -273,7 +333,10 @@ impl ExtractionConfig {
     fn from_file(path: &str) -> PyResult<Self> {
         let config = kreuzberg::ExtractionConfig::from_file(path)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Failed to load config: {}", e)))?;
-        Ok(Self { inner: config })
+        Ok(Self {
+            inner: config,
+            html_options_dict: None,
+        })
     }
 }
 
@@ -285,7 +348,261 @@ impl From<ExtractionConfig> for kreuzberg::ExtractionConfig {
 
 impl From<kreuzberg::ExtractionConfig> for ExtractionConfig {
     fn from(config: kreuzberg::ExtractionConfig) -> Self {
-        Self { inner: config }
+        Self {
+            inner: config,
+            html_options_dict: None,
+        }
+    }
+}
+
+fn parse_html_options_dict(
+    options: Option<Bound<'_, PyDict>>,
+) -> PyResult<(Option<ConversionOptions>, Option<Py<PyDict>>)> {
+    if let Some(dict) = options {
+        let parsed = parse_html_options(&dict)?;
+        Ok((Some(parsed), Some(dict.unbind())))
+    } else {
+        Ok((None, None))
+    }
+}
+
+fn parse_html_options(dict: &Bound<'_, PyDict>) -> PyResult<ConversionOptions> {
+    let mut opts = ConversionOptions::default();
+
+    if let Some(value) = dict.get_item("heading_style")? {
+        let style: String = value.extract()?;
+        opts.heading_style = parse_heading_style(&style)?;
+    }
+
+    if let Some(value) = dict.get_item("list_indent_type")? {
+        let value: String = value.extract()?;
+        opts.list_indent_type = parse_list_indent_type(&value)?;
+    }
+
+    if let Some(value) = dict.get_item("list_indent_width")? {
+        opts.list_indent_width = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("bullets")? {
+        opts.bullets = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("strong_em_symbol")? {
+        let symbol: String = value.extract()?;
+        let mut chars = symbol.chars();
+        let ch = chars
+            .next()
+            .ok_or_else(|| PyValueError::new_err("strong_em_symbol must not be empty"))?;
+        opts.strong_em_symbol = ch;
+    }
+
+    if let Some(value) = dict.get_item("escape_asterisks")? {
+        opts.escape_asterisks = value.extract()?;
+    }
+    if let Some(value) = dict.get_item("escape_underscores")? {
+        opts.escape_underscores = value.extract()?;
+    }
+    if let Some(value) = dict.get_item("escape_misc")? {
+        opts.escape_misc = value.extract()?;
+    }
+    if let Some(value) = dict.get_item("escape_ascii")? {
+        opts.escape_ascii = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("code_language")? {
+        opts.code_language = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("autolinks")? {
+        opts.autolinks = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("default_title")? {
+        opts.default_title = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("br_in_tables")? {
+        opts.br_in_tables = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("hocr_spatial_tables")? {
+        opts.hocr_spatial_tables = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("highlight_style")? {
+        let style: String = value.extract()?;
+        opts.highlight_style = parse_highlight_style(&style)?;
+    }
+
+    if let Some(value) = dict.get_item("extract_metadata")? {
+        opts.extract_metadata = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("whitespace_mode")? {
+        let mode: String = value.extract()?;
+        opts.whitespace_mode = parse_whitespace_mode(&mode)?;
+    }
+
+    if let Some(value) = dict.get_item("strip_newlines")? {
+        opts.strip_newlines = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("wrap")? {
+        opts.wrap = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("wrap_width")? {
+        opts.wrap_width = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("convert_as_inline")? {
+        opts.convert_as_inline = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("sub_symbol")? {
+        opts.sub_symbol = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("sup_symbol")? {
+        opts.sup_symbol = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("newline_style")? {
+        let style: String = value.extract()?;
+        opts.newline_style = parse_newline_style(&style)?;
+    }
+
+    if let Some(value) = dict.get_item("code_block_style")? {
+        let style: String = value.extract()?;
+        opts.code_block_style = parse_code_block_style(&style)?;
+    }
+
+    if let Some(value) = dict.get_item("keep_inline_images_in")? {
+        opts.keep_inline_images_in = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("encoding")? {
+        opts.encoding = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("debug")? {
+        opts.debug = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("strip_tags")? {
+        opts.strip_tags = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("preserve_tags")? {
+        opts.preserve_tags = value.extract()?;
+    }
+
+    if let Some(value) = dict.get_item("preprocessing")? {
+        let pre_dict: Bound<'_, PyDict> = value.downcast::<PyDict>()?.clone();
+        let mut preprocessing = opts.preprocessing.clone();
+
+        if let Some(v) = pre_dict.get_item("enabled")? {
+            preprocessing.enabled = v.extract()?;
+        }
+
+        if let Some(v) = pre_dict.get_item("preset")? {
+            let preset: String = v.extract()?;
+            preprocessing.preset = parse_preprocessing_preset(&preset)?;
+        }
+
+        if let Some(v) = pre_dict.get_item("remove_navigation")? {
+            preprocessing.remove_navigation = v.extract()?;
+        }
+
+        if let Some(v) = pre_dict.get_item("remove_forms")? {
+            preprocessing.remove_forms = v.extract()?;
+        }
+
+        opts.preprocessing = preprocessing;
+    }
+
+    Ok(opts)
+}
+
+fn parse_heading_style(value: &str) -> PyResult<HeadingStyle> {
+    match value.to_lowercase().as_str() {
+        "atx" => Ok(HeadingStyle::Atx),
+        "underlined" => Ok(HeadingStyle::Underlined),
+        "atx_closed" => Ok(HeadingStyle::AtxClosed),
+        other => Err(PyValueError::new_err(format!(
+            "Invalid heading_style '{}'. Expected one of: atx, underlined, atx_closed",
+            other
+        ))),
+    }
+}
+
+fn parse_list_indent_type(value: &str) -> PyResult<ListIndentType> {
+    match value.to_lowercase().as_str() {
+        "spaces" => Ok(ListIndentType::Spaces),
+        "tabs" => Ok(ListIndentType::Tabs),
+        other => Err(PyValueError::new_err(format!(
+            "Invalid list_indent_type '{}'. Expected 'spaces' or 'tabs'",
+            other
+        ))),
+    }
+}
+
+fn parse_highlight_style(value: &str) -> PyResult<HighlightStyle> {
+    match value.to_lowercase().as_str() {
+        "double_equal" | "==" | "highlight" => Ok(HighlightStyle::DoubleEqual),
+        "html" => Ok(HighlightStyle::Html),
+        "bold" => Ok(HighlightStyle::Bold),
+        "none" => Ok(HighlightStyle::None),
+        other => Err(PyValueError::new_err(format!(
+            "Invalid highlight_style '{}'. Expected one of: double_equal, html, bold, none",
+            other
+        ))),
+    }
+}
+
+fn parse_whitespace_mode(value: &str) -> PyResult<WhitespaceMode> {
+    match value.to_lowercase().as_str() {
+        "normalized" => Ok(WhitespaceMode::Normalized),
+        "strict" => Ok(WhitespaceMode::Strict),
+        other => Err(PyValueError::new_err(format!(
+            "Invalid whitespace_mode '{}'. Expected 'normalized' or 'strict'",
+            other
+        ))),
+    }
+}
+
+fn parse_newline_style(value: &str) -> PyResult<NewlineStyle> {
+    match value.to_lowercase().as_str() {
+        "spaces" => Ok(NewlineStyle::Spaces),
+        "backslash" => Ok(NewlineStyle::Backslash),
+        other => Err(PyValueError::new_err(format!(
+            "Invalid newline_style '{}'. Expected 'spaces' or 'backslash'",
+            other
+        ))),
+    }
+}
+
+fn parse_code_block_style(value: &str) -> PyResult<CodeBlockStyle> {
+    match value.to_lowercase().as_str() {
+        "indented" => Ok(CodeBlockStyle::Indented),
+        "backticks" => Ok(CodeBlockStyle::Backticks),
+        "tildes" => Ok(CodeBlockStyle::Tildes),
+        other => Err(PyValueError::new_err(format!(
+            "Invalid code_block_style '{}'. Expected 'indented', 'backticks', or 'tildes'",
+            other
+        ))),
+    }
+}
+
+fn parse_preprocessing_preset(value: &str) -> PyResult<PreprocessingPreset> {
+    match value.to_lowercase().as_str() {
+        "minimal" => Ok(PreprocessingPreset::Minimal),
+        "standard" => Ok(PreprocessingPreset::Standard),
+        "aggressive" => Ok(PreprocessingPreset::Aggressive),
+        other => Err(PyValueError::new_err(format!(
+            "Invalid preprocessing.preset '{}'. Expected one of: minimal, standard, aggressive",
+            other
+        ))),
     }
 }
 

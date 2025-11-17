@@ -51,6 +51,10 @@ pub struct CExtractionResult {
     pub detected_languages_json: *mut c_char,
     /// Metadata as JSON object (null-terminated string, or NULL if no metadata, must be freed with kreuzberg_free_string)
     pub metadata_json: *mut c_char,
+    /// Text chunks as JSON array (null-terminated string, or NULL if no chunks, must be freed with kreuzberg_free_string)
+    pub chunks_json: *mut c_char,
+    /// Extracted images as JSON array (null-terminated string, or NULL if no images, must be freed with kreuzberg_free_string)
+    pub images_json: *mut c_char,
     /// Whether extraction was successful
     pub success: bool,
 }
@@ -123,6 +127,24 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         Err(_) => ptr::null_mut(),
     };
 
+    // Serialize chunks to JSON
+    let chunks_json = match result.chunks {
+        Some(chunks) => match serde_json::to_string(&chunks) {
+            Ok(json) => CString::new(json).ok().map(|s| s.into_raw()).unwrap_or(ptr::null_mut()),
+            Err(_) => ptr::null_mut(),
+        },
+        None => ptr::null_mut(),
+    };
+
+    // Serialize images to JSON
+    let images_json = match result.images {
+        Some(images) => match serde_json::to_string(&images) {
+            Ok(json) => CString::new(json).ok().map(|s| s.into_raw()).unwrap_or(ptr::null_mut()),
+            Err(_) => ptr::null_mut(),
+        },
+        None => ptr::null_mut(),
+    };
+
     // Allocate and return the result structure
     Ok(Box::into_raw(Box::new(CExtractionResult {
         content,
@@ -133,6 +155,8 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         tables_json,
         detected_languages_json,
         metadata_json,
+        chunks_json,
+        images_json,
         success: true,
     })))
 }
@@ -766,8 +790,59 @@ pub unsafe extern "C" fn kreuzberg_free_result(result: *mut CExtractionResult) {
         if !result_box.metadata_json.is_null() {
             unsafe { drop(CString::from_raw(result_box.metadata_json)) };
         }
+        if !result_box.chunks_json.is_null() {
+            unsafe { drop(CString::from_raw(result_box.chunks_json)) };
+        }
+        if !result_box.images_json.is_null() {
+            unsafe { drop(CString::from_raw(result_box.images_json)) };
+        }
 
         // Box drop will free the result struct itself
+    }
+}
+
+/// Load an extraction configuration from a file (TOML/YAML/JSON) and return JSON.
+///
+/// # Safety
+///
+/// - `path` must be a valid null-terminated UTF-8 string
+/// - Returned pointer must be freed with `kreuzberg_free_string`
+/// - Returns NULL on error; call `kreuzberg_last_error` for details
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_load_extraction_config_from_file(path: *const c_char) -> *mut c_char {
+    clear_last_error();
+
+    if path.is_null() {
+        set_last_error("Config path cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    let path_str = match unsafe { CStr::from_ptr(path) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in config path: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    match ExtractionConfig::from_file(path_str) {
+        Ok(config) => match serde_json::to_string(&config) {
+            Ok(json) => match CString::new(json) {
+                Ok(cstr) => cstr.into_raw(),
+                Err(e) => {
+                    set_last_error(format!("Failed to convert config JSON: {}", e));
+                    ptr::null_mut()
+                }
+            },
+            Err(e) => {
+                set_last_error(format!("Failed to serialize config to JSON: {}", e));
+                ptr::null_mut()
+            }
+        },
+        Err(err) => {
+            set_last_error(err.to_string());
+            ptr::null_mut()
+        }
     }
 }
 

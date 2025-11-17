@@ -40,8 +40,12 @@ export function assertValidExtractionResult(result: ExtractionResult): void {
 		throw new Error("result.detectedLanguages must be null or an array");
 	}
 
-	if (result.chunks !== undefined && result.chunks !== null && !Array.isArray(result.chunks)) {
-		throw new Error("result.chunks must be undefined, null, or an array");
+	if (result.chunks !== null && !Array.isArray(result.chunks)) {
+		throw new Error("result.chunks must be null or an array");
+	}
+
+	if (result.images !== null && !Array.isArray(result.images)) {
+		throw new Error("result.images must be null or an array");
 	}
 }
 

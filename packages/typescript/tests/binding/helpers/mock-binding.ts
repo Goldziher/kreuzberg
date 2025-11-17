@@ -30,6 +30,7 @@ const toWire = (result: ExtractionResult) => ({
 	tables: result.tables,
 	detected_languages: result.detectedLanguages,
 	chunks: result.chunks ?? undefined,
+	images: result.images ?? undefined,
 });
 
 const fromWire = (wire: {
@@ -39,6 +40,7 @@ const fromWire = (wire: {
 	tables?: unknown[];
 	detected_languages?: string[] | null;
 	chunks?: unknown[] | null;
+	images?: unknown[] | null;
 }): ExtractionResult => ({
 	content: wire.content,
 	mimeType: wire.mime_type,
@@ -46,6 +48,7 @@ const fromWire = (wire: {
 	tables: Array.isArray(wire.tables) ? wire.tables : [],
 	detectedLanguages: wire.detected_languages ?? null,
 	chunks: (wire.chunks ?? null) as ExtractionResult["chunks"],
+	images: (wire.images ?? null) as ExtractionResult["images"],
 });
 
 const createInitialResult = (data: Uint8Array | Buffer, mimeType: string | null): ExtractionResult => ({
@@ -55,6 +58,7 @@ const createInitialResult = (data: Uint8Array | Buffer, mimeType: string | null)
 	tables: [],
 	detectedLanguages: null,
 	chunks: null,
+	images: null,
 });
 
 const waitForPromise = <T>(promise: Promise<T>): T => {
@@ -213,6 +217,7 @@ export function createMockExtractionBinding() {
 				tables: processed.tables,
 				detectedLanguages: processed.detectedLanguages,
 				chunks: processed.chunks,
+				images: processed.images,
 			};
 		},
 		async extractBytes(data: Buffer, mimeType: string | null, config: Record<string, unknown> | null = null) {
@@ -225,6 +230,7 @@ export function createMockExtractionBinding() {
 				tables: processed.tables,
 				detectedLanguages: processed.detectedLanguages,
 				chunks: processed.chunks,
+				images: processed.images,
 			};
 		},
 	};

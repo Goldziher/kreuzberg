@@ -110,4 +110,30 @@ public final class ImageExtractionConfig {
       return new ImageExtractionConfig(this);
     }
   }
+
+  static ImageExtractionConfig fromMap(Map<String, Object> map) {
+    if (map == null) {
+      return null;
+    }
+    Builder builder = builder();
+    if (map.containsKey("extract_images") && map.get("extract_images") instanceof Boolean) {
+      builder.extractImages((Boolean) map.get("extract_images"));
+    }
+    if (map.get("target_dpi") instanceof Number) {
+      builder.targetDpi(((Number) map.get("target_dpi")).intValue());
+    }
+    if (map.get("max_image_dimension") instanceof Number) {
+      builder.maxImageDimension(((Number) map.get("max_image_dimension")).intValue());
+    }
+    if (map.get("auto_adjust_dpi") instanceof Boolean) {
+      builder.autoAdjustDpi((Boolean) map.get("auto_adjust_dpi"));
+    }
+    if (map.get("min_dpi") instanceof Number) {
+      builder.minDpi(((Number) map.get("min_dpi")).intValue());
+    }
+    if (map.get("max_dpi") instanceof Number) {
+      builder.maxDpi(((Number) map.get("max_dpi")).intValue());
+    }
+    return builder.build();
+  }
 }

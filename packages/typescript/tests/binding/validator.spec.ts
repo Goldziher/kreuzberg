@@ -258,7 +258,19 @@ describe("Validator bridge wiring", () => {
 			metadata: JSON.stringify({ score: 0.99, nested: { value: 42 } }),
 			tables: [{ cells: [["a"]] }],
 			detected_languages: ["en"],
-			chunks: [{ id: 1 }],
+			chunks: [
+				{
+					content: "chunk",
+					embedding: null,
+					metadata: {
+						charStart: 0,
+						charEnd: 5,
+						tokenCount: null,
+						chunkIndex: 0,
+						totalChunks: 1,
+					},
+				},
+			],
 		});
 
 		await wrapped.validate(wirePayload);
@@ -270,7 +282,19 @@ describe("Validator bridge wiring", () => {
 				metadata: { score: 0.99, nested: { value: 42 } },
 				tables: [{ cells: [["a"]] }],
 				detectedLanguages: ["en"],
-				chunks: [{ id: 1 }],
+				chunks: [
+					{
+						content: "chunk",
+						embedding: null,
+						metadata: {
+							charStart: 0,
+							charEnd: 5,
+							tokenCount: null,
+							chunkIndex: 0,
+							totalChunks: 1,
+						},
+					},
+				],
 			}),
 		);
 	});

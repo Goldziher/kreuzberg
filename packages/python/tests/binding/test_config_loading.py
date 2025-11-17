@@ -18,6 +18,7 @@ def test_from_file_toml_basic() -> None:
     assert not config.use_cache
     assert config.enable_quality_processing
     assert config.force_ocr
+    assert config.max_concurrent_extractions == 4
 
 
 def test_from_file_yaml_basic() -> None:
@@ -29,6 +30,7 @@ def test_from_file_yaml_basic() -> None:
     assert config.use_cache
     assert not config.enable_quality_processing
     assert not config.force_ocr
+    assert config.max_concurrent_extractions == 8
 
 
 def test_from_file_toml_with_ocr() -> None:

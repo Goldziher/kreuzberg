@@ -37,6 +37,14 @@ RSpec.describe 'Kreuzberg package' do
       it 'exports Config::PDF' do
         expect(defined?(Kreuzberg::Config::PDF)).to eq('constant')
       end
+
+      it 'exports Config::HtmlOptions' do
+        expect(defined?(Kreuzberg::Config::HtmlOptions)).to eq('constant')
+      end
+
+      it 'exports Config::Keywords' do
+        expect(defined?(Kreuzberg::Config::Keywords)).to eq('constant')
+      end
     end
 
     describe 'result classes' do
@@ -50,6 +58,10 @@ RSpec.describe 'Kreuzberg package' do
 
       it 'exports Result::Chunk' do
         expect(defined?(Kreuzberg::Result::Chunk)).to eq('constant')
+      end
+
+      it 'exports Result::Image' do
+        expect(defined?(Kreuzberg::Result::Image)).to eq('constant')
       end
     end
 

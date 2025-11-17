@@ -123,4 +123,33 @@ public final class ImagePreprocessingConfig {
       return new ImagePreprocessingConfig(this);
     }
   }
+
+  static ImagePreprocessingConfig fromMap(Map<String, Object> map) {
+    if (map == null) {
+      return null;
+    }
+    Builder builder = builder();
+    if (map.get("target_dpi") instanceof Number) {
+      builder.targetDpi(((Number) map.get("target_dpi")).intValue());
+    }
+    if (map.get("auto_rotate") instanceof Boolean) {
+      builder.autoRotate((Boolean) map.get("auto_rotate"));
+    }
+    if (map.get("deskew") instanceof Boolean) {
+      builder.deskew((Boolean) map.get("deskew"));
+    }
+    if (map.get("denoise") instanceof Boolean) {
+      builder.denoise((Boolean) map.get("denoise"));
+    }
+    if (map.get("contrast_enhance") instanceof Boolean) {
+      builder.contrastEnhance((Boolean) map.get("contrast_enhance"));
+    }
+    if (map.get("binarization_method") instanceof String) {
+      builder.binarizationMethod((String) map.get("binarization_method"));
+    }
+    if (map.get("invert_colors") instanceof Boolean) {
+      builder.invertColors((Boolean) map.get("invert_colors"));
+    }
+    return builder.build();
+  }
 }

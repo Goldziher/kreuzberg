@@ -182,6 +182,34 @@ def test_ensure_ocr_backend_registered_with_paddleocr_missing_dependency(docx_do
         assert "paddleocr" in str(exc_info.value).lower()
 
 
+def test_extraction_config_max_concurrent_property() -> None:
+    config = ExtractionConfig(max_concurrent_extractions=5)
+    assert config.max_concurrent_extractions == 5
+
+    config.max_concurrent_extractions = None
+    assert config.max_concurrent_extractions is None
+
+
+def test_extraction_config_html_options_roundtrip() -> None:
+    options = {
+        "extract_metadata": False,
+        "wrap": True,
+        "wrap_width": 120,
+        "heading_style": "atx",
+        "preprocessing": {"enabled": True, "preset": "aggressive"},
+    }
+    config = ExtractionConfig(html_options=options)
+    assert config.html_options == options
+
+    config.html_options = None
+    assert config.html_options is None
+
+
+def test_extraction_config_html_options_invalid_heading() -> None:
+    with pytest.raises(ValueError):
+        ExtractionConfig(html_options={"heading_style": "invalid"})
+
+
 def test_ocr_backend_cache_eviction(docx_document: Path) -> None:
     """Test that OCR backend cache evicts oldest entry when full."""
     import kreuzberg

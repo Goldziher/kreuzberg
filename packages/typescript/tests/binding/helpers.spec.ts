@@ -43,6 +43,7 @@ describe("Helper Functions and Edge Cases", () => {
 			expect(result).toHaveProperty("tables");
 			expect(result).toHaveProperty("detectedLanguages");
 			expect(result).toHaveProperty("chunks");
+			expect(result).toHaveProperty("images");
 		});
 
 		it("should handle missing tables as empty array", () => {
@@ -60,7 +61,13 @@ describe("Helper Functions and Edge Cases", () => {
 		it("should handle chunks as null when not configured", () => {
 			const result = extractFileSync(pdfPath, null, null);
 
-			expect(result.chunks === null || result.chunks === undefined || Array.isArray(result.chunks)).toBe(true);
+			expect(result.chunks === null || Array.isArray(result.chunks)).toBe(true);
+		});
+
+		it("should handle images as null when not configured", () => {
+			const result = extractFileSync(pdfPath, null, null);
+
+			expect(result.images === null || Array.isArray(result.images)).toBe(true);
 		});
 
 		it("should preserve metadata when already an object", () => {

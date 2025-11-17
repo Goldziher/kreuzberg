@@ -232,7 +232,8 @@ describe("Async PostProcessor Support", () => {
 					expect(Array.isArray(result.tables)).toBe(true);
 
 					expect(result.detectedLanguages === null || Array.isArray(result.detectedLanguages)).toBe(true);
-					expect(result.chunks === null || result.chunks === undefined || Array.isArray(result.chunks)).toBe(true);
+					expect(result.chunks === null || Array.isArray(result.chunks)).toBe(true);
+					expect(result.images === null || Array.isArray(result.images)).toBe(true);
 
 					result.metadata.all_props_valid = true;
 					return result;

@@ -79,6 +79,8 @@ class KreuzbergTest {
         assertNotNull(result.language());
         assertNotNull(result.date());
         assertNotNull(result.subject());
+        assertNotNull(result.getChunks());
+        assertNotNull(result.getImages());
     }
 
     @Test
@@ -108,6 +110,18 @@ class KreuzbergTest {
         ExtractionResult withDate = original.withDate("2024-01-01");
         assertTrue(withDate.date().isPresent());
         assertEquals("2024-01-01", withDate.date().get());
+    }
+
+    @Test
+    void testLoadConfig(@TempDir Path tempDir) throws Exception {
+        Path configFile = tempDir.resolve("kreuzberg.toml");
+        Files.writeString(configFile, "use_cache = false\nmax_concurrent_extractions = 3\n");
+
+        ExtractionConfig config = Kreuzberg.loadConfig(configFile);
+        assertNotNull(config, "Config should load");
+        assertFalse(config.isUseCache(), "use_cache should reflect file");
+        assertEquals(Integer.valueOf(3), config.getMaxConcurrentExtractions());
+        assertEquals(Boolean.FALSE, config.toMap().get("use_cache"));
     }
 
     @Test

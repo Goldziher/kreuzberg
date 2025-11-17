@@ -98,4 +98,33 @@ public final class PostProcessorConfig {
       return new PostProcessorConfig(this);
     }
   }
+
+  static PostProcessorConfig fromMap(Map<String, Object> map) {
+    if (map == null) {
+      return null;
+    }
+    Builder builder = builder();
+    if (map.get("enabled") instanceof Boolean) {
+      builder.enabled((Boolean) map.get("enabled"));
+    }
+    if (map.get("enabled_processors") instanceof Iterable) {
+      java.util.List<String> enabled = new java.util.ArrayList<>();
+      for (Object value : (Iterable<?>) map.get("enabled_processors")) {
+        if (value instanceof String) {
+          enabled.add((String) value);
+        }
+      }
+      builder.enabledProcessors(enabled);
+    }
+    if (map.get("disabled_processors") instanceof Iterable) {
+      java.util.List<String> disabled = new java.util.ArrayList<>();
+      for (Object value : (Iterable<?>) map.get("disabled_processors")) {
+        if (value instanceof String) {
+          disabled.add((String) value);
+        }
+      }
+      builder.disabledProcessors(disabled);
+    }
+    return builder.build();
+  }
 }

@@ -2,6 +2,7 @@
 use_cache: true
 enable_quality_processing: false
 force_ocr: false
+max_concurrent_extractions: 8
 
 ocr:
   backend: "easyocr"

@@ -62,6 +62,68 @@ export interface PostProcessorConfig {
 	disabledProcessors?: string[];
 }
 
+export interface HtmlPreprocessingOptions {
+	enabled?: boolean;
+	preset?: "minimal" | "standard" | "aggressive";
+	removeNavigation?: boolean;
+	removeForms?: boolean;
+}
+
+export interface HtmlConversionOptions {
+	headingStyle?: "atx" | "underlined" | "atx_closed";
+	listIndentType?: "spaces" | "tabs";
+	listIndentWidth?: number;
+	bullets?: string;
+	strongEmSymbol?: string;
+	escapeAsterisks?: boolean;
+	escapeUnderscores?: boolean;
+	escapeMisc?: boolean;
+	escapeAscii?: boolean;
+	codeLanguage?: string;
+	autolinks?: boolean;
+	defaultTitle?: boolean;
+	brInTables?: boolean;
+	hocrSpatialTables?: boolean;
+	highlightStyle?: "double_equal" | "html" | "bold" | "none";
+	extractMetadata?: boolean;
+	whitespaceMode?: "normalized" | "strict";
+	stripNewlines?: boolean;
+	wrap?: boolean;
+	wrapWidth?: number;
+	convertAsInline?: boolean;
+	subSymbol?: string;
+	supSymbol?: string;
+	newlineStyle?: "spaces" | "backslash";
+	codeBlockStyle?: "indented" | "backticks" | "tildes";
+	keepInlineImagesIn?: string[];
+	encoding?: string;
+	debug?: boolean;
+	stripTags?: string[];
+	preserveTags?: string[];
+	preprocessing?: HtmlPreprocessingOptions;
+}
+
+export type KeywordAlgorithm = "yake" | "rake";
+
+export interface YakeParams {
+	windowSize?: number;
+}
+
+export interface RakeParams {
+	minWordLength?: number;
+	maxWordsPerPhrase?: number;
+}
+
+export interface KeywordConfig {
+	algorithm?: KeywordAlgorithm;
+	maxKeywords?: number;
+	minScore?: number;
+	ngramRange?: [number, number];
+	language?: string;
+	yakeParams?: YakeParams;
+	rakeParams?: RakeParams;
+}
+
 export interface ExtractionConfig {
 	useCache?: boolean;
 	enableQualityProcessing?: boolean;
@@ -73,6 +135,8 @@ export interface ExtractionConfig {
 	tokenReduction?: TokenReductionConfig;
 	languageDetection?: LanguageDetectionConfig;
 	postprocessor?: PostProcessorConfig;
+	htmlOptions?: HtmlConversionOptions;
+	keywords?: KeywordConfig;
 	maxConcurrentExtractions?: number;
 }
 
@@ -199,6 +263,34 @@ export interface ErrorMetadata {
 	message?: string;
 }
 
+export interface ChunkMetadata {
+	charStart: number;
+	charEnd: number;
+	tokenCount?: number | null;
+	chunkIndex: number;
+	totalChunks: number;
+}
+
+export interface Chunk {
+	content: string;
+	embedding?: number[] | null;
+	metadata: ChunkMetadata;
+}
+
+export interface ExtractedImage {
+	data: Uint8Array;
+	format: string;
+	imageIndex: number;
+	pageNumber?: number | null;
+	width?: number | null;
+	height?: number | null;
+	colorspace?: string | null;
+	bitsPerComponent?: number | null;
+	isMask: boolean;
+	description?: string | null;
+	ocrResult?: ExtractionResult | null;
+}
+
 /**
  * Extraction result metadata.
  *
@@ -299,7 +391,8 @@ export interface ExtractionResult {
 	metadata: Metadata;
 	tables: Table[];
 	detectedLanguages: string[] | null;
-	chunks?: string[] | null;
+	chunks: Chunk[] | null;
+	images: ExtractedImage[] | null;
 }
 
 export type ProcessingStage = "early" | "middle" | "late";

@@ -46,10 +46,15 @@
  */
 
 import type {
+	Chunk,
 	ChunkingConfig,
+	ExtractedImage,
 	ExtractionConfig as ExtractionConfigType,
 	ExtractionResult,
+	HtmlConversionOptions,
+	HtmlPreprocessingOptions,
 	ImageExtractionConfig,
+	KeywordConfig,
 	LanguageDetectionConfig,
 	OcrBackendProtocol,
 	OcrConfig,
@@ -181,6 +186,81 @@ function parseMetadata(metadataStr: string): any {
 	}
 }
 
+function ensureUint8Array(value: unknown): Uint8Array {
+	if (value instanceof Uint8Array) {
+		return value;
+	}
+	if (typeof Buffer !== "undefined" && value instanceof Buffer) {
+		return new Uint8Array(value);
+	}
+	if (Array.isArray(value)) {
+		return new Uint8Array(value);
+	}
+	return new Uint8Array();
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: JSON payload from native binding is untyped
+function convertChunk(rawChunk: any): Chunk {
+	if (!rawChunk) {
+		return {
+			content: "",
+			metadata: {
+				charStart: 0,
+				charEnd: 0,
+				tokenCount: null,
+				chunkIndex: 0,
+				totalChunks: 0,
+			},
+			embedding: null,
+		};
+	}
+	const metadata = rawChunk.metadata ?? {};
+	return {
+		content: rawChunk.content ?? "",
+		embedding: rawChunk.embedding ?? null,
+		metadata: {
+			charStart: metadata.charStart ?? 0,
+			charEnd: metadata.charEnd ?? 0,
+			tokenCount: metadata.tokenCount ?? null,
+			chunkIndex: metadata.chunkIndex ?? 0,
+			totalChunks: metadata.totalChunks ?? 0,
+		},
+	};
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: JSON payload from native binding is untyped
+function convertImage(rawImage: any): ExtractedImage {
+	if (!rawImage) {
+		return {
+			data: new Uint8Array(),
+			format: "unknown",
+			imageIndex: 0,
+			pageNumber: null,
+			width: null,
+			height: null,
+			colorspace: null,
+			bitsPerComponent: null,
+			isMask: false,
+			description: null,
+			ocrResult: null,
+		};
+	}
+
+	return {
+		data: ensureUint8Array(rawImage.data),
+		format: rawImage.format ?? "unknown",
+		imageIndex: rawImage.imageIndex ?? 0,
+		pageNumber: rawImage.pageNumber ?? null,
+		width: rawImage.width ?? null,
+		height: rawImage.height ?? null,
+		colorspace: rawImage.colorspace ?? null,
+		bitsPerComponent: rawImage.bitsPerComponent ?? null,
+		isMask: rawImage.isMask ?? false,
+		description: rawImage.description ?? null,
+		ocrResult: rawImage.ocrResult ? convertResult(rawImage.ocrResult) : null,
+	};
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: Raw NAPI result is untyped
 function convertResult(rawResult: any): ExtractionResult {
 	return {
@@ -189,7 +269,12 @@ function convertResult(rawResult: any): ExtractionResult {
 		metadata: typeof rawResult.metadata === "string" ? parseMetadata(rawResult.metadata) : rawResult.metadata,
 		tables: rawResult.tables || [],
 		detectedLanguages: rawResult.detectedLanguages || null,
-		chunks: rawResult.chunks || null,
+		chunks: Array.isArray(rawResult.chunks)
+			? (rawResult.chunks as unknown[]).map((chunk) => convertChunk(chunk))
+			: null,
+		images: Array.isArray(rawResult.images)
+			? (rawResult.images as unknown[]).map((image) => convertImage(image))
+			: null,
 	};
 }
 
@@ -309,6 +394,92 @@ function normalizePostProcessorConfig(postprocessor?: PostProcessorConfig): Nati
 	return normalized;
 }
 
+function normalizeHtmlPreprocessing(options?: HtmlPreprocessingOptions): NativeExtractionConfig | undefined {
+	if (!options) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "enabled", options.enabled);
+	setIfDefined(normalized, "preset", options.preset);
+	setIfDefined(normalized, "removeNavigation", options.removeNavigation);
+	setIfDefined(normalized, "removeForms", options.removeForms);
+	return normalized;
+}
+
+function normalizeHtmlOptions(options?: HtmlConversionOptions): NativeExtractionConfig | undefined {
+	if (!options) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "headingStyle", options.headingStyle);
+	setIfDefined(normalized, "listIndentType", options.listIndentType);
+	setIfDefined(normalized, "listIndentWidth", options.listIndentWidth);
+	setIfDefined(normalized, "bullets", options.bullets);
+	setIfDefined(normalized, "strongEmSymbol", options.strongEmSymbol);
+	setIfDefined(normalized, "escapeAsterisks", options.escapeAsterisks);
+	setIfDefined(normalized, "escapeUnderscores", options.escapeUnderscores);
+	setIfDefined(normalized, "escapeMisc", options.escapeMisc);
+	setIfDefined(normalized, "escapeAscii", options.escapeAscii);
+	setIfDefined(normalized, "codeLanguage", options.codeLanguage);
+	setIfDefined(normalized, "autolinks", options.autolinks);
+	setIfDefined(normalized, "defaultTitle", options.defaultTitle);
+	setIfDefined(normalized, "brInTables", options.brInTables);
+	setIfDefined(normalized, "hocrSpatialTables", options.hocrSpatialTables);
+	setIfDefined(normalized, "highlightStyle", options.highlightStyle);
+	setIfDefined(normalized, "extractMetadata", options.extractMetadata);
+	setIfDefined(normalized, "whitespaceMode", options.whitespaceMode);
+	setIfDefined(normalized, "stripNewlines", options.stripNewlines);
+	setIfDefined(normalized, "wrap", options.wrap);
+	setIfDefined(normalized, "wrapWidth", options.wrapWidth);
+	setIfDefined(normalized, "convertAsInline", options.convertAsInline);
+	setIfDefined(normalized, "subSymbol", options.subSymbol);
+	setIfDefined(normalized, "supSymbol", options.supSymbol);
+	setIfDefined(normalized, "newlineStyle", options.newlineStyle);
+	setIfDefined(normalized, "codeBlockStyle", options.codeBlockStyle);
+	if (options.keepInlineImagesIn) {
+		normalized.keepInlineImagesIn = options.keepInlineImagesIn;
+	}
+	setIfDefined(normalized, "encoding", options.encoding);
+	setIfDefined(normalized, "debug", options.debug);
+	if (options.stripTags) {
+		normalized.stripTags = options.stripTags;
+	}
+	if (options.preserveTags) {
+		normalized.preserveTags = options.preserveTags;
+	}
+
+	const preprocessing = normalizeHtmlPreprocessing(options.preprocessing);
+	if (preprocessing) {
+		normalized.preprocessing = preprocessing;
+	}
+
+	return normalized;
+}
+
+function normalizeKeywordConfig(config?: KeywordConfig): NativeExtractionConfig | undefined {
+	if (!config) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "algorithm", config.algorithm);
+	setIfDefined(normalized, "maxKeywords", config.maxKeywords);
+	setIfDefined(normalized, "minScore", config.minScore);
+	if (config.ngramRange) {
+		normalized.ngramRange = config.ngramRange;
+	}
+	setIfDefined(normalized, "language", config.language);
+	if (config.yakeParams) {
+		normalized.yakeParams = config.yakeParams;
+	}
+	if (config.rakeParams) {
+		normalized.rakeParams = config.rakeParams;
+	}
+	return normalized;
+}
+
 function normalizeExtractionConfig(config: ExtractionConfigType | null): NativeExtractionConfig | null {
 	if (!config) {
 		return null;
@@ -353,6 +524,16 @@ function normalizeExtractionConfig(config: ExtractionConfigType | null): NativeE
 	const postprocessor = normalizePostProcessorConfig(config.postprocessor);
 	if (postprocessor) {
 		normalized.postprocessor = postprocessor;
+	}
+
+	const keywords = normalizeKeywordConfig(config.keywords);
+	if (keywords) {
+		normalized.keywords = keywords;
+	}
+
+	const htmlOptions = normalizeHtmlOptions(config.htmlOptions);
+	if (htmlOptions) {
+		normalized.htmlOptions = htmlOptions;
 	}
 
 	return normalized;
@@ -735,6 +916,7 @@ export function registerPostProcessor(processor: PostProcessorProtocol): void {
 				tables?: unknown[];
 				detected_languages?: string[];
 				chunks?: unknown[];
+				images?: unknown[];
 			};
 
 			const result: ExtractionResult = {
@@ -743,7 +925,8 @@ export function registerPostProcessor(processor: PostProcessorProtocol): void {
 				metadata: typeof wireResult.metadata === "string" ? JSON.parse(wireResult.metadata) : wireResult.metadata,
 				tables: (wireResult.tables || []) as Table[],
 				detectedLanguages: wireResult.detected_languages ?? null,
-				chunks: (wireResult.chunks as string[] | null | undefined) ?? null,
+				chunks: (wireResult.chunks as Chunk[] | null | undefined) ?? null,
+				images: (wireResult.images as ExtractedImage[] | null | undefined) ?? null,
 			};
 
 			const updated = await processor.process(result);
@@ -755,6 +938,7 @@ export function registerPostProcessor(processor: PostProcessorProtocol): void {
 				tables: updated.tables,
 				detected_languages: updated.detectedLanguages,
 				chunks: updated.chunks,
+				images: updated.images,
 			};
 
 			return JSON.stringify(wireUpdated);

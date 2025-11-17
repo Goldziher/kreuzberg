@@ -192,12 +192,35 @@ config = ExtractionConfig(
 result = extract_file_sync("document.pdf", config=config)
 ```
 
+### HTML Conversion Options & Batch Concurrency
+
+```python
+from kreuzberg import ExtractionConfig
+
+config = ExtractionConfig(
+    max_concurrent_extractions=8,
+    html_options={
+        "extract_metadata": True,
+        "wrap": True,
+        "wrap_width": 100,
+        "strip_tags": ["script", "style"],
+        "preprocessing": {"enabled": True, "preset": "standard"},
+    },
+)
+```
+
 ## Metadata Extraction
 
 ```python
 from kreuzberg import extract_file_sync
 
 result = extract_file_sync("document.pdf")
+
+if result.images:
+    print(f"Extracted {len(result.images)} inline images")
+
+if result.chunks:
+    print(f"First chunk tokens: {result.chunks[0]['metadata']['token_count']}")
 
 print(result.metadata.get("pdf", {}))
 print(result.metadata.get("language"))

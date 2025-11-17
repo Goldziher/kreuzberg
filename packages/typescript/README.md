@@ -207,8 +207,64 @@ const config: ExtractionConfig = {
 
 const result = extractFileSync('long_document.pdf', null, config);
 
-for (const chunk of result.chunks || []) {
-  console.log(chunk);
+for (const chunk of result.chunks ?? []) {
+  console.log(`Chunk ${chunk.metadata.chunkIndex + 1}/${chunk.metadata.totalChunks}`);
+  console.log(`Tokens: ${chunk.metadata.tokenCount ?? 0}`);
+  console.log(chunk.content);
+}
+```
+
+## HTML Conversion Options
+
+```typescript
+import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+
+const config: ExtractionConfig = {
+  htmlOptions: {
+    headingStyle: 'atx_closed',
+    listIndentType: 'spaces',
+    wrap: true,
+    wrapWidth: 100,
+    keepInlineImagesIn: ['figure', 'header'],
+    preprocessing: {
+      enabled: true,
+      preset: 'standard',
+    },
+  },
+};
+
+const result = extractFileSync('page.html', null, config);
+console.log(result.content);
+```
+
+## Keyword Extraction
+
+```typescript
+import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+
+const config: ExtractionConfig = {
+  keywords: {
+    algorithm: 'yake',
+    maxKeywords: 8,
+    minScore: 0.15,
+    ngramRange: [1, 3],
+  },
+};
+
+const result = extractFileSync('research.pdf', null, config);
+console.log(result.metadata.keyword_extraction);
+```
+
+## Image Extraction
+
+```typescript
+import { extractFileSync } from '@goldziher/kreuzberg';
+
+const result = extractFileSync('document.pdf');
+
+if (result.images) {
+  console.log(`Extracted ${result.images.length} inline images`);
+  console.log(result.images[0]?.format, result.images[0]?.pageNumber);
 }
 ```
 

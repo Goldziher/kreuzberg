@@ -152,6 +152,40 @@ class ErrorMetadata(TypedDict, total=False):
     message: str
 
 
+class ChunkMetadata(TypedDict):
+    """Chunk metadata describing offsets within the original document."""
+
+    char_start: int
+    char_end: int
+    token_count: int | None
+    chunk_index: int
+    total_chunks: int
+
+
+class Chunk(TypedDict, total=False):
+    """Text chunk with optional embedding vector."""
+
+    content: str
+    embedding: list[float] | None
+    metadata: ChunkMetadata
+
+
+class ExtractedImage(TypedDict, total=False):
+    """Image artifact extracted from a document page."""
+
+    data: bytes
+    format: str
+    image_index: int
+    page_number: int | None
+    width: int | None
+    height: int | None
+    colorspace: str | None
+    bits_per_component: int | None
+    is_mask: bool
+    description: str | None
+    ocr_result: ExtractionResult | None
+
+
 class Metadata(TypedDict, total=False):
     """Strongly-typed metadata for extraction results.
 
@@ -334,6 +368,8 @@ class ExtractionResult(TypedDict):
         metadata: Strongly-typed metadata (see Metadata TypedDict)
         tables: List of extracted tables
         detected_languages: List of detected language codes (ISO 639-1)
+        chunks: Optional list of text chunks with embeddings and metadata
+        images: Optional list of extracted images (with nested OCR results)
     """
 
     content: str
@@ -341,13 +377,18 @@ class ExtractionResult(TypedDict):
     metadata: Metadata
     tables: list[Table]
     detected_languages: list[str] | None
+    chunks: list[Chunk] | None
+    images: list[ExtractedImage] | None
 
 
 __all__ = [
     "ArchiveMetadata",
+    "Chunk",
+    "ChunkMetadata",
     "EmailMetadata",
     "ErrorMetadata",
     "ExcelMetadata",
+    "ExtractedImage",
     "ExtractionResult",
     "HtmlMetadata",
     "ImageMetadata",

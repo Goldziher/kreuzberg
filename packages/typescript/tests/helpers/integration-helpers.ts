@@ -58,6 +58,8 @@ export function assertValidExtractionResult(result: ExtractionResult): void {
 	expect(result).toHaveProperty("metadata");
 	expect(result).toHaveProperty("tables");
 	expect(result).toHaveProperty("detectedLanguages");
+	expect(result).toHaveProperty("chunks");
+	expect(result).toHaveProperty("images");
 
 	expect(typeof result.content).toBe("string");
 	expect(typeof result.mimeType).toBe("string");
@@ -69,8 +71,12 @@ export function assertValidExtractionResult(result: ExtractionResult): void {
 		expect(Array.isArray(result.detectedLanguages)).toBe(true);
 	}
 
-	if (result.chunks !== undefined && result.chunks !== null) {
+	if (result.chunks !== null) {
 		expect(Array.isArray(result.chunks)).toBe(true);
+	}
+
+	if (result.images !== null) {
+		expect(Array.isArray(result.images)).toBe(true);
 	}
 }
 

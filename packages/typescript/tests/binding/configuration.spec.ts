@@ -112,6 +112,39 @@ describe("Configuration Options", () => {
 		});
 	});
 
+	describe("HTML conversion configuration", () => {
+		it("should handle htmlOptions with preprocessing", () => {
+			const config: ExtractionConfigType = {
+				htmlOptions: {
+					headingStyle: "atx",
+					wrap: true,
+					wrapWidth: 120,
+					preprocessing: {
+						enabled: true,
+						preset: "standard",
+					},
+				},
+			};
+			const result = extractFileSync(pdfPath, null, config);
+			expect(result.content).toBeTruthy();
+		});
+	});
+
+	describe("Keyword configuration", () => {
+		it("should handle keyword extraction settings", () => {
+			const config: ExtractionConfigType = {
+				keywords: {
+					algorithm: "yake",
+					maxKeywords: 5,
+					minScore: 0.2,
+					ngramRange: [1, 3],
+				},
+			};
+			const result = extractFileSync(pdfPath, null, config);
+			expect(result.content).toBeTruthy();
+		});
+	});
+
 	describe("PDF options", () => {
 		it("should handle PDF extractImages: true", () => {
 			const config: ExtractionConfigType = {

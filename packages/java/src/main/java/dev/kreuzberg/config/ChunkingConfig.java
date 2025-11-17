@@ -12,7 +12,7 @@ public final class ChunkingConfig {
   private final int maxChars;
   private final int maxOverlap;
   private final String preset;
-  private final String embedding;
+  private final Map<String, Object> embedding;
   private final Boolean enabled;
 
   private ChunkingConfig(Builder builder) {
@@ -39,7 +39,7 @@ public final class ChunkingConfig {
     return preset;
   }
 
-  public String getEmbedding() {
+  public Map<String, Object> getEmbedding() {
     return embedding;
   }
 
@@ -67,7 +67,7 @@ public final class ChunkingConfig {
     private int maxChars = 1000;
     private int maxOverlap = 200;
     private String preset;
-    private String embedding;
+    private Map<String, Object> embedding;
     private Boolean enabled = true;
 
     private Builder() {
@@ -89,7 +89,7 @@ public final class ChunkingConfig {
       return this;
     }
 
-    public Builder embedding(String embedding) {
+    public Builder embedding(Map<String, Object> embedding) {
       this.embedding = embedding;
       return this;
     }
@@ -102,5 +102,38 @@ public final class ChunkingConfig {
     public ChunkingConfig build() {
       return new ChunkingConfig(this);
     }
+  }
+
+  static ChunkingConfig fromMap(Map<String, Object> map) {
+    if (map == null) {
+      return null;
+    }
+    Builder builder = builder();
+    Object maxCharsValue = map.get("max_chars");
+    if (maxCharsValue instanceof Number) {
+      builder.maxChars(((Number) maxCharsValue).intValue());
+    }
+    Object maxOverlapValue = map.get("max_overlap");
+    if (maxOverlapValue instanceof Number) {
+      builder.maxOverlap(((Number) maxOverlapValue).intValue());
+    }
+    Object presetValue = map.get("preset");
+    if (presetValue instanceof String) {
+      builder.preset((String) presetValue);
+    }
+    @SuppressWarnings("unchecked")
+    Map<String, Object> embeddingMap = map.get("embedding") instanceof Map
+        ? (Map<String, Object>) map.get("embedding")
+        : null;
+    if (embeddingMap != null && !embeddingMap.isEmpty()) {
+      builder.embedding(new HashMap<>(embeddingMap));
+    }
+    if (map.containsKey("enabled")) {
+      Object enabledValue = map.get("enabled");
+      if (enabledValue instanceof Boolean) {
+        builder.enabled((Boolean) enabledValue);
+      }
+    }
+    return builder.build();
   }
 }

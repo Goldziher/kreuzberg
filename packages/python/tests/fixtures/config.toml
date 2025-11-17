@@ -2,6 +2,7 @@
 use_cache = false
 enable_quality_processing = true
 force_ocr = true
+max_concurrent_extractions = 4
 
 [ocr]
 backend = "tesseract"

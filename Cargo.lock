@@ -2951,6 +2951,7 @@ version = "4.0.0-rc.1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
+ "html-to-markdown-rs",
  "kreuzberg",
  "mimalloc-rust",
  "napi",
@@ -2966,6 +2967,7 @@ name = "kreuzberg-py"
 version = "4.0.0-rc.1"
 dependencies = [
  "async-trait",
+ "html-to-markdown-rs",
  "kreuzberg",
  "once_cell",
  "pyo3",
@@ -2980,6 +2982,7 @@ name = "kreuzberg-rb"
 version = "4.0.0-rc.1"
 dependencies = [
  "async-trait",
+ "html-to-markdown-rs",
  "kreuzberg",
  "magnus",
  "pretty_assertions",
