@@ -87,7 +87,7 @@ version = "0.7.0"
 features = ["html_reports"]
 
 [dev-dependencies.image]
-version = "0.25.8"
+version = "0.25.9"
 
 [dev-dependencies.imageproc]
 version = "0.25.0"

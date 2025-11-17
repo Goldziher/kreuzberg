@@ -225,7 +225,7 @@ function normalizeOcrConfig(ocr?: OcrConfig): NativeExtractionConfig | undefined
 
 	const tesseract = normalizeTesseractConfig(ocr.tesseractConfig);
 	if (tesseract) {
-		normalized["tesseractConfig"] = tesseract;
+		normalized.tesseractConfig = tesseract;
 	}
 
 	return normalized;
@@ -322,37 +322,37 @@ function normalizeExtractionConfig(config: ExtractionConfigType | null): NativeE
 
 	const ocr = normalizeOcrConfig(config.ocr);
 	if (ocr) {
-		normalized["ocr"] = ocr;
+		normalized.ocr = ocr;
 	}
 
 	const chunking = normalizeChunkingConfig(config.chunking);
 	if (chunking) {
-		normalized["chunking"] = chunking;
+		normalized.chunking = chunking;
 	}
 
 	const images = normalizeImageExtractionConfig(config.images);
 	if (images) {
-		normalized["images"] = images;
+		normalized.images = images;
 	}
 
 	const pdf = normalizePdfConfig(config.pdfOptions);
 	if (pdf) {
-		normalized["pdfOptions"] = pdf;
+		normalized.pdfOptions = pdf;
 	}
 
 	const tokenReduction = normalizeTokenReductionConfig(config.tokenReduction);
 	if (tokenReduction) {
-		normalized["tokenReduction"] = tokenReduction;
+		normalized.tokenReduction = tokenReduction;
 	}
 
 	const languageDetection = normalizeLanguageDetectionConfig(config.languageDetection);
 	if (languageDetection) {
-		normalized["languageDetection"] = languageDetection;
+		normalized.languageDetection = languageDetection;
 	}
 
 	const postprocessor = normalizePostProcessorConfig(config.postprocessor);
 	if (postprocessor) {
-		normalized["postprocessor"] = postprocessor;
+		normalized.postprocessor = postprocessor;
 	}
 
 	return normalized;
@@ -500,7 +500,7 @@ export async function extractBytes(
 	config: ExtractionConfigType | null = null,
 ): Promise<ExtractionResult> {
 	const validated = assertUint8Array(data, "data");
-	if (process.env["KREUZBERG_DEBUG_GUTEN"] === "1") {
+	if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
 		// Helpful when debugging OCR pipelines that bridge through Rust/Node.
 		console.log("[TypeScript] Debug input header:", Array.from(validated.slice(0, 8)));
 	}
@@ -1057,7 +1057,7 @@ export function registerOcrBackend(backend: OcrBackendProtocol): void {
 			...processArgs: [OcrProcessPayload | OcrProcessTuple | NestedOcrProcessTuple, string?]
 		): Promise<string> {
 			const [imagePayload, maybeLanguage] = processArgs;
-			if (process.env["KREUZBERG_DEBUG_GUTEN"] === "1") {
+			if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
 				console.log("[registerOcrBackend] JS arguments", { length: processArgs.length });
 				console.log("[registerOcrBackend] Raw args", {
 					imagePayloadType: Array.isArray(imagePayload) ? "tuple" : typeof imagePayload,
@@ -1081,7 +1081,7 @@ export function registerOcrBackend(backend: OcrBackendProtocol): void {
 				throw new Error("OCR backend did not receive a language parameter");
 			}
 
-			if (process.env["KREUZBERG_DEBUG_GUTEN"] === "1") {
+			if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
 				const length = typeof rawBytes === "string" ? rawBytes.length : rawBytes.length;
 				console.log(
 					"[registerOcrBackend] Received payload",

@@ -12,88 +12,90 @@ import java.util.Map;
  * @since 4.0.0
  */
 public final class PostProcessorConfig {
-    private final boolean enabled;
-    private final List<String> enabledProcessors;
-    private final List<String> disabledProcessors;
+  private final boolean enabled;
+  private final List<String> enabledProcessors;
+  private final List<String> disabledProcessors;
 
-    private PostProcessorConfig(Builder builder) {
-        this.enabled = builder.enabled;
-        this.enabledProcessors = builder.enabledProcessors != null
-                ? Collections.unmodifiableList(new ArrayList<>(builder.enabledProcessors))
-                : null;
-        this.disabledProcessors = builder.disabledProcessors != null
-                ? Collections.unmodifiableList(new ArrayList<>(builder.disabledProcessors))
-                : null;
+  private PostProcessorConfig(Builder builder) {
+    this.enabled = builder.enabled;
+    this.enabledProcessors = builder.enabledProcessors != null
+        ? Collections.unmodifiableList(new ArrayList<>(builder.enabledProcessors))
+        : null;
+    this.disabledProcessors = builder.disabledProcessors != null
+        ? Collections.unmodifiableList(new ArrayList<>(builder.disabledProcessors))
+        : null;
+  }
+
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  public boolean isEnabled() {
+    return enabled;
+  }
+
+  public List<String> getEnabledProcessors() {
+    return enabledProcessors;
+  }
+
+  public List<String> getDisabledProcessors() {
+    return disabledProcessors;
+  }
+
+  public Map<String, Object> toMap() {
+    Map<String, Object> map = new HashMap<>();
+    map.put("enabled", enabled);
+    if (enabledProcessors != null && !enabledProcessors.isEmpty()) {
+      map.put("enabled_processors", enabledProcessors);
+    }
+    if (disabledProcessors != null && !disabledProcessors.isEmpty()) {
+      map.put("disabled_processors", disabledProcessors);
+    }
+    return map;
+  }
+
+  public static final class Builder {
+    private boolean enabled = true;
+    private List<String> enabledProcessors;
+    private List<String> disabledProcessors;
+
+    private Builder() {
+      // Use defaults
     }
 
-    public static Builder builder() {
-        return new Builder();
+    public Builder enabled(boolean enabled) {
+      this.enabled = enabled;
+      return this;
     }
 
-    public boolean isEnabled() {
-        return enabled;
+    public Builder enabledProcessors(List<String> enabledProcessors) {
+      this.enabledProcessors = enabledProcessors;
+      return this;
     }
 
-    public List<String> getEnabledProcessors() {
-        return enabledProcessors;
+    public Builder enabledProcessor(String processor) {
+      if (this.enabledProcessors == null) {
+        this.enabledProcessors = new ArrayList<>();
+      }
+      this.enabledProcessors.add(processor);
+      return this;
     }
 
-    public List<String> getDisabledProcessors() {
-        return disabledProcessors;
+    public Builder disabledProcessors(List<String> disabledProcessors) {
+      this.disabledProcessors = disabledProcessors;
+      return this;
     }
 
-    public Map<String, Object> toMap() {
-        Map<String, Object> map = new HashMap<>();
-        map.put("enabled", enabled);
-        if (enabledProcessors != null && !enabledProcessors.isEmpty()) {
-            map.put("enabled_processors", enabledProcessors);
-        }
-        if (disabledProcessors != null && !disabledProcessors.isEmpty()) {
-            map.put("disabled_processors", disabledProcessors);
-        }
-        return map;
+    public Builder disabledProcessor(String processor) {
+      if (this.disabledProcessors == null) {
+        this.disabledProcessors = new ArrayList<>();
+      }
+      this.disabledProcessors.add(processor);
+      return this;
     }
 
-    public static final class Builder {
-        private boolean enabled = true;
-        private List<String> enabledProcessors;
-        private List<String> disabledProcessors;
-
-        private Builder() { }
-
-        public Builder enabled(boolean enabled) {
-            this.enabled = enabled;
-            return this;
-        }
-
-        public Builder enabledProcessors(List<String> enabledProcessors) {
-            this.enabledProcessors = enabledProcessors;
-            return this;
-        }
-
-        public Builder enabledProcessor(String processor) {
-            if (this.enabledProcessors == null) {
-                this.enabledProcessors = new ArrayList<>();
-            }
-            this.enabledProcessors.add(processor);
-            return this;
-        }
-
-        public Builder disabledProcessors(List<String> disabledProcessors) {
-            this.disabledProcessors = disabledProcessors;
-            return this;
-        }
-
-        public Builder disabledProcessor(String processor) {
-            if (this.disabledProcessors == null) {
-                this.disabledProcessors = new ArrayList<>();
-            }
-            this.disabledProcessors.add(processor);
-            return this;
-        }
-
-        public PostProcessorConfig build() {
-            return new PostProcessorConfig(this);
-        }
+    public PostProcessorConfig build() {
+      return new PostProcessorConfig(this);
     }
+  }
 }

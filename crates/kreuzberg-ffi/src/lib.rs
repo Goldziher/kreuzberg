@@ -688,11 +688,9 @@ pub unsafe extern "C" fn kreuzberg_free_batch_result(batch_result: *mut CBatchRe
 
             // Free the array itself
             unsafe {
-                drop(Box::from_raw(std::slice::from_raw_parts_mut(
-                    batch.results,
-                    batch.count,
-                )))
-            };
+                let array_ptr = std::ptr::slice_from_raw_parts_mut(batch.results, batch.count);
+                drop(Box::from_raw(array_ptr));
+            }
         }
     }
 }

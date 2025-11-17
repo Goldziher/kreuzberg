@@ -1,8 +1,11 @@
 version: "3"
+env:
+  RUBY:
+    sh: rbenv which ruby
 vars:
   RUST_LOG: info
   V3_TAG: v3.20.2
-  BUNDLE: bundle
+  BUNDLE: rbenv exec bundle
 tasks:
   sync-versions:
     desc: Sync version from Cargo.toml to all package manifests
@@ -184,16 +187,38 @@ tasks:
     cmds:
       - mvn test
   java:lint:
-    desc: Lint Java code (checkstyle + PMD)
+    desc: Lint Java code (Spotless + Checkstyle + PMD)
     dir: packages/java
     cmds:
+      - mvn spotless:check
       - mvn checkstyle:check
       - mvn pmd:check pmd:cpd-check
-  java:update:
-    desc: Update Java dependencies
+  java:format:
+    desc: Format Java code with Spotless
     dir: packages/java
     cmds:
-      - echo "Checking for dependency updates..."
+      - mvn spotless:apply
+  java:update:
+    desc: Update Java dependencies
+    cmds:
+      - task: java:update:dependencies
+      - task: java:update:dev-dependencies
+      - task: java:update:report
+  java:update:dependencies:
+    desc: Update Java runtime dependencies to newest stable releases
+    dir: packages/java
+    cmds:
+      - mvn versions:use-latest-releases -Dallowsnapshots=false -DgenerateBackupPoms=false
+  java:update:dev-dependencies:
+    desc: Update Maven plugins and dev-only dependencies
+    dir: packages/java
+    cmds:
+      - mvn versions:use-latest-versions -Dincludes=org.apache.maven.plugins:*,org.codehaus.mojo:* -DgenerateBackupPoms=false
+      - mvn versions:update-properties -DgenerateBackupPoms=false
+  java:update:report:
+    desc: Display pending dependency and plugin updates
+    dir: packages/java
+    cmds:
       - mvn versions:display-dependency-updates
       - mvn versions:display-plugin-updates
   e2e:rust:generate:
@@ -339,6 +364,7 @@ tasks:
       - task: python:format
       - task: ruby:lint:fix
       - task: typescript:format
+      - task: java:format
   pre-commit:install:
     desc: Install pre-commit hooks
     cmds:

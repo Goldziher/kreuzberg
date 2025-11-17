@@ -48,7 +48,7 @@ repos:
       - id: cargo-check
       - id: clippy
   - repo: https://github.com/gherynos/pre-commit-java
-    rev: v0.6.27
+    rev: v0.6.28
     hooks:
       - id: cpd
       - id: checkstyle

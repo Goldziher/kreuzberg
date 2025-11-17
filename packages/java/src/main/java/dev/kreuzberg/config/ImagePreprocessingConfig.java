@@ -9,116 +9,118 @@ import java.util.Map;
  * @since 4.0.0
  */
 public final class ImagePreprocessingConfig {
-    private final int targetDpi;
-    private final boolean autoRotate;
-    private final boolean deskew;
-    private final boolean denoise;
-    private final boolean contrastEnhance;
-    private final String binarizationMethod;
-    private final boolean invertColors;
+  private final int targetDpi;
+  private final boolean autoRotate;
+  private final boolean deskew;
+  private final boolean denoise;
+  private final boolean contrastEnhance;
+  private final String binarizationMethod;
+  private final boolean invertColors;
 
-    private ImagePreprocessingConfig(Builder builder) {
-        this.targetDpi = builder.targetDpi;
-        this.autoRotate = builder.autoRotate;
-        this.deskew = builder.deskew;
-        this.denoise = builder.denoise;
-        this.contrastEnhance = builder.contrastEnhance;
-        this.binarizationMethod = builder.binarizationMethod;
-        this.invertColors = builder.invertColors;
+  private ImagePreprocessingConfig(Builder builder) {
+    this.targetDpi = builder.targetDpi;
+    this.autoRotate = builder.autoRotate;
+    this.deskew = builder.deskew;
+    this.denoise = builder.denoise;
+    this.contrastEnhance = builder.contrastEnhance;
+    this.binarizationMethod = builder.binarizationMethod;
+    this.invertColors = builder.invertColors;
+  }
+
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  public int getTargetDpi() {
+    return targetDpi;
+  }
+
+  public boolean isAutoRotate() {
+    return autoRotate;
+  }
+
+  public boolean isDeskew() {
+    return deskew;
+  }
+
+  public boolean isDenoise() {
+    return denoise;
+  }
+
+  public boolean isContrastEnhance() {
+    return contrastEnhance;
+  }
+
+  public String getBinarizationMethod() {
+    return binarizationMethod;
+  }
+
+  public boolean isInvertColors() {
+    return invertColors;
+  }
+
+  public Map<String, Object> toMap() {
+    Map<String, Object> map = new HashMap<>();
+    map.put("target_dpi", targetDpi);
+    map.put("auto_rotate", autoRotate);
+    map.put("deskew", deskew);
+    map.put("denoise", denoise);
+    map.put("contrast_enhance", contrastEnhance);
+    map.put("binarization_method", binarizationMethod);
+    map.put("invert_colors", invertColors);
+    return map;
+  }
+
+  public static final class Builder {
+    private int targetDpi = 300;
+    private boolean autoRotate = true;
+    private boolean deskew = true;
+    private boolean denoise = false;
+    private boolean contrastEnhance = true;
+    private String binarizationMethod = "otsu";
+    private boolean invertColors = false;
+
+    private Builder() {
+      // Use defaults
     }
 
-    public static Builder builder() {
-        return new Builder();
+    public Builder targetDpi(int targetDpi) {
+      this.targetDpi = targetDpi;
+      return this;
     }
 
-    public int getTargetDpi() {
-        return targetDpi;
+    public Builder autoRotate(boolean autoRotate) {
+      this.autoRotate = autoRotate;
+      return this;
     }
 
-    public boolean isAutoRotate() {
-        return autoRotate;
+    public Builder deskew(boolean deskew) {
+      this.deskew = deskew;
+      return this;
     }
 
-    public boolean isDeskew() {
-        return deskew;
+    public Builder denoise(boolean denoise) {
+      this.denoise = denoise;
+      return this;
     }
 
-    public boolean isDenoise() {
-        return denoise;
+    public Builder contrastEnhance(boolean contrastEnhance) {
+      this.contrastEnhance = contrastEnhance;
+      return this;
     }
 
-    public boolean isContrastEnhance() {
-        return contrastEnhance;
+    public Builder binarizationMethod(String binarizationMethod) {
+      this.binarizationMethod = binarizationMethod;
+      return this;
     }
 
-    public String getBinarizationMethod() {
-        return binarizationMethod;
+    public Builder invertColors(boolean invertColors) {
+      this.invertColors = invertColors;
+      return this;
     }
 
-    public boolean isInvertColors() {
-        return invertColors;
+    public ImagePreprocessingConfig build() {
+      return new ImagePreprocessingConfig(this);
     }
-
-    public Map<String, Object> toMap() {
-        Map<String, Object> map = new HashMap<>();
-        map.put("target_dpi", targetDpi);
-        map.put("auto_rotate", autoRotate);
-        map.put("deskew", deskew);
-        map.put("denoise", denoise);
-        map.put("contrast_enhance", contrastEnhance);
-        map.put("binarization_method", binarizationMethod);
-        map.put("invert_colors", invertColors);
-        return map;
-    }
-
-    public static final class Builder {
-        private int targetDpi = 300;
-        private boolean autoRotate = true;
-        private boolean deskew = true;
-        private boolean denoise = false;
-        private boolean contrastEnhance = true;
-        private String binarizationMethod = "otsu";
-        private boolean invertColors = false;
-
-        private Builder() { }
-
-        public Builder targetDpi(int targetDpi) {
-            this.targetDpi = targetDpi;
-            return this;
-        }
-
-        public Builder autoRotate(boolean autoRotate) {
-            this.autoRotate = autoRotate;
-            return this;
-        }
-
-        public Builder deskew(boolean deskew) {
-            this.deskew = deskew;
-            return this;
-        }
-
-        public Builder denoise(boolean denoise) {
-            this.denoise = denoise;
-            return this;
-        }
-
-        public Builder contrastEnhance(boolean contrastEnhance) {
-            this.contrastEnhance = contrastEnhance;
-            return this;
-        }
-
-        public Builder binarizationMethod(String binarizationMethod) {
-            this.binarizationMethod = binarizationMethod;
-            return this;
-        }
-
-        public Builder invertColors(boolean invertColors) {
-            this.invertColors = invertColors;
-            return this;
-        }
-
-        public ImagePreprocessingConfig build() {
-            return new ImagePreprocessingConfig(this);
-        }
-    }
+  }
 }

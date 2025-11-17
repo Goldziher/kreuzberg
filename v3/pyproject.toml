@@ -87,7 +87,7 @@ optional-dependencies.api = [
 ]
 optional-dependencies.chunking = [ "semantic-text-splitter>=0.28" ]
 optional-dependencies.cli = [
-  "click>=8.3",
+  "click>=8.3.1",
   "rich>=14.2",
   "tomli>=2; python_version<'3.11'",
 ]
