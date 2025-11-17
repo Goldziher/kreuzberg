@@ -1584,35 +1584,47 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
-      - name: Download Maven artifacts
-        uses: actions/download-artifact@v6
-        with:
-          name: maven-packages
-          path: dist
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '22'
-          cache: 'maven'
+          cache: maven
+          server-id: central
+          server-username: ${{ secrets.NEXUS_USERNAME }}
+          server-password: ${{ secrets.NEXUS_PASSWORD }}
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.GPP_PASSPHRASE }}
 
-      - name: Dry run summary
-        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Force gpg2 executable
         run: |
-          echo "Dry run requested; Maven artifacts ready:" >> "$GITHUB_STEP_SUMMARY"
-          ls -1 dist/*.jar >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          mkdir -p "${HOME}/.local/bin"
+          printf '#!/usr/bin/env bash\nexec gpg2 "$@"\n' > "${HOME}/.local/bin/gpg"
+          chmod +x "${HOME}/.local/bin/gpg"
+          echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
       - name: Publish to Maven Central
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        uses: WasiqB/maven-publish-action@v2.0.1
-        with:
-          maven-goals: 'deploy'
-          maven-args: '-DskipTests'
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg_passphrase: ${{ secrets.GPP_PASSPHRASE }}
-          nexus_username: ${{ secrets.NEXUS_USERNAME }}
-          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+        working-directory: packages/java
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          mvn --batch-mode --no-transfer-progress clean deploy
+
+      - name: Dry run summary
+        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        run: echo "Dry run requested; Maven publish skipped." >> "$GITHUB_STEP_SUMMARY"
 
   publish-homebrew:
     name: Update Homebrew formula
