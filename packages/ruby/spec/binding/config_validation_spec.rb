@@ -67,6 +67,19 @@ RSpec.describe 'Configuration Validation' do
       expect(hash[:ocr]).to be_nil
       expect(hash[:chunking]).to be_nil
     end
+
+    it 'accepts html options hashes' do
+      config = described_class.new(html_options: { heading_style: :atx, wrap: true })
+      expect(config.html_options).to be_a(Kreuzberg::Config::HtmlOptions)
+      expect(config.html_options.to_h[:heading_style]).to eq(:atx)
+    end
+
+    it 'accepts keyword configurations' do
+      keywords = Kreuzberg::Config::Keywords.new(algorithm: :yake, max_keywords: 5)
+      config = described_class.new(keywords: keywords, max_concurrent_extractions: 4)
+      expect(config.keywords).to be_a(Kreuzberg::Config::Keywords)
+      expect(config.max_concurrent_extractions).to eq(4)
+    end
   end
 
   describe Kreuzberg::Config::OCR do
@@ -97,6 +110,18 @@ RSpec.describe 'Configuration Validation' do
       expect(config.backend).to eq('tesseract')
       expect(config.language).to eq('123')
     end
+
+    it 'accepts tesseract config hashes' do
+      config = described_class.new(
+        tesseract_config: {
+          psm: 6,
+          enable_table_detection: true
+        }
+      )
+
+      expect(config.tesseract_config).to be_a(Kreuzberg::Config::Tesseract)
+      expect(config.tesseract_config.to_h[:psm]).to eq(6)
+    end
   end
 
   describe Kreuzberg::Config::Chunking do
@@ -122,6 +147,13 @@ RSpec.describe 'Configuration Validation' do
       config = described_class.new(preset: 'fast')
       expect(config.preset).to eq('fast')
     end
+
+    it 'accepts embedding configs' do
+      embedding = { model: { type: :preset, name: 'quality' }, normalize: false }
+      config = described_class.new(embedding: embedding)
+      expect(config.embedding).to be_a(Kreuzberg::Config::Embedding)
+      expect(config.embedding.to_h[:model]).to include(type: :preset, name: 'quality')
+    end
   end
 
   describe Kreuzberg::Config::LanguageDetection do
@@ -145,6 +177,12 @@ RSpec.describe 'Configuration Validation' do
     it 'coerces confidence to float' do
       config = described_class.new(min_confidence: '0.75')
       expect(config.min_confidence).to eq(0.75)
+    end
+
+    it 'supports detect_multiple flag' do
+      config = described_class.new(detect_multiple: true)
+      expect(config.detect_multiple).to be true
+      expect(config.to_h[:detect_multiple]).to be true
     end
   end
 
@@ -170,6 +208,31 @@ RSpec.describe 'Configuration Validation' do
     it 'converts password to string' do
       config = described_class.new(passwords: 12_345)
       expect(config.passwords).to eq(['12345'])
+    end
+  end
+
+  describe Kreuzberg::Config::HtmlOptions do
+    it 'normalizes preprocessing settings' do
+      options = described_class.new(
+        heading_style: :atx_closed,
+        preprocessing: { enabled: true, preset: :standard }
+      )
+      hash = options.to_h
+      expect(hash[:heading_style]).to eq(:atx_closed)
+      expect(hash[:preprocessing]).to include(preset: :standard)
+    end
+  end
+
+  describe Kreuzberg::Config::Keywords do
+    it 'accepts hash arguments' do
+      config = described_class.new(
+        algorithm: :yake,
+        max_keywords: 10,
+        ngram_range: [1, 3],
+        yake_params: { window_size: 4 }
+      )
+      expect(config.to_h[:algorithm]).to eq('yake')
+      expect(config.to_h[:yake_params]).to eq(window_size: 4)
     end
   end
 

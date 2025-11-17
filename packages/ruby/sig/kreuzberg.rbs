@@ -8,9 +8,14 @@ module Kreuzberg
     class OCR
       attr_reader backend: String
       attr_reader language: String
-      attr_reader tesseract_config: untyped
+      attr_reader tesseract_config: Tesseract?
 
-      def initialize: (?backend: String, ?language: String, ?tesseract_config: untyped) -> void
+      def initialize: (?backend: String, ?language: String, ?tesseract_config: (Tesseract | Hash[Symbol, untyped])?) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class Tesseract
+      def initialize: (**untyped options) -> void
       def to_h: () -> Hash[Symbol, untyped]
     end
 
@@ -18,14 +23,14 @@ module Kreuzberg
       attr_reader max_chars: Integer
       attr_reader max_overlap: Integer
       attr_reader preset: String?
-      attr_reader embedding: untyped
+      attr_reader embedding: Embedding?
       attr_reader enabled: bool?
 
       def initialize: (
         ?max_chars: Integer?,
         ?max_overlap: Integer?,
         ?preset: String?,
-        ?embedding: untyped,
+        ?embedding: (Embedding | Hash[Symbol, untyped])?,
         ?chunk_size: Integer?,
         ?chunk_overlap: Integer?,
         ?enabled: bool
@@ -33,11 +38,29 @@ module Kreuzberg
       def to_h: () -> Hash[Symbol, untyped]
     end
 
+    class Embedding
+      attr_reader model: Hash[Symbol, untyped]
+      attr_reader normalize: bool?
+      attr_reader batch_size: Integer?
+      attr_reader show_download_progress: bool?
+      attr_reader cache_dir: String?
+
+      def initialize: (
+        ?model: Hash[Symbol, untyped],
+        ?normalize: bool?,
+        ?batch_size: Integer?,
+        ?show_download_progress: bool?,
+        ?cache_dir: String?
+      ) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
     class LanguageDetection
       attr_reader enabled: bool
       attr_reader min_confidence: Float
+      attr_reader detect_multiple: bool
 
-      def initialize: (?enabled: bool, ?min_confidence: Float) -> void
+      def initialize: (?enabled: bool, ?min_confidence: Float, ?detect_multiple: bool) -> void
       def to_h: () -> Hash[Symbol, untyped]
     end
 
@@ -107,6 +130,34 @@ module Kreuzberg
       def to_h: () -> Hash[Symbol, untyped]
     end
 
+    class HtmlPreprocessing
+      attr_reader enabled: bool?
+      attr_reader preset: Symbol?
+      attr_reader remove_navigation: bool?
+      attr_reader remove_forms: bool?
+
+      def initialize: (?enabled: bool?, ?preset: Symbol?, ?remove_navigation: bool?, ?remove_forms: bool?) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class HtmlOptions
+      def initialize: (**untyped options) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class Keywords
+      def initialize: (
+        ?algorithm: Symbol?,
+        ?max_keywords: Integer?,
+        ?min_score: Float?,
+        ?ngram_range: Array[Integer]?,
+        ?language: Symbol?,
+        ?yake_params: Hash[Symbol, untyped]?,
+        ?rake_params: Hash[Symbol, untyped]?
+      ) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
     class Extraction
       attr_reader use_cache: bool
       attr_reader enable_quality_processing: bool
@@ -119,6 +170,9 @@ module Kreuzberg
       attr_reader image_preprocessing: ImagePreprocessing?
       attr_reader postprocessor: PostProcessor?
       attr_reader token_reduction: TokenReduction?
+      attr_reader keywords: Keywords?
+      attr_reader html_options: HtmlOptions?
+      attr_reader max_concurrent_extractions: Integer?
 
       def self.from_file: (String path) -> Extraction
       def initialize: (
@@ -132,7 +186,10 @@ module Kreuzberg
         ?image_extraction: (ImageExtraction | Hash[Symbol, untyped])?,
         ?image_preprocessing: (ImagePreprocessing | Hash[Symbol, untyped])?,
         ?postprocessor: (PostProcessor | Hash[Symbol, untyped])?,
-        ?token_reduction: (TokenReduction | Hash[Symbol, untyped])?
+        ?token_reduction: (TokenReduction | Hash[Symbol, untyped])?,
+        ?keywords: (Keywords | Hash[Symbol, untyped])?,
+        ?html_options: (HtmlOptions | Hash[Symbol, untyped])?,
+        ?max_concurrent_extractions: Integer?
       ) -> void
       def to_h: () -> Hash[Symbol, untyped]
 
@@ -155,7 +212,8 @@ module Kreuzberg
     metadata_json: String,
     tables: Array[table_hash]?,
     detected_languages: Array[String]?,
-    chunks: Array[chunk_hash]?
+    chunks: Array[chunk_hash]?,
+    images: Array[image_hash]?
   }
 
   type table_hash = {
@@ -168,7 +226,24 @@ module Kreuzberg
     content: String,
     char_start: Integer,
     char_end: Integer,
-    token_count: Integer?
+    token_count: Integer?,
+    chunk_index: Integer?,
+    total_chunks: Integer?,
+    embedding: Array[Float]?
+  }
+
+  type image_hash = {
+    data: String,
+    format: String,
+    image_index: Integer,
+    page_number: Integer?,
+    width: Integer?,
+    height: Integer?,
+    colorspace: String?,
+    bits_per_component: Integer?,
+    is_mask: bool?,
+    description: String?,
+    ocr_result: extraction_result_hash?
   }
 
   type config_hash = Hash[Symbol, untyped]
@@ -196,9 +271,49 @@ module Kreuzberg
       attr_reader char_start: Integer
       attr_reader char_end: Integer
       attr_reader token_count: Integer?
+      attr_reader chunk_index: Integer?
+      attr_reader total_chunks: Integer?
+      attr_reader embedding: Array[Float]?
 
-      def initialize: (content: String, char_start: Integer, char_end: Integer, token_count: Integer?) -> void
+      def initialize: (
+        content: String,
+        char_start: Integer,
+        char_end: Integer,
+        token_count: Integer?,
+        chunk_index: Integer?,
+        total_chunks: Integer?,
+        embedding: Array[Float]?
+      ) -> void
       def to_h: () -> chunk_hash
+    end
+
+    class Image
+      attr_reader data: String
+      attr_reader format: String
+      attr_reader image_index: Integer
+      attr_reader page_number: Integer?
+      attr_reader width: Integer?
+      attr_reader height: Integer?
+      attr_reader colorspace: String?
+      attr_reader bits_per_component: Integer?
+      attr_reader is_mask: bool?
+      attr_reader description: String?
+      attr_reader ocr_result: Result?
+
+      def initialize: (
+        data: String,
+        format: String,
+        image_index: Integer,
+        page_number: Integer?,
+        width: Integer?,
+        height: Integer?,
+        colorspace: String?,
+        bits_per_component: Integer?,
+        is_mask: bool?,
+        description: String?,
+        ocr_result: Result?
+      ) -> void
+      def to_h: () -> image_hash
     end
 
     attr_reader content: String
@@ -208,6 +323,7 @@ module Kreuzberg
     attr_reader tables: Array[Table]
     attr_reader detected_languages: Array[String]?
     attr_reader chunks: Array[Chunk]?
+    attr_reader images: Array[Image]?
 
     def initialize: (extraction_result_hash hash) -> void
     def to_h: () -> Hash[Symbol, untyped]

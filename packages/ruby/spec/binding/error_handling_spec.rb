@@ -3,6 +3,37 @@
 # Error handling and exception mapping tests
 
 RSpec.describe 'Error Handling' do
+  let(:nested_ocr_result) do
+    {
+      'content' => 'ocr text',
+      'mime_type' => 'text/plain',
+      'metadata_json' => '{}',
+      'tables' => []
+    }
+  end
+
+  let(:image_result_payload) do
+    {
+      content: 'Test',
+      mime_type: 'text/plain',
+      images: [
+        {
+          'data' => "binary\0data",
+          'format' => 'png',
+          'image_index' => 0,
+          'page_number' => 1,
+          'width' => 100,
+          'height' => 200,
+          'colorspace' => 'RGB',
+          'bits_per_component' => 8,
+          'is_mask' => false,
+          'description' => 'inline image',
+          'ocr_result' => nested_ocr_result
+        }
+      ]
+    }
+  end
+
   describe 'file not found errors' do
     it 'raises error for non-existent file' do
       expect do
@@ -135,6 +166,7 @@ RSpec.describe 'Error Handling' do
       expect(result.tables).to eq([])
       expect(result.detected_languages).to be_nil
       expect(result.chunks).to be_nil
+      expect(result.images).to be_nil
     end
 
     it 'handles partial result data' do
@@ -156,6 +188,15 @@ RSpec.describe 'Error Handling' do
       )
 
       expect(result.metadata).to eq({})
+    end
+
+    it 'parses extracted images' do
+      result = Kreuzberg::Result.new(image_result_payload)
+      image = result.images&.first
+
+      expect(image&.format).to eq('png')
+      expect(image&.data&.encoding).to eq(Encoding::BINARY)
+      expect(image&.ocr_result).to be_a(Kreuzberg::Result)
     end
   end
 

@@ -124,7 +124,34 @@ results.each do |result|
 end
 ```
 
+### Structured Results (Chunks & Images)
+
+```ruby
+result = Kreuzberg.extract_file_sync("long-report.pdf", config: {
+  chunking: { max_chars: 750 },
+  image_extraction: { extract_images: true }
+})
+
+result.chunks&.each do |chunk|
+  puts "[#{chunk.chunk_index + 1}/#{chunk.total_chunks}] #{chunk.content[0..80]}"
+end
+
+result.images&.each do |image|
+  File.binwrite("image-#{image.image_index}.#{image.format}", image.data)
+  if image.ocr_result
+    puts "Embedded OCR content: #{image.ocr_result.content[0..60]}"
+  end
+end
+```
+
 ## Configuration
+
+### Load From File
+
+```ruby
+config = Kreuzberg::Config::Extraction.from_file("config.toml")
+result = Kreuzberg.extract_file_sync("report.pdf", config: config)
+```
 
 ### Extraction Configuration
 
@@ -142,9 +169,11 @@ config = Kreuzberg::Config::Extraction.new(
 ocr = Kreuzberg::Config::OCR.new(
   backend: "tesseract",           # OCR backend (tesseract, easyocr, paddleocr)
   language: "eng",                # Language code (eng, deu, fra, etc.)
-  preprocessing: true,            # Enable image preprocessing
-  table_extraction: false,        # Extract tables via OCR
-  confidence_threshold: 0.0       # Minimum confidence threshold
+  tesseract_config: {
+    psm: 6,
+    enable_table_detection: true,
+    preprocessing: Kreuzberg::Config::ImagePreprocessing.new(auto_rotate: true).to_h
+  }
 )
 
 config = Kreuzberg::Config::Extraction.new(ocr: ocr)
@@ -157,7 +186,10 @@ chunking = Kreuzberg::Config::Chunking.new(
   enabled: true,
   chunk_size: 1000,       # Characters per chunk
   chunk_overlap: 200,     # Overlap between chunks
-  strategy: "sentence"    # Chunking strategy
+  embedding: {
+    model: { type: :preset, name: "balanced" },
+    normalize: true
+  }
 )
 
 config = Kreuzberg::Config::Extraction.new(chunking: chunking)
@@ -169,12 +201,41 @@ result.chunks.each do |chunk|
 end
 ```
 
+### HTML Conversion Options
+
+```ruby
+html_options = Kreuzberg::Config::HtmlOptions.new(
+  heading_style: :atx_closed,
+  wrap: true,
+  wrap_width: 100,
+  preprocessing: { enabled: true, preset: :standard }
+)
+
+config = Kreuzberg::Config::Extraction.new(html_options: html_options)
+result = Kreuzberg.extract_file_sync("page.html", config: config)
+```
+
+### Keyword Extraction
+
+```ruby
+keywords = Kreuzberg::Config::Keywords.new(
+  algorithm: :yake,
+  max_keywords: 8,
+  min_score: 0.2,
+  ngram_range: [1, 3]
+)
+
+config = Kreuzberg::Config::Extraction.new(keywords: keywords)
+result = Kreuzberg.extract_file_sync("research.pdf", config: config)
+```
+
 ### Language Detection
 
 ```ruby
 lang_detection = Kreuzberg::Config::LanguageDetection.new(
   enabled: true,
-  min_confidence: 0.8
+  min_confidence: 0.8,
+  detect_multiple: true
 )
 
 config = Kreuzberg::Config::Extraction.new(language_detection: lang_detection)
@@ -217,6 +278,19 @@ result.tables.each do |table|
   table.rows.each do |row|
     puts row.join(', ')
   end
+end
+
+# Access text chunks and metadata
+result.chunks&.each do |chunk|
+  puts "Chunk #{chunk.chunk_index + 1}/#{chunk.total_chunks}"
+  puts "Chars: #{chunk.char_start}-#{chunk.char_end}"
+  puts "Embedding length: #{chunk.embedding&.length}"
+end
+
+# Access extracted images
+result.images&.each do |image|
+  File.binwrite("image-\#{image.image_index}.#{image.format}", image.data)
+  puts "Image #{image.image_index} on page #{image.page_number}"
 end
 
 # Convert to hash

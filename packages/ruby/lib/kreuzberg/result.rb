@@ -18,8 +18,10 @@ module Kreuzberg
   #   puts "Metadata: #{result.metadata.inspect}"
   #   result.tables.each { |table| puts table.inspect }
   #
+  # rubocop:disable Metrics/ClassLength
   class Result
-    attr_reader :content, :mime_type, :metadata, :metadata_json, :tables, :detected_languages, :chunks
+    attr_reader :content, :mime_type, :metadata, :metadata_json, :tables,
+                :detected_languages, :chunks, :images
 
     # Table structure
     #
@@ -47,9 +49,57 @@ module Kreuzberg
     # @!attribute [r] token_count
     #   @return [Integer, nil] Approximate token count (may be nil)
     #
-    Chunk = Struct.new(:content, :char_start, :char_end, :token_count, keyword_init: true) do
+    Chunk = Struct.new(
+      :content,
+      :char_start,
+      :char_end,
+      :token_count,
+      :chunk_index,
+      :total_chunks,
+      :embedding,
+      keyword_init: true
+    ) do
       def to_h
-        { content: content, char_start: char_start, char_end: char_end, token_count: token_count }
+        {
+          content: content,
+          char_start: char_start,
+          char_end: char_end,
+          token_count: token_count,
+          chunk_index: chunk_index,
+          total_chunks: total_chunks,
+          embedding: embedding
+        }
+      end
+    end
+
+    Image = Struct.new(
+      :data,
+      :format,
+      :image_index,
+      :page_number,
+      :width,
+      :height,
+      :colorspace,
+      :bits_per_component,
+      :is_mask,
+      :description,
+      :ocr_result,
+      keyword_init: true
+    ) do
+      def to_h
+        {
+          data: data,
+          format: format,
+          image_index: image_index,
+          page_number: page_number,
+          width: width,
+          height: height,
+          colorspace: colorspace,
+          bits_per_component: bits_per_component,
+          is_mask: is_mask,
+          description: description,
+          ocr_result: ocr_result&.to_h
+        }
       end
     end
 
@@ -66,6 +116,7 @@ module Kreuzberg
       @tables = parse_tables(get_value(hash, 'tables'))
       @detected_languages = parse_detected_languages(get_value(hash, 'detected_languages'))
       @chunks = parse_chunks(get_value(hash, 'chunks'))
+      @images = parse_images(get_value(hash, 'images'))
     end
 
     # Convert to hash
@@ -79,7 +130,8 @@ module Kreuzberg
         metadata: @metadata,
         tables: @tables.map(&:to_h),
         detected_languages: @detected_languages,
-        chunks: @chunks&.map(&:to_h)
+        chunks: @chunks&.map(&:to_h),
+        images: @images&.map(&:to_h)
       }
     end
 
@@ -130,9 +182,35 @@ module Kreuzberg
           content: chunk_hash['content'],
           char_start: chunk_hash['char_start'],
           char_end: chunk_hash['char_end'],
-          token_count: chunk_hash['token_count']
+          token_count: chunk_hash['token_count'],
+          chunk_index: chunk_hash['chunk_index'],
+          total_chunks: chunk_hash['total_chunks'],
+          embedding: chunk_hash['embedding']
+        )
+      end
+    end
+
+    def parse_images(images_data)
+      return nil if images_data.nil?
+
+      images_data.map do |image_hash|
+        data = image_hash['data']
+        data = data.dup.force_encoding(Encoding::BINARY) if data.respond_to?(:force_encoding)
+        Image.new(
+          data: data,
+          format: image_hash['format'],
+          image_index: image_hash['image_index'],
+          page_number: image_hash['page_number'],
+          width: image_hash['width'],
+          height: image_hash['height'],
+          colorspace: image_hash['colorspace'],
+          bits_per_component: image_hash['bits_per_component'],
+          is_mask: image_hash['is_mask'],
+          description: image_hash['description'],
+          ocr_result: image_hash['ocr_result'] ? Result.new(image_hash['ocr_result']) : nil
         )
       end
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end

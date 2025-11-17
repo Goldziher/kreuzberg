@@ -3,8 +3,17 @@
 //! High-performance document intelligence framework bindings for Ruby.
 //! Provides extraction, OCR, chunking, and language detection for 30+ file formats.
 
+use html_to_markdown_rs::options::{
+    CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, ListIndentType, NewlineStyle,
+    PreprocessingOptions as HtmlPreprocessingOptions, PreprocessingPreset, WhitespaceMode,
+};
+use kreuzberg::keywords::{
+    KeywordAlgorithm as RustKeywordAlgorithm, KeywordConfig as RustKeywordConfig, RakeParams as RustRakeParams,
+    YakeParams as RustYakeParams,
+};
+use kreuzberg::types::TesseractConfig as RustTesseractConfig;
 use kreuzberg::{
-    ChunkingConfig, ExtractionConfig, ExtractionResult as RustExtractionResult, ImageExtractionConfig,
+    ChunkingConfig, EmbeddingConfig, ExtractionConfig, ExtractionResult as RustExtractionResult, ImageExtractionConfig,
     ImagePreprocessingConfig, KreuzbergError, LanguageDetectionConfig, OcrConfig, PdfConfig, PostProcessorConfig,
     TokenReductionConfig,
 };
@@ -14,6 +23,31 @@ use magnus::value::ReprValue;
 use magnus::{Error, IntoValue, RArray, RHash, Ruby, Symbol, TryConvert, Value, function, scan_args::scan_args};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+/// Keeps Ruby values alive across plugin registrations by informing the GC.
+struct GcGuardedValue {
+    value: Value,
+}
+
+impl GcGuardedValue {
+    fn new(value: Value) -> Self {
+        let ruby = Ruby::get().expect("Ruby not initialized");
+        ruby.gc_register_address(&value);
+        Self { value }
+    }
+
+    fn value(&self) -> Value {
+        self.value
+    }
+}
+
+impl Drop for GcGuardedValue {
+    fn drop(&mut self) {
+        if let Ok(ruby) = Ruby::get() {
+            ruby.gc_unregister_address(&self.value);
+        }
+    }
+}
 
 /// Convert Kreuzberg errors to Ruby exceptions
 fn kreuzberg_error(err: KreuzbergError) -> Error {
@@ -272,11 +306,20 @@ fn parse_ocr_config(ruby: &Ruby, hash: RHash) -> Result<OcrConfig, Error> {
         "eng".to_string()
     };
 
-    let config = OcrConfig {
+    let mut config = OcrConfig {
         backend,
         language,
         tesseract_config: None,
     };
+
+    if let Some(val) = get_kw(ruby, hash, "tesseract_config")
+        && !val.is_nil()
+    {
+        let tc_json = ruby_value_to_json(val)?;
+        let parsed: RustTesseractConfig =
+            serde_json::from_value(tc_json).map_err(|e| runtime_error(format!("Invalid tesseract_config: {}", e)))?;
+        config.tesseract_config = Some(parsed);
+    }
 
     Ok(config)
 }
@@ -303,10 +346,21 @@ fn parse_chunking_config(ruby: &Ruby, hash: RHash) -> Result<ChunkingConfig, Err
         None
     };
 
+    let embedding = if let Some(val) = get_kw(ruby, hash, "embedding")
+        && !val.is_nil()
+    {
+        let json_value = ruby_value_to_json(val)?;
+        let parsed: EmbeddingConfig = serde_json::from_value(json_value)
+            .map_err(|e| runtime_error(format!("Invalid chunking.embedding: {}", e)))?;
+        Some(parsed)
+    } else {
+        None
+    };
+
     let config = ChunkingConfig {
         max_chars,
         max_overlap,
-        embedding: None, // TODO: Support embedding config from Ruby
+        embedding,
         preset,
     };
 
@@ -544,6 +598,431 @@ fn parse_token_reduction_config(ruby: &Ruby, hash: RHash) -> Result<TokenReducti
     Ok(config)
 }
 
+fn parse_keyword_config(ruby: &Ruby, hash: RHash) -> Result<RustKeywordConfig, Error> {
+    let mut config = RustKeywordConfig::default();
+
+    if let Some(val) = get_kw(ruby, hash, "algorithm") {
+        let algo = symbol_to_string(val)?;
+        config.algorithm = match algo.to_lowercase().as_str() {
+            "yake" => RustKeywordAlgorithm::Yake,
+            "rake" => RustKeywordAlgorithm::Rake,
+            other => {
+                return Err(runtime_error(format!(
+                    "Invalid keywords.algorithm '{}', expected 'yake' or 'rake'",
+                    other
+                )));
+            }
+        };
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "max_keywords") {
+        config.max_keywords = usize::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "min_score") {
+        config.min_score = f64::try_convert(val)? as f32;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "ngram_range") {
+        let ary = RArray::try_convert(val)?;
+        if ary.len() == 2 {
+            let values = ary.to_vec::<i64>()?;
+            config.ngram_range = (values[0] as usize, values[1] as usize);
+        } else {
+            return Err(runtime_error("keywords.ngram_range must have exactly two values"));
+        }
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "language") {
+        if !val.is_nil() {
+            config.language = Some(symbol_to_string(val)?);
+        }
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "yake_params")
+        && !val.is_nil()
+    {
+        let yake_hash = RHash::try_convert(val)?;
+        let window = if let Some(window_val) = get_kw(ruby, yake_hash, "window_size") {
+            usize::try_convert(window_val)?
+        } else {
+            2
+        };
+        config.yake_params = Some(RustYakeParams { window_size: window });
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "rake_params")
+        && !val.is_nil()
+    {
+        let rake_hash = RHash::try_convert(val)?;
+        let mut params = RustRakeParams::default();
+        if let Some(val) = get_kw(ruby, rake_hash, "min_word_length") {
+            params.min_word_length = usize::try_convert(val)?;
+        }
+        if let Some(val) = get_kw(ruby, rake_hash, "max_words_per_phrase") {
+            params.max_words_per_phrase = usize::try_convert(val)?;
+        }
+        config.rake_params = Some(params);
+    }
+
+    Ok(config)
+}
+
+fn parse_html_options(ruby: &Ruby, hash: RHash) -> Result<ConversionOptions, Error> {
+    let mut options = ConversionOptions::default();
+
+    if let Some(val) = get_kw(ruby, hash, "heading_style") {
+        let style = symbol_to_string(val)?;
+        options.heading_style = match style.to_lowercase().as_str() {
+            "atx" => HeadingStyle::Atx,
+            "underlined" => HeadingStyle::Underlined,
+            "atx_closed" | "atx-closed" => HeadingStyle::AtxClosed,
+            other => return Err(runtime_error(format!("Invalid html_options.heading_style '{}'", other))),
+        };
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "list_indent_type") {
+        let val_str = symbol_to_string(val)?;
+        options.list_indent_type = match val_str.to_lowercase().as_str() {
+            "spaces" => ListIndentType::Spaces,
+            "tabs" => ListIndentType::Tabs,
+            other => {
+                return Err(runtime_error(format!(
+                    "Invalid html_options.list_indent_type '{}'",
+                    other
+                )));
+            }
+        };
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "list_indent_width") {
+        options.list_indent_width = usize::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "bullets") {
+        options.bullets = String::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "strong_em_symbol") {
+        let symbol = String::try_convert(val)?;
+        let mut chars = symbol.chars();
+        options.strong_em_symbol = chars
+            .next()
+            .ok_or_else(|| runtime_error("html_options.strong_em_symbol must not be empty"))?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "escape_asterisks") {
+        options.escape_asterisks = bool::try_convert(val)?;
+    }
+    if let Some(val) = get_kw(ruby, hash, "escape_underscores") {
+        options.escape_underscores = bool::try_convert(val)?;
+    }
+    if let Some(val) = get_kw(ruby, hash, "escape_misc") {
+        options.escape_misc = bool::try_convert(val)?;
+    }
+    if let Some(val) = get_kw(ruby, hash, "escape_ascii") {
+        options.escape_ascii = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "code_language") {
+        options.code_language = String::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "autolinks") {
+        options.autolinks = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "default_title") {
+        options.default_title = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "br_in_tables") {
+        options.br_in_tables = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "hocr_spatial_tables") {
+        options.hocr_spatial_tables = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "highlight_style") {
+        let style = symbol_to_string(val)?;
+        options.highlight_style = match style.to_lowercase().as_str() {
+            "double_equal" | "double-equal" => HighlightStyle::DoubleEqual,
+            "html" => HighlightStyle::Html,
+            "bold" => HighlightStyle::Bold,
+            "none" => HighlightStyle::None,
+            other => {
+                return Err(runtime_error(format!(
+                    "Invalid html_options.highlight_style '{}'",
+                    other
+                )));
+            }
+        };
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "extract_metadata") {
+        options.extract_metadata = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "whitespace_mode") {
+        let mode = symbol_to_string(val)?;
+        options.whitespace_mode = match mode.to_lowercase().as_str() {
+            "normalized" => WhitespaceMode::Normalized,
+            "strict" => WhitespaceMode::Strict,
+            other => {
+                return Err(runtime_error(format!(
+                    "Invalid html_options.whitespace_mode '{}'",
+                    other
+                )));
+            }
+        };
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "strip_newlines") {
+        options.strip_newlines = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "wrap") {
+        options.wrap = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "wrap_width") {
+        options.wrap_width = usize::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "convert_as_inline") {
+        options.convert_as_inline = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "sub_symbol") {
+        options.sub_symbol = String::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "sup_symbol") {
+        options.sup_symbol = String::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "newline_style") {
+        let style = symbol_to_string(val)?;
+        options.newline_style = match style.to_lowercase().as_str() {
+            "spaces" => NewlineStyle::Spaces,
+            "backslash" => NewlineStyle::Backslash,
+            other => return Err(runtime_error(format!("Invalid html_options.newline_style '{}'", other))),
+        };
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "code_block_style") {
+        let style = symbol_to_string(val)?;
+        options.code_block_style = match style.to_lowercase().as_str() {
+            "indented" => CodeBlockStyle::Indented,
+            "backticks" => CodeBlockStyle::Backticks,
+            "tildes" => CodeBlockStyle::Tildes,
+            other => {
+                return Err(runtime_error(format!(
+                    "Invalid html_options.code_block_style '{}'",
+                    other
+                )));
+            }
+        };
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "keep_inline_images_in") {
+        let arr = RArray::try_convert(val)?;
+        options.keep_inline_images_in = arr.to_vec::<String>()?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "encoding") {
+        options.encoding = String::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "debug") {
+        options.debug = bool::try_convert(val)?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "strip_tags") {
+        let arr = RArray::try_convert(val)?;
+        options.strip_tags = arr.to_vec::<String>()?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "preserve_tags") {
+        let arr = RArray::try_convert(val)?;
+        options.preserve_tags = arr.to_vec::<String>()?;
+    }
+
+    if let Some(val) = get_kw(ruby, hash, "preprocessing")
+        && !val.is_nil()
+    {
+        let pre_hash = RHash::try_convert(val)?;
+        let mut preprocessing = options.preprocessing.clone();
+        if let Some(v) = get_kw(ruby, pre_hash, "enabled") {
+            preprocessing.enabled = bool::try_convert(v)?;
+        }
+        if let Some(v) = get_kw(ruby, pre_hash, "preset") {
+            let preset = symbol_to_string(v)?;
+            preprocessing.preset = match preset.to_lowercase().as_str() {
+                "minimal" => PreprocessingPreset::Minimal,
+                "standard" => PreprocessingPreset::Standard,
+                "aggressive" => PreprocessingPreset::Aggressive,
+                other => {
+                    return Err(runtime_error(format!(
+                        "Invalid html_options.preprocessing.preset '{}'",
+                        other
+                    )));
+                }
+            };
+        }
+        if let Some(v) = get_kw(ruby, pre_hash, "remove_navigation") {
+            preprocessing.remove_navigation = bool::try_convert(v)?;
+        }
+        if let Some(v) = get_kw(ruby, pre_hash, "remove_forms") {
+            preprocessing.remove_forms = bool::try_convert(v)?;
+        }
+        options.preprocessing = preprocessing;
+    }
+
+    Ok(options)
+}
+
+fn keyword_algorithm_to_str(algo: RustKeywordAlgorithm) -> &'static str {
+    match algo {
+        RustKeywordAlgorithm::Yake => "yake",
+        RustKeywordAlgorithm::Rake => "rake",
+    }
+}
+
+fn keyword_config_to_ruby_hash(ruby: &Ruby, config: &RustKeywordConfig) -> Result<RHash, Error> {
+    let hash = ruby.hash_new();
+    hash.aset("algorithm", keyword_algorithm_to_str(config.algorithm))?;
+    hash.aset("max_keywords", config.max_keywords as i64)?;
+    hash.aset("min_score", config.min_score)?;
+    hash.aset("language", config.language.clone().unwrap_or_default())?;
+
+    let range_array = ruby.ary_new();
+    range_array.push(config.ngram_range.0 as i64)?;
+    range_array.push(config.ngram_range.1 as i64)?;
+    hash.aset("ngram_range", range_array)?;
+
+    if let Some(yake) = &config.yake_params {
+        let yake_hash = ruby.hash_new();
+        yake_hash.aset("window_size", yake.window_size as i64)?;
+        hash.aset("yake_params", yake_hash)?;
+    }
+
+    if let Some(rake) = &config.rake_params {
+        let rake_hash = ruby.hash_new();
+        rake_hash.aset("min_word_length", rake.min_word_length as i64)?;
+        rake_hash.aset("max_words_per_phrase", rake.max_words_per_phrase as i64)?;
+        hash.aset("rake_params", rake_hash)?;
+    }
+
+    Ok(hash)
+}
+
+fn html_options_to_ruby_hash(ruby: &Ruby, options: &ConversionOptions) -> Result<RHash, Error> {
+    let hash = ruby.hash_new();
+    hash.aset(
+        "heading_style",
+        match options.heading_style {
+            HeadingStyle::Atx => "atx",
+            HeadingStyle::Underlined => "underlined",
+            HeadingStyle::AtxClosed => "atx_closed",
+        },
+    )?;
+    hash.aset(
+        "list_indent_type",
+        match options.list_indent_type {
+            ListIndentType::Spaces => "spaces",
+            ListIndentType::Tabs => "tabs",
+        },
+    )?;
+    hash.aset("list_indent_width", options.list_indent_width as i64)?;
+    hash.aset("bullets", options.bullets.clone())?;
+    hash.aset("strong_em_symbol", options.strong_em_symbol.to_string())?;
+    hash.aset("escape_asterisks", options.escape_asterisks)?;
+    hash.aset("escape_underscores", options.escape_underscores)?;
+    hash.aset("escape_misc", options.escape_misc)?;
+    hash.aset("escape_ascii", options.escape_ascii)?;
+    hash.aset("code_language", options.code_language.clone())?;
+    hash.aset("autolinks", options.autolinks)?;
+    hash.aset("default_title", options.default_title)?;
+    hash.aset("br_in_tables", options.br_in_tables)?;
+    hash.aset("hocr_spatial_tables", options.hocr_spatial_tables)?;
+    hash.aset(
+        "highlight_style",
+        match options.highlight_style {
+            HighlightStyle::DoubleEqual => "double_equal",
+            HighlightStyle::Html => "html",
+            HighlightStyle::Bold => "bold",
+            HighlightStyle::None => "none",
+        },
+    )?;
+    hash.aset("extract_metadata", options.extract_metadata)?;
+    hash.aset(
+        "whitespace_mode",
+        match options.whitespace_mode {
+            WhitespaceMode::Normalized => "normalized",
+            WhitespaceMode::Strict => "strict",
+        },
+    )?;
+    hash.aset("strip_newlines", options.strip_newlines)?;
+    hash.aset("wrap", options.wrap)?;
+    hash.aset("wrap_width", options.wrap_width as i64)?;
+    hash.aset("convert_as_inline", options.convert_as_inline)?;
+    hash.aset("sub_symbol", options.sub_symbol.clone())?;
+    hash.aset("sup_symbol", options.sup_symbol.clone())?;
+    hash.aset(
+        "newline_style",
+        match options.newline_style {
+            NewlineStyle::Spaces => "spaces",
+            NewlineStyle::Backslash => "backslash",
+        },
+    )?;
+    hash.aset(
+        "code_block_style",
+        match options.code_block_style {
+            CodeBlockStyle::Indented => "indented",
+            CodeBlockStyle::Backticks => "backticks",
+            CodeBlockStyle::Tildes => "tildes",
+        },
+    )?;
+
+    let keep_inline = ruby.ary_new();
+    for tag in &options.keep_inline_images_in {
+        keep_inline.push(tag.as_str())?;
+    }
+    hash.aset("keep_inline_images_in", keep_inline)?;
+
+    hash.aset("encoding", options.encoding.clone())?;
+    hash.aset("debug", options.debug)?;
+
+    let strip_tags = ruby.ary_new();
+    for tag in &options.strip_tags {
+        strip_tags.push(tag.as_str())?;
+    }
+    hash.aset("strip_tags", strip_tags)?;
+
+    let preserve_tags = ruby.ary_new();
+    for tag in &options.preserve_tags {
+        preserve_tags.push(tag.as_str())?;
+    }
+    hash.aset("preserve_tags", preserve_tags)?;
+
+    let pre_hash = ruby.hash_new();
+    pre_hash.aset("enabled", options.preprocessing.enabled)?;
+    pre_hash.aset(
+        "preset",
+        match options.preprocessing.preset {
+            PreprocessingPreset::Minimal => "minimal",
+            PreprocessingPreset::Standard => "standard",
+            PreprocessingPreset::Aggressive => "aggressive",
+        },
+    )?;
+    pre_hash.aset("remove_navigation", options.preprocessing.remove_navigation)?;
+    pre_hash.aset("remove_forms", options.preprocessing.remove_forms)?;
+    hash.aset("preprocessing", pre_hash)?;
+
+    Ok(hash)
+}
 /// Parse ExtractionConfig from Ruby Hash
 fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<ExtractionConfig, Error> {
     let mut config = ExtractionConfig::default();
@@ -608,6 +1087,25 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
         {
             let token_reduction_hash = RHash::try_convert(val)?;
             config.token_reduction = Some(parse_token_reduction_config(ruby, token_reduction_hash)?);
+        }
+
+        if let Some(val) = get_kw(ruby, hash, "keywords")
+            && !val.is_nil()
+        {
+            let keywords_hash = RHash::try_convert(val)?;
+            config.keywords = Some(parse_keyword_config(ruby, keywords_hash)?);
+        }
+
+        if let Some(val) = get_kw(ruby, hash, "html_options")
+            && !val.is_nil()
+        {
+            let html_hash = RHash::try_convert(val)?;
+            config.html_options = Some(parse_html_options(ruby, html_hash)?);
+        }
+
+        if let Some(val) = get_kw(ruby, hash, "max_concurrent_extractions") {
+            let value = usize::try_convert(val)?;
+            config.max_concurrent_extractions = Some(value);
         }
     }
 
@@ -697,6 +1195,12 @@ fn extraction_config_to_ruby_hash(ruby: &Ruby, config: ExtractionConfig) -> Resu
                 ruby.str_new(&preset).into_value_with(ruby),
             )?;
         }
+        if let Some(embedding) = chunking.embedding {
+            let embedding_json = serde_json::to_value(&embedding)
+                .map_err(|e| runtime_error(format!("Failed to serialize embedding config: {}", e)))?;
+            let embedding_value = json_value_to_ruby(ruby, &embedding_json)?;
+            set_hash_entry(ruby, &chunking_hash, "embedding", embedding_value)?;
+        }
         set_hash_entry(ruby, &hash, "chunking", chunking_hash.into_value_with(ruby))?;
     }
 
@@ -717,6 +1221,16 @@ fn extraction_config_to_ruby_hash(ruby: &Ruby, config: ExtractionConfig) -> Resu
             &lang_hash,
             "min_confidence",
             ruby.float_from_f64(lang_detection.min_confidence).into_value_with(ruby),
+        )?;
+        set_hash_entry(
+            ruby,
+            &lang_hash,
+            "detect_multiple",
+            if lang_detection.detect_multiple {
+                ruby.qtrue().as_value()
+            } else {
+                ruby.qfalse().as_value()
+            },
         )?;
         set_hash_entry(ruby, &hash, "language_detection", lang_hash.into_value_with(ruby))?;
     }
@@ -854,6 +1368,25 @@ fn extraction_config_to_ruby_hash(ruby: &Ruby, config: ExtractionConfig) -> Resu
         set_hash_entry(ruby, &hash, "token_reduction", tr_hash.into_value_with(ruby))?;
     }
 
+    if let Some(keywords) = config.keywords {
+        let keywords_hash = keyword_config_to_ruby_hash(ruby, &keywords)?;
+        set_hash_entry(ruby, &hash, "keywords", keywords_hash.into_value_with(ruby))?;
+    }
+
+    if let Some(html_options) = config.html_options {
+        let html_hash = html_options_to_ruby_hash(ruby, &html_options)?;
+        set_hash_entry(ruby, &hash, "html_options", html_hash.into_value_with(ruby))?;
+    }
+
+    if let Some(max_concurrent) = config.max_concurrent_extractions {
+        set_hash_entry(
+            ruby,
+            &hash,
+            "max_concurrent_extractions",
+            ruby.integer_from_u64(max_concurrent as u64).into_value_with(ruby),
+        )?;
+    }
+
     Ok(hash)
 }
 
@@ -951,6 +1484,19 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
             chunk_hash.aset("char_end", chunk.metadata.char_end)?;
             if let Some(token_count) = chunk.metadata.token_count {
                 chunk_hash.aset("token_count", token_count)?;
+            } else {
+                chunk_hash.aset("token_count", ruby.qnil().as_value())?;
+            }
+            chunk_hash.aset("chunk_index", chunk.metadata.chunk_index)?;
+            chunk_hash.aset("total_chunks", chunk.metadata.total_chunks)?;
+            if let Some(embedding) = chunk.embedding {
+                let embedding_array = ruby.ary_new();
+                for value in embedding {
+                    embedding_array.push(ruby.float_from_f64(value as f64).into_value_with(ruby))?;
+                }
+                chunk_hash.aset("embedding", embedding_array)?;
+            } else {
+                chunk_hash.aset("embedding", ruby.qnil().as_value())?;
             }
             chunks_array.push(chunk_hash)?;
         }
@@ -958,6 +1504,65 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
         set_hash_entry(ruby, &hash, "chunks", chunks_value)?;
     } else {
         set_hash_entry(ruby, &hash, "chunks", ruby.qnil().as_value())?;
+    }
+
+    if let Some(images) = result.images {
+        let images_array = ruby.ary_new();
+        for image in images {
+            let image_hash = ruby.hash_new();
+            let data_value = ruby.str_from_slice(&image.data).into_value_with(ruby);
+            image_hash.aset("data", data_value)?;
+            image_hash.aset("format", image.format)?;
+            image_hash.aset("image_index", image.image_index as i64)?;
+            if let Some(page) = image.page_number {
+                image_hash.aset("page_number", page as i64)?;
+            } else {
+                image_hash.aset("page_number", ruby.qnil().as_value())?;
+            }
+            if let Some(width) = image.width {
+                image_hash.aset("width", width as i64)?;
+            } else {
+                image_hash.aset("width", ruby.qnil().as_value())?;
+            }
+            if let Some(height) = image.height {
+                image_hash.aset("height", height as i64)?;
+            } else {
+                image_hash.aset("height", ruby.qnil().as_value())?;
+            }
+            if let Some(colorspace) = image.colorspace {
+                image_hash.aset("colorspace", colorspace)?;
+            } else {
+                image_hash.aset("colorspace", ruby.qnil().as_value())?;
+            }
+            if let Some(bits) = image.bits_per_component {
+                image_hash.aset("bits_per_component", bits as i64)?;
+            } else {
+                image_hash.aset("bits_per_component", ruby.qnil().as_value())?;
+            }
+            image_hash.aset(
+                "is_mask",
+                if image.is_mask {
+                    ruby.qtrue().as_value()
+                } else {
+                    ruby.qfalse().as_value()
+                },
+            )?;
+            if let Some(description) = image.description {
+                image_hash.aset("description", description)?;
+            } else {
+                image_hash.aset("description", ruby.qnil().as_value())?;
+            }
+            if let Some(ocr_result) = image.ocr_result {
+                let nested = extraction_result_to_ruby(ruby, *ocr_result)?;
+                image_hash.aset("ocr_result", nested.into_value_with(ruby))?;
+            } else {
+                image_hash.aset("ocr_result", ruby.qnil().as_value())?;
+            }
+            images_array.push(image_hash)?;
+        }
+        set_hash_entry(ruby, &hash, "images", images_array.into_value_with(ruby))?;
+    } else {
+        set_hash_entry(ruby, &hash, "images", ruby.qnil().as_value())?;
     }
 
     Ok(hash)
@@ -1332,7 +1937,7 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
 
     struct RubyPostProcessor {
         name: String,
-        processor: magnus::Value,
+        processor: GcGuardedValue,
     }
 
     unsafe impl Send for RubyPostProcessor {}
@@ -1364,7 +1969,7 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
             _config: &kreuzberg::ExtractionConfig,
         ) -> kreuzberg::Result<()> {
             let processor_name = self.name.clone();
-            let processor = self.processor;
+            let processor = self.processor.value();
             let result_clone = result.clone();
 
             // Use block_in_place to avoid GVL deadlocks (same pattern as Python PostProcessor)
@@ -1497,7 +2102,7 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
 
     let processor_impl = Arc::new(RubyPostProcessor {
         name: name.clone(),
-        processor,
+        processor: GcGuardedValue::new(processor),
     });
 
     let registry = kreuzberg::get_post_processor_registry();
@@ -1540,7 +2145,7 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
 
     struct RubyValidator {
         name: String,
-        validator: magnus::Value,
+        validator: GcGuardedValue,
         priority: i32,
     }
 
@@ -1573,7 +2178,7 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
             _config: &kreuzberg::ExtractionConfig,
         ) -> kreuzberg::Result<()> {
             let validator_name = self.name.clone();
-            let validator = self.validator;
+            let validator = self.validator.value();
             let result_clone = result.clone();
 
             // Use block_in_place to avoid GVL deadlocks (same pattern as Python Validator)
@@ -1605,7 +2210,7 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
 
     let validator_impl = Arc::new(RubyValidator {
         name: name.clone(),
-        validator,
+        validator: GcGuardedValue::new(validator),
         priority,
     });
 
@@ -1654,7 +2259,7 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
 
     struct RubyOcrBackend {
         name: String,
-        backend: magnus::Value,
+        backend: GcGuardedValue,
     }
 
     unsafe impl Send for RubyOcrBackend {}
@@ -1695,6 +2300,7 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
 
             let response = self
                 .backend
+                .value()
                 .funcall::<_, _, Value>("process_image", (image_str, config_hash.into_value_with(&ruby)))
                 .map_err(|e| kreuzberg::KreuzbergError::Ocr {
                     message: format!("Ruby OCR backend failed: {}", e),
@@ -1718,9 +2324,10 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
         }
 
         fn supports_language(&self, lang: &str) -> bool {
-            match self.backend.respond_to("supports_language?", true) {
+            match self.backend.value().respond_to("supports_language?", true) {
                 Ok(true) => self
                     .backend
+                    .value()
                     .funcall::<_, _, bool>("supports_language?", (lang,))
                     .unwrap_or(true),
                 _ => true,
@@ -1734,7 +2341,7 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
 
     let backend_impl = Arc::new(RubyOcrBackend {
         name: name.clone(),
-        backend,
+        backend: GcGuardedValue::new(backend),
     });
 
     let registry = kreuzberg::get_ocr_backend_registry();

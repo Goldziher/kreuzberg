@@ -17,15 +17,50 @@ module Kreuzberg
       )
         @backend = backend.to_s
         @language = language.to_s
-        @tesseract_config = tesseract_config
+        @tesseract_config = normalize_tesseract_config(tesseract_config)
       end
 
       def to_h
         {
           backend: @backend,
           language: @language,
-          tesseract_config: @tesseract_config
+          tesseract_config: @tesseract_config&.to_h
         }.compact
+      end
+
+      private
+
+      def normalize_tesseract_config(value)
+        return nil if value.nil?
+        return value if value.is_a?(Tesseract)
+        return Tesseract.new(**value.transform_keys(&:to_sym)) if value.is_a?(Hash)
+
+        raise ArgumentError, "Expected #{Tesseract}, Hash, or nil, got #{value.class}"
+      end
+    end
+
+    class Tesseract
+      attr_reader :options
+
+      def initialize(**options)
+        @options = options.transform_keys(&:to_sym)
+        normalize_nested_preprocessing!
+      end
+
+      def to_h
+        @options.dup
+      end
+
+      private
+
+      def normalize_nested_preprocessing!
+        preprocessing = @options[:preprocessing]
+        return if preprocessing.nil?
+        return if preprocessing.is_a?(ImagePreprocessing)
+        return @options[:preprocessing] = ImagePreprocessing.new(**preprocessing.transform_keys(&:to_sym)) if
+          preprocessing.is_a?(Hash)
+
+        raise ArgumentError, "preprocessing must be #{ImagePreprocessing} or Hash"
       end
     end
 
@@ -52,8 +87,8 @@ module Kreuzberg
         @max_chars = resolved_size.to_i
         @max_overlap = resolved_overlap.to_i
         @preset = preset&.to_s
-        @embedding = embedding
-        @enabled = enabled.nil? ? nil : !!enabled
+        @embedding = normalize_embedding(embedding)
+        @enabled = boolean_or_nil(enabled)
       end
 
       def to_h
@@ -61,11 +96,74 @@ module Kreuzberg
           max_chars: @max_chars,
           max_overlap: @max_overlap,
           preset: @preset,
-          embedding: @embedding
+          embedding: @embedding&.to_h
         }.compact
         # @type var config: Hash[Symbol, untyped]
         config[:enabled] = @enabled unless @enabled.nil?
         config
+      end
+
+      private
+
+      def normalize_embedding(value)
+        return nil if value.nil?
+        return value if value.is_a?(Embedding)
+        return Embedding.new(**value.transform_keys(&:to_sym)) if value.is_a?(Hash)
+
+        raise ArgumentError, "Expected #{Embedding}, Hash, or nil, got #{value.class}"
+      end
+
+      def boolean_or_nil(value)
+        return nil if value.nil?
+
+        value ? true : false
+      end
+    end
+
+    class Embedding
+      attr_reader :model, :normalize, :batch_size, :show_download_progress, :cache_dir
+
+      def initialize(
+        model: { type: :preset, name: 'balanced' },
+        normalize: true,
+        batch_size: 32,
+        show_download_progress: false,
+        cache_dir: nil
+      )
+        @model = normalize_model(model)
+        @normalize = boolean_or_nil(normalize)
+        @batch_size = batch_size&.to_i
+        @show_download_progress = boolean_or_nil(show_download_progress)
+        @cache_dir = cache_dir&.to_s
+      end
+
+      def to_h
+        {
+          model: @model,
+          normalize: @normalize,
+          batch_size: @batch_size,
+          show_download_progress: @show_download_progress,
+          cache_dir: @cache_dir
+        }.compact
+      end
+
+      private
+
+      def normalize_model(model)
+        normalized = if model.respond_to?(:to_h)
+                       model.to_h
+                     else
+                       model
+                     end
+        raise ArgumentError, 'model must be a Hash describing the embedding model' unless normalized.is_a?(Hash)
+
+        normalized.transform_keys(&:to_sym)
+      end
+
+      def boolean_or_nil(value)
+        return nil if value.nil?
+
+        value ? true : false
       end
     end
 
@@ -75,17 +173,19 @@ module Kreuzberg
     #   lang = LanguageDetection.new(enabled: true, min_confidence: 0.8)
     #
     class LanguageDetection
-      attr_reader :enabled, :min_confidence
+      attr_reader :enabled, :min_confidence, :detect_multiple
 
-      def initialize(enabled: false, min_confidence: 0.5)
+      def initialize(enabled: false, min_confidence: 0.5, detect_multiple: false)
         @enabled = enabled ? true : false
         @min_confidence = min_confidence.to_f
+        @detect_multiple = detect_multiple ? true : false
       end
 
       def to_h
         {
           enabled: @enabled,
-          min_confidence: @min_confidence
+          min_confidence: @min_confidence,
+          detect_multiple: @detect_multiple
         }
       end
     end
@@ -257,6 +357,134 @@ module Kreuzberg
       end
     end
 
+    class HtmlPreprocessing
+      attr_reader :enabled, :preset, :remove_navigation, :remove_forms
+
+      def initialize(enabled: nil, preset: nil, remove_navigation: nil, remove_forms: nil)
+        @enabled = boolean_or_nil(enabled)
+        @preset = preset&.to_sym
+        @remove_navigation = boolean_or_nil(remove_navigation)
+        @remove_forms = boolean_or_nil(remove_forms)
+      end
+
+      def to_h
+        {
+          enabled: @enabled,
+          preset: @preset,
+          remove_navigation: @remove_navigation,
+          remove_forms: @remove_forms
+        }.compact
+      end
+
+      private
+
+      def boolean_or_nil(value)
+        return nil if value.nil?
+
+        value ? true : false
+      end
+    end
+
+    class HtmlOptions
+      attr_reader :options
+
+      def initialize(**options)
+        normalized = options.transform_keys(&:to_sym)
+        symbol_keys = %i[
+          heading_style
+          code_block_style
+          highlight_style
+          list_indent_type
+          newline_style
+          whitespace_mode
+        ]
+        symbol_keys.each do |key|
+          normalized[key] = normalized[key]&.to_sym if normalized.key?(key)
+        end
+        if normalized[:preprocessing].is_a?(Hash)
+          normalized[:preprocessing] = HtmlPreprocessing.new(**normalized[:preprocessing])
+        end
+        @options = normalized
+      end
+
+      def to_h
+        @options.transform_values { |value| value.respond_to?(:to_h) ? value.to_h : value }
+      end
+    end
+
+    class KeywordYakeParams
+      attr_reader :window_size
+
+      def initialize(window_size: 2)
+        @window_size = window_size.to_i
+      end
+
+      def to_h
+        { window_size: @window_size }
+      end
+    end
+
+    class KeywordRakeParams
+      attr_reader :min_word_length, :max_words_per_phrase
+
+      def initialize(min_word_length: 1, max_words_per_phrase: 3)
+        @min_word_length = min_word_length.to_i
+        @max_words_per_phrase = max_words_per_phrase.to_i
+      end
+
+      def to_h
+        {
+          min_word_length: @min_word_length,
+          max_words_per_phrase: @max_words_per_phrase
+        }
+      end
+    end
+
+    class Keywords
+      attr_reader :algorithm, :max_keywords, :min_score, :ngram_range,
+                  :language, :yake_params, :rake_params
+
+      def initialize(
+        algorithm: nil,
+        max_keywords: nil,
+        min_score: nil,
+        ngram_range: nil,
+        language: nil,
+        yake_params: nil,
+        rake_params: nil
+      )
+        @algorithm = algorithm&.to_s
+        @max_keywords = max_keywords&.to_i
+        @min_score = min_score&.to_f
+        @ngram_range = ngram_range&.map(&:to_i)
+        @language = language&.to_s
+        @yake_params = normalize_nested(yake_params, KeywordYakeParams)
+        @rake_params = normalize_nested(rake_params, KeywordRakeParams)
+      end
+
+      def to_h
+        {
+          algorithm: @algorithm,
+          max_keywords: @max_keywords,
+          min_score: @min_score,
+          ngram_range: @ngram_range,
+          language: @language,
+          yake_params: @yake_params&.to_h,
+          rake_params: @rake_params&.to_h
+        }.compact
+      end
+
+      private
+
+      def normalize_nested(value, klass)
+        return nil if value.nil?
+        return value if value.is_a?(klass)
+        return klass.new(**value.transform_keys(&:to_sym)) if value.is_a?(Hash)
+
+        raise ArgumentError, "Expected #{klass}, Hash, or nil, got #{value.class}"
+      end
+    end
+
     # Post-processor configuration
     #
     # @example Enable all post-processors
@@ -341,7 +569,8 @@ module Kreuzberg
       attr_reader :use_cache, :enable_quality_processing, :force_ocr,
                   :ocr, :chunking, :language_detection, :pdf_options,
                   :image_extraction, :image_preprocessing, :postprocessor,
-                  :token_reduction
+                  :token_reduction, :keywords, :html_options,
+                  :max_concurrent_extractions
 
       # Load configuration from a file.
       #
@@ -374,7 +603,10 @@ module Kreuzberg
         image_extraction: nil,
         image_preprocessing: nil,
         postprocessor: nil,
-        token_reduction: nil
+        token_reduction: nil,
+        keywords: nil,
+        html_options: nil,
+        max_concurrent_extractions: nil
       )
         @use_cache = use_cache ? true : false
         @enable_quality_processing = enable_quality_processing ? true : false
@@ -387,6 +619,9 @@ module Kreuzberg
         @image_preprocessing = normalize_config(image_preprocessing, ImagePreprocessing)
         @postprocessor = normalize_config(postprocessor, PostProcessor)
         @token_reduction = normalize_config(token_reduction, TokenReduction)
+        @keywords = normalize_config(keywords, Keywords)
+        @html_options = normalize_config(html_options, HtmlOptions)
+        @max_concurrent_extractions = max_concurrent_extractions&.to_i
       end
 
       # rubocop:disable Metrics/PerceivedComplexity
@@ -402,7 +637,10 @@ module Kreuzberg
           image_extraction: @image_extraction&.to_h,
           image_preprocessing: @image_preprocessing&.to_h,
           postprocessor: @postprocessor&.to_h,
-          token_reduction: @token_reduction&.to_h
+          token_reduction: @token_reduction&.to_h,
+          keywords: @keywords&.to_h,
+          html_options: @html_options&.to_h,
+          max_concurrent_extractions: @max_concurrent_extractions
         }.compact
       end
       # rubocop:enable Metrics/PerceivedComplexity
