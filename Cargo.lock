@@ -2986,6 +2986,7 @@ dependencies = [
  "kreuzberg",
  "magnus",
  "pretty_assertions",
+ "rb-sys",
  "serde_json",
  "tokio",
 ]
