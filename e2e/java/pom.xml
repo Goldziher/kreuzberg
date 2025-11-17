@@ -20,9 +20,9 @@
         <dependency>
             <groupId>com.kreuzberg</groupId>
             <artifactId>kreuzberg</artifactId>
-            <version>4.0.0-rc1</version>
+            <version>4.0.0-rc.1</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/../../../packages/java/target/kreuzberg-4.0.0-rc1.jar</systemPath>
+            <systemPath>${project.basedir}/../../packages/java/target/kreuzberg-4.0.0-rc.1.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -35,6 +35,11 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-parameter-names</artifactId>
             <version>${jackson.version}</version>
         </dependency>
     </dependencies>

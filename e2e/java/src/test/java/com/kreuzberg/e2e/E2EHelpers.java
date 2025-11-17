@@ -2,10 +2,10 @@ package com.kreuzberg.e2e;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kreuzberg.ExtractionResult;
-import com.kreuzberg.Kreuzberg;
-import com.kreuzberg.KreuzbergException;
-import com.kreuzberg.Table;
+import dev.kreuzberg.ExtractionResult;
+import dev.kreuzberg.Kreuzberg;
+import dev.kreuzberg.KreuzbergException;
+import dev.kreuzberg.Table;
 import org.junit.jupiter.api.Assumptions;
 
 import java.nio.file.Files;
@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 public final class E2EHelpers {
     private static final Path WORKSPACE_ROOT =
-            Paths.get("").toAbsolutePath().getParent().getParent().getParent();
+            Paths.get("").toAbsolutePath().getParent().getParent();
     private static final Path TEST_DOCUMENTS = WORKSPACE_ROOT.resolve("test_documents");
     private static final ObjectMapper MAPPER = new ObjectMapper();
 

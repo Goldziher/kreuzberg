@@ -1,5 +1,6 @@
 package dev.kreuzberg;
 
+import dev.kreuzberg.config.ExtractionConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class KreuzbergTest {
     private static final int DEFAULT_PRIORITY = 100;
     private static final int MIN_CONTENT_LENGTH = 10;
+    private static final int SAMPLE_CONCURRENCY = 3;
 
     @Test
     void testGetVersion() {
@@ -115,12 +117,15 @@ class KreuzbergTest {
     @Test
     void testLoadConfig(@TempDir Path tempDir) throws Exception {
         Path configFile = tempDir.resolve("kreuzberg.toml");
-        Files.writeString(configFile, "use_cache = false\nmax_concurrent_extractions = 3\n");
+        Files.writeString(
+            configFile,
+            "use_cache = false\nmax_concurrent_extractions = " + SAMPLE_CONCURRENCY + "\n"
+        );
 
         ExtractionConfig config = Kreuzberg.loadConfig(configFile);
         assertNotNull(config, "Config should load");
         assertFalse(config.isUseCache(), "use_cache should reflect file");
-        assertEquals(Integer.valueOf(3), config.getMaxConcurrentExtractions());
+        assertEquals(Integer.valueOf(SAMPLE_CONCURRENCY), config.getMaxConcurrentExtractions());
         assertEquals(Boolean.FALSE, config.toMap().get("use_cache"));
     }
 

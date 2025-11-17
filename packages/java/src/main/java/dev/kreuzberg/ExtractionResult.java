@@ -637,7 +637,7 @@ public final class ExtractionResult {
                 com.fasterxml.jackson.core.JsonParser p,
                 com.fasterxml.jackson.databind.DeserializationContext ctxt
         ) throws java.io.IOException {
-            com.fasterxml.jackson.databind.ObjectCodec codec = p.getCodec();
+            com.fasterxml.jackson.core.ObjectCodec codec = p.getCodec();
             ObjectMapper mapper = codec instanceof ObjectMapper
                 ? (ObjectMapper) codec
                 : new ObjectMapper();

@@ -39,9 +39,9 @@
         <maven.compiler.target>22</maven.compiler.target>
         <maven.compiler.release>22</maven.compiler.release>
         <junit.version>5.11.4</junit.version>
-        <maven-compiler-plugin.version>4.0.0-beta-3</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
-        <maven-resources-plugin.version>4.0.0-beta-1</maven-resources-plugin.version>
+        <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
         <versions-maven-plugin.version>2.19.1</versions-maven-plugin.version>
@@ -49,6 +49,7 @@
         <checkstyle.version>12.1.2</checkstyle.version>
         <spotless.plugin.version>3.0.0</spotless.plugin.version>
         <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
+        <gpg.skip>true</gpg.skip>
     </properties>
 
     <dependencies>
@@ -253,6 +254,7 @@
                             <goal>sign</goal>
                         </goals>
                         <configuration>
+                            <skip>${gpg.skip}</skip>
                             <gpgExecutable>gpg2</gpgExecutable>
                             <gpgArguments>
                                 <arg>--pinentry-mode</arg>

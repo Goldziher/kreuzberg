@@ -4,8 +4,8 @@
 //! Provides extraction, OCR, chunking, and language detection for 30+ file formats.
 
 use html_to_markdown_rs::options::{
-    CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, ListIndentType, NewlineStyle,
-    PreprocessingOptions as HtmlPreprocessingOptions, PreprocessingPreset, WhitespaceMode,
+    CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, ListIndentType, NewlineStyle, PreprocessingPreset,
+    WhitespaceMode,
 };
 use kreuzberg::keywords::{
     KeywordAlgorithm as RustKeywordAlgorithm, KeywordConfig as RustKeywordConfig, RakeParams as RustRakeParams,

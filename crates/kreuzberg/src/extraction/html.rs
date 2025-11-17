@@ -27,16 +27,19 @@
 use crate::error::{KreuzbergError, Result};
 use crate::types::HtmlMetadata;
 use html_to_markdown_rs::{
-    ConversionOptions, InlineImage, InlineImageConfig as LibInlineImageConfig, InlineImageFormat,
+    ConversionOptions, HtmlExtraction, InlineImage, InlineImageConfig as LibInlineImageConfig, InlineImageFormat,
     convert as convert_html, convert_with_inline_images,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap, thread};
 
 pub use html_to_markdown_rs::{
     CodeBlockStyle, HeadingStyle, HighlightStyle, ListIndentType, NewlineStyle, PreprocessingOptions,
     PreprocessingPreset, WhitespaceMode,
 };
+
+const LARGE_HTML_STACK_THRESHOLD_BYTES: usize = 512 * 1024;
+const HTML_CONVERSION_STACK_SIZE_BYTES: usize = 16 * 1024 * 1024;
 
 /// Result of HTML extraction with optional images and warnings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,6 +111,78 @@ fn inline_image_to_extracted(image: InlineImage) -> ExtractedInlineImage {
     }
 }
 
+fn resolve_conversion_options(options: Option<ConversionOptions>) -> ConversionOptions {
+    options.unwrap_or_else(|| ConversionOptions {
+        extract_metadata: true,
+        hocr_spatial_tables: false,
+        preprocessing: PreprocessingOptions {
+            enabled: false,
+            ..Default::default()
+        },
+        ..Default::default()
+    })
+}
+
+fn html_requires_large_stack(len: usize) -> bool {
+    len >= LARGE_HTML_STACK_THRESHOLD_BYTES
+}
+
+fn convert_html_with_options(html: &str, options: ConversionOptions) -> Result<String> {
+    convert_html(html, Some(options))
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown: {}", e)))
+}
+
+fn convert_html_with_options_large_stack(html: String, options: ConversionOptions) -> Result<String> {
+    run_on_dedicated_stack(move || convert_html_with_options(&html, options))
+}
+
+fn convert_inline_images_with_options(
+    html: &str,
+    options: ConversionOptions,
+    image_config: LibInlineImageConfig,
+) -> Result<HtmlExtraction> {
+    convert_with_inline_images(html, Some(options), image_config)
+        .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown with images: {}", e)))
+}
+
+fn convert_inline_images_with_large_stack(
+    html: String,
+    options: ConversionOptions,
+    image_config: LibInlineImageConfig,
+) -> Result<HtmlExtraction> {
+    run_on_dedicated_stack(move || convert_inline_images_with_options(&html, options, image_config))
+}
+
+fn run_on_dedicated_stack<T, F>(job: F) -> Result<T>
+where
+    T: Send + 'static,
+    F: FnOnce() -> Result<T> + Send + 'static,
+{
+    let handle = thread::Builder::new()
+        .name("kreuzberg-html-conversion".to_string())
+        .stack_size(HTML_CONVERSION_STACK_SIZE_BYTES)
+        .spawn(job)
+        .map_err(|err| KreuzbergError::Other(format!("Failed to spawn HTML conversion thread: {}", err)))?;
+
+    match handle.join() {
+        Ok(result) => result,
+        Err(panic) => {
+            let reason = extract_panic_reason(&panic);
+            Err(KreuzbergError::Other(format!("HTML conversion panicked: {}", reason)))
+        }
+    }
+}
+
+fn extract_panic_reason(panic: &Box<dyn Any + Send + 'static>) -> String {
+    if let Some(msg) = panic.downcast_ref::<&str>() {
+        (*msg).to_string()
+    } else if let Some(msg) = panic.downcast_ref::<String>() {
+        msg.clone()
+    } else {
+        "unknown panic".to_string()
+    }
+}
+
 /// Convert HTML to markdown with optional configuration.
 ///
 /// Uses sensible defaults if no configuration is provided:
@@ -115,21 +190,12 @@ fn inline_image_to_extracted(image: InlineImage) -> ExtractedInlineImage {
 /// - `hocr_spatial_tables = false` (disable hOCR table detection)
 /// - `preprocessing.enabled = false` (disable HTML preprocessing)
 pub fn convert_html_to_markdown(html: &str, options: Option<ConversionOptions>) -> Result<String> {
-    let opts = options.unwrap_or_else(|| {
-        use html_to_markdown_rs::options::PreprocessingOptions;
-        ConversionOptions {
-            extract_metadata: true,
-            hocr_spatial_tables: false,
-            preprocessing: PreprocessingOptions {
-                enabled: false, // Disable preprocessing by default
-                ..Default::default()
-            },
-            ..Default::default()
-        }
-    });
-
-    convert_html(html, Some(opts))
-        .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown: {}", e)))
+    let options = resolve_conversion_options(options);
+    if html_requires_large_stack(html.len()) {
+        convert_html_with_options_large_stack(html.to_string(), options)
+    } else {
+        convert_html_with_options(html, options)
+    }
 }
 
 /// Process HTML with optional image extraction.
@@ -139,18 +205,16 @@ pub fn process_html(
     extract_images: bool,
     max_image_size: u64,
 ) -> Result<HtmlExtractionResult> {
-    let opts = options.unwrap_or_else(|| ConversionOptions {
-        extract_metadata: true,
-        hocr_spatial_tables: false,
-        ..Default::default()
-    });
-
     if extract_images {
+        let options = resolve_conversion_options(options.clone());
         let mut img_config = LibInlineImageConfig::new(max_image_size);
         img_config.filename_prefix = Some("inline-image".to_string());
 
-        let extraction = convert_with_inline_images(html, Some(opts), img_config)
-            .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown with images: {}", e)))?;
+        let extraction = if html_requires_large_stack(html.len()) {
+            convert_inline_images_with_large_stack(html.to_string(), options, img_config)?
+        } else {
+            convert_inline_images_with_options(html, options, img_config)?
+        };
 
         let images = extraction
             .inline_images
@@ -166,8 +230,8 @@ pub fn process_html(
             warnings,
         })
     } else {
-        let markdown = convert_html(html, Some(opts))
-            .map_err(|e| KreuzbergError::parsing(format!("Failed to convert HTML to Markdown: {}", e)))?;
+        let options = resolve_conversion_options(options);
+        let markdown = convert_html_to_markdown(html, Some(options))?;
 
         Ok(HtmlExtractionResult {
             markdown,
