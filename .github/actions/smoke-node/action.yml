@@ -60,6 +60,7 @@ runs:
             package_spec="file:${normalized_path}"
           fi
         else
+        then
           workspacePath="${KREUZBERG_NODE_PKG:-}"
           if [[ -z "$workspacePath" ]]; then
             echo "Missing KREUZBERG_NODE_PKG env var" >&2
@@ -98,6 +99,7 @@ runs:
           NODE
           pnpm install --no-frozen-lockfile
         else
+        then
           node <<'NODE'
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
