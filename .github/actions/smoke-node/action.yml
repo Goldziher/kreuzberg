@@ -13,7 +13,7 @@ runs:
     - name: Smoke test Node.js package
       shell: bash
       env:
-        KREUZBERG_NODE_PKG: ${{ github.workspace }}/crates/kreuzberg-node
+        KREUZBERG_NODE_PKG: ${{ github.workspace }}/packages/typescript
       run: |
         set -euo pipefail
         tmp=$(mktemp -d)
@@ -66,6 +66,17 @@ runs:
             exit 1
           fi
           workspace_normalized=$(WORKSPACE_PATH="$workspacePath" node -e "const path=require('path');process.stdout.write(path.resolve(process.env.WORKSPACE_PATH).replace(/\\\\/g,'/'))")
+          package_spec="file:${workspace_normalized}"
+        fi
+
+        if [[ -z "$package_spec" ]]; then
+          workspacePath="${KREUZBERG_NODE_PKG:-}"
+          if [[ -z "$workspacePath" ]]; then
+            echo "Unable to determine Node package location" >&2
+            exit 1
+          fi
+          workspace_normalized=$(WORKSPACE_PATH="$workspacePath" node -e "const path=require('path');process.stdout.write(path.resolve(process.env.WORKSPACE_PATH).replace(/\\\\/g,'/'))")
+          echo "Falling back to workspace Node package at $workspace_normalized"
           package_spec="file:${workspace_normalized}"
         fi
 
