@@ -20,6 +20,7 @@ resolver = "2"
 [patch.crates-io]
 kreuzberg = { path = "crates/kreuzberg" }
 kreuzberg-tesseract = { path = "crates/kreuzberg-tesseract" }
+rb-sys = { path = "vendor/rb-sys" }
 
 [workspace.package]
 version = "4.0.0-rc.1"

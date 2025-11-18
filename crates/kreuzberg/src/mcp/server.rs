@@ -428,7 +428,7 @@ impl Default for KreuzbergMcp {
 /// use kreuzberg::mcp::start_mcp_server;
 ///
 /// #[tokio::main]
-/// async fn main() -> kreuzberg::Result<()> {
+/// async fn main() -> anyhow::Result<()> {
 ///     start_mcp_server().await?;
 ///     Ok(())
 /// }

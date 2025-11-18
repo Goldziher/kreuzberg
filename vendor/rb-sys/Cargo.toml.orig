@@ -1,0 +1,57 @@
+[package]
+build = "build/main.rs"
+name = "rb-sys"
+version = "0.9.117"
+edition = "2018"
+readme = "readme.md"
+categories = ["external-ffi-bindings"]
+description = "Rust bindings for the CRuby API"
+documentation = "https://docs.rs/rb-sys"
+homepage = "https://github.com/oxidize-rb/rb-sys"
+license = "MIT OR Apache-2.0"
+links = "rb"
+repository = "https://github.com/oxidize-rb/rb-sys"
+rust-version = "1.65"
+
+[build-dependencies]
+rb-sys-build = { version = "0.9.117", path = "../rb-sys-build" }
+
+[dev-dependencies]
+rb-sys = { path = ".", features = ["link-ruby"] }
+rusty-fork = "0.3.0"
+
+[features]
+default = ["stable-api-compiled-fallback"]
+link-ruby = []
+fuzz = []
+no-link-ruby = []
+ruby-static = []
+global-allocator = []
+stable-api = []
+stable-api-compiled-fallback = ["stable-api"] # Fallback to compiled C API
+stable-api-compiled-testing = [
+  "stable-api-compiled-fallback",
+] # For testing the fallback in rb-sys (internal)
+stable-api-compiled-force = [] # Always use the compiled C API
+ruby-macros = ["stable-api"] # deprecated
+bindgen-rbimpls = ["rb-sys-build/bindgen-rbimpls"]
+bindgen-deprecated-types = ["rb-sys-build/bindgen-deprecated-types"]
+bindgen-layout-tests = ["rb-sys-build/bindgen-layout-tests"]
+bindgen-impl-debug = ["rb-sys-build/bindgen-impl-debug"]
+bindgen-sizet-is-usize = ["rb-sys-build/bindgen-sizet-is-usize"]
+bindgen-return-const-encoding-pointers = [
+  "rb-sys-build/bindgen-return-const-encoding-pointers",
+]
+bindgen-enable-function-attribute-detection = [
+  "rb-sys-build/bindgen-enable-function-attribute-detection",
+]
+
+[lib]
+doctest = false
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+  "cfg(rb_sys_gem)",
+  "cfg(rb_sys_use_stable_api_compiled_fallback)",
+  "cfg(rb_sys_force_stable_api_compiled)",
+] }
