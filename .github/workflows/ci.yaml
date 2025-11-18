@@ -17,6 +17,7 @@ env:
   PDFIUM_VERSION: "7455"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
+  RUSTFLAGS: "-D warnings -A unpredictable-function-pointer-comparisons -A fn_ptr_eq"
 
 jobs:
   validate:
