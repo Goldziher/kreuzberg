@@ -23,34 +23,30 @@ uv build --wheel --out-dir "$WHEEL_DIR"
 LATEST_WHEEL="$(ls -t "$WHEEL_DIR"/*.whl | head -n1)"
 uv pip install --force-reinstall "$LATEST_WHEEL"
 
-export LATEST_WHEEL
-python - <<'PY'
+uv run python - <<'PY'
+import importlib.util
 import os
-import sys
-import zipfile
 import pathlib
 import shutil
+import sys
 
-wheel = pathlib.Path(os.environ["LATEST_WHEEL"])
-target_dir = pathlib.Path(os.environ.get("PYTHON_TARGET_DIR", "")) or pathlib.Path(
-    os.environ["PYTHON_DIR"]
-) / "kreuzberg"
+pkg = importlib.util.find_spec("kreuzberg")
+if pkg is None or pkg.origin is None:
+    raise SystemExit("kreuzberg package not found after wheel installation")
+
+source_dir = pathlib.Path(pkg.origin).parent
+target_dir = pathlib.Path(os.environ["PYTHON_DIR"]).joinpath("kreuzberg")
 target_dir.mkdir(parents=True, exist_ok=True)
 
-with zipfile.ZipFile(wheel) as zf:
-    members = [
-        name
-        for name in zf.namelist()
-        if name.startswith("kreuzberg/_internal_bindings") and not name.endswith(".pyi")
-    ]
-    if not members:
-        raise SystemExit(
-            f"No _internal_bindings artifacts found inside wheel {wheel!s}"
-        )
-    for member in members:
-        destination = target_dir / pathlib.Path(member).name
-        with zf.open(member) as src, destination.open("wb") as dst:
-            shutil.copyfileobj(src, dst)
+copied = False
+for artifact in source_dir.glob("_internal_bindings*"):
+    if artifact.suffix in {".py", ".pyi"}:
+        continue
+    shutil.copyfile(artifact, target_dir / artifact.name)
+    copied = True
+
+if not copied:
+    raise SystemExit(f"No compiled bindings found in {source_dir}")
 PY
 popd >/dev/null
 

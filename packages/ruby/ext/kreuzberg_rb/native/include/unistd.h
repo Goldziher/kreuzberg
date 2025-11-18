@@ -8,6 +8,10 @@
 #include <process.h>
 #include <stdlib.h>
 
+#ifndef pid_t
+typedef int pid_t;
+#endif
+
 #ifndef ssize_t
 typedef long ssize_t;
 #endif

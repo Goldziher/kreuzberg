@@ -10,10 +10,10 @@ const JAVA_HELPERS_TEMPLATE: &str = r#"package com.kreuzberg.e2e;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kreuzberg.ExtractionResult;
-import com.kreuzberg.Kreuzberg;
-import com.kreuzberg.KreuzbergException;
-import com.kreuzberg.Table;
+import dev.kreuzberg.ExtractionResult;
+import dev.kreuzberg.Kreuzberg;
+import dev.kreuzberg.KreuzbergException;
+import dev.kreuzberg.Table;
 import org.junit.jupiter.api.Assumptions;
 
 import java.nio.file.Files;
@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 public final class E2EHelpers {
     private static final Path WORKSPACE_ROOT =
-            Paths.get("").toAbsolutePath().getParent().getParent().getParent();
+            Paths.get("").toAbsolutePath().getParent().getParent();
     private static final Path TEST_DOCUMENTS = WORKSPACE_ROOT.resolve("test_documents");
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -359,11 +359,11 @@ const JAVA_POM_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 
     <dependencies>
         <dependency>
-            <groupId>com.kreuzberg</groupId>
+            <groupId>dev.kreuzberg</groupId>
             <artifactId>kreuzberg</artifactId>
-            <version>4.0.0-rc1</version>
+            <version>4.0.0-rc.1</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/../../../packages/java/target/kreuzberg-4.0.0-rc1.jar</systemPath>
+            <systemPath>${project.basedir}/../../packages/java/target/kreuzberg-4.0.0-rc.1.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -376,6 +376,12 @@ const JAVA_POM_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-parameter-names</artifactId>
             <version>${jackson.version}</version>
         </dependency>
     </dependencies>
