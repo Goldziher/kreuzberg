@@ -53,6 +53,8 @@ aggregated-results/
 benchmark_results.json
 benchmarks/results/
 build/
+!vendor/rb-sys/build/
+!vendor/rb-sys/build/**
 CLAUDE.md
 
 # Coverage

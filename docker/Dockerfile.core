@@ -47,6 +47,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/kreuzberg/ crates/kreuzberg/
 COPY crates/kreuzberg-cli/ crates/kreuzberg-cli/
 COPY crates/kreuzberg-tesseract/ crates/kreuzberg-tesseract/
+COPY vendor/rb-sys/ vendor/rb-sys/
 
 # Remove workspace members that aren't included (Ruby, Node, Python, tools, e2e)
 RUN sed -i '/kreuzberg-py/d; /kreuzberg_rb/d; /kreuzberg-node/d; /kreuzberg-ffi/d; /benchmark-harness/d; /e2e-generator/d; /e2e\/rust/d' Cargo.toml

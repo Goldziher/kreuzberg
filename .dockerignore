@@ -9,6 +9,8 @@ target/
 **/target/
 dist/
 build/
+!vendor/rb-sys/build/
+!vendor/rb-sys/build/**
 
 # Documentation
 docs/
