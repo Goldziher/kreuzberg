@@ -26,14 +26,17 @@ runs:
         esac
 
         ort_dir="${RUNNER_TEMP}/onnxruntime/${target}"
-        if [ ! -f "${ort_dir}/onnxruntime/lib/libonnxruntime.a" ]; then
-          mkdir -p "${ort_dir}"
-          curl -fsSL "${ort_url}" | tar -xz -C "${ort_dir}"
+        ort_root="${ort_dir}/onnxruntime"
+        ort_lib="${ort_root}/lib"
+        if [ ! -f "${ort_lib}/libonnxruntime.a" ]; then
+          rm -rf "${ort_dir}"
+          mkdir -p "${ort_lib}"
+          curl -fsSL "${ort_url}" | tar -xz -C "${ort_lib}"
         fi
 
         {
           echo "ORT_STRATEGY=system"
-          echo "ORT_LIB_LOCATION=${ort_dir}/onnxruntime/lib"
+          echo "ORT_LIB_LOCATION=${ort_lib}"
           echo "ORT_SKIP_DOWNLOAD=1"
           echo "ORT_PREFER_DYNAMIC_LINK=1"
         } >> "${GITHUB_ENV}"
