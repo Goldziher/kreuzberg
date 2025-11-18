@@ -1592,45 +1592,29 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
-      - name: Ensure target commit
-        if: ${{ needs.prepare.outputs.target_sha != '' }}
-        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '22'
-          cache: maven
-          server-id: central
-          server-username: ${{ secrets.NEXUS_USERNAME }}
-          server-password: ${{ secrets.NEXUS_PASSWORD }}
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.GPP_PASSPHRASE }}
-
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Force gpg2 executable
-        run: |
-          set -euo pipefail
-          if command -v gpg2 >/dev/null 2>&1; then
-            mkdir -p "${HOME}/.local/bin"
-            printf '#!/usr/bin/env bash\nexec gpg2 "$@"\n' > "${HOME}/.local/bin/gpg"
-            chmod +x "${HOME}/.local/bin/gpg"
-            echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
-          fi
-
-      - name: Publish to Maven Central
+      - name: Maven release
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        working-directory: packages/java
-        env:
-          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
-        run: |
-          set -euo pipefail
-          mvn --batch-mode --no-transfer-progress clean deploy
+        uses: qcastel/github-actions-maven-release@v1.12.44
+        with:
+          release-branch-name: "main"
+          gpg-enabled: "true"
+          gpg-key-id: ${{ secrets.GPG_KEY_ID }}
+          gpg-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.GPP_PASSPHRASE }}
+          maven-project-folder: "packages/java"
+          maven-args: "-DskipTests -Dgpg.skip=false"
+          maven-servers: |
+            [
+              {
+                "id": "central",
+                "username": "${{ secrets.MAVEN_USERNAME || secrets.NEXUS_USERNAME }}",
+                "password": "${{ secrets.MAVEN_PASSWORD || secrets.NEXUS_PASSWORD }}"
+              }
+            ]
+          docker-registry-id: ghcr.io
+          docker-registry-username: ${{ github.actor }}
+          docker-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          access-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
