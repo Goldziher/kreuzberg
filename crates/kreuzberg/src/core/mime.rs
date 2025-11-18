@@ -84,7 +84,6 @@ static EXT_TO_MIME: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     m.insert("tsv", "text/tab-separated-values");
     m.insert("json", JSON_MIME_TYPE);
     m.insert("yaml", YAML_MIME_TYPE);
-    m.insert("yml", YAML_MIME_TYPE);
     m.insert("toml", TOML_MIME_TYPE);
     m.insert("xml", XML_MIME_TYPE);
     m.insert("svg", SVG_MIME_TYPE);

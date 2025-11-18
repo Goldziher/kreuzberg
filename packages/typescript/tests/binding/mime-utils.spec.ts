@@ -76,7 +76,6 @@ describe("MIME Utility Functions", () => {
 			const testCases = [
 				{ ext: "json", expected: "application/json" },
 				{ ext: "yaml", expected: "application/x-yaml" },
-				{ ext: "yml", expected: "application/x-yaml" },
 				{ ext: "xml", expected: "application/xml" },
 				{ ext: "csv", expected: "text/csv" },
 				{ ext: "toml", expected: "application/toml" },

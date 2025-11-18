@@ -999,7 +999,7 @@ pub fn load_extraction_config_from_file(file_path: String) -> Result<JsExtractio
 
     let rust_config = match ext.to_lowercase().as_str() {
         "toml" => ExtractionConfig::from_toml_file(path).map_err(convert_error)?,
-        "yaml" | "yml" => ExtractionConfig::from_yaml_file(path).map_err(convert_error)?,
+        "yaml" => ExtractionConfig::from_yaml_file(path).map_err(convert_error)?,
         "json" => ExtractionConfig::from_json_file(path).map_err(convert_error)?,
         _ => {
             return Err(Error::new(

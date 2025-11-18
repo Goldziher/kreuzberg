@@ -15,9 +15,9 @@ Kreuzberg supports multiple configuration methods:
 
 Kreuzberg automatically discovers configuration files in this order:
 
-1. Current directory: `./kreuzberg.{toml,yaml,yml,json}`
-2. User config: `~/.config/kreuzberg/config.{toml,yaml,yml,json}`
-3. System config: `/etc/kreuzberg/config.{toml,yaml,yml,json}`
+1. Current directory: `./kreuzberg.{toml,yaml,json}`
+2. User config: `~/.config/kreuzberg/config.{toml,yaml,json}`
+3. System config: `/etc/kreuzberg/config.{toml,yaml,json}`
 
 For complete examples, see the [examples directory](https://github.com/Goldziher/kreuzberg/tree/main/examples).
 
