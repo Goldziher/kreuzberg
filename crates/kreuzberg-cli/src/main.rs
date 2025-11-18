@@ -682,13 +682,13 @@ fn main() -> Result<()> {
 ///
 /// Supports three formats, determined by file extension:
 /// - `.toml`: TOML format (recommended for humans)
-/// - `.yaml` or `.yml`: YAML format
+/// - `.yaml`: YAML format
 /// - `.json`: JSON format
 ///
 /// # Errors
 ///
 /// Returns an error if:
-/// - Explicit config file has unsupported extension (must be .toml, .yaml, .yml, or .json)
+/// - Explicit config file has unsupported extension (must be .toml, .yaml, or .json)
 /// - Config file cannot be read or parsed
 /// - Config file contains invalid extraction settings
 fn load_config(config_path: Option<PathBuf>) -> Result<ExtractionConfig> {
@@ -697,12 +697,12 @@ fn load_config(config_path: Option<PathBuf>) -> Result<ExtractionConfig> {
         let path_lower = path_str.to_lowercase();
         let config = if path_lower.ends_with(".toml") {
             ExtractionConfig::from_toml_file(&path)
-        } else if path_lower.ends_with(".yaml") || path_lower.ends_with(".yml") {
+        } else if path_lower.ends_with(".yaml") {
             ExtractionConfig::from_yaml_file(&path)
         } else if path_lower.ends_with(".json") {
             ExtractionConfig::from_json_file(&path)
         } else {
-            anyhow::bail!("Config file must have .toml, .yaml, .yml, or .json extension (case-insensitive)");
+            anyhow::bail!("Config file must have .toml, .yaml, or .json extension (case-insensitive)");
         };
         config.with_context(|| format!("Failed to load configuration from '{}'. Ensure the file exists, is readable, and contains valid configuration.", path.display()))
     } else {

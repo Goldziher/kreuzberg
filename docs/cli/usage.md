@@ -524,7 +524,7 @@ docker run -v $(pwd):/data goldziher/kreuzberg:latest \
 
 ### Docker Compose
 
-**docker-compose.yml:**
+**docker-compose.yaml:**
 
 ```yaml
 version: '3.8'

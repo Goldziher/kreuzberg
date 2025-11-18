@@ -58,7 +58,7 @@ repos:
     hooks:
       - id: rubocop
         name: rubocop
-        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yml'
+        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yaml'
         require_serial: true
         language: system
         files: ^packages/ruby/.*\.rb$

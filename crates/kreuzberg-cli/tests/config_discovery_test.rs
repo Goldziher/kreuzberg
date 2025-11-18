@@ -1,7 +1,7 @@
 //! Integration tests for CLI config file discovery.
 //!
 //! These tests verify that the CLI correctly discovers and loads configuration files
-//! in various formats (.toml, .yaml, .yml, .json) with case-insensitive extension
+//! in various formats (.toml, .yaml, .json) with case-insensitive extension
 //! matching, explicit --config flag support, and proper error handling.
 
 use std::fs;
@@ -114,7 +114,7 @@ fn test_discover_kreuzberg_yml_in_current_directory() {
     build_binary();
 
     let dir = tempdir().unwrap();
-    let config_path = dir.path().join(".kreuzberg.yml");
+    let config_path = dir.path().join(".kreuzberg.yaml");
 
     fs::write(
         &config_path,

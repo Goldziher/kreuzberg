@@ -574,7 +574,7 @@ module Kreuzberg
 
       # Load configuration from a file.
       #
-      # Detects the file format from the extension (.toml, .yaml, .yml, .json)
+      # Detects the file format from the extension (.toml, .yaml, .json)
       # and loads the configuration accordingly.
       #
       # @param path [String] Path to the configuration file

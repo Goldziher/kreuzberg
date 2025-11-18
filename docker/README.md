@@ -108,7 +108,7 @@ IMAGE_NAME=kreuzberg:full ./scripts/test_docker.sh
 
 ## GitHub Actions
 
-The `.github/workflows/docker.yml` workflow builds and publishes both variants:
+The `.github/workflows/docker.yaml` workflow builds and publishes both variants:
 - `kreuzberg:v4-core` - Core image without LibreOffice
 - `kreuzberg:v4-full` - Full image with LibreOffice
 - `kreuzberg:v4`, `kreuzberg:latest` - Aliases for full image

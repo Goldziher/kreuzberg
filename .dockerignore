@@ -74,4 +74,4 @@ crates/kreuzberg-rb/
 *.tmp
 .dockerignore
 Dockerfile
-docker-compose.yml
+docker-compose.yaml

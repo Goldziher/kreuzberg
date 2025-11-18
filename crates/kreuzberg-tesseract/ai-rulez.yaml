@@ -115,7 +115,7 @@ rules:
   - content: Public APIs belong in `src/api.rs` and should favour typed enums (`enums.rs`) and explicit configuration structs. Document usage in rustdoc, keep examples compiling, and avoid leaking raw pointers outside the crate.
     name: API Design
     priority: medium
-  - content: Follow Conventional Commits enforced by `commitlint.yml`. Use prefixes such as `feat:`, `fix:`, `ci:`, `chore:` and ensure Prek plus CI succeed before merging.
+  - content: Follow Conventional Commits enforced by `commitlint.yaml`. Use prefixes such as `feat:`, `fix:`, `ci:`, `chore:` and ensure Prek plus CI succeed before merging.
     name: Commit Conventions
     priority: medium
 sections:

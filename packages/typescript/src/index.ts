@@ -1310,7 +1310,7 @@ export const ExtractionConfig = {
 	 *
 	 * Automatically detects the file format based on extension:
 	 * - `.toml` - TOML format
-	 * - `.yaml` or `.yml` - YAML format
+	 * - `.yaml` - YAML format
 	 * - `.json` - JSON format
 	 *
 	 * @param filePath - Path to the configuration file (absolute or relative)

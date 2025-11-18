@@ -125,7 +125,7 @@ Kreuzberg supports 118+ file extensions across multiple categories:
 | `.html`, `.htm` | `text/html` |
 | `.xml` | `application/xml` |
 | `.json` | `application/json` |
-| `.yaml`, `.yml` | `application/x-yaml` |
+| `.yaml` | `application/x-yaml` |
 | `.toml` | `application/toml` |
 
 ### Email

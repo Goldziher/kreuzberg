@@ -299,7 +299,7 @@ impl ExtractionConfig {
     ///
     /// Supported formats:
     /// - `.toml` - TOML format
-    /// - `.yaml`, `.yml` - YAML format
+    /// - `.yaml` - YAML format
     /// - `.json` - JSON format
     ///
     /// Args:

@@ -954,7 +954,7 @@ impl TryFrom<ExtractionConfig> for JsExtractionConfig {
 ///
 /// Automatically detects the file format based on extension:
 /// - `.toml` - TOML format
-/// - `.yaml` or `.yml` - YAML format
+/// - `.yaml` - YAML format
 /// - `.json` - JSON format
 ///
 /// # Parameters
@@ -1004,10 +1004,7 @@ pub fn load_extraction_config_from_file(file_path: String) -> Result<JsExtractio
         _ => {
             return Err(Error::new(
                 Status::InvalidArg,
-                format!(
-                    "Unsupported file extension: '{}'. Supported: .toml, .yaml, .yml, .json",
-                    ext
-                ),
+                format!("Unsupported file extension: '{}'. Supported: .toml, .yaml, .json", ext),
             ));
         }
     };

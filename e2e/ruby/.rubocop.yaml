@@ -1,4 +1,4 @@
-inherit_from: ../../packages/ruby/.rubocop.yml
+inherit_from: ../../packages/ruby/.rubocop.yaml
 
 # Disable buggy cop that causes crashes
 RSpec/PredicateMatcher:

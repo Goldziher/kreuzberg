@@ -106,7 +106,7 @@ All image formats support OCR: `.jpg`, `.jpeg`, `.png`, `.tiff`, `.tif`, `.bmp`,
 | HTML | `.html`, `.htm` | Metadata extraction, link preservation |
 | XML | `.xml` | Streaming parser for multi-GB files |
 | JSON | `.json` | Intelligent field detection |
-| YAML | `.yaml`, `.yml` | Structure preservation |
+| YAML | `.yaml` | Structure preservation |
 | TOML | `.toml` | Configuration parsing |
 
 ### Email & Archives

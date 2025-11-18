@@ -45,7 +45,7 @@ All formats support async/await and batch processing. Image formats and PDFs sup
 | Format | Extensions | MIME Type | Extraction Method | OCR Support | Special Features |
 |--------|-----------|-----------|-------------------|-------------|------------------|
 | JSON | `.json` | `application/json`, `text/json` | Native Rust (serde_json) | No | Field counting, nested structure extraction |
-| YAML | `.yaml`, `.yml` | `application/x-yaml`, `text/yaml`, `text/x-yaml` | Native Rust (serde_yaml) | No | Multi-document support, field counting |
+| YAML | `.yaml` | `application/x-yaml`, `text/yaml`, `text/x-yaml` | Native Rust (serde_yaml) | No | Multi-document support, field counting |
 | TOML | `.toml` | `application/toml`, `text/toml` | Native Rust (toml crate) | No | Configuration file support |
 | CSV | `.csv` | `text/csv` | Native Rust (via Pandoc) | No | Tabular data extraction |
 | TSV | `.tsv` | `text/tab-separated-values` | Native Rust (via Pandoc) | No | Tab-separated data extraction |

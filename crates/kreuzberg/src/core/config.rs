@@ -383,7 +383,7 @@ impl ExtractionConfig {
     ///
     /// Supported formats:
     /// - `.toml` - TOML format
-    /// - `.yaml`, `.yml` - YAML format
+    /// - `.yaml` - YAML format
     /// - `.json` - JSON format
     ///
     /// # Arguments
@@ -422,7 +422,7 @@ impl ExtractionConfig {
             "yaml" | "yml" => Self::from_yaml_file(path),
             "json" => Self::from_json_file(path),
             _ => Err(KreuzbergError::validation(format!(
-                "Unsupported config file format: .{}. Supported formats: .toml, .yaml, .yml, .json",
+                "Unsupported config file format: .{}. Supported formats: .toml, .yaml, .json",
                 extension
             ))),
         }

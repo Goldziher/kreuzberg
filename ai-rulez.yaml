@@ -114,9 +114,9 @@ agents:
     name: infra-engineer
     priority: medium
     system_prompt: |
-      DevOps for Kreuzberg. Expertise: Docker (multi-stage, multi-platform), GitHub Actions, Taskfile.yml, PyPI/Docker Hub/crates.io releases.
+      DevOps for Kreuzberg. Expertise: Docker (multi-stage, multi-platform), GitHub Actions, Taskfile.yaml, PyPI/Docker Hub/crates.io releases.
 
-      Files: .github/workflows/, docker/, Taskfile.yml. Principles: IaC, security first, reproducible builds.
+      Files: .github/workflows/, docker/, Taskfile.yaml. Principles: IaC, security first, reproducible builds.
     targets:
       - CLAUDE.md
   - description: Performance optimizer for Rust core and bindings
@@ -139,7 +139,7 @@ rules:
       **Rust core** (crates/kreuzberg): cargo build/test/clippy/fmt, 95% coverage.
       **Bindings**: maturin develop (Python), pnpm build (TS), bundle exec rake compile (Ruby), mvn clean install (Java).
       **E2E tests**: Auto-generated via tools/e2e-generator. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang <rust|python|typescript|ruby|java>
-      **Task runner**: task --list (Taskfile.yml).
+      **Task runner**: task --list (Taskfile.yaml).
       **Versions**: task sync-versions (syncs from Cargo.toml).
     name: Development Commands
     priority: critical

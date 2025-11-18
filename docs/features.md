@@ -39,7 +39,7 @@ Kreuzberg extracts text, tables, and metadata from over 50 file formats:
 
 **Structured Data**
 - JSON (`.json`) - JavaScript Object Notation
-- YAML (`.yaml`, `.yml`) - YAML Ain't Markup Language
+- YAML (`.yaml`) - YAML Ain't Markup Language
 - TOML (`.toml`) - Tom's Obvious Minimal Language
 
 **Archives**

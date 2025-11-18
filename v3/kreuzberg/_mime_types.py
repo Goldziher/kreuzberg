@@ -180,7 +180,6 @@ EXT_TO_MIME_TYPE: Final[Mapping[str, str]] = {
     ".msg": MSG_MIME_TYPE,
     ".json": JSON_MIME_TYPE,
     ".yaml": YAML_MIME_TYPE,
-    ".yml": YAML_MIME_TYPE,
     ".toml": TOML_MIME_TYPE,
     ".odt": "application/vnd.oasis.opendocument.text",
     ".docx": DOCX_MIME_TYPE,

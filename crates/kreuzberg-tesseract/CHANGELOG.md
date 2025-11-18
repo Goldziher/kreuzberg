@@ -61,7 +61,7 @@ The following changes are from the upstream [tesseract-rs](https://github.com/ca
 - **BREAKING**: Default feature changed from `build-tesseract` to `static-linking`
 - Updated Tesseract from 5.3.4 to 5.5.1
 - Updated Leptonica from 1.84.1 to 1.86.0
-- Replaced .github/workflows/rust.yml with kreuzberg-style ci.yaml
+- Replaced .github/workflows/rust.yaml with kreuzberg-style ci.yaml
 - Migrated from Husky to Prek for git hook management
 - Parameterized build URLs for easier version management
 - Improved Windows library detection with version-specific names

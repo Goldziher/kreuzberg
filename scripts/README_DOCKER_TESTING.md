@@ -42,7 +42,7 @@ The Docker testing system validates the full functionality of the Kreuzberg Dock
 
 ### CI/CD
 
-The test script is automatically run in CI via `.github/workflows/docker.yml` on:
+The test script is automatically run in CI via `.github/workflows/docker.yaml` on:
 - Push to `main` branch (when Docker-related files change)
 - Pull requests to `main` branch
 - Manual workflow dispatch

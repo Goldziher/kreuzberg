@@ -1392,7 +1392,7 @@ fn extraction_config_to_ruby_hash(ruby: &Ruby, config: ExtractionConfig) -> Resu
 
 /// Load extraction configuration from a file.
 ///
-/// Detects the file format from the extension (.toml, .yaml, .yml, .json)
+/// Detects the file format from the extension (.toml, .yaml, .json)
 /// and loads the configuration accordingly. Returns a hash to be used by Ruby.
 ///
 /// @param path [String] Path to the configuration file
@@ -1411,15 +1411,15 @@ fn config_from_file(path: String) -> Result<RHash, Error> {
     let extension = file_path
         .extension()
         .and_then(|ext| ext.to_str())
-        .ok_or_else(|| runtime_error("File path must have an extension (.toml, .yaml, .yml, or .json)"))?;
+        .ok_or_else(|| runtime_error("File path must have an extension (.toml, .yaml, or .json)"))?;
 
     let config = match extension {
         "toml" => ExtractionConfig::from_toml_file(file_path).map_err(kreuzberg_error)?,
-        "yaml" | "yml" => ExtractionConfig::from_yaml_file(file_path).map_err(kreuzberg_error)?,
+        "yaml" => ExtractionConfig::from_yaml_file(file_path).map_err(kreuzberg_error)?,
         "json" => ExtractionConfig::from_json_file(file_path).map_err(kreuzberg_error)?,
         _ => {
             return Err(runtime_error(format!(
-                "Unsupported file extension '{}'. Supported: .toml, .yaml, .yml, .json",
+                "Unsupported file extension '{}'. Supported: .toml, .yaml, .json",
                 extension
             )));
         }

@@ -117,7 +117,7 @@ pub fn extract_zip_text_content(bytes: &[u8]) -> Result<HashMap<String, String>>
 
     let mut contents = HashMap::new();
     let text_extensions = [
-        ".txt", ".md", ".json", ".xml", ".html", ".csv", ".log", ".yaml", ".yml", ".toml",
+        ".txt", ".md", ".json", ".xml", ".html", ".csv", ".log", ".yaml", ".toml",
     ];
 
     for i in 0..archive.len() {
@@ -147,7 +147,7 @@ pub fn extract_tar_text_content(bytes: &[u8]) -> Result<HashMap<String, String>>
 
     let mut contents = HashMap::new();
     let text_extensions = [
-        ".txt", ".md", ".json", ".xml", ".html", ".csv", ".log", ".yaml", ".yml", ".toml",
+        ".txt", ".md", ".json", ".xml", ".html", ".csv", ".log", ".yaml", ".toml",
     ];
 
     let entries = archive
@@ -217,7 +217,7 @@ pub fn extract_7z_text_content(bytes: &[u8]) -> Result<HashMap<String, String>> 
 
     let mut contents = HashMap::new();
     let text_extensions = [
-        ".txt", ".md", ".json", ".xml", ".html", ".csv", ".log", ".yaml", ".yml", ".toml",
+        ".txt", ".md", ".json", ".xml", ".html", ".csv", ".log", ".yaml", ".toml",
     ];
 
     archive

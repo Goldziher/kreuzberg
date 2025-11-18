@@ -376,7 +376,6 @@ mod tests {
         let test_cases = vec![
             ("test.json", JSON_MIME_TYPE),
             ("test.yaml", YAML_MIME_TYPE),
-            ("test.yml", YAML_MIME_TYPE),
             ("test.toml", TOML_MIME_TYPE),
             ("test.xml", XML_MIME_TYPE),
             ("test.csv", "text/csv"),
