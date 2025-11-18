@@ -185,17 +185,29 @@ tasks:
     desc: Install Java dependencies
     dir: packages/java
     cmds:
-      - mvn clean install -DskipTests
+      - |
+        if ! command -v java >/dev/null 2>&1; then
+          echo "ERROR: Java (JDK 22+) is required." >&2
+          exit 1
+        fi
+        java -version
+      - |
+        if ! command -v mvn >/dev/null 2>&1; then
+          echo "ERROR: Maven 3.8+ is required. Install it via your package manager." >&2
+          exit 1
+        fi
+        mvn -v
+      - mvn clean install -DskipTests -Dgpg.skip=true
   java:build:
     desc: Build Java package
     dir: packages/java
     cmds:
-      - mvn clean package -DskipTests
+      - mvn clean package -DskipTests -Dgpg.skip=true
   java:test:
     desc: Run Java tests
     dir: packages/java
     cmds:
-      - mvn test
+      - mvn -Dgpg.skip=true test
   java:lint:
     desc: Lint Java code (Spotless + Checkstyle + PMD)
     dir: packages/java
