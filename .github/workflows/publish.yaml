@@ -23,6 +23,10 @@ on:
   push:
     tags:
       - "v*"
+  release:
+    types: [published]
+  repository_dispatch:
+    types: [publish-release]
 
 concurrency:
   group: ${{ github.workflow }}-${{ (github.event_name == 'workflow_dispatch' && (github.event.inputs.ref || github.event.inputs.tag)) || github.ref || github.run_id }}
@@ -66,6 +70,11 @@ jobs:
             dry_run_input="${{ inputs.dry_run }}"
             ref_input="${{ inputs.ref }}"
             targets_input="${{ inputs.targets }}"
+          elif [[ "$event" == "release" ]]; then
+            tag="${{ github.event.release.tag_name }}"
+            dry_run_input="false"
+            ref_input="refs/tags/${tag}"
+            targets_input=""
           elif [[ "$event" == "repository_dispatch" ]]; then
             tag="${{ github.event.client_payload.tag }}"
             dry_run_input="${{ github.event.client_payload.dry_run }}"
@@ -955,7 +964,6 @@ jobs:
       - cli-binaries
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -1242,8 +1250,8 @@ jobs:
         if: ${{ always() && needs.prepare.outputs.release_docker == 'true' }}
         run: docker rmi kreuzberg-publish:${{ matrix.variant }}-test || true
 
-  create-release:
-    name: Create GitHub Release
+  upload-release-artifacts:
+    name: Upload release artifacts
     needs:
       - prepare
       - python-wheels
@@ -1251,10 +1259,8 @@ jobs:
       - node-bindings
       - cli-binaries
       - ruby-gem
-      - cargo-packages
       - release-smoke
-      - publish-docker
-    if: ${{ needs.prepare.outputs.is_tag == 'true' }}
+    if: ${{ needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -1264,6 +1270,18 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
+      - name: Ensure GitHub release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ needs.prepare.outputs.tag }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists"
+          else
+            gh release create "$tag" --title "$tag" --generate-notes
+          fi
+
       - name: Download CLI artifacts
         if: ${{ needs.prepare.outputs.release_cli == 'true' }}
         uses: actions/download-artifact@v6
@@ -1272,17 +1290,8 @@ jobs:
           path: dist/cli
           merge-multiple: true
 
-      - name: Create GitHub Release
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create ${{ needs.prepare.outputs.tag }} \
-            --title "${{ needs.prepare.outputs.tag }}" \
-            --generate-notes
-
       - name: Upload CLI binaries to release
-        if: ${{ needs.prepare.outputs.release_cli == 'true' && needs.prepare.outputs.dry_run != 'true' }}
+        if: ${{ needs.prepare.outputs.release_cli == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -1296,15 +1305,9 @@ jobs:
             gh release upload ${{ needs.prepare.outputs.tag }} "$file" --clobber
           done
 
-      - name: Release dry-run summary
-        if: ${{ needs.prepare.outputs.release_cli == 'true' && needs.prepare.outputs.dry_run == 'true' }}
-        run: |
-          echo "Dry run requested. Release artifacts ready for upload:" >> "$GITHUB_STEP_SUMMARY"
-          find dist/cli -type f -maxdepth 1 -print >> "$GITHUB_STEP_SUMMARY"
-
   publish-crates:
     name: Publish crates.io packages
-    needs: [prepare, create-release]
+    needs: [prepare, upload-release-artifacts]
     if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_crates == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -1376,7 +1379,7 @@ jobs:
 
   publish-pypi:
     name: Publish Python packages to PyPI
-    needs: [prepare, create-release]
+    needs: [prepare, upload-release-artifacts]
     if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_python == 'true' }}
     runs-on: ubuntu-latest
     environment: pypi
@@ -1404,6 +1407,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
+          skip-existing: true
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
@@ -1413,7 +1417,7 @@ jobs:
 
   publish-rubygems:
     name: Publish Ruby gems
-    needs: [prepare, create-release]
+    needs: [prepare, upload-release-artifacts]
     if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_ruby == 'true' }}
     runs-on: ubuntu-latest
     permissions:
@@ -1455,7 +1459,7 @@ jobs:
 
   publish-node:
     name: Publish Node packages
-    needs: [prepare, create-release]
+    needs: [prepare, upload-release-artifacts]
     if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_node == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -1560,7 +1564,7 @@ jobs:
 
   publish-maven:
     name: Publish Maven packages
-    needs: [prepare, create-release]
+    needs: [prepare, upload-release-artifacts]
     if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -1613,7 +1617,7 @@ jobs:
 
   publish-homebrew:
     name: Update Homebrew formula
-    needs: [prepare, create-release]
+    needs: [prepare, upload-release-artifacts]
     if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_homebrew == 'true' }}
     runs-on: ubuntu-latest
     steps:
