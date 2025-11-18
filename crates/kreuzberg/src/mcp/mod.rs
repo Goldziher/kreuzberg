@@ -16,7 +16,7 @@
 //! use kreuzberg::mcp::start_mcp_server;
 //!
 //! #[tokio::main]
-//! async fn main() -> anyhow::Result<()> {
+//! async fn main() -> kreuzberg::Result<()> {
 //!     start_mcp_server().await?;
 //!     Ok(())
 //! }
