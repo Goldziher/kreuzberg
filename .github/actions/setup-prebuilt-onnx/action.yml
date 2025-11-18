@@ -25,7 +25,7 @@ runs:
             ;;
         esac
 
-        ort_dir="${RUNNER_TEMP}/onnxruntime/${target}"
+        ort_dir="${GITHUB_WORKSPACE}/target/onnxruntime/${target}"
         ort_root="${ort_dir}/onnxruntime"
         ort_lib="${ort_root}/lib"
         if [ ! -f "${ort_lib}/libonnxruntime.a" ]; then
