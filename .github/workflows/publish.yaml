@@ -1434,8 +1434,23 @@ jobs:
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         uses: rubygems/configure-rubygems-credentials@v1.0.0
 
+      - name: Check RubyGems version
+        id: rubygems_check
+        run: |
+          set -euo pipefail
+          export VERSION="${{ needs.prepare.outputs.version }}"
+          exists=$(python3 - <<'PY'
+          import json, os, urllib.request
+          version = os.environ["VERSION"]
+          with urllib.request.urlopen("https://rubygems.org/api/v1/versions/kreuzberg.json") as resp:
+              data = json.load(resp)
+          print("true" if any(entry.get("number") == version for entry in data) else "false")
+          PY
+          )
+          echo "exists=$exists" >> "$GITHUB_OUTPUT"
+
       - name: Publish gems
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.rubygems_check.outputs.exists != 'true' }}
         working-directory: dist
         run: |
           set -euo pipefail
@@ -1449,6 +1464,10 @@ jobs:
             echo "Pushing ${gem}"
             gem push "$gem"
           done
+
+      - name: Ruby gem already published
+        if: ${{ steps.rubygems_check.outputs.exists == 'true' }}
+        run: echo "RubyGem version ${{ needs.prepare.outputs.version }} already published; skipping." >> $GITHUB_STEP_SUMMARY
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
@@ -1595,10 +1614,12 @@ jobs:
       - name: Force gpg2 executable
         run: |
           set -euo pipefail
-          mkdir -p "${HOME}/.local/bin"
-          printf '#!/usr/bin/env bash\nexec gpg2 "$@"\n' > "${HOME}/.local/bin/gpg"
-          chmod +x "${HOME}/.local/bin/gpg"
-          echo "${HOME}/.local/bin" >> $GITHUB_PATH
+          if command -v gpg2 >/dev/null 2>&1; then
+            mkdir -p "${HOME}/.local/bin"
+            printf '#!/usr/bin/env bash\nexec gpg2 "$@"\n' > "${HOME}/.local/bin/gpg"
+            chmod +x "${HOME}/.local/bin/gpg"
+            echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Publish to Maven Central
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
