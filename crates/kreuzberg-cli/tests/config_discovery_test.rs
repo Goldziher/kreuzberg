@@ -110,7 +110,7 @@ enable_quality_processing: false
 }
 
 #[test]
-fn test_discover_kreuzberg_yaml_in_current_directory() {
+fn test_discover_kreuzberg_yml_in_current_directory() {
     build_binary();
 
     let dir = tempdir().unwrap();
@@ -252,11 +252,11 @@ use_cache: false
 }
 
 #[test]
-fn test_case_insensitive_yaml_extension() {
+fn test_case_insensitive_yml_extension() {
     build_binary();
 
     let dir = tempdir().unwrap();
-    let config_path = dir.path().join("custom.YAML");
+    let config_path = dir.path().join("custom.YML");
 
     fs::write(
         &config_path,

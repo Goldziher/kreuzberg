@@ -419,7 +419,7 @@ impl ExtractionConfig {
 
         match extension.to_lowercase().as_str() {
             "toml" => Self::from_toml_file(path),
-            "yaml" => Self::from_yaml_file(path),
+            "yaml" | "yml" => Self::from_yaml_file(path),
             "json" => Self::from_json_file(path),
             _ => Err(KreuzbergError::validation(format!(
                 "Unsupported config file format: .{}. Supported formats: .toml, .yaml, .json",

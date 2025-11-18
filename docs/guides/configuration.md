@@ -117,9 +117,9 @@ flowchart TD
 
 Kreuzberg automatically discovers configuration files in the following locations (in order):
 
-1. Current directory: `./kreuzberg.{toml,yaml,json}`
-2. User config: `~/.config/kreuzberg/config.{toml,yaml,json}`
-3. System config: `/etc/kreuzberg/config.{toml,yaml,json}`
+1. Current directory: `./kreuzberg.{toml,yaml,yml,json}`
+2. User config: `~/.config/kreuzberg/config.{toml,yaml,yml,json}`
+3. System config: `/etc/kreuzberg/config.{toml,yaml,yml,json}`
 
 === "Python"
 
