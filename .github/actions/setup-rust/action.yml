@@ -53,6 +53,23 @@ runs:
         components: ${{ inputs.components }}
         target: ${{ inputs.target }}
 
+    - name: Configure Rust lint flags
+      shell: bash
+      run: |
+        set -euo pipefail
+        base="${RUSTFLAGS:-"-D warnings -A unpredictable-function-pointer-comparisons"}"
+        check_output=$(cat <<'EOF' | RUSTC_COLOR=never rustc -W fn_ptr_eq - 2>&1 >/dev/null || true
+fn main() {}
+EOF
+)
+        if grep -qi "unknown lint" <<<"$check_output"; then
+          echo "fn_ptr_eq lint unavailable on $(rustc -V); skipping flag"
+        else
+          base+=" -A fn_ptr_eq --cfg has_fn_ptr_eq_lint"
+          echo "Detected fn_ptr_eq lint support; appended suppression flags"
+        fi
+        echo "RUSTFLAGS=$base" >> "$GITHUB_ENV"
+
     - name: Cache Rust build artifacts
       id: cache-rust
       uses: actions/cache@v4

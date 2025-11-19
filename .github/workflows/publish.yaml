@@ -37,7 +37,6 @@ env:
   PDFIUM_VERSION: "7455"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
-  RUSTFLAGS: "-D warnings -A unpredictable-function-pointer-comparisons -A fn_ptr_eq"
 
 jobs:
   prepare:
@@ -459,8 +458,10 @@ jobs:
           python-version: "3.13"
           cache-prefix: python-sdist
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-python-sdist
 
       - name: Build sdist
         run: bash scripts/build_python_sdist.sh dist
@@ -539,8 +540,10 @@ jobs:
         with:
           package_json_file: package.json
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-node-${{ matrix.settings.target }}
 
       - name: Add Rust target
         if: ${{ matrix.settings.rust_target != '' }}
@@ -662,8 +665,11 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          target: ${{ matrix.target }}
+          cache-key-prefix: publish-cli-${{ matrix.target }}
 
       - name: Add compilation target
         run: rustup target add ${{ matrix.target }}
@@ -922,8 +928,10 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-cargo-packages
 
       - name: Package crates
         env:
@@ -1006,8 +1014,10 @@ jobs:
         with:
           ruby-version: "3.3"
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-release-smoke-${{ matrix.os }}
 
       - name: Download Pdfium runtime
         uses: ./.github/actions/download-pdfium
@@ -1317,8 +1327,10 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-crates
 
       - name: Verify Cargo.toml version matches tag
         run: |

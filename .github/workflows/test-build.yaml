@@ -24,7 +24,6 @@ env:
   PDFIUM_VERSION: "7455"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
-  RUSTFLAGS: "-D warnings -A unpredictable-function-pointer-comparisons -A fn_ptr_eq"
 
 jobs:
   python-wheels:
@@ -172,8 +171,10 @@ jobs:
           python-version: "3.13"
           cache-prefix: python-sdist
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: python-sdist
 
       - name: Cache Pdfium binaries
         uses: ./.github/actions/cache-pdfium
@@ -240,19 +241,11 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
         with:
-          targets: ${{ matrix.settings.target }}
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ matrix.settings.os }}-cargo-napi-${{ matrix.settings.target }}-${{ hashFiles('**/Cargo.lock') }}
+          target: ${{ matrix.settings.target }}
+          cache-key-prefix: node-${{ matrix.settings.target }}
 
       - name: Install cross (Linux cross-compilation)
         if: matrix.settings.use_zigbuild
@@ -507,23 +500,15 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
         with:
-          targets: ${{ matrix.target }}
+          target: ${{ matrix.target }}
+          cache-key-prefix: cli-${{ matrix.target }}
 
       - name: Install musl-tools
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-cli-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build CLI binary
         run: cargo build --release --target ${{ matrix.target }} --package kreuzberg-cli
@@ -605,8 +590,10 @@ jobs:
         with:
           ruby-version: "3.3"
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: release-smoke-${{ matrix.os }}
 
       - name: Download Pdfium runtime
         uses: ./.github/actions/download-pdfium
