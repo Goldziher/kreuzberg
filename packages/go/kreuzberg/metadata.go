@@ -36,7 +36,6 @@ var formatFieldSets = map[string][]string{
 
 // UnmarshalJSON ensures Metadata captures flattened format unions and additional custom fields.
 func (m *Metadata) UnmarshalJSON(data []byte) error {
-	type alias Metadata
 	var aux struct {
 		Language           *string                     `json:"language"`
 		Date               *string                     `json:"date"`

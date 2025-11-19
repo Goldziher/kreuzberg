@@ -11,4 +11,7 @@
     <!-- Test files can have more relaxed rules -->
     <suppress checks="MagicNumber" files=".*Test\.java"/>
     <suppress checks="MethodLength" files=".*Test\.java"/>
+
+    <!-- Benchmark harness scripts live outside the Java package structure -->
+    <suppress checks="JavadocPackage" files="tools/benchmark-harness/scripts/.*"/>
 </suppressions>

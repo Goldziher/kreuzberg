@@ -142,7 +142,7 @@ type TextMetadata struct {
 	CodeBlocks     [][2]string `json:"code_blocks,omitempty"`
 }
 
-// HtmlMetadata captures standard meta tags and social graph data.
+//revive:disable-next-line var-naming
 type HtmlMetadata struct {
 	Title              *string `json:"title,omitempty"`
 	Description        *string `json:"description,omitempty"`

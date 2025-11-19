@@ -62,6 +62,68 @@ fn find_ruby() -> Result<(PathBuf, Vec<String>)> {
     }
 }
 
+/// Helper to find Go toolchain
+fn find_go() -> Result<PathBuf> {
+    which::which("go").map_err(|_| crate::Error::Config("Go toolchain not found".to_string()))
+}
+
+/// Helper to find Java runtime
+fn find_java() -> Result<PathBuf> {
+    which::which("java").map_err(|_| crate::Error::Config("Java runtime not found".to_string()))
+}
+
+fn workspace_root() -> Result<PathBuf> {
+    let manifest_dir =
+        env::var("CARGO_MANIFEST_DIR").map_err(|_| crate::Error::Config("CARGO_MANIFEST_DIR not set".to_string()))?;
+    let path = PathBuf::from(manifest_dir);
+    let root = path
+        .parent()
+        .and_then(|p| p.parent())
+        .ok_or_else(|| crate::Error::Config("Unable to resolve workspace root".to_string()))?;
+    Ok(root.to_path_buf())
+}
+
+fn native_library_dir() -> Result<PathBuf> {
+    let root = workspace_root()?;
+    let release = root.join("target/release");
+    if release.exists() {
+        return Ok(release);
+    }
+    let debug = root.join("target/debug");
+    if debug.exists() {
+        return Ok(debug);
+    }
+    Err(crate::Error::Config(
+        "Native library directory not found in target/".to_string(),
+    ))
+}
+
+fn prepend_env(var: &str, value: &str, separator: &str) -> String {
+    match env::var(var) {
+        Ok(existing) if !existing.is_empty() => format!("{value}{separator}{existing}"),
+        _ => value.to_string(),
+    }
+}
+
+fn build_library_env() -> Result<Vec<(String, String)>> {
+    let lib_dir = native_library_dir()?;
+    let lib_str = lib_dir.to_string_lossy().to_string();
+    let mut envs = vec![
+        (
+            "LD_LIBRARY_PATH".to_string(),
+            prepend_env("LD_LIBRARY_PATH", &lib_str, ":"),
+        ),
+        (
+            "DYLD_LIBRARY_PATH".to_string(),
+            prepend_env("DYLD_LIBRARY_PATH", &lib_str, ":"),
+        ),
+    ];
+    if cfg!(target_os = "windows") {
+        envs.push(("PATH".to_string(), prepend_env("PATH", &lib_str, ";")));
+    }
+    Ok(envs)
+}
+
 /// Create Python sync adapter (extract_file)
 pub fn create_python_sync_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("kreuzberg_extract.py")?;
@@ -152,6 +214,60 @@ pub fn create_ruby_batch_adapter() -> Result<SubprocessAdapter> {
         args,
         vec![],
     ))
+}
+
+/// Create Go sync adapter
+pub fn create_go_sync_adapter() -> Result<SubprocessAdapter> {
+    let script_path = get_script_path("kreuzberg_extract_go.go")?;
+    let command = find_go()?;
+    let args = vec![
+        "run".to_string(),
+        script_path.to_string_lossy().to_string(),
+        "sync".to_string(),
+    ];
+    let env = build_library_env()?;
+    Ok(SubprocessAdapter::new("kreuzberg-go-sync", command, args, env))
+}
+
+/// Create Go batch adapter
+pub fn create_go_batch_adapter() -> Result<SubprocessAdapter> {
+    let script_path = get_script_path("kreuzberg_extract_go.go")?;
+    let command = find_go()?;
+    let args = vec![
+        "run".to_string(),
+        script_path.to_string_lossy().to_string(),
+        "batch".to_string(),
+    ];
+    let env = build_library_env()?;
+    Ok(SubprocessAdapter::with_batch_support(
+        "kreuzberg-go-batch",
+        command,
+        args,
+        env,
+    ))
+}
+
+/// Create Java sync adapter
+pub fn create_java_sync_adapter() -> Result<SubprocessAdapter> {
+    let script_path = get_script_path("kreuzberg_extract_java.java")?;
+    let command = find_java()?;
+    let classpath = workspace_root()?.join("packages/java/target/classes");
+    if !classpath.exists() {
+        return Err(crate::Error::Config(format!(
+            "Java classes not found at {} – run `mvn package` inside packages/java first",
+            classpath.display()
+        )));
+    }
+    let lib_dir = native_library_dir()?;
+    let args = vec![
+        "--enable-native-access=ALL-UNNAMED".to_string(),
+        format!("-Djava.library.path={}", lib_dir.display()),
+        "--class-path".to_string(),
+        classpath.to_string_lossy().to_string(),
+        script_path.to_string_lossy().to_string(),
+        "sync".to_string(),
+    ];
+    Ok(SubprocessAdapter::new("kreuzberg-java-sync", command, args, vec![]))
 }
 
 #[cfg(test)]

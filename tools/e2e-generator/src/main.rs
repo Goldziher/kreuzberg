@@ -1,4 +1,5 @@
 mod fixtures;
+mod go;
 mod java;
 mod python;
 mod ruby;
@@ -46,6 +47,7 @@ enum Language {
     Typescript,
     Ruby,
     Java,
+    Go,
 }
 
 fn main() -> Result<()> {
@@ -60,6 +62,7 @@ fn main() -> Result<()> {
                 Language::Typescript => typescript::generate(&fixtures, output.as_path())?,
                 Language::Ruby => ruby::generate(&fixtures, output.as_path())?,
                 Language::Java => java::generate(&fixtures, output.as_path())?,
+                Language::Go => go::generate(&fixtures, output.as_path())?,
             };
         }
         Commands::List { fixtures } => {

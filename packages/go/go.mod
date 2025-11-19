@@ -1,3 +1,3 @@
 module github.com/Goldziher/kreuzberg/packages/go
 
-go 1.22
+go 1.25
