@@ -57,21 +57,98 @@ type Metadata struct {
 	Language           *string                     `json:"language,omitempty"`
 	Date               *string                     `json:"date,omitempty"`
 	Subject            *string                     `json:"subject,omitempty"`
-	FormatType         string                      `json:"format_type,omitempty"`
-	Pdf                *PdfMetadata                `json:"-"`
-	Excel              *ExcelMetadata              `json:"-"`
-	Email              *EmailMetadata              `json:"-"`
-	Pptx               *PptxMetadata               `json:"-"`
-	Archive            *ArchiveMetadata            `json:"-"`
-	Image              *ImageMetadata              `json:"-"`
-	XML                *XMLMetadata                `json:"-"`
-	Text               *TextMetadata               `json:"-"`
-	HTML               *HtmlMetadata               `json:"-"`
-	OCR                *OcrMetadata                `json:"-"`
+	Format             FormatMetadata              `json:"-"`
 	ImagePreprocessing *ImagePreprocessingMetadata `json:"image_preprocessing,omitempty"`
 	JSONSchema         json.RawMessage             `json:"json_schema,omitempty"`
 	Error              *ErrorMetadata              `json:"error,omitempty"`
 	Additional         map[string]json.RawMessage  `json:"-"`
+}
+
+// FormatMetadata represents the discriminated union of metadata formats.
+type FormatMetadata struct {
+	Type    FormatType
+	Pdf     *PdfMetadata
+	Excel   *ExcelMetadata
+	Email   *EmailMetadata
+	Pptx    *PptxMetadata
+	Archive *ArchiveMetadata
+	Image   *ImageMetadata
+	XML     *XMLMetadata
+	Text    *TextMetadata
+	HTML    *HtmlMetadata
+	OCR     *OcrMetadata
+}
+
+// FormatType enumerates supported metadata discriminators.
+type FormatType string
+
+const (
+	FormatUnknown FormatType = ""
+	FormatPDF     FormatType = "pdf"
+	FormatExcel   FormatType = "excel"
+	FormatEmail   FormatType = "email"
+	FormatPPTX    FormatType = "pptx"
+	FormatArchive FormatType = "archive"
+	FormatImage   FormatType = "image"
+	FormatXML     FormatType = "xml"
+	FormatText    FormatType = "text"
+	FormatHTML    FormatType = "html"
+	FormatOCR     FormatType = "ocr"
+)
+
+// FormatType returns the discriminated format string.
+func (m Metadata) FormatType() FormatType {
+	return m.Format.Type
+}
+
+// PdfMetadata returns the PDF metadata if present.
+func (m Metadata) PdfMetadata() (*PdfMetadata, bool) {
+	return m.Format.Pdf, m.Format.Type == FormatPDF && m.Format.Pdf != nil
+}
+
+// ExcelMetadata returns the Excel metadata if present.
+func (m Metadata) ExcelMetadata() (*ExcelMetadata, bool) {
+	return m.Format.Excel, m.Format.Type == FormatExcel && m.Format.Excel != nil
+}
+
+// EmailMetadata returns the Email metadata if present.
+func (m Metadata) EmailMetadata() (*EmailMetadata, bool) {
+	return m.Format.Email, m.Format.Type == FormatEmail && m.Format.Email != nil
+}
+
+// PptxMetadata returns the PPTX metadata if present.
+func (m Metadata) PptxMetadata() (*PptxMetadata, bool) {
+	return m.Format.Pptx, m.Format.Type == FormatPPTX && m.Format.Pptx != nil
+}
+
+// ArchiveMetadata returns the archive metadata if present.
+func (m Metadata) ArchiveMetadata() (*ArchiveMetadata, bool) {
+	return m.Format.Archive, m.Format.Type == FormatArchive && m.Format.Archive != nil
+}
+
+// ImageMetadata returns the image metadata if present.
+func (m Metadata) ImageMetadata() (*ImageMetadata, bool) {
+	return m.Format.Image, m.Format.Type == FormatImage && m.Format.Image != nil
+}
+
+// XMLMetadata returns the XML metadata if present.
+func (m Metadata) XMLMetadata() (*XMLMetadata, bool) {
+	return m.Format.XML, m.Format.Type == FormatXML && m.Format.XML != nil
+}
+
+// TextMetadata returns the text metadata if present.
+func (m Metadata) TextMetadata() (*TextMetadata, bool) {
+	return m.Format.Text, m.Format.Type == FormatText && m.Format.Text != nil
+}
+
+// HTMLMetadata returns the HTML metadata if present.
+func (m Metadata) HTMLMetadata() (*HtmlMetadata, bool) {
+	return m.Format.HTML, m.Format.Type == FormatHTML && m.Format.HTML != nil
+}
+
+// OcrMetadata returns the OCR metadata if present.
+func (m Metadata) OcrMetadata() (*OcrMetadata, bool) {
+	return m.Format.OCR, m.Format.Type == FormatOCR && m.Format.OCR != nil
 }
 
 // PdfMetadata contains metadata extracted from PDF documents.

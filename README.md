@@ -4,11 +4,12 @@
 [![PyPI](https://badge.fury.io/py/kreuzberg.svg)](https://badge.fury.io/py/kreuzberg)
 [![npm](https://img.shields.io/npm/v/@goldziher/kreuzberg)](https://www.npmjs.com/package/@goldziher/kreuzberg)
 [![RubyGems](https://badge.fury.io/rb/kreuzberg.svg)](https://rubygems.org/gems/kreuzberg)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Goldziher/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/Goldziher/kreuzberg/packages/go/kreuzberg)
 [![Crates.io](https://img.shields.io/crates/v/kreuzberg)](https://crates.io/crates/kreuzberg)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats. Available for Rust, Python, Ruby, TypeScript/Node.js—or use via CLI, REST API, or MCP server.
+**A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats. Available for Rust, Python, Ruby, Go, and TypeScript/Node.js—or use via CLI, REST API, or MCP server.
 
 > **🚀 Version 4.0.0 Release Candidate**
 > This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter. Help us make the stable release better!
@@ -51,6 +52,16 @@ npm install @goldziher/kreuzberg
 
 **[TypeScript/Node.js Documentation →](packages/typescript/README.md)**
 
+### Go
+
+```bash
+go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest
+```
+
+Build the FFI crate (`cargo build -p kreuzberg-ffi --release`) and set `LD_LIBRARY_PATH`/`DYLD_FALLBACK_LIBRARY_PATH` to `target/release` so cgo can locate `libkreuzberg_ffi`.
+
+**[Go Documentation →](packages/go/README.md)**
+
 ### Rust
 
 ```toml
@@ -79,6 +90,7 @@ Each language binding provides comprehensive documentation with examples and bes
 - **[Python Quick Start →](packages/python/README.md)** – Installation, basic usage, async/sync APIs
 - **[Ruby Quick Start →](packages/ruby/README.md)** – Installation, basic usage, configuration
 - **[TypeScript/Node.js Quick Start →](packages/typescript/README.md)** – Installation, types, promises
+- **[Go Quick Start →](packages/go/README.md)** – Installation, native library setup, sync/async extraction + batch APIs
 - **[Rust Quick Start →](crates/kreuzberg/README.md)** – Crate usage, features, async/sync APIs
 - **[CLI Quick Start →](https://kreuzberg.dev/cli/)** – Command-line usage, batch processing, options
 

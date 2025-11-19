@@ -183,6 +183,7 @@ nav:
   - API Reference:
       - Python: reference/api-python.md
       - TypeScript: reference/api-typescript.md
+      - Go: reference/api-go.md
       - Rust: reference/api-rust.md
       - Ruby: reference/api-ruby.md
       - Configuration: reference/configuration.md

@@ -10,7 +10,6 @@ import "C"
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"unsafe"
 )
@@ -52,10 +51,10 @@ func ExtractFileSync(path string, config *ExtractionConfig) (*ExtractionResult, 
 // ExtractBytesSync extracts content and metadata from a byte array with the given MIME type.
 func ExtractBytesSync(data []byte, mimeType string, config *ExtractionConfig) (*ExtractionResult, error) {
 	if len(data) == 0 {
-		return nil, errors.New("kreuzberg: data cannot be empty")
+		return nil, newValidationError("data cannot be empty", nil)
 	}
 	if mimeType == "" {
-		return nil, errors.New("kreuzberg: mimeType is required")
+		return nil, newValidationError("mimeType is required", nil)
 	}
 
 	buf := C.CBytes(data)
@@ -96,7 +95,7 @@ func BatchExtractFilesSync(paths []string, config *ExtractionConfig) ([]*Extract
 	cStrings := make([]*C.char, len(paths))
 	for i, path := range paths {
 		if path == "" {
-			return nil, fmt.Errorf("kreuzberg: path at index %d is empty", i)
+			return nil, newValidationError(fmt.Sprintf("path at index %d is empty", i), nil)
 		}
 		cStrings[i] = C.CString(path)
 	}
@@ -134,10 +133,10 @@ func BatchExtractBytesSync(items []BytesWithMime, config *ExtractionConfig) ([]*
 
 	for i, item := range items {
 		if len(item.Data) == 0 {
-			return nil, fmt.Errorf("kreuzberg: data at index %d is empty", i)
+			return nil, newValidationError(fmt.Sprintf("data at index %d is empty", i), nil)
 		}
 		if item.MimeType == "" {
-			return nil, fmt.Errorf("kreuzberg: mimeType at index %d is empty", i)
+			return nil, newValidationError(fmt.Sprintf("mimeType at index %d is empty", i), nil)
 		}
 		buf := C.CBytes(item.Data)
 		cBuffers[i] = buf
@@ -190,15 +189,15 @@ func convertCResult(cRes *C.CExtractionResult) (*ExtractionResult, error) {
 	}
 
 	if err := decodeJSONCString(cRes.tables_json, &result.Tables); err != nil {
-		return nil, fmt.Errorf("kreuzberg: failed to decode tables: %w", err)
+		return nil, newSerializationError("failed to decode tables", err)
 	}
 
 	if err := decodeJSONCString(cRes.detected_languages_json, &result.DetectedLanguages); err != nil {
-		return nil, fmt.Errorf("kreuzberg: failed to decode detected languages: %w", err)
+		return nil, newSerializationError("failed to decode detected languages", err)
 	}
 
 	if err := decodeJSONCString(cRes.metadata_json, &result.Metadata); err != nil {
-		return nil, fmt.Errorf("kreuzberg: failed to decode metadata: %w", err)
+		return nil, newSerializationError("failed to decode metadata", err)
 	}
 
 	if result.Metadata.Language == nil && cRes.language != nil {
@@ -218,11 +217,11 @@ func convertCResult(cRes *C.CExtractionResult) (*ExtractionResult, error) {
 	}
 
 	if err := decodeJSONCString(cRes.chunks_json, &result.Chunks); err != nil {
-		return nil, fmt.Errorf("kreuzberg: failed to decode chunks: %w", err)
+		return nil, newSerializationError("failed to decode chunks", err)
 	}
 
 	if err := decodeJSONCString(cRes.images_json, &result.Images); err != nil {
-		return nil, fmt.Errorf("kreuzberg: failed to decode images: %w", err)
+		return nil, newSerializationError("failed to decode images", err)
 	}
 
 	return result, nil
@@ -267,7 +266,7 @@ func newConfigJSON(config *ExtractionConfig) (*C.char, func(), error) {
 	}
 	data, err := json.Marshal(config)
 	if err != nil {
-		return nil, nil, fmt.Errorf("kreuzberg: failed to encode config: %w", err)
+		return nil, nil, newSerializationError("failed to encode config", err)
 	}
 	if len(data) == 0 {
 		return nil, nil, nil
@@ -282,9 +281,9 @@ func newConfigJSON(config *ExtractionConfig) (*C.char, func(), error) {
 func lastError() error {
 	errPtr := C.kreuzberg_last_error()
 	if errPtr == nil {
-		return errors.New("kreuzberg: unknown error")
+		return newRuntimeError("unknown error", nil)
 	}
-	return fmt.Errorf("kreuzberg: %s", C.GoString(errPtr))
+	return classifyNativeError(C.GoString(errPtr))
 }
 
 func stringPtr(value string) *string {
@@ -298,7 +297,7 @@ func stringPtr(value string) *string {
 // LoadExtractionConfigFromFile parses a TOML/YAML/JSON config file into an ExtractionConfig.
 func LoadExtractionConfigFromFile(path string) (*ExtractionConfig, error) {
 	if path == "" {
-		return nil, errors.New("kreuzberg: config path cannot be empty")
+		return nil, newValidationError("config path cannot be empty", nil)
 	}
 
 	cPath := C.CString(path)
@@ -313,7 +312,7 @@ func LoadExtractionConfigFromFile(path string) (*ExtractionConfig, error) {
 	raw := C.GoString(ptr)
 	cfg := &ExtractionConfig{}
 	if err := json.Unmarshal([]byte(raw), cfg); err != nil {
-		return nil, fmt.Errorf("kreuzberg: failed to decode config JSON: %w", err)
+		return nil, newSerializationError("failed to decode config JSON", err)
 	}
 	return cfg, nil
 }

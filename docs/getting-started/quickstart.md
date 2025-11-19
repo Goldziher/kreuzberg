@@ -8,82 +8,27 @@ Extract text from any supported document format:
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync
-
-    # Extract from a file
-    result = extract_file_sync("document.pdf")
-
-    print(result.content)  # Extracted text
-    print(result.metadata)  # Document metadata
-    print(result.tables)    # Extracted tables
-    ```
+    --8<-- "snippets/python/extract_file_sync.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFileSync } from 'kreuzberg';
-
-    // Extract from a file
-    const result = extractFileSync('document.pdf');
-
-    console.log(result.content);  // Extracted text
-    console.log(result.metadata);  // Document metadata
-    console.log(result.tables);    // Extracted tables
-    ```
+    --8<-- "snippets/typescript/extract_file_sync.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::extract_file_sync;
-
-    fn main() -> kreuzberg::Result<()> {
-        // Extract from a file
-        let result = extract_file_sync("document.pdf", None, &Default::default())?;
-
-        println!("{}", result.content);  // Extracted text
-        println!("{:?}", result.metadata);  // Document metadata
-        println!("{:?}", result.tables);    // Extracted tables
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/extract_file_sync.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    # Extract from a file
-    result = Kreuzberg.extract_file_sync('document.pdf')
-
-    puts result.content  # Extracted text
-    puts result.metadata  # Document metadata
-    puts result.tables    # Extracted tables
-    ```
+    --8<-- "snippets/ruby/extract_file_sync.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
+    --8<-- "snippets/java/extract_file_sync.md"
 
-    public class Main {
-        public static void main(String[] args) {
-            try {
-                // Extract from a file
-                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+=== "Go"
 
-                System.out.println(result.getContent());  // Extracted text
-                System.out.println(result.getMetadata());  // Document metadata
-                System.out.println(result.getTables());    // Extracted tables
-            } catch (IOException | KreuzbergException e) {
-                System.err.println("Extraction failed: " + e.getMessage());
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/go/extract_file_sync.md"
 
 === "CLI"
 
@@ -104,75 +49,27 @@ For better performance with I/O-bound operations:
 
 === "Python"
 
-    ```python
-    import asyncio
-    from kreuzberg import extract_file
-
-    async def main():
-        result = await extract_file("document.pdf")
-        print(result.content)
-
-    asyncio.run(main())
-    ```
+    --8<-- "snippets/python/extract_file_async.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFile } from 'kreuzberg';
-
-    async function main() {
-        const result = await extractFile('document.pdf');
-        console.log(result.content);
-    }
-
-    main();
-    ```
+    --8<-- "snippets/typescript/extract_file_async.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::extract_file;
-
-    #[tokio::main]
-    async fn main() -> kreuzberg::Result<()> {
-        let result = extract_file("document.pdf", None, &Default::default()).await?;
-        println!("{}", result.content);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/extract_file_async.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    # Ruby doesn't have native async/await
-    # This uses a blocking Tokio runtime internally
-    result = Kreuzberg.extract_file('document.pdf')
-    puts result.content
-    ```
+    --8<-- "snippets/ruby/extract_file_async.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import java.util.concurrent.CompletableFuture;
+    --8<-- "snippets/java/extract_file_async.md"
 
-    public class Main {
-        public static void main(String[] args) {
-            CompletableFuture<ExtractionResult> future =
-                Kreuzberg.extractFileAsync("document.pdf");
+=== "Go"
 
-            future.thenAccept(result -> {
-                System.out.println(result.getContent());
-            }).exceptionally(error -> {
-                System.err.println("Extraction failed: " + error.getMessage());
-                return null;
-            }).join();
-        }
-    }
-    ```
+    --8<-- "snippets/go/extract_file_async.md"
 
 ## OCR Extraction
 
@@ -180,101 +77,27 @@ Extract text from images and scanned documents:
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            backend="tesseract",
-            language="eng"
-        )
-    )
-
-    result = extract_file_sync("scanned.pdf", config=config)
-    print(result.content)
-    ```
+    --8<-- "snippets/python/ocr_extraction.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFileSync, ExtractionConfig, OcrConfig } from 'kreuzberg';
-
-    const config = new ExtractionConfig({
-        ocr: new OcrConfig({
-            backend: 'tesseract',
-            language: 'eng'
-        })
-    });
-
-    const result = extractFileSync('scanned.pdf', null, config);
-    console.log(result.content);
-    ```
+    --8<-- "snippets/typescript/ocr_extraction.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let config = ExtractionConfig {
-            ocr: Some(OcrConfig {
-                backend: "tesseract".to_string(),
-                language: Some("eng".to_string()),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        let result = extract_file_sync("scanned.pdf", None, &config)?;
-        println!("{}", result.content);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/ocr_extraction.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::Config::Extraction.new(
-      ocr: Kreuzberg::Config::OCR.new(
-        backend: 'tesseract',
-        language: 'eng'
-      )
-    )
-
-    result = Kreuzberg.extract_file_sync('scanned.pdf', config: config)
-    puts result.content
-    ```
+    --8<-- "snippets/ruby/ocr_extraction.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.OcrConfig;
-    import java.io.IOException;
+    --8<-- "snippets/java/ocr_extraction.md"
 
-    public class Main {
-        public static void main(String[] args) {
-            try {
-                ExtractionConfig config = ExtractionConfig.builder()
-                    .ocr(OcrConfig.builder()
-                        .backend("tesseract")
-                        .language("eng")
-                        .build())
-                    .build();
+=== "Go"
 
-                ExtractionResult result = Kreuzberg.extractFileSync("scanned.pdf", null, config);
-                System.out.println(result.getContent());
-            } catch (IOException | KreuzbergException e) {
-                System.err.println("Extraction failed: " + e.getMessage());
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/go/ocr_extraction.md"
 
 === "CLI"
 

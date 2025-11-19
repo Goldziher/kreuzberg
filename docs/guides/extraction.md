@@ -34,143 +34,49 @@ Extract text, tables, and metadata from a file on disk.
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig
-
-    result = extract_file_sync("document.pdf", config=ExtractionConfig())
-
-    print(result.content)
-    print(f"Tables: {len(result.tables)}")
-    print(f"Metadata: {result.metadata}")
-    ```
+    --8<-- "snippets/python/extract_file_sync.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFileSync, ExtractionConfig } from 'kreuzberg';
-
-    const result = extractFileSync('document.pdf', null, new ExtractionConfig());
-
-    console.log(result.content);
-    console.log(`Tables: ${result.tables.length}`);
-    console.log(`Metadata: ${JSON.stringify(result.metadata)}`);
-    ```
+    --8<-- "snippets/typescript/extract_file_sync.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default())?;
-
-        println!("{}", result.content);
-        println!("Tables: {}", result.tables.len());
-        println!("Metadata: {:?}", result.metadata);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/extract_file_sync.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    result = Kreuzberg.extract_file_sync('document.pdf')
-
-    puts result.content
-    puts "Tables: #{result.tables.length}"
-    puts "Metadata: #{result.metadata}"
-    ```
+    --8<-- "snippets/ruby/extract_file_sync.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
+    --8<-- "snippets/java/extract_file_sync.md"
 
-    try {
-        ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+=== "Go"
 
-        System.out.println(result.getContent());
-        System.out.println("Tables: " + result.getTables().size());
-        System.out.println("Metadata: " + result.getMetadata());
-    } catch (IOException | KreuzbergException e) {
-        e.printStackTrace();
-    }
-    ```
+    --8<-- "snippets/go/extract_file_sync.md"
 
 ### Asynchronous
 
 === "Python"
 
-    ```python
-    import asyncio
-    from kreuzberg import extract_file, ExtractionConfig
-
-    async def main():
-        result = await extract_file("document.pdf", config=ExtractionConfig())
-        print(result.content)
-
-    asyncio.run(main())
-    ```
+    --8<-- "snippets/python/extract_file_async.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFile, ExtractionConfig } from 'kreuzberg';
-
-    async function main() {
-        const result = await extractFile('document.pdf', null, new ExtractionConfig());
-        console.log(result.content);
-    }
-
-    main();
-    ```
+    --8<-- "snippets/typescript/extract_file_async.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file, ExtractionConfig};
-
-    #[tokio::main]
-    async fn main() -> kreuzberg::Result<()> {
-        let result = extract_file("document.pdf", None, &ExtractionConfig::default()).await?;
-        println!("{}", result.content);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/extract_file_async.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    result = Kreuzberg.extract_file('document.pdf')
-    puts result.content
-    ```
+    --8<-- "snippets/ruby/extract_file_async.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import java.util.concurrent.CompletableFuture;
-
-    public class Example {
-        public static void main(String[] args) {
-            CompletableFuture<ExtractionResult> future =
-                Kreuzberg.extractFileAsync("document.pdf");
-
-            future.thenAccept(result -> {
-                System.out.println(result.getContent());
-                System.out.println("Tables: " + result.getTables().size());
-            }).join(); // Wait for completion (or compose further)
-        }
-    }
-    ```
+    --8<-- "snippets/java/extract_file_async.md"
 
 ```mermaid
 flowchart TD
@@ -233,194 +139,45 @@ Extract from data already loaded in memory.
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_bytes_sync, ExtractionConfig
-
-    with open("document.pdf", "rb") as f:
-        data = f.read()
-
-    result = extract_bytes_sync(
-        data,
-        mime_type="application/pdf",
-        config=ExtractionConfig()
-    )
-    print(result.content)
-    ```
+    --8<-- "snippets/python/extract_bytes_sync.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractBytesSync, ExtractionConfig } from 'kreuzberg';
-    import { readFileSync } from 'fs';
-
-    const data = readFileSync('document.pdf');
-
-    const result = extractBytesSync(
-        data,
-        'application/pdf',
-        new ExtractionConfig()
-    );
-    console.log(result.content);
-    ```
+    --8<-- "snippets/typescript/extract_bytes_sync.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_bytes_sync, ExtractionConfig};
-    use std::fs;
-
-    fn main() -> kreuzberg::Result<()> {
-        let data = fs::read("document.pdf")?;
-
-        let result = extract_bytes_sync(
-            &data,
-            "application/pdf",
-            &ExtractionConfig::default()
-        )?;
-        println!("{}", result.content);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/extract_bytes_sync.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    data = File.binread('document.pdf')
-
-    result = Kreuzberg.extract_bytes_sync(
-        data,
-        'application/pdf'
-    )
-    puts result.content
-    ```
+    --8<-- "snippets/ruby/extract_bytes_sync.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
-    import java.nio.file.Files;
-    import java.nio.file.Paths;
-
-    try {
-        byte[] data = Files.readAllBytes(Paths.get("document.pdf"));
-
-        ExtractionResult result = Kreuzberg.extractBytesSync(
-            data,
-            "application/pdf"
-        );
-        System.out.println(result.getContent());
-    } catch (IOException | KreuzbergException e) {
-        e.printStackTrace();
-    }
-    ```
+    --8<-- "snippets/java/extract_bytes_sync.md"
 
 ### Asynchronous
 
 === "Python"
 
-    ```python
-    import asyncio
-    from kreuzberg import extract_bytes, ExtractionConfig
-
-    async def main():
-        with open("document.pdf", "rb") as f:
-            data = f.read()
-
-        result = await extract_bytes(
-            data,
-            mime_type="application/pdf",
-            config=ExtractionConfig()
-        )
-        print(result.content)
-
-    asyncio.run(main())
-    ```
+    --8<-- "snippets/python/extract_bytes_async.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractBytes, ExtractionConfig } from 'kreuzberg';
-    import { readFile } from 'fs/promises';
-
-    async function main() {
-        const data = await readFile('document.pdf');
-
-        const result = await extractBytes(
-            data,
-            'application/pdf',
-            new ExtractionConfig()
-        );
-        console.log(result.content);
-    }
-
-    main();
-    ```
+    --8<-- "snippets/typescript/extract_bytes_async.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_bytes, ExtractionConfig};
-    use tokio::fs;
-
-    #[tokio::main]
-    async fn main() -> kreuzberg::Result<()> {
-        let data = fs::read("document.pdf").await?;
-
-        let result = extract_bytes(
-            &data,
-            "application/pdf",
-            &ExtractionConfig::default()
-        ).await?;
-        println!("{}", result.content);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/extract_bytes_async.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    data = File.binread('document.pdf')
-
-    result = Kreuzberg.extract_bytes(
-        data,
-        'application/pdf'
-    )
-    puts result.content
-    ```
+    --8<-- "snippets/ruby/extract_bytes_async.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
-    import java.nio.file.Files;
-    import java.nio.file.Paths;
-
-    public class Example {
-        public static void main(String[] args) {
-            try {
-                byte[] data = Files.readAllBytes(Paths.get("document.pdf"));
-
-                ExtractionResult result = Kreuzberg.extractBytesSync(
-                    data,
-                    "application/pdf"
-                );
-                System.out.println(result.getContent());
-            } catch (IOException | KreuzbergException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/java/extract_bytes_async.md"
 
 !!! note "MIME Type Detection"
     Kreuzberg automatically detects MIME types from file extensions. When extracting from bytes, you must provide the MIME type explicitly.
@@ -433,231 +190,45 @@ Process multiple files concurrently for better performance.
 
 === "Python"
 
-    ```python
-    from kreuzberg import batch_extract_files_sync, ExtractionConfig
-
-    files = ["doc1.pdf", "doc2.docx", "doc3.pptx"]
-    config = ExtractionConfig()
-
-    results = batch_extract_files_sync(files, config=config)
-
-    for i, result in enumerate(results):
-        print(f"File {i+1}: {len(result.content)} characters")
-    ```
+    --8<-- "snippets/python/batch_extract_files_sync.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { batchExtractFilesSync, ExtractionConfig } from 'kreuzberg';
-
-    const files = ['doc1.pdf', 'doc2.docx', 'doc3.pptx'];
-    const config = new ExtractionConfig();
-
-    const results = batchExtractFilesSync(files, config);
-
-    results.forEach((result, i) => {
-        console.log(`File ${i+1}: ${result.content.length} characters`);
-    });
-    ```
+    --8<-- "snippets/typescript/batch_extract_files_sync.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{batch_extract_file_sync, ExtractionConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let files = vec!["doc1.pdf", "doc2.docx", "doc3.pptx"];
-        let config = ExtractionConfig::default();
-
-        let results = batch_extract_file_sync(&files, None, &config)?;
-
-        for (i, result) in results.iter().enumerate() {
-            println!("File {}: {} characters", i+1, result.content.len());
-        }
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/batch_extract_files_sync.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    files = ['doc1.pdf', 'doc2.docx', 'doc3.pptx']
-
-    results = Kreuzberg.batch_extract_files_sync(files)
-
-    results.each_with_index do |result, i|
-        puts "File #{i+1}: #{result.content.length} characters"
-    end
-    ```
+    --8<-- "snippets/ruby/batch_extract_files_sync.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
-    import java.util.Arrays;
-    import java.util.List;
-
-    try {
-        List<String> files = Arrays.asList("doc1.pdf", "doc2.docx", "doc3.pptx");
-
-        List<ExtractionResult> results = Kreuzberg.batchExtractFilesSync(files);
-
-        for (int i = 0; i < results.size(); i++) {
-            ExtractionResult result = results.get(i);
-            System.out.println("File " + (i+1) + ": " + result.getContent().length() + " characters");
-        }
-    } catch (IOException | KreuzbergException e) {
-        e.printStackTrace();
-    }
-    ```
+    --8<-- "snippets/java/batch_extract_files_sync.md"
 
 ### Batch Extract Bytes
 
 === "Python"
 
-    ```python
-    from kreuzberg import batch_extract_bytes_sync, ExtractionConfig
-
-    files = ["doc1.pdf", "doc2.docx"]
-    data_list = []
-    mime_types = []
-
-    for file in files:
-        with open(file, "rb") as f:
-            data_list.append(f.read())
-        mime_types.append("application/pdf" if file.endswith(".pdf") else "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-
-    results = batch_extract_bytes_sync(
-        data_list,
-        mime_types=mime_types,
-        config=ExtractionConfig()
-    )
-
-    for i, result in enumerate(results):
-        print(f"Document {i+1}: {len(result.content)} characters")
-    ```
+    --8<-- "snippets/python/batch_extract_bytes_sync.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { batchExtractBytesSync, ExtractionConfig } from 'kreuzberg';
-    import { readFileSync } from 'fs';
-
-    const files = ['doc1.pdf', 'doc2.docx'];
-    const dataList = files.map(f => readFileSync(f));
-    const mimeTypes = files.map(f =>
-        f.endsWith('.pdf') ? 'application/pdf' :
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    );
-
-    const results = batchExtractBytesSync(
-        dataList,
-        mimeTypes,
-        new ExtractionConfig()
-    );
-
-    results.forEach((result, i) => {
-        console.log(`Document ${i+1}: ${result.content.length} characters`);
-    });
-    ```
+    --8<-- "snippets/typescript/batch_extract_bytes_sync.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{batch_extract_bytes_sync, ExtractionConfig};
-    use std::fs;
-
-    fn main() -> kreuzberg::Result<()> {
-        let files = vec!["doc1.pdf", "doc2.docx"];
-
-        let data_list: Vec<Vec<u8>> = files.iter()
-            .map(|f| fs::read(f).unwrap())
-            .collect();
-
-        let mime_types: Vec<&str> = files.iter()
-            .map(|f| if f.ends_with(".pdf") {
-                "application/pdf"
-            } else {
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            })
-            .collect();
-
-        let results = batch_extract_bytes_sync(
-            &data_list,
-            &mime_types,
-            &ExtractionConfig::default()
-        )?;
-
-        for (i, result) in results.iter().enumerate() {
-            println!("Document {}: {} characters", i+1, result.content.len());
-        }
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/batch_extract_bytes_sync.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    files = ['doc1.pdf', 'doc2.docx']
-
-    data_list = files.map { |f| File.binread(f) }
-    mime_types = files.map do |f|
-        f.end_with?('.pdf') ? 'application/pdf' :
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    end
-
-    results = Kreuzberg.batch_extract_bytes_sync(
-        data_list,
-        mime_types
-    )
-
-    results.each_with_index do |result, i|
-        puts "Document #{i+1}: #{result.content.length} characters"
-    end
-    ```
+    --8<-- "snippets/ruby/batch_extract_bytes_sync.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.BytesWithMime;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
-    import java.nio.file.Files;
-    import java.nio.file.Paths;
-    import java.util.ArrayList;
-    import java.util.Arrays;
-    import java.util.List;
-
-    try {
-        List<String> files = Arrays.asList("doc1.pdf", "doc2.docx");
-
-        List<BytesWithMime> dataList = new ArrayList<>();
-        for (String file : files) {
-            byte[] data = Files.readAllBytes(Paths.get(file));
-            String mimeType = file.endsWith(".pdf") ? "application/pdf" :
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            dataList.add(new BytesWithMime(data, mimeType));
-        }
-
-        List<ExtractionResult> results = Kreuzberg.batchExtractBytesSync(dataList);
-
-        for (int i = 0; i < results.size(); i++) {
-            ExtractionResult result = results.get(i);
-            System.out.println("Document " + (i+1) + ": " + result.getContent().length() + " characters");
-        }
-    } catch (IOException | KreuzbergException e) {
-        e.printStackTrace();
-    }
-    ```
+    --8<-- "snippets/java/batch_extract_bytes_sync.md"
 
 ```mermaid
 flowchart TD
@@ -718,143 +289,23 @@ All extraction functions raise exceptions on failure:
 
 === "Python"
 
-    ```python
-    from kreuzberg import (
-        extract_file_sync,
-        ExtractionConfig,
-        KreuzbergError,
-        ValidationError,
-        ParsingError,
-        OCRError,
-        MissingDependencyError
-    )
-
-    try:
-        result = extract_file_sync("document.pdf", config=ExtractionConfig())
-        print(result.content)
-    except ValidationError as e:
-        print(f"Invalid configuration: {e}")
-    except ParsingError as e:
-        print(f"Failed to parse document: {e}")
-        print(f"Context: {e.context}")
-    except OCRError as e:
-        print(f"OCR processing failed: {e}")
-    except MissingDependencyError as e:
-        print(f"Missing dependency: {e}")
-    except KreuzbergError as e:
-        print(f"Extraction error: {e}")
-    except (OSError, RuntimeError) as e:
-        print(f"System error: {e}")
-    ```
+    --8<-- "snippets/python/error_handling.md"
 
 === "TypeScript"
 
-    ```typescript
-    import {
-        extractFileSync,
-        ExtractionConfig,
-        KreuzbergError
-    } from 'kreuzberg';
-
-    try {
-        const result = extractFileSync('document.pdf', null, new ExtractionConfig());
-        console.log(result.content);
-    } catch (error) {
-        if (error instanceof KreuzbergError) {
-            console.error(`Extraction error: ${error.message}`);
-        } else {
-            throw error;
-        }
-    }
-    ```
+    --8<-- "snippets/typescript/error_handling.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig, KreuzbergError};
-
-    fn main() {
-        let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default());
-
-        match result {
-            Ok(extraction) => {
-                println!("{}", extraction.content);
-            }
-            Err(KreuzbergError::Validation(msg)) => {
-                eprintln!("Invalid configuration: {}", msg);
-            }
-            Err(KreuzbergError::Parsing { message, context }) => {
-                eprintln!("Failed to parse document: {}", message);
-                eprintln!("Context: {:?}", context);
-            }
-            Err(KreuzbergError::Ocr(msg)) => {
-                eprintln!("OCR processing failed: {}", msg);
-            }
-            Err(KreuzbergError::MissingDependency { dependency, message }) => {
-                eprintln!("Missing dependency {}: {}", dependency, message);
-            }
-            Err(KreuzbergError::Io(e)) => {
-                eprintln!("I/O error: {}", e);
-            }
-            Err(e) => {
-                eprintln!("Extraction error: {}", e);
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/rust/error_handling.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    begin
-        result = Kreuzberg.extract_file_sync('document.pdf')
-        puts result.content
-    rescue Kreuzberg::ValidationError => e
-        puts "Invalid configuration: #{e.message}"
-    rescue Kreuzberg::ParsingError => e
-        puts "Failed to parse document: #{e.message}"
-    rescue Kreuzberg::OCRError => e
-        puts "OCR processing failed: #{e.message}"
-    rescue Kreuzberg::MissingDependencyError => e
-        puts "Missing dependency: #{e.message}"
-    rescue Kreuzberg::Error => e
-        puts "Extraction error: #{e.message}"
-    rescue StandardError => e
-        puts "System error: #{e.message}"
-    end
-    ```
+    --8<-- "snippets/ruby/error_handling.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import dev.kreuzberg.ValidationException;
-    import dev.kreuzberg.ParsingException;
-    import dev.kreuzberg.OcrException;
-    import dev.kreuzberg.MissingDependencyException;
-    import java.io.IOException;
-
-    try {
-        ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
-        System.out.println(result.getContent());
-    } catch (ValidationException e) {
-        System.err.println("Invalid configuration: " + e.getMessage());
-    } catch (ParsingException e) {
-        System.err.println("Failed to parse document: " + e.getMessage());
-    } catch (OcrException e) {
-        System.err.println("OCR processing failed: " + e.getMessage());
-    } catch (MissingDependencyException e) {
-        System.err.println("Missing dependency: " + e.getMessage());
-    } catch (KreuzbergException e) {
-        System.err.println("Extraction error: " + e.getMessage());
-    } catch (IOException e) {
-        System.err.println("System error: " + e.getMessage());
-    }
-    ```
+    --8<-- "snippets/java/error_handling.md"
 
 !!! warning "System Errors"
     `OSError` (Python), `IOException` (Rust), and system-level errors always bubble up to users. These indicate real system problems that need to be addressed (permissions, disk space, etc.).
@@ -865,3 +316,6 @@ All extraction functions raise exceptions on failure:
 - [OCR Guide](ocr.md) - Set up optical character recognition
 - [Advanced Features](advanced.md) - Chunking, language detection, and more
 - [API Reference](../reference/api-python.md) - Detailed API documentation
+=== "Go"
+
+    --8<-- "snippets/go/error_handling.md"
