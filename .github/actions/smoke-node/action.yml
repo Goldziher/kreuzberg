@@ -84,32 +84,10 @@ runs:
 
         if [[ -n "${{ inputs.package-tarball }}" ]]; then
           rm -f pnpm-lock.yaml
-          node <<'NODE'
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            const spec = process.env.KREUZBERG_NODE_SPEC || '';
-            if (!spec) {
-              console.error('KREUZBERG_NODE_SPEC missing for artifact install');
-              process.exit(1);
-            }
-            pkg.dependencies = pkg.dependencies || {};
-            pkg.dependencies['kreuzberg-node'] = spec.replace(/\\/g, '/');
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          NODE
+          node "$GITHUB_WORKSPACE/.github/actions/smoke-node/update-package-spec.js"
           pnpm install --no-frozen-lockfile
         else
-          node <<'NODE'
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            const spec = process.env.KREUZBERG_NODE_SPEC || '';
-            if (!spec) {
-              console.error('KREUZBERG_NODE_SPEC missing for workspace install');
-              process.exit(1);
-            }
-            pkg.dependencies = pkg.dependencies || {};
-            pkg.dependencies['kreuzberg-node'] = spec.replace(/\\/g, '/');
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          NODE
+          node "$GITHUB_WORKSPACE/.github/actions/smoke-node/update-package-spec.js"
           rm -f pnpm-lock.yaml
           pnpm install --no-frozen-lockfile
         fi
