@@ -115,6 +115,7 @@ fn link_libruby(rbconfig: &mut RbConfig) {
 }
 
 fn export_cargo_cfg(rbconfig: &mut RbConfig, cap: &mut File) {
+    println!("cargo:rustc-check-cfg=cfg(has_fn_ptr_eq_lint)");
     rustc_cfg(rbconfig, "ruby_major", "MAJOR");
     rustc_cfg(rbconfig, "ruby_minor", "MINOR");
     rustc_cfg(rbconfig, "ruby_teeny", "TEENY");

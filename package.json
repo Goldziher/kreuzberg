@@ -5,5 +5,10 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.5"
 	},
+	"pnpm": {
+		"overrides": {
+			"glob": "10.5.0"
+		}
+	},
 	"version": "4.0.0-rc.1"
 }
