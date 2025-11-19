@@ -26,15 +26,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-env
         with:
           python-version: "3.13"
+          cache-prefix: validate-python
 
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
@@ -48,12 +44,7 @@ jobs:
           bundler-cache: false
 
       - name: Install Ruby dependencies for lint
-        working-directory: packages/ruby
-        run: bundle install --jobs 4 --retry 3
-
-      - name: Install Python Dependencies
-        run: uv sync --all-extras --all-packages --all-groups --no-install-project
-        shell: bash
+        run: bash scripts/install_ruby_dependencies.sh packages/ruby
 
       - name: Install prek
         run: bash scripts/install_prek.sh
@@ -266,7 +257,7 @@ jobs:
       - name: Install v3 dependencies
         if: steps.check-v3.outputs.v3_changed == 'true'
         working-directory: v3
-        run: uv sync --all-extras
+        run: uv sync --all-extras --no-install-workspace
 
       - name: Run v3 tests
         if: steps.check-v3.outputs.v3_changed == 'true'

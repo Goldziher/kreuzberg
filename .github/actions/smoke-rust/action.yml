@@ -14,55 +14,6 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        tmp=$(mktemp -d)
-        SMOKE_TMP="$tmp" python - <<'PY'
-        import os
-        import pathlib
-        import textwrap
-
-        tmp_dir = pathlib.Path(os.environ["SMOKE_TMP"])
-        tmp_dir.mkdir(parents=True, exist_ok=True)
-        (tmp_dir / "src").mkdir(parents=True, exist_ok=True)
-        (tmp_dir / "Cargo.toml").write_text(
-            textwrap.dedent(
-                """\
-                [package]
-                name = "kreuzberg-smoke-test"
-                version = "0.1.0"
-                edition = "2024"
-
-                [dependencies]
-                """
-            ),
-            encoding="utf-8",
-        )
-        (tmp_dir / "src" / "main.rs").write_text(
-            textwrap.dedent(
-                """\
-                use kreuzberg::ExtractionConfig;
-
-                fn main() {
-                    let config = ExtractionConfig::default();
-                    println!("✓ Kreuzberg crate loaded successfully");
-                    println!("Config: use_cache = {}", config.use_cache);
-                }
-                """
-            ),
-            encoding="utf-8",
-        )
-        PY
-
-        if [[ -n "${{ inputs.source-path }}" ]]; then
-          # Use path dependency
-          echo "kreuzberg = { path = \"${{ inputs.source-path }}/crates/kreuzberg\" }" >> "$tmp/Cargo.toml"
-        else
-          # Use path dependency from workspace root
-          echo "kreuzberg = { path = \"${GITHUB_WORKSPACE}/crates/kreuzberg\" }" >> "$tmp/Cargo.toml"
-        fi
-
-        pushd "$tmp" >/dev/null
-        cargo build --release
-        ./target/release/kreuzberg-smoke-test
-        popd >/dev/null
-
-        echo "✓ Rust crate smoke test passed"
+        python scripts/smoke_rust.py \
+          --workspace "${GITHUB_WORKSPACE}" \
+          --source-path "${{ inputs.source-path }}"
