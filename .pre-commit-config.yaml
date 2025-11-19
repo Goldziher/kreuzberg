@@ -13,6 +13,14 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+      - id: check-json
+        exclude: ^packages/typescript/tsconfig\.json$
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+        exclude: ^packages/python/tests/fixtures/invalid\.yaml$
       - id: check-toml
         exclude: (invalid|test).*\.toml$
       - id: check-case-conflict
@@ -25,11 +33,11 @@ repos:
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.3.5
+    rev: v2.3.6
     hooks:
       - id: biome-check
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v1.28.0
+    rev: v1.29.0
     hooks:
       - id: oxlint
         args: ["--fix"]
@@ -55,6 +63,12 @@ repos:
         args: ["-c", "packages/java/checkstyle.xml"]
   - repo: local
     hooks:
+      - id: golangci-lint
+        name: golangci-lint (packages/go)
+        entry: bash -c 'cd packages/go && golangci-lint run --config ../../.golangci.yml ./...'
+        language: system
+        files: ^packages/go/
+        pass_filenames: false
       - id: rubocop
         name: rubocop
         entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yml'

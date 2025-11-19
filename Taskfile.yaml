@@ -15,12 +15,14 @@ tasks:
       - task: typescript:install
       - task: ruby:install
       - task: java:install
+      - task: go:install
       - task: rust:build
   lint:
     desc: Run linters for all languages
     cmds:
       - task: rust:check
       - task: python:lint
+      - task: go:lint
       - task: ruby:lint
       - task: typescript:lint
       - task: java:lint
@@ -409,3 +411,37 @@ tasks:
       - task: clean:ruby
       - task: clean:typescript
       - task: clean:java
+  go:install:
+    desc: Install Go tools and modules
+    cmds:
+      - |
+        echo "Installing golangci-lint v{{.GOLANGCI_LINT_VERSION}}..."
+        go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v{{.GOLANGCI_LINT_VERSION}}
+      - cmd: |
+          cd packages/go
+          go mod download
+          go mod tidy
+
+  go:update:
+    desc: Update Go dependencies and linters
+    cmds:
+      - |
+        echo "Updating golangci-lint to v{{.GOLANGCI_LINT_VERSION}}..."
+        go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v{{.GOLANGCI_LINT_VERSION}}
+      - cmd: |
+          cd packages/go
+          go get -u ./...
+          go mod tidy
+
+  go:lint:
+    desc: Lint Go bindings
+    dir: packages/go
+    cmds:
+      - go fmt ./...
+      - golangci-lint run --config ../../.golangci.yml ./...
+
+  go:test:
+    desc: Run Go tests
+    dir: packages/go
+    cmds:
+      - go test ./...

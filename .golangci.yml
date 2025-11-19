@@ -1,0 +1,157 @@
+version: "2"
+
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  concurrency: 4
+  modules-download-mode: readonly
+  allow-serial-runners: false
+  allow-parallel-runners: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - revive
+    - gocyclo
+    - goconst
+    - gocritic
+    - gosec
+    - misspell
+    - nakedret
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - (net/http.ResponseWriter).Write
+        - (io.Closer).Close
+        - fmt.Fprintf
+        - fmt.Printf
+        - fmt.Println
+        - os.Setenv
+        - os.Unsetenv
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gocyclo:
+      min-complexity: 25
+    gosec:
+      excludes:
+        - G101 # ~keep hardcoded credentials check (too many false positives)
+    govet:
+      enable-all: true
+      disable:
+        - shadow
+    misspell:
+      locale: US
+    nakedret:
+      max-func-lines: 30
+    revive:
+      confidence: 0.8
+      severity: warning
+      enable-all-rules: false
+      rules:
+        - name: blank-imports
+        - name: context-keys-type
+        - name: time-naming
+        - name: var-declaration
+        - name: unexported-return
+        - name: errorf
+        - name: context-as-argument
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: range
+        - name: receiver-naming
+        - name: indent-error-flow
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+  exclusions:
+    generated: lax
+    rules:
+      # Test files: More lenient for repeated strings
+      - linters:
+          - goconst
+        path: _test\.go
+      # Test files: More lenient for cyclomatic complexity
+      - linters:
+          - gocyclo
+        path: _test\.go
+      # Test files: Skip all gosec security checks (tests don't need production security standards)
+      - linters:
+          - gosec
+        path: _test\.go
+      # Test files: Allow flexible context parameter ordering in test helpers
+      - linters:
+          - revive
+        path: _test\.go
+        text: "context-as-argument"
+      # Test files: Allow unused writes (test setup artifacts)
+      - linters:
+          - goconst
+          - revive
+          - errcheck
+          - govet
+        path: _test\.go
+        text: "unusedwrite:"
+      # All files: Field alignment is not critical
+      - linters:
+          - govet
+        text: "fieldalignment:"
+      # Test files: Disable errcheck entirely (test assertions handle errors differently)
+      - linters:
+          - errcheck
+        path: _test\.go
+    paths:
+      - vendor
+      - build
+      - deployments
+      - third_party$
+      - builtin$
+      - examples$
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: true
+  new: false
+  exclude:
+    - "Error return value of `\\(\\*github\\.com/goccy/go-json\\.Encoder\\)\\.Encode` is not checked"
+    - "Error return value of `w\\.Write` is not checked"
+    - "Error return value of `resp\\.Body\\.Close` is not checked"
+    - "Error return value of `res\\.Body\\.Close` is not checked"
+    - "Error return value of `r\\.Body\\.Read` is not checked"
+    - "Error return value of `os\\.Setenv` is not checked"
+    - "Error return value of `os\\.Unsetenv` is not checked"
+    - 'shadow: declaration of "err" shadows declaration'
+    - "unusedwrite: unused write to field"
+    - "Error return value of `c\\.provider\\.Delete` is not checked"
+    - "Error return value of `provider\\.Close` is not checked"
+    - "Error return value of `natsClient\\.Close` is not checked"
+    - "Error return value of `cacheProvider\\.Close` is not checked"
+    - "Error return value of `processor\\.Close` is not checked"
+    - "Error return value of `sub\\.Unsubscribe` is not checked"
+    - "Error return value of `json\\.Marshal` is not checked"
+    - "Error return value of `strconv\\."
+    - "Error return value of `fmt\\.Sscanf` is not checked"
+    - "Error return value is not checked"
+
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
