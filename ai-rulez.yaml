@@ -81,6 +81,20 @@ agents:
       **Key files**: Kreuzberg.java (high-level API), KreuzbergFFI.java (FFI bindings), config/* (builder pattern), KreuzbergException.java (exception hierarchy).
     targets:
       - CLAUDE.md
+  - description: Go bindings engineer (cgo + Go SDK)
+    id: go-engineer
+    name: go-engineer
+    priority: high
+    system_prompt: |
+      **Role**: Go bindings for Kreuzberg Rust core. Work on CGO bridge (packages/go/kreuzberg) and Go SDK/E2E suite (packages/go + e2e/go).
+
+      **Scope**: Go 1.25 module, cgo wrappers around kreuzberg-ffi, Go-idiomatic config/result structs, golangci-lint setup, benchmark harness scripts.
+
+      Commands: cd packages/go && go test ./..., golangci-lint run --config ../../.golangci.yml ./..., ensure `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH` includes target/release when running tests (e.g. `LD_LIBRARY_PATH=$PWD/target/release:$LD_LIBRARY_PATH go test ./...`).
+
+      **Critical**: Core logic lives in Rust. Go code should remain thin wrappers/helper utilities over the C API. Coordinate with rust-engineer for shared logic.
+    targets:
+      - CLAUDE.md
   - description: Test automation engineer (Rust + bindings)
     id: test-engineer
     name: test-engineer
@@ -130,15 +144,15 @@ agents:
     targets:
       - CLAUDE.md
 metadata:
-  description: "Rust document intelligence library. Core: crates/kreuzberg (standalone, edition 2024). Bindings: Python (PyO3), TypeScript (NAPI-RS), Ruby (Magnus), Java (FFM API). Supports PDFs, images, office docs, and more."
+  description: "Rust document intelligence library. Core: crates/kreuzberg (standalone, edition 2024). Bindings: Python (PyO3), TypeScript (NAPI-RS), Ruby (Magnus), Java (FFM API), Go (cgo). Supports PDFs, images, office docs, and more."
   name: Kreuzberg
   version: 4.0.0-rc1
 presets: ["claude", "codex"]
 rules:
   - content: |
       **Rust core** (crates/kreuzberg): cargo build/test/clippy/fmt, 95% coverage.
-      **Bindings**: maturin develop (Python), pnpm build (TS), bundle exec rake compile (Ruby), mvn clean install (Java).
-      **E2E tests**: Auto-generated via tools/e2e-generator. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang <rust|python|typescript|ruby|java>
+      **Bindings**: maturin develop (Python), pnpm build (TS), bundle exec rake compile (Ruby), mvn clean install (Java), go test ./... & golangci-lint run --config .golangci.yml ./... (Go).
+      **E2E tests**: Auto-generated via tools/e2e-generator. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang <rust|python|typescript|ruby|java|go>
       **Task runner**: task --list (Taskfile.yaml).
       **Versions**: task sync-versions (syncs from Cargo.toml).
     name: Development Commands
@@ -176,6 +190,7 @@ rules:
       - TypeScript: crates/kreuzberg-node (NAPI-RS) → packages/typescript
       - Ruby: packages/ruby/ext/kreuzberg_rb/native (Magnus) → packages/ruby
       - Java: crates/kreuzberg-ffi (C FFI) → packages/java (Java 22 FFM API)
+      - Go: packages/go/kreuzberg (cgo) → packages/go + e2e/go
 
       **Key: ALL extraction logic lives in Rust core. Bindings provide language-idiomatic APIs only.**
     name: Architecture
@@ -243,11 +258,21 @@ rules:
     name: Java Conventions
     priority: high
   - content: |
-      **Rust workspace** (Cargo.toml): crates/{kreuzberg,kreuzberg-py,kreuzberg-node,kreuzberg-ffi,kreuzberg-cli}, packages/ruby/ext/kreuzberg_rb/native, tools/{benchmark-harness,e2e-generator}, e2e/rust.
+      **Go 1.25**: packages/go uses cgo bindings to kreuzberg-ffi. Keep go.mod/go.sum tidy via `go mod tidy`.
 
-      **Language packages**: packages/{python,typescript,ruby,java} - thin wrappers around Rust core.
+      **Linting**: `golangci-lint run --config ../../.golangci.yml ./...`, no gofmt differences (CI enforces `gofmt -l .` clean).
 
-      **E2E tests**: Auto-generated from fixtures/ via tools/e2e-generator. Located in e2e/{rust,python,typescript,ruby,java}.
+      **Testing**: `go test ./...` inside packages/go and e2e/go with LD_LIBRARY_PATH/DYLD_LIBRARY_PATH pointing to target/release (contains libkreuzberg_ffi + libpdfium). Use `task e2e:go:verify` locally.
+
+      **FFI**: Binding header (packages/go/kreuzberg/binding.go) must stay in sync with kreuzberg-ffi C header. Add new APIs to Rust first, then expose through cgo, update types.go metadata structures, and regenerate Go E2E tests when fixtures change.
+    name: Go Conventions
+    priority: high
+  - content: |
+      **Rust workspace** (Cargo.toml): crates/{kreuzberg,kreuzberg-py,kreuzberg-node,kreuzberg-ffi,kreuzberg-cli}, packages/ruby/ext/kreuzberg_rb/native, tools/{benchmark-harness,e2e-generator}, e2e/{rust,go}.
+
+      **Language packages**: packages/{python,typescript,ruby,java,go} - thin wrappers around Rust core.
+
+      **E2E tests**: Auto-generated from fixtures/ via tools/e2e-generator. Located in e2e/{rust,python,typescript,ruby,java,go}.
 
       **Benchmarking**: Rust harness in tools/benchmark-harness.
 

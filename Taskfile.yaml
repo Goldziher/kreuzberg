@@ -3,6 +3,8 @@ vars:
   RUST_LOG: info
   V3_TAG: v3.20.2
   BUNDLE: bundle
+  GOLANGCI_LINT_VERSION: v2.6.2
+silent: false
 tasks:
   sync-versions:
     desc: Sync version from Cargo.toml to all package manifests
@@ -17,6 +19,23 @@ tasks:
       - task: java:install
       - task: go:install
       - task: rust:build
+  build:
+    desc: Build core libraries and language bindings
+    cmds:
+      - task: rust:build
+      - task: python:build
+      - task: ruby:build
+      - task: typescript:build
+      - task: java:build
+  test:
+    desc: Run test suites for all languages
+    cmds:
+      - task: rust:test
+      - task: python:test
+      - task: ruby:test
+      - task: typescript:test
+      - task: java:test
+      - task: go:test
   lint:
     desc: Run linters for all languages
     cmds:
@@ -26,6 +45,13 @@ tasks:
       - task: ruby:lint
       - task: typescript:lint
       - task: java:lint
+  format:
+    desc: Format code for all languages
+    cmds:
+      - task: rust:format
+      - task: python:format
+      - task: ruby:format
+      - task: typescript:format
   rust:build:
     desc: Build all Rust crates
     cmds:
@@ -39,7 +65,7 @@ tasks:
     cmds:
       - cargo check --workspace
       - cargo clippy --workspace -- -D warnings
-  rust:fmt:
+  rust:format:
     desc: Format Rust code
     cmds:
       - cargo fmt --all
@@ -130,6 +156,11 @@ tasks:
     dir: packages/ruby
     cmds:
       - "{{.BUNDLE}} exec rubocop --autocorrect-all"
+  ruby:format:
+    desc: Format Ruby code
+    dir: packages/ruby
+    cmds:
+      - "{{.BUNDLE}} exec rubocop --autocorrect-all"
   ruby:typecheck:
     desc: Run steep type checking
     dir: packages/ruby
@@ -203,7 +234,7 @@ tasks:
     cmds:
       - cargo run -p kreuzberg-e2e-generator -- generate --lang rust --fixtures fixtures
         --output e2e
-  e2e:rust:fmt:
+  e2e:rust:format:
     desc: Format generated Rust E2E sources
     cmds:
       - cargo fmt --manifest-path e2e/rust/Cargo.toml
@@ -216,10 +247,10 @@ tasks:
     cmds:
       - cargo test -p e2e-rust --release
   e2e:rust:verify:
-    desc: Regenerate and validate Rust E2E suite (generate + fmt + lint + test)
+    desc: Regenerate and validate Rust E2E suite (generate + format + lint + test)
     cmds:
       - task: e2e:rust:generate
-      - task: e2e:rust:fmt
+      - task: e2e:rust:format
       - task: e2e:rust:lint
       - task: e2e:rust:test
   e2e:python:generate:
@@ -290,6 +321,40 @@ tasks:
       - task: e2e:ruby:generate
       - task: e2e:ruby:lint
       - task: e2e:ruby:test
+  e2e:java:generate:
+    desc: Generate Java E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang java --fixtures fixtures --output e2e
+  e2e:java:test:
+    desc: Run Java E2E tests
+    dir: e2e/java
+    cmds:
+      - mvn test
+  e2e:java:verify:
+    desc: Regenerate and validate Java E2E suite
+    cmds:
+      - task: e2e:java:generate
+      - task: e2e:java:test
+  e2e:go:generate:
+    desc: Generate Go E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang go --fixtures fixtures --output e2e
+      - cmd: |
+          cd e2e/go
+          gofmt -w .
+  e2e:go:test:
+    desc: Run Go E2E tests
+    dir: e2e/go
+    cmds:
+      - |
+          DYLD_LIBRARY_PATH=../../target/release:${DYLD_LIBRARY_PATH:-} \
+          LD_LIBRARY_PATH=../../target/release:${LD_LIBRARY_PATH:-} \
+          go test ./...
+  e2e:go:verify:
+    desc: Regenerate and validate Go E2E suite
+    cmds:
+      - task: e2e:go:generate
+      - task: e2e:go:test
   cli:build:
     desc: Build CLI binary
     cmds:
@@ -305,11 +370,7 @@ tasks:
   dev:test:
     desc: Run all tests
     cmds:
-      - task: rust:test
-      - task: python:test
-      - task: ruby:test
-      - task: typescript:test
-      - task: java:test
+      - task: test
   dev:lint:
     desc: Lint all code
     cmds:
@@ -317,10 +378,7 @@ tasks:
   dev:format:
     desc: Format all code
     cmds:
-      - task: rust:fmt
-      - task: python:format
-      - task: ruby:lint:fix
-      - task: typescript:format
+      - task: format
   pre-commit:install:
     desc: Install pre-commit hooks
     cmds:
@@ -377,6 +435,7 @@ tasks:
       - task: ruby:update
       - task: python:update
       - task: java:update
+      - task: go:update
       - prek autoupdate
       - "echo \"\u2713 All dependencies updated\""
   clean:rust:
