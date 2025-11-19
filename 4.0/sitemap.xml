@@ -2,114 +2,114 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://kreuzberg.dev/4.0/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/changelog/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/contributing/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/features/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/cli/usage/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/concepts/architecture/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/concepts/extraction-pipeline/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/concepts/mime-detection/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/concepts/performance/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/concepts/plugin-system/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/getting-started/installation/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/getting-started/quickstart/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/guides/advanced/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/guides/api-server/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/guides/configuration/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/guides/docker/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/guides/extraction/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/guides/ocr/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/guides/plugins/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/migration/v3-to-v4/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/reference/api-python/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/reference/api-ruby/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/reference/api-rust/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/reference/api-typescript/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/reference/configuration/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/reference/errors/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/reference/formats/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/reference/types/</loc>
-         <lastmod>2025-11-18</lastmod>
+         <lastmod>2025-11-19</lastmod>
     </url>
 </urlset>
