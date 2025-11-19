@@ -15,16 +15,42 @@ runs:
       run: |
         set -euo pipefail
         tmp=$(mktemp -d)
+        SMOKE_TMP="$tmp" python - <<'PY'
+        import os
+        import pathlib
+        import textwrap
 
-        # Create a minimal Cargo project that depends on kreuzberg
-        cat > "$tmp/Cargo.toml" <<'EOF'
-[package]
-name = "kreuzberg-smoke-test"
-version = "0.1.0"
-edition = "2024"
+        tmp_dir = pathlib.Path(os.environ["SMOKE_TMP"])
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        (tmp_dir / "src").mkdir(parents=True, exist_ok=True)
+        (tmp_dir / "Cargo.toml").write_text(
+            textwrap.dedent(
+                """\
+                [package]
+                name = "kreuzberg-smoke-test"
+                version = "0.1.0"
+                edition = "2024"
 
-[dependencies]
-EOF
+                [dependencies]
+                """
+            ),
+            encoding="utf-8",
+        )
+        (tmp_dir / "src" / "main.rs").write_text(
+            textwrap.dedent(
+                """\
+                use kreuzberg::ExtractionConfig;
+
+                fn main() {
+                    let config = ExtractionConfig::default();
+                    println!("✓ Kreuzberg crate loaded successfully");
+                    println!("Config: use_cache = {}", config.use_cache);
+                }
+                """
+            ),
+            encoding="utf-8",
+        )
+        PY
 
         if [[ -n "${{ inputs.source-path }}" ]]; then
           # Use path dependency
@@ -33,18 +59,6 @@ EOF
           # Use path dependency from workspace root
           echo "kreuzberg = { path = \"${GITHUB_WORKSPACE}/crates/kreuzberg\" }" >> "$tmp/Cargo.toml"
         fi
-
-        # Create a simple test program
-        mkdir -p "$tmp/src"
-        cat > "$tmp/src/main.rs" <<'EOF'
-use kreuzberg::ExtractionConfig;
-
-fn main() {
-    let config = ExtractionConfig::default();
-    println!("✓ Kreuzberg crate loaded successfully");
-    println!("Config: use_cache = {}", config.use_cache);
-}
-EOF
 
         pushd "$tmp" >/dev/null
         cargo build --release

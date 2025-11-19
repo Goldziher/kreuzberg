@@ -124,7 +124,6 @@ plugins:
       enable_creation_date: true
       type: timeago
       fallback_to_build_date: true
-      enable_creation_date: true
       enabled: true
 
 extra:
