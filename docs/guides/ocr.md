@@ -164,181 +164,53 @@ pip install "kreuzberg[paddleocr]"
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            backend="tesseract",
-            language="eng"
-        )
-    )
-
-    result = extract_file_sync("scanned.pdf", config=config)
-    print(result.content)
-    ```
+    --8<-- "snippets/python/ocr_extraction.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFileSync, ExtractionConfig, OcrConfig } from 'kreuzberg';
-
-    const config = new ExtractionConfig({
-        ocr: new OcrConfig({
-            backend: 'tesseract',
-            language: 'eng'
-        })
-    });
-
-    const result = extractFileSync('scanned.pdf', null, config);
-    console.log(result.content);
-    ```
+    --8<-- "snippets/typescript/ocr_extraction.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let config = ExtractionConfig {
-            ocr: Some(OcrConfig {
-                backend: "tesseract".to_string(),
-                language: Some("eng".to_string()),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        let result = extract_file_sync("scanned.pdf", None, &config)?;
-        println!("{}", result.content);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/ocr_extraction.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::Config::Extraction.new(
-        ocr: Kreuzberg::Config::OCR.new(
-            backend: 'tesseract',
-            language: 'eng'
-        )
-    )
-
-    result = Kreuzberg.extract_file_sync('scanned.pdf', config: config)
-    puts result.content
-    ```
+    --8<-- "snippets/ruby/ocr_extraction.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.OcrConfig;
+    --8<-- "snippets/java/ocr_extraction.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .ocr(OcrConfig.builder()
-            .backend("tesseract")
-            .language("eng")
-            .build())
-        .build();
+=== "Go"
 
-    ExtractionResult result = Kreuzberg.extractFileSync("scanned.pdf", null, config);
-    System.out.println(result.content());
-    ```
+    --8<-- "snippets/go/ocr_extraction.md"
 
 ### Multiple Languages
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            backend="tesseract",
-            language="eng+deu+fra"
-        )
-    )
-
-    result = extract_file_sync("multilingual.pdf", config=config)
-    print(result.content)
-    ```
+    --8<-- "snippets/python/ocr_multi_language.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFileSync, ExtractionConfig, OcrConfig } from 'kreuzberg';
-
-    const config = new ExtractionConfig({
-        ocr: new OcrConfig({
-            backend: 'tesseract',
-            language: 'eng+deu+fra'
-        })
-    });
-
-    const result = extractFileSync('multilingual.pdf', null, config);
-    console.log(result.content);
-    ```
+    --8<-- "snippets/typescript/ocr_multi_language.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let config = ExtractionConfig {
-            ocr: Some(OcrConfig {
-                backend: "tesseract".to_string(),
-                language: Some("eng+deu+fra".to_string()),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        let result = extract_file_sync("multilingual.pdf", None, &config)?;
-        println!("{}", result.content);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/ocr_multi_language.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::Config::Extraction.new(
-        ocr: Kreuzberg::Config::OCR.new(
-            backend: 'tesseract',
-            language: 'eng+deu+fra'
-        )
-    )
-
-    result = Kreuzberg.extract_file_sync('multilingual.pdf', config: config)
-    puts result.content
-    ```
+    --8<-- "snippets/ruby/ocr_multi_language.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.OcrConfig;
+    --8<-- "snippets/java/ocr_multi_language.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .ocr(OcrConfig.builder()
-            .backend("tesseract")
-            .language("eng+deu+fra")
-            .build())
-        .build();
+=== "Go"
 
-    ExtractionResult result = Kreuzberg.extractFileSync("multilingual.pdf", null, config);
-    System.out.println(result.content());
-    ```
+    --8<-- "snippets/go/ocr_multi_language.md"
 
 ### Force OCR on All Pages
 
@@ -346,113 +218,27 @@ Process PDFs with OCR even when they have a text layer:
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(backend="tesseract"),
-        force_ocr=True
-    )
-
-    result = extract_file_sync("document.pdf", config=config)
-    print(result.content)
-    ```
+    --8<-- "snippets/python/ocr_force_all_pages.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFileSync, ExtractionConfig, OcrConfig } from 'kreuzberg';
-
-    const config = new ExtractionConfig({
-        ocr: new OcrConfig({ backend: 'tesseract' }),
-        forceOcr: true
-    });
-
-    const result = extractFileSync('document.pdf', null, config);
-    console.log(result.content);
-    ```
+    --8<-- "snippets/typescript/ocr_force_all_pages.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let config = ExtractionConfig {
-            ocr: Some(OcrConfig {
-                backend: "tesseract".to_string(),
-                ..Default::default()
-            }),
-            force_ocr: true,
-            ..Default::default()
-        };
-
-        let result = extract_file_sync("document.pdf", None, &config)?;
-        println!("{}", result.content);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/ocr_force_all_pages.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::Config::Extraction.new(
-        ocr: Kreuzberg::Config::OCR.new(backend: 'tesseract'),
-        force_ocr: true
-    )
-
-    result = Kreuzberg.extract_file_sync('document.pdf', config: config)
-    puts result.content
-    ```
+    --8<-- "snippets/ruby/ocr_force_all_pages.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.OcrConfig;
-
-    ExtractionConfig config = ExtractionConfig.builder()
-        .ocr(OcrConfig.builder()
-            .backend("tesseract")
-            .build())
-        .forceOcr(true)
-        .build();
-
-    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
-    System.out.println(result.content());
-    ```
+    --8<-- "snippets/java/ocr_force_all_pages.md"
 
 === "Go"
 
-    ```go
-    package main
-
-    import (
-        "fmt"
-        "log"
-
-        "github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
-    )
-
-    func main() {
-        force := true
-        result, err := kreuzberg.ExtractFileSync("document.pdf", &kreuzberg.ExtractionConfig{
-            OCR: &kreuzberg.OCRConfig{
-                Backend: "tesseract",
-            },
-            ForceOCR: &force,
-        })
-        if err != nil {
-            log.Fatalf("extract failed: %v", err)
-        }
-
-        fmt.Println(result.Content)
-    }
-    ```
+    --8<-- "snippets/go/ocr_force_all_pages.md"
 
 ### Using EasyOCR (Python Only)
 
@@ -503,86 +289,27 @@ Control image resolution for OCR processing:
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig, PdfConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(backend="tesseract"),
-        pdf=PdfConfig(dpi=300)
-    )
-
-    result = extract_file_sync("scanned.pdf", config=config)
-    ```
+    --8<-- "snippets/python/ocr_dpi_config.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFileSync, ExtractionConfig, OcrConfig, PdfConfig } from 'kreuzberg';
-
-    const config = new ExtractionConfig({
-        ocr: new OcrConfig({ backend: 'tesseract' }),
-        pdf: new PdfConfig({ dpi: 300 })
-    });
-
-    const result = extractFileSync('scanned.pdf', null, config);
-    ```
+    --8<-- "snippets/typescript/ocr_dpi_config.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig, PdfConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let config = ExtractionConfig {
-            ocr: Some(OcrConfig {
-                backend: "tesseract".to_string(),
-                ..Default::default()
-            }),
-            pdf_options: Some(PdfConfig {
-                dpi: Some(300),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        let result = extract_file_sync("scanned.pdf", None, &config)?;
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/ocr_dpi_config.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::Config::Extraction.new(
-        ocr: Kreuzberg::Config::OCR.new(backend: 'tesseract'),
-        pdf: Kreuzberg::Config::PDF.new(dpi: 300)
-    )
-
-    result = Kreuzberg.extract_file_sync('scanned.pdf', config: config)
-    ```
+    --8<-- "snippets/ruby/ocr_dpi_config.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.OcrConfig;
-    import dev.kreuzberg.config.ImagePreprocessingConfig;
+    --8<-- "snippets/java/ocr_dpi_config.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .ocr(OcrConfig.builder()
-            .backend("tesseract")
-            .build())
-        .imagePreprocessing(ImagePreprocessingConfig.builder()
-            .targetDpi(300)
-            .build())
-        .build();
+=== "Go"
 
-    ExtractionResult result = Kreuzberg.extractFileSync("scanned.pdf", null, config);
-    ```
+    --8<-- "snippets/go/ocr_dpi_config.md"
 
 !!! tip "DPI Recommendations"
     - **150 DPI**: Fast processing, lower accuracy

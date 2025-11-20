@@ -1,0 +1,16 @@
+```java
+import dev.kreuzberg.Kreuzberg;
+import dev.kreuzberg.ExtractionResult;
+import dev.kreuzberg.config.ExtractionConfig;
+import dev.kreuzberg.config.OcrConfig;
+
+ExtractionConfig config = ExtractionConfig.builder()
+    .ocr(OcrConfig.builder()
+        .backend("tesseract")
+        .language("eng+deu+fra")
+        .build())
+    .build();
+
+ExtractionResult result = Kreuzberg.extractFileSync("multilingual.pdf", null, config);
+System.out.println(result.content());
+```
