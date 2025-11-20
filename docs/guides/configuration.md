@@ -541,104 +541,27 @@ Image preprocessing configuration for OCR.
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            tesseract_config=TesseractConfig(
-                preprocessing=ImagePreprocessingConfig(
-                    target_dpi=300,
-                    denoise=True,
-                    deskew=True,
-                    contrast_enhance=True,
-                    binarization_method="otsu"
-                )
-            )
-        )
-    )
-    ```
+    --8<-- "snippets/python/image_preprocessing.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      ocr: new OcrConfig({
-        tesseractConfig: new TesseractConfig({
-          preprocessing: new ImagePreprocessingConfig({
-            targetDpi: 300,
-            denoise: true,
-            deskew: true,
-            contrastEnhance: true,
-            binarizationMethod: 'otsu'
-          })
-        })
-      })
-    });
-    ```
+    --8<-- "snippets/typescript/image_preprocessing.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig};
-
-    let config = ExtractionConfig {
-        ocr: Some(OcrConfig {
-            tesseract_config: Some(TesseractConfig {
-                preprocessing: Some(ImagePreprocessingConfig {
-                    target_dpi: 300,
-                    denoise: true,
-                    deskew: true,
-                    contrast_enhance: true,
-                    binarization_method: "otsu".to_string(),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            }),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/image_preprocessing.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      ocr: Kreuzberg::OcrConfig.new(
-        tesseract_config: Kreuzberg::TesseractConfig.new(
-          preprocessing: Kreuzberg::ImagePreprocessingConfig.new(
-            target_dpi: 300,
-            denoise: true,
-            deskew: true,
-            contrast_enhance: true,
-            binarization_method: 'otsu'
-          )
-        )
-      )
-    )
-    ```
+    --8<-- "snippets/ruby/image_preprocessing.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.ImagePreprocessingConfig;
+    --8<-- "snippets/java/image_preprocessing.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .imagePreprocessing(ImagePreprocessingConfig.builder()
-            .targetDpi(300)
-            .denoise(true)
-            .deskew(true)
-            .contrastEnhance(true)
-            .binarizationMethod("otsu")
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/image_preprocessing.md"
 
 ## PdfConfig
 
