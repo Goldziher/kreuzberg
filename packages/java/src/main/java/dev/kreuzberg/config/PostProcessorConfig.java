@@ -108,7 +108,7 @@ public final class PostProcessorConfig {
       builder.enabled((Boolean) map.get("enabled"));
     }
     if (map.get("enabled_processors") instanceof Iterable) {
-      java.util.List<String> enabled = new java.util.ArrayList<>();
+      List<String> enabled = new ArrayList<>();
       for (Object value : (Iterable<?>) map.get("enabled_processors")) {
         if (value instanceof String) {
           enabled.add((String) value);
@@ -117,7 +117,7 @@ public final class PostProcessorConfig {
       builder.enabledProcessors(enabled);
     }
     if (map.get("disabled_processors") instanceof Iterable) {
-      java.util.List<String> disabled = new java.util.ArrayList<>();
+      List<String> disabled = new ArrayList<>();
       for (Object value : (Iterable<?>) map.get("disabled_processors")) {
         if (value instanceof String) {
           disabled.add((String) value);

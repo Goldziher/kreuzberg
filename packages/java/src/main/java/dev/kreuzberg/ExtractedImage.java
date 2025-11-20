@@ -1,5 +1,7 @@
 package dev.kreuzberg;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
@@ -20,18 +22,19 @@ public final class ExtractedImage {
     private final String description;
     private final ExtractionResult ocrResult;
 
+    @JsonCreator
     public ExtractedImage(
-        byte[] data,
-        String format,
-        int imageIndex,
-        Integer pageNumber,
-        Integer width,
-        Integer height,
-        String colorspace,
-        Integer bitsPerComponent,
-        boolean mask,
-        String description,
-        ExtractionResult ocrResult
+        @JsonProperty("data") byte[] data,
+        @JsonProperty("format") String format,
+        @JsonProperty("image_index") int imageIndex,
+        @JsonProperty("page_number") Integer pageNumber,
+        @JsonProperty("width") Integer width,
+        @JsonProperty("height") Integer height,
+        @JsonProperty("colorspace") String colorspace,
+        @JsonProperty("bits_per_component") Integer bitsPerComponent,
+        @JsonProperty("is_mask") boolean mask,
+        @JsonProperty("description") String description,
+        @JsonProperty("ocr_result") ExtractionResult ocrResult
     ) {
         this.data = Objects.requireNonNull(data, "data must not be null").clone();
         this.format = Objects.requireNonNull(format, "format must not be null");

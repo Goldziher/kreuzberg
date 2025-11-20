@@ -1,5 +1,7 @@
 package dev.kreuzberg;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -13,7 +15,14 @@ public final class ChunkMetadata {
     private final int chunkIndex;
     private final int totalChunks;
 
-    public ChunkMetadata(int charStart, int charEnd, Integer tokenCount, int chunkIndex, int totalChunks) {
+    @JsonCreator
+    public ChunkMetadata(
+        @JsonProperty("char_start") int charStart,
+        @JsonProperty("char_end") int charEnd,
+        @JsonProperty("token_count") Integer tokenCount,
+        @JsonProperty("chunk_index") int chunkIndex,
+        @JsonProperty("total_chunks") int totalChunks
+    ) {
         if (charStart < 0 || charEnd < charStart) {
             throw new IllegalArgumentException("Invalid chunk character range: " + charStart + "-" + charEnd);
         }

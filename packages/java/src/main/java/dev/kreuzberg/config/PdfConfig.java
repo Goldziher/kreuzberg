@@ -100,7 +100,7 @@ public final class PdfConfig {
     if (passwordsValue instanceof Iterable) {
       @SuppressWarnings("unchecked")
       Iterable<Object> iterable = (Iterable<Object>) passwordsValue;
-      java.util.List<String> passwords = new java.util.ArrayList<>();
+      List<String> passwords = new ArrayList<>();
       for (Object entry : iterable) {
         if (entry instanceof String) {
           passwords.add((String) entry);

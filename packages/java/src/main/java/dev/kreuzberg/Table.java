@@ -1,5 +1,7 @@
 package dev.kreuzberg;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,9 +18,9 @@ import java.util.Objects;
  * @param pageNumber the page number where the table was found (1-indexed)
  */
 public record Table(
-    List<List<String>> cells,
-    String markdown,
-    int pageNumber
+    @JsonProperty("cells") List<List<String>> cells,
+    @JsonProperty("markdown") String markdown,
+    @JsonProperty("page_number") int pageNumber
 ) {
     /**
      * Creates a new Table.
@@ -29,13 +31,20 @@ public record Table(
      * @throws NullPointerException if cells or markdown is null
      * @throws IllegalArgumentException if pageNumber is not positive
      */
-    public Table {
+    @JsonCreator
+    public Table(
+        @JsonProperty("cells") List<List<String>> cells,
+        @JsonProperty("markdown") String markdown,
+        @JsonProperty("page_number") int pageNumber
+    ) {
         Objects.requireNonNull(cells, "cells must not be null");
         Objects.requireNonNull(markdown, "markdown must not be null");
         if (pageNumber < 1) {
             throw new IllegalArgumentException("pageNumber must be positive, got " + pageNumber);
         }
-        cells = deepCopyTable(cells);
+        this.cells = deepCopyTable(cells);
+        this.markdown = markdown;
+        this.pageNumber = pageNumber;
     }
 
     /**
@@ -106,7 +115,7 @@ public record Table(
     private static List<List<String>> deepCopyTable(List<List<String>> table) {
         List<List<String>> copy = new ArrayList<>(table.size());
         for (List<String> row : table) {
-            copy.add(new ArrayList<>(row));
+            copy.add(Collections.unmodifiableList(new ArrayList<>(row)));
         }
         return Collections.unmodifiableList(copy);
     }

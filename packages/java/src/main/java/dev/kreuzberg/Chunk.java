@@ -1,5 +1,7 @@
 package dev.kreuzberg;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -14,7 +16,12 @@ public final class Chunk {
     private final List<Double> embedding;
     private final ChunkMetadata metadata;
 
-    public Chunk(String content, List<Double> embedding, ChunkMetadata metadata) {
+    @JsonCreator
+    public Chunk(
+        @JsonProperty("content") String content,
+        @JsonProperty("embedding") List<Double> embedding,
+        @JsonProperty("metadata") ChunkMetadata metadata
+    ) {
         this.content = Objects.requireNonNull(content, "content must not be null");
         this.metadata = Objects.requireNonNull(metadata, "metadata must not be null");
         if (embedding != null) {

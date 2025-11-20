@@ -55,4 +55,22 @@ public interface PostProcessor {
         }
         return result -> after.process(this.process(result));
     }
+
+    /**
+     * Defines when the processor runs in the pipeline.
+     *
+     * @return processing stage, defaults to {@link ProcessingStage#MIDDLE}
+     */
+    default ProcessingStage processingStage() {
+        return ProcessingStage.MIDDLE;
+    }
+
+    /**
+     * Priority within the processing stage. Higher values run first.
+     *
+     * @return priority value (default 0)
+     */
+    default int priority() {
+        return 0;
+    }
 }

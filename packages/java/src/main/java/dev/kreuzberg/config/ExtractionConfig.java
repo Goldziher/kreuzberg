@@ -271,7 +271,7 @@ public final class ExtractionConfig {
     if (value instanceof Map) {
       return (Map<String, Object>) value;
     }
-    return null;
+    return Collections.emptyMap();
   }
 
   public static final class Builder {

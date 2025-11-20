@@ -1,89 +1,110 @@
 package dev.kreuzberg;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 /**
  * Result of a document extraction operation.
  *
- * <p>Contains the extracted text content and metadata from a document.</p>
- *
- * @param content the extracted text content
- * @param mimeType the detected MIME type of the document
- * @param language the detected language (ISO 639 code), if available
- * @param date the document date, if available
- * @param subject the document subject/description, if available
+ * <p>Includes extracted content, tables, metadata, detected languages, text chunks, images, and success flag.</p>
  */
-public record ExtractionResult(
-    String content,
-    String mimeType,
-    Optional<String> language,
-    Optional<String> date,
-    Optional<String> subject
-) {
-    /**
-     * Creates a new extraction result.
-     *
-     * @param content the extracted text content (must not be null)
-     * @param mimeType the detected MIME type (must not be null)
-     * @param language the detected language (may be null)
-     * @param date the document date (may be null)
-     * @param subject the document subject (may be null)
-     * @throws NullPointerException if content or mimeType is null
-     */
-    public ExtractionResult {
-        Objects.requireNonNull(content, "content must not be null");
-        Objects.requireNonNull(mimeType, "mimeType must not be null");
-        language = Optional.ofNullable(language).flatMap(opt -> opt);
-        date = Optional.ofNullable(date).flatMap(opt -> opt);
-        subject = Optional.ofNullable(subject).flatMap(opt -> opt);
-    }
+public final class ExtractionResult {
+    private final String content;
+    private final String mimeType;
+    private final Map<String, Object> metadata;
+    private final List<Table> tables;
+    private final List<String> detectedLanguages;
+    private final List<Chunk> chunks;
+    private final List<ExtractedImage> images;
+    private final boolean success;
+    private final Optional<String> language;
+    private final Optional<String> date;
+    private final Optional<String> subject;
 
-    /**
-     * Creates an extraction result from raw values.
-     *
-     * @param content the extracted text content
-     * @param mimeType the detected MIME type
-     * @param language the detected language (may be null)
-     * @param date the document date (may be null)
-     * @param subject the document subject (may be null)
-     * @return a new ExtractionResult
-     */
-    static ExtractionResult of(
+    ExtractionResult(
         String content,
         String mimeType,
-        String language,
-        String date,
-        String subject
+        Map<String, Object> metadata,
+        List<Table> tables,
+        List<String> detectedLanguages,
+        List<Chunk> chunks,
+        List<ExtractedImage> images,
+        boolean success
     ) {
-        return new ExtractionResult(
-            content,
-            mimeType,
-            Optional.ofNullable(language),
-            Optional.ofNullable(date),
-            Optional.ofNullable(subject)
-        );
+        this.content = Objects.requireNonNull(content, "content must not be null");
+        this.mimeType = Objects.requireNonNull(mimeType, "mimeType must not be null");
+        this.metadata = Collections.unmodifiableMap(metadata != null ? metadata : Collections.emptyMap());
+        this.tables = Collections.unmodifiableList(tables != null ? tables : Collections.emptyList());
+        if (detectedLanguages != null) {
+            this.detectedLanguages = Collections.unmodifiableList(detectedLanguages);
+        } else {
+            this.detectedLanguages = List.of();
+        }
+        this.chunks = Collections.unmodifiableList(chunks != null ? chunks : List.of());
+        this.images = Collections.unmodifiableList(images != null ? images : List.of());
+        this.success = success;
+        this.language = Optional.ofNullable((String) this.metadata.get("language"));
+        this.date = Optional.ofNullable((String) this.metadata.get("date"));
+        this.subject = Optional.ofNullable((String) this.metadata.get("subject"));
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public Map<String, Object> getMetadata() {
+        return metadata;
+    }
+
+    public List<Table> getTables() {
+        return tables;
+    }
+
+    public List<String> getDetectedLanguages() {
+        return detectedLanguages;
+    }
+
+    public List<Chunk> getChunks() {
+        return chunks;
+    }
+
+    public List<ExtractedImage> getImages() {
+        return images;
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public Optional<String> getLanguage() {
+        return language;
+    }
+
+    public Optional<String> getDate() {
+        return date;
+    }
+
+    public Optional<String> getSubject() {
+        return subject;
     }
 
     @Override
     public String toString() {
-        final int contentPreviewLength = 100;
         return "ExtractionResult{"
-            + "content='" + truncate(content, contentPreviewLength) + "',"
-            + " mimeType='" + mimeType + "',"
-            + " language=" + language
-            + ", date=" + date
-            + ", subject=" + subject
+            + "contentLength=" + content.length()
+            + ", mimeType='" + mimeType + '\''
+            + ", tables=" + tables.size()
+            + ", detectedLanguages=" + detectedLanguages
+            + ", chunks=" + chunks.size()
+            + ", images=" + images.size()
+            + ", success=" + success
             + '}';
-    }
-
-    private static String truncate(String str, int maxLength) {
-        if (str == null) {
-            return "null";
-        }
-        if (str.length() <= maxLength) {
-            return str;
-        }
-        return str.substring(0, maxLength) + "...";
     }
 }

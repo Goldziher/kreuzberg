@@ -57,4 +57,13 @@ public interface Validator {
             after.validate(result);
         };
     }
+
+    /**
+     * Priority for validator execution. Higher values run earlier.
+     *
+     * @return priority value (default 0)
+     */
+    default int priority() {
+        return 0;
+    }
 }

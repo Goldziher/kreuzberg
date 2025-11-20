@@ -1,6 +1,7 @@
 package dev.kreuzberg;
 
-import java.lang.foreign.MemorySegment;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Interface for custom OCR backend implementations.
@@ -10,39 +11,12 @@ import java.lang.foreign.MemorySegment;
  *
  * <h2>Usage</h2>
  * <pre>{@code
- * // Create a global arena for the callback lifecycle
- * Arena callbackArena = Arena.ofAuto();
- *
- * OcrBackend customBackend = (imageBytes, imageLength, configJson) -> {
- *     try {
- *         // Read image bytes
- *         byte[] image = imageBytes.reinterpret(imageLength).toArray(ValueLayout.JAVA_BYTE);
- *
- *         // Parse config JSON
- *         String configStr = configJson.reinterpret(Long.MAX_VALUE).getString(0);
- *         // Parse configStr as JSON and extract language, etc.
- *
- *         // Perform OCR using your custom engine
- *         String text = myOcrEngine.recognize(image, language);
- *
- *         // Return result as C string
- *         return callbackArena.allocateFrom(text);
- *     } catch (Exception e) {
- *         // Return NULL on error
- *         return MemorySegment.NULL;
- *     }
+ * OcrBackend customBackend = (imageBytes, configJson) -> {
+ *     String language = parseLanguage(configJson);
+ *     return myOcrEngine.recognize(imageBytes, language);
  * };
  *
- * try (Arena arena = Arena.ofConfined()) {
- *     Kreuzberg.registerOcrBackend("custom-ocr", customBackend, arena);
- *
- *     // Use the custom backend in extraction
- *     ExtractionConfig config = ExtractionConfig.builder()
- *         .ocr(OcrConfig.builder().backend("custom-ocr").build())
- *         .build();
- *
- *     ExtractionResult result = Kreuzberg.extractFile("scanned.pdf", config);
- * }
+ * Kreuzberg.registerOcrBackend("custom-ocr", customBackend, List.of("eng", "deu"));
  * }</pre>
  *
  * <h2>Thread Safety</h2>
@@ -60,22 +34,20 @@ public interface OcrBackend {
     /**
      * Process image bytes and extract text via OCR.
      *
-     * <p>This method receives raw image data (PNG, JPEG, TIFF, etc.) as a native
-     * memory segment and OCR configuration as JSON. It must return a pointer to
-     * the extracted text as a C string.</p>
+     * <p>The configuration is provided as a JSON string encoded from {@link dev.kreuzberg.config.OcrConfig}.</p>
      *
-     * <p>The memory segments are only valid for the duration of this call and should
-     * not be stored or accessed after returning.</p>
-     *
-     * <p><strong>IMPORTANT:</strong> The returned MemorySegment must be allocated
-     * via {@link Arena#allocateFrom(String)} using a global or confined arena, and
-     * will be freed by the Rust side after use.</p>
-     *
-     * @param imageBytes native memory segment containing image data
-     * @param imageLength length of the image data in bytes
-     * @param configJson native memory segment containing JSON-encoded OcrConfig
-     * @return memory segment containing null-terminated UTF-8 string with extracted text,
-     *         or {@link MemorySegment#NULL} on error
+     * @param imageBytes raw image data
+     * @param configJson JSON string containing OCR configuration
+     * @return extracted text, or null on failure
      */
-    MemorySegment processImage(MemorySegment imageBytes, long imageLength, MemorySegment configJson);
+    String processImage(byte[] imageBytes, String configJson);
+
+    /**
+     * Languages supported by the backend.
+     *
+     * @return language codes (empty means all languages)
+     */
+    default List<String> supportedLanguages() {
+        return Collections.emptyList();
+    }
 }

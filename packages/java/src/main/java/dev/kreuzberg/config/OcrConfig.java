@@ -1,5 +1,6 @@
 package dev.kreuzberg.config;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -157,6 +158,6 @@ public final class OcrConfig {
     if (value instanceof Map) {
       return (Map<String, Object>) value;
     }
-    return null;
+    return Collections.emptyMap();
   }
 }
