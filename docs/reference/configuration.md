@@ -302,73 +302,23 @@ Configuration for extracting and processing images from documents.
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, ImageExtractionConfig
-
-    config = ExtractionConfig(
-        images=ImageExtractionConfig(
-            extract_images=True,
-            target_dpi=200,
-            max_image_dimension=2048,
-            auto_adjust_dpi=True,
-            min_dpi=100,
-            max_dpi=400
-        )
-    )
-    ```
+    --8<-- "snippets/python/image_extraction.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, ImageExtractionConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      images: {
-        extractImages: true,
-        targetDpi: 200,
-        maxImageDimension: 2048,
-        autoAdjustDpi: true,
-        minDpi: 100,
-        maxDpi: 400
-      }
-    };
-    ```
+    --8<-- "snippets/typescript/image_extraction.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, ImageExtractionConfig};
-
-    let config = ExtractionConfig {
-        images: Some(ImageExtractionConfig {
-            extract_images: true,
-            target_dpi: 200,
-            max_image_dimension: 2048,
-            auto_adjust_dpi: true,
-            min_dpi: 100,
-            max_dpi: 400,
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/image_extraction.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.ImageExtractionConfig;
+    --8<-- "snippets/java/image_extraction.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .imageExtraction(ImageExtractionConfig.builder()
-            .extractImages(true)
-            .targetDpi(200)
-            .maxImageDimension(2048)
-            .autoAdjustDpi(true)
-            .minDpi(100)
-            .maxDpi(400)
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/image_extraction.md"
 
 ---
 
@@ -431,65 +381,23 @@ Built-in post-processors include:
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, PostProcessorConfig
-
-    config = ExtractionConfig(
-        postprocessor=PostProcessorConfig(
-            enabled=True,
-            enabled_processors=["deduplication", "whitespace_normalization"],
-            disabled_processors=["mojibake_fix"]
-        )
-    )
-    ```
+    --8<-- "snippets/python/postprocessor_config.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, PostProcessorConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      postprocessor: {
-        enabled: true,
-        enabledProcessors: ['deduplication', 'whitespace_normalization'],
-        disabledProcessors: ['mojibake_fix']
-      }
-    };
-    ```
+    --8<-- "snippets/typescript/postprocessor_config.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, PostProcessorConfig};
-
-    let config = ExtractionConfig {
-        postprocessor: Some(PostProcessorConfig {
-            enabled: true,
-            enabled_processors: Some(vec![
-                "deduplication".to_string(),
-                "whitespace_normalization".to_string()
-            ]),
-            disabled_processors: Some(vec!["mojibake_fix".to_string()]),
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/postprocessor_config.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.PostProcessorConfig;
-    import java.util.Arrays;
+    --8<-- "snippets/java/postprocessor_config.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .postprocessor(PostProcessorConfig.builder()
-            .enabled(true)
-            .enabledProcessors(Arrays.asList("deduplication", "whitespace_normalization"))
-            .disabledProcessors(Arrays.asList("mojibake_fix"))
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/postprocessor_config.md"
 
 ---
 
@@ -514,57 +422,23 @@ Configuration for reducing token count in extracted text, useful for optimizing 
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, TokenReductionConfig
-
-    config = ExtractionConfig(
-        token_reduction=TokenReductionConfig(
-            mode="moderate",
-            preserve_important_words=True
-        )
-    )
-    ```
+    --8<-- "snippets/python/token_reduction.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, TokenReductionConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      tokenReduction: {
-        mode: 'moderate',
-        preserveImportantWords: true
-      }
-    };
-    ```
+    --8<-- "snippets/typescript/token_reduction.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, TokenReductionConfig};
-
-    let config = ExtractionConfig {
-        token_reduction: Some(TokenReductionConfig {
-            mode: "moderate".to_string(),
-            preserve_important_words: true,
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/token_reduction.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.TokenReductionConfig;
+    --8<-- "snippets/java/token_reduction.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .tokenReduction(TokenReductionConfig.builder()
-            .mode("moderate")
-            .preserveImportantWords(true)
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/token_reduction.md"
 
 ---
 
