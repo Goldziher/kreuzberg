@@ -543,7 +543,6 @@ mod build_tesseract {
         extract_dir
     }
 
-
     fn infer_extension(url: &str) -> &str {
         if url.ends_with(".tar.gz") {
             "tar.gz"
