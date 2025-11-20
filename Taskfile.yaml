@@ -503,6 +503,7 @@ tasks:
     desc: Run Go tests
     dir: packages/go
     cmds:
+      - bash ../../scripts/download_pdfium_runtime.sh
       - go test ./...
 
   smoke:node:
