@@ -12,6 +12,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+typedef struct ExtractionConfig ExtractionConfig;
+
 /**
  * C-compatible extraction result structure
  */
@@ -837,5 +839,10 @@ ExtractionConfig *kreuzberg_config_from_file(const char *path);
  * ```
  */
 ExtractionConfig *kreuzberg_config_discover(void);
+
+/**
+ * Free an ExtractionConfig created by the FFI helpers.
+ */
+void kreuzberg_free_config(ExtractionConfig *config);
 
 #endif  /* KREUZBERG_FFI_H */

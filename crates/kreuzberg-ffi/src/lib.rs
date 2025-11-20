@@ -2957,6 +2957,18 @@ pub unsafe extern "C" fn kreuzberg_list_validators() -> *mut c_char {
 // Config Loading FFI
 // ============================================================================
 
+/// Opaque wrapper around `ExtractionConfig` for FFI usage.
+#[repr(C)]
+pub struct FfiExtractionConfig {
+    inner: ExtractionConfig,
+}
+
+impl FfiExtractionConfig {
+    fn into_raw(config: ExtractionConfig) -> *mut Self {
+        Box::into_raw(Box::new(Self { inner: config }))
+    }
+}
+
 /// Load an ExtractionConfig from a file.
 ///
 /// Automatically detects the file format based on extension:
@@ -2987,7 +2999,7 @@ pub unsafe extern "C" fn kreuzberg_list_validators() -> *mut c_char {
 /// kreuzberg_free_config(config);
 /// ```
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn kreuzberg_config_from_file(path: *const c_char) -> *mut ExtractionConfig {
+pub unsafe extern "C" fn kreuzberg_config_from_file(path: *const c_char) -> *mut FfiExtractionConfig {
     clear_last_error();
 
     if path.is_null() {
@@ -3006,7 +3018,7 @@ pub unsafe extern "C" fn kreuzberg_config_from_file(path: *const c_char) -> *mut
     let path_buf = Path::new(path_str);
 
     match ExtractionConfig::from_file(path_buf) {
-        Ok(config) => Box::into_raw(Box::new(config)),
+        Ok(config) => FfiExtractionConfig::into_raw(config),
         Err(e) => {
             // ~keep: IO errors from file operations should bubble up as they indicate
             // system-level issues (permissions, disk full, file not found, etc.).
@@ -3058,11 +3070,11 @@ pub unsafe extern "C" fn kreuzberg_config_from_file(path: *const c_char) -> *mut
 /// kreuzberg_free_config(config);
 /// ```
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut ExtractionConfig {
+pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut FfiExtractionConfig {
     clear_last_error();
 
     match ExtractionConfig::discover() {
-        Ok(Some(config)) => Box::into_raw(Box::new(config)),
+        Ok(Some(config)) => FfiExtractionConfig::into_raw(config),
         Ok(None) => {
             // Not an error - just no config found
             ptr::null_mut()
@@ -3081,6 +3093,19 @@ pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut ExtractionConfig {
             ptr::null_mut()
         }
     }
+}
+
+/// Free an ExtractionConfig allocated through the FFI helpers.
+///
+/// # Safety
+/// - `config` must come from `kreuzberg_config_from_file` or `kreuzberg_config_discover`
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_free_config(config: *mut FfiExtractionConfig) {
+    if config.is_null() {
+        return;
+    }
+    // SAFETY: pointer originated from Box::into_raw inside the FFI helpers.
+    drop(Box::from_raw(config));
 }
 
 #[cfg(test)]
