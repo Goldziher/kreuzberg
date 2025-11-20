@@ -83,7 +83,7 @@ tasks:
     desc: Install Python dependencies
     dir: packages/python
     cmds:
-      - uv sync --all-extras
+      - uv sync --all-extras --no-install-workspace
   python:test:
     desc: Run Python tests
     dir: packages/python
@@ -119,7 +119,7 @@ tasks:
       - uv run uv-bump --pyproject-toml pyproject.toml
       - uv run uv-bump --pyproject-toml packages/python/pyproject.toml
       - uv run uv-bump --pyproject-toml v3/pyproject.toml
-      - uv sync --all-packages --all-extras --upgrade
+      - uv sync --all-packages --all-extras --upgrade --no-install-workspace
   ruby:install:
     desc: Install Ruby dependencies
     dir: packages/ruby
@@ -347,9 +347,9 @@ tasks:
     dir: e2e/go
     cmds:
       - |
-          DYLD_LIBRARY_PATH=../../target/release:${DYLD_LIBRARY_PATH:-} \
-          LD_LIBRARY_PATH=../../target/release:${LD_LIBRARY_PATH:-} \
-          go test ./...
+        DYLD_LIBRARY_PATH=../../target/release:${DYLD_LIBRARY_PATH:-} \
+        LD_LIBRARY_PATH=../../target/release:${LD_LIBRARY_PATH:-} \
+        go test ./...
   e2e:go:verify:
     desc: Regenerate and validate Go E2E suite
     cmds:
@@ -414,7 +414,7 @@ tasks:
       - echo "Disabling social plugin (requires cairo)..."
       - "sed -i.bak 's/^  - social$/  # - social/' /tmp/kreuzberg-v3-build/mkdocs.yaml"
       - echo "Building and deploying v3 docs..."
-      - cd /tmp/kreuzberg-v3-build && uv sync --group docs && uv pip install mike
+      - cd /tmp/kreuzberg-v3-build && uv sync --group docs --no-install-workspace && uv pip install mike
       - cd /tmp/kreuzberg-v3-build && uv run mike deploy 3.0 v3
       - echo "Cleaning up worktree..."
       - git worktree remove --force /tmp/kreuzberg-v3-build || true
@@ -504,3 +504,14 @@ tasks:
     dir: packages/go
     cmds:
       - go test ./...
+
+  smoke:node:
+    desc: Run Node smoke test locally (require KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg-node.tgz)
+    dir: e2e/smoke/node
+    cmds:
+      - |
+        : "${KREUZBERG_NODE_SPEC:?Set KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg-node.tgz}"
+        node ../../.github/actions/smoke-node/update-package-spec.js
+        rm -f pnpm-lock.yaml
+        pnpm install --no-frozen-lockfile
+        pnpm run check

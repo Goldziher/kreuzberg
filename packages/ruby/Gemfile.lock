@@ -42,7 +42,7 @@ GEM
       rb-inotify (~> 0.9, >= 0.9.10)
     logger (1.7.0)
     method_source (1.1.0)
-    minitest (5.26.1)
+    minitest (5.26.2)
     mutex_m (0.3.0)
     parallel (1.27.0)
     parser (3.3.10.0)

@@ -28,6 +28,9 @@ license = "MIT"
 repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://kreuzberg.dev"
 
+[workspace.dependencies]
+serde_json = "1.0"
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
