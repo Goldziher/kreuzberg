@@ -654,76 +654,27 @@ PDF-specific extraction configuration.
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, PdfConfig
-
-    config = ExtractionConfig(
-        pdf_options=PdfConfig(
-            extract_images=True,
-            extract_metadata=True,
-            passwords=["password1", "password2"]
-        )
-    )
-    ```
+    --8<-- "snippets/python/pdf_config.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, PdfConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      pdfOptions: new PdfConfig({
-        extractImages: true,
-        extractMetadata: true,
-        passwords: ['password1', 'password2']
-      })
-    });
-    ```
+    --8<-- "snippets/typescript/pdf_config.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, PdfConfig};
-
-    let config = ExtractionConfig {
-        pdf_options: Some(PdfConfig {
-            extract_images: true,
-            extract_metadata: true,
-            passwords: Some(vec!["password1".to_string(), "password2".to_string()]),
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/pdf_config.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      pdf_options: Kreuzberg::PdfConfig.new(
-        extract_images: true,
-        extract_metadata: true,
-        passwords: ['password1', 'password2']
-      )
-    )
-    ```
+    --8<-- "snippets/ruby/pdf_config.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.PdfConfig;
-    import java.util.Arrays;
+    --8<-- "snippets/java/pdf_config.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .pdfOptions(PdfConfig.builder()
-            .extractImages(true)
-            .extractMetadata(true)
-            .passwords(Arrays.asList("password1", "password2"))
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/pdf_config.md"
 
 ## ImageExtractionConfig
 
