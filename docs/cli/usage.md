@@ -20,13 +20,6 @@ The Kreuzberg CLI provides command-line access to all extraction features. This 
 
     --8<-- "snippets/cli/install_go_sdk.md"
 
-=== "Go (SDK)"
-
-    ```bash
-    # Add the Go SDK to your module
-    go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest
-    ```
-
 ## Basic Usage
 
 ### Extract from Single File
