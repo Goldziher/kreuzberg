@@ -207,4 +207,63 @@ RSpec.describe 'PostProcessor Plugin System' do
       end.to raise_error
     end
   end
+
+  describe 'list_post_processors' do
+    it 'returns empty array when no post-processors registered' do
+      Kreuzberg.clear_post_processors
+      processors = Kreuzberg.list_post_processors
+      expect(processors).to be_an(Array)
+      expect(processors).to be_empty
+    end
+
+    it 'returns post-processor names after registration' do
+      Kreuzberg.clear_post_processors
+      processor = lambda do |result|
+        result['content'] = result['content'].upcase
+        result
+      end
+      Kreuzberg.register_post_processor('test-processor', processor)
+      processors = Kreuzberg.list_post_processors
+      expect(processors).to include('test-processor')
+      Kreuzberg.clear_post_processors
+    end
+
+    it 'returns all registered post-processor names' do
+      Kreuzberg.clear_post_processors
+      processor1 = lambda do |result|
+        result
+      end
+      processor2 = lambda do |result|
+        result
+      end
+      processor3 = lambda do |result|
+        result
+      end
+
+      Kreuzberg.register_post_processor('processor-one', processor1)
+      Kreuzberg.register_post_processor('processor-two', processor2)
+      Kreuzberg.register_post_processor('processor-three', processor3)
+
+      processors = Kreuzberg.list_post_processors
+      expect(processors).to contain_exactly('processor-one', 'processor-two', 'processor-three')
+      Kreuzberg.clear_post_processors
+    end
+
+    it 'reflects changes after unregistration' do
+      Kreuzberg.clear_post_processors
+      processor = lambda do |result|
+        result
+      end
+      Kreuzberg.register_post_processor('temp-processor', processor)
+
+      processors_before = Kreuzberg.list_post_processors
+      expect(processors_before).to include('temp-processor')
+
+      Kreuzberg.unregister_post_processor('temp-processor')
+
+      processors_after = Kreuzberg.list_post_processors
+      expect(processors_after).not_to include('temp-processor')
+      Kreuzberg.clear_post_processors
+    end
+  end
 end

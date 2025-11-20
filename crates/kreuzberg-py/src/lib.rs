@@ -93,12 +93,16 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(core::batch_extract_bytes, m)?)?;
 
     m.add_function(wrap_pyfunction!(plugins::register_ocr_backend, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::unregister_ocr_backend, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::list_ocr_backends, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::register_post_processor, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::unregister_post_processor, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::clear_post_processors, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::list_post_processors, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::register_validator, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::unregister_validator, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::clear_validators, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::list_validators, m)?)?;
 
     m.add_function(wrap_pyfunction!(init_async_runtime, m)?)?;
 

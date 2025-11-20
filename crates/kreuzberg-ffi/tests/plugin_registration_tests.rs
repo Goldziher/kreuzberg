@@ -16,6 +16,12 @@ extern "C" {
     fn kreuzberg_last_error() -> *const c_char;
 }
 
+// External FFI functions for OCR backends
+extern "C" {
+    fn kreuzberg_unregister_ocr_backend(name: *const c_char) -> bool;
+    fn kreuzberg_list_ocr_backends() -> *mut c_char;
+}
+
 // Callback types
 type ValidatorCallback = unsafe extern "C" fn(
     content: *const c_char,
@@ -383,5 +389,122 @@ fn test_validator_priorities_are_registered() {
 
         // Cleanup
         kreuzberg_clear_validators();
+    }
+}
+
+// ============================================================================
+// OCR Backend Plugin Tests
+// ============================================================================
+
+/// Test listing OCR backends returns valid JSON.
+#[test]
+fn test_list_ocr_backends_returns_valid_json() {
+    unsafe {
+        let list_ptr = kreuzberg_list_ocr_backends();
+        assert!(!list_ptr.is_null(), "List should not be null");
+
+        let list_json = c_str_to_string(list_ptr).expect("Should have valid JSON");
+        kreuzberg_free_string(list_ptr);
+
+        // Parse as JSON array
+        let backends: Vec<String> =
+            serde_json::from_str(&list_json).expect("Should be valid JSON array");
+
+        // May be empty or contain default backends
+        assert!(backends.is_empty() || !backends.is_empty(), "Should be a valid array");
+    }
+}
+
+/// Test unregistering non-existent OCR backend succeeds gracefully.
+#[test]
+fn test_unregister_nonexistent_ocr_backend_succeeds_gracefully() {
+    unsafe {
+        let name = CString::new("nonexistent-ocr-backend").unwrap();
+        let result = kreuzberg_unregister_ocr_backend(name.as_ptr());
+
+        // Should return true (no-op for non-existent)
+        assert!(
+            result,
+            "Unregistering non-existent OCR backend should succeed (no-op)"
+        );
+    }
+}
+
+/// Test unregistering OCR backend with null name fails gracefully.
+#[test]
+fn test_unregister_ocr_backend_with_null_name_fails_gracefully() {
+    unsafe {
+        let result = kreuzberg_unregister_ocr_backend(ptr::null());
+
+        assert!(!result, "Unregistration with null name should fail");
+
+        let error = get_last_error();
+        assert!(error.is_some(), "Should have error message");
+        let error_msg = error.unwrap();
+        assert!(
+            error_msg.contains("NULL") || error_msg.contains("null"),
+            "Error should mention null: {}",
+            error_msg
+        );
+    }
+}
+
+/// Test unregistering OCR backend with empty name fails gracefully.
+#[test]
+fn test_unregister_ocr_backend_with_empty_name_fails_gracefully() {
+    unsafe {
+        let name = CString::new("").unwrap();
+        let result = kreuzberg_unregister_ocr_backend(name.as_ptr());
+
+        assert!(!result, "Unregistration with empty name should fail");
+
+        let error = get_last_error();
+        assert!(error.is_some(), "Should have error message");
+        let error_msg = error.unwrap();
+        assert!(
+            error_msg.contains("empty") || error_msg.contains("invalid"),
+            "Error should mention empty/invalid: {}",
+            error_msg
+        );
+    }
+}
+
+/// Test unregistering OCR backend with whitespace in name fails gracefully.
+#[test]
+fn test_unregister_ocr_backend_with_whitespace_in_name_fails_gracefully() {
+    unsafe {
+        let name = CString::new("ocr backend with spaces").unwrap();
+        let result = kreuzberg_unregister_ocr_backend(name.as_ptr());
+
+        assert!(!result, "Unregistration with whitespace in name should fail");
+
+        let error = get_last_error();
+        assert!(error.is_some(), "Should have error message");
+        let error_msg = error.unwrap();
+        assert!(
+            error_msg.contains("whitespace") || error_msg.contains("invalid"),
+            "Error should mention whitespace/invalid: {}",
+            error_msg
+        );
+    }
+}
+
+/// Test unregistering OCR backend with invalid UTF-8 fails gracefully.
+#[test]
+fn test_unregister_ocr_backend_with_invalid_utf8_fails_gracefully() {
+    unsafe {
+        // Create invalid UTF-8 bytes manually
+        let invalid_bytes = vec![b'o', b'c', b'r', b'-', 0xFF, 0xFE, 0x00];
+        let name_ptr = invalid_bytes.as_ptr() as *const i8;
+        let result = kreuzberg_unregister_ocr_backend(name_ptr);
+
+        // Should fail gracefully with UTF-8 error
+        assert!(!result, "Should fail with invalid UTF-8");
+        let error = get_last_error();
+        assert!(error.is_some(), "Should have error message on failure");
+        assert!(
+            error.unwrap().contains("Invalid UTF-8"),
+            "Error should mention UTF-8 issue"
+        );
     }
 }

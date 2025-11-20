@@ -26,6 +26,14 @@ mod build_tesseract {
                 LEPTONICA_VERSION
             ),
             format!(
+                "https://github.com/DanBloomberg/leptonica/archive/refs/tags/{}.tar.gz",
+                LEPTONICA_VERSION
+            ),
+            format!(
+                "https://www.leptonica.org/source/leptonica-{}.tar.gz",
+                LEPTONICA_VERSION
+            ),
+            format!(
                 "https://github.com/DanBloomberg/leptonica/archive/refs/tags/{}.zip",
                 LEPTONICA_VERSION
             ),
@@ -465,9 +473,9 @@ mod build_tesseract {
 
         fs::create_dir_all(target_dir).expect("Failed to create target directory");
 
-        let content = download_bytes_from_urls(urls, name);
+        let (content, archive_ext) = download_bytes_from_urls(urls, name);
 
-        let temp_file = target_dir.join(format!("{}.zip", name));
+        let temp_file = target_dir.join(format!("{}.{}", name, archive_ext));
         fs::write(&temp_file, content).expect("Failed to write archive to file");
 
         let extract_dir = target_dir.join(name);
@@ -476,41 +484,75 @@ mod build_tesseract {
         }
         fs::create_dir_all(&extract_dir).expect("Failed to create extraction directory");
 
-        let mut archive = ZipArchive::new(fs::File::open(&temp_file).unwrap()).unwrap();
+        match archive_ext.as_str() {
+            "zip" => {
+                let mut archive = ZipArchive::new(fs::File::open(&temp_file).unwrap()).unwrap();
 
-        // Extract files, ignoring the top-level directory
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i).unwrap();
-            let file_path = file.mangled_name();
-            let file_path = file_path.to_str().unwrap();
+                // Extract files, ignoring the top-level directory
+                for i in 0..archive.len() {
+                    let mut file = archive.by_index(i).unwrap();
+                    let file_path = file.mangled_name();
+                    let file_path = file_path.to_str().unwrap();
 
-            // Skip the top-level directory
-            let path = Path::new(file_path);
-            let path = path.strip_prefix(path.components().next().unwrap()).unwrap();
+                    // Skip the top-level directory
+                    let path = Path::new(file_path);
+                    let path = path.strip_prefix(path.components().next().unwrap()).unwrap();
 
-            if path.as_os_str().is_empty() {
-                continue;
-            }
+                    if path.as_os_str().is_empty() {
+                        continue;
+                    }
 
-            let target_path = extract_dir.join(path);
+                    let target_path = extract_dir.join(path);
 
-            if file.is_dir() {
-                fs::create_dir_all(target_path).unwrap();
-            } else {
-                if let Some(parent) = target_path.parent() {
-                    fs::create_dir_all(parent).unwrap();
+                    if file.is_dir() {
+                        fs::create_dir_all(target_path).unwrap();
+                    } else {
+                        if let Some(parent) = target_path.parent() {
+                            fs::create_dir_all(parent).unwrap();
+                        }
+                        let mut outfile = fs::File::create(target_path).unwrap();
+                        std::io::copy(&mut file, &mut outfile).unwrap();
+                    }
                 }
-                let mut outfile = fs::File::create(target_path).unwrap();
-                std::io::copy(&mut file, &mut outfile).unwrap();
             }
+            "tar.gz" | "tgz" => {
+                let file = fs::File::open(&temp_file).unwrap();
+                let gz = flate2::read::GzDecoder::new(file);
+                let mut archive = tar::Archive::new(gz);
+                for entry in archive.entries().unwrap() {
+                    let mut entry = entry.unwrap();
+                    let path = entry.path().unwrap();
+                    let mut comps = path.components();
+                    comps.next(); // strip top-level dir
+                    let stripped = comps.as_path();
+                    if stripped.as_os_str().is_empty() {
+                        continue;
+                    }
+                    let target_path = extract_dir.join(stripped);
+                    let parent = target_path.parent().unwrap();
+                    fs::create_dir_all(parent).unwrap();
+                    entry.unpack(&target_path).unwrap();
+                }
+            }
+            other => panic!("Unsupported archive extension for {}: {}", name, other),
         }
 
-        fs::remove_file(temp_file).expect("Failed to remove temporary zip file");
+        fs::remove_file(temp_file).expect("Failed to remove temporary archive file");
 
         extract_dir
     }
 
-    fn download_bytes_from_urls(urls: &[String], name: &str) -> Vec<u8> {
+    fn infer_extension(url: &str) -> &str {
+        if url.ends_with(".tar.gz") {
+            "tar.gz"
+        } else if url.ends_with(".tgz") {
+            "tgz"
+        } else {
+            "zip"
+        }
+    }
+
+    fn download_bytes_from_urls(urls: &[String], name: &str) -> (Vec<u8>, String) {
         use reqwest::blocking::Client;
 
         let user_agent = format!(
@@ -544,7 +586,7 @@ mod build_tesseract {
                             name,
                             url
                         );
-                        return content;
+                        return (content, infer_extension(url).to_string());
                     }
                     Err(err) => {
                         println!(

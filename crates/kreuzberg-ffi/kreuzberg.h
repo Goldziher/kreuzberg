@@ -769,6 +769,49 @@ bool kreuzberg_clear_validators(void);
 char *kreuzberg_list_validators(void);
 
 /**
+ * Unregister an OCR backend by name.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - Returns true on success, false on error (check kreuzberg_last_error)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * bool success = kreuzberg_unregister_ocr_backend("custom-ocr");
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to unregister: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_unregister_ocr_backend(const char *name);
+
+/**
+ * List all registered OCR backends as a JSON array of names.
+ *
+ * # Safety
+ *
+ * - Returned string must be freed with `kreuzberg_free_string`.
+ * - Returns NULL on error (check `kreuzberg_last_error`).
+ *
+ * # Example (C)
+ *
+ * ```c
+ * char* backends = kreuzberg_list_ocr_backends();
+ * if (backends == NULL) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to list backends: %s\n", error);
+ * } else {
+ *     printf("OCR backends: %s\n", backends);
+ *     kreuzberg_free_string(backends);
+ * }
+ * ```
+ */
+char *kreuzberg_list_ocr_backends(void);
+
+/**
  * Load an ExtractionConfig from a file.
  *
  * Automatically detects the file format based on extension:

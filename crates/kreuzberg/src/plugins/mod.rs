@@ -201,7 +201,10 @@ mod traits;
 mod validator;
 
 pub use extractor::{DocumentExtractor, clear_extractors, list_extractors, register_extractor, unregister_extractor};
-pub use ocr::{OcrBackend, OcrBackendType};
-pub use processor::{PostProcessor, ProcessingStage};
+pub use ocr::{
+    OcrBackend, OcrBackendType, clear_ocr_backends, list_ocr_backends, register_ocr_backend,
+    unregister_ocr_backend,
+};
+pub use processor::{PostProcessor, ProcessingStage, list_post_processors};
 pub use traits::Plugin;
 pub use validator::{Validator, clear_validators, list_validators, register_validator, unregister_validator};

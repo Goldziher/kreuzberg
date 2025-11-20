@@ -223,4 +223,52 @@ RSpec.describe 'Validator Plugin System' do
       end.not_to raise_error
     end
   end
+
+  describe 'list_validators' do
+    it 'returns empty array when no validators registered' do
+      Kreuzberg.clear_validators
+      validators = Kreuzberg.list_validators
+      expect(validators).to be_an(Array)
+      expect(validators).to be_empty
+    end
+
+    it 'returns validator names after registration' do
+      Kreuzberg.clear_validators
+      validator = ->(result) { }
+      Kreuzberg.register_validator('test-validator', validator)
+      validators = Kreuzberg.list_validators
+      expect(validators).to include('test-validator')
+      Kreuzberg.clear_validators
+    end
+
+    it 'returns all registered validator names' do
+      Kreuzberg.clear_validators
+      validator1 = ->(result) { }
+      validator2 = ->(result) { }
+      validator3 = ->(result) { }
+
+      Kreuzberg.register_validator('validator-one', validator1)
+      Kreuzberg.register_validator('validator-two', validator2)
+      Kreuzberg.register_validator('validator-three', validator3)
+
+      validators = Kreuzberg.list_validators
+      expect(validators).to contain_exactly('validator-one', 'validator-two', 'validator-three')
+      Kreuzberg.clear_validators
+    end
+
+    it 'reflects changes after unregistration' do
+      Kreuzberg.clear_validators
+      validator = ->(result) { }
+      Kreuzberg.register_validator('temp-validator', validator)
+
+      validators_before = Kreuzberg.list_validators
+      expect(validators_before).to include('temp-validator')
+
+      Kreuzberg.unregister_validator('temp-validator')
+
+      validators_after = Kreuzberg.list_validators
+      expect(validators_after).not_to include('temp-validator')
+      Kreuzberg.clear_validators
+    end
+  end
 end

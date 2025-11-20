@@ -2412,6 +2412,60 @@ fn clear_validators() -> Result<(), Error> {
     Ok(())
 }
 
+/// List all registered validators.
+///
+/// @return [Array<String>] Array of validator names
+///
+fn list_validators() -> Result<Vec<String>, Error> {
+    let registry = kreuzberg::get_validator_registry();
+    let validators = registry
+        .read()
+        .map_err(|e| runtime_error(format!("Failed to acquire registry lock: {}", e)))?
+        .list();
+    Ok(validators)
+}
+
+/// List all registered post-processors.
+///
+/// @return [Array<String>] Array of post-processor names
+///
+fn list_post_processors() -> Result<Vec<String>, Error> {
+    let registry = kreuzberg::get_post_processor_registry();
+    let processors = registry
+        .read()
+        .map_err(|e| runtime_error(format!("Failed to acquire registry lock: {}", e)))?
+        .list();
+    Ok(processors)
+}
+
+/// Unregister an OCR backend by name.
+///
+/// Removes a previously registered OCR backend from the global registry.
+///
+/// @param name [String] Backend name to unregister
+/// @return [void]
+///
+/// @example
+///   Kreuzberg.unregister_ocr_backend("my_ocr")
+///
+fn unregister_ocr_backend(name: String) -> Result<(), Error> {
+    kreuzberg::plugins::unregister_ocr_backend(&name).map_err(|e| runtime_error(e.to_string()))
+}
+
+/// List all registered OCR backend names.
+///
+/// Returns an array of all OCR backend names currently registered in the global registry.
+///
+/// @return [Array<String>] Array of OCR backend names
+///
+/// @example
+///   backends = Kreuzberg.list_ocr_backends
+///   #=> ["tesseract", "my_custom_ocr"]
+///
+fn list_ocr_backends() -> Result<Vec<String>, Error> {
+    kreuzberg::plugins::list_ocr_backends().map_err(|e| runtime_error(e.to_string()))
+}
+
 /// Detect MIME type from a file path.
 ///
 /// @param path [String] Path to the file
@@ -2564,6 +2618,10 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     module.define_module_function("unregister_validator", function!(unregister_validator, 1))?;
     module.define_module_function("clear_post_processors", function!(clear_post_processors, 0))?;
     module.define_module_function("clear_validators", function!(clear_validators, 0))?;
+    module.define_module_function("list_post_processors", function!(list_post_processors, 0))?;
+    module.define_module_function("list_validators", function!(list_validators, 0))?;
+    module.define_module_function("unregister_ocr_backend", function!(unregister_ocr_backend, 1))?;
+    module.define_module_function("list_ocr_backends", function!(list_ocr_backends, 0))?;
 
     module.define_module_function("_config_from_file_native", function!(config_from_file, 1))?;
 

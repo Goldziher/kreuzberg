@@ -698,6 +698,55 @@ public final class Kreuzberg {
     }
 
     /**
+     * Unregister an OCR backend by name.
+     *
+     * @param name backend name
+     * @throws KreuzbergException if unregistering fails
+     */
+    public static void unregisterOCRBackend(String name) throws KreuzbergException {
+        String normalizedName = validatePluginName(name, "OCR backend");
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment nameSeg = KreuzbergFFI.allocateCString(arena, normalizedName);
+            boolean success = (boolean) KreuzbergFFI.KREUZBERG_UNREGISTER_OCR_BACKEND.invoke(nameSeg);
+            if (!success) {
+                throw new KreuzbergException("Failed to unregister OCR backend: " + getLastError());
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error unregistering OCR backend", e);
+        } finally {
+            CallbackHandle handle = OCR_CALLBACKS.remove(normalizedName);
+            closeCallback(handle);
+        }
+    }
+
+    /**
+     * List registered OCR backend names.
+     *
+     * @return OCR backend names
+     * @throws KreuzbergException if listing fails
+     */
+    public static List<String> listOCRBackends() throws KreuzbergException {
+        try {
+            MemorySegment namesPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_LIST_OCR_BACKENDS.invoke();
+            if (namesPtr == null || namesPtr.address() == 0) {
+                return List.of();
+            }
+            try {
+                String json = KreuzbergFFI.readCString(namesPtr);
+                return ResultParser.parseStringList(json);
+            } finally {
+                KreuzbergFFI.KREUZBERG_FREE_STRING.invoke(namesPtr);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Failed to list OCR backends", e);
+        }
+    }
+
+    /**
      * Get the Kreuzberg library version.
      *
      * @return the version string

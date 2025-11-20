@@ -2954,6 +2954,107 @@ pub unsafe extern "C" fn kreuzberg_list_validators() -> *mut c_char {
 }
 
 // ============================================================================
+// OCR Backend Plugin Registration FFI
+// ============================================================================
+
+/// Unregister an OCR backend by name.
+///
+/// # Safety
+///
+/// - `name` must be a valid null-terminated C string
+/// - Returns true on success, false on error (check kreuzberg_last_error)
+///
+/// # Example (C)
+///
+/// ```c
+/// bool success = kreuzberg_unregister_ocr_backend("custom-ocr");
+/// if (!success) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to unregister: %s\n", error);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_unregister_ocr_backend(name: *const c_char) -> bool {
+    clear_last_error();
+
+    if name.is_null() {
+        set_last_error("OCR backend name cannot be NULL".to_string());
+        return false;
+    }
+
+    // SAFETY: Caller must ensure name is a valid null-terminated C string
+    let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in OCR backend name: {}", e));
+            return false;
+        }
+    };
+
+    if name_str.is_empty() {
+        set_last_error("OCR backend name cannot be empty".to_string());
+        return false;
+    }
+
+    if name_str.chars().any(|c| c.is_whitespace()) {
+        set_last_error("OCR backend name cannot contain whitespace".to_string());
+        return false;
+    }
+
+    match kreuzberg::plugins::unregister_ocr_backend(name_str) {
+        Ok(()) => true,
+        Err(e) => {
+            set_last_error(e.to_string());
+            false
+        }
+    }
+}
+
+/// List all registered OCR backends as a JSON array of names.
+///
+/// # Safety
+///
+/// - Returned string must be freed with `kreuzberg_free_string`.
+/// - Returns NULL on error (check `kreuzberg_last_error`).
+///
+/// # Example (C)
+///
+/// ```c
+/// char* backends = kreuzberg_list_ocr_backends();
+/// if (backends == NULL) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to list backends: %s\n", error);
+/// } else {
+///     printf("OCR backends: %s\n", backends);
+///     kreuzberg_free_string(backends);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_list_ocr_backends() -> *mut c_char {
+    clear_last_error();
+
+    match kreuzberg::plugins::list_ocr_backends() {
+        Ok(backends) => match serde_json::to_string(&backends) {
+            Ok(json) => match CString::new(json) {
+                Ok(cstr) => cstr.into_raw(),
+                Err(e) => {
+                    set_last_error(format!("Failed to create C string: {}", e));
+                    ptr::null_mut()
+                }
+            },
+            Err(e) => {
+                set_last_error(format!("Failed to serialize OCR backend list: {}", e));
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+// ============================================================================
 // Config Loading FFI
 // ============================================================================
 

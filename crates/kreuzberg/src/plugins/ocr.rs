@@ -8,6 +8,7 @@ use crate::plugins::Plugin;
 use crate::types::ExtractionResult;
 use async_trait::async_trait;
 use std::path::Path;
+use std::sync::Arc;
 
 /// OCR backend types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -249,6 +250,188 @@ pub trait OcrBackend: Plugin {
     fn supports_table_detection(&self) -> bool {
         false
     }
+}
+
+// Public registration APIs
+
+/// Register an OCR backend with the global registry.
+///
+/// The OCR backend will be registered with its name from the `name()` method
+/// and can be used for OCR processing via the extraction pipeline.
+///
+/// # Arguments
+///
+/// * `backend` - The OCR backend implementation wrapped in Arc
+///
+/// # Returns
+///
+/// - `Ok(())` if registration succeeded
+/// - `Err(...)` if validation failed or initialization failed
+///
+/// # Errors
+///
+/// - `KreuzbergError::Validation` - Invalid backend name (empty or contains whitespace)
+/// - Any error from the backend's `initialize()` method
+///
+/// # Example
+///
+/// ```rust
+/// use kreuzberg::plugins::{Plugin, OcrBackend, register_ocr_backend, OcrBackendType};
+/// use kreuzberg::{Result, OcrConfig};
+/// use kreuzberg::types::{ExtractionResult, Metadata};
+/// use async_trait::async_trait;
+/// use std::sync::Arc;
+/// use std::path::Path;
+///
+/// struct CustomOcr;
+///
+/// impl Plugin for CustomOcr {
+///     fn name(&self) -> &str { "custom-ocr" }
+///     fn version(&self) -> String { "1.0.0".to_string() }
+///     fn initialize(&self) -> Result<()> { Ok(()) }
+///     fn shutdown(&self) -> Result<()> { Ok(()) }
+/// }
+///
+/// #[async_trait]
+/// impl OcrBackend for CustomOcr {
+///     async fn process_image(&self, _: &[u8], _: &OcrConfig) -> Result<ExtractionResult> {
+///         Ok(ExtractionResult {
+///             content: "text".to_string(),
+///             mime_type: "text/plain".to_string(),
+///             metadata: Metadata::default(),
+///             tables: vec![],
+///             detected_languages: None,
+///             chunks: None,
+///             images: None,
+///         })
+///     }
+///     fn supports_language(&self, _: &str) -> bool { true }
+///     fn backend_type(&self) -> OcrBackendType { OcrBackendType::Custom }
+/// }
+///
+/// # tokio_test::block_on(async {
+/// let backend = Arc::new(CustomOcr);
+/// register_ocr_backend(backend)?;
+/// # Ok::<(), kreuzberg::KreuzbergError>(())
+/// # });
+/// ```
+pub fn register_ocr_backend(backend: Arc<dyn OcrBackend>) -> crate::Result<()> {
+    use crate::plugins::registry::get_ocr_backend_registry;
+
+    let registry = get_ocr_backend_registry();
+    // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
+    // This is a critical runtime error (similar to OOM) that should bubble up
+    // as it indicates the registry is in an inconsistent state.
+    let mut registry = registry
+        .write()
+        .expect("OCR backend registry lock poisoned - critical runtime error");
+
+    registry.register(backend)
+}
+
+/// Unregister an OCR backend by name.
+///
+/// Removes the OCR backend from the global registry and calls its `shutdown()` method.
+///
+/// # Arguments
+///
+/// * `name` - Name of the OCR backend to unregister
+///
+/// # Returns
+///
+/// - `Ok(())` if the backend was unregistered or didn't exist
+/// - `Err(...)` if the shutdown method failed
+///
+/// # Example
+///
+/// ```rust
+/// use kreuzberg::plugins::unregister_ocr_backend;
+///
+/// # tokio_test::block_on(async {
+/// unregister_ocr_backend("custom-ocr")?;
+/// # Ok::<(), kreuzberg::KreuzbergError>(())
+/// # });
+/// ```
+pub fn unregister_ocr_backend(name: &str) -> crate::Result<()> {
+    use crate::plugins::registry::get_ocr_backend_registry;
+
+    let registry = get_ocr_backend_registry();
+    // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
+    // This is a critical runtime error (similar to OOM) that should bubble up
+    // as it indicates the registry is in an inconsistent state.
+    let mut registry = registry
+        .write()
+        .expect("OCR backend registry lock poisoned - critical runtime error");
+
+    registry.remove(name)
+}
+
+/// List all registered OCR backends.
+///
+/// Returns the names of all OCR backends currently registered in the global registry.
+///
+/// # Returns
+///
+/// A vector of OCR backend names.
+///
+/// # Example
+///
+/// ```rust
+/// use kreuzberg::plugins::list_ocr_backends;
+///
+/// # tokio_test::block_on(async {
+/// let backends = list_ocr_backends()?;
+/// for name in backends {
+///     println!("Registered OCR backend: {}", name);
+/// }
+/// # Ok::<(), kreuzberg::KreuzbergError>(())
+/// # });
+/// ```
+pub fn list_ocr_backends() -> crate::Result<Vec<String>> {
+    use crate::plugins::registry::get_ocr_backend_registry;
+
+    let registry = get_ocr_backend_registry();
+    // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
+    // This is a critical runtime error (similar to OOM) that should bubble up
+    // as it indicates the registry is in an inconsistent state.
+    let registry = registry
+        .read()
+        .expect("OCR backend registry lock poisoned - critical runtime error");
+
+    Ok(registry.list())
+}
+
+/// Clear all OCR backends from the global registry.
+///
+/// Removes all OCR backends and calls their `shutdown()` methods.
+///
+/// # Returns
+///
+/// - `Ok(())` if all backends were cleared successfully
+/// - `Err(...)` if any shutdown method failed
+///
+/// # Example
+///
+/// ```rust
+/// use kreuzberg::plugins::clear_ocr_backends;
+///
+/// # tokio_test::block_on(async {
+/// clear_ocr_backends()?;
+/// # Ok::<(), kreuzberg::KreuzbergError>(())
+/// # });
+/// ```
+pub fn clear_ocr_backends() -> crate::Result<()> {
+    use crate::plugins::registry::get_ocr_backend_registry;
+
+    let registry = get_ocr_backend_registry();
+    // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
+    // This is a critical runtime error (similar to OOM) that should bubble up
+    // as it indicates the registry is in an inconsistent state.
+    let mut registry = registry
+        .write()
+        .expect("OCR backend registry lock poisoned - critical runtime error");
+
+    registry.shutdown_all()
 }
 
 #[cfg(test)]

@@ -468,94 +468,23 @@ Image preprocessing configuration for improving OCR quality on scanned documents
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            backend="tesseract",
-            tesseract_config=TesseractConfig(
-                preprocessing=ImagePreprocessingConfig(
-                    target_dpi=300,
-                    auto_rotate=True,
-                    deskew=True,
-                    denoise=True,
-                    contrast_enhance=True,
-                    binarization_method="otsu",
-                    invert_colors=False
-                )
-            )
-        )
-    )
-    ```
+    --8<-- "snippets/python/image_preprocessing.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      ocr: {
-        backend: 'tesseract',
-        tesseractConfig: {
-          preprocessing: {
-            targetDpi: 300,
-            autoRotate: true,
-            deskew: true,
-            denoise: true,
-            contrastEnhance: true,
-            binarizationMethod: 'otsu',
-            invertColors: false
-          }
-        }
-      }
-    };
-    ```
+    --8<-- "snippets/typescript/image_preprocessing.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig};
-
-    let config = ExtractionConfig {
-        ocr: Some(OcrConfig {
-            backend: "tesseract".to_string(),
-            tesseract_config: Some(TesseractConfig {
-                preprocessing: Some(ImagePreprocessingConfig {
-                    target_dpi: 300,
-                    auto_rotate: true,
-                    deskew: true,
-                    denoise: true,
-                    contrast_enhance: true,
-                    binarization_method: "otsu".to_string(),
-                    invert_colors: false,
-                }),
-                ..Default::default()
-            }),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/image_preprocessing.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.ImagePreprocessingConfig;
+    --8<-- "snippets/java/image_preprocessing.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .imagePreprocessing(ImagePreprocessingConfig.builder()
-            .targetDpi(300)
-            .autoRotate(true)
-            .deskew(true)
-            .denoise(true)
-            .contrastEnhance(true)
-            .binarizationMethod("otsu")
-            .invertColors(false)
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/image_preprocessing.md"
 
 ---
 

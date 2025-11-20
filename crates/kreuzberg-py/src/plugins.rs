@@ -1658,3 +1658,149 @@ pub fn clear_validators(py: Python<'_>) -> PyResult<()> {
 
     Ok(())
 }
+
+/// List all registered validator names.
+///
+/// Returns a list of all validator names currently registered in the global registry.
+///
+/// # Returns
+///
+/// List of validator names.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import list_validators, register_validator, clear_validators
+///
+/// class MyValidator:
+///     def name(self) -> str:
+///         return "my_validator"
+///
+///     def validate(self, result: dict) -> None:
+///         pass
+///
+/// # Register validator
+/// register_validator(MyValidator())
+///
+/// # List validators
+/// validators = list_validators()
+/// assert "my_validator" in validators
+///
+/// # Cleanup
+/// clear_validators()
+/// ```
+#[pyfunction]
+pub fn list_validators() -> PyResult<Vec<String>> {
+    kreuzberg::plugins::list_validators()
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// List all registered post-processor names.
+///
+/// Returns a list of all post-processor names currently registered in the global registry.
+///
+/// # Returns
+///
+/// List of post-processor names.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import list_post_processors, register_post_processor, clear_post_processors
+///
+/// class MyProcessor:
+///     def name(self) -> str:
+///         return "my_processor"
+///
+///     def process(self, result: dict) -> dict:
+///         return result
+///
+/// # Register processor
+/// register_post_processor(MyProcessor())
+///
+/// # List processors
+/// processors = list_post_processors()
+/// assert "my_processor" in processors
+///
+/// # Cleanup
+/// clear_post_processors()
+/// ```
+#[pyfunction]
+pub fn list_post_processors() -> PyResult<Vec<String>> {
+    kreuzberg::plugins::list_post_processors()
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Unregister an OCR backend by name.
+///
+/// Removes a previously registered OCR backend from the global registry and
+/// calls its `shutdown()` method to release resources.
+///
+/// # Arguments
+///
+/// * `name` - Backend name to unregister
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import register_ocr_backend, unregister_ocr_backend
+///
+/// class MyOcrBackend:
+///     def name(self) -> str:
+///         return "my_ocr"
+///
+///     def supported_languages(self) -> list[str]:
+///         return ["eng"]
+///
+///     def process_image(self, image_bytes: bytes, language: str) -> dict:
+///         return {"content": "text", "metadata": {}, "tables": []}
+///
+/// register_ocr_backend(MyOcrBackend())
+/// # ... use backend ...
+/// unregister_ocr_backend("my_ocr")
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the backend is not found or shutdown fails.
+#[pyfunction]
+pub fn unregister_ocr_backend(name: &str) -> PyResult<()> {
+    kreuzberg::plugins::unregister_ocr_backend(name)
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// List all registered OCR backend names.
+///
+/// Returns a list of all OCR backend names currently registered in the global registry.
+///
+/// # Returns
+///
+/// List of OCR backend names.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import list_ocr_backends, register_ocr_backend
+///
+/// class MyOcrBackend:
+///     def name(self) -> str:
+///         return "my_ocr"
+///
+///     def supported_languages(self) -> list[str]:
+///         return ["eng"]
+///
+///     def process_image(self, image_bytes: bytes, language: str) -> dict:
+///         return {"content": "text", "metadata": {}, "tables": []}
+///
+/// # Register backend
+/// register_ocr_backend(MyOcrBackend())
+///
+/// # List backends
+/// backends = list_ocr_backends()
+/// assert "my_ocr" in backends
+/// ```
+#[pyfunction]
+pub fn list_ocr_backends() -> PyResult<Vec<String>> {
+    kreuzberg::plugins::list_ocr_backends()
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}

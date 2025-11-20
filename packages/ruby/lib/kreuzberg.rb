@@ -59,8 +59,20 @@ module Kreuzberg
   # Purge all validators.
   module_function :clear_validators
 
+  # List all registered validators.
+  module_function :list_validators
+
+  # List all registered post-processors.
+  module_function :list_post_processors
+
   # Register an OCR backend instance implementing OcrBackendProtocol.
   module_function :register_ocr_backend
+
+  # Unregister an OCR backend by name.
+  module_function :unregister_ocr_backend
+
+  # List all registered OCR backends.
+  module_function :list_ocr_backends
 end
 
 require_relative 'kreuzberg/cache_api'

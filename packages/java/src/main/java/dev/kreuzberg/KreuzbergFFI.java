@@ -49,6 +49,8 @@ final class KreuzbergFFI {
     static final MethodHandle KREUZBERG_LIST_VALIDATORS;
     static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND;
     static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND_WITH_LANGUAGES;
+    static final MethodHandle KREUZBERG_UNREGISTER_OCR_BACKEND;
+    static final MethodHandle KREUZBERG_LIST_OCR_BACKENDS;
     static final MethodHandle KREUZBERG_DETECT_MIME_TYPE;
     static final MethodHandle KREUZBERG_VALIDATE_MIME_TYPE;
     static final MethodHandle KREUZBERG_LIST_EMBEDDING_PRESETS;
@@ -286,6 +288,16 @@ final class KreuzbergFFI {
                     ValueLayout.ADDRESS,
                     ValueLayout.ADDRESS
                 )
+            );
+
+            KREUZBERG_UNREGISTER_OCR_BACKEND = linkFunction(
+                "kreuzberg_unregister_ocr_backend",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_LIST_OCR_BACKENDS = linkFunction(
+                "kreuzberg_list_ocr_backends",
+                FunctionDescriptor.of(ValueLayout.ADDRESS)
             );
 
             KREUZBERG_DETECT_MIME_TYPE = linkFunction(
