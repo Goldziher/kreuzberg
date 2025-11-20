@@ -29,119 +29,13 @@ Extract content from custom file formats or override built-in extractors.
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::plugins::{Plugin, DocumentExtractor};
-    use kreuzberg::{Result, ExtractionResult, ExtractionConfig, Metadata};
-    use async_trait::async_trait;
-    use std::path::Path;
-
-    struct CustomJsonExtractor;
-
-    impl Plugin for CustomJsonExtractor {
-        fn name(&self) -> &str { "custom-json-extractor" }
-        fn version(&self) -> String { "1.0.0".to_string() }
-        fn initialize(&self) -> Result<()> { Ok(()) }
-        fn shutdown(&self) -> Result<()> { Ok(()) }
-    }
-
-    #[async_trait]
-    impl DocumentExtractor for CustomJsonExtractor {
-        async fn extract_bytes(
-            &self,
-            content: &[u8],
-            _mime_type: &str,
-            _config: &ExtractionConfig,
-        ) -> Result<ExtractionResult> {
-            let json: serde_json::Value = serde_json::from_slice(content)?;
-            let text = extract_text_from_json(&json);
-
-            Ok(ExtractionResult {
-                content: text,
-                mime_type: "application/json".to_string(),
-                metadata: Metadata::default(),
-                tables: vec![],
-                detected_languages: None,
-                chunks: None,
-                images: None,
-            })
-        }
-
-        fn supported_mime_types(&self) -> &[&str] {
-            &["application/json", "text/json"]
-        }
-
-        fn priority(&self) -> i32 { 50 }
-    }
-
-    fn extract_text_from_json(value: &serde_json::Value) -> String {
-        match value {
-            serde_json::Value::String(s) => format!("{}\n", s),
-            serde_json::Value::Array(arr) => {
-                arr.iter().map(extract_text_from_json).collect()
-            }
-            serde_json::Value::Object(obj) => {
-                obj.values().map(extract_text_from_json).collect()
-            }
-            _ => String::new(),
-        }
-    }
-    ```
+    --8<-- "snippets/rust/plugin_extractor.md"
 
 ### Python Implementation
 
 === "Python"
 
-    ```python
-    from kreuzberg import register_document_extractor, ExtractionResult
-    import json
-
-    class CustomJsonExtractor:
-        def name(self) -> str:
-            return "custom-json-extractor"
-
-        def version(self) -> str:
-            return "1.0.0"
-
-        def supported_mime_types(self) -> list[str]:
-            return ["application/json", "text/json"]
-
-        def priority(self) -> int:
-            return 50
-
-        def extract_bytes(
-            self,
-            content: bytes,
-            mime_type: str,
-            config: dict
-        ) -> ExtractionResult:
-            data = json.loads(content)
-            text = self._extract_text(data)
-
-            return {
-                "content": text,
-                "mime_type": "application/json",
-                "metadata": {},
-                "tables": [],
-            }
-
-        def _extract_text(self, obj) -> str:
-            if isinstance(obj, str):
-                return f"{obj}\n"
-            elif isinstance(obj, list):
-                return "".join(self._extract_text(item) for item in obj)
-            elif isinstance(obj, dict):
-                return "".join(self._extract_text(v) for v in obj.values())
-            return ""
-
-        def initialize(self) -> None:
-            pass
-
-        def shutdown(self) -> None:
-            pass
-
-    # Register the extractor
-    register_document_extractor(CustomJsonExtractor())
-    ```
+    --8<-- "snippets/python/plugin_extractor.md"
 
 === "Go"
 
