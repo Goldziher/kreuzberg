@@ -39,7 +39,7 @@ Extract content from custom file formats or override built-in extractors.
 
 === "Go"
 
-    --8<-- "snippets/go/plugin_extractor.md"
+    --8<-- "snippets/go/plugin_validator.md"
 
 ### Registration
 
@@ -171,18 +171,6 @@ Post-processors execute in three stages:
 
     register_post_processor(WordCountProcessor())
     ```
-
-### Go Implementation
-
-=== "Go"
-
-    --8<-- "snippets/go/plugin_validator.md"
-
-### Go Implementation
-
-=== "Go"
-
-    --8<-- "snippets/go/plugin_postprocessor.md"
 
 === "Java"
 

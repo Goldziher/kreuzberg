@@ -36,25 +36,49 @@ Kreuzberg supports four ways to configure extraction:
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/config_discover.md"
+    ```typescript
+    import { ExtractionConfig, extractFile } from '@kreuzberg/sdk';
+
+    const config = await ExtractionConfig.discover();
+    const result = await extractFile('document.pdf', { config });
+    ```
 
 === "Rust"
 
-    --8<-- "snippets/rust/config_discover.md"
+    ```rust
+    use kreuzberg::ExtractionConfig;
+
+    let config = ExtractionConfig::discover()?;
+    let result = extract_file("document.pdf", None, &config).await?;
+    ```
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/config_discover.md"
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::ExtractionConfig.discover
+    result = Kreuzberg.extract_file('document.pdf', config: config)
+    ```
 
 === "Java"
 
-    --8<-- "snippets/java/config_discover.md"
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
 
-=== "Go (File)"
+    ExtractionConfig config = ExtractionConfig.discover();
+    ExtractionResult result = Kreuzberg.extractFile("document.pdf", null, config);
+    ```
+
+=== "Go"
 
     --8<-- "snippets/go/config_file.md"
 
-=== "Go (Programmatic)"
+=== "Go"
 
     --8<-- "snippets/go/config_programmatic.md"
 
@@ -139,23 +163,50 @@ Kreuzberg automatically discovers configuration files in the following locations
 
 === "Python"
 
-    --8<-- "snippets/python/config_discover.md"
+    ```python
+    from kreuzberg import ExtractionConfig
+
+    config = ExtractionConfig.discover()
+    result = extract_file("document.pdf", config=config)
+    ```
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/config_discover.md"
+    ```typescript
+    import { ExtractionConfig, extractFile } from '@kreuzberg/sdk';
+
+    const config = await ExtractionConfig.discover();
+    const result = await extractFile('document.pdf', { config });
+    ```
 
 === "Rust"
 
-    --8<-- "snippets/rust/config_discover.md"
+    ```rust
+    use kreuzberg::ExtractionConfig;
+
+    let config = ExtractionConfig::discover()?;
+    let result = extract_file("document.pdf", None, &config).await?;
+    ```
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/config_discover.md"
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::ExtractionConfig.discover
+    result = Kreuzberg.extract_file('document.pdf', config: config)
+    ```
 
 === "Java"
 
-    --8<-- "snippets/java/config_discover.md"
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
+
+    ExtractionConfig config = ExtractionConfig.builder().build();
+    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
+    ```
 
 ## ExtractionConfig
 
@@ -179,27 +230,66 @@ The main configuration object controlling extraction behavior.
 
 === "Python"
 
-    --8<-- "snippets/python/config_basic.md"
+    ```python
+    from kreuzberg import extract_file, ExtractionConfig
+
+    config = ExtractionConfig(
+        use_cache=True,
+        enable_quality_processing=True
+    )
+    result = extract_file("document.pdf", config=config)
+    ```
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/config_basic.md"
+    ```typescript
+    import { extractFile, ExtractionConfig } from '@kreuzberg/sdk';
+
+    const config = new ExtractionConfig({
+      useCache: true,
+      enableQualityProcessing: true
+    });
+    const result = await extractFile('document.pdf', { config });
+    ```
 
 === "Rust"
 
-    --8<-- "snippets/rust/config_basic.md"
+    ```rust
+    use kreuzberg::{extract_file, ExtractionConfig};
+
+    let config = ExtractionConfig {
+        use_cache: true,
+        enable_quality_processing: true,
+        ..Default::default()
+    };
+    let result = extract_file("document.pdf", None, &config).await?;
+    ```
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/config_basic.md"
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::ExtractionConfig.new(
+      use_cache: true,
+      enable_quality_processing: true
+    )
+    result = Kreuzberg.extract_file('document.pdf', config: config)
+    ```
 
 === "Java"
 
-    --8<-- "snippets/java/config_basic.md"
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
 
-=== "Go"
-
-    --8<-- "snippets/go/config_basic.md"
+    ExtractionConfig config = ExtractionConfig.builder()
+        .useCache(true)
+        .enableQualityProcessing(true)
+        .build();
+    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
+    ```
 
 ## OcrConfig
 
@@ -215,27 +305,77 @@ Configuration for OCR processing. Set to enable OCR on images and scanned PDFs.
 
 === "Python"
 
-    --8<-- "snippets/python/config_ocr.md"
+    ```python
+    from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig
+
+    config = ExtractionConfig(
+        ocr=OcrConfig(
+            backend="tesseract",
+            language="eng+fra",
+            tesseract_config=TesseractConfig(psm=3)
+        )
+    )
+    ```
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/config_ocr.md"
+    ```typescript
+    import { ExtractionConfig, OcrConfig, TesseractConfig } from '@kreuzberg/sdk';
+
+    const config = new ExtractionConfig({
+      ocr: new OcrConfig({
+        backend: 'tesseract',
+        language: 'eng+fra',
+        tesseractConfig: new TesseractConfig({ psm: 3 })
+      })
+    });
+    ```
 
 === "Rust"
 
-    --8<-- "snippets/rust/config_ocr.md"
+    ```rust
+    use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig};
+
+    let config = ExtractionConfig {
+        ocr: Some(OcrConfig {
+            backend: "tesseract".to_string(),
+            language: "eng+fra".to_string(),
+            tesseract_config: Some(TesseractConfig {
+                psm: 3,
+                ..Default::default()
+            }),
+        }),
+        ..Default::default()
+    };
+    ```
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/config_ocr.md"
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::ExtractionConfig.new(
+      ocr: Kreuzberg::OcrConfig.new(
+        backend: 'tesseract',
+        language: 'eng+fra',
+        tesseract_config: Kreuzberg::TesseractConfig.new(psm: 3)
+      )
+    )
+    ```
 
 === "Java"
 
-    --8<-- "snippets/java/config_ocr.md"
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.OcrConfig;
 
-=== "Go"
-
-    --8<-- "snippets/go/config_ocr.md"
+    ExtractionConfig config = ExtractionConfig.builder()
+        .ocr(OcrConfig.builder()
+            .backend("tesseract")
+            .language("eng+fra")
+            .build())
+        .build();
+    ```
 
 ## TesseractConfig
 
@@ -719,19 +859,45 @@ Text chunking configuration for splitting extracted text into chunks.
 
 === "Rust"
 
-    --8<-- "snippets/rust/chunking.md"
+    ```rust
+    use kreuzberg::{ExtractionConfig, ChunkingConfig};
+
+    let config = ExtractionConfig {
+        chunking: Some(ChunkingConfig {
+            max_chars: 500,
+            max_overlap: 50,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    ```
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/chunking.md"
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::ExtractionConfig.new(
+      chunking: Kreuzberg::ChunkingConfig.new(
+        max_chars: 500,
+        max_overlap: 50
+      )
+    )
+    ```
 
 === "Java"
 
-    --8<-- "snippets/java/chunking.md"
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.config.ChunkingConfig;
 
-=== "Go"
-
-    --8<-- "snippets/go/chunking.md"
+    ExtractionConfig config = ExtractionConfig.builder()
+        .chunking(ChunkingConfig.builder()
+            .maxChars(500)
+            .maxOverlap(50)
+            .build())
+        .build();
+    ```
 
 ## EmbeddingConfig
 
