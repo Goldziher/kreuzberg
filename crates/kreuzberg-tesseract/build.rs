@@ -22,6 +22,10 @@ mod build_tesseract {
 
         vec![
             format!(
+                "https://github.com/DanBloomberg/leptonica/releases/download/{}/leptonica-{}.tar.gz",
+                LEPTONICA_VERSION, LEPTONICA_VERSION
+            ),
+            format!(
                 "https://codeload.github.com/DanBloomberg/leptonica/zip/refs/tags/{}",
                 LEPTONICA_VERSION
             ),
