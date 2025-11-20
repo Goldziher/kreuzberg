@@ -145,6 +145,33 @@ typedef char *(*OcrBackendCallback)(const uint8_t *image_bytes,
 typedef char *(*PostProcessorCallback)(const char *result_json);
 
 /**
+ * Type alias for the DocumentExtractor callback function.
+ *
+ * # Parameters
+ *
+ * - `content`: Raw document bytes
+ * - `content_len`: Length of the content array
+ * - `mime_type`: MIME type of the document (null-terminated string)
+ * - `config_json`: JSON-encoded ExtractionConfig (null-terminated string)
+ *
+ * # Returns
+ *
+ * Null-terminated JSON string containing the ExtractionResult, or NULL on error.
+ * The returned string must be freeable by kreuzberg_free_string.
+ *
+ * # Safety
+ *
+ * The callback must:
+ * - Not store the content, mime_type, or config_json pointers (only valid during the call)
+ * - Return a valid null-terminated UTF-8 JSON string or NULL on error
+ * - The returned string must be freeable by kreuzberg_free_string
+ */
+typedef char *(*DocumentExtractorCallback)(const uint8_t *content,
+                                           uintptr_t content_len,
+                                           const char *mime_type,
+                                           const char *config_json);
+
+/**
  * Type alias for the Validator callback function.
  *
  * # Parameters
@@ -598,6 +625,75 @@ bool kreuzberg_clear_post_processors(void);
 char *kreuzberg_list_post_processors(void);
 
 /**
+ * Register a custom DocumentExtractor via FFI callback.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - `callback` must be a valid function pointer that:
+ *   - Does not store the content, mime_type, or config_json pointers
+ *   - Returns a null-terminated UTF-8 JSON string or NULL on error
+ *   - The returned string must be freeable by kreuzberg_free_string
+ * - `mime_types` must be a valid null-terminated C string containing comma-separated MIME types
+ * - `priority` determines the order of selection (higher priority preferred)
+ * - Returns true on success, false on error (check kreuzberg_last_error)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * char* my_extractor(const uint8_t* content, size_t len, const char* mime_type, const char* config) {
+ *     // Extract content from bytes, return JSON ExtractionResult
+ *     return strdup("{\"content\":\"extracted text\",\"mime_type\":\"text/plain\",\"metadata\":{}}");
+ * }
+ *
+ * bool success = kreuzberg_register_document_extractor(
+ *     "my-extractor",
+ *     my_extractor,
+ *     "application/x-custom,text/x-custom",
+ *     100
+ * );
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to register: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_register_document_extractor(const char *name,
+                                           DocumentExtractorCallback callback,
+                                           const char *mime_types,
+                                           int32_t priority);
+
+/**
+ * Unregister a DocumentExtractor by name.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - Returns true on success, false on error (check kreuzberg_last_error)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * bool success = kreuzberg_unregister_document_extractor("my-extractor");
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to unregister: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_unregister_document_extractor(const char *name);
+
+/**
+ * List all registered DocumentExtractors as a JSON array of names.
+ *
+ * # Safety
+ *
+ * - Returned string must be freed with `kreuzberg_free_string`.
+ * - Returns NULL on error (check `kreuzberg_last_error`).
+ */
+char *kreuzberg_list_document_extractors(void);
+
+/**
  * Register a custom Validator via FFI callback.
  *
  * # Safety
@@ -671,5 +767,75 @@ bool kreuzberg_clear_validators(void);
  * - Returns NULL on error (check `kreuzberg_last_error`).
  */
 char *kreuzberg_list_validators(void);
+
+/**
+ * Load an ExtractionConfig from a file.
+ *
+ * Automatically detects the file format based on extension:
+ * - `.toml` - TOML format
+ * - `.yaml`, `.yml` - YAML format
+ * - `.json` - JSON format
+ *
+ * # Safety
+ *
+ * - `path` must be a valid null-terminated C string representing a file path
+ * - Returns a pointer to ExtractionConfig on success, NULL on error
+ * - The returned config must be freed with `kreuzberg_free_config`
+ * - Check `kreuzberg_last_error` on NULL return
+ *
+ * # Example (C)
+ *
+ * ```c
+ * ExtractionConfig* config = kreuzberg_config_from_file("kreuzberg.toml");
+ * if (config == NULL) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to load config: %s\n", error);
+ *     return 1;
+ * }
+ *
+ * // Use config...
+ * char* result = kreuzberg_extract_file_with_config_sync("document.pdf", config);
+ *
+ * kreuzberg_free_config(config);
+ * ```
+ */
+ExtractionConfig *kreuzberg_config_from_file(const char *path);
+
+/**
+ * Discover and load an ExtractionConfig by searching parent directories.
+ *
+ * Searches the current directory and all parent directories for:
+ * - `kreuzberg.toml`
+ * - `kreuzberg.yaml`
+ * - `kreuzberg.yml`
+ * - `kreuzberg.json`
+ *
+ * Returns the first config file found, or NULL if none found.
+ *
+ * # Safety
+ *
+ * - Returns a pointer to ExtractionConfig on success, NULL if not found or on error
+ * - The returned config must be freed with `kreuzberg_free_config`
+ * - Check `kreuzberg_last_error` to distinguish between "not found" and actual errors
+ *
+ * # Example (C)
+ *
+ * ```c
+ * ExtractionConfig* config = kreuzberg_config_discover();
+ * if (config == NULL) {
+ *     const char* error = kreuzberg_last_error();
+ *     if (error != NULL && strlen(error) > 0) {
+ *         printf("Error discovering config: %s\n", error);
+ *         return 1;
+ *     }
+ *     // No config found, use defaults
+ *     config = kreuzberg_config_new();
+ * }
+ *
+ * // Use config...
+ * kreuzberg_free_config(config);
+ * ```
+ */
+ExtractionConfig *kreuzberg_config_discover(void);
 
 #endif  /* KREUZBERG_FFI_H */

@@ -200,8 +200,8 @@ pub mod registry;
 mod traits;
 mod validator;
 
-pub use extractor::DocumentExtractor;
+pub use extractor::{DocumentExtractor, clear_extractors, list_extractors, register_extractor, unregister_extractor};
 pub use ocr::{OcrBackend, OcrBackendType};
 pub use processor::{PostProcessor, ProcessingStage};
 pub use traits::Plugin;
-pub use validator::Validator;
+pub use validator::{Validator, clear_validators, list_validators, register_validator, unregister_validator};

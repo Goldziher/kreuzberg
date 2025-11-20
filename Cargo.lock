@@ -1463,9 +1463,11 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 name = "e2e-rust"
 version = "4.0.0-rc.1"
 dependencies = [
+ "async-trait",
  "kreuzberg",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
 ]
 
@@ -2820,6 +2822,7 @@ dependencies = [
  "kreuzberg",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
 ]
 
