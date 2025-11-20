@@ -15,10 +15,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Optional;
 
 /**
  * High-level Java API for Kreuzberg document intelligence library.
@@ -284,6 +286,93 @@ public final class Kreuzberg {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    public static String detectMimeType(String path) throws KreuzbergException {
+        return detectMimeType(path, true);
+    }
+
+    public static String detectMimeType(String path, boolean checkExists) throws KreuzbergException {
+        Objects.requireNonNull(path, "path must not be null");
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment pathSeg = KreuzbergFFI.allocateCString(arena, path);
+            MemorySegment mimePtr = (MemorySegment) KreuzbergFFI.KREUZBERG_DETECT_MIME_TYPE.invoke(
+                pathSeg,
+                checkExists
+            );
+            if (mimePtr == null || mimePtr.address() == 0) {
+                throw new KreuzbergException("Failed to detect MIME type: " + getLastError());
+            }
+            return KreuzbergFFI.readCString(mimePtr);
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error detecting MIME type", e);
+        }
+    }
+
+    public static String validateMimeType(String mimeType) throws KreuzbergException {
+        Objects.requireNonNull(mimeType, "mimeType must not be null");
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment mimeSeg = KreuzbergFFI.allocateCString(arena, mimeType);
+            MemorySegment validatedPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_VALIDATE_MIME_TYPE.invoke(mimeSeg);
+            if (validatedPtr == null || validatedPtr.address() == 0) {
+                throw new KreuzbergException("Failed to validate MIME type: " + getLastError());
+            }
+            return KreuzbergFFI.readCString(validatedPtr);
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error validating MIME type", e);
+        }
+    }
+
+    public static List<String> listEmbeddingPresets() throws KreuzbergException {
+        try {
+            MemorySegment presetsPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_LIST_EMBEDDING_PRESETS.invoke();
+            if (presetsPtr == null || presetsPtr.address() == 0) {
+                throw new KreuzbergException("Failed to list embedding presets: " + getLastError());
+            }
+            try {
+                String json = KreuzbergFFI.readCString(presetsPtr);
+                return ResultParser.parseStringList(json);
+            } finally {
+                KreuzbergFFI.KREUZBERG_FREE_STRING.invoke(presetsPtr);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error listing embedding presets", e);
+        }
+    }
+
+    public static Optional<EmbeddingPreset> getEmbeddingPreset(String name) throws KreuzbergException {
+        Objects.requireNonNull(name, "name must not be null");
+        if (name.isBlank()) {
+            throw new KreuzbergException("Preset name must not be blank");
+        }
+
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment nameSeg = KreuzbergFFI.allocateCString(arena, name);
+            MemorySegment presetPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_GET_EMBEDDING_PRESET.invoke(nameSeg);
+            if (presetPtr == null || presetPtr.address() == 0) {
+                String error = getLastError();
+                if (error.toLowerCase(Locale.ROOT).contains("unknown embedding preset")) {
+                    return Optional.empty();
+                }
+                throw new KreuzbergException("Failed to fetch embedding preset: " + error);
+            }
+            try {
+                String json = KreuzbergFFI.readCString(presetPtr);
+                return Optional.ofNullable(ResultParser.parseEmbeddingPreset(json));
+            } finally {
+                KreuzbergFFI.KREUZBERG_FREE_STRING.invoke(presetPtr);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error fetching embedding preset", e);
+        }
     }
 
     /**

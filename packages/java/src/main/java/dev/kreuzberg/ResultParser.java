@@ -19,6 +19,7 @@ final class ResultParser {
     private static final TypeReference<List<Chunk>> CHUNK_LIST = new TypeReference<>() { };
     private static final TypeReference<List<ExtractedImage>> IMAGE_LIST = new TypeReference<>() { };
     private static final TypeReference<Map<String, Object>> METADATA_MAP = new TypeReference<>() { };
+    private static final TypeReference<EmbeddingPreset> EMBEDDING_PRESET = new TypeReference<>() { };
 
     private ResultParser() {
     }
@@ -64,6 +65,13 @@ final class ResultParser {
 
     static String toJson(Map<String, Object> map) throws Exception {
         return MAPPER.writeValueAsString(map);
+    }
+
+    static EmbeddingPreset parseEmbeddingPreset(String json) throws Exception {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        return MAPPER.readValue(json, EMBEDDING_PRESET);
     }
 
     static ExtractionResult fromJson(String json) throws KreuzbergException {

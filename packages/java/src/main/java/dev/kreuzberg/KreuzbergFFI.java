@@ -49,6 +49,10 @@ final class KreuzbergFFI {
     static final MethodHandle KREUZBERG_LIST_VALIDATORS;
     static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND;
     static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND_WITH_LANGUAGES;
+    static final MethodHandle KREUZBERG_DETECT_MIME_TYPE;
+    static final MethodHandle KREUZBERG_VALIDATE_MIME_TYPE;
+    static final MethodHandle KREUZBERG_LIST_EMBEDDING_PRESETS;
+    static final MethodHandle KREUZBERG_GET_EMBEDDING_PRESET;
 
     // Memory layouts
     static final StructLayout C_EXTRACTION_RESULT_LAYOUT = MemoryLayout.structLayout(
@@ -282,6 +286,26 @@ final class KreuzbergFFI {
                     ValueLayout.ADDRESS,
                     ValueLayout.ADDRESS
                 )
+            );
+
+            KREUZBERG_DETECT_MIME_TYPE = linkFunction(
+                "kreuzberg_detect_mime_type",
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_BOOLEAN)
+            );
+
+            KREUZBERG_VALIDATE_MIME_TYPE = linkFunction(
+                "kreuzberg_validate_mime_type",
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_LIST_EMBEDDING_PRESETS = linkFunction(
+                "kreuzberg_list_embedding_presets",
+                FunctionDescriptor.of(ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_GET_EMBEDDING_PRESET = linkFunction(
+                "kreuzberg_get_embedding_preset",
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS)
             );
         } catch (Exception e) {
             throw new ExceptionInInitializerError(e);
