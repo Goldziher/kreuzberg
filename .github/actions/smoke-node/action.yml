@@ -17,6 +17,6 @@ runs:
     - name: Smoke test Node.js package
       shell: bash
       env:
-        KREUZBERG_NODE_PKG: ${{ github.workspace }}/packages/typescript
+        KREUZBERG_NODE_PKG: ${{ github.workspace }}/crates/kreuzberg-node
       run: |
         "$GITHUB_WORKSPACE/scripts/smoke-node.sh" "${{ inputs.package-tarball }}" "${{ inputs.package-spec }}"
