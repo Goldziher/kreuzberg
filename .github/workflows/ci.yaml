@@ -123,6 +123,73 @@ jobs:
         with:
           run: task e2e:ts:verify
 
+  # Add dedicated Java and Go E2E coverage to baseline CI
+  java-e2e:
+    name: Java E2E (ubuntu-latest, Java 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install Task
+        uses: ./.github/actions/setup-task
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "22"
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: java-e2e
+
+      - name: Build Java binding
+        run: mvn -f packages/java/pom.xml -DskipTests compile
+
+      - name: Run Java E2E suite
+        uses: ./.github/actions/run-and-ensure-clean
+        with:
+          run: task e2e:java:verify
+
+  go-e2e:
+    name: Go E2E (ubuntu-latest, Go 1.21)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install Task
+        uses: ./.github/actions/setup-task
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: go-e2e
+
+      - name: Build FFI (release)
+        run: cargo build -p kreuzberg-ffi --release
+
+      - name: Run Go E2E suite
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/target/release
+          DYLD_FALLBACK_LIBRARY_PATH: ${{ github.workspace }}/target/release
+        uses: ./.github/actions/run-and-ensure-clean
+        with:
+          run: task e2e:go:verify
+
       - name: Run tests (Linux, Node 20 - with coverage)
         if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
         working-directory: packages/typescript

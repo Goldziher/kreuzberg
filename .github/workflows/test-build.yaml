@@ -155,6 +155,57 @@ jobs:
           name: ${{ matrix.artifact }}
           path: target/wheels/*.whl
 
+  java:
+    name: Build Java bindings
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "22"
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: java
+
+      - name: Build Java binding
+        run: mvn -f packages/java/pom.xml -DskipTests compile
+
+  go:
+    name: Build Go bindings
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: go
+
+      - name: Build FFI (release)
+        run: cargo build -p kreuzberg-ffi --release
+
+      - name: Go test
+        working-directory: packages/go/kreuzberg
+        run: go test ./...
+
   python-sdist:
     name: Build Python sdist
     runs-on: ubuntu-latest
