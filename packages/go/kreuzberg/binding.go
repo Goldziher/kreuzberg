@@ -316,3 +316,90 @@ func LoadExtractionConfigFromFile(path string) (*ExtractionConfig, error) {
 	}
 	return cfg, nil
 }
+
+// DetectMimeType detects MIME type from a file path using extension and content heuristics.
+func DetectMimeType(path string, checkExists bool) (string, error) {
+	if path == "" {
+		return "", newValidationError("path cannot be empty", nil)
+	}
+
+	cPath := C.CString(path)
+	defer C.free(unsafe.Pointer(cPath))
+
+	ptr := C.kreuzberg_detect_mime_type(cPath, C.bool(checkExists))
+	if ptr == nil {
+		return "", lastError()
+	}
+	defer C.kreuzberg_free_string(ptr)
+
+	return C.GoString(ptr), nil
+}
+
+// ValidateMimeType validates that the given MIME type is supported.
+func ValidateMimeType(mimeType string) (string, error) {
+	if mimeType == "" {
+		return "", newValidationError("mimeType cannot be empty", nil)
+	}
+
+	cMime := C.CString(mimeType)
+	defer C.free(unsafe.Pointer(cMime))
+
+	ptr := C.kreuzberg_validate_mime_type(cMime)
+	if ptr == nil {
+		return "", lastError()
+	}
+	defer C.kreuzberg_free_string(ptr)
+
+	return C.GoString(ptr), nil
+}
+
+// EmbeddingPreset describes a built-in embedding preset.
+type EmbeddingPreset struct {
+	Name        string `json:"name"`
+	ChunkSize   int    `json:"chunk_size"`
+	Overlap     int    `json:"overlap"`
+	ModelName   string `json:"model_name"`
+	Dimensions  int    `json:"dimensions"`
+	Description string `json:"description"`
+}
+
+// ListEmbeddingPresets returns available embedding preset names.
+func ListEmbeddingPresets() ([]string, error) {
+	ptr := C.kreuzberg_list_embedding_presets()
+	if ptr == nil {
+		return nil, lastError()
+	}
+	defer C.kreuzberg_free_string(ptr)
+
+	raw := C.GoString(ptr)
+	if raw == "" {
+		return []string{}, nil
+	}
+	var names []string
+	if err := json.Unmarshal([]byte(raw), &names); err != nil {
+		return nil, newSerializationError("failed to decode preset names", err)
+	}
+	return names, nil
+}
+
+// GetEmbeddingPreset returns preset metadata by name.
+func GetEmbeddingPreset(name string) (*EmbeddingPreset, error) {
+	if name == "" {
+		return nil, newValidationError("preset name cannot be empty", nil)
+	}
+
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+
+	ptr := C.kreuzberg_get_embedding_preset(cName)
+	if ptr == nil {
+		return nil, lastError()
+	}
+	defer C.kreuzberg_free_string(ptr)
+
+	var preset EmbeddingPreset
+	if err := json.Unmarshal([]byte(C.GoString(ptr)), &preset); err != nil {
+		return nil, newSerializationError("failed to decode embedding preset", err)
+	}
+	return &preset, nil
+}

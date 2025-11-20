@@ -13,7 +13,9 @@ type ExtractionConfig struct {
 	PdfOptions               *PdfConfig               `json:"pdf_options,omitempty"`
 	TokenReduction           *TokenReductionConfig    `json:"token_reduction,omitempty"`
 	LanguageDetection        *LanguageDetectionConfig `json:"language_detection,omitempty"`
+	Keywords                 *KeywordConfig           `json:"keywords,omitempty"`
 	Postprocessor            *PostProcessorConfig     `json:"postprocessor,omitempty"`
+	HTMLOptions              *HTMLConversionOptions   `json:"html_options,omitempty"`
 	MaxConcurrentExtractions *int                     `json:"max_concurrent_extractions,omitempty"`
 }
 
@@ -62,13 +64,13 @@ type ImagePreprocessingConfig struct {
 
 // ChunkingConfig configures text chunking for downstream RAG/Retrieval workloads.
 type ChunkingConfig struct {
-	MaxChars     *int           `json:"max_chars,omitempty"`
-	MaxOverlap   *int           `json:"max_overlap,omitempty"`
-	ChunkSize    *int           `json:"chunk_size,omitempty"`
-	ChunkOverlap *int           `json:"chunk_overlap,omitempty"`
-	Preset       *string        `json:"preset,omitempty"`
-	Embedding    map[string]any `json:"embedding,omitempty"`
-	Enabled      *bool          `json:"enabled,omitempty"`
+	MaxChars     *int             `json:"max_chars,omitempty"`
+	MaxOverlap   *int             `json:"max_overlap,omitempty"`
+	ChunkSize    *int             `json:"chunk_size,omitempty"`
+	ChunkOverlap *int             `json:"chunk_overlap,omitempty"`
+	Preset       *string          `json:"preset,omitempty"`
+	Embedding    *EmbeddingConfig `json:"embedding,omitempty"`
+	Enabled      *bool            `json:"enabled,omitempty"`
 }
 
 // ImageExtractionConfig controls inline image extraction from PDFs/Office docs.
@@ -106,4 +108,87 @@ type PostProcessorConfig struct {
 	Enabled            *bool    `json:"enabled,omitempty"`
 	EnabledProcessors  []string `json:"enabled_processors,omitempty"`
 	DisabledProcessors []string `json:"disabled_processors,omitempty"`
+}
+
+// EmbeddingModelType configures embedding model selection.
+type EmbeddingModelType struct {
+	Type       string `json:"type"`                 // preset, fastembed, custom
+	Name       string `json:"name,omitempty"`       // for preset
+	Model      string `json:"model,omitempty"`      // for fastembed/custom
+	ModelID    string `json:"model_id,omitempty"`   // alias for custom
+	Dimensions *int   `json:"dimensions,omitempty"` // for fastembed/custom
+}
+
+// EmbeddingConfig configures embedding generation for chunks.
+type EmbeddingConfig struct {
+	Model                *EmbeddingModelType `json:"model,omitempty"`
+	Normalize            *bool               `json:"normalize,omitempty"`
+	BatchSize            *int                `json:"batch_size,omitempty"`
+	ShowDownloadProgress *bool               `json:"show_download_progress,omitempty"`
+	CacheDir             *string             `json:"cache_dir,omitempty"`
+}
+
+// KeywordConfig configures keyword extraction.
+type KeywordConfig struct {
+	Algorithm   string      `json:"algorithm,omitempty"` // yake | rake
+	MaxKeywords *int        `json:"max_keywords,omitempty"`
+	MinScore    *float64    `json:"min_score,omitempty"`
+	NgramRange  *[2]int     `json:"ngram_range,omitempty"`
+	Language    *string     `json:"language,omitempty"`
+	Yake        *YakeParams `json:"yake_params,omitempty"`
+	Rake        *RakeParams `json:"rake_params,omitempty"`
+}
+
+// YakeParams holds YAKE-specific tuning.
+type YakeParams struct {
+	WindowSize *int `json:"window_size,omitempty"`
+}
+
+// RakeParams holds RAKE-specific tuning.
+type RakeParams struct {
+	MinWordLength     *int `json:"min_word_length,omitempty"`
+	MaxWordsPerPhrase *int `json:"max_words_per_phrase,omitempty"`
+}
+
+// HTMLPreprocessingOptions configures HTML cleaning.
+type HTMLPreprocessingOptions struct {
+	Enabled          *bool   `json:"enabled,omitempty"`
+	Preset           *string `json:"preset,omitempty"` // minimal|standard|aggressive
+	RemoveNavigation *bool   `json:"remove_navigation,omitempty"`
+	RemoveForms      *bool   `json:"remove_forms,omitempty"`
+}
+
+// HTMLConversionOptions mirrors html_to_markdown_rs::ConversionOptions.
+type HTMLConversionOptions struct {
+	HeadingStyle       *string                   `json:"heading_style,omitempty"`
+	ListIndentType     *string                   `json:"list_indent_type,omitempty"`
+	ListIndentWidth    *int                      `json:"list_indent_width,omitempty"`
+	Bullets            *string                   `json:"bullets,omitempty"`
+	StrongEmSymbol     *string                   `json:"strong_em_symbol,omitempty"`
+	EscapeAsterisks    *bool                     `json:"escape_asterisks,omitempty"`
+	EscapeUnderscores  *bool                     `json:"escape_underscores,omitempty"`
+	EscapeMisc         *bool                     `json:"escape_misc,omitempty"`
+	EscapeASCII        *bool                     `json:"escape_ascii,omitempty"`
+	CodeLanguage       *string                   `json:"code_language,omitempty"`
+	Autolinks          *bool                     `json:"autolinks,omitempty"`
+	DefaultTitle       *bool                     `json:"default_title,omitempty"`
+	BrInTables         *bool                     `json:"br_in_tables,omitempty"`
+	HocrSpatialTables  *bool                     `json:"hocr_spatial_tables,omitempty"`
+	HighlightStyle     *string                   `json:"highlight_style,omitempty"`
+	ExtractMetadata    *bool                     `json:"extract_metadata,omitempty"`
+	WhitespaceMode     *string                   `json:"whitespace_mode,omitempty"`
+	StripNewlines      *bool                     `json:"strip_newlines,omitempty"`
+	Wrap               *bool                     `json:"wrap,omitempty"`
+	WrapWidth          *int                      `json:"wrap_width,omitempty"`
+	ConvertAsInline    *bool                     `json:"convert_as_inline,omitempty"`
+	SubSymbol          *string                   `json:"sub_symbol,omitempty"`
+	SupSymbol          *string                   `json:"sup_symbol,omitempty"`
+	NewlineStyle       *string                   `json:"newline_style,omitempty"`
+	CodeBlockStyle     *string                   `json:"code_block_style,omitempty"`
+	KeepInlineImagesIn []string                  `json:"keep_inline_images_in,omitempty"`
+	Encoding           *string                   `json:"encoding,omitempty"`
+	Debug              *bool                     `json:"debug,omitempty"`
+	StripTags          []string                  `json:"strip_tags,omitempty"`
+	PreserveTags       []string                  `json:"preserve_tags,omitempty"`
+	Preprocessing      *HTMLPreprocessingOptions `json:"preprocessing,omitempty"`
 }
