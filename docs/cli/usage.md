@@ -654,26 +654,6 @@ The `serve` command starts a RESTful HTTP API server:
     --8<-- "snippets/cli/serve_java.md"
 
 
-=== "Go"
-
-    ```go
-    package main
-
-    import (
-        "log"
-        "os/exec"
-    )
-
-    func main() {
-        cmd := exec.Command("kreuzberg", "serve", "--host", "0.0.0.0", "--port", "3000")
-        cmd.Stdout = log.Writer()
-        cmd.Stderr = log.Writer()
-        if err := cmd.Run(); err != nil {
-            log.Fatalf("server exited: %v", err)
-        }
-    }
-    ```
-
 The server provides endpoints for:
 - `/extract` - Extract text from uploaded files
 - `/health` - Health check
@@ -706,30 +686,6 @@ The `mcp` command starts a Model Context Protocol server for AI integration:
 === "Java"
 
     --8<-- "snippets/cli/mcp_java.md"
-
-=== "Go"
-
-    --8<-- "snippets/cli/mcp_go.md"
-
-=== "Go"
-
-    ```go
-    package main
-
-    import (
-        "log"
-        "os/exec"
-    )
-
-    func main() {
-        cmd := exec.Command("kreuzberg", "mcp")
-        cmd.Stdout = log.Writer()
-        cmd.Stderr = log.Writer()
-        if err := cmd.Run(); err != nil {
-            log.Fatalf("mcp exited: %v", err)
-        }
-    }
-    ```
 
 The MCP server provides tools for AI agents:
 - `extract_file` - Extract text from a file path
