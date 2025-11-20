@@ -293,6 +293,18 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/go/image_extraction/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/go/image_preprocessing/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/go/language_detection/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/go/metadata/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
@@ -313,11 +325,23 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/go/pdf_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/go/plugin_validator/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/snippets/go/tables/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/go/tesseract_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/go/token_reduction/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
@@ -381,6 +405,18 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/java/image_extraction/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/java/image_preprocessing/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/java/language_detection/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/java/metadata/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
@@ -401,7 +437,19 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/java/pdf_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/java/tables/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/java/tesseract_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/java/token_reduction/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
@@ -461,6 +509,18 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/python/image_extraction/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/python/image_preprocessing/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/python/language_detection/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/python/metadata/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
@@ -481,6 +541,10 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/python/pdf_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/python/plugin_extractor/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
@@ -490,6 +554,14 @@
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/snippets/python/tables/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/python/tesseract_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/python/token_reduction/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
@@ -549,6 +621,18 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/ruby/image_extraction/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/ruby/image_preprocessing/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/ruby/language_detection/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/ruby/metadata/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
@@ -569,11 +653,23 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/ruby/pdf_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/ruby/plugin_validator/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/snippets/ruby/tables/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/ruby/tesseract_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/ruby/token_reduction/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
@@ -633,6 +729,18 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/rust/image_extraction/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/rust/image_preprocessing/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/rust/language_detection/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/rust/metadata/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
@@ -653,11 +761,23 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/rust/pdf_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/rust/plugin_extractor/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/snippets/rust/tables/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/rust/tesseract_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/rust/token_reduction/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
@@ -717,6 +837,18 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/image_extraction/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/image_preprocessing/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/language_detection/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/typescript/metadata/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
@@ -737,11 +869,23 @@
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/pdf_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/typescript/plugin_validator/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/snippets/typescript/tables/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/tesseract_config/</loc>
+         <lastmod>2025-11-20</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/token_reduction/</loc>
          <lastmod>2025-11-20</lastmod>
     </url>
 </urlset>
