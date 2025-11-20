@@ -18,6 +18,7 @@ tasks:
       - task: ruby:install
       - task: java:install
       - task: go:install
+      - task: csharp:install
       - task: rust:build
   build:
     desc: Build core libraries and language bindings
@@ -27,6 +28,7 @@ tasks:
       - task: ruby:build
       - task: typescript:build
       - task: java:build
+      - task: csharp:build
   test:
     desc: Run test suites for all languages
     cmds:
@@ -36,6 +38,7 @@ tasks:
       - task: typescript:test
       - task: java:test
       - task: go:test
+      - task: csharp:test
   lint:
     desc: Run linters for all languages
     cmds:
@@ -45,6 +48,7 @@ tasks:
       - task: ruby:lint
       - task: typescript:lint
       - task: java:lint
+      - task: csharp:lint
   format:
     desc: Format code for all languages
     cmds:
@@ -52,6 +56,7 @@ tasks:
       - task: python:format
       - task: ruby:format
       - task: typescript:format
+      - task: csharp:format
   rust:build:
     desc: Build all Rust crates
     cmds:
@@ -355,6 +360,23 @@ tasks:
     cmds:
       - task: e2e:go:generate
       - task: e2e:go:test
+  e2e:csharp:generate:
+    desc: Generate C# E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang csharp --fixtures fixtures --output e2e
+  e2e:csharp:test:
+    desc: Run C# E2E tests
+    dir: e2e/csharp
+    cmds:
+      - |
+          DYLD_LIBRARY_PATH=../../target/release:${DYLD_LIBRARY_PATH:-} \
+          LD_LIBRARY_PATH=../../target/release:${LD_LIBRARY_PATH:-} \
+          dotnet test Kreuzberg.E2E.csproj -c Release
+  e2e:csharp:verify:
+    desc: Regenerate and validate C# E2E suite
+    cmds:
+      - task: e2e:csharp:generate
+      - task: e2e:csharp:test
   cli:build:
     desc: Build CLI binary
     cmds:
@@ -504,3 +526,39 @@ tasks:
     dir: packages/go
     cmds:
       - go test ./...
+
+  csharp:build:
+    desc: Build C# binding and benchmarks
+    dir: packages/csharp
+    cmds:
+      - dotnet restore
+      - dotnet build Kreuzberg/Kreuzberg.csproj -c Release
+      - dotnet build Benchmark/Benchmark.csproj -c Release
+
+  csharp:test:
+    desc: Run C# tests
+    dir: packages/csharp
+    cmds:
+      - dotnet test Kreuzberg.Tests/Kreuzberg.Tests.csproj -c Release
+
+  csharp:lint:
+    desc: Verify C# formatting
+    dir: packages/csharp
+    cmds:
+      - dotnet format Kreuzberg/Kreuzberg.csproj --verify-no-changes
+      - dotnet format Kreuzberg.Tests/Kreuzberg.Tests.csproj --verify-no-changes
+      - dotnet format Benchmark/Benchmark.csproj --verify-no-changes
+
+  csharp:format:
+    desc: Format C# code
+    dir: packages/csharp
+    cmds:
+      - dotnet format Kreuzberg/Kreuzberg.csproj
+      - dotnet format Kreuzberg.Tests/Kreuzberg.Tests.csproj
+      - dotnet format Benchmark/Benchmark.csproj
+
+  csharp:install:
+    desc: Restore C# dependencies
+    dir: packages/csharp
+    cmds:
+      - dotnet restore

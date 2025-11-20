@@ -1,5 +1,12 @@
 # TODO
 
+## C# Binding Parity
+- [x] Add C# binding project mirroring core APIs (sync/sync-with-config/bytes/batch, config loading, version, error handling, plugin registration).
+- [x] Wire C# binding build/test into workspace tasks and FFI artifacts (ensure P/Invoke library names + packaging).
+- [ ] Add C# examples/quickstart/docs updates across docs site with language tabs/snippets.
+- [x] Extend e2e generator to emit C# tests and fixtures parity; integrate into CI/task runners.
+- [x] Extend benchmark harness to run C# adapter for parity with other languages (CLI/config updates).
+
 ## Go Binding Parity
 - [x] Align `packages/go/kreuzberg` metadata model with Rust format union (discriminated `format_type`, nested structs, `additional` map).
 - [x] Introduce typed Go errors (`MissingDependencyError`, `ValidationError`, etc.) instead of generic `fmt.Errorf`.

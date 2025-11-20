@@ -90,3 +90,9 @@ repos:
         language: system
         types: [python]
         exclude: ^(v3|benchmarks|scripts|crates|examples|e2e)/
+      - id: dotnet-format
+        name: dotnet format (packages/csharp)
+        entry: bash -c 'cd packages/csharp && dotnet format Kreuzberg/Kreuzberg.csproj --verify-no-changes && dotnet format Kreuzberg.Tests/Kreuzberg.Tests.csproj --verify-no-changes && dotnet format Benchmark/Benchmark.csproj --verify-no-changes'
+        language: system
+        files: ^packages/csharp/
+        pass_filenames: false

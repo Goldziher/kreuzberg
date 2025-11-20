@@ -102,6 +102,21 @@ Main extraction configuration controlling all aspects of document processing.
     ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
     ```
 
+=== "C#"
+
+    ```csharp
+    using Kreuzberg;
+
+    var config = new ExtractionConfig
+    {
+        UseCache = true,
+        EnableQualityProcessing = true,
+        ForceOcr = false,
+    };
+
+    var result = KreuzbergClient.ExtractFileSync("document.pdf", config);
+    ```
+
 ---
 
 ## OcrConfig

@@ -30,6 +30,10 @@ Extract text from any supported document format:
 
     --8<-- "snippets/go/extract_file_sync.md"
 
+=== "C#"
+
+    --8<-- "snippets/csharp/extract_file_sync.md"
+
 === "CLI"
 
     ```bash
@@ -71,6 +75,10 @@ For better performance with I/O-bound operations:
 
     --8<-- "snippets/go/extract_file_async.md"
 
+=== "C#"
+
+    --8<-- "snippets/csharp/extract_file_async.md"
+
 ## OCR Extraction
 
 Extract text from images and scanned documents:
@@ -98,6 +106,10 @@ Extract text from images and scanned documents:
 === "Go"
 
     --8<-- "snippets/go/ocr_extraction.md"
+
+=== "C#"
+
+    --8<-- "snippets/csharp/ocr_extraction.md"
 
 === "CLI"
 
@@ -197,6 +209,10 @@ Process multiple files concurrently:
 
     # Use glob patterns
     kreuzberg extract documents/**/*.pdf
+
+=== "C#"
+
+    --8<-- "snippets/csharp/batch_extract_files_sync.md"
     ```
 
 ## Extract from Bytes

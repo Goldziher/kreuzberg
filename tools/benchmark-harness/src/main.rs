@@ -177,9 +177,10 @@ async fn main() -> Result<()> {
             registry.register(Arc::new(NativeAdapter::with_config(extraction_config)))?;
 
             use benchmark_harness::adapters::{
-                create_go_batch_adapter, create_go_sync_adapter, create_java_sync_adapter, create_node_async_adapter,
-                create_node_batch_adapter, create_python_async_adapter, create_python_batch_adapter,
-                create_python_sync_adapter, create_ruby_batch_adapter, create_ruby_sync_adapter,
+                create_csharp_sync_adapter, create_go_batch_adapter, create_go_sync_adapter, create_java_sync_adapter,
+                create_node_async_adapter, create_node_batch_adapter, create_python_async_adapter,
+                create_python_batch_adapter, create_python_sync_adapter, create_ruby_batch_adapter,
+                create_ruby_sync_adapter,
             };
 
             if let Ok(adapter) = create_python_sync_adapter() {
@@ -210,6 +211,9 @@ async fn main() -> Result<()> {
                 let _ = registry.register(Arc::new(adapter));
             }
             if let Ok(adapter) = create_java_sync_adapter() {
+                let _ = registry.register(Arc::new(adapter));
+            }
+            if let Ok(adapter) = create_csharp_sync_adapter() {
                 let _ = registry.register(Arc::new(adapter));
             }
 

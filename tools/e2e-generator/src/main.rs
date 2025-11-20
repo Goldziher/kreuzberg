@@ -1,3 +1,4 @@
+mod csharp;
 mod fixtures;
 mod go;
 mod java;
@@ -48,6 +49,7 @@ enum Language {
     Ruby,
     Java,
     Go,
+    Csharp,
 }
 
 fn main() -> Result<()> {
@@ -63,6 +65,7 @@ fn main() -> Result<()> {
                 Language::Ruby => ruby::generate(&fixtures, output.as_path())?,
                 Language::Java => java::generate(&fixtures, output.as_path())?,
                 Language::Go => go::generate(&fixtures, output.as_path())?,
+                Language::Csharp => csharp::generate(&fixtures, output.as_path())?,
             };
         }
         Commands::List { fixtures } => {
