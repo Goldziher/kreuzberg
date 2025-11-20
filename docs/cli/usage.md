@@ -679,7 +679,6 @@ The `mcp` command starts a Model Context Protocol server for AI integration:
 === "Java"
 
     --8<-- "snippets/cli/mcp_java.md"
-
 The MCP server provides tools for AI agents:
 - `extract_file` - Extract text from a file path
 - `extract_bytes` - Extract text from base64-encoded bytes
