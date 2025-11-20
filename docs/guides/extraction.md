@@ -56,6 +56,10 @@ Extract text, tables, and metadata from a file on disk.
 
     --8<-- "snippets/go/extract_file_sync.md"
 
+=== "C#"
+
+    --8<-- "snippets/csharp/extract_file_sync.md"
+
 ### Asynchronous
 
 === "Python"
@@ -82,6 +86,10 @@ Extract text, tables, and metadata from a file on disk.
 
     --8<-- "snippets/go/extract_file_async.md"
 
+=== "C#"
+
+    --8<-- "snippets/csharp/extract_file_async.md"
+
 ```mermaid
 flowchart TD
     Start[Choose Sync or Async] --> Context{Already in<br/>Async Context?}
@@ -107,6 +115,29 @@ flowchart TD
     style UseSyncSimple fill:#90EE90
     style UseSyncSingle fill:#90EE90
     style UseSyncBatch fill:#90EE90
+```
+
+## TypeScript / Node.js {#typescript-nodejs}
+
+All TypeScript/Node.js examples in this guide use the `@goldziher/kreuzberg` package. Import synchronous APIs from the root module and asynchronous helpers from the same namespace. See the [TypeScript API Reference](../reference/api-typescript.md) for complete type definitions.
+
+```typescript
+import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+
+const result = extractFileSync('document.pdf', null, new ExtractionConfig());
+console.log(result.content);
+```
+
+## Ruby {#ruby}
+
+Ruby bindings mirror the same function names (`extract_file_sync`, `extract_bytes`, `batch_extract_files`, etc.) under the `Kreuzberg` module. Configuration objects live under `Kreuzberg::Config`. See the [Ruby API Reference](../reference/api-ruby.md) for details.
+
+```ruby
+require 'kreuzberg'
+
+config = Kreuzberg::Config::Extraction.new(force_ocr: true)
+result = Kreuzberg.extract_file_sync('document.pdf', config: config)
+puts result.content
 ```
 
 !!! tip "When to Use Async"
@@ -142,6 +173,10 @@ Extract from data already loaded in memory.
 
     --8<-- "snippets/go/extract_bytes_sync.md"
 
+=== "C#"
+
+    --8<-- "snippets/csharp/extract_bytes_sync.md"
+
 ### Asynchronous
 
 === "Python"
@@ -167,6 +202,10 @@ Extract from data already loaded in memory.
 === "Go"
 
     --8<-- "snippets/go/extract_bytes_async.md"
+
+=== "C#"
+
+    --8<-- "snippets/csharp/extract_bytes_async.md"
 
 !!! note "MIME Type Detection"
     Kreuzberg automatically detects MIME types from file extensions. When extracting from bytes, you must provide the MIME type explicitly.
@@ -201,6 +240,10 @@ Process multiple files concurrently for better performance.
 
     --8<-- "snippets/go/batch_extract_files_sync.md"
 
+=== "C#"
+
+    --8<-- "snippets/csharp/batch_extract_files_sync.md"
+
 ### Batch Extract Bytes
 
 === "Python"
@@ -226,6 +269,10 @@ Process multiple files concurrently for better performance.
 === "Go"
 
     --8<-- "snippets/go/batch_extract_bytes_sync.md"
+
+=== "C#"
+
+    --8<-- "snippets/csharp/batch_extract_bytes_sync.md"
 
 ```mermaid
 flowchart TD
@@ -307,6 +354,10 @@ All extraction functions raise exceptions on failure:
 === "Go"
 
     --8<-- "snippets/go/error_handling.md"
+
+=== "C#"
+
+    --8<-- "snippets/csharp/error_handling.md"
 
 !!! warning "System Errors"
     `OSError` (Python), `IOException` (Rust), and system-level errors always bubble up to users. These indicate real system problems that need to be addressed (permissions, disk space, etc.).

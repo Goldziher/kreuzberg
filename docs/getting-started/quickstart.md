@@ -30,6 +30,10 @@ Extract text from any supported document format:
 
     --8<-- "snippets/go/extract_file_sync.md"
 
+=== "C#"
+
+    --8<-- "snippets/csharp/extract_file_sync.md"
+
 === "CLI"
 
     --8<-- "snippets/cli/extract_basic.md"
@@ -61,6 +65,10 @@ For better performance with I/O-bound operations:
 === "Go"
 
     --8<-- "snippets/go/extract_file_async.md"
+
+=== "C#"
+
+    --8<-- "snippets/csharp/extract_file_async.md"
 
 === "CLI"
 
@@ -96,6 +104,10 @@ Extract text from images and scanned documents:
 
     --8<-- "snippets/go/ocr_extraction.md"
 
+=== "C#"
+
+    --8<-- "snippets/csharp/ocr_extraction.md"
+
 === "CLI"
 
     --8<-- "snippets/cli/ocr_basic.md"
@@ -128,6 +140,10 @@ Process multiple files concurrently:
 
     --8<-- "snippets/go/batch_extract_files_sync.md"
 
+=== "C#"
+
+    --8<-- "snippets/csharp/batch_extract_files_sync.md"
+
 === "CLI"
 
     --8<-- "snippets/cli/batch_basic.md"
@@ -159,6 +175,10 @@ When you already have file content in memory:
 === "Go"
 
     --8<-- "snippets/go/extract_bytes_sync.md"
+
+=== "C#"
+
+    --8<-- "snippets/csharp/extract_bytes_sync.md"
 
 === "CLI"
 

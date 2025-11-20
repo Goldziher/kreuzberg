@@ -63,6 +63,21 @@ Main extraction configuration controlling all aspects of document processing.
 
     --8<-- "snippets/go/config_basic.md"
 
+=== "C#"
+
+    ```csharp
+    using Kreuzberg;
+
+    var config = new ExtractionConfig
+    {
+        UseCache = true,
+        EnableQualityProcessing = true,
+        ForceOcr = false,
+    };
+
+    var result = KreuzbergClient.ExtractFileSync("document.pdf", config);
+    ```
+
 ---
 
 ## OcrConfig

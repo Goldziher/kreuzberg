@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+
+    <PackageId>Goldziher.Kreuzberg</PackageId>
+    <Version>4.0.0-rc.1</Version>
+    <Authors>Na'aman Hirschfeld</Authors>
+    <Company>Goldziher</Company>
+    <Description>High-performance document intelligence for .NET powered by the Kreuzberg Rust core.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://kreuzberg.dev</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Goldziher/kreuzberg</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>kreuzberg;document;extraction;rust;ffi</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>
