@@ -229,60 +229,24 @@ Configuration for automatic language detection in extracted text.
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, LanguageDetectionConfig
-
-    config = ExtractionConfig(
-        language_detection=LanguageDetectionConfig(
-            enabled=True,
-            min_confidence=0.9,
-            detect_multiple=True
-        )
-    )
-    ```
+    --8<-- "snippets/python/language_detection.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, LanguageDetectionConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      languageDetection: {
-        enabled: true,
-        minConfidence: 0.9,
-        detectMultiple: true
-      }
-    };
-    ```
+    --8<-- "snippets/typescript/language_detection.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, LanguageDetectionConfig};
-
-    let config = ExtractionConfig {
-        language_detection: Some(LanguageDetectionConfig {
-            enabled: true,
-            min_confidence: 0.9,
-            detect_multiple: true,
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/language_detection.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.LanguageDetectionConfig;
+    --8<-- "snippets/java/language_detection.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .languageDetection(LanguageDetectionConfig.builder()
-            .enabled(true)
-            .minConfidence(0.9)
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/language_detection.md"
+
 
 ---
 
@@ -300,66 +264,24 @@ PDF-specific extraction configuration.
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, PdfConfig
-
-    config = ExtractionConfig(
-        pdf_options=PdfConfig(
-            extract_images=True,
-            extract_metadata=True,
-            passwords=["password1", "password2", "secret123"]
-        )
-    )
-    ```
+    --8<-- "snippets/python/pdf_config.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, PdfConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      pdfOptions: {
-        extractImages: true,
-        extractMetadata: true,
-        passwords: ['password1', 'password2', 'secret123']
-      }
-    };
-    ```
+    --8<-- "snippets/typescript/pdf_config.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, PdfConfig};
-
-    let config = ExtractionConfig {
-        pdf_options: Some(PdfConfig {
-            extract_images: true,
-            extract_metadata: true,
-            passwords: Some(vec![
-                "password1".to_string(),
-                "password2".to_string(),
-                "secret123".to_string()
-            ]),
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/pdf_config.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.PdfConfig;
-    import java.util.Arrays;
+    --8<-- "snippets/java/pdf_config.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .pdfOptions(PdfConfig.builder()
-            .extractImages(true)
-            .extractMetadata(true)
-            .passwords(Arrays.asList("password1", "password2", "secret123"))
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/pdf_config.md"
+
 
 ---
 
