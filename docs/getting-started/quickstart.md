@@ -177,273 +177,27 @@ Customize extraction behavior:
 
 === "Python"
 
-    ```python
-    from kreuzberg import (
-        extract_file_sync,
-        ExtractionConfig,
-        OcrConfig,
-        ChunkingConfig,
-        TokenReductionConfig,
-        LanguageDetectionConfig
-    )
-
-    config = ExtractionConfig(
-        # Enable OCR
-        ocr=OcrConfig(
-            backend="tesseract",
-            language="eng+deu"  # Multiple languages
-        ),
-
-        # Enable chunking for LLM processing
-        chunking=ChunkingConfig(
-            max_chunk_size=1000,
-            overlap=100
-        ),
-
-        # Enable token reduction
-        token_reduction=TokenReductionConfig(
-            enabled=True,
-            target_reduction=0.3  # Reduce by 30%
-        ),
-
-        # Enable language detection
-        language_detection=LanguageDetectionConfig(
-            enabled=True,
-            detect_multiple=True
-        ),
-
-        # Enable caching
-        use_cache=True,
-
-        # Enable quality processing
-        enable_quality_processing=True
-    )
-
-    result = extract_file_sync("document.pdf", config=config)
-
-    # Access chunks
-    for chunk in result.chunks:
-        print(f"Chunk: {chunk.text[:100]}...")
-
-    # Access detected languages
-    if result.detected_languages:
-        print(f"Languages: {result.detected_languages}")
-    ```
+    --8<-- "snippets/python/advanced_config.md"
 
 === "TypeScript"
 
-    ```typescript
-    import {
-        extractFileSync,
-        ExtractionConfig,
-        OcrConfig,
-        ChunkingConfig,
-        TokenReductionConfig,
-        LanguageDetectionConfig
-    } from 'kreuzberg';
-
-    const config = new ExtractionConfig({
-        // Enable OCR
-        ocr: new OcrConfig({
-            backend: 'tesseract',
-            language: 'eng+deu'  // Multiple languages
-        }),
-
-        // Enable chunking for LLM processing
-        chunking: new ChunkingConfig({
-            maxChunkSize: 1000,
-            overlap: 100
-        }),
-
-        // Enable token reduction
-        tokenReduction: new TokenReductionConfig({
-            enabled: true,
-            targetReduction: 0.3  // Reduce by 30%
-        }),
-
-        // Enable language detection
-        languageDetection: new LanguageDetectionConfig({
-            enabled: true,
-            detectMultiple: true
-        }),
-
-        // Enable caching
-        useCache: true,
-
-        // Enable quality processing
-        enableQualityProcessing: true
-    });
-
-    const result = extractFileSync('document.pdf', null, config);
-
-    // Access chunks
-    for (const chunk of result.chunks) {
-        console.log(`Chunk: ${chunk.text.substring(0, 100)}...`);
-    }
-
-    // Access detected languages
-    if (result.detectedLanguages) {
-        console.log(`Languages: ${result.detectedLanguages}`);
-    }
-    ```
+    --8<-- "snippets/typescript/advanced_config.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{
-        extract_file_sync,
-        ExtractionConfig,
-        OcrConfig,
-        ChunkingConfig,
-        LanguageDetectionConfig
-    };
-
-    fn main() -> kreuzberg::Result<()> {
-        let config = ExtractionConfig {
-            // Enable OCR
-            ocr: Some(OcrConfig {
-                backend: "tesseract".to_string(),
-                language: Some("eng+deu".to_string()),  // Multiple languages
-                ..Default::default()
-            }),
-
-            // Enable chunking for LLM processing
-            chunking: Some(ChunkingConfig {
-                max_chunk_size: 1000,
-                overlap: 100,
-            }),
-
-            // Enable language detection
-            language_detection: Some(LanguageDetectionConfig {
-                enabled: true,
-                detect_multiple: true,
-                ..Default::default()
-            }),
-
-            // Enable caching
-            use_cache: true,
-
-            // Enable quality processing
-            enable_quality_processing: true,
-
-            ..Default::default()
-        };
-
-        let result = extract_file_sync("document.pdf", None, &config)?;
-
-        // Access chunks
-        if let Some(chunks) = result.chunks {
-            for chunk in chunks {
-                println!("Chunk: {}...", &chunk[..100.min(chunk.len())]);
-            }
-        }
-
-        // Access detected languages
-        if let Some(languages) = result.detected_languages {
-            println!("Languages: {:?}", languages);
-        }
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/advanced_config.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::Config::Extraction.new(
-      # Enable OCR
-      ocr: Kreuzberg::Config::OCR.new(
-        backend: 'tesseract',
-        language: 'eng+deu'  # Multiple languages
-      ),
-
-      # Enable chunking for LLM processing
-      chunking: Kreuzberg::Config::Chunking.new(
-        max_chars: 1000,
-        max_overlap: 100
-      ),
-
-      # Enable language detection
-      language_detection: Kreuzberg::Config::LanguageDetection.new,
-
-      # Enable caching
-      use_cache: true,
-
-      # Enable quality processing
-      enable_quality_processing: true
-    )
-
-    result = Kreuzberg.extract_file_sync('document.pdf', config: config)
-
-    # Access chunks
-    if result.chunks
-      result.chunks.each do |chunk|
-        puts "Chunk: #{chunk[0..100]}..."
-      end
-    end
-
-    # Access detected languages
-    if result.detected_languages
-      puts "Languages: #{result.detected_languages}"
-    end
-    ```
+    --8<-- "snippets/ruby/advanced_config.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import dev.kreuzberg.config.*;
-    import java.io.IOException;
+    --8<-- "snippets/java/advanced_config.md"
 
-    public class Main {
-        public static void main(String[] args) {
-            try {
-                ExtractionConfig config = ExtractionConfig.builder()
-                    // Enable OCR
-                    .ocr(OcrConfig.builder()
-                        .backend("tesseract")
-                        .language("eng+deu")  // Multiple languages
-                        .build())
+=== "Go"
 
-                    // Enable chunking for LLM processing
-                    .chunking(ChunkingConfig.builder()
-                        .maxChars(1000)
-                        .maxOverlap(100)
-                        .build())
-
-                    // Enable token reduction
-                    .tokenReduction(TokenReductionConfig.builder()
-                        .mode("moderate")
-                        .preserveImportantWords(true)
-                        .build())
-
-                    // Enable language detection
-                    .languageDetection(LanguageDetectionConfig.builder()
-                        .enabled(true)
-                        .build())
-
-                    // Enable caching
-                    .useCache(true)
-
-                    // Enable quality processing
-                    .enableQualityProcessing(true)
-                    .build();
-
-                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
-
-                // Access detected languages
-                if (!result.getDetectedLanguages().isEmpty()) {
-                    System.out.println("Languages: " + result.getDetectedLanguages());
-                }
-            } catch (IOException | KreuzbergException e) {
-                System.err.println("Extraction failed: " + e.getMessage());
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/go/advanced_config.md"
 
 ## Working with Metadata
 
@@ -451,151 +205,27 @@ Access format-specific metadata from extracted documents:
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig
-
-    result = extract_file_sync("document.pdf", config=ExtractionConfig())
-
-    # Access PDF metadata
-    if result.metadata.get("pdf"):
-        pdf_meta = result.metadata["pdf"]
-        print(f"Pages: {pdf_meta.get('page_count')}")
-        print(f"Author: {pdf_meta.get('author')}")
-        print(f"Title: {pdf_meta.get('title')}")
-
-    # Access HTML metadata
-    result = extract_file_sync("page.html", config=ExtractionConfig())
-    if result.metadata.get("html"):
-        html_meta = result.metadata["html"]
-        print(f"Title: {html_meta.get('title')}")
-        print(f"Description: {html_meta.get('description')}")
-        print(f"Open Graph Image: {html_meta.get('og_image')}")
-    ```
+    --8<-- "snippets/python/metadata.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFileSync, ExtractionConfig } from 'kreuzberg';
-
-    const result = extractFileSync('document.pdf', null, new ExtractionConfig());
-
-    // Access PDF metadata
-    if (result.metadata.pdf) {
-        console.log(`Pages: ${result.metadata.pdf.pageCount}`);
-        console.log(`Author: ${result.metadata.pdf.author}`);
-        console.log(`Title: ${result.metadata.pdf.title}`);
-    }
-
-    // Access HTML metadata
-    const htmlResult = extractFileSync('page.html', null, new ExtractionConfig());
-    if (htmlResult.metadata.html) {
-        console.log(`Title: ${htmlResult.metadata.html.title}`);
-        console.log(`Description: ${htmlResult.metadata.html.description}`);
-        console.log(`Open Graph Image: ${htmlResult.metadata.html.ogImage}`);
-    }
-    ```
+    --8<-- "snippets/typescript/metadata.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default())?;
-
-        // Access PDF metadata
-        if let Some(pdf_meta) = result.metadata.pdf {
-            if let Some(pages) = pdf_meta.page_count {
-                println!("Pages: {}", pages);
-            }
-            if let Some(author) = pdf_meta.author {
-                println!("Author: {}", author);
-            }
-            if let Some(title) = pdf_meta.title {
-                println!("Title: {}", title);
-            }
-        }
-
-        // Access HTML metadata
-        let html_result = extract_file_sync("page.html", None, &ExtractionConfig::default())?;
-        if let Some(html_meta) = html_result.metadata.html {
-            if let Some(title) = html_meta.title {
-                println!("Title: {}", title);
-            }
-            if let Some(desc) = html_meta.description {
-                println!("Description: {}", desc);
-            }
-            if let Some(og_img) = html_meta.og_image {
-                println!("Open Graph Image: {}", og_img);
-            }
-        }
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/metadata.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    result = Kreuzberg.extract_file_sync('document.pdf')
-
-    # Access PDF metadata
-    if result.metadata['pdf']
-      pdf_meta = result.metadata['pdf']
-      puts "Pages: #{pdf_meta['page_count']}"
-      puts "Author: #{pdf_meta['author']}"
-      puts "Title: #{pdf_meta['title']}"
-    end
-
-    # Access HTML metadata
-    html_result = Kreuzberg.extract_file_sync('page.html')
-    if html_result.metadata['html']
-      html_meta = html_result.metadata['html']
-      puts "Title: #{html_meta['title']}"
-      puts "Description: #{html_meta['description']}"
-      puts "Open Graph Image: #{html_meta['og_image']}"
-    end
-    ```
+    --8<-- "snippets/ruby/metadata.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
-    import java.util.Map;
+    --8<-- "snippets/java/metadata.md"
 
-    public class Main {
-        public static void main(String[] args) {
-            try {
-                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+=== "Go"
 
-                // Access PDF metadata
-                @SuppressWarnings("unchecked")
-                Map<String, Object> pdfMeta = (Map<String, Object>) result.getMetadata().get("pdf");
-                if (pdfMeta != null) {
-                    System.out.println("Pages: " + pdfMeta.get("page_count"));
-                    System.out.println("Author: " + pdfMeta.get("author"));
-                    System.out.println("Title: " + pdfMeta.get("title"));
-                }
-
-                // Access HTML metadata
-                ExtractionResult htmlResult = Kreuzberg.extractFileSync("page.html");
-                @SuppressWarnings("unchecked")
-                Map<String, Object> htmlMeta = (Map<String, Object>) htmlResult.getMetadata().get("html");
-                if (htmlMeta != null) {
-                    System.out.println("Title: " + htmlMeta.get("title"));
-                    System.out.println("Description: " + htmlMeta.get("description"));
-                    System.out.println("Open Graph Image: " + htmlMeta.get("og_image"));
-                }
-            } catch (IOException | KreuzbergException e) {
-                System.err.println("Extraction failed: " + e.getMessage());
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/go/metadata.md"
 
 Kreuzberg extracts format-specific metadata for:
 - **PDF**: page count, title, author, subject, keywords, dates
@@ -616,112 +246,27 @@ Extract and process tables from documents:
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig
-
-    result = extract_file_sync("document.pdf", config=ExtractionConfig())
-
-    # Iterate over tables
-    for table in result.tables:
-        print(f"Table with {len(table.cells)} rows")
-        print(table.markdown)  # Markdown representation
-
-        # Access cells
-        for row in table.cells:
-            print(row)
-    ```
+    --8<-- "snippets/python/tables.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFileSync, ExtractionConfig } from 'kreuzberg';
-
-    const result = extractFileSync('document.pdf', null, new ExtractionConfig());
-
-    // Iterate over tables
-    for (const table of result.tables) {
-        console.log(`Table with ${table.cells.length} rows`);
-        console.log(table.markdown);  // Markdown representation
-
-        // Access cells
-        for (const row of table.cells) {
-            console.log(row);
-        }
-    }
-    ```
+    --8<-- "snippets/typescript/tables.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default())?;
-
-        // Iterate over tables
-        for table in &result.tables {
-            println!("Table with {} rows", table.cells.len());
-            println!("{}", table.markdown);  // Markdown representation
-
-            // Access cells
-            for row in &table.cells {
-                println!("{:?}", row);
-            }
-        }
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/tables.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    result = Kreuzberg.extract_file_sync('document.pdf')
-
-    # Iterate over tables
-    result.tables.each do |table|
-      puts "Table with #{table['cells'].length} rows"
-      puts table['markdown']  # Markdown representation
-
-      # Access cells
-      table['cells'].each do |row|
-        puts row
-      end
-    end
-    ```
+    --8<-- "snippets/ruby/tables.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import dev.kreuzberg.Table;
-    import java.io.IOException;
-    import java.util.List;
+    --8<-- "snippets/java/tables.md"
 
-    public class Main {
-        public static void main(String[] args) {
-            try {
-                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+=== "Go"
 
-                // Iterate over tables
-                for (Table table : result.getTables()) {
-                    System.out.println("Table with " + table.cells().size() + " rows");
-                    System.out.println(table.markdown());  // Markdown representation
-
-                    // Access cells
-                    for (List<String> row : table.cells()) {
-                        System.out.println(row);
-                    }
-                }
-            } catch (IOException | KreuzbergException e) {
-                System.err.println("Extraction failed: " + e.getMessage());
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/go/tables.md"
 
 ## Error Handling
 
@@ -729,121 +274,27 @@ Handle extraction errors gracefully:
 
 === "Python"
 
-    ```python
-    from kreuzberg import (
-        extract_file_sync,
-        ExtractionConfig,
-        KreuzbergError,
-        ValidationError,
-        ParsingError,
-        OCRError
-    )
-
-    try:
-        result = extract_file_sync("document.pdf", config=ExtractionConfig())
-        print(result.content)
-    except ValidationError as e:
-        print(f"Invalid configuration: {e}")
-    except ParsingError as e:
-        print(f"Failed to parse document: {e}")
-    except OCRError as e:
-        print(f"OCR processing failed: {e}")
-    except KreuzbergError as e:
-        print(f"Extraction error: {e}")
-    ```
+    --8<-- "snippets/python/error_handling.md"
 
 === "TypeScript"
 
-    ```typescript
-    import {
-        extractFileSync,
-        ExtractionConfig,
-        KreuzbergError
-    } from 'kreuzberg';
-
-    try {
-        const result = extractFileSync('document.pdf', null, new ExtractionConfig());
-        console.log(result.content);
-    } catch (error) {
-        if (error instanceof KreuzbergError) {
-            console.error(`Extraction error: ${error.message}`);
-        } else {
-            throw error;
-        }
-    }
-    ```
+    --8<-- "snippets/typescript/error_handling.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file_sync, ExtractionConfig, KreuzbergError};
-
-    fn main() {
-        let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default());
-
-        match result {
-            Ok(extraction) => {
-                println!("{}", extraction.content);
-            }
-            Err(KreuzbergError::Validation(msg)) => {
-                eprintln!("Invalid configuration: {}", msg);
-            }
-            Err(KreuzbergError::Parsing(msg)) => {
-                eprintln!("Failed to parse document: {}", msg);
-            }
-            Err(KreuzbergError::Ocr(msg)) => {
-                eprintln!("OCR processing failed: {}", msg);
-            }
-            Err(e) => {
-                eprintln!("Extraction error: {}", e);
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/rust/error_handling.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    begin
-      result = Kreuzberg.extract_file_sync('document.pdf')
-      puts result.content
-    rescue StandardError => e
-      puts "Extraction error: #{e.message}"
-    end
-    ```
+    --8<-- "snippets/ruby/error_handling.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import dev.kreuzberg.ValidationException;
-    import dev.kreuzberg.ParsingException;
-    import dev.kreuzberg.OcrException;
-    import java.io.IOException;
+    --8<-- "snippets/java/error_handling.md"
 
-    public class Main {
-        public static void main(String[] args) {
-            try {
-                ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
-                System.out.println(result.getContent());
-            } catch (ValidationException e) {
-                System.err.println("Invalid configuration: " + e.getMessage());
-            } catch (ParsingException e) {
-                System.err.println("Failed to parse document: " + e.getMessage());
-            } catch (OcrException e) {
-                System.err.println("OCR processing failed: " + e.getMessage());
-            } catch (IOException e) {
-                System.err.println("File error: " + e.getMessage());
-            } catch (KreuzbergException e) {
-                System.err.println("Extraction error: " + e.getMessage());
-            }
-        }
-    }
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/error_handling.md"
 
 ## Next Steps
 
