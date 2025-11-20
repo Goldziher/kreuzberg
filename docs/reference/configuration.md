@@ -195,58 +195,23 @@ Configuration for splitting extracted text into overlapping chunks, useful for v
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, ChunkingConfig
-
-    config = ExtractionConfig(
-        chunking=ChunkingConfig(
-            max_chars=1000,
-            max_overlap=200
-        )
-    )
-    ```
+    --8<-- "snippets/python/chunking.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, ChunkingConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      chunking: {
-        maxChars: 1000,
-        maxOverlap: 200
-      }
-    };
-    ```
+    --8<-- "snippets/typescript/chunking.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, ChunkingConfig};
-
-    let config = ExtractionConfig {
-        chunking: Some(ChunkingConfig {
-            max_chars: 1000,
-            max_overlap: 200,
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/chunking.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.ChunkingConfig;
+    --8<-- "snippets/java/chunking.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .chunking(ChunkingConfig.builder()
-            .maxChars(1000)
-            .maxOverlap(200)
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/chunking.md"
 
 ---
 
