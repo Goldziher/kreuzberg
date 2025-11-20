@@ -143,6 +143,10 @@ Extract content from custom file formats or override built-in extractors.
     register_document_extractor(CustomJsonExtractor())
     ```
 
+=== "Go"
+
+    --8<-- "snippets/go/plugin_validator.md"
+
 ### Registration
 
 === "Rust"

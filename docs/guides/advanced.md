@@ -107,6 +107,10 @@ Kreuzberg uses the `text-splitter` library with two chunking strategies:
         .build();
     ```
 
+=== "Go"
+
+    --8<-- "snippets/go/chunking.md"
+
 !!! note "Ruby Support"
     Ruby bindings are currently under development and not yet production-ready.
 
@@ -178,6 +182,10 @@ Each chunk includes:
       }
     }
     ```
+
+=== "Go"
+
+    --8<-- "snippets/go/chunking.md"
 
 === "Rust"
 

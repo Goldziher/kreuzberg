@@ -32,15 +32,55 @@ Kreuzberg supports four ways to configure extraction:
 
 === "Programmatic"
 
-    ```python
-    from kreuzberg import extract_file, ExtractionConfig, OcrConfig
+    --8<-- "snippets/python/config_programmatic.md"
 
-    config = ExtractionConfig(
-        use_cache=True,
-        ocr=OcrConfig(backend="tesseract")
-    )
-    result = extract_file("document.pdf", config=config)
+=== "TypeScript"
+
+    ```typescript
+    import { ExtractionConfig, extractFile } from '@kreuzberg/sdk';
+
+    const config = await ExtractionConfig.discover();
+    const result = await extractFile('document.pdf', { config });
     ```
+
+=== "Rust"
+
+    ```rust
+    use kreuzberg::ExtractionConfig;
+
+    let config = ExtractionConfig::discover()?;
+    let result = extract_file("document.pdf", None, &config).await?;
+    ```
+
+=== "Ruby"
+
+    ```ruby
+    require 'kreuzberg'
+
+    config = Kreuzberg::ExtractionConfig.discover
+    result = Kreuzberg.extract_file('document.pdf', config: config)
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.config.ExtractionConfig;
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.KreuzbergException;
+    import java.io.IOException;
+
+    ExtractionConfig config = ExtractionConfig.discover();
+    ExtractionResult result = Kreuzberg.extractFile("document.pdf", null, config);
+    ```
+
+=== "Go"
+
+    --8<-- "snippets/go/config_file.md"
+
+=== "Go"
+
+    --8<-- "snippets/go/config_programmatic.md"
 
 === "TOML File"
 

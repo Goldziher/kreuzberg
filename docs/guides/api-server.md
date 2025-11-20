@@ -85,6 +85,29 @@ A Model Context Protocol server that exposes Kreuzberg as tools for AI agents an
     }
     ```
 
+=== "Go"
+
+    ```go
+    package main
+
+    import (
+        "log"
+        "os/exec"
+    )
+
+    func main() {
+        cmd := exec.Command("kreuzberg", "serve", "-H", "0.0.0.0", "-p", "8000")
+        cmd.Stdout = log.Writer()
+        cmd.Stderr = log.Writer()
+        if err := cmd.Start(); err != nil {
+            log.Fatalf("failed to start server: %v", err)
+        }
+        if err := cmd.Wait(); err != nil {
+            log.Fatalf("server exited with error: %v", err)
+        }
+    }
+    ```
+
 === "Docker"
 
     ```bash
