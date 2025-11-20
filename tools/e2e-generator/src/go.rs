@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
 )
@@ -63,12 +64,32 @@ func buildConfig(t *testing.T, raw []byte) *kreuzberg.ExtractionConfig {
 	return &cfg
 }
 
+func shouldSkipMissingDependency(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return ' '
+		}
+		return r
+	}, strings.ToLower(err.Error()))
+
+	if strings.Contains(message, "missing dependency") || strings.Contains(message, "libreoffice") {
+		return true
+	}
+	return false
+}
+
 func runExtraction(t *testing.T, relativePath string, configJSON []byte) *kreuzberg.ExtractionResult {
 	t.Helper()
 	documentPath := ensureDocument(t, relativePath, true)
 	config := buildConfig(t, configJSON)
 	result, err := kreuzberg.ExtractFileSync(documentPath, config)
 	if err != nil {
+		if shouldSkipMissingDependency(err) {
+			t.Skipf("Skipping %s: dependency unavailable (%v)", relativePath, err)
+		}
 		t.Fatalf("extractFileSync(%s) failed: %v", documentPath, err)
 	}
 	return result

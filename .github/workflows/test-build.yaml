@@ -177,7 +177,7 @@ jobs:
           cache-key-prefix: java
 
       - name: Build Java binding
-        run: mvn -f packages/java/pom.xml -DskipTests compile
+        run: mvn -f packages/java/pom.xml -DskipTests package
 
   go:
     name: Build Go bindings

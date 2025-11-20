@@ -149,7 +149,7 @@ jobs:
           cache-key-prefix: java-e2e
 
       - name: Build Java binding
-        run: mvn -f packages/java/pom.xml -DskipTests compile
+        run: mvn -f packages/java/pom.xml -DskipTests package
 
       - name: Run Java E2E suite
         uses: ./.github/actions/run-and-ensure-clean

@@ -333,6 +333,7 @@ tasks:
   e2e:java:verify:
     desc: Regenerate and validate Java E2E suite
     cmds:
+      - task: java:build
       - task: e2e:java:generate
       - task: e2e:java:test
   e2e:go:generate:
