@@ -965,70 +965,27 @@ Configuration for reducing token count in extracted text.
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, TokenReductionConfig
-
-    config = ExtractionConfig(
-        token_reduction=TokenReductionConfig(
-            mode="moderate",
-            preserve_important_words=True
-        )
-    )
-    ```
+    --8<-- "snippets/python/token_reduction.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, TokenReductionConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      tokenReduction: new TokenReductionConfig({
-        mode: 'moderate',
-        preserveImportantWords: true
-      })
-    });
-    ```
+    --8<-- "snippets/typescript/token_reduction.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, TokenReductionConfig};
-
-    let config = ExtractionConfig {
-        token_reduction: Some(TokenReductionConfig {
-            mode: "moderate".to_string(),
-            preserve_important_words: true,
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/token_reduction.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      token_reduction: Kreuzberg::TokenReductionConfig.new(
-        mode: 'moderate',
-        preserve_important_words: true
-      )
-    )
-    ```
+    --8<-- "snippets/ruby/token_reduction.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.TokenReductionConfig;
+    --8<-- "snippets/java/token_reduction.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .tokenReduction(TokenReductionConfig.builder()
-            .mode("moderate")
-            .preserveImportantWords(true)
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/token_reduction.md"
 
 ## LanguageDetectionConfig
 
