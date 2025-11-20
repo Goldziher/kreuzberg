@@ -17,8 +17,15 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 kreuzberg = { path = "../kreuzberg", features = ["full"] }
 serde_json = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 async-trait = "0.1.89"
 tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros", "sync"] }
+html-to-markdown-rs = { version = "2.8.3", default-features = false, optional = true }
 
 [build-dependencies]
 cbindgen = "0.29"
+
+[features]
+default = ["html", "embeddings"]
+html = ["html-to-markdown-rs"]
+embeddings = ["kreuzberg/embeddings"]

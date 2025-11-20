@@ -2816,7 +2816,9 @@ version = "4.0.0-rc.1"
 dependencies = [
  "async-trait",
  "cbindgen",
+ "html-to-markdown-rs",
  "kreuzberg",
+ "serde",
  "serde_json",
  "tokio",
 ]

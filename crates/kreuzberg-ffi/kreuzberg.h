@@ -193,6 +193,49 @@ typedef char *(*ValidatorCallback)(const char *result_json);
 struct CExtractionResult *kreuzberg_extract_file_sync(const char *file_path);
 
 /**
+ * Detect MIME type from a file path.
+ *
+ * # Safety
+ *
+ * - `file_path` must be a valid null-terminated C string
+ * - The returned string must be freed with `kreuzberg_free_string`
+ * - Returns NULL on error (check `kreuzberg_last_error`)
+ */
+char *kreuzberg_detect_mime_type(const char *file_path, bool check_exists);
+
+/**
+ * Validate that a MIME type is supported by Kreuzberg.
+ *
+ * # Safety
+ *
+ * - `mime_type` must be a valid null-terminated C string
+ * - The returned string must be freed with `kreuzberg_free_string`
+ * - Returns NULL on error (check `kreuzberg_last_error`)
+ */
+char *kreuzberg_validate_mime_type(const char *mime_type);
+
+/**
+ * List available embedding preset names.
+ *
+ * # Safety
+ *
+ * - Returned string is a JSON array and must be freed with `kreuzberg_free_string`
+ * - Returns NULL on error (check `kreuzberg_last_error`)
+ */
+char *kreuzberg_list_embedding_presets(void);
+
+/**
+ * Get a specific embedding preset by name.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - Returned string is JSON object and must be freed with `kreuzberg_free_string`
+ * - Returns NULL on error (check `kreuzberg_last_error`)
+ */
+char *kreuzberg_get_embedding_preset(const char *name);
+
+/**
  * Extract text and metadata from a file with custom configuration (synchronous).
  *
  * # Safety
@@ -350,6 +393,17 @@ void kreuzberg_free_batch_result(struct CBatchResult *batch_result);
 void kreuzberg_free_string(char *s);
 
 /**
+ * Clone a null-terminated string using Rust's allocator.
+ *
+ * # Safety
+ *
+ * - `s` must be a valid null-terminated UTF-8 string
+ * - Returned pointer must be freed with `kreuzberg_free_string`
+ * - Returns NULL on error (check `kreuzberg_last_error`)
+ */
+char *kreuzberg_clone_string(const char *s);
+
+/**
  * Free an extraction result returned by `kreuzberg_extract_file_sync`.
  *
  * # Safety
@@ -441,6 +495,18 @@ const char *kreuzberg_version(void);
 bool kreuzberg_register_ocr_backend(const char *name, OcrBackendCallback callback);
 
 /**
+ * Register a custom OCR backend with explicit language support via FFI callback.
+ *
+ * # Safety
+ *
+ * - `languages_json` must be a null-terminated JSON array of language codes or NULL
+ * - See `kreuzberg_register_ocr_backend` for additional safety notes.
+ */
+bool kreuzberg_register_ocr_backend_with_languages(const char *name,
+                                                   OcrBackendCallback callback,
+                                                   const char *languages_json);
+
+/**
  * Register a custom PostProcessor via FFI callback.
  *
  * # Safety
@@ -473,6 +539,25 @@ bool kreuzberg_register_post_processor(const char *name,
                                        int32_t priority);
 
 /**
+ * Register a custom PostProcessor with an explicit processing stage.
+ *
+ * # Safety
+ *
+ * - `name` must be a valid null-terminated C string
+ * - `stage` must be a valid null-terminated C string containing "early", "middle", or "late"
+ * - `callback` must be a valid function pointer that:
+ *   - Does not store the result_json pointer
+ *   - Returns a null-terminated UTF-8 JSON string or NULL on error
+ *   - The returned string must be freeable by kreuzberg_free_string
+ * - `priority` determines the order of execution within the stage (higher priority runs first)
+ * - Returns true on success, false on error (check kreuzberg_last_error)
+ */
+bool kreuzberg_register_post_processor_with_stage(const char *name,
+                                                  PostProcessorCallback callback,
+                                                  int32_t priority,
+                                                  const char *stage);
+
+/**
  * Unregister a PostProcessor by name.
  *
  * # Safety
@@ -491,6 +576,26 @@ bool kreuzberg_register_post_processor(const char *name,
  * ```
  */
 bool kreuzberg_unregister_post_processor(const char *name);
+
+/**
+ * Clear all registered PostProcessors.
+ *
+ * # Safety
+ *
+ * - Removes all registered processors. Subsequent extractions will run without them.
+ * - Returns true on success, false on error.
+ */
+bool kreuzberg_clear_post_processors(void);
+
+/**
+ * List all registered PostProcessors as a JSON array of names.
+ *
+ * # Safety
+ *
+ * - Returned string must be freed with `kreuzberg_free_string`.
+ * - Returns NULL on error (check `kreuzberg_last_error`).
+ */
+char *kreuzberg_list_post_processors(void);
 
 /**
  * Register a custom Validator via FFI callback.
@@ -546,5 +651,25 @@ bool kreuzberg_register_validator(const char *name, ValidatorCallback callback, 
  * ```
  */
 bool kreuzberg_unregister_validator(const char *name);
+
+/**
+ * Clear all registered Validators.
+ *
+ * # Safety
+ *
+ * - Removes all validators. Subsequent extractions will skip custom validation.
+ * - Returns true on success, false on error.
+ */
+bool kreuzberg_clear_validators(void);
+
+/**
+ * List all registered Validators as a JSON array of names.
+ *
+ * # Safety
+ *
+ * - Returned string must be freed with `kreuzberg_free_string`.
+ * - Returns NULL on error (check `kreuzberg_last_error`).
+ */
+char *kreuzberg_list_validators(void);
 
 #endif  /* KREUZBERG_FFI_H */

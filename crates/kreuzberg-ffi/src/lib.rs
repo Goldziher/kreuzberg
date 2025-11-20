@@ -13,9 +13,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
 use kreuzberg::plugins::registry::get_ocr_backend_registry;
-use kreuzberg::plugins::{OcrBackend, Plugin};
+use kreuzberg::plugins::{OcrBackend, Plugin, ProcessingStage};
 use kreuzberg::types::ExtractionResult;
 use kreuzberg::{KreuzbergError, Result};
+use serde::Serialize;
 
 // Thread-local storage for the last error message
 thread_local! {
@@ -30,6 +31,372 @@ fn set_last_error(err: String) {
 /// Clear the last error message
 fn clear_last_error() {
     LAST_ERROR.with(|last| *last.borrow_mut() = None);
+}
+
+fn string_to_c_string(value: String) -> std::result::Result<*mut c_char, String> {
+    CString::new(value)
+        .map(CString::into_raw)
+        .map_err(|e| format!("Failed to create C string: {}", e))
+}
+
+type FfiResult<T> = std::result::Result<T, String>;
+
+#[cfg(feature = "html")]
+fn parse_extraction_config_from_json(config_str: &str) -> FfiResult<ExtractionConfig> {
+    use html_to_markdown_rs::options::{
+        CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, ListIndentType, NewlineStyle,
+        PreprocessingPreset, WhitespaceMode,
+    };
+
+    fn parse_enum<T, F>(value: Option<&serde_json::Value>, parse_fn: F) -> FfiResult<Option<T>>
+    where
+        F: Fn(&str) -> std::result::Result<T, String>,
+    {
+        if let Some(raw) = value {
+            let text = raw
+                .as_str()
+                .ok_or_else(|| "Expected string for html_options enum field".to_string())?;
+            return parse_fn(text).map(Some);
+        }
+        Ok(None)
+    }
+
+    fn parse_heading_style(value: &str) -> FfiResult<HeadingStyle> {
+        match value.to_lowercase().as_str() {
+            "atx" => Ok(HeadingStyle::Atx),
+            "underlined" => Ok(HeadingStyle::Underlined),
+            "atx_closed" => Ok(HeadingStyle::AtxClosed),
+            other => Err(format!(
+                "Invalid heading_style '{}'. Expected one of: atx, underlined, atx_closed",
+                other
+            )),
+        }
+    }
+
+    fn parse_list_indent_type(value: &str) -> FfiResult<ListIndentType> {
+        match value.to_lowercase().as_str() {
+            "spaces" => Ok(ListIndentType::Spaces),
+            "tabs" => Ok(ListIndentType::Tabs),
+            other => Err(format!(
+                "Invalid list_indent_type '{}'. Expected 'spaces' or 'tabs'",
+                other
+            )),
+        }
+    }
+
+    fn parse_highlight_style(value: &str) -> FfiResult<HighlightStyle> {
+        match value.to_lowercase().as_str() {
+            "double_equal" | "==" | "highlight" => Ok(HighlightStyle::DoubleEqual),
+            "html" => Ok(HighlightStyle::Html),
+            "bold" => Ok(HighlightStyle::Bold),
+            "none" => Ok(HighlightStyle::None),
+            other => Err(format!(
+                "Invalid highlight_style '{}'. Expected one of: double_equal, html, bold, none",
+                other
+            )),
+        }
+    }
+
+    fn parse_whitespace_mode(value: &str) -> FfiResult<WhitespaceMode> {
+        match value.to_lowercase().as_str() {
+            "normalized" => Ok(WhitespaceMode::Normalized),
+            "strict" => Ok(WhitespaceMode::Strict),
+            other => Err(format!(
+                "Invalid whitespace_mode '{}'. Expected 'normalized' or 'strict'",
+                other
+            )),
+        }
+    }
+
+    fn parse_newline_style(value: &str) -> FfiResult<NewlineStyle> {
+        match value.to_lowercase().as_str() {
+            "spaces" => Ok(NewlineStyle::Spaces),
+            "backslash" => Ok(NewlineStyle::Backslash),
+            other => Err(format!(
+                "Invalid newline_style '{}'. Expected 'spaces' or 'backslash'",
+                other
+            )),
+        }
+    }
+
+    fn parse_code_block_style(value: &str) -> FfiResult<CodeBlockStyle> {
+        match value.to_lowercase().as_str() {
+            "indented" => Ok(CodeBlockStyle::Indented),
+            "backticks" => Ok(CodeBlockStyle::Backticks),
+            "tildes" => Ok(CodeBlockStyle::Tildes),
+            other => Err(format!(
+                "Invalid code_block_style '{}'. Expected 'indented', 'backticks', or 'tildes'",
+                other
+            )),
+        }
+    }
+
+    fn parse_preprocessing_preset(value: &str) -> FfiResult<PreprocessingPreset> {
+        match value.to_lowercase().as_str() {
+            "minimal" => Ok(PreprocessingPreset::Minimal),
+            "standard" => Ok(PreprocessingPreset::Standard),
+            "aggressive" => Ok(PreprocessingPreset::Aggressive),
+            other => Err(format!(
+                "Invalid preprocessing.preset '{}'. Expected one of: minimal, standard, aggressive",
+                other
+            )),
+        }
+    }
+
+    fn parse_html_options(value: &serde_json::Value) -> FfiResult<ConversionOptions> {
+        let mut opts = ConversionOptions::default();
+        let obj = value
+            .as_object()
+            .ok_or_else(|| "html_options must be an object".to_string())?;
+
+        if let Some(val) = obj.get("heading_style") {
+            opts.heading_style = parse_enum(Some(val), parse_heading_style)?.unwrap_or(opts.heading_style);
+        }
+
+        if let Some(val) = obj.get("list_indent_type") {
+            opts.list_indent_type = parse_enum(Some(val), parse_list_indent_type)?.unwrap_or(opts.list_indent_type);
+        }
+
+        if let Some(val) = obj.get("list_indent_width") {
+            opts.list_indent_width = val
+                .as_u64()
+                .map(|v| v as usize)
+                .ok_or_else(|| "list_indent_width must be an integer".to_string())?;
+        }
+
+        if let Some(val) = obj.get("bullets") {
+            opts.bullets = val
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| "bullets must be a string".to_string())?;
+        }
+
+        if let Some(val) = obj.get("strong_em_symbol") {
+            let symbol = val
+                .as_str()
+                .ok_or_else(|| "strong_em_symbol must be a string".to_string())?;
+            let mut chars = symbol.chars();
+            opts.strong_em_symbol = chars
+                .next()
+                .ok_or_else(|| "strong_em_symbol must not be empty".to_string())?;
+        }
+
+        if let Some(val) = obj.get("escape_asterisks") {
+            opts.escape_asterisks = val
+                .as_bool()
+                .ok_or_else(|| "escape_asterisks must be a boolean".to_string())?;
+        }
+        if let Some(val) = obj.get("escape_underscores") {
+            opts.escape_underscores = val
+                .as_bool()
+                .ok_or_else(|| "escape_underscores must be a boolean".to_string())?;
+        }
+        if let Some(val) = obj.get("escape_misc") {
+            opts.escape_misc = val
+                .as_bool()
+                .ok_or_else(|| "escape_misc must be a boolean".to_string())?;
+        }
+        if let Some(val) = obj.get("escape_ascii") {
+            opts.escape_ascii = val
+                .as_bool()
+                .ok_or_else(|| "escape_ascii must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("code_language") {
+            opts.code_language = val
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| "code_language must be a string".to_string())?;
+        }
+
+        if let Some(val) = obj.get("autolinks") {
+            opts.autolinks = val.as_bool().ok_or_else(|| "autolinks must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("default_title") {
+            opts.default_title = val
+                .as_bool()
+                .ok_or_else(|| "default_title must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("br_in_tables") {
+            opts.br_in_tables = val
+                .as_bool()
+                .ok_or_else(|| "br_in_tables must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("hocr_spatial_tables") {
+            opts.hocr_spatial_tables = val
+                .as_bool()
+                .ok_or_else(|| "hocr_spatial_tables must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("highlight_style") {
+            opts.highlight_style = parse_enum(Some(val), parse_highlight_style)?.unwrap_or(opts.highlight_style);
+        }
+
+        if let Some(val) = obj.get("extract_metadata") {
+            opts.extract_metadata = val
+                .as_bool()
+                .ok_or_else(|| "extract_metadata must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("whitespace_mode") {
+            opts.whitespace_mode = parse_enum(Some(val), parse_whitespace_mode)?.unwrap_or(opts.whitespace_mode);
+        }
+
+        if let Some(val) = obj.get("strip_newlines") {
+            opts.strip_newlines = val
+                .as_bool()
+                .ok_or_else(|| "strip_newlines must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("wrap") {
+            opts.wrap = val.as_bool().ok_or_else(|| "wrap must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("wrap_width") {
+            opts.wrap_width = val
+                .as_u64()
+                .map(|v| v as usize)
+                .ok_or_else(|| "wrap_width must be an integer".to_string())?;
+        }
+
+        if let Some(val) = obj.get("convert_as_inline") {
+            opts.convert_as_inline = val
+                .as_bool()
+                .ok_or_else(|| "convert_as_inline must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("sub_symbol") {
+            opts.sub_symbol = val
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| "sub_symbol must be a string".to_string())?;
+        }
+
+        if let Some(val) = obj.get("sup_symbol") {
+            opts.sup_symbol = val
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| "sup_symbol must be a string".to_string())?;
+        }
+
+        if let Some(val) = obj.get("newline_style") {
+            opts.newline_style = parse_enum(Some(val), parse_newline_style)?.unwrap_or(opts.newline_style);
+        }
+
+        if let Some(val) = obj.get("code_block_style") {
+            opts.code_block_style = parse_enum(Some(val), parse_code_block_style)?.unwrap_or(opts.code_block_style);
+        }
+
+        if let Some(val) = obj.get("keep_inline_images_in") {
+            opts.keep_inline_images_in = val
+                .as_array()
+                .ok_or_else(|| "keep_inline_images_in must be an array".to_string())?
+                .iter()
+                .map(|v| {
+                    v.as_str()
+                        .map(str::to_string)
+                        .ok_or_else(|| "keep_inline_images_in entries must be strings".to_string())
+                })
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+        }
+
+        if let Some(val) = obj.get("encoding") {
+            opts.encoding = val
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| "encoding must be a string".to_string())?;
+        }
+
+        if let Some(val) = obj.get("debug") {
+            opts.debug = val.as_bool().ok_or_else(|| "debug must be a boolean".to_string())?;
+        }
+
+        if let Some(val) = obj.get("strip_tags") {
+            opts.strip_tags = val
+                .as_array()
+                .ok_or_else(|| "strip_tags must be an array".to_string())?
+                .iter()
+                .map(|v| {
+                    v.as_str()
+                        .map(str::to_string)
+                        .ok_or_else(|| "strip_tags entries must be strings".to_string())
+                })
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+        }
+
+        if let Some(val) = obj.get("preserve_tags") {
+            opts.preserve_tags = val
+                .as_array()
+                .ok_or_else(|| "preserve_tags must be an array".to_string())?
+                .iter()
+                .map(|v| {
+                    v.as_str()
+                        .map(str::to_string)
+                        .ok_or_else(|| "preserve_tags entries must be strings".to_string())
+                })
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+        }
+
+        if let Some(val) = obj.get("preprocessing") {
+            let pre = val
+                .as_object()
+                .ok_or_else(|| "preprocessing must be an object".to_string())?;
+            let mut preprocessing = opts.preprocessing.clone();
+
+            if let Some(v) = pre.get("enabled") {
+                preprocessing.enabled = v
+                    .as_bool()
+                    .ok_or_else(|| "preprocessing.enabled must be a boolean".to_string())?;
+            }
+
+            if let Some(v) = pre.get("preset") {
+                let preset = v
+                    .as_str()
+                    .ok_or_else(|| "preprocessing.preset must be a string".to_string())?;
+                preprocessing.preset = parse_preprocessing_preset(preset)?;
+            }
+
+            if let Some(v) = pre.get("remove_navigation") {
+                preprocessing.remove_navigation = v
+                    .as_bool()
+                    .ok_or_else(|| "preprocessing.remove_navigation must be a boolean".to_string())?;
+            }
+
+            if let Some(v) = pre.get("remove_forms") {
+                preprocessing.remove_forms = v
+                    .as_bool()
+                    .ok_or_else(|| "preprocessing.remove_forms must be a boolean".to_string())?;
+            }
+
+            opts.preprocessing = preprocessing;
+        }
+
+        Ok(opts)
+    }
+
+    let value: serde_json::Value =
+        serde_json::from_str(config_str).map_err(|e| format!("Failed to parse config JSON: {}", e))?;
+
+    let html_options = value.get("html_options").map(parse_html_options).transpose()?;
+
+    let mut config: ExtractionConfig =
+        serde_json::from_value(value).map_err(|e| format!("Failed to parse config JSON: {}", e))?;
+
+    if let Some(options) = html_options {
+        config.html_options = Some(options);
+    }
+
+    Ok(config)
+}
+
+#[cfg(not(feature = "html"))]
+fn parse_extraction_config_from_json(config_str: &str) -> FfiResult<ExtractionConfig> {
+    let config = serde_json::from_str::<ExtractionConfig>(config_str)
+        .map_err(|e| format!("Failed to parse config JSON: {}", e))?;
+    Ok(config)
 }
 
 /// C-compatible extraction result structure
@@ -227,6 +594,180 @@ pub unsafe extern "C" fn kreuzberg_extract_file_sync(file_path: *const c_char) -
     }
 }
 
+/// Detect MIME type from a file path.
+///
+/// # Safety
+///
+/// - `file_path` must be a valid null-terminated C string
+/// - The returned string must be freed with `kreuzberg_free_string`
+/// - Returns NULL on error (check `kreuzberg_last_error`)
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_detect_mime_type(file_path: *const c_char, check_exists: bool) -> *mut c_char {
+    clear_last_error();
+
+    if file_path.is_null() {
+        set_last_error("file_path cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    let path_str = match unsafe { CStr::from_ptr(file_path) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in file path: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    match kreuzberg::core::mime::detect_mime_type(path_str, check_exists) {
+        Ok(mime) => match string_to_c_string(mime) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Validate that a MIME type is supported by Kreuzberg.
+///
+/// # Safety
+///
+/// - `mime_type` must be a valid null-terminated C string
+/// - The returned string must be freed with `kreuzberg_free_string`
+/// - Returns NULL on error (check `kreuzberg_last_error`)
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_validate_mime_type(mime_type: *const c_char) -> *mut c_char {
+    clear_last_error();
+
+    if mime_type.is_null() {
+        set_last_error("mime_type cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    let mime_type_str = match unsafe { CStr::from_ptr(mime_type) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in mime_type: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    match kreuzberg::validate_mime_type(mime_type_str) {
+        Ok(validated) => match string_to_c_string(validated) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct SerializableEmbeddingPreset<'a> {
+    name: &'a str,
+    chunk_size: usize,
+    overlap: usize,
+    model_name: String,
+    dimensions: usize,
+    description: &'a str,
+}
+
+/// List available embedding preset names.
+///
+/// # Safety
+///
+/// - Returned string is a JSON array and must be freed with `kreuzberg_free_string`
+/// - Returns NULL on error (check `kreuzberg_last_error`)
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_list_embedding_presets() -> *mut c_char {
+    clear_last_error();
+
+    let presets = kreuzberg::embeddings::list_presets();
+    match serde_json::to_string(&presets) {
+        Ok(json) => match string_to_c_string(json) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(format!("Failed to serialize presets: {}", e));
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Get a specific embedding preset by name.
+///
+/// # Safety
+///
+/// - `name` must be a valid null-terminated C string
+/// - Returned string is JSON object and must be freed with `kreuzberg_free_string`
+/// - Returns NULL on error (check `kreuzberg_last_error`)
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_get_embedding_preset(name: *const c_char) -> *mut c_char {
+    clear_last_error();
+
+    if name.is_null() {
+        set_last_error("preset name cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    let preset_name = match unsafe { CStr::from_ptr(name) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in preset name: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    let preset = match kreuzberg::embeddings::get_preset(preset_name) {
+        Some(preset) => preset,
+        None => {
+            set_last_error(format!("Unknown embedding preset: {}", preset_name));
+            return ptr::null_mut();
+        }
+    };
+
+    #[cfg(feature = "embeddings")]
+    let model_name = format!("{:?}", preset.model);
+    #[cfg(not(feature = "embeddings"))]
+    let model_name = preset.model_name.to_string();
+    let serializable = SerializableEmbeddingPreset {
+        name: preset.name,
+        chunk_size: preset.chunk_size,
+        overlap: preset.overlap,
+        model_name,
+        dimensions: preset.dimensions,
+        description: preset.description,
+    };
+
+    match serde_json::to_string(&serializable) {
+        Ok(json) => match string_to_c_string(json) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(format!("Failed to serialize embedding preset: {}", e));
+            ptr::null_mut()
+        }
+    }
+}
+
 /// Extract text and metadata from a file with custom configuration (synchronous).
 ///
 /// # Safety
@@ -283,10 +824,10 @@ pub unsafe extern "C" fn kreuzberg_extract_file_sync_with_config(
             }
         };
 
-        match serde_json::from_str::<ExtractionConfig>(config_str) {
+        match parse_extraction_config_from_json(config_str) {
             Ok(cfg) => cfg,
             Err(e) => {
-                set_last_error(format!("Failed to parse config JSON: {}", e));
+                set_last_error(e);
                 return ptr::null_mut();
             }
         }
@@ -445,10 +986,10 @@ pub unsafe extern "C" fn kreuzberg_extract_bytes_sync_with_config(
             }
         };
 
-        match serde_json::from_str::<ExtractionConfig>(config_str) {
+        match parse_extraction_config_from_json(config_str) {
             Ok(cfg) => cfg,
             Err(e) => {
-                set_last_error(format!("Failed to parse config JSON: {}", e));
+                set_last_error(e);
                 return ptr::null_mut();
             }
         }
@@ -525,10 +1066,10 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_files_sync(
             }
         };
 
-        match serde_json::from_str::<ExtractionConfig>(config_str) {
+        match parse_extraction_config_from_json(config_str) {
             Ok(cfg) => cfg,
             Err(e) => {
-                set_last_error(format!("Failed to parse config JSON: {}", e));
+                set_last_error(e);
                 return ptr::null_mut();
             }
         }
@@ -623,10 +1164,10 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
             }
         };
 
-        match serde_json::from_str::<ExtractionConfig>(config_str) {
+        match parse_extraction_config_from_json(config_str) {
             Ok(cfg) => cfg,
             Err(e) => {
-                set_last_error(format!("Failed to parse config JSON: {}", e));
+                set_last_error(e);
                 return ptr::null_mut();
             }
         }
@@ -797,6 +1338,39 @@ pub unsafe extern "C" fn kreuzberg_free_string(s: *mut c_char) {
     }
 }
 
+/// Clone a null-terminated string using Rust's allocator.
+///
+/// # Safety
+///
+/// - `s` must be a valid null-terminated UTF-8 string
+/// - Returned pointer must be freed with `kreuzberg_free_string`
+/// - Returns NULL on error (check `kreuzberg_last_error`)
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_clone_string(s: *const c_char) -> *mut c_char {
+    clear_last_error();
+
+    if s.is_null() {
+        set_last_error("Input string cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    let raw = match unsafe { CStr::from_ptr(s) }.to_str() {
+        Ok(val) => val,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in string: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    match CString::new(raw) {
+        Ok(cstr) => cstr.into_raw(),
+        Err(e) => {
+            set_last_error(format!("Failed to clone string: {}", e));
+            ptr::null_mut()
+        }
+    }
+}
+
 /// Free an extraction result returned by `kreuzberg_extract_file_sync`.
 ///
 /// # Safety
@@ -923,6 +1497,38 @@ pub unsafe extern "C" fn kreuzberg_version() -> *const c_char {
 type OcrBackendCallback =
     unsafe extern "C" fn(image_bytes: *const u8, image_length: usize, config_json: *const c_char) -> *mut c_char;
 
+fn parse_languages_from_json(languages_json: *const c_char) -> FfiResult<Option<Vec<String>>> {
+    if languages_json.is_null() {
+        return Ok(None);
+    }
+
+    let raw = unsafe { CStr::from_ptr(languages_json) }
+        .to_str()
+        .map_err(|e| format!("Invalid UTF-8 in languages JSON: {}", e))?;
+
+    if raw.trim().is_empty() {
+        return Ok(None);
+    }
+
+    let langs: Vec<String> = serde_json::from_str(raw).map_err(|e| format!("Failed to parse languages JSON: {}", e))?;
+
+    if langs.is_empty() {
+        return Ok(None);
+    }
+
+    let normalized = langs
+        .into_iter()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect::<Vec<_>>();
+
+    if normalized.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(normalized))
+}
+
 /// FFI wrapper for custom OCR backends registered from Java/C.
 ///
 /// This struct wraps a C function pointer and implements the OcrBackend trait,
@@ -931,11 +1537,16 @@ type OcrBackendCallback =
 struct FfiOcrBackend {
     name: String,
     callback: OcrBackendCallback,
+    supported_languages: Option<Vec<String>>,
 }
 
 impl FfiOcrBackend {
-    fn new(name: String, callback: OcrBackendCallback) -> Self {
-        Self { name, callback }
+    fn new(name: String, callback: OcrBackendCallback, supported_languages: Option<Vec<String>>) -> Self {
+        Self {
+            name,
+            callback,
+            supported_languages,
+        }
     }
 }
 
@@ -1022,8 +1633,10 @@ impl OcrBackend for FfiOcrBackend {
     }
 
     fn supports_language(&self, _lang: &str) -> bool {
-        // FFI backends support all languages (delegation to the foreign implementation)
-        true
+        match &self.supported_languages {
+            Some(langs) => langs.iter().any(|candidate| candidate.eq_ignore_ascii_case(_lang)),
+            None => true,
+        }
     }
 
     fn backend_type(&self) -> kreuzberg::plugins::OcrBackendType {
@@ -1075,7 +1688,63 @@ pub unsafe extern "C" fn kreuzberg_register_ocr_backend(name: *const c_char, cal
         }
     };
 
-    let backend = Arc::new(FfiOcrBackend::new(name_str.to_string(), callback));
+    let backend = Arc::new(FfiOcrBackend::new(name_str.to_string(), callback, None));
+
+    let registry = get_ocr_backend_registry();
+    let mut registry_guard = match registry.write() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry write lock: {}", e));
+            return false;
+        }
+    };
+
+    match registry_guard.register(backend) {
+        Ok(()) => true,
+        Err(e) => {
+            set_last_error(format!("Failed to register OCR backend: {}", e));
+            false
+        }
+    }
+}
+
+/// Register a custom OCR backend with explicit language support via FFI callback.
+///
+/// # Safety
+///
+/// - `languages_json` must be a null-terminated JSON array of language codes or NULL
+/// - See `kreuzberg_register_ocr_backend` for additional safety notes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_register_ocr_backend_with_languages(
+    name: *const c_char,
+    callback: OcrBackendCallback,
+    languages_json: *const c_char,
+) -> bool {
+    clear_last_error();
+
+    if name.is_null() {
+        set_last_error("Backend name cannot be NULL".to_string());
+        return false;
+    }
+
+    // SAFETY: Caller must ensure name is a valid null-terminated C string
+    let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in backend name: {}", e));
+            return false;
+        }
+    };
+
+    let supported_languages = match parse_languages_from_json(languages_json) {
+        Ok(langs) => langs,
+        Err(e) => {
+            set_last_error(e);
+            return false;
+        }
+    };
+
+    let backend = Arc::new(FfiOcrBackend::new(name_str.to_string(), callback, supported_languages));
 
     let registry = get_ocr_backend_registry();
     let mut registry_guard = match registry.write() {
@@ -1126,11 +1795,12 @@ type PostProcessorCallback = unsafe extern "C" fn(result_json: *const c_char) ->
 struct FfiPostProcessor {
     name: String,
     callback: PostProcessorCallback,
+    stage: ProcessingStage,
 }
 
 impl FfiPostProcessor {
-    fn new(name: String, callback: PostProcessorCallback) -> Self {
-        Self { name, callback }
+    fn new(name: String, callback: PostProcessorCallback, stage: ProcessingStage) -> Self {
+        Self { name, callback, stage }
     }
 }
 
@@ -1219,7 +1889,22 @@ impl kreuzberg::plugins::PostProcessor for FfiPostProcessor {
     }
 
     fn processing_stage(&self) -> kreuzberg::plugins::ProcessingStage {
-        kreuzberg::plugins::ProcessingStage::Middle
+        self.stage
+    }
+}
+
+fn parse_processing_stage(stage: Option<&str>) -> FfiResult<ProcessingStage> {
+    match stage {
+        Some(value) => match value.to_lowercase().as_str() {
+            "early" => Ok(ProcessingStage::Early),
+            "middle" => Ok(ProcessingStage::Middle),
+            "late" => Ok(ProcessingStage::Late),
+            other => Err(format!(
+                "Invalid processing stage '{}'. Expected one of: early, middle, late",
+                other
+            )),
+        },
+        None => Ok(ProcessingStage::Middle),
     }
 }
 
@@ -1271,7 +1956,86 @@ pub unsafe extern "C" fn kreuzberg_register_post_processor(
         }
     };
 
-    let processor = Arc::new(FfiPostProcessor::new(name_str.to_string(), callback));
+    let processor = Arc::new(FfiPostProcessor::new(
+        name_str.to_string(),
+        callback,
+        ProcessingStage::Middle,
+    ));
+
+    let registry = kreuzberg::plugins::registry::get_post_processor_registry();
+    let mut registry_guard = match registry.write() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry write lock: {}", e));
+            return false;
+        }
+    };
+
+    match registry_guard.register(processor, priority) {
+        Ok(()) => true,
+        Err(e) => {
+            set_last_error(format!("Failed to register PostProcessor: {}", e));
+            false
+        }
+    }
+}
+
+/// Register a custom PostProcessor with an explicit processing stage.
+///
+/// # Safety
+///
+/// - `name` must be a valid null-terminated C string
+/// - `stage` must be a valid null-terminated C string containing "early", "middle", or "late"
+/// - `callback` must be a valid function pointer that:
+///   - Does not store the result_json pointer
+///   - Returns a null-terminated UTF-8 JSON string or NULL on error
+///   - The returned string must be freeable by kreuzberg_free_string
+/// - `priority` determines the order of execution within the stage (higher priority runs first)
+/// - Returns true on success, false on error (check kreuzberg_last_error)
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_register_post_processor_with_stage(
+    name: *const c_char,
+    callback: PostProcessorCallback,
+    priority: i32,
+    stage: *const c_char,
+) -> bool {
+    clear_last_error();
+
+    if name.is_null() {
+        set_last_error("PostProcessor name cannot be NULL".to_string());
+        return false;
+    }
+
+    // SAFETY: Caller must ensure name is a valid null-terminated C string
+    let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in PostProcessor name: {}", e));
+            return false;
+        }
+    };
+
+    let stage_str = if stage.is_null() {
+        None
+    } else {
+        match unsafe { CStr::from_ptr(stage) }.to_str() {
+            Ok(s) => Some(s),
+            Err(e) => {
+                set_last_error(format!("Invalid UTF-8 in processing stage: {}", e));
+                return false;
+            }
+        }
+    };
+
+    let stage = match parse_processing_stage(stage_str) {
+        Ok(stage) => stage,
+        Err(e) => {
+            set_last_error(e);
+            return false;
+        }
+    };
+
+    let processor = Arc::new(FfiPostProcessor::new(name_str.to_string(), callback, stage));
 
     let registry = kreuzberg::plugins::registry::get_post_processor_registry();
     let mut registry_guard = match registry.write() {
@@ -1339,6 +2103,63 @@ pub unsafe extern "C" fn kreuzberg_unregister_post_processor(name: *const c_char
         Err(e) => {
             set_last_error(format!("Failed to remove PostProcessor: {}", e));
             false
+        }
+    }
+}
+
+/// Clear all registered PostProcessors.
+///
+/// # Safety
+///
+/// - Removes all registered processors. Subsequent extractions will run without them.
+/// - Returns true on success, false on error.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_clear_post_processors() -> bool {
+    clear_last_error();
+
+    let registry = kreuzberg::plugins::registry::get_post_processor_registry();
+    let mut registry_guard = match registry.write() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry write lock: {}", e));
+            return false;
+        }
+    };
+
+    *registry_guard = Default::default();
+    true
+}
+
+/// List all registered PostProcessors as a JSON array of names.
+///
+/// # Safety
+///
+/// - Returned string must be freed with `kreuzberg_free_string`.
+/// - Returns NULL on error (check `kreuzberg_last_error`).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_list_post_processors() -> *mut c_char {
+    clear_last_error();
+
+    let registry = kreuzberg::plugins::registry::get_post_processor_registry();
+    let registry_guard = match registry.read() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry read lock: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    match serde_json::to_string(&registry_guard.list()) {
+        Ok(json) => match CString::new(json) {
+            Ok(cstr) => cstr.into_raw(),
+            Err(e) => {
+                set_last_error(format!("Failed to create C string: {}", e));
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(format!("Failed to serialize PostProcessor list: {}", e));
+            ptr::null_mut()
         }
     }
 }
@@ -1594,6 +2415,63 @@ pub unsafe extern "C" fn kreuzberg_unregister_validator(name: *const c_char) -> 
         Err(e) => {
             set_last_error(format!("Failed to remove Validator: {}", e));
             false
+        }
+    }
+}
+
+/// Clear all registered Validators.
+///
+/// # Safety
+///
+/// - Removes all validators. Subsequent extractions will skip custom validation.
+/// - Returns true on success, false on error.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_clear_validators() -> bool {
+    clear_last_error();
+
+    let registry = kreuzberg::plugins::registry::get_validator_registry();
+    let mut registry_guard = match registry.write() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry write lock: {}", e));
+            return false;
+        }
+    };
+
+    *registry_guard = Default::default();
+    true
+}
+
+/// List all registered Validators as a JSON array of names.
+///
+/// # Safety
+///
+/// - Returned string must be freed with `kreuzberg_free_string`.
+/// - Returns NULL on error (check `kreuzberg_last_error`).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_list_validators() -> *mut c_char {
+    clear_last_error();
+
+    let registry = kreuzberg::plugins::registry::get_validator_registry();
+    let registry_guard = match registry.read() {
+        Ok(guard) => guard,
+        Err(e) => {
+            set_last_error(format!("Failed to acquire registry read lock: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    match serde_json::to_string(&registry_guard.list()) {
+        Ok(json) => match CString::new(json) {
+            Ok(cstr) => cstr.into_raw(),
+            Err(e) => {
+                set_last_error(format!("Failed to create C string: {}", e));
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(format!("Failed to serialize Validator list: {}", e));
+            ptr::null_mut()
         }
     }
 }

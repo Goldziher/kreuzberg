@@ -30,6 +30,7 @@ homepage = "https://kreuzberg.dev"
 
 [workspace.dependencies]
 serde_json = "1.0"
+serde = "1.0"
 
 [profile.release]
 lto = "thin"
