@@ -504,7 +504,10 @@ tasks:
     dir: packages/go
     cmds:
       - bash ../../scripts/download_pdfium_runtime.sh
-      - go test ./...
+      - |
+        export LD_LIBRARY_PATH="$PWD/../../target/release:${LD_LIBRARY_PATH:-}"
+        export DYLD_FALLBACK_LIBRARY_PATH="$PWD/../../target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+        go test ./...
 
   smoke:node:
     desc: Run Node smoke test locally (require KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg-node.tgz)
