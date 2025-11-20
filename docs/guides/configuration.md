@@ -1001,74 +1001,27 @@ Configuration for automatic language detection.
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, LanguageDetectionConfig
-
-    config = ExtractionConfig(
-        language_detection=LanguageDetectionConfig(
-            enabled=True,
-            min_confidence=0.9,
-            detect_multiple=True
-        )
-    )
-    ```
+    --8<-- "snippets/python/language_detection.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, LanguageDetectionConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      languageDetection: new LanguageDetectionConfig({
-        enabled: true,
-        minConfidence: 0.9,
-        detectMultiple: true
-      })
-    });
-    ```
+    --8<-- "snippets/typescript/language_detection.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, LanguageDetectionConfig};
-
-    let config = ExtractionConfig {
-        language_detection: Some(LanguageDetectionConfig {
-            enabled: true,
-            min_confidence: 0.9,
-            detect_multiple: true,
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/language_detection.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      language_detection: Kreuzberg::LanguageDetectionConfig.new(
-        enabled: true,
-        min_confidence: 0.9,
-        detect_multiple: true
-      )
-    )
-    ```
+    --8<-- "snippets/ruby/language_detection.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.LanguageDetectionConfig;
+    --8<-- "snippets/java/language_detection.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .languageDetection(LanguageDetectionConfig.builder()
-            .enabled(true)
-            .minConfidence(0.9)
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/language_detection.md"
 
 ## PostProcessorConfig
 
