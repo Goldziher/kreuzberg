@@ -88,7 +88,12 @@ def main() -> None:
     if not wheel_files:
         raise SystemExit(f"No wheels found in {wheel_dir}")
 
-    identity = args.identity or os.environ.get("MACOS_CODESIGN_IDENTITY") or os.environ.get("KREUZBERG_CODESIGN_IDENTITY") or "-"
+    identity = (
+        args.identity
+        or os.environ.get("MACOS_CODESIGN_IDENTITY")
+        or os.environ.get("KREUZBERG_CODESIGN_IDENTITY")
+        or "-"
+    )
 
     for wheel_path in wheel_files:
         sign_wheel(wheel_path, identity)

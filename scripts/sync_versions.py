@@ -28,11 +28,7 @@ def get_workspace_version(repo_root: Path) -> str:
         raise FileNotFoundError(f"Cargo.toml not found at {cargo_toml}")
 
     content = cargo_toml.read_text()
-    match = re.search(
-        r'^\[workspace\.package\]\s*\nversion\s*=\s*"([^"]+)"',
-        content,
-        re.MULTILINE
-    )
+    match = re.search(r'^\[workspace\.package\]\s*\nversion\s*=\s*"([^"]+)"', content, re.MULTILINE)
 
     if not match:
         raise ValueError("Could not find version in Cargo.toml [workspace.package]")
@@ -80,13 +76,7 @@ def update_pyproject_toml(file_path: Path, version: str) -> Tuple[bool, str, str
     if old_version == version:
         return False, old_version, version
 
-    new_content = re.sub(
-        r'^(version\s*=\s*)"[^"]+"',
-        rf'\1"{version}"',
-        content,
-        count=1,
-        flags=re.MULTILINE
-    )
+    new_content = re.sub(r'^(version\s*=\s*)"[^"]+"', rf'\1"{version}"', content, count=1, flags=re.MULTILINE)
 
     file_path.write_text(new_content)
     return True, old_version, version
@@ -105,11 +95,7 @@ def update_ruby_version(file_path: Path, version: str) -> Tuple[bool, str, str]:
     if old_version == version:
         return False, old_version, version
 
-    new_content = re.sub(
-        r'(VERSION\s*=\s*)"[^"]+"',
-        rf'\1"{version}"',
-        content
-    )
+    new_content = re.sub(r'(VERSION\s*=\s*)"[^"]+"', rf'\1"{version}"', content)
 
     file_path.write_text(new_content)
     return True, old_version, version
@@ -128,13 +114,7 @@ def update_cargo_toml(file_path: Path, version: str) -> Tuple[bool, str, str]:
     if old_version == version:
         return False, old_version, version
 
-    new_content = re.sub(
-        r'^(version\s*=\s*)"[^"]+"',
-        rf'\1"{version}"',
-        content,
-        count=1,
-        flags=re.MULTILINE
-    )
+    new_content = re.sub(r'^(version\s*=\s*)"[^"]+"', rf'\1"{version}"', content, count=1, flags=re.MULTILINE)
 
     file_path.write_text(new_content)
     return True, old_version, version
