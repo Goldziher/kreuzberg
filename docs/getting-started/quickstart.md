@@ -32,16 +32,7 @@ Extract text from any supported document format:
 
 === "CLI"
 
-    ```bash
-    # Extract to stdout
-    kreuzberg extract document.pdf
-
-    # Save to file
-    kreuzberg extract document.pdf -o output.txt
-
-    # Extract with metadata
-    kreuzberg extract document.pdf --metadata
-    ```
+    --8<-- "snippets/cli/extract_basic.md"
 
 ## Async Extraction
 
@@ -101,9 +92,7 @@ Extract text from images and scanned documents:
 
 === "CLI"
 
-    ```bash
-    kreuzberg extract scanned.pdf --ocr --language eng
-    ```
+    --8<-- "snippets/cli/ocr_basic.md"
 
 ## Batch Processing
 
@@ -135,13 +124,7 @@ Process multiple files concurrently:
 
 === "CLI"
 
-    ```bash
-    # Process multiple files
-    kreuzberg extract doc1.pdf doc2.docx doc3.pptx
-
-    # Use glob patterns
-    kreuzberg extract documents/**/*.pdf
-    ```
+    --8<-- "snippets/cli/batch_basic.md"
 
 ## Extract from Bytes
 
