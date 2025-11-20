@@ -45,62 +45,23 @@ Main extraction configuration controlling all aspects of document processing.
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file, ExtractionConfig
-
-    config = ExtractionConfig(
-        use_cache=True,
-        enable_quality_processing=True,
-        force_ocr=False
-    )
-
-    result = extract_file("document.pdf", config=config)
-    ```
+    --8<-- "snippets/python/config_basic.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractFile, ExtractionConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      useCache: true,
-      enableQualityProcessing: true,
-      forceOcr: false
-    };
-
-    const result = await extractFile('document.pdf', { config });
-    ```
+    --8<-- "snippets/typescript/config_basic.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_file, ExtractionConfig};
-
-    let config = ExtractionConfig {
-        use_cache: true,
-        enable_quality_processing: true,
-        force_ocr: false,
-        ..Default::default()
-    };
-
-    let result = extract_file("document.pdf", None, &config).await?;
-    ```
+    --8<-- "snippets/rust/config_basic.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.config.ExtractionConfig;
+    --8<-- "snippets/java/config_basic.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .useCache(true)
-        .enableQualityProcessing(true)
-        .forceOcr(false)
-        .build();
+=== "Go"
 
-    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
-    ```
+    --8<-- "snippets/go/config_basic.md"
 
 ---
 
@@ -118,73 +79,23 @@ Configuration for OCR (Optical Character Recognition) processing on images and s
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            backend="tesseract",
-            language="eng+fra",
-            tesseract_config=TesseractConfig(
-                psm=3,
-                oem=1,
-                min_confidence=0.8
-            )
-        )
-    )
-    ```
+    --8<-- "snippets/python/config_ocr.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, OcrConfig, TesseractConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      ocr: {
-        backend: 'tesseract',
-        language: 'eng+fra',
-        tesseractConfig: {
-          psm: 3,
-          oem: 1,
-          minConfidence: 0.8
-        }
-      }
-    };
-    ```
+    --8<-- "snippets/typescript/config_ocr.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig};
-
-    let config = ExtractionConfig {
-        ocr: Some(OcrConfig {
-            backend: "tesseract".to_string(),
-            language: "eng+fra".to_string(),
-            tesseract_config: Some(TesseractConfig {
-                psm: 3,
-                oem: 1,
-                min_confidence: 0.8,
-                ..Default::default()
-            }),
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/config_ocr.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.OcrConfig;
+    --8<-- "snippets/java/config_ocr.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .ocr(OcrConfig.builder()
-            .backend("tesseract")
-            .language("eng+fra")
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/config_ocr.md"
 
 ---
 
@@ -244,79 +155,28 @@ Tesseract OCR engine configuration with fine-grained control over recognition pa
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            backend="tesseract",
-            language="eng+fra+deu",
-            tesseract_config=TesseractConfig(
-                psm=6,
-                oem=1,
-                min_confidence=0.8,
-                enable_table_detection=True,
-                tessedit_char_whitelist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?-"
-            )
-        )
-    )
-    ```
+    --8<-- "snippets/python/tesseract_config.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, OcrConfig, TesseractConfig } from '@kreuzberg/sdk';
-
-    const config: ExtractionConfig = {
-      ocr: {
-        backend: 'tesseract',
-        language: 'eng+fra+deu',
-        tesseractConfig: {
-          psm: 6,
-          oem: 1,
-          minConfidence: 0.8,
-          enableTableDetection: true,
-          tesseditCharWhitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?-'
-        }
-      }
-    };
-    ```
+    --8<-- "snippets/typescript/tesseract_config.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig};
+    --8<-- "snippets/rust/tesseract_config.md"
 
-    let config = ExtractionConfig {
-        ocr: Some(OcrConfig {
-            backend: "tesseract".to_string(),
-            language: "eng+fra+deu".to_string(),
-            tesseract_config: Some(TesseractConfig {
-                psm: 6,
-                oem: 1,
-                min_confidence: 0.8,
-                enable_table_detection: true,
-                tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?-".to_string(),
-                ..Default::default()
-            }),
-        }),
-        ..Default::default()
-    };
-    ```
+=== "Ruby"
+
+    --8<-- "snippets/ruby/tesseract_config.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.OcrConfig;
+    --8<-- "snippets/java/tesseract_config.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .ocr(OcrConfig.builder()
-            .backend("tesseract")
-            .language("eng+fra+deu")
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/tesseract_config.md"
+
 
 ---
 
