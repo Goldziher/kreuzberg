@@ -682,23 +682,7 @@ The `mcp` command starts a Model Context Protocol server for AI integration:
 
 === "Go"
 
-    ```go
-    package main
-
-    import (
-        "log"
-        "os/exec"
-    )
-
-    func main() {
-        cmd := exec.Command("kreuzberg", "mcp")
-        cmd.Stdout = log.Writer()
-        cmd.Stderr = log.Writer()
-        if err := cmd.Run(); err != nil {
-            log.Fatalf("mcp exited: %v", err)
-        }
-    }
-    ```
+    --8<-- "snippets/cli/mcp_go.md"
 
 The MCP server provides tools for AI agents:
 - `extract_file` - Extract text from a file path
