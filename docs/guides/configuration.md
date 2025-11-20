@@ -930,91 +930,27 @@ Create embedding models using these factory methods:
 
 === "Python"
 
-    ```python
-    from kreuzberg import ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType
-
-    config = ExtractionConfig(
-        chunking=ChunkingConfig(
-            max_chars=1000,
-            embedding=EmbeddingConfig(
-                model=EmbeddingModelType.preset("all-mpnet-base-v2"),
-                batch_size=16,
-                normalize=True,
-                show_download_progress=True
-            )
-        )
-    )
-    ```
+    --8<-- "snippets/python/embedding_config.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      chunking: new ChunkingConfig({
-        maxChars: 1000,
-        embedding: new EmbeddingConfig({
-          model: EmbeddingModelType.preset('all-mpnet-base-v2'),
-          batchSize: 16,
-          normalize: true,
-          showDownloadProgress: true
-        })
-      })
-    });
-    ```
+    --8<-- "snippets/typescript/embedding_config.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType};
-
-    let config = ExtractionConfig {
-        chunking: Some(ChunkingConfig {
-            max_chars: 1000,
-            embedding: Some(EmbeddingConfig {
-                model: EmbeddingModelType::preset("all-mpnet-base-v2"),
-                batch_size: 16,
-                normalize: true,
-                show_download_progress: true,
-                ..Default::default()
-            }),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/embedding_config.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      chunking: Kreuzberg::ChunkingConfig.new(
-        max_chars: 1000,
-        embedding: Kreuzberg::EmbeddingConfig.new(
-          model: Kreuzberg::EmbeddingModelType.preset('all-mpnet-base-v2'),
-          batch_size: 16,
-          normalize: true,
-          show_download_progress: true
-        )
-      )
-    )
-    ```
+    --8<-- "snippets/ruby/embedding_config.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.ChunkingConfig;
+    --8<-- "snippets/java/embedding_config.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .chunking(ChunkingConfig.builder()
-            .maxChars(1000)
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/embedding_config.md"
 
 ## TokenReductionConfig
 
