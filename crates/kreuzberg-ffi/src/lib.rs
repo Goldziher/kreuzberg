@@ -5,6 +5,7 @@
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
+use std::marker::PhantomData;
 use std::os::raw::c_char;
 use std::path::Path;
 use std::ptr;
@@ -2960,12 +2961,17 @@ pub unsafe extern "C" fn kreuzberg_list_validators() -> *mut c_char {
 /// Opaque wrapper around `ExtractionConfig` for FFI usage.
 #[repr(C)]
 pub struct FfiExtractionConfig {
-    inner: ExtractionConfig,
+    _private: [u8; 0],
+    _phantom: PhantomData<ExtractionConfig>,
 }
 
 impl FfiExtractionConfig {
     fn into_raw(config: ExtractionConfig) -> *mut Self {
-        Box::into_raw(Box::new(Self { inner: config }))
+        Box::into_raw(Box::new(config)) as *mut Self
+    }
+
+    fn as_extraction_config_ptr(ptr: *mut Self) -> *mut ExtractionConfig {
+        ptr as *mut ExtractionConfig
     }
 }
 
@@ -3106,7 +3112,7 @@ pub unsafe extern "C" fn kreuzberg_free_config(config: *mut FfiExtractionConfig)
     }
     // SAFETY: pointer originated from Box::into_raw inside the FFI helpers.
     unsafe {
-        drop(Box::from_raw(config));
+        drop(Box::from_raw(FfiExtractionConfig::as_extraction_config_ptr(config)));
     }
 }
 

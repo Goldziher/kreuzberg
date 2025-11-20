@@ -70,6 +70,13 @@ echo "Using Node package spec: $KREUZBERG_NODE_SPEC"
 node "$workspace/.github/actions/smoke-node/update-package-spec.js"
 rm -f pnpm-lock.yaml
 pnpm install --no-frozen-lockfile
+
+# Ensure the native binding is built for the current platform when using a workspace path
+pkg_dir="$(node -e "const path=require('path');console.log(path.dirname(require.resolve('kreuzberg-node/package.json')).replace(/\\\\/g,'/'))")"
+if [[ -d "$pkg_dir" ]]; then
+  (cd "$pkg_dir" && pnpm run build --if-present)
+fi
+
 pnpm run check
 
 popd >/dev/null
