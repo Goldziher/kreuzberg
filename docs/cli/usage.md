@@ -6,29 +6,19 @@ The Kreuzberg CLI provides command-line access to all extraction features. This 
 
 === "Homebrew (macOS/Linux)"
 
-    ```bash
-    brew install kreuzberg
-    ```
+    --8<-- "snippets/cli/install_homebrew.md"
 
 === "Cargo (Cross-platform)"
 
-    ```bash
-    cargo install kreuzberg-cli
-    ```
+    --8<-- "snippets/cli/install_cargo.md"
 
 === "Docker"
 
-    ```bash
-    docker pull goldziher/kreuzberg:latest
-    docker run -v $(pwd):/data goldziher/kreuzberg:latest extract /data/document.pdf
-    ```
+    --8<-- "snippets/cli/install_docker.md"
 
 === "Go (SDK)"
 
-    ```bash
-    # Add the Go SDK to your module
-    go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest
-    ```
+    --8<-- "snippets/cli/install_go_sdk.md"
 
 ## Basic Usage
 

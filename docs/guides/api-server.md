@@ -30,101 +30,27 @@ A Model Context Protocol server that exposes Kreuzberg as tools for AI agents an
 
 === "CLI"
 
-    ```bash
-    # Default: http://127.0.0.1:8000
-    kreuzberg serve
-
-    # Custom host and port
-    kreuzberg serve -H 0.0.0.0 -p 3000
-
-    # With configuration file
-    kreuzberg serve --config kreuzberg.toml
-    ```
+    --8<-- "snippets/api_server/cli.md"
 
 === "Python"
 
-    ```python
-    import subprocess
-
-    # Start server
-    subprocess.Popen(["python", "-m", "kreuzberg", "serve", "-H", "0.0.0.0", "-p", "8000"])
-    ```
+    --8<-- "snippets/api_server/python.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, api::serve_with_config};
-
-    #[tokio::main]
-    async fn main() -> kreuzberg::Result<()> {
-        let config = ExtractionConfig::discover()?;
-        serve_with_config("0.0.0.0", 8000, config).await?;
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/api_server/rust.md"
 
 === "Java"
 
-    ```java
-    import java.io.IOException;
-
-    public class ApiServer {
-        public static void main(String[] args) {
-            try {
-                // Start HTTP API server using CLI
-                ProcessBuilder pb = new ProcessBuilder(
-                    "kreuzberg", "serve", "-H", "0.0.0.0", "-p", "8000"
-                );
-                pb.inheritIO();
-                Process process = pb.start();
-                process.waitFor();
-            } catch (IOException | InterruptedException e) {
-                System.err.println("Failed to start server: " + e.getMessage());
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/api_server/java.md"
 
 === "Go"
 
-    ```go
-    package main
-
-    import (
-        "log"
-        "os/exec"
-    )
-
-    func main() {
-        cmd := exec.Command("kreuzberg", "serve", "-H", "0.0.0.0", "-p", "8000")
-        cmd.Stdout = log.Writer()
-        cmd.Stderr = log.Writer()
-        if err := cmd.Start(); err != nil {
-            log.Fatalf("failed to start server: %v", err)
-        }
-        if err := cmd.Wait(); err != nil {
-            log.Fatalf("server exited with error: %v", err)
-        }
-    }
-    ```
+    --8<-- "snippets/api_server/go.md"
 
 === "Docker"
 
-    ```bash
-    # Run server on port 8000
-    docker run -d \
-      -p 8000:8000 \
-      goldziher/kreuzberg:latest \
-      serve -H 0.0.0.0 -p 8000
-
-    # With environment variables
-    docker run -d \
-      -e KREUZBERG_CORS_ORIGINS="https://myapp.com" \
-      -e KREUZBERG_MAX_UPLOAD_SIZE_MB=200 \
-      -p 8000:8000 \
-      goldziher/kreuzberg:latest \
-      serve -H 0.0.0.0 -p 8000
-    ```
+    --8<-- "snippets/api_server/docker.md"
 
 ### API Endpoints
 
