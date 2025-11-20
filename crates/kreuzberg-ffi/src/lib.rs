@@ -3105,7 +3105,9 @@ pub unsafe extern "C" fn kreuzberg_free_config(config: *mut FfiExtractionConfig)
         return;
     }
     // SAFETY: pointer originated from Box::into_raw inside the FFI helpers.
-    drop(Box::from_raw(config));
+    unsafe {
+        drop(Box::from_raw(config));
+    }
 }
 
 #[cfg(test)]

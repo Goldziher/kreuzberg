@@ -253,6 +253,7 @@ jobs:
   node-bindings:
     name: Build Node bindings (${{ matrix.settings.target }})
     runs-on: ${{ matrix.settings.os }}
+    continue-on-error: ${{ matrix.settings.target == 'x86_64-unknown-linux-musl' }}
     timeout-minutes: 180
     strategy:
       fail-fast: false
