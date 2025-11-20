@@ -56,50 +56,25 @@ Kreuzberg offers two Docker image variants optimized for different use cases:
 
 === "Core"
 
-    ```bash
-    docker pull goldziher/kreuzberg:v4-core
-    ```
+    --8<-- "snippets/docker/core_pull.md"
 
 === "Full"
 
-    ```bash
-    docker pull goldziher/kreuzberg:v4-full
-    ```
+    --8<-- "snippets/docker/full_pull.md"
 
 ### Basic Usage
 
 === "API Server"
 
-    ```bash
-    # Start API server (default mode)
-    docker run -p 8000:8000 goldziher/kreuzberg:v4-core
-
-    # Test the API
-    curl -F "files=@document.pdf" http://localhost:8000/extract
-    ```
+    --8<-- "snippets/docker/api_server_basic.md"
 
 === "CLI Mode"
 
-    ```bash
-    # Extract a single file
-    docker run -v $(pwd):/data goldziher/kreuzberg:v4-core \
-      extract /data/document.pdf
-
-    # Batch process multiple files
-    docker run -v $(pwd):/data goldziher/kreuzberg:v4-core \
-      batch /data/*.pdf --output-format json
-
-    # Detect MIME type
-    docker run -v $(pwd):/data goldziher/kreuzberg:v4-core \
-      detect /data/unknown-file.bin
-    ```
+    --8<-- "snippets/docker/cli_mode_basic.md"
 
 === "MCP Server"
 
-    ```bash
-    # Start MCP server
-    docker run goldziher/kreuzberg:v4-core mcp
-    ```
+    --8<-- "snippets/docker/mcp_basic.md"
 
 ## Execution Modes
 
@@ -466,19 +441,11 @@ Clone the repository and build:
 
 === "Core Image"
 
-    ```bash
-    git clone https://github.com/Goldziher/kreuzberg.git
-    cd kreuzberg
-    docker build -f docker/Dockerfile.core -t kreuzberg:core .
-    ```
+    --8<-- "snippets/docker/build_core.md"
 
 === "Full Image"
 
-    ```bash
-    git clone https://github.com/Goldziher/kreuzberg.git
-    cd kreuzberg
-    docker build -f docker/Dockerfile.full -t kreuzberg:full .
-    ```
+    --8<-- "snippets/docker/build_full.md"
 
 ### Custom Dockerfiles
 

@@ -638,69 +638,24 @@ The `serve` command starts a RESTful HTTP API server:
 
 === "Rust CLI"
 
-    ```bash
-    # Start server (default: 127.0.0.1:8000)
-    kreuzberg serve
-
-    # Specify host and port
-    kreuzberg serve --host 0.0.0.0 --port 3000
-
-    # With custom config
-    kreuzberg serve --config production.toml
-    ```
+    --8<-- "snippets/cli/serve_rust.md"
 
 === "Python"
 
-    ```bash
-    # Start server via Python CLI proxy
-    python -m kreuzberg serve
-
-    # Specify host and port
-    python -m kreuzberg serve --host 0.0.0.0 --port 3000
-
-    # With custom config
-    python -m kreuzberg serve --config production.toml
-    ```
+    --8<-- "snippets/cli/serve_python.md"
 
 === "TypeScript"
 
-    ```bash
-    # Start server via TypeScript CLI proxy
-    npx kreuzberg serve
-
-    # Specify host and port
-    npx kreuzberg serve --host 0.0.0.0 --port 3000
-
-    # With custom config
-    npx kreuzberg serve --config production.toml
-    ```
-
-=== "Java"
-
-    ```java
-    // Java bindings not yet available
-    // Use the Rust CLI or Docker for now
-    ```
+    --8<-- "snippets/cli/serve_typescript.md"
 
 === "Go"
 
-    ```go
-    package main
+    --8<-- "snippets/cli/serve_go.md"
 
-    import (
-        "log"
-        "os/exec"
-    )
+=== "Java"
 
-    func main() {
-        cmd := exec.Command("kreuzberg", "serve", "--host", "0.0.0.0", "--port", "3000")
-        cmd.Stdout = log.Writer()
-        cmd.Stderr = log.Writer()
-        if err := cmd.Run(); err != nil {
-            log.Fatalf("server exited: %v", err)
-        }
-    }
-    ```
+    --8<-- "snippets/cli/serve_java.md"
+
 
 The server provides endpoints for:
 - `/extract` - Extract text from uploaded files
@@ -717,40 +672,23 @@ The `mcp` command starts a Model Context Protocol server for AI integration:
 
 === "Rust CLI"
 
-    ```bash
-    # Start MCP server (stdio transport)
-    kreuzberg mcp
-
-    # With custom config
-    kreuzberg mcp --config kreuzberg.toml
-    ```
+    --8<-- "snippets/cli/mcp_rust.md"
 
 === "Python"
 
-    ```bash
-    # Start MCP server via Python CLI proxy
-    python -m kreuzberg mcp
-
-    # With custom config
-    python -m kreuzberg mcp --config kreuzberg.toml
-    ```
+    --8<-- "snippets/cli/mcp_python.md"
 
 === "TypeScript"
 
-    ```bash
-    # Start MCP server via TypeScript CLI proxy
-    npx kreuzberg mcp
+    --8<-- "snippets/cli/mcp_typescript.md"
 
-    # With custom config
-    npx kreuzberg mcp --config kreuzberg.toml
-    ```
+=== "Go"
+
+    --8<-- "snippets/cli/mcp_go.md"
 
 === "Java"
 
-    ```java
-    // Java bindings not yet available
-    // Use the Rust CLI or Docker for now
-    ```
+    --8<-- "snippets/cli/mcp_java.md"
 
 === "Go"
 
