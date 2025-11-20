@@ -78,6 +78,10 @@ Extract text, tables, and metadata from a file on disk.
 
     --8<-- "snippets/java/extract_file_async.md"
 
+=== "Go"
+
+    --8<-- "snippets/go/extract_file_async.md"
+
 ```mermaid
 flowchart TD
     Start[Choose Sync or Async] --> Context{Already in<br/>Async Context?}
@@ -110,10 +114,7 @@ flowchart TD
 All TypeScript/Node.js examples in this guide use the `@goldziher/kreuzberg` package. Import synchronous APIs from the root module and asynchronous helpers from the same namespace. See the [TypeScript API Reference](../reference/api-typescript.md) for complete type definitions.
 
 ```typescript
-import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
-
-const result = extractFileSync('document.pdf', null, new ExtractionConfig());
-console.log(result.content);
+--8<-- "snippets/typescript/extract_file_sync.md"
 ```
 
 ## Ruby {#ruby}
@@ -121,11 +122,7 @@ console.log(result.content);
 Ruby bindings mirror the same function names (`extract_file_sync`, `extract_bytes`, `batch_extract_files`, etc.) under the `Kreuzberg` module. Configuration objects live under `Kreuzberg::Config`. See the [Ruby API Reference](../reference/api-ruby.md) for details.
 
 ```ruby
-require 'kreuzberg'
-
-config = Kreuzberg::Config::Extraction.new(force_ocr: true)
-result = Kreuzberg.extract_file_sync('document.pdf', config: config)
-puts result.content
+--8<-- "snippets/ruby/extract_file_sync.md"
 ```
 
 !!! tip "When to Use Async"
@@ -157,6 +154,10 @@ Extract from data already loaded in memory.
 
     --8<-- "snippets/java/extract_bytes_sync.md"
 
+=== "Go"
+
+    --8<-- "snippets/go/extract_bytes_sync.md"
+
 ### Asynchronous
 
 === "Python"
@@ -178,6 +179,10 @@ Extract from data already loaded in memory.
 === "Java"
 
     --8<-- "snippets/java/extract_bytes_async.md"
+
+=== "Go"
+
+    --8<-- "snippets/go/extract_bytes_async.md"
 
 !!! note "MIME Type Detection"
     Kreuzberg automatically detects MIME types from file extensions. When extracting from bytes, you must provide the MIME type explicitly.
@@ -208,6 +213,10 @@ Process multiple files concurrently for better performance.
 
     --8<-- "snippets/java/batch_extract_files_sync.md"
 
+=== "Go"
+
+    --8<-- "snippets/go/batch_extract_files_sync.md"
+
 ### Batch Extract Bytes
 
 === "Python"
@@ -229,6 +238,10 @@ Process multiple files concurrently for better performance.
 === "Java"
 
     --8<-- "snippets/java/batch_extract_bytes_sync.md"
+
+=== "Go"
+
+    --8<-- "snippets/go/batch_extract_bytes_sync.md"
 
 ```mermaid
 flowchart TD

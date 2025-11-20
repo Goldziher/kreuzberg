@@ -111,83 +111,27 @@ Process multiple files concurrently:
 
 === "Python"
 
-    ```python
-    from kreuzberg import batch_extract_files_sync, ExtractionConfig
-
-    files = ["doc1.pdf", "doc2.docx", "doc3.pptx"]
-    results = batch_extract_files_sync(files, config=ExtractionConfig())
-
-    for result in results:
-        print(f"Content length: {len(result.content)}")
-    ```
+    --8<-- "snippets/python/batch_extract_files_sync.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { batchExtractFilesSync, ExtractionConfig } from 'kreuzberg';
-
-    const files = ['doc1.pdf', 'doc2.docx', 'doc3.pptx'];
-    const results = batchExtractFilesSync(files, new ExtractionConfig());
-
-    for (const result of results) {
-        console.log(`Content length: ${result.content.length}`);
-    }
-    ```
+    --8<-- "snippets/typescript/batch_extract_files_sync.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{batch_extract_file_sync, ExtractionConfig};
-
-    fn main() -> kreuzberg::Result<()> {
-        let files = vec!["doc1.pdf", "doc2.docx", "doc3.pptx"];
-        let results = batch_extract_file_sync(&files, None, &ExtractionConfig::default())?;
-
-        for result in results {
-            println!("Content length: {}", result.content.len());
-        }
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/batch_extract_files_sync.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    files = ['doc1.pdf', 'doc2.docx', 'doc3.pptx']
-    results = Kreuzberg.batch_extract_files_sync(files)
-
-    results.each do |result|
-      puts "Content length: #{result.content.length}"
-    end
-    ```
+    --8<-- "snippets/ruby/batch_extract_files_sync.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
-    import java.util.Arrays;
-    import java.util.List;
+    --8<-- "snippets/java/batch_extract_files_sync.md"
 
-    public class Main {
-        public static void main(String[] args) {
-            try {
-                List<String> files = Arrays.asList("doc1.pdf", "doc2.docx", "doc3.pptx");
-                List<ExtractionResult> results = Kreuzberg.batchExtractFilesSync(files);
+=== "Go"
 
-                for (ExtractionResult result : results) {
-                    System.out.println("Content length: " + result.getContent().length());
-                }
-            } catch (IOException | KreuzbergException e) {
-                System.err.println("Extraction failed: " + e.getMessage());
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/go/batch_extract_files_sync.md"
 
 === "CLI"
 
@@ -205,95 +149,27 @@ When you already have file content in memory:
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_bytes_sync, ExtractionConfig
-
-    with open("document.pdf", "rb") as f:
-        data = f.read()
-
-    result = extract_bytes_sync(
-        data,
-        mime_type="application/pdf",
-        config=ExtractionConfig()
-    )
-    print(result.content)
-    ```
+    --8<-- "snippets/python/extract_bytes_sync.md"
 
 === "TypeScript"
 
-    ```typescript
-    import { extractBytesSync, ExtractionConfig } from 'kreuzberg';
-    import { readFileSync } from 'fs';
-
-    const data = readFileSync('document.pdf');
-
-    const result = extractBytesSync(
-        data,
-        'application/pdf',
-        new ExtractionConfig()
-    );
-    console.log(result.content);
-    ```
+    --8<-- "snippets/typescript/extract_bytes_sync.md"
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{extract_bytes_sync, ExtractionConfig};
-    use std::fs;
-
-    fn main() -> kreuzberg::Result<()> {
-        let data = fs::read("document.pdf")?;
-
-        let result = extract_bytes_sync(
-            &data,
-            "application/pdf",
-            &ExtractionConfig::default()
-        )?;
-        println!("{}", result.content);
-        Ok(())
-    }
-    ```
+    --8<-- "snippets/rust/extract_bytes_sync.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    data = File.binread('document.pdf')
-
-    result = Kreuzberg.extract_bytes_sync(
-      data,
-      'application/pdf'
-    )
-    puts result.content
-    ```
+    --8<-- "snippets/ruby/extract_bytes_sync.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
-    import java.nio.file.Files;
-    import java.nio.file.Paths;
+    --8<-- "snippets/java/extract_bytes_sync.md"
 
-    public class Main {
-        public static void main(String[] args) {
-            try {
-                byte[] data = Files.readAllBytes(Paths.get("document.pdf"));
+=== "Go"
 
-                ExtractionResult result = Kreuzberg.extractBytesSync(
-                    data,
-                    "application/pdf"
-                );
-                System.out.println(result.getContent());
-            } catch (IOException | KreuzbergException e) {
-                System.err.println("Extraction failed: " + e.getMessage());
-            }
-        }
-    }
-    ```
+    --8<-- "snippets/go/extract_bytes_sync.md"
 
 ## Advanced Configuration
 
