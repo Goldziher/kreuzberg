@@ -1691,8 +1691,7 @@ pub fn clear_validators(py: Python<'_>) -> PyResult<()> {
 /// ```
 #[pyfunction]
 pub fn list_validators() -> PyResult<Vec<String>> {
-    kreuzberg::plugins::list_validators()
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    kreuzberg::plugins::list_validators().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }
 
 /// List all registered post-processor names.
@@ -1727,8 +1726,7 @@ pub fn list_validators() -> PyResult<Vec<String>> {
 /// ```
 #[pyfunction]
 pub fn list_post_processors() -> PyResult<Vec<String>> {
-    kreuzberg::plugins::list_post_processors()
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    kreuzberg::plugins::list_post_processors().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }
 
 /// Unregister an OCR backend by name.
@@ -1801,6 +1799,5 @@ pub fn unregister_ocr_backend(name: &str) -> PyResult<()> {
 /// ```
 #[pyfunction]
 pub fn list_ocr_backends() -> PyResult<Vec<String>> {
-    kreuzberg::plugins::list_ocr_backends()
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    kreuzberg::plugins::list_ocr_backends().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }

@@ -1165,7 +1165,7 @@ mod tests {
         let registry = OcrBackendRegistry::default();
         #[cfg(feature = "ocr")]
         assert!(
-            registry.list().len() >= 1,
+            !registry.list().is_empty(),
             "expected at least one default OCR backend when the 'ocr' feature is enabled"
         );
         #[cfg(not(feature = "ocr"))]

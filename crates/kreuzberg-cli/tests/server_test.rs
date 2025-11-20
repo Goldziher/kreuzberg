@@ -12,14 +12,14 @@ use std::time::Duration;
 #[ignore]
 fn test_serve_command_starts() {
     let status = Command::new("cargo")
-        .args(&["build", "--bin", "kreuzberg", "--features", "all"])
+        .args(["build", "--bin", "kreuzberg", "--features", "all"])
         .status()
         .expect("Failed to build binary");
 
     assert!(status.success(), "Failed to build kreuzberg binary");
 
     let mut child = Command::new("./target/debug/kreuzberg")
-        .args(&["serve", "-H", "127.0.0.1", "-p", "18000"])
+        .args(["serve", "-H", "127.0.0.1", "-p", "18000"])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -76,7 +76,7 @@ language = "eng"
     fs::write("test_config.toml", config_content).expect("Failed to write test config");
 
     let mut child = Command::new("./target/debug/kreuzberg")
-        .args(&["serve", "-H", "127.0.0.1", "-p", "18001", "-c", "test_config.toml"])
+        .args(["serve", "-H", "127.0.0.1", "-p", "18001", "-c", "test_config.toml"])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -98,7 +98,7 @@ language = "eng"
 #[test]
 fn test_serve_command_help() {
     let build_status = Command::new("cargo")
-        .args(&["build", "--bin", "kreuzberg", "--features", "all"])
+        .args(["build", "--bin", "kreuzberg", "--features", "all"])
         .status()
         .expect("Failed to build binary");
 
@@ -111,7 +111,7 @@ fn test_serve_command_help() {
         .unwrap_or_else(|| "../target/debug/kreuzberg".to_string());
 
     let output = Command::new(&binary_path)
-        .args(&["serve", "--help"])
+        .args(["serve", "--help"])
         .output()
         .expect("Failed to execute command");
 
@@ -128,7 +128,7 @@ fn test_serve_command_help() {
 #[test]
 fn test_mcp_command_help() {
     let build_status = Command::new("cargo")
-        .args(&["build", "--bin", "kreuzberg", "--features", "all"])
+        .args(["build", "--bin", "kreuzberg", "--features", "all"])
         .status()
         .expect("Failed to build binary");
 
@@ -141,7 +141,7 @@ fn test_mcp_command_help() {
         .unwrap_or_else(|| "../target/debug/kreuzberg".to_string());
 
     let output = Command::new(&binary_path)
-        .args(&["mcp", "--help"])
+        .args(["mcp", "--help"])
         .output()
         .expect("Failed to execute command");
 

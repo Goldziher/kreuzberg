@@ -407,8 +407,7 @@ fn test_list_ocr_backends_returns_valid_json() {
         kreuzberg_free_string(list_ptr);
 
         // Parse as JSON array
-        let backends: Vec<String> =
-            serde_json::from_str(&list_json).expect("Should be valid JSON array");
+        let backends: Vec<String> = serde_json::from_str(&list_json).expect("Should be valid JSON array");
 
         // May be empty or contain default backends
         assert!(backends.is_empty() || !backends.is_empty(), "Should be a valid array");
@@ -423,10 +422,7 @@ fn test_unregister_nonexistent_ocr_backend_succeeds_gracefully() {
         let result = kreuzberg_unregister_ocr_backend(name.as_ptr());
 
         // Should return true (no-op for non-existent)
-        assert!(
-            result,
-            "Unregistering non-existent OCR backend should succeed (no-op)"
-        );
+        assert!(result, "Unregistering non-existent OCR backend should succeed (no-op)");
     }
 }
 
