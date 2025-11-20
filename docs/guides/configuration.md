@@ -719,45 +719,19 @@ Text chunking configuration for splitting extracted text into chunks.
 
 === "Rust"
 
-    ```rust
-    use kreuzberg::{ExtractionConfig, ChunkingConfig};
-
-    let config = ExtractionConfig {
-        chunking: Some(ChunkingConfig {
-            max_chars: 500,
-            max_overlap: 50,
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    ```
+    --8<-- "snippets/rust/chunking.md"
 
 === "Ruby"
 
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      chunking: Kreuzberg::ChunkingConfig.new(
-        max_chars: 500,
-        max_overlap: 50
-      )
-    )
-    ```
+    --8<-- "snippets/ruby/chunking.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.ChunkingConfig;
+    --8<-- "snippets/java/chunking.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .chunking(ChunkingConfig.builder()
-            .maxChars(500)
-            .maxOverlap(50)
-            .build())
-        .build();
-    ```
+=== "Go"
+
+    --8<-- "snippets/go/chunking.md"
 
 ## EmbeddingConfig
 

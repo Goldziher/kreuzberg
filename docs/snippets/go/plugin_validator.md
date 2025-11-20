@@ -1,35 +1,29 @@
 ```go
 package main
 
-/*
-#cgo CFLAGS: -I${SRCDIR}/../../../crates/kreuzberg-ffi
-#cgo LDFLAGS: -L${SRCDIR}/../../../target/release -lkreuzberg_ffi
-#include "../../../crates/kreuzberg-ffi/kreuzberg.h"
-#include <stdlib.h>
-*/
-import "C"
 import (
-	"log"
-	"unsafe"
+	"errors"
 
 	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
 )
 
-//export customValidator
-func customValidator(resultJSON *C.char) *C.char {
-	// Inspect resultJSON, return error message or NULL
+type QualityValidator struct{}
+
+func (v *QualityValidator) Name() string    { return "quality-validator" }
+func (v *QualityValidator) Version() string { return "1.0.0" }
+
+func (v *QualityValidator) Validate(result *kreuzberg.ExtractionResult, _ *kreuzberg.ExtractionConfig) error {
+	if len(result.Content) == 0 {
+		return errors.New("empty content")
+	}
 	return nil
 }
 
-func main() {
-	if err := kreuzberg.RegisterValidator("go-validator", 50, (C.ValidatorCallback)(C.customValidator)); err != nil {
-		log.Fatalf("register validator failed: %v", err)
-	}
+func (v *QualityValidator) Initialize() error { return nil }
+func (v *QualityValidator) Shutdown() error   { return nil }
 
-	result, err := kreuzberg.ExtractFileSync("document.pdf", nil)
-	if err != nil {
-		log.Fatalf("extract failed: %v", err)
-	}
-	log.Printf("Content length: %d", len(result.Content))
+func main() {
+	reg := kreuzberg.GetValidatorRegistry()
+	reg.Register(&QualityValidator{}, 50)
 }
 ```
