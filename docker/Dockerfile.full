@@ -34,7 +34,7 @@ RUN mkdir -p /build/pdfium && \
     else \
         PDFIUM_ARCH="x64"; \
     fi && \
-    curl -fL "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${PDFIUM_VERSION}/pdfium-linux-${PDFIUM_ARCH}.tgz" \
+    curl -fL "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${PDFIUM_VERSION}/pdfium-linux-${PDFIUM_ARCH}.tgz || curl -fL "https://storage.googleapis.com/chromium-browser-snapshots/Linux_${PDFIUM_ARCH}/pdfium-${PDFIUM_VERSION}.tgz"" \
         -o /build/pdfium.tgz && \
     tar -xzf /build/pdfium.tgz -C /build/pdfium && \
     rm /build/pdfium.tgz
