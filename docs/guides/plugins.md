@@ -41,6 +41,10 @@ Extract content from custom file formats or override built-in extractors.
 
     --8<-- "snippets/go/plugin_validator.md"
 
+=== "Go"
+
+    --8<-- "snippets/go/plugin_validator.md"
+
 ### Registration
 
 === "Rust"
