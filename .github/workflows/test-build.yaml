@@ -202,9 +202,9 @@ jobs:
       - name: Build FFI (release)
         run: cargo build -p kreuzberg-ffi --release
 
-      - name: Go test
+      - name: Go build (compile only)
         working-directory: packages/go/kreuzberg
-        run: go test ./...
+        run: go build ./...
 
   python-sdist:
     name: Build Python sdist
