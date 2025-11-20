@@ -170,7 +170,7 @@ jobs:
         uses: ./.github/actions/setup-task
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.21"
 
@@ -308,7 +308,7 @@ jobs:
         uses: ./.github/actions/setup-task
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.25"
           cache: true
