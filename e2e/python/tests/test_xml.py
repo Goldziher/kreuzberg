@@ -22,4 +22,3 @@ def test_xml_plant_catalog() -> None:
     helpers.assert_expected_mime(result, ["application/xml"])
     helpers.assert_min_content_length(result, 100)
     helpers.assert_metadata_expectation(result, "element_count", {"gte": 1})
-
