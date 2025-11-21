@@ -1,8 +1,9 @@
-use crate::fixtures::{Assertions, Fixture};
+use crate::fixtures::{Assertions, Fixture, PluginAssertions, PluginTestSpec};
 use anyhow::{Context, Result};
 use camino::Utf8Path;
 use itertools::Itertools;
 use serde_json::{Map, Value};
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;
 
@@ -409,8 +410,14 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     write_pom(&java_root)?;
     clean_test_files(&src_test)?;
 
-    let mut grouped = fixtures
-        .iter()
+    // Separate document extraction and plugin API fixtures
+    let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
+
+    let api_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
+
+    // Generate document extraction tests
+    let mut grouped = doc_fixtures
+        .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
         .into_iter()
         .collect::<Vec<_>>();
@@ -422,6 +429,11 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         let content = render_category(&category, &class_name, &fixtures)?;
         let path = src_test.join(format!("{}.java", class_name));
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
+    }
+
+    // Generate plugin API tests
+    if !api_fixtures.is_empty() {
+        generate_plugin_api_tests(&api_fixtures, &src_test)?;
     }
 
     Ok(())
@@ -515,7 +527,7 @@ fn render_test(fixture: &Fixture) -> Result<String> {
         to_java_method_name(&fixture.id)
     )?;
 
-    let config_expr = render_config_expression(&fixture.extraction.config)?;
+    let config_expr = render_config_expression(&fixture.extraction().config)?;
     let config_var = match config_expr {
         Some(json) => {
             writeln!(
@@ -533,8 +545,8 @@ fn render_test(fixture: &Fixture) -> Result<String> {
 
     let requirements = collect_requirements(fixture);
     let requirements_expr = render_string_list(&requirements);
-    let notes_expr = render_optional_string(fixture.skip.notes.as_ref());
-    let skip_flag = if fixture.skip.if_document_missing {
+    let notes_expr = render_optional_string(fixture.skip().notes.as_ref());
+    let skip_flag = if fixture.skip().if_document_missing {
         "true"
     } else {
         "false"
@@ -542,14 +554,14 @@ fn render_test(fixture: &Fixture) -> Result<String> {
 
     writeln!(body, "        E2EHelpers.runFixture(")?;
     writeln!(body, "            {},", render_java_string(&fixture.id))?;
-    writeln!(body, "            {},", render_java_string(&fixture.document.path))?;
+    writeln!(body, "            {},", render_java_string(&fixture.document().path))?;
     writeln!(body, "            {},", config_var)?;
     writeln!(body, "            {},", requirements_expr)?;
     writeln!(body, "            {},", notes_expr)?;
     writeln!(body, "            {},", skip_flag)?;
     writeln!(body, "            result -> {{")?;
 
-    let assertions = render_assertions(&fixture.assertions);
+    let assertions = render_assertions(&fixture.assertions());
     if !assertions.is_empty() {
         body.push_str(&assertions);
     }
@@ -763,11 +775,467 @@ fn to_java_method_name(input: &str) -> String {
 
 fn collect_requirements(fixture: &Fixture) -> Vec<String> {
     fixture
-        .skip
+        .skip()
         .requires_feature
         .iter()
-        .chain(fixture.document.requires_external_tool.iter())
+        .chain(fixture.document().requires_external_tool.iter())
         .filter(|value| !value.is_empty())
         .map(|value| value.to_string())
         .collect()
+}
+
+// Plugin API test generation
+
+fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Result<()> {
+    let test_file = output_dir.join("PluginAPIsTest.java");
+
+    let mut content = String::new();
+
+    // Package and imports
+    writeln!(content, "// Auto-generated from fixtures/plugin_api/ - DO NOT EDIT")?;
+    writeln!(content, "package com.kreuzberg.e2e;")?;
+    writeln!(content)?;
+    writeln!(content, "import static org.junit.jupiter.api.Assertions.*;")?;
+    writeln!(content)?;
+    writeln!(content, "import dev.kreuzberg.config.ExtractionConfig;")?;
+    writeln!(content, "import dev.kreuzberg.Kreuzberg;")?;
+    writeln!(content, "import dev.kreuzberg.KreuzbergException;")?;
+    writeln!(content, "import java.io.IOException;")?;
+    writeln!(content, "import java.nio.file.Files;")?;
+    writeln!(content, "import java.nio.file.Path;")?;
+    writeln!(content, "import java.util.List;")?;
+    writeln!(content, "import org.junit.jupiter.api.DisplayName;")?;
+    writeln!(content, "import org.junit.jupiter.api.Test;")?;
+    writeln!(content, "import org.junit.jupiter.api.io.TempDir;")?;
+    writeln!(content)?;
+
+    // Class Javadoc
+    writeln!(content, "/**")?;
+    writeln!(content, " * E2E tests for plugin/config/utility APIs.")?;
+    writeln!(content, " *")?;
+    writeln!(content, " * <p>Generated from plugin API fixtures.")?;
+    writeln!(
+        content,
+        " * To regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang java"
+    )?;
+    writeln!(content, " *")?;
+    writeln!(content, " * @since 4.0.0")?;
+    writeln!(content, " */")?;
+    writeln!(content, "@DisplayName(\"Plugin API Tests\")")?;
+    writeln!(content, "class PluginAPIsTest {{")?;
+    writeln!(content)?;
+
+    // Generate test methods grouped by API category
+    let grouped = group_by_category(fixtures);
+
+    for (category, fixtures) in grouped {
+        writeln!(content, "    // {} Tests", category_to_title(category))?;
+        writeln!(content)?;
+
+        for fixture in fixtures {
+            generate_java_test_method(fixture, &mut content)?;
+            writeln!(content)?;
+        }
+    }
+
+    writeln!(content, "}}")?;
+
+    fs::write(&test_file, content).with_context(|| format!("Failed to write {test_file}"))?;
+
+    Ok(())
+}
+
+fn group_by_category<'a>(fixtures: &[&'a Fixture]) -> BTreeMap<&'a str, Vec<&'a Fixture>> {
+    let mut grouped: BTreeMap<&str, Vec<&Fixture>> = BTreeMap::new();
+    for fixture in fixtures {
+        let category = fixture.api_category.as_ref().unwrap().as_str();
+        grouped.entry(category).or_default().push(fixture);
+    }
+    grouped
+}
+
+fn category_to_title(category: &str) -> String {
+    category
+        .split('_')
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn generate_java_test_method(fixture: &Fixture, buf: &mut String) -> Result<()> {
+    let test_spec = fixture.test_spec.as_ref().unwrap();
+    let test_name = to_java_method_name(&fixture.id);
+
+    // @Test annotation
+    writeln!(buf, "    @Test")?;
+
+    // @DisplayName annotation
+    writeln!(buf, "    @DisplayName(\"{}\")", fixture.description)?;
+
+    // Method signature
+    match test_spec.pattern.as_str() {
+        "config_from_file" | "mime_from_path" => {
+            writeln!(
+                buf,
+                "    void {}(@TempDir Path tempDir) throws IOException, KreuzbergException {{",
+                test_name
+            )?;
+        }
+        "config_discover" => {
+            writeln!(
+                buf,
+                "    void {}(@TempDir Path tempDir) throws IOException, KreuzbergException {{",
+                test_name
+            )?;
+        }
+        _ => {
+            writeln!(buf, "    void {}() throws KreuzbergException {{", test_name)?;
+        }
+    }
+
+    // Generate test body based on pattern
+    match test_spec.pattern.as_str() {
+        "simple_list" => generate_simple_list_test_java(test_spec, buf)?,
+        "clear_registry" => generate_clear_registry_test_java(test_spec, buf)?,
+        "graceful_unregister" => generate_graceful_unregister_test_java(test_spec, buf)?,
+        "config_from_file" => generate_config_from_file_test_java(test_spec, buf)?,
+        "config_discover" => generate_config_discover_test_java(test_spec, buf)?,
+        "mime_from_bytes" => generate_mime_from_bytes_test_java(test_spec, buf)?,
+        "mime_from_path" => generate_mime_from_path_test_java(test_spec, buf)?,
+        "mime_extension_lookup" => generate_mime_extension_lookup_test_java(test_spec, buf)?,
+        _ => anyhow::bail!("Unknown test pattern: {}", test_spec.pattern),
+    }
+
+    writeln!(buf, "    }}")?;
+
+    Ok(())
+}
+
+fn generate_simple_list_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let func_name = snake_to_camel(&test_spec.function_call.name);
+    let assertions = &test_spec.assertions;
+
+    // Call the function
+    writeln!(buf, "        List<String> result = Kreuzberg.{}();", func_name)?;
+
+    // Generate assertions
+    writeln!(buf, "        assertNotNull(result);")?;
+
+    if let Some(item_type) = &assertions.list_item_type {
+        if item_type == "string" {
+            writeln!(
+                buf,
+                "        assertTrue(result.stream().allMatch(item -> item instanceof String));"
+            )?;
+        }
+    }
+
+    if let Some(contains) = &assertions.list_contains {
+        writeln!(buf, "        assertTrue(result.contains(\"{}\"));", contains)?;
+    }
+
+    Ok(())
+}
+
+fn generate_clear_registry_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let clear_func = snake_to_camel(&test_spec.function_call.name);
+
+    // Call clear function
+    writeln!(buf, "        Kreuzberg.{}();", clear_func)?;
+
+    // Verify cleanup by calling list function
+    let list_func = clear_func.replace("clear", "list");
+    writeln!(buf, "        List<String> result = Kreuzberg.{}();", list_func)?;
+    writeln!(buf, "        assertEquals(0, result.size());")?;
+
+    Ok(())
+}
+
+fn generate_graceful_unregister_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let func_name = snake_to_camel(&test_spec.function_call.name);
+    let arg = &test_spec.function_call.args[0];
+    let arg_str = arg.as_str().unwrap();
+
+    // Should not throw
+    writeln!(
+        buf,
+        "        assertDoesNotThrow(() -> Kreuzberg.{}(\"{}\"));",
+        func_name, arg_str
+    )?;
+
+    Ok(())
+}
+
+fn generate_config_from_file_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec.setup.as_ref().unwrap();
+    let file_content = setup.temp_file_content.as_ref().unwrap();
+    let file_name = setup.temp_file_name.as_ref().unwrap();
+
+    // Create temp file
+    writeln!(buf, "        Path configPath = tempDir.resolve(\"{}\");", file_name)?;
+    writeln!(buf, "        Files.writeString(configPath, \"\"\"")?;
+    writeln!(buf, "{}\"\"\");", file_content)?;
+    writeln!(buf)?;
+
+    // Load config
+    writeln!(
+        buf,
+        "        ExtractionConfig config = ExtractionConfig.fromFile(configPath.toString());"
+    )?;
+
+    // Generate assertions
+    generate_object_property_assertions_java(&test_spec.assertions, buf)?;
+
+    Ok(())
+}
+
+fn generate_config_discover_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec.setup.as_ref().unwrap();
+    let file_content = setup.temp_file_content.as_ref().unwrap();
+    let file_name = setup.temp_file_name.as_ref().unwrap();
+    let subdir = setup.subdirectory_name.as_ref().unwrap();
+
+    // Create config in parent dir
+    writeln!(buf, "        Path configPath = tempDir.resolve(\"{}\");", file_name)?;
+    writeln!(buf, "        Files.writeString(configPath, \"\"\"")?;
+    writeln!(buf, "{}\"\"\");", file_content)?;
+    writeln!(buf)?;
+
+    // Create subdirectory
+    writeln!(buf, "        Path subDir = tempDir.resolve(\"{}\");", subdir)?;
+    writeln!(buf, "        Files.createDirectories(subDir);")?;
+    writeln!(buf)?;
+
+    // Change directory using system property
+    writeln!(buf, "        String originalDir = System.getProperty(\"user.dir\");")?;
+    writeln!(buf, "        try {{")?;
+    writeln!(buf, "            System.setProperty(\"user.dir\", subDir.toString());")?;
+    writeln!(
+        buf,
+        "            ExtractionConfig config = ExtractionConfig.discover();"
+    )?;
+    writeln!(buf, "            assertNotNull(config);")?;
+
+    // Generate assertions with proper indentation
+    let mut assertion_buf = String::new();
+    generate_object_property_assertions_java(&test_spec.assertions, &mut assertion_buf)?;
+    for line in assertion_buf.lines() {
+        if !line.trim().is_empty() {
+            writeln!(buf, "    {}", line)?;
+        }
+    }
+
+    writeln!(buf, "        }} finally {{")?;
+    writeln!(buf, "            System.setProperty(\"user.dir\", originalDir);")?;
+    writeln!(buf, "        }}")?;
+
+    Ok(())
+}
+
+fn generate_mime_from_bytes_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec.setup.as_ref().unwrap();
+    let test_data = setup.test_data.as_ref().unwrap();
+    let func_name = snake_to_camel(&test_spec.function_call.name);
+
+    // Convert test data to bytes
+    let bytes_literal = test_data.replace("\\n", "\\n");
+    writeln!(buf, "        byte[] testBytes = \"{}\".getBytes();", bytes_literal)?;
+    writeln!(buf, "        String result = Kreuzberg.{}(testBytes);", func_name)?;
+
+    // Generate assertions
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(
+            buf,
+            "        assertTrue(result.toLowerCase().contains(\"{}\"));",
+            contains
+        )?;
+    }
+
+    Ok(())
+}
+
+fn generate_mime_from_path_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec.setup.as_ref().unwrap();
+    let file_name = setup.temp_file_name.as_ref().unwrap();
+    let file_content = setup.temp_file_content.as_ref().unwrap();
+    let func_name = snake_to_camel(&test_spec.function_call.name);
+
+    // Create temp file
+    writeln!(buf, "        Path testFile = tempDir.resolve(\"{}\");", file_name)?;
+    writeln!(buf, "        Files.writeString(testFile, \"{}\");", file_content)?;
+    writeln!(buf)?;
+
+    // Detect MIME
+    writeln!(
+        buf,
+        "        String result = Kreuzberg.{}(testFile.toString());",
+        func_name
+    )?;
+
+    // Generate assertions
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(
+            buf,
+            "        assertTrue(result.toLowerCase().contains(\"{}\"));",
+            contains
+        )?;
+    }
+
+    Ok(())
+}
+
+fn generate_mime_extension_lookup_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let func_name = snake_to_camel(&test_spec.function_call.name);
+    let arg = &test_spec.function_call.args[0];
+    let mime_type = arg.as_str().unwrap();
+
+    writeln!(
+        buf,
+        "        List<String> result = Kreuzberg.{}(\"{}\");",
+        func_name, mime_type
+    )?;
+    writeln!(buf, "        assertNotNull(result);")?;
+
+    if let Some(contains) = &test_spec.assertions.list_contains {
+        writeln!(buf, "        assertTrue(result.contains(\"{}\"));", contains)?;
+    }
+
+    Ok(())
+}
+
+fn generate_object_property_assertions_java(assertions: &PluginAssertions, buf: &mut String) -> Result<()> {
+    for prop in &assertions.object_properties {
+        let parts: Vec<&str> = prop.path.split('.').collect();
+
+        // Determine if final property is boolean based on value
+        let is_bool_property = prop.value.as_ref().map(|v| v.is_boolean()).unwrap_or(false);
+
+        if let Some(exists) = prop.exists {
+            if exists {
+                let mut path = "config".to_string();
+                for (i, part) in parts.iter().enumerate() {
+                    let is_last = i == parts.len() - 1;
+                    let is_bool = is_last && is_bool_property;
+                    let getter = if is_bool {
+                        property_to_is_getter(part)
+                    } else {
+                        property_to_getter(part)
+                    };
+                    writeln!(buf, "        assertNotNull({}.{}());", path, getter)?;
+                    path = format!("{}.{}()", path, getter);
+                }
+            }
+        }
+
+        if let Some(value) = &prop.value {
+            let mut getter_path = String::from("config");
+            for (i, part) in parts.iter().enumerate() {
+                let is_last = i == parts.len() - 1;
+                let is_bool = is_last && is_bool_property;
+                let getter = if is_bool {
+                    property_to_is_getter(part)
+                } else {
+                    property_to_getter(part)
+                };
+                getter_path = format!("{}.{}()", getter_path, getter);
+            }
+
+            match value {
+                Value::Number(n) => {
+                    writeln!(buf, "        assertEquals({}, {});", n, getter_path)?;
+                }
+                Value::Bool(b) => {
+                    if *b {
+                        writeln!(buf, "        assertTrue({});", getter_path)?;
+                    } else {
+                        writeln!(buf, "        assertFalse({});", getter_path)?;
+                    }
+                }
+                Value::String(s) => {
+                    writeln!(buf, "        assertEquals(\"{}\", {});", s, getter_path)?;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn snake_to_camel(input: &str) -> String {
+    // Handle special cases for acronyms
+    if input == "ocr_backends" {
+        return "oCRBackends".to_string();
+    }
+    if input.starts_with("unregister_ocr_backend") {
+        return "unregisterOCRBackend".to_string();
+    }
+    if input.starts_with("clear_ocr_backends") {
+        return "clearOCRBackends".to_string();
+    }
+    if input.starts_with("list_ocr_backends") {
+        return "listOCRBackends".to_string();
+    }
+
+    let mut result = String::new();
+    let mut capitalize_next = false;
+
+    for (i, ch) in input.chars().enumerate() {
+        if ch == '_' {
+            capitalize_next = true;
+        } else if i == 0 {
+            result.push(ch.to_ascii_lowercase());
+        } else if capitalize_next {
+            result.push(ch.to_ascii_uppercase());
+            capitalize_next = false;
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result
+}
+
+fn property_to_getter(property: &str) -> String {
+    // Convert snake_case property to PascalCase for getter
+    let mut result = String::new();
+    let mut capitalize_next = true;
+
+    for ch in property.chars() {
+        if ch == '_' {
+            capitalize_next = true;
+        } else if capitalize_next {
+            result.push(ch.to_ascii_uppercase());
+            capitalize_next = false;
+        } else {
+            result.push(ch);
+        }
+    }
+
+    format!("get{}", result)
+}
+
+fn property_to_is_getter(property: &str) -> String {
+    // Convert snake_case property to PascalCase for boolean getter (is prefix)
+    let mut result = String::new();
+    let mut capitalize_next = true;
+
+    for ch in property.chars() {
+        if ch == '_' {
+            capitalize_next = true;
+        } else if capitalize_next {
+            result.push(ch.to_ascii_uppercase());
+            capitalize_next = false;
+        } else {
+            result.push(ch);
+        }
+    }
+
+    format!("is{}", result)
 }

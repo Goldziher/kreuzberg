@@ -1,116 +1,46 @@
-# Auto-generated plugin API tests for Python binding.
+# Auto-generated from fixtures/plugin_api/ - DO NOT EDIT
 """
-E2E tests for plugin registration and management APIs.
+E2E tests for plugin/config/utility APIs.
 
-Tests all plugin types:
-- Validators
-- Post-processors
-- OCR backends
-- Document extractors
-
-Tests all management operations:
-- Registration
-- Unregistration
-- Listing
-- Clearing
+Generated from plugin API fixtures.
+To regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang python
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import kreuzberg
 from kreuzberg import ExtractionConfig
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-class TestValidatorAPIs:
-    """Test validator registration and management APIs."""
-
-    def test_list_validators(self) -> None:
-        """List all registered validators."""
-        validators = kreuzberg.list_validators()
-        assert isinstance(validators, list)
-        assert all(isinstance(v, str) for v in validators)
-
-    def test_clear_validators(self) -> None:
-        """Clear all validators."""
-        # Should not raise
-        kreuzberg.clear_validators()
-        validators = kreuzberg.list_validators()
-        assert len(validators) == 0
+# Configuration Tests
 
 
-class TestPostProcessorAPIs:
-    """Test post-processor registration and management APIs."""
+def test_config_discover(tmp_path: Path, monkeypatch) -> None:
+    """Discover configuration from current or parent directories"""
+    config_path = tmp_path / "kreuzberg.toml"
+    config_path.write_text("""[chunking]
+max_chars = 50
+""")
 
-    def test_list_post_processors(self) -> None:
-        """List all registered post-processors."""
-        processors = kreuzberg.list_post_processors()
-        assert isinstance(processors, list)
-        assert all(isinstance(p, str) for p in processors)
+    subdir = tmp_path / "subdir"
+    subdir.mkdir()
+    monkeypatch.chdir(subdir)
 
-    def test_clear_post_processors(self) -> None:
-        """Clear all post-processors."""
-        # Should not raise
-        kreuzberg.clear_post_processors()
-        processors = kreuzberg.list_post_processors()
-        assert len(processors) == 0
+    config = ExtractionConfig.discover()
+    assert config is not None
 
-
-class TestOCRBackendAPIs:
-    """Test OCR backend registration and management APIs."""
-
-    def test_list_ocr_backends(self) -> None:
-        """List all registered OCR backends."""
-        backends = kreuzberg.list_ocr_backends()
-        assert isinstance(backends, list)
-        assert all(isinstance(b, str) for b in backends)
-        # Should include built-in backends
-        assert "tesseract" in backends
-
-    def test_unregister_ocr_backend(self) -> None:
-        """Unregister an OCR backend."""
-        # Should handle nonexistent backend gracefully
-        kreuzberg.unregister_ocr_backend("nonexistent-backend-xyz")
-
-    def test_clear_ocr_backends(self) -> None:
-        """Clear all OCR backends."""
-        # Should not raise
-        kreuzberg.clear_ocr_backends()
-        backends = kreuzberg.list_ocr_backends()
-        assert len(backends) == 0
+    assert config.chunking is not None
+    assert config.chunking.max_chars == 50
 
 
-class TestDocumentExtractorAPIs:
-    """Test document extractor registration and management APIs."""
-
-    def test_list_document_extractors(self) -> None:
-        """List all registered document extractors."""
-        extractors = kreuzberg.list_document_extractors()
-        assert isinstance(extractors, list)
-        assert all(isinstance(e, str) for e in extractors)
-        # Should include built-in extractors
-        assert any("pdf" in e.lower() for e in extractors)
-
-    def test_unregister_document_extractor(self) -> None:
-        """Unregister a document extractor."""
-        # Should handle nonexistent extractor gracefully
-        kreuzberg.unregister_document_extractor("nonexistent-extractor-xyz")
-
-    def test_clear_document_extractors(self) -> None:
-        """Clear all document extractors."""
-        # Should not raise
-        kreuzberg.clear_document_extractors()
-        extractors = kreuzberg.list_document_extractors()
-        assert len(extractors) == 0
-
-
-class TestConfigAPIs:
-    """Test configuration loading and management APIs."""
-
-    def test_config_from_file(self, tmp_path) -> None:
-        """Load configuration from a TOML file."""
-        config_path = tmp_path / "test_config.toml"
-        config_path.write_text("""
-[chunking]
+def test_config_from_file(tmp_path: Path) -> None:
+    """Load configuration from a TOML file"""
+    config_path = tmp_path / "test_config.toml"
+    config_path.write_text("""[chunking]
 max_chars = 100
 max_overlap = 20
 
@@ -118,52 +48,117 @@ max_overlap = 20
 enabled = false
 """)
 
-        config = ExtractionConfig.from_file(str(config_path))
-        assert config.chunking is not None
-        assert config.chunking.max_chars == 100
-        assert config.chunking.max_overlap == 20
-        assert config.language_detection is not None
-        assert config.language_detection.enabled is False
+    config = ExtractionConfig.from_file(str(config_path))
 
-    def test_config_discover(self, tmp_path, monkeypatch) -> None:
-        """Discover configuration from current or parent directories."""
-        config_path = tmp_path / "kreuzberg.toml"
-        config_path.write_text("""
-[chunking]
-max_chars = 50
-""")
-
-        # Change to subdirectory
-        subdir = tmp_path / "subdir"
-        subdir.mkdir()
-        monkeypatch.chdir(subdir)
-
-        config = ExtractionConfig.discover()
-        assert config is not None
-        assert config.chunking is not None
-        assert config.chunking.max_chars == 50
+    assert config.chunking is not None
+    assert config.chunking.max_chars == 100
+    assert config.chunking.max_overlap == 20
+    assert config.language_detection is not None
+    assert config.language_detection.enabled is False
 
 
-class TestMIMEUtilities:
-    """Test MIME type detection and utilities."""
+# Document Extractor Management Tests
 
-    def test_detect_mime_from_bytes(self) -> None:
-        """Detect MIME type from file bytes."""
-        # PDF magic bytes
-        pdf_bytes = b"%PDF-1.4\n"
-        mime_type = kreuzberg.detect_mime_type(pdf_bytes)
-        assert "pdf" in mime_type.lower()
 
-    def test_detect_mime_from_path(self, tmp_path) -> None:
-        """Detect MIME type from file path."""
-        test_file = tmp_path / "test.txt"
-        test_file.write_text("Hello, world!")
+def test_extractors_clear() -> None:
+    """Clear all document extractors and verify list is empty"""
+    kreuzberg.clear_document_extractors()
+    result = kreuzberg.list_document_extractors()
+    assert len(result) == 0
 
-        mime_type = kreuzberg.detect_mime_type_from_path(str(test_file))
-        assert "text" in mime_type.lower()
 
-    def test_get_mime_extensions(self) -> None:
-        """Get file extensions for a MIME type."""
-        extensions = kreuzberg.get_extensions_for_mime("application/pdf")
-        assert isinstance(extensions, list)
-        assert "pdf" in extensions
+def test_extractors_list() -> None:
+    """List all registered document extractors"""
+    result = kreuzberg.list_document_extractors()
+    assert isinstance(result, list)
+    assert all(isinstance(item, str) for item in result)
+
+
+def test_extractors_unregister() -> None:
+    """Unregister nonexistent document extractor gracefully"""
+    kreuzberg.unregister_document_extractor("nonexistent-extractor-xyz")
+
+
+# Mime Utilities Tests
+
+
+def test_mime_detect_bytes() -> None:
+    """Detect MIME type from file bytes"""
+    test_bytes = b"%PDF-1.4\n"
+    result = kreuzberg.detect_mime_type(test_bytes)
+
+    assert "pdf" in result.lower()
+
+
+def test_mime_detect_path(tmp_path: Path) -> None:
+    """Detect MIME type from file path"""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Hello, world!")
+
+    result = kreuzberg.detect_mime_type_from_path(str(test_file))
+
+    assert "text" in result.lower()
+
+
+def test_mime_get_extensions() -> None:
+    """Get file extensions for a MIME type"""
+    result = kreuzberg.get_extensions_for_mime("application/pdf")
+    assert isinstance(result, list)
+    assert "pdf" in result
+
+
+# Ocr Backend Management Tests
+
+
+def test_ocr_backends_clear() -> None:
+    """Clear all OCR backends and verify list is empty"""
+    kreuzberg.clear_ocr_backends()
+    result = kreuzberg.list_ocr_backends()
+    assert len(result) == 0
+
+
+def test_ocr_backends_list() -> None:
+    """List all registered OCR backends"""
+    result = kreuzberg.list_ocr_backends()
+    assert isinstance(result, list)
+    assert all(isinstance(item, str) for item in result)
+    assert "tesseract" in result
+
+
+def test_ocr_backends_unregister() -> None:
+    """Unregister nonexistent OCR backend gracefully"""
+    kreuzberg.unregister_ocr_backend("nonexistent-backend-xyz")
+
+
+# Post Processor Management Tests
+
+
+def test_post_processors_clear() -> None:
+    """Clear all post-processors and verify list is empty"""
+    kreuzberg.clear_post_processors()
+    result = kreuzberg.list_post_processors()
+    assert len(result) == 0
+
+
+def test_post_processors_list() -> None:
+    """List all registered post-processors"""
+    result = kreuzberg.list_post_processors()
+    assert isinstance(result, list)
+    assert all(isinstance(item, str) for item in result)
+
+
+# Validator Management Tests
+
+
+def test_validators_clear() -> None:
+    """Clear all validators and verify list is empty"""
+    kreuzberg.clear_validators()
+    result = kreuzberg.list_validators()
+    assert len(result) == 0
+
+
+def test_validators_list() -> None:
+    """List all registered validators"""
+    result = kreuzberg.list_validators()
+    assert isinstance(result, list)
+    assert all(isinstance(item, str) for item in result)

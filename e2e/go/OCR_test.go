@@ -6,63 +6,63 @@ package e2e
 import "testing"
 
 func TestOCR_OCR_IMAGE_HELLO_WORLD(t *testing.T) {
-	result := runExtraction(t, "images/test_hello_world.png", []byte(`{
+    result := runExtraction(t, "images/test_hello_world.png", []byte(`{
   "force_ocr": true,
   "ocr": {
     "backend": "tesseract",
     "language": "eng"
   }
 }`))
-	assertExpectedMime(t, result, []string{"image/png"})
-	assertMinContentLength(t, result, 5)
-	assertContentContainsAny(t, result, []string{"hello", "world"})
+    assertExpectedMime(t, result, []string{"image/png"})
+    assertMinContentLength(t, result, 5)
+    assertContentContainsAny(t, result, []string{"hello", "world"})
 }
 
 func TestOCR_OCR_IMAGE_NO_TEXT(t *testing.T) {
-	result := runExtraction(t, "images/flower_no_text.jpg", []byte(`{
+    result := runExtraction(t, "images/flower_no_text.jpg", []byte(`{
   "force_ocr": true,
   "ocr": {
     "backend": "tesseract",
     "language": "eng"
   }
 }`))
-	assertExpectedMime(t, result, []string{"image/jpeg"})
-	assertMaxContentLength(t, result, 200)
+    assertExpectedMime(t, result, []string{"image/jpeg"})
+    assertMaxContentLength(t, result, 200)
 }
 
 func TestOCR_OCR_PDF_IMAGE_ONLY_GERMAN(t *testing.T) {
-	result := runExtraction(t, "pdfs/image_only_german_pdf.pdf", []byte(`{
+    result := runExtraction(t, "pdfs/image_only_german_pdf.pdf", []byte(`{
   "force_ocr": true,
   "ocr": {
     "backend": "tesseract",
     "language": "eng"
   }
 }`))
-	assertExpectedMime(t, result, []string{"application/pdf"})
-	assertMinContentLength(t, result, 20)
+    assertExpectedMime(t, result, []string{"application/pdf"})
+    assertMinContentLength(t, result, 20)
 }
 
 func TestOCR_OCR_PDF_ROTATED_90(t *testing.T) {
-	result := runExtraction(t, "pdfs/ocr_test_rotated_90.pdf", []byte(`{
+    result := runExtraction(t, "pdfs/ocr_test_rotated_90.pdf", []byte(`{
   "force_ocr": true,
   "ocr": {
     "backend": "tesseract",
     "language": "eng"
   }
 }`))
-	assertExpectedMime(t, result, []string{"application/pdf"})
-	assertMinContentLength(t, result, 10)
+    assertExpectedMime(t, result, []string{"application/pdf"})
+    assertMinContentLength(t, result, 10)
 }
 
 func TestOCR_OCR_PDF_TESSERACT(t *testing.T) {
-	result := runExtraction(t, "pdfs/ocr_test.pdf", []byte(`{
+    result := runExtraction(t, "pdfs/ocr_test.pdf", []byte(`{
   "force_ocr": true,
   "ocr": {
     "backend": "tesseract",
     "language": "eng"
   }
 }`))
-	assertExpectedMime(t, result, []string{"application/pdf"})
-	assertMinContentLength(t, result, 20)
-	assertContentContainsAny(t, result, []string{"Docling", "Markdown", "JSON"})
+    assertExpectedMime(t, result, []string{"application/pdf"})
+    assertMinContentLength(t, result, 20)
+    assertContentContainsAny(t, result, []string{"Docling", "Markdown", "JSON"})
 }

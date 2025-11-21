@@ -1,0 +1,18 @@
+{
+	"id": "validators_clear",
+	"description": "Clear all validators and verify list is empty",
+	"api_category": "validator_management",
+	"api_function": "clear_validators",
+	"tags": ["validators", "plugin_management", "clear"],
+	"test_spec": {
+		"pattern": "clear_registry",
+		"function_call": {
+			"name": "clear_validators",
+			"args": []
+		},
+		"assertions": {
+			"return_type": "void",
+			"verify_cleanup": true
+		}
+	}
+}

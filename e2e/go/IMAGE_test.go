@@ -6,9 +6,9 @@ package e2e
 import "testing"
 
 func TestIMAGE_IMAGE_METADATA_ONLY(t *testing.T) {
-	result := runExtraction(t, "images/example.jpg", []byte(`{
+    result := runExtraction(t, "images/example.jpg", []byte(`{
   "ocr": null
 }`))
-	assertExpectedMime(t, result, []string{"image/jpeg"})
-	assertMaxContentLength(t, result, 100)
+    assertExpectedMime(t, result, []string{"image/jpeg"})
+    assertMaxContentLength(t, result, 100)
 }

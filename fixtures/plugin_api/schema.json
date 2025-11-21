@@ -1,0 +1,241 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://kreuzberg.dev/schemas/plugin-api-fixture.json",
+	"title": "Kreuzberg Plugin API Test Fixture",
+	"description": "Schema for plugin/config/utility API test fixtures. These fixtures define tests for non-document-extraction APIs like plugin management, configuration loading, and MIME utilities.",
+	"type": "object",
+	"required": ["id", "api_category", "api_function", "test_spec"],
+	"properties": {
+		"id": {
+			"type": "string",
+			"description": "Unique identifier for this fixture (e.g., 'list_validators', 'config_from_file_basic')",
+			"pattern": "^[a-z0-9_]+$"
+		},
+		"description": {
+			"type": "string",
+			"description": "Human-readable description of what this test verifies"
+		},
+		"api_category": {
+			"type": "string",
+			"description": "Category of API being tested",
+			"enum": [
+				"validator_management",
+				"post_processor_management",
+				"ocr_backend_management",
+				"document_extractor_management",
+				"configuration",
+				"mime_utilities",
+				"embedding_presets"
+			]
+		},
+		"api_function": {
+			"type": "string",
+			"description": "Name of the API function being tested (snake_case format)",
+			"examples": ["list_validators", "clear_validators", "config_from_file", "detect_mime_type"]
+		},
+		"test_spec": {
+			"type": "object",
+			"description": "Specification of the test to generate",
+			"required": ["pattern", "assertions"],
+			"properties": {
+				"pattern": {
+					"type": "string",
+					"description": "Test pattern type",
+					"enum": [
+						"simple_list",
+						"clear_registry",
+						"graceful_unregister",
+						"config_from_file",
+						"config_discover",
+						"mime_from_bytes",
+						"mime_from_path",
+						"mime_extension_lookup"
+					]
+				},
+				"setup": {
+					"type": "object",
+					"description": "Optional setup steps before test execution",
+					"properties": {
+						"create_temp_file": {
+							"type": "boolean",
+							"description": "Whether to create a temporary file"
+						},
+						"temp_file_name": {
+							"type": "string",
+							"description": "Name of temporary file to create"
+						},
+						"temp_file_content": {
+							"type": "string",
+							"description": "Content to write to temporary file"
+						},
+						"create_temp_dir": {
+							"type": "boolean",
+							"description": "Whether to create a temporary directory"
+						},
+						"create_subdirectory": {
+							"type": "boolean",
+							"description": "Whether to create a subdirectory in temp dir"
+						},
+						"subdirectory_name": {
+							"type": "string",
+							"description": "Name of subdirectory to create"
+						},
+						"change_directory": {
+							"type": "boolean",
+							"description": "Whether to change to subdirectory for test"
+						},
+						"test_data": {
+							"type": "string",
+							"description": "Test data (e.g., bytes for MIME detection)"
+						},
+						"lazy_init_required": {
+							"type": "object",
+							"description": "Special initialization required (e.g., Go document extractors)",
+							"properties": {
+								"languages": {
+									"type": "array",
+									"items": {
+										"type": "string",
+										"enum": ["go"]
+									}
+								},
+								"init_action": {
+									"type": "string",
+									"description": "Action to perform for initialization"
+								},
+								"init_data": {
+									"type": "object",
+									"description": "Data needed for initialization"
+								}
+							}
+						}
+					}
+				},
+				"function_call": {
+					"type": "object",
+					"description": "Specification of the function to call",
+					"required": ["name"],
+					"properties": {
+						"name": {
+							"type": "string",
+							"description": "Function name (snake_case, will be converted per language)"
+						},
+						"args": {
+							"type": "array",
+							"description": "Arguments to pass (use ${var} for substitutions)",
+							"items": {
+								"oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "object" }]
+							}
+						},
+						"is_method": {
+							"type": "boolean",
+							"description": "Whether this is a class/static method (e.g., ExtractionConfig.from_file)"
+						},
+						"class_name": {
+							"type": "string",
+							"description": "Class name if is_method is true"
+						}
+					}
+				},
+				"assertions": {
+					"type": "object",
+					"description": "Assertions to verify in the test",
+					"properties": {
+						"return_type": {
+							"type": "string",
+							"description": "Expected return type",
+							"enum": ["list", "boolean", "string", "number", "object", "null", "void"]
+						},
+						"list_item_type": {
+							"type": "string",
+							"description": "If return_type is list, the type of items"
+						},
+						"list_contains": {
+							"type": "string",
+							"description": "Item that must be in returned list"
+						},
+						"list_empty": {
+							"type": "boolean",
+							"description": "Whether list should be empty"
+						},
+						"string_contains": {
+							"type": "string",
+							"description": "Substring that must be in returned string"
+						},
+						"does_not_throw": {
+							"type": "boolean",
+							"description": "Assert that function does not throw/error"
+						},
+						"object_properties": {
+							"type": "array",
+							"description": "Object properties to verify",
+							"items": {
+								"type": "object",
+								"required": ["path", "value"],
+								"properties": {
+									"path": {
+										"type": "string",
+										"description": "Property path (dot notation, e.g., 'chunking.max_chars')"
+									},
+									"value": {
+										"description": "Expected value"
+									},
+									"type": {
+										"type": "string",
+										"description": "Expected type of value"
+									},
+									"exists": {
+										"type": "boolean",
+										"description": "Whether property should exist (true) or not exist (false)"
+									}
+								}
+							}
+						},
+						"verify_cleanup": {
+							"type": "boolean",
+							"description": "Verify list is empty after clear operation"
+						}
+					}
+				},
+				"teardown": {
+					"type": "object",
+					"description": "Optional teardown steps after test execution",
+					"properties": {
+						"restore_directory": {
+							"type": "boolean",
+							"description": "Whether to restore original directory"
+						},
+						"cleanup_temp_files": {
+							"type": "boolean",
+							"description": "Whether to manually cleanup temp files (auto for most languages)"
+						}
+					}
+				}
+			}
+		},
+		"skip": {
+			"type": "object",
+			"description": "Skip directive for specific languages or conditions",
+			"properties": {
+				"languages": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"enum": ["rust", "python", "typescript", "ruby", "java", "go"]
+					}
+				},
+				"reason": {
+					"type": "string",
+					"description": "Reason for skipping"
+				}
+			}
+		},
+		"tags": {
+			"type": "array",
+			"description": "Tags for categorizing fixtures",
+			"items": {
+				"type": "string"
+			}
+		}
+	}
+}

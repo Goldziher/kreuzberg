@@ -1,0 +1,49 @@
+{
+	"id": "config_from_file",
+	"description": "Load configuration from a TOML file",
+	"api_category": "configuration",
+	"api_function": "from_file",
+	"tags": ["configuration", "toml", "file_loading"],
+	"test_spec": {
+		"pattern": "config_from_file",
+		"setup": {
+			"create_temp_file": true,
+			"temp_file_name": "test_config.toml",
+			"temp_file_content": "[chunking]\nmax_chars = 100\nmax_overlap = 20\n\n[language_detection]\nenabled = false\n"
+		},
+		"function_call": {
+			"name": "from_file",
+			"is_method": true,
+			"class_name": "ExtractionConfig",
+			"args": ["${temp_file_path}"]
+		},
+		"assertions": {
+			"return_type": "object",
+			"object_properties": [
+				{
+					"path": "chunking",
+					"exists": true
+				},
+				{
+					"path": "chunking.max_chars",
+					"value": 100,
+					"type": "number"
+				},
+				{
+					"path": "chunking.max_overlap",
+					"value": 20,
+					"type": "number"
+				},
+				{
+					"path": "language_detection",
+					"exists": true
+				},
+				{
+					"path": "language_detection.enabled",
+					"value": false,
+					"type": "boolean"
+				}
+			]
+		}
+	}
+}

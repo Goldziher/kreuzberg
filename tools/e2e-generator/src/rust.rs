@@ -15,8 +15,11 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
 
     clean_rs_files(&tests_dir)?;
 
-    let mut grouped = fixtures
-        .iter()
+    // Filter to only document extraction fixtures (plugin API not yet implemented)
+    let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
+
+    let mut grouped = doc_fixtures
+        .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
         .into_iter()
         .collect::<Vec<_>>();
@@ -58,7 +61,7 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     writeln!(buffer, "use kreuzberg::core::config::ExtractionConfig;")?;
 
     let needs_error_import = fixtures.iter().any(|fixture| {
-        !fixture.skip.requires_feature.is_empty() || !fixture.document.requires_external_tool.is_empty()
+        !fixture.skip().requires_feature.is_empty() || !fixture.document().requires_external_tool.is_empty()
     });
 
     if needs_error_import {
@@ -84,14 +87,14 @@ fn render_test(fixture: &Fixture) -> Result<String> {
         fixture.description
     )?;
 
-    let doc_path = &fixture.document.path;
+    let doc_path = &fixture.document().path;
     writeln!(
         test_body,
         "    let document_path = resolve_document(\"{}\");",
         escape_rust_string(doc_path)
     )?;
 
-    if fixture.skip.if_document_missing {
+    if fixture.skip().if_document_missing {
         writeln!(
             test_body,
             "    if !document_path.exists() {{\n        println!(\"Skipping {id}: missing document at {{}}\", document_path.display());\n        return;\n    }}",
@@ -99,7 +102,7 @@ fn render_test(fixture: &Fixture) -> Result<String> {
         )?;
     }
 
-    let config_literal = render_config_literal(&fixture.extraction.config)?;
+    let config_literal = render_config_literal(&fixture.extraction().config)?;
     if config_literal.trim().is_empty() || config_literal.trim() == "{}" {
         writeln!(test_body, "    let config = ExtractionConfig::default();\n")?;
     } else {
@@ -114,7 +117,7 @@ fn render_test(fixture: &Fixture) -> Result<String> {
         test_body,
         "    let result = match kreuzberg::extract_file_sync(&document_path, None, &config) {{"
     )?;
-    if !fixture.skip.requires_feature.is_empty() || !fixture.document.requires_external_tool.is_empty() {
+    if !fixture.skip().requires_feature.is_empty() || !fixture.document().requires_external_tool.is_empty() {
         writeln!(
             test_body,
             "        Err(KreuzbergError::MissingDependency(dep)) => {{\n            println!(\"Skipping {id}: missing dependency {{dep}}\", dep=dep);\n            return;\n        }},",
@@ -132,7 +135,7 @@ fn render_test(fixture: &Fixture) -> Result<String> {
         id = fixture.id
     )?;
 
-    test_body.push_str(&render_assertions(&fixture.assertions));
+    test_body.push_str(&render_assertions(&fixture.assertions()));
 
     writeln!(test_body, "}}\n")?;
 
