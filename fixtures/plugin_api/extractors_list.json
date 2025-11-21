@@ -1,0 +1,29 @@
+{
+	"id": "extractors_list",
+	"description": "List all registered document extractors",
+	"api_category": "document_extractor_management",
+	"api_function": "list_document_extractors",
+	"tags": ["extractors", "plugin_management", "list"],
+	"test_spec": {
+		"pattern": "simple_list",
+		"setup": {
+			"lazy_init_required": {
+				"languages": ["go"],
+				"init_action": "extract_file_sync",
+				"init_data": {
+					"create_temp_file": true,
+					"temp_file_name": "test.pdf",
+					"temp_file_content": "%PDF-1.4\n%EOF\n"
+				}
+			}
+		},
+		"function_call": {
+			"name": "list_document_extractors",
+			"args": []
+		},
+		"assertions": {
+			"return_type": "list",
+			"list_item_type": "string"
+		}
+	}
+}

@@ -156,4 +156,16 @@ class KreuzbergTest {
         var processors = Kreuzberg.listPostProcessors();
         assertFalse(processors.contains(name), "PostProcessors should be cleared");
     }
+
+    @Test
+    void testListOCRBackends() throws KreuzbergException {
+        var backends = Kreuzberg.listOCRBackends();
+        assertNotNull(backends, "OCR backends list should not be null");
+    }
+
+    @Test
+    void testUnregisterOCRBackend() throws KreuzbergException {
+        assertDoesNotThrow(() -> Kreuzberg.unregisterOCRBackend("nonexistent"),
+            "Unregistering nonexistent OCR backend should not throw");
+    }
 }

@@ -1,5 +1,5 @@
 use crate::fixtures::{Assertions, Fixture};
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use camino::Utf8Path;
 use itertools::Itertools;
 use serde_json::{Map, Value};
@@ -236,8 +236,14 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     write_spec_helper(&spec_dir)?;
     clean_spec_files(&spec_dir)?;
 
-    let mut grouped = fixtures
-        .iter()
+    // Separate document extraction and plugin API fixtures
+    let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
+
+    let plugin_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
+
+    // Generate document extraction tests
+    let mut grouped = doc_fixtures
+        .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
         .into_iter()
         .collect::<Vec<_>>();
@@ -249,6 +255,11 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         let content = render_category(&category, &fixtures)?;
         let path = spec_dir.join(file_name);
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
+    }
+
+    // Generate plugin API tests
+    if !plugin_fixtures.is_empty() {
+        generate_plugin_api_tests(&plugin_fixtures, &spec_dir)?;
     }
 
     Ok(())
@@ -322,19 +333,19 @@ fn render_example(fixture: &Fixture, is_last: bool) -> Result<String> {
     writeln!(body, "  it {} do", render_ruby_string(&fixture.id))?;
     writeln!(body, "    E2ERuby.run_fixture(")?;
     writeln!(body, "      {},", render_ruby_string(&fixture.id))?;
-    writeln!(body, "      {},", render_ruby_string(&fixture.document.path))?;
+    writeln!(body, "      {},", render_ruby_string(&fixture.document().path))?;
 
-    let config_expr = render_config_expression(&fixture.extraction.config)?;
+    let config_expr = render_config_expression(&fixture.extraction().config)?;
     match config_expr {
         None => writeln!(body, "      nil,")?,
         Some(expr) => writeln!(body, "      {expr},")?,
     }
 
     let requirements = render_string_array(&collect_requirements(fixture));
-    let notes_literal = render_optional_string(fixture.skip.notes.as_ref());
+    let notes_literal = render_optional_string(fixture.skip().notes.as_ref());
     writeln!(body, "      requirements: {},", requirements)?;
     writeln!(body, "      notes: {},", notes_literal)?;
-    let skip_flag = if fixture.skip.if_document_missing {
+    let skip_flag = if fixture.skip().if_document_missing {
         "true"
     } else {
         "false"
@@ -342,7 +353,7 @@ fn render_example(fixture: &Fixture, is_last: bool) -> Result<String> {
     writeln!(body, "      skip_if_missing: {}", skip_flag)?;
     writeln!(body, "    ) do |result|")?;
 
-    let assertions = render_assertions(&fixture.assertions);
+    let assertions = render_assertions(&fixture.assertions());
     if !assertions.is_empty() {
         body.push_str(&assertions);
     }
@@ -588,6 +599,7 @@ fn is_symbol_key(key: &str) -> bool {
     }
 
     let mut chars = key.chars();
+    // SAFETY: We just checked that key is not empty, so next() will return Some
     let first = chars.next().unwrap();
     if !first.is_ascii_lowercase() && first != '_' {
         return false;
@@ -597,11 +609,490 @@ fn is_symbol_key(key: &str) -> bool {
 
 fn collect_requirements(fixture: &Fixture) -> Vec<String> {
     fixture
-        .skip
+        .skip()
         .requires_feature
         .iter()
-        .chain(fixture.document.requires_external_tool.iter())
+        .chain(fixture.document().requires_external_tool.iter())
         .filter(|value| !value.is_empty())
         .map(|value| value.to_string())
         .collect()
+}
+
+// Plugin API test generation
+
+fn generate_plugin_api_tests(fixtures: &[&Fixture], spec_dir: &Utf8Path) -> Result<()> {
+    let mut buffer = String::new();
+
+    // File header
+    writeln!(buffer, "# frozen_string_literal: true")?;
+    writeln!(buffer)?;
+    writeln!(buffer, "# Auto-generated from fixtures/plugin_api/ - DO NOT EDIT")?;
+    writeln!(buffer)?;
+    writeln!(buffer, "# E2E tests for plugin/config/utility APIs.")?;
+    writeln!(buffer, "#")?;
+    writeln!(buffer, "# Generated from plugin API fixtures.")?;
+    writeln!(
+        buffer,
+        "# To regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang ruby"
+    )?;
+    writeln!(buffer)?;
+    writeln!(
+        buffer,
+        "# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength"
+    )?;
+    writeln!(buffer)?;
+    writeln!(buffer, "require 'spec_helper'")?;
+    writeln!(buffer, "require 'tmpdir'")?;
+    writeln!(buffer, "require 'fileutils'")?;
+    writeln!(buffer)?;
+
+    // Group fixtures by api_category
+    let mut grouped_map: std::collections::HashMap<String, Vec<&Fixture>> = std::collections::HashMap::new();
+    for fixture in fixtures.iter() {
+        let category = fixture
+            .api_category
+            .as_ref()
+            .with_context(|| format!("Fixture '{}' missing api_category", fixture.id))?
+            .as_str()
+            .to_string();
+        grouped_map.entry(category).or_default().push(fixture);
+    }
+    let mut grouped: Vec<_> = grouped_map.into_iter().collect();
+    grouped.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // Generate tests grouped by category
+    for (category, mut fixtures) in grouped {
+        fixtures.sort_by(|a, b| a.id.cmp(&b.id));
+        let category_title = to_title_case(&category);
+        writeln!(buffer, "RSpec.describe '{}' do", category_title)?;
+
+        for fixture in fixtures {
+            buffer.push_str(&render_plugin_test(fixture)?);
+        }
+
+        writeln!(buffer, "end")?;
+        writeln!(buffer)?;
+    }
+
+    writeln!(
+        buffer,
+        "# rubocop:enable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength"
+    )?;
+
+    let path = spec_dir.join("plugin_apis_spec.rb");
+    fs::write(&path, buffer).with_context(|| format!("Writing {}", path))?;
+
+    Ok(())
+}
+
+fn render_plugin_test(fixture: &Fixture) -> Result<String> {
+    let mut buffer = String::new();
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+
+    // Generate test name from description
+    let test_name = &fixture.description;
+    writeln!(buffer, "  it '{}' do", escape_ruby_string_content(test_name))?;
+
+    // Render based on pattern
+    match test_spec.pattern.as_str() {
+        "simple_list" => render_simple_list_test(&mut buffer, fixture)?,
+        "clear_registry" => render_clear_registry_test(&mut buffer, fixture)?,
+        "graceful_unregister" => render_graceful_unregister_test(&mut buffer, fixture)?,
+        "config_from_file" => render_config_from_file_test(&mut buffer, fixture)?,
+        "config_discover" => render_config_discover_test(&mut buffer, fixture)?,
+        "mime_from_bytes" => render_mime_from_bytes_test(&mut buffer, fixture)?,
+        "mime_from_path" => render_mime_from_path_test(&mut buffer, fixture)?,
+        "mime_extension_lookup" => render_mime_extension_lookup_test(&mut buffer, fixture)?,
+        _ => {
+            bail!("Unknown plugin test pattern: {}", test_spec.pattern);
+        }
+    }
+
+    writeln!(buffer, "  end")?;
+    writeln!(buffer)?;
+
+    Ok(buffer)
+}
+
+fn render_simple_list_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let function_name = &test_spec.function_call.name;
+
+    writeln!(buffer, "    result = Kreuzberg.{}", function_name)?;
+    writeln!(buffer, "    expect(result).to be_an(Array)")?;
+
+    if let Some(item_type) = &test_spec.assertions.list_item_type {
+        let ruby_type = match item_type.as_str() {
+            "string" => "String",
+            "number" => "Numeric",
+            "boolean" => "Object", // Ruby doesn't have a Boolean class
+            _ => "Object",
+        };
+        writeln!(buffer, "    expect(result).to all(be_a({}))", ruby_type)?;
+    }
+
+    if let Some(contains) = &test_spec.assertions.list_contains {
+        writeln!(
+            buffer,
+            "    expect(result).to include('{}')",
+            escape_ruby_string_content(contains)
+        )?;
+    }
+
+    Ok(())
+}
+
+fn render_clear_registry_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let clear_function = &test_spec.function_call.name;
+
+    // Extract the list function name by replacing 'clear_' with 'list_'
+    let list_function = clear_function.replace("clear_", "list_");
+
+    writeln!(buffer, "    Kreuzberg.{}", clear_function)?;
+
+    if test_spec.assertions.verify_cleanup {
+        writeln!(buffer, "    result = Kreuzberg.{}", list_function)?;
+        writeln!(buffer, "    expect(result).to be_empty")?;
+    }
+
+    Ok(())
+}
+
+fn render_graceful_unregister_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let function_name = &test_spec.function_call.name;
+
+    // Get the argument (should be the name of a nonexistent item)
+    let arg = test_spec
+        .function_call
+        .args
+        .first()
+        .and_then(|v| v.as_str())
+        .unwrap_or("nonexistent-item-xyz");
+
+    writeln!(
+        buffer,
+        "    expect {{ Kreuzberg.{}('{}') }}.not_to raise_error",
+        function_name,
+        escape_ruby_string_content(arg)
+    )?;
+
+    Ok(())
+}
+
+fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_from_file", fixture.id))?;
+
+    // Create temp file
+    let temp_file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+    let temp_file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+
+    writeln!(buffer, "    Dir.mktmpdir do |tmpdir|")?;
+    writeln!(
+        buffer,
+        "      config_path = File.join(tmpdir, '{}')",
+        escape_ruby_string_content(temp_file_name)
+    )?;
+    writeln!(buffer, "      File.write(config_path, <<~TOML)")?;
+    writeln!(buffer, "{}", temp_file_content)?;
+    writeln!(buffer, "      TOML")?;
+    writeln!(buffer)?;
+
+    // Call ExtractionConfig.from_file (note: Ruby uses snake_case class method names)
+    let class_name = test_spec
+        .function_call
+        .class_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing class_name", fixture.id))?;
+    let ruby_class = map_ruby_class_name(class_name);
+    let method_name = &test_spec.function_call.name;
+
+    writeln!(
+        buffer,
+        "      config = Kreuzberg::Config::{}.{}(config_path)",
+        ruby_class, method_name
+    )?;
+    writeln!(buffer)?;
+
+    // Assertions
+    for prop in &test_spec.assertions.object_properties {
+        render_object_property_assertion(buffer, "config", prop, "      ")?;
+    }
+
+    writeln!(buffer, "    end")?;
+
+    Ok(())
+}
+
+fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_discover", fixture.id))?;
+
+    let temp_file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+    let temp_file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+    let subdirectory_name = setup
+        .subdirectory_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing subdirectory_name", fixture.id))?;
+
+    writeln!(buffer, "    Dir.mktmpdir do |tmpdir|")?;
+    writeln!(
+        buffer,
+        "      config_path = File.join(tmpdir, '{}')",
+        escape_ruby_string_content(temp_file_name)
+    )?;
+    writeln!(buffer, "      File.write(config_path, <<~TOML)")?;
+    writeln!(buffer, "{}", temp_file_content)?;
+    writeln!(buffer, "      TOML")?;
+    writeln!(buffer)?;
+    writeln!(
+        buffer,
+        "      subdir = File.join(tmpdir, '{}')",
+        escape_ruby_string_content(subdirectory_name)
+    )?;
+    writeln!(buffer, "      FileUtils.mkdir_p(subdir)")?;
+    writeln!(buffer)?;
+
+    // Change directory and discover
+    let class_name = test_spec
+        .function_call
+        .class_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing class_name", fixture.id))?;
+    let ruby_class = map_ruby_class_name(class_name);
+    let method_name = &test_spec.function_call.name;
+
+    writeln!(buffer, "      FileUtils.cd(subdir) do")?;
+    writeln!(
+        buffer,
+        "        config = Kreuzberg::Config::{}.{}",
+        ruby_class, method_name
+    )?;
+    writeln!(buffer)?;
+
+    // Assertions
+    for prop in &test_spec.assertions.object_properties {
+        render_object_property_assertion(buffer, "config", prop, "        ")?;
+    }
+
+    writeln!(buffer, "      end")?;
+    writeln!(buffer, "    end")?;
+
+    Ok(())
+}
+
+fn render_mime_from_bytes_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_bytes", fixture.id))?;
+
+    let test_data = setup
+        .test_data
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_data", fixture.id))?;
+
+    let function_name = &test_spec.function_call.name;
+
+    // Convert test data to Ruby string with proper encoding
+    writeln!(
+        buffer,
+        "    test_bytes = '{}'.dup.force_encoding('ASCII-8BIT')",
+        escape_ruby_string_content(test_data)
+    )?;
+    writeln!(buffer, "    result = Kreuzberg.{}(test_bytes)", function_name)?;
+
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(
+            buffer,
+            "    expect(result.downcase).to include('{}')",
+            escape_ruby_string_content(&contains.to_lowercase())
+        )?;
+    }
+
+    Ok(())
+}
+
+fn render_mime_from_path_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let function_name = &test_spec.function_call.name;
+
+    writeln!(buffer, "    Dir.mktmpdir do |tmpdir|")?;
+    writeln!(buffer, "      test_file = File.join(tmpdir, 'test.txt')")?;
+    writeln!(buffer, "      File.write(test_file, 'Hello, world!')")?;
+    writeln!(buffer)?;
+    writeln!(buffer, "      result = Kreuzberg.{}(test_file)", function_name)?;
+
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(
+            buffer,
+            "      expect(result.downcase).to include('{}')",
+            escape_ruby_string_content(&contains.to_lowercase())
+        )?;
+    }
+
+    writeln!(buffer, "    end")?;
+
+    Ok(())
+}
+
+fn render_mime_extension_lookup_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let function_name = &test_spec.function_call.name;
+
+    // Get the MIME type argument
+    let mime_type = test_spec
+        .function_call
+        .args
+        .first()
+        .and_then(|v| v.as_str())
+        .unwrap_or("application/pdf");
+
+    writeln!(
+        buffer,
+        "    result = Kreuzberg.{}('{}')",
+        function_name,
+        escape_ruby_string_content(mime_type)
+    )?;
+    writeln!(buffer, "    expect(result).to be_an(Array)")?;
+
+    if let Some(contains) = &test_spec.assertions.list_contains {
+        writeln!(
+            buffer,
+            "    expect(result).to include('{}')",
+            escape_ruby_string_content(contains)
+        )?;
+    }
+
+    Ok(())
+}
+
+fn render_object_property_assertion(
+    buffer: &mut String,
+    var_name: &str,
+    prop: &crate::fixtures::ObjectPropertyAssertion,
+    indent: &str,
+) -> Result<()> {
+    let path_parts: Vec<&str> = prop.path.split('.').collect();
+    let ruby_path = path_parts.join(".");
+
+    // Check existence if specified
+    if let Some(exists) = prop.exists {
+        if exists {
+            writeln!(buffer, "{}expect({}.{}).not_to be_nil", indent, var_name, ruby_path)?;
+        } else {
+            writeln!(buffer, "{}expect({}.{}).to be_nil", indent, var_name, ruby_path)?;
+        }
+    }
+
+    // Check value if specified
+    if let Some(value) = &prop.value {
+        match value {
+            Value::Number(n) => {
+                writeln!(buffer, "{}expect({}.{}).to eq({})", indent, var_name, ruby_path, n)?;
+            }
+            Value::Bool(b) => {
+                writeln!(buffer, "{}expect({}.{}).to eq({})", indent, var_name, ruby_path, b)?;
+            }
+            Value::String(s) => {
+                writeln!(
+                    buffer,
+                    "{}expect({}.{}).to eq('{}')",
+                    indent,
+                    var_name,
+                    ruby_path,
+                    escape_ruby_string_content(s)
+                )?;
+            }
+            _ => {
+                writeln!(
+                    buffer,
+                    "{}expect({}.{}).to eq({})",
+                    indent,
+                    var_name,
+                    ruby_path,
+                    render_ruby_value(value)
+                )?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn to_title_case(s: &str) -> String {
+    s.split('_')
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().chain(chars).collect(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn escape_ruby_string_content(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('\'', "\\'")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t")
+}
+
+// Map fixture class names to Ruby-specific class names
+fn map_ruby_class_name(name: &str) -> &str {
+    match name {
+        "ExtractionConfig" => "Extraction",
+        _ => name,
+    }
 }

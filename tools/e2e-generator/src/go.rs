@@ -374,8 +374,14 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     clean_tests(&go_root)?;
     write_helpers(&go_root)?;
 
-    let mut grouped = fixtures
-        .iter()
+    // Separate document extraction and plugin API fixtures
+    let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
+
+    let plugin_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
+
+    // Generate document extraction tests
+    let mut grouped = doc_fixtures
+        .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
         .into_iter()
         .collect::<Vec<_>>();
@@ -387,6 +393,11 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         let content = render_category(&category, &fixtures)?;
         fs::write(go_root.join(&filename), content)
             .with_context(|| format!("failed to write Go test file {filename}"))?;
+    }
+
+    // Generate plugin API tests
+    if !plugin_fixtures.is_empty() {
+        generate_plugin_api_tests(&go_root, &plugin_fixtures)?;
     }
 
     Ok(())
@@ -457,10 +468,10 @@ fn render_test(fixture: &Fixture) -> Result<String> {
     writeln!(
         code,
         "    result := runExtraction(t, {}, {})",
-        go_string_literal(&fixture.document.path),
-        render_config_literal(&fixture.extraction.config)?
+        go_string_literal(&fixture.document().path),
+        render_config_literal(&fixture.extraction().config)?
     )?;
-    code.push_str(&render_assertions(&fixture.assertions));
+    code.push_str(&render_assertions(&fixture.assertions()));
     writeln!(code, "}}")?;
     Ok(code)
 }
@@ -564,4 +575,580 @@ fn sanitize_identifier(value: &str) -> String {
         ident.remove(0);
     }
     if ident.is_empty() { "Fixture".to_string() } else { ident }
+}
+
+/// Generate plugin API tests in Go
+fn generate_plugin_api_tests(go_root: &Utf8Path, fixtures: &[&Fixture]) -> Result<()> {
+    let mut buffer = String::new();
+
+    // File header
+    writeln!(buffer, "// Auto-generated from fixtures/plugin_api/ - DO NOT EDIT")?;
+    writeln!(buffer, "//")?;
+    writeln!(buffer, "// E2E tests for plugin/config/utility APIs.")?;
+    writeln!(buffer, "//")?;
+    writeln!(buffer, "// Generated from plugin API fixtures.")?;
+    writeln!(
+        buffer,
+        "// To regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang go"
+    )?;
+    writeln!(buffer)?;
+    writeln!(buffer, "package e2e")?;
+    writeln!(buffer)?;
+    writeln!(buffer, "import (")?;
+    writeln!(buffer, "    \"os\"")?;
+    writeln!(buffer, "    \"path/filepath\"")?;
+    writeln!(buffer, "    \"strings\"")?;
+    writeln!(buffer, "    \"testing\"")?;
+    writeln!(buffer)?;
+    writeln!(
+        buffer,
+        "    kreuzberg \"github.com/Goldziher/kreuzberg/packages/go/kreuzberg\""
+    )?;
+    writeln!(buffer, ")")?;
+    writeln!(buffer)?;
+
+    // Group fixtures by API category
+    let mut grouped: Vec<(String, Vec<&Fixture>)> = Vec::new();
+    for fixture in fixtures.iter() {
+        let category = fixture
+            .api_category
+            .as_ref()
+            .with_context(|| format!("Fixture '{}' missing api_category", fixture.id))?
+            .as_str()
+            .to_string();
+
+        // Find or create the category group
+        if let Some(entry_pos) = grouped.iter().position(|(cat, _)| cat == &category) {
+            grouped[entry_pos].1.push(fixture);
+        } else {
+            grouped.push((category, vec![fixture]));
+        }
+    }
+    grouped.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // Generate tests for each category
+    for (category, mut category_fixtures) in grouped {
+        category_fixtures.sort_by(|a, b| a.id.cmp(&b.id));
+
+        // Category header comment
+        writeln!(buffer, "// {} Tests", to_title_case(&category))?;
+        writeln!(buffer)?;
+
+        for fixture in category_fixtures {
+            buffer.push_str(&render_plugin_test(fixture)?);
+            buffer.push('\n');
+        }
+    }
+
+    // Write to file
+    let output_path = go_root.join("plugin_apis_test.go");
+    fs::write(output_path.as_std_path(), buffer).context("failed to write plugin_apis_test.go")?;
+
+    Ok(())
+}
+
+/// Render a single plugin API test function
+fn render_plugin_test(fixture: &Fixture) -> Result<String> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+
+    let mut code = String::new();
+
+    // Generate test function name
+    let test_name = format!("Test{}", to_pascal_case(&test_spec.function_call.name));
+    writeln!(code, "func {test_name}(t *testing.T) {{")?;
+
+    // Handle different test patterns
+    match test_spec.pattern.as_str() {
+        "simple_list" => render_simple_list(fixture, test_spec, &mut code)?,
+        "clear_registry" => render_clear_registry(fixture, test_spec, &mut code)?,
+        "graceful_unregister" => render_graceful_unregister(fixture, test_spec, &mut code)?,
+        "config_from_file" => render_config_from_file(fixture, test_spec, &mut code)?,
+        "config_discover" => render_config_discover(fixture, test_spec, &mut code)?,
+        "mime_from_bytes" => render_mime_from_bytes(fixture, test_spec, &mut code)?,
+        "mime_from_path" => render_mime_from_path(fixture, test_spec, &mut code)?,
+        "mime_extension_lookup" => render_mime_extension_lookup(fixture, test_spec, &mut code)?,
+        _ => anyhow::bail!("Unknown test pattern: {}", test_spec.pattern),
+    }
+
+    writeln!(code, "}}")?;
+    Ok(code)
+}
+
+/// Convert snake_case to PascalCase, handling acronyms like OCR
+fn to_pascal_case(s: &str) -> String {
+    s.split('_')
+        .map(|word| {
+            // Handle special acronyms that should be all caps
+            match word.to_uppercase().as_str() {
+                "OCR" => "OCR".to_string(),
+                _ => {
+                    let mut chars = word.chars();
+                    match chars.next() {
+                        None => String::new(),
+                        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                    }
+                }
+            }
+        })
+        .collect()
+}
+
+/// Convert snake_case to Title Case (with spaces)
+fn to_title_case(s: &str) -> String {
+    s.split('_')
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Render a simple list test
+fn render_simple_list(
+    _fixture: &Fixture,
+    test_spec: &crate::fixtures::PluginTestSpec,
+    code: &mut String,
+) -> Result<()> {
+    let func_name = to_pascal_case(&test_spec.function_call.name);
+
+    // Check for lazy initialization
+    if let Some(setup) = &test_spec.setup {
+        if let Some(lazy_init) = &setup.lazy_init_required {
+            if lazy_init.languages.contains(&"go".to_string()) {
+                // Special handling for Go lazy initialization
+                writeln!(code, "    tmpDir := t.TempDir()")?;
+                writeln!(code, "    testFile := filepath.Join(tmpDir, \"test.pdf\")")?;
+                writeln!(code, "    pdfContent := []byte(\"%PDF-1.4\\\\n%EOF\\\\n\")")?;
+                writeln!(
+                    code,
+                    "    if err := os.WriteFile(testFile, pdfContent, 0644); err != nil {{"
+                )?;
+                writeln!(code, "        t.Fatalf(\"Failed to write test PDF file: %v\", err)")?;
+                writeln!(code, "    }}")?;
+                writeln!(code)?;
+                writeln!(code, "    // This will initialize the PDF extractor")?;
+                writeln!(code, "    _, _ = kreuzberg.ExtractFileSync(testFile, nil)")?;
+                writeln!(code)?;
+            }
+        }
+    }
+
+    writeln!(code, "    result, err := kreuzberg.{}()", func_name)?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"{} failed: %v\", err)", func_name)?;
+    writeln!(code, "    }}")?;
+    writeln!(code, "    if result == nil {{")?;
+    writeln!(code, "        t.Fatal(\"Result should not be nil\")")?;
+    writeln!(code, "    }}")?;
+
+    Ok(())
+}
+
+/// Render a clear registry test
+fn render_clear_registry(
+    _fixture: &Fixture,
+    test_spec: &crate::fixtures::PluginTestSpec,
+    code: &mut String,
+) -> Result<()> {
+    let clear_func = to_pascal_case(&test_spec.function_call.name);
+    let list_func = clear_func.replace("Clear", "List");
+
+    writeln!(code, "    err := kreuzberg.{}()", clear_func)?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"{} failed: %v\", err)", clear_func)?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+    writeln!(code, "    result, err := kreuzberg.{}()", list_func)?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"{} failed: %v\", err)", list_func)?;
+    writeln!(code, "    }}")?;
+    writeln!(code, "    if len(result) != 0 {{")?;
+    writeln!(
+        code,
+        "        t.Errorf(\"Expected empty list after clear, got %d items\", len(result))"
+    )?;
+    writeln!(code, "    }}")?;
+
+    Ok(())
+}
+
+/// Render a graceful unregister test
+fn render_graceful_unregister(
+    _fixture: &Fixture,
+    test_spec: &crate::fixtures::PluginTestSpec,
+    code: &mut String,
+) -> Result<()> {
+    let func_name = to_pascal_case(&test_spec.function_call.name);
+    let arg = test_spec
+        .function_call
+        .args
+        .first()
+        .and_then(|v| v.as_str())
+        .unwrap_or("nonexistent-backend-xyz");
+
+    writeln!(code, "    err := kreuzberg.{}(\"{}\")", func_name, arg)?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(
+        code,
+        "        t.Errorf(\"{} should not error for nonexistent item: %v\", err)",
+        func_name
+    )?;
+    writeln!(code, "    }}")?;
+
+    Ok(())
+}
+
+/// Render a config_from_file test
+fn render_config_from_file(
+    fixture: &Fixture,
+    test_spec: &crate::fixtures::PluginTestSpec,
+    code: &mut String,
+) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_from_file", fixture.id))?;
+
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+
+    writeln!(code, "    tmpDir := t.TempDir()")?;
+    writeln!(code, "    configPath := filepath.Join(tmpDir, \"{}\")", file_name)?;
+    writeln!(code)?;
+    writeln!(code, "    configContent := `{}`", file_content)?;
+    writeln!(
+        code,
+        "    if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {{"
+    )?;
+    writeln!(code, "        t.Fatalf(\"Failed to write config file: %v\", err)")?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+
+    let method_name = to_pascal_case(&test_spec.function_call.name);
+
+    writeln!(code, "    config, err := kreuzberg.Config{}(configPath)", method_name)?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"{} failed: %v\", err)", method_name)?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+
+    // Render property assertions
+    for prop in &test_spec.assertions.object_properties {
+        render_property_assertion(prop, code)?;
+    }
+
+    Ok(())
+}
+
+/// Render a config_discover test
+fn render_config_discover(
+    fixture: &Fixture,
+    test_spec: &crate::fixtures::PluginTestSpec,
+    code: &mut String,
+) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_discover", fixture.id))?;
+
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+
+    let subdir_name = setup
+        .subdirectory_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing subdirectory_name", fixture.id))?;
+
+    writeln!(code, "    tmpDir := t.TempDir()")?;
+    writeln!(code, "    configPath := filepath.Join(tmpDir, \"{}\")", file_name)?;
+    writeln!(code)?;
+    writeln!(
+        code,
+        "    if err := os.WriteFile(configPath, []byte(`{}`), 0644); err != nil {{",
+        file_content
+    )?;
+    writeln!(code, "        t.Fatalf(\"Failed to write config file: %v\", err)")?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+    writeln!(code, "    subDir := filepath.Join(tmpDir, \"{}\")", subdir_name)?;
+    writeln!(code, "    if err := os.MkdirAll(subDir, 0755); err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"Failed to create subdirectory: %v\", err)")?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+    writeln!(code, "    originalDir, err := os.Getwd()")?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"Failed to get current directory: %v\", err)")?;
+    writeln!(code, "    }}")?;
+    writeln!(code, "    defer os.Chdir(originalDir)")?;
+    writeln!(code)?;
+    writeln!(code, "    if err := os.Chdir(subDir); err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"Failed to change directory: %v\", err)")?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+
+    let method_name = to_pascal_case(&test_spec.function_call.name);
+
+    writeln!(code, "    config, err := kreuzberg.Config{}()", method_name)?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"{} failed: %v\", err)", method_name)?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+    writeln!(code, "    if config == nil {{")?;
+    writeln!(
+        code,
+        "        t.Fatal(\"Config should be discovered from parent directory\")"
+    )?;
+    writeln!(code, "    }}")?;
+
+    // Render property assertions
+    for prop in &test_spec.assertions.object_properties {
+        render_property_assertion(prop, code)?;
+    }
+
+    Ok(())
+}
+
+/// Render a mime_from_bytes test
+fn render_mime_from_bytes(
+    fixture: &Fixture,
+    test_spec: &crate::fixtures::PluginTestSpec,
+    code: &mut String,
+) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_bytes", fixture.id))?;
+
+    let test_data = setup
+        .test_data
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_data", fixture.id))?;
+
+    let func_name = to_pascal_case(&test_spec.function_call.name);
+
+    writeln!(code, "    testData := []byte(\"{}\")", test_data.replace('\\', "\\\\"))?;
+    writeln!(code, "    mime, err := kreuzberg.{}(testData)", func_name)?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"{} failed: %v\", err)", func_name)?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(
+            code,
+            "    if !strings.Contains(strings.ToLower(mime), \"{}\") {{",
+            contains
+        )?;
+        writeln!(
+            code,
+            "        t.Errorf(\"Expected MIME to contain '{}', got %q\", mime)",
+            contains
+        )?;
+        writeln!(code, "    }}")?;
+    }
+
+    Ok(())
+}
+
+/// Render a mime_from_path test
+fn render_mime_from_path(
+    fixture: &Fixture,
+    test_spec: &crate::fixtures::PluginTestSpec,
+    code: &mut String,
+) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_path", fixture.id))?;
+
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+
+    let func_name = to_pascal_case(&test_spec.function_call.name);
+
+    writeln!(code, "    tmpDir := t.TempDir()")?;
+    writeln!(code, "    testFile := filepath.Join(tmpDir, \"{}\")", file_name)?;
+    writeln!(
+        code,
+        "    if err := os.WriteFile(testFile, []byte(\"{}\"), 0644); err != nil {{",
+        file_content.replace('"', "\\\"")
+    )?;
+    writeln!(code, "        t.Fatalf(\"Failed to write test file: %v\", err)")?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+    writeln!(code, "    mime, err := kreuzberg.{}(testFile)", func_name)?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"{} failed: %v\", err)", func_name)?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(
+            code,
+            "    if !strings.Contains(strings.ToLower(mime), \"{}\") {{",
+            contains
+        )?;
+        writeln!(
+            code,
+            "        t.Errorf(\"Expected MIME to contain '{}', got %q\", mime)",
+            contains
+        )?;
+        writeln!(code, "    }}")?;
+    }
+
+    Ok(())
+}
+
+/// Render a mime_extension_lookup test
+fn render_mime_extension_lookup(
+    fixture: &Fixture,
+    test_spec: &crate::fixtures::PluginTestSpec,
+    code: &mut String,
+) -> Result<()> {
+    let func_name = to_pascal_case(&test_spec.function_call.name);
+    let arg = test_spec.function_call.args.first().with_context(|| {
+        format!(
+            "Fixture '{}' function '{}' missing argument",
+            fixture.id, test_spec.function_call.name
+        )
+    })?;
+    let mime_type = arg
+        .as_str()
+        .with_context(|| format!("Fixture '{}' argument is not a string", fixture.id))?;
+
+    writeln!(
+        code,
+        "    extensions, err := kreuzberg.{}(\"{}\")",
+        func_name, mime_type
+    )?;
+    writeln!(code, "    if err != nil {{")?;
+    writeln!(code, "        t.Fatalf(\"{} failed: %v\", err)", func_name)?;
+    writeln!(code, "    }}")?;
+    writeln!(code)?;
+    writeln!(code, "    if extensions == nil {{")?;
+    writeln!(code, "        t.Fatal(\"Extensions list should not be nil\")")?;
+    writeln!(code, "    }}")?;
+
+    if let Some(contains) = &test_spec.assertions.list_contains {
+        writeln!(code)?;
+        writeln!(code, "    found := false")?;
+        writeln!(code, "    for _, ext := range extensions {{")?;
+        writeln!(code, "        if ext == \"{}\" {{", contains)?;
+        writeln!(code, "            found = true")?;
+        writeln!(code, "            break")?;
+        writeln!(code, "        }}")?;
+        writeln!(code, "    }}")?;
+        writeln!(code, "    if !found {{")?;
+        writeln!(
+            code,
+            "        t.Errorf(\"Expected extensions to contain '{}', got %v\", extensions)",
+            contains
+        )?;
+        writeln!(code, "    }}")?;
+    }
+
+    Ok(())
+}
+
+/// Render property assertion for config objects
+fn render_property_assertion(prop: &crate::fixtures::ObjectPropertyAssertion, code: &mut String) -> Result<()> {
+    let parts: Vec<&str> = prop.path.split('.').collect();
+
+    if parts.len() == 1 {
+        // Top-level property
+        if let Some(exists) = prop.exists {
+            if exists {
+                writeln!(code, "    if config.{} == nil {{", to_pascal_case(parts[0]))?;
+                writeln!(code, "        t.Fatal(\"Config should have {} property\")", parts[0])?;
+                writeln!(code, "    }}")?;
+            }
+        }
+    } else if parts.len() == 2 {
+        // Nested property
+        let parent = to_pascal_case(parts[0]);
+        let child = to_pascal_case(parts[1]);
+
+        if let Some(exists) = prop.exists {
+            if exists {
+                writeln!(code, "    if config.{} == nil {{", parent)?;
+                writeln!(code, "        t.Fatal(\"Config should have {} property\")", parts[0])?;
+                writeln!(code, "    }}")?;
+            }
+        }
+
+        if let Some(value) = &prop.value {
+            match value {
+                Value::Number(n) => {
+                    writeln!(
+                        code,
+                        "    if config.{}.{} == nil || *config.{}.{} != {} {{",
+                        parent, child, parent, child, n
+                    )?;
+                    writeln!(
+                        code,
+                        "        t.Errorf(\"Expected {}.{}={}, got %v\", *config.{}.{})",
+                        parts[0], parts[1], n, parent, child
+                    )?;
+                    writeln!(code, "    }}")?;
+                }
+                Value::Bool(b) => {
+                    writeln!(
+                        code,
+                        "    if config.{}.{} == nil || *config.{}.{} != {} {{",
+                        parent, child, parent, child, b
+                    )?;
+                    writeln!(
+                        code,
+                        "        t.Errorf(\"Expected {}.{}={}, got %v\", *config.{}.{})",
+                        parts[0], parts[1], b, parent, child
+                    )?;
+                    writeln!(code, "    }}")?;
+                }
+                Value::String(s) => {
+                    writeln!(
+                        code,
+                        "    if config.{}.{} == nil || *config.{}.{} != \"{}\" {{",
+                        parent, child, parent, child, s
+                    )?;
+                    writeln!(
+                        code,
+                        "        t.Errorf(\"Expected {}.{}={}, got %v\", *config.{}.{})",
+                        parts[0], parts[1], s, parent, child
+                    )?;
+                    writeln!(code, "    }}")?;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    Ok(())
 }

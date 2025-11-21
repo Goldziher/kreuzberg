@@ -1,0 +1,18 @@
+{
+	"id": "post_processors_clear",
+	"description": "Clear all post-processors and verify list is empty",
+	"api_category": "post_processor_management",
+	"api_function": "clear_post_processors",
+	"tags": ["post_processors", "plugin_management", "clear"],
+	"test_spec": {
+		"pattern": "clear_registry",
+		"function_call": {
+			"name": "clear_post_processors",
+			"args": []
+		},
+		"assertions": {
+			"return_type": "void",
+			"verify_cleanup": true
+		}
+	}
+}

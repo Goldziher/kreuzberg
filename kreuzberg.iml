@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module version="4">
+  <component name="Go" enabled="true" />
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$">
@@ -17,6 +18,7 @@
       <sourceFolder url="file://$MODULE_DIR$/packages/ruby/ext/kreuzberg_rb/native/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tools/benchmark-harness/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tools/e2e-generator/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/kreuzberg-ffi/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />

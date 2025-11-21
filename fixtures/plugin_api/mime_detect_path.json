@@ -1,0 +1,23 @@
+{
+	"id": "mime_detect_path",
+	"description": "Detect MIME type from file path",
+	"api_category": "mime_utilities",
+	"api_function": "detect_mime_type_from_path",
+	"tags": ["mime", "detection", "path"],
+	"test_spec": {
+		"pattern": "mime_from_path",
+		"setup": {
+			"create_temp_file": true,
+			"temp_file_name": "test.txt",
+			"temp_file_content": "Hello, world!"
+		},
+		"function_call": {
+			"name": "detect_mime_type_from_path",
+			"args": ["${temp_file_path}"]
+		},
+		"assertions": {
+			"return_type": "string",
+			"string_contains": "text"
+		}
+	}
+}

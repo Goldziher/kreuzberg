@@ -1658,3 +1658,226 @@ pub fn clear_validators(py: Python<'_>) -> PyResult<()> {
 
     Ok(())
 }
+
+/// List all registered validator names.
+///
+/// Returns a list of all validator names currently registered in the global registry.
+///
+/// # Returns
+///
+/// List of validator names.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import list_validators, register_validator, clear_validators
+///
+/// class MyValidator:
+///     def name(self) -> str:
+///         return "my_validator"
+///
+///     def validate(self, result: dict) -> None:
+///         pass
+///
+/// # Register validator
+/// register_validator(MyValidator())
+///
+/// # List validators
+/// validators = list_validators()
+/// assert "my_validator" in validators
+///
+/// # Cleanup
+/// clear_validators()
+/// ```
+#[pyfunction]
+pub fn list_validators() -> PyResult<Vec<String>> {
+    kreuzberg::plugins::list_validators().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// List all registered post-processor names.
+///
+/// Returns a list of all post-processor names currently registered in the global registry.
+///
+/// # Returns
+///
+/// List of post-processor names.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import list_post_processors, register_post_processor, clear_post_processors
+///
+/// class MyProcessor:
+///     def name(self) -> str:
+///         return "my_processor"
+///
+///     def process(self, result: dict) -> dict:
+///         return result
+///
+/// # Register processor
+/// register_post_processor(MyProcessor())
+///
+/// # List processors
+/// processors = list_post_processors()
+/// assert "my_processor" in processors
+///
+/// # Cleanup
+/// clear_post_processors()
+/// ```
+#[pyfunction]
+pub fn list_post_processors() -> PyResult<Vec<String>> {
+    kreuzberg::plugins::list_post_processors().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Unregister an OCR backend by name.
+///
+/// Removes a previously registered OCR backend from the global registry and
+/// calls its `shutdown()` method to release resources.
+///
+/// # Arguments
+///
+/// * `name` - Backend name to unregister
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import register_ocr_backend, unregister_ocr_backend
+///
+/// class MyOcrBackend:
+///     def name(self) -> str:
+///         return "my_ocr"
+///
+///     def supported_languages(self) -> list[str]:
+///         return ["eng"]
+///
+///     def process_image(self, image_bytes: bytes, language: str) -> dict:
+///         return {"content": "text", "metadata": {}, "tables": []}
+///
+/// register_ocr_backend(MyOcrBackend())
+/// # ... use backend ...
+/// unregister_ocr_backend("my_ocr")
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the backend is not found or shutdown fails.
+#[pyfunction]
+pub fn unregister_ocr_backend(name: &str) -> PyResult<()> {
+    kreuzberg::plugins::unregister_ocr_backend(name)
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// List all registered OCR backend names.
+///
+/// Returns a list of all OCR backend names currently registered in the global registry.
+///
+/// # Returns
+///
+/// List of OCR backend names.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import list_ocr_backends, register_ocr_backend
+///
+/// class MyOcrBackend:
+///     def name(self) -> str:
+///         return "my_ocr"
+///
+///     def supported_languages(self) -> list[str]:
+///         return ["eng"]
+///
+///     def process_image(self, image_bytes: bytes, language: str) -> dict:
+///         return {"content": "text", "metadata": {}, "tables": []}
+///
+/// # Register backend
+/// register_ocr_backend(MyOcrBackend())
+///
+/// # List backends
+/// backends = list_ocr_backends()
+/// assert "my_ocr" in backends
+/// ```
+#[pyfunction]
+pub fn list_ocr_backends() -> PyResult<Vec<String>> {
+    kreuzberg::plugins::list_ocr_backends().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Clear all registered OCR backends.
+///
+/// Removes all OCR backends from the global registry and calls their `shutdown()`
+/// methods. Useful for test cleanup or resetting state.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import clear_ocr_backends
+///
+/// # In pytest fixture or test cleanup
+/// clear_ocr_backends()
+/// ```
+#[pyfunction]
+pub fn clear_ocr_backends() -> PyResult<()> {
+    kreuzberg::plugins::clear_ocr_backends().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// List all registered document extractor names.
+///
+/// Returns a list of all document extractor names currently registered in the global registry.
+/// This function automatically initializes built-in extractors (PDF, DOCX, etc.) on first call.
+///
+/// # Returns
+///
+/// List of document extractor names.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import list_document_extractors
+///
+/// # List all registered extractors (includes built-in PDF, DOCX, etc.)
+/// extractors = list_document_extractors()
+/// assert any("pdf" in e.lower() for e in extractors)
+/// ```
+#[pyfunction]
+pub fn list_document_extractors() -> PyResult<Vec<String>> {
+    kreuzberg::plugins::list_extractors().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Unregister a document extractor by name.
+///
+/// Removes a previously registered document extractor from the global registry.
+///
+/// # Arguments
+///
+/// * `name` - Extractor name to unregister
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import unregister_document_extractor
+///
+/// # Unregister an extractor
+/// unregister_document_extractor("my_custom_extractor")
+/// ```
+#[pyfunction]
+pub fn unregister_document_extractor(name: &str) -> PyResult<()> {
+    kreuzberg::plugins::unregister_extractor(name).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Clear all registered document extractors.
+///
+/// Removes all document extractors from the global registry.
+/// Useful for test cleanup or resetting state.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import clear_document_extractors
+///
+/// # In pytest fixture or test cleanup
+/// clear_document_extractors()
+/// ```
+#[pyfunction]
+pub fn clear_document_extractors() -> PyResult<()> {
+    kreuzberg::plugins::clear_extractors().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}

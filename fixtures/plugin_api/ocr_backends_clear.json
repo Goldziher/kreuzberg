@@ -1,0 +1,18 @@
+{
+	"id": "ocr_backends_clear",
+	"description": "Clear all OCR backends and verify list is empty",
+	"api_category": "ocr_backend_management",
+	"api_function": "clear_ocr_backends",
+	"tags": ["ocr", "plugin_management", "clear"],
+	"test_spec": {
+		"pattern": "clear_registry",
+		"function_call": {
+			"name": "clear_ocr_backends",
+			"args": []
+		},
+		"assertions": {
+			"return_type": "void",
+			"verify_cleanup": true
+		}
+	}
+}

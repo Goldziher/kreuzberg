@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use walkdir::WalkDir;
 
 /// Parsed fixture definition shared across generators.
+/// Supports both document extraction and plugin API fixtures.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 pub struct Fixture {
@@ -16,12 +17,27 @@ pub struct Fixture {
     pub description: String,
     #[serde(default)]
     pub category: Option<String>,
-    pub document: DocumentSpec,
+
+    // Document extraction fields (required for document fixtures)
     #[serde(default)]
-    pub extraction: ExtractionSpec,
-    pub assertions: Assertions,
+    pub document: Option<DocumentSpec>,
     #[serde(default)]
-    pub skip: SkipDirective,
+    pub extraction: Option<ExtractionSpec>,
+    #[serde(default)]
+    pub assertions: Option<Assertions>,
+    #[serde(default)]
+    pub skip: Option<SkipDirective>,
+
+    // Plugin API fields (required for plugin API fixtures)
+    #[serde(default)]
+    pub api_category: Option<String>,
+    #[serde(default)]
+    pub api_function: Option<String>,
+    #[serde(default)]
+    pub test_spec: Option<PluginTestSpec>,
+    #[serde(default)]
+    pub plugin_skip: Option<PluginSkipDirective>,
+
     #[serde(skip)]
     pub source: Utf8PathBuf,
 }
@@ -31,6 +47,42 @@ impl Fixture {
         self.category
             .as_deref()
             .expect("category should be resolved during load")
+    }
+
+    /// Returns true if this is a plugin API fixture
+    pub fn is_plugin_api(&self) -> bool {
+        self.api_category.is_some()
+    }
+
+    /// Returns true if this is a document extraction fixture
+    pub fn is_document_extraction(&self) -> bool {
+        self.document.is_some()
+    }
+
+    /// Get document spec for document extraction fixtures.
+    /// Panics if called on a plugin API fixture.
+    pub fn document(&self) -> &DocumentSpec {
+        self.document
+            .as_ref()
+            .expect("document field required for document extraction fixtures")
+    }
+
+    /// Get extraction spec for document extraction fixtures.
+    /// Returns a default if not specified. Panics if called on a plugin API fixture.
+    pub fn extraction(&self) -> ExtractionSpec {
+        self.extraction.clone().unwrap_or_default()
+    }
+
+    /// Get assertions for document extraction fixtures.
+    /// Returns a default if not specified. Panics if called on a plugin API fixture.
+    pub fn assertions(&self) -> Assertions {
+        self.assertions.clone().unwrap_or_default()
+    }
+
+    /// Get skip directive for document extraction fixtures.
+    /// Returns a default if not specified. Panics if called on a plugin API fixture.
+    pub fn skip(&self) -> SkipDirective {
+        self.skip.clone().unwrap_or_default()
     }
 }
 
@@ -145,6 +197,154 @@ where
     Ok(output)
 }
 
+// Plugin API fixture types
+
+/// Test specification for plugin API fixtures
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize)]
+pub struct PluginTestSpec {
+    /// Test pattern identifier (e.g., "simple_list", "clear_registry")
+    pub pattern: String,
+    /// Optional setup steps before test execution
+    #[serde(default)]
+    pub setup: Option<PluginSetup>,
+    /// Function call specification
+    pub function_call: PluginFunctionCall,
+    /// Assertions to verify
+    pub assertions: PluginAssertions,
+    /// Optional teardown steps after test execution
+    #[serde(default)]
+    pub teardown: Option<PluginTeardown>,
+}
+
+/// Setup configuration for plugin API tests
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct PluginSetup {
+    /// Whether to create a temporary file
+    #[serde(default)]
+    pub create_temp_file: bool,
+    /// Name of temporary file to create
+    #[serde(default)]
+    pub temp_file_name: Option<String>,
+    /// Content to write to temporary file
+    #[serde(default)]
+    pub temp_file_content: Option<String>,
+    /// Whether to create a temporary directory
+    #[serde(default)]
+    pub create_temp_dir: bool,
+    /// Whether to create a subdirectory in temp dir
+    #[serde(default)]
+    pub create_subdirectory: bool,
+    /// Name of subdirectory to create
+    #[serde(default)]
+    pub subdirectory_name: Option<String>,
+    /// Whether to change to subdirectory for test
+    #[serde(default)]
+    pub change_directory: bool,
+    /// Test data (e.g., bytes for MIME detection)
+    #[serde(default)]
+    pub test_data: Option<String>,
+    /// Special initialization required (e.g., for Go document extractors)
+    #[serde(default)]
+    pub lazy_init_required: Option<LazyInitSpec>,
+}
+
+/// Lazy initialization specification
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize)]
+pub struct LazyInitSpec {
+    /// Languages requiring initialization
+    pub languages: Vec<String>,
+    /// Action to perform for initialization
+    pub init_action: String,
+    /// Data needed for initialization
+    #[serde(default)]
+    pub init_data: Option<Value>,
+}
+
+/// Function call specification
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize)]
+pub struct PluginFunctionCall {
+    /// Function name (snake_case, will be converted per language)
+    pub name: String,
+    /// Arguments to pass (use ${var} for substitutions)
+    #[serde(default)]
+    pub args: Vec<Value>,
+    /// Whether this is a class/static method
+    #[serde(default)]
+    pub is_method: bool,
+    /// Class name if is_method is true
+    #[serde(default)]
+    pub class_name: Option<String>,
+}
+
+/// Assertions for plugin API tests
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct PluginAssertions {
+    /// Expected return type
+    #[serde(default)]
+    pub return_type: Option<String>,
+    /// If return_type is list, the type of items
+    #[serde(default)]
+    pub list_item_type: Option<String>,
+    /// Item that must be in returned list
+    #[serde(default)]
+    pub list_contains: Option<String>,
+    /// Whether list should be empty
+    #[serde(default)]
+    pub list_empty: bool,
+    /// Substring that must be in returned string
+    #[serde(default)]
+    pub string_contains: Option<String>,
+    /// Assert that function does not throw/error
+    #[serde(default)]
+    pub does_not_throw: bool,
+    /// Object properties to verify
+    #[serde(default)]
+    pub object_properties: Vec<ObjectPropertyAssertion>,
+    /// Verify list is empty after clear operation
+    #[serde(default)]
+    pub verify_cleanup: bool,
+}
+
+/// Assertion for object property
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize)]
+pub struct ObjectPropertyAssertion {
+    /// Property path (dot notation, e.g., 'chunking.max_chars')
+    pub path: String,
+    /// Expected value
+    #[serde(default)]
+    pub value: Option<Value>,
+    /// Whether property should exist (true) or not exist (false)
+    #[serde(default)]
+    pub exists: Option<bool>,
+}
+
+/// Teardown configuration for plugin API tests
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct PluginTeardown {
+    /// Whether to restore original directory
+    #[serde(default)]
+    pub restore_directory: bool,
+}
+
+/// Skip directive for plugin API fixtures
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct PluginSkipDirective {
+    /// Languages to skip this test for
+    #[serde(default)]
+    pub languages: Vec<String>,
+    /// Reason for skipping
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
 /// Load fixtures from directory.
 pub fn load_fixtures(fixtures_dir: &Utf8Path) -> Result<Vec<Fixture>> {
     let mut fixtures = Vec::new();
@@ -171,6 +371,19 @@ pub fn load_fixtures(fixtures_dir: &Utf8Path) -> Result<Vec<Fixture>> {
         let contents = std::fs::read_to_string(&path).with_context(|| format!("Failed to read fixture {}", path))?;
         let mut fixture: Fixture = serde_json::from_str(&contents).with_context(|| format!("Parsing {path}"))?;
 
+        // Validate that fixture has either document or plugin API fields
+        if !fixture.is_document_extraction() && !fixture.is_plugin_api() {
+            bail!(
+                "Fixture {} must have either 'document' (document extraction) or 'api_category' (plugin API) field",
+                path
+            );
+        }
+
+        if fixture.is_document_extraction() && fixture.is_plugin_api() {
+            bail!("Fixture {} cannot have both 'document' and 'api_category' fields", path);
+        }
+
+        // Set category from directory name if not specified
         if fixture.category.is_none() {
             let category = path.parent().and_then(Utf8Path::file_name).map(|name| name.to_string());
             fixture.category = category;

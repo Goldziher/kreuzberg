@@ -112,3 +112,20 @@ default-features = false
 [build-dependencies.zip]
 version = "6.0.0"
 optional = true
+
+[build-dependencies.flate2]
+version = "1.0.35"
+features = ["gz"]
+optional = true
+
+[build-dependencies.tar]
+version = "0.4.42"
+optional = true
+[build-dependencies.flate2]
+version = "1.0.35"
+features = ["gz"]
+optional = true
+
+[build-dependencies.tar]
+version = "0.4.42"
+optional = true

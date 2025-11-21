@@ -27,9 +27,9 @@ public record Table(
      *
      * @param cells the table cells (must not be null)
      * @param markdown the Markdown representation (must not be null)
-     * @param pageNumber the page number (must be positive)
+     * @param pageNumber the page number (0 for non-paginated documents, >= 1 for paginated documents)
      * @throws NullPointerException if cells or markdown is null
-     * @throws IllegalArgumentException if pageNumber is not positive
+     * @throws IllegalArgumentException if pageNumber is negative
      */
     @JsonCreator
     public Table(
@@ -39,8 +39,8 @@ public record Table(
     ) {
         Objects.requireNonNull(cells, "cells must not be null");
         Objects.requireNonNull(markdown, "markdown must not be null");
-        if (pageNumber < 1) {
-            throw new IllegalArgumentException("pageNumber must be positive, got " + pageNumber);
+        if (pageNumber < 0) {
+            throw new IllegalArgumentException("pageNumber must be non-negative, got " + pageNumber);
         }
         this.cells = deepCopyTable(cells);
         this.markdown = markdown;

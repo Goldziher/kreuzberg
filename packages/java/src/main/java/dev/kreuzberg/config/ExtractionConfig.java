@@ -135,6 +135,32 @@ public final class ExtractionConfig {
     }
   }
 
+  /**
+   * Load configuration from a file (TOML, YAML, or JSON).
+   *
+   * @param path path to the configuration file
+   * @return parsed configuration
+   * @throws KreuzbergException if loading or parsing fails
+   * @since 4.0.0
+   */
+  public static ExtractionConfig fromFile(String path) throws KreuzbergException {
+    return dev.kreuzberg.Kreuzberg.loadExtractionConfigFromFile(java.nio.file.Path.of(path));
+  }
+
+  /**
+   * Discover configuration from current or parent directories.
+   *
+   * <p>Searches for kreuzberg.toml, kreuzberg.yaml, or kreuzberg.json
+   * in the current directory and parent directories.</p>
+   *
+   * @return discovered configuration, or null if not found
+   * @throws KreuzbergException if an error occurs during discovery
+   * @since 4.0.0
+   */
+  public static ExtractionConfig discover() throws KreuzbergException {
+    return dev.kreuzberg.Kreuzberg.discoverExtractionConfig();
+  }
+
   public Map<String, Object> toMap() {
     if (rawConfigOverride != null) {
       return rawConfigOverride;

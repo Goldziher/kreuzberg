@@ -330,6 +330,32 @@ impl ExtractionConfig {
             html_options_dict: None,
         })
     }
+
+    /// Discover and load configuration from current or parent directories.
+    ///
+    /// Searches for a configuration file (kreuzberg.toml, kreuzberg.yaml, or kreuzberg.yml)
+    /// in the current working directory and parent directories. Returns the first found
+    /// configuration or a default configuration if none is found.
+    ///
+    /// Returns:
+    ///     ExtractionConfig: Loaded configuration or default config
+    ///
+    /// Example:
+    ///     >>> from kreuzberg import ExtractionConfig
+    ///     >>> # Searches current and parent directories for config
+    ///     >>> config = ExtractionConfig.discover()
+    ///     >>> # Always returns a config (default if none found)
+    ///     >>> assert config is not None
+    #[staticmethod]
+    fn discover() -> PyResult<Self> {
+        let config = kreuzberg::ExtractionConfig::discover()
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Failed to discover config: {}", e)))?
+            .unwrap_or_default();
+        Ok(Self {
+            inner: config,
+            html_options_dict: None,
+        })
+    }
 }
 
 impl From<ExtractionConfig> for kreuzberg::ExtractionConfig {

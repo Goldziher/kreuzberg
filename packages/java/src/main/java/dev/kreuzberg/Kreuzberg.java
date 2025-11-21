@@ -238,6 +238,30 @@ public final class Kreuzberg {
         }
     }
 
+    public static ExtractionConfig discoverExtractionConfig() throws KreuzbergException {
+        try {
+            MemorySegment jsonPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_CONFIG_DISCOVER.invoke();
+            if (jsonPtr == null || jsonPtr.address() == 0) {
+                String error = getLastError();
+                if (error != null && !error.isBlank()) {
+                    throw new KreuzbergException("Failed to discover config: " + error);
+                }
+                // No config found, return null
+                return null;
+            }
+            try {
+                String json = KreuzbergFFI.readCString(jsonPtr);
+                return ExtractionConfig.fromJson(json);
+            } finally {
+                KreuzbergFFI.KREUZBERG_FREE_STRING.invoke(jsonPtr);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error discovering config", e);
+        }
+    }
+
     public static CompletableFuture<ExtractionResult> extractFileAsync(Path path, ExtractionConfig config) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -694,6 +718,215 @@ public final class Kreuzberg {
             if (!registered) {
                 closeCallback(new CallbackHandle(arena, MemorySegment.NULL, backend));
             }
+        }
+    }
+
+    /**
+     * Unregister an OCR backend by name.
+     *
+     * @param name backend name
+     * @throws KreuzbergException if unregistering fails
+     */
+    public static void unregisterOCRBackend(String name) throws KreuzbergException {
+        String normalizedName = validatePluginName(name, "OCR backend");
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment nameSeg = KreuzbergFFI.allocateCString(arena, normalizedName);
+            boolean success = (boolean) KreuzbergFFI.KREUZBERG_UNREGISTER_OCR_BACKEND.invoke(nameSeg);
+            if (!success) {
+                throw new KreuzbergException("Failed to unregister OCR backend: " + getLastError());
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error unregistering OCR backend", e);
+        } finally {
+            CallbackHandle handle = OCR_CALLBACKS.remove(normalizedName);
+            closeCallback(handle);
+        }
+    }
+
+    /**
+     * List registered OCR backend names.
+     *
+     * @return OCR backend names
+     * @throws KreuzbergException if listing fails
+     */
+    public static List<String> listOCRBackends() throws KreuzbergException {
+        try {
+            MemorySegment namesPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_LIST_OCR_BACKENDS.invoke();
+            if (namesPtr == null || namesPtr.address() == 0) {
+                return List.of();
+            }
+            try {
+                String json = KreuzbergFFI.readCString(namesPtr);
+                return ResultParser.parseStringList(json);
+            } finally {
+                KreuzbergFFI.KREUZBERG_FREE_STRING.invoke(namesPtr);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Failed to list OCR backends", e);
+        }
+    }
+
+    /**
+     * Remove all registered OCR backends.
+     *
+     * @throws KreuzbergException if clearing fails
+     */
+    public static void clearOCRBackends() throws KreuzbergException {
+        try {
+            boolean success = (boolean) KreuzbergFFI.KREUZBERG_CLEAR_OCR_BACKENDS.invoke();
+            if (!success) {
+                throw new KreuzbergException("Failed to clear OCR backends: " + getLastError());
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error clearing OCR backends", e);
+        } finally {
+            OCR_CALLBACKS.values().forEach(Kreuzberg::closeCallback);
+            OCR_CALLBACKS.clear();
+        }
+    }
+
+    /**
+     * List registered document extractor names.
+     *
+     * @return extractor names
+     * @throws KreuzbergException if listing fails
+     */
+    public static List<String> listDocumentExtractors() throws KreuzbergException {
+        try {
+            MemorySegment namesPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_LIST_DOCUMENT_EXTRACTORS.invoke();
+            if (namesPtr == null || namesPtr.address() == 0) {
+                return List.of();
+            }
+            try {
+                String json = KreuzbergFFI.readCString(namesPtr);
+                return ResultParser.parseStringList(json);
+            } finally {
+                KreuzbergFFI.KREUZBERG_FREE_STRING.invoke(namesPtr);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Failed to list document extractors", e);
+        }
+    }
+
+    /**
+     * Unregister a document extractor by name.
+     *
+     * @param name extractor name
+     * @throws KreuzbergException if unregistering fails
+     */
+    public static void unregisterDocumentExtractor(String name) throws KreuzbergException {
+        String normalizedName = validatePluginName(name, "Document extractor");
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment nameSeg = KreuzbergFFI.allocateCString(arena, normalizedName);
+            boolean success = (boolean) KreuzbergFFI.KREUZBERG_UNREGISTER_DOCUMENT_EXTRACTOR.invoke(nameSeg);
+            if (!success) {
+                throw new KreuzbergException("Failed to unregister document extractor: " + getLastError());
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error unregistering document extractor", e);
+        }
+    }
+
+    /**
+     * Remove all registered document extractors.
+     *
+     * @throws KreuzbergException if clearing fails
+     */
+    public static void clearDocumentExtractors() throws KreuzbergException {
+        try {
+            boolean success = (boolean) KreuzbergFFI.KREUZBERG_CLEAR_DOCUMENT_EXTRACTORS.invoke();
+            if (!success) {
+                throw new KreuzbergException("Failed to clear document extractors: " + getLastError());
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error clearing document extractors", e);
+        }
+    }
+
+    /**
+     * Detect MIME type from raw bytes.
+     *
+     * @param data byte array to analyze
+     * @return detected MIME type
+     * @throws KreuzbergException if detection fails
+     */
+    public static String detectMimeType(byte[] data) throws KreuzbergException {
+        Objects.requireNonNull(data, "data must not be null");
+        if (data.length == 0) {
+            throw new KreuzbergException("data cannot be empty");
+        }
+
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment dataSegment = arena.allocateFrom(ValueLayout.JAVA_BYTE, data);
+            MemorySegment mimePtr = (MemorySegment) KreuzbergFFI.KREUZBERG_DETECT_MIME_TYPE_FROM_BYTES.invoke(
+                dataSegment,
+                (long) data.length
+            );
+            if (mimePtr == null || mimePtr.address() == 0) {
+                throw new KreuzbergException("Failed to detect MIME type from bytes: " + getLastError());
+            }
+            return KreuzbergFFI.readCString(mimePtr);
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error detecting MIME type from bytes", e);
+        }
+    }
+
+    /**
+     * Detect MIME type from a file path.
+     *
+     * @param path file path
+     * @return detected MIME type
+     * @throws KreuzbergException if detection fails
+     */
+    public static String detectMimeTypeFromPath(String path) throws KreuzbergException {
+        return detectMimeType(path, true);
+    }
+
+    /**
+     * Get file extensions for a MIME type.
+     *
+     * @param mimeType MIME type string
+     * @return list of file extensions (without leading dot)
+     * @throws KreuzbergException if lookup fails
+     */
+    public static List<String> getExtensionsForMime(String mimeType) throws KreuzbergException {
+        Objects.requireNonNull(mimeType, "mimeType must not be null");
+        if (mimeType.isBlank()) {
+            throw new KreuzbergException("mimeType must not be blank");
+        }
+
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment mimeSeg = KreuzbergFFI.allocateCString(arena, mimeType);
+            MemorySegment extensionsPtr =
+                (MemorySegment) KreuzbergFFI.KREUZBERG_GET_EXTENSIONS_FOR_MIME.invoke(mimeSeg);
+            if (extensionsPtr == null || extensionsPtr.address() == 0) {
+                String error = getLastError();
+                throw new KreuzbergException("Failed to get extensions for MIME type: " + error);
+            }
+            try {
+                String json = KreuzbergFFI.readCString(extensionsPtr);
+                return ResultParser.parseStringList(json);
+            } finally {
+                KreuzbergFFI.KREUZBERG_FREE_STRING.invoke(extensionsPtr);
+            }
+        } catch (KreuzbergException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new KreuzbergException("Unexpected error getting extensions for MIME type", e);
         }
     }
 

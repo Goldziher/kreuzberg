@@ -5,7 +5,6 @@
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
-use std::marker::PhantomData;
 use std::os::raw::c_char;
 use std::path::Path;
 use std::ptr;
@@ -2955,25 +2954,334 @@ pub unsafe extern "C" fn kreuzberg_list_validators() -> *mut c_char {
 }
 
 // ============================================================================
-// Config Loading FFI
+// OCR Backend Plugin Registration FFI
 // ============================================================================
 
-/// Opaque wrapper around `ExtractionConfig` for FFI usage.
-#[repr(C)]
-pub struct FfiExtractionConfig {
-    _private: [u8; 0],
-    _phantom: PhantomData<ExtractionConfig>,
-}
+/// Unregister an OCR backend by name.
+///
+/// # Safety
+///
+/// - `name` must be a valid null-terminated C string
+/// - Returns true on success, false on error (check kreuzberg_last_error)
+///
+/// # Example (C)
+///
+/// ```c
+/// bool success = kreuzberg_unregister_ocr_backend("custom-ocr");
+/// if (!success) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to unregister: %s\n", error);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_unregister_ocr_backend(name: *const c_char) -> bool {
+    clear_last_error();
 
-impl FfiExtractionConfig {
-    fn into_raw(config: ExtractionConfig) -> *mut Self {
-        Box::into_raw(Box::new(config)) as *mut Self
+    if name.is_null() {
+        set_last_error("OCR backend name cannot be NULL".to_string());
+        return false;
     }
 
-    fn as_extraction_config_ptr(ptr: *mut Self) -> *mut ExtractionConfig {
-        ptr as *mut ExtractionConfig
+    // SAFETY: Caller must ensure name is a valid null-terminated C string
+    let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in OCR backend name: {}", e));
+            return false;
+        }
+    };
+
+    if name_str.is_empty() {
+        set_last_error("OCR backend name cannot be empty".to_string());
+        return false;
+    }
+
+    if name_str.chars().any(|c| c.is_whitespace()) {
+        set_last_error("OCR backend name cannot contain whitespace".to_string());
+        return false;
+    }
+
+    match kreuzberg::plugins::unregister_ocr_backend(name_str) {
+        Ok(()) => true,
+        Err(e) => {
+            set_last_error(e.to_string());
+            false
+        }
     }
 }
+
+/// List all registered OCR backends as a JSON array of names.
+///
+/// # Safety
+///
+/// - Returned string must be freed with `kreuzberg_free_string`.
+/// - Returns NULL on error (check `kreuzberg_last_error`).
+///
+/// # Example (C)
+///
+/// ```c
+/// char* backends = kreuzberg_list_ocr_backends();
+/// if (backends == NULL) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to list backends: %s\n", error);
+/// } else {
+///     printf("OCR backends: %s\n", backends);
+///     kreuzberg_free_string(backends);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_list_ocr_backends() -> *mut c_char {
+    clear_last_error();
+
+    match kreuzberg::plugins::list_ocr_backends() {
+        Ok(backends) => match serde_json::to_string(&backends) {
+            Ok(json) => match CString::new(json) {
+                Ok(cstr) => cstr.into_raw(),
+                Err(e) => {
+                    set_last_error(format!("Failed to create C string: {}", e));
+                    ptr::null_mut()
+                }
+            },
+            Err(e) => {
+                set_last_error(format!("Failed to serialize OCR backend list: {}", e));
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Clear all registered OCR backends.
+///
+/// # Safety
+///
+/// - Removes all registered OCR backends. Subsequent extractions will use only built-in backends.
+/// - Returns true on success, false on error.
+///
+/// # Example (C)
+///
+/// ```c
+/// bool success = kreuzberg_clear_ocr_backends();
+/// if (!success) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to clear OCR backends: %s\n", error);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_clear_ocr_backends() -> bool {
+    clear_last_error();
+
+    match kreuzberg::plugins::clear_ocr_backends() {
+        Ok(()) => true,
+        Err(e) => {
+            set_last_error(e.to_string());
+            false
+        }
+    }
+}
+
+/// Clear all registered DocumentExtractors.
+///
+/// # Safety
+///
+/// - Removes all registered extractors. Subsequent extractions will use only built-in extractors.
+/// - Returns true on success, false on error.
+///
+/// # Example (C)
+///
+/// ```c
+/// bool success = kreuzberg_clear_document_extractors();
+/// if (!success) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to clear document extractors: %s\n", error);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_clear_document_extractors() -> bool {
+    clear_last_error();
+
+    let registry = kreuzberg::plugins::registry::get_document_extractor_registry();
+    let mut registry_guard = match registry.write() {
+        Ok(guard) => guard,
+        Err(e) => {
+            // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
+            // This is a critical runtime error (similar to OOM) that should bubble up
+            // as it indicates the registry is in an inconsistent state.
+            set_last_error(format!("Failed to acquire registry write lock: {}", e));
+            return false;
+        }
+    };
+
+    *registry_guard = Default::default();
+    true
+}
+
+/// Detect MIME type from raw bytes.
+///
+/// # Safety
+///
+/// - `bytes` must be a valid pointer to byte data
+/// - `len` must be the correct length of the byte array
+/// - The returned string must be freed with `kreuzberg_free_string`
+/// - Returns NULL on error (check `kreuzberg_last_error`)
+///
+/// # Example (C)
+///
+/// ```c
+/// const char* pdf_bytes = "%PDF-1.4\n";
+/// char* mime = kreuzberg_detect_mime_type_from_bytes((const uint8_t*)pdf_bytes, strlen(pdf_bytes));
+/// if (mime == NULL) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to detect MIME type: %s\n", error);
+/// } else {
+///     printf("MIME type: %s\n", mime);
+///     kreuzberg_free_string(mime);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_detect_mime_type_from_bytes(bytes: *const u8, len: usize) -> *mut c_char {
+    clear_last_error();
+
+    if bytes.is_null() {
+        set_last_error("bytes cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    let slice = unsafe { std::slice::from_raw_parts(bytes, len) };
+
+    match kreuzberg::core::mime::detect_mime_type_from_bytes(slice) {
+        Ok(mime) => match string_to_c_string(mime) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Detect MIME type from file path (checks extension and reads file content).
+///
+/// # Safety
+///
+/// - `file_path` must be a valid null-terminated C string
+/// - The returned string must be freed with `kreuzberg_free_string`
+/// - Returns NULL on error (check `kreuzberg_last_error`)
+///
+/// # Example (C)
+///
+/// ```c
+/// char* mime = kreuzberg_detect_mime_type_from_path("document.pdf");
+/// if (mime == NULL) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to detect MIME type: %s\n", error);
+/// } else {
+///     printf("MIME type: %s\n", mime);
+///     kreuzberg_free_string(mime);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_detect_mime_type_from_path(file_path: *const c_char) -> *mut c_char {
+    clear_last_error();
+
+    if file_path.is_null() {
+        set_last_error("file_path cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    let path_str = match unsafe { CStr::from_ptr(file_path) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in file path: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    match kreuzberg::core::mime::detect_mime_type(path_str, true) {
+        Ok(mime) => match string_to_c_string(mime) {
+            Ok(ptr) => ptr,
+            Err(e) => {
+                set_last_error(e);
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            // ~keep: IO errors from file operations should bubble up as they indicate
+            // system-level issues (permissions, file not found, etc.).
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Get file extensions for a MIME type.
+///
+/// # Safety
+///
+/// - `mime_type` must be a valid null-terminated C string
+/// - The returned string is a JSON array of extensions (must be freed with `kreuzberg_free_string`)
+/// - Returns NULL on error (check `kreuzberg_last_error`)
+///
+/// # Example (C)
+///
+/// ```c
+/// char* extensions = kreuzberg_get_extensions_for_mime("application/pdf");
+/// if (extensions == NULL) {
+///     const char* error = kreuzberg_last_error();
+///     printf("Failed to get extensions: %s\n", error);
+/// } else {
+///     printf("Extensions: %s\n", extensions);
+///     kreuzberg_free_string(extensions);
+/// }
+/// ```
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kreuzberg_get_extensions_for_mime(mime_type: *const c_char) -> *mut c_char {
+    clear_last_error();
+
+    if mime_type.is_null() {
+        set_last_error("mime_type cannot be NULL".to_string());
+        return ptr::null_mut();
+    }
+
+    let mime_str = match unsafe { CStr::from_ptr(mime_type) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(format!("Invalid UTF-8 in MIME type: {}", e));
+            return ptr::null_mut();
+        }
+    };
+
+    match kreuzberg::core::mime::get_extensions_for_mime(mime_str) {
+        Ok(extensions) => match serde_json::to_string(&extensions) {
+            Ok(json) => match string_to_c_string(json) {
+                Ok(ptr) => ptr,
+                Err(e) => {
+                    set_last_error(e);
+                    ptr::null_mut()
+                }
+            },
+            Err(e) => {
+                set_last_error(format!("Failed to serialize extensions: {}", e));
+                ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            set_last_error(e.to_string());
+            ptr::null_mut()
+        }
+    }
+}
+
+// ============================================================================
+// Config Loading FFI
+// ============================================================================
 
 /// Load an ExtractionConfig from a file.
 ///
@@ -3005,7 +3313,7 @@ impl FfiExtractionConfig {
 /// kreuzberg_free_config(config);
 /// ```
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn kreuzberg_config_from_file(path: *const c_char) -> *mut FfiExtractionConfig {
+pub unsafe extern "C" fn kreuzberg_config_from_file(path: *const c_char) -> *mut ExtractionConfig {
     clear_last_error();
 
     if path.is_null() {
@@ -3024,7 +3332,7 @@ pub unsafe extern "C" fn kreuzberg_config_from_file(path: *const c_char) -> *mut
     let path_buf = Path::new(path_str);
 
     match ExtractionConfig::from_file(path_buf) {
-        Ok(config) => FfiExtractionConfig::into_raw(config),
+        Ok(config) => Box::into_raw(Box::new(config)),
         Err(e) => {
             // ~keep: IO errors from file operations should bubble up as they indicate
             // system-level issues (permissions, disk full, file not found, etc.).
@@ -3050,37 +3358,48 @@ pub unsafe extern "C" fn kreuzberg_config_from_file(path: *const c_char) -> *mut
 /// - `kreuzberg.yml`
 /// - `kreuzberg.json`
 ///
-/// Returns the first config file found, or NULL if none found.
+/// Returns the first config file found as JSON, or NULL if none found.
 ///
 /// # Safety
 ///
-/// - Returns a pointer to ExtractionConfig on success, NULL if not found or on error
-/// - The returned config must be freed with `kreuzberg_free_config`
-/// - Check `kreuzberg_last_error` to distinguish between "not found" and actual errors
+/// - The returned string must be freed with `kreuzberg_free_string`
+/// - Returns NULL if no config found or on error (check `kreuzberg_last_error`)
 ///
 /// # Example (C)
 ///
 /// ```c
-/// ExtractionConfig* config = kreuzberg_config_discover();
-/// if (config == NULL) {
+/// char* config_json = kreuzberg_config_discover();
+/// if (config_json == NULL) {
 ///     const char* error = kreuzberg_last_error();
 ///     if (error != NULL && strlen(error) > 0) {
 ///         printf("Error discovering config: %s\n", error);
 ///         return 1;
 ///     }
 ///     // No config found, use defaults
-///     config = kreuzberg_config_new();
+///     printf("No config file found\n");
+/// } else {
+///     printf("Config: %s\n", config_json);
+///     kreuzberg_free_string(config_json);
 /// }
-///
-/// // Use config...
-/// kreuzberg_free_config(config);
 /// ```
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut FfiExtractionConfig {
+pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut c_char {
     clear_last_error();
 
     match ExtractionConfig::discover() {
-        Ok(Some(config)) => FfiExtractionConfig::into_raw(config),
+        Ok(Some(config)) => match serde_json::to_string(&config) {
+            Ok(json) => match CString::new(json) {
+                Ok(cstr) => cstr.into_raw(),
+                Err(e) => {
+                    set_last_error(format!("Failed to serialize config: {}", e));
+                    ptr::null_mut()
+                }
+            },
+            Err(e) => {
+                set_last_error(format!("Failed to serialize config: {}", e));
+                ptr::null_mut()
+            }
+        },
         Ok(None) => {
             // Not an error - just no config found
             ptr::null_mut()
@@ -3098,21 +3417,6 @@ pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut FfiExtractionConfig
             }
             ptr::null_mut()
         }
-    }
-}
-
-/// Free an ExtractionConfig allocated through the FFI helpers.
-///
-/// # Safety
-/// - `config` must come from `kreuzberg_config_from_file` or `kreuzberg_config_discover`
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn kreuzberg_free_config(config: *mut FfiExtractionConfig) {
-    if config.is_null() {
-        return;
-    }
-    // SAFETY: pointer originated from Box::into_raw inside the FFI helpers.
-    unsafe {
-        drop(Box::from_raw(FfiExtractionConfig::as_extraction_config_ptr(config)));
     }
 }
 

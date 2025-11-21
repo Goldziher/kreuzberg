@@ -1,0 +1,18 @@
+{
+	"id": "extractors_clear",
+	"description": "Clear all document extractors and verify list is empty",
+	"api_category": "document_extractor_management",
+	"api_function": "clear_document_extractors",
+	"tags": ["extractors", "plugin_management", "clear"],
+	"test_spec": {
+		"pattern": "clear_registry",
+		"function_call": {
+			"name": "clear_document_extractors",
+			"args": []
+		},
+		"assertions": {
+			"return_type": "void",
+			"verify_cleanup": true
+		}
+	}
+}

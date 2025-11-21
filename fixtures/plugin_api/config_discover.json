@@ -1,0 +1,42 @@
+{
+	"id": "config_discover",
+	"description": "Discover configuration from current or parent directories",
+	"api_category": "configuration",
+	"api_function": "discover",
+	"tags": ["configuration", "toml", "discovery"],
+	"test_spec": {
+		"pattern": "config_discover",
+		"setup": {
+			"create_temp_dir": true,
+			"create_temp_file": true,
+			"temp_file_name": "kreuzberg.toml",
+			"temp_file_content": "[chunking]\nmax_chars = 50\n",
+			"create_subdirectory": true,
+			"subdirectory_name": "subdir",
+			"change_directory": true
+		},
+		"function_call": {
+			"name": "discover",
+			"is_method": true,
+			"class_name": "ExtractionConfig",
+			"args": []
+		},
+		"assertions": {
+			"return_type": "object",
+			"object_properties": [
+				{
+					"path": "chunking",
+					"exists": true
+				},
+				{
+					"path": "chunking.max_chars",
+					"value": 50,
+					"type": "number"
+				}
+			]
+		},
+		"teardown": {
+			"restore_directory": true
+		}
+	}
+}

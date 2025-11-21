@@ -93,18 +93,30 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(core::batch_extract_bytes, m)?)?;
 
     m.add_function(wrap_pyfunction!(plugins::register_ocr_backend, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::unregister_ocr_backend, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::list_ocr_backends, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::clear_ocr_backends, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::register_post_processor, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::unregister_post_processor, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::clear_post_processors, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::list_post_processors, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::register_validator, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::unregister_validator, m)?)?;
     m.add_function(wrap_pyfunction!(plugins::clear_validators, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::list_validators, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::list_document_extractors, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::unregister_document_extractor, m)?)?;
+    m.add_function(wrap_pyfunction!(plugins::clear_document_extractors, m)?)?;
 
     m.add_function(wrap_pyfunction!(init_async_runtime, m)?)?;
 
     m.add_class::<EmbeddingPreset>()?;
     m.add_function(wrap_pyfunction!(list_embedding_presets, m)?)?;
     m.add_function(wrap_pyfunction!(get_embedding_preset, m)?)?;
+
+    m.add_function(wrap_pyfunction!(detect_mime_type_from_bytes, m)?)?;
+    m.add_function(wrap_pyfunction!(detect_mime_type_from_path, m)?)?;
+    m.add_function(wrap_pyfunction!(get_extensions_for_mime, m)?)?;
 
     Ok(())
 }
@@ -214,4 +226,62 @@ fn get_embedding_preset(name: String) -> Option<EmbeddingPreset> {
         dimensions: preset.dimensions,
         description: preset.description.to_string(),
     })
+}
+
+/// Detect MIME type from file bytes.
+///
+/// Analyzes the provided bytes to determine the MIME type using magic number detection.
+///
+/// Args:
+///     data (bytes): File content as bytes
+///
+/// Returns:
+///     str: Detected MIME type (e.g., "application/pdf", "image/png")
+///
+/// Example:
+///     >>> from kreuzberg import detect_mime_type_from_bytes
+///     >>> pdf_bytes = b"%PDF-1.4\n"
+///     >>> mime_type = detect_mime_type_from_bytes(pdf_bytes)
+///     >>> assert "pdf" in mime_type.lower()
+#[pyfunction]
+fn detect_mime_type_from_bytes(data: &[u8]) -> PyResult<String> {
+    kreuzberg::detect_mime_type_from_bytes(data).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Detect MIME type from file path.
+///
+/// Reads the file at the given path and detects its MIME type.
+///
+/// Args:
+///     path (str): Path to the file
+///
+/// Returns:
+///     str: Detected MIME type (e.g., "application/pdf", "text/plain")
+///
+/// Example:
+///     >>> from kreuzberg import detect_mime_type_from_path
+///     >>> mime_type = detect_mime_type_from_path("document.pdf")
+///     >>> assert "pdf" in mime_type.lower()
+#[pyfunction]
+fn detect_mime_type_from_path(path: &str) -> PyResult<String> {
+    kreuzberg::detect_mime_type(path, true).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Get file extensions for a MIME type.
+///
+/// Returns a list of common file extensions associated with the given MIME type.
+///
+/// Args:
+///     mime_type (str): MIME type (e.g., "application/pdf", "image/png")
+///
+/// Returns:
+///     list[str]: List of file extensions (e.g., ["pdf"], ["png"])
+///
+/// Example:
+///     >>> from kreuzberg import get_extensions_for_mime
+///     >>> extensions = get_extensions_for_mime("application/pdf")
+///     >>> assert "pdf" in extensions
+#[pyfunction]
+fn get_extensions_for_mime(mime_type: &str) -> PyResult<Vec<String>> {
+    kreuzberg::get_extensions_for_mime(mime_type).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }

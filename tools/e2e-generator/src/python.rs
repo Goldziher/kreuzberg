@@ -1,8 +1,9 @@
-use crate::fixtures::{Assertions, Fixture};
+use crate::fixtures::{Assertions, Fixture, PluginAssertions, PluginTestSpec};
 use anyhow::{Context, Result};
 use camino::Utf8Path;
 use itertools::Itertools;
 use serde_json::{Map, Value};
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;
 
@@ -222,8 +223,13 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     write_init_files(&python_root)?;
     write_helpers(&python_root)?;
 
-    let mut grouped = fixtures
-        .iter()
+    // Separate document extraction and plugin API fixtures
+    let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
+    let api_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
+
+    // Generate document extraction tests
+    let mut grouped = doc_fixtures
+        .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
         .into_iter()
         .collect::<Vec<_>>();
@@ -235,6 +241,11 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         let content = render_category(&category, &fixtures)?;
         fs::write(tests_dir.join(&filename), content)
             .with_context(|| format!("Failed to write Python test file {filename}"))?;
+    }
+
+    // Generate plugin API tests
+    if !api_fixtures.is_empty() {
+        generate_plugin_api_tests(&api_fixtures, &tests_dir)?;
     }
 
     Ok(())
@@ -305,7 +316,7 @@ fn render_test(fixture: &Fixture) -> Result<String> {
     writeln!(
         code,
         "    document_path = helpers.resolve_document({})",
-        python_string_literal(&fixture.document.path)
+        python_string_literal(&fixture.document().path)
     )?;
     writeln!(code, "    if not document_path.exists():")?;
     writeln!(
@@ -315,14 +326,14 @@ fn render_test(fixture: &Fixture) -> Result<String> {
     )?;
     writeln!(code)?;
 
-    let config_literal = render_config_literal(&fixture.extraction.config);
+    let config_literal = render_config_literal(&fixture.extraction().config);
     writeln!(code, "    config = helpers.build_config({})", config_literal)?;
     writeln!(code)?;
 
     writeln!(code, "    result = extract_file_sync(document_path, None, config)")?;
     writeln!(code)?;
 
-    code.push_str(&render_assertions(&fixture.assertions));
+    code.push_str(&render_assertions(&fixture.assertions()));
 
     Ok(code)
 }
@@ -478,4 +489,336 @@ fn escape_python_string(value: &str) -> String {
 
 fn python_string_literal(value: &str) -> String {
     format!("\"{}\"", escape_python_string(value))
+}
+
+// Plugin API test generation
+
+fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Result<()> {
+    let test_file = output_dir.join("test_plugin_apis.py");
+
+    let mut content = String::new();
+
+    // Header
+    content.push_str("# Auto-generated from fixtures/plugin_api/ - DO NOT EDIT\n");
+    content.push_str("\"\"\"\n");
+    content.push_str("E2E tests for plugin/config/utility APIs.\n");
+    content.push('\n');
+    content.push_str("Generated from plugin API fixtures.\n");
+    content.push_str("To regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang python\n");
+    content.push_str("\"\"\"\n\n");
+    content.push_str("from __future__ import annotations\n\n");
+    content.push_str("import os\n");
+    content.push_str("from pathlib import Path\n\n");
+    content.push_str("import kreuzberg\n");
+    content.push_str("from kreuzberg import ExtractionConfig\n\n");
+
+    // Generate test functions grouped by API category
+    let grouped = group_by_category(fixtures)?;
+
+    for (category, fixtures) in grouped {
+        writeln!(&mut content, "\n# {} Tests\n", category_to_title(category))?;
+
+        for fixture in fixtures {
+            generate_python_test_function(fixture, &mut content)?;
+        }
+    }
+
+    fs::write(&test_file, content).with_context(|| format!("Failed to write {test_file}"))?;
+
+    Ok(())
+}
+
+fn group_by_category<'a>(fixtures: &[&'a Fixture]) -> Result<BTreeMap<&'a str, Vec<&'a Fixture>>> {
+    let mut grouped: BTreeMap<&str, Vec<&Fixture>> = BTreeMap::new();
+    for fixture in fixtures {
+        let category = fixture
+            .api_category
+            .as_ref()
+            .with_context(|| format!("Fixture '{}' missing api_category", fixture.id))?
+            .as_str();
+        grouped.entry(category).or_default().push(fixture);
+    }
+    Ok(grouped)
+}
+
+fn category_to_title(category: &str) -> String {
+    category
+        .split('_')
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn generate_python_test_function(fixture: &Fixture, buf: &mut String) -> Result<()> {
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let test_name = format!("test_{}", fixture.id);
+
+    // Function signature
+    match test_spec.pattern.as_str() {
+        "config_from_file" | "mime_from_path" => {
+            writeln!(buf, "def {}(tmp_path: Path) -> None:", test_name)?;
+        }
+        "config_discover" => {
+            writeln!(buf, "def {}(tmp_path: Path, monkeypatch) -> None:", test_name)?;
+        }
+        _ => {
+            writeln!(buf, "def {}() -> None:", test_name)?;
+        }
+    }
+
+    // Docstring
+    writeln!(buf, "    \"\"\"{}\"\"\"", escape_python_string(&fixture.description))?;
+
+    // Generate test body based on pattern
+    match test_spec.pattern.as_str() {
+        "simple_list" => generate_simple_list_test(fixture, test_spec, buf)?,
+        "clear_registry" => generate_clear_registry_test(fixture, test_spec, buf)?,
+        "graceful_unregister" => generate_graceful_unregister_test(fixture, test_spec, buf)?,
+        "config_from_file" => generate_config_from_file_test(fixture, test_spec, buf)?,
+        "config_discover" => generate_config_discover_test(fixture, test_spec, buf)?,
+        "mime_from_bytes" => generate_mime_from_bytes_test(fixture, test_spec, buf)?,
+        "mime_from_path" => generate_mime_from_path_test(fixture, test_spec, buf)?,
+        "mime_extension_lookup" => generate_mime_extension_lookup_test(fixture, test_spec, buf)?,
+        _ => anyhow::bail!("Unknown test pattern: {}", test_spec.pattern),
+    }
+
+    writeln!(buf)?;
+    Ok(())
+}
+
+fn generate_simple_list_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let func_name = &test_spec.function_call.name;
+    let assertions = &test_spec.assertions;
+
+    // Call the function
+    writeln!(buf, "    result = kreuzberg.{}()", func_name)?;
+
+    // Generate assertions
+    writeln!(buf, "    assert isinstance(result, list)")?;
+
+    if let Some(item_type) = &assertions.list_item_type {
+        if item_type == "string" {
+            writeln!(buf, "    assert all(isinstance(item, str) for item in result)")?;
+        }
+    }
+
+    if let Some(contains) = &assertions.list_contains {
+        writeln!(buf, "    assert \"{}\" in result", contains)?;
+    }
+
+    Ok(())
+}
+
+fn generate_clear_registry_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let func_name = &test_spec.function_call.name;
+
+    // Call clear function
+    writeln!(buf, "    kreuzberg.{}()", func_name)?;
+
+    // Verify cleanup by calling list function
+    let list_func = func_name.replace("clear_", "list_");
+    writeln!(buf, "    result = kreuzberg.{}()", list_func)?;
+    writeln!(buf, "    assert len(result) == 0")?;
+
+    Ok(())
+}
+
+fn generate_graceful_unregister_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let func_name = &test_spec.function_call.name;
+    let arg = test_spec
+        .function_call
+        .args
+        .first()
+        .with_context(|| format!("Function '{}' missing argument", func_name))?;
+    let arg_str = arg
+        .as_str()
+        .with_context(|| format!("Function '{}' argument is not a string", func_name))?;
+
+    // Should not raise
+    writeln!(buf, "    kreuzberg.{}(\"{}\")", func_name, arg_str)?;
+
+    Ok(())
+}
+
+fn generate_config_from_file_test(fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_from_file", fixture.id))?;
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+
+    // Create temp file
+    writeln!(buf, "    config_path = tmp_path / \"{}\"", file_name)?;
+    writeln!(buf, "    config_path.write_text(\"\"\"{}\"\"\")", file_content)?;
+    writeln!(buf)?;
+
+    // Load config
+    writeln!(buf, "    config = ExtractionConfig.from_file(str(config_path))")?;
+    writeln!(buf)?;
+
+    // Generate assertions
+    generate_object_property_assertions(&test_spec.assertions, buf)?;
+
+    Ok(())
+}
+
+fn generate_config_discover_test(fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_discover", fixture.id))?;
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+    let subdir = setup
+        .subdirectory_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing subdirectory_name", fixture.id))?;
+
+    // Create config in parent dir
+    writeln!(buf, "    config_path = tmp_path / \"{}\"", file_name)?;
+    writeln!(buf, "    config_path.write_text(\"\"\"{}\"\"\")", file_content)?;
+    writeln!(buf)?;
+
+    // Create subdirectory
+    writeln!(buf, "    subdir = tmp_path / \"{}\"", subdir)?;
+    writeln!(buf, "    subdir.mkdir()")?;
+    writeln!(buf, "    monkeypatch.chdir(subdir)")?;
+    writeln!(buf)?;
+
+    // Discover config
+    writeln!(buf, "    config = ExtractionConfig.discover()")?;
+    writeln!(buf, "    assert config is not None")?;
+    writeln!(buf)?;
+
+    // Generate assertions
+    generate_object_property_assertions(&test_spec.assertions, buf)?;
+
+    Ok(())
+}
+
+fn generate_mime_from_bytes_test(fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_bytes", fixture.id))?;
+    let test_data = setup
+        .test_data
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_data", fixture.id))?;
+    let func_name = &test_spec.function_call.name;
+
+    // Convert test data to bytes (escape sequences already in JSON are preserved)
+    writeln!(buf, "    test_bytes = b\"{}\"", test_data)?;
+    writeln!(buf, "    result = kreuzberg.{}(test_bytes)", func_name)?;
+    writeln!(buf)?;
+
+    // Generate assertions
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(buf, "    assert \"{}\" in result.lower()", contains)?;
+    }
+
+    Ok(())
+}
+
+fn generate_mime_from_path_test(fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_path", fixture.id))?;
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+    let func_name = &test_spec.function_call.name;
+
+    // Create temp file
+    writeln!(buf, "    test_file = tmp_path / \"{}\"", file_name)?;
+    writeln!(buf, "    test_file.write_text(\"{}\")", file_content)?;
+    writeln!(buf)?;
+
+    // Detect MIME
+    writeln!(buf, "    result = kreuzberg.{}(str(test_file))", func_name)?;
+    writeln!(buf)?;
+
+    // Generate assertions
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(buf, "    assert \"{}\" in result.lower()", contains)?;
+    }
+
+    Ok(())
+}
+
+fn generate_mime_extension_lookup_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let func_name = &test_spec.function_call.name;
+    let arg = test_spec
+        .function_call
+        .args
+        .first()
+        .with_context(|| format!("Function '{}' missing argument", func_name))?;
+    let mime_type = arg
+        .as_str()
+        .with_context(|| format!("Function '{}' argument is not a string", func_name))?;
+
+    writeln!(buf, "    result = kreuzberg.{}(\"{}\")", func_name, mime_type)?;
+    writeln!(buf, "    assert isinstance(result, list)")?;
+
+    if let Some(contains) = &test_spec.assertions.list_contains {
+        writeln!(buf, "    assert \"{}\" in result", contains)?;
+    }
+
+    Ok(())
+}
+
+fn generate_object_property_assertions(assertions: &PluginAssertions, buf: &mut String) -> Result<()> {
+    for prop in &assertions.object_properties {
+        let parts: Vec<&str> = prop.path.split('.').collect();
+
+        if let Some(exists) = prop.exists {
+            if exists {
+                let mut path = "config".to_string();
+                for part in &parts {
+                    writeln!(buf, "    assert {}.{} is not None", path, part)?;
+                    path = format!("{}.{}", path, part);
+                }
+            }
+        }
+
+        if let Some(value) = &prop.value {
+            let path = format!("config.{}", prop.path);
+            match value {
+                Value::Number(n) => writeln!(buf, "    assert {} == {}", path, n)?,
+                Value::Bool(b) => writeln!(buf, "    assert {} is {}", path, if *b { "True" } else { "False" })?,
+                Value::String(s) => writeln!(buf, "    assert {} == \"{}\"", path, s)?,
+                _ => {}
+            }
+        }
+    }
+
+    Ok(())
 }

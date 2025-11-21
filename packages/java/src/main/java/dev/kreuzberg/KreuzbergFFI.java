@@ -49,8 +49,17 @@ final class KreuzbergFFI {
     static final MethodHandle KREUZBERG_LIST_VALIDATORS;
     static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND;
     static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND_WITH_LANGUAGES;
+    static final MethodHandle KREUZBERG_UNREGISTER_OCR_BACKEND;
+    static final MethodHandle KREUZBERG_LIST_OCR_BACKENDS;
+    static final MethodHandle KREUZBERG_CLEAR_OCR_BACKENDS;
+    static final MethodHandle KREUZBERG_LIST_DOCUMENT_EXTRACTORS;
+    static final MethodHandle KREUZBERG_UNREGISTER_DOCUMENT_EXTRACTOR;
+    static final MethodHandle KREUZBERG_CLEAR_DOCUMENT_EXTRACTORS;
     static final MethodHandle KREUZBERG_DETECT_MIME_TYPE;
     static final MethodHandle KREUZBERG_VALIDATE_MIME_TYPE;
+    static final MethodHandle KREUZBERG_DETECT_MIME_TYPE_FROM_BYTES;
+    static final MethodHandle KREUZBERG_GET_EXTENSIONS_FOR_MIME;
+    static final MethodHandle KREUZBERG_CONFIG_DISCOVER;
     static final MethodHandle KREUZBERG_LIST_EMBEDDING_PRESETS;
     static final MethodHandle KREUZBERG_GET_EMBEDDING_PRESET;
 
@@ -288,6 +297,36 @@ final class KreuzbergFFI {
                 )
             );
 
+            KREUZBERG_UNREGISTER_OCR_BACKEND = linkFunction(
+                "kreuzberg_unregister_ocr_backend",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_LIST_OCR_BACKENDS = linkFunction(
+                "kreuzberg_list_ocr_backends",
+                FunctionDescriptor.of(ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_CLEAR_OCR_BACKENDS = linkFunction(
+                "kreuzberg_clear_ocr_backends",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN)
+            );
+
+            KREUZBERG_LIST_DOCUMENT_EXTRACTORS = linkFunction(
+                "kreuzberg_list_document_extractors",
+                FunctionDescriptor.of(ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_UNREGISTER_DOCUMENT_EXTRACTOR = linkFunction(
+                "kreuzberg_unregister_document_extractor",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_CLEAR_DOCUMENT_EXTRACTORS = linkFunction(
+                "kreuzberg_clear_document_extractors",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN)
+            );
+
             KREUZBERG_DETECT_MIME_TYPE = linkFunction(
                 "kreuzberg_detect_mime_type",
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_BOOLEAN)
@@ -296,6 +335,21 @@ final class KreuzbergFFI {
             KREUZBERG_VALIDATE_MIME_TYPE = linkFunction(
                 "kreuzberg_validate_mime_type",
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_DETECT_MIME_TYPE_FROM_BYTES = linkFunction(
+                "kreuzberg_detect_mime_type_from_bytes",
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG)
+            );
+
+            KREUZBERG_GET_EXTENSIONS_FOR_MIME = linkFunction(
+                "kreuzberg_get_extensions_for_mime",
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_CONFIG_DISCOVER = linkFunction(
+                "kreuzberg_config_discover",
+                FunctionDescriptor.of(ValueLayout.ADDRESS)
             );
 
             KREUZBERG_LIST_EMBEDDING_PRESETS = linkFunction(
@@ -336,27 +390,49 @@ final class KreuzbergFFI {
         String osName = System.getProperty("os.name").toLowerCase(Locale.ROOT);
         String libName;
         String libExt;
+        String pdfiumLibName;
 
         // Determine library name and extension based on OS
         if (osName.contains("mac") || osName.contains("darwin")) {
             libName = "libkreuzberg_ffi";
+            pdfiumLibName = "libpdfium";
             libExt = ".dylib";
         } else if (osName.contains("win")) {
             libName = "kreuzberg_ffi";
+            pdfiumLibName = "pdfium";
             libExt = ".dll";
         } else {
             libName = "libkreuzberg_ffi";
+            pdfiumLibName = "libpdfium";
             libExt = ".so";
         }
 
         // Try to load from classpath first (for packaged JAR)
         String resourcePath = "/" + libName + libExt;
+        String pdfiumResourcePath = "/" + pdfiumLibName + libExt;
         var resource = KreuzbergFFI.class.getResource(resourcePath);
 
         if (resource != null) {
             // Library found in classpath, extract and load it
             try (java.io.InputStream in = KreuzbergFFI.class.getResourceAsStream(resourcePath)) {
-                java.nio.file.Path tempLib = java.nio.file.Files.createTempFile(libName, libExt);
+                // Create temp directory for both libraries
+                java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("kreuzberg_native");
+                tempDir.toFile().deleteOnExit();
+
+                // Extract pdfium library first (dependency of FFI library)
+                var pdfiumResource = KreuzbergFFI.class.getResource(pdfiumResourcePath);
+                if (pdfiumResource != null) {
+                    var pdfiumStream = KreuzbergFFI.class.getResourceAsStream(pdfiumResourcePath);
+                    try (java.io.InputStream pdfiumIn = pdfiumStream) {
+                        java.nio.file.Path tempPdfium = tempDir.resolve(pdfiumLibName + libExt);
+                        tempPdfium.toFile().deleteOnExit();
+                        var replaceExisting = java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+                        java.nio.file.Files.copy(pdfiumIn, tempPdfium, replaceExisting);
+                    }
+                }
+
+                // Extract and load FFI library
+                java.nio.file.Path tempLib = tempDir.resolve(libName + libExt);
                 tempLib.toFile().deleteOnExit();
                 java.nio.file.Files.copy(in, tempLib, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 System.load(tempLib.toAbsolutePath().toString());

@@ -310,6 +310,119 @@ pub fn detect_or_validate(path: Option<&Path>, mime_type: Option<&str>) -> Resul
     }
 }
 
+/// Detect MIME type from raw file bytes.
+///
+/// Uses magic byte signatures to detect file type from content.
+/// Falls back to `infer` crate for comprehensive detection.
+///
+/// # Arguments
+///
+/// * `content` - Raw file bytes
+///
+/// # Returns
+///
+/// The detected MIME type string.
+///
+/// # Errors
+///
+/// Returns `KreuzbergError::UnsupportedFormat` if MIME type cannot be determined.
+pub fn detect_mime_type_from_bytes(content: &[u8]) -> Result<String> {
+    // Use infer crate for magic byte detection
+    if let Some(kind) = infer::get(content) {
+        let mime_type = kind.mime_type();
+
+        // Validate that it's a supported type
+        if SUPPORTED_MIME_TYPES.contains(mime_type) || mime_type.starts_with("image/") {
+            return Ok(mime_type.to_string());
+        }
+    }
+
+    // Try to detect text-based formats
+    if let Ok(text) = std::str::from_utf8(content) {
+        let trimmed = text.trim_start();
+
+        // Detect JSON
+        if (trimmed.starts_with('{') || trimmed.starts_with('['))
+            && serde_json::from_str::<serde_json::Value>(text).is_ok()
+        {
+            return Ok(JSON_MIME_TYPE.to_string());
+        }
+
+        // Detect XML
+        if trimmed.starts_with("<?xml") || trimmed.starts_with('<') {
+            return Ok(XML_MIME_TYPE.to_string());
+        }
+
+        // Detect HTML
+        if trimmed.starts_with("<!DOCTYPE html") || trimmed.starts_with("<html") {
+            return Ok(HTML_MIME_TYPE.to_string());
+        }
+
+        // Detect PDF header
+        if trimmed.starts_with("%PDF") {
+            return Ok(PDF_MIME_TYPE.to_string());
+        }
+
+        // Default to plain text for valid UTF-8
+        return Ok(PLAIN_TEXT_MIME_TYPE.to_string());
+    }
+
+    Err(KreuzbergError::UnsupportedFormat(
+        "Could not determine MIME type from bytes".to_string(),
+    ))
+}
+
+/// Get file extensions for a given MIME type.
+///
+/// Returns all known file extensions that map to the specified MIME type.
+///
+/// # Arguments
+///
+/// * `mime_type` - The MIME type to look up
+///
+/// # Returns
+///
+/// A vector of file extensions (without leading dot) for the MIME type.
+///
+/// # Example
+///
+/// ```
+/// use kreuzberg::core::mime::get_extensions_for_mime;
+///
+/// let extensions = get_extensions_for_mime("application/pdf").unwrap();
+/// assert_eq!(extensions, vec!["pdf"]);
+///
+/// let doc_extensions = get_extensions_for_mime("application/vnd.openxmlformats-officedocument.wordprocessingml.document").unwrap();
+/// assert!(doc_extensions.contains(&"docx".to_string()));
+/// ```
+pub fn get_extensions_for_mime(mime_type: &str) -> Result<Vec<String>> {
+    let mut extensions = Vec::new();
+
+    // Search through EXT_TO_MIME for matching MIME types
+    for (ext, mime) in EXT_TO_MIME.iter() {
+        if *mime == mime_type {
+            extensions.push(ext.to_string());
+        }
+    }
+
+    // If we found extensions, return them
+    if !extensions.is_empty() {
+        return Ok(extensions);
+    }
+
+    // Try using mime_guess crate for reverse lookup
+    let guessed = mime_guess::get_mime_extensions_str(mime_type);
+    if let Some(exts) = guessed {
+        return Ok(exts.iter().map(|s| s.to_string()).collect());
+    }
+
+    // No extensions found
+    Err(KreuzbergError::UnsupportedFormat(format!(
+        "No known extensions for MIME type: {}",
+        mime_type
+    )))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

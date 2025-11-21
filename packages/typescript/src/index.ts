@@ -1288,6 +1288,128 @@ export function registerOcrBackend(backend: OcrBackendProtocol): void {
 }
 
 /**
+ * List all registered OCR backends.
+ *
+ * Returns an array of names of all currently registered OCR backends,
+ * including built-in backends like "tesseract".
+ *
+ * @returns Array of OCR backend names
+ *
+ * @example
+ * ```typescript
+ * import { listOcrBackends } from '@goldziher/kreuzberg';
+ *
+ * const backends = listOcrBackends();
+ * console.log(backends); // ['tesseract', 'my-custom-backend', ...]
+ * ```
+ */
+export function listOcrBackends(): string[] {
+	const binding = getBinding();
+	return binding.listOcrBackends();
+}
+
+/**
+ * Unregister an OCR backend by name.
+ *
+ * Removes the specified OCR backend from the registry. If the backend doesn't exist,
+ * this operation is a no-op (does not throw an error).
+ *
+ * @param name - Name of the OCR backend to unregister
+ *
+ * @example
+ * ```typescript
+ * import { unregisterOcrBackend } from '@goldziher/kreuzberg';
+ *
+ * // Unregister a custom backend
+ * unregisterOcrBackend('my-custom-ocr');
+ * ```
+ */
+export function unregisterOcrBackend(name: string): void {
+	const binding = getBinding();
+	binding.unregisterOcrBackend(name);
+}
+
+/**
+ * Clear all registered OCR backends.
+ *
+ * Removes all OCR backends from the registry, including built-in backends.
+ * Use with caution as this will make OCR functionality unavailable until
+ * backends are re-registered.
+ *
+ * @example
+ * ```typescript
+ * import { clearOcrBackends } from '@goldziher/kreuzberg';
+ *
+ * clearOcrBackends();
+ * ```
+ */
+export function clearOcrBackends(): void {
+	const binding = getBinding();
+	binding.clearOcrBackends();
+}
+
+/**
+ * List all registered document extractors.
+ *
+ * Returns an array of names of all currently registered document extractors,
+ * including built-in extractors for PDF, Office documents, images, etc.
+ *
+ * @returns Array of document extractor names
+ *
+ * @example
+ * ```typescript
+ * import { listDocumentExtractors } from '@goldziher/kreuzberg';
+ *
+ * const extractors = listDocumentExtractors();
+ * console.log(extractors); // ['PDFExtractor', 'ImageExtractor', ...]
+ * ```
+ */
+export function listDocumentExtractors(): string[] {
+	const binding = getBinding();
+	return binding.listDocumentExtractors();
+}
+
+/**
+ * Unregister a document extractor by name.
+ *
+ * Removes the specified document extractor from the registry. If the extractor
+ * doesn't exist, this operation is a no-op (does not throw an error).
+ *
+ * @param name - Name of the document extractor to unregister
+ *
+ * @example
+ * ```typescript
+ * import { unregisterDocumentExtractor } from '@goldziher/kreuzberg';
+ *
+ * // Unregister a custom extractor
+ * unregisterDocumentExtractor('MyCustomExtractor');
+ * ```
+ */
+export function unregisterDocumentExtractor(name: string): void {
+	const binding = getBinding();
+	binding.unregisterDocumentExtractor(name);
+}
+
+/**
+ * Clear all registered document extractors.
+ *
+ * Removes all document extractors from the registry, including built-in extractors.
+ * Use with caution as this will make document extraction unavailable until
+ * extractors are re-registered.
+ *
+ * @example
+ * ```typescript
+ * import { clearDocumentExtractors } from '@goldziher/kreuzberg';
+ *
+ * clearDocumentExtractors();
+ * ```
+ */
+export function clearDocumentExtractors(): void {
+	const binding = getBinding();
+	binding.clearDocumentExtractors();
+}
+
+/**
  * ExtractionConfig namespace with static methods for loading configuration from files.
  *
  * Provides a factory method to load extraction configuration from TOML, YAML, or JSON files.
@@ -1339,38 +1461,93 @@ export const ExtractionConfig = {
 		const binding = getBinding();
 		return binding.loadExtractionConfigFromFile(filePath);
 	},
+
+	/**
+	 * Discover and load configuration from current or parent directories.
+	 *
+	 * Searches for a `kreuzberg.toml` file starting from the current working directory
+	 * and traversing up the directory tree. Returns the first configuration file found.
+	 *
+	 * @returns ExtractionConfig object if found, or null if no configuration file exists
+	 *
+	 * @example
+	 * ```typescript
+	 * import { ExtractionConfig } from '@goldziher/kreuzberg';
+	 *
+	 * // Try to find config in current or parent directories
+	 * const config = ExtractionConfig.discover();
+	 * if (config) {
+	 *   console.log('Found configuration');
+	 *   // Use config for extraction
+	 * } else {
+	 *   console.log('No configuration file found, using defaults');
+	 * }
+	 * ```
+	 */
+	discover(): ExtractionConfigType | null {
+		const binding = getBinding();
+		return binding.discoverExtractionConfig();
+	},
 };
 
 /**
- * Detect MIME type from a file path.
+ * Detect MIME type from raw bytes.
  *
- * Uses file extension to determine MIME type. Falls back to content-based
- * detection if extension-based detection fails.
+ * Uses content inspection (magic bytes) to determine MIME type.
+ * This is more accurate than extension-based detection but requires
+ * reading the file content.
  *
- * @param path - Path to the file (string)
- * @param checkExists - Whether to verify file existence (defaults to true)
+ * @param bytes - Raw file content as Buffer
  * @returns The detected MIME type string
  *
- * @throws {Error} If file doesn't exist (when checkExists is true)
- * @throws {Error} If MIME type cannot be determined
- * @throws {Error} If extension is unknown
+ * @throws {Error} If MIME type cannot be determined from content
  *
  * @example
  * ```typescript
  * import { detectMimeType } from '@goldziher/kreuzberg';
+ * import * as fs from 'fs';
+ *
+ * // Read file content
+ * const content = fs.readFileSync('document.pdf');
+ *
+ * // Detect MIME type from bytes
+ * const mimeType = detectMimeType(content);
+ * console.log(mimeType); // 'application/pdf'
+ * ```
+ */
+export function detectMimeType(bytes: Buffer): string {
+	const binding = getBinding();
+	return binding.detectMimeType(bytes);
+}
+
+/**
+ * Detect MIME type from a file path.
+ *
+ * Uses file extension to determine MIME type. Falls back to `mime_guess` crate
+ * if extension-based detection fails.
+ *
+ * @param path - Path to the file (string)
+ * @returns The detected MIME type string
+ *
+ * @throws {Error} If file doesn't exist
+ * @throws {Error} If MIME type cannot be determined from path/extension
+ * @throws {Error} If extension is unknown
+ *
+ * @example
+ * ```typescript
+ * import { detectMimeTypeFromPath } from '@goldziher/kreuzberg';
  *
  * // Detect from existing file
- * const mimeType = detectMimeType('document.pdf');
+ * const mimeType = detectMimeTypeFromPath('document.pdf');
  * console.log(mimeType); // 'application/pdf'
  *
- * // Detect without checking file existence
- * const mimeType2 = detectMimeType('document.docx', false);
+ * const mimeType2 = detectMimeTypeFromPath('document.docx');
  * console.log(mimeType2); // 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
  * ```
  */
-export function detectMimeType(path: string, checkExists = true): string {
+export function detectMimeTypeFromPath(path: string): string {
 	const binding = getBinding();
-	return binding.detectMimeType(path, checkExists);
+	return binding.detectMimeTypeFromPath(path);
 }
 
 /**
@@ -1407,6 +1584,35 @@ export function detectMimeType(path: string, checkExists = true): string {
 export function validateMimeType(mimeType: string): string {
 	const binding = getBinding();
 	return binding.validateMimeType(mimeType);
+}
+
+/**
+ * Get file extensions for a given MIME type.
+ *
+ * Returns an array of file extensions commonly associated with the specified
+ * MIME type. For example, 'application/pdf' returns ['pdf'].
+ *
+ * @param mimeType - The MIME type to look up (e.g., 'application/pdf', 'image/jpeg')
+ * @returns Array of file extensions (without leading dots)
+ *
+ * @throws {Error} If the MIME type is not recognized or supported
+ *
+ * @example
+ * ```typescript
+ * import { getExtensionsForMime } from '@goldziher/kreuzberg';
+ *
+ * // Get extensions for PDF
+ * const pdfExts = getExtensionsForMime('application/pdf');
+ * console.log(pdfExts); // ['pdf']
+ *
+ * // Get extensions for JPEG
+ * const jpegExts = getExtensionsForMime('image/jpeg');
+ * console.log(jpegExts); // ['jpg', 'jpeg']
+ * ```
+ */
+export function getExtensionsForMime(mimeType: string): string[] {
+	const binding = getBinding();
+	return binding.getExtensionsForMime(mimeType);
 }
 
 /**

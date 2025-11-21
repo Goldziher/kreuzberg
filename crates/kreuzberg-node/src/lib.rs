@@ -1012,6 +1012,40 @@ pub fn load_extraction_config_from_file(file_path: String) -> Result<JsExtractio
     JsExtractionConfig::try_from(rust_config)
 }
 
+/// Discover and load extraction configuration from current or parent directories.
+///
+/// Searches for a `kreuzberg.toml` file starting from the current working directory
+/// and traversing up the directory tree. Returns the first configuration file found.
+///
+/// # Returns
+///
+/// `JsExtractionConfig` object if a configuration file is found, or `null` if no
+/// configuration file exists in the current or parent directories.
+///
+/// # Example
+///
+/// ```typescript
+/// import { ExtractionConfig } from '@goldziher/kreuzberg';
+///
+/// // Try to find config in current or parent directories
+/// const config = ExtractionConfig.discover();
+/// if (config) {
+///   console.log('Found configuration');
+///   // Use config for extraction
+/// } else {
+///   console.log('No configuration file found, using defaults');
+/// }
+/// ```
+#[napi(js_name = "discoverExtractionConfig")]
+pub fn discover_extraction_config() -> Result<Option<JsExtractionConfig>> {
+    let rust_config = ExtractionConfig::discover().map_err(convert_error)?;
+
+    match rust_config {
+        Some(config) => Ok(Some(JsExtractionConfig::try_from(config)?)),
+        None => Ok(None),
+    }
+}
+
 #[napi(object)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct JsTable {
@@ -2543,6 +2577,166 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
     Ok(())
 }
 
+/// Unregister an OCR backend by name.
+///
+/// Removes the specified OCR backend from the registry. If the backend doesn't exist,
+/// this operation is a no-op (does not throw an error).
+///
+/// # Parameters
+///
+/// * `name` - Name of the OCR backend to unregister
+///
+/// # Example
+///
+/// ```typescript
+/// import { unregisterOcrBackend } from '@goldziher/kreuzberg';
+///
+/// // Unregister a custom backend
+/// unregisterOcrBackend('my-custom-ocr');
+/// ```
+#[napi]
+pub fn unregister_ocr_backend(name: String) -> Result<()> {
+    kreuzberg::plugins::unregister_ocr_backend(&name).map_err(convert_error)
+}
+
+/// List all registered OCR backends.
+///
+/// Returns an array of names of all currently registered OCR backends,
+/// including built-in backends like "tesseract".
+///
+/// # Returns
+///
+/// Array of OCR backend names.
+///
+/// # Example
+///
+/// ```typescript
+/// import { listOcrBackends } from '@goldziher/kreuzberg';
+///
+/// const backends = listOcrBackends();
+/// console.log(backends); // ['tesseract', 'my-custom-backend', ...]
+/// ```
+#[napi]
+pub fn list_ocr_backends() -> Result<Vec<String>> {
+    kreuzberg::plugins::list_ocr_backends().map_err(convert_error)
+}
+
+/// Clear all registered OCR backends.
+///
+/// Removes all OCR backends from the registry, including built-in backends.
+/// Use with caution as this will make OCR functionality unavailable until
+/// backends are re-registered.
+///
+/// # Example
+///
+/// ```typescript
+/// import { clearOcrBackends } from '@goldziher/kreuzberg';
+///
+/// clearOcrBackends();
+/// ```
+#[napi]
+pub fn clear_ocr_backends() -> Result<()> {
+    kreuzberg::plugins::clear_ocr_backends().map_err(convert_error)
+}
+
+/// List all registered document extractors.
+///
+/// Returns an array of names of all currently registered document extractors,
+/// including built-in extractors for PDF, Office documents, images, etc.
+///
+/// # Returns
+///
+/// Array of document extractor names.
+///
+/// # Example
+///
+/// ```typescript
+/// import { listDocumentExtractors } from '@goldziher/kreuzberg';
+///
+/// const extractors = listDocumentExtractors();
+/// console.log(extractors); // ['PDFExtractor', 'ImageExtractor', ...]
+/// ```
+#[napi]
+pub fn list_document_extractors() -> Result<Vec<String>> {
+    kreuzberg::plugins::list_extractors().map_err(convert_error)
+}
+
+/// Unregister a document extractor by name.
+///
+/// Removes the specified document extractor from the registry. If the extractor
+/// doesn't exist, this operation is a no-op (does not throw an error).
+///
+/// # Parameters
+///
+/// * `name` - Name of the document extractor to unregister
+///
+/// # Example
+///
+/// ```typescript
+/// import { unregisterDocumentExtractor } from '@goldziher/kreuzberg';
+///
+/// // Unregister a custom extractor
+/// unregisterDocumentExtractor('MyCustomExtractor');
+/// ```
+#[napi]
+pub fn unregister_document_extractor(name: String) -> Result<()> {
+    kreuzberg::plugins::unregister_extractor(&name).map_err(convert_error)
+}
+
+/// Clear all registered document extractors.
+///
+/// Removes all document extractors from the registry, including built-in extractors.
+/// Use with caution as this will make document extraction unavailable until
+/// extractors are re-registered.
+///
+/// # Example
+///
+/// ```typescript
+/// import { clearDocumentExtractors } from '@goldziher/kreuzberg';
+///
+/// clearDocumentExtractors();
+/// ```
+#[napi]
+pub fn clear_document_extractors() -> Result<()> {
+    kreuzberg::plugins::clear_extractors().map_err(convert_error)
+}
+
+/// Detect MIME type from raw bytes.
+///
+/// Uses content inspection (magic bytes) to determine MIME type.
+/// This is more accurate than extension-based detection but requires
+/// reading the file content.
+///
+/// # Parameters
+///
+/// * `bytes` - Raw file content as Buffer
+///
+/// # Returns
+///
+/// The detected MIME type string.
+///
+/// # Errors
+///
+/// Throws an error if MIME type cannot be determined from content.
+///
+/// # Example
+///
+/// ```typescript
+/// import { detectMimeType } from '@goldziher/kreuzberg';
+/// import * as fs from 'fs';
+///
+/// // Read file content
+/// const content = fs.readFileSync('document.pdf');
+///
+/// // Detect MIME type from bytes
+/// const mimeType = detectMimeType(content);
+/// console.log(mimeType); // 'application/pdf'
+/// ```
+#[napi]
+pub fn detect_mime_type(bytes: Buffer) -> Result<String> {
+    kreuzberg::core::mime::detect_mime_type_from_bytes(bytes.as_ref()).map_err(convert_error)
+}
+
 /// Detect MIME type from a file path.
 ///
 /// Uses file extension to determine MIME type. Falls back to `mime_guess` crate
@@ -2551,7 +2745,6 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
 /// # Parameters
 ///
 /// * `path` - Path to the file (string)
-/// * `check_exists` - Whether to verify file existence (defaults to true)
 ///
 /// # Returns
 ///
@@ -2560,28 +2753,25 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
 /// # Errors
 ///
 /// Throws an error if:
-/// - File doesn't exist (when `check_exists` is true)
+/// - File doesn't exist
 /// - MIME type cannot be determined from path/extension
 /// - Extension is unknown
 ///
 /// # Example
 ///
 /// ```typescript
-/// import { detectMimeType } from '@goldziher/kreuzberg';
+/// import { detectMimeTypeFromPath } from '@goldziher/kreuzberg';
 ///
 /// // Detect from existing file
-/// const mimeType = detectMimeType('document.pdf');
+/// const mimeType = detectMimeTypeFromPath('document.pdf');
 /// console.log(mimeType); // 'application/pdf'
 ///
-/// // Detect without checking file existence
-/// const mimeType2 = detectMimeType('document.docx', false);
+/// const mimeType2 = detectMimeTypeFromPath('document.docx');
 /// console.log(mimeType2); // 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 /// ```
 #[napi]
-pub fn detect_mime_type(path: String, check_exists: Option<bool>) -> Result<String> {
-    let check = check_exists.unwrap_or(true);
-
-    kreuzberg::core::mime::detect_mime_type(&path, check).map_err(convert_error)
+pub fn detect_mime_type_from_path(path: String) -> Result<String> {
+    kreuzberg::core::mime::detect_mime_type(&path, true).map_err(convert_error)
 }
 
 /// Validate that a MIME type is supported by Kreuzberg.
@@ -2624,6 +2814,41 @@ pub fn detect_mime_type(path: String, check_exists: Option<bool>) -> Result<Stri
 #[napi]
 pub fn validate_mime_type(mime_type: String) -> Result<String> {
     kreuzberg::core::mime::validate_mime_type(&mime_type).map_err(convert_error)
+}
+
+/// Get file extensions for a given MIME type.
+///
+/// Returns an array of file extensions commonly associated with the specified
+/// MIME type. For example, 'application/pdf' returns ['pdf'].
+///
+/// # Parameters
+///
+/// * `mime_type` - The MIME type to look up (e.g., 'application/pdf', 'image/jpeg')
+///
+/// # Returns
+///
+/// Array of file extensions (without leading dots).
+///
+/// # Errors
+///
+/// Throws an error if the MIME type is not recognized or supported.
+///
+/// # Example
+///
+/// ```typescript
+/// import { getExtensionsForMime } from '@goldziher/kreuzberg';
+///
+/// // Get extensions for PDF
+/// const pdfExts = getExtensionsForMime('application/pdf');
+/// console.log(pdfExts); // ['pdf']
+///
+/// // Get extensions for JPEG
+/// const jpegExts = getExtensionsForMime('image/jpeg');
+/// console.log(jpegExts); // ['jpg', 'jpeg']
+/// ```
+#[napi]
+pub fn get_extensions_for_mime(mime_type: String) -> Result<Vec<String>> {
+    kreuzberg::core::mime::get_extensions_for_mime(&mime_type).map_err(convert_error)
 }
 
 /// Embedding preset configuration for TypeScript bindings.

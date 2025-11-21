@@ -1,0 +1,21 @@
+{
+	"id": "mime_detect_bytes",
+	"description": "Detect MIME type from file bytes",
+	"api_category": "mime_utilities",
+	"api_function": "detect_mime_type",
+	"tags": ["mime", "detection", "bytes"],
+	"test_spec": {
+		"pattern": "mime_from_bytes",
+		"setup": {
+			"test_data": "%PDF-1.4\\n"
+		},
+		"function_call": {
+			"name": "detect_mime_type",
+			"args": ["${test_data_bytes}"]
+		},
+		"assertions": {
+			"return_type": "string",
+			"string_contains": "pdf"
+		}
+	}
+}

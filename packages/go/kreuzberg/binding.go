@@ -11,6 +11,8 @@ import "C"
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"unsafe"
 )
 
@@ -317,8 +319,72 @@ func LoadExtractionConfigFromFile(path string) (*ExtractionConfig, error) {
 	return cfg, nil
 }
 
-// DetectMimeType detects MIME type from a file path using extension and content heuristics.
-func DetectMimeType(path string, checkExists bool) (string, error) {
+// ConfigFromFile loads an ExtractionConfig from a file (alias for LoadExtractionConfigFromFile).
+func ConfigFromFile(path string) (*ExtractionConfig, error) {
+	return LoadExtractionConfigFromFile(path)
+}
+
+// ConfigDiscover searches parent directories for a config file and loads it.
+// Returns nil without error if no config file is found.
+func ConfigDiscover() (*ExtractionConfig, error) {
+	// Try to discover config in parent directories
+	// This works by checking current directory and parent directories
+	// Since we can't directly use the ExtractionConfig* return type easily,
+	// we'll use a workaround: discover the config file path and load it
+	// For now, implement a simple search for config files
+
+	// Use a temporary approach: search for config files manually
+	configNames := []string{"kreuzberg.toml", "kreuzberg.yaml", "kreuzberg.yml", "kreuzberg.json"}
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return nil, newIOError("failed to get current directory", err)
+	}
+
+	// Search current and parent directories
+	dir := currentDir
+	for {
+		for _, name := range configNames {
+			configPath := filepath.Join(dir, name)
+			if _, err := os.Stat(configPath); err == nil {
+				// Found config file
+				return LoadExtractionConfigFromFile(configPath)
+			}
+		}
+
+		// Move to parent directory
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached root directory
+			break
+		}
+		dir = parent
+	}
+
+	// No config found
+	return nil, nil
+}
+
+// DetectMimeType detects MIME type from byte content using magic bytes.
+func DetectMimeType(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", newValidationError("data cannot be empty", nil)
+	}
+
+	buf := C.CBytes(data)
+	defer C.free(buf)
+
+	ptr := C.kreuzberg_detect_mime_type_from_bytes((*C.uint8_t)(buf), C.uintptr_t(len(data)))
+	if ptr == nil {
+		return "", lastError()
+	}
+	defer C.kreuzberg_free_string(ptr)
+
+	return C.GoString(ptr), nil
+}
+
+// DetectMimeTypeFromPath detects MIME type from a file path (checks extension and content).
+func DetectMimeTypeFromPath(path string) (string, error) {
 	if path == "" {
 		return "", newValidationError("path cannot be empty", nil)
 	}
@@ -326,13 +392,36 @@ func DetectMimeType(path string, checkExists bool) (string, error) {
 	cPath := C.CString(path)
 	defer C.free(unsafe.Pointer(cPath))
 
-	ptr := C.kreuzberg_detect_mime_type(cPath, C.bool(checkExists))
+	ptr := C.kreuzberg_detect_mime_type_from_path(cPath)
 	if ptr == nil {
 		return "", lastError()
 	}
 	defer C.kreuzberg_free_string(ptr)
 
 	return C.GoString(ptr), nil
+}
+
+// GetExtensionsForMime returns file extensions associated with a MIME type.
+func GetExtensionsForMime(mimeType string) ([]string, error) {
+	if mimeType == "" {
+		return nil, newValidationError("mimeType cannot be empty", nil)
+	}
+
+	cMime := C.CString(mimeType)
+	defer C.free(unsafe.Pointer(cMime))
+
+	ptr := C.kreuzberg_get_extensions_for_mime(cMime)
+	if ptr == nil {
+		return nil, lastError()
+	}
+	defer C.kreuzberg_free_string(ptr)
+
+	jsonStr := C.GoString(ptr)
+	var extensions []string
+	if err := json.Unmarshal([]byte(jsonStr), &extensions); err != nil {
+		return nil, newSerializationError("failed to parse extensions list", err)
+	}
+	return extensions, nil
 }
 
 // ValidateMimeType validates that the given MIME type is supported.

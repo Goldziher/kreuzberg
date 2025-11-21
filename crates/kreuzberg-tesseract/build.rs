@@ -22,10 +22,6 @@ mod build_tesseract {
 
         vec![
             format!(
-                "https://github.com/DanBloomberg/leptonica/releases/download/{}/leptonica-{}.tar.gz",
-                LEPTONICA_VERSION, LEPTONICA_VERSION
-            ),
-            format!(
                 "https://codeload.github.com/DanBloomberg/leptonica/zip/refs/tags/{}",
                 LEPTONICA_VERSION
             ),
@@ -526,16 +522,15 @@ mod build_tesseract {
                 for entry in archive.entries().unwrap() {
                     let mut entry = entry.unwrap();
                     let path = entry.path().unwrap();
-                    let mut components = path.components();
-                    components.next(); // strip top-level directory
-                    let stripped = components.as_path();
+                    let mut comps = path.components();
+                    comps.next(); // strip top-level dir
+                    let stripped = comps.as_path();
                     if stripped.as_os_str().is_empty() {
                         continue;
                     }
                     let target_path = extract_dir.join(stripped);
-                    if let Some(parent) = target_path.parent() {
-                        fs::create_dir_all(parent).unwrap();
-                    }
+                    let parent = target_path.parent().unwrap();
+                    fs::create_dir_all(parent).unwrap();
                     entry.unpack(&target_path).unwrap();
                 }
             }

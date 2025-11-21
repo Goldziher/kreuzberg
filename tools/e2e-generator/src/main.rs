@@ -68,12 +68,22 @@ fn main() -> Result<()> {
         Commands::List { fixtures } => {
             let fixtures = load_fixtures(fixtures.as_path())?;
             for fixture in fixtures {
-                println!(
-                    "{:<24} {:<12} {}",
-                    fixture.id,
-                    fixture.category(),
-                    fixture.document.path
-                );
+                if fixture.is_document_extraction() {
+                    println!(
+                        "{:<24} {:<12} [doc] {}",
+                        fixture.id,
+                        fixture.category(),
+                        fixture.document().path
+                    );
+                } else if fixture.is_plugin_api() {
+                    println!(
+                        "{:<24} {:<12} [api] {} -> {}",
+                        fixture.id,
+                        fixture.category(),
+                        fixture.api_category.as_deref().unwrap_or("N/A"),
+                        fixture.api_function.as_deref().unwrap_or("N/A")
+                    );
+                }
             }
         }
     }

@@ -1,0 +1,17 @@
+{
+	"id": "extractors_unregister",
+	"description": "Unregister nonexistent document extractor gracefully",
+	"api_category": "document_extractor_management",
+	"api_function": "unregister_document_extractor",
+	"tags": ["extractors", "plugin_management", "unregister"],
+	"test_spec": {
+		"pattern": "graceful_unregister",
+		"function_call": {
+			"name": "unregister_document_extractor",
+			"args": ["nonexistent-extractor-xyz"]
+		},
+		"assertions": {
+			"does_not_throw": true
+		}
+	}
+}

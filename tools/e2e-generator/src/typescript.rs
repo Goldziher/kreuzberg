@@ -365,8 +365,14 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     clean_ts_files(&tests_dir)?;
     write_helpers(&tests_dir)?;
 
-    let mut grouped = fixtures
-        .iter()
+    // Separate document extraction and plugin API fixtures
+    let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
+
+    let plugin_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
+
+    // Generate document extraction tests
+    let mut grouped = doc_fixtures
+        .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
         .into_iter()
         .collect::<Vec<_>>();
@@ -378,6 +384,11 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         let content = render_category(&category, &fixtures)?;
         let path = tests_dir.join(file_name);
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
+    }
+
+    // Generate plugin API tests
+    if !plugin_fixtures.is_empty() {
+        generate_plugin_api_tests(&plugin_fixtures, &tests_dir)?;
     }
 
     Ok(())
@@ -444,23 +455,23 @@ fn render_test(fixture: &Fixture) -> Result<String> {
     writeln!(
         body,
         "    const documentPath = resolveDocument(\"{}\");",
-        escape_ts_string(&fixture.document.path)
+        escape_ts_string(&fixture.document().path)
     )?;
 
-    if fixture.skip.if_document_missing {
+    if fixture.skip().if_document_missing {
         writeln!(body, "    if (!existsSync(documentPath)) {{")?;
         writeln!(
             body,
             "      console.warn(\"Skipping {}: missing document at\", documentPath);",
             escape_ts_string(&fixture.id)
         )?;
-        if let Some(notes) = fixture.skip.notes.as_ref() {
+        if let Some(notes) = fixture.skip().notes.as_ref() {
             writeln!(body, "      console.warn(\"Notes: {}\");", escape_ts_string(notes))?;
         }
         writeln!(body, "      return;\n    }}")?;
     }
 
-    match render_config_expression(&fixture.extraction.config)? {
+    match render_config_expression(&fixture.extraction().config)? {
         None => writeln!(body, "    const config = buildConfig(undefined);")?,
         Some(config_expr) => writeln!(body, "    const config = buildConfig({config_expr});")?,
     }
@@ -470,13 +481,16 @@ fn render_test(fixture: &Fixture) -> Result<String> {
     writeln!(body, "    try {{")?;
     writeln!(body, "      result = extractFileSync(documentPath, null, config);")?;
     writeln!(body, "    }} catch (error) {{")?;
-    if !requirements.is_empty() || fixture.skip.notes.is_some() || !fixture.document.requires_external_tool.is_empty() {
+    if !requirements.is_empty()
+        || fixture.skip().notes.is_some()
+        || !fixture.document().requires_external_tool.is_empty()
+    {
         writeln!(
             body,
             "      if (shouldSkipFixture(error, \"{}\", {}, {})) {{",
             escape_ts_string(&fixture.id),
             render_string_array(&requirements),
-            render_optional_string(fixture.skip.notes.as_ref())
+            render_optional_string(fixture.skip().notes.as_ref())
         )?;
     } else {
         writeln!(
@@ -488,7 +502,7 @@ fn render_test(fixture: &Fixture) -> Result<String> {
     writeln!(body, "        return;\n      }}\n      throw error;\n    }}")?;
     writeln!(body, "    if (result === null) {{\n      return;\n    }}")?;
 
-    body.push_str(&render_assertions(&fixture.assertions));
+    body.push_str(&render_assertions(&fixture.assertions()));
 
     writeln!(body, "  }}, TEST_TIMEOUT_MS);\n")?;
 
@@ -594,10 +608,10 @@ fn render_optional_string(value: Option<&String>) -> String {
 
 fn collect_requirements(fixture: &Fixture) -> Vec<String> {
     fixture
-        .skip
+        .skip()
         .requires_feature
         .iter()
-        .chain(fixture.document.requires_external_tool.iter())
+        .chain(fixture.document().requires_external_tool.iter())
         .filter(|value| !value.is_empty())
         .map(|value| value.to_string())
         .collect::<BTreeSet<_>>()
@@ -631,4 +645,477 @@ fn escape_ts_string(input: &str) -> String {
 
 fn render_json_literal(value: &Value) -> String {
     serde_json::to_string(value).unwrap_or_else(|_| "null".into())
+}
+
+fn generate_plugin_api_tests(fixtures: &[&Fixture], tests_dir: &Utf8Path) -> Result<()> {
+    let mut buffer = String::new();
+
+    // File header
+    writeln!(buffer, "// Auto-generated from fixtures/plugin_api/ - DO NOT EDIT")?;
+    writeln!(buffer, "/**")?;
+    writeln!(buffer, " * E2E tests for plugin/config/utility APIs.")?;
+    writeln!(buffer, " *")?;
+    writeln!(buffer, " * Generated from plugin API fixtures.")?;
+    writeln!(
+        buffer,
+        " * To regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang typescript"
+    )?;
+    writeln!(buffer, " */")?;
+    writeln!(buffer)?;
+    writeln!(buffer, "import * as fs from \"fs\";")?;
+    writeln!(buffer, "import * as os from \"os\";")?;
+    writeln!(buffer, "import * as path from \"path\";")?;
+    writeln!(buffer, "import {{ describe, expect, it }} from \"vitest\";")?;
+    writeln!(
+        buffer,
+        "import * as kreuzberg from \"../../../packages/typescript/src/index.js\";"
+    )?;
+    writeln!(buffer)?;
+
+    // Group fixtures by api_category
+    let mut grouped = fixtures
+        .iter()
+        .into_group_map_by(|fixture| {
+            fixture
+                .api_category
+                .as_ref()
+                .expect("api_category required for plugin API fixtures")
+                .clone()
+        })
+        .into_iter()
+        .collect::<Vec<_>>();
+    grouped.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // Generate tests grouped by category
+    for (category, mut fixtures) in grouped {
+        fixtures.sort_by(|a, b| a.id.cmp(&b.id));
+        let category_title = to_title_case(&category);
+        writeln!(buffer, "describe(\"{category_title}\", () => {{")?;
+
+        for fixture in fixtures {
+            buffer.push_str(&render_plugin_test(fixture)?);
+        }
+
+        writeln!(buffer, "}});")?;
+        writeln!(buffer)?;
+    }
+
+    let path = tests_dir.join("plugin-apis.test.ts");
+    fs::write(&path, buffer).with_context(|| format!("Writing {}", path))?;
+
+    Ok(())
+}
+
+fn render_plugin_test(fixture: &Fixture) -> Result<String> {
+    let mut buffer = String::new();
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .expect("test_spec required for plugin API fixtures");
+
+    // Generate test name from description
+    let test_name = &fixture.description;
+    writeln!(buffer, "    it(\"{}\", () => {{", escape_ts_string(test_name))?;
+
+    // Render based on pattern
+    match test_spec.pattern.as_str() {
+        "simple_list" => render_simple_list_test(&mut buffer, fixture)?,
+        "clear_registry" => render_clear_registry_test(&mut buffer, fixture)?,
+        "graceful_unregister" => render_graceful_unregister_test(&mut buffer, fixture)?,
+        "config_from_file" => render_config_from_file_test(&mut buffer, fixture)?,
+        "config_discover" => render_config_discover_test(&mut buffer, fixture)?,
+        "mime_from_bytes" => render_mime_from_bytes_test(&mut buffer, fixture)?,
+        "mime_from_path" => render_mime_from_path_test(&mut buffer, fixture)?,
+        "mime_extension_lookup" => render_mime_extension_lookup_test(&mut buffer, fixture)?,
+        _ => {
+            return Err(anyhow::anyhow!("Unknown plugin test pattern: {}", test_spec.pattern));
+        }
+    }
+
+    writeln!(buffer, "    }});")?;
+    writeln!(buffer)?;
+
+    Ok(buffer)
+}
+
+fn render_simple_list_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let function_name = to_camel_case(&test_spec.function_call.name);
+
+    writeln!(buffer, "        const result = kreuzberg.{function_name}();")?;
+    writeln!(buffer, "        expect(Array.isArray(result)).toBe(true);")?;
+
+    if let Some(item_type) = &test_spec.assertions.list_item_type {
+        if item_type == "string" {
+            writeln!(
+                buffer,
+                "        expect(result.every((item) => typeof item === \"string\")).toBe(true);"
+            )?;
+        }
+    }
+
+    if let Some(contains) = &test_spec.assertions.list_contains {
+        writeln!(
+            buffer,
+            "        expect(result).toContain(\"{}\");",
+            escape_ts_string(contains)
+        )?;
+    }
+
+    Ok(())
+}
+
+fn render_clear_registry_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let clear_fn = to_camel_case(&test_spec.function_call.name);
+
+    // Derive list function name from clear function (e.g., clearValidators -> listValidators)
+    let list_fn = clear_fn.replace("clear", "list");
+
+    writeln!(buffer, "        kreuzberg.{clear_fn}();")?;
+
+    if test_spec.assertions.verify_cleanup {
+        writeln!(buffer, "        const result = kreuzberg.{list_fn}();")?;
+        writeln!(buffer, "        expect(result).toHaveLength(0);")?;
+    }
+
+    Ok(())
+}
+
+fn render_graceful_unregister_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let function_name = to_camel_case(&test_spec.function_call.name);
+
+    // Get the first argument (should be the nonexistent name)
+    let arg = if let Some(Value::String(s)) = test_spec.function_call.args.first() {
+        s
+    } else {
+        "nonexistent-item"
+    };
+
+    writeln!(
+        buffer,
+        "        expect(() => kreuzberg.{function_name}(\"{}\")).not.toThrow();",
+        escape_ts_string(arg)
+    )?;
+
+    Ok(())
+}
+
+fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let setup = test_spec.setup.as_ref().expect("setup required for config_from_file");
+
+    // Create temp file
+    let temp_file_name = setup.temp_file_name.as_ref().expect("temp_file_name required");
+    let temp_file_content = setup.temp_file_content.as_ref().expect("temp_file_content required");
+
+    writeln!(
+        buffer,
+        "        const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), \"kreuzberg-test-\"));"
+    )?;
+    writeln!(
+        buffer,
+        "        const configPath = path.join(tmpDir, \"{}\");",
+        escape_ts_string(temp_file_name)
+    )?;
+    writeln!(
+        buffer,
+        "        fs.writeFileSync(configPath, \"{}\");",
+        escape_ts_string(temp_file_content)
+    )?;
+    writeln!(buffer)?;
+
+    // Call ExtractionConfig.fromFile
+    let class_name = test_spec
+        .function_call
+        .class_name
+        .as_ref()
+        .expect("class_name required");
+    let method_name = to_camel_case(&test_spec.function_call.name);
+
+    writeln!(
+        buffer,
+        "        const config = kreuzberg.{}.{method_name}(configPath);",
+        class_name
+    )?;
+    writeln!(buffer)?;
+
+    // Assertions
+    for prop in &test_spec.assertions.object_properties {
+        render_object_property_assertion(buffer, "config", prop)?;
+    }
+
+    // Cleanup
+    writeln!(buffer, "        fs.rmSync(tmpDir, {{ recursive: true, force: true }});")?;
+
+    Ok(())
+}
+
+fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let setup = test_spec.setup.as_ref().expect("setup required for config_discover");
+
+    // Create temp directory structure
+    writeln!(
+        buffer,
+        "        const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), \"kreuzberg-test-\"));"
+    )?;
+
+    let temp_file_name = setup.temp_file_name.as_ref().expect("temp_file_name required");
+    let temp_file_content = setup.temp_file_content.as_ref().expect("temp_file_content required");
+
+    writeln!(
+        buffer,
+        "        const configPath = path.join(tmpDir, \"{}\");",
+        escape_ts_string(temp_file_name)
+    )?;
+    writeln!(
+        buffer,
+        "        fs.writeFileSync(configPath, \"{}\");",
+        escape_ts_string(temp_file_content)
+    )?;
+    writeln!(buffer)?;
+
+    // Create subdirectory if needed
+    if setup.create_subdirectory {
+        let subdir_name = setup.subdirectory_name.as_ref().expect("subdirectory_name required");
+        writeln!(
+            buffer,
+            "        const subDir = path.join(tmpDir, \"{}\");",
+            escape_ts_string(subdir_name)
+        )?;
+        writeln!(buffer, "        fs.mkdirSync(subDir);")?;
+        writeln!(buffer)?;
+    }
+
+    // Change directory if needed
+    if setup.change_directory {
+        writeln!(buffer, "        const originalCwd = process.cwd();")?;
+        writeln!(buffer, "        try {{")?;
+        writeln!(buffer, "            process.chdir(subDir);")?;
+        writeln!(buffer)?;
+    }
+
+    // Call ExtractionConfig.discover
+    let class_name = test_spec
+        .function_call
+        .class_name
+        .as_ref()
+        .expect("class_name required");
+    let method_name = to_camel_case(&test_spec.function_call.name);
+
+    let indent = if setup.change_directory { "    " } else { "" };
+    writeln!(
+        buffer,
+        "        {indent}const config = kreuzberg.{}.{method_name}();",
+        class_name
+    )?;
+    writeln!(buffer, "        {indent}")?;
+
+    // Assertions
+    for prop in &test_spec.assertions.object_properties {
+        render_object_property_assertion_with_indent(buffer, "config", prop, indent)?;
+    }
+
+    // Restore directory if needed
+    if setup.change_directory {
+        writeln!(buffer, "        }} finally {{")?;
+        writeln!(buffer, "            process.chdir(originalCwd);")?;
+        writeln!(buffer, "        }}")?;
+    }
+
+    // Cleanup
+    writeln!(buffer, "        fs.rmSync(tmpDir, {{ recursive: true, force: true }});")?;
+
+    Ok(())
+}
+
+fn render_mime_from_bytes_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let setup = test_spec.setup.as_ref().expect("setup required for mime_from_bytes");
+
+    let test_data = setup.test_data.as_ref().expect("test_data required");
+    let function_name = to_camel_case(&test_spec.function_call.name);
+
+    // Convert test data to Buffer
+    writeln!(
+        buffer,
+        "        const testData = Buffer.from(\"{}\");",
+        escape_ts_string(test_data)
+    )?;
+    writeln!(buffer, "        const result = kreuzberg.{function_name}(testData);")?;
+
+    // Assertions
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(
+            buffer,
+            "        expect(result.toLowerCase()).toContain(\"{}\");",
+            escape_ts_string(&contains.to_lowercase())
+        )?;
+    }
+
+    Ok(())
+}
+
+fn render_mime_from_path_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let setup = test_spec.setup.as_ref().expect("setup required for mime_from_path");
+
+    let temp_file_name = setup.temp_file_name.as_ref().expect("temp_file_name required");
+    let temp_file_content = setup.temp_file_content.as_ref().expect("temp_file_content required");
+    let function_name = to_camel_case(&test_spec.function_call.name);
+
+    // Create temp file
+    writeln!(
+        buffer,
+        "        const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), \"kreuzberg-test-\"));"
+    )?;
+    writeln!(
+        buffer,
+        "        const filePath = path.join(tmpDir, \"{}\");",
+        escape_ts_string(temp_file_name)
+    )?;
+    writeln!(
+        buffer,
+        "        fs.writeFileSync(filePath, \"{}\");",
+        escape_ts_string(temp_file_content)
+    )?;
+    writeln!(buffer)?;
+
+    writeln!(buffer, "        const result = kreuzberg.{function_name}(filePath);")?;
+
+    // Assertions
+    if let Some(contains) = &test_spec.assertions.string_contains {
+        writeln!(
+            buffer,
+            "        expect(result.toLowerCase()).toContain(\"{}\");",
+            escape_ts_string(&contains.to_lowercase())
+        )?;
+    }
+
+    // Cleanup
+    writeln!(buffer, "        fs.rmSync(tmpDir, {{ recursive: true, force: true }});")?;
+
+    Ok(())
+}
+
+fn render_mime_extension_lookup_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
+    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let function_name = to_camel_case(&test_spec.function_call.name);
+
+    // Get the first argument (should be the MIME type)
+    let mime_type = if let Some(Value::String(s)) = test_spec.function_call.args.first() {
+        s
+    } else {
+        "application/pdf"
+    };
+
+    writeln!(
+        buffer,
+        "        const result = kreuzberg.{function_name}(\"{}\");",
+        escape_ts_string(mime_type)
+    )?;
+    writeln!(buffer, "        expect(Array.isArray(result)).toBe(true);")?;
+
+    if let Some(contains) = &test_spec.assertions.list_contains {
+        writeln!(
+            buffer,
+            "        expect(result).toContain(\"{}\");",
+            escape_ts_string(contains)
+        )?;
+    }
+
+    Ok(())
+}
+
+fn render_object_property_assertion(
+    buffer: &mut String,
+    var_name: &str,
+    prop: &crate::fixtures::ObjectPropertyAssertion,
+) -> Result<()> {
+    render_object_property_assertion_with_indent(buffer, var_name, prop, "")
+}
+
+fn render_object_property_assertion_with_indent(
+    buffer: &mut String,
+    var_name: &str,
+    prop: &crate::fixtures::ObjectPropertyAssertion,
+    indent: &str,
+) -> Result<()> {
+    let path_parts: Vec<&str> = prop.path.split('.').collect();
+    let ts_path = path_parts
+        .iter()
+        .map(|p| to_camel_case(p))
+        .collect::<Vec<_>>()
+        .join("?.");
+
+    // Check existence if specified
+    if let Some(exists) = prop.exists {
+        if exists {
+            writeln!(buffer, "        {indent}expect({var_name}.{ts_path}).toBeDefined();")?;
+        } else {
+            writeln!(buffer, "        {indent}expect({var_name}.{ts_path}).toBeUndefined();")?;
+        }
+    }
+
+    // Check value if specified
+    if let Some(value) = &prop.value {
+        match value {
+            Value::Number(n) => {
+                writeln!(buffer, "        {indent}expect({var_name}.{ts_path}).toBe({n});")?;
+            }
+            Value::Bool(b) => {
+                writeln!(buffer, "        {indent}expect({var_name}.{ts_path}).toBe({b});")?;
+            }
+            Value::String(s) => {
+                writeln!(
+                    buffer,
+                    "        {indent}expect({var_name}.{ts_path}).toBe(\"{}\");",
+                    escape_ts_string(s)
+                )?;
+            }
+            _ => {
+                writeln!(
+                    buffer,
+                    "        {indent}expect({var_name}.{ts_path}).toEqual({});",
+                    render_json_literal(value)
+                )?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn to_camel_case(s: &str) -> String {
+    let parts: Vec<&str> = s.split('_').collect();
+    if parts.is_empty() {
+        return String::new();
+    }
+
+    let mut result = parts[0].to_string();
+    for part in &parts[1..] {
+        if !part.is_empty() {
+            let mut chars = part.chars();
+            if let Some(first) = chars.next() {
+                result.push_str(&first.to_uppercase().to_string());
+                result.push_str(chars.as_str());
+            }
+        }
+    }
+    result
+}
+
+fn to_title_case(s: &str) -> String {
+    s.split('_')
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().chain(chars).collect(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }

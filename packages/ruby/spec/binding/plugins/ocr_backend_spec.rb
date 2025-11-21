@@ -242,4 +242,66 @@ RSpec.describe 'OCR Backend Plugin System' do
       end.to raise_error
     end
   end
+
+  describe 'OCR backend management' do
+    describe '.list_ocr_backends' do
+      it 'returns an array of backend names' do
+        backends = Kreuzberg.list_ocr_backends
+        expect(backends).to be_an(Array)
+      end
+
+      it 'includes registered backends' do
+        class ListTestBackend
+          include Kreuzberg::OcrBackendProtocol
+
+          def name
+            'list-test-backend'
+          end
+
+          def process_image(_image_bytes, _config)
+            'test'
+          end
+        end
+
+        backend = ListTestBackend.new
+        Kreuzberg.register_ocr_backend('list-test-backend', backend)
+
+        backends = Kreuzberg.list_ocr_backends
+        expect(backends).to include('list-test-backend')
+
+        Kreuzberg.unregister_ocr_backend('list-test-backend')
+      end
+    end
+
+    describe '.unregister_ocr_backend' do
+      it 'removes backend from registry' do
+        class UnregisterTestBackend
+          include Kreuzberg::OcrBackendProtocol
+
+          def name
+            'unregister-test'
+          end
+
+          def process_image(_image_bytes, _config)
+            'test'
+          end
+        end
+
+        backend = UnregisterTestBackend.new
+        Kreuzberg.register_ocr_backend('unregister-test', backend)
+
+        backends = Kreuzberg.list_ocr_backends
+        expect(backends).to include('unregister-test')
+
+        Kreuzberg.unregister_ocr_backend('unregister-test')
+
+        backends = Kreuzberg.list_ocr_backends
+        expect(backends).not_to include('unregister-test')
+      end
+
+      it 'accepts nonexistent backend name without error' do
+        expect { Kreuzberg.unregister_ocr_backend('nonexistent-backend-xyz') }.not_to raise_error
+      end
+    end
+  end
 end

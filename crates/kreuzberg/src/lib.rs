@@ -90,8 +90,8 @@ pub use core::config::{
 
 pub use core::mime::{
     DOCX_MIME_TYPE, EXCEL_MIME_TYPE, HTML_MIME_TYPE, JSON_MIME_TYPE, MARKDOWN_MIME_TYPE, PDF_MIME_TYPE,
-    PLAIN_TEXT_MIME_TYPE, POWER_POINT_MIME_TYPE, XML_MIME_TYPE, detect_mime_type, detect_or_validate,
-    validate_mime_type,
+    PLAIN_TEXT_MIME_TYPE, POWER_POINT_MIME_TYPE, XML_MIME_TYPE, detect_mime_type, detect_mime_type_from_bytes,
+    detect_or_validate, get_extensions_for_mime, validate_mime_type,
 };
 
 pub use plugins::registry::{
