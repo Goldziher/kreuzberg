@@ -1865,8 +1865,7 @@ pub fn list_document_extractors() -> PyResult<Vec<String>> {
 /// ```
 #[pyfunction]
 pub fn unregister_document_extractor(name: &str) -> PyResult<()> {
-    kreuzberg::plugins::unregister_extractor(name)
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    kreuzberg::plugins::unregister_extractor(name).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }
 
 /// Clear all registered document extractors.

@@ -245,8 +245,7 @@ fn get_embedding_preset(name: String) -> Option<EmbeddingPreset> {
 ///     >>> assert "pdf" in mime_type.lower()
 #[pyfunction]
 fn detect_mime_type_from_bytes(data: &[u8]) -> PyResult<String> {
-    kreuzberg::detect_mime_type_from_bytes(data)
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    kreuzberg::detect_mime_type_from_bytes(data).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }
 
 /// Detect MIME type from file path.
@@ -265,8 +264,7 @@ fn detect_mime_type_from_bytes(data: &[u8]) -> PyResult<String> {
 ///     >>> assert "pdf" in mime_type.lower()
 #[pyfunction]
 fn detect_mime_type_from_path(path: &str) -> PyResult<String> {
-    kreuzberg::detect_mime_type(path, true)
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    kreuzberg::detect_mime_type(path, true).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }
 
 /// Get file extensions for a MIME type.
@@ -285,6 +283,5 @@ fn detect_mime_type_from_path(path: &str) -> PyResult<String> {
 ///     >>> assert "pdf" in extensions
 #[pyfunction]
 fn get_extensions_for_mime(mime_type: &str) -> PyResult<Vec<String>> {
-    kreuzberg::get_extensions_for_mime(mime_type)
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    kreuzberg::get_extensions_for_mime(mime_type).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }

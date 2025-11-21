@@ -509,7 +509,7 @@ async def batch_extract_bytes(
 
 
 def detect_mime_type(data: bytes | bytearray) -> str:
-    """Detect MIME type from file bytes.
+    r"""Detect MIME type from file bytes.
 
     Args:
         data: File content as bytes or bytearray

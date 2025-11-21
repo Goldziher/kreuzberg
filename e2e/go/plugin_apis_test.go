@@ -121,6 +121,17 @@ func TestClearOCRBackends(t *testing.T) {
 }
 
 func TestListDocumentExtractors(t *testing.T) {
+	// Ensure extractors are initialized by using one first
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.pdf")
+	pdfContent := []byte("%PDF-1.4\n%EOF\n")
+	if err := os.WriteFile(testFile, pdfContent, 0644); err != nil {
+		t.Fatalf("Failed to write test PDF file: %v", err)
+	}
+
+	// This will initialize the PDF extractor
+	_, _ = kreuzberg.ExtractFileSync(testFile, nil)
+
 	extractors, err := kreuzberg.ListDocumentExtractors()
 	if err != nil {
 		t.Fatalf("ListDocumentExtractors failed: %v", err)

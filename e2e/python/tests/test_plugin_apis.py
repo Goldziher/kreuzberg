@@ -14,9 +14,8 @@ Tests all management operations:
 - Listing
 - Clearing
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 import kreuzberg
 from kreuzberg import ExtractionConfig

@@ -2727,14 +2727,20 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     module.define_module_function("list_ocr_backends", function!(list_ocr_backends, 0))?;
     module.define_module_function("clear_ocr_backends", function!(clear_ocr_backends, 0))?;
     module.define_module_function("list_document_extractors", function!(list_document_extractors, 0))?;
-    module.define_module_function("unregister_document_extractor", function!(unregister_document_extractor, 1))?;
+    module.define_module_function(
+        "unregister_document_extractor",
+        function!(unregister_document_extractor, 1),
+    )?;
     module.define_module_function("clear_document_extractors", function!(clear_document_extractors, 0))?;
 
     module.define_module_function("_config_from_file_native", function!(config_from_file, 1))?;
     module.define_module_function("_config_discover_native", function!(config_discover, 0))?;
 
     module.define_module_function("detect_mime_type", function!(detect_mime_type_from_bytes, 1))?;
-    module.define_module_function("detect_mime_type_from_path", function!(detect_mime_type_from_path_native, 1))?;
+    module.define_module_function(
+        "detect_mime_type_from_path",
+        function!(detect_mime_type_from_path_native, 1),
+    )?;
     module.define_module_function("get_extensions_for_mime", function!(get_extensions_for_mime_native, 1))?;
     module.define_module_function("validate_mime_type", function!(validate_mime_type_native, 1))?;
 

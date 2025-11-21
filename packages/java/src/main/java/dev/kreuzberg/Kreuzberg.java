@@ -911,9 +911,11 @@ public final class Kreuzberg {
 
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment mimeSeg = KreuzbergFFI.allocateCString(arena, mimeType);
-            MemorySegment extensionsPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_GET_EXTENSIONS_FOR_MIME.invoke(mimeSeg);
+            MemorySegment extensionsPtr =
+                (MemorySegment) KreuzbergFFI.KREUZBERG_GET_EXTENSIONS_FOR_MIME.invoke(mimeSeg);
             if (extensionsPtr == null || extensionsPtr.address() == 0) {
-                throw new KreuzbergException("Failed to get extensions for MIME type: " + getLastError());
+                String error = getLastError();
+                throw new KreuzbergException("Failed to get extensions for MIME type: " + error);
             }
             try {
                 String json = KreuzbergFFI.readCString(extensionsPtr);
