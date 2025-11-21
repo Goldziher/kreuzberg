@@ -342,7 +342,7 @@ jobs:
         run: cargo build --release -p kreuzberg-ffi
 
       - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v1.61.0
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2
 
       - name: Lint Go bindings
         working-directory: packages/go
@@ -412,7 +412,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # TODO: Re-enable Windows once rb-sys fixes ssize_t type mismatch on Windows x64 with Ruby 3.3+
+        # See: https://github.com/oxidize-rb/rb-sys tracking_allocator.rs issue
+        os: [ubuntu-latest, macos-latest] # windows-latest
         ruby-version: ["3.3", "3.4"]
     steps:
       - name: Checkout
