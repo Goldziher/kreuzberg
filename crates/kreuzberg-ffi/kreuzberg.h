@@ -13,11 +13,6 @@
 #include <stdlib.h>
 
 /**
- * Opaque type for ExtractionConfig
- */
-typedef struct ExtractionConfig ExtractionConfig;
-
-/**
  * C-compatible extraction result structure
  */
 typedef struct CExtractionResult {
