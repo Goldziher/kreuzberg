@@ -607,21 +607,15 @@ fn generate_object_property_assertions_rust(
             }
 
             if let Some(value) = &prop.value {
-                let rust_path = path.replace('.', ".");
                 match value {
                     Value::Number(n) => {
-                        writeln!(buf, "    assert_eq!(config.{}, {});", rust_path, n)?;
+                        writeln!(buf, "    assert_eq!(config.{}, {});", path, n)?;
                     }
                     Value::String(s) => {
-                        writeln!(
-                            buf,
-                            "    assert_eq!(config.{}, \"{}\");",
-                            rust_path,
-                            escape_rust_string(&s)
-                        )?;
+                        writeln!(buf, "    assert_eq!(config.{}, \"{}\");", path, escape_rust_string(s))?;
                     }
                     Value::Bool(b) => {
-                        writeln!(buf, "    assert_eq!(config.{}, {});", rust_path, b)?;
+                        writeln!(buf, "    assert_eq!(config.{}, {});", path, b)?;
                     }
                     _ => {
                         writeln!(buf, "    // Complex value assertion not yet implemented for {}", path)?;

@@ -599,6 +599,7 @@ fn is_symbol_key(key: &str) -> bool {
     }
 
     let mut chars = key.chars();
+    // SAFETY: We just checked that key is not empty, so next() will return Some
     let first = chars.next().unwrap();
     if !first.is_ascii_lowercase() && first != '_' {
         return false;
@@ -646,17 +647,17 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], spec_dir: &Utf8Path) -> Resu
     writeln!(buffer)?;
 
     // Group fixtures by api_category
-    let mut grouped = fixtures
-        .iter()
-        .into_group_map_by(|fixture| {
-            fixture
-                .api_category
-                .as_ref()
-                .expect("api_category required for plugin API fixtures")
-                .clone()
-        })
-        .into_iter()
-        .collect::<Vec<_>>();
+    let mut grouped_map: std::collections::HashMap<String, Vec<&Fixture>> = std::collections::HashMap::new();
+    for fixture in fixtures.iter() {
+        let category = fixture
+            .api_category
+            .as_ref()
+            .with_context(|| format!("Fixture '{}' missing api_category", fixture.id))?
+            .as_str()
+            .to_string();
+        grouped_map.entry(category).or_default().push(fixture);
+    }
+    let mut grouped: Vec<_> = grouped_map.into_iter().collect();
     grouped.sort_by(|a, b| a.0.cmp(&b.0));
 
     // Generate tests grouped by category
@@ -689,7 +690,7 @@ fn render_plugin_test(fixture: &Fixture) -> Result<String> {
     let test_spec = fixture
         .test_spec
         .as_ref()
-        .expect("test_spec required for plugin API fixtures");
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
 
     // Generate test name from description
     let test_name = &fixture.description;
@@ -717,7 +718,10 @@ fn render_plugin_test(fixture: &Fixture) -> Result<String> {
 }
 
 fn render_simple_list_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let function_name = &test_spec.function_call.name;
 
     writeln!(buffer, "    result = Kreuzberg.{}", function_name)?;
@@ -745,7 +749,10 @@ fn render_simple_list_test(buffer: &mut String, fixture: &Fixture) -> Result<()>
 }
 
 fn render_clear_registry_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let clear_function = &test_spec.function_call.name;
 
     // Extract the list function name by replacing 'clear_' with 'list_'
@@ -762,7 +769,10 @@ fn render_clear_registry_test(buffer: &mut String, fixture: &Fixture) -> Result<
 }
 
 fn render_graceful_unregister_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let function_name = &test_spec.function_call.name;
 
     // Get the argument (should be the name of a nonexistent item)
@@ -784,12 +794,24 @@ fn render_graceful_unregister_test(buffer: &mut String, fixture: &Fixture) -> Re
 }
 
 fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
-    let setup = test_spec.setup.as_ref().expect("setup required for config_from_file");
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_from_file", fixture.id))?;
 
     // Create temp file
-    let temp_file_name = setup.temp_file_name.as_ref().expect("temp_file_name required");
-    let temp_file_content = setup.temp_file_content.as_ref().expect("temp_file_content required");
+    let temp_file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+    let temp_file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
 
     writeln!(buffer, "    Dir.mktmpdir do |tmpdir|")?;
     writeln!(
@@ -807,7 +829,7 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
         .function_call
         .class_name
         .as_ref()
-        .expect("class_name required");
+        .with_context(|| format!("Fixture '{}' missing class_name", fixture.id))?;
     let ruby_class = map_ruby_class_name(class_name);
     let method_name = &test_spec.function_call.name;
 
@@ -829,12 +851,27 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
 }
 
 fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
-    let setup = test_spec.setup.as_ref().expect("setup required for config_discover");
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_discover", fixture.id))?;
 
-    let temp_file_name = setup.temp_file_name.as_ref().expect("temp_file_name required");
-    let temp_file_content = setup.temp_file_content.as_ref().expect("temp_file_content required");
-    let subdirectory_name = setup.subdirectory_name.as_ref().expect("subdirectory_name required");
+    let temp_file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+    let temp_file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+    let subdirectory_name = setup
+        .subdirectory_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing subdirectory_name", fixture.id))?;
 
     writeln!(buffer, "    Dir.mktmpdir do |tmpdir|")?;
     writeln!(
@@ -859,7 +896,7 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
         .function_call
         .class_name
         .as_ref()
-        .expect("class_name required");
+        .with_context(|| format!("Fixture '{}' missing class_name", fixture.id))?;
     let ruby_class = map_ruby_class_name(class_name);
     let method_name = &test_spec.function_call.name;
 
@@ -883,10 +920,19 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
 }
 
 fn render_mime_from_bytes_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
-    let setup = test_spec.setup.as_ref().expect("setup required for mime_from_bytes");
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_bytes", fixture.id))?;
 
-    let test_data = setup.test_data.as_ref().expect("test_data required");
+    let test_data = setup
+        .test_data
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_data", fixture.id))?;
 
     let function_name = &test_spec.function_call.name;
 
@@ -910,7 +956,10 @@ fn render_mime_from_bytes_test(buffer: &mut String, fixture: &Fixture) -> Result
 }
 
 fn render_mime_from_path_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let function_name = &test_spec.function_call.name;
 
     writeln!(buffer, "    Dir.mktmpdir do |tmpdir|")?;
@@ -933,7 +982,10 @@ fn render_mime_from_path_test(buffer: &mut String, fixture: &Fixture) -> Result<
 }
 
 fn render_mime_extension_lookup_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let function_name = &test_spec.function_call.name;
 
     // Get the MIME type argument

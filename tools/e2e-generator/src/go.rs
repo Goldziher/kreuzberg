@@ -608,17 +608,22 @@ fn generate_plugin_api_tests(go_root: &Utf8Path, fixtures: &[&Fixture]) -> Resul
     writeln!(buffer)?;
 
     // Group fixtures by API category
-    let mut grouped = fixtures
-        .iter()
-        .into_group_map_by(|fixture| {
-            fixture
-                .api_category
-                .as_ref()
-                .expect("plugin API fixture must have api_category")
-                .clone()
-        })
-        .into_iter()
-        .collect::<Vec<_>>();
+    let mut grouped: Vec<(String, Vec<&Fixture>)> = Vec::new();
+    for fixture in fixtures.iter() {
+        let category = fixture
+            .api_category
+            .as_ref()
+            .with_context(|| format!("Fixture '{}' missing api_category", fixture.id))?
+            .as_str()
+            .to_string();
+
+        // Find or create the category group
+        if let Some(entry_pos) = grouped.iter().position(|(cat, _)| cat == &category) {
+            grouped[entry_pos].1.push(fixture);
+        } else {
+            grouped.push((category, vec![fixture]));
+        }
+    }
     grouped.sort_by(|a, b| a.0.cmp(&b.0));
 
     // Generate tests for each category
@@ -647,7 +652,7 @@ fn render_plugin_test(fixture: &Fixture) -> Result<String> {
     let test_spec = fixture
         .test_spec
         .as_ref()
-        .expect("plugin API fixture must have test_spec");
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
 
     let mut code = String::new();
 
@@ -802,21 +807,24 @@ fn render_graceful_unregister(
 
 /// Render a config_from_file test
 fn render_config_from_file(
-    _fixture: &Fixture,
+    fixture: &Fixture,
     test_spec: &crate::fixtures::PluginTestSpec,
     code: &mut String,
 ) -> Result<()> {
-    let setup = test_spec.setup.as_ref().expect("config_from_file requires setup");
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_from_file", fixture.id))?;
 
     let file_content = setup
         .temp_file_content
         .as_ref()
-        .expect("config_from_file requires temp_file_content");
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
 
     let file_name = setup
         .temp_file_name
         .as_ref()
-        .expect("config_from_file requires temp_file_name");
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
 
     writeln!(code, "    tmpDir := t.TempDir()")?;
     writeln!(code, "    configPath := filepath.Join(tmpDir, \"{}\")", file_name)?;
@@ -848,26 +856,29 @@ fn render_config_from_file(
 
 /// Render a config_discover test
 fn render_config_discover(
-    _fixture: &Fixture,
+    fixture: &Fixture,
     test_spec: &crate::fixtures::PluginTestSpec,
     code: &mut String,
 ) -> Result<()> {
-    let setup = test_spec.setup.as_ref().expect("config_discover requires setup");
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_discover", fixture.id))?;
 
     let file_content = setup
         .temp_file_content
         .as_ref()
-        .expect("config_discover requires temp_file_content");
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
 
     let file_name = setup
         .temp_file_name
         .as_ref()
-        .expect("config_discover requires temp_file_name");
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
 
     let subdir_name = setup
         .subdirectory_name
         .as_ref()
-        .expect("config_discover requires subdirectory_name");
+        .with_context(|| format!("Fixture '{}' missing subdirectory_name", fixture.id))?;
 
     writeln!(code, "    tmpDir := t.TempDir()")?;
     writeln!(code, "    configPath := filepath.Join(tmpDir, \"{}\")", file_name)?;
@@ -920,13 +931,19 @@ fn render_config_discover(
 
 /// Render a mime_from_bytes test
 fn render_mime_from_bytes(
-    _fixture: &Fixture,
+    fixture: &Fixture,
     test_spec: &crate::fixtures::PluginTestSpec,
     code: &mut String,
 ) -> Result<()> {
-    let setup = test_spec.setup.as_ref().expect("mime_from_bytes requires setup");
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_bytes", fixture.id))?;
 
-    let test_data = setup.test_data.as_ref().expect("mime_from_bytes requires test_data");
+    let test_data = setup
+        .test_data
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_data", fixture.id))?;
 
     let func_name = to_pascal_case(&test_spec.function_call.name);
 
@@ -956,21 +973,24 @@ fn render_mime_from_bytes(
 
 /// Render a mime_from_path test
 fn render_mime_from_path(
-    _fixture: &Fixture,
+    fixture: &Fixture,
     test_spec: &crate::fixtures::PluginTestSpec,
     code: &mut String,
 ) -> Result<()> {
-    let setup = test_spec.setup.as_ref().expect("mime_from_path requires setup");
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_path", fixture.id))?;
 
     let file_name = setup
         .temp_file_name
         .as_ref()
-        .expect("mime_from_path requires temp_file_name");
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
 
     let file_content = setup
         .temp_file_content
         .as_ref()
-        .expect("mime_from_path requires temp_file_content");
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
 
     let func_name = to_pascal_case(&test_spec.function_call.name);
 
@@ -1009,17 +1029,20 @@ fn render_mime_from_path(
 
 /// Render a mime_extension_lookup test
 fn render_mime_extension_lookup(
-    _fixture: &Fixture,
+    fixture: &Fixture,
     test_spec: &crate::fixtures::PluginTestSpec,
     code: &mut String,
 ) -> Result<()> {
     let func_name = to_pascal_case(&test_spec.function_call.name);
-    let mime_type = test_spec
-        .function_call
-        .args
-        .first()
-        .and_then(|v| v.as_str())
-        .expect("mime_extension_lookup requires mime type argument");
+    let arg = test_spec.function_call.args.first().with_context(|| {
+        format!(
+            "Fixture '{}' function '{}' missing argument",
+            fixture.id, test_spec.function_call.name
+        )
+    })?;
+    let mime_type = arg
+        .as_str()
+        .with_context(|| format!("Fixture '{}' argument is not a string", fixture.id))?;
 
     writeln!(
         code,

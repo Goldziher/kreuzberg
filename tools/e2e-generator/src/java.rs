@@ -738,10 +738,13 @@ fn to_java_class_name(input: &str) -> String {
 
     if output.is_empty() {
         "Fixture".to_string()
-    } else if output.chars().next().unwrap().is_ascii_digit() {
-        format!("Test{}", output)
     } else {
-        output
+        // SAFETY: We just checked that output is not empty, so next() will return Some
+        if output.chars().next().unwrap().is_ascii_digit() {
+            format!("Test{}", output)
+        } else {
+            output
+        }
     }
 }
 
@@ -766,10 +769,13 @@ fn to_java_method_name(input: &str) -> String {
 
     if output.is_empty() {
         "testFixture".to_string()
-    } else if output.chars().next().unwrap().is_ascii_digit() {
-        format!("test{}", output)
     } else {
-        output
+        // SAFETY: We just checked that output is not empty, so next() will return Some
+        if output.chars().next().unwrap().is_ascii_digit() {
+            format!("test{}", output)
+        } else {
+            output
+        }
     }
 }
 
@@ -826,7 +832,7 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Re
     writeln!(content)?;
 
     // Generate test methods grouped by API category
-    let grouped = group_by_category(fixtures);
+    let grouped = group_by_category(fixtures)?;
 
     for (category, fixtures) in grouped {
         writeln!(content, "    // {} Tests", category_to_title(category))?;
@@ -845,13 +851,17 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Re
     Ok(())
 }
 
-fn group_by_category<'a>(fixtures: &[&'a Fixture]) -> BTreeMap<&'a str, Vec<&'a Fixture>> {
+fn group_by_category<'a>(fixtures: &[&'a Fixture]) -> Result<BTreeMap<&'a str, Vec<&'a Fixture>>> {
     let mut grouped: BTreeMap<&str, Vec<&Fixture>> = BTreeMap::new();
     for fixture in fixtures {
-        let category = fixture.api_category.as_ref().unwrap().as_str();
+        let category = fixture
+            .api_category
+            .as_ref()
+            .with_context(|| format!("Fixture '{}' missing api_category", fixture.id))?
+            .as_str();
         grouped.entry(category).or_default().push(fixture);
     }
-    grouped
+    Ok(grouped)
 }
 
 fn category_to_title(category: &str) -> String {
@@ -869,7 +879,10 @@ fn category_to_title(category: &str) -> String {
 }
 
 fn generate_java_test_method(fixture: &Fixture, buf: &mut String) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().unwrap();
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let test_name = to_java_method_name(&fixture.id);
 
     // @Test annotation
@@ -959,8 +972,14 @@ fn generate_clear_registry_test_java(test_spec: &PluginTestSpec, buf: &mut Strin
 
 fn generate_graceful_unregister_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
     let func_name = snake_to_camel(&test_spec.function_call.name);
-    let arg = &test_spec.function_call.args[0];
-    let arg_str = arg.as_str().unwrap();
+    let arg = test_spec
+        .function_call
+        .args
+        .first()
+        .with_context(|| format!("Function '{}' missing argument", test_spec.function_call.name))?;
+    let arg_str = arg
+        .as_str()
+        .with_context(|| format!("Function '{}' argument is not a string", test_spec.function_call.name))?;
 
     // Should not throw
     writeln!(
@@ -973,9 +992,18 @@ fn generate_graceful_unregister_test_java(test_spec: &PluginTestSpec, buf: &mut 
 }
 
 fn generate_config_from_file_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
-    let setup = test_spec.setup.as_ref().unwrap();
-    let file_content = setup.temp_file_content.as_ref().unwrap();
-    let file_name = setup.temp_file_name.as_ref().unwrap();
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| "Test spec missing setup for config_from_file")?;
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| "Setup missing temp_file_content")?;
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| "Setup missing temp_file_name")?;
 
     // Create temp file
     writeln!(buf, "        Path configPath = tempDir.resolve(\"{}\");", file_name)?;
@@ -996,10 +1024,22 @@ fn generate_config_from_file_test_java(test_spec: &PluginTestSpec, buf: &mut Str
 }
 
 fn generate_config_discover_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
-    let setup = test_spec.setup.as_ref().unwrap();
-    let file_content = setup.temp_file_content.as_ref().unwrap();
-    let file_name = setup.temp_file_name.as_ref().unwrap();
-    let subdir = setup.subdirectory_name.as_ref().unwrap();
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| "Test spec missing setup for config_discover")?;
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| "Setup missing temp_file_content")?;
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| "Setup missing temp_file_name")?;
+    let subdir = setup
+        .subdirectory_name
+        .as_ref()
+        .with_context(|| "Setup missing subdirectory_name")?;
 
     // Create config in parent dir
     writeln!(buf, "        Path configPath = tempDir.resolve(\"{}\");", file_name)?;
@@ -1039,12 +1079,15 @@ fn generate_config_discover_test_java(test_spec: &PluginTestSpec, buf: &mut Stri
 }
 
 fn generate_mime_from_bytes_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
-    let setup = test_spec.setup.as_ref().unwrap();
-    let test_data = setup.test_data.as_ref().unwrap();
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| "Test spec missing setup for mime_from_bytes")?;
+    let test_data = setup.test_data.as_ref().with_context(|| "Setup missing test_data")?;
     let func_name = snake_to_camel(&test_spec.function_call.name);
 
     // Convert test data to bytes
-    let bytes_literal = test_data.replace("\\n", "\\n");
+    let bytes_literal = test_data.clone();
     writeln!(buf, "        byte[] testBytes = \"{}\".getBytes();", bytes_literal)?;
     writeln!(buf, "        String result = Kreuzberg.{}(testBytes);", func_name)?;
 
@@ -1061,9 +1104,18 @@ fn generate_mime_from_bytes_test_java(test_spec: &PluginTestSpec, buf: &mut Stri
 }
 
 fn generate_mime_from_path_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
-    let setup = test_spec.setup.as_ref().unwrap();
-    let file_name = setup.temp_file_name.as_ref().unwrap();
-    let file_content = setup.temp_file_content.as_ref().unwrap();
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| "Test spec missing setup for mime_from_path")?;
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| "Setup missing temp_file_name")?;
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| "Setup missing temp_file_content")?;
     let func_name = snake_to_camel(&test_spec.function_call.name);
 
     // Create temp file
@@ -1092,8 +1144,14 @@ fn generate_mime_from_path_test_java(test_spec: &PluginTestSpec, buf: &mut Strin
 
 fn generate_mime_extension_lookup_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
     let func_name = snake_to_camel(&test_spec.function_call.name);
-    let arg = &test_spec.function_call.args[0];
-    let mime_type = arg.as_str().unwrap();
+    let arg = test_spec
+        .function_call
+        .args
+        .first()
+        .with_context(|| format!("Function '{}' missing argument", test_spec.function_call.name))?;
+    let mime_type = arg
+        .as_str()
+        .with_context(|| format!("Function '{}' argument is not a string", test_spec.function_call.name))?;
 
     writeln!(
         buf,

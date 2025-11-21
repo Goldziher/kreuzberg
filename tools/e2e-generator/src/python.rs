@@ -513,7 +513,7 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Re
     content.push_str("from kreuzberg import ExtractionConfig\n\n");
 
     // Generate test functions grouped by API category
-    let grouped = group_by_category(fixtures);
+    let grouped = group_by_category(fixtures)?;
 
     for (category, fixtures) in grouped {
         writeln!(&mut content, "\n# {} Tests\n", category_to_title(category))?;
@@ -528,13 +528,17 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Re
     Ok(())
 }
 
-fn group_by_category<'a>(fixtures: &[&'a Fixture]) -> BTreeMap<&'a str, Vec<&'a Fixture>> {
+fn group_by_category<'a>(fixtures: &[&'a Fixture]) -> Result<BTreeMap<&'a str, Vec<&'a Fixture>>> {
     let mut grouped: BTreeMap<&str, Vec<&Fixture>> = BTreeMap::new();
     for fixture in fixtures {
-        let category = fixture.api_category.as_ref().unwrap().as_str();
+        let category = fixture
+            .api_category
+            .as_ref()
+            .with_context(|| format!("Fixture '{}' missing api_category", fixture.id))?
+            .as_str();
         grouped.entry(category).or_default().push(fixture);
     }
-    grouped
+    Ok(grouped)
 }
 
 fn category_to_title(category: &str) -> String {
@@ -552,7 +556,10 @@ fn category_to_title(category: &str) -> String {
 }
 
 fn generate_python_test_function(fixture: &Fixture, buf: &mut String) -> Result<()> {
-    let test_spec = fixture.test_spec.as_ref().unwrap();
+    let test_spec = fixture
+        .test_spec
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let test_name = format!("test_{}", fixture.id);
 
     // Function signature
@@ -627,8 +634,14 @@ fn generate_clear_registry_test(_fixture: &Fixture, test_spec: &PluginTestSpec, 
 
 fn generate_graceful_unregister_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
     let func_name = &test_spec.function_call.name;
-    let arg = &test_spec.function_call.args[0];
-    let arg_str = arg.as_str().unwrap();
+    let arg = test_spec
+        .function_call
+        .args
+        .first()
+        .with_context(|| format!("Function '{}' missing argument", func_name))?;
+    let arg_str = arg
+        .as_str()
+        .with_context(|| format!("Function '{}' argument is not a string", func_name))?;
 
     // Should not raise
     writeln!(buf, "    kreuzberg.{}(\"{}\")", func_name, arg_str)?;
@@ -636,10 +649,19 @@ fn generate_graceful_unregister_test(_fixture: &Fixture, test_spec: &PluginTestS
     Ok(())
 }
 
-fn generate_config_from_file_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
-    let setup = test_spec.setup.as_ref().unwrap();
-    let file_content = setup.temp_file_content.as_ref().unwrap();
-    let file_name = setup.temp_file_name.as_ref().unwrap();
+fn generate_config_from_file_test(fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_from_file", fixture.id))?;
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
 
     // Create temp file
     writeln!(buf, "    config_path = tmp_path / \"{}\"", file_name)?;
@@ -656,11 +678,23 @@ fn generate_config_from_file_test(_fixture: &Fixture, test_spec: &PluginTestSpec
     Ok(())
 }
 
-fn generate_config_discover_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
-    let setup = test_spec.setup.as_ref().unwrap();
-    let file_content = setup.temp_file_content.as_ref().unwrap();
-    let file_name = setup.temp_file_name.as_ref().unwrap();
-    let subdir = setup.subdirectory_name.as_ref().unwrap();
+fn generate_config_discover_test(fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for config_discover", fixture.id))?;
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+    let subdir = setup
+        .subdirectory_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing subdirectory_name", fixture.id))?;
 
     // Create config in parent dir
     writeln!(buf, "    config_path = tmp_path / \"{}\"", file_name)?;
@@ -684,9 +718,15 @@ fn generate_config_discover_test(_fixture: &Fixture, test_spec: &PluginTestSpec,
     Ok(())
 }
 
-fn generate_mime_from_bytes_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
-    let setup = test_spec.setup.as_ref().unwrap();
-    let test_data = setup.test_data.as_ref().unwrap();
+fn generate_mime_from_bytes_test(fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_bytes", fixture.id))?;
+    let test_data = setup
+        .test_data
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing test_data", fixture.id))?;
     let func_name = &test_spec.function_call.name;
 
     // Convert test data to bytes (escape sequences already in JSON are preserved)
@@ -702,10 +742,19 @@ fn generate_mime_from_bytes_test(_fixture: &Fixture, test_spec: &PluginTestSpec,
     Ok(())
 }
 
-fn generate_mime_from_path_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
-    let setup = test_spec.setup.as_ref().unwrap();
-    let file_name = setup.temp_file_name.as_ref().unwrap();
-    let file_content = setup.temp_file_content.as_ref().unwrap();
+fn generate_mime_from_path_test(fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
+    let setup = test_spec
+        .setup
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing setup for mime_from_path", fixture.id))?;
+    let file_name = setup
+        .temp_file_name
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_name", fixture.id))?;
+    let file_content = setup
+        .temp_file_content
+        .as_ref()
+        .with_context(|| format!("Fixture '{}' missing temp_file_content", fixture.id))?;
     let func_name = &test_spec.function_call.name;
 
     // Create temp file
@@ -727,8 +776,14 @@ fn generate_mime_from_path_test(_fixture: &Fixture, test_spec: &PluginTestSpec, 
 
 fn generate_mime_extension_lookup_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
     let func_name = &test_spec.function_call.name;
-    let arg = &test_spec.function_call.args[0];
-    let mime_type = arg.as_str().unwrap();
+    let arg = test_spec
+        .function_call
+        .args
+        .first()
+        .with_context(|| format!("Function '{}' missing argument", func_name))?;
+    let mime_type = arg
+        .as_str()
+        .with_context(|| format!("Function '{}' argument is not a string", func_name))?;
 
     writeln!(buf, "    result = kreuzberg.{}(\"{}\")", func_name, mime_type)?;
     writeln!(buf, "    assert isinstance(result, list)")?;
