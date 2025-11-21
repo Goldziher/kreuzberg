@@ -13,7 +13,7 @@ func TestDetectMimeTypePDF(t *testing.T) {
 		t.Fatalf("write temp pdf: %v", err)
 	}
 
-	mime, err := DetectMimeType(path, true)
+	mime, err := DetectMimeTypeFromPath(path)
 	if err != nil {
 		t.Fatalf("detect mime: %v", err)
 	}
@@ -23,7 +23,7 @@ func TestDetectMimeTypePDF(t *testing.T) {
 }
 
 func TestDetectMimeTypeMissingFile(t *testing.T) {
-	_, err := DetectMimeType("nonexistent-file.docx", true)
+	_, err := DetectMimeTypeFromPath("nonexistent-file.docx")
 	if err == nil {
 		t.Fatalf("expected error for missing file")
 	}
