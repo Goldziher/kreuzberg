@@ -2,890 +2,910 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://kreuzberg.dev/3.0/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/changelog/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/contributing/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/features/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/cli/usage/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/concepts/architecture/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/concepts/extraction-pipeline/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/concepts/mime-detection/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/concepts/performance/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/concepts/plugin-system/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/getting-started/installation/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/getting-started/quickstart/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/guides/advanced/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/guides/api-server/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/guides/configuration/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/guides/docker/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/guides/extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/guides/ocr/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/guides/plugins/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/migration/v3-to-v4/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/reference/api-go/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/reference/api-python/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/reference/api-ruby/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/reference/api-rust/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/reference/api-typescript/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/reference/configuration/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/reference/errors/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/reference/formats/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/reference/types/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/api_server/cli/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/api_server/docker/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/api_server/go/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/api_server/java/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/api_server/python/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/api_server/rust/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/batch_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/extract_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/install_cargo/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/install_docker/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/install_go_sdk/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/install_homebrew/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/mcp_go/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/mcp_java/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/mcp_python/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/mcp_rust/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/mcp_typescript/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/ocr_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/serve_go/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/serve_java/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/serve_python/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/serve_rust/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/cli/serve_typescript/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/docker/api_server_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/docker/build_core/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/docker/build_full/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/docker/cli_mode_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/docker/core_pull/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/docker/full_pull/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/docker/mcp_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/advanced_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/batch_extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/batch_extract_files_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/chunking/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/config_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/config_file/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/config_ocr/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/config_programmatic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/embedding_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/error_handling/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/extract_bytes_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/extract_file_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/extract_file_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/image_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/image_preprocessing/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/language_detection/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/metadata/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/ocr_dpi_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/ocr_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/ocr_force_all_pages/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/ocr_multi_language/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/pdf_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/plugin_validator/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/postprocessor_config/</loc>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/tables/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/tesseract_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/token_reduction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/advanced_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/batch_extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/batch_extract_files_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/chunking/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/config_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/config_discover/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/config_file/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/config_ocr/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/config_programmatic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/embedding_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/error_handling/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/extract_bytes_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/extract_file_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/extract_file_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/image_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/image_preprocessing/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/language_detection/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/metadata/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/ocr_dpi_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/ocr_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/ocr_force_all_pages/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/ocr_multi_language/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/pdf_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/java/postprocessor_config/</loc>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/tables/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/tesseract_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/java/token_reduction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/advanced_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/batch_extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/batch_extract_files_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/chunking/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/config_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/config_discover/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/config_ocr/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/config_programmatic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/embedding_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/error_handling/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/extract_bytes_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/extract_file_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/extract_file_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/image_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/image_preprocessing/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/language_detection/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/metadata/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/ocr_dpi_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/ocr_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/ocr_force_all_pages/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/ocr_multi_language/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/pdf_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/plugin_extractor/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/plugin_validator/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/python/postprocessor_config/</loc>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/tables/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/tesseract_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/python/token_reduction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/advanced_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/batch_extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/batch_extract_files_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/chunking/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/config_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/config_discover/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/config_ocr/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/config_programmatic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/embedding_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/error_handling/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/extract_bytes_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/extract_file_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/extract_file_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/image_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/image_preprocessing/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/language_detection/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/metadata/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/ocr_dpi_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/ocr_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/ocr_force_all_pages/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/ocr_multi_language/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/pdf_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/plugin_validator/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/tables/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/tesseract_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/token_reduction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/advanced_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/batch_extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/batch_extract_files_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/chunking/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/config_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/config_discover/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/config_ocr/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/config_programmatic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/embedding_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/error_handling/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/extract_bytes_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/extract_file_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/extract_file_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/image_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/image_preprocessing/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/language_detection/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/metadata/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/ocr_dpi_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/ocr_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/ocr_force_all_pages/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/ocr_multi_language/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/pdf_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/plugin_extractor/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/rust/postprocessor_config/</loc>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/tables/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/tesseract_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/rust/token_reduction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/advanced_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/batch_extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/batch_extract_files_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/chunking/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/config_basic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/config_discover/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/config_ocr/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/config_programmatic/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/embedding_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/error_handling/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/extract_bytes_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/extract_bytes_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/extract_file_async/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/extract_file_sync/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/image_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/image_preprocessing/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/language_detection/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/metadata/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/ocr_dpi_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/ocr_extraction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/ocr_force_all_pages/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/ocr_multi_language/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/pdf_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/plugin_validator/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/typescript/postprocessor_config/</loc>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/tables/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/tesseract_config/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/token_reduction/</loc>
-         <lastmod>2025-11-20</lastmod>
+         <lastmod>2025-11-21</lastmod>
     </url>
 </urlset>
