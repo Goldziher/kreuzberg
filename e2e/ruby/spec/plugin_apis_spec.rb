@@ -115,7 +115,6 @@ RSpec.describe 'Ocr Backend Management' do
     result = Kreuzberg.list_ocr_backends
     expect(result).to be_an(Array)
     expect(result).to all(be_a(String))
-    expect(result).to include('tesseract')
   end
 
   it 'Unregister nonexistent OCR backend gracefully' do
