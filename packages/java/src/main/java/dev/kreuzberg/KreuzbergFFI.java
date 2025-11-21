@@ -420,21 +420,29 @@ final class KreuzbergFFI {
                 tempDir.toFile().deleteOnExit();
 
                 // Extract pdfium library first (dependency of FFI library)
+                java.nio.file.Path tempPdfium = null;
                 var pdfiumResource = KreuzbergFFI.class.getResource(pdfiumResourcePath);
                 if (pdfiumResource != null) {
                     var pdfiumStream = KreuzbergFFI.class.getResourceAsStream(pdfiumResourcePath);
                     try (java.io.InputStream pdfiumIn = pdfiumStream) {
-                        java.nio.file.Path tempPdfium = tempDir.resolve(pdfiumLibName + libExt);
+                        tempPdfium = tempDir.resolve(pdfiumLibName + libExt);
                         tempPdfium.toFile().deleteOnExit();
                         var replaceExisting = java.nio.file.StandardCopyOption.REPLACE_EXISTING;
                         java.nio.file.Files.copy(pdfiumIn, tempPdfium, replaceExisting);
                     }
                 }
 
-                // Extract and load FFI library
+                // Extract FFI library
                 java.nio.file.Path tempLib = tempDir.resolve(libName + libExt);
                 tempLib.toFile().deleteOnExit();
                 java.nio.file.Files.copy(in, tempLib, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+                // Load pdfium first (dependency must be loaded before dependent library)
+                if (tempPdfium != null) {
+                    System.load(tempPdfium.toAbsolutePath().toString());
+                }
+
+                // Now load FFI library
                 System.load(tempLib.toAbsolutePath().toString());
                 return;
             } catch (Exception e) { // NOPMD - fallback to loading from system path
@@ -444,14 +452,27 @@ final class KreuzbergFFI {
 
         // Try to load from build directory (for development/testing)
         String projectRoot = System.getProperty("user.dir");
-        java.nio.file.Path targetLib = java.nio.file.Path.of(projectRoot, "target", "classes", libName + libExt);
+        java.nio.file.Path targetLib = java.nio.file.Path.of(
+            projectRoot, "target", "classes", libName + libExt);
+        java.nio.file.Path targetPdfium = java.nio.file.Path.of(
+            projectRoot, "target", "classes", pdfiumLibName + libExt);
 
         if (java.nio.file.Files.exists(targetLib)) {
+            // Load pdfium first if it exists
+            if (java.nio.file.Files.exists(targetPdfium)) {
+                System.load(targetPdfium.toAbsolutePath().toString());
+            }
             System.load(targetLib.toAbsolutePath().toString());
             return;
         }
 
         // Fall back to system library path
+        // (assumes libraries are in LD_LIBRARY_PATH/DYLD_LIBRARY_PATH)
+        try {
+            System.loadLibrary("pdfium");
+        } catch (UnsatisfiedLinkError e) { // NOPMD - pdfium might already be loaded
+            // Ignore error - pdfium might already be loaded or not needed
+        }
         System.loadLibrary("kreuzberg_ffi");
     }
 
