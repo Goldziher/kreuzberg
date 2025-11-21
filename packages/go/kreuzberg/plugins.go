@@ -181,3 +181,50 @@ func ListOCRBackends() ([]string, error) {
 	}
 	return backends, nil
 }
+
+// ClearOCRBackends removes all registered OCR backends.
+func ClearOCRBackends() error {
+	if ok := C.kreuzberg_clear_ocr_backends(); !bool(ok) {
+		return lastError()
+	}
+	return nil
+}
+
+// ListDocumentExtractors returns names of all registered document extractors.
+func ListDocumentExtractors() ([]string, error) {
+	listPtr := C.kreuzberg_list_document_extractors()
+	if listPtr == nil {
+		return []string{}, nil
+	}
+	defer C.kreuzberg_free_string(listPtr)
+
+	jsonStr := C.GoString(listPtr)
+	var extractors []string
+	if err := json.Unmarshal([]byte(jsonStr), &extractors); err != nil {
+		return nil, newSerializationError("failed to parse document extractors list", err)
+	}
+	return extractors, nil
+}
+
+// UnregisterDocumentExtractor removes a registered document extractor by name.
+func UnregisterDocumentExtractor(name string) error {
+	if name == "" {
+		return newValidationError("document extractor name cannot be empty", nil)
+	}
+
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+
+	if ok := C.kreuzberg_unregister_document_extractor(cName); !bool(ok) {
+		return lastError()
+	}
+	return nil
+}
+
+// ClearDocumentExtractors removes all registered document extractors.
+func ClearDocumentExtractors() error {
+	if ok := C.kreuzberg_clear_document_extractors(); !bool(ok) {
+		return lastError()
+	}
+	return nil
+}

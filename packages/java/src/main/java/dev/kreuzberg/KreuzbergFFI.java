@@ -51,8 +51,15 @@ final class KreuzbergFFI {
     static final MethodHandle KREUZBERG_REGISTER_OCR_BACKEND_WITH_LANGUAGES;
     static final MethodHandle KREUZBERG_UNREGISTER_OCR_BACKEND;
     static final MethodHandle KREUZBERG_LIST_OCR_BACKENDS;
+    static final MethodHandle KREUZBERG_CLEAR_OCR_BACKENDS;
+    static final MethodHandle KREUZBERG_LIST_DOCUMENT_EXTRACTORS;
+    static final MethodHandle KREUZBERG_UNREGISTER_DOCUMENT_EXTRACTOR;
+    static final MethodHandle KREUZBERG_CLEAR_DOCUMENT_EXTRACTORS;
     static final MethodHandle KREUZBERG_DETECT_MIME_TYPE;
     static final MethodHandle KREUZBERG_VALIDATE_MIME_TYPE;
+    static final MethodHandle KREUZBERG_DETECT_MIME_TYPE_FROM_BYTES;
+    static final MethodHandle KREUZBERG_GET_EXTENSIONS_FOR_MIME;
+    static final MethodHandle KREUZBERG_CONFIG_DISCOVER;
     static final MethodHandle KREUZBERG_LIST_EMBEDDING_PRESETS;
     static final MethodHandle KREUZBERG_GET_EMBEDDING_PRESET;
 
@@ -300,6 +307,26 @@ final class KreuzbergFFI {
                 FunctionDescriptor.of(ValueLayout.ADDRESS)
             );
 
+            KREUZBERG_CLEAR_OCR_BACKENDS = linkFunction(
+                "kreuzberg_clear_ocr_backends",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN)
+            );
+
+            KREUZBERG_LIST_DOCUMENT_EXTRACTORS = linkFunction(
+                "kreuzberg_list_document_extractors",
+                FunctionDescriptor.of(ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_UNREGISTER_DOCUMENT_EXTRACTOR = linkFunction(
+                "kreuzberg_unregister_document_extractor",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_CLEAR_DOCUMENT_EXTRACTORS = linkFunction(
+                "kreuzberg_clear_document_extractors",
+                FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN)
+            );
+
             KREUZBERG_DETECT_MIME_TYPE = linkFunction(
                 "kreuzberg_detect_mime_type",
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_BOOLEAN)
@@ -308,6 +335,21 @@ final class KreuzbergFFI {
             KREUZBERG_VALIDATE_MIME_TYPE = linkFunction(
                 "kreuzberg_validate_mime_type",
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_DETECT_MIME_TYPE_FROM_BYTES = linkFunction(
+                "kreuzberg_detect_mime_type_from_bytes",
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG)
+            );
+
+            KREUZBERG_GET_EXTENSIONS_FOR_MIME = linkFunction(
+                "kreuzberg_get_extensions_for_mime",
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_CONFIG_DISCOVER = linkFunction(
+                "kreuzberg_config_discover",
+                FunctionDescriptor.of(ValueLayout.ADDRESS)
             );
 
             KREUZBERG_LIST_EMBEDDING_PRESETS = linkFunction(

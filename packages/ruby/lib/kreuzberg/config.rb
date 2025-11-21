@@ -592,6 +592,27 @@ module Kreuzberg
         new(**hash.transform_keys(&:to_sym))
       end
 
+      # Discover configuration file in current or parent directories.
+      #
+      # Searches for kreuzberg.toml, kreuzberg.yaml, or kreuzberg.json in the current
+      # directory and parent directories.
+      #
+      # @return [Kreuzberg::Config::Extraction, nil] Loaded configuration object or nil if not found
+      #
+      # @example
+      #   config = Kreuzberg::Config::Extraction.discover
+      #   if config
+      #     # Use discovered config
+      #   end
+      #
+      def self.discover
+        hash = Kreuzberg._config_discover_native
+        return nil if hash.nil?
+
+        # Convert string keys to symbols for keyword arguments
+        new(**hash.transform_keys(&:to_sym))
+      end
+
       def initialize(
         use_cache: true,
         enable_quality_processing: false,

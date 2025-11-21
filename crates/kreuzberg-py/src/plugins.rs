@@ -1801,3 +1801,88 @@ pub fn unregister_ocr_backend(name: &str) -> PyResult<()> {
 pub fn list_ocr_backends() -> PyResult<Vec<String>> {
     kreuzberg::plugins::list_ocr_backends().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }
+
+/// Clear all registered OCR backends.
+///
+/// Removes all OCR backends from the global registry and calls their `shutdown()`
+/// methods. Useful for test cleanup or resetting state.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import clear_ocr_backends
+///
+/// # In pytest fixture or test cleanup
+/// clear_ocr_backends()
+/// ```
+#[pyfunction]
+pub fn clear_ocr_backends() -> PyResult<()> {
+    kreuzberg::plugins::clear_ocr_backends().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// List all registered document extractor names.
+///
+/// Returns a list of all document extractor names currently registered in the global registry.
+/// This function automatically initializes built-in extractors (PDF, DOCX, etc.) on first call.
+///
+/// # Returns
+///
+/// List of document extractor names.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import list_document_extractors
+///
+/// # List all registered extractors (includes built-in PDF, DOCX, etc.)
+/// extractors = list_document_extractors()
+/// assert any("pdf" in e.lower() for e in extractors)
+/// ```
+#[pyfunction]
+pub fn list_document_extractors() -> PyResult<Vec<String>> {
+    // Ensure built-in extractors are initialized
+    kreuzberg::extractors::ensure_initialized()
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+
+    kreuzberg::plugins::list_extractors().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Unregister a document extractor by name.
+///
+/// Removes a previously registered document extractor from the global registry.
+///
+/// # Arguments
+///
+/// * `name` - Extractor name to unregister
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import unregister_document_extractor
+///
+/// # Unregister an extractor
+/// unregister_document_extractor("my_custom_extractor")
+/// ```
+#[pyfunction]
+pub fn unregister_document_extractor(name: &str) -> PyResult<()> {
+    kreuzberg::plugins::unregister_extractor(name)
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Clear all registered document extractors.
+///
+/// Removes all document extractors from the global registry.
+/// Useful for test cleanup or resetting state.
+///
+/// # Example
+///
+/// ```python
+/// from kreuzberg import clear_document_extractors
+///
+/// # In pytest fixture or test cleanup
+/// clear_document_extractors()
+/// ```
+#[pyfunction]
+pub fn clear_document_extractors() -> PyResult<()> {
+    kreuzberg::plugins::clear_extractors().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}

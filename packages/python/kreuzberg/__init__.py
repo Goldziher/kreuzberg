@@ -57,9 +57,15 @@ from kreuzberg._internal_bindings import (
     PostProcessorConfig,
     TesseractConfig,
     TokenReductionConfig,
+    clear_document_extractors,
+    clear_ocr_backends,
     clear_post_processors,
     clear_validators,
+    detect_mime_type_from_bytes,
+    detect_mime_type_from_path,
     get_embedding_preset,
+    get_extensions_for_mime,
+    list_document_extractors,
     list_embedding_presets,
     list_ocr_backends,
     list_post_processors,
@@ -67,6 +73,7 @@ from kreuzberg._internal_bindings import (
     register_ocr_backend,
     register_post_processor,
     register_validator,
+    unregister_document_extractor,
     unregister_ocr_backend,
     unregister_post_processor,
     unregister_validator,
@@ -151,13 +158,19 @@ __all__ = [
     "batch_extract_bytes_sync",
     "batch_extract_files",
     "batch_extract_files_sync",
+    "clear_document_extractors",
+    "clear_ocr_backends",
     "clear_post_processors",
     "clear_validators",
+    "detect_mime_type",
+    "detect_mime_type_from_path",
     "extract_bytes",
     "extract_bytes_sync",
     "extract_file",
     "extract_file_sync",
     "get_embedding_preset",
+    "get_extensions_for_mime",
+    "list_document_extractors",
     "list_embedding_presets",
     "list_ocr_backends",
     "list_post_processors",
@@ -165,6 +178,7 @@ __all__ = [
     "register_ocr_backend",
     "register_post_processor",
     "register_validator",
+    "unregister_document_extractor",
     "unregister_ocr_backend",
     "unregister_post_processor",
     "unregister_validator",
@@ -492,3 +506,21 @@ async def batch_extract_bytes(
     _ensure_ocr_backend_registered(config, easyocr_kwargs, paddleocr_kwargs)
 
     return await batch_extract_bytes_impl([bytes(d) for d in data_list], mime_types, config)
+
+
+def detect_mime_type(data: bytes | bytearray) -> str:
+    """Detect MIME type from file bytes.
+
+    Args:
+        data: File content as bytes or bytearray
+
+    Returns:
+        Detected MIME type (e.g., "application/pdf", "image/png")
+
+    Example:
+        >>> from kreuzberg import detect_mime_type
+        >>> pdf_bytes = b"%PDF-1.4\\n"
+        >>> mime_type = detect_mime_type(pdf_bytes)
+        >>> assert "pdf" in mime_type.lower()
+    """
+    return detect_mime_type_from_bytes(bytes(data))

@@ -13,6 +13,11 @@
 #include <stdlib.h>
 
 /**
+ * Opaque type for ExtractionConfig
+ */
+typedef struct ExtractionConfig ExtractionConfig;
+
+/**
  * C-compatible extraction result structure
  */
 typedef struct CExtractionResult {
@@ -812,6 +817,120 @@ bool kreuzberg_unregister_ocr_backend(const char *name);
 char *kreuzberg_list_ocr_backends(void);
 
 /**
+ * Clear all registered OCR backends.
+ *
+ * # Safety
+ *
+ * - Removes all registered OCR backends. Subsequent extractions will use only built-in backends.
+ * - Returns true on success, false on error.
+ *
+ * # Example (C)
+ *
+ * ```c
+ * bool success = kreuzberg_clear_ocr_backends();
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to clear OCR backends: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_clear_ocr_backends(void);
+
+/**
+ * Clear all registered DocumentExtractors.
+ *
+ * # Safety
+ *
+ * - Removes all registered extractors. Subsequent extractions will use only built-in extractors.
+ * - Returns true on success, false on error.
+ *
+ * # Example (C)
+ *
+ * ```c
+ * bool success = kreuzberg_clear_document_extractors();
+ * if (!success) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to clear document extractors: %s\n", error);
+ * }
+ * ```
+ */
+bool kreuzberg_clear_document_extractors(void);
+
+/**
+ * Detect MIME type from raw bytes.
+ *
+ * # Safety
+ *
+ * - `bytes` must be a valid pointer to byte data
+ * - `len` must be the correct length of the byte array
+ * - The returned string must be freed with `kreuzberg_free_string`
+ * - Returns NULL on error (check `kreuzberg_last_error`)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * const char* pdf_bytes = "%PDF-1.4\n";
+ * char* mime = kreuzberg_detect_mime_type_from_bytes((const uint8_t*)pdf_bytes, strlen(pdf_bytes));
+ * if (mime == NULL) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to detect MIME type: %s\n", error);
+ * } else {
+ *     printf("MIME type: %s\n", mime);
+ *     kreuzberg_free_string(mime);
+ * }
+ * ```
+ */
+char *kreuzberg_detect_mime_type_from_bytes(const uint8_t *bytes, uintptr_t len);
+
+/**
+ * Detect MIME type from file path (checks extension and reads file content).
+ *
+ * # Safety
+ *
+ * - `file_path` must be a valid null-terminated C string
+ * - The returned string must be freed with `kreuzberg_free_string`
+ * - Returns NULL on error (check `kreuzberg_last_error`)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * char* mime = kreuzberg_detect_mime_type_from_path("document.pdf");
+ * if (mime == NULL) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to detect MIME type: %s\n", error);
+ * } else {
+ *     printf("MIME type: %s\n", mime);
+ *     kreuzberg_free_string(mime);
+ * }
+ * ```
+ */
+char *kreuzberg_detect_mime_type_from_path(const char *file_path);
+
+/**
+ * Get file extensions for a MIME type.
+ *
+ * # Safety
+ *
+ * - `mime_type` must be a valid null-terminated C string
+ * - The returned string is a JSON array of extensions (must be freed with `kreuzberg_free_string`)
+ * - Returns NULL on error (check `kreuzberg_last_error`)
+ *
+ * # Example (C)
+ *
+ * ```c
+ * char* extensions = kreuzberg_get_extensions_for_mime("application/pdf");
+ * if (extensions == NULL) {
+ *     const char* error = kreuzberg_last_error();
+ *     printf("Failed to get extensions: %s\n", error);
+ * } else {
+ *     printf("Extensions: %s\n", extensions);
+ *     kreuzberg_free_string(extensions);
+ * }
+ * ```
+ */
+char *kreuzberg_get_extensions_for_mime(const char *mime_type);
+
+/**
  * Load an ExtractionConfig from a file.
  *
  * Automatically detects the file format based on extension:
@@ -853,32 +972,31 @@ ExtractionConfig *kreuzberg_config_from_file(const char *path);
  * - `kreuzberg.yml`
  * - `kreuzberg.json`
  *
- * Returns the first config file found, or NULL if none found.
+ * Returns the first config file found as JSON, or NULL if none found.
  *
  * # Safety
  *
- * - Returns a pointer to ExtractionConfig on success, NULL if not found or on error
- * - The returned config must be freed with `kreuzberg_free_config`
- * - Check `kreuzberg_last_error` to distinguish between "not found" and actual errors
+ * - The returned string must be freed with `kreuzberg_free_string`
+ * - Returns NULL if no config found or on error (check `kreuzberg_last_error`)
  *
  * # Example (C)
  *
  * ```c
- * ExtractionConfig* config = kreuzberg_config_discover();
- * if (config == NULL) {
+ * char* config_json = kreuzberg_config_discover();
+ * if (config_json == NULL) {
  *     const char* error = kreuzberg_last_error();
  *     if (error != NULL && strlen(error) > 0) {
  *         printf("Error discovering config: %s\n", error);
  *         return 1;
  *     }
  *     // No config found, use defaults
- *     config = kreuzberg_config_new();
+ *     printf("No config file found\n");
+ * } else {
+ *     printf("Config: %s\n", config_json);
+ *     kreuzberg_free_string(config_json);
  * }
- *
- * // Use config...
- * kreuzberg_free_config(config);
  * ```
  */
-ExtractionConfig *kreuzberg_config_discover(void);
+char *kreuzberg_config_discover(void);
 
 #endif  /* KREUZBERG_FFI_H */

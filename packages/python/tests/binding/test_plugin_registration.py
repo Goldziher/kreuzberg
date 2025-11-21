@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
+import contextlib
 
 from kreuzberg import (
     clear_post_processors,
@@ -211,7 +211,5 @@ def test_unregister_ocr_backend_removes_backend() -> None:
 
 def test_unregister_nonexistent_ocr_backend() -> None:
     """Test unregistering a nonexistent backend handles gracefully."""
-    try:
+    with contextlib.suppress(Exception):
         unregister_ocr_backend("nonexistent_backend_xyz")
-    except Exception:
-        pass

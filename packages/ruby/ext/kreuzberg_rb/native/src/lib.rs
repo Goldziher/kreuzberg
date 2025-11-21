@@ -1428,6 +1428,31 @@ fn config_from_file(path: String) -> Result<RHash, Error> {
     extraction_config_to_ruby_hash(&ruby, config)
 }
 
+/// Discover configuration file in current or parent directories.
+///
+/// Searches for kreuzberg.toml, kreuzberg.yaml, or kreuzberg.json in the current
+/// directory and parent directories. Returns nil if no config file is found.
+///
+/// @return [Hash, nil] Configuration hash or nil if not found
+///
+/// @example
+///   hash = Kreuzberg._config_discover_native
+///   # => {...config hash...} or nil
+///
+fn config_discover() -> Result<Value, Error> {
+    let ruby = Ruby::get().expect("Ruby not initialized");
+
+    let maybe_config = ExtractionConfig::discover().map_err(kreuzberg_error)?;
+
+    match maybe_config {
+        Some(config) => {
+            let hash = extraction_config_to_ruby_hash(&ruby, config)?;
+            Ok(hash.as_value())
+        }
+        None => Ok(ruby.qnil().as_value()),
+    }
+}
+
 /// Convert Rust ExtractionResult to Ruby Hash
 fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Result<RHash, Error> {
     let hash = ruby.hash_new();
@@ -2466,35 +2491,60 @@ fn list_ocr_backends() -> Result<Vec<String>, Error> {
     kreuzberg::plugins::list_ocr_backends().map_err(|e| runtime_error(e.to_string()))
 }
 
-/// Detect MIME type from a file path.
+/// Clear all registered OCR backends.
 ///
-/// @param path [String] Path to the file
-/// @param check_exists [Boolean] Whether to verify file existence (default: true)
-/// @return [String] Detected MIME type
+/// Removes all OCR backends from the global registry and calls their shutdown methods.
+///
+/// @return [void]
 ///
 /// @example
-///   mime = Kreuzberg.detect_mime_type("document.pdf")
-///   #=> "application/pdf"
+///   Kreuzberg.clear_ocr_backends
 ///
-/// @example Skip existence check
-///   mime = Kreuzberg.detect_mime_type("/path/to/future/file.docx", check_exists: false)
-///   #=> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+fn clear_ocr_backends() -> Result<(), Error> {
+    kreuzberg::plugins::clear_ocr_backends().map_err(|e| runtime_error(e.to_string()))
+}
+
+/// List all registered document extractor names.
 ///
-fn detect_mime_type_native(args: &[Value]) -> Result<String, Error> {
-    let ruby = Ruby::get().expect("Ruby not initialized");
-    let args = scan_args::<(String,), (), (), (), RHash, ()>(args)?;
-    let (path,) = args.required;
-    let opts = args.keywords;
+/// Returns an array of all document extractor names currently registered in the global registry.
+///
+/// @return [Array<String>] Array of document extractor names
+///
+/// @example
+///   extractors = Kreuzberg.list_document_extractors
+///   #=> ["pdf", "docx", "txt"]
+///
+fn list_document_extractors() -> Result<Vec<String>, Error> {
+    // Ensure built-in extractors are initialized
+    kreuzberg::extractors::ensure_initialized().map_err(|e| runtime_error(e.to_string()))?;
+    kreuzberg::plugins::list_extractors().map_err(|e| runtime_error(e.to_string()))
+}
 
-    let check_exists = if let Some(val) = get_kw(&ruby, opts, "check_exists") {
-        bool::try_convert(val)?
-    } else {
-        true
-    };
+/// Unregister a document extractor by name.
+///
+/// Removes a previously registered document extractor from the global registry.
+///
+/// @param name [String] Extractor name to unregister
+/// @return [void]
+///
+/// @example
+///   Kreuzberg.unregister_document_extractor("my_extractor")
+///
+fn unregister_document_extractor(name: String) -> Result<(), Error> {
+    kreuzberg::plugins::unregister_extractor(&name).map_err(|e| runtime_error(e.to_string()))
+}
 
-    let mime_type = kreuzberg::detect_mime_type(&path, check_exists).map_err(kreuzberg_error)?;
-
-    Ok(mime_type)
+/// Clear all registered document extractors.
+///
+/// Removes all document extractors from the global registry and calls their shutdown methods.
+///
+/// @return [void]
+///
+/// @example
+///   Kreuzberg.clear_document_extractors
+///
+fn clear_document_extractors() -> Result<(), Error> {
+    kreuzberg::plugins::clear_extractors().map_err(|e| runtime_error(e.to_string()))
 }
 
 /// Validate that a MIME type is supported.
@@ -2512,6 +2562,59 @@ fn detect_mime_type_native(args: &[Value]) -> Result<String, Error> {
 ///
 fn validate_mime_type_native(mime_type: String) -> Result<String, Error> {
     kreuzberg::validate_mime_type(&mime_type).map_err(kreuzberg_error)
+}
+
+/// Detect MIME type from byte content.
+///
+/// Uses magic byte detection to determine the MIME type of content.
+///
+/// @param bytes [String] The byte content to analyze
+/// @return [String] Detected MIME type
+///
+/// @example
+///   pdf_bytes = "%PDF-1.4\n"
+///   mime = Kreuzberg.detect_mime_type(pdf_bytes)
+///   #=> "application/pdf"
+///
+fn detect_mime_type_from_bytes(bytes: String) -> Result<String, Error> {
+    let mime_type = kreuzberg::detect_mime_type_from_bytes(bytes.as_bytes()).map_err(kreuzberg_error)?;
+    Ok(mime_type)
+}
+
+/// Detect MIME type from a file path.
+///
+/// Detects MIME type by reading the file's magic bytes.
+///
+/// @param path [String] Path to the file
+/// @return [String] Detected MIME type
+///
+/// @example
+///   mime = Kreuzberg.detect_mime_type_from_path("document.pdf")
+///   #=> "application/pdf"
+///
+fn detect_mime_type_from_path_native(path: String) -> Result<String, Error> {
+    let content = fs::read(&path).map_err(KreuzbergError::Io).map_err(kreuzberg_error)?;
+    let mime_type = kreuzberg::detect_mime_type_from_bytes(&content).map_err(kreuzberg_error)?;
+    Ok(mime_type)
+}
+
+/// Get file extensions for a given MIME type.
+///
+/// Returns an array of file extensions commonly associated with the MIME type.
+///
+/// @param mime_type [String] The MIME type
+/// @return [Array<String>] Array of file extensions (without dots)
+///
+/// @example
+///   exts = Kreuzberg.get_extensions_for_mime("application/pdf")
+///   #=> ["pdf"]
+///
+/// @example
+///   exts = Kreuzberg.get_extensions_for_mime("image/jpeg")
+///   #=> ["jpg", "jpeg"]
+///
+fn get_extensions_for_mime_native(mime_type: String) -> Result<Vec<String>, Error> {
+    kreuzberg::get_extensions_for_mime(&mime_type).map_err(kreuzberg_error)
 }
 
 /// List all available embedding preset names.
@@ -2622,10 +2725,17 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     module.define_module_function("list_validators", function!(list_validators, 0))?;
     module.define_module_function("unregister_ocr_backend", function!(unregister_ocr_backend, 1))?;
     module.define_module_function("list_ocr_backends", function!(list_ocr_backends, 0))?;
+    module.define_module_function("clear_ocr_backends", function!(clear_ocr_backends, 0))?;
+    module.define_module_function("list_document_extractors", function!(list_document_extractors, 0))?;
+    module.define_module_function("unregister_document_extractor", function!(unregister_document_extractor, 1))?;
+    module.define_module_function("clear_document_extractors", function!(clear_document_extractors, 0))?;
 
     module.define_module_function("_config_from_file_native", function!(config_from_file, 1))?;
+    module.define_module_function("_config_discover_native", function!(config_discover, 0))?;
 
-    module.define_module_function("detect_mime_type", function!(detect_mime_type_native, -1))?;
+    module.define_module_function("detect_mime_type", function!(detect_mime_type_from_bytes, 1))?;
+    module.define_module_function("detect_mime_type_from_path", function!(detect_mime_type_from_path_native, 1))?;
+    module.define_module_function("get_extensions_for_mime", function!(get_extensions_for_mime_native, 1))?;
     module.define_module_function("validate_mime_type", function!(validate_mime_type_native, 1))?;
 
     module.define_module_function("list_embedding_presets", function!(list_embedding_presets, 0))?;
