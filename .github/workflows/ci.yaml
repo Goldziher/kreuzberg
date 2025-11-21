@@ -341,6 +341,9 @@ jobs:
       - name: Build kreuzberg-ffi
         run: cargo build --release -p kreuzberg-ffi
 
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v1.61.0
+
       - name: Lint Go bindings
         working-directory: packages/go
         run: |
