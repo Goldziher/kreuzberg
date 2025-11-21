@@ -1,22 +1,35 @@
-name: Smoke test Node.js package
+name: Smoke test Node package
 description: Tests Node.js package installation and functionality
 
 inputs:
   package-tarball:
-    description: Path to the npm package tarball (.tgz file)
-    required: false
-    default: ""
-  package-spec:
-    description: Explicit Node package spec (file:... or tarball path). Overrides workspace/tarball resolution.
-    required: false
-    default: ""
+    description: Path to the Node.js package tarball
+    required: true
 
 runs:
   using: composite
   steps:
-    - name: Smoke test Node.js package
+    - name: Smoke Node install
       shell: bash
-      env:
-        KREUZBERG_NODE_PKG: ${{ github.workspace }}/crates/kreuzberg-node
       run: |
-        "$GITHUB_WORKSPACE/scripts/smoke-node.sh" "${{ inputs.package-tarball }}" "${{ inputs.package-spec }}"
+        set -euo pipefail
+        tarball="${{ inputs.package-tarball }}"
+        # If directory provided, find the tarball inside
+        if [[ -d "$tarball" ]]; then
+          tarball=$(find "$tarball" -name "*.tgz" -type f | head -n 1)
+          if [[ -z "$tarball" ]]; then
+            echo "No .tgz file found in directory" >&2
+            exit 1
+          fi
+        fi
+        echo "Using tarball: $tarball"
+        tmp=$(mktemp -d)
+        cp -R e2e/smoke/node/. "$tmp"/
+        pushd "$tmp" >/dev/null
+        cp "$tarball" ./kreuzberg-node.tgz
+        node -e "const fs=require('fs');const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));pkg.dependencies=pkg.dependencies||{};pkg.dependencies['kreuzberg-node']='file:./kreuzberg-node.tgz';fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+ '\n');"
+        rm -f pnpm-lock.yaml
+        pnpm install --no-frozen-lockfile
+        pnpm run check
+        popd >/dev/null
+        echo "✓ Node package smoke test passed"

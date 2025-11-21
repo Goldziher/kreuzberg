@@ -805,8 +805,10 @@ jobs:
             label: linux
           - os: macos-14
             label: macos-arm64
-          - os: windows-latest
-            label: windows-x64
+          # TODO: Re-enable Windows once rb-sys fixes ssize_t type mismatch on Windows x64 with Ruby 3.3+
+          # See: https://github.com/oxidize-rb/rb-sys tracking_allocator.rs issue
+          # - os: windows-latest
+          #   label: windows-x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:

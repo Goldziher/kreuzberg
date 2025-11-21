@@ -350,10 +350,12 @@ jobs:
             label: macos-arm64
             platform: arm64-darwin
             build_source_gem: false
-          - os: windows-latest
-            label: windows-x64
-            platform: x64-mingw32
-            build_source_gem: false
+          # TODO: Re-enable Windows once rb-sys fixes ssize_t type mismatch on Windows x64 with Ruby 3.3+
+          # See: https://github.com/oxidize-rb/rb-sys tracking_allocator.rs issue
+          # - os: windows-latest
+          #   label: windows-x64
+          #   platform: x64-mingw32
+          #   build_source_gem: false
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -711,6 +713,16 @@ jobs:
         with:
           name: ${{ steps.node_artifact.outputs.name }}
           path: artifacts/node
+
+      - name: Package Node.js tarball
+        run: |
+          set -euo pipefail
+          cp artifacts/node/*.node crates/kreuzberg-node/
+          cd crates/kreuzberg-node
+          pnpm install --frozen-lockfile=false
+          pnpm pack --pack-destination "$GITHUB_WORKSPACE/artifacts/node"
+          echo "Created tarball:"
+          ls -lh "$GITHUB_WORKSPACE/artifacts/node"/*.tgz
 
       - name: Download Ruby gem
         if: runner.os != 'Windows'
