@@ -115,3 +115,6 @@ results/
 # Docker test artifacts
 /tmp/kreuzberg-docker-test-results.json
 docker-logs/
+
+# AI Rules generated files
+.mcp.json
