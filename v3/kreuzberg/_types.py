@@ -42,6 +42,8 @@ if TYPE_CHECKING:
 OcrBackendType = Literal["tesseract", "easyocr", "paddleocr"]
 OutputFormatType = Literal["text", "tsv", "hocr", "markdown"]
 ErrorContextType = Literal["batch_processing", "optional_feature", "single_extraction", "unknown"]
+
+
 class ConfigDict:
     def to_dict(self, include_none: bool = False) -> dict[str, Any]:
         result = msgspec.to_builtins(
@@ -259,6 +261,7 @@ class PaddleOCRConfig(ConfigDict):
     """Expansion ratio for detected text boxes (replaces det_db_unclip_ratio)."""
     use_textline_orientation: bool = True
     """Whether to use text line orientation classification model (replaces use_angle_cls)."""
+
 
 # Backward-compatible alias for OCR configuration union used by prior releases.
 OcrConfig = TesseractConfig | EasyOCRConfig | PaddleOCRConfig
