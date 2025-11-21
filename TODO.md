@@ -60,38 +60,37 @@ Now matches TypeScript/Java/FFI behavior (no auto-init on list).
 ### Priority 2: Environment Issues
 
 #### 3. Java E2EHelpers Compilation Errors
-**Status**: ⏳ TODO
+**Status**: ✅ FIXED (commit 0635ecb6)
 **Affects**: Java E2E tests (NOT plugin APIs)
 
-**Problem**: E2EHelpers.java has compilation errors preventing ANY Java E2E tests from running.
+**Root Cause**: Multiple compilation errors in E2EHelpers.java:
+1. Missing imports for `MissingDependencyException` and `ExtractionConfig`
+2. Wrong exception reference: `KreuzbergException.MissingDependency` (doesn't exist)
+3. Type mismatch: `buildConfig()` returned `Map` instead of `ExtractionConfig`
+4. Path vs String mismatch: `documentPath.toString()` vs `documentPath`
 
-**Errors**:
-1. Missing `KreuzbergException.MissingDependency` class (4 references)
-2. Type mismatch: `String` cannot be converted to `java.nio.file.Path` (line 119)
+**Fix**:
+- Added missing imports
+- Changed to `MissingDependencyException` (top-level class)
+- Updated `buildConfig()` to return `ExtractionConfig` using `ExtractionConfig.fromJson()`
+- Fixed Path type usage
 
-**File**: `e2e/java/src/test/java/com/kreuzberg/e2e/E2EHelpers.java`
-
-**Action Items**:
-- [ ] Fix missing `MissingDependency` exception class reference
-- [ ] Fix Path vs String type conversion
-- [ ] Verify Java E2E tests compile and run
+**Verification**: `mvn test-compile` succeeds with BUILD SUCCESS.
 
 ---
 
 #### 4. Ruby Environment Linkage Issues
-**Status**: ⏳ TODO
+**Status**: ✅ FIXED (commit bc4039c5)
 **Affects**: Ruby E2E tests (ALL specs)
 
-**Problem**: Incompatible libruby.3.4.dylib linkage prevents any Ruby specs from loading.
+**Root Cause**: JSON gem's native extensions were linked against rbenv's Ruby 3.4.7, but bundle was using Homebrew's Ruby 3.4.7.
 
-**Error**: `LoadError: linked to incompatible /Users/naamanhirschfeld/.rbenv/versions/3.4.7/lib/libruby.3.4.dylib`
+**Fix**:
+- Removed `vendor/bundle` directory
+- Ran `bundle install` to rebuild all gems with rbenv's Ruby
+- Regenerated Ruby plugin API tests with fixed OCR fixture
 
-**Root Cause**: JSON gem's native extension compiled against different Ruby version than runtime.
-
-**Action Items**:
-- [ ] Rebuild Ruby native extensions with correct Ruby version
-- [ ] OR: Update to compatible Ruby/gem versions
-- [ ] Verify Ruby E2E tests load and run
+**Verification**: Ruby specs now run successfully (58 examples, 4 failures - OCR test now passing)
 
 ---
 
