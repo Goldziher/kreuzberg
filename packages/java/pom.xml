@@ -154,11 +154,11 @@
                     </dependency>
                 </dependencies>
                 <configuration>
-                    <configLocation>checkstyle.xml</configLocation>
-                    <suppressionsLocation>${project.basedir}/checkstyle-suppressions.xml</suppressionsLocation>
+                    <configLocation>${project.basedir}/checkstyle.xml</configLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <violationSeverity>warning</violationSeverity>
+                    <propertyExpansion>config_loc=${project.basedir}</propertyExpansion>
                 </configuration>
                 <executions>
                     <execution>

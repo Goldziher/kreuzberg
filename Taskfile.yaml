@@ -3,7 +3,7 @@ vars:
   RUST_LOG: info
   V3_TAG: v3.20.2
   BUNDLE: bundle
-  GOLANGCI_LINT_VERSION: v2.6.2
+  GOLANGCI_LINT_VERSION: 2.6.2
 silent: false
 tasks:
   sync-versions:

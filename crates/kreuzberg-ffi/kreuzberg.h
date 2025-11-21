@@ -12,8 +12,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef struct ExtractionConfig ExtractionConfig;
-
 /**
  * C-compatible extraction result structure
  */
@@ -194,6 +192,13 @@ typedef char *(*DocumentExtractorCallback)(const uint8_t *content,
  * - The returned string must be freeable by kreuzberg_free_string
  */
 typedef char *(*ValidatorCallback)(const char *result_json);
+
+/**
+ * Opaque wrapper around `ExtractionConfig` for FFI usage.
+ */
+typedef struct FfiExtractionConfig {
+  uint8_t _private[0];
+} FfiExtractionConfig;
 
 /**
  * Extract text and metadata from a file (synchronous).
@@ -801,7 +806,7 @@ char *kreuzberg_list_validators(void);
  * kreuzberg_free_config(config);
  * ```
  */
-ExtractionConfig *kreuzberg_config_from_file(const char *path);
+struct FfiExtractionConfig *kreuzberg_config_from_file(const char *path);
 
 /**
  * Discover and load an ExtractionConfig by searching parent directories.
@@ -838,11 +843,14 @@ ExtractionConfig *kreuzberg_config_from_file(const char *path);
  * kreuzberg_free_config(config);
  * ```
  */
-ExtractionConfig *kreuzberg_config_discover(void);
+struct FfiExtractionConfig *kreuzberg_config_discover(void);
 
 /**
- * Free an ExtractionConfig created by the FFI helpers.
+ * Free an ExtractionConfig allocated through the FFI helpers.
+ *
+ * # Safety
+ * - `config` must come from `kreuzberg_config_from_file` or `kreuzberg_config_discover`
  */
-void kreuzberg_free_config(ExtractionConfig *config);
+void kreuzberg_free_config(struct FfiExtractionConfig *config);
 
 #endif  /* KREUZBERG_FFI_H */
