@@ -9,10 +9,7 @@ fn test_html_complex_layout() {
 
     let document_path = resolve_document("web/taylor_swift.html");
     if !document_path.exists() {
-        println!(
-            "Skipping html_complex_layout: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping html_complex_layout: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -32,10 +29,7 @@ fn test_html_simple_table() {
 
     let document_path = resolve_document("web/simple_table.html");
     if !document_path.exists() {
-        println!(
-            "Skipping html_simple_table: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping html_simple_table: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -49,3 +43,4 @@ fn test_html_simple_table() {
     assertions::assert_min_content_length(&result, 20);
     assertions::assert_content_contains_all(&result, &["|"]);
 }
+
