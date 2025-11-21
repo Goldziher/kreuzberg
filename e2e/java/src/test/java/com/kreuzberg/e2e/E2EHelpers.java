@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kreuzberg.ExtractionResult;
 import dev.kreuzberg.Kreuzberg;
-import dev.kreuzberg.KreuzbergException;
 import dev.kreuzberg.MissingDependencyException;
 import dev.kreuzberg.Table;
 import dev.kreuzberg.config.ExtractionConfig;
@@ -35,15 +34,13 @@ public final class E2EHelpers {
         return TEST_DOCUMENTS.resolve(relativePath);
     }
 
-    public static ExtractionConfig buildConfig(JsonNode configNode) throws KreuzbergException {
+    public static ExtractionConfig buildConfig(JsonNode configNode) throws Exception {
         if (configNode == null || configNode.isNull() || !configNode.isObject()) {
             return null;
         }
         try {
-            String configJson = MAPPER.writeValueAsString(configNode);
-            return ExtractionConfig.fromJson(configJson);
-        } catch (KreuzbergException e) {
-            throw e;
+            String json = MAPPER.writeValueAsString(configNode);
+            return ExtractionConfig.fromJson(json);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse config", e);
         }
@@ -69,7 +66,15 @@ public final class E2EHelpers {
 
         String reason;
         if (missingDependency) {
-            reason = "missing dependency";
+            if (error instanceof MissingDependencyException) {
+                // Extract dependency from exception message if available
+                String msg = error.getMessage();
+                reason = msg != null && !msg.isEmpty()
+                        ? "missing dependency: " + msg
+                        : "missing dependency";
+            } else {
+                reason = "missing dependency";
+            }
         } else if (unsupportedFormat) {
             reason = "unsupported format";
         } else {
