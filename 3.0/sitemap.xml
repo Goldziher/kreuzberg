@@ -85,6 +85,10 @@
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/3.0/reference/api-java/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/3.0/reference/api-python/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
@@ -261,6 +265,10 @@
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/clear_plugins/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/client_extract_multiple_files/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
@@ -365,6 +373,10 @@
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/list_plugins/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/mcp_custom_client/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
@@ -374,6 +386,10 @@
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/metadata/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/min_length_validator/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
@@ -405,6 +421,26 @@
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/pdf_metadata_extractor/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/pdf_only_processor/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/plugin_extractor/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/plugin_logging/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/plugin_testing/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/plugin_validator/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
@@ -418,6 +454,14 @@
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/quality_processing_example/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/quality_score_validator/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/stateful_plugin/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
@@ -441,7 +485,15 @@
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/unregister_plugins/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/3.0/snippets/go/vector_database_integration/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/go/word_count_processor/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
@@ -981,6 +1033,10 @@
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/clear_plugins/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/client_extract_multiple_files/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
@@ -990,6 +1046,10 @@
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/client_extract_with_config/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/cloud_ocr_backend/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
@@ -1081,6 +1141,10 @@
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/list_plugins/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/mcp_custom_client/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
@@ -1090,6 +1154,10 @@
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/metadata/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/min_length_validator/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
@@ -1121,6 +1189,22 @@
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/pdf_metadata_extractor/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/plugin_extractor/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/plugin_logging/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/plugin_testing/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/plugin_validator/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
@@ -1134,6 +1218,14 @@
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/quality_processing_example/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/quality_score_validator/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/stateful_plugin/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
@@ -1157,7 +1249,15 @@
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/unregister_plugins/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/3.0/snippets/ruby/vector_database_integration/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/ruby/word_count_processor/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
@@ -1570,6 +1670,18 @@
     </url>
     <url>
          <loc>https://kreuzberg.dev/3.0/snippets/typescript/pdf_config/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/typescript/plugin_extractor/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/typescript/plugin_logging/</loc>
+         <lastmod>2025-11-21</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/3.0/snippets/typescript/plugin_testing/</loc>
          <lastmod>2025-11-21</lastmod>
     </url>
     <url>
