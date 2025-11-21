@@ -5,11 +5,10 @@
 use std::ffi::{CStr, CString};
 use std::fs;
 use std::os::raw::c_char;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 // External FFI functions
-extern "C" {
+unsafe extern "C" {
     fn kreuzberg_load_extraction_config_from_file(file_path: *const c_char) -> *mut c_char;
     fn kreuzberg_free_string(s: *mut c_char);
     fn kreuzberg_last_error() -> *const c_char;
@@ -20,14 +19,14 @@ unsafe fn c_str_to_string(ptr: *const c_char) -> Option<String> {
     if ptr.is_null() {
         None
     } else {
-        Some(CStr::from_ptr(ptr).to_string_lossy().into_owned())
+        unsafe { Some(CStr::from_ptr(ptr).to_string_lossy().into_owned()) }
     }
 }
 
 /// Helper to get last error message
 unsafe fn get_last_error() -> Option<String> {
-    let error_ptr = kreuzberg_last_error();
-    c_str_to_string(error_ptr)
+    let error_ptr = unsafe { kreuzberg_last_error() };
+    unsafe { c_str_to_string(error_ptr) }
 }
 
 /// Test successful config loading from TOML file.

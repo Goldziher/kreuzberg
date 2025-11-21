@@ -7,7 +7,7 @@ use std::os::raw::c_char;
 use std::ptr;
 
 // External FFI functions for validators
-extern "C" {
+unsafe extern "C" {
     fn kreuzberg_register_validator(name: *const c_char, callback: ValidatorCallback, priority: i32) -> bool;
     fn kreuzberg_unregister_validator(name: *const c_char) -> bool;
     fn kreuzberg_list_validators() -> *mut c_char;
@@ -29,14 +29,14 @@ unsafe fn c_str_to_string(ptr: *const c_char) -> Option<String> {
     if ptr.is_null() {
         None
     } else {
-        Some(CStr::from_ptr(ptr).to_string_lossy().into_owned())
+        unsafe { Some(CStr::from_ptr(ptr).to_string_lossy().into_owned()) }
     }
 }
 
 /// Helper to get last error message
 unsafe fn get_last_error() -> Option<String> {
-    let error_ptr = kreuzberg_last_error();
-    c_str_to_string(error_ptr)
+    let error_ptr = unsafe { kreuzberg_last_error() };
+    unsafe { c_str_to_string(error_ptr) }
 }
 
 /// Mock validator callback that always passes

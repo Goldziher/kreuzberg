@@ -25,7 +25,9 @@ if [[ -z "$package_spec" && -n "$artifact_tar" ]]; then
   if [[ -d "$tarball" ]]; then
     echo "Artifact is a directory: $tarball"
     echo "Contents:"
-    find "$tarball" -maxdepth 3 -type f -printf " - %p\n" || true
+    if command -v find >/dev/null 2>&1; then
+      find "$tarball" -maxdepth 3 -type f 2>/dev/null | sed 's/^/ - /' || ls -la "$tarball"
+    fi
     stage_dir="$tmp/node-artifact"
     mkdir -p "$stage_dir"
     # Pack the directory into a tarball similar to html-to-markdown flow
@@ -33,13 +35,13 @@ if [[ -z "$package_spec" && -n "$artifact_tar" ]]; then
       echo "Packing package.json-based artifact into tarball"
       (cd "$tarball" && pnpm install --frozen-lockfile=false && pnpm pack --pack-destination "$stage_dir") >/dev/null
     fi
-    candidate=$(find "$tarball" "$stage_dir" -maxdepth 3 \( -name "*.tgz" -o -name "*.tar.gz" \) -type f | head -n 1 || true)
+    candidate=$(find "$tarball" "$stage_dir" -maxdepth 3 \( -name "*.tgz" -o -name "*.tar.gz" \) -type f 2>/dev/null | head -n 1 || true)
     if [[ -n "$candidate" ]]; then
       echo "Found tarball candidate: $candidate"
       tarball="$candidate"
     else
       echo "No tarball found; copying directory contents to stage for discovery"
-      cp -R "$tarball"/. "$stage_dir"/ || true
+      cp -r "$tarball"/* "$stage_dir"/ 2>/dev/null || cp -R "$tarball"/. "$stage_dir"/ || true
       tarball="$stage_dir"
     fi
   fi
@@ -55,13 +57,20 @@ if [[ -z "$package_spec" && -n "$artifact_tar" ]]; then
       tar -xzf "$tarball" -C "$stage_dir"
       ;;
     *)
-      echo "Copying artifact to $stage_dir"
-      cp "$tarball" "$stage_dir"/
+      if [[ -d "$tarball" ]]; then
+        echo "Copying directory contents to $stage_dir"
+        cp -r "$tarball"/* "$stage_dir"/ 2>/dev/null || cp -R "$tarball"/. "$stage_dir"/ || true
+      else
+        echo "Copying artifact to $stage_dir"
+        cp "$tarball" "$stage_dir"/
+      fi
       ;;
   esac
 
   echo "Listing extracted artifacts:"
-  find "$stage_dir" -maxdepth 3 -type f -printf " - %p\n" || true
+  if command -v find >/dev/null 2>&1; then
+    find "$stage_dir" -maxdepth 3 -type f 2>/dev/null | sed 's/^/ - /' || ls -laR "$stage_dir"
+  fi
 
   pkg_file=$(find "$stage_dir" -maxdepth 3 -name "*.tgz" -type f | head -n 1 || true)
   if [[ -n "$pkg_file" ]]; then
@@ -77,7 +86,7 @@ if [[ -z "$package_spec" && -n "$artifact_tar" ]]; then
     if [[ -n "$npm_dir" ]]; then
       search_root="$npm_dir"
     fi
-    pkg_dir=$(find "$search_root" -type f -name "package.json" -printf "%h\n" | head -n 1 || true)
+    pkg_dir=$(find "$search_root" -type f -name "package.json" 2>/dev/null | head -n 1 | xargs dirname 2>/dev/null || true)
     if [[ -n "$pkg_dir" ]]; then
       echo "Using package directory: $pkg_dir"
       (cd "$pkg_dir" && pnpm install --frozen-lockfile=false && pnpm pack --pack-destination "$tmp") >/dev/null
