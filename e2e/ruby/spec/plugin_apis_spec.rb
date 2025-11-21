@@ -7,7 +7,7 @@
 # Generated from plugin API fixtures.
 # To regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang ruby
 
-# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength
+# rubocop:disable Metrics/BlockLength
 
 require 'spec_helper'
 require 'tmpdir'
@@ -18,9 +18,8 @@ RSpec.describe 'Configuration' do
     Dir.mktmpdir do |tmpdir|
       config_path = File.join(tmpdir, 'kreuzberg.toml')
       File.write(config_path, <<~TOML)
-[chunking]
-max_chars = 50
-
+        [chunking]
+        max_chars = 50
       TOML
 
       subdir = File.join(tmpdir, 'subdir')
@@ -39,13 +38,12 @@ max_chars = 50
     Dir.mktmpdir do |tmpdir|
       config_path = File.join(tmpdir, 'test_config.toml')
       File.write(config_path, <<~TOML)
-[chunking]
-max_chars = 100
-max_overlap = 20
-
-[language_detection]
-enabled = false
-
+        [chunking]
+        max_chars = 100
+        max_overlap = 20
+        
+        [language_detection]
+        enabled = false
       TOML
 
       config = Kreuzberg::Config::Extraction.from_file(config_path)

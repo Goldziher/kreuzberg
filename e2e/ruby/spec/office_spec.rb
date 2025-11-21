@@ -2,7 +2,7 @@
 
 # Auto-generated tests for office fixtures.
 
-# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength
+# rubocop:disable Metrics/BlockLength
 require_relative 'spec_helper'
 
 RSpec.describe 'office fixtures' do

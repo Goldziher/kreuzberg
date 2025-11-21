@@ -305,7 +305,7 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     writeln!(buffer)?;
     writeln!(
         buffer,
-        "# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength"
+        "# rubocop:disable Metrics/BlockLength"
     )?;
     writeln!(buffer, "require_relative 'spec_helper'\n")?;
     writeln!(
@@ -638,7 +638,7 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], spec_dir: &Utf8Path) -> Resu
     writeln!(buffer)?;
     writeln!(
         buffer,
-        "# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength"
+        "# rubocop:disable Metrics/BlockLength"
     )?;
     writeln!(buffer)?;
     writeln!(buffer, "require 'spec_helper'")?;
@@ -820,7 +820,10 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
         escape_ruby_string_content(temp_file_name)
     )?;
     writeln!(buffer, "      File.write(config_path, <<~TOML)")?;
-    writeln!(buffer, "{}", temp_file_content)?;
+    // Indent heredoc content to match the closing delimiter
+    for line in temp_file_content.lines() {
+        writeln!(buffer, "        {}", line)?;
+    }
     writeln!(buffer, "      TOML")?;
     writeln!(buffer)?;
 
@@ -844,7 +847,6 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
     for prop in &test_spec.assertions.object_properties {
         render_object_property_assertion(buffer, "config", prop, "      ")?;
     }
-
     writeln!(buffer, "    end")?;
 
     Ok(())
@@ -880,7 +882,10 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
         escape_ruby_string_content(temp_file_name)
     )?;
     writeln!(buffer, "      File.write(config_path, <<~TOML)")?;
-    writeln!(buffer, "{}", temp_file_content)?;
+    // Indent heredoc content to match the closing delimiter
+    for line in temp_file_content.lines() {
+        writeln!(buffer, "        {}", line)?;
+    }
     writeln!(buffer, "      TOML")?;
     writeln!(buffer)?;
     writeln!(
@@ -912,7 +917,6 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
     for prop in &test_spec.assertions.object_properties {
         render_object_property_assertion(buffer, "config", prop, "        ")?;
     }
-
     writeln!(buffer, "      end")?;
     writeln!(buffer, "    end")?;
 
@@ -975,7 +979,6 @@ fn render_mime_from_path_test(buffer: &mut String, fixture: &Fixture) -> Result<
             escape_ruby_string_content(&contains.to_lowercase())
         )?;
     }
-
     writeln!(buffer, "    end")?;
 
     Ok(())
