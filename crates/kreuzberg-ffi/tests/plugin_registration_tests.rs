@@ -490,7 +490,7 @@ fn test_unregister_ocr_backend_with_whitespace_in_name_fails_gracefully() {
 fn test_unregister_ocr_backend_with_invalid_utf8_fails_gracefully() {
     unsafe {
         // Create invalid UTF-8 bytes manually
-        let invalid_bytes = vec![b'o', b'c', b'r', b'-', 0xFF, 0xFE, 0x00];
+        let invalid_bytes = [b'o', b'c', b'r', b'-', 0xFF, 0xFE, 0x00];
         let name_ptr = invalid_bytes.as_ptr() as *const i8;
         let result = kreuzberg_unregister_ocr_backend(name_ptr);
 

@@ -34,6 +34,7 @@ unsafe extern "C" fn test_extractor_callback(
     CString::new(result).unwrap().into_raw()
 }
 
+#[allow(dead_code)]
 unsafe extern "C" fn failing_extractor_callback(
     _content: *const u8,
     _content_len: usize,

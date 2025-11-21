@@ -2911,27 +2911,26 @@ mod tests {
 
     #[test]
     fn test_extraction_config_with_new_fields() {
-        let mut config = ExtractionConfig::default();
-
-        config.images = Some(ImageExtractionConfig {
-            extract_images: true,
-            target_dpi: 300,
-            max_image_dimension: 4096,
-            auto_adjust_dpi: true,
-            min_dpi: 72,
-            max_dpi: 600,
-        });
-
-        config.postprocessor = Some(PostProcessorConfig {
-            enabled: true,
-            enabled_processors: None,
-            disabled_processors: None,
-        });
-
-        config.token_reduction = Some(TokenReductionConfig {
-            mode: "light".to_string(),
-            preserve_important_words: true,
-        });
+        let config = ExtractionConfig {
+            images: Some(ImageExtractionConfig {
+                extract_images: true,
+                target_dpi: 300,
+                max_image_dimension: 4096,
+                auto_adjust_dpi: true,
+                min_dpi: 72,
+                max_dpi: 600,
+            }),
+            postprocessor: Some(PostProcessorConfig {
+                enabled: true,
+                enabled_processors: None,
+                disabled_processors: None,
+            }),
+            token_reduction: Some(TokenReductionConfig {
+                mode: "light".to_string(),
+                preserve_important_words: true,
+            }),
+            ..Default::default()
+        };
 
         assert!(config.images.is_some());
         assert!(config.postprocessor.is_some());
