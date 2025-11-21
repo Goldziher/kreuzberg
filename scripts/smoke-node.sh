@@ -23,30 +23,45 @@ if [[ -z "$package_spec" && -n "$artifact_tar" ]]; then
     tarball="${workspace}/${artifact_tar}"
   fi
   if [[ -d "$tarball" ]]; then
-    candidate=$(find "$tarball" -maxdepth 2 \( -name "*.tgz" -o -name "*.tar.gz" \) -type f | head -n 1 || true)
-    if [[ -z "$candidate" ]]; then
-      echo "No Node package tgz found inside $tarball" >&2
-      exit 1
+    echo "Artifact is a directory: $tarball"
+    echo "Contents:"
+    find "$tarball" -maxdepth 3 -type f -printf " - %p\n" || true
+    stage_dir="$tmp/node-artifact"
+    mkdir -p "$stage_dir"
+    # Prefer npm pack artifacts if present
+    candidate=$(find "$tarball" -maxdepth 3 \( -name "*.tgz" -o -name "*.tar.gz" \) -type f | head -n 1 || true)
+    if [[ -n "$candidate" ]]; then
+      echo "Found tarball candidate: $candidate"
+      tarball="$candidate"
+    else
+      echo "No tarball found; copying directory contents to stage for discovery"
+      cp -R "$tarball"/. "$stage_dir"/
+      tarball="$stage_dir"
     fi
-    tarball="$candidate"
   fi
   if [[ ! -e "$tarball" ]]; then
     echo "Provided Node artifact not found: $tarball" >&2
     exit 1
   fi
-  stage_dir="$tmp/node-artifact"
+  stage_dir="${stage_dir:-$tmp/node-artifact}"
   mkdir -p "$stage_dir"
   case "$tarball" in
     *.tar.gz|*.tgz)
+      echo "Extracting tarball $tarball to $stage_dir"
       tar -xzf "$tarball" -C "$stage_dir"
       ;;
     *)
+      echo "Copying artifact to $stage_dir"
       cp "$tarball" "$stage_dir"/
       ;;
   esac
 
+  echo "Listing extracted artifacts:"
+  find "$stage_dir" -maxdepth 3 -type f -printf " - %p\n" || true
+
   pkg_file=$(find "$stage_dir" -maxdepth 3 -name "*.tgz" -type f | head -n 1 || true)
   if [[ -n "$pkg_file" ]]; then
+    echo "Using npm pack tarball: $pkg_file"
     cp "$pkg_file" ./kreuzberg.tgz
     package_spec="file:./kreuzberg.tgz"
   else
@@ -54,13 +69,19 @@ if [[ -z "$package_spec" && -n "$artifact_tar" ]]; then
     if [[ -d "$stage_dir/npm" ]]; then
       search_root="$stage_dir/npm"
     fi
-    pkg_dir=$(find "$search_root" -mindepth 1 -maxdepth 1 -type d | head -n 1 || true)
-    if [[ -z "$pkg_dir" || ! -f "$pkg_dir/package.json" ]]; then
+    npm_dir=$(find "$search_root" -maxdepth 2 -type d -name "npm" | head -n 1 || true)
+    if [[ -n "$npm_dir" ]]; then
+      search_root="$npm_dir"
+    fi
+    pkg_dir=$(find "$search_root" -type f -name "package.json" -printf "%h\n" | head -n 1 || true)
+    if [[ -n "$pkg_dir" ]]; then
+      echo "Using package directory: $pkg_dir"
+      package_spec="file:$(node -e "const path=require('path');console.log(path.resolve(process.argv[1]).replace(/\\\\/g,'/'))" "$pkg_dir")"
+    else
       echo "Unable to determine Node package directory inside $tarball" >&2
       ls -R "$stage_dir" >&2 || true
       exit 1
     fi
-    package_spec="file:$(node -e "const path=require('path');console.log(path.resolve(process.argv[1]).replace(/\\\\/g,'/'))" "$pkg_dir")"
   fi
 fi
 
