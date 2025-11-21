@@ -390,27 +390,49 @@ final class KreuzbergFFI {
         String osName = System.getProperty("os.name").toLowerCase(Locale.ROOT);
         String libName;
         String libExt;
+        String pdfiumLibName;
 
         // Determine library name and extension based on OS
         if (osName.contains("mac") || osName.contains("darwin")) {
             libName = "libkreuzberg_ffi";
+            pdfiumLibName = "libpdfium";
             libExt = ".dylib";
         } else if (osName.contains("win")) {
             libName = "kreuzberg_ffi";
+            pdfiumLibName = "pdfium";
             libExt = ".dll";
         } else {
             libName = "libkreuzberg_ffi";
+            pdfiumLibName = "libpdfium";
             libExt = ".so";
         }
 
         // Try to load from classpath first (for packaged JAR)
         String resourcePath = "/" + libName + libExt;
+        String pdfiumResourcePath = "/" + pdfiumLibName + libExt;
         var resource = KreuzbergFFI.class.getResource(resourcePath);
 
         if (resource != null) {
             // Library found in classpath, extract and load it
             try (java.io.InputStream in = KreuzbergFFI.class.getResourceAsStream(resourcePath)) {
-                java.nio.file.Path tempLib = java.nio.file.Files.createTempFile(libName, libExt);
+                // Create temp directory for both libraries
+                java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("kreuzberg_native");
+                tempDir.toFile().deleteOnExit();
+
+                // Extract pdfium library first (dependency of FFI library)
+                var pdfiumResource = KreuzbergFFI.class.getResource(pdfiumResourcePath);
+                if (pdfiumResource != null) {
+                    var pdfiumStream = KreuzbergFFI.class.getResourceAsStream(pdfiumResourcePath);
+                    try (java.io.InputStream pdfiumIn = pdfiumStream) {
+                        java.nio.file.Path tempPdfium = tempDir.resolve(pdfiumLibName + libExt);
+                        tempPdfium.toFile().deleteOnExit();
+                        var replaceExisting = java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+                        java.nio.file.Files.copy(pdfiumIn, tempPdfium, replaceExisting);
+                    }
+                }
+
+                // Extract and load FFI library
+                java.nio.file.Path tempLib = tempDir.resolve(libName + libExt);
                 tempLib.toFile().deleteOnExit();
                 java.nio.file.Files.copy(in, tempLib, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 System.load(tempLib.toAbsolutePath().toString());

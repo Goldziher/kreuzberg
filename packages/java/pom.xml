@@ -86,7 +86,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Exec Maven Plugin for building native FFI -->
+            <!-- Exec Maven Plugin for building native FFI and fixing dylib references -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -106,6 +106,24 @@
                                 <argument>--release</argument>
                                 <argument>-p</argument>
                                 <argument>kreuzberg-ffi</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>fix-macos-dylib-references</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>sh</executable>
+                            <arguments>
+                                <argument>-c</argument>
+                                <argument>
+                                    if [ -f ${project.build.directory}/classes/libkreuzberg_ffi.dylib ]; then
+                                        install_name_tool -change @rpath/libpdfium.dylib @loader_path/libpdfium.dylib ${project.build.directory}/classes/libkreuzberg_ffi.dylib 2>/dev/null || true
+                                    fi
+                                </argument>
                             </arguments>
                         </configuration>
                     </execution>
