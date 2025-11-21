@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Python environment
         uses: ./.github/actions/setup-python-env
@@ -70,7 +70,7 @@ jobs:
         node-version: ["20", "24"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install Task
         uses: ./.github/actions/setup-task
@@ -130,7 +130,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -162,7 +162,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -226,7 +226,7 @@ jobs:
         python-version: ["3.10", "3.13"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install Task
         uses: ./.github/actions/setup-task
@@ -302,7 +302,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install Task
         uses: ./.github/actions/setup-task
@@ -379,7 +379,7 @@ jobs:
       TRANSFORMERS_CACHE: ~/.cache/huggingface
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Check for v3 changes
         id: check-v3
@@ -418,7 +418,7 @@ jobs:
         ruby-version: ["3.3", "3.4"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install Task
         uses: ./.github/actions/setup-task
@@ -487,7 +487,7 @@ jobs:
         java-version: ['22', '23']
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -531,7 +531,7 @@ jobs:
             target: aarch64-apple-darwin
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
@@ -553,7 +553,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
