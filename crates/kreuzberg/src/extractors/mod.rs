@@ -83,15 +83,32 @@ static EXTRACTORS_INITIALIZED: Lazy<Result<()>> = Lazy::new(register_default_ext
 /// Ensure built-in extractors are registered.
 ///
 /// This function is called automatically on first extraction operation.
-/// It's safe to call multiple times - registration only happens once.
+/// It's safe to call multiple times - registration only happens once,
+/// unless the registry was cleared, in which case extractors are re-registered.
 pub fn ensure_initialized() -> Result<()> {
+    // First, try the lazy initialization
     EXTRACTORS_INITIALIZED
         .as_ref()
         .map(|_| ())
         .map_err(|e| crate::KreuzbergError::Plugin {
             message: format!("Failed to register default extractors: {}", e),
             plugin_name: "built-in-extractors".to_string(),
-        })
+        })?;
+
+    // Check if registry is empty (e.g., after clear_document_extractors)
+    // If so, re-register the default extractors
+    let registry = get_document_extractor_registry();
+    let registry_guard = registry
+        .read()
+        .map_err(|e| crate::KreuzbergError::Other(format!("Document extractor registry lock poisoned: {}", e)))?;
+
+    if registry_guard.list().is_empty() {
+        // Drop read lock before acquiring write lock
+        drop(registry_guard);
+        register_default_extractors()?;
+    }
+
+    Ok(())
 }
 
 /// Register all built-in extractors with the global registry.
