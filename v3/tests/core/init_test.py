@@ -26,8 +26,6 @@ def test_exports() -> None:
         "LanguageDetectionConfig",
         "Metadata",
         "MissingDependencyError",
-        "OCRConfig",
-        "OcrConfig",
         "OCRError",
         "PSMMode",
         "PaddleOCRConfig",
