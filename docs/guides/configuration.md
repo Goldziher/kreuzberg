@@ -30,57 +30,29 @@ Kreuzberg's behavior is controlled through configuration objects. All settings a
 
 Kreuzberg supports four ways to configure extraction:
 
-=== "Programmatic"
+=== "Go"
 
-    --8<-- "snippets/python/config_programmatic.md"
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, extractFile } from '@kreuzberg/sdk';
-
-    const config = await ExtractionConfig.discover();
-    const result = await extractFile('document.pdf', { config });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::ExtractionConfig;
-
-    let config = ExtractionConfig::discover()?;
-    let result = extract_file("document.pdf", None, &config).await?;
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.discover
-    result = Kreuzberg.extract_file('document.pdf', config: config)
-    ```
+    --8<-- "snippets/go/config_discover.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.KreuzbergException;
-    import java.io.IOException;
+    --8<-- "snippets/java/config_discover.md"
 
-    ExtractionConfig config = ExtractionConfig.discover();
-    ExtractionResult result = Kreuzberg.extractFile("document.pdf", null, config);
-    ```
+=== "Python"
 
-=== "Go"
+    --8<-- "snippets/python/config_discover.md"
 
-    --8<-- "snippets/go/config_file.md"
+=== "Ruby"
 
-=== "Go"
+    --8<-- "snippets/ruby/config_discover.md"
 
-    --8<-- "snippets/go/config_programmatic.md"
+=== "Rust"
+
+    --8<-- "snippets/rust/config_discover.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/config_discover.md"
 
 === "TOML File"
 
@@ -161,52 +133,29 @@ Kreuzberg automatically discovers configuration files in the following locations
 2. User config: `~/.config/kreuzberg/config.{toml,yaml,yml,json}`
 3. System config: `/etc/kreuzberg/config.{toml,yaml,yml,json}`
 
-=== "Python"
+=== "Go"
 
-    ```python
-    from kreuzberg import ExtractionConfig
-
-    config = ExtractionConfig.discover()
-    result = extract_file("document.pdf", config=config)
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, extractFile } from '@kreuzberg/sdk';
-
-    const config = await ExtractionConfig.discover();
-    const result = await extractFile('document.pdf', { config });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::ExtractionConfig;
-
-    let config = ExtractionConfig::discover()?;
-    let result = extract_file("document.pdf", None, &config).await?;
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.discover
-    result = Kreuzberg.extract_file('document.pdf', config: config)
-    ```
+    --8<-- "snippets/go/config_discover.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.config.ExtractionConfig;
+    --8<-- "snippets/java/config_discover.md"
 
-    ExtractionConfig config = ExtractionConfig.builder().build();
-    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
-    ```
+=== "Python"
+
+    --8<-- "snippets/python/config_discover.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/config_discover.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/config_discover.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/config_discover.md"
 
 ## ExtractionConfig
 
@@ -228,68 +177,29 @@ The main configuration object controlling extraction behavior.
 
 ### Basic Example
 
-=== "Python"
+=== "Go"
 
-    ```python
-    from kreuzberg import extract_file, ExtractionConfig
-
-    config = ExtractionConfig(
-        use_cache=True,
-        enable_quality_processing=True
-    )
-    result = extract_file("document.pdf", config=config)
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { extractFile, ExtractionConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      useCache: true,
-      enableQualityProcessing: true
-    });
-    const result = await extractFile('document.pdf', { config });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{extract_file, ExtractionConfig};
-
-    let config = ExtractionConfig {
-        use_cache: true,
-        enable_quality_processing: true,
-        ..Default::default()
-    };
-    let result = extract_file("document.pdf", None, &config).await?;
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      use_cache: true,
-      enable_quality_processing: true
-    )
-    result = Kreuzberg.extract_file('document.pdf', config: config)
-    ```
+    --8<-- "snippets/go/config_basic.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.config.ExtractionConfig;
+    --8<-- "snippets/java/config_basic.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .useCache(true)
-        .enableQualityProcessing(true)
-        .build();
-    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
-    ```
+=== "Python"
+
+    --8<-- "snippets/python/config_basic.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/config_basic.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/config_basic.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/config_basic.md"
 
 ## OcrConfig
 
@@ -303,79 +213,29 @@ Configuration for OCR processing. Set to enable OCR on images and scanned PDFs.
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    ```python
-    from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            backend="tesseract",
-            language="eng+fra",
-            tesseract_config=TesseractConfig(psm=3)
-        )
-    )
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, OcrConfig, TesseractConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      ocr: new OcrConfig({
-        backend: 'tesseract',
-        language: 'eng+fra',
-        tesseractConfig: new TesseractConfig({ psm: 3 })
-      })
-    });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig};
-
-    let config = ExtractionConfig {
-        ocr: Some(OcrConfig {
-            backend: "tesseract".to_string(),
-            language: "eng+fra".to_string(),
-            tesseract_config: Some(TesseractConfig {
-                psm: 3,
-                ..Default::default()
-            }),
-        }),
-        ..Default::default()
-    };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      ocr: Kreuzberg::OcrConfig.new(
-        backend: 'tesseract',
-        language: 'eng+fra',
-        tesseract_config: Kreuzberg::TesseractConfig.new(psm: 3)
-      )
-    )
-    ```
+    --8<-- "snippets/go/config_ocr.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.OcrConfig;
+    --8<-- "snippets/java/config_ocr.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .ocr(OcrConfig.builder()
-            .backend("tesseract")
-            .language("eng+fra")
-            .build())
-        .build();
-    ```
+=== "Python"
+
+    --8<-- "snippets/python/config_ocr.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/config_ocr.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/config_ocr.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/config_ocr.md"
 
 ## TesseractConfig
 
@@ -431,97 +291,29 @@ Tesseract OCR engine configuration.
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    ```python
-    from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig
-
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            language="eng+fra+deu",
-            tesseract_config=TesseractConfig(
-                psm=6,
-                oem=1,
-                min_confidence=0.8,
-                tessedit_char_whitelist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?",
-                enable_table_detection=True
-            )
-        )
-    )
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, OcrConfig, TesseractConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      ocr: new OcrConfig({
-        language: 'eng+fra+deu',
-        tesseractConfig: new TesseractConfig({
-          psm: 6,
-          oem: 1,
-          minConfidence: 0.8,
-          tesseditCharWhitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?',
-          enableTableDetection: true
-        })
-      })
-    });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig};
-
-    let config = ExtractionConfig {
-        ocr: Some(OcrConfig {
-            language: "eng+fra+deu".to_string(),
-            tesseract_config: Some(TesseractConfig {
-                psm: 6,
-                oem: 1,
-                min_confidence: 0.8,
-                tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?".to_string(),
-                enable_table_detection: true,
-                ..Default::default()
-            }),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      ocr: Kreuzberg::OcrConfig.new(
-        language: 'eng+fra+deu',
-        tesseract_config: Kreuzberg::TesseractConfig.new(
-          psm: 6,
-          oem: 1,
-          min_confidence: 0.8,
-          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?',
-          enable_table_detection: true
-        )
-      )
-    )
-    ```
+    --8<-- "snippets/go/tesseract_config.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.OcrConfig;
+    --8<-- "snippets/java/tesseract_config.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .ocr(OcrConfig.builder()
-            .language("eng+fra+deu")
-            .build())
-        .build();
-    ```
+=== "Python"
+
+    --8<-- "snippets/python/tesseract_config.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/tesseract_config.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/tesseract_config.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/tesseract_config.md"
 
 ## ImagePreprocessingConfig
 
@@ -539,29 +331,29 @@ Image preprocessing configuration for OCR.
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    --8<-- "snippets/python/image_preprocessing.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/image_preprocessing.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/image_preprocessing.md"
-
-=== "Ruby"
-
-    --8<-- "snippets/ruby/image_preprocessing.md"
+    --8<-- "snippets/go/image_preprocessing.md"
 
 === "Java"
 
     --8<-- "snippets/java/image_preprocessing.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/image_preprocessing.md"
+    --8<-- "snippets/python/image_preprocessing.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/image_preprocessing.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/image_preprocessing.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/image_preprocessing.md"
 
 ## PdfConfig
 
@@ -575,29 +367,29 @@ PDF-specific extraction configuration.
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    --8<-- "snippets/python/pdf_config.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/pdf_config.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/pdf_config.md"
-
-=== "Ruby"
-
-    --8<-- "snippets/ruby/pdf_config.md"
+    --8<-- "snippets/go/pdf_config.md"
 
 === "Java"
 
     --8<-- "snippets/java/pdf_config.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/pdf_config.md"
+    --8<-- "snippets/python/pdf_config.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/pdf_config.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/pdf_config.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/pdf_config.md"
 
 ## ImageExtractionConfig
 
@@ -614,83 +406,29 @@ Configuration for extracting images from documents.
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    ```python
-    from kreuzberg import ExtractionConfig, ImageExtractionConfig
-
-    config = ExtractionConfig(
-        images=ImageExtractionConfig(
-            extract_images=True,
-            target_dpi=200,
-            max_image_dimension=2048,
-            auto_adjust_dpi=True
-        )
-    )
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, ImageExtractionConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      images: new ImageExtractionConfig({
-        extractImages: true,
-        targetDpi: 200,
-        maxImageDimension: 2048,
-        autoAdjustDpi: true
-      })
-    });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{ExtractionConfig, ImageExtractionConfig};
-
-    let config = ExtractionConfig {
-        images: Some(ImageExtractionConfig {
-            extract_images: true,
-            target_dpi: 200,
-            max_image_dimension: 2048,
-            auto_adjust_dpi: true,
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      images: Kreuzberg::ImageExtractionConfig.new(
-        extract_images: true,
-        target_dpi: 200,
-        max_image_dimension: 2048,
-        auto_adjust_dpi: true
-      )
-    )
-    ```
+    --8<-- "snippets/go/image_extraction.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.ImageExtractionConfig;
+    --8<-- "snippets/java/image_extraction.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .imageExtraction(ImageExtractionConfig.builder()
-            .extractImages(true)
-            .targetDpi(200)
-            .maxImageDimension(2048)
-            .autoAdjustDpi(true)
-            .build())
-        .build();
-    ```
+=== "Python"
+
+    --8<-- "snippets/python/image_extraction.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/image_extraction.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/image_extraction.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/image_extraction.md"
 
 ## ChunkingConfig
 
@@ -705,73 +443,29 @@ Text chunking configuration for splitting extracted text into chunks.
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    ```python
-    from kreuzberg import ExtractionConfig, ChunkingConfig
-
-    config = ExtractionConfig(
-        chunking=ChunkingConfig(
-            max_chars=500,
-            max_overlap=50
-        )
-    )
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, ChunkingConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      chunking: new ChunkingConfig({
-        maxChars: 500,
-        maxOverlap: 50
-      })
-    });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{ExtractionConfig, ChunkingConfig};
-
-    let config = ExtractionConfig {
-        chunking: Some(ChunkingConfig {
-            max_chars: 500,
-            max_overlap: 50,
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      chunking: Kreuzberg::ChunkingConfig.new(
-        max_chars: 500,
-        max_overlap: 50
-      )
-    )
-    ```
+    --8<-- "snippets/go/chunking.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.ChunkingConfig;
+    --8<-- "snippets/java/chunking.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .chunking(ChunkingConfig.builder()
-            .maxChars(500)
-            .maxOverlap(50)
-            .build())
-        .build();
-    ```
+=== "Python"
+
+    --8<-- "snippets/python/chunking.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/chunking.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/chunking.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/chunking.md"
 
 ## EmbeddingConfig
 
@@ -802,29 +496,29 @@ Create embedding models using these factory methods:
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    --8<-- "snippets/python/embedding_config.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/embedding_config.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/embedding_config.md"
-
-=== "Ruby"
-
-    --8<-- "snippets/ruby/embedding_config.md"
+    --8<-- "snippets/go/embedding_config.md"
 
 === "Java"
 
     --8<-- "snippets/java/embedding_config.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/embedding_config.md"
+    --8<-- "snippets/python/embedding_config.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/embedding_config.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/embedding_config.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/embedding_config.md"
 
 ## TokenReductionConfig
 
@@ -837,29 +531,29 @@ Configuration for reducing token count in extracted text.
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    --8<-- "snippets/python/token_reduction.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/token_reduction.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/token_reduction.md"
-
-=== "Ruby"
-
-    --8<-- "snippets/ruby/token_reduction.md"
+    --8<-- "snippets/go/token_reduction.md"
 
 === "Java"
 
     --8<-- "snippets/java/token_reduction.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/token_reduction.md"
+    --8<-- "snippets/python/token_reduction.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/token_reduction.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/token_reduction.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/token_reduction.md"
 
 ## LanguageDetectionConfig
 
@@ -873,29 +567,29 @@ Configuration for automatic language detection.
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    --8<-- "snippets/python/language_detection.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/language_detection.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/language_detection.md"
-
-=== "Ruby"
-
-    --8<-- "snippets/ruby/language_detection.md"
+    --8<-- "snippets/go/language_detection.md"
 
 === "Java"
 
     --8<-- "snippets/java/language_detection.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/language_detection.md"
+    --8<-- "snippets/python/language_detection.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/language_detection.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/language_detection.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/language_detection.md"
 
 ## PostProcessorConfig
 
@@ -909,158 +603,53 @@ Configuration for post-processing pipeline.
 
 ### Example
 
-=== "Python"
+=== "Go"
 
-    ```python
-    from kreuzberg import ExtractionConfig, PostProcessorConfig
-
-    config = ExtractionConfig(
-        postprocessor=PostProcessorConfig(
-            enabled=True,
-            enabled_processors=["deduplication", "whitespace_normalization"],
-            disabled_processors=["mojibake_fix"]
-        )
-    )
-    ```
-
-=== "TypeScript"
-
-    ```typescript
-    import { ExtractionConfig, PostProcessorConfig } from '@kreuzberg/sdk';
-
-    const config = new ExtractionConfig({
-      postprocessor: new PostProcessorConfig({
-        enabled: true,
-        enabledProcessors: ['deduplication', 'whitespace_normalization'],
-        disabledProcessors: ['mojibake_fix']
-      })
-    });
-    ```
-
-=== "Rust"
-
-    ```rust
-    use kreuzberg::{ExtractionConfig, PostProcessorConfig};
-
-    let config = ExtractionConfig {
-        postprocessor: Some(PostProcessorConfig {
-            enabled: true,
-            enabled_processors: Some(vec![
-                "deduplication".to_string(),
-                "whitespace_normalization".to_string()
-            ]),
-            disabled_processors: Some(vec!["mojibake_fix".to_string()]),
-        }),
-        ..Default::default()
-    };
-    ```
-
-=== "Ruby"
-
-    ```ruby
-    require 'kreuzberg'
-
-    config = Kreuzberg::ExtractionConfig.new(
-      postprocessor: Kreuzberg::PostProcessorConfig.new(
-        enabled: true,
-        enabled_processors: ['deduplication', 'whitespace_normalization'],
-        disabled_processors: ['mojibake_fix']
-      )
-    )
-    ```
+    --8<-- "snippets/go/postprocessor_config.md"
 
 === "Java"
 
-    ```java
-    import dev.kreuzberg.config.ExtractionConfig;
-    import dev.kreuzberg.config.PostProcessorConfig;
-    import java.util.Arrays;
+    --8<-- "snippets/java/postprocessor_config.md"
 
-    ExtractionConfig config = ExtractionConfig.builder()
-        .postprocessor(PostProcessorConfig.builder()
-            .enabled(true)
-            .enabledProcessors(Arrays.asList("deduplication", "whitespace_normalization"))
-            .disabledProcessors(Arrays.asList("mojibake_fix"))
-            .build())
-        .build();
-    ```
+=== "Python"
+
+    --8<-- "snippets/python/postprocessor_config.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/postprocessor_config.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/postprocessor_config.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/postprocessor_config.md"
 
 ## Complete Example
 
 Here's a complete example showing all configuration options together:
 
+=== "Go"
+
+    --8<-- "snippets/go/complete_example.md"
+
+=== "Java"
+
+    --8<-- "snippets/java/complete_example.md"
+
 === "Python"
 
-    ```python
-    from kreuzberg import (
-        extract_file,
-        ExtractionConfig,
-        OcrConfig,
-        TesseractConfig,
-        ImagePreprocessingConfig,
-        PdfConfig,
-        ImageExtractionConfig,
-        ChunkingConfig,
-        EmbeddingConfig,
-        EmbeddingModelType,
-        TokenReductionConfig,
-        LanguageDetectionConfig,
-        PostProcessorConfig,
-    )
+    --8<-- "snippets/python/complete_example.md"
 
-    config = ExtractionConfig(
-        use_cache=True,
-        enable_quality_processing=True,
-        force_ocr=False,
-        ocr=OcrConfig(
-            backend="tesseract",
-            language="eng+fra",
-            tesseract_config=TesseractConfig(
-                psm=3,
-                oem=3,
-                min_confidence=0.8,
-                preprocessing=ImagePreprocessingConfig(
-                    target_dpi=300,
-                    denoise=True,
-                    deskew=True,
-                    contrast_enhance=True,
-                ),
-                enable_table_detection=True,
-            ),
-        ),
-        pdf_options=PdfConfig(
-            extract_images=True,
-            extract_metadata=True,
-        ),
-        images=ImageExtractionConfig(
-            extract_images=True,
-            target_dpi=150,
-            max_image_dimension=4096,
-        ),
-        chunking=ChunkingConfig(
-            max_chars=1000,
-            max_overlap=200,
-            embedding=EmbeddingConfig(
-                model=EmbeddingModelType.preset("all-MiniLM-L6-v2"),
-                batch_size=32,
-            ),
-        ),
-        token_reduction=TokenReductionConfig(
-            mode="moderate",
-            preserve_important_words=True,
-        ),
-        language_detection=LanguageDetectionConfig(
-            enabled=True,
-            min_confidence=0.8,
-            detect_multiple=False,
-        ),
-        postprocessor=PostProcessorConfig(
-            enabled=True,
-        ),
-    )
+=== "Ruby"
 
-    result = extract_file("document.pdf", config=config)
-    ```
+    --8<-- "snippets/ruby/complete_example.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/complete_example.md"
 
 === "TOML"
 
@@ -1115,52 +704,6 @@ Here's a complete example showing all configuration options together:
     enabled = true
     ```
 
-=== "Java"
+=== "TypeScript"
 
-    ```java
-    import dev.kreuzberg.Kreuzberg;
-    import dev.kreuzberg.ExtractionResult;
-    import dev.kreuzberg.config.*;
-
-    ExtractionConfig config = ExtractionConfig.builder()
-        .useCache(true)
-        .enableQualityProcessing(true)
-        .forceOcr(false)
-        .ocr(OcrConfig.builder()
-            .backend("tesseract")
-            .language("eng+fra")
-            .build())
-        .pdfOptions(PdfConfig.builder()
-            .extractImages(true)
-            .extractMetadata(true)
-            .build())
-        .imageExtraction(ImageExtractionConfig.builder()
-            .extractImages(true)
-            .targetDpi(150)
-            .maxImageDimension(4096)
-            .build())
-        .imagePreprocessing(ImagePreprocessingConfig.builder()
-            .targetDpi(300)
-            .denoise(true)
-            .deskew(true)
-            .contrastEnhance(true)
-            .build())
-        .chunking(ChunkingConfig.builder()
-            .maxChars(1000)
-            .maxOverlap(200)
-            .build())
-        .tokenReduction(TokenReductionConfig.builder()
-            .mode("moderate")
-            .preserveImportantWords(true)
-            .build())
-        .languageDetection(LanguageDetectionConfig.builder()
-            .enabled(true)
-            .minConfidence(0.8)
-            .build())
-        .postprocessor(PostProcessorConfig.builder()
-            .enabled(true)
-            .build())
-        .build();
-
-    ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
-    ```
+    --8<-- "snippets/typescript/complete_example.md"

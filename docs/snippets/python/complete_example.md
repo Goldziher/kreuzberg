@@ -1,0 +1,70 @@
+```python
+from kreuzberg import (
+    extract_file,
+    ExtractionConfig,
+    OcrConfig,
+    TesseractConfig,
+    ImagePreprocessingConfig,
+    PdfConfig,
+    ImageExtractionConfig,
+    ChunkingConfig,
+    EmbeddingConfig,
+    EmbeddingModelType,
+    TokenReductionConfig,
+    LanguageDetectionConfig,
+    PostProcessorConfig,
+)
+
+config = ExtractionConfig(
+    use_cache=True,
+    enable_quality_processing=True,
+    force_ocr=False,
+    ocr=OcrConfig(
+        backend="tesseract",
+        language="eng+fra",
+        tesseract_config=TesseractConfig(
+            psm=3,
+            oem=3,
+            min_confidence=0.8,
+            preprocessing=ImagePreprocessingConfig(
+                target_dpi=300,
+                denoise=True,
+                deskew=True,
+                contrast_enhance=True,
+            ),
+            enable_table_detection=True,
+        ),
+    ),
+    pdf_options=PdfConfig(
+        extract_images=True,
+        extract_metadata=True,
+    ),
+    images=ImageExtractionConfig(
+        extract_images=True,
+        target_dpi=150,
+        max_image_dimension=4096,
+    ),
+    chunking=ChunkingConfig(
+        max_chars=1000,
+        max_overlap=200,
+        embedding=EmbeddingConfig(
+            model=EmbeddingModelType.preset("all-MiniLM-L6-v2"),
+            batch_size=32,
+        ),
+    ),
+    token_reduction=TokenReductionConfig(
+        mode="moderate",
+        preserve_important_words=True,
+    ),
+    language_detection=LanguageDetectionConfig(
+        enabled=True,
+        min_confidence=0.8,
+        detect_multiple=False,
+    ),
+    postprocessor=PostProcessorConfig(
+        enabled=True,
+    ),
+)
+
+result = extract_file("document.pdf", config=config)
+```

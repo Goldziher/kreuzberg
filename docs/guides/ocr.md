@@ -162,124 +162,138 @@ pip install "kreuzberg[paddleocr]"
 
 ### Basic Configuration
 
-=== "Python"
+=== "Go"
 
-    --8<-- "snippets/python/ocr_extraction.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/ocr_extraction.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/ocr_extraction.md"
-
-=== "Ruby"
-
-    --8<-- "snippets/ruby/ocr_extraction.md"
+    --8<-- "snippets/go/ocr_extraction.md"
 
 === "Java"
 
     --8<-- "snippets/java/ocr_extraction.md"
 
-=== "Go"
-
-    --8<-- "snippets/go/ocr_extraction.md"
-
-### Multiple Languages
-
 === "Python"
 
-    --8<-- "snippets/python/ocr_multi_language.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/ocr_multi_language.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/ocr_multi_language.md"
+    --8<-- "snippets/python/ocr_extraction.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/ocr_multi_language.md"
+    --8<-- "snippets/ruby/ocr_extraction.md"
 
-=== "Java"
+=== "Rust"
 
-    --8<-- "snippets/java/ocr_multi_language.md"
+    --8<-- "snippets/rust/ocr_extraction.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/ocr_extraction.md"
+
+### Multiple Languages
 
 === "Go"
 
     --8<-- "snippets/go/ocr_multi_language.md"
 
-### Force OCR on All Pages
+=== "Java"
 
-Process PDFs with OCR even when they have a text layer:
+    --8<-- "snippets/java/ocr_multi_language.md"
 
 === "Python"
 
-    --8<-- "snippets/python/ocr_force_all_pages.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/ocr_force_all_pages.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/ocr_force_all_pages.md"
+    --8<-- "snippets/python/ocr_multi_language.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/ocr_force_all_pages.md"
+    --8<-- "snippets/ruby/ocr_multi_language.md"
 
-=== "Java"
+=== "Rust"
 
-    --8<-- "snippets/java/ocr_force_all_pages.md"
+    --8<-- "snippets/rust/ocr_multi_language.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/ocr_multi_language.md"
+
+### Force OCR on All Pages
+
+Process PDFs with OCR even when they have a text layer:
 
 === "Go"
 
     --8<-- "snippets/go/ocr_force_all_pages.md"
 
-### Using EasyOCR (Python Only)
+=== "Java"
+
+    --8<-- "snippets/java/ocr_force_all_pages.md"
 
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
+    --8<-- "snippets/python/ocr_force_all_pages.md"
 
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            backend="easyocr",
-            language="en",
-            use_gpu=True
-        )
-    )
+=== "Ruby"
 
-    result = extract_file_sync("scanned.pdf", config=config)
-    print(result.content)
-    ```
+    --8<-- "snippets/ruby/ocr_force_all_pages.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/ocr_force_all_pages.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/ocr_force_all_pages.md"
+
+### Using EasyOCR (Python Only)
+
+=== "Go"
+
+    --8<-- "snippets/go/ocr_easyocr.md"
+
+=== "Java"
+
+    --8<-- "snippets/java/ocr_easyocr.md"
+
+=== "Python"
+
+    --8<-- "snippets/python/ocr_easyocr.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/ocr_easyocr.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/ocr_easyocr.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/ocr_easyocr.md"
 
 !!! tip "GPU Acceleration"
     EasyOCR and PaddleOCR support GPU acceleration via PyTorch/PaddlePaddle. Set `use_gpu=True` to enable.
 
 ### Using PaddleOCR (Python Only)
 
+=== "Go"
+
+    --8<-- "snippets/go/ocr_paddleocr.md"
+
+=== "Java"
+
+    --8<-- "snippets/java/ocr_paddleocr.md"
+
 === "Python"
 
-    ```python
-    from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
+    --8<-- "snippets/python/ocr_paddleocr.md"
 
-    config = ExtractionConfig(
-        ocr=OcrConfig(
-            backend="paddleocr",
-            language="en",
-            use_gpu=True
-        )
-    )
+=== "Ruby"
 
-    result = extract_file_sync("scanned.pdf", config=config)
-    print(result.content)
-    ```
+    --8<-- "snippets/ruby/ocr_paddleocr.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/ocr_paddleocr.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/ocr_paddleocr.md"
 
 ## Advanced OCR Options
 
@@ -287,29 +301,29 @@ Process PDFs with OCR even when they have a text layer:
 
 Control image resolution for OCR processing:
 
-=== "Python"
+=== "Go"
 
-    --8<-- "snippets/python/ocr_dpi_config.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/ocr_dpi_config.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/ocr_dpi_config.md"
-
-=== "Ruby"
-
-    --8<-- "snippets/ruby/ocr_dpi_config.md"
+    --8<-- "snippets/go/ocr_dpi_config.md"
 
 === "Java"
 
     --8<-- "snippets/java/ocr_dpi_config.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/ocr_dpi_config.md"
+    --8<-- "snippets/python/ocr_dpi_config.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/ocr_dpi_config.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/ocr_dpi_config.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/ocr_dpi_config.md"
 
 !!! tip "DPI Recommendations"
     - **150 DPI**: Fast processing, lower accuracy
