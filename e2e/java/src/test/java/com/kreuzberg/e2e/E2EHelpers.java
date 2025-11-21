@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kreuzberg.ExtractionResult;
 import dev.kreuzberg.Kreuzberg;
 import dev.kreuzberg.KreuzbergException;
+import dev.kreuzberg.MissingDependencyException;
 import dev.kreuzberg.Table;
+import dev.kreuzberg.config.ExtractionConfig;
 import org.junit.jupiter.api.Assumptions;
 
 import java.nio.file.Files;
@@ -33,14 +35,15 @@ public final class E2EHelpers {
         return TEST_DOCUMENTS.resolve(relativePath);
     }
 
-    public static Map<String, Object> buildConfig(JsonNode configNode) {
+    public static ExtractionConfig buildConfig(JsonNode configNode) throws KreuzbergException {
         if (configNode == null || configNode.isNull() || !configNode.isObject()) {
             return null;
         }
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> result = MAPPER.convertValue(configNode, Map.class);
-            return result;
+            String configJson = MAPPER.writeValueAsString(configNode);
+            return ExtractionConfig.fromJson(configJson);
+        } catch (KreuzbergException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse config", e);
         }
@@ -56,7 +59,7 @@ public final class E2EHelpers {
         String lowered = message.toLowerCase();
         boolean requirementHit = requirements.stream()
                 .anyMatch(req -> lowered.contains(req.toLowerCase()));
-        boolean missingDependency = error instanceof KreuzbergException.MissingDependency
+        boolean missingDependency = error instanceof MissingDependencyException
                 || lowered.contains("missing dependency");
         boolean unsupportedFormat = lowered.contains("unsupported format");
 
@@ -66,15 +69,7 @@ public final class E2EHelpers {
 
         String reason;
         if (missingDependency) {
-            if (error instanceof KreuzbergException.MissingDependency) {
-                KreuzbergException.MissingDependency md = (KreuzbergException.MissingDependency) error;
-                String dep = md.getDependency();
-                reason = dep != null && !dep.isEmpty()
-                        ? "missing dependency " + dep
-                        : "missing dependency";
-            } else {
-                reason = "missing dependency";
-            }
+            reason = "missing dependency";
         } else if (unsupportedFormat) {
             reason = "unsupported format";
         } else {
@@ -113,10 +108,10 @@ public final class E2EHelpers {
             return;
         }
 
-        Map<String, Object> config = buildConfig(configNode);
+        ExtractionConfig config = buildConfig(configNode);
         ExtractionResult result;
         try {
-            result = Kreuzberg.extractFile(documentPath.toString(), config);
+            result = Kreuzberg.extractFile(documentPath, config);
         } catch (Exception e) {
             String skipReason = skipReasonFor(e, fixtureId, requirements, notes);
             if (skipReason != null) {
