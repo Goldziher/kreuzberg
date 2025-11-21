@@ -5,7 +5,7 @@ All notable changes to Kreuzberg will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.0.0-rc.1] - 2025-01-06
+## [4.0.0-rc.1] - Unreleased
 
 ### Major Release - Complete Architecture Rewrite
 
@@ -426,9 +426,13 @@ Kreuzberg v4 was a major undertaking. Thank you to all contributors!
 
 ---
 
-## [3.x.x] - Previous Versions
+## [3.22.0] - 2025-11-21
 
-See v3 branch for previous changelog entries. The v3 architecture was Python-only with a different design philosophy.
+### Fixed
+- Restored public export for `OCRConfig` in v3 compatibility layer to unblock consumers relying on the legacy type.
+
+### Changed
+- Updated v3 dependencies to current versions.
 
 ---
 
@@ -439,4 +443,6 @@ See v3 branch for previous changelog entries. The v3 architecture was Python-onl
 - **Examples**: https://github.com/Goldziher/kreuzberg/tree/v4-dev/examples
 - **Support**: https://github.com/Goldziher/kreuzberg/issues
 
-[4.0.0-rc.1]: https://github.com/Goldziher/kreuzberg/compare/v3.0.0...v4.0.0-rc.1
+[4.0.0-rc.1]: https://github.com/Goldziher/kreuzberg/compare/v4.0.0-rc.0...v4.0.0-rc.1
+[4.0.0-rc.0]: https://github.com/Goldziher/kreuzberg/compare/v3.21.0...v4.0.0-rc.0
+[3.22.0]: https://github.com/Goldziher/kreuzberg/compare/v3.21.0...v3.22.0

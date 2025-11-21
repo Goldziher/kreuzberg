@@ -4,7 +4,7 @@ requires = [ "uv-build" ]
 
 [project]
 name = "kreuzberg"
-version = "3.21.0"
+version = "3.22.0"
 description = "Document intelligence framework for Python - Extract text, metadata, and structured data from diverse file formats (v3 LTS)"
 readme = "README.md"
 keywords = [
