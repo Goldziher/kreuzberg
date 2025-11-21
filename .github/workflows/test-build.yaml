@@ -26,6 +26,24 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "14.0"
 
 jobs:
+  rust-smoke:
+    name: Rust Smoke Test (Early)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-smoke
+
+      - name: Smoke test Rust crate
+        uses: ./.github/actions/smoke-rust
+
   python-wheels:
     name: Build Python wheels (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
@@ -170,6 +188,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "22"
+          cache: 'maven'
 
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
@@ -192,7 +211,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.21"
+          go-version: "1.25"
+          cache: true
 
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
@@ -588,13 +608,48 @@ jobs:
           echo "📦 Built CLI binary for ${{ matrix.target }}:"
           ls -lh kreuzberg-${{ matrix.target }}.* || echo "No archives found"
 
+      - name: Smoke test CLI binary (inline)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🧪 Testing CLI binary for ${{ matrix.target }}"
+
+          # Extract and test the binary we just built
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cli_archive="kreuzberg-${{ matrix.target }}.zip"
+            tmp=$(mktemp -d)
+            unzip -q "$cli_archive" -d "$tmp"
+            cli_bin="$tmp/kreuzberg.exe"
+          else
+            cli_archive="kreuzberg-${{ matrix.target }}.tar.gz"
+            tmp=$(mktemp -d)
+            tar -xzf "$cli_archive" -C "$tmp"
+            cli_bin="$tmp/kreuzberg"
+          fi
+
+          if [ ! -f "$cli_bin" ]; then
+            echo "ERROR: CLI binary extraction failed" >&2
+            exit 1
+          fi
+
+          chmod +x "$cli_bin" || true
+
+          # Test CLI with version command
+          output=$("$cli_bin" --version)
+          if ! echo "$output" | grep -q "kreuzberg"; then
+            echo "ERROR: CLI did not produce expected version output" >&2
+            echo "Output: $output" >&2
+            exit 1
+          fi
+
+          echo "✓ CLI binary smoke test passed for ${{ matrix.target }}"
+
   release-smoke:
     name: Release Smoke Tests (${{ matrix.os }})
     needs:
       - python-wheels
       - node-bindings
       - ruby-gem
-      - cli-binaries
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -687,21 +742,6 @@ jobs:
               ;;
           esac
 
-      - name: Determine CLI artifact name
-        id: cli_artifact
-        run: |
-          case "${{ matrix.os }}" in
-            ubuntu-latest)
-              echo "name=cli-x86_64-unknown-linux-gnu" >> "$GITHUB_OUTPUT"
-              ;;
-            macos-latest)
-              echo "name=cli-aarch64-apple-darwin" >> "$GITHUB_OUTPUT"
-              ;;
-            windows-latest)
-              echo "name=cli-x86_64-pc-windows-msvc" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
       - name: Download Python wheels
         uses: actions/download-artifact@v6
         with:
@@ -731,12 +771,6 @@ jobs:
           name: ${{ steps.ruby_artifact.outputs.name }}
           path: artifacts/ruby
 
-      - name: Download CLI artifact
-        uses: actions/download-artifact@v6
-        with:
-          name: ${{ steps.cli_artifact.outputs.name }}
-          path: artifacts/cli
-
       - name: Smoke test Python wheel
         uses: ./.github/actions/smoke-python
         with:
@@ -753,17 +787,10 @@ jobs:
         with:
           gem-path: artifacts/ruby
 
-      - name: Smoke test CLI binary
-        uses: ./.github/actions/smoke-cli
-        with:
-          cli-artifacts-dir: artifacts/cli
-
-      - name: Smoke test Rust crate
-        uses: ./.github/actions/smoke-rust
-
   summarize:
     name: Build Summary
     needs:
+      - rust-smoke
       - python-wheels
       - python-sdist
       - node-bindings
@@ -786,12 +813,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust Smoke Test | ${{ needs.rust-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Python Wheels | ${{ needs.python-wheels.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Python Sdist | ${{ needs.python-sdist.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Node Bindings | ${{ needs.node-bindings.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Ruby Gem | ${{ needs.ruby-gem.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CLI Binaries | ${{ needs.cli-binaries.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Smoke Tests | ${{ needs.release-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CLI Binaries (with inline smoke test) | ${{ needs.cli-binaries.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cross-Platform Smoke Tests | ${{ needs.release-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📦 Built Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

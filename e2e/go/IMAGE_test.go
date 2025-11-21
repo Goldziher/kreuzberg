@@ -12,3 +12,4 @@ func TestIMAGE_IMAGE_METADATA_ONLY(t *testing.T) {
     assertExpectedMime(t, result, []string{"image/jpeg"})
     assertMaxContentLength(t, result, 100)
 }
+

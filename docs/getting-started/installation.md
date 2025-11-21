@@ -119,8 +119,3 @@ task dev:test   # full test matrix (Rust + Python + Ruby + TypeScript)
 ```
 
 See [Contributing](../contributing.md) for branch naming, coding conventions, and test expectations.
-Homebrew formula (installs the CLI plus shared dependencies):
-
-```bash
-brew install goldziher/tap/kreuzberg
-```

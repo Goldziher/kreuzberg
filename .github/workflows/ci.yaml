@@ -142,11 +142,15 @@ jobs:
         with:
           distribution: temurin
           java-version: "22"
+          cache: 'maven'
 
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: java-e2e
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
 
       - name: Build Java binding
         run: mvn -f packages/java/pom.xml -DskipTests package
@@ -172,12 +176,16 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.21"
+          go-version: "1.25"
+          cache: true
 
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-e2e
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
 
       - name: Build FFI (release)
         run: cargo build -p kreuzberg-ffi --release

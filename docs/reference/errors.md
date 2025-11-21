@@ -74,6 +74,45 @@ except Exception as e:
     print(f"Other error: {e}")
 ```
 
+**Example (Ruby):**
+
+```ruby
+require 'kreuzberg'
+
+begin
+  result = Kreuzberg.extract_file_sync('/nonexistent/file.pdf')
+  puts result.content
+rescue Kreuzberg::Errors::IOError => e
+  # System error - log and report to user
+  puts "File system error: #{e.message}"
+rescue Kreuzberg::Errors::Error => e
+  puts "Extraction error: #{e.message}"
+end
+```
+
+**Example (Go):**
+
+```go
+import (
+	"errors"
+	"fmt"
+	"kreuzberg"
+)
+
+result, err := kreuzberg.ExtractFileSync("/nonexistent/file.pdf", nil)
+if err != nil {
+	var ioErr *kreuzberg.IOError
+	if errors.As(err, &ioErr) {
+		// System error - log and report to user
+		fmt.Printf("File system error: %v\n", err)
+		return
+	}
+	fmt.Printf("Extraction error: %v\n", err)
+	return
+}
+fmt.Println(result.Content)
+```
+
 ---
 
 ### KreuzbergError::Parsing
@@ -125,6 +164,46 @@ try:
 except ParsingError as e:
     print(f"Document is corrupt or invalid: {e}")
     # Try alternative extraction method or notify user
+```
+
+**Example (Ruby):**
+
+```ruby
+require 'kreuzberg'
+
+begin
+  result = Kreuzberg.extract_file_sync('corrupt.pdf')
+  puts result.content
+rescue Kreuzberg::Errors::ParsingError => e
+  puts "Document is corrupt or invalid: #{e.message}"
+  puts "Context: #{e.context}" if e.context
+  # Try alternative extraction method or notify user
+rescue Kreuzberg::Errors::Error => e
+  puts "Extraction error: #{e.message}"
+end
+```
+
+**Example (Go):**
+
+```go
+import (
+	"errors"
+	"fmt"
+	"kreuzberg"
+)
+
+result, err := kreuzberg.ExtractFileSync("corrupt.pdf", nil)
+if err != nil {
+	var parseErr *kreuzberg.ParsingError
+	if errors.As(err, &parseErr) {
+		fmt.Printf("Document is corrupt or invalid: %v\n", err)
+		// Try alternative extraction method or notify user
+		return
+	}
+	fmt.Printf("Extraction error: %v\n", err)
+	return
+}
+fmt.Println(result.Content)
 ```
 
 ---
@@ -182,6 +261,58 @@ except OCRError as e:
     print(f"OCR failed: {e}")
     # Fall back to extraction without OCR
     result = extract_file("scanned.pdf")
+```
+
+**Example (Ruby):**
+
+```ruby
+require 'kreuzberg'
+
+config = Kreuzberg::Config::Extraction.new(
+  ocr: Kreuzberg::Config::OCR.new
+)
+
+begin
+  result = Kreuzberg.extract_file_sync('scanned.pdf', config: config)
+  puts result.content
+rescue Kreuzberg::Errors::OCRError => e
+  puts "OCR failed: #{e.message}"
+  puts "Context: #{e.context}" if e.context
+  # Fall back to extraction without OCR
+  result = Kreuzberg.extract_file_sync('scanned.pdf')
+  puts result.content
+rescue Kreuzberg::Errors::Error => e
+  puts "Extraction error: #{e.message}"
+end
+```
+
+**Example (Go):**
+
+```go
+import (
+	"errors"
+	"fmt"
+	"kreuzberg"
+)
+
+config := &kreuzberg.ExtractionConfig{
+	OCR: &kreuzberg.OcrConfig{},
+}
+
+result, err := kreuzberg.ExtractFileSync("scanned.pdf", config)
+if err != nil {
+	var ocrErr *kreuzberg.OCRError
+	if errors.As(err, &ocrErr) {
+		fmt.Printf("OCR failed: %v\n", err)
+		// Fall back to extraction without OCR
+		result, _ = kreuzberg.ExtractFileSync("scanned.pdf", nil)
+		fmt.Println(result.Content)
+		return
+	}
+	fmt.Printf("Extraction error: %v\n", err)
+	return
+}
+fmt.Println(result.Content)
 ```
 
 ---
@@ -445,6 +576,55 @@ try:
 except MissingDependencyError as e:
     print(f"Missing system dependency: {e}")
     print("Install with: brew install tesseract (macOS)")
+```
+
+**Example (Ruby):**
+
+```ruby
+require 'kreuzberg'
+
+config = Kreuzberg::Config::Extraction.new(
+  ocr: Kreuzberg::Config::OCR.new
+)
+
+begin
+  result = Kreuzberg.extract_file_sync('scanned.pdf', config: config)
+  puts result.content
+rescue Kreuzberg::Errors::MissingDependencyError => e
+  puts "Missing system dependency: #{e.message}"
+  puts "Dependency: #{e.dependency}" if e.dependency
+  puts "Install with: brew install tesseract (macOS)"
+rescue Kreuzberg::Errors::Error => e
+  puts "Extraction error: #{e.message}"
+end
+```
+
+**Example (Go):**
+
+```go
+import (
+	"errors"
+	"fmt"
+	"kreuzberg"
+)
+
+config := &kreuzberg.ExtractionConfig{
+	OCR: &kreuzberg.OcrConfig{},
+}
+
+result, err := kreuzberg.ExtractFileSync("scanned.pdf", config)
+if err != nil {
+	var depErr *kreuzberg.MissingDependencyError
+	if errors.As(err, &depErr) {
+		fmt.Printf("Missing system dependency: %v\n", err)
+		fmt.Printf("Dependency: %s\n", depErr.Dependency)
+		fmt.Println("Install with: brew install tesseract (macOS)")
+		return
+	}
+	fmt.Printf("Extraction error: %v\n", err)
+	return
+}
+fmt.Println(result.Content)
 ```
 
 ---

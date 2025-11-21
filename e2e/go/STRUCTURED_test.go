@@ -24,3 +24,4 @@ func TestSTRUCTURED_STRUCTURED_YAML_SIMPLE(t *testing.T) {
     assertExpectedMime(t, result, []string{"application/x-yaml"})
     assertMinContentLength(t, result, 10)
 }
+

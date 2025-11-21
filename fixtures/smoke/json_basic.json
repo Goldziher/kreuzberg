@@ -1,0 +1,17 @@
+{
+	"id": "smoke_json_basic",
+	"category": "smoke",
+	"tags": ["smoke", "structured", "json"],
+	"description": "Smoke test: JSON file extraction",
+	"document": {
+		"path": "data_formats/simple.json",
+		"media_type": "application/json"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/json",
+		"min_content_length": 5
+	}
+}

@@ -11,17 +11,34 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Cache ONNX Runtime
+      id: cache-onnx
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ runner.temp }}/onnxruntime
+        key: onnx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ort-version }}
+        restore-keys: |
+          onnx-${{ runner.os }}-${{ runner.arch }}-
+
     - name: Prepare ONNX Runtime (Linux)
       if: runner.os == 'Linux'
       shell: bash
       run: |
         set -euo pipefail
         ort_version="${{ inputs.ort-version }}"
-        archive="onnxruntime-linux-x64-${ort_version}.tgz"
-        curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
         extract_dir="$RUNNER_TEMP/onnxruntime"
-        mkdir -p "$extract_dir"
-        tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+
+        # Download only if not cached
+        if [ ! -d "$extract_dir/onnxruntime-linux-x64-${ort_version}" ]; then
+          echo "Cache miss: Downloading ONNX Runtime ${ort_version}"
+          archive="onnxruntime-linux-x64-${ort_version}.tgz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+          mkdir -p "$extract_dir"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+        else
+          echo "Cache hit: Using cached ONNX Runtime ${ort_version}"
+        fi
         ort_root="$extract_dir/onnxruntime-linux-x64-${ort_version}"
         if [ ! -d "$ort_root/lib" ]; then
           echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
@@ -43,11 +60,18 @@ runs:
       run: |
         set -euo pipefail
         ort_version="${{ inputs.ort-version }}"
-        archive="onnxruntime-osx-arm64-${ort_version}.tgz"
-        curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
         extract_dir="$RUNNER_TEMP/onnxruntime"
-        mkdir -p "$extract_dir"
-        tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+
+        # Download only if not cached
+        if [ ! -d "$extract_dir/onnxruntime-osx-arm64-${ort_version}" ]; then
+          echo "Cache miss: Downloading ONNX Runtime ${ort_version}"
+          archive="onnxruntime-osx-arm64-${ort_version}.tgz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+          mkdir -p "$extract_dir"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
+        else
+          echo "Cache hit: Using cached ONNX Runtime ${ort_version}"
+        fi
         ort_root="$extract_dir/onnxruntime-osx-arm64-${ort_version}"
         if [ ! -d "$ort_root/lib" ]; then
           echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
@@ -68,13 +92,21 @@ runs:
       shell: pwsh
       run: |
         $OrtVersion = "${{ inputs.ort-version }}"
-        $Archive = "onnxruntime-win-x64-$OrtVersion.zip"
-        $DownloadPath = Join-Path $env:TEMP $Archive
-        Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v$OrtVersion/$Archive" -OutFile $DownloadPath -UseBasicParsing
         $ExtractRoot = Join-Path $env:TEMP "onnxruntime"
-        New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
-        Expand-Archive -Path $DownloadPath -DestinationPath $ExtractRoot -Force
         $OrtRoot = Join-Path $ExtractRoot "onnxruntime-win-x64-$OrtVersion"
+
+        # Download only if not cached
+        if (-Not (Test-Path $OrtRoot)) {
+          Write-Host "Cache miss: Downloading ONNX Runtime $OrtVersion"
+          $Archive = "onnxruntime-win-x64-$OrtVersion.zip"
+          $DownloadPath = Join-Path $env:TEMP $Archive
+          Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v$OrtVersion/$Archive" -OutFile $DownloadPath -UseBasicParsing
+          New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+          Expand-Archive -Path $DownloadPath -DestinationPath $ExtractRoot -Force
+        } else {
+          Write-Host "Cache hit: Using cached ONNX Runtime $OrtVersion"
+        }
+
         if (!(Test-Path (Join-Path $OrtRoot 'lib'))) {
           Write-Error "ONNX Runtime lib directory missing at $OrtRoot\lib"
           exit 1

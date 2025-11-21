@@ -273,42 +273,92 @@ Kreuzberg automatically detects file formats using:
 
 Example with manual override:
 
-```python
-from kreuzberg import extract_file
+=== "Python"
 
-# Auto-detect from extension
-result = extract_file("document.pdf")
+    ```python
+    from kreuzberg import extract_file
 
-# Manual MIME type override
-result = extract_file("document.dat", mime_type="application/pdf")
-```
+    # Auto-detect from extension
+    result = extract_file("document.pdf")
 
-```typescript
-import { extractFile } from 'kreuzberg';
+    # Manual MIME type override
+    result = extract_file("document.dat", mime_type="application/pdf")
+    ```
 
-// Auto-detect from extension
-const result = await extractFile('document.pdf');
+=== "TypeScript"
 
-// Manual MIME type override
-const result2 = await extractFile('document.dat', { mimeType: 'application/pdf' });
-```
-
-```rust
-use kreuzberg::{extract_file, ExtractionConfig};
-
-#[tokio::main]
-async fn main() -> kreuzberg::Result<()> {
-    let config = ExtractionConfig::default();
+    ```typescript
+    import { extractFile } from 'kreuzberg';
 
     // Auto-detect from extension
-    let result = extract_file("document.pdf", None, &config).await?;
+    const result = await extractFile('document.pdf');
 
     // Manual MIME type override
-    let result = extract_file("document.dat", Some("application/pdf"), &config).await?;
+    const result2 = await extractFile('document.dat', { mimeType: 'application/pdf' });
+    ```
 
-    Ok(())
-}
-```
+=== "Rust"
+
+    ```rust
+    use kreuzberg::{extract_file, ExtractionConfig};
+
+    #[tokio::main]
+    async fn main() -> kreuzberg::Result<()> {
+        let config = ExtractionConfig::default();
+
+        // Auto-detect from extension
+        let result = extract_file("document.pdf", None, &config).await?;
+
+        // Manual MIME type override
+        let result = extract_file("document.dat", Some("application/pdf"), &config).await?;
+
+        Ok(())
+    }
+    ```
+
+=== "Ruby"
+
+    ```ruby
+    require 'kreuzberg'
+
+    # Auto-detect from extension
+    result = Kreuzberg.extract_file_sync('document.pdf')
+
+    # Manual MIME type override
+    config = Kreuzberg::Config::Extraction.new
+    result = Kreuzberg.extract_file_sync('document.dat', mime_type: 'application/pdf', config: config)
+    ```
+
+=== "Java"
+
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.ExtractionResult;
+
+    // Auto-detect from extension
+    ExtractionResult result = Kreuzberg.extractFile("document.pdf");
+
+    // Manual MIME type override using detectMimeType
+    String mimeType = Kreuzberg.detectMimeType(new byte[]{/* PDF header bytes */});
+    ExtractionResult result2 = Kreuzberg.extractFileAsBytes(rawBytes, mimeType, null);
+    ```
+
+=== "Go"
+
+    ```go
+    import "kreuzberg"
+
+    // Auto-detect from extension
+    result, err := kreuzberg.ExtractFileSync("document.pdf", nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Manual MIME type override
+    config := &kreuzberg.ExtractionConfig{}
+    mimeBytes, _ := ioutil.ReadFile("document.dat")
+    result2, err := kreuzberg.ExtractBytesSync(mimeBytes, "application/pdf", config)
+    ```
 
 ## OCR Support
 
@@ -403,81 +453,213 @@ results = batch_extract_file(paths, config=config)
 
 Kreuzberg's plugin system allows adding custom format extractors:
 
-### Python Plugin
+=== "Python"
 
-```python
-from kreuzberg import DocumentExtractor, ExtractionResult, Metadata
+    ```python
+    from kreuzberg import DocumentExtractor, ExtractionResult, Metadata
 
-class CustomExtractor(DocumentExtractor):
-    def name(self) -> str:
-        return "custom-format-extractor"
+    class CustomExtractor(DocumentExtractor):
+        def name(self) -> str:
+            return "custom-format-extractor"
 
-    def supported_mime_types(self) -> list[str]:
-        return ["application/x-custom"]
+        def supported_mime_types(self) -> list[str]:
+            return ["application/x-custom"]
 
-    def extract_bytes(self, content: bytes, mime_type: str, config) -> ExtractionResult:
+        def extract_bytes(self, content: bytes, mime_type: str, config) -> ExtractionResult:
+            # Your extraction logic here
+            text = parse_custom_format(content)
+            return ExtractionResult(
+                content=text,
+                mime_type=mime_type,
+                metadata=Metadata()
+            )
+
+    # Register plugin
+    from kreuzberg import get_document_extractor_registry
+    registry = get_document_extractor_registry()
+    registry.register(CustomExtractor())
+    ```
+
+=== "TypeScript"
+
+    ```typescript
+    import { registerDocumentExtractor, type DocumentExtractorProtocol } from 'kreuzberg';
+
+    class CustomExtractor implements DocumentExtractorProtocol {
+        name(): string {
+            return "custom-format-extractor";
+        }
+
+        supportedMimeTypes(): string[] {
+            return ["application/x-custom"];
+        }
+
+        async extractBytes(content: Uint8Array, mimeType: string, config?: ExtractionConfig): Promise<ExtractionResult> {
+            // Your extraction logic here
+            const text = parseCustomFormat(content);
+            return {
+                content: text,
+                mimeType: mimeType,
+                success: true,
+                metadata: {}
+            };
+        }
+    }
+
+    // Register plugin
+    registerDocumentExtractor(new CustomExtractor());
+    ```
+
+=== "Ruby"
+
+    ```ruby
+    require 'kreuzberg'
+
+    class CustomExtractor
+      def name
+        'custom-format-extractor'
+      end
+
+      def supported_mime_types
+        ['application/x-custom']
+      end
+
+      def extract_bytes(content, mime_type, config)
         # Your extraction logic here
         text = parse_custom_format(content)
-        return ExtractionResult(
-            content=text,
-            mime_type=mime_type,
-            metadata=Metadata()
+        Kreuzberg::Result.new(
+          content: text,
+          mime_type: mime_type,
+          metadata: {}
         )
+      end
+    end
 
-# Register plugin
-from kreuzberg import get_document_extractor_registry
-registry = get_document_extractor_registry()
-registry.register(CustomExtractor())
-```
+    # Register plugin
+    Kreuzberg.register_document_extractor(CustomExtractor.new)
+    ```
 
-### Rust Plugin
+=== "Java"
 
-```rust
-use kreuzberg::plugins::{DocumentExtractor, Plugin};
-use kreuzberg::types::ExtractionResult;
-use async_trait::async_trait;
+    ```java
+    import dev.kreuzberg.Kreuzberg;
+    import dev.kreuzberg.DocumentExtractorProtocol;
+    import dev.kreuzberg.ExtractionResult;
+    import dev.kreuzberg.config.ExtractionConfig;
 
-pub struct CustomExtractor;
+    public class CustomExtractor implements DocumentExtractorProtocol {
+        @Override
+        public String name() {
+            return "custom-format-extractor";
+        }
 
-impl Plugin for CustomExtractor {
-    fn name(&self) -> &str {
-        "custom-format-extractor"
+        @Override
+        public String[] supportedMimeTypes() {
+            return new String[]{"application/x-custom"};
+        }
+
+        @Override
+        public ExtractionResult extractBytes(
+            byte[] content,
+            String mimeType,
+            ExtractionConfig config) throws Exception {
+            // Your extraction logic here
+            String text = parseCustomFormat(content);
+            return new ExtractionResult(text, mimeType, true, null);
+        }
     }
 
-    fn version(&self) -> String {
-        "1.0.0".to_string()
-    }
-}
+    // Register plugin
+    Kreuzberg.registerDocumentExtractor(new CustomExtractor());
+    ```
 
-#[async_trait]
-impl DocumentExtractor for CustomExtractor {
-    async fn extract_bytes(
-        &self,
-        content: &[u8],
-        mime_type: &str,
-        config: &ExtractionConfig,
-    ) -> kreuzberg::Result<ExtractionResult> {
+=== "Go"
+
+    ```go
+    package main
+
+    import (
+        "kreuzberg"
+        "log"
+    )
+
+    // DocumentExtractor implementation
+    type CustomExtractor struct{}
+
+    func (e *CustomExtractor) Name() string {
+        return "custom-format-extractor"
+    }
+
+    func (e *CustomExtractor) SupportedMimeTypes() []string {
+        return []string{"application/x-custom"}
+    }
+
+    func (e *CustomExtractor) ExtractBytes(content []byte, mimeType string, config *kreuzberg.ExtractionConfig) (*kreuzberg.ExtractionResult, error) {
         // Your extraction logic here
-        let text = parse_custom_format(content)?;
-        Ok(ExtractionResult {
-            content: text,
-            mime_type: mime_type.to_string(),
-            ..Default::default()
-        })
+        text := parseCustomFormat(content)
+        return &kreuzberg.ExtractionResult{
+            Content:  text,
+            MimeType: mimeType,
+            Success:  true,
+        }, nil
     }
 
-    fn supported_mime_types(&self) -> &[&str] {
-        &["application/x-custom"]
+    // Register plugin
+    func init() {
+        if err := kreuzberg.RegisterDocumentExtractor("custom-format-extractor", &CustomExtractor{}); err != nil {
+            log.Fatal(err)
+        }
     }
-}
+    ```
 
-// Register plugin
-use kreuzberg::plugins::registry::get_document_extractor_registry;
-use std::sync::Arc;
+=== "Rust"
 
-let registry = get_document_extractor_registry();
-registry.write().unwrap().register(Arc::new(CustomExtractor))?;
-```
+    ```rust
+    use kreuzberg::plugins::{DocumentExtractor, Plugin};
+    use kreuzberg::types::ExtractionResult;
+    use async_trait::async_trait;
+
+    pub struct CustomExtractor;
+
+    impl Plugin for CustomExtractor {
+        fn name(&self) -> &str {
+            "custom-format-extractor"
+        }
+
+        fn version(&self) -> String {
+            "1.0.0".to_string()
+        }
+    }
+
+    #[async_trait]
+    impl DocumentExtractor for CustomExtractor {
+        async fn extract_bytes(
+            &self,
+            content: &[u8],
+            mime_type: &str,
+            config: &ExtractionConfig,
+        ) -> kreuzberg::Result<ExtractionResult> {
+            // Your extraction logic here
+            let text = parse_custom_format(content)?;
+            Ok(ExtractionResult {
+                content: text,
+                mime_type: mime_type.to_string(),
+                ..Default::default()
+            })
+        }
+
+        fn supported_mime_types(&self) -> &[&str] {
+            &["application/x-custom"]
+        }
+    }
+
+    // Register plugin
+    use kreuzberg::plugins::registry::get_document_extractor_registry;
+    use std::sync::Arc;
+
+    let registry = get_document_extractor_registry();
+    registry.write().unwrap().register(Arc::new(CustomExtractor))?;
+    ```
 
 ## See Also
 

@@ -10,3 +10,4 @@ func TestXML_XML_PLANT_CATALOG(t *testing.T) {
     assertExpectedMime(t, result, []string{"application/xml"})
     assertMinContentLength(t, result, 100)
 }
+

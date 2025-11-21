@@ -1,0 +1,17 @@
+{
+	"id": "smoke_txt_basic",
+	"category": "smoke",
+	"tags": ["smoke", "text", "plaintext"],
+	"description": "Smoke test: Plain text file",
+	"document": {
+		"path": "text/report.txt",
+		"media_type": "text/plain"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "text/plain",
+		"min_content_length": 5
+	}
+}

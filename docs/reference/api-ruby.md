@@ -600,3 +600,376 @@ results.each_with_index do |result, i|
   puts "#{files[i]}: #{result.content.length} characters"
 end
 ```
+
+## Batch Extract from Bytes
+
+### `batch_extract_bytes_sync(data_list, mime_types, config = nil)`
+
+Extract text from multiple byte arrays synchronously.
+
+**Parameters:**
+- `data_list` (Array<String>): Array of byte strings (binary data)
+- `mime_types` (Array<String>): Array of MIME types corresponding to each byte array
+- `config` (Hash, optional): Extraction configuration
+
+**Returns:** Array<Hash> - Array of extraction results
+
+**Example:**
+
+```ruby
+require 'kreuzberg'
+
+# Read multiple files into memory
+pdf_data = File.binread('invoice.pdf')
+docx_data = File.binread('report.docx')
+xlsx_data = File.binread('data.xlsx')
+
+data_list = [pdf_data, docx_data, xlsx_data]
+mime_types = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+]
+
+results = Kreuzberg.batch_extract_bytes_sync(data_list, mime_types)
+
+results.each_with_index do |result, i|
+  puts "Document #{i}:"
+  puts "  Content length: #{result[:content].length}"
+  puts "  Format: #{result[:metadata][:format_type]}"
+end
+```
+
+**With OCR Configuration:**
+
+```ruby
+config = {
+  ocr: {
+    backend: 'tesseract',
+    language: 'eng'
+  }
+}
+
+results = Kreuzberg.batch_extract_bytes_sync(data_list, mime_types, config)
+```
+
+### `batch_extract_bytes(data_list, mime_types, config = nil)`
+
+Extract text from multiple byte arrays asynchronously.
+
+**Parameters:** Same as `batch_extract_bytes_sync`
+
+**Returns:** Array<Hash> - Array of extraction results
+
+**Example:**
+
+```ruby
+require 'kreuzberg'
+
+# Asynchronous batch extraction from bytes
+data_list = files.map { |f| File.binread(f) }
+mime_types = files.map { |f| 'application/pdf' }
+
+results = Kreuzberg.batch_extract_bytes(data_list, mime_types, {
+  chunking: {
+    max_chars: 1024,
+    max_overlap: 200
+  }
+})
+
+results.each_with_index do |result, i|
+  puts "Document #{i}: #{result[:content][0..100]}..."
+  if result[:chunks]
+    puts "  Chunks: #{result[:chunks].length}"
+  end
+end
+```
+
+## Extensibility
+
+Kreuzberg's plugin system allows you to extend functionality with custom post-processors, validators, and OCR backends.
+
+### Custom Post-Processors
+
+Post-processors modify extraction results after document processing. They can enrich metadata, transform content, or add custom logic.
+
+**Interface:**
+
+```ruby
+class CustomPostProcessor
+  def call(result)
+    # Modify result and return it
+    # result is a Hash with keys: :content, :metadata, :tables, etc.
+    result
+  end
+
+  def processing_stage
+    # Optional: Return :early, :default, or :late
+    :default
+  end
+end
+```
+
+**Example:**
+
+```ruby
+require 'kreuzberg'
+
+class WordCountProcessor
+  def call(result)
+    # Skip if no content
+    return result if result[:content].nil? || result[:content].empty?
+
+    # Count words
+    word_count = result[:content].split.length
+
+    # Add to metadata
+    result[:metadata] ||= {}
+    result[:metadata][:word_count] = word_count
+    result[:metadata][:processed_by] = 'WordCountProcessor'
+
+    result
+  end
+
+  def processing_stage
+    :early  # Run early in the pipeline
+  end
+end
+
+# Register the processor
+processor = WordCountProcessor.new
+Kreuzberg.register_post_processor('word_count', 100, processor)
+
+# Use in extraction
+result = Kreuzberg.extract_file_sync('document.pdf')
+puts "Words: #{result[:metadata][:word_count]}"
+
+# Unregister when done
+Kreuzberg.unregister_post_processor('word_count')
+```
+
+**Stateful Processor Example:**
+
+```ruby
+class PdfMetadataExtractor
+  def initialize
+    @processed_count = 0
+    @start_time = Time.now
+  end
+
+  def call(result)
+    # Only process PDFs
+    return result unless result[:metadata][:mime_type] == 'application/pdf'
+
+    @processed_count += 1
+
+    # Add processing metadata
+    result[:metadata][:pdf_processed] = true
+    result[:metadata][:processing_order] = @processed_count
+    result[:metadata][:processing_timestamp] = Time.now.to_i
+    result[:metadata][:elapsed_seconds] = (Time.now - @start_time).round(2)
+
+    result
+  end
+
+  def statistics
+    {
+      processed_count: @processed_count,
+      running_for: (Time.now - @start_time).round(2)
+    }
+  end
+end
+
+processor = PdfMetadataExtractor.new
+Kreuzberg.register_post_processor('pdf_metadata', 90, processor)
+
+# Process multiple files
+files = ['doc1.pdf', 'doc2.pdf', 'doc3.pdf']
+results = Kreuzberg.batch_extract_files_sync(files)
+
+puts "Statistics: #{processor.statistics}"
+```
+
+### Custom Validators
+
+Validators check extraction results and raise errors if validation fails.
+
+**Interface:**
+
+```ruby
+class CustomValidator
+  def call(result)
+    # Check result
+    # Raise Kreuzberg::Errors::ValidationError if invalid
+    # Return nil if valid
+  end
+end
+```
+
+**Example:**
+
+```ruby
+require 'kreuzberg'
+
+class MinimumLengthValidator
+  def initialize(min_length: 100)
+    @min_length = min_length
+  end
+
+  def call(result)
+    content = result[:content] || ''
+
+    if content.strip.length < @min_length
+      raise Kreuzberg::Errors::ValidationError,
+            "Content too short: #{content.length} chars, minimum #{@min_length} required"
+    end
+  end
+end
+
+# Register validator
+validator = MinimumLengthValidator.new(min_length: 50)
+Kreuzberg.register_validator('min_length', 100, validator)
+
+# This will raise if content is too short
+begin
+  result = Kreuzberg.extract_file_sync('short_document.txt')
+rescue Kreuzberg::Errors::ValidationError => e
+  puts "Validation failed: #{e.message}"
+end
+```
+
+**Quality Score Validator:**
+
+```ruby
+class QualityScoreValidator
+  def call(result)
+    metadata = result[:metadata] || {}
+    quality_score = metadata[:quality_score] || 0.0
+
+    if quality_score < 0.5
+      raise Kreuzberg::Errors::ValidationError,
+            format('Quality score %.2f below threshold 0.50', quality_score)
+    end
+  end
+end
+
+validator = QualityScoreValidator.new
+Kreuzberg.register_validator('quality_check', 90, validator)
+```
+
+### Custom OCR Backends
+
+Implement custom OCR backends for specialized OCR engines or cloud services.
+
+**Interface:**
+
+```ruby
+class CustomOcrBackend
+  def name
+    'custom-ocr'
+  end
+
+  def supported_languages
+    ['eng', 'fra', 'deu']
+  end
+
+  def process_image(image_data, language)
+    # Process image and return OCR result
+    # image_data is a binary string
+    # Return Hash with: :content, :mime_type, :metadata, :tables
+  end
+end
+```
+
+**Example:**
+
+```ruby
+require 'kreuzberg'
+require 'net/http'
+require 'json'
+
+class CloudOcrBackend
+  def name
+    'cloud-ocr'
+  end
+
+  def supported_languages
+    ['eng', 'fra', 'deu', 'spa', 'jpn', 'chi_sim']
+  end
+
+  def process_image(image_data, language)
+    # Send to cloud OCR service
+    uri = URI('https://api.example.com/ocr')
+    request = Net::HTTP::Post.new(uri)
+    request['Content-Type'] = 'image/jpeg'
+    request['Accept-Language'] = language
+    request.body = image_data
+
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+      http.request(request)
+    end
+
+    # Parse response
+    data = JSON.parse(response.body)
+
+    {
+      content: data['text'],
+      mime_type: 'text/plain',
+      metadata: {
+        backend: 'cloud-ocr',
+        language: language,
+        confidence: data['confidence']
+      },
+      tables: []
+    }
+  end
+end
+
+# Register OCR backend
+backend = CloudOcrBackend.new
+Kreuzberg.register_ocr_backend(backend)
+
+# Use with extraction
+config = {
+  ocr: {
+    backend: 'cloud-ocr',
+    language: 'eng'
+  }
+}
+
+result = Kreuzberg.extract_file_sync('scanned.pdf', config)
+```
+
+### Plugin Management
+
+**Listing Plugins:**
+
+```ruby
+# List all registered plugins
+post_processors = Kreuzberg.list_post_processors
+validators = Kreuzberg.list_validators
+ocr_backends = Kreuzberg.list_ocr_backends
+
+puts "Post-processors: #{post_processors.join(', ')}"
+puts "Validators: #{validators.join(', ')}"
+puts "OCR backends: #{ocr_backends.join(', ')}"
+```
+
+**Clearing Plugins:**
+
+```ruby
+# Clear all post-processors
+Kreuzberg.clear_post_processors
+
+# Clear all validators
+Kreuzberg.clear_validators
+```
+
+**Unregistering Specific Plugins:**
+
+```ruby
+# Unregister by name
+Kreuzberg.unregister_post_processor('word_count')
+Kreuzberg.unregister_validator('min_length')
+Kreuzberg.unregister_ocr_backend('cloud-ocr')
+```

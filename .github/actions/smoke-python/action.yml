@@ -104,6 +104,16 @@ runs:
           "$VENV_PY" -m pip install "${GITHUB_WORKSPACE}/packages/python"
         fi
 
-        "$VENV_PY" main.py
+        # Run comprehensive smoke tests from E2E suite
+        echo "Running comprehensive smoke tests..."
+        "$VENV_PY" -m pip install pytest
+
+        # Copy fixtures and smoke tests from E2E
+        cp -R "${GITHUB_WORKSPACE}/fixtures" "$tmp"/
+        cp -R "${GITHUB_WORKSPACE}/e2e/python/tests" "$tmp"/
+
+        # Run only smoke tests (test_smoke.py)
+        "$VENV_PY" -m pytest tests/test_smoke.py -v
+
         popd >/dev/null
-        echo "✓ Python package smoke test passed"
+        echo "✓ Python package smoke test passed (7 comprehensive tests)"

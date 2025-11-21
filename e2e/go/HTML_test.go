@@ -17,3 +17,4 @@ func TestHTML_HTML_SIMPLE_TABLE(t *testing.T) {
     assertMinContentLength(t, result, 20)
     assertContentContainsAll(t, result, []string{"|"})
 }
+

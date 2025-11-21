@@ -1,0 +1,18 @@
+{
+	"id": "smoke_docx_basic",
+	"category": "smoke",
+	"tags": ["smoke", "office", "docx"],
+	"description": "Smoke test: DOCX with formatted text",
+	"document": {
+		"path": "office/document.docx",
+		"media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		"min_content_length": 20,
+		"content_contains_any": ["Lorem", "ipsum", "document", "text"]
+	}
+}

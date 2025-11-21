@@ -1,0 +1,20 @@
+{
+	"id": "smoke_xlsx_basic",
+	"category": "smoke",
+	"tags": ["smoke", "office", "xlsx", "tables"],
+	"description": "Smoke test: XLSX with basic spreadsheet data",
+	"document": {
+		"path": "spreadsheets/stanley_cups.xlsx",
+		"media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		"min_content_length": 10,
+		"tables": {
+			"min": 1
+		}
+	}
+}

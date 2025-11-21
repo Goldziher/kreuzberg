@@ -109,19 +109,22 @@ flowchart LR
 
 Rust's ownership model enables zero-copy string slicing and byte buffer handling:
 
-```rust
-// Python: Copies substring
-text = content[100:500]  # Allocates new string
+```python
+# Python: String slicing creates a new object
+text = content[100:500]  # New string object created (immutable)
+```
 
-// Rust: Zero-copy slice
-let text: &str = &content[100..500];  // No allocation
+```rust
+// Rust: Zero-copy slice with no allocation
+let text: &str = &content[100..500];  // Borrows slice, no allocation
 ```
 
 **Impact:**
 
-- **No memory allocation** for substrings
-- **No CPU cycles** spent copying
-- **Better cache locality** from fewer allocations
+- **Python**: String slicing always allocates a new object due to immutability, incurring memory and CPU overhead
+- **Rust**: Borrowing a slice costs zero memory allocations—the borrow is a pointer + length
+- **Performance gain**: Rust's zero-copy approach eliminates redundant allocations for parsing and text processing
+- **Better cache locality**: Fewer allocations mean smaller memory footprint and improved CPU cache hits
 
 ### 3. SIMD Acceleration
 

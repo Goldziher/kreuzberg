@@ -1,0 +1,18 @@
+{
+	"id": "smoke_pdf_basic",
+	"category": "smoke",
+	"tags": ["smoke", "pdf", "basic"],
+	"description": "Smoke test: PDF with simple text extraction",
+	"document": {
+		"path": "pdfs/fake_memo.pdf",
+		"media_type": "application/pdf"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 50,
+		"content_contains_any": ["May 5, 2023", "To Whom it May Concern"]
+	}
+}

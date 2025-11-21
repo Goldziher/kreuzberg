@@ -1,19 +1,30 @@
 ```python
-def extract_bytes(
-    self,
-    content: bytes,
-    mime_type: str,
-    config: dict
-) -> dict:
-    if not content:
-        raise ValueError("Empty content")
+from kreuzberg import extract_file_sync, extract_bytes_sync, ExtractionConfig
+from kreuzberg import KreuzbergError, ParsingError, OCRError, ValidationError, MissingDependencyError
 
-    try:
-        data = parse_content(content)
-    except Exception as e:
-        raise ParsingError(
-            f"Failed to parse {mime_type}: {e}"
-        ) from e
+# Extract from file with comprehensive error handling
+try:
+    result = extract_file_sync("document.pdf")
+    print(f"Extracted {len(result.content)} characters")
+except ParsingError as e:
+    print(f"Failed to parse document: {e}")
+except OCRError as e:
+    print(f"OCR processing failed: {e}")
+except MissingDependencyError as e:
+    print(f"Missing dependency: {e}")
+except KreuzbergError as e:
+    print(f"Extraction error: {e}")
 
-    return result
+# Extract from bytes with configuration
+try:
+    config = ExtractionConfig()
+    pdf_bytes = b"%PDF-1.4\n..."  # PDF file bytes
+    result = extract_bytes_sync(pdf_bytes, "application/pdf", config)
+    print(f"Extracted: {result.content[:100]}...")
+except ValidationError as e:
+    print(f"Invalid configuration: {e}")
+except OCRError as e:
+    print(f"OCR failed: {e}")
+except KreuzbergError as e:
+    print(f"Extraction failed: {e}")
 ```

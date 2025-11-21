@@ -9,30 +9,28 @@ import { assertions, buildConfig, resolveDocument, shouldSkipFixture } from "./h
 const TEST_TIMEOUT_MS = 60_000;
 
 describe("image fixtures", () => {
-	it(
-		"image_metadata_only",
-		() => {
-			const documentPath = resolveDocument("images/example.jpg");
-			if (!existsSync(documentPath)) {
-				console.warn("Skipping image_metadata_only: missing document at", documentPath);
-				return;
-			}
-			const config = buildConfig({ ocr: null });
-			let result: ExtractionResult | null = null;
-			try {
-				result = extractFileSync(documentPath, null, config);
-			} catch (error) {
-				if (shouldSkipFixture(error, "image_metadata_only", [], undefined)) {
-					return;
-				}
-				throw error;
-			}
-			if (result === null) {
-				return;
-			}
-			assertions.assertExpectedMime(result, ["image/jpeg"]);
-			assertions.assertMaxContentLength(result, 100);
-		},
-		TEST_TIMEOUT_MS,
-	);
+  it("image_metadata_only", () => {
+    const documentPath = resolveDocument("images/example.jpg");
+    if (!existsSync(documentPath)) {
+      console.warn("Skipping image_metadata_only: missing document at", documentPath);
+      return;
+    }
+    const config = buildConfig({"ocr":null});
+    let result: ExtractionResult | null = null;
+    try {
+      result = extractFileSync(documentPath, null, config);
+    } catch (error) {
+      if (shouldSkipFixture(error, "image_metadata_only", [], undefined)) {
+        return;
+      }
+      throw error;
+    }
+    if (result === null) {
+      return;
+    }
+    assertions.assertExpectedMime(result, ["image/jpeg"]);
+    assertions.assertMaxContentLength(result, 100);
+  }, TEST_TIMEOUT_MS);
+
 });
+

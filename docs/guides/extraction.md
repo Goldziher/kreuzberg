@@ -109,22 +109,6 @@ flowchart TD
     style UseSyncBatch fill:#90EE90
 ```
 
-## TypeScript / Node.js {#typescript-nodejs}
-
-All TypeScript/Node.js examples in this guide use the `@goldziher/kreuzberg` package. Import synchronous APIs from the root module and asynchronous helpers from the same namespace. See the [TypeScript API Reference](../reference/api-typescript.md) for complete type definitions.
-
-```typescript
---8<-- "snippets/typescript/extract_file_sync.md"
-```
-
-## Ruby {#ruby}
-
-Ruby bindings mirror the same function names (`extract_file_sync`, `extract_bytes`, `batch_extract_files`, etc.) under the `Kreuzberg` module. Configuration objects live under `Kreuzberg::Config`. See the [Ruby API Reference](../reference/api-ruby.md) for details.
-
-```ruby
---8<-- "snippets/ruby/extract_file_sync.md"
-```
-
 !!! tip "When to Use Async"
     Use async variants when you're already in an async context or processing multiple files concurrently. For simple scripts, sync variants are simpler and just as fast.
 
@@ -320,6 +304,10 @@ All extraction functions raise exceptions on failure:
 
     --8<-- "snippets/java/error_handling.md"
 
+=== "Go"
+
+    --8<-- "snippets/go/error_handling.md"
+
 !!! warning "System Errors"
     `OSError` (Python), `IOException` (Rust), and system-level errors always bubble up to users. These indicate real system problems that need to be addressed (permissions, disk space, etc.).
 
@@ -329,6 +317,3 @@ All extraction functions raise exceptions on failure:
 - [OCR Guide](ocr.md) - Set up optical character recognition
 - [Advanced Features](advanced.md) - Chunking, language detection, and more
 - [API Reference](../reference/api-python.md) - Detailed API documentation
-=== "Go"
-
-    --8<-- "snippets/go/error_handling.md"

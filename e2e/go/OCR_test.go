@@ -66,3 +66,4 @@ func TestOCR_OCR_PDF_TESSERACT(t *testing.T) {
     assertMinContentLength(t, result, 20)
     assertContentContainsAny(t, result, []string{"Docling", "Markdown", "JSON"})
 }
+

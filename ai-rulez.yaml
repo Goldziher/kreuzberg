@@ -147,7 +147,7 @@ metadata:
   description: "Rust document intelligence library. Core: crates/kreuzberg (standalone, edition 2024). Bindings: Python (PyO3), TypeScript (NAPI-RS), Ruby (Magnus), Java (FFM API), Go (cgo). Supports PDFs, images, office docs, and more."
   name: Kreuzberg
   version: 4.0.0-rc1
-presets: ["claude", "codex"]
+presets: ["claude", "codex", "gemini"]
 rules:
   - content: |
       **Rust core** (crates/kreuzberg): cargo build/test/clippy/fmt, 95% coverage.

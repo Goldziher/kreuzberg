@@ -62,6 +62,12 @@ For better performance with I/O-bound operations:
 
     --8<-- "snippets/go/extract_file_async.md"
 
+=== "CLI"
+
+    !!! note "Not Applicable"
+        Async extraction is an API-level feature. The CLI operates synchronously.
+        Use language-specific bindings (Python, TypeScript, Rust) for async operations.
+
 ## OCR Extraction
 
 Extract text from images and scanned documents:
@@ -154,6 +160,22 @@ When you already have file content in memory:
 
     --8<-- "snippets/go/extract_bytes_sync.md"
 
+=== "CLI"
+
+    !!! note "Not Applicable"
+        The CLI operates on files from disk. For in-memory data processing, use language-specific bindings.
+
+        However, you can use CLI with pipes and temporary files:
+
+        ```bash
+        # Create temporary file from stdin and extract
+        cat data.pdf | kreuzberg extract /dev/stdin
+
+        # Or process piped content
+        curl https://example.com/document.pdf | \
+          kreuzberg extract /dev/stdin
+        ```
+
 ## Advanced Configuration
 
 Customize extraction behavior:
@@ -182,6 +204,60 @@ Customize extraction behavior:
 
     --8<-- "snippets/go/advanced_config.md"
 
+=== "CLI"
+
+    Configure extraction behavior via command-line flags or config files:
+
+    ```bash
+    # Using command-line flags
+    kreuzberg extract document.pdf \
+      --ocr \
+      --chunk --chunk-size 1000 --chunk-overlap 100 \
+      --detect-language \
+      --quality
+
+    # Using config file
+    kreuzberg extract document.pdf --config kreuzberg.toml
+    ```
+
+    **kreuzberg.toml:**
+
+    ```toml
+    [ocr]
+    backend = "tesseract"
+    language = "eng"
+
+    [chunking]
+    max_chunk_size = 1000
+    overlap = 100
+
+    [language_detection]
+    enabled = true
+    detect_multiple = true
+
+    enable_quality_processing = true
+    use_cache = true
+    ```
+
+    **kreuzberg.yaml:**
+
+    ```yaml
+    ocr:
+      backend: tesseract
+      language: eng
+
+    chunking:
+      max_chunk_size: 1000
+      overlap: 100
+
+    language_detection:
+      enabled: true
+      detect_multiple: true
+
+    enable_quality_processing: true
+    use_cache: true
+    ```
+
 ## Working with Metadata
 
 Access format-specific metadata from extracted documents:
@@ -209,6 +285,47 @@ Access format-specific metadata from extracted documents:
 === "Go"
 
     --8<-- "snippets/go/metadata.md"
+
+=== "CLI"
+
+    Extract and parse metadata using JSON output:
+
+    ```bash
+    # Extract with metadata
+    kreuzberg extract document.pdf --metadata --format json --pretty
+
+    # Save to file and parse metadata
+    kreuzberg extract document.pdf --metadata --format json > result.json
+
+    # Extract PDF metadata
+    cat result.json | jq '.metadata.pdf'
+
+    # Extract HTML metadata
+    kreuzberg extract page.html --metadata --format json | jq '.metadata.html'
+
+    # Get specific fields
+    kreuzberg extract document.pdf --metadata --format json | \
+      jq '.metadata | {page_count, author, title}'
+
+    # Process multiple files
+    kreuzberg batch documents/*.pdf --metadata --format json > all_metadata.json
+    ```
+
+    **JSON Output Structure:**
+
+    ```json
+    {
+      "content": "Extracted text...",
+      "metadata": {
+        "mime_type": "application/pdf",
+        "pdf": {
+          "page_count": 10,
+          "author": "John Doe",
+          "title": "Document Title"
+        }
+      }
+    }
+    ```
 
 Kreuzberg extracts format-specific metadata for:
 - **PDF**: page count, title, author, subject, keywords, dates
@@ -250,6 +367,47 @@ Extract and process tables from documents:
 === "Go"
 
     --8<-- "snippets/go/tables.md"
+
+=== "CLI"
+
+    Extract and process tables from documents:
+
+    ```bash
+    # Extract tables
+    kreuzberg extract document.pdf --tables --format json --pretty
+
+    # Save tables to JSON
+    kreuzberg extract spreadsheet.xlsx --tables --format json > tables.json
+
+    # Extract and parse table markdown
+    kreuzberg extract document.pdf --tables --format json | \
+      jq '.tables[] | .markdown'
+
+    # Get table cells
+    kreuzberg extract document.pdf --tables --format json | \
+      jq '.tables[] | .cells'
+
+    # Batch extract tables from multiple files
+    kreuzberg batch documents/**/*.pdf --tables --format json > all_tables.json
+    ```
+
+    **JSON Table Structure:**
+
+    ```json
+    {
+      "content": "...",
+      "tables": [
+        {
+          "cells": [
+            ["Name", "Age", "City"],
+            ["Alice", "30", "New York"],
+            ["Bob", "25", "Los Angeles"]
+          ],
+          "markdown": "| Name | Age | City |\n|------|-----|--------|\n| Alice | 30 | New York |\n| Bob | 25 | Los Angeles |"
+        }
+      ]
+    }
+    ```
 
 ## Error Handling
 

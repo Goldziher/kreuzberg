@@ -118,3 +118,9 @@ docker-logs/
 
 # AI Rules generated files
 .mcp.json
+
+# AI Rules generated files
+.gemini/settings.json
+
+# Auto-generated E2E test files
+e2e/java/src/test/java/com/kreuzberg/e2e/package-info.java

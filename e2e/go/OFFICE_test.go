@@ -100,3 +100,4 @@ func TestOFFICE_OFFICE_XLSX_OFFICE_EXAMPLE(t *testing.T) {
     assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
     assertMinContentLength(t, result, 10)
 }
+

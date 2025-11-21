@@ -1,0 +1,23 @@
+{
+	"id": "smoke_image_png",
+	"category": "smoke",
+	"tags": ["smoke", "image", "png"],
+	"description": "Smoke test: PNG image (without OCR, metadata only)",
+	"document": {
+		"path": "images/sample.png",
+		"media_type": "image/png"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "image/png",
+		"metadata": {
+			"format": "PNG"
+		}
+	},
+	"skip": {
+		"if_document_missing": true,
+		"notes": "Image extraction requires image processing dependencies"
+	}
+}

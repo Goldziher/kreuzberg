@@ -10,3 +10,4 @@ func TestEMAIL_EMAIL_SAMPLE_EML(t *testing.T) {
     assertExpectedMime(t, result, []string{"message/rfc822"})
     assertMinContentLength(t, result, 20)
 }
+
