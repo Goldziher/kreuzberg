@@ -11,6 +11,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+/**
+ * Opaque type for extraction configuration.
+ * This is an opaque pointer type - callers should not access its internals.
+ */
+typedef struct ExtractionConfig ExtractionConfig;
+
 
 /**
  * C-compatible extraction result structure
