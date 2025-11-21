@@ -28,14 +28,18 @@ if [[ -z "$package_spec" && -n "$artifact_tar" ]]; then
     find "$tarball" -maxdepth 3 -type f -printf " - %p\n" || true
     stage_dir="$tmp/node-artifact"
     mkdir -p "$stage_dir"
-    # Prefer npm pack artifacts if present
-    candidate=$(find "$tarball" -maxdepth 3 \( -name "*.tgz" -o -name "*.tar.gz" \) -type f | head -n 1 || true)
+    # Pack the directory into a tarball similar to html-to-markdown flow
+    if [[ -f "$tarball/package.json" ]]; then
+      echo "Packing package.json-based artifact into tarball"
+      (cd "$tarball" && pnpm install --frozen-lockfile=false && pnpm pack --pack-destination "$stage_dir") >/dev/null
+    fi
+    candidate=$(find "$tarball" "$stage_dir" -maxdepth 3 \( -name "*.tgz" -o -name "*.tar.gz" \) -type f | head -n 1 || true)
     if [[ -n "$candidate" ]]; then
       echo "Found tarball candidate: $candidate"
       tarball="$candidate"
     else
       echo "No tarball found; copying directory contents to stage for discovery"
-      cp -R "$tarball"/. "$stage_dir"/
+      cp -R "$tarball"/. "$stage_dir"/ || true
       tarball="$stage_dir"
     fi
   fi
@@ -76,45 +80,30 @@ if [[ -z "$package_spec" && -n "$artifact_tar" ]]; then
     pkg_dir=$(find "$search_root" -type f -name "package.json" -printf "%h\n" | head -n 1 || true)
     if [[ -n "$pkg_dir" ]]; then
       echo "Using package directory: $pkg_dir"
-      package_spec="file:$(node -e "const path=require('path');console.log(path.resolve(process.argv[1]).replace(/\\\\/g,'/'))" "$pkg_dir")"
+      (cd "$pkg_dir" && pnpm install --frozen-lockfile=false && pnpm pack --pack-destination "$tmp") >/dev/null
+      packed=$(ls "$tmp"/*.tgz | head -n 1 || true)
+      if [[ -n "$packed" ]]; then
+        package_spec="file:$packed"
+      fi
     else
-      echo "Unable to determine Node package directory inside $tarball" >&2
-      ls -R "$stage_dir" >&2 || true
-      exit 1
+      echo "Unable to determine Node package directory inside $tarball; will pack from workspace" >&2
+      package_spec=""
     fi
   fi
 fi
 
-# Final fallback to workspace path only if nothing else provided
+# Final fallback: pack workspace crate
 if [[ -z "$package_spec" ]]; then
-  workspace_path="${KREUZBERG_NODE_PKG:-$workspace/crates/kreuzberg-node}"
-  workspace_normalized="$(node -e "const path=require('path');console.log(path.resolve(process.argv[1]).replace(/\\\\/g,'/'))" "$workspace_path")"
-  echo "Falling back to workspace Node package at $workspace_normalized"
-  package_spec="file:${workspace_normalized}"
-fi
-
-# When pointing at a workspace directory, build and pack to avoid path issues (especially on Windows)
-if [[ "$package_spec" == file:* ]]; then
-  resolved_path="$(node - <<'NODE' "$package_spec"
-const {fileURLToPath} = require('url');
-const path = require('path');
-const spec = process.argv[1];
-if (!spec.startsWith('file:')) {
-  console.log('');
-  return;
-}
-const candidate = spec.startsWith('file:///') ? fileURLToPath(spec) : spec.replace(/^file:/, '');
-console.log(path.resolve(candidate).replace(/\\/g, '/'));
-NODE
-)"
-  if [[ -n "$resolved_path" && -d "$resolved_path" && -f "$resolved_path/package.json" ]]; then
-    echo "Packing workspace Node package from $resolved_path"
-    (cd "$resolved_path" && pnpm install --frozen-lockfile=false && pnpm run build --if-present && pnpm pack --pack-destination "$tmp") >/dev/null
-    packed=$(ls "$tmp"/*.tgz | head -n 1 || true)
-    if [[ -n "$packed" ]]; then
-      package_spec="file:$packed"
-      echo "Using packed tarball: $package_spec"
-    fi
+  workspace_pkg="${KREUZBERG_NODE_PKG:-$workspace/crates/kreuzberg-node}"
+  echo "No usable artifact found; packing workspace Node crate from $workspace_pkg"
+  (cd "$workspace_pkg" && pnpm install --frozen-lockfile=false && pnpm run build --if-present && pnpm pack --pack-destination "$tmp") >/dev/null
+  packed=$(ls "$tmp"/*.tgz | head -n 1 || true)
+  if [[ -n "$packed" ]]; then
+    package_spec="file:$packed"
+    echo "Using packed workspace tarball: $package_spec"
+  else
+    echo "Failed to pack workspace Node crate; aborting smoke" >&2
+    exit 1
   fi
 fi
 
@@ -124,13 +113,6 @@ echo "Using Node package spec: $KREUZBERG_NODE_SPEC"
 node "$workspace/.github/actions/smoke-node/update-package-spec.js"
 rm -f pnpm-lock.yaml
 pnpm install --no-frozen-lockfile
-
-# Ensure the native binding is built for the current platform when using a workspace path
-pkg_dir="$(node -e "const path=require('path');console.log(path.dirname(require.resolve('kreuzberg-node/package.json')).replace(/\\\\/g,'/'))")"
-if [[ -d "$pkg_dir" ]]; then
-  (cd "$pkg_dir" && pnpm run build --if-present)
-fi
-
 pnpm run check
 
 popd >/dev/null
