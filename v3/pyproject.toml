@@ -104,10 +104,6 @@ optional-dependencies.paddleocr = [
 ]
 scripts.kreuzberg = "kreuzberg.cli:cli"
 
-[tool.uv.build]
-src-dir = "."
-package = "kreuzberg"
-
 [tool.ruff]
 target-version = "py310"
 line-length = 120
