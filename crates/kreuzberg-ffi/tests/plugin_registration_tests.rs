@@ -17,7 +17,7 @@ unsafe extern "C" {
 }
 
 // External FFI functions for OCR backends
-extern "C" {
+unsafe extern "C" {
     fn kreuzberg_unregister_ocr_backend(name: *const c_char) -> bool;
     fn kreuzberg_list_ocr_backends() -> *mut c_char;
 }
