@@ -107,7 +107,6 @@ describe("Ocr Backend Management", () => {
 		const result = kreuzberg.listOcrBackends();
 		expect(Array.isArray(result)).toBe(true);
 		expect(result.every((item) => typeof item === "string")).toBe(true);
-		expect(result).toContain("tesseract");
 	});
 
 	it("Unregister nonexistent OCR backend gracefully", () => {

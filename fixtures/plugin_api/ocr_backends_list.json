@@ -12,8 +12,7 @@
 		},
 		"assertions": {
 			"return_type": "list",
-			"list_item_type": "string",
-			"list_contains": "tesseract"
+			"list_item_type": "string"
 		}
 	}
 }

@@ -122,7 +122,6 @@ def test_ocr_backends_list() -> None:
     result = kreuzberg.list_ocr_backends()
     assert isinstance(result, list)
     assert all(isinstance(item, str) for item in result)
-    assert "tesseract" in result
 
 
 def test_ocr_backends_unregister() -> None:

@@ -1840,10 +1840,6 @@ pub fn clear_ocr_backends() -> PyResult<()> {
 /// ```
 #[pyfunction]
 pub fn list_document_extractors() -> PyResult<Vec<String>> {
-    // Ensure built-in extractors are initialized
-    kreuzberg::extractors::ensure_initialized()
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
-
     kreuzberg::plugins::list_extractors().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }
 

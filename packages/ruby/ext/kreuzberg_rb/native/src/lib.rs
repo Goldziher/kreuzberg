@@ -2515,8 +2515,6 @@ fn clear_ocr_backends() -> Result<(), Error> {
 ///   #=> ["pdf", "docx", "txt"]
 ///
 fn list_document_extractors() -> Result<Vec<String>, Error> {
-    // Ensure built-in extractors are initialized
-    kreuzberg::extractors::ensure_initialized().map_err(|e| runtime_error(e.to_string()))?;
     kreuzberg::plugins::list_extractors().map_err(|e| runtime_error(e.to_string()))
 }
 
