@@ -23,7 +23,6 @@ def test_ocr_image_hello_world() -> None:
     helpers.assert_min_content_length(result, 5)
     helpers.assert_content_contains_any(result, ["hello", "world"])
 
-
 def test_ocr_image_no_text() -> None:
     """Image with no text to ensure OCR handles empty results gracefully."""
 
@@ -37,7 +36,6 @@ def test_ocr_image_no_text() -> None:
 
     helpers.assert_expected_mime(result, ["image/jpeg"])
     helpers.assert_max_content_length(result, 200)
-
 
 def test_ocr_pdf_image_only_german() -> None:
     """Image-only German PDF requiring OCR to extract text."""
@@ -54,7 +52,6 @@ def test_ocr_pdf_image_only_german() -> None:
     helpers.assert_min_content_length(result, 20)
     helpers.assert_metadata_expectation(result, "format_type", {"eq": "pdf"})
 
-
 def test_ocr_pdf_rotated_90() -> None:
     """Rotated page PDF requiring OCR to verify orientation handling."""
 
@@ -68,7 +65,6 @@ def test_ocr_pdf_rotated_90() -> None:
 
     helpers.assert_expected_mime(result, ["application/pdf"])
     helpers.assert_min_content_length(result, 10)
-
 
 def test_ocr_pdf_tesseract() -> None:
     """Scanned PDF requires OCR to extract text."""
@@ -84,3 +80,4 @@ def test_ocr_pdf_tesseract() -> None:
     helpers.assert_expected_mime(result, ["application/pdf"])
     helpers.assert_min_content_length(result, 20)
     helpers.assert_content_contains_any(result, ["Docling", "Markdown", "JSON"])
+

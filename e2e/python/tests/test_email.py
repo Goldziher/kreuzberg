@@ -21,3 +21,4 @@ def test_email_sample_eml() -> None:
 
     helpers.assert_expected_mime(result, ["message/rfc822"])
     helpers.assert_min_content_length(result, 20)
+

@@ -21,3 +21,4 @@ def test_image_metadata_only() -> None:
 
     helpers.assert_expected_mime(result, ["image/jpeg"])
     helpers.assert_max_content_length(result, 100)
+
