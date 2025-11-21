@@ -253,7 +253,6 @@ jobs:
   node-bindings:
     name: Build Node bindings (${{ matrix.settings.target }})
     runs-on: ${{ matrix.settings.os }}
-    continue-on-error: ${{ matrix.settings.target == 'x86_64-unknown-linux-musl' }}
     timeout-minutes: 180
     strategy:
       fail-fast: false
@@ -261,9 +260,6 @@ jobs:
         settings:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            use_zigbuild: false
           - os: macos-14
             target: aarch64-apple-darwin
           - os: windows-latest
@@ -298,10 +294,6 @@ jobs:
         with:
           target: ${{ matrix.settings.target }}
           cache-key-prefix: node-${{ matrix.settings.target }}
-
-      - name: Install musl tools (musl targets)
-        if: contains(matrix.settings.target, 'musl')
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Install cross (Linux cross-compilation)
         if: matrix.settings.use_zigbuild
@@ -540,10 +532,6 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: kreuzberg
-          # TODO: Re-enable x86_64-unknown-linux-musl once build issues are resolved
-          # - os: ubuntu-latest
-          #   target: x86_64-unknown-linux-musl
-          #   artifact_name: kreuzberg
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: kreuzberg.exe
@@ -561,10 +549,6 @@ jobs:
         with:
           target: ${{ matrix.target }}
           cache-key-prefix: cli-${{ matrix.target }}
-
-      - name: Install musl-tools
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Build CLI binary
         run: cargo build --release --target ${{ matrix.target }} --package kreuzberg-cli
@@ -749,7 +733,7 @@ jobs:
       - name: Smoke test Node.js package
         uses: ./.github/actions/smoke-node
         with:
-          package-tarball: ""
+          package-tarball: artifacts/node
 
       - name: Smoke test Ruby gem
         if: runner.os != 'Windows'

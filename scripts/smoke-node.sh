@@ -22,6 +22,14 @@ if [[ -z "$package_spec" && -n "$artifact_tar" ]]; then
   if [[ "$tarball" != /* ]]; then
     tarball="${workspace}/${artifact_tar}"
   fi
+  if [[ -d "$tarball" ]]; then
+    candidate=$(find "$tarball" -maxdepth 2 \( -name "*.tgz" -o -name "*.tar.gz" \) -type f | head -n 1 || true)
+    if [[ -z "$candidate" ]]; then
+      echo "No Node package tgz found inside $tarball" >&2
+      exit 1
+    fi
+    tarball="$candidate"
+  fi
   if [[ ! -e "$tarball" ]]; then
     echo "Provided Node artifact not found: $tarball" >&2
     exit 1
@@ -58,10 +66,35 @@ fi
 
 # Final fallback to workspace path only if nothing else provided
 if [[ -z "$package_spec" ]]; then
-  workspace_path="${KREUZBERG_NODE_PKG:-$workspace/packages/typescript}"
+  workspace_path="${KREUZBERG_NODE_PKG:-$workspace/crates/kreuzberg-node}"
   workspace_normalized="$(node -e "const path=require('path');console.log(path.resolve(process.argv[1]).replace(/\\\\/g,'/'))" "$workspace_path")"
   echo "Falling back to workspace Node package at $workspace_normalized"
   package_spec="file:${workspace_normalized}"
+fi
+
+# When pointing at a workspace directory, build and pack to avoid path issues (especially on Windows)
+if [[ "$package_spec" == file:* ]]; then
+  resolved_path="$(node - <<'NODE' "$package_spec"
+const {fileURLToPath} = require('url');
+const path = require('path');
+const spec = process.argv[1];
+if (!spec.startsWith('file:')) {
+  console.log('');
+  return;
+}
+const candidate = spec.startsWith('file:///') ? fileURLToPath(spec) : spec.replace(/^file:/, '');
+console.log(path.resolve(candidate).replace(/\\/g, '/'));
+NODE
+)"
+  if [[ -n "$resolved_path" && -d "$resolved_path" && -f "$resolved_path/package.json" ]]; then
+    echo "Packing workspace Node package from $resolved_path"
+    (cd "$resolved_path" && pnpm install --frozen-lockfile=false && pnpm run build --if-present && pnpm pack --pack-destination "$tmp") >/dev/null
+    packed=$(ls "$tmp"/*.tgz | head -n 1 || true)
+    if [[ -n "$packed" ]]; then
+      package_spec="file:$packed"
+      echo "Using packed tarball: $package_spec"
+    fi
+  fi
 fi
 
 export KREUZBERG_NODE_SPEC="$package_spec"

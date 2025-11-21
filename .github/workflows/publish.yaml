@@ -563,21 +563,12 @@ jobs:
             rust_target: ""
             use_cross: false
             use_napi_cross: false
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            rust_target: x86_64-unknown-linux-musl
-            use_cross: true
-            use_napi_cross: false
           # TODO: Re-enable additional Linux targets once cross-compilation pipeline matches test-build
           # - os: ubuntu-latest
           #   target: aarch64-unknown-linux-gnu
           #   rust_target: aarch64-unknown-linux-gnu
           #   use_cross: false
           #   use_napi_cross: true
-          # - os: ubuntu-latest
-          #   target: aarch64-unknown-linux-musl
-          #   rust_target: aarch64-unknown-linux-musl
-          #   use_cross: true
           #   use_napi_cross: false
           # - os: ubuntu-latest
           #   target: armv7-unknown-linux-gnueabihf
@@ -751,9 +742,6 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           case "${{ matrix.target }}" in
-            x86_64-unknown-linux-musl)
-              sudo apt-get install -y musl-tools
-              ;;
             aarch64-unknown-linux-gnu)
               sudo apt-get install -y gcc-aarch64-linux-gnu
               ;;
