@@ -1,289 +1,364 @@
-# API Parity Gaps - TDD Implementation Plan
+# E2E Test System Overhaul + API Parity Gaps
 
-**Generated**: 2025-11-21
+**Generated**: 2025-11-21 (Updated)
 **Branch**: `feature/close-all-api-gaps`
-**Approach**: Test-Driven Development (Red-Green-Refactor)
+**Critical Issue Identified**: Hand-written E2E tests violating fixture-driven architecture
 
 ---
 
-## Overview
+## 🚨 CRITICAL: Current State Analysis
 
-Following comprehensive API parity review, identified critical gaps across language bindings. This document tracks TDD-based implementation to achieve 100% API parity.
+### The Problem
 
-**Strategy**:
-1. Write failing E2E tests for ALL missing APIs
-2. Implement Rust core APIs (if needed)
-3. Implement binding-specific wrappers
-4. Verify tests pass
-5. Commit and push
+**Hand-written E2E tests exist that claim to be "auto-generated"**:
+- `e2e/python/tests/test_plugin_apis.py` - Header says "Auto-generated" but is hand-written
+- `e2e/typescript/tests/plugin-apis.test.ts` - Header says "Auto-generated" but is hand-written
+- `e2e/ruby/spec/plugin_apis_spec.rb` - Header says "Auto-generated" but is hand-written
+- `e2e/java/src/test/java/dev/kreuzberg/e2e/PluginAPIsTest.java` - Header says "Auto-generated" but is hand-written
+- `e2e/go/plugin_apis_test.go` - Header says "Auto-generated" but is hand-written
 
----
+**E2E Generator (`tools/e2e-generator`) ONLY handles document extraction fixtures**:
+- Uses fixtures from `fixtures/` (PDF, Office, HTML, etc.)
+- Does NOT generate plugin API tests
+- No fixture schema for plugin/config/utility API tests
 
-## Priority Breakdown
-
-### P0: Critical Functionality Gaps (MUST FIX)
-
-#### 1. Missing `register_document_extractor()` API
-**Status**: ❌ Missing in ALL bindings
-**Severity**: Critical - Users cannot register custom document extractors
-
-**Affected**:
-- Python: `packages/python/kreuzberg/__init__.py`
-- TypeScript: `packages/typescript/src/index.ts`
-- Ruby: `packages/ruby/lib/kreuzberg.rb`
-- Java: `packages/java/src/main/java/dev/kreuzberg/Kreuzberg.java`
-- Go: `packages/go/kreuzberg/plugins.go`
-
-**Rust Core**: ✅ Already exports `register_extractor()` at `crates/kreuzberg/src/plugins/mod.rs:203`
-
-**E2E Tests to Add**:
-- [ ] `e2e/python/tests/test_plugin_apis.py` - `test_register_document_extractor`
-- [ ] `e2e/typescript/tests/plugin-apis.test.ts` - `should register a document extractor`
-- [ ] `e2e/ruby/spec/plugin_apis_spec.rb` - `register_document_extractor`
-- [ ] `e2e/java/src/test/java/dev/kreuzberg/e2e/PluginAPIsTest.java` - `testRegisterDocumentExtractor`
-- [ ] `e2e/go/plugin_apis_test.go` - `TestRegisterDocumentExtractor`
-
-**Implementation Steps**:
-1. Add E2E tests (should fail - RED)
-2. Python: Add binding in `crates/kreuzberg-py/src/plugins.rs`, export in `__init__.py`
-3. TypeScript: Add binding in `crates/kreuzberg-node/src/lib.rs`, export in `index.ts`
-4. Ruby: Add binding in `packages/ruby/ext/kreuzberg_rb/native/src/lib.rs`, export in `kreuzberg.rb`
-5. Java: Add FFI function in `crates/kreuzberg-ffi/src/lib.rs`, wrapper in `Kreuzberg.java`
-6. Go: Add CGo function in `packages/go/kreuzberg/plugins.go`
-7. Run tests (should pass - GREEN)
+**This violates core architecture**: E2E tests MUST be generated from fixtures, not hand-maintained.
 
 ---
 
-### P1: High Priority - Architectural Inconsistencies
+## Phase 1: Remove Hand-Written Tests & Fix Architecture
 
-#### 2. Rust Core Missing Post-Processor Mutation APIs
-**Status**: ⚠️ Rust core only exports `list_post_processors()`, not mutation APIs
-**Severity**: High - Architectural inconsistency
+### Step 1.1: Audit Current Hand-Written Tests
 
-**Issue**:
-- Rust core does NOT export: `register_post_processor`, `unregister_post_processor`, `clear_post_processors`
-- All bindings work around this by accessing `get_post_processor_registry()` directly
-- Inconsistent with validators and OCR backends which DO export mutation APIs
+**Files to inspect**:
+- [ ] `e2e/python/tests/test_plugin_apis.py` - What APIs does it test?
+- [ ] `e2e/typescript/tests/plugin-apis.test.ts` - What APIs does it test?
+- [ ] `e2e/ruby/spec/plugin_apis_spec.rb` - What APIs does it test?
+- [ ] `e2e/java/src/test/java/dev/kreuzberg/e2e/PluginAPIsTest.java` - What APIs does it test?
+- [ ] `e2e/go/plugin_apis_test.go` - What APIs does it test?
 
-**Files**:
-- `crates/kreuzberg/src/plugins/processor.rs` - Functions exist but not re-exported
-- `crates/kreuzberg/src/plugins/mod.rs:207` - Only exports `list_post_processors()`
+**Create matrix**: Which plugin/config/utility APIs are currently tested by hand-written tests?
 
-**E2E Tests**: ✅ Already exist (bindings work around the gap)
+### Step 1.2: Design Fixture Schema for Plugin API Tests
 
-**Implementation Steps**:
-1. Export `register_post_processor`, `unregister_post_processor`, `clear_post_processors` in `plugins/mod.rs`
-2. Update bindings to use exported functions instead of direct registry access (optional cleanup)
+**New fixture type**: `plugin_api_fixtures/` or extend existing schema
+
+**Categories needed**:
+1. **Validator Management**:
+   - `list_validators`
+   - `register_validator` (if applicable)
+   - `unregister_validator` (if applicable)
+   - `clear_validators`
+
+2. **Post-Processor Management**:
+   - `list_post_processors`
+   - `register_post_processor` (if applicable)
+   - `unregister_post_processor` (if applicable)
+   - `clear_post_processors`
+
+3. **OCR Backend Management**:
+   - `list_ocr_backends`
+   - `register_ocr_backend` (if applicable)
+   - `unregister_ocr_backend`
+   - `clear_ocr_backends`
+
+4. **Document Extractor Management**:
+   - `list_document_extractors`
+   - `register_document_extractor` (NEW - needs implementation)
+   - `unregister_document_extractor`
+   - `clear_document_extractors`
+
+5. **Configuration Loading**:
+   - `ExtractionConfig.from_file()` / `fromFile()` / `ConfigFromFile()`
+   - `ExtractionConfig.discover()` / `discover()` / `ConfigDiscover()`
+
+6. **MIME Utilities**:
+   - `detect_mime_type(bytes)` / `detectMimeType(bytes)`
+   - `detect_mime_type_from_path(path)` / `detectMimeTypeFromPath(path)`
+   - `get_extensions_for_mime(mime_type)` / `getExtensionsForMime(mimeType)`
+   - `validate_mime_type(mime_type)` / `validateMimeType(mimeType)`
+
+7. **Embedding Presets** (if applicable):
+   - `list_embedding_presets()` / `listEmbeddingPresets()`
+   - `get_embedding_preset(name)` / `getEmbeddingPreset(name)`
+
+**Fixture Schema Design**:
+
+```json
+{
+  "id": "list_validators",
+  "category": "plugin_api",
+  "api_type": "validator_management",
+  "description": "List all registered validators",
+  "test_spec": {
+    "function": "list_validators",
+    "args": [],
+    "assertions": {
+      "returns_list": true,
+      "list_item_type": "string"
+    }
+  }
+}
+```
+
+```json
+{
+  "id": "config_from_file_basic",
+  "category": "config_api",
+  "api_type": "config_loading",
+  "description": "Load configuration from TOML file",
+  "test_spec": {
+    "function": "ExtractionConfig.from_file",
+    "setup": {
+      "create_temp_file": true,
+      "file_content": "[chunking]\nmax_chars = 100\nmax_overlap = 20\n"
+    },
+    "args": ["${temp_file_path}"],
+    "assertions": {
+      "returns_config": true,
+      "config_has_chunking": true,
+      "chunking.max_chars": 100,
+      "chunking.max_overlap": 20
+    }
+  }
+}
+```
+
+**Action Items**:
+- [ ] Design complete fixture schema for plugin/config/utility APIs
+- [ ] Create `fixtures/plugin_api/` directory
+- [ ] Document schema in `fixtures/plugin_api/schema.json`
+
+### Step 1.3: Extend E2E Generator
+
+**Files to modify**:
+- `tools/e2e-generator/src/fixtures.rs` - Extend `Fixture` struct to handle plugin API fixtures
+- `tools/e2e-generator/src/python.rs` - Add plugin API test generation
+- `tools/e2e-generator/src/typescript.rs` - Add plugin API test generation
+- `tools/e2e-generator/src/ruby.rs` - Add plugin API test generation
+- `tools/e2e-generator/src/java.rs` - Add plugin API test generation
+- `tools/e2e-generator/src/go.rs` - Add plugin API test generation
+- `tools/e2e-generator/src/rust.rs` - Add plugin API test generation (if needed)
+
+**Generator Changes**:
+1. Parse plugin API fixtures from `fixtures/plugin_api/`
+2. Generate test functions for each API category
+3. Handle language-specific naming conventions (snake_case vs camelCase vs PascalCase)
+4. Generate assertions based on fixture spec
+5. Handle temp file creation for config loading tests
+
+**Action Items**:
+- [ ] Extend `Fixture` struct to support `api_type` and `test_spec` fields
+- [ ] Add plugin API test generation to Python generator
+- [ ] Add plugin API test generation to TypeScript generator
+- [ ] Add plugin API test generation to Ruby generator
+- [ ] Add plugin API test generation to Java generator
+- [ ] Add plugin API test generation to Go generator
+- [ ] Test generator with sample fixtures
+
+### Step 1.4: Generate New Tests & Remove Hand-Written
+
+**Process**:
+1. Run generator for each language: `cargo run -p kreuzberg-e2e-generator -- generate --lang <language>`
+2. Compare generated tests with hand-written tests
+3. Verify generated tests cover all cases
+4. Delete hand-written test files
+5. Update `.gitignore` to prevent hand-written E2E tests
+
+**Action Items**:
+- [ ] Generate Python plugin API tests from fixtures
+- [ ] Generate TypeScript plugin API tests from fixtures
+- [ ] Generate Ruby plugin API tests from fixtures
+- [ ] Generate Java plugin API tests from fixtures
+- [ ] Generate Go plugin API tests from fixtures
+- [ ] Verify generated tests compile
+- [ ] Run generated tests (expect some failures - that's RED phase)
+- [ ] Delete hand-written files:
+  - `e2e/python/tests/test_plugin_apis.py`
+  - `e2e/typescript/tests/plugin-apis.test.ts`
+  - `e2e/ruby/spec/plugin_apis_spec.rb`
+  - `e2e/java/src/test/java/dev/kreuzberg/e2e/PluginAPIsTest.java`
+  - `e2e/go/plugin_apis_test.go`
+- [ ] Add to `.gitignore`: `e2e/**/tests/**/*plugin*api*` (or similar pattern)
+- [ ] Commit: "refactor: replace hand-written plugin API tests with generated tests"
 
 ---
 
-#### 3. Python Missing Config Loading APIs
-**Status**: ❌ Python missing `ExtractionConfig.from_file()` and `ExtractionConfig.discover()`
-**Severity**: High - Missing developer convenience
+## Phase 2: Implement Missing APIs (TDD - RED → GREEN)
 
-**Current State**:
-- TypeScript ✅ Has: `ExtractionConfig.fromFile()`, `ExtractionConfig.discover()`
-- Java ✅ Has: `ExtractionConfig.fromFile()`, `ExtractionConfig.discover()`
-- Go ✅ Has: `ConfigFromFile()`, `ConfigDiscover()`
-- Python ❌ Missing both
-- Ruby ❌ Missing both
+Now that we have **generated** tests, we can see which APIs are missing (RED phase).
 
-**Rust Core**: ✅ Exports `ExtractionConfig::from_file()` and `ExtractionConfig::discover()`
+### Step 2.1: Run Generated Tests (RED Phase)
 
-**E2E Tests to Add**:
-- [ ] `e2e/python/tests/test_plugin_apis.py` - Already exists but not using class methods
-- [ ] `e2e/ruby/spec/plugin_apis_spec.rb` - Already exists but not using class methods
+**Action Items**:
+- [ ] Run Python generated tests → identify missing APIs
+- [ ] Run TypeScript generated tests → identify missing APIs
+- [ ] Run Ruby generated tests → identify missing APIs
+- [ ] Run Java generated tests → identify missing APIs
+- [ ] Run Go generated tests → identify missing APIs
+- [ ] Create matrix of missing APIs per language
 
-**Implementation Steps**:
-1. **Python**: Add class methods `from_file()` and `discover()` to `ExtractionConfig` in `crates/kreuzberg-py/src/config.rs`
-2. **Ruby**: Add class methods `from_file` and `discover` to `Config::Extraction` in `packages/ruby/ext/kreuzberg_rb/native/src/lib.rs`
-3. Update E2E tests to use class methods instead of standalone functions
-4. Verify tests pass
+### Step 2.2: Implement Missing APIs (GREEN Phase)
 
----
+**Priority Order** (from API parity review):
 
-#### 4. Ruby Missing Config Loading APIs
-**Status**: ❌ Same as Python above
-**See**: Section 3 above for implementation
+#### P0: Critical - Missing in ALL Bindings
+- [ ] **`register_document_extractor()`**
+  - Python: `crates/kreuzberg-py/src/plugins.rs`, `packages/python/kreuzberg/__init__.py`
+  - TypeScript: `crates/kreuzberg-node/src/lib.rs`, `packages/typescript/src/index.ts`
+  - Ruby: `packages/ruby/ext/kreuzberg_rb/native/src/lib.rs`, `packages/ruby/lib/kreuzberg.rb`
+  - Java: `crates/kreuzberg-ffi/src/lib.rs`, `packages/java/src/main/java/dev/kreuzberg/Kreuzberg.java`
+  - Go: `packages/go/kreuzberg/plugins.go`
+  - **Note**: Requires implementing trait wrapper for language-specific extractor objects
 
----
+#### P1: High - Config Loading APIs
+- [ ] **Python: `ExtractionConfig.from_file()` and `ExtractionConfig.discover()`**
+  - File: `crates/kreuzberg-py/src/config.rs`
+  - Add class methods to `ExtractionConfig`
 
-### P2: Medium Priority - Feature Completeness
+- [ ] **Ruby: `Config::Extraction.from_file` and `Config::Extraction.discover`**
+  - File: `packages/ruby/ext/kreuzberg_rb/native/src/lib.rs`
+  - Add class methods
 
-#### 5. Ruby Missing MIME Utilities (All 4 APIs)
-**Status**: ❌ Ruby missing ALL MIME utility functions
-**Severity**: Medium - Missing utility features
+- [ ] **Rust Core: Export post-processor mutation APIs**
+  - File: `crates/kreuzberg/src/plugins/mod.rs`
+  - Export: `register_post_processor`, `unregister_post_processor`, `clear_post_processors`
 
-**Missing APIs**:
-- `detect_mime_type(data)` / `detect_mime_type_from_bytes(data)`
-- `detect_mime_type_from_path(path)`
-- `get_extensions_for_mime(mime_type)`
-- `validate_mime_type(mime_type)`
+#### P2: Medium - Ruby Missing APIs
+- [ ] **Ruby: MIME Utilities (4 APIs)**
+  - `detect_mime_type(data)`
+  - `detect_mime_type_from_path(path)`
+  - `get_extensions_for_mime(mime_type)`
+  - `validate_mime_type(mime_type)`
+  - File: `packages/ruby/ext/kreuzberg_rb/native/src/lib.rs`, `packages/ruby/lib/kreuzberg.rb`
 
-**Current State**:
-- Python ✅ Has 3/4 (missing `validate_mime_type`)
-- TypeScript ✅ Has all 4
-- Java ✅ Has all 4
-- Go ✅ Has all 4
-- Ruby ❌ Has 0/4
+- [ ] **Ruby: Embedding Presets (2 APIs)**
+  - `list_embedding_presets()`
+  - `get_embedding_preset(name)`
+  - File: `packages/ruby/ext/kreuzberg_rb/native/src/lib.rs`, `packages/ruby/lib/kreuzberg.rb`
 
-**E2E Tests**: ✅ Already exist in `e2e/ruby/spec/plugin_apis_spec.rb` but commented out or skipped
+- [ ] **Ruby: `unregister_document_extractor()`**
+  - Likely already implemented in native binding
+  - Just needs export in `packages/ruby/lib/kreuzberg.rb`
 
-**Implementation Steps**:
-1. Add bindings in `packages/ruby/ext/kreuzberg_rb/native/src/lib.rs` for all 4 MIME functions
-2. Export in `packages/ruby/lib/kreuzberg.rb`
-3. Uncomment/enable E2E tests
-4. Verify tests pass
+#### P3: Low - Python Missing API
+- [ ] **Python: `validate_mime_type()`**
+  - File: `crates/kreuzberg-py/src/lib.rs`, `packages/python/kreuzberg/__init__.py`
 
----
+### Step 2.3: Verify Tests Pass (GREEN Phase)
 
-#### 6. Ruby Missing Embedding Preset APIs
-**Status**: ❌ Ruby missing `list_embedding_presets()` and `get_embedding_preset()`
-**Severity**: Medium - Feature gap
-
-**Current State**:
-- Python ✅ Has both
-- TypeScript ✅ Has both
-- Java ✅ Has both
-- Go ✅ Has both
-- Ruby ❌ Has neither
-
-**E2E Tests to Add**:
-- [ ] `e2e/ruby/spec/plugin_apis_spec.rb` - `list_embedding_presets`, `get_embedding_preset`
-
-**Implementation Steps**:
-1. Add bindings in `packages/ruby/ext/kreuzberg_rb/native/src/lib.rs`
-2. Export in `packages/ruby/lib/kreuzberg.rb`
-3. Add E2E tests
-4. Verify tests pass
-
----
-
-#### 7. Ruby Missing `unregister_document_extractor()`
-**Status**: ❌ Ruby has `list_document_extractors` and `clear_document_extractors` but NOT `unregister_document_extractor`
-**Severity**: Medium - Incomplete API set
-
-**Current State**:
-- Python ✅ Has
-- TypeScript ✅ Has
-- Java ✅ Has
-- Go ✅ Has
-- Ruby ❌ Missing (but has list and clear)
-
-**E2E Tests**: ✅ Already exists in `e2e/ruby/spec/plugin_apis_spec.rb`
-
-**Implementation Steps**:
-1. The native binding likely already exists in `packages/ruby/ext/kreuzberg_rb/native/src/lib.rs`
-2. Just needs to be added to `module_function` list in `packages/ruby/lib/kreuzberg.rb`
-3. Verify E2E test passes
-
----
-
-### P3: Low Priority - Nice to Have
-
-#### 8. Python Missing `validate_mime_type()`
-**Status**: ❌ Python missing 1 MIME utility
-**Severity**: Low - Minor utility function
-
-**Current State**:
-- Python has: `detect_mime_type()`, `detect_mime_type_from_path()`, `get_extensions_for_mime()`
-- Python missing: `validate_mime_type()`
-
-**E2E Tests to Add**:
-- [ ] `e2e/python/tests/test_plugin_apis.py` - `test_validate_mime_type`
-
-**Implementation Steps**:
-1. Add binding in `crates/kreuzberg-py/src/lib.rs`
-2. Export in `packages/python/kreuzberg/__init__.py`
-3. Add E2E test
-4. Verify test passes
-
----
-
-## TDD Implementation Checklist
-
-### Phase 1: Write Failing Tests (RED)
-- [ ] Add E2E test for `register_document_extractor()` in Python
-- [ ] Add E2E test for `register_document_extractor()` in TypeScript
-- [ ] Add E2E test for `register_document_extractor()` in Ruby
-- [ ] Add E2E test for `register_document_extractor()` in Java
-- [ ] Add E2E test for `register_document_extractor()` in Go
-- [ ] Add E2E test for `ExtractionConfig.from_file()` in Python (class method)
-- [ ] Add E2E test for `ExtractionConfig.discover()` in Python (class method)
-- [ ] Add E2E test for `Config::Extraction.from_file` in Ruby (class method)
-- [ ] Add E2E test for `Config::Extraction.discover` in Ruby (class method)
-- [ ] Add E2E tests for Ruby MIME utilities (4 tests)
-- [ ] Add E2E tests for Ruby embedding presets (2 tests)
-- [ ] Add E2E test for Python `validate_mime_type()`
-- [ ] Run all E2E tests → verify failures
-
-### Phase 2: Implement Rust Core (if needed)
-- [ ] Export post-processor mutation APIs in `plugins/mod.rs` (P1)
-- [ ] Verify Rust core has all required APIs for bindings
-
-### Phase 3: Implement Bindings (GREEN)
-**P0 - Critical**:
-- [ ] Python: `register_document_extractor()`
-- [ ] TypeScript: `registerDocumentExtractor()`
-- [ ] Ruby: `register_document_extractor`
-- [ ] Java: `registerDocumentExtractor()`
-- [ ] Go: `RegisterDocumentExtractor()`
-
-**P1 - High**:
-- [ ] Python: `ExtractionConfig.from_file()`, `ExtractionConfig.discover()`
-- [ ] Ruby: `Config::Extraction.from_file`, `Config::Extraction.discover`
-
-**P2 - Medium**:
-- [ ] Ruby: `detect_mime_type()`, `detect_mime_type_from_path()`, `get_extensions_for_mime()`, `validate_mime_type()`
-- [ ] Ruby: `list_embedding_presets()`, `get_embedding_preset()`
-- [ ] Ruby: `unregister_document_extractor()` (expose existing)
-
-**P3 - Low**:
-- [ ] Python: `validate_mime_type()`
-
-### Phase 4: Verification
-- [ ] Run Python E2E tests → 100% passing
-- [ ] Run TypeScript E2E tests → 100% passing
-- [ ] Run Ruby E2E tests → 100% passing
-- [ ] Run Java E2E tests → 100% passing
-- [ ] Run Go E2E tests → 100% passing
+**Action Items**:
+- [ ] Run Python generated tests → 100% passing
+- [ ] Run TypeScript generated tests → 100% passing
+- [ ] Run Ruby generated tests → 100% passing
+- [ ] Run Java generated tests → 100% passing
+- [ ] Run Go generated tests → 100% passing
 - [ ] Run `cargo clippy --all-targets --all-features` → zero warnings
-- [ ] Commit and push
+- [ ] Commit implementations with passing tests
 
-### Phase 5: Cleanup
+---
+
+## Phase 3: Create Fixtures for Missing API Coverage
+
+**If generated tests don't cover all missing APIs**, create fixtures:
+
+### New Fixtures Needed
+
+**From API Parity Review**:
+- [ ] `fixtures/plugin_api/register_document_extractor.json` - NEW API, needs fixtures
+- [ ] `fixtures/config_api/config_from_file.json` - Config loading
+- [ ] `fixtures/config_api/config_discover.json` - Config discovery
+- [ ] `fixtures/mime_api/detect_mime_from_bytes.json` - MIME detection from bytes
+- [ ] `fixtures/mime_api/detect_mime_from_path.json` - MIME detection from path
+- [ ] `fixtures/mime_api/get_extensions_for_mime.json` - Extension lookup
+- [ ] `fixtures/mime_api/validate_mime_type.json` - MIME validation
+- [ ] `fixtures/embedding_api/list_presets.json` - Embedding preset list
+- [ ] `fixtures/embedding_api/get_preset.json` - Embedding preset get
+
+**Process**:
+1. Create fixture JSON files
+2. Regenerate tests: `cargo run -p kreuzberg-e2e-generator -- generate --lang <language>`
+3. Implement APIs
+4. Verify tests pass
+
+---
+
+## Phase 4: Documentation & Cleanup
+
+### Step 4.1: Document Generator System
+
+**Action Items**:
+- [ ] Update `tools/e2e-generator/README.md` with plugin API fixture docs
+- [ ] Document fixture schema in `fixtures/plugin_api/schema.json`
+- [ ] Add examples to `fixtures/plugin_api/examples/`
+- [ ] Update main `README.md` to explain E2E test generation
+
+### Step 4.2: Add CI Checks
+
+**Action Items**:
+- [ ] Add CI step to verify E2E tests are generated (not hand-written)
+- [ ] Add CI step to regenerate tests and check for git diff
+- [ ] Document regeneration process in `CONTRIBUTING.md`
+
+### Step 4.3: Final Verification
+
+**Action Items**:
+- [ ] All E2E tests are generated from fixtures
+- [ ] No hand-written E2E tests remain
+- [ ] All language bindings have 100% API parity
+- [ ] All generated tests pass
+- [ ] Clippy passes
+- [ ] Documentation updated
 - [ ] Remove TODO.md
-- [ ] Create PR with all changes
-- [ ] Document remaining architectural decisions (if any)
+- [ ] Create PR
+
+---
+
+## Implementation Checklist Summary
+
+### Phase 1: Fix Architecture (CRITICAL)
+- [ ] 1.1: Audit hand-written tests
+- [ ] 1.2: Design plugin API fixture schema
+- [ ] 1.3: Extend E2E generator to support plugin APIs
+- [ ] 1.4: Generate tests, delete hand-written files
+
+### Phase 2: Implement APIs (TDD)
+- [ ] 2.1: Run generated tests (RED)
+- [ ] 2.2: Implement missing APIs (GREEN)
+- [ ] 2.3: Verify tests pass
+
+### Phase 3: Coverage
+- [ ] 3.1: Create fixtures for any remaining gaps
+- [ ] 3.2: Regenerate and verify
+
+### Phase 4: Cleanup
+- [ ] 4.1: Documentation
+- [ ] 4.2: CI checks
+- [ ] 4.3: Final verification
 
 ---
 
 ## Expected Final State
 
-After completion, ALL bindings should have:
-
-| API Category | Python | TypeScript | Ruby | Java | Go |
-|--------------|--------|------------|------|------|----|
-| **Validators** (4 APIs) | ✅ 4/4 | ✅ 4/4 | ✅ 4/4 | ✅ 4/4 | ✅ 4/4 |
-| **Post-Processors** (4 APIs) | ✅ 4/4 | ✅ 4/4 | ✅ 4/4 | ✅ 4/4 | ✅ 4/4 |
-| **OCR Backends** (4 APIs) | ✅ 4/4 | ✅ 4/4 | ✅ 4/4 | ✅ 4/4 | ✅ 4/4 |
-| **Document Extractors** (4 APIs) | ⏳ 3/4 | ⏳ 3/4 | ⏳ 2/4 | ⏳ 3/4 | ⏳ 3/4 |
-| **Config Loading** (2 APIs) | ⏳ 0/2 | ✅ 2/2 | ⏳ 0/2 | ✅ 2/2 | ✅ 2/2 |
-| **MIME Utilities** (4 APIs) | ⏳ 3/4 | ✅ 4/4 | ⏳ 0/4 | ✅ 4/4 | ✅ 4/4 |
-| **Embedding Presets** (2 APIs) | ✅ 2/2 | ✅ 2/2 | ⏳ 0/2 | ✅ 2/2 | ✅ 2/2 |
-
-**Legend**: ✅ Complete | ⏳ Work needed
-
-**Target**: All cells should be ✅ (100% parity)
+1. **Zero hand-written E2E tests** - All generated from fixtures
+2. **100% API parity** across all 5 language bindings
+3. **Fixtures cover**:
+   - Document extraction (existing)
+   - Plugin management APIs (new)
+   - Configuration APIs (new)
+   - MIME utilities (new)
+   - Embedding presets (new)
+4. **Generator handles** all test generation
+5. **CI enforces** fixture-driven architecture
 
 ---
 
 ## Notes
 
-- Follow TDD strictly: Write test → See it fail → Implement → See it pass
-- Each implementation should be committed separately by priority
-- Ruby has the most gaps (13 missing APIs)
-- Python has 3 missing APIs
-- TypeScript/Java/Go are nearly complete (1 missing each)
-- Use specialized agents for parallel implementation where possible
+- **DO NOT** write any E2E tests by hand
+- **DO NOT** modify generated test files directly
+- **ALWAYS** work through fixtures and generator
+- Generator is source of truth for E2E tests
+- This is non-negotiable architecture
 
 **End of TODO.md**
