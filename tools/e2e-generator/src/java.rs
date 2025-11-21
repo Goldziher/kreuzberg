@@ -1024,61 +1024,6 @@ fn generate_config_from_file_test_java(test_spec: &PluginTestSpec, buf: &mut Str
     Ok(())
 }
 
-fn generate_config_discover_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
-    let setup = test_spec
-        .setup
-        .as_ref()
-        .with_context(|| "Test spec missing setup for config_discover")?;
-    let file_content = setup
-        .temp_file_content
-        .as_ref()
-        .with_context(|| "Setup missing temp_file_content")?;
-    let file_name = setup
-        .temp_file_name
-        .as_ref()
-        .with_context(|| "Setup missing temp_file_name")?;
-    let subdir = setup
-        .subdirectory_name
-        .as_ref()
-        .with_context(|| "Setup missing subdirectory_name")?;
-
-    // Create config in parent dir
-    writeln!(buf, "        Path configPath = tempDir.resolve(\"{}\");", file_name)?;
-    writeln!(buf, "        Files.writeString(configPath, \"\"\"")?;
-    writeln!(buf, "{}\"\"\");", file_content)?;
-    writeln!(buf)?;
-
-    // Create subdirectory
-    writeln!(buf, "        Path subDir = tempDir.resolve(\"{}\");", subdir)?;
-    writeln!(buf, "        Files.createDirectories(subDir);")?;
-    writeln!(buf)?;
-
-    // Change directory using system property
-    writeln!(buf, "        String originalDir = System.getProperty(\"user.dir\");")?;
-    writeln!(buf, "        try {{")?;
-    writeln!(buf, "            System.setProperty(\"user.dir\", subDir.toString());")?;
-    writeln!(
-        buf,
-        "            ExtractionConfig config = ExtractionConfig.discover();"
-    )?;
-    writeln!(buf, "            assertNotNull(config);")?;
-
-    // Generate assertions with proper indentation
-    let mut assertion_buf = String::new();
-    generate_object_property_assertions_java(&test_spec.assertions, &mut assertion_buf)?;
-    for line in assertion_buf.lines() {
-        if !line.trim().is_empty() {
-            writeln!(buf, "    {}", line)?;
-        }
-    }
-
-    writeln!(buf, "        }} finally {{")?;
-    writeln!(buf, "            System.setProperty(\"user.dir\", originalDir);")?;
-    writeln!(buf, "        }}")?;
-
-    Ok(())
-}
-
 fn generate_mime_from_bytes_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
     let setup = test_spec
         .setup
