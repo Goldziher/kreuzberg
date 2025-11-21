@@ -29,23 +29,25 @@
 
 #### 1. Missing Rust Plugin API Test Generation
 **Severity**: CRITICAL
-**Status**: ⏳ TODO
+**Status**: ⚠️ PARTIAL (Commit 51bd61ed)
 
 **Problem**: The Rust generator (`tools/e2e-generator/src/rust.rs`) explicitly filters OUT plugin API fixtures and does not generate tests for them. Rust core library has NO E2E tests for plugin/config/MIME APIs.
 
-**Evidence**:
-```rust
-// rust.rs:18 - Filter to only document extraction fixtures
-let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
-// Plugin API generation: NOT IMPLEMENTED
-```
+**Progress**:
+- ✅ Implemented `generate_plugin_api_tests()` in `rust.rs` (commit 51bd61ed)
+- ✅ Added all 8 test pattern renderers (simple_list, clear_registry, config_from_file, etc.)
+- ✅ Used proper error contexts (`.with_context()`) instead of `.unwrap()`
+- ❌ Generated tests do NOT compile - require API investigation
 
-**Impact**: Rust is the PRIMARY implementation per CLAUDE.md, yet it's the only language without plugin API tests. All 5 bindings have these tests except the source.
+**Blocking Issues** (must resolve before tests can be generated):
+1. Missing/incorrect imports (KreuzbergError, hex, tempfile, temp_cwd crates)
+2. API signature mismatches (detect_mime_type returns Result but generated code treats as String)
+3. Missing validate_mime_type function in Rust core
+4. Need to verify actual Rust API surface matches what Python/TS/Ruby/Java/Go expect
 
 **Action Items**:
-- [ ] Implement `generate_plugin_api_tests()` in `rust.rs`
-- [ ] Generate tests to `e2e/rust/tests/plugin_apis.rs`
-- [ ] Handle all 8 test patterns (simple_list, clear_registry, etc.)
+- [ ] Investigate actual Rust core API (lib.rs exports, MIME module, config API)
+- [ ] Fix generated test imports and API calls
 - [ ] Ensure tests compile and pass
 - [ ] Verify 95% test coverage requirement is met
 
