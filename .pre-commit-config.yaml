@@ -54,7 +54,6 @@ repos:
     rev: v1.0
     hooks:
       - id: fmt
-      - id: cargo-check
       - id: clippy
   - repo: https://github.com/gherynos/pre-commit-java
     rev: v0.6.27
