@@ -34,6 +34,7 @@ def test_html_simple_table() -> None:
     result = extract_file_sync(document_path, None, config)
 
     helpers.assert_expected_mime(result, ["text/html"])
-    helpers.assert_min_content_length(result, 20)
-    helpers.assert_content_contains_all(result, ["|"])
+    helpers.assert_min_content_length(result, 100)
+    helpers.assert_content_contains_all(result, ["Product", "Category", "Price", "Stock", "Laptop", "Electronics", "Sample Data Table"])
+    helpers.assert_table_count(result, 1, None)
 

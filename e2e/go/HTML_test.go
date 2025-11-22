@@ -14,7 +14,8 @@ func TestHTML_HTML_COMPLEX_LAYOUT(t *testing.T) {
 func TestHTML_HTML_SIMPLE_TABLE(t *testing.T) {
     result := runExtraction(t, "web/simple_table.html", nil)
     assertExpectedMime(t, result, []string{"text/html"})
-    assertMinContentLength(t, result, 20)
-    assertContentContainsAll(t, result, []string{"|"})
+    assertMinContentLength(t, result, 100)
+    assertContentContainsAll(t, result, []string{"Product", "Category", "Price", "Stock", "Laptop", "Electronics", "Sample Data Table"})
+    assertTableCount(t, result, intPtr(1), nil)
 }
 

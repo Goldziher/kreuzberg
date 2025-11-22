@@ -50,7 +50,9 @@ func TestOFFICE_OFFICE_DOCX_LISTS(t *testing.T) {
 func TestOFFICE_OFFICE_DOCX_TABLES(t *testing.T) {
     result := runExtraction(t, "documents/docx_tables.docx", nil)
     assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
-    assertMinContentLength(t, result, 20)
+    assertMinContentLength(t, result, 50)
+    assertContentContainsAll(t, result, []string{"Simple uniform table", "Nested Table", "merged cells", "Header Col"})
+    assertTableCount(t, result, intPtr(1), nil)
 }
 
 func TestOFFICE_OFFICE_PPT_LEGACY(t *testing.T) {
@@ -86,7 +88,9 @@ func TestOFFICE_OFFICE_XLS_LEGACY(t *testing.T) {
 func TestOFFICE_OFFICE_XLSX_BASIC(t *testing.T) {
     result := runExtraction(t, "spreadsheets/stanley_cups.xlsx", nil)
     assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
-    assertMinContentLength(t, result, 10)
+    assertMinContentLength(t, result, 100)
+    assertContentContainsAll(t, result, []string{"Team", "Location", "Stanley Cups"})
+    assertTableCount(t, result, intPtr(1), nil)
 }
 
 func TestOFFICE_OFFICE_XLSX_MULTI_SHEET(t *testing.T) {

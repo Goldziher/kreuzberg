@@ -40,7 +40,8 @@ fn test_html_simple_table() {
     };
 
     assertions::assert_expected_mime(&result, &["text/html"]);
-    assertions::assert_min_content_length(&result, 20);
-    assertions::assert_content_contains_all(&result, &["|"]);
+    assertions::assert_min_content_length(&result, 100);
+    assertions::assert_content_contains_all(&result, &["Product", "Category", "Price", "Stock", "Laptop", "Electronics", "Sample Data Table"]);
+    assertions::assert_table_count(&result, Some(1), None);
 }
 

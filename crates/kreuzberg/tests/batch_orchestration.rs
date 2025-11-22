@@ -7,8 +7,8 @@
 //! - File I/O optimization
 //! - Resource utilization (CPU cores)
 
-use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
-use kreuzberg::core::extractor::{batch_extract_bytes, batch_extract_file, extract_file_sync};
+use kreuzberg::core::config::ExtractionConfig;
+use kreuzberg::core::extractor::{batch_extract_bytes, batch_extract_file};
 use std::time::{Duration, Instant};
 
 mod helpers;

@@ -169,7 +169,9 @@ fn test_office_docx_tables() {
     };
 
     assertions::assert_expected_mime(&result, &["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]);
-    assertions::assert_min_content_length(&result, 20);
+    assertions::assert_min_content_length(&result, 50);
+    assertions::assert_content_contains_all(&result, &["Simple uniform table", "Nested Table", "merged cells", "Header Col"]);
+    assertions::assert_table_count(&result, Some(1), None);
 }
 
 #[test]
@@ -282,7 +284,7 @@ fn test_office_xls_legacy() {
 
 #[test]
 fn test_office_xlsx_basic() {
-    // XLSX spreadsheet should produce metadata and content.
+    // XLSX spreadsheet should produce metadata and table content.
 
     let document_path = resolve_document("spreadsheets/stanley_cups.xlsx");
     if !document_path.exists() {
@@ -297,8 +299,11 @@ fn test_office_xlsx_basic() {
     };
 
     assertions::assert_expected_mime(&result, &["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
-    assertions::assert_min_content_length(&result, 10);
-    assertions::assert_metadata_expectation(&result, "sheet_count", &serde_json::json!({"gte":1}));
+    assertions::assert_min_content_length(&result, 100);
+    assertions::assert_content_contains_all(&result, &["Team", "Location", "Stanley Cups"]);
+    assertions::assert_table_count(&result, Some(1), None);
+    assertions::assert_metadata_expectation(&result, "sheet_count", &serde_json::json!({"gte":2}));
+    assertions::assert_metadata_expectation(&result, "sheet_names", &serde_json::json!({"contains":"Stanley Cups"}));
 }
 
 #[test]

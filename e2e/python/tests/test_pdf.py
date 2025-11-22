@@ -175,6 +175,7 @@ def test_pdf_tables_large() -> None:
 
     helpers.assert_expected_mime(result, ["application/pdf"])
     helpers.assert_min_content_length(result, 500)
+    helpers.assert_table_count(result, 1, None)
 
 def test_pdf_tables_medium() -> None:
     """Medium-sized PDF with multiple tables."""
@@ -189,6 +190,7 @@ def test_pdf_tables_medium() -> None:
 
     helpers.assert_expected_mime(result, ["application/pdf"])
     helpers.assert_min_content_length(result, 100)
+    helpers.assert_table_count(result, 1, None)
 
 def test_pdf_tables_small() -> None:
     """Small PDF containing tables to validate table extraction."""
@@ -202,7 +204,9 @@ def test_pdf_tables_small() -> None:
     result = extract_file_sync(document_path, None, config)
 
     helpers.assert_expected_mime(result, ["application/pdf"])
-    helpers.assert_min_content_length(result, 10)
+    helpers.assert_min_content_length(result, 50)
+    helpers.assert_content_contains_all(result, ["Table 1", "Selected Numbers", "Celsius", "Fahrenheit", "Water Freezing Point", "Water Boiling Point"])
+    helpers.assert_table_count(result, 1, None)
 
 def test_pdf_technical_stat_learning() -> None:
     """Technical statistical learning PDF requiring substantial extraction."""

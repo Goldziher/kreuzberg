@@ -235,6 +235,7 @@ fn test_pdf_tables_large() {
 
     assertions::assert_expected_mime(&result, &["application/pdf"]);
     assertions::assert_min_content_length(&result, 500);
+    assertions::assert_table_count(&result, Some(1), None);
 }
 
 #[test]
@@ -255,6 +256,7 @@ fn test_pdf_tables_medium() {
 
     assertions::assert_expected_mime(&result, &["application/pdf"]);
     assertions::assert_min_content_length(&result, 100);
+    assertions::assert_table_count(&result, Some(1), None);
 }
 
 #[test]
@@ -274,7 +276,9 @@ fn test_pdf_tables_small() {
     };
 
     assertions::assert_expected_mime(&result, &["application/pdf"]);
-    assertions::assert_min_content_length(&result, 10);
+    assertions::assert_min_content_length(&result, 50);
+    assertions::assert_content_contains_all(&result, &["Table 1", "Selected Numbers", "Celsius", "Fahrenheit", "Water Freezing Point", "Water Boiling Point"]);
+    assertions::assert_table_count(&result, Some(1), None);
 }
 
 #[test]

@@ -46,7 +46,8 @@ func TestSMOKE_SMOKE_TXT_BASIC(t *testing.T) {
 func TestSMOKE_SMOKE_XLSX_BASIC(t *testing.T) {
     result := runExtraction(t, "spreadsheets/stanley_cups.xlsx", nil)
     assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
-    assertMinContentLength(t, result, 10)
-    assertContentContainsAny(t, result, []string{"Stanley", "Blues", "Flyers"})
+    assertMinContentLength(t, result, 100)
+    assertContentContainsAll(t, result, []string{"Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR"})
+    assertTableCount(t, result, intPtr(1), nil)
 }
 

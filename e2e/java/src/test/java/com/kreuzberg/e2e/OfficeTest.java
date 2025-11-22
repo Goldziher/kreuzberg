@@ -148,7 +148,9 @@ public class OfficeTest {
             true,
             result -> {
                 E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
-                E2EHelpers.Assertions.assertMinContentLength(result, 20);
+                E2EHelpers.Assertions.assertMinContentLength(result, 50);
+                E2EHelpers.Assertions.assertContentContainsAll(result, Arrays.asList("Simple uniform table", "Nested Table", "merged cells", "Header Col"));
+                E2EHelpers.Assertions.assertTableCount(result, 1, null);
             }
         );
     }
@@ -250,8 +252,11 @@ public class OfficeTest {
             true,
             result -> {
                 E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-                E2EHelpers.Assertions.assertMinContentLength(result, 10);
-                E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_count", Map.of("gte", 1));
+                E2EHelpers.Assertions.assertMinContentLength(result, 100);
+                E2EHelpers.Assertions.assertContentContainsAll(result, Arrays.asList("Team", "Location", "Stanley Cups"));
+                E2EHelpers.Assertions.assertTableCount(result, 1, null);
+                E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_count", Map.of("gte", 2));
+                E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_names", Map.of("contains", "Stanley Cups"));
             }
         );
     }

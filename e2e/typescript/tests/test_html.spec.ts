@@ -52,8 +52,9 @@ describe("html fixtures", () => {
       return;
     }
     assertions.assertExpectedMime(result, ["text/html"]);
-    assertions.assertMinContentLength(result, 20);
-    assertions.assertContentContainsAll(result, ["|"]);
+    assertions.assertMinContentLength(result, 100);
+    assertions.assertContentContainsAll(result, ["Product", "Category", "Price", "Stock", "Laptop", "Electronics", "Sample Data Table"]);
+    assertions.assertTableCount(result, 1, null);
   }, TEST_TIMEOUT_MS);
 
 });

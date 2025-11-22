@@ -126,9 +126,9 @@ pub async fn extract_file(
         }
         #[cfg(not(feature = "office"))]
         LEGACY_WORD_MIME_TYPE => {
-            return Err(KreuzbergError::UnsupportedFormat(format!(
-                "Legacy Word conversion requires the `office` feature or LibreOffice support"
-            )));
+            return Err(KreuzbergError::UnsupportedFormat(
+                "Legacy Word conversion requires the `office` feature or LibreOffice support".to_string()
+            ));
         }
         #[cfg(feature = "office")]
         LEGACY_POWERPOINT_MIME_TYPE => {
@@ -141,9 +141,9 @@ pub async fn extract_file(
         }
         #[cfg(not(feature = "office"))]
         LEGACY_POWERPOINT_MIME_TYPE => {
-            return Err(KreuzbergError::UnsupportedFormat(format!(
-                "Legacy PowerPoint conversion requires the `office` feature or LibreOffice support"
-            )));
+            return Err(KreuzbergError::UnsupportedFormat(
+                "Legacy PowerPoint conversion requires the `office` feature or LibreOffice support".to_string()
+            ));
         }
         _ => {}
     }

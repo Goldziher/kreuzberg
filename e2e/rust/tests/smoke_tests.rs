@@ -128,7 +128,7 @@ fn test_smoke_txt_basic() {
 
 #[test]
 fn test_smoke_xlsx_basic() {
-    // Smoke test: XLSX with basic spreadsheet data
+    // Smoke test: XLSX with basic spreadsheet data including tables
 
     let document_path = resolve_document("spreadsheets/stanley_cups.xlsx");
     if !document_path.exists() {
@@ -143,7 +143,10 @@ fn test_smoke_xlsx_basic() {
     };
 
     assertions::assert_expected_mime(&result, &["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
-    assertions::assert_min_content_length(&result, 10);
-    assertions::assert_content_contains_any(&result, &["Stanley", "Blues", "Flyers"]);
+    assertions::assert_min_content_length(&result, 100);
+    assertions::assert_content_contains_all(&result, &["Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR"]);
+    assertions::assert_table_count(&result, Some(1), None);
+    assertions::assert_metadata_expectation(&result, "sheet_count", &serde_json::json!({"gte":2}));
+    assertions::assert_metadata_expectation(&result, "sheet_names", &serde_json::json!({"contains":"Stanley Cups"}));
 }
 

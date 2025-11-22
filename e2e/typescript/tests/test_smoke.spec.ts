@@ -171,8 +171,11 @@ describe("smoke fixtures", () => {
       return;
     }
     assertions.assertExpectedMime(result, ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
-    assertions.assertMinContentLength(result, 10);
-    assertions.assertContentContainsAny(result, ["Stanley", "Blues", "Flyers"]);
+    assertions.assertMinContentLength(result, 100);
+    assertions.assertContentContainsAll(result, ["Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR"]);
+    assertions.assertTableCount(result, 1, null);
+    assertions.assertMetadataExpectation(result, "sheet_count", {"gte":2});
+    assertions.assertMetadataExpectation(result, "sheet_names", {"contains":"Stanley Cups"});
   }, TEST_TIMEOUT_MS);
 
 });

@@ -96,7 +96,7 @@ def test_smoke_txt_basic() -> None:
     helpers.assert_min_content_length(result, 5)
 
 def test_smoke_xlsx_basic() -> None:
-    """Smoke test: XLSX with basic spreadsheet data"""
+    """Smoke test: XLSX with basic spreadsheet data including tables"""
 
     document_path = helpers.resolve_document("spreadsheets/stanley_cups.xlsx")
     if not document_path.exists():
@@ -107,6 +107,9 @@ def test_smoke_xlsx_basic() -> None:
     result = extract_file_sync(document_path, None, config)
 
     helpers.assert_expected_mime(result, ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"])
-    helpers.assert_min_content_length(result, 10)
-    helpers.assert_content_contains_any(result, ["Stanley", "Blues", "Flyers"])
+    helpers.assert_min_content_length(result, 100)
+    helpers.assert_content_contains_all(result, ["Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR"])
+    helpers.assert_table_count(result, 1, None)
+    helpers.assert_metadata_expectation(result, "sheet_count", {"gte": 2})
+    helpers.assert_metadata_expectation(result, "sheet_names", {"contains": "Stanley Cups"})
 

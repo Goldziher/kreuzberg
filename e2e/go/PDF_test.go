@@ -76,18 +76,22 @@ func TestPDF_PDF_TABLES_LARGE(t *testing.T) {
     result := runExtraction(t, "pdfs_with_tables/large.pdf", nil)
     assertExpectedMime(t, result, []string{"application/pdf"})
     assertMinContentLength(t, result, 500)
+    assertTableCount(t, result, intPtr(1), nil)
 }
 
 func TestPDF_PDF_TABLES_MEDIUM(t *testing.T) {
     result := runExtraction(t, "pdfs_with_tables/medium.pdf", nil)
     assertExpectedMime(t, result, []string{"application/pdf"})
     assertMinContentLength(t, result, 100)
+    assertTableCount(t, result, intPtr(1), nil)
 }
 
 func TestPDF_PDF_TABLES_SMALL(t *testing.T) {
     result := runExtraction(t, "pdfs_with_tables/tiny.pdf", nil)
     assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 10)
+    assertMinContentLength(t, result, 50)
+    assertContentContainsAll(t, result, []string{"Table 1", "Selected Numbers", "Celsius", "Fahrenheit", "Water Freezing Point", "Water Boiling Point"})
+    assertTableCount(t, result, intPtr(1), nil)
 }
 
 func TestPDF_PDF_TECHNICAL_STAT_LEARNING(t *testing.T) {

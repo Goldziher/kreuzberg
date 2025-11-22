@@ -134,8 +134,11 @@ public class SmokeTest {
             true,
             result -> {
                 E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-                E2EHelpers.Assertions.assertMinContentLength(result, 10);
-                E2EHelpers.Assertions.assertContentContainsAny(result, Arrays.asList("Stanley", "Blues", "Flyers"));
+                E2EHelpers.Assertions.assertMinContentLength(result, 100);
+                E2EHelpers.Assertions.assertContentContainsAll(result, Arrays.asList("Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR"));
+                E2EHelpers.Assertions.assertTableCount(result, 1, null);
+                E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_count", Map.of("gte", 2));
+                E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_names", Map.of("contains", "Stanley Cups"));
             }
         );
     }

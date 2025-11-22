@@ -274,6 +274,7 @@ describe("pdf fixtures", () => {
     }
     assertions.assertExpectedMime(result, ["application/pdf"]);
     assertions.assertMinContentLength(result, 500);
+    assertions.assertTableCount(result, 1, null);
   }, TEST_TIMEOUT_MS);
 
   it("pdf_tables_medium", () => {
@@ -297,6 +298,7 @@ describe("pdf fixtures", () => {
     }
     assertions.assertExpectedMime(result, ["application/pdf"]);
     assertions.assertMinContentLength(result, 100);
+    assertions.assertTableCount(result, 1, null);
   }, TEST_TIMEOUT_MS);
 
   it("pdf_tables_small", () => {
@@ -319,7 +321,9 @@ describe("pdf fixtures", () => {
       return;
     }
     assertions.assertExpectedMime(result, ["application/pdf"]);
-    assertions.assertMinContentLength(result, 10);
+    assertions.assertMinContentLength(result, 50);
+    assertions.assertContentContainsAll(result, ["Table 1", "Selected Numbers", "Celsius", "Fahrenheit", "Water Freezing Point", "Water Boiling Point"]);
+    assertions.assertTableCount(result, 1, null);
   }, TEST_TIMEOUT_MS);
 
   it("pdf_technical_stat_learning", () => {

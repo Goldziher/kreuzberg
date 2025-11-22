@@ -20,9 +20,9 @@ import type {
     PostProcessorConfig,
     TesseractConfig,
     TokenReductionConfig,
-} from "../../../packages/typescript/src/types.js";
+} from "./types.js";
 
-const WORKSPACE_ROOT = resolve(__dirname, "../../..");
+const WORKSPACE_ROOT = resolve(__dirname, "../../../../..");
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");
 
 type PlainRecord = Record<string, unknown>;
@@ -357,13 +357,12 @@ function valuesEqual(lhs: unknown, rhs: unknown): boolean {
 "#;
 
 pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
-    let ts_root = output_root.join("typescript");
-    let tests_dir = ts_root.join("tests");
+    let ts_impl_dir = output_root.join("packages/typescript/src");
 
-    fs::create_dir_all(&tests_dir).context("Failed to create TypeScript tests directory")?;
+    fs::create_dir_all(&ts_impl_dir).context("Failed to create TypeScript src directory")?;
 
-    clean_ts_files(&tests_dir)?;
-    write_helpers(&tests_dir)?;
+    clean_ts_files(&ts_impl_dir)?;
+    write_helpers(&ts_impl_dir)?;
 
     // Separate document extraction and plugin API fixtures
     let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
@@ -382,13 +381,13 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         fixtures.sort_by(|a, b| a.id.cmp(&b.id));
         let file_name = format!("test_{}.spec.ts", sanitize_identifier(&category));
         let content = render_category(&category, &fixtures)?;
-        let path = tests_dir.join(file_name);
+        let path = ts_impl_dir.join(file_name);
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
     }
 
     // Generate plugin API tests
     if !plugin_fixtures.is_empty() {
-        generate_plugin_api_tests(&plugin_fixtures, &tests_dir)?;
+        generate_plugin_api_tests(&plugin_fixtures, &ts_impl_dir)?;
     }
 
     Ok(())
@@ -401,10 +400,19 @@ fn clean_ts_files(dir: &Utf8Path) -> Result<()> {
 
     for entry in fs::read_dir(dir.as_std_path())? {
         let entry = entry?;
-        if entry.path().file_name().is_some_and(|name| name == "helpers.ts") {
+        let file_name = entry.path().file_name().unwrap_or_default().to_string_lossy().to_string();
+
+        // Skip implementation files, only remove test files
+        if file_name == "helpers.ts"
+            || file_name == "index.ts"
+            || file_name == "types.ts"
+            || file_name == "errors.ts"
+            || file_name == "cli.ts" {
             continue;
         }
-        if entry.path().extension().is_some_and(|ext| ext == "ts") {
+
+        // Remove test files (.spec.ts)
+        if file_name.ends_with(".spec.ts") {
             fs::remove_file(entry.path())?;
         }
     }
@@ -412,8 +420,8 @@ fn clean_ts_files(dir: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
-fn write_helpers(tests_dir: &Utf8Path) -> Result<()> {
-    let helpers_path = tests_dir.join("helpers.ts");
+fn write_helpers(src_dir: &Utf8Path) -> Result<()> {
+    let helpers_path = src_dir.join("helpers.ts");
     fs::write(&helpers_path, TYPESCRIPT_HELPERS_TEMPLATE).context("Failed to write helpers.ts")
 }
 
@@ -424,15 +432,15 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     writeln!(buffer, "import {{ describe, it }} from \"vitest\";")?;
     writeln!(
         buffer,
-        "import {{ extractFileSync }} from \"../../../packages/typescript/src/index.js\";",
+        "import {{ extractFileSync }} from \"./index.js\";",
     )?;
     writeln!(
         buffer,
-        "import type {{ ExtractionResult }} from \"../../../packages/typescript/src/types.js\";",
+        "import type {{ ExtractionResult }} from \"./types.js\";",
     )?;
     writeln!(
         buffer,
-        "import {{ assertions, buildConfig, resolveDocument, shouldSkipFixture }} from \"./helpers\";\n",
+        "import {{ assertions, buildConfig, resolveDocument, shouldSkipFixture }} from \"./helpers.js\";\n",
     )?;
     writeln!(buffer, "const TEST_TIMEOUT_MS = 60_000;\n")?;
 
@@ -647,7 +655,7 @@ fn render_json_literal(value: &Value) -> String {
     serde_json::to_string(value).unwrap_or_else(|_| "null".into())
 }
 
-fn generate_plugin_api_tests(fixtures: &[&Fixture], tests_dir: &Utf8Path) -> Result<()> {
+fn generate_plugin_api_tests(fixtures: &[&Fixture], src_dir: &Utf8Path) -> Result<()> {
     let mut buffer = String::new();
 
     // File header
@@ -668,7 +676,7 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], tests_dir: &Utf8Path) -> Res
     writeln!(buffer, "import {{ describe, expect, it }} from \"vitest\";")?;
     writeln!(
         buffer,
-        "import * as kreuzberg from \"../../../packages/typescript/src/index.js\";"
+        "import * as kreuzberg from \"./index.js\";"
     )?;
     writeln!(buffer)?;
 
@@ -700,7 +708,7 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], tests_dir: &Utf8Path) -> Res
         writeln!(buffer)?;
     }
 
-    let path = tests_dir.join("plugin-apis.test.ts");
+    let path = src_dir.join("plugin-apis.spec.ts");
     fs::write(&path, buffer).with_context(|| format!("Writing {}", path))?;
 
     Ok(())

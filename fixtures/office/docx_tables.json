@@ -1,16 +1,25 @@
 {
-	"id": "office_docx_tables",
-	"category": "office",
-	"description": "DOCX document containing tables for table-aware extraction.",
-	"document": {
-		"path": "documents/docx_tables.docx",
-		"media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-	},
-	"extraction": {
-		"config": {}
-	},
-	"assertions": {
-		"expected_mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-		"min_content_length": 20
-	}
+  "id": "office_docx_tables",
+  "category": "office",
+  "description": "DOCX document containing tables for table-aware extraction.",
+  "document": {
+    "path": "documents/docx_tables.docx",
+    "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  },
+  "extraction": {
+    "config": {}
+  },
+  "assertions": {
+    "expected_mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "min_content_length": 50,
+    "content_contains_all": [
+      "Simple uniform table",
+      "Nested Table",
+      "merged cells",
+      "Header Col"
+    ],
+    "tables": {
+      "min": 1
+    }
+  }
 }

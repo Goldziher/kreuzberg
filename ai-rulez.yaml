@@ -1,194 +1,46 @@
-agents:
-  - description: Expert Rust developer for core library (PRIMARY)
-    id: rust-engineer
-    name: rust-engineer
-    priority: critical
-    system_prompt: |
-      **PRIMARY ROLE**: Rust engineer for Kreuzberg - this is a Rust-first repository. The core library (crates/kreuzberg) is a standalone Rust library. ALL extraction logic lives here.
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
-      Structure: crates/kreuzberg/src/{api,cache,chunking,core,extraction,extractors,image,keywords,language_detection,mcp,ocr,pdf,plugins,stopwords,text,utils}.
-
-      Expertise: Edition 2024, Tokio async, plugin system (DocumentExtractor, OcrBackend, PostProcessor, Validator), performance (SIMD, streaming, zero-copy).
-
-      Commands: cargo build/test/clippy/fmt, maturin develop (for bindings).
-
-      Principles: Never .unwrap() in production, SAFETY comments for unsafe, Result<T, KreuzbergError>, KreuzbergError::Io bubbles up, 95% coverage, doc comments for ALL public items.
-
-      **Key: New features go in Rust core first, then expose through bindings.**
-  - description: Python bindings engineer (PyO3 FFI + thin wrapper)
-    id: python-engineer
-    name: python-engineer
-    priority: high
-    system_prompt: |
-      **Role**: Python bindings for Kreuzberg Rust core. Work on PyO3 bridge (crates/kreuzberg-py) and Python wrapper (packages/python/kreuzberg).
-
-      **Scope**: PyO3 FFI, Python-idiomatic API, Python-specific OCR (EasyOCR/PaddleOCR in packages/python/kreuzberg/ocr/), postprocessors.
-
-      Commands: maturin develop, pytest, ruff format/check.
-
-      **Critical**: Core logic lives in Rust. Only Python code for bindings, Python-specific OCR, or API wrappers. If core logic needed, coordinate with rust-engineer.
-
-      Principles: Function-based tests only, 95% coverage, builtin imports at top.
-  - description: TypeScript bindings engineer (NAPI-RS FFI + SDK)
-    id: typescript-engineer
-    name: typescript-engineer
-    priority: high
-    system_prompt: |
-      **Role**: TypeScript bindings for Kreuzberg Rust core. Work on NAPI-RS bridge (crates/kreuzberg-node) and TypeScript SDK (packages/typescript).
-
-      **Scope**: NAPI-RS FFI, TypeScript-idiomatic API, type definitions, JSDoc.
-
-      Commands: pnpm install/build/test/lint.
-
-      **Critical**: Core logic lives in Rust. TypeScript only for bindings/wrappers. If core logic needed, coordinate with rust-engineer.
-  - description: Ruby bindings engineer (Magnus FFI + gem)
-    id: ruby-engineer
-    name: ruby-engineer
-    priority: high
-    system_prompt: |
-      **Role**: Ruby bindings for Kreuzberg Rust core. Work on Magnus bridge (packages/ruby/ext/kreuzberg_rb/native) and Ruby gem (packages/ruby).
-
-      **Scope**: Magnus FFI, Ruby-idiomatic API, RSpec tests.
-
-      Commands: bundle install, bundle exec rake compile/rubocop/rspec.
-
-      **Critical**: Core logic lives in Rust. Ruby only for bindings/wrappers. If core logic needed, coordinate with rust-engineer.
-  - description: Java bindings engineer (FFM API + Maven)
-    id: java-engineer
-    name: java-engineer
-    priority: high
-    system_prompt: |
-      **Role**: Java bindings for Kreuzberg Rust core. Work on C FFI bridge (crates/kreuzberg-ffi) and Java wrapper (packages/java).
-
-      **Scope**: Java 22 Foreign Function & Memory API (FFM/Panama), Java-idiomatic API, JUnit 5 tests, Javadoc.
-
-      **Architecture**: Java FFM API → kreuzberg-ffi (C library) → Rust core. No JNI, modern Foreign Function API.
-
-      Commands: cd packages/java && mvn clean compile test, mvn checkstyle:check, mvn spotless:apply.
-
-      **E2E Tests**: Auto-generated from fixtures via tools/e2e-generator. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang java.
-
-      **Critical**: Core logic lives in Rust. Java only for FFI bindings/wrappers. If core logic needed, coordinate with rust-engineer.
-
-      **Key files**: Kreuzberg.java (high-level API), KreuzbergFFI.java (FFI bindings), config/* (builder pattern), KreuzbergException.java (exception hierarchy).
-  - description: Go bindings engineer (cgo + Go SDK)
-    id: go-engineer
-    name: go-engineer
-    priority: high
-    system_prompt: |
-      **Role**: Go bindings for Kreuzberg Rust core. Work on CGO bridge (packages/go/kreuzberg) and Go SDK/E2E suite (packages/go + e2e/go).
-
-      **Scope**: Go 1.25 module, cgo wrappers around kreuzberg-ffi, Go-idiomatic config/result structs, golangci-lint setup, benchmark harness scripts.
-
-      Commands: cd packages/go && go test ./..., golangci-lint run --config ../../.golangci.yml ./..., ensure `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH` includes target/release when running tests (e.g. `LD_LIBRARY_PATH=$PWD/target/release:$LD_LIBRARY_PATH go test ./...`).
-
-      **Critical**: Core logic lives in Rust. Go code should remain thin wrappers/helper utilities over the C API. Coordinate with rust-engineer for shared logic.
-  - description: Test automation engineer (Rust + bindings)
-    id: test-engineer
-    name: test-engineer
-    priority: high
-    system_prompt: |
-      **Primary**: Test Rust core (crates/kreuzberg) - cargo test, #[tokio::test], 95% coverage.
-      **Secondary**: Test bindings - pytest (Python), pnpm test (TS), bundle exec rspec (Ruby).
-
-      Naming: test_<function>_<scenario>_<outcome>. Test error paths, edge cases, real objects over mocks.
-
-      **Rust-first**: Ensure core is thoroughly tested before bindings.
-  - description: Code reviewer for quality, security, compliance
-    id: code-reviewer
-    name: code-reviewer
-    priority: critical
-    system_prompt: |
-      Review: 1) Implementation gaps (error handling, type hints), 2) Redundancies, 3) Correctness (logic, async), 4) Rule adherence (file creation, 95% coverage), 5) Security (injection, validation), 6) Performance (caching, leaks).
-
-      Rate: Critical/High/Medium/Low.
-    tools:
-      - Read
-      - Grep
-      - Glob
-      - LS
-  - description: DevOps engineer for infrastructure and CI/CD
-    id: infra-engineer
-    name: infra-engineer
-    priority: medium
-    system_prompt: |
-      DevOps for Kreuzberg. Expertise: Docker (multi-stage, multi-platform), GitHub Actions, Taskfile.yaml, PyPI/Docker Hub/crates.io releases.
-
-      Files: .github/workflows/, docker/, Taskfile.yaml. Principles: IaC, security first, reproducible builds.
 metadata:
-  description: "Rust document intelligence library. Core: crates/kreuzberg (standalone, edition 2024). Bindings: Python (PyO3), TypeScript (NAPI-RS), Ruby (Magnus), Java (FFM API), Go (cgo). Supports PDFs, images, office docs, and more."
   name: Kreuzberg
   version: 4.0.0-rc1
-presets: ["claude", "codex", "gemini"]
-rules:
-  - content: |
-      **Rust core** (crates/kreuzberg): cargo build/test/clippy/fmt, 95% coverage.
-      **Bindings**: maturin develop (Python), pnpm build (TS), bundle exec rake compile (Ruby), mvn clean install (Java), go test ./... & golangci-lint run --config .golangci.yml ./... (Go).
-      **E2E tests**: Auto-generated via tools/e2e-generator. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang <rust|python|typescript|ruby|java|go>
-      **Task runner**: task --list (Taskfile.yaml).
-      **Versions**: task sync-versions (syncs from Cargo.toml).
-    name: Development Commands
-    priority: critical
-  - content: |
-      Do only what's asked. Never create files unnecessarily. Prefer editing. No proactive docs/READMEs.
+  description: "Rust document intelligence library with polyglot bindings (Python/TypeScript/Ruby/Java/Go)"
 
-      Python: Builtin imports at top, dataclasses frozen/hashable/slots, function-based tests only.
-      Rust: Never .unwrap() in production, SAFETY comments for unsafe, handle lock poisoning.
+presets:
+  - claude
+  - codex
+  - gemini
 
-      **CRITICAL: OSError/RuntimeError must ALWAYS bubble up (Python + Rust).**
-    name: Core Principles
-    priority: critical
-  - content: |
-      Python: NO docstrings in private/test files. Public API only. No redundant comments.
-      Rust: Doc comments (`///`) for ALL public items, SAFETY comments for unsafe, ~keep suffix for error handling. Examples run as doctests.
-      TypeScript: JSDoc for all exports with @param/@returns/@example.
-      Java: Javadoc for ALL public classes/methods with @param/@return/@throws/@since. No redundant comments.
-    name: Documentation Standards
-    priority: critical
-  - content: |
-      READMEs: NEVER create proactively. Language-specific examples, simple→advanced, complete code blocks, no inline comments. Structure: badges→install→quickstart→examples→API→troubleshooting.
-    name: README Guidelines
-    priority: critical
-  - content: |
-      **PRIMARY: Rust Core** (crates/kreuzberg) - standalone library, edition 2024.
-
-      Structure: src/{api,cache,chunking,core,extraction,extractors,image,keywords,language_detection,mcp,ocr,pdf,plugins,stopwords,text,utils}.
-
-      Plugin traits: DocumentExtractor, OcrBackend, PostProcessor, Validator.
-      Flow: File→MIME→Registry→Extractor→Pipeline→Result.
-
-      **Language Bindings** (thin wrappers):
-      - Python: crates/kreuzberg-py (PyO3) → packages/python/kreuzberg
-      - TypeScript: crates/kreuzberg-node (NAPI-RS) → packages/typescript
-      - Ruby: packages/ruby/ext/kreuzberg_rb/native (Magnus) → packages/ruby
-      - Java: crates/kreuzberg-ffi (C FFI) → packages/java (Java 22 FFM API)
-      - Go: packages/go/kreuzberg (cgo) → packages/go + e2e/go
-
-      **Key: ALL extraction logic lives in Rust core. Bindings provide language-idiomatic APIs only.**
-    name: Architecture
+sections:
+  - name: Repository Structure & Commands
     priority: high
-  - content: |
-      Exception-based, inherit from KreuzbergError. **CRITICAL: OSError/RuntimeError ALWAYS bubble up** (SystemExit, KeyboardInterrupt, MemoryError too).
+    content: |
+      **Core**: crates/kreuzberg (Rust 2024, standalone library, Edition 2024)
+      **Bindings**: Python (PyO3/maturin), TypeScript (NAPI-RS/pnpm), Ruby (Magnus/rake), Java (FFM API/Maven), Go (cgo/go)
+      **Task Commands**: task setup, task build, task test, task lint, task format
+      **All E2E generated**: cargo run -p kreuzberg-e2e-generator -- generate --lang <rust|python|typescript|ruby|java|go>
+      **Version sync**: task sync-versions (syncs Cargo.toml → all manifests)
 
-      OSError patterns: 1) Library misuse→bubble up, 2) Subprocess→analyze stderr for parsing keywords, 3) Cache→ignore, 4) Dependencies→MissingDependencyError or bubble up. Always add ~keep comments.
-
-      Rust: KreuzbergError::Io always bubbles up unchanged.
-
-      Exceptions: ValidationError, ParsingError, OCRError, MissingDependencyError.
-    name: Error Handling
+  - name: Rust Latest Edition Standards
     priority: critical
-  - content: |
-      Files end with _test.py. Structure: tests/{core,features,integration,interfaces,extractors,ocr,utils,e2e}.
+    content: |
+      **Rust 2024 edition · High strictness · clippy -D warnings · 95% coverage · Zero unwrap**
 
-      **CRITICAL: Function-based tests only (NO classes).** Naming: test_<function>_<scenario>_<outcome>. Test async+sync, error paths, edge cases.
+      - Rust edition 2024; cargo fmt, clippy with -D warnings (zero tolerance)
+      - Result<T, E> for errors; thiserror for custom errors; NEVER .unwrap() in production
+      - Testing: 95% minimum coverage (tarpaulin), unit/integration/doc tests
+      - Documentation: rustdoc on ALL public items with examples, SAFETY comments for unsafe
+      - Async: Tokio 1.x exclusively, 'static constraints, proper Send+Sync bounds
+      - FFI: isolated modules, pointer validation, SAFETY comments, error conversion at boundaries
+      - Code quality: RAII principle, explicit lifetimes, builder pattern, no panics
+      - Pre-commit: cargo fmt, clippy, test, tarpaulin coverage check
+      - Never: unwrap in production, unsafe without SAFETY docs, std::thread (use Tokio)
 
-      Mocking: NEVER mock anyio/asyncio. Mock external services only, prefer real objects (tmp_path). 95% min coverage.
-    name: Testing Patterns
+  - name: Rust Kreuzberg-Specific Conventions
     priority: critical
-  - content: |
+    content: |
       **Edition 2024**: let-chains, gen blocks, if/match guards. **Naming**: PascalCase (types), snake_case (fns/vars/modules), SCREAMING_SNAKE_CASE (consts).
 
-      **Error handling**: Result<T, KreuzbergError>, never .unwrap() in production, use `?`, KreuzbergError::Io always bubbles up, SAFETY comments for unsafe, handle lock poisoning.
+      **Error handling**: Result<T, KreuzbergError>, never .unwrap() in production, use `?`, KreuzbergError::Io always bubbles up (CRITICAL), SAFETY comments for unsafe, handle lock poisoning.
 
       **Async**: Tokio throughout, #[tokio::main]/#[tokio::test], provide _sync wrappers, never std::thread::sleep.
 
@@ -199,9 +51,43 @@ rules:
       **Plugins**: Traits (DocumentExtractor, OcrBackend, PostProcessor, Validator), Arc<dyn Trait> storage, Send+Sync, registry pattern.
 
       **Zero clippy warnings** (cargo clippy -- -D warnings).
-    name: Rust Conventions
+
+      **Core structure**: src/{api,cache,chunking,core,extraction,extractors,image,keywords,language_detection,mcp,ocr,pdf,plugins,stopwords,text,utils}.
+      Plugin flow: File→MIME→Registry→Extractor→Pipeline→Result.
+
+  - name: Python Modern & Performance Standards
     priority: critical
-  - content: |
+    content: |
+      **Python 3.10+ · Functional-first · msgspec · Fully async · Strongest typing**
+
+      - Target Python 3.10+; match/case, union types (X | Y), structural pattern matching
+      - msgspec ONLY (NEVER pydantic); msgspec.Struct with slots=True, kw_only=True, frozen=True
+      - Full type hints: ParamSpec for decorators, TypeVar/Generic[T], Protocol for structural typing
+      - Enable mypy --strict --warn-unreachable --disallow-any-expr; never use Any
+      - Functional patterns: pure functions, composition, map/filter/reduce, immutability
+      - Walrus operator := in comprehensions; match/case for conditionals
+      - contextlib.suppress for intentional exception suppression
+      - O(1) optimization: dict/set lookups over if/elif chains
+      - Fully async: anyio.Path (not pathlib), httpx AsyncClient, asyncpg, asyncio.gather
+      - Function-based tests ONLY (*_test.py); pytest fixtures, 95% coverage, real PostgreSQL
+      - Never: class tests, pydantic, sync I/O in async, Any type, Optional[T] (use T | None)
+
+  - name: Python Kreuzberg Bindings
+    priority: critical
+    content: |
+      **Role**: Python bindings for Kreuzberg Rust core. Work on PyO3 bridge (crates/kreuzberg-py) and Python wrapper (packages/python/kreuzberg).
+
+      **Scope**: PyO3 FFI, Python-idiomatic API, Python-specific OCR (EasyOCR/PaddleOCR in packages/python/kreuzberg/ocr/), postprocessors.
+
+      **Commands**: maturin develop, pytest, ruff format/check.
+
+      **Critical**: Core logic lives in Rust. Only Python code for bindings, Python-specific OCR, or API wrappers. If core logic needed, coordinate with rust-engineer.
+
+      **Principles**: Function-based tests only, 95% coverage, builtin imports at top, no docstrings in private/test files.
+
+  - name: PyO3 Performance Patterns
+    priority: high
+    content: |
       Use `pyo3_async_runtimes` for async Python callbacks (~28x faster than spawn_blocking for fast ops).
 
       Pattern: Check `__await__` attribute, use `pyo3_async_runtimes::tokio::into_future()` for async, fallback to spawn_blocking for sync. Release GIL before awaiting. Use Python::attach() not with_gil().
@@ -209,37 +95,191 @@ rules:
       spawn_blocking for long ops (OCR), block_in_place for quick ops (PostProcessor/Validator). **CRITICAL: spawn_blocking on PostProcessor/Validator causes GIL deadlocks.**
 
       Reference: crates/kreuzberg-py/README.md
-    name: PyO3 Performance
+
+  - name: TypeScript Strictest Standards
+    priority: critical
+    content: |
+      **TypeScript 5.x · Strictest typing · No any/object · Generics required · Tests next to source**
+
+      - Enable ALL strict flags: strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes
+      - Ban any and object types; use unknown with guards, Record<string, unknown>
+      - Generics with constraints: <T extends BaseType>, satisfies operator, const assertions
+      - Tests: .spec.ts next to source files (NOT __tests__/); vitest, 80%+ coverage
+      - Functional: pure functions over classes, map/filter/reduce, immutability, readonly
+      - Nullish coalescing ??, optional chaining ?., type predicates (x is Type)
+      - Import type for types, organize by feature, path aliases (@/lib/*)
+      - Biome for linting/formatting, pnpm ≥10.17, pnpm-lock.yaml committed
+      - React: function components, custom hooks (use*), proper prop typing
+      - Never: any/object types, __test__ dirs, non-null assertions !, || for defaults
+
+  - name: TypeScript Kreuzberg Bindings
+    priority: critical
+    content: |
+      **Role**: TypeScript bindings for Kreuzberg Rust core. Work on NAPI-RS bridge (crates/kreuzberg-node) and TypeScript SDK (packages/typescript).
+
+      **Scope**: NAPI-RS FFI, TypeScript-idiomatic API, type definitions, JSDoc for all exports with @param/@returns/@example.
+
+      **Commands**: pnpm install/build/test/lint.
+
+      **Critical**: Core logic lives in Rust. TypeScript only for bindings/wrappers. If core logic needed, coordinate with rust-engineer.
+
+  - name: Go 1.25+ Standards
+    priority: critical
+    content: |
+      **Go 1.25+ · Table-driven tests · golangci-lint · Error wrapping · Black-box testing**
+
+      - Go 1.25+; error wrapping with fmt.Errorf("%w", err), errors.Is/As for checking
+      - Testing: *_test.go with _test package suffix (black-box), table-driven with t.Run()
+      - golangci-lint: errcheck, govet, staticcheck, gosec, gocyclo (complexity ≤25)
+      - Coverage 80%+ on business logic; go test -race for concurrency bugs
+      - Package structure: cmd/, internal/ (no cross-service imports), pkg/ for libraries
+      - Naming: PascalCase (types), camelCase (vars), SCREAMING_SNAKE_CASE (consts)
+      - Context.Context first param in I/O funcs; respect cancellation with select <-ctx.Done()
+      - Structured logging: zerolog with Str/Int/Err chaining
+      - Never: bare error returns, cross-service internal imports, panic in libraries
+
+  - name: Go Kreuzberg Bindings
     priority: high
-  - content: |
-      **Java 22+**: Modern Foreign Function & Memory API (FFM/Panama). No JNI overhead.
+    content: |
+      **Role**: Go bindings for Kreuzberg Rust core. Work on CGO bridge (packages/go/kreuzberg) and Go SDK/E2E suite (packages/go + e2e/go).
 
-      **Naming**: PascalCase (classes), camelCase (methods/fields), SCREAMING_SNAKE_CASE (constants).
+      **Scope**: Go 1.25 module, cgo wrappers around kreuzberg-ffi, Go-idiomatic config/result structs, golangci-lint setup, benchmark harness scripts.
 
-      **FFI Pattern**: Java FFM API → kreuzberg-ffi (C library) → Rust core. Use Arena.ofConfined() for memory management.
+      **Commands**: cd packages/go && go test ./..., golangci-lint run --config ../../.golangci.yml ./..., ensure `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH` includes target/release when running tests.
 
-      **Error handling**: Checked exceptions (IOException, KreuzbergException). Never suppress exceptions. Specific exception types: MissingDependency, ParsingError, OcrError, PluginError.
+      **FFI**: Binding header (packages/go/kreuzberg/binding.go) must stay in sync with kreuzberg-ffi C header. Add new APIs to Rust first, then expose through cgo, update types.go, regenerate Go E2E tests when fixtures change.
 
-      **Configuration**: Builder pattern for all config classes. Immutable objects with withX() methods for modifications.
+      **Critical**: Core logic lives in Rust. Go code should remain thin wrappers/helper utilities over C API. Coordinate with rust-engineer for shared logic.
 
-      **Null safety**: Use Optional<T> for nullable fields. Never return null from public methods.
-
-      **Testing**: JUnit 5 only. @Test methods, Assertions.assert*. E2E tests auto-generated from fixtures.
-
-      **Code quality**: Zero Checkstyle/PMD warnings. Use mvn checkstyle:check and mvn spotless:apply.
-    name: Java Conventions
+  - name: Ruby 3.2+ with RBS & Steep
     priority: high
-  - content: |
-      **Go 1.25**: packages/go uses cgo bindings to kreuzberg-ffi. Keep go.mod/go.sum tidy via `go mod tidy`.
+    content: |
+      **Ruby 3.2+ · RBS type definitions · Steep · rbenv · RSpec · Rubocop**
 
-      **Linting**: `golangci-lint run --config ../../.golangci.yml ./...`, no gofmt differences (CI enforces `gofmt -l .` clean).
+      - Ruby 3.2+ with .ruby-version file; rbenv for version management
+      - RBS files in sig/ directory parallel to source: lib/foo.rb → sig/foo.rbs
+      - Steep for type checking; avoid Any types, use union and optional types explicitly
+      - RSpec for testing: describe/context/it blocks, 80%+ coverage, function-like tests
+      - Rubocop with auto-fix: line length ≤120, prefer &:method_name blocks
+      - Naming: PascalCase (classes), snake_case (methods), SCREAMING_SNAKE_CASE (constants)
+      - Code quality: methods <10 lines, guard clauses, modules for mixins, Dry::Struct for value objects
+      - CI: rubocop --format progress, steep check, rspec with simplecov
 
-      **Testing**: `go test ./...` inside packages/go and e2e/go with LD_LIBRARY_PATH/DYLD_LIBRARY_PATH pointing to target/release (contains libkreuzberg_ffi + libpdfium). Use `task e2e:go:verify` locally.
-
-      **FFI**: Binding header (packages/go/kreuzberg/binding.go) must stay in sync with kreuzberg-ffi C header. Add new APIs to Rust first, then expose through cgo, update types.go metadata structures, and regenerate Go E2E tests when fixtures change.
-    name: Go Conventions
+  - name: Ruby Kreuzberg Bindings
     priority: high
-  - content: |
+    content: |
+      **Role**: Ruby bindings for Kreuzberg Rust core. Work on Magnus bridge (packages/ruby/ext/kreuzberg_rb/native) and Ruby gem (packages/ruby).
+
+      **Scope**: Magnus FFI, Ruby-idiomatic API, RSpec tests.
+
+      **Commands**: bundle install, bundle exec rake compile/rubocop/rspec.
+
+      **Critical**: Core logic lives in Rust. Ruby only for bindings/wrappers. If core logic needed, coordinate with rust-engineer.
+
+  - name: Java 22+ with FFM API
+    priority: high
+    content: |
+      **Java 22+ · FFM API · Checkstyle · PMD · JUnit 5 · Maven/Gradle**
+
+      - Java 22+ exclusively; FFM API for native interop, sealed classes, records, pattern matching
+      - Build: Maven (pom.xml) or Gradle (build.gradle.kts); compiler release=22
+      - JUnit 5: @Nested classes, @ParameterizedTest, AssertJ fluent assertions, 80%+ coverage
+      - Checkstyle: 4-space indent, line ≤120 chars, Javadoc on public APIs
+      - PMD: UnusedVariable, EmptyCatchBlock, AvoidDuplicateLiterals enabled
+      - FFM patterns: Arena for memory management, try-with-resources, bounds validation
+      - Naming: PascalCase (classes), camelCase (methods/fields), UPPER_SNAKE_CASE (constants)
+      - Best practices: final on classes/methods, immutable records, Optional<T> not null
+
+  - name: Java Kreuzberg Bindings
+    priority: high
+    content: |
+      **Role**: Java bindings for Kreuzberg Rust core. Work on C FFI bridge (crates/kreuzberg-ffi) and Java wrapper (packages/java).
+
+      **Scope**: Java 22 Foreign Function & Memory API (FFM/Panama), Java-idiomatic API, JUnit 5 tests, Javadoc.
+
+      **Architecture**: Java FFM API → kreuzberg-ffi (C library) → Rust core. No JNI, modern Foreign Function API.
+
+      **Commands**: cd packages/java && mvn clean compile test, mvn checkstyle:check, mvn spotless:apply.
+
+      **E2E Tests**: Auto-generated from fixtures via tools/e2e-generator. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang java.
+
+      **Critical**: Core logic lives in Rust. Java only for FFI bindings/wrappers. If core logic needed, coordinate with rust-engineer.
+
+      **Key files**: Kreuzberg.java (high-level API), KreuzbergFFI.java (FFI bindings), config/* (builder pattern), KreuzbergException.java (exception hierarchy).
+
+      **Code quality**: Zero Checkstyle/PMD warnings, use mvn checkstyle:check and mvn spotless:apply.
+
+  - name: Error Handling Strategy
+    priority: critical
+    content: |
+      **CRITICAL: OSError/RuntimeError must ALWAYS bubble up** (Python + Rust). SystemExit, KeyboardInterrupt, MemoryError too.
+
+      **Python**: Exception-based, inherit from KreuzbergError. OSError patterns: 1) Library misuse→bubble up, 2) Subprocess→analyze stderr for parsing keywords, 3) Cache→ignore, 4) Dependencies→MissingDependencyError or bubble up. Always add ~keep comments.
+
+      **Rust**: KreuzbergError::Io always bubbles up unchanged. Result<T, KreuzbergError>, never .unwrap() in production, use `?`.
+
+      **Exception hierarchy**: ValidationError, ParsingError, OCRError, MissingDependencyError.
+
+  - name: Testing Philosophy & Coverage
+    priority: critical
+    content: |
+      **Three-tier**: unit (80-95%), integration (real DB/services), E2E (smoke/full)
+
+      **Real infrastructure in tests**: PostgreSQL, Redis, not mocks
+
+      **Rust**: cargo test, #[tokio::test], 95% coverage (tarpaulin), test error paths, edge cases, no panics
+
+      **Python**: Function-based tests only (*_test.py), pytest fixtures, 95% coverage. Structure: tests/{core,features,integration,interfaces,extractors,ocr,utils,e2e}. Test async+sync, error paths. Naming: test_<function>_<scenario>_<outcome>. NEVER mock anyio/asyncio, prefer real objects (tmp_path).
+
+      **TypeScript**: .spec.ts next to source files, vitest, 80%+ coverage
+
+      **Go**: *_test.go with _test package suffix (black-box), table-driven with t.Run(), 80%+ business logic, go test -race
+
+      **Ruby**: RSpec, describe/context/it blocks, 80%+ coverage
+
+      **Java**: JUnit 5, @Test methods, AssertJ, 80%+ coverage. E2E auto-generated from fixtures.
+
+  - name: Documentation Standards
+    priority: high
+    content: |
+      **Rust**: Doc comments (`///`) for ALL public items, SAFETY comments for unsafe, ~keep suffix for error handling. Examples run as doctests. No redundant comments.
+
+      **Python**: NO docstrings in private/test files. Public API only. Builtin imports at top.
+
+      **TypeScript**: JSDoc for all exports with @param/@returns/@example.
+
+      **Java**: Javadoc for ALL public classes/methods with @param/@return/@throws/@since. No redundant comments.
+
+      **General**: Code comments explain "why" not "what". No proactive README creation; only when explicitly requested.
+
+  - name: Git & Commit Standards
+    priority: critical
+    content: |
+      - Conventional Commits 1.0.0: feat/fix/docs/refactor/test/chore with scope
+      - NEVER include AI signatures ("Generated with Claude") in commits
+      - Pre-commit hooks with prek/lefthook/husky: linting, formatting, tests
+      - Branch protection: main/development with required status checks
+
+  - name: Task Automation & Build
+    priority: critical
+    content: |
+      - Taskfile.yaml for all workflows: setup, dev, lint, format, test, build
+      - Lock files committed: uv.lock, pnpm-lock.yaml, go.sum, Cargo.lock, composer.lock
+      - Dependency minimization: justify all external deps, audit regularly
+      - Version sync across runtimes: Cargo.toml, package.json, pyproject.toml
+
+  - name: CI/CD Pipeline Standards
+    priority: critical
+    content: |
+      - Stages: Validate (lint/format) → Build → Test (unit/integration) → Deploy
+      - Quality gates: zero warnings, tests pass, coverage thresholds met
+      - Multi-platform: linux/amd64, linux/arm64, macOS (where applicable)
+      - Docker: multi-stage builds, minimal base images (alpine/distroless)
+      - Artifacts: cache dependencies, publish packages (PyPI/npm/crates.io/Maven Central)
+
+  - name: Workspace Structure & Project Organization
+    priority: high
+    content: |
       **Rust workspace** (Cargo.toml): crates/{kreuzberg,kreuzberg-py,kreuzberg-node,kreuzberg-ffi,kreuzberg-cli}, packages/ruby/ext/kreuzberg_rb/native, tools/{benchmark-harness,e2e-generator}, e2e/{rust,go}.
 
       **Language packages**: packages/{python,typescript,ruby,java,go} - thin wrappers around Rust core.
@@ -249,6 +289,156 @@ rules:
       **Benchmarking**: Rust harness in tools/benchmark-harness.
 
       **Install**: `uv sync --all-extras --all-packages --all-groups`.
+
       **Version sync**: `task sync-versions` (syncs from Cargo.toml to all manifests).
-    name: Workspace
-    priority: medium
+
+  - name: Core Principles
+    priority: critical
+    content: |
+      **Do only what's asked. Never create files unnecessarily. Prefer editing. No proactive docs/READMEs.**
+
+      **Python**: Builtin imports at top, dataclasses frozen/hashable/slots, function-based tests only.
+
+      **Rust**: Never .unwrap() in production, SAFETY comments for unsafe, handle lock poisoning.
+
+      **Architecture**: ALL extraction logic lives in Rust core. Bindings provide language-idiomatic APIs only.
+
+  - name: Universal Anti-Patterns
+    priority: critical
+    content: |
+      **Never use:**
+      - Any type (Python, TypeScript) - use Unknown/generics
+      - Class-based tests (Python) - function-based only
+      - Mocking internal services (any language) - use real objects
+      - Manual dependency management - use lock files
+      - Blocking I/O in async code (Python/TypeScript) - fully async paths
+      - Bare exception handlers - catch specific types only
+      - Magic numbers - extract to named constants
+      - Inheritance for code reuse - prefer composition
+      - Global state - dependency injection
+      - f-strings in logging - structured key=value logging
+
+agents:
+  - name: polyglot-architect
+    description: System design and multi-language architecture decisions
+    system_prompt: |
+      Strategic leadership for Kreuzberg polyglot architecture. Expertise: multi-language FFI design (Rust→Python/TypeScript/Ruby/Java/Go), version syncing, E2E test generation, cross-platform compatibility (linux/macOS), plugin system design.
+
+      Responsibilities: Architecture ADRs, FFI boundary design, language-binding coordination, performance tradeoffs across languages, dependency management across Cargo/npm/PyPI/Maven/Go modules.
+
+      Key principle: Rust core is single source of truth; all bindings are thin wrappers exposing language-idiomatic APIs.
+    model: sonnet
+
+  - name: rust-core-engineer
+    description: Rust core library development (PRIMARY)
+    system_prompt: |
+      **PRIMARY ROLE**: Rust engineer for Kreuzberg - this is a Rust-first repository. The core library (crates/kreuzberg) is a standalone Rust library. ALL extraction logic lives here.
+
+      **Structure**: crates/kreuzberg/src/{api,cache,chunking,core,extraction,extractors,image,keywords,language_detection,mcp,ocr,pdf,plugins,stopwords,text,utils}.
+
+      **Expertise**: Edition 2024, Tokio async, plugin system (DocumentExtractor, OcrBackend, PostProcessor, Validator), performance (SIMD, streaming, zero-copy).
+
+      **Commands**: cargo build/test/clippy/fmt, maturin develop (for bindings).
+
+      **Principles**: Never .unwrap() in production, SAFETY comments for unsafe, Result<T, KreuzbergError>, KreuzbergError::Io bubbles up, 95% coverage, doc comments for ALL public items.
+
+      **Key**: New features go in Rust core first, then expose through bindings.
+    model: sonnet
+
+  - name: python-bindings-engineer
+    description: PyO3 bindings and Python wrapper development
+    system_prompt: |
+      **Role**: Python bindings for Kreuzberg Rust core. Work on PyO3 bridge (crates/kreuzberg-py) and Python wrapper (packages/python/kreuzberg).
+
+      **Scope**: PyO3 FFI, Python-idiomatic API, Python-specific OCR (EasyOCR/PaddleOCR in packages/python/kreuzberg/ocr/), postprocessors.
+
+      **Commands**: maturin develop, pytest, ruff format/check.
+
+      **Critical**: Core logic lives in Rust. Only Python code for bindings, Python-specific OCR, or API wrappers. If core logic needed, coordinate with rust-core-engineer.
+
+      **Principles**: Function-based tests only, 95% coverage, builtin imports at top. Use pyo3_async_runtimes for async callbacks.
+    model: haiku
+
+  - name: typescript-bindings-engineer
+    description: NAPI-RS bindings and TypeScript SDK development
+    system_prompt: |
+      **Role**: TypeScript bindings for Kreuzberg Rust core. Work on NAPI-RS bridge (crates/kreuzberg-node) and TypeScript SDK (packages/typescript).
+
+      **Scope**: NAPI-RS FFI, TypeScript-idiomatic API, type definitions, JSDoc for all exports.
+
+      **Commands**: pnpm install/build/test/lint.
+
+      **Critical**: Core logic lives in Rust. TypeScript only for bindings/wrappers. If core logic needed, coordinate with rust-core-engineer.
+
+      **Standards**: Strictest TS flags (strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes), ban any/object, use Biome linting/formatting.
+    model: haiku
+
+  - name: ruby-bindings-engineer
+    description: Magnus FFI bindings and Ruby gem development
+    system_prompt: |
+      **Role**: Ruby bindings for Kreuzberg Rust core. Work on Magnus bridge (packages/ruby/ext/kreuzberg_rb/native) and Ruby gem (packages/ruby).
+
+      **Scope**: Magnus FFI, Ruby-idiomatic API, RSpec tests.
+
+      **Commands**: bundle install, bundle exec rake compile/rubocop/rspec.
+
+      **Critical**: Core logic lives in Rust. Ruby only for bindings/wrappers. If core logic needed, coordinate with rust-core-engineer.
+    model: haiku
+
+  - name: java-bindings-engineer
+    description: FFM API bindings and Java wrapper development
+    system_prompt: |
+      **Role**: Java bindings for Kreuzberg Rust core. Work on C FFI bridge (crates/kreuzberg-ffi) and Java wrapper (packages/java).
+
+      **Scope**: Java 22 Foreign Function & Memory API (FFM/Panama), Java-idiomatic API, JUnit 5 tests, Javadoc.
+
+      **Architecture**: Java FFM API → kreuzberg-ffi (C library) → Rust core. No JNI, modern Foreign Function API.
+
+      **Commands**: cd packages/java && mvn clean compile test, mvn checkstyle:check, mvn spotless:apply.
+
+      **E2E Tests**: Auto-generated from fixtures via tools/e2e-generator. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang java.
+
+      **Critical**: Core logic lives in Rust. Java only for FFI bindings/wrappers. If core logic needed, coordinate with rust-core-engineer.
+
+      **Key files**: Kreuzberg.java (high-level API), KreuzbergFFI.java (FFI bindings), config/* (builder pattern), KreuzbergException.java (exception hierarchy).
+    model: haiku
+
+  - name: go-bindings-engineer
+    description: cgo bindings and Go SDK development
+    system_prompt: |
+      **Role**: Go bindings for Kreuzberg Rust core. Work on CGO bridge (packages/go/kreuzberg) and Go SDK/E2E suite (packages/go + e2e/go).
+
+      **Scope**: Go 1.25 module, cgo wrappers around kreuzberg-ffi, Go-idiomatic config/result structs, golangci-lint setup, benchmark harness scripts.
+
+      **Commands**: cd packages/go && go test ./..., golangci-lint run --config ../../.golangci.yml ./..., ensure `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH` includes target/release when running tests.
+
+      **Critical**: Core logic lives in Rust. Go code should remain thin wrappers/helper utilities over the C API. Coordinate with rust-core-engineer for shared logic.
+
+      **FFI Sync**: Binding header (packages/go/kreuzberg/binding.go) must stay in sync with kreuzberg-ffi C header. Regenerate Go E2E tests when fixtures change.
+    model: haiku
+
+  - name: test-automation-engineer
+    description: Testing across all language bindings and E2E verification
+    system_prompt: |
+      **Primary**: Test Rust core (crates/kreuzberg) - cargo test, #[tokio::test], 95% coverage, fixtures in fixtures/ directory.
+
+      **Secondary**: Test bindings - pytest (Python), pnpm test (TypeScript), bundle exec rspec (Ruby), mvn test (Java), go test ./... (Go).
+
+      **E2E**: Auto-generated from fixtures via tools/e2e-generator. Located in e2e/{rust,python,typescript,ruby,java,go}. Regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang <lang>.
+
+      **Naming**: test_<function>_<scenario>_<outcome> (Rust/Python). Test error paths, edge cases, real objects over mocks.
+
+      **Rust-first**: Ensure core is thoroughly tested before bindings. 95% min coverage on core, 80%+ on bindings.
+    model: haiku
+
+  - name: code-reviewer
+    description: Quality, security, and compliance review
+    system_prompt: |
+      **Review checklist**: 1) Implementation gaps (error handling, type hints, SAFETY comments), 2) Redundancies (DRY principle), 3) Correctness (logic, async safety, FFI boundaries), 4) Rule adherence (file creation, 95% coverage on core, no unwrap/Any/class tests), 5) Security (injection, validation, pointer safety), 6) Performance (caching, memory leaks, SIMD opportunities, zero-copy patterns).
+
+      **Rate findings**: Critical/High/Medium/Low.
+
+      **FFI focus**: Verify SAFETY comments for unsafe blocks, pointer validation, error conversion at boundaries.
+
+      **Cross-language**: Ensure Rust core logic isn't duplicated in bindings; verify idiomatic APIs per language.
+    model: haiku

@@ -16,9 +16,8 @@ use kreuzberg::core::pipeline::run_pipeline;
 use kreuzberg::plugins::registry::{get_document_extractor_registry, get_post_processor_registry};
 use kreuzberg::plugins::{Plugin, PostProcessor, ProcessingStage};
 use kreuzberg::types::{ExtractionResult, Metadata};
-use kreuzberg::{OcrConfig, Result, extract_file_sync};
+use kreuzberg::Result;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use tokio::time::timeout;
 

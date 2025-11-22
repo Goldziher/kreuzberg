@@ -26,7 +26,7 @@ pdf = ["dep:pdfium-render", "dep:lopdf", "dep:image"]
 excel = ["dep:calamine", "dep:polars"]
 office = ["dep:roxmltree", "dep:zip", "dep:docx-lite"]
 email = ["dep:mail-parser", "dep:msg_parser"]
-html = ["dep:html-to-markdown-rs", "dep:html-escape"]
+html = ["dep:html-to-markdown-rs", "dep:html-escape", "dep:scraper"]
 xml = ["dep:quick-xml", "dep:roxmltree"]
 archives = ["dep:zip", "dep:tar", "dep:sevenz-rust"]
 
@@ -98,6 +98,7 @@ mail-parser = { version = "0.11.1", optional = true }
 msg_parser = { version = "0.1.1", optional = true }
 html-to-markdown-rs = { version = "2.8.3", features = ["inline-images"], optional = true }
 html-escape = { version = "0.2.13", optional = true }
+scraper = { version = "0.24.0", optional = true }
 quick-xml = { version = "0.38.4", optional = true }
 tar = { version = "0.4.44", optional = true }
 sevenz-rust = { version = "0.6.1", optional = true }

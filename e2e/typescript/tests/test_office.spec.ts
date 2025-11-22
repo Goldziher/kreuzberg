@@ -191,7 +191,9 @@ describe("office fixtures", () => {
       return;
     }
     assertions.assertExpectedMime(result, ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]);
-    assertions.assertMinContentLength(result, 20);
+    assertions.assertMinContentLength(result, 50);
+    assertions.assertContentContainsAll(result, ["Simple uniform table", "Nested Table", "merged cells", "Header Col"]);
+    assertions.assertTableCount(result, 1, null);
   }, TEST_TIMEOUT_MS);
 
   it("office_ppt_legacy", () => {
@@ -330,8 +332,11 @@ describe("office fixtures", () => {
       return;
     }
     assertions.assertExpectedMime(result, ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
-    assertions.assertMinContentLength(result, 10);
-    assertions.assertMetadataExpectation(result, "sheet_count", {"gte":1});
+    assertions.assertMinContentLength(result, 100);
+    assertions.assertContentContainsAll(result, ["Team", "Location", "Stanley Cups"]);
+    assertions.assertTableCount(result, 1, null);
+    assertions.assertMetadataExpectation(result, "sheet_count", {"gte":2});
+    assertions.assertMetadataExpectation(result, "sheet_names", {"contains":"Stanley Cups"});
   }, TEST_TIMEOUT_MS);
 
   it("office_xlsx_multi_sheet", () => {

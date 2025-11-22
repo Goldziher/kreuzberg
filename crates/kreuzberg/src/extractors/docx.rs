@@ -4,9 +4,9 @@
 
 use crate::Result;
 use crate::core::config::ExtractionConfig;
-use crate::extraction::{docx, office_metadata};
+use crate::extraction::office_metadata;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::{ExtractionResult, Metadata};
+use crate::types::{ExtractionResult, Metadata, Table};
 use async_trait::async_trait;
 use std::io::Cursor;
 
@@ -57,6 +57,110 @@ impl Plugin for DocxExtractor {
     }
 }
 
+/// Convert docx-lite table to Kreuzberg Table struct with markdown representation.
+///
+/// # Arguments
+/// * `docx_table` - The table from docx-lite library
+/// * `table_index` - Index of the table in the document (used as page_number)
+///
+/// # Returns
+/// * `Table` - Converted table with cells and markdown representation
+fn convert_docx_table_to_table(
+    docx_table: &docx_lite::Table,
+    table_index: usize,
+) -> Table {
+    // Extract cells as 2D vector
+    let cells: Vec<Vec<String>> = docx_table
+        .rows
+        .iter()
+        .map(|row| {
+            row.cells
+                .iter()
+                .map(|cell| {
+                    // Extract text from all paragraphs in the cell
+                    cell.paragraphs
+                        .iter()
+                        .map(|para| para.to_text())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                        .trim()
+                        .to_string()
+                })
+                .collect()
+        })
+        .collect();
+
+    // Generate markdown representation
+    let markdown = cells_to_markdown(&cells);
+
+    Table {
+        cells,
+        markdown,
+        page_number: table_index + 1, // 1-indexed
+    }
+}
+
+/// Convert 2D cell data to markdown table format.
+///
+/// # Arguments
+/// * `cells` - 2D vector of cell strings (rows × columns)
+///
+/// # Returns
+/// * `String` - Markdown formatted table
+fn cells_to_markdown(cells: &[Vec<String>]) -> String {
+    if cells.is_empty() {
+        return String::new();
+    }
+
+    let mut markdown = String::new();
+
+    // Determine number of columns from first row
+    let num_cols = cells.first().map(|r| r.len()).unwrap_or(0);
+    if num_cols == 0 {
+        return String::new();
+    }
+
+    // Header row (first row)
+    if let Some(header) = cells.first() {
+        markdown.push_str("| ");
+        for cell in header {
+            // Escape pipe characters in cell content
+            let escaped = cell.replace('|', "\\|");
+            markdown.push_str(&escaped);
+            markdown.push_str(" | ");
+        }
+        markdown.push('\n');
+
+        // Separator row
+        markdown.push('|');
+        for _ in 0..num_cols {
+            markdown.push_str("------|");
+        }
+        markdown.push('\n');
+    }
+
+    // Data rows (skip first row as it's the header)
+    for row in cells.iter().skip(1) {
+        markdown.push_str("| ");
+        for (idx, cell) in row.iter().enumerate() {
+            if idx >= num_cols {
+                break; // Handle irregular tables
+            }
+            // Escape pipe characters in cell content
+            let escaped = cell.replace('|', "\\|");
+            markdown.push_str(&escaped);
+            markdown.push_str(" | ");
+        }
+        // Pad with empty cells if row is shorter than expected
+        for _ in row.len()..num_cols {
+            markdown.push_str(" | ");
+        }
+        markdown.push('\n');
+    }
+
+    markdown
+}
+
 #[async_trait]
 impl DocumentExtractor for DocxExtractor {
     async fn extract_bytes(
@@ -65,18 +169,51 @@ impl DocumentExtractor for DocxExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Extract text with docx-lite
-        let text = if crate::core::batch_mode::is_batch_mode() {
+        // Parse the DOCX document to extract both text and tables
+        let (text, tables) = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Use spawn_blocking for parallelism
-            let content_for_text = content.to_vec();
-            tokio::task::spawn_blocking(move || docx::extract_text(&content_for_text))
-                .await
-                .map_err(|e| {
-                    crate::error::KreuzbergError::parsing(format!("DOCX text extraction task failed: {}", e))
-                })??
+            let content_owned = content.to_vec();
+            tokio::task::spawn_blocking(move || -> crate::error::Result<(String, Vec<Table>)> {
+                // Parse document structure
+                let cursor = Cursor::new(&content_owned);
+                let doc = docx_lite::parse_document(cursor)
+                    .map_err(|e| crate::error::KreuzbergError::parsing(format!("DOCX parsing failed: {}", e)))?;
+
+                // Extract text
+                let text = doc.extract_text();
+
+                // Extract tables
+                let tables: Vec<Table> = doc
+                    .tables
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, table)| convert_docx_table_to_table(table, idx))
+                    .collect();
+
+                Ok((text, tables))
+            })
+            .await
+            .map_err(|e| {
+                crate::error::KreuzbergError::parsing(format!("DOCX extraction task failed: {}", e))
+            })??
         } else {
             // Single-file mode: Direct extraction (no spawn overhead)
-            docx::extract_text(content)?
+            let cursor = Cursor::new(content);
+            let doc = docx_lite::parse_document(cursor)
+                .map_err(|e| crate::error::KreuzbergError::parsing(format!("DOCX parsing failed: {}", e)))?;
+
+            // Extract text
+            let text = doc.extract_text();
+
+            // Extract tables
+            let tables: Vec<Table> = doc
+                .tables
+                .iter()
+                .enumerate()
+                .map(|(idx, table)| convert_docx_table_to_table(table, idx))
+                .collect();
+
+            (text, tables)
         };
 
         // Extract metadata using existing office_metadata module
@@ -196,7 +333,7 @@ impl DocumentExtractor for DocxExtractor {
                 additional: metadata_map,
                 ..Default::default()
             },
-            tables: vec![],
+            tables,
             detected_languages: None,
             chunks: None,
             images: None,
@@ -246,5 +383,105 @@ mod tests {
         let extractor = DocxExtractor::new();
         assert!(extractor.initialize().is_ok());
         assert!(extractor.shutdown().is_ok());
+    }
+
+    #[test]
+    fn test_cells_to_markdown_basic_table() {
+        let cells = vec![
+            vec!["Header1".to_string(), "Header2".to_string()],
+            vec!["Row1Col1".to_string(), "Row1Col2".to_string()],
+            vec!["Row2Col1".to_string(), "Row2Col2".to_string()],
+        ];
+
+        let markdown = cells_to_markdown(&cells);
+
+        assert!(markdown.contains("| Header1 | Header2 |"));
+        assert!(markdown.contains("|------|------|"));
+        assert!(markdown.contains("| Row1Col1 | Row1Col2 |"));
+        assert!(markdown.contains("| Row2Col1 | Row2Col2 |"));
+    }
+
+    #[test]
+    fn test_cells_to_markdown_empty() {
+        let cells: Vec<Vec<String>> = vec![];
+        let markdown = cells_to_markdown(&cells);
+        assert_eq!(markdown, "");
+    }
+
+    #[test]
+    fn test_cells_to_markdown_escape_pipes() {
+        let cells = vec![
+            vec!["Header".to_string()],
+            vec!["Cell with | pipe".to_string()],
+        ];
+
+        let markdown = cells_to_markdown(&cells);
+        assert!(markdown.contains("Cell with \\| pipe"));
+    }
+
+    #[test]
+    fn test_cells_to_markdown_irregular_rows() {
+        let cells = vec![
+            vec!["H1".to_string(), "H2".to_string(), "H3".to_string()],
+            vec!["R1C1".to_string(), "R1C2".to_string()], // Missing third column
+            vec!["R2C1".to_string(), "R2C2".to_string(), "R2C3".to_string()],
+        ];
+
+        let markdown = cells_to_markdown(&cells);
+
+        // Should have 3 columns in header
+        assert!(markdown.contains("| H1 | H2 | H3 |"));
+        // Should pad short rows
+        assert!(markdown.contains("| R1C1 | R1C2 |  |"));
+    }
+
+    #[test]
+    fn test_convert_docx_table_to_table() {
+        use docx_lite::{Paragraph, Run, Table as DocxTable, TableCell, TableRow};
+
+        // Create a simple docx-lite table
+        let mut table = DocxTable::new();
+
+        // Header row
+        let mut header_row = TableRow::default();
+        let mut cell1 = TableCell::default();
+        let mut para1 = Paragraph::new();
+        para1.add_run(Run::new("Name".to_string()));
+        cell1.paragraphs.push(para1);
+        header_row.cells.push(cell1);
+
+        let mut cell2 = TableCell::default();
+        let mut para2 = Paragraph::new();
+        para2.add_run(Run::new("Age".to_string()));
+        cell2.paragraphs.push(para2);
+        header_row.cells.push(cell2);
+
+        table.rows.push(header_row);
+
+        // Data row
+        let mut data_row = TableRow::default();
+        let mut cell3 = TableCell::default();
+        let mut para3 = Paragraph::new();
+        para3.add_run(Run::new("Alice".to_string()));
+        cell3.paragraphs.push(para3);
+        data_row.cells.push(cell3);
+
+        let mut cell4 = TableCell::default();
+        let mut para4 = Paragraph::new();
+        para4.add_run(Run::new("30".to_string()));
+        cell4.paragraphs.push(para4);
+        data_row.cells.push(cell4);
+
+        table.rows.push(data_row);
+
+        // Convert to Kreuzberg Table
+        let result = convert_docx_table_to_table(&table, 0);
+
+        assert_eq!(result.page_number, 1); // 0 + 1 = 1 (1-indexed)
+        assert_eq!(result.cells.len(), 2); // 2 rows
+        assert_eq!(result.cells[0], vec!["Name", "Age"]);
+        assert_eq!(result.cells[1], vec!["Alice", "30"]);
+        assert!(result.markdown.contains("| Name | Age |"));
+        assert!(result.markdown.contains("| Alice | 30 |"));
     }
 }

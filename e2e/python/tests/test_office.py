@@ -118,7 +118,9 @@ def test_office_docx_tables() -> None:
     result = extract_file_sync(document_path, None, config)
 
     helpers.assert_expected_mime(result, ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"])
-    helpers.assert_min_content_length(result, 20)
+    helpers.assert_min_content_length(result, 50)
+    helpers.assert_content_contains_all(result, ["Simple uniform table", "Nested Table", "merged cells", "Header Col"])
+    helpers.assert_table_count(result, 1, None)
 
 def test_office_ppt_legacy() -> None:
     """Legacy PowerPoint .ppt file requiring LibreOffice conversion."""
@@ -191,7 +193,7 @@ def test_office_xls_legacy() -> None:
     helpers.assert_min_content_length(result, 10)
 
 def test_office_xlsx_basic() -> None:
-    """XLSX spreadsheet should produce metadata and content."""
+    """XLSX spreadsheet should produce metadata and table content."""
 
     document_path = helpers.resolve_document("spreadsheets/stanley_cups.xlsx")
     if not document_path.exists():
@@ -202,8 +204,11 @@ def test_office_xlsx_basic() -> None:
     result = extract_file_sync(document_path, None, config)
 
     helpers.assert_expected_mime(result, ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"])
-    helpers.assert_min_content_length(result, 10)
-    helpers.assert_metadata_expectation(result, "sheet_count", {"gte": 1})
+    helpers.assert_min_content_length(result, 100)
+    helpers.assert_content_contains_all(result, ["Team", "Location", "Stanley Cups"])
+    helpers.assert_table_count(result, 1, None)
+    helpers.assert_metadata_expectation(result, "sheet_count", {"gte": 2})
+    helpers.assert_metadata_expectation(result, "sheet_names", {"contains": "Stanley Cups"})
 
 def test_office_xlsx_multi_sheet() -> None:
     """XLSX workbook with multiple sheets."""

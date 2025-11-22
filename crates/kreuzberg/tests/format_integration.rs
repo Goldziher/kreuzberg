@@ -7,9 +7,6 @@
 
 mod helpers;
 
-use helpers::*;
-use kreuzberg::{ExtractionConfig, OcrConfig, extract_file};
-
 #[cfg(feature = "pdf")]
 #[tokio::test]
 async fn test_pdf_password_protected_async() {

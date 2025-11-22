@@ -3,7 +3,7 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::{ExcelMetadata, ExtractionResult, Metadata};
+use crate::types::{ExcelMetadata, ExtractionResult, Metadata, Table};
 use async_trait::async_trait;
 use std::path::Path;
 
@@ -21,6 +21,61 @@ impl Default for ExcelExtractor {
 impl ExcelExtractor {
     pub fn new() -> Self {
         Self
+    }
+
+    /// Convert Excel workbook sheets to Table structs.
+    ///
+    /// Each sheet becomes a table with the first row as headers,
+    /// remaining rows as data, and the sheet name as caption.
+    fn sheets_to_tables(workbook: &crate::types::ExcelWorkbook) -> Vec<Table> {
+        let mut tables = Vec::with_capacity(workbook.sheets.len());
+
+        for (sheet_index, sheet) in workbook.sheets.iter().enumerate() {
+            // Skip empty sheets
+            if sheet.row_count == 0 || sheet.col_count == 0 {
+                continue;
+            }
+
+            // We need to re-parse the sheet to get structured cell data
+            // The workbook.sheets only contains markdown, not raw cell data
+            // So we'll extract from the markdown table representation
+
+            // Parse cells from markdown
+            let lines: Vec<&str> = sheet.markdown.lines().collect();
+            let mut cells: Vec<Vec<String>> = Vec::new();
+
+            // Find the table content (skip header line "## Sheet Name" and blank line)
+            let table_start = lines.iter().position(|line| line.starts_with("| "));
+
+            if let Some(start_idx) = table_start {
+                for line in lines.iter().skip(start_idx) {
+                    if line.starts_with("| ") && !line.contains("---") {
+                        // Parse table row
+                        let row: Vec<String> = line
+                            .trim_start_matches("| ")
+                            .trim_end_matches(" |")
+                            .split(" | ")
+                            .map(|cell| {
+                                // Unescape markdown pipes and backslashes
+                                cell.replace("\\|", "|").replace("\\\\", "\\")
+                            })
+                            .collect();
+                        cells.push(row);
+                    }
+                }
+            }
+
+            // Only create table if we have data
+            if !cells.is_empty() {
+                tables.push(Table {
+                    cells,
+                    markdown: sheet.markdown.clone(),
+                    page_number: sheet_index + 1, // 1-indexed
+                });
+            }
+        }
+
+        tables
     }
 }
 
@@ -78,6 +133,7 @@ impl DocumentExtractor for ExcelExtractor {
         };
 
         let markdown = crate::extraction::excel::excel_to_markdown(&workbook);
+        let tables = Self::sheets_to_tables(&workbook);
 
         let sheet_names: Vec<String> = workbook.sheets.iter().map(|s| s.name.clone()).collect();
         let excel_metadata = ExcelMetadata {
@@ -100,7 +156,7 @@ impl DocumentExtractor for ExcelExtractor {
                 additional,
                 ..Default::default()
             },
-            tables: vec![],
+            tables,
             detected_languages: None,
             chunks: None,
             images: None,
@@ -114,6 +170,7 @@ impl DocumentExtractor for ExcelExtractor {
 
         let workbook = crate::extraction::excel::read_excel_file(path_str)?;
         let markdown = crate::extraction::excel::excel_to_markdown(&workbook);
+        let tables = Self::sheets_to_tables(&workbook);
 
         let sheet_names: Vec<String> = workbook.sheets.iter().map(|s| s.name.clone()).collect();
         let excel_metadata = ExcelMetadata {
@@ -136,7 +193,7 @@ impl DocumentExtractor for ExcelExtractor {
                 additional,
                 ..Default::default()
             },
-            tables: vec![],
+            tables,
             detected_languages: None,
             chunks: None,
             images: None,
@@ -180,5 +237,105 @@ mod tests {
         assert_eq!(mime_types.len(), 8);
         assert!(mime_types.contains(&"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
         assert!(mime_types.contains(&"application/vnd.ms-excel"));
+    }
+
+    #[test]
+    fn test_sheets_to_tables_conversion() {
+        use crate::types::ExcelSheet;
+        use std::collections::HashMap;
+
+        // Create a mock workbook with a single sheet
+        let sheet = ExcelSheet {
+            name: "TestSheet".to_string(),
+            markdown: r#"## TestSheet
+
+| Name | Age | City |
+| --- | --- | --- |
+| Alice | 30 | NYC |
+| Bob | 25 | LA |
+"#.to_string(),
+            row_count: 3,
+            col_count: 3,
+            cell_count: 9,
+        };
+
+        let workbook = crate::types::ExcelWorkbook {
+            sheets: vec![sheet],
+            metadata: HashMap::new(),
+        };
+
+        let tables = ExcelExtractor::sheets_to_tables(&workbook);
+
+        assert_eq!(tables.len(), 1);
+        assert_eq!(tables[0].page_number, 1);
+        assert_eq!(tables[0].cells.len(), 3); // Header + 2 data rows
+        assert_eq!(tables[0].cells[0], vec!["Name", "Age", "City"]);
+        assert_eq!(tables[0].cells[1], vec!["Alice", "30", "NYC"]);
+        assert_eq!(tables[0].cells[2], vec!["Bob", "25", "LA"]);
+    }
+
+    #[test]
+    fn test_sheets_to_tables_empty_sheet() {
+        use crate::types::ExcelSheet;
+        use std::collections::HashMap;
+
+        let sheet = ExcelSheet {
+            name: "EmptySheet".to_string(),
+            markdown: "## EmptySheet\n\n*Empty sheet*".to_string(),
+            row_count: 0,
+            col_count: 0,
+            cell_count: 0,
+        };
+
+        let workbook = crate::types::ExcelWorkbook {
+            sheets: vec![sheet],
+            metadata: HashMap::new(),
+        };
+
+        let tables = ExcelExtractor::sheets_to_tables(&workbook);
+        assert_eq!(tables.len(), 0); // Empty sheets should not create tables
+    }
+
+    #[test]
+    fn test_sheets_to_tables_multiple_sheets() {
+        use crate::types::ExcelSheet;
+        use std::collections::HashMap;
+
+        let sheet1 = ExcelSheet {
+            name: "Sheet1".to_string(),
+            markdown: r#"## Sheet1
+
+| Col1 | Col2 |
+| --- | --- |
+| A | B |
+"#.to_string(),
+            row_count: 2,
+            col_count: 2,
+            cell_count: 4,
+        };
+
+        let sheet2 = ExcelSheet {
+            name: "Sheet2".to_string(),
+            markdown: r#"## Sheet2
+
+| X | Y |
+| --- | --- |
+| 1 | 2 |
+"#.to_string(),
+            row_count: 2,
+            col_count: 2,
+            cell_count: 4,
+        };
+
+        let workbook = crate::types::ExcelWorkbook {
+            sheets: vec![sheet1, sheet2],
+            metadata: HashMap::new(),
+        };
+
+        let tables = ExcelExtractor::sheets_to_tables(&workbook);
+
+        assert_eq!(tables.len(), 2);
+        assert_eq!(tables[0].page_number, 1);
+        assert_eq!(tables[1].page_number, 2);
     }
 }

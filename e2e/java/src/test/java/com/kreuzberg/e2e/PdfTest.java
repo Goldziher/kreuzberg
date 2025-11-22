@@ -214,6 +214,7 @@ public class PdfTest {
             result -> {
                 E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("application/pdf"));
                 E2EHelpers.Assertions.assertMinContentLength(result, 500);
+                E2EHelpers.Assertions.assertTableCount(result, 1, null);
             }
         );
     }
@@ -231,6 +232,7 @@ public class PdfTest {
             result -> {
                 E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("application/pdf"));
                 E2EHelpers.Assertions.assertMinContentLength(result, 100);
+                E2EHelpers.Assertions.assertTableCount(result, 1, null);
             }
         );
     }
@@ -247,7 +249,9 @@ public class PdfTest {
             true,
             result -> {
                 E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("application/pdf"));
-                E2EHelpers.Assertions.assertMinContentLength(result, 10);
+                E2EHelpers.Assertions.assertMinContentLength(result, 50);
+                E2EHelpers.Assertions.assertContentContainsAll(result, Arrays.asList("Table 1", "Selected Numbers", "Celsius", "Fahrenheit", "Water Freezing Point", "Water Boiling Point"));
+                E2EHelpers.Assertions.assertTableCount(result, 1, null);
             }
         );
     }

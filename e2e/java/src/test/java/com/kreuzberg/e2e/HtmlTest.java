@@ -46,8 +46,9 @@ public class HtmlTest {
             true,
             result -> {
                 E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("text/html"));
-                E2EHelpers.Assertions.assertMinContentLength(result, 20);
-                E2EHelpers.Assertions.assertContentContainsAll(result, Arrays.asList("|"));
+                E2EHelpers.Assertions.assertMinContentLength(result, 100);
+                E2EHelpers.Assertions.assertContentContainsAll(result, Arrays.asList("Product", "Category", "Price", "Stock", "Laptop", "Electronics", "Sample Data Table"));
+                E2EHelpers.Assertions.assertTableCount(result, 1, null);
             }
         );
     }
