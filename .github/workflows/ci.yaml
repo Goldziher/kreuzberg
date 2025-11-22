@@ -67,6 +67,11 @@ jobs:
         with:
           go-version: '1.25'
 
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.64.0
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
       - name: Install Task
         run: |
           sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
