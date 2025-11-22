@@ -72,7 +72,7 @@ optional-dependencies.easyocr = [
 optional-dependencies.paddleocr = [
   "paddleocr>=3.3.2; python_version<'3.14'",
   "paddlepaddle>=3.2.1,<3.2.2; python_version<'3.14'",
-  "setuptools>=80.9; python_version<'3.14'",
+  "setuptools>=80.9.0; python_version<'3.14'",
 ]
 urls.Changelog = "https://kreuzberg.dev/CHANGELOG/"
 urls.Documentation = "https://kreuzberg.dev"
