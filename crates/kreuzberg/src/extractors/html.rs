@@ -29,18 +29,14 @@ impl HtmlExtractor {
 /// into `Table` objects with cells and markdown representation.
 fn extract_html_tables(html: &str) -> Result<Vec<Table>> {
     let document = Html::parse_document(html);
-    let table_selector = Selector::parse("table").map_err(|e| {
-        crate::error::KreuzbergError::parsing(format!("Failed to parse table selector: {}", e))
-    })?;
-    let row_selector = Selector::parse("tr").map_err(|e| {
-        crate::error::KreuzbergError::parsing(format!("Failed to parse row selector: {}", e))
-    })?;
-    let header_selector = Selector::parse("th").map_err(|e| {
-        crate::error::KreuzbergError::parsing(format!("Failed to parse header selector: {}", e))
-    })?;
-    let cell_selector = Selector::parse("td").map_err(|e| {
-        crate::error::KreuzbergError::parsing(format!("Failed to parse cell selector: {}", e))
-    })?;
+    let table_selector = Selector::parse("table")
+        .map_err(|e| crate::error::KreuzbergError::parsing(format!("Failed to parse table selector: {}", e)))?;
+    let row_selector = Selector::parse("tr")
+        .map_err(|e| crate::error::KreuzbergError::parsing(format!("Failed to parse row selector: {}", e)))?;
+    let header_selector = Selector::parse("th")
+        .map_err(|e| crate::error::KreuzbergError::parsing(format!("Failed to parse header selector: {}", e)))?;
+    let cell_selector = Selector::parse("td")
+        .map_err(|e| crate::error::KreuzbergError::parsing(format!("Failed to parse cell selector: {}", e)))?;
 
     let mut tables = Vec::new();
 
@@ -360,10 +356,7 @@ mod tests {
 
     #[test]
     fn test_cells_to_markdown_escape_pipes() {
-        let cells = vec![
-            vec!["Header".to_string()],
-            vec!["Cell with | pipe".to_string()],
-        ];
+        let cells = vec![vec!["Header".to_string()], vec!["Cell with | pipe".to_string()]];
 
         let markdown = cells_to_markdown(&cells);
         assert!(markdown.contains("Cell with \\| pipe"));
@@ -402,7 +395,10 @@ mod tests {
 
         let extractor = HtmlExtractor::new();
         let config = ExtractionConfig::default();
-        let result = extractor.extract_bytes(html.as_bytes(), "text/html", &config).await.unwrap();
+        let result = extractor
+            .extract_bytes(html.as_bytes(), "text/html", &config)
+            .await
+            .unwrap();
 
         assert_eq!(result.tables.len(), 1);
         let table = &result.tables[0];

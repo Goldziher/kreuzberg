@@ -122,13 +122,12 @@ fn group_chars_into_words(
         }
 
         // Check if this character should start a new word
-        if should_start_new_word(&current_word_chars, &char_info)
-            && !current_word_chars.is_empty() {
-                if let Some(word) = finalize_word(&current_word_chars, page_height, min_confidence) {
-                    words.push(word);
-                }
-                current_word_chars.clear();
+        if should_start_new_word(&current_word_chars, &char_info) && !current_word_chars.is_empty() {
+            if let Some(word) = finalize_word(&current_word_chars, page_height, min_confidence) {
+                words.push(word);
             }
+            current_word_chars.clear();
+        }
 
         current_word_chars.push(char_info);
     }
@@ -182,13 +181,21 @@ fn finalize_word(chars: &[CharInfo], page_height: i32, min_confidence: f64) -> O
     }
 
     // Calculate bounding box (encompassing all characters)
-    let left = chars.iter().map(|c| c.x).min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(0.0);
+    let left = chars
+        .iter()
+        .map(|c| c.x)
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap_or(0.0);
     let right = chars
         .iter()
         .map(|c| c.x + c.width)
         .max_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap_or(0.0);
-    let bottom = chars.iter().map(|c| c.y).min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(0.0);
+    let bottom = chars
+        .iter()
+        .map(|c| c.y)
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap_or(0.0);
     let top = chars
         .iter()
         .map(|c| c.y + c.height)

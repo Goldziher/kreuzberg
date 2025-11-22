@@ -167,6 +167,11 @@ jobs:
         shell: bash
         run: ls -lh target/wheels
 
+      - name: Smoke test Python wheel
+        uses: ./.github/actions/smoke-python
+        with:
+          wheel-path: target/wheels
+
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v5
         with:
@@ -198,6 +203,16 @@ jobs:
       - name: Build Java binding
         run: mvn -f packages/java/pom.xml -DskipTests package
 
+      - name: Smoke test Java bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🧪 Running Java bindings smoke test"
+          cd packages/java
+          # Run basic smoke tests - verify the build worked and classes are loadable
+          mvn test -Dtest="*SmokeTest" || mvn test -DfailIfNoTests=false
+          echo "✓ Java bindings smoke test passed"
+
   go:
     name: Build Go bindings
     runs-on: ubuntu-latest
@@ -225,6 +240,16 @@ jobs:
       - name: Go build (compile only)
         working-directory: packages/go/kreuzberg
         run: go build ./...
+
+      - name: Smoke test Go bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🧪 Running Go bindings smoke test"
+          export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH:-}"
+          cd packages/go
+          go test -v ./...
+          echo "✓ Go bindings smoke test passed"
 
   python-sdist:
     name: Build Python sdist
@@ -345,6 +370,11 @@ jobs:
 
       - name: List built bindings
         run: bash scripts/list_artifacts.sh crates/kreuzberg-node "*.node" "NAPI bindings"
+
+      - name: Smoke test Node.js bindings
+        uses: ./.github/actions/smoke-node
+        with:
+          package-tarball: crates/kreuzberg-node
 
   ruby-gem:
     name: Build Ruby gem (${{ matrix.label }})
@@ -543,6 +573,11 @@ jobs:
           echo "📦 Built Ruby gem for ${{ matrix.label }}:"
           ls -lh packages/ruby/pkg/*.gem || echo "No gems found"
 
+      - name: Smoke test Ruby gem
+        uses: ./.github/actions/smoke-ruby
+        with:
+          gem-path: packages/ruby/pkg
+
   cli-binaries:
     name: Build CLI binaries (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
@@ -618,7 +653,7 @@ jobs:
           echo "📦 Built CLI binary for ${{ matrix.target }}:"
           ls -lh kreuzberg-${{ matrix.target }}.* || echo "No archives found"
 
-      - name: Smoke test CLI binary (inline)
+      - name: Smoke test CLI binary
         shell: bash
         run: |
           set -euo pipefail
@@ -700,174 +735,17 @@ jobs:
 
           echo "✓ CLI binary smoke test passed for ${{ matrix.target }}"
 
-  release-smoke:
-    name: Release Smoke Tests (${{ matrix.os }})
-    needs:
-      - python-wheels
-      - node-bindings
-      - ruby-gem
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          submodules: recursive
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          package_json_file: package.json
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 20
-          check-latest: true
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.10"
-
-      - name: Setup Ruby
-        if: runner.os != 'Windows'
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-rust
-        with:
-          cache-key-prefix: release-smoke-${{ matrix.os }}
-
-      - name: Download Pdfium runtime
-        uses: ./.github/actions/download-pdfium
-        with:
-          pdfium-version: ${{ env.PDFIUM_VERSION }}
-
-      - name: Determine Python wheel artifact name
-        id: python_artifact
-        run: |
-          case "${{ matrix.os }}" in
-            ubuntu-latest)
-              echo "name=wheels-linux-x86_64" >> "$GITHUB_OUTPUT"
-              ;;
-            macos-latest)
-              echo "name=wheels-macos" >> "$GITHUB_OUTPUT"
-              ;;
-            windows-latest)
-              echo "name=wheels-windows" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
-      - name: Determine Node artifact name
-        id: node_artifact
-        run: |
-          case "${{ matrix.os }}" in
-            ubuntu-latest)
-              echo "name=napi-x86_64-unknown-linux-gnu" >> "$GITHUB_OUTPUT"
-              ;;
-            macos-latest)
-              echo "name=napi-aarch64-apple-darwin" >> "$GITHUB_OUTPUT"
-              ;;
-            windows-latest)
-              echo "name=napi-x86_64-pc-windows-msvc" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
-      - name: Determine Ruby artifact name
-        id: ruby_artifact
-        run: |
-          case "${{ matrix.os }}" in
-            ubuntu-latest)
-              echo "name=gem-linux-x86_64" >> "$GITHUB_OUTPUT"
-              ;;
-            macos-latest)
-              echo "name=gem-macos-arm64" >> "$GITHUB_OUTPUT"
-              ;;
-            windows-latest)
-              echo "name=gem-windows-x64" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
-      - name: Download Python wheels
-        uses: actions/download-artifact@v6
-        with:
-          name: ${{ steps.python_artifact.outputs.name }}
-          path: artifacts/python
-
-      - name: Download Node bindings
-        uses: actions/download-artifact@v6
-        with:
-          name: ${{ steps.node_artifact.outputs.name }}
-          path: artifacts/node
-
-      - name: Package Node.js tarball
-        shell: bash
-        working-directory: packages/typescript
-        run: |
-          set -euo pipefail
-
-          # Clean any previous artifacts
-          rm -rf npm artifacts/node
-          mkdir -p artifacts/node
-
-          # Copy the .node binaries from downloaded artifacts to source
-          cp -r ../../artifacts/napi-* . || true
-
-          # Install dependencies
-          pnpm install --frozen-lockfile=false
-
-          # Create platform-specific npm packages
-          pnpm exec napi create-npm-dirs
-
-          # Pack the tarball
-          pnpm pack --pack-destination artifacts/node
-
-          # Move to workspace artifacts
-          mv artifacts/node/*.tgz ../../artifacts/node/kreuzberg-node-4.0.0-rc.1.tgz
-
-      - name: Download Ruby gem
-        if: runner.os != 'Windows'
-        uses: actions/download-artifact@v6
-        with:
-          name: ${{ steps.ruby_artifact.outputs.name }}
-          path: artifacts/ruby
-
-      - name: Smoke test Python wheel
-        uses: ./.github/actions/smoke-python
-        with:
-          wheel-path: artifacts/python
-
-      - name: Smoke test Node.js package
-        uses: ./.github/actions/smoke-node
-        with:
-          package-tarball: artifacts/node
-
-      - name: Smoke test Ruby gem
-        if: runner.os != 'Windows'
-        uses: ./.github/actions/smoke-ruby
-        with:
-          gem-path: artifacts/ruby
-
   summarize:
     name: Build Summary
     needs:
       - rust-smoke
       - python-wheels
       - python-sdist
+      - java
+      - go
       - node-bindings
       - ruby-gem
       - cli-binaries
-      - release-smoke
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -880,17 +758,18 @@ jobs:
         run: |
           echo "# 🏗️ Build Artifacts Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "## Job Status (with integrated smoke tests)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Rust Smoke Test | ${{ needs.rust-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Wheels | ${{ needs.python-wheels.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Sdist | ${{ needs.python-sdist.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Node Bindings | ${{ needs.node-bindings.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Ruby Gem | ${{ needs.ruby-gem.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CLI Binaries (with inline smoke test) | ${{ needs.cli-binaries.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Cross-Platform Smoke Tests | ${{ needs.release-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status | Smoke Test Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|-------------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust Smoke Test | ${{ needs.rust-smoke.result }} | N/A |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Wheels | ${{ needs.python-wheels.result }} | Integrated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Sdist | ${{ needs.python-sdist.result }} | N/A |" >> $GITHUB_STEP_SUMMARY
+          echo "| Java Bindings | ${{ needs.java.result }} | Integrated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Go Bindings | ${{ needs.go.result }} | Integrated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Node Bindings | ${{ needs.node-bindings.result }} | Integrated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ruby Gem | ${{ needs.ruby-gem.result }} | Integrated |" >> $GITHUB_STEP_SUMMARY
+          echo "| CLI Binaries | ${{ needs.cli-binaries.result }} | Integrated |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📦 Built Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -948,14 +827,16 @@ jobs:
           # Overall status
           if [ "${{ needs.python-wheels.result }}" = "success" ] && \
              [ "${{ needs.python-sdist.result }}" = "success" ] && \
+             [ "${{ needs.java.result }}" = "success" ] && \
+             [ "${{ needs.go.result }}" = "success" ] && \
              [ "${{ needs.node-bindings.result }}" = "success" ] && \
              [ "${{ needs.ruby-gem.result }}" = "success" ] && \
              [ "${{ needs.cli-binaries.result }}" = "success" ]; then
-            echo "## ✅ All builds succeeded!" >> $GITHUB_STEP_SUMMARY
+            echo "## ✅ All builds and smoke tests succeeded!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "All artifacts are ready for testing." >> $GITHUB_STEP_SUMMARY
+            echo "All artifacts have been built and passed integration testing." >> $GITHUB_STEP_SUMMARY
           else
-            echo "## ⚠️ Some builds failed" >> $GITHUB_STEP_SUMMARY
+            echo "## ⚠️ Some builds or smoke tests failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Check the job details above for more information." >> $GITHUB_STEP_SUMMARY
           fi

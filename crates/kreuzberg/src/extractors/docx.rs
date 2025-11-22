@@ -65,10 +65,7 @@ impl Plugin for DocxExtractor {
 ///
 /// # Returns
 /// * `Table` - Converted table with cells and markdown representation
-fn convert_docx_table_to_table(
-    docx_table: &docx_lite::Table,
-    table_index: usize,
-) -> Table {
+fn convert_docx_table_to_table(docx_table: &docx_lite::Table, table_index: usize) -> Table {
     // Extract cells as 2D vector
     let cells: Vec<Vec<String>> = docx_table
         .rows
@@ -193,9 +190,7 @@ impl DocumentExtractor for DocxExtractor {
                 Ok((text, tables))
             })
             .await
-            .map_err(|e| {
-                crate::error::KreuzbergError::parsing(format!("DOCX extraction task failed: {}", e))
-            })??
+            .map_err(|e| crate::error::KreuzbergError::parsing(format!("DOCX extraction task failed: {}", e)))??
         } else {
             // Single-file mode: Direct extraction (no spawn overhead)
             let cursor = Cursor::new(content);
@@ -410,10 +405,7 @@ mod tests {
 
     #[test]
     fn test_cells_to_markdown_escape_pipes() {
-        let cells = vec![
-            vec!["Header".to_string()],
-            vec!["Cell with | pipe".to_string()],
-        ];
+        let cells = vec![vec!["Header".to_string()], vec!["Cell with | pipe".to_string()]];
 
         let markdown = cells_to_markdown(&cells);
         assert!(markdown.contains("Cell with \\| pipe"));

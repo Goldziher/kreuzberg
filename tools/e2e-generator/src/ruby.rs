@@ -303,10 +303,7 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     writeln!(buffer)?;
     writeln!(buffer, "# Auto-generated tests for {category} fixtures.")?;
     writeln!(buffer)?;
-    writeln!(
-        buffer,
-        "# rubocop:disable Metrics/BlockLength"
-    )?;
+    writeln!(buffer, "# rubocop:disable Metrics/BlockLength")?;
     writeln!(buffer, "require_relative 'spec_helper'\n")?;
     writeln!(
         buffer,
@@ -636,10 +633,7 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], spec_dir: &Utf8Path) -> Resu
         "# To regenerate: cargo run -p kreuzberg-e2e-generator -- generate --lang ruby"
     )?;
     writeln!(buffer)?;
-    writeln!(
-        buffer,
-        "# rubocop:disable Metrics/BlockLength"
-    )?;
+    writeln!(buffer, "# rubocop:disable Metrics/BlockLength")?;
     writeln!(buffer)?;
     writeln!(buffer, "require 'spec_helper'")?;
     writeln!(buffer, "require 'tmpdir'")?;

@@ -403,7 +403,7 @@ fn render_assertions(assertions: &Assertions) -> String {
             buffer,
             "    helpers.assert_metadata_expectation(result, {}, {})",
             python_string_literal(path),
-            render_python_value(expectation)
+            render_python_metadata_expectation(expectation)
         )
         .unwrap();
     }
@@ -434,6 +434,27 @@ fn render_string_list(values: &[String]) -> String {
             .collect::<Vec<_>>()
             .join(", ");
         format!("[{parts}]")
+    }
+}
+
+fn render_python_metadata_expectation(value: &Value) -> String {
+    match value {
+        Value::Object(map) => {
+            if map.is_empty() {
+                return "{}".to_string();
+            }
+            let parts = map
+                .iter()
+                .map(|(key, value)| format!("{}: {}", python_string_literal(key), render_python_value(value)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{{{parts}}}")
+        }
+        // For non-object metadata values, wrap in "eq" expectation
+        _ => {
+            let value_expr = render_python_value(value);
+            format!("{{\"eq\": {value_expr}}}")
+        }
     }
 }
 

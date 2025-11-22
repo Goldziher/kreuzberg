@@ -50,7 +50,7 @@ def test_smoke_image_png() -> None:
     result = extract_file_sync(document_path, None, config)
 
     helpers.assert_expected_mime(result, ["image/png"])
-    helpers.assert_metadata_expectation(result, "format", "PNG")
+    helpers.assert_metadata_expectation(result, "format", {"eq": "PNG"})
 
 def test_smoke_json_basic() -> None:
     """Smoke test: JSON file extraction"""

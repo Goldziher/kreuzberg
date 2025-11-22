@@ -400,14 +400,20 @@ fn clean_ts_files(dir: &Utf8Path) -> Result<()> {
 
     for entry in fs::read_dir(dir.as_std_path())? {
         let entry = entry?;
-        let file_name = entry.path().file_name().unwrap_or_default().to_string_lossy().to_string();
+        let file_name = entry
+            .path()
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
 
         // Skip implementation files, only remove test files
         if file_name == "helpers.ts"
             || file_name == "index.ts"
             || file_name == "types.ts"
             || file_name == "errors.ts"
-            || file_name == "cli.ts" {
+            || file_name == "cli.ts"
+        {
             continue;
         }
 
@@ -430,14 +436,8 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     writeln!(buffer, "// Auto-generated tests for {category} fixtures.\n")?;
     writeln!(buffer, "import {{ existsSync }} from \"node:fs\";")?;
     writeln!(buffer, "import {{ describe, it }} from \"vitest\";")?;
-    writeln!(
-        buffer,
-        "import {{ extractFileSync }} from \"./index.js\";",
-    )?;
-    writeln!(
-        buffer,
-        "import type {{ ExtractionResult }} from \"./types.js\";",
-    )?;
+    writeln!(buffer, "import {{ extractFileSync }} from \"./index.js\";",)?;
+    writeln!(buffer, "import type {{ ExtractionResult }} from \"./types.js\";",)?;
     writeln!(
         buffer,
         "import {{ assertions, buildConfig, resolveDocument, shouldSkipFixture }} from \"./helpers.js\";\n",
@@ -674,10 +674,7 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], src_dir: &Utf8Path) -> Resul
     writeln!(buffer, "import * as os from \"os\";")?;
     writeln!(buffer, "import * as path from \"path\";")?;
     writeln!(buffer, "import {{ describe, expect, it }} from \"vitest\";")?;
-    writeln!(
-        buffer,
-        "import * as kreuzberg from \"./index.js\";"
-    )?;
+    writeln!(buffer, "import * as kreuzberg from \"./index.js\";")?;
     writeln!(buffer)?;
 
     // Group fixtures by api_category

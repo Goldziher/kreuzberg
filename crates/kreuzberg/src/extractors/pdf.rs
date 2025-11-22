@@ -11,10 +11,10 @@ use std::path::Path;
 use crate::pdf::error::PdfError;
 #[cfg(feature = "ocr")]
 use crate::pdf::rendering::{PageRenderOptions, PdfRenderer};
-#[cfg(feature = "pdf")]
-use pdfium_render::prelude::*;
 #[cfg(all(feature = "pdf", feature = "ocr"))]
 use crate::types::Table;
+#[cfg(feature = "pdf")]
+use pdfium_render::prelude::*;
 
 #[cfg(feature = "ocr")]
 const MIN_TOTAL_NON_WHITESPACE: usize = 64;

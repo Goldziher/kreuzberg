@@ -185,6 +185,21 @@ pub mod assertions {
                         "Expected metadata `{path}` string `{actual}` to contain `{expected}`"
                     );
                 }
+                _ if value.is_array() && contains.is_string() => {
+                    // Array contains a string value
+                    let actual_values = value
+                        .as_array()
+                        .expect("value is array by branch")
+                        .iter()
+                        .collect::<Vec<_>>();
+                    let expected = contains.as_str().expect("contains is string by branch");
+                    assert!(
+                        actual_values.iter().any(|item| {
+                            item.as_str().map_or(false, |s| s.contains(expected))
+                        }),
+                        "Expected metadata `{path}` to contain `{expected}`, got {actual_values:?}"
+                    );
+                }
                 _ if value.is_array() && contains.is_array() => {
                     let actual_values = value
                         .as_array()

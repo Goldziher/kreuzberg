@@ -270,6 +270,14 @@ public final class E2EHelpers {
                 if (value instanceof String && contains instanceof String) {
                     assertTrue(((String) value).contains((String) contains),
                             String.format("Expected '%s' to contain '%s'", value, contains));
+                } else if (value instanceof List && contains instanceof String) {
+                    // List contains a string
+                    @SuppressWarnings("unchecked")
+                    List<Object> valueList = (List<Object>) value;
+                    boolean found = valueList.stream()
+                            .anyMatch(item -> item.toString().contains((String) contains));
+                    assertTrue(found,
+                            String.format("Expected %s to contain '%s'", value, contains));
                 } else if (value instanceof List && contains instanceof List) {
                     @SuppressWarnings("unchecked")
                     List<Object> valueList = (List<Object>) value;

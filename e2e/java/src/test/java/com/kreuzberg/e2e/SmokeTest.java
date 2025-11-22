@@ -65,7 +65,7 @@ public class SmokeTest {
             true,
             result -> {
                 E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("image/png"));
-                E2EHelpers.Assertions.assertMetadataExpectation(result, "format", "PNG");
+                E2EHelpers.Assertions.assertMetadataExpectation(result, "format", Map.of("eq", "PNG"));
             }
         );
     }

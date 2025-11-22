@@ -253,7 +253,8 @@ mod tests {
 | --- | --- | --- |
 | Alice | 30 | NYC |
 | Bob | 25 | LA |
-"#.to_string(),
+"#
+            .to_string(),
             row_count: 3,
             col_count: 3,
             cell_count: 9,
@@ -308,7 +309,8 @@ mod tests {
 | Col1 | Col2 |
 | --- | --- |
 | A | B |
-"#.to_string(),
+"#
+            .to_string(),
             row_count: 2,
             col_count: 2,
             cell_count: 4,
@@ -321,7 +323,8 @@ mod tests {
 | X | Y |
 | --- | --- |
 | 1 | 2 |
-"#.to_string(),
+"#
+            .to_string(),
             row_count: 2,
             col_count: 2,
             cell_count: 4,
