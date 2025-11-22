@@ -23,7 +23,7 @@ pyo3-async-runtimes = { version = "0.27", features = ["tokio-runtime"] }
 serde_json = "1.0.145"
 tokio = { version = "1.48.0", features = ["rt", "macros"] }
 tracing = "0.1"
-html-to-markdown-rs = { version = "2.8.3", default-features = false }
+html-to-markdown-rs = { version = "2.9.1", default-features = false }
 
 [features]
 default = ["extension-module"]
