@@ -580,11 +580,6 @@ jobs:
             rust_target: ""
             use_cross: false
             use_napi_cross: false
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            rust_target: aarch64-pc-windows-msvc
-            use_cross: false
-            use_napi_cross: false
     steps:
       - name: Checkout
         uses: actions/checkout@v6
