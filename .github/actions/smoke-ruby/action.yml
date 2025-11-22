@@ -45,15 +45,8 @@ runs:
 
           echo "Using gem: $gem_file"
 
-          # Unpack gem and configure bundle to use it
-          mkdir -p vendor/local-gems
-          gem unpack "$gem_file" --target vendor/local-gems >/dev/null
-          gem_dir=$(find vendor/local-gems -maxdepth 1 -type d -name 'kreuzberg-*' | head -n 1)
-          if [[ -z "$gem_dir" ]]; then
-            echo "Failed to unpack gem" >&2
-            exit 1
-          fi
-          bundle config set --local local.kreuzberg "$gem_dir"
+          # Install gem locally
+          gem install "$gem_file" --local --no-document
         fi
 
         bundle install

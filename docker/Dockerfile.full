@@ -22,7 +22,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Set pdfium version (can be overridden via build-arg)
-ARG PDFIUM_VERSION=7469
+ARG PDFIUM_VERSION=7529
 ARG TARGETARCH
 ENV PDFIUM_VERSION=${PDFIUM_VERSION}
 

@@ -22,6 +22,10 @@ runs:
             exit 1
           fi
         fi
+        # Convert to absolute path before changing directories
+        if [[ "$tarball" != /* ]]; then
+          tarball="${GITHUB_WORKSPACE}/$tarball"
+        fi
         echo "Using tarball: $tarball"
         tmp=$(mktemp -d)
         cp -R e2e/smoke/node/. "$tmp"/

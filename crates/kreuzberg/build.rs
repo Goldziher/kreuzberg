@@ -111,9 +111,9 @@ fn get_latest_version(repo: &str) -> String {
     }
 
     if repo.contains("bblanchon") {
-        "7455".to_string()
+        "7529".to_string()
     } else {
-        "7469".to_string()
+        "7529".to_string()
     }
 }
 

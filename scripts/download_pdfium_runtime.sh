@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-version="${PDFIUM_VERSION:-${1:-7455}}"
+version="${PDFIUM_VERSION:-${1:-7529}}"
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 dest_release="$root_dir/target/release"
 dest_debug="$root_dir/target/debug"

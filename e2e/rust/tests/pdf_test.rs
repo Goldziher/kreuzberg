@@ -9,10 +9,7 @@ fn test_pdf_assembly_technical() {
 
     let document_path = resolve_document("pdfs/assembly_language_for_beginners_al4_b_en.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_assembly_technical: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_assembly_technical: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -34,10 +31,7 @@ fn test_pdf_bayesian_data_analysis() {
 
     let document_path = resolve_document("pdfs/bayesian_data_analysis_third_edition_13th_feb_2020.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_bayesian_data_analysis: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_bayesian_data_analysis: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -59,10 +53,7 @@ fn test_pdf_code_and_formula() {
 
     let document_path = resolve_document("pdfs/code_and_formula.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_code_and_formula: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_code_and_formula: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -82,10 +73,7 @@ fn test_pdf_deep_learning() {
 
     let document_path = resolve_document("pdfs/fundamentals_of_deep_learning_2014.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_deep_learning: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_deep_learning: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -107,10 +95,7 @@ fn test_pdf_embedded_images() {
 
     let document_path = resolve_document("pdfs/embedded_images_tables.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_embedded_images: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_embedded_images: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -131,10 +116,7 @@ fn test_pdf_google_doc() {
 
     let document_path = resolve_document("pdfs/google_doc_document.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_google_doc: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_google_doc: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -155,10 +137,7 @@ fn test_pdf_large_ciml() {
 
     let document_path = resolve_document("pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_large_ciml: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_large_ciml: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -180,10 +159,7 @@ fn test_pdf_non_english_german() {
 
     let document_path = resolve_document("pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_non_english_german: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_non_english_german: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -205,10 +181,7 @@ fn test_pdf_right_to_left() {
 
     let document_path = resolve_document("pdfs/right_to_left_01.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_right_to_left: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_right_to_left: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -229,10 +202,7 @@ fn test_pdf_simple_text() {
 
     let document_path = resolve_document("pdfs/fake_memo.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_simple_text: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_simple_text: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -253,10 +223,7 @@ fn test_pdf_tables_large() {
 
     let document_path = resolve_document("pdfs_with_tables/large.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_tables_large: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_tables_large: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -277,10 +244,7 @@ fn test_pdf_tables_medium() {
 
     let document_path = resolve_document("pdfs_with_tables/medium.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_tables_medium: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_tables_medium: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -301,10 +265,7 @@ fn test_pdf_tables_small() {
 
     let document_path = resolve_document("pdfs_with_tables/tiny.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_tables_small: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_tables_small: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -316,17 +277,7 @@ fn test_pdf_tables_small() {
 
     assertions::assert_expected_mime(&result, &["application/pdf"]);
     assertions::assert_min_content_length(&result, 50);
-    assertions::assert_content_contains_all(
-        &result,
-        &[
-            "Table 1",
-            "Selected Numbers",
-            "Celsius",
-            "Fahrenheit",
-            "Water Freezing Point",
-            "Water Boiling Point",
-        ],
-    );
+    assertions::assert_content_contains_all(&result, &["Table 1", "Selected Numbers", "Celsius", "Fahrenheit", "Water Freezing Point", "Water Boiling Point"]);
     assertions::assert_table_count(&result, Some(1), None);
 }
 
@@ -334,13 +285,9 @@ fn test_pdf_tables_small() {
 fn test_pdf_technical_stat_learning() {
     // Technical statistical learning PDF requiring substantial extraction.
 
-    let document_path =
-        resolve_document("pdfs/an_introduction_to_statistical_learning_with_applications_in_r_islr_sixth_printing.pdf");
+    let document_path = resolve_document("pdfs/an_introduction_to_statistical_learning_with_applications_in_r_islr_sixth_printing.pdf");
     if !document_path.exists() {
-        println!(
-            "Skipping pdf_technical_stat_learning: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping pdf_technical_stat_learning: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -355,3 +302,4 @@ fn test_pdf_technical_stat_learning() {
     assertions::assert_content_contains_any(&result, &["statistical", "regression", "learning"]);
     assertions::assert_metadata_expectation(&result, "format_type", &serde_json::json!({"eq":"pdf"}));
 }
+

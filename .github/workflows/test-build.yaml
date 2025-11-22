@@ -21,7 +21,7 @@ env:
   CARGO_INCREMENTAL: 0
   CARGO_PROFILE_DEV_DEBUG: 0
   RUST_BACKTRACE: short
-  PDFIUM_VERSION: "7455"
+  PDFIUM_VERSION: "7529"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
 
@@ -69,12 +69,12 @@ jobs:
           #   python: "3.10"
           #   needs_qemu: true
           #   extra_args: ""
-          - label: macos-universal
+          - label: macos-arm64
             os: macos-14
             artifact: wheels-macos
             python: "3.10"
             needs_qemu: false
-            rust_target: universal2-apple-darwin
+            rust_target: aarch64-apple-darwin
             manylinux: ""
             extra_args: ""
           - label: windows-amd64
@@ -137,9 +137,9 @@ jobs:
           rust-target: ${{ matrix.rust_target }}
 
       - name: Install macOS Rust targets
-        if: matrix.label == 'macos-universal'
+        if: matrix.label == 'macos-arm64'
         shell: bash
-        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+        run: rustup target add aarch64-apple-darwin
 
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
@@ -171,6 +171,7 @@ jobs:
         uses: ./.github/actions/smoke-python
         with:
           wheel-path: target/wheels
+          python-version: ${{ matrix.python }}
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v5

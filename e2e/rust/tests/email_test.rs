@@ -9,10 +9,7 @@ fn test_email_sample_eml() {
 
     let document_path = resolve_document("email/sample_email.eml");
     if !document_path.exists() {
-        println!(
-            "Skipping email_sample_eml: missing document at {}",
-            document_path.display()
-        );
+        println!("Skipping email_sample_eml: missing document at {}", document_path.display());
         return;
     }
     let config = ExtractionConfig::default();
@@ -25,3 +22,4 @@ fn test_email_sample_eml() {
     assertions::assert_expected_mime(&result, &["message/rfc822"]);
     assertions::assert_min_content_length(&result, 20);
 }
+

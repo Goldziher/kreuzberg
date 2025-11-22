@@ -6,10 +6,19 @@ inputs:
     description: Path to the Python wheel file or directory containing wheels
     required: false
     default: ""
+  python-version:
+    description: Python version to use for testing (e.g., "3.10")
+    required: false
+    default: "3.10"
 
 runs:
   using: composite
   steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
     - name: Smoke test Python wheel
       shell: bash
       run: |
