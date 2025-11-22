@@ -6,19 +6,20 @@ vars:
   GOLANGCI_LINT_VERSION: 2.6.2
 silent: false
 tasks:
-  sync-versions:
+  version:sync:
     desc: Sync version from Cargo.toml to all package manifests
     cmds:
       - uv run python scripts/sync_versions.py
   setup:
-    desc: Install dependencies for all languages
+    desc: "Install all dependencies and initialize project. Idempotent - safe to re-run anytime."
     cmds:
+      - task: rust:install
       - task: python:install
       - task: typescript:install
       - task: ruby:install
       - task: java:install
       - task: go:install
-      - task: rust:build
+      - echo "Setup complete - safe to re-run anytime"
   build:
     desc: Build core libraries and language bindings
     cmds:
@@ -37,21 +38,51 @@ tasks:
       - task: java:test
       - task: go:test
   lint:
-    desc: Run linters for all languages
+    desc: Run all linters with auto-fix enabled
     cmds:
-      - task: rust:check
+      - task: rust:lint
       - task: python:lint
-      - task: go:lint
-      - task: ruby:lint
       - task: typescript:lint
+      - task: ruby:lint
       - task: java:lint
+      - task: go:lint
+  lint:check:
+    desc: Run all linters in check-only mode (no modifications)
+    cmds:
+      - task: rust:lint:check
+      - task: python:lint:check
+      - task: typescript:lint:check
+      - task: ruby:lint:check
+      - task: java:lint:check
+      - task: go:lint:check
+  check:
+    desc: Run all checks without modifications (lint + format checks)
+    cmds:
+      - task: lint:check
+      - task: format:check
   format:
-    desc: Format code for all languages
+    desc: Format code for all languages (with modifications)
     cmds:
       - task: rust:format
       - task: python:format
       - task: ruby:format
       - task: typescript:format
+      - task: java:format
+      - task: go:format
+  format:check:
+    desc: Check code formatting without modifications
+    cmds:
+      - task: rust:format:check
+      - task: python:format:check
+      - task: ruby:format:check
+      - task: typescript:format:check
+      - task: java:format:check
+      - task: go:format:check
+  rust:install:
+    desc: Install Rust toolchain
+    cmds:
+      - echo "Rust toolchain is typically installed via rustup"
+      - rustc --version
   rust:build:
     desc: Build all Rust crates
     cmds:
@@ -60,15 +91,24 @@ tasks:
     desc: Run all Rust tests
     cmds:
       - cargo test --workspace --release
-  rust:check:
-    desc: Check Rust code
-    cmds:
-      - cargo check --workspace
-      - cargo clippy --workspace -- -D warnings
-  rust:format:
-    desc: Format Rust code
+  rust:lint:
+    desc: Lint Rust code with auto-fix (cargo fmt + clippy)
     cmds:
       - cargo fmt --all
+      - cargo clippy --workspace --fix --allow-dirty --allow-staged
+  rust:lint:check:
+    desc: Lint Rust code in check-only mode (cargo fmt + clippy checks)
+    cmds:
+      - cargo fmt --all -- --check
+      - cargo clippy --workspace -- -D warnings
+  rust:format:
+    desc: Format Rust code (cargo fmt with modifications)
+    cmds:
+      - cargo fmt --all
+  rust:format:check:
+    desc: Check Rust code formatting without modifications
+    cmds:
+      - cargo fmt --all -- --check
   rust:doc:
     desc: Generate Rust documentation
     cmds:
@@ -84,6 +124,11 @@ tasks:
     dir: packages/python
     cmds:
       - uv sync --all-extras --no-install-workspace
+  python:setup:
+    desc: Alias for python:install (idempotent)
+    dir: packages/python
+    cmds:
+      - task: python:install
   python:test:
     desc: Run Python tests
     dir: packages/python
@@ -95,18 +140,28 @@ tasks:
     cmds:
       - uv run pytest --cov --cov-report=html
   python:lint:
-    desc: Lint Python code
+    desc: Lint Python code with auto-fix (ruff check + format)
+    dir: packages/python
+    cmds:
+      - uv run ruff check --fix
+      - uv run ruff format
+  python:lint:check:
+    desc: Lint Python code in check-only mode (ruff + mypy)
     dir: packages/python
     cmds:
       - uv run ruff check
       - uv run ruff format --check
       - uv run mypy
   python:format:
-    desc: Format Python code
+    desc: Format Python code with modifications (ruff format)
     dir: packages/python
     cmds:
-      - uv run ruff check --fix
       - uv run ruff format
+  python:format:check:
+    desc: Check Python code formatting without modifications
+    dir: packages/python
+    cmds:
+      - uv run ruff format --check
   python:build:
     desc: Build Python wheel
     dir: packages/python
@@ -125,6 +180,11 @@ tasks:
     dir: packages/ruby
     cmds:
       - "{{.BUNDLE}} install"
+  ruby:setup:
+    desc: Alias for ruby:install (idempotent)
+    dir: packages/ruby
+    cmds:
+      - task: ruby:install
   ruby:build:
     desc: Build Ruby extension
     dir: packages/ruby
@@ -146,21 +206,27 @@ tasks:
     cmds:
       - "{{.BUNDLE}} exec rspec --format documentation --color"
   ruby:lint:
-    desc: Lint Ruby code (rubocop + steep type checking)
+    desc: Lint Ruby code with auto-fix (rubocop + steep)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml --autocorrect-all"
       - "{{.BUNDLE}} exec steep check"
-  ruby:lint:fix:
-    desc: Auto-fix Ruby lint issues
+  ruby:lint:check:
+    desc: Lint Ruby code in check-only mode (rubocop + steep, no fixes)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --autocorrect-all"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml"
+      - "{{.BUNDLE}} exec steep check"
   ruby:format:
-    desc: Format Ruby code
+    desc: Format Ruby code with modifications (rubocop)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --autocorrect-all"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml --autocorrect-all"
+  ruby:format:check:
+    desc: Check Ruby code formatting without modifications (rubocop)
+    dir: packages/ruby
+    cmds:
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml"
   ruby:typecheck:
     desc: Run steep type checking
     dir: packages/ruby
@@ -176,6 +242,11 @@ tasks:
     dir: packages/typescript
     cmds:
       - pnpm install
+  typescript:setup:
+    desc: Alias for typescript:install (idempotent)
+    dir: packages/typescript
+    cmds:
+      - task: typescript:install
   typescript:build:
     desc: Build TypeScript package
     dir: packages/typescript
@@ -187,15 +258,25 @@ tasks:
     cmds:
       - pnpm test
   typescript:lint:
-    desc: Lint TypeScript code
+    desc: Lint TypeScript code with auto-fix (biome)
+    dir: packages/typescript
+    cmds:
+      - pnpm lint --write
+  typescript:lint:check:
+    desc: Lint TypeScript code in check-only mode (biome, no fixes)
     dir: packages/typescript
     cmds:
       - pnpm lint
   typescript:format:
-    desc: Format TypeScript code
+    desc: Format TypeScript code with modifications (biome)
     dir: packages/typescript
     cmds:
       - pnpm format
+  typescript:format:check:
+    desc: Check TypeScript code formatting without modifications (biome)
+    dir: packages/typescript
+    cmds:
+      - pnpm format --check
   typescript:update:
     desc: Update TypeScript dependencies
     cmds:
@@ -206,6 +287,11 @@ tasks:
     dir: packages/java
     cmds:
       - mvn clean install -DskipTests
+  java:setup:
+    desc: Alias for java:install (idempotent)
+    dir: packages/java
+    cmds:
+      - task: java:install
   java:build:
     desc: Build Java package
     dir: packages/java
@@ -217,7 +303,25 @@ tasks:
     cmds:
       - mvn test
   java:lint:
-    desc: Lint Java code (checkstyle + PMD)
+    desc: Lint Java code with auto-fix (checkstyle + PMD)
+    dir: packages/java
+    cmds:
+      - mvn checkstyle:check
+      - mvn pmd:check pmd:cpd-check
+  java:lint:check:
+    desc: Lint Java code in check-only mode (checkstyle + PMD, no fixes)
+    dir: packages/java
+    cmds:
+      - mvn checkstyle:check
+      - mvn pmd:check pmd:cpd-check
+  java:format:
+    desc: Format Java code with modifications (checkstyle + PMD validation)
+    dir: packages/java
+    cmds:
+      - mvn checkstyle:check
+      - mvn pmd:check pmd:cpd-check
+  java:format:check:
+    desc: Check Java code formatting without modifications (checkstyle + PMD validation)
     dir: packages/java
     cmds:
       - mvn checkstyle:check
@@ -309,7 +413,7 @@ tasks:
     desc: Lint generated Ruby E2E suite
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop ../../e2e/ruby/spec"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml ../../e2e/ruby/spec"
   e2e:ruby:test:
     desc: Run Ruby E2E tests
     dir: packages/ruby
@@ -429,16 +533,23 @@ tasks:
     cmds:
       - uv run mike deploy --push 4.0 latest
   update:
-    desc: Update all dependencies to latest versions
+    desc: Update all dependencies to latest versions (cargo upgrade, uv-bump, pnpm up --latest, etc.)
     cmds:
+      - echo "Updating Rust dependencies..."
       - task: rust:update
-      - task: typescript:update
-      - task: ruby:update
+      - echo "Updating Python dependencies..."
       - task: python:update
+      - echo "Updating TypeScript dependencies..."
+      - task: typescript:update
+      - echo "Updating Ruby dependencies..."
+      - task: ruby:update
+      - echo "Updating Java dependencies..."
       - task: java:update
+      - echo "Updating Go dependencies..."
       - task: go:update
+      - echo "Updating pre-commit hooks..."
       - prek autoupdate
-      - "echo \"\u2713 All dependencies updated\""
+      - echo "All dependencies updated"
   clean:rust:
     desc: Clean Rust build artifacts
     cmds:
@@ -494,11 +605,27 @@ tasks:
           go mod tidy
 
   go:lint:
-    desc: Lint Go bindings
+    desc: Lint Go code with auto-fix (gofmt + golangci-lint)
     dir: packages/go
     cmds:
       - go fmt ./...
+      - golangci-lint run --config ../../.golangci.yml --fix ./...
+  go:lint:check:
+    desc: Lint Go code in check-only mode (gofmt + golangci-lint, no fixes)
+    dir: packages/go
+    cmds:
+      - go fmt -l ./... | grep -q . && exit 1 || true
       - golangci-lint run --config ../../.golangci.yml ./...
+  go:format:
+    desc: Format Go code with modifications (gofmt)
+    dir: packages/go
+    cmds:
+      - gofmt -w ./...
+  go:format:check:
+    desc: Check Go code formatting without modifications (gofmt)
+    dir: packages/go
+    cmds:
+      - go fmt -l ./... | grep -q . && exit 1 || true
 
   go:test:
     desc: Run Go tests

@@ -234,7 +234,7 @@ RSpec.describe 'Validator Plugin System' do
 
     it 'returns validator names after registration' do
       Kreuzberg.clear_validators
-      validator = ->(result) { }
+      validator = ->(result) {}
       Kreuzberg.register_validator('test-validator', validator)
       validators = Kreuzberg.list_validators
       expect(validators).to include('test-validator')
@@ -243,9 +243,9 @@ RSpec.describe 'Validator Plugin System' do
 
     it 'returns all registered validator names' do
       Kreuzberg.clear_validators
-      validator1 = ->(result) { }
-      validator2 = ->(result) { }
-      validator3 = ->(result) { }
+      validator1 = ->(result) {}
+      validator2 = ->(result) {}
+      validator3 = ->(result) {}
 
       Kreuzberg.register_validator('validator-one', validator1)
       Kreuzberg.register_validator('validator-two', validator2)
@@ -258,7 +258,7 @@ RSpec.describe 'Validator Plugin System' do
 
     it 'reflects changes after unregistration' do
       Kreuzberg.clear_validators
-      validator = ->(result) { }
+      validator = ->(result) {}
       Kreuzberg.register_validator('temp-validator', validator)
 
       validators_before = Kreuzberg.list_validators
