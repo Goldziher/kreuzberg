@@ -32,4 +32,11 @@ fi
 
 rm -f "$ROOT"/crates/kreuzberg-node/*.node
 cp "$ARTIFACT_DIR"/*.node "$ROOT"/crates/kreuzberg-node/
+
+# Create tarball for distribution/testing
+echo "Creating npm tarball..."
+rm -f "$ROOT"/crates/kreuzberg-node/*.tgz
+pnpm pack
+echo "Tarball created successfully"
+
 popd >/dev/null

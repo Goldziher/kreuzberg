@@ -29,7 +29,7 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
 
     for (category, mut fixtures) in grouped {
         fixtures.sort_by(|a, b| a.id.cmp(&b.id));
-        let file_name = format!("{}_tests.rs", sanitize_identifier(&category));
+        let file_name = format!("{}_test.rs", sanitize_identifier(&category));
         let content = render_category(&category, &fixtures)?;
         let path = tests_dir.join(file_name);
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
@@ -263,7 +263,7 @@ fn escape_rust_string(value: &str) -> String {
 }
 
 fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Result<()> {
-    let test_file = output_dir.join("plugin_apis_tests.rs");
+    let test_file = output_dir.join("plugin_apis_test.rs");
 
     let mut buffer = String::new();
 
@@ -558,11 +558,7 @@ fn generate_mime_from_bytes_test_rust(test_spec: &PluginTestSpec, buf: &mut Stri
 
     // Convert test data to bytes (like Python's b"...")
     // The test_data is already escaped in JSON (e.g., "%PDF-1.4\n")
-    let bytes_str = test_data
-        .replace("\\n", "\\n")
-        .replace("\\r", "\\r")
-        .replace("\\t", "\\t");
-    writeln!(buf, "    let data = b\"{}\";", bytes_str)?;
+    writeln!(buf, "    let data = b\"{}\";", test_data)?;
 
     // Call detect_mime_type_from_bytes
     writeln!(buf, "    let result = detect_mime_type_from_bytes(data)")?;

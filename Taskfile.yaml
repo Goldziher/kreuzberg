@@ -261,7 +261,7 @@ tasks:
     desc: Lint TypeScript code with auto-fix (biome)
     dir: packages/typescript
     cmds:
-      - pnpm lint --write
+      - pnpm lint:fix
   typescript:lint:check:
     desc: Lint TypeScript code in check-only mode (biome, no fixes)
     dir: packages/typescript
@@ -276,7 +276,7 @@ tasks:
     desc: Check TypeScript code formatting without modifications (biome)
     dir: packages/typescript
     cmds:
-      - pnpm format --check
+      - pnpm exec biome format src
   typescript:update:
     desc: Update TypeScript dependencies
     cmds:
@@ -620,12 +620,12 @@ tasks:
     desc: Format Go code with modifications (gofmt)
     dir: packages/go
     cmds:
-      - gofmt -w ./...
+      - gofmt -w .
   go:format:check:
     desc: Check Go code formatting without modifications (gofmt)
     dir: packages/go
     cmds:
-      - go fmt -l ./... | grep -q . && exit 1 || true
+      - gofmt -l . | grep -q . && exit 1 || true
 
   go:test:
     desc: Run Go tests

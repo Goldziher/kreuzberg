@@ -389,7 +389,7 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
 
     for (category, mut fixtures) in grouped {
         fixtures.sort_by(|a, b| a.id.cmp(&b.id));
-        let filename = format!("{}_test.go", sanitize_identifier(&category));
+        let filename = format!("{}_test.go", category.to_lowercase());
         let content = render_category(&category, &fixtures)?;
         fs::write(go_root.join(&filename), content)
             .with_context(|| format!("failed to write Go test file {filename}"))?;
@@ -454,15 +454,15 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
         buffer.push('\n');
     }
 
-    Ok(buffer)
+    Ok(indent_with_tabs(&buffer))
 }
 
 fn render_test(fixture: &Fixture) -> Result<String> {
     let mut code = String::new();
     let test_name = format!(
-        "Test{}_{}",
-        sanitize_identifier(fixture.category()),
-        sanitize_identifier(&fixture.id)
+        "Test{}{}",
+        to_go_pascal_case(fixture.category()),
+        to_go_pascal_case(&fixture.id)
     );
     writeln!(code, "func {test_name}(t *testing.T) {{")?;
     writeln!(
@@ -562,19 +562,36 @@ fn go_string_literal(value: &str) -> String {
     format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
-fn sanitize_identifier(value: &str) -> String {
-    let mut ident = String::new();
-    for ch in value.chars() {
-        if ch.is_ascii_alphanumeric() {
-            ident.push(ch.to_ascii_uppercase());
-        } else {
-            ident.push('_');
-        }
-    }
-    while ident.starts_with('_') {
-        ident.remove(0);
-    }
-    if ident.is_empty() { "Fixture".to_string() } else { ident }
+/// Convert a snake_case or UPPER_CASE identifier to PascalCase for Go test names
+fn to_go_pascal_case(value: &str) -> String {
+    value
+        .split('_')
+        .filter(|s| !s.is_empty())
+        .map(|part| {
+            let mut chars = part.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase(),
+            }
+        })
+        .collect()
+}
+
+/// Convert space-based indentation (4 spaces per level) to tab-based indentation.
+/// Go's gofmt expects tabs, not spaces.
+fn indent_with_tabs(text: &str) -> String {
+    text.lines()
+        .map(|line| {
+            let trimmed = line.trim_start();
+            if trimmed.is_empty() {
+                String::new()
+            } else {
+                let indent_count = (line.len() - trimmed.len()) / 4;
+                format!("{}{}", "\t".repeat(indent_count), trimmed)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Generate plugin API tests in Go
@@ -642,7 +659,8 @@ fn generate_plugin_api_tests(go_root: &Utf8Path, fixtures: &[&Fixture]) -> Resul
 
     // Write to file
     let output_path = go_root.join("plugin_apis_test.go");
-    fs::write(output_path.as_std_path(), buffer).context("failed to write plugin_apis_test.go")?;
+    let formatted_buffer = indent_with_tabs(&buffer);
+    fs::write(output_path.as_std_path(), formatted_buffer).context("failed to write plugin_apis_test.go")?;
 
     Ok(())
 }

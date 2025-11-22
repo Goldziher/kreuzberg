@@ -20,7 +20,7 @@ import type {
     PostProcessorConfig,
     TesseractConfig,
     TokenReductionConfig,
-} from "./types.js";
+} from "../src/types.js";
 
 const WORKSPACE_ROOT = resolve(__dirname, "../../../../..");
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");
@@ -357,9 +357,9 @@ function valuesEqual(lhs: unknown, rhs: unknown): boolean {
 "#;
 
 pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
-    let ts_impl_dir = output_root.join("packages/typescript/src");
+    let ts_impl_dir = output_root.join("typescript/tests");
 
-    fs::create_dir_all(&ts_impl_dir).context("Failed to create TypeScript src directory")?;
+    fs::create_dir_all(&ts_impl_dir).context("Failed to create TypeScript tests directory")?;
 
     clean_ts_files(&ts_impl_dir)?;
     write_helpers(&ts_impl_dir)?;
@@ -379,7 +379,7 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
 
     for (category, mut fixtures) in grouped {
         fixtures.sort_by(|a, b| a.id.cmp(&b.id));
-        let file_name = format!("test_{}.spec.ts", sanitize_identifier(&category));
+        let file_name = format!("{}.spec.ts", to_kebab_case(&category));
         let content = render_category(&category, &fixtures)?;
         let path = ts_impl_dir.join(file_name);
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
@@ -436,12 +436,12 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     writeln!(buffer, "// Auto-generated tests for {category} fixtures.\n")?;
     writeln!(buffer, "import {{ existsSync }} from \"node:fs\";")?;
     writeln!(buffer, "import {{ describe, it }} from \"vitest\";")?;
-    writeln!(buffer, "import {{ extractFileSync }} from \"./index.js\";",)?;
-    writeln!(buffer, "import type {{ ExtractionResult }} from \"./types.js\";",)?;
     writeln!(
         buffer,
-        "import {{ assertions, buildConfig, resolveDocument, shouldSkipFixture }} from \"./helpers.js\";\n",
+        "import {{ assertions, buildConfig, resolveDocument, shouldSkipFixture }} from \"../src/helpers.js\";"
     )?;
+    writeln!(buffer, "import {{ extractFileSync }} from \"../src/index.js\";")?;
+    writeln!(buffer, "import type {{ ExtractionResult }} from \"../src/types.js\";\n")?;
     writeln!(buffer, "const TEST_TIMEOUT_MS = 60_000;\n")?;
 
     writeln!(buffer, "describe(\"{category} fixtures\", () => {{")?;
@@ -627,19 +627,21 @@ fn collect_requirements(fixture: &Fixture) -> Vec<String> {
         .collect()
 }
 
-fn sanitize_identifier(input: &str) -> String {
-    let mut output = String::new();
-    for (idx, ch) in input.chars().enumerate() {
-        if ch.is_ascii_alphanumeric() || ch == '_' {
-            if idx == 0 && ch.is_ascii_digit() {
-                output.push('_');
+fn to_kebab_case(input: &str) -> String {
+    input
+        .chars()
+        .map(|c| {
+            if c.is_whitespace() || c == '_' {
+                '-'
+            } else {
+                c.to_ascii_lowercase()
             }
-            output.push(ch);
-        } else {
-            output.push('_');
-        }
-    }
-    if output.is_empty() { "fixture".into() } else { output }
+        })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 fn escape_ts_string(input: &str) -> String {
@@ -670,11 +672,11 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], src_dir: &Utf8Path) -> Resul
     )?;
     writeln!(buffer, " */")?;
     writeln!(buffer)?;
-    writeln!(buffer, "import * as fs from \"fs\";")?;
-    writeln!(buffer, "import * as os from \"os\";")?;
-    writeln!(buffer, "import * as path from \"path\";")?;
+    writeln!(buffer, "import * as fs from \"node:fs\";")?;
+    writeln!(buffer, "import * as os from \"node:os\";")?;
+    writeln!(buffer, "import * as path from \"node:path\";")?;
     writeln!(buffer, "import {{ describe, expect, it }} from \"vitest\";")?;
-    writeln!(buffer, "import * as kreuzberg from \"./index.js\";")?;
+    writeln!(buffer, "import * as kreuzberg from \"../src/index.js\";")?;
     writeln!(buffer)?;
 
     // Group fixtures by api_category

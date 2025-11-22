@@ -5,99 +5,98 @@ package e2e
 
 import "testing"
 
-func TestPDF_PDF_ASSEMBLY_TECHNICAL(t *testing.T) {
-    result := runExtraction(t, "pdfs/assembly_language_for_beginners_al4_b_en.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 5000)
-    assertContentContainsAny(t, result, []string{"assembly", "register", "instruction"})
+func TestPdfPdfAssemblyTechnical(t *testing.T) {
+	result := runExtraction(t, "pdfs/assembly_language_for_beginners_al4_b_en.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 5000)
+	assertContentContainsAny(t, result, []string{"assembly", "register", "instruction"})
 }
 
-func TestPDF_PDF_BAYESIAN_DATA_ANALYSIS(t *testing.T) {
-    result := runExtraction(t, "pdfs/bayesian_data_analysis_third_edition_13th_feb_2020.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 10000)
-    assertContentContainsAny(t, result, []string{"Bayesian", "probability", "distribution"})
+func TestPdfPdfBayesianDataAnalysis(t *testing.T) {
+	result := runExtraction(t, "pdfs/bayesian_data_analysis_third_edition_13th_feb_2020.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 10000)
+	assertContentContainsAny(t, result, []string{"Bayesian", "probability", "distribution"})
 }
 
-func TestPDF_PDF_CODE_AND_FORMULA(t *testing.T) {
-    result := runExtraction(t, "pdfs/code_and_formula.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 100)
+func TestPdfPdfCodeAndFormula(t *testing.T) {
+	result := runExtraction(t, "pdfs/code_and_formula.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 100)
 }
 
-func TestPDF_PDF_DEEP_LEARNING(t *testing.T) {
-    result := runExtraction(t, "pdfs/fundamentals_of_deep_learning_2014.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 1000)
-    assertContentContainsAny(t, result, []string{"neural", "network", "deep learning"})
+func TestPdfPdfDeepLearning(t *testing.T) {
+	result := runExtraction(t, "pdfs/fundamentals_of_deep_learning_2014.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 1000)
+	assertContentContainsAny(t, result, []string{"neural", "network", "deep learning"})
 }
 
-func TestPDF_PDF_EMBEDDED_IMAGES(t *testing.T) {
-    result := runExtraction(t, "pdfs/embedded_images_tables.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 50)
-    assertTableCount(t, result, intPtr(0), nil)
+func TestPdfPdfEmbeddedImages(t *testing.T) {
+	result := runExtraction(t, "pdfs/embedded_images_tables.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 50)
+	assertTableCount(t, result, intPtr(0), nil)
 }
 
-func TestPDF_PDF_GOOGLE_DOC(t *testing.T) {
-    result := runExtraction(t, "pdfs/google_doc_document.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 50)
+func TestPdfPdfGoogleDoc(t *testing.T) {
+	result := runExtraction(t, "pdfs/google_doc_document.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 50)
 }
 
-func TestPDF_PDF_LARGE_CIML(t *testing.T) {
-    result := runExtraction(t, "pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 10000)
-    assertContentContainsAny(t, result, []string{"machine learning", "algorithm", "training"})
+func TestPdfPdfLargeCiml(t *testing.T) {
+	result := runExtraction(t, "pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 10000)
+	assertContentContainsAny(t, result, []string{"machine learning", "algorithm", "training"})
 }
 
-func TestPDF_PDF_NON_ENGLISH_GERMAN(t *testing.T) {
-    result := runExtraction(t, "pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 100)
-    assertContentContainsAny(t, result, []string{"Intel", "paging"})
+func TestPdfPdfNonEnglishGerman(t *testing.T) {
+	result := runExtraction(t, "pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 100)
+	assertContentContainsAny(t, result, []string{"Intel", "paging"})
 }
 
-func TestPDF_PDF_RIGHT_TO_LEFT(t *testing.T) {
-    result := runExtraction(t, "pdfs/right_to_left_01.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 50)
+func TestPdfPdfRightToLeft(t *testing.T) {
+	result := runExtraction(t, "pdfs/right_to_left_01.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 50)
 }
 
-func TestPDF_PDF_SIMPLE_TEXT(t *testing.T) {
-    result := runExtraction(t, "pdfs/fake_memo.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 50)
-    assertContentContainsAny(t, result, []string{"May 5, 2023", "To Whom it May Concern", "Mallori"})
+func TestPdfPdfSimpleText(t *testing.T) {
+	result := runExtraction(t, "pdfs/fake_memo.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 50)
+	assertContentContainsAny(t, result, []string{"May 5, 2023", "To Whom it May Concern", "Mallori"})
 }
 
-func TestPDF_PDF_TABLES_LARGE(t *testing.T) {
-    result := runExtraction(t, "pdfs_with_tables/large.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 500)
-    assertTableCount(t, result, intPtr(1), nil)
+func TestPdfPdfTablesLarge(t *testing.T) {
+	result := runExtraction(t, "pdfs_with_tables/large.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 500)
+	assertTableCount(t, result, intPtr(1), nil)
 }
 
-func TestPDF_PDF_TABLES_MEDIUM(t *testing.T) {
-    result := runExtraction(t, "pdfs_with_tables/medium.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 100)
-    assertTableCount(t, result, intPtr(1), nil)
+func TestPdfPdfTablesMedium(t *testing.T) {
+	result := runExtraction(t, "pdfs_with_tables/medium.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 100)
+	assertTableCount(t, result, intPtr(1), nil)
 }
 
-func TestPDF_PDF_TABLES_SMALL(t *testing.T) {
-    result := runExtraction(t, "pdfs_with_tables/tiny.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 50)
-    assertContentContainsAll(t, result, []string{"Table 1", "Selected Numbers", "Celsius", "Fahrenheit", "Water Freezing Point", "Water Boiling Point"})
-    assertTableCount(t, result, intPtr(1), nil)
+func TestPdfPdfTablesSmall(t *testing.T) {
+	result := runExtraction(t, "pdfs_with_tables/tiny.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 50)
+	assertContentContainsAll(t, result, []string{"Table 1", "Selected Numbers", "Celsius", "Fahrenheit", "Water Freezing Point", "Water Boiling Point"})
+	assertTableCount(t, result, intPtr(1), nil)
 }
 
-func TestPDF_PDF_TECHNICAL_STAT_LEARNING(t *testing.T) {
-    result := runExtraction(t, "pdfs/an_introduction_to_statistical_learning_with_applications_in_r_islr_sixth_printing.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 10000)
-    assertContentContainsAny(t, result, []string{"statistical", "regression", "learning"})
+func TestPdfPdfTechnicalStatLearning(t *testing.T) {
+	result := runExtraction(t, "pdfs/an_introduction_to_statistical_learning_with_applications_in_r_islr_sixth_printing.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 10000)
+	assertContentContainsAny(t, result, []string{"statistical", "regression", "learning"})
 }
-

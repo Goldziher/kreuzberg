@@ -15,9 +15,9 @@ if /mswin|mingw/.match?(RbConfig::CONFIG['host_os'])
   if devkit
     sysroot = "#{devkit}#{prefix}".tr('\\\\', '/')
     extra_args.concat([
-      '--target=x86_64-pc-windows-gnu',
-      "--sysroot=#{sysroot}"
-    ])
+                        '--target=x86_64-pc-windows-gnu',
+                        "--sysroot=#{sysroot}"
+                      ])
   end
 
   unless extra_args.empty?

@@ -2,10 +2,10 @@
 #![allow(clippy::too_many_lines)]
 
 use kreuzberg::core::config::ExtractionConfig;
-use kreuzberg::plugins::{list_validators, clear_validators};
-use kreuzberg::plugins::{list_post_processors, clear_extractors, list_extractors};
-use kreuzberg::plugins::{list_ocr_backends, clear_ocr_backends, unregister_ocr_backend};
-use kreuzberg::plugins::{unregister_extractor};
+use kreuzberg::plugins::unregister_extractor;
+use kreuzberg::plugins::{clear_extractors, list_extractors, list_post_processors};
+use kreuzberg::plugins::{clear_ocr_backends, list_ocr_backends, unregister_ocr_backend};
+use kreuzberg::plugins::{clear_validators, list_validators};
 use kreuzberg::{detect_mime_type, detect_mime_type_from_bytes, get_extensions_for_mime};
 
 #[test]
@@ -14,9 +14,13 @@ fn test_config_discover() {
 
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let config_path = temp_dir.path().join("kreuzberg.toml");
-    std::fs::write(&config_path, r#"[chunking]
+    std::fs::write(
+        &config_path,
+        r#"[chunking]
 max_chars = 50
-"#).expect("Failed to write config file");
+"#,
+    )
+    .expect("Failed to write config file");
 
     let subdir = temp_dir.path().join("subdir");
     std::fs::create_dir(&subdir).expect("Failed to create subdirectory");
@@ -24,8 +28,7 @@ max_chars = 50
     let original_dir = std::env::current_dir().expect("Failed to get current dir");
     std::env::set_current_dir(&subdir).expect("Failed to change directory");
 
-    let config = ExtractionConfig::discover()
-        .expect("Failed to discover config");
+    let config = ExtractionConfig::discover().expect("Failed to discover config");
     assert!(config.is_some());
     let config = config.unwrap();
 
@@ -43,16 +46,19 @@ fn test_config_from_file() {
 
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let config_path = temp_dir.path().join("test_config.toml");
-    std::fs::write(&config_path, r#"[chunking]
+    std::fs::write(
+        &config_path,
+        r#"[chunking]
 max_chars = 100
 max_overlap = 20
 
 [language_detection]
 enabled = false
-"#).expect("Failed to write config file");
+"#,
+    )
+    .expect("Failed to write config file");
 
-    let config = ExtractionConfig::from_file(&config_path)
-        .expect("Failed to load config from file");
+    let config = ExtractionConfig::from_file(&config_path).expect("Failed to load config from file");
 
     // Verify chunking exists
     let _ = &config.chunking;
@@ -92,8 +98,7 @@ fn test_mime_detect_bytes() {
     // Detect MIME type from file bytes
 
     let data = b"%PDF-1.4\n";
-    let result = detect_mime_type_from_bytes(data)
-        .expect("Failed to detect MIME type from bytes");
+    let result = detect_mime_type_from_bytes(data).expect("Failed to detect MIME type from bytes");
     assert!(result.contains("pdf"));
 }
 
@@ -105,8 +110,7 @@ fn test_mime_detect_path() {
     let file_path = temp_dir.path().join("test.txt");
     std::fs::write(&file_path, "Hello, world!").expect("Failed to write file");
 
-    let result = detect_mime_type(&file_path, true)
-        .expect("Failed to detect MIME type");
+    let result = detect_mime_type(&file_path, true).expect("Failed to detect MIME type");
     assert!(result.contains("text"));
 }
 
@@ -114,8 +118,7 @@ fn test_mime_detect_path() {
 fn test_mime_get_extensions() {
     // Get file extensions for a MIME type
 
-    let result = get_extensions_for_mime("application/pdf")
-        .expect("Failed to get extensions for MIME type");
+    let result = get_extensions_for_mime("application/pdf").expect("Failed to get extensions for MIME type");
     assert!(result.contains(&"pdf".to_string()));
 }
 
@@ -181,4 +184,3 @@ fn test_validators_list() {
     let result = list_validators().expect("Failed to list registry");
     assert!(result.iter().all(|s| !s.is_empty()));
 }
-

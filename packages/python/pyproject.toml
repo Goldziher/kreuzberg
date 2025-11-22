@@ -90,7 +90,9 @@ manifest-path = "../../crates/kreuzberg-py/Cargo.toml"
 bins = [
   { name = "kreuzberg", package = "kreuzberg-cli", rename-to = "kreuzberg-cli", features = [ "all" ] },
 ]
-# Include pdfium.dll on Windows (if present)
+# Include pdfium native libraries for all platforms
 include = [
   { path = "kreuzberg/pdfium.dll", format = "wheel" },
+  { path = "kreuzberg/libpdfium.dylib", format = "wheel" },
+  { path = "kreuzberg/libpdfium.so", format = "wheel" },
 ]

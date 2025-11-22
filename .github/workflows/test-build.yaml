@@ -365,11 +365,15 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: napi-${{ matrix.settings.target }}
-          path: crates/kreuzberg-node/*.node
+          path: |
+            crates/kreuzberg-node/*.node
+            crates/kreuzberg-node/*.tgz
           retention-days: 7
 
       - name: List built bindings
-        run: bash scripts/list_artifacts.sh crates/kreuzberg-node "*.node" "NAPI bindings"
+        run: |
+          bash scripts/list_artifacts.sh crates/kreuzberg-node "*.node" "NAPI bindings"
+          bash scripts/list_artifacts.sh crates/kreuzberg-node "*.tgz" "NAPI tarball"
 
       - name: Smoke test Node.js bindings
         uses: ./.github/actions/smoke-node

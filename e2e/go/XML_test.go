@@ -5,9 +5,8 @@ package e2e
 
 import "testing"
 
-func TestXML_XML_PLANT_CATALOG(t *testing.T) {
-    result := runExtraction(t, "xml/plant_catalog.xml", nil)
-    assertExpectedMime(t, result, []string{"application/xml"})
-    assertMinContentLength(t, result, 100)
+func TestXmlXmlPlantCatalog(t *testing.T) {
+	result := runExtraction(t, "xml/plant_catalog.xml", nil)
+	assertExpectedMime(t, result, []string{"application/xml"})
+	assertMinContentLength(t, result, 100)
 }
-

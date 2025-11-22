@@ -9,7 +9,10 @@ fn test_structured_json_basic() {
 
     let document_path = resolve_document("json/sample_document.json");
     if !document_path.exists() {
-        println!("Skipping structured_json_basic: missing document at {}", document_path.display());
+        println!(
+            "Skipping structured_json_basic: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -30,7 +33,10 @@ fn test_structured_json_simple() {
 
     let document_path = resolve_document("data_formats/simple.json");
     if !document_path.exists() {
-        println!("Skipping structured_json_simple: missing document at {}", document_path.display());
+        println!(
+            "Skipping structured_json_simple: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -51,7 +57,10 @@ fn test_structured_yaml_simple() {
 
     let document_path = resolve_document("data_formats/simple.yaml");
     if !document_path.exists() {
-        println!("Skipping structured_yaml_simple: missing document at {}", document_path.display());
+        println!(
+            "Skipping structured_yaml_simple: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -64,4 +73,3 @@ fn test_structured_yaml_simple() {
     assertions::assert_expected_mime(&result, &["application/x-yaml"]);
     assertions::assert_min_content_length(&result, 10);
 }
-

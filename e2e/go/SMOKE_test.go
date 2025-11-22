@@ -5,49 +5,48 @@ package e2e
 
 import "testing"
 
-func TestSMOKE_SMOKE_DOCX_BASIC(t *testing.T) {
-    result := runExtraction(t, "documents/fake.docx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
-    assertMinContentLength(t, result, 20)
-    assertContentContainsAny(t, result, []string{"Lorem", "ipsum", "document", "text"})
+func TestSmokeSmokeDocxBasic(t *testing.T) {
+	result := runExtraction(t, "documents/fake.docx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
+	assertMinContentLength(t, result, 20)
+	assertContentContainsAny(t, result, []string{"Lorem", "ipsum", "document", "text"})
 }
 
-func TestSMOKE_SMOKE_HTML_BASIC(t *testing.T) {
-    result := runExtraction(t, "web/simple_table.html", nil)
-    assertExpectedMime(t, result, []string{"text/html"})
-    assertMinContentLength(t, result, 10)
-    assertContentContainsAny(t, result, []string{"#", "**", "simple", "HTML"})
+func TestSmokeSmokeHtmlBasic(t *testing.T) {
+	result := runExtraction(t, "web/simple_table.html", nil)
+	assertExpectedMime(t, result, []string{"text/html"})
+	assertMinContentLength(t, result, 10)
+	assertContentContainsAny(t, result, []string{"#", "**", "simple", "HTML"})
 }
 
-func TestSMOKE_SMOKE_IMAGE_PNG(t *testing.T) {
-    result := runExtraction(t, "images/sample.png", nil)
-    assertExpectedMime(t, result, []string{"image/png"})
+func TestSmokeSmokeImagePng(t *testing.T) {
+	result := runExtraction(t, "images/sample.png", nil)
+	assertExpectedMime(t, result, []string{"image/png"})
 }
 
-func TestSMOKE_SMOKE_JSON_BASIC(t *testing.T) {
-    result := runExtraction(t, "data_formats/simple.json", nil)
-    assertExpectedMime(t, result, []string{"application/json"})
-    assertMinContentLength(t, result, 5)
+func TestSmokeSmokeJsonBasic(t *testing.T) {
+	result := runExtraction(t, "data_formats/simple.json", nil)
+	assertExpectedMime(t, result, []string{"application/json"})
+	assertMinContentLength(t, result, 5)
 }
 
-func TestSMOKE_SMOKE_PDF_BASIC(t *testing.T) {
-    result := runExtraction(t, "pdfs/fake_memo.pdf", nil)
-    assertExpectedMime(t, result, []string{"application/pdf"})
-    assertMinContentLength(t, result, 50)
-    assertContentContainsAny(t, result, []string{"May 5, 2023", "To Whom it May Concern"})
+func TestSmokeSmokePdfBasic(t *testing.T) {
+	result := runExtraction(t, "pdfs/fake_memo.pdf", nil)
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 50)
+	assertContentContainsAny(t, result, []string{"May 5, 2023", "To Whom it May Concern"})
 }
 
-func TestSMOKE_SMOKE_TXT_BASIC(t *testing.T) {
-    result := runExtraction(t, "text/report.txt", nil)
-    assertExpectedMime(t, result, []string{"text/plain"})
-    assertMinContentLength(t, result, 5)
+func TestSmokeSmokeTxtBasic(t *testing.T) {
+	result := runExtraction(t, "text/report.txt", nil)
+	assertExpectedMime(t, result, []string{"text/plain"})
+	assertMinContentLength(t, result, 5)
 }
 
-func TestSMOKE_SMOKE_XLSX_BASIC(t *testing.T) {
-    result := runExtraction(t, "spreadsheets/stanley_cups.xlsx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
-    assertMinContentLength(t, result, 100)
-    assertContentContainsAll(t, result, []string{"Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR"})
-    assertTableCount(t, result, intPtr(1), nil)
+func TestSmokeSmokeXlsxBasic(t *testing.T) {
+	result := runExtraction(t, "spreadsheets/stanley_cups.xlsx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
+	assertMinContentLength(t, result, 100)
+	assertContentContainsAll(t, result, []string{"Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR"})
+	assertTableCount(t, result, intPtr(1), nil)
 }
-

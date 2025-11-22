@@ -5,103 +5,102 @@ package e2e
 
 import "testing"
 
-func TestOFFICE_OFFICE_DOC_LEGACY(t *testing.T) {
-    result := runExtraction(t, "legacy_office/unit_test_lists.doc", nil)
-    assertExpectedMime(t, result, []string{"application/msword"})
-    assertMinContentLength(t, result, 20)
+func TestOfficeOfficeDocLegacy(t *testing.T) {
+	result := runExtraction(t, "legacy_office/unit_test_lists.doc", nil)
+	assertExpectedMime(t, result, []string{"application/msword"})
+	assertMinContentLength(t, result, 20)
 }
 
-func TestOFFICE_OFFICE_DOCX_BASIC(t *testing.T) {
-    result := runExtraction(t, "office/document.docx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
-    assertMinContentLength(t, result, 10)
+func TestOfficeOfficeDocxBasic(t *testing.T) {
+	result := runExtraction(t, "office/document.docx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
+	assertMinContentLength(t, result, 10)
 }
 
-func TestOFFICE_OFFICE_DOCX_EQUATIONS(t *testing.T) {
-    result := runExtraction(t, "documents/equations.docx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
-    assertMinContentLength(t, result, 20)
+func TestOfficeOfficeDocxEquations(t *testing.T) {
+	result := runExtraction(t, "documents/equations.docx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
+	assertMinContentLength(t, result, 20)
 }
 
-func TestOFFICE_OFFICE_DOCX_FAKE(t *testing.T) {
-    result := runExtraction(t, "documents/fake.docx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
-    assertMinContentLength(t, result, 20)
+func TestOfficeOfficeDocxFake(t *testing.T) {
+	result := runExtraction(t, "documents/fake.docx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
+	assertMinContentLength(t, result, 20)
 }
 
-func TestOFFICE_OFFICE_DOCX_FORMATTING(t *testing.T) {
-    result := runExtraction(t, "documents/unit_test_formatting.docx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
-    assertMinContentLength(t, result, 20)
+func TestOfficeOfficeDocxFormatting(t *testing.T) {
+	result := runExtraction(t, "documents/unit_test_formatting.docx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
+	assertMinContentLength(t, result, 20)
 }
 
-func TestOFFICE_OFFICE_DOCX_HEADERS(t *testing.T) {
-    result := runExtraction(t, "documents/unit_test_headers.docx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
-    assertMinContentLength(t, result, 20)
+func TestOfficeOfficeDocxHeaders(t *testing.T) {
+	result := runExtraction(t, "documents/unit_test_headers.docx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
+	assertMinContentLength(t, result, 20)
 }
 
-func TestOFFICE_OFFICE_DOCX_LISTS(t *testing.T) {
-    result := runExtraction(t, "documents/unit_test_lists.docx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
-    assertMinContentLength(t, result, 20)
+func TestOfficeOfficeDocxLists(t *testing.T) {
+	result := runExtraction(t, "documents/unit_test_lists.docx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
+	assertMinContentLength(t, result, 20)
 }
 
-func TestOFFICE_OFFICE_DOCX_TABLES(t *testing.T) {
-    result := runExtraction(t, "documents/docx_tables.docx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
-    assertMinContentLength(t, result, 50)
-    assertContentContainsAll(t, result, []string{"Simple uniform table", "Nested Table", "merged cells", "Header Col"})
-    assertTableCount(t, result, intPtr(1), nil)
+func TestOfficeOfficeDocxTables(t *testing.T) {
+	result := runExtraction(t, "documents/docx_tables.docx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
+	assertMinContentLength(t, result, 50)
+	assertContentContainsAll(t, result, []string{"Simple uniform table", "Nested Table", "merged cells", "Header Col"})
+	assertTableCount(t, result, intPtr(1), nil)
 }
 
-func TestOFFICE_OFFICE_PPT_LEGACY(t *testing.T) {
-    result := runExtraction(t, "legacy_office/simple.ppt", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.ms-powerpoint"})
-    assertMinContentLength(t, result, 10)
+func TestOfficeOfficePptLegacy(t *testing.T) {
+	result := runExtraction(t, "legacy_office/simple.ppt", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.ms-powerpoint"})
+	assertMinContentLength(t, result, 10)
 }
 
-func TestOFFICE_OFFICE_PPTX_BASIC(t *testing.T) {
-    result := runExtraction(t, "presentations/simple.pptx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.presentationml.presentation"})
-    assertMinContentLength(t, result, 50)
+func TestOfficeOfficePptxBasic(t *testing.T) {
+	result := runExtraction(t, "presentations/simple.pptx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.presentationml.presentation"})
+	assertMinContentLength(t, result, 50)
 }
 
-func TestOFFICE_OFFICE_PPTX_IMAGES(t *testing.T) {
-    result := runExtraction(t, "presentations/powerpoint_with_image.pptx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.presentationml.presentation"})
-    assertMinContentLength(t, result, 20)
+func TestOfficeOfficePptxImages(t *testing.T) {
+	result := runExtraction(t, "presentations/powerpoint_with_image.pptx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.presentationml.presentation"})
+	assertMinContentLength(t, result, 20)
 }
 
-func TestOFFICE_OFFICE_PPTX_PITCH_DECK(t *testing.T) {
-    result := runExtraction(t, "presentations/pitch_deck_presentation.pptx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.presentationml.presentation"})
-    assertMinContentLength(t, result, 100)
+func TestOfficeOfficePptxPitchDeck(t *testing.T) {
+	result := runExtraction(t, "presentations/pitch_deck_presentation.pptx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.presentationml.presentation"})
+	assertMinContentLength(t, result, 100)
 }
 
-func TestOFFICE_OFFICE_XLS_LEGACY(t *testing.T) {
-    result := runExtraction(t, "spreadsheets/test_excel.xls", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.ms-excel"})
-    assertMinContentLength(t, result, 10)
+func TestOfficeOfficeXlsLegacy(t *testing.T) {
+	result := runExtraction(t, "spreadsheets/test_excel.xls", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.ms-excel"})
+	assertMinContentLength(t, result, 10)
 }
 
-func TestOFFICE_OFFICE_XLSX_BASIC(t *testing.T) {
-    result := runExtraction(t, "spreadsheets/stanley_cups.xlsx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
-    assertMinContentLength(t, result, 100)
-    assertContentContainsAll(t, result, []string{"Team", "Location", "Stanley Cups"})
-    assertTableCount(t, result, intPtr(1), nil)
+func TestOfficeOfficeXlsxBasic(t *testing.T) {
+	result := runExtraction(t, "spreadsheets/stanley_cups.xlsx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
+	assertMinContentLength(t, result, 100)
+	assertContentContainsAll(t, result, []string{"Team", "Location", "Stanley Cups"})
+	assertTableCount(t, result, intPtr(1), nil)
 }
 
-func TestOFFICE_OFFICE_XLSX_MULTI_SHEET(t *testing.T) {
-    result := runExtraction(t, "spreadsheets/excel_multi_sheet.xlsx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
-    assertMinContentLength(t, result, 20)
+func TestOfficeOfficeXlsxMultiSheet(t *testing.T) {
+	result := runExtraction(t, "spreadsheets/excel_multi_sheet.xlsx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
+	assertMinContentLength(t, result, 20)
 }
 
-func TestOFFICE_OFFICE_XLSX_OFFICE_EXAMPLE(t *testing.T) {
-    result := runExtraction(t, "office/excel.xlsx", nil)
-    assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
-    assertMinContentLength(t, result, 10)
+func TestOfficeOfficeXlsxOfficeExample(t *testing.T) {
+	result := runExtraction(t, "office/excel.xlsx", nil)
+	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
+	assertMinContentLength(t, result, 10)
 }
-

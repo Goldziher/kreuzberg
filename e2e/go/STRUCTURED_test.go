@@ -5,23 +5,22 @@ package e2e
 
 import "testing"
 
-func TestSTRUCTURED_STRUCTURED_JSON_BASIC(t *testing.T) {
-    result := runExtraction(t, "json/sample_document.json", nil)
-    assertExpectedMime(t, result, []string{"application/json"})
-    assertMinContentLength(t, result, 20)
-    assertContentContainsAny(t, result, []string{"Sample Document", "Test Author"})
+func TestStructuredStructuredJsonBasic(t *testing.T) {
+	result := runExtraction(t, "json/sample_document.json", nil)
+	assertExpectedMime(t, result, []string{"application/json"})
+	assertMinContentLength(t, result, 20)
+	assertContentContainsAny(t, result, []string{"Sample Document", "Test Author"})
 }
 
-func TestSTRUCTURED_STRUCTURED_JSON_SIMPLE(t *testing.T) {
-    result := runExtraction(t, "data_formats/simple.json", nil)
-    assertExpectedMime(t, result, []string{"application/json"})
-    assertMinContentLength(t, result, 10)
-    assertContentContainsAny(t, result, []string{"{", "name"})
+func TestStructuredStructuredJsonSimple(t *testing.T) {
+	result := runExtraction(t, "data_formats/simple.json", nil)
+	assertExpectedMime(t, result, []string{"application/json"})
+	assertMinContentLength(t, result, 10)
+	assertContentContainsAny(t, result, []string{"{", "name"})
 }
 
-func TestSTRUCTURED_STRUCTURED_YAML_SIMPLE(t *testing.T) {
-    result := runExtraction(t, "data_formats/simple.yaml", nil)
-    assertExpectedMime(t, result, []string{"application/x-yaml"})
-    assertMinContentLength(t, result, 10)
+func TestStructuredStructuredYamlSimple(t *testing.T) {
+	result := runExtraction(t, "data_formats/simple.yaml", nil)
+	assertExpectedMime(t, result, []string{"application/x-yaml"})
+	assertMinContentLength(t, result, 10)
 }
-

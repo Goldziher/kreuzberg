@@ -5,17 +5,16 @@ package e2e
 
 import "testing"
 
-func TestHTML_HTML_COMPLEX_LAYOUT(t *testing.T) {
-    result := runExtraction(t, "web/taylor_swift.html", nil)
-    assertExpectedMime(t, result, []string{"text/html"})
-    assertMinContentLength(t, result, 1000)
+func TestHtmlHtmlComplexLayout(t *testing.T) {
+	result := runExtraction(t, "web/taylor_swift.html", nil)
+	assertExpectedMime(t, result, []string{"text/html"})
+	assertMinContentLength(t, result, 1000)
 }
 
-func TestHTML_HTML_SIMPLE_TABLE(t *testing.T) {
-    result := runExtraction(t, "web/simple_table.html", nil)
-    assertExpectedMime(t, result, []string{"text/html"})
-    assertMinContentLength(t, result, 100)
-    assertContentContainsAll(t, result, []string{"Product", "Category", "Price", "Stock", "Laptop", "Electronics", "Sample Data Table"})
-    assertTableCount(t, result, intPtr(1), nil)
+func TestHtmlHtmlSimpleTable(t *testing.T) {
+	result := runExtraction(t, "web/simple_table.html", nil)
+	assertExpectedMime(t, result, []string{"text/html"})
+	assertMinContentLength(t, result, 100)
+	assertContentContainsAll(t, result, []string{"Product", "Category", "Price", "Stock", "Laptop", "Electronics", "Sample Data Table"})
+	assertTableCount(t, result, intPtr(1), nil)
 }
-

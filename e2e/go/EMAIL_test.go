@@ -5,9 +5,8 @@ package e2e
 
 import "testing"
 
-func TestEMAIL_EMAIL_SAMPLE_EML(t *testing.T) {
-    result := runExtraction(t, "email/sample_email.eml", nil)
-    assertExpectedMime(t, result, []string{"message/rfc822"})
-    assertMinContentLength(t, result, 20)
+func TestEmailEmailSampleEml(t *testing.T) {
+	result := runExtraction(t, "email/sample_email.eml", nil)
+	assertExpectedMime(t, result, []string{"message/rfc822"})
+	assertMinContentLength(t, result, 20)
 }
-
