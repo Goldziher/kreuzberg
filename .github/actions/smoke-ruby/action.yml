@@ -45,6 +45,10 @@ runs:
 
           echo "Using gem: $gem_file"
 
+          # Install build dependencies required by extconf.rb
+          # rb_sys is needed at build time but is a development dependency
+          gem install rb_sys --no-document
+
           # Install gem locally
           gem install "$gem_file" --local --no-document
         fi

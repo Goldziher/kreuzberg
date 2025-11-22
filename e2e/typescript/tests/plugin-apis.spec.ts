@@ -10,7 +10,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
-import * as kreuzberg from "../src/index.js";
+import * as kreuzberg from "kreuzberg-node";
 
 describe("Configuration", () => {
     it("Discover configuration from current or parent directories", () => {

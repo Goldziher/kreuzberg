@@ -69,6 +69,30 @@ runs:
         fi
         echo "RUSTFLAGS=$base" >> "$GITHUB_ENV"
 
+    - name: Generate Cargo.lock hash
+      id: cargo-hash
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Generate hash from Cargo.lock files, with fallback if hashFiles fails
+        # Primary: root Cargo.lock (workspace lock file)
+        # Works on both Linux (sha256sum) and macOS (shasum -a 256)
+        if [ -f "Cargo.lock" ]; then
+          if command -v sha256sum &> /dev/null; then
+            hash=$(sha256sum Cargo.lock | cut -d' ' -f1)
+          elif command -v shasum &> /dev/null; then
+            hash=$(shasum -a 256 Cargo.lock | cut -d' ' -f1)
+          else
+            # Fallback to file modification time if no hash tool available
+            hash=$(stat -c %Y Cargo.lock 2>/dev/null || stat -f %m Cargo.lock)
+          fi
+        else
+          # Fallback to a timestamp-based hash if no Cargo.lock exists
+          hash=$(date +%Y%m%d)
+        fi
+        echo "hash=$hash" >> "$GITHUB_OUTPUT"
+        echo "Using Cargo.lock hash: $hash"
+
     - name: Cache Rust build artifacts
       id: cache-rust
       uses: actions/cache@v4
@@ -78,7 +102,7 @@ runs:
           ~/.cargo/registry/cache
           ~/.cargo/git/db
           target/
-        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ steps.cargo-hash.outputs.hash }}
         restore-keys: |
           ${{ inputs.cache-key-prefix }}-${{ runner.os }}-
 

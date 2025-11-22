@@ -2,7 +2,7 @@
 
 # Auto-generated tests for smoke fixtures.
 
-# rubocop:disable Metrics/BlockLength
+# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength
 require_relative 'spec_helper'
 
 RSpec.describe 'smoke fixtures' do

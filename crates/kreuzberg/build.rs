@@ -110,11 +110,7 @@ fn get_latest_version(repo: &str) -> String {
         }
     }
 
-    if repo.contains("bblanchon") {
-        "7529".to_string()
-    } else {
-        "7529".to_string()
-    }
+    "7529".to_string()
 }
 
 fn get_pdfium_url_and_lib(target: &str) -> (String, String) {

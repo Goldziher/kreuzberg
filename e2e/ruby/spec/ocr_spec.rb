@@ -2,7 +2,7 @@
 
 # Auto-generated tests for ocr fixtures.
 
-# rubocop:disable Metrics/BlockLength
+# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength
 require_relative 'spec_helper'
 
 RSpec.describe 'ocr fixtures' do

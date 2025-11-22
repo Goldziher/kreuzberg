@@ -13,6 +13,13 @@
 	},
 	"main": "index.js",
 	"types": "index.d.ts",
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"require": "./index.js",
+			"import": "./index.js"
+		}
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Goldziher/kreuzberg.git"
