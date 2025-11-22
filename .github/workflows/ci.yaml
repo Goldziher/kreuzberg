@@ -18,7 +18,7 @@ env:
   RUST_BACKTRACE: short
   RUST_MIN_STACK: 16777216  # 16MB for HTML parsing
   PDFIUM_VERSION: "7529"
-  ORT_VERSION: "1.23.2"
+  ORT_VERSION: "1.20.1"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
   # sccache configuration
   SCCACHE_GHA_ENABLED: "true"
@@ -194,16 +194,6 @@ jobs:
             platform: macos-arm64
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Maximize build space (Linux only)
-        if: runner.os == 'Linux'
-        uses: easimon/maximize-build-space@v10
-        with:
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-          remove-docker-images: 'true'
-
       - uses: actions/checkout@v6
 
       - name: Install system dependencies
@@ -337,7 +327,7 @@ jobs:
           cd crates/kreuzberg-node
           pnpm install
           pnpm exec napi build --platform --release --target ${{ matrix.target }}
-          pnpm exec napi prepublish -t npm --gh-release=false
+          pnpm exec napi prepublish -t npm --no-gh-release
           pnpm pack
 
       - name: Show sccache stats
@@ -603,6 +593,13 @@ jobs:
       # Smoke test section (merged from smoke-cli job)
       - name: Extract and test CLI
         run: |
+          if [ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
+            if [ "${{ runner.os }}" = "macOS" ]; then
+              export DYLD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_LIBRARY_PATH:-}"
+            else
+              export LD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${LD_LIBRARY_PATH:-}"
+            fi
+          fi
           tar xzf kreuzberg-cli-${{ matrix.target }}.tar.gz
           chmod +x kreuzberg
           ./kreuzberg --version
@@ -812,6 +809,9 @@ jobs:
           bundler-cache: true
           working-directory: packages/ruby
 
+      - name: Install rb_sys build helper
+        run: gem install rb_sys -v "~> 0.9"
+
       - name: Download gem
         uses: actions/download-artifact@v6
         with:
@@ -919,6 +919,11 @@ jobs:
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: go-tests
 
       - name: Setup Go
         uses: actions/setup-go@v6
