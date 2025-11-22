@@ -33,7 +33,7 @@ runs:
         if [ ! -d "$extract_dir/onnxruntime-linux-x64-${ort_version}" ]; then
           echo "Cache miss: Downloading ONNX Runtime ${ort_version}"
           archive="onnxruntime-linux-x64-${ort_version}.tgz"
-          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
           mkdir -p "$extract_dir"
           tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
         else
@@ -66,7 +66,7 @@ runs:
         if [ ! -d "$extract_dir/onnxruntime-osx-arm64-${ort_version}" ]; then
           echo "Cache miss: Downloading ONNX Runtime ${ort_version}"
           archive="onnxruntime-osx-arm64-${ort_version}.tgz"
-          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
           mkdir -p "$extract_dir"
           tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
         else
@@ -100,7 +100,7 @@ runs:
           Write-Host "Cache miss: Downloading ONNX Runtime $OrtVersion"
           $Archive = "onnxruntime-win-x64-$OrtVersion.zip"
           $DownloadPath = Join-Path $env:TEMP $Archive
-          Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v$OrtVersion/$Archive" -OutFile $DownloadPath -UseBasicParsing
+          Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v$OrtVersion/$Archive" -OutFile $DownloadPath -UseBasicParsing -MaximumRetryCount 5 -RetryIntervalSec 5
           New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
           Expand-Archive -Path $DownloadPath -DestinationPath $ExtractRoot -Force
         } else {

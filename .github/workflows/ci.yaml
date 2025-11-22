@@ -194,8 +194,6 @@ jobs:
             platform: macos-arm64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-
       - name: Maximize build space (Linux only)
         if: runner.os == 'Linux'
         uses: easimon/maximize-build-space@v10
@@ -205,6 +203,8 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
           remove-docker-images: 'true'
+
+      - uses: actions/checkout@v6
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -267,6 +267,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: python-sdist
 
       - name: Setup Python
         uses: ./.github/actions/setup-python-env
@@ -332,7 +337,7 @@ jobs:
           cd crates/kreuzberg-node
           pnpm install
           pnpm exec napi build --platform --release --target ${{ matrix.target }}
-          pnpm run prepublishOnly
+          pnpm exec napi prepublish -t npm --gh-release=false
           pnpm pack
 
       - name: Show sccache stats
@@ -571,7 +576,7 @@ jobs:
         if: matrix.archive == 'tar.gz'
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }} kreuzberg-cli
+          tar czf kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }} kreuzberg
           mv kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }} ../../..
 
       - name: Package CLI (Windows)
@@ -579,7 +584,7 @@ jobs:
         shell: pwsh
         run: |
           cd target/${{ matrix.target }}/release
-          Compress-Archive -Path kreuzberg-cli.exe -DestinationPath ../../../kreuzberg-cli-${{ matrix.target }}.zip
+          Compress-Archive -Path kreuzberg.exe -DestinationPath ../../../kreuzberg-cli-${{ matrix.target }}.zip
 
       - name: Show sccache stats
         run: sccache --show-stats
@@ -599,9 +604,9 @@ jobs:
       - name: Extract and test CLI
         run: |
           tar xzf kreuzberg-cli-${{ matrix.target }}.tar.gz
-          chmod +x kreuzberg-cli
-          ./kreuzberg-cli --version
-          ./kreuzberg-cli --help
+          chmod +x kreuzberg
+          ./kreuzberg --version
+          ./kreuzberg --help
 
   # ============================================================================
   # STAGE 4: Test Language Bindings (8-15 min) - Run in parallel with builds
@@ -816,7 +821,7 @@ jobs:
       - name: Install gem
         run: |
           cd packages/ruby
-          gem install pkg/kreuzberg_rb-*.gem
+          gem install pkg/kreuzberg-*.gem
 
       - name: Run Ruby tests
         run: |
@@ -853,6 +858,26 @@ jobs:
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: java-tests-${{ matrix.java-version }}-${{ matrix.os }}
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage Pdfium runtime
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: target/release
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -900,6 +925,21 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: packages/go/go.sum
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage Pdfium runtime
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: target/release
 
       - name: Download FFI library
         uses: actions/download-artifact@v6

@@ -18,6 +18,19 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Compute uv.lock hash
+      id: uv-lock-hash
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -f uv.lock ]; then
+          hash="$(sha256sum uv.lock | cut -d' ' -f1)"
+        else
+          echo "uv.lock not found, using fallback hash"
+          hash="no-uv-lock"
+        fi
+        echo "value=$hash" >> "$GITHUB_OUTPUT"
+
     - name: Install uv
       uses: astral-sh/setup-uv@v7
       with:
@@ -36,7 +49,7 @@ runs:
         path: |
           ~/.cache/uv
           .venv
-        key: ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('uv.lock') }}-v2
+        key: ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ steps.uv-lock-hash.outputs.value }}-v2
         restore-keys: |
           ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-v2-
 
