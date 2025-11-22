@@ -26,7 +26,7 @@ env:
 
 jobs:
   # ============================================================================
-  # STAGE 1: Fast Validation (5-8 min)
+  # STAGE 1: Fast Validation (5-8 min) - Runs independently
   # ============================================================================
   validate:
     name: Validate (Lint & Format)
@@ -84,14 +84,13 @@ jobs:
         run: task lint
 
   # ============================================================================
-  # STAGE 2: Rust Core Tests (8-12 min)
+  # STAGE 2: Rust Core Tests (8-12 min) - Run in parallel with builds
   # ============================================================================
 
   rust-unit:
     name: Rust Unit Tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    needs: validate
     strategy:
       fail-fast: false
       matrix:
@@ -138,7 +137,6 @@ jobs:
     name: Rust E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: validate
     steps:
       - uses: actions/checkout@v6
 
@@ -176,12 +174,11 @@ jobs:
         uses: ./.github/actions/cleanup-rust-cache
 
   # ============================================================================
-  # STAGE 3: Build Release Artifacts (12-20 min with sccache)
+  # STAGE 3: Build + Smoke Tests Combined (12-20 min with sccache)
   # ============================================================================
 
-  build-python-wheels:
-    name: Python Wheels (${{ matrix.target }})
-    needs: validate
+  build-and-smoke-python:
+    name: Python Build + Smoke (${{ matrix.target }})
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -253,9 +250,15 @@ jobs:
         if: always()
         uses: ./.github/actions/cleanup-rust-cache
 
+      # Smoke test section (merged from smoke-python job)
+      - name: Smoke test wheel
+        shell: bash
+        run: |
+          pip install target/wheels/kreuzberg-*.whl
+          python -c "import kreuzberg; print(f'Kreuzberg version: {kreuzberg.__version__}')"
+
   build-python-sdist:
     name: Python Sdist
-    needs: validate
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
@@ -279,9 +282,8 @@ jobs:
           path: target/wheels/*.tar.gz
           retention-days: 7
 
-  build-node-bindings:
-    name: Node Bindings (${{ matrix.target }})
-    needs: validate
+  build-and-smoke-node:
+    name: Node Build + Smoke (${{ matrix.target }})
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -341,9 +343,14 @@ jobs:
         if: always()
         uses: ./.github/actions/cleanup-rust-cache
 
+      # Smoke test section (merged from smoke-node job)
+      - name: Smoke test Node.js bindings
+        uses: ./.github/actions/smoke-node
+        with:
+          package-tarball: crates/kreuzberg-node
+
   build-ruby-gem:
     name: Ruby Gem (${{ matrix.os }})
-    needs: validate
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -405,7 +412,6 @@ jobs:
 
   build-java:
     name: Java Bindings
-    needs: validate
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
@@ -453,7 +459,6 @@ jobs:
 
   build-go:
     name: Go Bindings
-    needs: validate
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
@@ -503,9 +508,8 @@ jobs:
         if: always()
         uses: ./.github/actions/cleanup-rust-cache
 
-  build-cli:
-    name: CLI Binaries (${{ matrix.target }})
-    needs: validate
+  build-and-smoke-cli:
+    name: CLI Build + Smoke (${{ matrix.target }})
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -567,13 +571,21 @@ jobs:
         if: always()
         uses: ./.github/actions/cleanup-rust-cache
 
+      # Smoke test section (merged from smoke-cli job)
+      - name: Extract and test CLI
+        run: |
+          tar xzf kreuzberg-cli-${{ matrix.target }}.tar.gz
+          chmod +x kreuzberg-cli
+          ./kreuzberg-cli --version
+          ./kreuzberg-cli --help
+
   # ============================================================================
-  # STAGE 4: Test Language Bindings (8-15 min)
+  # STAGE 4: Test Language Bindings (8-15 min) - Run in parallel with builds
   # ============================================================================
 
   test-python:
     name: Python Tests (${{ matrix.python-version }}, ${{ matrix.os }})
-    needs: build-python-wheels
+    needs: build-and-smoke-python
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -659,7 +671,7 @@ jobs:
 
   test-typescript:
     name: TypeScript Tests (Node ${{ matrix.node-version }}, ${{ matrix.os }})
-    needs: build-node-bindings
+    needs: build-and-smoke-node
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -884,102 +896,6 @@ jobs:
             task e2e:go:verify
 
   # ============================================================================
-  # STAGE 5: Smoke Tests for Built Artifacts
-  # ============================================================================
-
-  smoke-python:
-    name: Smoke Test Python (${{ matrix.platform }})
-    needs: build-python-wheels
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux-x86_64
-          - os: macos-14
-            platform: macos-arm64
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-
-      - name: Download wheel
-        uses: actions/download-artifact@v6
-        with:
-          name: wheels-${{ matrix.platform }}
-          path: dist/
-
-      - name: Smoke test wheel
-        shell: bash
-        run: |
-          pip install dist/kreuzberg-*.whl
-          python -c "import kreuzberg; print(f'Kreuzberg version: {kreuzberg.__version__}')"
-
-  smoke-cli:
-    name: Smoke Test CLI (${{ matrix.target }})
-    needs: build-cli
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-14
-            target: aarch64-apple-darwin
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Download CLI
-        uses: actions/download-artifact@v6
-        with:
-          name: cli-${{ matrix.target }}
-          path: .
-
-      - name: Extract and test CLI
-        run: |
-          tar xzf kreuzberg-cli-${{ matrix.target }}.tar.gz
-          chmod +x kreuzberg-cli
-          ./kreuzberg-cli --version
-          ./kreuzberg-cli --help
-
-  smoke-node:
-    name: Smoke Test Node (${{ matrix.target }})
-    needs: build-node-bindings
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-14
-            target: aarch64-apple-darwin
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: ./.github/actions/setup-node-workspace
-
-      - name: Download Node bindings
-        uses: actions/download-artifact@v6
-        with:
-          name: napi-${{ matrix.target }}
-          path: crates/kreuzberg-node/
-
-      - name: Smoke test Node.js bindings
-        uses: ./.github/actions/smoke-node
-        with:
-          package-tarball: crates/kreuzberg-node
-
-  # ============================================================================
   # Summary
   # ============================================================================
 
@@ -994,9 +910,13 @@ jobs:
       - test-ruby
       - test-java
       - test-go
-      - smoke-python
-      - smoke-cli
-      - smoke-node
+      - build-and-smoke-python
+      - build-and-smoke-cli
+      - build-and-smoke-node
+      - build-python-sdist
+      - build-ruby-gem
+      - build-java
+      - build-go
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: success()
@@ -1017,9 +937,13 @@ jobs:
       - test-ruby
       - test-java
       - test-go
-      - smoke-python
-      - smoke-cli
-      - smoke-node
+      - build-and-smoke-python
+      - build-and-smoke-cli
+      - build-and-smoke-node
+      - build-python-sdist
+      - build-ruby-gem
+      - build-java
+      - build-go
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: failure()
