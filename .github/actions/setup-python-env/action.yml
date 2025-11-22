@@ -24,7 +24,11 @@ runs:
       run: |
         set -euo pipefail
         if [ -f uv.lock ]; then
-          hash="$(sha256sum uv.lock | cut -d' ' -f1)"
+          if command -v sha256sum >/dev/null 2>&1; then
+            hash="$(sha256sum uv.lock | cut -d' ' -f1)"
+          else
+            hash="$(shasum -a 256 uv.lock | cut -d' ' -f1)"
+          fi
         else
           echo "uv.lock not found, using fallback hash"
           hash="no-uv-lock"

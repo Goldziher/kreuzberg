@@ -123,6 +123,8 @@ jobs:
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Run unit tests
         run: cargo test --workspace --exclude kreuzberg-e2e-generator --all-features
@@ -161,6 +163,8 @@ jobs:
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Install Task
         run: |
@@ -248,7 +252,11 @@ jobs:
       - name: Smoke test wheel
         shell: bash
         run: |
-          pip install target/wheels/kreuzberg-*.whl
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            pip install target/wheels/*manylinux*.whl
+          else
+            pip install target/wheels/kreuzberg-*.whl
+          fi
           python -c "import kreuzberg; print(f'Kreuzberg version: {kreuzberg.__version__}')"
 
   build-python-sdist:
@@ -681,7 +689,7 @@ jobs:
 
       - name: Upload coverage (ubuntu 3.10 only)
         if: matrix.coverage
-        uses: deepsourcelabs/test-coverage-action@v2
+        uses: deepsourcelabs/test-coverage-action@v1
         with:
           key: python
           coverage-file: packages/python/coverage.lcov
@@ -744,6 +752,8 @@ jobs:
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Download Node bindings
         uses: actions/download-artifact@v6
@@ -762,7 +772,7 @@ jobs:
 
       - name: Upload coverage (ubuntu Node 20 only)
         if: matrix.coverage
-        uses: deepsourcelabs/test-coverage-action@v2
+        uses: deepsourcelabs/test-coverage-action@v1
         with:
           key: typescript
           coverage-file: packages/typescript/coverage/lcov.info
@@ -796,6 +806,8 @@ jobs:
             ruby-version: "3.4"
             platform: macos-arm64
     runs-on: ${{ matrix.os }}
+    env:
+      RUSTC_WRAPPER: ""  # Unset sccache - not available in test job, not needed for pre-built gem
     steps:
       - uses: actions/checkout@v6
 
@@ -967,7 +979,9 @@ jobs:
         with:
           run: |
             sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
-            export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH}"
+            export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH:-}"
+            export DYLD_LIBRARY_PATH="${PWD}/target/release:${DYLD_LIBRARY_PATH:-}"
+            export DYLD_FALLBACK_LIBRARY_PATH="${PWD}/target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
             task e2e:go:verify
 
   # ============================================================================
