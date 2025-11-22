@@ -12,7 +12,9 @@ use crate::pdf::error::PdfError;
 #[cfg(feature = "ocr")]
 use crate::pdf::rendering::{PageRenderOptions, PdfRenderer};
 #[cfg(feature = "pdf")]
-use pdfium_render::prelude::Pdfium;
+use pdfium_render::prelude::*;
+#[cfg(all(feature = "pdf", feature = "ocr"))]
+use crate::types::Table;
 
 #[cfg(feature = "ocr")]
 const MIN_TOTAL_NON_WHITESPACE: usize = 64;
@@ -131,6 +133,61 @@ fn evaluate_native_text_for_ocr(native_text: &str, page_count: Option<usize>) ->
     }
 }
 
+/// Extract tables from PDF document using native text positions.
+///
+/// This function converts PDF character positions to HocrWord format,
+/// then uses the existing table reconstruction logic to detect tables.
+#[cfg(all(feature = "pdf", feature = "ocr"))]
+fn extract_tables_from_document(
+    document: &PdfDocument,
+    _metadata: &crate::pdf::metadata::PdfMetadata,
+) -> Result<Vec<Table>> {
+    use crate::ocr::table::{reconstruct_table, table_to_markdown};
+    use crate::pdf::table::extract_words_from_page;
+
+    let mut all_tables = Vec::new();
+
+    // Process each page
+    for (page_index, page) in document.pages().iter().enumerate() {
+        // Extract words with positions from the page
+        let words = extract_words_from_page(&page, 0.0)?; // Use 0.0 confidence for PDF (always high quality)
+
+        if words.is_empty() {
+            continue;
+        }
+
+        // Use existing table reconstruction logic
+        // These thresholds match the defaults from TesseractConfig
+        let column_threshold = 50;
+        let row_threshold_ratio = 0.5;
+
+        // Reconstruct table from positioned words
+        let table_cells = reconstruct_table(&words, column_threshold, row_threshold_ratio, true);
+
+        if !table_cells.is_empty() {
+            // Generate markdown representation
+            let markdown = table_to_markdown(&table_cells);
+
+            all_tables.push(Table {
+                cells: table_cells,
+                markdown,
+                page_number: page_index + 1, // 1-indexed
+            });
+        }
+    }
+
+    Ok(all_tables)
+}
+
+/// Fallback for when OCR feature is not enabled - returns empty tables.
+#[cfg(all(feature = "pdf", not(feature = "ocr")))]
+fn extract_tables_from_document(
+    _document: &PdfDocument,
+    _metadata: &crate::pdf::metadata::PdfMetadata,
+) -> Result<Vec<crate::types::Table>> {
+    Ok(vec![])
+}
+
 /// PDF document extractor using pypdfium2 and playa-pdf.
 pub struct PdfExtractor;
 
@@ -237,7 +294,7 @@ impl DocumentExtractor for PdfExtractor {
         config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         #[cfg(feature = "pdf")]
-        let (pdf_metadata, native_text) = if crate::core::batch_mode::is_batch_mode() {
+        let (pdf_metadata, native_text, tables) = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Move PDF extraction to blocking thread pool to enable parallelism
             let content_owned = content.to_vec();
             tokio::task::spawn_blocking(move || {
@@ -259,7 +316,10 @@ impl DocumentExtractor for PdfExtractor {
                 let metadata = crate::pdf::metadata::extract_metadata_from_document(&document)?;
                 let native_text = crate::pdf::text::extract_text_from_pdf_document(&document)?;
 
-                Ok::<_, crate::error::KreuzbergError>((metadata, native_text))
+                // Extract tables from native PDF text (when not using OCR)
+                let tables = extract_tables_from_document(&document, &metadata)?;
+
+                Ok::<_, crate::error::KreuzbergError>((metadata, native_text, tables))
             })
             .await
             .map_err(|e| crate::error::KreuzbergError::Other(format!("PDF extraction task failed: {}", e)))??
@@ -283,7 +343,10 @@ impl DocumentExtractor for PdfExtractor {
             let metadata = crate::pdf::metadata::extract_metadata_from_document(&document)?;
             let native_text = crate::pdf::text::extract_text_from_pdf_document(&document)?;
 
-            (metadata, native_text)
+            // Extract tables from native PDF text (when not using OCR)
+            let tables = extract_tables_from_document(&document, &metadata)?;
+
+            (metadata, native_text, tables)
         };
 
         #[cfg(feature = "ocr")]
@@ -353,6 +416,9 @@ impl DocumentExtractor for PdfExtractor {
             None
         };
 
+        // Tables were extracted during metadata/text extraction phase
+        // (see extract_tables_from_document function below)
+
         Ok(ExtractionResult {
             content: text,
             mime_type: mime_type.to_string(),
@@ -361,7 +427,7 @@ impl DocumentExtractor for PdfExtractor {
                 format: Some(crate::types::FormatMetadata::Pdf(pdf_metadata)),
                 ..Default::default()
             },
-            tables: vec![],
+            tables,
             detected_languages: None,
             chunks: None,
             images,
