@@ -113,12 +113,13 @@ jobs:
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium
-
-      - name: Stage PDFium runtime
-        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
@@ -150,12 +151,13 @@ jobs:
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium
-
-      - name: Stage PDFium runtime
-        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
@@ -165,9 +167,7 @@ jobs:
           sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
 
       - name: Run E2E verification
-        uses: ./.github/actions/run-and-ensure-clean
-        with:
-          run: task e2e:rust:verify
+        run: task e2e:rust:verify
 
       - name: Cleanup Rust cache
         if: always()
@@ -223,9 +223,13 @@ jobs:
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Build Python wheels
         uses: PyO3/maturin-action@v1
@@ -315,9 +319,13 @@ jobs:
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Build Node bindings
         run: |
@@ -387,9 +395,13 @@ jobs:
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Build Ruby gem
         run: |
@@ -434,9 +446,13 @@ jobs:
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Build Java bindings
         run: |
@@ -480,9 +496,13 @@ jobs:
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Build FFI library
         run: cargo build -p kreuzberg-ffi --release
@@ -536,9 +556,13 @@ jobs:
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Build CLI
         run: cargo build -p kreuzberg-cli --release --target ${{ matrix.target }}
@@ -703,12 +727,18 @@ jobs:
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Stage PDFium runtime
         uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: packages/typescript
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
