@@ -192,15 +192,7 @@ jobs:
           - os: macos-14
             target: aarch64-apple-darwin
             platform: macos-arm64
-          # Windows (only on main branch)
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            platform: windows-amd64
     runs-on: ${{ matrix.os }}
-    # Windows only on main branch
-    if: |
-      matrix.platform != 'windows-amd64' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v6
 
@@ -300,14 +292,7 @@ jobs:
           - os: macos-14
             target: aarch64-apple-darwin
             platform: macos-arm64
-          # Windows (only on main)
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            platform: windows-x64
     runs-on: ${{ matrix.os }}
-    if: |
-      matrix.platform != 'windows-x64' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v6
 
@@ -529,13 +514,7 @@ jobs:
           - os: macos-14
             target: aarch64-apple-darwin
             archive: tar.gz
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            archive: zip
     runs-on: ${{ matrix.os }}
-    if: |
-      matrix.os != 'windows-latest' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v6
 
@@ -606,21 +585,12 @@ jobs:
             python-version: "3.13"
             platform: linux-x86_64
             coverage: false
-          # macOS on main branch only
+          # macOS
           - os: macos-14
             python-version: "3.13"
             platform: macos-arm64
             coverage: false
-          # Windows on main branch only
-          - os: windows-latest
-            python-version: "3.13"
-            platform: windows-amd64
-            coverage: false
     runs-on: ${{ matrix.os }}
-    # Windows/macOS only on main
-    if: |
-      matrix.os == 'ubuntu-latest' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     env:
       HF_HOME: ~/.cache/huggingface
       TRANSFORMERS_CACHE: ~/.cache/huggingface
@@ -701,20 +671,12 @@ jobs:
             node-version: "24"
             target: x86_64-unknown-linux-gnu
             coverage: false
-          # macOS on main only
+          # macOS
           - os: macos-14
             node-version: "24"
             target: aarch64-apple-darwin
             coverage: false
-          # Windows on main only
-          - os: windows-latest
-            node-version: "24"
-            target: x86_64-pc-windows-msvc
-            coverage: false
     runs-on: ${{ matrix.os }}
-    if: |
-      matrix.os == 'ubuntu-latest' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v6
 
@@ -782,14 +744,11 @@ jobs:
           - os: ubuntu-latest
             ruby-version: "3.4"
             platform: linux-x64
-          # macOS on main only
+          # macOS
           - os: macos-14
             ruby-version: "3.4"
             platform: macos-arm64
     runs-on: ${{ matrix.os }}
-    if: |
-      matrix.os == 'ubuntu-latest' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v6
 
@@ -840,16 +799,10 @@ jobs:
             java-version: '22'
           - os: ubuntu-latest
             java-version: '25'
-          # macOS on main only
+          # macOS
           - os: macos-14
             java-version: '25'
-          # Windows on main only
-          - os: windows-latest
-            java-version: '25'
     runs-on: ${{ matrix.os }}
-    if: |
-      matrix.os == 'ubuntu-latest' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v6
 
@@ -943,12 +896,7 @@ jobs:
             platform: linux-x86_64
           - os: macos-14
             platform: macos-arm64
-          - os: windows-latest
-            platform: windows-amd64
     runs-on: ${{ matrix.os }}
-    if: |
-      matrix.os != 'windows-latest' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v6
 
@@ -981,12 +929,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - os: macos-14
             target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
-    if: |
-      matrix.os != 'windows-latest' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v6
 
@@ -996,30 +939,12 @@ jobs:
           name: cli-${{ matrix.target }}
           path: .
 
-      - name: Extract CLI (Unix)
-        if: runner.os != 'Windows'
+      - name: Extract and test CLI
         run: |
           tar xzf kreuzberg-cli-${{ matrix.target }}.tar.gz
           chmod +x kreuzberg-cli
-
-      - name: Extract CLI (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Expand-Archive -Path kreuzberg-cli-${{ matrix.target }}.zip -DestinationPath .
-
-      - name: Smoke test CLI (Unix)
-        if: runner.os != 'Windows'
-        run: |
           ./kreuzberg-cli --version
           ./kreuzberg-cli --help
-
-      - name: Smoke test CLI (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          .\kreuzberg-cli.exe --version
-          .\kreuzberg-cli.exe --help
 
   smoke-node:
     name: Smoke Test Node (${{ matrix.target }})
@@ -1033,12 +958,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - os: macos-14
             target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
-    if: |
-      matrix.os != 'windows-latest' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v6
 
