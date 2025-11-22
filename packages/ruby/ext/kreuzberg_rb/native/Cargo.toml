@@ -1,12 +1,12 @@
 [package]
 name = "kreuzberg-rb"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
+version = "4.0.0-rc.1"
+edition = "2024"
+rust-version = "1.85"
 authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/Goldziher/kreuzberg"
-homepage = "https://github.com/Goldziher/kreuzberg"
+homepage = "https://kreuzberg.dev"
 documentation = "https://docs.rs/kreuzberg"
 readme = "README.md"
 description = "Ruby bindings (Magnus) for Kreuzberg - high-performance document intelligence framework"

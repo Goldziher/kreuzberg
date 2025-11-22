@@ -53,10 +53,15 @@ runs:
         components: ${{ inputs.components }}
         target: ${{ inputs.target }}
 
-    - name: Configure Rust lint flags
+    - name: Setup sccache
+      uses: mozilla-actions/sccache-action@v0.0.9
+
+    - name: Configure Rust lint and sccache flags
       shell: bash
       run: |
         set -euo pipefail
+        echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
         base="${RUSTFLAGS:-"-D warnings -A unpredictable-function-pointer-comparisons"}"
         if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc -W fn_ptr_eq - 2>&1)"; then
           :
