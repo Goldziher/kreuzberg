@@ -572,6 +572,16 @@ jobs:
           target: ${{ matrix.target }}
           cache-key-prefix: cli-${{ matrix.target }}
 
+      - name: Cache Pdfium binaries
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download Pdfium runtime
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
       - name: Build CLI binary
         run: cargo build --release --target ${{ matrix.target }} --package kreuzberg-cli
 
@@ -633,6 +643,52 @@ jobs:
           fi
 
           chmod +x "$cli_bin" || true
+
+          # Set up Pdfium runtime library paths for Unix-like systems
+          pdfium_runtime=""
+          if [[ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]]; then
+            pdfium_runtime="$tmp/pdfium-runtime"
+            mkdir -p "$pdfium_runtime"
+            case "${RUNNER_OS:-Linux}" in
+              Windows)
+                src="$KREUZBERG_PDFIUM_PREBUILT/bin/pdfium.dll"
+                filename="pdfium.dll"
+                ;;
+              macOS)
+                src="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.dylib"
+                filename="libpdfium.dylib"
+                ;;
+              Linux)
+                src="$KREUZBERG_PDFIUM_PREBUILT/lib/libpdfium.so"
+                filename="libpdfium.so"
+                ;;
+              *)
+                echo "Unsupported RUNNER_OS '${RUNNER_OS:-}' for Pdfium staging" >&2
+                exit 1
+                ;;
+            esac
+
+            if [[ ! -f "$src" ]]; then
+              echo "Pdfium runtime not found at $src" >&2
+              exit 1
+            fi
+
+            dest="$pdfium_runtime/$filename"
+            cp -f "$src" "$dest"
+
+            case "${RUNNER_OS:-Linux}" in
+              Windows)
+                # Copy to the same directory as the binary on Windows
+                cp -f "$dest" "$(dirname "$cli_bin")/$filename"
+                ;;
+              macOS)
+                export DYLD_LIBRARY_PATH="$pdfium_runtime:${DYLD_LIBRARY_PATH:-}"
+                ;;
+              Linux)
+                export LD_LIBRARY_PATH="$pdfium_runtime:${LD_LIBRARY_PATH:-}"
+                ;;
+            esac
+          fi
 
           # Test CLI with version command
           output=$("$cli_bin" --version)
@@ -757,9 +813,27 @@ jobs:
       - name: Package Node.js tarball
         run: |
           set -euo pipefail
-          cp artifacts/node/*.node crates/kreuzberg-node/
+          # Setup the kreuzberg-node package with proper npm directory structure
+          rm -rf crates/kreuzberg-node/npm
+          mkdir -p crates/kreuzberg-node/npm
+
+          # Copy .node files that were built
+          if [ -f "artifacts/node"/*.node ]; then
+            cp artifacts/node/*.node crates/kreuzberg-node/
+          fi
+
+          # Generate npm package structure
           cd crates/kreuzberg-node
           pnpm install --frozen-lockfile=false
+          pnpm exec napi create-npm-dirs
+
+          # Move platform-specific packages to npm directory
+          if [ -d npm ]; then
+            # npm directory should already exist from napi create-npm-dirs
+            ls -lh npm/ || echo "npm directory is empty"
+          fi
+
+          # Pack the main tarball
           pnpm pack --pack-destination "$GITHUB_WORKSPACE/artifacts/node"
           echo "Created tarball:"
           ls -lh "$GITHUB_WORKSPACE/artifacts/node"/*.tgz
