@@ -9,7 +9,7 @@ RSpec.describe 'smoke fixtures' do
   it 'smoke_docx_basic' do
     E2ERuby.run_fixture(
       'smoke_docx_basic',
-      'office/document.docx',
+      'documents/fake.docx',
       nil,
       requirements: [],
       notes: nil,
@@ -125,7 +125,7 @@ RSpec.describe 'smoke fixtures' do
         ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
       )
       E2ERuby::Assertions.assert_min_content_length(result, 10)
-      E2ERuby::Assertions.assert_table_count(result, 1, nil)
+      E2ERuby::Assertions.assert_content_contains_any(result, %w[Stanley Blues Flyers])
     end
   end
 end

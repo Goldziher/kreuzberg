@@ -1475,6 +1475,7 @@ name = "e2e-rust"
 version = "4.0.0-rc.1"
 dependencies = [
  "async-trait",
+ "hex",
  "kreuzberg",
  "serde",
  "serde_json",

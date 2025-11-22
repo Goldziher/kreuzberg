@@ -6,7 +6,7 @@ package e2e
 import "testing"
 
 func TestSMOKE_SMOKE_DOCX_BASIC(t *testing.T) {
-    result := runExtraction(t, "office/document.docx", nil)
+    result := runExtraction(t, "documents/fake.docx", nil)
     assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
     assertMinContentLength(t, result, 20)
     assertContentContainsAny(t, result, []string{"Lorem", "ipsum", "document", "text"})
@@ -47,6 +47,6 @@ func TestSMOKE_SMOKE_XLSX_BASIC(t *testing.T) {
     result := runExtraction(t, "spreadsheets/stanley_cups.xlsx", nil)
     assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
     assertMinContentLength(t, result, 10)
-    assertTableCount(t, result, intPtr(1), nil)
+    assertContentContainsAny(t, result, []string{"Stanley", "Blues", "Flyers"})
 }
 

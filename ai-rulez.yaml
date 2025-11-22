@@ -15,8 +15,6 @@ agents:
       Principles: Never .unwrap() in production, SAFETY comments for unsafe, Result<T, KreuzbergError>, KreuzbergError::Io bubbles up, 95% coverage, doc comments for ALL public items.
 
       **Key: New features go in Rust core first, then expose through bindings.**
-    targets:
-      - CLAUDE.md
   - description: Python bindings engineer (PyO3 FFI + thin wrapper)
     id: python-engineer
     name: python-engineer
@@ -31,8 +29,6 @@ agents:
       **Critical**: Core logic lives in Rust. Only Python code for bindings, Python-specific OCR, or API wrappers. If core logic needed, coordinate with rust-engineer.
 
       Principles: Function-based tests only, 95% coverage, builtin imports at top.
-    targets:
-      - CLAUDE.md
   - description: TypeScript bindings engineer (NAPI-RS FFI + SDK)
     id: typescript-engineer
     name: typescript-engineer
@@ -45,8 +41,6 @@ agents:
       Commands: pnpm install/build/test/lint.
 
       **Critical**: Core logic lives in Rust. TypeScript only for bindings/wrappers. If core logic needed, coordinate with rust-engineer.
-    targets:
-      - CLAUDE.md
   - description: Ruby bindings engineer (Magnus FFI + gem)
     id: ruby-engineer
     name: ruby-engineer
@@ -59,8 +53,6 @@ agents:
       Commands: bundle install, bundle exec rake compile/rubocop/rspec.
 
       **Critical**: Core logic lives in Rust. Ruby only for bindings/wrappers. If core logic needed, coordinate with rust-engineer.
-    targets:
-      - CLAUDE.md
   - description: Java bindings engineer (FFM API + Maven)
     id: java-engineer
     name: java-engineer
@@ -79,8 +71,6 @@ agents:
       **Critical**: Core logic lives in Rust. Java only for FFI bindings/wrappers. If core logic needed, coordinate with rust-engineer.
 
       **Key files**: Kreuzberg.java (high-level API), KreuzbergFFI.java (FFI bindings), config/* (builder pattern), KreuzbergException.java (exception hierarchy).
-    targets:
-      - CLAUDE.md
   - description: Go bindings engineer (cgo + Go SDK)
     id: go-engineer
     name: go-engineer
@@ -93,8 +83,6 @@ agents:
       Commands: cd packages/go && go test ./..., golangci-lint run --config ../../.golangci.yml ./..., ensure `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH` includes target/release when running tests (e.g. `LD_LIBRARY_PATH=$PWD/target/release:$LD_LIBRARY_PATH go test ./...`).
 
       **Critical**: Core logic lives in Rust. Go code should remain thin wrappers/helper utilities over the C API. Coordinate with rust-engineer for shared logic.
-    targets:
-      - CLAUDE.md
   - description: Test automation engineer (Rust + bindings)
     id: test-engineer
     name: test-engineer
@@ -106,8 +94,6 @@ agents:
       Naming: test_<function>_<scenario>_<outcome>. Test error paths, edge cases, real objects over mocks.
 
       **Rust-first**: Ensure core is thoroughly tested before bindings.
-    targets:
-      - CLAUDE.md
   - description: Code reviewer for quality, security, compliance
     id: code-reviewer
     name: code-reviewer
@@ -116,8 +102,6 @@ agents:
       Review: 1) Implementation gaps (error handling, type hints), 2) Redundancies, 3) Correctness (logic, async), 4) Rule adherence (file creation, 95% coverage), 5) Security (injection, validation), 6) Performance (caching, leaks).
 
       Rate: Critical/High/Medium/Low.
-    targets:
-      - CLAUDE.md
     tools:
       - Read
       - Grep
@@ -131,18 +115,6 @@ agents:
       DevOps for Kreuzberg. Expertise: Docker (multi-stage, multi-platform), GitHub Actions, Taskfile.yaml, PyPI/Docker Hub/crates.io releases.
 
       Files: .github/workflows/, docker/, Taskfile.yaml. Principles: IaC, security first, reproducible builds.
-    targets:
-      - CLAUDE.md
-  - description: Performance optimizer for Rust core and bindings
-    id: performance-optimizer
-    name: performance-optimizer
-    priority: medium
-    system_prompt: |
-      Performance optimizer. Focus: Rust core (SIMD, streaming, zero-copy), async patterns, FFI overhead, caching, memory usage.
-
-      Tools: cargo bench, perf, Instruments, pytest-benchmark. Measure before/after.
-    targets:
-      - CLAUDE.md
 metadata:
   description: "Rust document intelligence library. Core: crates/kreuzberg (standalone, edition 2024). Bindings: Python (PyO3), TypeScript (NAPI-RS), Ruby (Magnus), Java (FFM API), Go (cgo). Supports PDFs, images, office docs, and more."
   name: Kreuzberg
@@ -280,11 +252,3 @@ rules:
       **Version sync**: `task sync-versions` (syncs from Cargo.toml to all manifests).
     name: Workspace
     priority: medium
-  - content: |
-      GitHub Actions: Release (PyPI/crates.io/npm), Docker (multi-platform), CI (matrix testing), Docs (GitHub Pages).
-
-      Docker variants: goldziher/kreuzberg:v4.0.0-rc.1{,-easyocr,-paddle,-vision-tables,-all}.
-
-      Common issues: Use `git tag --sort=-version:refname | head -n1` for version, `uv sync --group docs` for mkdocs.
-    name: CI/CD
-    priority: minimal

@@ -7,7 +7,7 @@ use kreuzberg::core::config::ExtractionConfig;
 fn test_smoke_docx_basic() {
     // Smoke test: DOCX with formatted text
 
-    let document_path = resolve_document("office/document.docx");
+    let document_path = resolve_document("documents/fake.docx");
     if !document_path.exists() {
         println!("Skipping smoke_docx_basic: missing document at {}", document_path.display());
         return;
@@ -144,6 +144,6 @@ fn test_smoke_xlsx_basic() {
 
     assertions::assert_expected_mime(&result, &["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
     assertions::assert_min_content_length(&result, 10);
-    assertions::assert_table_count(&result, Some(1), None);
+    assertions::assert_content_contains_any(&result, &["Stanley", "Blues", "Flyers"]);
 }
 

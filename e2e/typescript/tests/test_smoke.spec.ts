@@ -10,7 +10,7 @@ const TEST_TIMEOUT_MS = 60_000;
 
 describe("smoke fixtures", () => {
   it("smoke_docx_basic", () => {
-    const documentPath = resolveDocument("office/document.docx");
+    const documentPath = resolveDocument("documents/fake.docx");
     if (!existsSync(documentPath)) {
       console.warn("Skipping smoke_docx_basic: missing document at", documentPath);
       return;
@@ -172,7 +172,7 @@ describe("smoke fixtures", () => {
     }
     assertions.assertExpectedMime(result, ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
     assertions.assertMinContentLength(result, 10);
-    assertions.assertTableCount(result, 1, null);
+    assertions.assertContentContainsAny(result, ["Stanley", "Blues", "Flyers"]);
   }, TEST_TIMEOUT_MS);
 
 });

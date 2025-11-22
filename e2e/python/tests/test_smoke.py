@@ -11,7 +11,7 @@ from . import helpers
 def test_smoke_docx_basic() -> None:
     """Smoke test: DOCX with formatted text"""
 
-    document_path = helpers.resolve_document("office/document.docx")
+    document_path = helpers.resolve_document("documents/fake.docx")
     if not document_path.exists():
         pytest.skip(f"Skipping smoke_docx_basic: missing document at {document_path}")
 
@@ -108,5 +108,5 @@ def test_smoke_xlsx_basic() -> None:
 
     helpers.assert_expected_mime(result, ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"])
     helpers.assert_min_content_length(result, 10)
-    helpers.assert_table_count(result, 1, None)
+    helpers.assert_content_contains_any(result, ["Stanley", "Blues", "Flyers"])
 

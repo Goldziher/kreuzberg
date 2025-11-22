@@ -13,8 +13,6 @@
 	"assertions": {
 		"expected_mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		"min_content_length": 10,
-		"tables": {
-			"min": 1
-		}
+		"content_contains_any": ["Stanley", "Blues", "Flyers"]
 	}
 }

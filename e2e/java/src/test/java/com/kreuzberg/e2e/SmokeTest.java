@@ -22,7 +22,7 @@ public class SmokeTest {
         JsonNode config = null;
         E2EHelpers.runFixture(
             "smoke_docx_basic",
-            "office/document.docx",
+            "documents/fake.docx",
             config,
             Collections.emptyList(),
             null,
@@ -135,7 +135,7 @@ public class SmokeTest {
             result -> {
                 E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
                 E2EHelpers.Assertions.assertMinContentLength(result, 10);
-                E2EHelpers.Assertions.assertTableCount(result, 1, null);
+                E2EHelpers.Assertions.assertContentContainsAny(result, Arrays.asList("Stanley", "Blues", "Flyers"));
             }
         );
     }

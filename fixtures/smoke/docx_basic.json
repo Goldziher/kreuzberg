@@ -4,7 +4,7 @@
 	"tags": ["smoke", "office", "docx"],
 	"description": "Smoke test: DOCX with formatted text",
 	"document": {
-		"path": "office/document.docx",
+		"path": "documents/fake.docx",
 		"media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 	},
 	"extraction": {

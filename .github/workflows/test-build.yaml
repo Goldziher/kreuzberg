@@ -811,32 +811,29 @@ jobs:
           path: artifacts/node
 
       - name: Package Node.js tarball
+        shell: bash
+        working-directory: packages/typescript
         run: |
           set -euo pipefail
-          # Setup the kreuzberg-node package with proper npm directory structure
-          rm -rf crates/kreuzberg-node/npm
-          mkdir -p crates/kreuzberg-node/npm
 
-          # Copy .node files that were built
-          if [ -f "artifacts/node"/*.node ]; then
-            cp artifacts/node/*.node crates/kreuzberg-node/
-          fi
+          # Clean any previous artifacts
+          rm -rf npm artifacts/node
+          mkdir -p artifacts/node
 
-          # Generate npm package structure
-          cd crates/kreuzberg-node
+          # Copy the .node binaries from downloaded artifacts to source
+          cp -r ../../artifacts/napi-* . || true
+
+          # Install dependencies
           pnpm install --frozen-lockfile=false
+
+          # Create platform-specific npm packages
           pnpm exec napi create-npm-dirs
 
-          # Move platform-specific packages to npm directory
-          if [ -d npm ]; then
-            # npm directory should already exist from napi create-npm-dirs
-            ls -lh npm/ || echo "npm directory is empty"
-          fi
+          # Pack the tarball
+          pnpm pack --pack-destination artifacts/node
 
-          # Pack the main tarball
-          pnpm pack --pack-destination "$GITHUB_WORKSPACE/artifacts/node"
-          echo "Created tarball:"
-          ls -lh "$GITHUB_WORKSPACE/artifacts/node"/*.tgz
+          # Move to workspace artifacts
+          mv artifacts/node/*.tgz ../../artifacts/node/kreuzberg-node-4.0.0-rc.1.tgz
 
       - name: Download Ruby gem
         if: runner.os != 'Windows'
