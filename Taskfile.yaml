@@ -171,9 +171,7 @@ tasks:
     desc: Update Python dependencies
     cmds:
       - echo "Updating Python dependencies..."
-      - uv run uv-bump --pyproject-toml pyproject.toml
-      - uv run uv-bump --pyproject-toml packages/python/pyproject.toml
-      - uv run uv-bump --pyproject-toml v3/pyproject.toml
+      - uv run uv-bump
       - uv sync --all-packages --all-extras --upgrade --no-install-workspace
   ruby:install:
     desc: Install Ruby dependencies
