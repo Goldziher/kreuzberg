@@ -433,7 +433,7 @@ impl Default for KreuzbergMcp {
 ///     Ok(())
 /// }
 /// ```
-pub async fn start_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_mcp_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let service = KreuzbergMcp::new()?.serve(stdio()).await?;
 
     service.waiting().await?;
@@ -444,7 +444,7 @@ pub async fn start_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
 ///
 /// This variant allows specifying a custom extraction configuration
 /// (e.g., loaded from a file) instead of using defaults.
-pub async fn start_mcp_server_with_config(config: ExtractionConfig) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_mcp_server_with_config(config: ExtractionConfig) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let service = KreuzbergMcp::with_config(config).serve(stdio()).await?;
 
     service.waiting().await?;
