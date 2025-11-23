@@ -1182,7 +1182,10 @@ jobs:
   publish-crates:
     name: Publish crates.io packages
     needs: [prepare, upload-release-artifacts]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_crates == 'true' }}
+    # DISABLED: crates.io publishing disabled due to git dependencies (fastembed-rs, ort)
+    # Language bindings (PyPI, npm, RubyGems, Maven) still include full functionality
+    # Users should use git dependency: kreuzberg = { git = "https://github.com/Goldziher/kreuzberg" }
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -5,7 +5,6 @@
 [![npm](https://img.shields.io/npm/v/@goldziher/kreuzberg)](https://www.npmjs.com/package/@goldziher/kreuzberg)
 [![RubyGems](https://badge.fury.io/rb/kreuzberg.svg)](https://rubygems.org/gems/kreuzberg)
 [![Go Reference](https://pkg.go.dev/badge/github.com/Goldziher/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/Goldziher/kreuzberg/packages/go/kreuzberg)
-[![Crates.io](https://img.shields.io/crates/v/kreuzberg)](https://crates.io/crates/kreuzberg)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -66,8 +65,14 @@ Build the FFI crate (`cargo build -p kreuzberg-ffi --release`) and set `LD_LIBRA
 
 ```toml
 [dependencies]
-kreuzberg = "4.0"
+# Use git dependency for full feature support (including embeddings)
+kreuzberg = { git = "https://github.com/Goldziher/kreuzberg", tag = "v4.0.0" }
+
+# Or use a specific branch
+# kreuzberg = { git = "https://github.com/Goldziher/kreuzberg", branch = "main" }
 ```
+
+> **Note**: Kreuzberg is not currently published to crates.io due to git dependencies (fastembed-rs, ort). Use the git dependency above for full functionality.
 
 **[Rust Documentation →](crates/kreuzberg/README.md)**
 
