@@ -1,0 +1,103 @@
+name: Build Fastembed Test
+
+on:
+  push:
+    branches:
+      - test-fastembed-openssl
+  pull_request:
+    branches:
+      - test-fastembed-openssl
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  PDFIUM_VERSION: "7529"
+  RUST_BACKTRACE: short
+  RUSTFLAGS: -D warnings
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+
+jobs:
+  build-fastembed:
+    name: Build with official fastembed (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libssl-dev \
+            build-essential
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install openssl pkg-config
+
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Setup OpenSSL env vars (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "OPENSSL_DIR=C:\Program Files\OpenSSL-Win64" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=C:\Program Files\OpenSSL-Win64\lib" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=C:\Program Files\OpenSSL-Win64\include" >> $GITHUB_ENV
+
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install openssl --version=3.1.1 -y
+
+      - name: Verify OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          dir "C:\Program Files\OpenSSL-Win64"
+          dir "C:\Program Files\OpenSSL-Win64\lib"
+
+      - name: Build kreuzberg with embeddings feature
+        run: |
+          cargo build --features embeddings --verbose
+        env:
+          PKG_CONFIG_ALLOW_CROSS: 1
+
+      - name: Run tests with embeddings feature
+        run: |
+          cargo test --features embeddings --verbose
+        env:
+          PKG_CONFIG_ALLOW_CROSS: 1
+
+      - name: Build Python bindings with embeddings
+        if: runner.os != 'Windows'
+        run: |
+          pip install maturin
+          cd crates/kreuzberg-py
+          maturin build --features embeddings --release
+        env:
+          PKG_CONFIG_ALLOW_CROSS: 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Build Results for ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Target: ${{ matrix.target }}" >> $GITHUB_STEP_SUMMARY
+          echo "- OpenSSL: native-tls backend" >> $GITHUB_STEP_SUMMARY
+          echo "- Fastembed: Official crates.io version 5.2" >> $GITHUB_STEP_SUMMARY
