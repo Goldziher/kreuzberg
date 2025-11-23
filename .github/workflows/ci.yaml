@@ -977,6 +977,7 @@ jobs:
           cd packages/go
           export LD_LIBRARY_PATH="${PWD}/../../target/release:${LD_LIBRARY_PATH}"
           export DYLD_LIBRARY_PATH="${PWD}/../../target/release:${DYLD_LIBRARY_PATH}"
+          export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
           go test -v -race ./...
 
       - name: Run E2E verification
@@ -987,6 +988,7 @@ jobs:
             export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH:-}"
             export DYLD_LIBRARY_PATH="${PWD}/target/release:${DYLD_LIBRARY_PATH:-}"
             export DYLD_FALLBACK_LIBRARY_PATH="${PWD}/target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+            export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
             task e2e:go:verify
 
   # ============================================================================

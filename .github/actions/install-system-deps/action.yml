@@ -45,6 +45,8 @@ runs:
         pandoc --version
         soffice --version
         tesseract --version
+        echo "Verifying Tesseract language data..."
+        tesseract --list-langs
         echo "Testing LibreOffice headless mode..."
         soffice --headless --version || echo "Warning: LibreOffice headless version check failed"
 

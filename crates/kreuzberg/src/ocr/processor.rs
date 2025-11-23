@@ -177,6 +177,8 @@ impl OcrProcessor {
             "/opt/homebrew/share/tessdata",
             "/opt/homebrew/opt/tesseract/share/tessdata",
             "/usr/local/opt/tesseract/share/tessdata",
+            "/usr/share/tesseract-ocr/5/tessdata",
+            "/usr/share/tesseract-ocr/4/tessdata",
             "/usr/share/tessdata",
             "/usr/local/share/tessdata",
             r#"C:\Program Files\Tesseract-OCR\tessdata"#,
