@@ -18,7 +18,7 @@ env:
   RUST_BACKTRACE: short
   RUST_MIN_STACK: 16777216  # 16MB for HTML parsing
   PDFIUM_VERSION: "7529"
-  ORT_VERSION: "1.20.1"
+  ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
   # sccache configuration
   SCCACHE_GHA_ENABLED: "true"
