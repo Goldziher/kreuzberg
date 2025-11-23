@@ -290,6 +290,7 @@ enabled = true
 
 /// Test discover() returns None when no config found.
 #[test]
+#[serial_test::serial]
 fn test_discover_returns_none_when_not_found() {
     let temp_dir = TempDir::new().unwrap();
     let sub_dir = temp_dir.path().join("subdir");
@@ -337,6 +338,7 @@ fn test_discover_file_name_preference() {
 
 /// Test discover() with nested directories.
 #[test]
+#[serial_test::serial]
 fn test_discover_with_nested_directories() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("kreuzberg.toml");
