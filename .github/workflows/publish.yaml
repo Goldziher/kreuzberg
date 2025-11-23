@@ -1279,7 +1279,21 @@ jobs:
 
       - name: Publish kreuzberg
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
-        run: cargo publish -p kreuzberg --token ${{ secrets.CARGO_TOKEN }}
+        run: |
+          set -euo pipefail
+          publish_log=$(mktemp)
+          set +e
+          cargo publish -p kreuzberg --token ${{ secrets.CARGO_TOKEN }} 2>&1 | tee "$publish_log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            if grep -qi "already uploaded" "$publish_log"; then
+              echo "::notice::kreuzberg already published; skipping."
+              echo "kreuzberg already published; skipping." >> $GITHUB_STEP_SUMMARY
+            else
+              exit "$status"
+            fi
+          fi
 
       - name: Wait for indexing
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
@@ -1287,7 +1301,21 @@ jobs:
 
       - name: Publish kreuzberg-cli
         if: ${{ steps.crate_check.outputs.cli_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
-        run: cargo publish -p kreuzberg-cli --token ${{ secrets.CARGO_TOKEN }}
+        run: |
+          set -euo pipefail
+          publish_log=$(mktemp)
+          set +e
+          cargo publish -p kreuzberg-cli --token ${{ secrets.CARGO_TOKEN }} 2>&1 | tee "$publish_log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            if grep -qi "already uploaded" "$publish_log"; then
+              echo "::notice::kreuzberg-cli already published; skipping."
+              echo "kreuzberg-cli already published; skipping." >> $GITHUB_STEP_SUMMARY
+            else
+              exit "$status"
+            fi
+          fi
 
       - name: Crates dry-run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
@@ -1487,7 +1515,19 @@ jobs:
           shopt -s nullglob
           for pkg in crates/kreuzberg-node/npm/*.tgz; do
             echo "Publishing $pkg"
-            npm publish "$pkg" --access public --ignore-scripts
+            publish_log=$(mktemp)
+            set +e
+            npm publish "$pkg" --access public --ignore-scripts 2>&1 | tee "$publish_log"
+            status=${PIPESTATUS[0]}
+            set -e
+            if [ "$status" -ne 0 ]; then
+              if grep -q "previously published versions" "$publish_log"; then
+                echo "::notice::Package $pkg already published; skipping."
+                echo "Package $(basename "$pkg") already published; skipping." >> $GITHUB_STEP_SUMMARY
+              else
+                exit "$status"
+              fi
+            fi
           done
 
       - name: Wait for npm indexing
@@ -1500,7 +1540,19 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd crates/kreuzberg-node
-          pnpm publish --access public --no-git-checks
+          publish_log=$(mktemp)
+          set +e
+          pnpm publish --access public --no-git-checks 2>&1 | tee "$publish_log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            if grep -q "previously published versions" "$publish_log"; then
+              echo "::notice::kreuzberg-node already published; skipping."
+              echo "kreuzberg-node already published; skipping." >> $GITHUB_STEP_SUMMARY
+            else
+              exit "$status"
+            fi
+          fi
 
   publish-maven:
     name: Publish Maven packages
@@ -1513,8 +1565,35 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
-      - name: Maven release
+      - name: Check Maven Central for existing release
+        id: maven_check
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          exists=$(python3 - <<'PY'
+          import json, os, sys
+          try:
+              import urllib.request
+              version = os.environ["VERSION"]
+              url = f"https://search.maven.org/solrsearch/select?q=g:com.kreuzberg+AND+a:kreuzberg+AND+v:{version}&rows=1&wt=json"
+              with urllib.request.urlopen(url) as resp:
+                  data = json.load(resp)
+              exists = data.get("response", {}).get("numFound", 0) > 0
+              print("true" if exists else "false")
+          except Exception as e:
+              print(f"::warning::Failed to query Maven Central: {e}", file=sys.stderr)
+              print("false")
+          PY
+          )
+          echo "exists=$exists" >> "$GITHUB_OUTPUT"
+          if [ "$exists" = "true" ]; then
+            echo "::notice::Maven package version ${{ needs.prepare.outputs.version }} already published."
+          fi
+
+      - name: Maven release
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
         uses: qcastel/github-actions-maven-release@v1.12.44
         with:
           release-branch-name: "main"
@@ -1536,6 +1615,10 @@ jobs:
           docker-registry-username: ${{ github.actor }}
           docker-registry-password: ${{ secrets.GITHUB_TOKEN }}
           access-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Maven already published summary
+        if: ${{ steps.maven_check.outputs.exists == 'true' }}
+        run: echo "Maven package version ${{ needs.prepare.outputs.version }} already published; skipping." >> $GITHUB_STEP_SUMMARY
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
