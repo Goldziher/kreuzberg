@@ -35,10 +35,13 @@ const MIN_WORD_LENGTH: usize = 1;
 /// use kreuzberg::pdf::table::extract_words_from_page;
 /// use pdfium_render::prelude::*;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let pdfium = Pdfium::default();
 /// let document = pdfium.load_pdf_from_file("example.pdf", None)?;
 /// let page = document.pages().get(0)?;
 /// let words = extract_words_from_page(&page, 90.0)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn extract_words_from_page(page: &PdfPage, min_confidence: f64) -> Result<Vec<HocrWord>> {
     // Get page dimensions for coordinate system

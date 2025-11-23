@@ -407,6 +407,13 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Vendor kreuzberg core crate
+        run: |
+          set -euo pipefail
+          rm -rf packages/ruby/vendor/kreuzberg
+          mkdir -p packages/ruby/vendor
+          cp -R crates/kreuzberg packages/ruby/vendor/kreuzberg
+
       - name: Build Ruby gem
         run: |
           cd packages/ruby
@@ -644,6 +651,7 @@ jobs:
     env:
       HF_HOME: ~/.cache/huggingface
       TRANSFORMERS_CACHE: ~/.cache/huggingface
+      RUSTC_WRAPPER: ''  # Unset RUSTC_WRAPPER since we use pre-built wheels
     steps:
       - uses: actions/checkout@v6
 
