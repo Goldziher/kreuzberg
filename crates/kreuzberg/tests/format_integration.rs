@@ -7,6 +7,13 @@
 
 mod helpers;
 
+use helpers::{assert_mime_type, assert_non_empty_content, get_test_file_path, test_documents_available};
+use kreuzberg::core::config::ExtractionConfig;
+use kreuzberg::core::extractor::extract_file;
+
+#[cfg(feature = "ocr")]
+use kreuzberg::core::config::OcrConfig;
+
 #[cfg(feature = "pdf")]
 #[tokio::test]
 async fn test_pdf_password_protected_async() {

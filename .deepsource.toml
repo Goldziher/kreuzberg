@@ -53,9 +53,6 @@ runtime_version = "3.x.x"
 [[analyzers]]
 name = "javascript"
 
-[analyzers.meta]
-plugins = ["typescript"]
-
 [[analyzers]]
 name = "rust"
 
@@ -66,7 +63,7 @@ name = "ruby"
 name = "java"
 
 [analyzers.meta]
-runtime_version = "25"
+runtime_version = "21"
 
 [[analyzers]]
 name = "go"

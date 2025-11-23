@@ -13,7 +13,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        # Make Pdfium available to the native module if it was downloaded earlier
+        # Make Pdfium and ONNX Runtime available to the native module if downloaded earlier
         if [[ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]]; then
           case "${RUNNER_OS:-unknown}" in
             Linux)
@@ -27,6 +27,8 @@ runs:
               ;;
           esac
         fi
+        # ONNX Runtime paths should already be set by setup-onnx-runtime action
+        # ORT_LIB_LOCATION, LD_LIBRARY_PATH/DYLD_LIBRARY_PATH are already in env
         tarball="${{ inputs.package-tarball }}"
         # If directory provided, find the tarball inside
         if [[ -d "$tarball" ]]; then

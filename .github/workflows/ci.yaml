@@ -330,6 +330,11 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Build Node bindings
         run: |
           cd crates/kreuzberg-node
@@ -689,7 +694,7 @@ jobs:
 
       - name: Upload coverage (ubuntu 3.10 only)
         if: matrix.coverage
-        uses: deepsourcelabs/test-coverage-action@v1
+        uses: deepsourcelabs/test-coverage-action@master
         with:
           key: python
           coverage-file: packages/python/coverage.lcov
@@ -772,7 +777,7 @@ jobs:
 
       - name: Upload coverage (ubuntu Node 20 only)
         if: matrix.coverage
-        uses: deepsourcelabs/test-coverage-action@v1
+        uses: deepsourcelabs/test-coverage-action@master
         with:
           key: typescript
           coverage-file: packages/typescript/coverage/lcov.info

@@ -11,6 +11,12 @@ use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::{batch_extract_bytes, batch_extract_file};
 use std::time::{Duration, Instant};
 
+#[cfg(feature = "ocr")]
+use kreuzberg::core::config::OcrConfig;
+
+#[cfg(feature = "ocr")]
+use kreuzberg::core::extractor::extract_file_sync;
+
 mod helpers;
 
 /// Test that batch extraction processes documents in parallel.

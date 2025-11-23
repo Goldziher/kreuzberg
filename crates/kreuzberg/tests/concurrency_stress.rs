@@ -18,6 +18,13 @@ use kreuzberg::plugins::registry::{get_document_extractor_registry, get_post_pro
 use kreuzberg::plugins::{Plugin, PostProcessor, ProcessingStage};
 use kreuzberg::types::{ExtractionResult, Metadata};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+#[cfg(feature = "ocr")]
+use kreuzberg::core::config::OcrConfig;
+
+#[cfg(feature = "ocr")]
+use kreuzberg::core::extractor::extract_file_sync;
 use std::time::Duration;
 use tokio::time::timeout;
 
