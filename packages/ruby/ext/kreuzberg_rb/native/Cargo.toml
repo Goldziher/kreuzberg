@@ -31,3 +31,6 @@ html-to-markdown-rs = { version = "2.9.1", default-features = false }
 
 [dev-dependencies]
 pretty_assertions = "1.4"
+
+[patch.crates-io]
+kreuzberg = { path = "../../../../../crates/kreuzberg" }

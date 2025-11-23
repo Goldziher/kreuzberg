@@ -910,7 +910,9 @@ jobs:
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-java
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -921,9 +923,7 @@ jobs:
 
       - name: Build and package
         working-directory: packages/java
-        run: |
-          unset RUSTC_WRAPPER
-          mvn clean package -DskipTests
+        run: mvn clean package -DskipTests
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v5
