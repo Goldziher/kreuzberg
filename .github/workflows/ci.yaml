@@ -660,7 +660,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          key: huggingface-${{ runner.os }}-${{ hashFiles('packages/python/pyproject.toml') }}
+          key: huggingface-${{ runner.os }}-py-${{ matrix.python-version }}-${{ hashFiles('packages/python/pyproject.toml') || 'fallback' }}
 
       - name: Download wheels
         uses: actions/download-artifact@v6
@@ -672,7 +672,12 @@ jobs:
         shell: bash
         run: |
           # Install the specific wheel for this platform
-          python -m pip install dist/kreuzberg-*.whl
+          # Prioritize manylinux wheels over generic Linux wheels to avoid conflicts
+          if ls dist/kreuzberg-*-manylinux*.whl 1> /dev/null 2>&1; then
+            python -m pip install dist/kreuzberg-*-manylinux*.whl
+          else
+            python -m pip install dist/kreuzberg-*.whl
+          fi
 
       - name: Install SpaCy model (Linux 3.10 only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'

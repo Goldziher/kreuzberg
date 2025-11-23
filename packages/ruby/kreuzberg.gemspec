@@ -3,14 +3,26 @@
 require_relative 'lib/kreuzberg/version'
 
 repo_root = File.expand_path('../..', __dir__)
-crate_prefix = 'packages/ruby/'
-git_cmd = %(git -C "#{repo_root}" ls-files -z #{crate_prefix})
-git_files =
-  `#{git_cmd}`.split("\x0")
-              .select { |path| path.start_with?(crate_prefix) }
-              .map { |path| path.delete_prefix(crate_prefix) }
+
+# Include files from packages/ruby
+ruby_prefix = 'packages/ruby/'
+ruby_cmd = %(git -C "#{repo_root}" ls-files -z #{ruby_prefix})
+ruby_files =
+  `#{ruby_cmd}`.split("\x0")
+              .select { |path| path.start_with?(ruby_prefix) }
+              .map { |path| path.delete_prefix(ruby_prefix) }
+
+# Include the kreuzberg core crate (needed for path patch in Cargo.toml)
+core_prefix = 'crates/kreuzberg/'
+core_cmd = %(git -C "#{repo_root}" ls-files -z #{core_prefix})
+core_files =
+  `#{core_cmd}`.split("\x0")
+              .select { |path| path.start_with?(core_prefix) }
+              .map { |path| path.delete_prefix('crates/') }
+              .map { |path| "vendor/#{path}" }
+
 fallback_files = Dir.chdir(__dir__) do
-  Dir.glob(
+  ruby_fallback = Dir.glob(
     %w[
       README.md
       LICENSE
@@ -25,12 +37,21 @@ fallback_files = Dir.chdir(__dir__) do
       lib/**/*.rb
       sig/**/*.rbs
       spec/**/*.rb
-      vendor/**/*.rb
     ],
     File::FNM_DOTMATCH
   )
+
+  # Fallback for core crate - copy from repo root
+  core_fallback = Dir.chdir(repo_root) do
+    Dir.glob('crates/kreuzberg/**/*', File::FNM_DOTMATCH)
+      .reject { |f| File.directory?(f) }
+      .map { |path| "vendor/#{path.delete_prefix('crates/')}" }
+  end
+
+  ruby_fallback + core_fallback
 end
-files = git_files.empty? ? fallback_files : git_files
+
+files = (ruby_files + core_files).empty? ? fallback_files : (ruby_files + core_files)
 
 Gem::Specification.new do |spec|
   spec.name = 'kreuzberg'
