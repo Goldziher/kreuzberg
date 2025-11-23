@@ -4006,7 +4006,7 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 [[package]]
 name = "ort"
 version = "2.0.0-rc.10"
-source = "git+https://github.com/pykeio/ort#0084d085e8716e41788226ebfcb2553a16773bd6"
+source = "git+https://github.com/pykeio/ort#f95abfeb5e981c6ebd4dc21cbee84bba666190ea"
 dependencies = [
  "ndarray",
  "ort-sys",
@@ -4018,7 +4018,7 @@ dependencies = [
 [[package]]
 name = "ort-sys"
 version = "2.0.0-rc.10"
-source = "git+https://github.com/pykeio/ort#0084d085e8716e41788226ebfcb2553a16773bd6"
+source = "git+https://github.com/pykeio/ort#f95abfeb5e981c6ebd4dc21cbee84bba666190ea"
 dependencies = [
  "flate2",
  "hmac-sha256",
@@ -5265,7 +5265,7 @@ dependencies = [
 [[package]]
 name = "rb-sys"
 version = "0.9.117"
-source = "git+https://github.com/oxidize-rb/rb-sys#b7c9440b474df954ec0b8005a40044219eb6a58c"
+source = "git+https://github.com/oxidize-rb/rb-sys#6ce119991fad21fa4c7a50440f4d56f2a744df23"
 dependencies = [
  "rb-sys-build",
 ]
@@ -5273,7 +5273,7 @@ dependencies = [
 [[package]]
 name = "rb-sys-build"
 version = "0.9.117"
-source = "git+https://github.com/oxidize-rb/rb-sys#b7c9440b474df954ec0b8005a40044219eb6a58c"
+source = "git+https://github.com/oxidize-rb/rb-sys#6ce119991fad21fa4c7a50440f4d56f2a744df23"
 dependencies = [
  "bindgen",
  "lazy_static",
@@ -5996,9 +5996,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.4.6"
+version = "1.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2a4719bff48cee6b39d12c020eeb490953ad2443b7055bd0b21fca26bd8c28b"
+checksum = "7664a098b8e616bdfcc2dc0e9ac44eb231eedf41db4e9fe95d8d32ec728dedad"
 dependencies = [
  "libc",
 ]
@@ -6288,9 +6288,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.110"
+version = "2.0.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a99801b5bd34ede4cf3fc688c5919368fea4e4814a4664359503e6015b280aea"
+checksum = "390cc9a294ab71bdb1aa2e99d13be9c753cd2d7bd6560c77118597410c4d2e87"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6972,9 +6972,9 @@ dependencies = [
 
 [[package]]
 name = "utf8-width"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86bd8d4e895da8537e5315b8254664e6b769c4ff3db18321b297a1e7004392e3"
+checksum = "1292c0d970b54115d14f2492fe0170adf21d68a1de108eebc51c1df4f346a091"
 
 [[package]]
 name = "utf8_iter"
