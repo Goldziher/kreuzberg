@@ -1561,29 +1561,45 @@ jobs:
             echo "::notice::Maven package version ${{ needs.prepare.outputs.version }} already published."
           fi
 
-      - name: Maven release
+      - name: Setup Java
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
-        uses: qcastel/github-actions-maven-release@v1.12.44
+        uses: actions/setup-java@v5
         with:
-          release-branch-name: ${{ needs.prepare.outputs.matrix_ref }}
-          gpg-enabled: "true"
-          gpg-key-id: ${{ secrets.GPG_KEY_ID }}
-          gpg-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          distribution: temurin
+          java-version: "22"
+          cache: maven
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: ${{ secrets.GPP_PASSPHRASE }}
-          maven-project-folder: "packages/java"
-          maven-args: "-DskipTests -Dgpg.skip=false"
-          maven-servers: |
-            [
-              {
-                "id": "central",
-                "username": "${{ secrets.MAVEN_USERNAME || secrets.NEXUS_USERNAME }}",
-                "password": "${{ secrets.MAVEN_PASSWORD || secrets.NEXUS_PASSWORD }}"
-              }
-            ]
-          docker-registry-id: ghcr.io
-          docker-registry-username: ${{ github.actor }}
-          docker-registry-password: ${{ secrets.GITHUB_TOKEN }}
-          access-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Rust
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Prefer gpg2 binary
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        run: |
+          set -euo pipefail
+          if command -v gpg2 >/dev/null 2>&1; then
+            mkdir -p "${HOME}/.local/bin"
+            printf '#!/usr/bin/env bash\nexec gpg2 "$@"\n' > "${HOME}/.local/bin/gpg"
+            chmod +x "${HOME}/.local/bin/gpg"
+            echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+            echo "PATH=${HOME}/.local/bin:${PATH}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Release Maven package
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
+          GPG: /usr/bin/gpg2
+        run: |
+          set -euo pipefail
+          mvn -f packages/java/pom.xml --batch-mode --no-transfer-progress -Dgpg.executable=/usr/bin/gpg2 clean deploy
 
       - name: Maven already published summary
         if: ${{ steps.maven_check.outputs.exists == 'true' }}
@@ -1621,6 +1637,7 @@ jobs:
           formula-name: kreuzberg
           formula-path: Formula/kreuzberg.rb
           homebrew-tap: Goldziher/homebrew-tap
+          tag-name: ${{ needs.prepare.outputs.tag }}
           download-url: ${{ steps.release.outputs.url }}
           commit-message: |
             chore(homebrew): update kreuzberg to ${{ steps.release.outputs.version }}
