@@ -51,7 +51,29 @@ fallback_files = Dir.chdir(__dir__) do
   ruby_fallback + core_fallback
 end
 
-files = (ruby_files + core_files).empty? ? fallback_files : (ruby_files + core_files)
+# Check for vendored kreuzberg crate (copied during CI/packaging)
+vendor_files = Dir.chdir(__dir__) do
+  if Dir.exist?('vendor/kreuzberg')
+    Dir.glob('vendor/kreuzberg/**/*', File::FNM_DOTMATCH)
+      .reject { |f| File.directory?(f) }
+      .reject { |f| f.include?('/.fastembed_cache/') }
+      .reject { |f| f.include?('/target/') }
+      .reject { |f| f =~ /\.(swp|bak|tmp)$/ }
+      .reject { |f| f =~ /~$/ }
+  else
+    []
+  end
+end
+
+# Use git-tracked files if available, otherwise fallback to glob
+# Always include vendored files if they exist on disk (for CI packaging)
+files = if (ruby_files + core_files).empty?
+          fallback_files
+        elsif vendor_files.any?
+          ruby_files + vendor_files
+        else
+          ruby_files + core_files
+        end
 
 Gem::Specification.new do |spec|
   spec.name = 'kreuzberg'
