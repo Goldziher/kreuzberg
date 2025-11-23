@@ -974,6 +974,9 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
@@ -983,6 +986,8 @@ jobs:
 
       - name: Build and package
         working-directory: packages/java
+        env:
+          RUSTC_WRAPPER: ""  # Unset sccache - not available in publish job
         run: mvn clean package -DskipTests
 
       - name: Upload JAR artifact
