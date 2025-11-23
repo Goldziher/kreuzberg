@@ -1136,7 +1136,7 @@ jobs:
       - cli-binaries
       - ruby-gem
       - java-package
-      - cargo-packages
+      # cargo-packages removed - crates.io publishing disabled
     if: ${{ needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
     permissions:
