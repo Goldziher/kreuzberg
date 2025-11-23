@@ -973,21 +973,6 @@ jobs:
         with:
           cache-key-prefix: publish-cargo-packages
 
-      - name: Prepare Cargo.toml for crates.io packaging
-        run: |
-          set -euo pipefail
-          # Backup original Cargo.toml
-          cp crates/kreuzberg/Cargo.toml crates/kreuzberg/Cargo.toml.backup
-
-          # Remove fastembed git dependency (incompatible with crates.io)
-          # The embeddings feature is not part of default/full/server/cli bundles
-          sed -i '/^fastembed = { git =/d' crates/kreuzberg/Cargo.toml
-
-          # Also remove embeddings feature since it depends on fastembed
-          sed -i '/^embeddings = \[.*dep:fastembed/d' crates/kreuzberg/Cargo.toml
-
-          echo "::notice::Removed fastembed git dependency and embeddings feature for crates.io compatibility"
-
       - name: Package crates
         env:
           RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
@@ -1009,14 +994,6 @@ jobs:
           cp target/package/kreuzberg-*.crate crate-artifacts/
           if [ "$cli_packaged" -eq 1 ]; then
             cp target/package/kreuzberg-cli-*.crate crate-artifacts/
-          fi
-
-      - name: Restore Cargo.toml
-        if: always()
-        run: |
-          if [ -f crates/kreuzberg/Cargo.toml.backup ]; then
-            mv crates/kreuzberg/Cargo.toml.backup crates/kreuzberg/Cargo.toml
-            echo "::notice::Restored original Cargo.toml"
           fi
 
       - name: Upload crate packages
@@ -1259,22 +1236,6 @@ jobs:
               print(f"{key}={'true' if exists else 'false'}")
           PY
 
-      - name: Prepare Cargo.toml for crates.io publish
-        if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
-        run: |
-          set -euo pipefail
-          # Backup original Cargo.toml
-          cp crates/kreuzberg/Cargo.toml crates/kreuzberg/Cargo.toml.backup
-
-          # Remove fastembed git dependency (incompatible with crates.io)
-          # The embeddings feature is not part of default/full/server/cli bundles
-          sed -i '/^fastembed = { git =/d' crates/kreuzberg/Cargo.toml
-
-          # Also remove embeddings feature since it depends on fastembed
-          sed -i '/^embeddings = \[.*dep:fastembed/d' crates/kreuzberg/Cargo.toml
-
-          echo "::notice::Removed fastembed git dependency and embeddings feature for crates.io compatibility"
-
       - name: Publish kreuzberg
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         env:
@@ -1297,14 +1258,6 @@ jobs:
             else
               exit "$status"
             fi
-          fi
-
-      - name: Restore Cargo.toml
-        if: ${{ always() && steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
-        run: |
-          if [ -f crates/kreuzberg/Cargo.toml.backup ]; then
-            mv crates/kreuzberg/Cargo.toml.backup crates/kreuzberg/Cargo.toml
-            echo "::notice::Restored original Cargo.toml"
           fi
 
       - name: Wait for indexing
