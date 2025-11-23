@@ -867,6 +867,16 @@ jobs:
           $gemdir = "$workspace/packages/ruby"
           ridk exec bash -lc "cd $gemdir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle _2.5.12_ install --jobs 4 --retry 3"
 
+      - name: Vendor kreuzberg core crate
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Copying kreuzberg core crate to vendor directory..."
+          rm -rf packages/ruby/vendor/kreuzberg
+          mkdir -p packages/ruby/vendor
+          cp -R crates/kreuzberg packages/ruby/vendor/kreuzberg
+          echo "Vendor files prepared successfully"
+
       - name: Build gem (Unix)
         if: runner.os != 'Windows'
         shell: bash
