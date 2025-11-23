@@ -423,16 +423,22 @@ jobs:
           working-directory: packages/python
           sccache: ${{ steps.tesseract-cache.outputs.cache-enabled }}
 
+      - name: Setup Python (macOS)
+        if: matrix.label == 'macos-arm64'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
       - name: Install wheel CLI (macOS)
         if: matrix.label == 'macos-arm64'
-        run: uv pip install wheel
+        run: python3 -m pip install wheel
 
       - name: Codesign macOS wheel binaries
         if: matrix.label == 'macos-arm64'
         shell: bash
         env:
           MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
-        run: uv run python scripts/sign_macos_wheels.py --wheel-dir target/wheels
+        run: python3 scripts/sign_macos_wheels.py --wheel-dir target/wheels
 
       - name: List built wheels
         shell: bash
@@ -915,9 +921,9 @@ jobs:
 
       - name: Build and package
         working-directory: packages/java
-        env:
-          RUSTC_WRAPPER: ""  # Unset sccache - not available in publish job
-        run: mvn clean package -DskipTests
+        run: |
+          unset RUSTC_WRAPPER
+          mvn clean package -DskipTests
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v5
