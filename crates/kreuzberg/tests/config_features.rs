@@ -486,7 +486,6 @@ async fn test_quality_processing_disabled() {
 /// Test chunking with embeddings using balanced preset.
 #[tokio::test]
 #[cfg(feature = "embeddings")]
-#[ignore = "Requires ONNX Runtime setup"]
 async fn test_chunking_with_embeddings() {
     use kreuzberg::core::config::EmbeddingConfig;
 
@@ -546,7 +545,6 @@ async fn test_chunking_with_embeddings() {
 /// Test chunking with fast embedding preset.
 #[tokio::test]
 #[cfg(feature = "embeddings")]
-#[ignore = "Requires ONNX Runtime setup"]
 async fn test_chunking_with_fast_embeddings() {
     use kreuzberg::core::config::{EmbeddingConfig, EmbeddingModelType};
 

@@ -252,11 +252,7 @@ jobs:
       - name: Smoke test wheel
         shell: bash
         run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            pip install target/wheels/*manylinux*.whl
-          else
-            pip install target/wheels/kreuzberg-*.whl
-          fi
+          pip install --no-index --find-links target/wheels/ kreuzberg
           python -c "import kreuzberg; print(f'Kreuzberg version: {kreuzberg.__version__}')"
 
   build-python-sdist:
@@ -764,7 +760,12 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: napi-${{ matrix.target }}
-          path: packages/typescript/
+          path: crates/kreuzberg-node/
+
+      - name: Install Node bindings in workspace
+        run: |
+          cd crates/kreuzberg-node
+          pnpm install --filter kreuzberg-node...
 
       - name: Run TypeScript tests
         run: |
@@ -980,16 +981,14 @@ jobs:
           export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
           go test -v -race ./...
 
-      - name: Run E2E verification
-        uses: ./.github/actions/run-and-ensure-clean
-        with:
-          run: |
-            sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
-            export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH:-}"
-            export DYLD_LIBRARY_PATH="${PWD}/target/release:${DYLD_LIBRARY_PATH:-}"
-            export DYLD_FALLBACK_LIBRARY_PATH="${PWD}/target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
-            export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
-            task e2e:go:verify
+      - name: Run E2E tests
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+          export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH:-}"
+          export DYLD_LIBRARY_PATH="${PWD}/target/release:${DYLD_LIBRARY_PATH:-}"
+          export DYLD_FALLBACK_LIBRARY_PATH="${PWD}/target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+          export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+          task e2e:go:test
 
   # ============================================================================
   # Summary
