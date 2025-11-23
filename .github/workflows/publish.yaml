@@ -1561,18 +1561,8 @@ jobs:
             echo "::notice::Maven package version ${{ needs.prepare.outputs.version }} already published."
           fi
 
-      - name: Check GPG configuration
-        id: gpg_check
-        run: |
-          if [ -z "${{ secrets.GPG_KEY_ID }}" ] || [ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
-            echo "GPG secrets not configured, skipping Maven release"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Maven release
-        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' && steps.gpg_check.outputs.skip != 'true' }}
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
         uses: qcastel/github-actions-maven-release@v1.12.44
         with:
           release-branch-name: ${{ needs.prepare.outputs.matrix_ref }}
@@ -1594,10 +1584,6 @@ jobs:
           docker-registry-username: ${{ github.actor }}
           docker-registry-password: ${{ secrets.GITHUB_TOKEN }}
           access-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Maven skipped summary
-        if: ${{ steps.gpg_check.outputs.skip == 'true' }}
-        run: echo "Maven publish skipped (GPG secrets not configured)." >> $GITHUB_STEP_SUMMARY
 
       - name: Maven already published summary
         if: ${{ steps.maven_check.outputs.exists == 'true' }}
@@ -1629,18 +1615,7 @@ jobs:
           echo "  Version: $version"
           echo "  URL: $url"
 
-      - name: Check Homebrew token
-        id: homebrew_check
-        run: |
-          if [ -z "${{ secrets.HOMEBREW_TOKEN }}" ]; then
-            echo "HOMEBREW_TOKEN secret not configured, skipping Homebrew formula update"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Update Homebrew formula
-        if: ${{ steps.homebrew_check.outputs.skip != 'true' }}
         uses: mislav/bump-homebrew-formula-action@v3
         with:
           formula-name: kreuzberg
@@ -1653,7 +1628,3 @@ jobs:
             Auto-update from release ${{ steps.release.outputs.tag }}
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}
-
-      - name: Homebrew skipped summary
-        if: ${{ steps.homebrew_check.outputs.skip == 'true' }}
-        run: echo "Homebrew formula update skipped (HOMEBREW_TOKEN not configured)." >> $GITHUB_STEP_SUMMARY
