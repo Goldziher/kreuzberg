@@ -1,5 +1,5 @@
 {
-	"name": "kreuzberg-node",
+	"name": "kreuzberg",
 	"version": "4.0.0-rc.1",
 	"description": "Kreuzberg document intelligence - Node.js native bindings",
 	"author": {

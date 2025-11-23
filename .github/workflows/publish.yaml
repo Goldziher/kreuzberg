@@ -1219,11 +1219,17 @@ jobs:
 
       - name: Publish kreuzberg
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
+        env:
+          CARGO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "$CARGO_TOKEN" ]; then
+            echo "::error::CARGO_TOKEN secret not set"
+            exit 1
+          fi
           publish_log=$(mktemp)
           set +e
-          cargo publish -p kreuzberg --token ${{ secrets.CARGO_TOKEN }} 2>&1 | tee "$publish_log"
+          cargo publish -p kreuzberg --token "$CARGO_TOKEN" 2>&1 | tee "$publish_log"
           status=${PIPESTATUS[0]}
           set -e
           if [ "$status" -ne 0 ]; then
@@ -1241,11 +1247,17 @@ jobs:
 
       - name: Publish kreuzberg-cli
         if: ${{ steps.crate_check.outputs.cli_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
+        env:
+          CARGO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "$CARGO_TOKEN" ]; then
+            echo "::error::CARGO_TOKEN secret not set"
+            exit 1
+          fi
           publish_log=$(mktemp)
           set +e
-          cargo publish -p kreuzberg-cli --token ${{ secrets.CARGO_TOKEN }} 2>&1 | tee "$publish_log"
+          cargo publish -p kreuzberg-cli --token "$CARGO_TOKEN" 2>&1 | tee "$publish_log"
           status=${PIPESTATUS[0]}
           set -e
           if [ "$status" -ne 0 ]; then
@@ -1325,11 +1337,18 @@ jobs:
           set -euo pipefail
           export VERSION="${{ needs.prepare.outputs.version }}"
           exists=$(python3 - <<'PY'
-          import json, os, urllib.request
+          import json, os, sys, urllib.request
           version = os.environ["VERSION"]
-          with urllib.request.urlopen("https://rubygems.org/api/v1/versions/kreuzberg.json") as resp:
-              data = json.load(resp)
-          print("true" if any(entry.get("number") == version for entry in data) else "false")
+          try:
+              with urllib.request.urlopen("https://rubygems.org/api/v1/versions/kreuzberg.json") as resp:
+                  data = json.load(resp)
+              print("true" if any(entry.get("number") == version for entry in data) else "false")
+          except urllib.error.HTTPError as e:
+              if e.code == 404:
+                  print("::notice::Gem kreuzberg not found on RubyGems (first publish)", file=sys.stderr)
+                  print("false")
+              else:
+                  raise
           PY
           )
           echo "exists=$exists" >> "$GITHUB_OUTPUT"
@@ -1536,7 +1555,7 @@ jobs:
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
         uses: qcastel/github-actions-maven-release@v1.12.44
         with:
-          release-branch-name: "main"
+          release-branch-name: ${{ needs.prepare.outputs.matrix_ref }}
           gpg-enabled: "true"
           gpg-key-id: ${{ secrets.GPG_KEY_ID }}
           gpg-key: ${{ secrets.GPG_PRIVATE_KEY }}
