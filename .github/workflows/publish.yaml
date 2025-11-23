@@ -571,7 +571,7 @@ jobs:
           target: ${{ matrix.settings.target }}
 
       - name: Install Node dependencies
-        run: pnpm install --filter kreuzberg-node...
+        run: pnpm install --filter kreuzberg...
 
       - name: Clean npm directory
         if: runner.os != 'Windows'
@@ -583,7 +583,7 @@ jobs:
         run: Remove-Item -Recurse -Force crates/kreuzberg-node\npm -ErrorAction SilentlyContinue
 
       - name: Create npm package structure
-        run: pnpm --filter kreuzberg-node exec napi create-npm-dirs
+        run: pnpm --filter kreuzberg exec napi create-npm-dirs
 
       - name: Build native module
         if: runner.os != 'Windows'
@@ -604,7 +604,7 @@ jobs:
           $args = @('--platform', '--release', '--target', $env:TARGET, '--output-dir', './artifacts')
           if ($env:USE_NAPI_CROSS -eq 'true') { $args += '--use-napi-cross' }
           if ($env:USE_CROSS -eq 'true') { $args += '--use-cross' }
-          pnpm --filter kreuzberg-node exec napi build @args
+          pnpm --filter kreuzberg exec napi build @args
 
       - name: Package artifacts
         if: runner.os != 'Windows'
@@ -618,14 +618,14 @@ jobs:
         env:
           TARGET: ${{ matrix.settings.target }}
         run: |
-          pnpm --filter kreuzberg-node exec napi artifacts --output-dir ./artifacts
+          pnpm --filter kreuzberg exec napi artifacts --output-dir ./artifacts
           if (-Not (Test-Path crates/kreuzberg-node\npm)) { throw "npm artifact directory missing" }
           tar -czf node-bindings-$env:TARGET.tar.gz -C crates/kreuzberg-node npm
 
       - name: Generate and upload TypeScript definitions
         if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
         run: |
-          pnpm --filter kreuzberg-node exec napi build --platform --dts index.d.ts
+          pnpm --filter kreuzberg exec napi build --platform --dts index.d.ts
           mkdir -p typescript-defs
           cp crates/kreuzberg-node/index.d.ts typescript-defs/
           cp crates/kreuzberg-node/index.js typescript-defs/ || true
@@ -1464,7 +1464,7 @@ jobs:
 
       - name: Install workspace dependencies
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: pnpm install --filter kreuzberg-node...
+        run: pnpm install --filter kreuzberg...
 
       - name: Pack platform packages
         run: |

@@ -770,7 +770,7 @@ jobs:
       - name: Install Node bindings in workspace
         run: |
           cd crates/kreuzberg-node
-          pnpm install --filter kreuzberg-node...
+          pnpm install --filter kreuzberg...
 
       - name: Run TypeScript tests
         run: |
