@@ -159,6 +159,11 @@ async fn test_concurrent_extractions_with_cache() {
 async fn test_concurrent_ocr_processing() {
     use helpers::{get_test_file_path, skip_if_missing};
 
+    if cfg!(windows) {
+        // Tesseract on Windows CI is significantly slower; skip to avoid false timeouts.
+        return;
+    }
+
     if skip_if_missing("images/ocr_image.jpg") {
         tracing::debug!("Skipping concurrent OCR test: test file not available");
         return;

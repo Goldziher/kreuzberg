@@ -230,6 +230,7 @@ fn test_from_file_unsupported_extension_fails() {
 
 /// Test discover() finds config in current directory.
 #[test]
+#[serial_test::serial]
 fn test_discover_finds_config_in_current_dir() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("kreuzberg.toml");
@@ -258,6 +259,7 @@ enabled = true
 
 /// Test discover() finds config in parent directory.
 #[test]
+#[serial_test::serial]
 fn test_discover_finds_config_in_parent_dir() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("kreuzberg.toml");
@@ -313,6 +315,7 @@ fn test_discover_returns_none_when_not_found() {
 
 /// Test discover() prefers certain file names.
 #[test]
+#[serial_test::serial]
 fn test_discover_file_name_preference() {
     let temp_dir = TempDir::new().unwrap();
 

@@ -72,7 +72,6 @@ kreuzberg = { git = "https://github.com/Goldziher/kreuzberg", tag = "v4.0.0" }
 # kreuzberg = { git = "https://github.com/Goldziher/kreuzberg", branch = "main" }
 ```
 
-> **Note**: Kreuzberg is not currently published to crates.io due to git dependencies (fastembed-rs, ort). Use the git dependency above for full functionality.
 
 **[Rust Documentation →](crates/kreuzberg/README.md)**
 

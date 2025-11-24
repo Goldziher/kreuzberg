@@ -179,4 +179,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Target: ${{ matrix.target }}" >> $GITHUB_STEP_SUMMARY
           echo "- OpenSSL: native-tls backend" >> $GITHUB_STEP_SUMMARY
-          echo "- Fastembed: Official crates.io version 5.2" >> $GITHUB_STEP_SUMMARY
+          echo "- Fastembed: Official crates.io version 5.3" >> $GITHUB_STEP_SUMMARY
