@@ -54,13 +54,16 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Cache fastembed models
+      - name: Cache Hugging Face models (used by fastembed)
         uses: actions/cache@v4
         with:
-          path: ~/.cache/fastembed
-          key: fastembed-models-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cache/huggingface
+            ~/Library/Caches/huggingface
+            ~\AppData\Local\huggingface
+          key: hf-models-${{ runner.os }}-fastembed-v1
           restore-keys: |
-            fastembed-models-${{ runner.os }}-
+            hf-models-${{ runner.os }}-
 
       - name: Pre-download fastembed models
         run: |
