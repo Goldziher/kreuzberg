@@ -54,34 +54,60 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Setup OpenSSL env vars (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          echo "OPENSSL_DIR=C:\Program Files\OpenSSL-Win64" >> $GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=C:\Program Files\OpenSSL-Win64\lib" >> $GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=C:\Program Files\OpenSSL-Win64\include" >> $GITHUB_ENV
-
       - name: Install OpenSSL (Windows)
         if: runner.os == 'Windows'
         run: |
-          choco install openssl --version=3.1.1 -y
+          choco install openssl -y
 
-      - name: Verify OpenSSL (Windows)
+      - name: Find OpenSSL installation (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          dir "C:\Program Files\OpenSSL-Win64"
-          dir "C:\Program Files\OpenSSL-Win64\lib"
+          # Find OpenSSL installation directory
+          $opensslDirs = @(
+            "C:\Program Files\OpenSSL-Win64",
+            "C:\Program Files\OpenSSL",
+            "C:\ProgramData\chocolatey\lib\openssl\tools",
+            "C:\Strawberry\c"
+          )
 
-      - name: Build kreuzberg with embeddings feature
+          foreach ($dir in $opensslDirs) {
+            if (Test-Path $dir) {
+              Write-Host "Found OpenSSL at: $dir"
+              if (Test-Path "$dir\lib") {
+                Write-Host "Setting OPENSSL_DIR to $dir"
+                echo "OPENSSL_DIR=$dir" >> $env:GITHUB_ENV
+                echo "OPENSSL_LIB_DIR=$dir\lib" >> $env:GITHUB_ENV
+                echo "OPENSSL_INCLUDE_DIR=$dir\include" >> $env:GITHUB_ENV
+                Get-ChildItem -Path "$dir\lib" -Filter "*.lib" | Select-Object -First 5
+                break
+              }
+            }
+          }
+
+          # Also try to use vcpkg as fallback
+          if (-not (Test-Path env:OPENSSL_DIR)) {
+            Write-Host "OpenSSL not found in standard locations, trying vcpkg..."
+            vcpkg install openssl:x64-windows-static-md
+            $vcpkgRoot = "C:\vcpkg\installed\x64-windows-static-md"
+            if (Test-Path $vcpkgRoot) {
+              echo "OPENSSL_DIR=$vcpkgRoot" >> $env:GITHUB_ENV
+              echo "OPENSSL_LIB_DIR=$vcpkgRoot\lib" >> $env:GITHUB_ENV
+              echo "OPENSSL_INCLUDE_DIR=$vcpkgRoot\include" >> $env:GITHUB_ENV
+              echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+            }
+          }
+
+      - name: Build kreuzberg with full features
         run: |
-          cargo build --features embeddings --verbose
+          cargo build --features full,embeddings --verbose
         env:
           PKG_CONFIG_ALLOW_CROSS: 1
           RUSTC_WRAPPER: ""
 
-      - name: Run tests with embeddings feature
+      - name: Run tests with full features
         run: |
-          cargo test --features embeddings --verbose
+          cargo test --features full,embeddings --verbose
         env:
           PKG_CONFIG_ALLOW_CROSS: 1
           RUSTC_WRAPPER: ""
