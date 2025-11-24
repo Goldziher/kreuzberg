@@ -167,7 +167,7 @@ jobs:
         run: |
           pip install maturin
           cd crates/kreuzberg-py
-          maturin build --features embeddings --release
+          maturin build --release
         env:
           PKG_CONFIG_ALLOW_CROSS: 1
           RUSTC_WRAPPER: ""
