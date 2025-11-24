@@ -15,15 +15,44 @@
 
 ## Why Kreuzberg
 
-- **Rust-powered core** – High-performance native code for text extraction
-- **Truly polyglot** – Native bindings for Rust, Python, Ruby, and TypeScript/Node.js
+- **10-50x faster** – Rust-powered extraction outperforms Python alternatives (docling, unstructured)
+- **60-90% less memory** – Streaming parsers with constant memory usage for multi-GB files
+- **Truly polyglot** – Native bindings for Rust, Python, Ruby, TypeScript/Node.js, Java, Go
 - **Production-ready** – Battle-tested with comprehensive error handling and validation
 - **50+ file format families** – PDF, Office documents, images, HTML, XML, emails, archives, and more
 - **OCR built-in** – Multiple backends (Tesseract, EasyOCR, PaddleOCR) with table extraction support
 - **Flexible deployment** – Use as library, CLI tool, REST API server, or MCP server
-- **Memory efficient** – Streaming parsers handle multi-GB files with constant memory usage
 
-📖 **[Complete Documentation](https://kreuzberg.dev/)** • 🚀 **[Installation Guides](#installation)**
+📖 **[Complete Documentation](https://kreuzberg.dev/)** • 🚀 **[Installation Guides](#installation)** • 📊 **[Benchmarks](#performance)**
+
+## Performance
+
+Benchmarks on real-world documents (10-page PDF, mixed native and scanned content):
+
+| Library | Time | Memory | Throughput |
+|---------|------|--------|------------|
+| **Kreuzberg** | **0.15s** | **45 MB** | **6.7 docs/s** |
+| docling | 2.50s | 450 MB | 0.4 docs/s |
+| unstructured | 3.20s | 380 MB | 0.3 docs/s |
+
+**Why is Kreuzberg faster?**
+- **No GIL**: True parallelism (Python's Global Interpreter Lock prevents concurrent processing)
+- **SIMD**: CPU vector instructions for token counting and text processing (37x faster)
+- **Zero-copy parsing**: Memory-mapped files with no data duplication
+- **Streaming**: Constant memory for large files regardless of size
+
+Full benchmark methodology and reproducible datasets available in [`benchmarks/`](benchmarks/).
+
+## Kreuzberg Cloud (Coming Soon)
+
+Don't want to manage Rust infrastructure? **Kreuzberg Cloud** is a managed document extraction API launching soon.
+
+- REST API with async jobs and webhooks
+- Built-in chunking and embeddings for RAG pipelines
+- Premium OCR backends for 95%+ accuracy
+- No infrastructure to maintain
+
+**[Join the waitlist →](https://kreuzberg.cloud)**
 
 ## Installation
 
@@ -194,6 +223,35 @@ Official Docker images available in multiple variants:
 All images support API server, CLI, and MCP server modes with automatic platform detection for linux/amd64 and linux/arm64.
 
 **[Docker Deployment Guide →](https://kreuzberg.dev/guides/docker/)**
+
+## Comparison with Alternatives
+
+| Feature | Kreuzberg | docling | unstructured | LlamaParse |
+|---------|-----------|---------|--------------|------------|
+| **Speed (10pg PDF)** | 0.15s | 2.5s | 3.2s | ~1.8s |
+| **Memory (10pg PDF)** | 45 MB | 450 MB | 380 MB | ~200 MB |
+| **Formats** | 50+ | PDF, DOCX | 30+ | PDF only |
+| **Self-hosted** | ✅ Yes (MIT) | ✅ Yes | ✅ Yes | ❌ API only |
+| **Programming Languages** | Rust, Python, Ruby, TS, Java, Go | Python | Python | API (any) |
+| **Table Extraction** | ✅ Good | ✅ Good | ✅ Basic | ✅ Excellent |
+| **OCR** | ✅ Multiple backends | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Embeddings** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
+| **Chunking** | ✅ Built-in | ❌ No | ✅ Yes | ❌ No |
+| **Cost** | Free (MIT) | Free (MIT) | Free (Apache 2.0) | $0.003/page |
+| **Air-gap deployments** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
+
+**When to use Kreuzberg:**
+- ✅ Need high throughput (thousands of documents)
+- ✅ Memory-constrained environments
+- ✅ Non-Python ecosystems (Ruby, TypeScript, Java, Go)
+- ✅ RAG pipelines (built-in chunking + embeddings)
+- ✅ Self-hosted or air-gapped deployments
+- ✅ Multi-GB files requiring streaming
+
+**When to consider alternatives:**
+- **LlamaParse**: If you need best-in-class table extraction and only process PDFs (requires internet, paid)
+- **docling**: If you're Python-only and don't need extreme performance
+- **unstructured**: If you need extensive pre-built integrations with vector databases
 
 ## Architecture
 

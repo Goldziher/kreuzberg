@@ -178,6 +178,82 @@ jobs:
         uses: ./.github/actions/cleanup-rust-cache
 
   # ============================================================================
+  # STAGE 3b: Binding E2E (Generated) - Full-featured builds
+  # ============================================================================
+  bindings-e2e:
+    name: Binding E2E (All languages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup Rust with sccache
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: bindings-e2e
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13"
+          cache-prefix: bindings-e2e
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+          working-directory: packages/ruby
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Build Rust core with all features
+        run: cargo build --workspace --release --all-features
+
+      - name: Run generated E2E suites for all bindings
+        run: task e2e:all:verify
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/target/release:${LD_LIBRARY_PATH}
+          DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/release:${DYLD_LIBRARY_PATH}
+
+      - name: Show sccache stats
+        run: sccache --show-stats
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  # ============================================================================
   # STAGE 3: Build + Smoke Tests Combined (12-20 min with sccache)
   # ============================================================================
 

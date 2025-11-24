@@ -86,11 +86,11 @@ tasks:
   rust:build:
     desc: Build all Rust crates
     cmds:
-      - cargo build --release --workspace
+      - cargo build --release --workspace --all-features
   rust:test:
     desc: Run all Rust tests
     cmds:
-      - cargo test --workspace --release
+      - cargo test --workspace --release --all-features
   rust:lint:
     desc: Lint Rust code with auto-fix (cargo fmt + clippy)
     cmds:
@@ -458,6 +458,15 @@ tasks:
     cmds:
       - task: e2e:go:generate
       - task: e2e:go:test
+  e2e:all:verify:
+    desc: Regenerate and validate E2E suites for all languages
+    cmds:
+      - task: e2e:rust:verify
+      - task: e2e:python:verify
+      - task: e2e:ts:verify
+      - task: e2e:ruby:verify
+      - task: e2e:java:verify
+      - task: e2e:go:verify
   cli:build:
     desc: Build CLI binary
     cmds:
