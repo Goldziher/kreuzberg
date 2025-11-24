@@ -54,6 +54,53 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Cache fastembed models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/fastembed
+          key: fastembed-models-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            fastembed-models-${{ runner.os }}-
+
+      - name: Pre-download fastembed models
+        run: |
+          # Create a simple Rust program to download the models
+          mkdir -p /tmp/fastembed-test
+          cd /tmp/fastembed-test
+          cat > Cargo.toml <<'EOF'
+          [package]
+          name = "fastembed-test"
+          version = "0.1.0"
+          edition = "2021"
+
+          [dependencies]
+          fastembed = { version = "5.3", default-features = false, features = ["hf-hub-native-tls", "ort-download-binaries"] }
+          EOF
+
+          cat > src/main.rs <<'EOF'
+          use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+
+          fn main() {
+              println!("Downloading default model...");
+              let _ = TextEmbedding::try_new(Default::default());
+
+              println!("Downloading AllMiniLML6V2Q...");
+              let _ = TextEmbedding::try_new(InitOptions::new(EmbeddingModel::AllMiniLML6V2Q));
+
+              println!("Downloading BGEBaseENV15...");
+              let _ = TextEmbedding::try_new(InitOptions::new(EmbeddingModel::BGEBaseENV15));
+
+              println!("All models downloaded successfully!");
+          }
+          EOF
+
+          mkdir -p src
+          cargo run --release 2>&1 | grep -E "Downloading|downloaded|All models"
+        continue-on-error: true
+        env:
+          PKG_CONFIG_ALLOW_CROSS: 1
+          RUSTC_WRAPPER: ""
+
       - name: Install OpenSSL (Windows)
         if: runner.os == 'Windows'
         run: |
