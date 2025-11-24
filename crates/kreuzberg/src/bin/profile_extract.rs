@@ -31,6 +31,7 @@ fn normalize_rss(value: i64) -> i64 {
 }
 
 #[cfg(not(unix))]
+#[allow(dead_code)]
 fn normalize_rss(value: i64) -> i64 {
     value
 }
