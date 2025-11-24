@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 use std::process::Command;
+use tempfile::tempdir;
 
 /// Get the path to the kreuzberg binary.
 fn get_binary_path() -> String {
@@ -152,8 +153,11 @@ fn test_extract_file_not_found() {
 fn test_extract_directory_not_file() {
     build_binary();
 
+    let tmp_dir = tempdir().expect("Failed to create temp dir");
+    let dir_path = tmp_dir.path().to_string_lossy().to_string();
+
     let output = Command::new(get_binary_path())
-        .args(["extract", "/tmp"])
+        .args(["extract", dir_path.as_str()])
         .output()
         .expect("Failed to execute extract command");
 

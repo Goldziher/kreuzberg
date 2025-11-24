@@ -815,6 +815,7 @@ mod tests {
     // Tests for public registration APIs
 
     #[test]
+    #[serial_test::serial]
     fn test_register_validator() {
         use std::sync::Arc;
 
@@ -826,6 +827,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_unregister_validator() {
         use std::sync::Arc;
 
@@ -837,12 +839,14 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_unregister_nonexistent_validator() {
         let result = super::unregister_validator("nonexistent-validator-xyz");
         assert!(result.is_ok());
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_list_validators() {
         use std::sync::Arc;
 
@@ -867,6 +871,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_clear_validators() {
         use std::sync::Arc;
 
@@ -890,6 +895,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_register_validator_with_invalid_name() {
         use std::sync::Arc;
 
@@ -922,6 +928,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_register_validator_with_empty_name() {
         use std::sync::Arc;
 
