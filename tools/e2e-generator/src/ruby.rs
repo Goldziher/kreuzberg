@@ -303,7 +303,10 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     writeln!(buffer)?;
     writeln!(buffer, "# Auto-generated tests for {category} fixtures.")?;
     writeln!(buffer)?;
-    writeln!(buffer, "# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength")?;
+    writeln!(
+        buffer,
+        "# rubocop:disable RSpec/DescribeClass, RSpec/ExampleLength, Metrics/BlockLength"
+    )?;
     writeln!(buffer, "require_relative 'spec_helper'\n")?;
     writeln!(
         buffer,

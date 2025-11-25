@@ -83,7 +83,7 @@ jobs:
           working-directory: packages/python
           command: build
           args: --release --strip --out ../../target/wheels
-          sccache: 'true'
+          sccache: 'false'
           manylinux: auto
 
       - name: Show sccache stats

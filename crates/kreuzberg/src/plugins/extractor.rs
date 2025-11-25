@@ -538,6 +538,7 @@ pub fn clear_extractors() -> crate::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     struct MockExtractor {
         mime_types: Vec<&'static str>,
@@ -833,6 +834,7 @@ mod tests {
     // Tests for public registration APIs
 
     #[test]
+    #[serial]
     fn test_register_extractor() {
         use std::sync::Arc;
 
@@ -847,6 +849,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_unregister_extractor() {
         use std::sync::Arc;
 
@@ -861,12 +864,14 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_unregister_nonexistent_extractor() {
         let result = super::unregister_extractor("nonexistent-extractor-xyz");
         assert!(result.is_ok());
     }
 
     #[test]
+    #[serial]
     fn test_list_extractors() {
         use std::sync::Arc;
 
@@ -896,6 +901,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_clear_extractors() {
         use std::sync::Arc;
 
@@ -921,6 +927,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_register_extractor_with_invalid_name() {
         use std::sync::Arc;
 
@@ -965,6 +972,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_register_extractor_with_empty_name() {
         use std::sync::Arc;
 

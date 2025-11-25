@@ -2,12 +2,12 @@
 //! Integration test for the `/extract` API handler using multipart uploads.
 
 use axum::{
-    body::{to_bytes, Body},
+    body::{Body, to_bytes},
     http::{Request, StatusCode},
 };
 use kreuzberg::{
-    api::{create_router_with_limits, ApiSizeLimits},
     ExtractionConfig,
+    api::{ApiSizeLimits, create_router_with_limits},
 };
 use serde_json::Value;
 use tower::ServiceExt;
@@ -30,10 +30,7 @@ Hello world\r\n\
     let request = Request::builder()
         .method("POST")
         .uri("/extract")
-        .header(
-            "content-type",
-            format!("multipart/form-data; boundary={boundary}"),
-        )
+        .header("content-type", format!("multipart/form-data; boundary={boundary}"))
         .header("content-length", body_bytes.len())
         .body(Body::from(body_bytes))
         .expect("Failed to build request");

@@ -46,7 +46,7 @@ runs:
           if (Test-Path $dir) {
             $libPath = Join-Path $dir "lib"
             $includePath = Join-Path $dir "include"
-            if (Test-Path $libPath -and Test-Path $includePath) {
+            if ((Test-Path $libPath) -and (Test-Path $includePath)) {
               $selected = $dir
               break
             }

@@ -16,7 +16,7 @@
 //! use kreuzberg::mcp::start_mcp_server;
 //!
 //! #[tokio::main]
-//! async fn main() -> anyhow::Result<()> {
+//! async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 //!     start_mcp_server().await?;
 //!     Ok(())
 //! }

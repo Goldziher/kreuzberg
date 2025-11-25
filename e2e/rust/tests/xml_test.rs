@@ -9,7 +9,10 @@ fn test_xml_plant_catalog() {
 
     let document_path = resolve_document("xml/plant_catalog.xml");
     if !document_path.exists() {
-        println!("Skipping xml_plant_catalog: missing document at {}", document_path.display());
+        println!(
+            "Skipping xml_plant_catalog: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -23,4 +26,3 @@ fn test_xml_plant_catalog() {
     assertions::assert_min_content_length(&result, 100);
     assertions::assert_metadata_expectation(&result, "element_count", &serde_json::json!({"gte":1}));
 }
-

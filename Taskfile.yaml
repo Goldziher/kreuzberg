@@ -621,7 +621,7 @@ tasks:
     desc: Lint Go code in check-only mode (gofmt + golangci-lint, no fixes)
     dir: packages/go
     cmds:
-      - go fmt -l ./... | grep -q . && exit 1 || true
+      - gofmt -l . | grep -q . && exit 1 || true
       - golangci-lint run --config ../../.golangci.yml ./...
   go:format:
     desc: Format Go code with modifications (gofmt)

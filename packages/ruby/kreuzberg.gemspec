@@ -9,17 +9,17 @@ ruby_prefix = 'packages/ruby/'
 ruby_cmd = %(git -C "#{repo_root}" ls-files -z #{ruby_prefix})
 ruby_files =
   `#{ruby_cmd}`.split("\x0")
-              .select { |path| path.start_with?(ruby_prefix) }
-              .map { |path| path.delete_prefix(ruby_prefix) }
+               .select { |path| path.start_with?(ruby_prefix) }
+               .map { |path| path.delete_prefix(ruby_prefix) }
 
 # Include the kreuzberg core crate (needed for path patch in Cargo.toml)
 core_prefix = 'crates/kreuzberg/'
 core_cmd = %(git -C "#{repo_root}" ls-files -z #{core_prefix})
 core_files =
   `#{core_cmd}`.split("\x0")
-              .select { |path| path.start_with?(core_prefix) }
-              .map { |path| path.delete_prefix('crates/') }
-              .map { |path| "vendor/#{path}" }
+               .select { |path| path.start_with?(core_prefix) }
+               .map { |path| path.delete_prefix('crates/') }
+               .map { |path| "vendor/#{path}" }
 
 fallback_files = Dir.chdir(__dir__) do
   ruby_fallback = Dir.glob(
@@ -44,8 +44,8 @@ fallback_files = Dir.chdir(__dir__) do
   # Fallback for core crate - copy from repo root
   core_fallback = Dir.chdir(repo_root) do
     Dir.glob('crates/kreuzberg/**/*', File::FNM_DOTMATCH)
-      .reject { |f| File.directory?(f) }
-      .map { |path| "vendor/#{path.delete_prefix('crates/')}" }
+       .reject { |f| File.directory?(f) }
+       .map { |path| "vendor/#{path.delete_prefix('crates/')}" }
   end
 
   ruby_fallback + core_fallback
@@ -55,11 +55,11 @@ end
 vendor_files = Dir.chdir(__dir__) do
   if Dir.exist?('vendor/kreuzberg')
     Dir.glob('vendor/kreuzberg/**/*', File::FNM_DOTMATCH)
-      .reject { |f| File.directory?(f) }
-      .reject { |f| f.include?('/.fastembed_cache/') }
-      .reject { |f| f.include?('/target/') }
-      .reject { |f| f =~ /\.(swp|bak|tmp)$/ }
-      .reject { |f| f =~ /~$/ }
+       .reject { |f| File.directory?(f) }
+       .reject { |f| f.include?('/.fastembed_cache/') }
+       .reject { |f| f.include?('/target/') }
+       .grep_v(/\.(swp|bak|tmp)$/)
+       .grep_v(/~$/)
   else
     []
   end

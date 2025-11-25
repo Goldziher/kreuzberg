@@ -70,9 +70,10 @@ jobs:
       - name: Build Go bindings
         run: |
           cd packages/go
-          export LD_LIBRARY_PATH="${PWD}/../../target/release:${LD_LIBRARY_PATH}"
-          export DYLD_LIBRARY_PATH="${PWD}/../../target/release:${DYLD_LIBRARY_PATH}"
+          $env:LD_LIBRARY_PATH = "$PWD/../../target/release;$env:LD_LIBRARY_PATH"
+          $env:DYLD_LIBRARY_PATH = "$PWD/../../target/release;$env:DYLD_LIBRARY_PATH"
           go build -v ./...
+        shell: pwsh
 
       - name: Show sccache stats
         run: sccache --show-stats

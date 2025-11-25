@@ -85,7 +85,7 @@ jobs:
           cd crates/kreuzberg-node
           pnpm install
           pnpm exec napi build --platform --release --target ${{ matrix.target }}
-          pnpm exec napi artifacts
+          pnpm exec napi artifacts --output-dir ./artifacts
           pnpm exec napi prepublish -t npm --no-gh-release
           pnpm pack
 

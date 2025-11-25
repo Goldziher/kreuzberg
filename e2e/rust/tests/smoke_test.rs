@@ -9,7 +9,10 @@ fn test_smoke_docx_basic() {
 
     let document_path = resolve_document("documents/fake.docx");
     if !document_path.exists() {
-        println!("Skipping smoke_docx_basic: missing document at {}", document_path.display());
+        println!(
+            "Skipping smoke_docx_basic: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -19,7 +22,10 @@ fn test_smoke_docx_basic() {
         Ok(result) => result,
     };
 
-    assertions::assert_expected_mime(&result, &["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]);
+    assertions::assert_expected_mime(
+        &result,
+        &["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    );
     assertions::assert_min_content_length(&result, 20);
     assertions::assert_content_contains_any(&result, &["Lorem", "ipsum", "document", "text"]);
 }
@@ -30,7 +36,10 @@ fn test_smoke_html_basic() {
 
     let document_path = resolve_document("web/simple_table.html");
     if !document_path.exists() {
-        println!("Skipping smoke_html_basic: missing document at {}", document_path.display());
+        println!(
+            "Skipping smoke_html_basic: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -51,7 +60,10 @@ fn test_smoke_image_png() {
 
     let document_path = resolve_document("images/sample.png");
     if !document_path.exists() {
-        println!("Skipping smoke_image_png: missing document at {}", document_path.display());
+        println!(
+            "Skipping smoke_image_png: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -71,7 +83,10 @@ fn test_smoke_json_basic() {
 
     let document_path = resolve_document("data_formats/simple.json");
     if !document_path.exists() {
-        println!("Skipping smoke_json_basic: missing document at {}", document_path.display());
+        println!(
+            "Skipping smoke_json_basic: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -91,7 +106,10 @@ fn test_smoke_pdf_basic() {
 
     let document_path = resolve_document("pdfs/fake_memo.pdf");
     if !document_path.exists() {
-        println!("Skipping smoke_pdf_basic: missing document at {}", document_path.display());
+        println!(
+            "Skipping smoke_pdf_basic: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -112,7 +130,10 @@ fn test_smoke_txt_basic() {
 
     let document_path = resolve_document("text/report.txt");
     if !document_path.exists() {
-        println!("Skipping smoke_txt_basic: missing document at {}", document_path.display());
+        println!(
+            "Skipping smoke_txt_basic: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -132,7 +153,10 @@ fn test_smoke_xlsx_basic() {
 
     let document_path = resolve_document("spreadsheets/stanley_cups.xlsx");
     if !document_path.exists() {
-        println!("Skipping smoke_xlsx_basic: missing document at {}", document_path.display());
+        println!(
+            "Skipping smoke_xlsx_basic: missing document at {}",
+            document_path.display()
+        );
         return;
     }
     let config = ExtractionConfig::default();
@@ -142,11 +166,26 @@ fn test_smoke_xlsx_basic() {
         Ok(result) => result,
     };
 
-    assertions::assert_expected_mime(&result, &["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
+    assertions::assert_expected_mime(
+        &result,
+        &["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    );
     assertions::assert_min_content_length(&result, 100);
-    assertions::assert_content_contains_all(&result, &["Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR"]);
+    assertions::assert_content_contains_all(
+        &result,
+        &[
+            "Team",
+            "Location",
+            "Stanley Cups",
+            "Blues",
+            "Flyers",
+            "Maple Leafs",
+            "STL",
+            "PHI",
+            "TOR",
+        ],
+    );
     assertions::assert_table_count(&result, Some(1), None);
     assertions::assert_metadata_expectation(&result, "sheet_count", &serde_json::json!({"gte":2}));
     assertions::assert_metadata_expectation(&result, "sheet_names", &serde_json::json!({"contains":"Stanley Cups"}));
 }
-
