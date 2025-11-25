@@ -117,6 +117,10 @@ jobs:
           find packages/ruby/vendor/kreuzberg -name '*.bak' -delete
           find packages/ruby/vendor/kreuzberg -name '*.tmp' -delete
           find packages/ruby/vendor/kreuzberg -name '*~' -delete
+          # Make vendored core crate installable without workspace context
+          sed -i.bak 's/^edition\\.workspace = true/edition = "2024"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+          sed -i.bak 's/^rust-version\\.workspace = true/rust-version = "1.85"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+          rm -f packages/ruby/vendor/kreuzberg/Cargo.toml.bak
           core_version=$(awk -F '\"' '/^version =/ {print $2; exit}' crates/kreuzberg/Cargo.toml)
           cat > packages/ruby/vendor/Cargo.toml <<'EOF'
           [workspace]

@@ -87,6 +87,7 @@ jobs:
           pnpm exec napi build --platform --release --target ${{ matrix.target }}
           mkdir -p artifacts
           pnpm exec napi artifacts --output-dir ./artifacts
+          cp artifacts/*.node .
           pnpm exec napi prepublish -t npm --no-gh-release
           pnpm pack
 

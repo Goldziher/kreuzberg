@@ -32,6 +32,11 @@ jobs:
   build-and-smoke-python:
     name: Python Build + Smoke (${{ matrix.target }})
     timeout-minutes: 90
+    env:
+      RUSTC_WRAPPER: ""
+      CARGO_BUILD_RUSTC_WRAPPER: ""
+      SCCACHE_GHA_ENABLED: "false"
+      SCCACHE_PATH: ""
     strategy:
       fail-fast: false
       matrix:
