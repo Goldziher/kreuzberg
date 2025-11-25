@@ -1,0 +1,91 @@
+name: CI Validate
+
+on:
+  push:
+    branches: [main]
+    # paths:
+    #   - 'crates/**'
+    #   - 'packages/**'
+    #   - 'tools/**'
+  pull_request:
+    branches: [main]
+    # paths:
+    #   - 'crates/**'
+    #   - 'packages/**'
+    #   - 'tools/**'
+
+concurrency:
+  group: ci-validate-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  RUST_MIN_STACK: 16777216
+  PDFIUM_VERSION: "7529"
+  ORT_VERSION: "1.23.2"
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
+jobs:
+  validate:
+    name: Validate (Lint & Format)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: validate
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13"
+          cache-prefix: validate
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+          working-directory: packages/ruby
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2
+        shell: bash
+
+      - name: Install Task
+        uses: ./.github/actions/install-task
+
+      - name: Cache Prek
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prek/
+          key: prek-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.pre-commit-config.yaml') }}-v2
+
+      - name: Run unified lint
+        run: task lint
+        shell: bash

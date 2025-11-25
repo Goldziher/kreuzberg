@@ -1,0 +1,11 @@
+name: Install Task
+description: Install Taskfile CLI
+runs:
+  using: composite
+  steps:
+    - name: Install Task
+      shell: bash
+      run: |
+        set -euo pipefail
+        sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"

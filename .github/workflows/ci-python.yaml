@@ -1,0 +1,255 @@
+name: CI Python
+
+on:
+  push:
+    branches: [main]
+    # paths:
+    #   - 'crates/**'
+    #   - 'packages/python/**'
+  pull_request:
+    branches: [main]
+    # paths:
+    #   - 'crates/**'
+    #   - 'packages/python/**'
+
+concurrency:
+  group: ci-python-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  RUST_MIN_STACK: 16777216
+  PDFIUM_VERSION: "7529"
+  ORT_VERSION: "1.23.2"
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
+jobs:
+  build-and-smoke-python:
+    name: Python Build + Smoke (${{ matrix.target }})
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macos-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust with sccache
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: python-${{ matrix.platform }}
+          target: ${{ matrix.target }}
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13"
+          cache-prefix: wheels-${{ matrix.platform }}
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Build Python wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: packages/python
+          command: build
+          args: --release --strip --out ../../target/wheels
+          sccache: 'true'
+          manylinux: auto
+
+      - name: Show sccache stats
+        run: sccache --show-stats
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v5
+        with:
+          name: wheels-${{ matrix.platform }}
+          path: target/wheels/*.whl
+          retention-days: 7
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+      - name: Smoke test wheel
+        shell: bash
+        run: |
+          pip install --no-index --find-links target/wheels/ kreuzberg
+          python -c "import kreuzberg; print(f'Kreuzberg version: {kreuzberg.__version__}')"
+
+  build-python-sdist:
+    name: Python Sdist
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: python-sdist
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13"
+          cache-prefix: sdist
+
+      - name: Build sdist
+        run: |
+          cd packages/python
+          uv run maturin sdist --out ../../target/wheels
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v5
+        with:
+          name: python-sdist
+          path: target/wheels/*.tar.gz
+          retention-days: 7
+
+  test-python:
+    name: Python Tests (${{ matrix.python-version }}, ${{ matrix.os }})
+    needs: build-and-smoke-python
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.10"
+            platform: linux-x86_64
+            coverage: true
+          - os: ubuntu-latest
+            python-version: "3.13"
+            platform: linux-x86_64
+            coverage: false
+          - os: macos-latest
+            python-version: "3.10"
+            platform: macos-arm64
+            coverage: false
+          - os: macos-latest
+            python-version: "3.13"
+            platform: macos-arm64
+            coverage: false
+          - os: windows-latest
+            python-version: "3.10"
+            platform: windows-x86_64
+            coverage: false
+          - os: windows-latest
+            python-version: "3.13"
+            platform: windows-x86_64
+            coverage: false
+    runs-on: ${{ matrix.os }}
+    env:
+      HF_HOME: ~/.cache/huggingface
+      TRANSFORMERS_CACHE: ~/.cache/huggingface
+      RUSTC_WRAPPER: ''
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache-prefix: test-py-${{ matrix.python-version }}
+
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: huggingface-${{ runner.os }}-py-${{ matrix.python-version }}-${{ hashFiles('packages/python/pyproject.toml') || 'fallback' }}
+
+      - name: Download wheels
+        uses: actions/download-artifact@v6
+        with:
+          name: wheels-${{ matrix.platform }}
+          path: dist/
+
+      - name: Install wheel
+        shell: bash
+        run: |
+          if ls dist/kreuzberg-*-manylinux*.whl 1> /dev/null 2>&1; then
+            python -m pip install dist/kreuzberg-*-manylinux*.whl
+          elif ls dist/kreuzberg-*-macos*.whl 1> /dev/null 2>&1; then
+            python -m pip install dist/kreuzberg-*-macos*.whl
+          elif ls dist/kreuzberg-*-win_amd64.whl 1> /dev/null 2>&1; then
+            python -m pip install dist/kreuzberg-*-win_amd64.whl
+          else
+            python -m pip install dist/kreuzberg-*.whl
+          fi
+
+      - name: Install SpaCy model (Linux 3.10 only)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        run: |
+          uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+
+      - name: Run Python tests
+        run: |
+          cd packages/python
+          if [ "${{ matrix.coverage }}" = "true" ]; then
+            uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1
+          else
+            uv run pytest -vv --reruns 1 --reruns-delay 1
+          fi
+
+      - name: Upload coverage
+        if: matrix.coverage
+        uses: deepsourcelabs/test-coverage-action@master
+        with:
+          key: python
+          coverage-file: packages/python/coverage.lcov
+          dsn: ${{ secrets.DEEPSOURCE_DSN }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage Pdfium runtime
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: target/release
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Install Task
+        uses: ./.github/actions/install-task
+
+      - name: Run E2E tests
+        run: |
+          task e2e:python:test

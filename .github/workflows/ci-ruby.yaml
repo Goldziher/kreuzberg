@@ -1,0 +1,201 @@
+name: CI Ruby
+
+on:
+  push:
+    branches: [main]
+    # paths:
+    #   - 'packages/ruby/**'
+    #   - 'crates/**'
+  pull_request:
+    branches: [main]
+    # paths:
+    #   - 'packages/ruby/**'
+    #   - 'crates/**'
+
+concurrency:
+  group: ci-ruby-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  RUST_MIN_STACK: 16777216
+  PDFIUM_VERSION: "7529"
+  ORT_VERSION: "1.23.2"
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
+jobs:
+  build-ruby-gem:
+    name: Ruby Gem (${{ matrix.os }}, Ruby ${{ matrix.ruby-version }})
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            ruby-version: "3.3"
+            platform: linux-x64
+          - os: ubuntu-latest
+            ruby-version: "3.4"
+            platform: linux-x64
+          - os: macos-latest
+            ruby-version: "3.3"
+            platform: macos-arm64
+          - os: macos-latest
+            ruby-version: "3.4"
+            platform: macos-arm64
+          - os: windows-latest
+            ruby-version: "3.3"
+            platform: windows-x64
+          - os: windows-latest
+            ruby-version: "3.4"
+            platform: windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust with sccache
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: ruby-${{ matrix.platform }}
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+          working-directory: packages/ruby
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Vendor kreuzberg core crate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf packages/ruby/vendor/kreuzberg
+          mkdir -p packages/ruby/vendor
+          cp -R crates/kreuzberg packages/ruby/vendor/kreuzberg
+          rm -rf packages/ruby/vendor/kreuzberg/.fastembed_cache
+          rm -rf packages/ruby/vendor/kreuzberg/target
+          find packages/ruby/vendor/kreuzberg -name '*.swp' -delete
+          find packages/ruby/vendor/kreuzberg -name '*.bak' -delete
+          find packages/ruby/vendor/kreuzberg -name '*.tmp' -delete
+          find packages/ruby/vendor/kreuzberg -name '*~' -delete
+
+      - name: Build Ruby gem
+        shell: bash
+        run: |
+          cd packages/ruby
+          bundle exec rake build
+
+      - name: Show sccache stats
+        run: sccache --show-stats
+
+      - name: Upload gem
+        uses: actions/upload-artifact@v5
+        with:
+          name: gem-${{ matrix.platform }}-${{ matrix.ruby-version }}
+          path: packages/ruby/pkg/*.gem
+          retention-days: 7
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  test-ruby:
+    name: Ruby Tests (${{ matrix.os }}, Ruby ${{ matrix.ruby-version }})
+    needs: build-ruby-gem
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+            ruby-version: "3.3"
+          - os: ubuntu-latest
+            platform: linux-x64
+            ruby-version: "3.4"
+          - os: macos-latest
+            platform: macos-arm64
+            ruby-version: "3.3"
+          - os: macos-latest
+            platform: macos-arm64
+            ruby-version: "3.4"
+          - os: windows-latest
+            platform: windows-x64
+            ruby-version: "3.3"
+          - os: windows-latest
+            platform: windows-x64
+            ruby-version: "3.4"
+    runs-on: ${{ matrix.os }}
+    env:
+      RUSTC_WRAPPER: ""
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+          working-directory: packages/ruby
+
+      - name: Install rb_sys build helper
+        run: gem install rb_sys -v "~> 0.9"
+        shell: bash
+
+      - name: Download gem
+        uses: actions/download-artifact@v6
+        with:
+          name: gem-${{ matrix.platform }}-${{ matrix.ruby-version }}
+          path: packages/ruby/pkg/
+
+      - name: Install gem
+        shell: bash
+        run: |
+          cd packages/ruby
+          gem install pkg/kreuzberg-*.gem
+
+      - name: Run Ruby tests
+        run: |
+          cd packages/ruby
+          bundle exec rspec
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage Pdfium runtime
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: target/release
+
+      - name: Install Task
+        uses: ./.github/actions/install-task
+
+      - name: Run E2E tests
+        run: |
+          task e2e:ruby:test

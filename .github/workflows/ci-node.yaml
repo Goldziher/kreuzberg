@@ -1,0 +1,211 @@
+name: CI Node
+
+on:
+  push:
+    branches: [main]
+    # paths:
+    #   - 'crates/kreuzberg-node/**'
+    #   - 'packages/typescript/**'
+  pull_request:
+    branches: [main]
+    # paths:
+    #   - 'crates/kreuzberg-node/**'
+    #   - 'packages/typescript/**'
+
+concurrency:
+  group: ci-node-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  RUST_MIN_STACK: 16777216
+  PDFIUM_VERSION: "7529"
+  ORT_VERSION: "1.23.2"
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
+jobs:
+  build-and-smoke-node:
+    name: Node Build + Smoke (${{ matrix.target }})
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macos-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust with sccache
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: node-${{ matrix.platform }}
+          target: ${{ matrix.target }}
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Build Node bindings
+        shell: bash
+        run: |
+          cd crates/kreuzberg-node
+          pnpm install
+          pnpm exec napi build --platform --release --target ${{ matrix.target }}
+          pnpm exec napi artifacts
+          pnpm exec napi prepublish -t npm --no-gh-release
+          pnpm pack
+
+      - name: Show sccache stats
+        run: sccache --show-stats
+
+      - name: Upload Node bindings
+        uses: actions/upload-artifact@v5
+        with:
+          name: napi-${{ matrix.target }}
+          path: |
+            crates/kreuzberg-node/*.node
+            crates/kreuzberg-node/*.tgz
+          retention-days: 7
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+      - name: Smoke test Node.js bindings
+        uses: ./.github/actions/smoke-node
+        with:
+          package-tarball: crates/kreuzberg-node
+
+  test-typescript:
+    name: TypeScript Tests (Node ${{ matrix.node-version }}, ${{ matrix.os }})
+    needs: build-and-smoke-node
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node-version: "20"
+            target: x86_64-unknown-linux-gnu
+            coverage: true
+          - os: ubuntu-latest
+            node-version: "25"
+            target: x86_64-unknown-linux-gnu
+            coverage: false
+          - os: macos-latest
+            node-version: "20"
+            target: aarch64-apple-darwin
+            coverage: false
+          - os: macos-latest
+            node-version: "25"
+            target: aarch64-apple-darwin
+            coverage: false
+          - os: windows-latest
+            node-version: "20"
+            target: x86_64-pc-windows-msvc
+            coverage: false
+          - os: windows-latest
+            node-version: "25"
+            target: x86_64-pc-windows-msvc
+            coverage: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage PDFium runtime
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: packages/typescript
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Download Node bindings
+        uses: actions/download-artifact@v6
+        with:
+          name: napi-${{ matrix.target }}
+          path: crates/kreuzberg-node/
+
+      - name: Install Node bindings in workspace
+        run: |
+          cd crates/kreuzberg-node
+          pnpm install --filter kreuzberg...
+
+      - name: Run TypeScript tests
+        run: |
+          cd packages/typescript
+          if [ "${{ matrix.coverage }}" = "true" ]; then
+            pnpm test:coverage
+          else
+            pnpm test
+          fi
+
+      - name: Upload coverage
+        if: matrix.coverage
+        uses: deepsourcelabs/test-coverage-action@master
+        with:
+          key: typescript
+          coverage-file: packages/typescript/coverage/lcov.info
+          dsn: ${{ secrets.DEEPSOURCE_DSN }}
+
+      - name: Install Task
+        uses: ./.github/actions/install-task
+
+      - name: Run E2E tests
+        run: |
+          task e2e:ts:test

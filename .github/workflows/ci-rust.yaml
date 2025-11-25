@@ -1,0 +1,236 @@
+name: CI Rust
+
+on:
+  push:
+    branches: [main]
+    # paths:
+    #   - 'crates/**'
+    #   - 'tools/**'
+  pull_request:
+    branches: [main]
+    # paths:
+    #   - 'crates/**'
+    #   - 'tools/**'
+
+concurrency:
+  group: ci-rust-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  RUST_MIN_STACK: 16777216
+  PDFIUM_VERSION: "7529"
+  ORT_VERSION: "1.23.2"
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
+jobs:
+  rust-unit:
+    name: Rust Unit Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Cache Hugging Face models (fastembed)
+        uses: ./.github/actions/cache-hf-fastembed
+
+      - name: Setup Rust with sccache
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-unit-${{ matrix.os }}
+          target: ${{ matrix.target }}
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Run unit tests
+        run: cargo test --workspace --exclude kreuzberg-e2e-generator --all-features
+        shell: bash
+
+      - name: Show sccache stats
+        run: sccache --show-stats
+        shell: bash
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  rust-e2e:
+    name: Rust E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Cache Hugging Face models (fastembed)
+        uses: ./.github/actions/cache-hf-fastembed
+
+      - name: Setup Rust with sccache
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: rust-e2e
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Install Task
+        uses: ./.github/actions/install-task
+
+      - name: Run E2E tests
+        run: task e2e:rust:test
+        shell: bash
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  build-and-smoke-cli:
+    name: CLI Build + Smoke (${{ matrix.target }})
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup Rust with sccache
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: cli-${{ matrix.target }}
+          target: ${{ matrix.target }}
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Build CLI
+        run: cargo build -p kreuzberg-cli --release --target ${{ matrix.target }}
+        shell: bash
+
+      - name: Package CLI (Unix)
+        if: matrix.archive == 'tar.gz'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }} kreuzberg
+          mv kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }} ../../..
+        shell: bash
+
+      - name: Package CLI (Windows)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          cd target/${{ matrix.target }}/release
+          Compress-Archive -Path kreuzberg.exe -DestinationPath ../../../kreuzberg-cli-${{ matrix.target }}.zip
+
+      - name: Show sccache stats
+        run: sccache --show-stats
+        shell: bash
+
+      - name: Upload CLI binary
+        uses: actions/upload-artifact@v5
+        with:
+          name: cli-${{ matrix.target }}
+          path: kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }}
+          retention-days: 7
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+      - name: Extract and test CLI (Unix)
+        if: matrix.archive == 'tar.gz'
+        run: |
+          if [ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
+            if [ "${{ runner.os }}" = "macOS" ]; then
+              export DYLD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_LIBRARY_PATH:-}"
+            else
+              export LD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${LD_LIBRARY_PATH:-}"
+            fi
+          fi
+          tar xzf kreuzberg-cli-${{ matrix.target }}.tar.gz
+          chmod +x kreuzberg
+          ./kreuzberg --version
+          ./kreuzberg --help
+        shell: bash
+
+      - name: Extract and test CLI (Windows)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          if ($Env:KREUZBERG_PDFIUM_PREBUILT) {
+            $env:PATH = "$Env:KREUZBERG_PDFIUM_PREBUILT\bin;" + $env:PATH
+          }
+          Expand-Archive -Path "kreuzberg-cli-${{ matrix.target }}.zip" -DestinationPath .
+          ./kreuzberg.exe --version
+          ./kreuzberg.exe --help

@@ -1,4 +1,4 @@
-name: Docker Build & Test
+name: CI Docker Build & Test
 
 on:
   push:
@@ -9,7 +9,20 @@ on:
       - '.dockerignore'
       - 'crates/**'
       - 'scripts/test_docker.sh'
-      - '.github/workflows/docker.yml'
+      - '.github/workflows/ci-docker.yaml'
+      # - 'packages/**'
+      # - 'tools/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docker/**'
+      - '.dockerignore'
+      - 'crates/**'
+      - 'scripts/test_docker.sh'
+      - '.github/workflows/ci-docker.yaml'
+      # - 'packages/**'
+      # - 'tools/**'
   workflow_dispatch:
     inputs:
       skip_tests:
