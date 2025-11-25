@@ -85,6 +85,7 @@ jobs:
           cd crates/kreuzberg-node
           pnpm install
           pnpm exec napi build --platform --release --target ${{ matrix.target }}
+          mkdir -p artifacts
           pnpm exec napi artifacts --output-dir ./artifacts
           pnpm exec napi prepublish -t npm --no-gh-release
           pnpm pack
@@ -99,6 +100,7 @@ jobs:
           path: |
             crates/kreuzberg-node/*.node
             crates/kreuzberg-node/*.tgz
+            crates/kreuzberg-node/artifacts/**
           retention-days: 7
 
       - name: Cleanup Rust cache

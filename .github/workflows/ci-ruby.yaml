@@ -117,6 +117,22 @@ jobs:
           find packages/ruby/vendor/kreuzberg -name '*.bak' -delete
           find packages/ruby/vendor/kreuzberg -name '*.tmp' -delete
           find packages/ruby/vendor/kreuzberg -name '*~' -delete
+          core_version=$(awk -F '\"' '/^version =/ {print $2; exit}' crates/kreuzberg/Cargo.toml)
+          cat > packages/ruby/vendor/Cargo.toml <<'EOF'
+[workspace]
+members = ["kreuzberg"]
+
+[workspace.package]
+version = "__CORE_VERSION__"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Goldziher/kreuzberg"
+homepage = "https://kreuzberg.dev"
+EOF
+          sed -i.bak "s/__CORE_VERSION__/${core_version}/" packages/ruby/vendor/Cargo.toml
+          rm -f packages/ruby/vendor/Cargo.toml.bak
 
       - name: Build Ruby gem
         shell: bash

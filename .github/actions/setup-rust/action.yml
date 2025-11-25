@@ -117,6 +117,11 @@ runs:
         path: ~/.cargo/bin/cargo-llvm-cov
         key: cargo-llvm-cov-${{ runner.os }}
 
+    - name: Ensure sccache is on PATH
+      if: env.SCCACHE_PATH != ''
+      shell: bash
+      run: echo "${SCCACHE_PATH}" >> "$GITHUB_PATH"
+
     - name: Install cargo-llvm-cov if not cached
       shell: bash
       run: |

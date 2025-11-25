@@ -77,6 +77,11 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Clean previous wheel artifacts
         shell: bash
         run: |
@@ -86,6 +91,8 @@ jobs:
       - name: Build Python wheels
         uses: PyO3/maturin-action@v1
         env:
+          CARGO_BUILD_RUSTC_WRAPPER: ""
+          SCCACHE_GHA_ENABLED: "false"
           RUSTC_WRAPPER: ""
         with:
           working-directory: packages/python
