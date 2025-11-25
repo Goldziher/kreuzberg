@@ -76,6 +76,13 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Disable sccache on Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
+          echo "SCCACHE_GHA_ENABLED=false" >> "$GITHUB_ENV"
+
       - name: Run unit tests
         run: cargo test --workspace --exclude kreuzberg-e2e-generator --all-features
         shell: bash

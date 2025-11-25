@@ -48,6 +48,13 @@ jobs:
         with:
           cache-key-prefix: go-${{ matrix.os }}
 
+      - name: Disable sccache on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "RUSTC_WRAPPER=" >> $env:GITHUB_ENV
+          "SCCACHE_GHA_ENABLED=false" >> $env:GITHUB_ENV
+
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
