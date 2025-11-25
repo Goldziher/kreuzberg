@@ -137,7 +137,6 @@ PLATFORMS
   arm64-darwin-24
   ruby
   x64-mingw-ucrt
-  x64-mingw32
 
 DEPENDENCIES
   bundler (~> 2.0)

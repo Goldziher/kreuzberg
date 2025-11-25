@@ -5,7 +5,4 @@ source 'https://rubygems.org'
 gemspec
 
 gem 'pry', '~> 0.14', group: :development
-
-platforms :x86_64_linux, :arm64_darwin do
-  gem 'pry-byebug', '~> 3.10', group: :development
-end
+gem 'pry-byebug', '~> 3.10', group: :development, platforms: [:ruby, :mri]
