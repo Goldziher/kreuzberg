@@ -130,7 +130,7 @@ jobs:
           license = "MIT"
           repository = "https://github.com/Goldziher/kreuzberg"
           homepage = "https://kreuzberg.dev"
-EOF
+          EOF
           sed -i.bak "s/__CORE_VERSION__/${core_version}/" packages/ruby/vendor/Cargo.toml
           rm -f packages/ruby/vendor/Cargo.toml.bak
 
