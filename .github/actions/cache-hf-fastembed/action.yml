@@ -1,0 +1,83 @@
+name: Cache and Prefetch Hugging Face models for fastembed
+description: Cache Hugging Face model directories and optionally prefetch common fastembed models
+inputs:
+  cache-key-suffix:
+    description: Cache key suffix to differentiate model sets
+    required: false
+    default: fastembed-v1
+  fastembed-version:
+    description: fastembed crate version to use for prefetch
+    required: false
+    default: "5.3"
+  models:
+    description: Comma-separated list of fastembed models to prefetch (use 'default' for the default model)
+    required: false
+    default: "default,AllMiniLML6V2Q,BGEBaseENV15"
+  prefetch:
+    description: Whether to pre-download models
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Cache Hugging Face models
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/huggingface
+          ~/Library/Caches/huggingface
+          ~\AppData\Local\huggingface
+        key: hf-models-${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache-key-suffix }}
+        restore-keys: |
+          hf-models-${{ runner.os }}-${{ runner.arch }}-
+          hf-models-${{ runner.os }}-
+
+    - name: Prefetch fastembed models
+      if: inputs.prefetch == 'true'
+      shell: bash
+      env:
+        FASTEMBED_VERSION: ${{ inputs.fastembed-version }}
+        MODELS: ${{ inputs.models }}
+      run: |
+        set -euo pipefail
+        workdir="$(mktemp -d 2>/dev/null || mktemp -d -t fastembed)"
+        cd "$workdir"
+        cat > Cargo.toml <<'EOF'
+        [package]
+        name = "fastembed-prefetch"
+        version = "0.1.0"
+        edition = "2021"
+
+        [dependencies]
+        fastembed = { version = "FASTE_VER", default-features = false, features = ["hf-hub-native-tls", "ort-download-binaries"] }
+        EOF
+        sed -i.bak "s/FASTE_VER/${FASTEMBED_VERSION}/g" Cargo.toml || sed -i "s/FASTE_VER/${FASTEMBED_VERSION}/g" Cargo.toml
+
+        mkdir -p src
+        cat > src/main.rs <<'EOF'
+        use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+
+        fn main() {
+            let models = std::env::var("MODELS").unwrap_or_default();
+            for raw in models.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+                if raw.eq_ignore_ascii_case("default") {
+                    let _ = TextEmbedding::try_new(Default::default());
+                    continue;
+                }
+                let model = match raw {
+                    "AllMiniLML6V2Q" => Some(EmbeddingModel::AllMiniLML6V2Q),
+                    "BGEBaseENV15" => Some(EmbeddingModel::BGEBaseENV15),
+                    "BGELargeENV15" => Some(EmbeddingModel::BGELargeENV15),
+                    "MultilingualE5Base" => Some(EmbeddingModel::MultilingualE5Base),
+                    _ => None,
+                };
+                if let Some(m) = model {
+                    let _ = TextEmbedding::try_new(InitOptions::new(m));
+                } else {
+                    eprintln!("Skipping unknown model: {}", raw);
+                }
+            }
+        }
+        EOF
+
+        cargo run --release || true

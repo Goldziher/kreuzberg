@@ -1,0 +1,73 @@
+name: Setup OpenSSL
+description: Install and expose OpenSSL headers/libs across platforms
+runs:
+  using: composite
+  steps:
+    - name: Install OpenSSL (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y pkg-config libssl-dev build-essential
+
+    - name: Install OpenSSL (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        brew install openssl pkg-config
+        prefix="$(brew --prefix openssl@3 2>/dev/null || brew --prefix openssl 2>/dev/null || true)"
+        if [ -z "$prefix" ]; then
+          echo "Failed to locate Homebrew OpenSSL prefix" >&2
+          exit 1
+        fi
+        {
+          echo "OPENSSL_DIR=$prefix"
+          echo "OPENSSL_LIB_DIR=$prefix/lib"
+          echo "OPENSSL_INCLUDE_DIR=$prefix/include"
+          echo "PKG_CONFIG_PATH=$prefix/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+        } >> "$GITHUB_ENV"
+
+    - name: Install OpenSSL (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        choco install openssl -y
+        $opensslDirs = @(
+          "C:\Program Files\OpenSSL-Win64",
+          "C:\Program Files\OpenSSL",
+          "C:\ProgramData\chocolatey\lib\openssl\tools",
+          "C:\Strawberry\c"
+        )
+
+        $selected = $null
+        foreach ($dir in $opensslDirs) {
+          if (Test-Path $dir) {
+            $libPath = Join-Path $dir "lib"
+            $includePath = Join-Path $dir "include"
+            if (Test-Path $libPath -and Test-Path $includePath) {
+              $selected = $dir
+              break
+            }
+          }
+        }
+
+        if ($null -ne $selected) {
+          Write-Host "Using OpenSSL at $selected"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_DIR=$selected"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_LIB_DIR=$selected\lib"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_INCLUDE_DIR=$selected\include"
+        } else {
+          Write-Host "OpenSSL not found in standard locations, installing via vcpkg..."
+          vcpkg install openssl:x64-windows-static-md
+          $vcpkgRoot = "C:\vcpkg\installed\x64-windows-static-md"
+          if (-not (Test-Path $vcpkgRoot)) {
+            Write-Error "vcpkg OpenSSL installation not found at $vcpkgRoot"
+            exit 1
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_DIR=$vcpkgRoot"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_LIB_DIR=$vcpkgRoot\lib"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_INCLUDE_DIR=$vcpkgRoot\include"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_STATIC=1"
+        }
