@@ -109,7 +109,7 @@ rules:
   - content: Integration coverage is non-negotiable. Extend `tests/integration_test.rs`, reuse `tests/test_images/`, and keep consumer smoke tests in CI aligned with real-world usage. Tests must set `TESSDATA_PREFIX` when required.
     name: Testing Expectations
     priority: high
-  - content: CI runs all jobs in parallel for maximum speed - `validate` (Prek includes fmt + clippy), `unit-tests` (library tests only, no Tesseract), `integration-tests` (matrix on ubuntu/macos/windows with full OCR tests), and `smoke-test` (matrix on all platforms for downstream consumer verification). All jobs are independent and run concurrently. Keep `.github/workflows/ci.yaml` as the single source of truth.
+  - content: CI runs all jobs in parallel for maximum speed.
     name: CI Conventions
     priority: high
   - content: Public APIs belong in `src/api.rs` and should favour typed enums (`enums.rs`) and explicit configuration structs. Document usage in rustdoc, keep examples compiling, and avoid leaking raw pointers outside the crate.
