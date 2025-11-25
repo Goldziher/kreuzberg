@@ -73,16 +73,25 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: ${{ runner.os != 'Windows' }}
+          bundler-cache: false
           working-directory: packages/ruby
+
+      - name: Install Ruby deps
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd packages/ruby
+          bundle config set deployment false
+          bundle config set path vendor/bundle
+          bundle install --jobs 4
 
       - name: Install Ruby deps (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           cd packages/ruby
-          bundle config set path vendor/bundle
           bundle config set deployment false
+          bundle config set path vendor/bundle
           bundle install --jobs 4
 
       - name: Cache PDFium

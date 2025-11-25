@@ -77,8 +77,16 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Clean previous wheel artifacts
+        shell: bash
+        run: |
+          rm -rf target/wheels target/maturin
+          rm -f packages/python/kreuzberg/_internal_bindings.*
+
       - name: Build Python wheels
         uses: PyO3/maturin-action@v1
+        env:
+          RUSTC_WRAPPER: ""
         with:
           working-directory: packages/python
           command: build
