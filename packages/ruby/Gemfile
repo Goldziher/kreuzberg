@@ -6,4 +6,6 @@ gemspec
 
 gem 'pry', '~> 0.14', group: :development
 
-gem 'pry-byebug', '~> 3.10', group: :development unless Gem.win_platform?
+platforms :x86_64_linux, :arm64_darwin do
+  gem 'pry-byebug', '~> 3.10', group: :development
+end

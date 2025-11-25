@@ -73,8 +73,17 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: true
+          bundler-cache: ${{ runner.os != 'Windows' }}
           working-directory: packages/ruby
+
+      - name: Install Ruby deps (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd packages/ruby
+          bundle config set path vendor/bundle
+          bundle config set deployment false
+          bundle install --jobs 4
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
@@ -159,8 +168,17 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: true
+          bundler-cache: ${{ runner.os != 'Windows' }}
           working-directory: packages/ruby
+
+      - name: Install Ruby deps (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd packages/ruby
+          bundle config set path vendor/bundle
+          bundle config set deployment false
+          bundle install --jobs 4
 
       - name: Install rb_sys build helper
         run: gem install rb_sys -v "~> 0.9"
