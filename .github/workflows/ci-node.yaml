@@ -82,11 +82,18 @@ jobs:
         shell: bash
         run: |
           cd crates/kreuzberg-node
+          set -euo pipefail
           pnpm install
           pnpm exec napi build --platform --release --target ${{ matrix.target }}
           mkdir -p artifacts
           pnpm exec napi artifacts --output-dir ./artifacts
-          cp artifacts/*.node .
+          shopt -s nullglob globstar
+          artifacts=(artifacts/**/*.node)
+          if [ "${#artifacts[@]}" -eq 0 ]; then
+            echo "No .node artifacts produced under artifacts/" >&2
+            exit 1
+          fi
+          cp "${artifacts[@]}" .
           pnpm exec napi prepublish -t npm --no-gh-release
           pnpm pack
 

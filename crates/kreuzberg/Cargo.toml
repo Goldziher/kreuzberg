@@ -1,8 +1,8 @@
 [package]
 name = "kreuzberg"
 version = "4.0.0-rc.1"
-edition.workspace = true
-rust-version.workspace = true
+edition = "2024"
+rust-version = "1.85"
 authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
 description = "High-performance document intelligence library for Rust. Extract text, metadata, and structured data from PDFs, Office documents, images, and 50+ formats with async/sync APIs."
 license = "MIT"
@@ -112,7 +112,7 @@ ndarray = { version = "0.17.1", optional = true }
 kamadak-exif = { version = "0.6.1", optional = true }
 whatlang = { version = "0.18.0", optional = true }
 text-splitter = { version = "0.28.0", features = ["markdown"], optional = true }
-fastembed = { version = "5.3", default-features = false, features = ["hf-hub-native-tls", "ort-download-binaries"], optional = true }
+fastembed = { version = "5.3", default-features = false, features = ["hf-hub-rustls-tls", "ort-load-dynamic"], optional = true }
 unicode-normalization = { version = "0.1.25", optional = true }
 chardetng = { version = "0.1.17", optional = true }
 encoding_rs = { version = "0.8.35", optional = true }
