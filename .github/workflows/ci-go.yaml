@@ -75,13 +75,16 @@ jobs:
             $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
             $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
             if (-not $vsPath) { throw "MSVC not found via vswhere" }
+            $msvcRoot = Get-ChildItem -Directory -Path (Join-Path $vsPath "VC\Tools\MSVC") | Sort-Object Name -Descending | Select-Object -First 1
+            if (-not $msvcRoot) { throw "MSVC tools not found under $vsPath" }
+            $binPath = Join-Path $msvcRoot.FullName "bin\Hostx64\x64"
             $vcvars = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
             $envOutput = cmd /c "`"$vcvars`" ^&^& set"
             foreach ($line in $envOutput) {
               $parts = $line -split '=',2
               if ($parts.Length -eq 2) { [Environment]::SetEnvironmentVariable($parts[0], $parts[1]) }
             }
-            $env:PATH = "$ffiPath;$env:PATH"
+            $env:PATH = "$binPath;$ffiPath;$env:PATH"
             $env:LIB = "$ffiPath;$env:LIB"
             $env:CGO_LDFLAGS = "-L$ffiPath -lkreuzberg_ffi"
             $env:CGO_CFLAGS = "-I$workspace/crates/kreuzberg-ffi"

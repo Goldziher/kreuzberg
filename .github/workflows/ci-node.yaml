@@ -95,7 +95,12 @@ jobs:
             find . -maxdepth 4 -type f -name "*.node" || true
             exit 1
           fi
-          cp "${artifacts[@]}" .
+          for f in "${artifacts[@]}"; do
+            dest="./$(basename "$f")"
+            if [ "$f" != "$dest" ]; then
+              cp "$f" "$dest"
+            fi
+          done
           pnpm exec napi prepublish -t npm --no-gh-release
           pnpm pack
 
