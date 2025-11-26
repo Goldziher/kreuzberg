@@ -208,6 +208,11 @@ jobs:
           cd crates/kreuzberg-node
           pnpm install --filter kreuzberg...
 
+      - name: Add packaged Node binding to TypeScript workspace
+        run: |
+          cd packages/typescript
+          pnpm add --no-frozen-lockfile "file:../../crates/kreuzberg-node/kreuzberg-node-*.tgz"
+
       - name: Run TypeScript tests
         run: |
           cd packages/typescript

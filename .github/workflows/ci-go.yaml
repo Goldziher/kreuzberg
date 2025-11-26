@@ -84,15 +84,29 @@ jobs:
               $parts = $line -split '=',2
               if ($parts.Length -eq 2) { [Environment]::SetEnvironmentVariable($parts[0], $parts[1]) }
             }
-            $env:PATH = "$binPath;$ffiPath;$env:PATH"
+            $llvm = "C:\Program Files\LLVM\bin"
+            if (Test-Path "$llvm\clang-cl.exe") {
+              $env:CC = "$llvm\clang-cl.exe"
+              $env:CXX = "$llvm\clang-cl.exe"
+              $env:AR = "$llvm\llvm-ar.exe"
+              $env:NM = "$llvm\llvm-nm.exe"
+              $env:LD = "$llvm\lld-link.exe"
+              $env:RC = "$llvm\llvm-rc.exe"
+            } else {
+              $env:CC = "clang-cl"
+              $env:CXX = "clang-cl"
+              $env:AR = "llvm-ar"
+              $env:NM = "llvm-nm"
+              $env:LD = "lld-link"
+              $env:RC = "llvm-rc"
+            }
+            $env:PATH = "$llvm;$binPath;$ffiPath;$env:PATH"
             $env:LIB = "$ffiPath;$env:LIB"
             Remove-Item Env:CFLAGS -ErrorAction SilentlyContinue
             Remove-Item Env:CL -ErrorAction SilentlyContinue
             $env:CGO_LDFLAGS = "-L$ffiPath -lkreuzberg_ffi"
             $env:CGO_CFLAGS = "-I$workspace/crates/kreuzberg-ffi"
             $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
-            $env:CC = "clang-cl"
-            $env:CXX = "clang-cl"
           } else {
             $env:LD_LIBRARY_PATH = "$ffiPath;$env:LD_LIBRARY_PATH"
             $env:DYLD_LIBRARY_PATH = "$ffiPath;$env:DYLD_LIBRARY_PATH"
