@@ -86,8 +86,11 @@ jobs:
             }
             $env:PATH = "$binPath;$ffiPath;$env:PATH"
             $env:LIB = "$ffiPath;$env:LIB"
+            Remove-Item Env:CFLAGS -ErrorAction SilentlyContinue
+            Remove-Item Env:CL -ErrorAction SilentlyContinue
             $env:CGO_LDFLAGS = "-L$ffiPath -lkreuzberg_ffi"
             $env:CGO_CFLAGS = "-I$workspace/crates/kreuzberg-ffi"
+            $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
             $env:CC = "cl.exe"
             $env:CXX = "cl.exe"
           } else {

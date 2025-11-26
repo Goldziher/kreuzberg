@@ -85,6 +85,7 @@ jobs:
           set -euo pipefail
           pnpm install
           pnpm exec napi build --platform --release --target ${{ matrix.target }}
+          pnpm exec napi prepublish -t npm --no-gh-release
           mkdir -p artifacts
           # Collect artifacts from napi (if produced) and fallback to build outputs.
           pnpm exec napi artifacts --output-dir ./artifacts || true
@@ -101,7 +102,6 @@ jobs:
               cp "$f" "$dest"
             fi
           done
-          pnpm exec napi prepublish -t npm --no-gh-release
           pnpm pack
 
       - name: Upload Node bindings
