@@ -83,6 +83,8 @@ tokio = { version = "1.48.0", features = ["process", "fs", "rt", "rt-multi-threa
 uuid = { version = "1.18.1", features = ["v4"] }
 indexmap = "2.12.1"
 tracing = "0.1"
+# Only build profiling tooling on non-Windows targets (pprof depends on Unix APIs)
+[target.'cfg(not(target_os = "windows"))'.dependencies]
 pprof = { version = "0.15.0", features = ["flamegraph"], optional = true }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 base64-simd = "0.8"
