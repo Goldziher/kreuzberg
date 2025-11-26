@@ -76,7 +76,12 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Run unit tests
-        run: cargo test --workspace --exclude kreuzberg-e2e-generator --all-features
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cargo test --workspace --exclude kreuzberg-e2e-generator --no-default-features --features "full,server,cli"
+          else
+            cargo test --workspace --exclude kreuzberg-e2e-generator --all-features
+          fi
         shell: bash
 
       - name: Cleanup Rust cache
