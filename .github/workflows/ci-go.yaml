@@ -73,7 +73,10 @@ jobs:
           if ($IsWindows) {
             $env:PATH = "$ffiPath;$env:PATH"
             $env:LIB = "$ffiPath;$env:LIB"
-            $env:CGO_LDFLAGS = "-L$ffiPath"
+            $env:CGO_LDFLAGS = "-L$ffiPath -lkreuzberg_ffi"
+            $env:CGO_CFLAGS = "-I$($ffiPath | Split-Path)/kreuzberg-ffi"
+            $env:CC = "cl.exe"
+            $env:CXX = "cl.exe"
           } else {
             $env:LD_LIBRARY_PATH = "$ffiPath;$env:LD_LIBRARY_PATH"
             $env:DYLD_LIBRARY_PATH = "$ffiPath;$env:DYLD_LIBRARY_PATH"
