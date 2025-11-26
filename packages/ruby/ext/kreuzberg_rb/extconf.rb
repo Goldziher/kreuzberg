@@ -31,5 +31,6 @@ native_dir = 'native'
 
 create_rust_makefile('kreuzberg_rb') do |config|
   config.profile = default_profile.to_sym
-  config.ext_dir = 'lib'
+  # Build from the actual Rust crate location (native/) so Cargo.toml is resolvable in packaged gems
+  config.ext_dir = native_dir
 end
