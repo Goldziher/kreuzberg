@@ -27,8 +27,6 @@ env:
   PDFIUM_VERSION: "7529"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
 
 jobs:
   validate:
@@ -41,6 +39,7 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
+          use-sccache: false
           cache-key-prefix: validate
 
       - name: Setup OpenSSL

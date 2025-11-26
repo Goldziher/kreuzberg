@@ -2,12 +2,8 @@
 # This file configures build caching and compilation settings
 
 [build]
-# Use sccache for faster incremental compilation
-# Install: cargo install sccache
-# Environment: RUSTC_WRAPPER=sccache (auto-detected when installed)
-rustc-wrapper = "sccache"
-
-# Incremental compilation for faster rebuilds
+# Enable incremental builds locally for faster iterations.
+# CI disables sccache; set RUSTC_WRAPPER manually if you want it.
 incremental = true
 
 [target.x86_64-unknown-linux-gnu]

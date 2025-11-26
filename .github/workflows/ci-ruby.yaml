@@ -25,8 +25,6 @@ env:
   PDFIUM_VERSION: "7529"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
 
 jobs:
   build-ruby-gem:
@@ -64,9 +62,10 @@ jobs:
       - name: Setup OpenSSL
         uses: ./.github/actions/setup-openssl
 
-      - name: Setup Rust with sccache
+      - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
+          use-sccache: false
           cache-key-prefix: ruby-${{ matrix.platform }}
 
       - name: Setup Ruby
@@ -143,9 +142,6 @@ jobs:
         run: |
           cd packages/ruby
           bundle exec rake build
-
-      - name: Show sccache stats
-        run: sccache --show-stats
 
       - name: Upload gem
         uses: actions/upload-artifact@v5

@@ -25,8 +25,6 @@ env:
   PDFIUM_VERSION: "7529"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
 
 jobs:
   rust-unit:
@@ -55,9 +53,10 @@ jobs:
       - name: Cache Hugging Face models (fastembed)
         uses: ./.github/actions/cache-hf-fastembed
 
-      - name: Setup Rust with sccache
+      - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
+          use-sccache: false
           cache-key-prefix: rust-unit-${{ matrix.os }}
           target: ${{ matrix.target }}
 
@@ -76,19 +75,8 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
-      - name: Disable sccache on Windows
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
-          echo "SCCACHE_GHA_ENABLED=false" >> "$GITHUB_ENV"
-
       - name: Run unit tests
         run: cargo test --workspace --exclude kreuzberg-e2e-generator --all-features
-        shell: bash
-
-      - name: Show sccache stats
-        run: sccache --show-stats
         shell: bash
 
       - name: Cleanup Rust cache
@@ -111,9 +99,10 @@ jobs:
       - name: Cache Hugging Face models (fastembed)
         uses: ./.github/actions/cache-hf-fastembed
 
-      - name: Setup Rust with sccache
+      - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
+          use-sccache: false
           cache-key-prefix: rust-e2e
 
       - name: Cache PDFium
@@ -165,9 +154,10 @@ jobs:
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
-      - name: Setup Rust with sccache
+      - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
+          use-sccache: false
           cache-key-prefix: cli-${{ matrix.target }}
           target: ${{ matrix.target }}
 
@@ -199,10 +189,6 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           Compress-Archive -Path kreuzberg.exe -DestinationPath ../../../kreuzberg-cli-${{ matrix.target }}.zip
-
-      - name: Show sccache stats
-        run: sccache --show-stats
-        shell: bash
 
       - name: Upload CLI binary
         uses: actions/upload-artifact@v5

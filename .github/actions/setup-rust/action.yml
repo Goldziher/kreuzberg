@@ -21,6 +21,10 @@ inputs:
     description: Whether to maximize build space on Linux (removes .NET, Android, etc.)
     required: false
     default: 'true'
+  use-sccache:
+    description: Enable sccache as the Rust compiler wrapper
+    required: false
+    default: 'false'
 outputs:
   cache-hit:
     description: Whether the Rust cache was restored
@@ -54,14 +58,20 @@ runs:
         target: ${{ inputs.target }}
 
     - name: Setup sccache
+      if: inputs.use-sccache == 'true'
       uses: mozilla-actions/sccache-action@v0.0.9
 
-    - name: Configure Rust lint and sccache flags
+    - name: Configure Rust flags
       shell: bash
       run: |
         set -euo pipefail
-        echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
-        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+        if [ "${{ inputs.use-sccache }}" = "true" ]; then
+          echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+        else
+          echo "SCCACHE_GHA_ENABLED=false" >> "$GITHUB_ENV"
+          echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
+        fi
         base="${RUSTFLAGS:-"-D warnings -A unpredictable-function-pointer-comparisons"}"
         if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc -W fn_ptr_eq - 2>&1)"; then
           :
@@ -118,7 +128,7 @@ runs:
         key: cargo-llvm-cov-${{ runner.os }}
 
     - name: Ensure sccache is on PATH
-      if: env.SCCACHE_PATH != ''
+      if: inputs.use-sccache == 'true' && env.SCCACHE_PATH != ''
       shell: bash
       run: echo "${SCCACHE_PATH}" >> "$GITHUB_PATH"
 

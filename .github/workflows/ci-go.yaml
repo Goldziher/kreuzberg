@@ -25,8 +25,6 @@ env:
   PDFIUM_VERSION: "7529"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
 
 jobs:
   build-go:
@@ -43,17 +41,11 @@ jobs:
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
-      - name: Setup Rust with sccache
+      - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
+          use-sccache: false
           cache-key-prefix: go-${{ matrix.os }}
-
-      - name: Disable sccache on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          "RUSTC_WRAPPER=" >> $env:GITHUB_ENV
-          "SCCACHE_GHA_ENABLED=false" >> $env:GITHUB_ENV
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -81,9 +73,6 @@ jobs:
           $env:DYLD_LIBRARY_PATH = "$PWD/../../target/release;$env:DYLD_LIBRARY_PATH"
           go build -v ./...
         shell: pwsh
-
-      - name: Show sccache stats
-        run: sccache --show-stats
 
       - name: Upload FFI library
         uses: actions/upload-artifact@v5
@@ -117,6 +106,7 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
+          use-sccache: false
           cache-key-prefix: go-tests-${{ matrix.os }}
 
       - name: Setup Go

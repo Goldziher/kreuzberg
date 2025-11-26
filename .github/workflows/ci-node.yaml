@@ -25,8 +25,6 @@ env:
   PDFIUM_VERSION: "7529"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
 
 jobs:
   build-and-smoke-node:
@@ -55,9 +53,10 @@ jobs:
       - name: Setup OpenSSL
         uses: ./.github/actions/setup-openssl
 
-      - name: Setup Rust with sccache
+      - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
+          use-sccache: false
           cache-key-prefix: node-${{ matrix.platform }}
           target: ${{ matrix.target }}
 
@@ -90,9 +89,6 @@ jobs:
           cp artifacts/*.node .
           pnpm exec napi prepublish -t npm --no-gh-release
           pnpm pack
-
-      - name: Show sccache stats
-        run: sccache --show-stats
 
       - name: Upload Node bindings
         uses: actions/upload-artifact@v5
