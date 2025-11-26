@@ -86,11 +86,12 @@ jobs:
           pnpm install
           pnpm exec napi build --platform --release --target ${{ matrix.target }}
           mkdir -p artifacts
-          pnpm exec napi artifacts --output-dir ./artifacts
+          # Collect artifacts from napi (if produced) and fallback to target outputs.
+          pnpm exec napi artifacts --output-dir ./artifacts || true
           shopt -s nullglob globstar
-          artifacts=(artifacts/**/*.node)
+          artifacts=(artifacts/**/*.node target/**/release/*.node)
           if [ "${#artifacts[@]}" -eq 0 ]; then
-            echo "No .node artifacts produced under artifacts/" >&2
+            echo "No .node artifacts produced under artifacts/ or target/**/release" >&2
             exit 1
           fi
           cp "${artifacts[@]}" .

@@ -69,8 +69,15 @@ jobs:
       - name: Build Go bindings
         run: |
           cd packages/go
-          $env:LD_LIBRARY_PATH = "$PWD/../../target/release;$env:LD_LIBRARY_PATH"
-          $env:DYLD_LIBRARY_PATH = "$PWD/../../target/release;$env:DYLD_LIBRARY_PATH"
+          $ffiPath = "$PWD/../../target/release"
+          if ($IsWindows) {
+            $env:PATH = "$ffiPath;$env:PATH"
+            $env:LIB = "$ffiPath;$env:LIB"
+            $env:CGO_LDFLAGS = "-L$ffiPath"
+          } else {
+            $env:LD_LIBRARY_PATH = "$ffiPath;$env:LD_LIBRARY_PATH"
+            $env:DYLD_LIBRARY_PATH = "$ffiPath;$env:DYLD_LIBRARY_PATH"
+          }
           go build -v ./...
         shell: pwsh
 
