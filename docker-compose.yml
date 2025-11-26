@@ -33,6 +33,26 @@ services:
     restart: always
     stop_grace_period: 2m
 
+  windows-build:
+    build:
+      context: .
+      dockerfile: Dockerfile.windows-build
+    container_name: kreuzberg-windows-build
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+    environment:
+      CARGO_TERM_COLOR: always
+    command: >
+      cross test --target x86_64-pc-windows-gnu
+      --workspace
+      --exclude kreuzberg-e2e-generator
+      --all-features
+    tty: true
+    restart: "no"
+
 volumes:
   cargo-cache:
   target-cache:
