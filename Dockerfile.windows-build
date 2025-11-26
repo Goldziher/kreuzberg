@@ -1,7 +1,0 @@
-# Windows (GNU) cross-build/test image using cross-rs
-FROM ghcr.io/cross-rs/x86_64-pc-windows-gnu:0.2.5
-
-WORKDIR /workspace
-
-# Default command is a no-op; override via docker compose
-CMD ["bash"]
