@@ -103,6 +103,15 @@ jobs:
             fi
           done
           pnpm pack
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            pkg_tgz=$(ls kreuzberg-node-*.tgz | head -n1)
+            if [[ -f "kreuzberg-node.linux-x64-gnu.node" && -n "$pkg_tgz" ]]; then
+              tmpdir=$(mktemp -d)
+              tar xzf "$pkg_tgz" -C "$tmpdir"
+              cp "kreuzberg-node.linux-x64-gnu.node" "$tmpdir/package/"
+              tar czf "$pkg_tgz" -C "$tmpdir" package
+            fi
+          fi
 
       - name: Upload Node bindings
         uses: actions/upload-artifact@v5
