@@ -89,9 +89,10 @@ jobs:
           # Collect artifacts from napi (if produced) and fallback to build outputs.
           pnpm exec napi artifacts --output-dir ./artifacts || true
           shopt -s nullglob globstar
-          artifacts=(artifacts/**/*.node npm/**/*.node target/**/release/*.node ./*.node)
+          mapfile -t artifacts < <(find artifacts npm target . -maxdepth 6 -type f -name "*.node")
           if [ "${#artifacts[@]}" -eq 0 ]; then
             echo "No .node artifacts produced under artifacts/, npm/**/, target/**/release, or workspace root" >&2
+            find . -maxdepth 4 -type f -name "*.node" || true
             exit 1
           fi
           cp "${artifacts[@]}" .

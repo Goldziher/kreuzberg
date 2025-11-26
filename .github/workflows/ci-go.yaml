@@ -72,6 +72,15 @@ jobs:
           $ffiPath = "$PWD/../../target/release"
           $workspace = Resolve-Path "$PWD/../.."
           if ($IsWindows) {
+            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+            $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+            if (-not $vsPath) { throw "MSVC not found via vswhere" }
+            $vcvars = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
+            $envOutput = cmd /c "`"$vcvars`" ^&^& set"
+            foreach ($line in $envOutput) {
+              $parts = $line -split '=',2
+              if ($parts.Length -eq 2) { [Environment]::SetEnvironmentVariable($parts[0], $parts[1]) }
+            }
             $env:PATH = "$ffiPath;$env:PATH"
             $env:LIB = "$ffiPath;$env:LIB"
             $env:CGO_LDFLAGS = "-L$ffiPath -lkreuzberg_ffi"
