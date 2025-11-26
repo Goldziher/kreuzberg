@@ -70,11 +70,12 @@ jobs:
         run: |
           cd packages/go
           $ffiPath = "$PWD/../../target/release"
+          $workspace = Resolve-Path "$PWD/../.."
           if ($IsWindows) {
             $env:PATH = "$ffiPath;$env:PATH"
             $env:LIB = "$ffiPath;$env:LIB"
             $env:CGO_LDFLAGS = "-L$ffiPath -lkreuzberg_ffi"
-            $env:CGO_CFLAGS = "-I$($ffiPath | Split-Path)/kreuzberg-ffi"
+            $env:CGO_CFLAGS = "-I$workspace/crates/kreuzberg-ffi"
             $env:CC = "cl.exe"
             $env:CXX = "cl.exe"
           } else {
