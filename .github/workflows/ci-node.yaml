@@ -209,6 +209,7 @@ jobs:
           pnpm install --filter kreuzberg...
 
       - name: Add packaged Node binding to TypeScript workspace
+        shell: bash
         run: |
           cd packages/typescript
           pkg=$(ls ../../crates/kreuzberg-node/kreuzberg-node-*.tgz | head -n 1)
