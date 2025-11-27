@@ -1527,9 +1527,10 @@ export function detectMimeType(bytes: Buffer): string {
  * if extension-based detection fails.
  *
  * @param path - Path to the file (string)
+ * @param checkExists - Whether to verify file existence (default: true)
  * @returns The detected MIME type string
  *
- * @throws {Error} If file doesn't exist
+ * @throws {Error} If file doesn't exist (when checkExists is true)
  * @throws {Error} If MIME type cannot be determined from path/extension
  * @throws {Error} If extension is unknown
  *
@@ -1545,9 +1546,9 @@ export function detectMimeType(bytes: Buffer): string {
  * console.log(mimeType2); // 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
  * ```
  */
-export function detectMimeTypeFromPath(path: string): string {
+export function detectMimeTypeFromPath(path: string, checkExists?: boolean): string {
 	const binding = getBinding();
-	return binding.detectMimeTypeFromPath(path);
+	return binding.detectMimeTypeFromPath(path, checkExists);
 }
 
 /**

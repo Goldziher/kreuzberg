@@ -220,7 +220,37 @@ jobs:
           pnpm add "file:$pkg"
 
       - name: Run TypeScript tests
+        shell: bash
         run: |
+          # Set library paths for PDFium and ONNX Runtime
+          if [[ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]]; then
+            case "${RUNNER_OS:-unknown}" in
+              Linux)
+                export LD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${LD_LIBRARY_PATH:-}"
+                ;;
+              macOS)
+                export DYLD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_LIBRARY_PATH:-}"
+                export DYLD_FALLBACK_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+                ;;
+              Windows)
+                export PATH="$KREUZBERG_PDFIUM_PREBUILT/bin;${PATH:-}"
+                ;;
+            esac
+          fi
+          if [[ -n "${ORT_LIB_LOCATION:-}" ]]; then
+            case "${RUNNER_OS:-unknown}" in
+              Linux)
+                export LD_LIBRARY_PATH="$ORT_LIB_LOCATION:${LD_LIBRARY_PATH:-}"
+                ;;
+              macOS)
+                export DYLD_LIBRARY_PATH="$ORT_LIB_LOCATION:${DYLD_LIBRARY_PATH:-}"
+                export DYLD_FALLBACK_LIBRARY_PATH="$ORT_LIB_LOCATION:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+                ;;
+              Windows)
+                export PATH="$ORT_LIB_LOCATION;${PATH:-}"
+                ;;
+            esac
+          fi
           cd packages/typescript
           if [ "${{ matrix.coverage }}" = "true" ]; then
             pnpm test:coverage
@@ -240,5 +270,35 @@ jobs:
         uses: ./.github/actions/install-task
 
       - name: Run E2E tests
+        shell: bash
         run: |
+          # Set library paths for PDFium and ONNX Runtime
+          if [[ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]]; then
+            case "${RUNNER_OS:-unknown}" in
+              Linux)
+                export LD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${LD_LIBRARY_PATH:-}"
+                ;;
+              macOS)
+                export DYLD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_LIBRARY_PATH:-}"
+                export DYLD_FALLBACK_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+                ;;
+              Windows)
+                export PATH="$KREUZBERG_PDFIUM_PREBUILT/bin;${PATH:-}"
+                ;;
+            esac
+          fi
+          if [[ -n "${ORT_LIB_LOCATION:-}" ]]; then
+            case "${RUNNER_OS:-unknown}" in
+              Linux)
+                export LD_LIBRARY_PATH="$ORT_LIB_LOCATION:${LD_LIBRARY_PATH:-}"
+                ;;
+              macOS)
+                export DYLD_LIBRARY_PATH="$ORT_LIB_LOCATION:${DYLD_LIBRARY_PATH:-}"
+                export DYLD_FALLBACK_LIBRARY_PATH="$ORT_LIB_LOCATION:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+                ;;
+              Windows)
+                export PATH="$ORT_LIB_LOCATION;${PATH:-}"
+                ;;
+            esac
+          fi
           task e2e:ts:test

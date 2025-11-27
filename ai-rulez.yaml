@@ -176,13 +176,13 @@ sections:
 
       **Critical**: Core logic lives in Rust. Ruby only for bindings/wrappers. If core logic needed, coordinate with rust-engineer.
 
-  - name: Java 22+ with FFM API
+  - name: Java 25 with FFM API
     priority: high
     content: |
-      **Java 22+ · FFM API · Checkstyle · PMD · JUnit 5 · Maven/Gradle**
+      **Java 25 · FFM API · Checkstyle · PMD · JUnit 5 · Maven/Gradle**
 
-      - Java 22+ exclusively; FFM API for native interop, sealed classes, records, pattern matching
-      - Build: Maven (pom.xml) or Gradle (build.gradle.kts); compiler release=22
+      - Java 25 exclusively; FFM API for native interop, sealed classes, records, pattern matching
+      - Build: Maven (pom.xml) or Gradle (build.gradle.kts); compiler release=25
       - JUnit 5: @Nested classes, @ParameterizedTest, AssertJ fluent assertions, 80%+ coverage
       - Checkstyle: 4-space indent, line ≤120 chars, Javadoc on public APIs
       - PMD: UnusedVariable, EmptyCatchBlock, AvoidDuplicateLiterals enabled
@@ -195,7 +195,7 @@ sections:
     content: |
       **Role**: Java bindings for Kreuzberg Rust core. Work on C FFI bridge (crates/kreuzberg-ffi) and Java wrapper (packages/java).
 
-      **Scope**: Java 22 Foreign Function & Memory API (FFM/Panama), Java-idiomatic API, JUnit 5 tests, Javadoc.
+      **Scope**: Java 25 Foreign Function & Memory API (FFM/Panama), Java-idiomatic API, JUnit 5 tests, Javadoc.
 
       **Architecture**: Java FFM API → kreuzberg-ffi (C library) → Rust core. No JNI, modern Foreign Function API.
 
@@ -318,6 +318,30 @@ sections:
       - Global state - dependency injection
       - f-strings in logging - structured key=value logging
 
+  - name: Agent Selection & Usage Guidelines
+    priority: critical
+    content: |
+      **When to use agents**: Use the Task tool to spawn specialized agents for focused, language-specific work. Agents provide domain expertise and follow language-specific conventions.
+
+      **Agent selection rules**:
+      - **Rust core work** → rust-core-engineer (core library, extraction logic, plugins)
+      - **Python bindings** → python-bindings-engineer (PyO3 FFI, Python wrappers, EasyOCR/PaddleOCR)
+      - **TypeScript bindings** → typescript-bindings-engineer (NAPI-RS FFI, TS SDK)
+      - **Ruby bindings** → ruby-bindings-engineer (Magnus FFI, Ruby gem)
+      - **Java bindings** → java-bindings-engineer (FFM API, Java wrappers)
+      - **Go bindings** → go-bindings-engineer (cgo FFI, Go SDK)
+      - **Testing tasks** → test-automation-engineer (unit/integration/E2E across all languages)
+      - **Code review** → code-reviewer (quality, security, compliance checks)
+      - **Architecture/planning** → polyglot-architect (FFI design, multi-language coordination)
+
+      **Multi-language tasks**: If work spans multiple languages (e.g., Rust core + bindings), spawn multiple agents in parallel when possible.
+
+      **Performance**: All implementation agents use haiku (fast, cost-effective). Only polyglot-architect uses sonnet for strategic planning.
+
+      **Agent coordination**: Rust-first principle - core logic goes in rust-core-engineer first, then binding engineers expose through language-idiomatic APIs. Binding engineers should coordinate with rust-core-engineer for shared logic.
+
+      **When NOT to use agents**: Simple edits, single-file changes, or tasks you can complete directly without specialized domain knowledge.
+
 agents:
   - name: polyglot-architect
     description: System design and multi-language architecture decisions
@@ -343,7 +367,7 @@ agents:
       **Principles**: Never .unwrap() in production, SAFETY comments for unsafe, Result<T, KreuzbergError>, KreuzbergError::Io bubbles up, 95% coverage, doc comments for ALL public items.
 
       **Key**: New features go in Rust core first, then expose through bindings.
-    model: sonnet
+    model: haiku
 
   - name: python-bindings-engineer
     description: PyO3 bindings and Python wrapper development
@@ -390,7 +414,7 @@ agents:
     system_prompt: |
       **Role**: Java bindings for Kreuzberg Rust core. Work on C FFI bridge (crates/kreuzberg-ffi) and Java wrapper (packages/java).
 
-      **Scope**: Java 22 Foreign Function & Memory API (FFM/Panama), Java-idiomatic API, JUnit 5 tests, Javadoc.
+      **Scope**: Java 25 Foreign Function & Memory API (FFM/Panama), Java-idiomatic API, JUnit 5 tests, Javadoc.
 
       **Architecture**: Java FFM API → kreuzberg-ffi (C library) → Rust core. No JNI, modern Foreign Function API.
 

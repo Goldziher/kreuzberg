@@ -404,11 +404,11 @@ mod tests {
         // Ensure no leftover plugins from other tests
         {
             let registry = crate::plugins::registry::get_post_processor_registry();
-            registry.write().unwrap().clear();
+            registry.write().unwrap().shutdown_all().unwrap();
         }
         {
             let registry = crate::plugins::registry::get_validator_registry();
-            registry.write().unwrap().clear();
+            registry.write().unwrap().shutdown_all().unwrap();
         }
 
         let result = ExtractionResult {
