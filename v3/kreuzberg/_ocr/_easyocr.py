@@ -47,9 +47,6 @@ def _import_easyocr() -> tuple[Any, Any]:
     if easyocr is not None:
         return easyocr, torch
 
-    if not HAS_EASYOCR and easyocr is None:
-        return None, None
-
     try:
         import easyocr as _easyocr  # noqa: PLC0415
 
