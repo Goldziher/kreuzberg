@@ -107,9 +107,11 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $compat = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include\msvc_compat"
+          $includeRoot = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include"
+          $compat = "$includeRoot\msvc_compat"
+          $includeRoot = $includeRoot -replace '\\','/'
           $compatForward = $compat -replace '\\','/'
-          $extra = "-I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math"
+          $extra = "-I$includeRoot -I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math"
           Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=$extra"
           Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=$extra"
           Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=$extra"
@@ -256,9 +258,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $compat = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include\msvc_compat"
+          $includeRoot = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include"
+          $compat = "$includeRoot\msvc_compat"
+          $includeRoot = $includeRoot -replace '\\','/'
           $compatForward = $compat -replace '\\','/'
-          $extra = "-I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math"
+          $extra = "-I$includeRoot -I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math"
           Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=$extra"
           Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=$extra"
           Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=$extra"
