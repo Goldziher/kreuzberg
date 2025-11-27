@@ -400,6 +400,17 @@ mod tests {
         {
             let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
         } // Drop guard before async operations
+
+        // Ensure no leftover plugins from other tests
+        {
+            let registry = crate::plugins::registry::get_post_processor_registry();
+            registry.write().unwrap().clear();
+        }
+        {
+            let registry = crate::plugins::registry::get_validator_registry();
+            registry.write().unwrap().clear();
+        }
+
         let result = ExtractionResult {
             content: String::new(),
             mime_type: "text/plain".to_string(),
