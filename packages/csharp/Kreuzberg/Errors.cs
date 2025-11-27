@@ -37,7 +37,7 @@ public class KreuzbergException : Exception, IKreuzbergError
 public class KreuzbergValidationException : KreuzbergException
 {
     public KreuzbergValidationException(string message, Exception? inner = null)
-        : base(KreuzbergErrorKind.Validation, PrefixMessage(message, "Validation error"), inner)
+        : base(KreuzbergErrorKind.Validation, ErrorMapper.PrefixMessage(message, "Validation error"), inner)
     {
     }
 }
@@ -45,7 +45,7 @@ public class KreuzbergValidationException : KreuzbergException
 public class KreuzbergParsingException : KreuzbergException
 {
     public KreuzbergParsingException(string message, Exception? inner = null)
-        : base(KreuzbergErrorKind.Parsing, PrefixMessage(message, "Parsing error"), inner)
+        : base(KreuzbergErrorKind.Parsing, ErrorMapper.PrefixMessage(message, "Parsing error"), inner)
     {
     }
 }
@@ -53,7 +53,7 @@ public class KreuzbergParsingException : KreuzbergException
 public class KreuzbergOcrException : KreuzbergException
 {
     public KreuzbergOcrException(string message, Exception? inner = null)
-        : base(KreuzbergErrorKind.Ocr, PrefixMessage(message, "OCR error"), inner)
+        : base(KreuzbergErrorKind.Ocr, ErrorMapper.PrefixMessage(message, "OCR error"), inner)
     {
     }
 }
@@ -61,7 +61,7 @@ public class KreuzbergOcrException : KreuzbergException
 public class KreuzbergCacheException : KreuzbergException
 {
     public KreuzbergCacheException(string message, Exception? inner = null)
-        : base(KreuzbergErrorKind.Cache, PrefixMessage(message, "Cache error"), inner)
+        : base(KreuzbergErrorKind.Cache, ErrorMapper.PrefixMessage(message, "Cache error"), inner)
     {
     }
 }
@@ -69,7 +69,7 @@ public class KreuzbergCacheException : KreuzbergException
 public class KreuzbergImageProcessingException : KreuzbergException
 {
     public KreuzbergImageProcessingException(string message, Exception? inner = null)
-        : base(KreuzbergErrorKind.ImageProcessing, PrefixMessage(message, "Image processing error"), inner)
+        : base(KreuzbergErrorKind.ImageProcessing, ErrorMapper.PrefixMessage(message, "Image processing error"), inner)
     {
     }
 }
@@ -77,7 +77,7 @@ public class KreuzbergImageProcessingException : KreuzbergException
 public class KreuzbergSerializationException : KreuzbergException
 {
     public KreuzbergSerializationException(string message, Exception? inner = null)
-        : base(KreuzbergErrorKind.Serialization, PrefixMessage(message, "Serialization error"), inner)
+        : base(KreuzbergErrorKind.Serialization, ErrorMapper.PrefixMessage(message, "Serialization error"), inner)
     {
     }
 }
@@ -87,7 +87,7 @@ public class KreuzbergMissingDependencyException : KreuzbergException
     public string Dependency { get; }
 
     public KreuzbergMissingDependencyException(string dependency, string message, Exception? inner = null)
-        : base(KreuzbergErrorKind.MissingDependency, PrefixMessage(message, $"Missing dependency: {dependency}"), inner)
+        : base(KreuzbergErrorKind.MissingDependency, ErrorMapper.PrefixMessage(message, $"Missing dependency: {dependency}"), inner)
     {
         Dependency = dependency;
     }
@@ -98,7 +98,7 @@ public class KreuzbergPluginException : KreuzbergException
     public string PluginName { get; }
 
     public KreuzbergPluginException(string pluginName, string message, Exception? inner = null)
-        : base(KreuzbergErrorKind.Plugin, PrefixMessage(message, "Plugin error"), inner)
+        : base(KreuzbergErrorKind.Plugin, ErrorMapper.PrefixMessage(message, "Plugin error"), inner)
     {
         PluginName = pluginName;
     }
@@ -109,7 +109,7 @@ public class KreuzbergUnsupportedFormatException : KreuzbergException
     public string Format { get; }
 
     public KreuzbergUnsupportedFormatException(string format, string message, Exception? inner = null)
-        : base(KreuzbergErrorKind.UnsupportedFormat, PrefixMessage(message, $"Unsupported format: {format}"), inner)
+        : base(KreuzbergErrorKind.UnsupportedFormat, ErrorMapper.PrefixMessage(message, $"Unsupported format: {format}"), inner)
     {
         Format = format;
     }
@@ -120,7 +120,7 @@ public class KreuzbergIOException : IOException, IKreuzbergError
     public KreuzbergErrorKind Kind => KreuzbergErrorKind.Io;
 
     public KreuzbergIOException(string message, Exception? inner = null)
-        : base(PrefixMessage(message, "IO error"), inner)
+        : base(ErrorMapper.PrefixMessage(message, "IO error"), inner)
     {
     }
 }
@@ -130,7 +130,7 @@ public class KreuzbergRuntimeException : Exception, IKreuzbergError
     public KreuzbergErrorKind Kind => KreuzbergErrorKind.Runtime;
 
     public KreuzbergRuntimeException(string message, Exception? inner = null)
-        : base(PrefixMessage(message, "Runtime error"), inner)
+        : base(ErrorMapper.PrefixMessage(message, "Runtime error"), inner)
     {
     }
 }
@@ -218,7 +218,7 @@ internal static class ErrorMapper
         return "unknown";
     }
 
-    private static string PrefixMessage(string? message, string prefix)
+    internal static string PrefixMessage(string? message, string prefix)
     {
         var trimmed = string.IsNullOrWhiteSpace(message) ? string.Empty : message.Trim();
         if (trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("kreuzberg:", StringComparison.OrdinalIgnoreCase))

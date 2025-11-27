@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -15,6 +16,114 @@ public static class KreuzbergClient
     private static readonly ConcurrentDictionary<string, GCHandle> RegisteredPostProcessors = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, GCHandle> RegisteredValidators = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, GCHandle> RegisteredOcrBackends = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Detect MIME type from raw bytes.
+    /// </summary>
+    public static string DetectMimeType(ReadOnlySpan<byte> data)
+    {
+        if (data.IsEmpty)
+        {
+            throw new KreuzbergValidationException("data cannot be empty");
+        }
+
+        unsafe
+        {
+            fixed (byte* ptr = data)
+            {
+                var resultPtr = NativeMethods.DetectMimeTypeFromBytes((IntPtr)ptr, (UIntPtr)data.Length);
+                if (resultPtr == IntPtr.Zero)
+                {
+                    ThrowLastError();
+                }
+
+                var mime = InteropUtilities.ReadUtf8(resultPtr) ?? string.Empty;
+                NativeMethods.FreeString(resultPtr);
+                return mime;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Detect MIME type from a file path (checks existence and content).
+    /// </summary>
+    public static string DetectMimeTypeFromPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new KreuzbergValidationException("path cannot be empty");
+        }
+
+        var pathPtr = InteropUtilities.AllocUtf8(path);
+        try
+        {
+            var resultPtr = NativeMethods.DetectMimeTypeFromPath(pathPtr);
+            if (resultPtr == IntPtr.Zero)
+            {
+                ThrowLastError();
+            }
+
+            var mime = InteropUtilities.ReadUtf8(resultPtr) ?? string.Empty;
+            NativeMethods.FreeString(resultPtr);
+            return mime;
+        }
+        finally
+        {
+            InteropUtilities.FreeUtf8(pathPtr);
+        }
+    }
+
+    /// <summary>
+    /// Get file extensions associated with a MIME type.
+    /// </summary>
+    public static IReadOnlyList<string> GetExtensionsForMime(string mimeType)
+    {
+        if (string.IsNullOrWhiteSpace(mimeType))
+        {
+            throw new KreuzbergValidationException("mimeType cannot be empty");
+        }
+
+        var mimePtr = InteropUtilities.AllocUtf8(mimeType);
+        try
+        {
+            var resultPtr = NativeMethods.GetExtensionsForMime(mimePtr);
+            if (resultPtr == IntPtr.Zero)
+            {
+                ThrowLastError();
+            }
+
+            var json = InteropUtilities.ReadUtf8(resultPtr);
+            NativeMethods.FreeString(resultPtr);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return Array.Empty<string>();
+            }
+
+            var parsed = JsonSerializer.Deserialize<List<string>>(json, Serialization.Options);
+            return parsed ?? new List<string>();
+        }
+        finally
+        {
+            InteropUtilities.FreeUtf8(mimePtr);
+        }
+    }
+
+    /// <summary>
+    /// Discover extraction config by walking parent directories for kreuzberg.toml/yaml/json.
+    /// </summary>
+    public static ExtractionConfig? DiscoverExtractionConfig()
+    {
+        var configPtr = NativeMethods.ConfigDiscover();
+        if (configPtr == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        var json = InteropUtilities.ReadUtf8(configPtr);
+        NativeMethods.FreeString(configPtr);
+
+        return string.IsNullOrWhiteSpace(json) ? null : Serialization.ParseConfig(json!);
+    }
 
     /// <summary>
     /// Extracts text and metadata from a file.
@@ -336,6 +445,22 @@ public static class KreuzbergClient
         InteropUtilities.FreeUtf8(namePtr);
     }
 
+    public static IReadOnlyList<string> ListPostProcessors()
+    {
+        var ptr = NativeMethods.ListPostProcessors();
+        return ParseStringListAndFree(ptr);
+    }
+
+    public static void ClearPostProcessors()
+    {
+        if (!NativeMethods.ClearPostProcessors())
+        {
+            ThrowLastError();
+        }
+
+        FreeHandles(RegisteredPostProcessors);
+    }
+
     public static void UnregisterPostProcessor(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -408,6 +533,22 @@ public static class KreuzbergClient
         InteropUtilities.FreeUtf8(namePtr);
     }
 
+    public static IReadOnlyList<string> ListValidators()
+    {
+        var ptr = NativeMethods.ListValidators();
+        return ParseStringListAndFree(ptr);
+    }
+
+    public static void ClearValidators()
+    {
+        if (!NativeMethods.ClearValidators())
+        {
+            ThrowLastError();
+        }
+
+        FreeHandles(RegisteredValidators);
+    }
+
     public static void UnregisterValidator(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -474,6 +615,82 @@ public static class KreuzbergClient
         }
         RegisteredOcrBackends[backend.Name] = handle;
         InteropUtilities.FreeUtf8(namePtr);
+    }
+
+    public static IReadOnlyList<string> ListOcrBackends()
+    {
+        var ptr = NativeMethods.ListOcrBackends();
+        return ParseStringListAndFree(ptr);
+    }
+
+    public static void ClearOcrBackends()
+    {
+        if (!NativeMethods.ClearOcrBackends())
+        {
+            ThrowLastError();
+        }
+
+        FreeHandles(RegisteredOcrBackends);
+    }
+
+    public static void UnregisterOcrBackend(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("name cannot be empty", nameof(name));
+        }
+
+        var namePtr = InteropUtilities.AllocUtf8(name);
+        try
+        {
+            if (!NativeMethods.UnregisterOcrBackend(namePtr))
+            {
+                ThrowLastError();
+            }
+        }
+        finally
+        {
+            InteropUtilities.FreeUtf8(namePtr);
+            if (RegisteredOcrBackends.TryRemove(name, out var handle) && handle.IsAllocated)
+            {
+                handle.Free();
+            }
+        }
+    }
+
+    public static IReadOnlyList<string> ListDocumentExtractors()
+    {
+        var ptr = NativeMethods.ListDocumentExtractors();
+        return ParseStringListAndFree(ptr);
+    }
+
+    public static void UnregisterDocumentExtractor(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("name cannot be empty", nameof(name));
+        }
+
+        var namePtr = InteropUtilities.AllocUtf8(name);
+        try
+        {
+            if (!NativeMethods.UnregisterDocumentExtractor(namePtr))
+            {
+                ThrowLastError();
+            }
+        }
+        finally
+        {
+            InteropUtilities.FreeUtf8(namePtr);
+        }
+    }
+
+    public static void ClearDocumentExtractors()
+    {
+        if (!NativeMethods.ClearDocumentExtractors())
+        {
+            ThrowLastError();
+        }
     }
 
     private static unsafe ReadOnlySpan<byte> ConvertOcrInput(IntPtr bytesPtr, UIntPtr length)
@@ -594,5 +811,42 @@ public static class KreuzbergClient
         bytes.CopyTo(new Span<byte>(buffer, bytes.Length));
         buffer[bytes.Length] = 0;
         return (IntPtr)buffer;
+    }
+
+    private static IReadOnlyList<string> ParseStringListAndFree(IntPtr ptr)
+    {
+        if (ptr == IntPtr.Zero)
+        {
+            return Array.Empty<string>();
+        }
+
+        var json = InteropUtilities.ReadUtf8(ptr);
+        NativeMethods.FreeString(ptr);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return Array.Empty<string>();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<List<string>>(json, Serialization.Options);
+            return parsed ?? new List<string>();
+        }
+        catch (JsonException ex)
+        {
+            throw new KreuzbergSerializationException($"failed to parse string list: {ex.Message}", ex);
+        }
+    }
+
+    private static void FreeHandles(ConcurrentDictionary<string, GCHandle> handles)
+    {
+        foreach (var handle in handles.Values)
+        {
+            if (handle.IsAllocated)
+            {
+                handle.Free();
+            }
+        }
+        handles.Clear();
     }
 }

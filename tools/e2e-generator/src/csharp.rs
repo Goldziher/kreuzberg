@@ -7,7 +7,7 @@ use std::fs;
 
 const CS_PROJ_TEMPLATE: &str = r#"<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -389,12 +389,18 @@ fn build_category_tests(category: &str, fixtures: &[&Fixture]) -> Result<String>
 
 fn emit_test(output: &mut String, fixture: &Fixture) -> Result<()> {
     let method_name = format!("{}_{}", to_pascal(fixture.category()), to_pascal(&fixture.id));
-    let config_json = if fixture.extraction.config.is_empty() {
-        None
-    } else {
-        Some(serde_json::to_string(&fixture.extraction.config)?)
-    };
-    let assertions = &fixture.assertions;
+    let config_json = fixture
+        .extraction
+        .as_ref()
+        .and_then(|extraction| {
+            if extraction.config.is_empty() {
+                None
+            } else {
+                Some(serde_json::to_string(&extraction.config))
+            }
+        })
+        .transpose()?;
+    let assertions = fixture.assertions.as_ref();
 
     writeln!(output, "        [Fact]")?;
     writeln!(output, "        public void {name}()", name = method_name)?;
@@ -402,14 +408,20 @@ fn emit_test(output: &mut String, fixture: &Fixture) -> Result<()> {
     writeln!(
         output,
         "            var result = TestHelpers.RunExtraction(\"{path}\", {config});",
-        path = fixture.document.path,
-        config = config_json.as_deref().map_or("null".to_string(), |json| format!(
-            "@\"{}\"",
-            escape_csharp_literal(json)
-        ))
+        path = fixture
+            .document
+            .as_ref()
+            .map(|doc| doc.path.as_str())
+            .unwrap_or_default(),
+        config = config_json.as_deref().map_or_else(
+            || "null".to_string(),
+            |json| format!("@\"{}\"", escape_csharp_literal(json))
+        )
     )?;
 
-    emit_assertions(output, assertions)?;
+    if let Some(assertions) = assertions {
+        emit_assertions(output, assertions)?;
+    }
 
     writeln!(output, "        }}\n")?;
     Ok(())

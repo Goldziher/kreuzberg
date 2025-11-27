@@ -7,106 +7,106 @@ namespace Kreuzberg;
 public sealed class ExtractionResult
 {
     [JsonPropertyName("content")]
-    public string Content { get; init; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
 
     [JsonPropertyName("mime_type")]
-    public string MimeType { get; init; } = string.Empty;
+    public string MimeType { get; set; } = string.Empty;
 
     [JsonPropertyName("metadata")]
-    public Metadata Metadata { get; init; } = new();
+    public Metadata Metadata { get; set; } = new();
 
     [JsonPropertyName("tables")]
-    public List<Table> Tables { get; init; } = new();
+    public List<Table> Tables { get; set; } = new();
 
     [JsonPropertyName("detected_languages")]
-    public List<string>? DetectedLanguages { get; init; }
+    public List<string>? DetectedLanguages { get; set; }
 
     [JsonPropertyName("chunks")]
-    public List<Chunk>? Chunks { get; init; }
+    public List<Chunk>? Chunks { get; set; }
 
     [JsonPropertyName("images")]
-    public List<ExtractedImage>? Images { get; init; }
+    public List<ExtractedImage>? Images { get; set; }
 
     [JsonPropertyName("success")]
-    public bool Success { get; init; }
+    public bool Success { get; set; }
 }
 
 public sealed class Table
 {
     [JsonPropertyName("cells")]
-    public List<List<string>> Cells { get; init; } = new();
+    public List<List<string>> Cells { get; set; } = new();
 
     [JsonPropertyName("markdown")]
-    public string Markdown { get; init; } = string.Empty;
+    public string Markdown { get; set; } = string.Empty;
 
     [JsonPropertyName("page_number")]
-    public int PageNumber { get; init; }
+    public int PageNumber { get; set; }
 }
 
 public sealed class Chunk
 {
     [JsonPropertyName("content")]
-    public string Content { get; init; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
 
     [JsonPropertyName("embedding")]
-    public float[]? Embedding { get; init; }
+    public float[]? Embedding { get; set; }
 
     [JsonPropertyName("metadata")]
-    public ChunkMetadata Metadata { get; init; } = new();
+    public ChunkMetadata Metadata { get; set; } = new();
 }
 
 public sealed class ChunkMetadata
 {
     [JsonPropertyName("char_start")]
-    public int CharStart { get; init; }
+    public int CharStart { get; set; }
 
     [JsonPropertyName("char_end")]
-    public int CharEnd { get; init; }
+    public int CharEnd { get; set; }
 
     [JsonPropertyName("token_count")]
-    public int? TokenCount { get; init; }
+    public int? TokenCount { get; set; }
 
     [JsonPropertyName("chunk_index")]
-    public int ChunkIndex { get; init; }
+    public int ChunkIndex { get; set; }
 
     [JsonPropertyName("total_chunks")]
-    public int TotalChunks { get; init; }
+    public int TotalChunks { get; set; }
 }
 
 public sealed class ExtractedImage
 {
     [JsonPropertyName("data")]
-    public byte[] Data { get; init; } = Array.Empty<byte>();
+    public byte[] Data { get; set; } = Array.Empty<byte>();
 
     [JsonPropertyName("format")]
-    public string Format { get; init; } = string.Empty;
+    public string Format { get; set; } = string.Empty;
 
     [JsonPropertyName("image_index")]
-    public int ImageIndex { get; init; }
+    public int ImageIndex { get; set; }
 
     [JsonPropertyName("page_number")]
-    public int? PageNumber { get; init; }
+    public int? PageNumber { get; set; }
 
     [JsonPropertyName("width")]
-    public uint? Width { get; init; }
+    public uint? Width { get; set; }
 
     [JsonPropertyName("height")]
-    public uint? Height { get; init; }
+    public uint? Height { get; set; }
 
     [JsonPropertyName("colorspace")]
-    public string? Colorspace { get; init; }
+    public string? Colorspace { get; set; }
 
     [JsonPropertyName("bits_per_component")]
-    public uint? BitsPerComponent { get; init; }
+    public uint? BitsPerComponent { get; set; }
 
     [JsonPropertyName("is_mask")]
-    public bool IsMask { get; init; }
+    public bool IsMask { get; set; }
 
     [JsonPropertyName("description")]
-    public string? Description { get; init; }
+    public string? Description { get; set; }
 
     [JsonPropertyName("ocr_result")]
-    public ExtractionResult? OcrResult { get; init; }
+    public ExtractionResult? OcrResult { get; set; }
 }
 
 public enum FormatType
