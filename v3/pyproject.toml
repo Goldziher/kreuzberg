@@ -2,6 +2,9 @@
 build-backend = "uv_build"
 requires = [ "uv-build" ]
 
+[tool.uv.build]
+package-dir = "."
+
 [project]
 name = "kreuzberg"
 version = "3.22.0"
