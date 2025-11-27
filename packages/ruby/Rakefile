@@ -17,9 +17,6 @@ Rake::ExtensionTask.new('kreuzberg_rb', GEMSPEC) do |ext|
     arm64-darwin
     x64-mingw32
   ]
-
-  # Ensure vendored core crate is present when building staged gems
-  ext.gem_spec.package_files << 'vendor/kreuzberg/Cargo.toml'
 end
 
 RSpec::Core::RakeTask.new(:spec)
