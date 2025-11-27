@@ -426,13 +426,17 @@ Kreuzberg v4 was a major undertaking. Thank you to all contributors!
 
 ---
 
-## [3.22.0] - 2025-11-21
+## [3.22.0] - 2025-11-27
 
 ### Fixed
-- Restored public export for `OCRConfig` in v3 compatibility layer to unblock consumers relying on the legacy type.
+- Always attempt EasyOCR import before raising `MissingDependencyError` to improve error handling
+- Hardened HTML regexes for script/style stripping to prevent edge cases
+
+### Added
+- Test coverage for EasyOCR import path edge cases
 
 ### Changed
-- Updated v3 dependencies to current versions.
+- Updated v3 dependencies to current versions
 
 ---
 
