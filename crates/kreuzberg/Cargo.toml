@@ -116,11 +116,6 @@ chardetng = { version = "0.1.17", optional = true }
 encoding_rs = { version = "0.8.35", optional = true }
 yake-rust = { version = "1.0.3", optional = true }
 rake = { version = "0.3.6", optional = true }
-
-# Only build profiling tooling on non-Windows targets (pprof depends on Unix APIs)
-[target.'cfg(not(target_os = "windows"))'.dependencies]
-pprof = { version = "0.15.0", features = ["flamegraph"], optional = true }
-
 # Server features (optional)
 axum = { version = "0.8", features = ["macros", "json", "multipart"], optional = true }
 tower = { version = "0.5", optional = true }
@@ -136,3 +131,7 @@ zip = "6.0.0"
 serial_test = "3.2.0"
 anyhow = "1.0"
 tokio-test = "0.4"
+
+# Only build profiling tooling on non-Windows targets (pprof depends on Unix APIs)
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+pprof = { version = "0.15.0", features = ["flamegraph"], optional = true }
