@@ -97,7 +97,7 @@ jobs:
             Remove-Item Env:CFLAGS -ErrorAction SilentlyContinue
             Remove-Item Env:CL -ErrorAction SilentlyContinue
             $env:CGO_LDFLAGS = "-L$ffiPath -lkreuzberg_ffi"
-            $env:CGO_CFLAGS = "-Wno-unknown-warning-option -Wno-error=unknown-argument -Wno-unused-macros -I$workspace/crates/kreuzberg-ffi"
+            $env:CGO_CFLAGS = "-Wno-unknown-warning-option -Wno-error=unknown-argument -Wno-reserved-identifier -Wno-unused-macros -I$workspace/crates/kreuzberg-ffi"
             $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
           } else {
             $env:LD_LIBRARY_PATH = "$ffiPath;$env:LD_LIBRARY_PATH"
