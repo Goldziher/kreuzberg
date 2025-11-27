@@ -221,6 +221,11 @@ jobs:
           cd packages/ruby
           gem install pkg/kreuzberg-*.gem
 
+      - name: Build local native extension
+        run: |
+          cd packages/ruby
+          bundle exec rake compile
+
       - name: Run Ruby tests
         run: |
           cd packages/ruby
