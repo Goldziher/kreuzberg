@@ -10,8 +10,8 @@ on:
       - 'crates/**'
       - 'scripts/test_docker.sh'
       - '.github/workflows/ci-docker.yaml'
-      # - 'packages/**'
-      # - 'tools/**'
+      - 'packages/**'
+      - 'tools/**'
   pull_request:
     branches:
       - main
@@ -21,8 +21,8 @@ on:
       - 'crates/**'
       - 'scripts/test_docker.sh'
       - '.github/workflows/ci-docker.yaml'
-      # - 'packages/**'
-      # - 'tools/**'
+      - 'packages/**'
+      - 'tools/**'
   workflow_dispatch:
     inputs:
       skip_tests:
