@@ -75,7 +75,10 @@ jobs:
         shell: pwsh
         run: |
           $compat = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include\msvc_compat"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=-I$compat"
+          $compatForward = $compat -replace '\\','/'
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=-I$compatForward"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=-I$compatForward"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=-I$compatForward"
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
