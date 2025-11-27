@@ -85,9 +85,6 @@ uuid = { version = "1.18.1", features = ["v4"] }
 indexmap = "2.12.1"
 tracing = "0.1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-# Only build profiling tooling on non-Windows targets (pprof depends on Unix APIs)
-[target.'cfg(not(target_os = "windows"))'.dependencies]
-pprof = { version = "0.15.0", features = ["flamegraph"], optional = true }
 # Format extractors (optional)
 pdfium-render = { version = "0.8.36", features = ["thread_safe", "image"], optional = true }
 lopdf = { version = "0.38.0", optional = true }
@@ -119,6 +116,10 @@ chardetng = { version = "0.1.17", optional = true }
 encoding_rs = { version = "0.8.35", optional = true }
 yake-rust = { version = "1.0.3", optional = true }
 rake = { version = "0.3.6", optional = true }
+
+# Only build profiling tooling on non-Windows targets (pprof depends on Unix APIs)
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+pprof = { version = "0.15.0", features = ["flamegraph"], optional = true }
 
 # Server features (optional)
 axum = { version = "0.8", features = ["macros", "json", "multipart"], optional = true }
