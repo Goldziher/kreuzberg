@@ -807,10 +807,15 @@ jobs:
           bundler: "2.5.12"
           bundler-cache: false
 
-      - name: Configure bindgen sysroot (Windows)
+      - name: Configure bindgen compatibility headers (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          $includeRoot = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include"
+          $compat = "$includeRoot\msvc_compat"
+          $includeRoot = $includeRoot -replace '\\','/'
+          $compatForward = $compat -replace '\\','/'
+
           if (-not $env:RI_DEVKIT) {
             throw "RI_DEVKIT environment variable is not set"
           }
@@ -818,7 +823,11 @@ jobs:
           $msysPrefix = $msysPrefix.Trim()
           $riDevkit = $env:RI_DEVKIT -replace '\\','/'
           $sysroot = "$riDevkit$msysPrefix"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=--target=x86_64-pc-windows-gnu --sysroot=$sysroot"
+
+          $extra = "-I$includeRoot -I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math --target=x86_64-pc-windows-gnu --sysroot=$sysroot"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=$extra"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=$extra"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=$extra"
 
       - name: Cache Pdfium binaries
         uses: ./.github/actions/cache-pdfium
@@ -927,6 +936,8 @@ jobs:
     if: ${{ needs.prepare.outputs.release_java != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      PDFIUM_VERSION: "7529"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -939,17 +950,34 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
+          use-sccache: false
           cache-key-prefix: publish-java
 
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '22'
+          java-version: '25'
           cache: 'maven'
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Build and package
         working-directory: packages/java
@@ -1554,6 +1582,8 @@ jobs:
     needs: [prepare, upload-release-artifacts]
     if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_java == 'true' }}
     runs-on: ubuntu-latest
+    env:
+      PDFIUM_VERSION: "7529"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -1587,12 +1617,27 @@ jobs:
             echo "::notice::Maven package version ${{ needs.prepare.outputs.version }} already published."
           fi
 
+      - name: Install system dependencies
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        uses: ./.github/actions/setup-rust
+        with:
+          use-sccache: false
+          cache-key-prefix: publish-maven
+
       - name: Setup Java
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "22"
+          java-version: "25"
           cache: maven
           server-id: central
           server-username: MAVEN_USERNAME
@@ -1600,9 +1645,17 @@ jobs:
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: ${{ secrets.GPP_PASSPHRASE }}
 
-      - name: Setup Rust
+      - name: Cache PDFium
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
 
       - name: Prefer gpg2 binary
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
