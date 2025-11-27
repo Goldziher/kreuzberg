@@ -147,6 +147,6 @@ jobs:
         uses: ./.github/actions/install-task
 
       - name: Run E2E tests
-        shell: bash
+        shell: pwsh
         run: |
-          task e2e:java:test
+          bash -lc "task e2e:java:test"
