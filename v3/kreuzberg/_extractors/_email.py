@@ -116,8 +116,18 @@ class EmailExtractor(Extractor):
                 converted_text = h.handle(html_content)
                 text_parts.append(converted_text)
             else:
-                cleaned = re.sub(r"<script[^>]*>.*?</script>", "", html_content, flags=re.IGNORECASE | re.DOTALL)
-                cleaned = re.sub(r"<style[^>]*>.*?</style>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+                cleaned = re.sub(
+                    r"<script\b[^>]*>(?:(?!</script>).)*</script>",
+                    "",
+                    html_content,
+                    flags=re.IGNORECASE | re.DOTALL,
+                )
+                cleaned = re.sub(
+                    r"<style\b[^>]*>(?:(?!</style>).)*</style>",
+                    "",
+                    cleaned,
+                    flags=re.IGNORECASE | re.DOTALL,
+                )
                 clean_html = _HTML_TAG_PATTERN.sub("", cleaned)
                 clean_html = unescape(clean_html)
                 clean_html = _UNICODE_QUOTES_PATTERN.sub('"', clean_html)
