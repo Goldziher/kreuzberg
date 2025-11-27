@@ -217,7 +217,7 @@ jobs:
             echo "No kreuzberg-node tarball found" >&2
             exit 1
           fi
-          pnpm add --no-frozen-lockfile "file:$pkg"
+          pnpm add "file:$pkg"
 
       - name: Run TypeScript tests
         run: |
