@@ -175,6 +175,26 @@ async def test_init_easyocr_missing_dependency() -> None:
 
 
 @pytest.mark.anyio
+async def test_init_easyocr_imports_when_not_initialized(mocker: MockerFixture) -> None:
+    # Simulate no imports yet
+    with patch("kreuzberg._ocr._easyocr.HAS_EASYOCR", False), patch("kreuzberg._ocr._easyocr.easyocr", None), patch(
+        "kreuzberg._ocr._easyocr.torch", None
+    ):
+        mock_easyocr = mocker.MagicMock()
+        mock_torch = mocker.MagicMock()
+        mock_easyocr.Reader.return_value = mocker.MagicMock()
+
+        with patch("kreuzberg._ocr._easyocr._import_easyocr", return_value=(mock_easyocr, mock_torch)):
+            backend = EasyOCRBackend()
+            await backend._init_easyocr(language="en")
+
+            mock_easyocr.Reader.assert_called_once()
+            call_args = mock_easyocr.Reader.call_args
+            assert call_args[0][0] == ["en"]
+            assert backend._reader is mock_easyocr.Reader.return_value
+
+
+@pytest.mark.anyio
 async def test_init_easyocr(mocker: MockerFixture) -> None:
     mock_reader = Mock()
     mock_easyocr = Mock()
