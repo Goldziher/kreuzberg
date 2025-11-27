@@ -108,7 +108,11 @@ jobs:
         shell: pwsh
         run: |
           $compat = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include\msvc_compat"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=-I$compat"
+          $compatForward = $compat -replace '\\','/'
+          $extra = "-I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=$extra"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=$extra"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=$extra"
 
       - name: Vendor kreuzberg core crate
         shell: bash
@@ -253,7 +257,11 @@ jobs:
         shell: pwsh
         run: |
           $compat = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include\msvc_compat"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=-I$compat"
+          $compatForward = $compat -replace '\\','/'
+          $extra = "-I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=$extra"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=$extra"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=$extra"
 
       - name: Install Task
         uses: ./.github/actions/install-task
