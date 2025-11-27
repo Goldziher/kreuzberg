@@ -85,21 +85,13 @@ jobs:
               if ($parts.Length -eq 2) { [Environment]::SetEnvironmentVariable($parts[0], $parts[1]) }
             }
             $llvm = "C:\Program Files\LLVM\bin"
-            if (Test-Path "$llvm\clang-cl.exe") {
-              $env:CC = "$llvm\clang-cl.exe"
-              $env:CXX = "$llvm\clang-cl.exe"
-              $env:AR = "$llvm\llvm-ar.exe"
-              $env:NM = "$llvm\llvm-nm.exe"
-              $env:LD = "$llvm\lld-link.exe"
-              $env:RC = "$llvm\llvm-rc.exe"
-            } else {
-              $env:CC = "clang-cl"
-              $env:CXX = "clang-cl"
-              $env:AR = "llvm-ar"
-              $env:NM = "llvm-nm"
-              $env:LD = "lld-link"
-              $env:RC = "llvm-rc"
-            }
+            # Avoid absolute paths with spaces; rely on PATH to find LLVM/MSVC tools
+            $env:CC = "clang-cl"
+            $env:CXX = "clang-cl"
+            $env:AR = "llvm-ar"
+            $env:NM = "llvm-nm"
+            $env:LD = "lld-link"
+            $env:RC = "llvm-rc"
             $env:PATH = "$llvm;$binPath;$ffiPath;$env:PATH"
             $env:LIB = "$ffiPath;$env:LIB"
             Remove-Item Env:CFLAGS -ErrorAction SilentlyContinue
