@@ -3,7 +3,7 @@ dev = [
   "covdefaults>=2.3.0",
   "maturin>=1.10.2",
   "mypy>=1.18.2",
-  "prek>=0.2.17",
+  "prek>=0.2.19",
   "pytest>=9.0.1",
   "pytest-asyncio>=1.3.0",
   "pytest-cov>=7.0.0",
@@ -12,7 +12,7 @@ dev = [
   "pytest-timeout>=2.4.0",
   "ruff>=0.14.5",
   "types-pillow>=10.2",
-  "types-psutil>=7.0.0.20251116",
+  "types-psutil>=7.1.3.20251127",
   "uv-bump",
 ]
 docs = [
@@ -26,7 +26,7 @@ docs = [
 doc = [
   "mike>=2.1.3",
   "mkdocs>=1.6.1",
-  "mkdocs-gen-files>=0.5.0",
+  "mkdocs-gen-files>=0.6.0",
   "mkdocs-git-revision-date-localized-plugin>=1.5.0",
   "mkdocs-literate-nav>=0.6.2",
   "mkdocs-material[imaging]>=9.7.0",
@@ -37,7 +37,7 @@ benchmark = [
   "docling>=2.63.0",
   "extractous>=0.3.0",
   "markitdown>=0.1.3",
-  "unstructured>=0.18.20",
+  "unstructured>=0.18.21",
 ]
 
 [tool.setuptools]

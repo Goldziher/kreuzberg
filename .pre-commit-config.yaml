@@ -38,7 +38,7 @@ repos:
     hooks:
       - id: biome-check
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v1.29.0
+    rev: v1.30.0
     hooks:
       - id: oxlint
         args: ["--fix"]
