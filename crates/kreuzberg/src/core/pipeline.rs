@@ -457,6 +457,10 @@ mod tests {
     #[tokio::test]
     #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
     async fn test_pipeline_with_keyword_extraction() {
+        // Ensure keyword processor is registered (may have been cleared by other tests)
+        // Note: we can't use ensure_initialized() because it's a Lazy that only runs once
+        let _ = crate::keywords::register_keyword_processor();
+
         let result = ExtractionResult {
             content: r#"
 Machine learning is a branch of artificial intelligence that focuses on
