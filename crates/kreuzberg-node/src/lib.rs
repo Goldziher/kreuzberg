@@ -2745,6 +2745,7 @@ pub fn detect_mime_type(bytes: Buffer) -> Result<String> {
 /// # Parameters
 ///
 /// * `path` - Path to the file (string)
+/// * `check_exists` - Whether to verify file existence (default: true)
 ///
 /// # Returns
 ///
@@ -2753,7 +2754,7 @@ pub fn detect_mime_type(bytes: Buffer) -> Result<String> {
 /// # Errors
 ///
 /// Throws an error if:
-/// - File doesn't exist
+/// - File doesn't exist (when check_exists is true)
 /// - MIME type cannot be determined from path/extension
 /// - Extension is unknown
 ///
@@ -2770,8 +2771,8 @@ pub fn detect_mime_type(bytes: Buffer) -> Result<String> {
 /// console.log(mimeType2); // 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 /// ```
 #[napi]
-pub fn detect_mime_type_from_path(path: String) -> Result<String> {
-    kreuzberg::core::mime::detect_mime_type(&path, true).map_err(convert_error)
+pub fn detect_mime_type_from_path(path: String, check_exists: Option<bool>) -> Result<String> {
+    kreuzberg::core::mime::detect_mime_type(&path, check_exists.unwrap_or(true)).map_err(convert_error)
 }
 
 /// Validate that a MIME type is supported by Kreuzberg.

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { detectMimeType, validateMimeType } from "../../src/index.js";
+import { detectMimeTypeFromPath, validateMimeType } from "../../src/index.js";
 
 describe("MIME Utility Functions", () => {
 	let tempDir: string;
@@ -19,12 +19,12 @@ describe("MIME Utility Functions", () => {
 		// Cleanup is optional for temp files, OS will clean up eventually
 	});
 
-	describe("detectMimeType", () => {
+	describe("detectMimeTypeFromPath", () => {
 		it("should detect MIME type for PDF files", () => {
 			const testFile = join(tempDir, "test.pdf");
 			writeFileSync(testFile, "dummy content");
 
-			const mimeType = detectMimeType(testFile);
+			const mimeType = detectMimeTypeFromPath(testFile);
 			expect(mimeType).toBe("application/pdf");
 		});
 
@@ -32,7 +32,7 @@ describe("MIME Utility Functions", () => {
 			const testFile = join(tempDir, "test.docx");
 			writeFileSync(testFile, "dummy content");
 
-			const mimeType = detectMimeType(testFile);
+			const mimeType = detectMimeTypeFromPath(testFile);
 			expect(mimeType).toBe("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 		});
 
@@ -50,7 +50,7 @@ describe("MIME Utility Functions", () => {
 				const testFile = join(tempDir, `test.${ext}`);
 				writeFileSync(testFile, "dummy content");
 
-				const mimeType = detectMimeType(testFile);
+				const mimeType = detectMimeTypeFromPath(testFile);
 				expect(mimeType).toBe(expected);
 			}
 		});
@@ -67,7 +67,7 @@ describe("MIME Utility Functions", () => {
 				const testFile = join(tempDir, `test.${ext}`);
 				writeFileSync(testFile, "dummy content");
 
-				const mimeType = detectMimeType(testFile);
+				const mimeType = detectMimeTypeFromPath(testFile);
 				expect(mimeType).toBe(expected);
 			}
 		});
@@ -86,7 +86,7 @@ describe("MIME Utility Functions", () => {
 				const testFile = join(tempDir, `test.${ext}`);
 				writeFileSync(testFile, "dummy content");
 
-				const mimeType = detectMimeType(testFile);
+				const mimeType = detectMimeTypeFromPath(testFile);
 				expect(mimeType).toBe(expected);
 			}
 		});
@@ -103,7 +103,7 @@ describe("MIME Utility Functions", () => {
 				const testFile = join(tempDir, `test.${ext}`);
 				writeFileSync(testFile, "dummy content");
 
-				const mimeType = detectMimeType(testFile);
+				const mimeType = detectMimeTypeFromPath(testFile);
 				expect(mimeType).toBe(expected);
 			}
 		});
@@ -112,7 +112,7 @@ describe("MIME Utility Functions", () => {
 			const testFile = join(tempDir, "test.PDF");
 			writeFileSync(testFile, "dummy content");
 
-			const mimeType = detectMimeType(testFile);
+			const mimeType = detectMimeTypeFromPath(testFile);
 			expect(mimeType).toBe("application/pdf");
 		});
 
@@ -120,28 +120,28 @@ describe("MIME Utility Functions", () => {
 			const nonExistentFile = join(tempDir, "nonexistent.pdf");
 
 			// Should not throw when checkExists is false (default)
-			const mimeType = detectMimeType(nonExistentFile, false);
+			const mimeType = detectMimeTypeFromPath(nonExistentFile, false);
 			expect(mimeType).toBe("application/pdf");
 		});
 
 		it("should throw error for non-existent file when checkExists is true", () => {
 			const nonExistentFile = join(tempDir, "nonexistent.pdf");
 
-			expect(() => detectMimeType(nonExistentFile, true)).toThrow(/does not exist/i);
+			expect(() => detectMimeTypeFromPath(nonExistentFile, true)).toThrow(/does not exist/i);
 		});
 
 		it("should throw error for unknown extensions", () => {
 			const testFile = join(tempDir, "test.unknownext");
 			writeFileSync(testFile, "dummy content");
 
-			expect(() => detectMimeType(testFile)).toThrow(/unknown extension/i);
+			expect(() => detectMimeTypeFromPath(testFile)).toThrow(/unknown extension/i);
 		});
 
 		it("should throw error for files without extension", () => {
 			const testFile = join(tempDir, "testfile");
 			writeFileSync(testFile, "dummy content");
 
-			expect(() => detectMimeType(testFile)).toThrow(/(could not determine mime type|Failed to create reference)/i);
+			expect(() => detectMimeTypeFromPath(testFile)).toThrow(/(could not determine mime type|Failed to create reference)/i);
 		});
 	});
 

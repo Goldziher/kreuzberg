@@ -35,9 +35,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>22</maven.compiler.source>
-        <maven.compiler.target>22</maven.compiler.target>
-        <maven.compiler.release>22</maven.compiler.release>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.release>25</maven.compiler.release>
         <junit.version>5.11.4</junit.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
@@ -72,7 +72,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <release>22</release>
+                    <release>25</release>
                 </configuration>
             </plugin>
 
@@ -190,12 +190,13 @@
             </plugin>
 
             <!-- PMD Plugin for code quality checks -->
+            <!-- NOTE: PMD doesn't support targetJdk 25 yet, using 23 as fallback -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
                 <version>${maven-pmd-plugin.version}</version>
                 <configuration>
-                    <targetJdk>${maven.compiler.release}</targetJdk>
+                    <targetJdk>23</targetJdk>
                     <pmdVersion>${pmd.version}</pmdVersion>
                     <typeResolution>false</typeResolution>
                     <rulesets>
