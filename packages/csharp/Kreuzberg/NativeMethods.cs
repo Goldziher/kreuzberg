@@ -1,10 +1,22 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace Kreuzberg;
 
 internal static partial class NativeMethods
 {
     private const string LibraryName = "kreuzberg_ffi";
+    private static readonly Lazy<IntPtr> LibraryHandle = new(() => LoadNativeLibrary());
+
+    [ModuleInitializer]
+    internal static void InitResolver()
+    {
+        NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, ResolveLibrary);
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct CExtractionResult
@@ -154,4 +166,77 @@ internal static partial class NativeMethods
     [DllImport(LibraryName, EntryPoint = "kreuzberg_unregister_document_extractor", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
     internal static extern bool UnregisterDocumentExtractor(IntPtr name);
+
+    private static IntPtr ResolveLibrary(string libraryName, Assembly assembly, DllImportSearchPath? _)
+    {
+        if (!string.Equals(libraryName, LibraryName, StringComparison.Ordinal))
+        {
+            return IntPtr.Zero;
+        }
+
+        return LibraryHandle.Value;
+    }
+
+    private static IntPtr LoadNativeLibrary()
+    {
+        var fileName = GetLibraryFileName();
+        foreach (var path in GetProbePaths(fileName))
+        {
+            if (NativeLibrary.TryLoad(path, out var handle))
+            {
+                return handle;
+            }
+        }
+
+        throw new DllNotFoundException($"Unable to locate {fileName}. Set KREUZBERG_FFI_DIR or place the library in target/release.");
+    }
+
+    private static IEnumerable<string> GetProbePaths(string fileName)
+    {
+        var envDir = Environment.GetEnvironmentVariable("KREUZBERG_FFI_DIR");
+        if (!string.IsNullOrWhiteSpace(envDir))
+        {
+            yield return Path.Combine(envDir, fileName);
+        }
+
+        // Current base directory (e.g., test bin)
+        yield return Path.Combine(AppContext.BaseDirectory, fileName);
+
+        var cwd = Directory.GetCurrentDirectory();
+        yield return Path.Combine(cwd, fileName);
+
+        // Walk up to workspace target/{release,debug}
+        string? dir = AppContext.BaseDirectory;
+        for (var i = 0; i < 5 && dir != null; i++)
+        {
+            var release = Path.Combine(dir, "target", "release", fileName);
+            if (File.Exists(release))
+            {
+                yield return release;
+            }
+
+            var debug = Path.Combine(dir, "target", "debug", fileName);
+            if (File.Exists(debug))
+            {
+                yield return debug;
+            }
+
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+    }
+
+    private static string GetLibraryFileName()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return "kreuzberg_ffi.dll";
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            return "libkreuzberg_ffi.dylib";
+        }
+
+        return "libkreuzberg_ffi.so";
+    }
 }

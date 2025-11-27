@@ -579,6 +579,8 @@ tasks:
       - task: java:update
       - echo "Updating Go dependencies..."
       - task: go:update
+      - echo "Updating C# dependencies..."
+      - task: csharp:update
       - echo "Updating pre-commit hooks..."
       - prek autoupdate
       - echo "All dependencies updated"
@@ -720,6 +722,14 @@ tasks:
       - dotnet format Kreuzberg/Kreuzberg.csproj --verify-no-changes
       - dotnet format Kreuzberg.Tests/Kreuzberg.Tests.csproj --verify-no-changes
       - dotnet format Benchmark/Benchmark.csproj --verify-no-changes
+
+  csharp:update:
+    desc: Update/restore C# dependencies
+    dir: packages/csharp
+    cmds:
+      - dotnet restore Kreuzberg/Kreuzberg.csproj
+      - dotnet restore Kreuzberg.Tests/Kreuzberg.Tests.csproj
+      - dotnet restore Benchmark/Benchmark.csproj
 
   smoke:node:
     desc: Run Node smoke test locally (require KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg-node.tgz)

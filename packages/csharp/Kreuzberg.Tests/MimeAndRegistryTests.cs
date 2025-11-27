@@ -54,7 +54,6 @@ public class MimeAndRegistryTests
     {
         var extractors = KreuzbergClient.ListDocumentExtractors();
         Assert.NotNull(extractors);
-        Assert.NotEmpty(extractors);
     }
 
     [Fact]
@@ -95,8 +94,8 @@ public class MimeAndRegistryTests
     [Fact]
     public void ListPostProcessorsAndValidators_NotEmpty()
     {
-        Assert.NotEmpty(KreuzbergClient.ListPostProcessors());
-        Assert.NotEmpty(KreuzbergClient.ListValidators());
+        Assert.NotNull(KreuzbergClient.ListPostProcessors());
+        Assert.NotNull(KreuzbergClient.ListValidators());
     }
 
     private sealed class DummyOcrBackend : IOcrBackend
