@@ -103,6 +103,13 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Configure bindgen compatibility headers (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $compat = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include\msvc_compat"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=-I$compat"
+
       - name: Vendor kreuzberg core crate
         shell: bash
         run: |
@@ -240,6 +247,13 @@ jobs:
         uses: ./.github/actions/stage-pdfium-runtime
         with:
           destination: target/release
+
+      - name: Configure bindgen compatibility headers (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $compat = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include\msvc_compat"
+          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=-I$compat"
 
       - name: Install Task
         uses: ./.github/actions/install-task
