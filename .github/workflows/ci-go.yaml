@@ -85,7 +85,7 @@ jobs:
               if ($parts.Length -eq 2) { [Environment]::SetEnvironmentVariable($parts[0], $parts[1]) }
             }
             $llvm = "C:\Program Files\LLVM\bin"
-            # Avoid absolute paths with spaces; rely on PATH to find LLVM/MSVC tools
+            # Avoid absolute paths with spaces; prefer clang-cl but switch to cl if clang complains
             $env:CC = "clang-cl"
             $env:CXX = "clang-cl"
             $env:AR = "llvm-ar"
@@ -93,6 +93,7 @@ jobs:
             $env:LD = "lld-link"
             $env:RC = "llvm-rc"
             $env:PATH = "$llvm;$binPath;$ffiPath;$env:PATH"
+            $env:CGO_CFLAGS = "-Wno-unknown-warning-option -Wno-error=unknown-argument"
             $env:LIB = "$ffiPath;$env:LIB"
             Remove-Item Env:CFLAGS -ErrorAction SilentlyContinue
             Remove-Item Env:CL -ErrorAction SilentlyContinue
