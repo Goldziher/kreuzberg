@@ -171,11 +171,18 @@ def assert_metadata_expectation(result: Any, path: str, expectation: dict[str, A
                     f"Expected metadata '{path}' string to contain {expected_values!r}"
                 )
         elif isinstance(value, (list, tuple, set)):
-            missing = [item for item in expected_values if item not in value]
-            if missing:
-                pytest.fail(
-                    f"Expected metadata '{path}' to contain {expected_values!r}, missing {missing!r}"
-                )
+            # If expectation is a string, treat it as a single element we expect in the list
+            if isinstance(expected_values, str):
+                if expected_values not in value:
+                    pytest.fail(
+                        f"Expected metadata '{path}' to contain '{expected_values}', got {value!r}"
+                    )
+            else:
+                missing = [item for item in expected_values if item not in value]
+                if missing:
+                    pytest.fail(
+                        f"Expected metadata '{path}' to contain {expected_values!r}, missing {missing!r}"
+                    )
         else:
             pytest.fail(
                 f"Unsupported contains expectation for metadata '{path}': {value!r}"
