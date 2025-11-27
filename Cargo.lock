@@ -5276,7 +5276,7 @@ dependencies = [
 [[package]]
 name = "rb-sys"
 version = "0.9.117"
-source = "git+https://github.com/oxidize-rb/rb-sys?rev=6ce119991fad21fa4c7a50440f4d56f2a744df23#6ce119991fad21fa4c7a50440f4d56f2a744df23"
+source = "git+https://github.com/oxidize-rb/rb-sys?rev=acca8a7feac415f41f3773a940cbee2ae3167b94#acca8a7feac415f41f3773a940cbee2ae3167b94"
 dependencies = [
  "rb-sys-build",
 ]
@@ -5284,7 +5284,7 @@ dependencies = [
 [[package]]
 name = "rb-sys-build"
 version = "0.9.117"
-source = "git+https://github.com/oxidize-rb/rb-sys?rev=6ce119991fad21fa4c7a50440f4d56f2a744df23#6ce119991fad21fa4c7a50440f4d56f2a744df23"
+source = "git+https://github.com/oxidize-rb/rb-sys?rev=acca8a7feac415f41f3773a940cbee2ae3167b94#acca8a7feac415f41f3773a940cbee2ae3167b94"
 dependencies = [
  "bindgen",
  "lazy_static",

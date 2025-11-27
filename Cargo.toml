@@ -18,7 +18,7 @@ resolver = "2"
 
 [patch.crates-io]
 kreuzberg = { path = "crates/kreuzberg" }
-rb-sys = { git = "https://github.com/oxidize-rb/rb-sys", rev = "6ce119991fad21fa4c7a50440f4d56f2a744df23" }
+rb-sys = { git = "https://github.com/oxidize-rb/rb-sys", rev = "acca8a7feac415f41f3773a940cbee2ae3167b94" }
 
 [workspace.package]
 version = "4.0.0-rc.1"
