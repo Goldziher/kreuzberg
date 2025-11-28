@@ -163,6 +163,9 @@ jobs:
           # Ensure CMake can write tracking logs
           Add-Content -Path $env:GITHUB_ENV -Value "UseMultiToolTask=true"
           Add-Content -Path $env:GITHUB_ENV -Value "EnforceProcessCountAcrossBuilds=true"
+          # Disable FileTracker to avoid FTK1011 errors
+          Add-Content -Path $env:GITHUB_ENV -Value "DISABLEFILETRACKERFILETRACER=1"
+          Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_VERBOSE_MAKEFILE=ON"
 
       - name: Build Ruby gem
         shell: bash
@@ -274,6 +277,9 @@ jobs:
           # Ensure CMake can write tracking logs
           Add-Content -Path $env:GITHUB_ENV -Value "UseMultiToolTask=true"
           Add-Content -Path $env:GITHUB_ENV -Value "EnforceProcessCountAcrossBuilds=true"
+          # Disable FileTracker to avoid FTK1011 errors
+          Add-Content -Path $env:GITHUB_ENV -Value "DISABLEFILETRACKERFILETRACER=1"
+          Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_VERBOSE_MAKEFILE=ON"
 
       - name: Build local native extension
         shell: bash
