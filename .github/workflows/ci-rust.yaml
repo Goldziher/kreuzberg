@@ -91,7 +91,7 @@ jobs:
       - name: Run unit tests
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cargo test --workspace --exclude kreuzberg-e2e-generator --no-default-features --features "full,server,cli"
+            cargo test --workspace --exclude kreuzberg-e2e-generator --exclude kreuzberg-rb --exclude kreuzberg-py --exclude kreuzberg-node --no-default-features --features "full,server,cli"
           else
             cargo test --workspace --exclude kreuzberg-e2e-generator --all-features
           fi
