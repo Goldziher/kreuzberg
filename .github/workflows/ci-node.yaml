@@ -203,21 +203,19 @@ jobs:
           name: napi-${{ matrix.target }}
           path: crates/kreuzberg-node/
 
-      - name: Install Node bindings in workspace
-        run: |
-          cd crates/kreuzberg-node
-          pnpm install --filter kreuzberg...
-
-      - name: Add packaged Node binding to TypeScript workspace
+      - name: Unpack and install Node bindings
         shell: bash
         run: |
-          cd packages/typescript
-          pkg=$(ls ../../crates/kreuzberg-node/kreuzberg-node-*.tgz | head -n 1)
+          cd crates/kreuzberg-node
+          # Extract the tarball to get the built .node file
+          pkg=$(ls kreuzberg-node-*.tgz | head -n 1)
           if [ -z "$pkg" ]; then
             echo "No kreuzberg-node tarball found" >&2
             exit 1
           fi
-          pnpm add "file:$pkg"
+          # Install the package from tarball in the TypeScript workspace
+          cd ../../packages/typescript
+          pnpm add "file:../../crates/kreuzberg-node/$pkg"
 
       - name: Run TypeScript tests
         shell: bash

@@ -150,6 +150,20 @@ jobs:
           sed -i.bak "s/__CORE_VERSION__/${core_version}/" packages/ruby/vendor/Cargo.toml
           rm -f packages/ruby/vendor/Cargo.toml.bak
 
+      - name: Configure Tesseract build environment (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Set a clean temp directory for CMake builds to avoid FileTracker issues
+          $tempDir = "$env:GITHUB_WORKSPACE\temp"
+          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+          Add-Content -Path $env:GITHUB_ENV -Value "TEMP=$tempDir"
+          Add-Content -Path $env:GITHUB_ENV -Value "TMP=$tempDir"
+          Add-Content -Path $env:GITHUB_ENV -Value "TESSERACT_RS_CACHE_DIR=$env:GITHUB_WORKSPACE\.tesseract-cache"
+          # Ensure CMake can write tracking logs
+          Add-Content -Path $env:GITHUB_ENV -Value "UseMultiToolTask=true"
+          Add-Content -Path $env:GITHUB_ENV -Value "EnforceProcessCountAcrossBuilds=true"
+
       - name: Build Ruby gem
         shell: bash
         run: |
@@ -247,9 +261,27 @@ jobs:
           cd packages/ruby
           gem install pkg/kreuzberg-*.gem
 
+      - name: Configure Tesseract build environment (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Set a clean temp directory for CMake builds to avoid FileTracker issues
+          $tempDir = "$env:GITHUB_WORKSPACE\temp"
+          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+          Add-Content -Path $env:GITHUB_ENV -Value "TEMP=$tempDir"
+          Add-Content -Path $env:GITHUB_ENV -Value "TMP=$tempDir"
+          Add-Content -Path $env:GITHUB_ENV -Value "TESSERACT_RS_CACHE_DIR=$env:GITHUB_WORKSPACE\.tesseract-cache"
+          # Ensure CMake can write tracking logs
+          Add-Content -Path $env:GITHUB_ENV -Value "UseMultiToolTask=true"
+          Add-Content -Path $env:GITHUB_ENV -Value "EnforceProcessCountAcrossBuilds=true"
+
       - name: Build local native extension
+        shell: bash
         run: |
           cd packages/ruby
+          # Enable verbose output for debugging
+          export CARGO_BUILD_JOBS=1
+          export RUST_BACKTRACE=1
           bundle exec rake compile
 
       - name: Run Ruby tests
