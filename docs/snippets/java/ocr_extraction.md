@@ -16,7 +16,7 @@ public class Main {
                     .build())
                 .build();
 
-            ExtractionResult result = Kreuzberg.extractFileSync("scanned.pdf", null, config);
+            ExtractionResult result = Kreuzberg.extractFile("scanned.pdf", config);
             System.out.println(result.getContent());
         } catch (IOException | KreuzbergException e) {
             System.err.println("Extraction failed: " + e.getMessage());

@@ -37,11 +37,11 @@ Extract content from custom file formats or override built-in extractors.
 
     --8<-- "snippets/python/plugin_extractor.md"
 
-=== "Go"
-
-    --8<-- "snippets/go/plugin_validator.md"
-
 ### Registration
+
+=== "C#"
+
+    --8<-- "snippets/csharp/extractor_registration.md"
 
 === "Go"
 
@@ -101,11 +101,11 @@ Post-processors execute in three stages:
 
     --8<-- "snippets/python/word_count_processor.md"
 
-=== "Java"
-
-    --8<-- "snippets/java/word_count_processor.md"
-
 ### Conditional Processing
+
+=== "C#"
+
+    --8<-- "snippets/csharp/pdf_only_processor.md"
 
 === "Java"
 
@@ -131,6 +131,10 @@ Integrate custom OCR engines or cloud services.
 
 ### Python Implementation
 
+=== "C#"
+
+    --8<-- "snippets/csharp/cloud_ocr_backend.md"
+
 === "Java"
 
     --8<-- "snippets/java/cloud_ocr_backend.md"
@@ -154,6 +158,10 @@ Enforce quality requirements on extraction results.
 
 ### Python Implementation
 
+=== "C#"
+
+    --8<-- "snippets/csharp/min_length_validator.md"
+
 === "Java"
 
     --8<-- "snippets/java/min_length_validator.md"
@@ -163,6 +171,10 @@ Enforce quality requirements on extraction results.
     --8<-- "snippets/python/min_length_validator.md"
 
 ### Quality Score Validator
+
+=== "C#"
+
+    --8<-- "snippets/csharp/quality_score_validator.md"
 
 === "Java"
 
@@ -180,6 +192,10 @@ Enforce quality requirements on extraction results.
 
 ### Listing Plugins
 
+=== "C#"
+
+    --8<-- "snippets/csharp/list_plugins.md"
+
 === "Java"
 
     --8<-- "snippets/java/list_plugins.md"
@@ -193,6 +209,10 @@ Enforce quality requirements on extraction results.
     --8<-- "snippets/rust/list_plugins.md"
 
 ### Unregistering Plugins
+
+=== "C#"
+
+    --8<-- "snippets/csharp/unregister_plugins.md"
 
 === "Java"
 
@@ -208,6 +228,10 @@ Enforce quality requirements on extraction results.
 
 ### Clearing All Plugins
 
+=== "C#"
+
+    --8<-- "snippets/csharp/clear_plugins.md"
+
 === "Java"
 
     --8<-- "snippets/java/clear_plugins.md"
@@ -215,6 +239,10 @@ Enforce quality requirements on extraction results.
 === "Python"
 
     --8<-- "snippets/python/clear_plugins.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/clear_plugins.md"
 
 ## Thread Safety
 
@@ -227,6 +255,10 @@ All plugins must be thread-safe:
     --8<-- "snippets/rust/stateful_plugin.md"
 
 ### Python Thread Safety
+
+=== "C#"
+
+    --8<-- "snippets/csharp/stateful_plugin.md"
 
 === "Java"
 
@@ -246,6 +278,10 @@ All plugins must be thread-safe:
 
 ### Error Handling
 
+=== "C#"
+
+    --8<-- "snippets/csharp/error_handling.md"
+
 === "Java"
 
     --8<-- "snippets/java/error_handling.md"
@@ -259,6 +295,10 @@ All plugins must be thread-safe:
     --8<-- "snippets/rust/error_handling.md"
 
 ### Logging
+
+=== "C#"
+
+    --8<-- "snippets/csharp/plugin_logging.md"
 
 === "Java"
 
@@ -274,6 +314,10 @@ All plugins must be thread-safe:
 
 ### Testing
 
+=== "C#"
+
+    --8<-- "snippets/csharp/plugin_testing.md"
+
 === "Java"
 
     --8<-- "snippets/java/plugin_testing.md"
@@ -287,6 +331,10 @@ All plugins must be thread-safe:
     --8<-- "snippets/rust/plugin_testing.md"
 
 ## Complete Example: PDF Metadata Extractor
+
+=== "C#"
+
+    --8<-- "snippets/csharp/pdf_metadata_extractor.md"
 
 === "Java"
 

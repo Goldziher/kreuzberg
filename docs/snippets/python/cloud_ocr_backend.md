@@ -1,11 +1,11 @@
 ```python
 from kreuzberg import register_ocr_backend
-import requests
+import httpx
 
 class CloudOcrBackend:
     def __init__(self, api_key: str):
-        self.api_key = api_key
-        self.supported_langs = ["eng", "deu", "fra"]
+        self.api_key: str = api_key
+        self.langs: list[str] = ["eng", "deu", "fra"]
 
     def name(self) -> str:
         return "cloud-ocr"
@@ -13,32 +13,18 @@ class CloudOcrBackend:
     def version(self) -> str:
         return "1.0.0"
 
-    def backend_type(self) -> str:
-        return "custom"
-
     def supported_languages(self) -> list[str]:
-        return self.supported_langs
-
-    def supports_language(self, language: str) -> bool:
-        return language in self.supported_langs
+        return self.langs
 
     def process_image(self, image_bytes: bytes, config: dict) -> dict:
-        # Send image to cloud OCR service
-        response = requests.post(
-            "https://api.example.com/ocr",
-            files={"image": image_bytes},
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json={"language": config.get("language", "eng")}
-        )
-
-        text = response.json()["text"]
-
-        return {
-            "content": text,
-            "mime_type": "text/plain",
-            "metadata": {"confidence": response.json().get("confidence", 0.0)},
-            "tables": [],
-        }
+        with httpx.Client() as client:
+            response = client.post(
+                "https://api.example.com/ocr",
+                files={"image": image_bytes},
+                json={"language": config.get("language", "eng")},
+            )
+            text: str = response.json()["text"]
+            return {"content": text, "mime_type": "text/plain"}
 
     def initialize(self) -> None:
         pass
@@ -46,6 +32,6 @@ class CloudOcrBackend:
     def shutdown(self) -> None:
         pass
 
-# Register the backend
-register_ocr_backend(CloudOcrBackend(api_key="your-api-key"))
+backend: CloudOcrBackend = CloudOcrBackend(api_key="your-api-key")
+register_ocr_backend(backend)
 ```

@@ -1,13 +1,16 @@
 ```typescript
-import { ExtractionConfig, KeywordConfig, KeywordAlgorithm } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  keywords: new KeywordConfig({
-    algorithm: KeywordAlgorithm.YAKE,
-    maxKeywords: 10,
-    minScore: 0.3,
-    ngramRange: [1, 3],
-    language: 'en'
-  })
-});
+const config = {
+	keywords: {
+		algorithm: 'yake',
+		maxKeywords: 10,
+		minScore: 0.3,
+		ngramRange: [1, 3],
+		language: 'en',
+	},
+};
+
+const result = await extractFile('document.pdf', null, config);
+console.log(`Content: ${result.content}`);
 ```

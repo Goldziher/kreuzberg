@@ -1,10 +1,15 @@
 ```typescript
-import { extractFileSync, ExtractionConfig, OcrConfig, PdfConfig } from 'kreuzberg';
+import { extractFileSync } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  ocr: new OcrConfig({ backend: 'tesseract' }),
-  pdf: new PdfConfig({ dpi: 300 })
-});
+const config = {
+	ocr: {
+		backend: 'tesseract',
+	},
+	pdfOptions: {
+		extractImages: true,
+	},
+};
 
 const result = extractFileSync('scanned.pdf', null, config);
+console.log(result.content);
 ```

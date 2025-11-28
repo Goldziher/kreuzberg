@@ -43,5 +43,5 @@ ExtractionConfig config = ExtractionConfig.builder()
         .build())
     .build();
 
-ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
+ExtractionResult result = Kreuzberg.extractFile("document.pdf", config);
 ```

@@ -1,16 +1,11 @@
 ```typescript
-import { extractFileSync, ExtractionConfig } from "kreuzberg";
+import { extractFileSync } from 'kreuzberg';
 
-const result = extractFileSync("document.pdf", null, new ExtractionConfig());
+const result = extractFileSync('document.pdf');
 
-// Iterate over tables
 for (const table of result.tables) {
 	console.log(`Table with ${table.cells.length} rows`);
-	console.log(table.markdown); // Markdown representation
-
-	// Access cells
-	for (const row of table.cells) {
-		console.log(row);
-	}
+	console.log(`Page: ${table.pageNumber}`);
+	console.log(table.markdown);
 }
 ```

@@ -12,9 +12,7 @@ ExtractionConfig config = ExtractionConfig.builder()
         .build())
     .build();
 
-ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
+ExtractionResult result = Kreuzberg.extractFile("document.pdf", config);
 
-// Note: Java bindings don't currently support chunks/embeddings in the result
-// This feature is planned for a future release
 System.out.println("Extracted content: " + result.getContent().length() + " characters");
 ```

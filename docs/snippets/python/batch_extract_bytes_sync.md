@@ -1,24 +1,20 @@
 ```python
 from kreuzberg import batch_extract_bytes_sync, ExtractionConfig
 
-files = ["doc1.pdf", "doc2.docx"]
-data_list = []
-mime_types = []
+files: list[str] = ["doc1.pdf", "doc2.docx"]
+data_list: list[bytes] = []
+mime_types: list[str] = []
 
 for file in files:
     with open(file, "rb") as f:
         data_list.append(f.read())
-    mime_types.append(
-        "application/pdf" if file.endswith(".pdf") else
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    )
+    mime_type: str = "application/pdf" if file.endswith(".pdf") else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    mime_types.append(mime_type)
 
-results = batch_extract_bytes_sync(
-    data_list,
-    mime_types=mime_types,
-    config=ExtractionConfig()
-)
+config: ExtractionConfig = ExtractionConfig()
+results = batch_extract_bytes_sync(data_list, mime_types, config=config)
 
 for i, result in enumerate(results):
-    print(f"Document {i+1}: {len(result.content)} characters")
+    char_count: int = len(result.content)
+    print(f"Document {i + 1}: {char_count} characters")
 ```

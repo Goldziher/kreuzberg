@@ -1,7 +1,7 @@
 ```typescript
-import { extractFileSync, ExtractionConfig } from 'kreuzberg';
+import { extractFileSync } from 'kreuzberg';
 
-const result = extractFileSync('document.pdf', null, new ExtractionConfig());
+const result = extractFileSync('document.pdf');
 
 console.log(result.content);
 console.log(`Tables: ${result.tables.length}`);

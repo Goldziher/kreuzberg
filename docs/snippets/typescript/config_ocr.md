@@ -1,11 +1,16 @@
 ```typescript
-import { ExtractionConfig, OcrConfig, TesseractConfig } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  ocr: new OcrConfig({
-    backend: 'tesseract',
-    language: 'eng+fra',
-    tesseractConfig: new TesseractConfig({ psm: 3 })
-  })
-});
+const config = {
+	ocr: {
+		backend: 'tesseract',
+		language: 'eng+fra',
+		tesseractConfig: {
+			psm: 3,
+		},
+	},
+};
+
+const result = await extractFile('document.pdf', null, config);
+console.log(result.content);
 ```

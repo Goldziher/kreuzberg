@@ -24,7 +24,7 @@ Kreuzberg.register_validator("min_length_validator", validator, 100)
 config = Kreuzberg::Config::Extraction.new
 
 begin
-  result = Kreuzberg.extract_file("document.pdf", config)
+  result = Kreuzberg.extract_file_sync("document.pdf", config: config)
   puts "Extraction successful: #{result["content"].length} characters"
 rescue Kreuzberg::Errors::ValidationError => e
   puts "Validation failed: #{e.message}"

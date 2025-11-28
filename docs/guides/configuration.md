@@ -30,6 +30,10 @@ Kreuzberg's behavior is controlled through configuration objects. All settings a
 
 Kreuzberg supports four ways to configure extraction:
 
+=== "C#"
+
+    --8<-- "snippets/csharp/config_discover.md"
+
 === "Go"
 
     --8<-- "snippets/go/config_discover.md"
@@ -133,6 +137,10 @@ Kreuzberg automatically discovers configuration files in the following locations
 2. User config: `~/.config/kreuzberg/config.{toml,yaml,yml,json}`
 3. System config: `/etc/kreuzberg/config.{toml,yaml,yml,json}`
 
+=== "C#"
+
+    --8<-- "snippets/csharp/config_discover.md"
+
 === "Go"
 
     --8<-- "snippets/go/config_discover.md"
@@ -177,6 +185,10 @@ The main configuration object controlling extraction behavior.
 
 ### Basic Example
 
+=== "C#"
+
+    --8<-- "snippets/csharp/config_basic.md"
+
 === "Go"
 
     --8<-- "snippets/go/config_basic.md"
@@ -212,6 +224,10 @@ Configuration for OCR processing. Set to enable OCR on images and scanned PDFs.
 | `tesseract_config` | `TesseractConfig?` | `None` | Tesseract-specific configuration |
 
 ### Example
+
+=== "C#"
+
+    --8<-- "snippets/csharp/config_ocr.md"
 
 === "Go"
 
@@ -291,6 +307,10 @@ Tesseract OCR engine configuration.
 
 ### Example
 
+=== "C#"
+
+    --8<-- "snippets/csharp/tesseract_config.md"
+
 === "Go"
 
     --8<-- "snippets/go/tesseract_config.md"
@@ -331,6 +351,10 @@ Image preprocessing configuration for OCR.
 
 ### Example
 
+=== "C#"
+
+    --8<-- "snippets/csharp/image_preprocessing.md"
+
 === "Go"
 
     --8<-- "snippets/go/image_preprocessing.md"
@@ -366,6 +390,10 @@ PDF-specific extraction configuration.
 | `passwords` | `list[str]?` | `None` | List of passwords to try for encrypted PDFs |
 
 ### Example
+
+=== "C#"
+
+    --8<-- "snippets/csharp/pdf_config.md"
 
 === "Go"
 
@@ -406,6 +434,10 @@ Configuration for extracting images from documents.
 
 ### Example
 
+=== "C#"
+
+    --8<-- "snippets/csharp/image_extraction.md"
+
 === "Go"
 
     --8<-- "snippets/go/image_extraction.md"
@@ -442,6 +474,10 @@ Text chunking configuration for splitting extracted text into chunks.
 | `preset` | `str?` | `None` | Chunking preset: `"small"`, `"medium"`, `"large"` |
 
 ### Example
+
+=== "C#"
+
+    --8<-- "snippets/csharp/chunking.md"
 
 === "Go"
 
@@ -496,6 +532,10 @@ Create embedding models using these factory methods:
 
 ### Example
 
+=== "C#"
+
+    --8<-- "snippets/csharp/embedding_config.md"
+
 === "Go"
 
     --8<-- "snippets/go/embedding_config.md"
@@ -530,6 +570,10 @@ Configuration for reducing token count in extracted text.
 | `preserve_important_words` | `bool` | `true` | Preserve important words during reduction |
 
 ### Example
+
+=== "C#"
+
+    --8<-- "snippets/csharp/token_reduction.md"
 
 === "Go"
 
@@ -567,6 +611,10 @@ Configuration for automatic language detection.
 
 ### Example
 
+=== "C#"
+
+    --8<-- "snippets/csharp/language_detection.md"
+
 === "Go"
 
     --8<-- "snippets/go/language_detection.md"
@@ -603,6 +651,10 @@ Configuration for post-processing pipeline.
 
 ### Example
 
+=== "C#"
+
+    --8<-- "snippets/csharp/postprocessor_config.md"
+
 === "Go"
 
     --8<-- "snippets/go/postprocessor_config.md"
@@ -630,6 +682,10 @@ Configuration for post-processing pipeline.
 ## Complete Example
 
 Here's a complete example showing all configuration options together:
+
+=== "C#"
+
+    --8<-- "snippets/csharp/complete_example.md"
 
 === "Go"
 

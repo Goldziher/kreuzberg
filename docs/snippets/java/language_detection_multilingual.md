@@ -11,8 +11,7 @@ ExtractionConfig config = ExtractionConfig.builder()
         .build())
     .build();
 
-ExtractionResult result = Kreuzberg.extractFileSync("multilingual_document.pdf", null, config);
+ExtractionResult result = Kreuzberg.extractFile("multilingual_document.pdf", config);
 
 System.out.println("Detected languages: " + result.getDetectedLanguages());
-// Output: [eng, fra, deu]
 ```

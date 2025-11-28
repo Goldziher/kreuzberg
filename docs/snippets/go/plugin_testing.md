@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"unsafe"
 
 	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
 )
@@ -50,7 +51,10 @@ func TestPostProcessor(t *testing.T) {
 		"detected_languages": []interface{}{},
 	}
 
-	resultJSON, _ := json.Marshal(mockResult)
+	resultJSON, err := json.Marshal(mockResult)
+	if err != nil {
+		t.Fatalf("Failed to marshal mock result: %v", err)
+	}
 	cResultJSON := C.CString(string(resultJSON))
 	defer C.free(unsafe.Pointer(cResultJSON))
 
@@ -110,7 +114,10 @@ func TestValidator(t *testing.T) {
 		"detected_languages": []interface{}{},
 	}
 
-	validJSON, _ := json.Marshal(validContent)
+	validJSON, err := json.Marshal(validContent)
+	if err != nil {
+		t.Fatalf("Failed to marshal valid content: %v", err)
+	}
 	cValidJSON := C.CString(string(validJSON))
 	defer C.free(unsafe.Pointer(cValidJSON))
 
@@ -132,7 +139,10 @@ func TestValidator(t *testing.T) {
 		"detected_languages": []interface{}{},
 	}
 
-	invalidJSON, _ := json.Marshal(invalidContent)
+	invalidJSON, err := json.Marshal(invalidContent)
+	if err != nil {
+		t.Fatalf("Failed to marshal invalid content: %v", err)
+	}
 	cInvalidJSON := C.CString(string(invalidJSON))
 	defer C.free(unsafe.Pointer(cInvalidJSON))
 

@@ -1,17 +1,16 @@
 ```typescript
-import { ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  ocr: new OcrConfig({
-    tesseractConfig: new TesseractConfig({
-      preprocessing: new ImagePreprocessingConfig({
-        targetDpi: 300,
-        denoise: true,
-        deskew: true,
-        contrastEnhance: true,
-        binarizationMethod: 'otsu'
-      })
-    })
-  })
-});
+const config = {
+	ocr: {
+		backend: 'tesseract',
+		tesseractConfig: {
+			psm: 6,
+			enableTableDetection: true,
+		},
+	},
+};
+
+const result = await extractFile('document.pdf', null, config);
+console.log(result.content);
 ```

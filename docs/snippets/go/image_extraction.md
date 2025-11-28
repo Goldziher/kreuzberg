@@ -11,7 +11,7 @@ func main() {
     targetDPI := 200
     maxDim := 2048
     result, err := kreuzberg.ExtractFileSync("document.pdf", &kreuzberg.ExtractionConfig{
-        Images: &kreuzberg.ImageExtractionConfig{
+        ImageExtraction: &kreuzberg.ImageExtractionConfig{
             ExtractImages:     kreuzberg.BoolPtr(true),
             TargetDPI:         &targetDPI,
             MaxImageDimension: &maxDim,

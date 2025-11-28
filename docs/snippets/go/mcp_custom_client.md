@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os/exec"
 )
 
@@ -20,10 +21,18 @@ type MCPParams struct {
 
 func main() {
 	cmd := exec.Command("kreuzberg", "mcp")
-	stdin, _ := cmd.StdinPipe()
-	stdout, _ := cmd.StdoutPipe()
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Fatalf("create stdin pipe: %v", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatalf("create stdout pipe: %v", err)
+	}
 
-	cmd.Start()
+	if err := cmd.Start(); err != nil {
+		log.Fatalf("start command: %v", err)
+	}
 
 	request := MCPRequest{
 		Method: "tools/call",
@@ -36,7 +45,10 @@ func main() {
 		},
 	}
 
-	data, _ := json.Marshal(request)
+	data, err := json.Marshal(request)
+	if err != nil {
+		log.Fatalf("marshal request: %v", err)
+	}
 	fmt.Fprintf(stdin, "%s\n", string(data))
 
 	scanner := bufio.NewScanner(stdout)
@@ -44,6 +56,8 @@ func main() {
 		fmt.Println(scanner.Text())
 	}
 
-	cmd.Wait()
+	if err := cmd.Wait(); err != nil {
+		log.Fatalf("wait for command: %v", err)
+	}
 }
 ```

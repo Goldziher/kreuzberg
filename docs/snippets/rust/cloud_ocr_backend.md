@@ -23,7 +23,6 @@ impl OcrBackend for CloudOcrBackend {
         image_bytes: &[u8],
         config: &OcrConfig,
     ) -> Result<ExtractionResult> {
-        // Send image to cloud OCR service
         let text = self.call_cloud_api(image_bytes, &config.language).await?;
 
         Ok(ExtractionResult {
@@ -56,7 +55,6 @@ impl CloudOcrBackend {
         image: &[u8],
         language: &str
     ) -> Result<String> {
-        // API call implementation
         Ok("Extracted text".to_string())
     }
 }

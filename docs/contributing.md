@@ -9,6 +9,8 @@ Thanks for helping improve Kreuzberg! This guide summarizes the workflow, toolin
 - Node.js 20+ with `pnpm`.
 - Ruby 3.3+ via `rbenv` (preferred) or `rvm`.
 - Go 1.25+ (install via `brew install go`, `asdf install golang`, or the official installer).
+- Java 25+ (required for FFM API bindings).
+- .NET 9+ (required for C# bindings).
 - Homebrew (macOS) or system equivalents for Tesseract/Pdfium dependencies.
 
 Install all project dependencies in one shot:
@@ -93,6 +95,20 @@ task go:test           # go test ./... (requires libkreuzberg_ffi in target/rele
 task e2e:go:verify     # Regenerates fixtures and runs e2e/go tests with LD_LIBRARY_PATH set
 ```
 
+**Java** (FFM API):
+```bash
+cd packages/java
+mvn clean compile test  # Build and run tests
+mvn checkstyle:check    # Code quality checks
+```
+
+**C#** (.NET):
+```bash
+cd packages/csharp
+dotnet build            # Build the project
+dotnet test             # Run tests
+```
+
 ### Common Build Issues
 
 **Cross-compilation**:
@@ -117,8 +133,8 @@ sudo apt-get install build-essential
 2. **Make changes** with small, focused commits. Code should compile on all supported platforms.
 3. **Run tests/lint** for the areas you touched:
    - `task lint` – cross-language linters (cargo clippy, Ruff, Rubocop, Biome/Oxlint, Mypy).
-   - `task dev:test` – full test matrix (Rust + Python + Ruby + TypeScript).
-   - Language-specific shortcuts: `task python:test`, `task typescript:test`, `task ruby:test`, `task rust:test`, `task go:test`, `task e2e:go:verify`.
+   - `task dev:test` – full test matrix (Rust + Python + Ruby + TypeScript + Go + Java + C#).
+   - Language-specific shortcuts: `task python:test`, `task typescript:test`, `task ruby:test`, `task rust:test`, `task go:test`, `task java:test`, `task csharp:test`.
 4. **Write/Update docs** when adding features. User-facing content lives under `docs/` and must be referenced in `mkdocs.yaml`.
 5. **Ensure conventional commits** (`feat: ...`, `fix: ...`, `docs: ...`). The pre-commit hook checks commit messages.
 6. **Create a pull request** with a clear summary, screenshots/logs if relevant, and a checklist of tests you ran.
@@ -129,7 +145,9 @@ sudo apt-get install build-essential
 - **Python**: dataclasses use `frozen=True`, `slots=True`; function-based pytest tests; follow Ruff/Mypy rules.
 - **TypeScript**: maintain strict types, avoid `any`, keep bindings in `packages/typescript/src` and tests under `tests/binding|smoke|cli`.
 - **Ruby**: no global state outside `Kreuzberg` module, keep native bridge panic-free, follow Rubocop defaults.
-- **Testing strategy**: Only language-specific smoke/binding tests live in each package; shared behavior belongs to the `e2e/` fixtures (Python, Ruby, TypeScript, Rust, Go runners). When adding a new feature, update the relevant fixture and regenerate via `task e2e:<lang>:generate`.
+- **Java**: FFM API (Foreign Function & Memory), sealed classes, records, pattern matching; JUnit 5; follow Checkstyle rules.
+- **C#**: .NET 9+; follow Microsoft C# coding conventions; use records for data types, nullable reference types enabled.
+- **Testing strategy**: Only language-specific smoke/binding tests live in each package; shared behavior belongs to the `e2e/` fixtures (Python, Ruby, TypeScript, Rust, Go, Java, C# runners). When adding a new feature, update the relevant fixture and regenerate via `task e2e:<lang>:generate`.
 
 ## Documentation
 

@@ -1,7 +1,7 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
+config = Kreuzberg::Config::Extraction.new(
   enable_quality_processing: true
 )
 ```

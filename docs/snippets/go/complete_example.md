@@ -9,67 +9,41 @@ import (
 )
 
 func main() {
-	backend := "tesseract"
-	language := "eng+fra"
-	psm := 3
-	oem := 3
-	minConfidence := 0.8
-	targetDpi := 300
-	denoise := true
-	deskew := true
-	contrastEnhance := true
-	enableTableDetection := true
-	extractImages := true
-	extractMetadata := true
-	imageDpi := 150
-	maxImageDimension := 4096
-	maxChars := 1000
-	maxOverlap := 200
-	batchSize := 32
-	mode := "moderate"
-	preserveImportantWords := true
-	enabled := true
-	minLangConfidence := 0.8
-	detectMultiple := false
-	useCache := true
-	enableQuality := true
-	forceOcr := false
-
 	config := &kreuzberg.ExtractionConfig{
-		UseCache:                &useCache,
-		EnableQualityProcessing: &enableQuality,
-		ForceOcr:                &forceOcr,
+		UseCache:                kreuzberg.BoolPtr(true),
+		EnableQualityProcessing: kreuzberg.BoolPtr(true),
+		ForceOCR:                kreuzberg.BoolPtr(false),
 		OCR: &kreuzberg.OCRConfig{
-			Backend:   backend,
-			Language:  &language,
+			Backend:   "tesseract",
+			Language:  kreuzberg.StringPtr("eng+fra"),
 			Tesseract: &kreuzberg.TesseractConfig{
-				PSM:                  &psm,
-				OEM:                  &oem,
-				MinConfidence:        &minConfidence,
-				EnableTableDetection: &enableTableDetection,
+				PSM:                  kreuzberg.IntPtr(3),
+				OEM:                  kreuzberg.IntPtr(3),
+				MinConfidence:        kreuzberg.FloatPtr(0.8),
+				EnableTableDetection: kreuzberg.BoolPtr(true),
 			},
 		},
-		PDFOptions: &kreuzberg.PdfConfig{
-			ExtractImages:   &extractImages,
-			ExtractMetadata: &extractMetadata,
+		PdfOptions: &kreuzberg.PdfConfig{
+			ExtractImages:   kreuzberg.BoolPtr(true),
+			ExtractMetadata: kreuzberg.BoolPtr(true),
 		},
-		ImageExtraction: &kreuzberg.ImageExtractionConfig{
-			ExtractImages:     &extractImages,
-			TargetDpi:         &imageDpi,
-			MaxImageDimension: &maxImageDimension,
+		Images: &kreuzberg.ImageExtractionConfig{
+			ExtractImages:     kreuzberg.BoolPtr(true),
+			TargetDPI:         kreuzberg.IntPtr(150),
+			MaxImageDimension: kreuzberg.IntPtr(4096),
 		},
 		Chunking: &kreuzberg.ChunkingConfig{
-			MaxChars:   &maxChars,
-			MaxOverlap: &maxOverlap,
+			MaxChars:   kreuzberg.IntPtr(1000),
+			MaxOverlap: kreuzberg.IntPtr(200),
 		},
 		TokenReduction: &kreuzberg.TokenReductionConfig{
-			Mode:                    &mode,
-			PreserveImportantWords: &preserveImportantWords,
+			Mode:                   "moderate",
+			PreserveImportantWords: kreuzberg.BoolPtr(true),
 		},
 		LanguageDetection: &kreuzberg.LanguageDetectionConfig{
-			Enabled:        &enabled,
-			MinConfidence:  &minLangConfidence,
-			DetectMultiple: &detectMultiple,
+			Enabled:        kreuzberg.BoolPtr(true),
+			MinConfidence:  kreuzberg.FloatPtr(0.8),
+			DetectMultiple: kreuzberg.BoolPtr(false),
 		},
 	}
 

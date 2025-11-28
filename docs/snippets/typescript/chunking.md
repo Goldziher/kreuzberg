@@ -1,16 +1,16 @@
 ```typescript
-import { ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  chunking: new ChunkingConfig({
-    maxChars: 1500,
-    maxOverlap: 200,
-    embedding: new EmbeddingConfig({
-      model: new EmbeddingModelType({
-        type: 'preset',
-        name: 'text-embedding-all-minilm-l6-v2'
-      })
-    })
-  })
-});
+const config = {
+	chunking: {
+		maxChars: 1500,
+		maxOverlap: 200,
+		embedding: {
+			preset: 'quality',
+		},
+	},
+};
+
+const result = await extractFile('document.pdf', null, config);
+console.log(`Chunks created: ${result.chunks?.length ?? 0}`);
 ```

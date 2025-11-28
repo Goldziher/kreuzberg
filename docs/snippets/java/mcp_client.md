@@ -1,6 +1,10 @@
 ```java
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.Map;
 
 public class McpClient {
@@ -30,7 +34,9 @@ public class McpClient {
         stdin.flush();
 
         String response = stdout.readLine();
+        @SuppressWarnings("unchecked")
         Map<String, Object> result = mapper.readValue(response, Map.class);
+        @SuppressWarnings("unchecked")
         Map<String, Object> resultData = (Map<String, Object>) result.get("result");
         return (String) resultData.get("content");
     }

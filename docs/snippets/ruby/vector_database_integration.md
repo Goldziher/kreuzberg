@@ -1,11 +1,11 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
-  chunking: Kreuzberg::ChunkingConfig.new(
+config = Kreuzberg::Config::Extraction.new(
+  chunking: Kreuzberg::Config::Chunking.new(
     max_chars: 512,
     max_overlap: 50,
-    embedding: Kreuzberg::EmbeddingConfig.new(
+    embedding: Kreuzberg::Config::Embedding.new(
       model: Kreuzberg::EmbeddingModelType.new(
         type: 'preset',
         name: 'balanced'
@@ -15,7 +15,7 @@ config = Kreuzberg::ExtractionConfig.new(
   )
 )
 
-result = Kreuzberg.extract_file('document.pdf', config: config)
+result = Kreuzberg.extract_file_sync('document.pdf', config: config)
 
 result.chunks.each_with_index do |chunk, i|
   if chunk.embedding

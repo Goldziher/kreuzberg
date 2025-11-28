@@ -1,11 +1,14 @@
 ```typescript
-import { ExtractionConfig, LanguageDetectionConfig } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  languageDetection: new LanguageDetectionConfig({
-    enabled: true,
-    minConfidence: 0.9,
-    detectMultiple: true
-  })
-});
+const config = {
+	languageDetection: {
+		enabled: true,
+		minConfidence: 0.9,
+		detectMultiple: true,
+	},
+};
+
+const result = await extractFile('document.pdf', null, config);
+console.log(result.content);
 ```

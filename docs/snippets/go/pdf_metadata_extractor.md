@@ -39,7 +39,10 @@ func pdfMetadataExtractor(resultJSON *C.char) *C.char {
 	mimeType, ok := result["mime_type"].(string)
 	if !ok || mimeType != "application/pdf" {
 		// Return unchanged for non-PDF documents
-		outputJSON, _ := json.Marshal(result)
+		outputJSON, err := json.Marshal(result)
+		if err != nil {
+			return C.CString("{\"error\":\"Failed to serialize result\"}")
+		}
 		return C.CString(string(outputJSON))
 	}
 

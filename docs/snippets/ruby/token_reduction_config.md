@@ -1,8 +1,8 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
-  token_reduction: Kreuzberg::TokenReductionConfig.new(
+config = Kreuzberg::Config::Extraction.new(
+  token_reduction: Kreuzberg::Config::TokenReduction.new(
     mode: 'moderate',
     preserve_markdown: true,
     preserve_code: true,

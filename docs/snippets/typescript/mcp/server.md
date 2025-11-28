@@ -1,12 +1,12 @@
 ```typescript
 import {
-  extractFile,
-  extractFileSync,
-  extractBytes,
-  extractBytesSync,
-  type ExtractionResult,
-  type ExtractionConfig,
-} from "@goldziher/kreuzberg";
+	extractFile,
+	extractFileSync,
+	extractBytes,
+	extractBytesSync,
+	type ExtractionResult,
+	type ExtractionConfig,
+} from 'kreuzberg';
 import * as readline from "node:readline";
 
 /**

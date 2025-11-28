@@ -6,7 +6,7 @@ let config = ExtractionConfig {
         max_chars: 512,
         max_overlap: 50,
         embedding: Some(EmbeddingConfig {
-            model: "balanced".to_string(),
+            model: kreuzberg::EmbeddingModelType::Preset { name: "balanced".to_string() },
             normalize: true,
             ..Default::default()
         }),
@@ -20,7 +20,6 @@ let result = extract_file("document.pdf", None, &config).await?;
 if let Some(chunks) = result.chunks {
     for (i, chunk) in chunks.iter().enumerate() {
         if let Some(embedding) = &chunk.embedding {
-            // Store in vector database
             println!("Chunk {}: {} dimensions", i, embedding.len());
         }
     }

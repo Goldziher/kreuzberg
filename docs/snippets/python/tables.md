@@ -1,14 +1,12 @@
 ```python
-from kreuzberg import extract_file_sync, ExtractionConfig
+from kreuzberg import extract_file_sync, ExtractionConfig, ExtractedTable
 
 result = extract_file_sync("document.pdf", config=ExtractionConfig())
 
-# Iterate over tables
 for table in result.tables:
-    print(f"Table with {len(table.cells)} rows")
-    print(table.markdown)  # Markdown representation
-
-    # Access cells
+    row_count: int = len(table.cells)
+    print(f"Table with {row_count} rows")
+    print(table.markdown)
     for row in table.cells:
         print(row)
 ```

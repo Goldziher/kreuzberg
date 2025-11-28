@@ -11,6 +11,6 @@ ExtractionConfig config = ExtractionConfig.builder()
     .forceOcr(true)
     .build();
 
-ExtractionResult result = Kreuzberg.extractFileSync("document.pdf", null, config);
-System.out.println(result.content());
+ExtractionResult result = Kreuzberg.extractFile("document.pdf", config);
+System.out.println(result.getContent());
 ```

@@ -72,7 +72,7 @@ pub fn validate_mime_type(mime_type: &str) -> Result<()> {
 
 ## Supported MIME Types
 
-Kreuzberg supports 118+ file extensions across multiple categories:
+Kreuzberg supports multiple file formats across many categories:
 
 ### Documents
 

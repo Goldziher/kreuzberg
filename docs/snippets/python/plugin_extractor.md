@@ -10,33 +10,24 @@ class CustomJsonExtractor:
         return "1.0.0"
 
     def supported_mime_types(self) -> list[str]:
-        return ["application/json", "text/json"]
+        return ["application/json"]
 
     def priority(self) -> int:
         return 50
 
     def extract_bytes(
-        self,
-        content: bytes,
-        mime_type: str,
-        config: dict
+        self, content: bytes, mime_type: str, config: dict
     ) -> ExtractionResult:
-        data = json.loads(content)
-        text = self._extract_text(data)
+        data: dict = json.loads(content)
+        text: str = self._extract_text(data)
+        return {"content": text, "mime_type": "application/json"}
 
-        return {
-            "content": text,
-            "mime_type": "application/json",
-            "metadata": {},
-            "tables": [],
-        }
-
-    def _extract_text(self, obj) -> str:
+    def _extract_text(self, obj: object) -> str:
         if isinstance(obj, str):
-            return f"{obj}\\n"
-        elif isinstance(obj, list):
+            return f"{obj}\n"
+        if isinstance(obj, list):
             return "".join(self._extract_text(item) for item in obj)
-        elif isinstance(obj, dict):
+        if isinstance(obj, dict):
             return "".join(self._extract_text(v) for v in obj.values())
         return ""
 
@@ -46,6 +37,6 @@ class CustomJsonExtractor:
     def shutdown(self) -> None:
         pass
 
-# Register the extractor
-register_document_extractor(CustomJsonExtractor())
+extractor: CustomJsonExtractor = CustomJsonExtractor()
+register_document_extractor(extractor)
 ```

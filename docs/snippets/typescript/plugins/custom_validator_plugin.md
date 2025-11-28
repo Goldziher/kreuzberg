@@ -1,11 +1,11 @@
 ```typescript
 import {
-  registerValidator,
-  unregisterValidator,
-  type ValidatorProtocol,
-  type ExtractionResult,
-  ValidationError,
-} from "@goldziher/kreuzberg";
+	registerValidator,
+	unregisterValidator,
+	type ValidatorProtocol,
+	type ExtractionResult,
+	ValidationError,
+} from 'kreuzberg';
 
 /**
  * Stateful validator with call counting

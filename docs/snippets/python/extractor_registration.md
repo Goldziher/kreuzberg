@@ -1,6 +1,14 @@
 ```python
 from kreuzberg import register_document_extractor
 
-# Registration happens automatically when you call the function
-register_document_extractor(CustomJsonExtractor())
+class CustomExtractor:
+    def name(self) -> str:
+        return "custom"
+
+    def version(self) -> str:
+        return "1.0.0"
+
+extractor = CustomExtractor()
+register_document_extractor(extractor)
+print("Extractor registered")
 ```

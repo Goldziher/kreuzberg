@@ -9,10 +9,10 @@ class WordCountProcessor:
         return "1.0.0"
 
     def processing_stage(self) -> str:
-        return "early"  # or "middle", "late"
+        return "early"
 
     def process(self, result: ExtractionResult) -> ExtractionResult:
-        word_count = len(result["content"].split())
+        word_count: int = len(result["content"].split())
         result["metadata"]["word_count"] = word_count
         return result
 
@@ -25,5 +25,6 @@ class WordCountProcessor:
     def shutdown(self) -> None:
         pass
 
-register_post_processor(WordCountProcessor())
+processor: WordCountProcessor = WordCountProcessor()
+register_post_processor(processor)
 ```

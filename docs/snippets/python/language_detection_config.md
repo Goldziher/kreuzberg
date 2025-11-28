@@ -1,11 +1,15 @@
 ```python
-from kreuzberg import ExtractionConfig, LanguageDetectionConfig
+import asyncio
+from kreuzberg import ExtractionConfig, LanguageDetectionConfig, extract_file
 
-config = ExtractionConfig(
-    language_detection=LanguageDetectionConfig(
-        enabled=True,
-        min_confidence=0.8,      # Confidence threshold (0.0-1.0)
-        detect_multiple=False    # Single vs. multiple languages
+async def main() -> None:
+    config: ExtractionConfig = ExtractionConfig(
+        language_detection=LanguageDetectionConfig(
+            enabled=True, min_confidence=0.8, detect_multiple=False
+        )
     )
-)
+    result = await extract_file("document.pdf", config=config)
+    print(f"Languages: {result.detected_languages}")
+
+asyncio.run(main())
 ```

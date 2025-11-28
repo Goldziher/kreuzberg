@@ -1,43 +1,25 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
+config = Kreuzberg::Config::Extraction.new(
   enable_quality_processing: true,
-
-  language_detection: Kreuzberg::LanguageDetectionConfig.new(
+  language_detection: Kreuzberg::Config::LanguageDetection.new(
     enabled: true,
     detect_multiple: true
   ),
-
-  token_reduction: Kreuzberg::TokenReductionConfig.new(
-    mode: 'moderate',
-    preserve_markdown: true
-  ),
-
-  chunking: Kreuzberg::ChunkingConfig.new(
+  token_reduction: Kreuzberg::Config::TokenReduction.new(mode: 'moderate'),
+  chunking: Kreuzberg::Config::Chunking.new(
     max_chars: 512,
     max_overlap: 50,
-    embedding: Kreuzberg::EmbeddingConfig.new(
-      model: Kreuzberg::EmbeddingModelType.new(
-        type: 'preset',
-        name: 'balanced'
-      ),
-      normalize: true
-    )
+    embedding: { normalize: true }
   ),
-
-  keywords: Kreuzberg::KeywordConfig.new(
-    algorithm: Kreuzberg::KeywordAlgorithm::YAKE,
+  keywords: Kreuzberg::Config::Keywords.new(
+    algorithm: 'yake',
     max_keywords: 10
   )
 )
 
-result = Kreuzberg.extract_file('document.pdf', config: config)
-
-puts "Quality: #{result.metadata['quality_score'].round(2)}"
-puts "Languages: #{result.detected_languages}"
-puts "Keywords: #{result.metadata['keywords'].map { |kw| kw['text'] }}"
-if result.chunks && result.chunks[0].embedding
-  puts "Chunks: #{result.chunks.length} with #{result.chunks[0].embedding.length} dimensions"
-end
+result = Kreuzberg.extract_file_sync('document.pdf', config: config)
+puts "Languages: #{result.detected_languages.inspect}"
+puts "Chunks: #{result.chunks&.length || 0}"
 ```

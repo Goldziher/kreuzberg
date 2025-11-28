@@ -1,15 +1,17 @@
 ```typescript
-import { ExtractionConfig, ChunkingConfig, EmbeddingConfig, EmbeddingModelType } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  chunking: new ChunkingConfig({
-    maxChars: 1000,
-    embedding: new EmbeddingConfig({
-      model: EmbeddingModelType.preset('all-mpnet-base-v2'),
-      batchSize: 16,
-      normalize: true,
-      showDownloadProgress: true
-    })
-  })
-});
+const config = {
+	chunking: {
+		maxChars: 1000,
+		embedding: {
+			preset: 'quality',
+		},
+	},
+};
+
+const result = await extractFile('document.pdf', null, config);
+if (result.chunks && result.chunks.length > 0) {
+	console.log(`Chunk embeddings: ${result.chunks[0].embedding?.length ?? 0} dimensions`);
+}
 ```

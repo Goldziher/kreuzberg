@@ -1,18 +1,18 @@
 site_name: Kreuzberg
 site_description: A modern text extraction library supporting PDFs, images, office documents and more
 site_url: https://kreuzberg.dev
-site_author: Kreuzberg Contributors
+site_author: Na'aman Hirschfeld
 repo_name: Goldziher/kreuzberg
 repo_url: https://github.com/Goldziher/kreuzberg
 edit_uri: edit/main/docs/
 copyright: |
-  Copyright &copy; 2023-2025 Kreuzberg Contributors<br>
+  Copyright &copy; 2023-2025 Na'aman Hirschfeld<br>
   <a href="#__consent">Change cookie settings</a>
 
 theme:
   name: material
   logo: assets/logo.svg
-  favicon: assets/favicon.svg
+  favicon: assets/favicon.ico
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default

@@ -1,0 +1,12 @@
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/bin/Debug/net9.0/Kreuzberg.deps.json
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/bin/Debug/net9.0/Kreuzberg.dll
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/bin/Debug/net9.0/Kreuzberg.pdb
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/Debug/net9.0/Kreuzberg.GeneratedMSBuildEditorConfig.editorconfig
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/Debug/net9.0/Kreuzberg.AssemblyInfoInputs.cache
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/Debug/net9.0/Kreuzberg.AssemblyInfo.cs
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/Debug/net9.0/Kreuzberg.csproj.CoreCompileInputs.cache
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/Debug/net9.0/Kreuzberg.sourcelink.json
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/Debug/net9.0/Kreuzberg.dll
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/Debug/net9.0/refint/Kreuzberg.dll
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/Debug/net9.0/Kreuzberg.pdb
+/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/Debug/net9.0/ref/Kreuzberg.dll

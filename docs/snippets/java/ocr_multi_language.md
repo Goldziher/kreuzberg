@@ -11,6 +11,6 @@ ExtractionConfig config = ExtractionConfig.builder()
         .build())
     .build();
 
-ExtractionResult result = Kreuzberg.extractFileSync("multilingual.pdf", null, config);
-System.out.println(result.content());
+ExtractionResult result = Kreuzberg.extractFile("multilingual.pdf", config);
+System.out.println(result.getContent());
 ```

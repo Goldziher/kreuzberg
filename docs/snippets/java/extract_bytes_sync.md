@@ -9,9 +9,10 @@ import java.nio.file.Paths;
 try {
     byte[] data = Files.readAllBytes(Paths.get("document.pdf"));
 
-    ExtractionResult result = Kreuzberg.extractBytesSync(
+    ExtractionResult result = Kreuzberg.extractBytes(
         data,
-        "application/pdf"
+        "application/pdf",
+        null
     );
     System.out.println(result.getContent());
 } catch (IOException | KreuzbergException e) {

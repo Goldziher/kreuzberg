@@ -42,7 +42,6 @@ impl PostProcessor for PdfMetadataExtractor {
     ) -> Result<()> {
         self.processed_count.fetch_add(1, Ordering::AcqRel);
 
-        // Extract PDF-specific metadata
         result.metadata.additional.insert(
             "pdf_processed".to_string(),
             serde_json::json!(true)
@@ -64,18 +63,17 @@ impl PostProcessor for PdfMetadataExtractor {
     }
 
     fn estimated_duration_ms(&self, _result: &ExtractionResult) -> u64 {
-        10  // Fast operation
+        10
     }
 }
 
-// Registration
 use kreuzberg::plugins::registry::get_post_processor_registry;
 use std::sync::Arc;
 
 fn register() -> Result<()> {
     let processor = Arc::new(PdfMetadataExtractor::new());
     let registry = get_post_processor_registry();
-    registry.register(processor, 50)?;  // Default priority
+    registry.register(processor, 50)?;
     Ok(())
 }
 ```

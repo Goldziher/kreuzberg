@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 class PdfMetadataExtractor:
     def __init__(self):
-        self.processed_count = 0
+        self.processed_count: int = 0
 
     def name(self) -> str:
         return "pdf_metadata_extractor"
@@ -25,10 +25,7 @@ class PdfMetadataExtractor:
 
     def process(self, result: ExtractionResult) -> ExtractionResult:
         self.processed_count += 1
-
-        # Extract PDF-specific metadata
         result["metadata"]["pdf_processed"] = True
-
         return result
 
     def initialize(self) -> None:
@@ -37,6 +34,6 @@ class PdfMetadataExtractor:
     def shutdown(self) -> None:
         logger.info(f"Processed {self.processed_count} PDFs")
 
-# Register the processor
-register_post_processor(PdfMetadataExtractor())
+processor: PdfMetadataExtractor = PdfMetadataExtractor()
+register_post_processor(processor)
 ```

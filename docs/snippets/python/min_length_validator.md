@@ -1,10 +1,9 @@
 ```python
-from kreuzberg import register_validator
-from kreuzberg.exceptions import ValidationError
+from kreuzberg import register_validator, ValidationError
 
 class MinLengthValidator:
     def __init__(self, min_length: int = 100):
-        self.min_length = min_length
+        self.min_length: int = min_length
 
     def name(self) -> str:
         return "min_length_validator"
@@ -13,16 +12,15 @@ class MinLengthValidator:
         return "1.0.0"
 
     def priority(self) -> int:
-        return 100  # Run early
+        return 100
 
     def validate(self, result: dict) -> None:
-        if len(result["content"]) < self.min_length:
-            raise ValidationError(
-                f"Content too short: {len(result['content'])} < {self.min_length}"
-            )
+        content_len: int = len(result["content"])
+        if content_len < self.min_length:
+            raise ValidationError(f"Content too short: {content_len}")
 
     def should_validate(self, result: dict) -> bool:
-        return True  # Always validate
+        return True
 
     def initialize(self) -> None:
         pass
@@ -30,5 +28,6 @@ class MinLengthValidator:
     def shutdown(self) -> None:
         pass
 
-register_validator(MinLengthValidator(min_length=100))
+validator: MinLengthValidator = MinLengthValidator(min_length=100)
+register_validator(validator)
 ```

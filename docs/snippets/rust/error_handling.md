@@ -2,7 +2,6 @@
 use kreuzberg::{extract_file_sync, extract_bytes_sync, ExtractionConfig, KreuzbergError};
 
 fn main() -> kreuzberg::Result<()> {
-    // Extract from file with error handling
     match extract_file_sync("document.pdf", None, &ExtractionConfig::default()) {
         Ok(result) => {
             println!("Extracted {} characters", result.content.len());
@@ -21,7 +20,6 @@ fn main() -> kreuzberg::Result<()> {
         }
     }
 
-    // Extract from bytes with error handling using ? operator
     let pdf_bytes = b"%PDF-1.4\n...";
     match extract_bytes_sync(pdf_bytes, "application/pdf", None, &ExtractionConfig::default()) {
         Ok(result) => {

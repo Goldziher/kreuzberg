@@ -1,8 +1,8 @@
 ```typescript
 import {
-  registerOcrBackend,
-  type OcrBackendProtocol,
-} from "@goldziher/kreuzberg";
+	registerOcrBackend,
+	type OcrBackendProtocol,
+} from 'kreuzberg';
 
 /**
  * Mock OCR backend for testing

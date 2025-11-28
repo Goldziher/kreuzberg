@@ -1,6 +1,7 @@
 ```typescript
-import { ExtractionConfig, extractFile } from '@kreuzberg/sdk';
+import { extractFile, ExtractionConfig } from 'kreuzberg';
 
-const config = await ExtractionConfig.discover();
-const result = await extractFile('document.pdf', { config });
+const config = ExtractionConfig.discover();
+const result = await extractFile('document.pdf', null, config);
+console.log(result.content);
 ```

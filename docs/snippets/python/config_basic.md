@@ -1,10 +1,14 @@
 ```python
+import asyncio
 from kreuzberg import extract_file, ExtractionConfig
 
-config = ExtractionConfig(
-    use_cache=True,
-    enable_quality_processing=True
-)
+async def main() -> None:
+    config = ExtractionConfig(
+        use_cache=True,
+        enable_quality_processing=True
+    )
+    result = await extract_file("document.pdf", config=config)
+    print(result.content)
 
-result = extract_file("document.pdf", config=config)
+asyncio.run(main())
 ```

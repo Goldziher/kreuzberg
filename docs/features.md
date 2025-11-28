@@ -1,12 +1,12 @@
 # Features
 
-Kreuzberg is a comprehensive document intelligence library supporting 50+ file formats with advanced extraction, OCR, and processing capabilities. This page documents all features and their availability across language bindings.
+Kreuzberg is a comprehensive document intelligence library supporting 56 file formats with advanced extraction, OCR, and processing capabilities. This page documents all features and their availability across language bindings.
 
 ## Core Extraction Features
 
 ### File Format Support
 
-Kreuzberg extracts text, tables, and metadata from over 50 file formats:
+Kreuzberg extracts text, tables, and metadata from 56 file formats:
 
 **Documents**
 - PDF (`.pdf`) - Native text extraction with optional OCR fallback
@@ -439,49 +439,51 @@ kreuzberg mcp
 
 ### Feature Availability
 
-| Feature | Python | TypeScript | Rust | Ruby |
-|---------|--------|------------|------|------|
-| **Core Extraction** | ✓ | ✓ | ✓ | ✓ |
-| All file formats | ✓ | ✓ | ✓ | ✓ |
-| Table extraction | ✓ | ✓ | ✓ | ✓ |
-| Metadata extraction | ✓ | ✓ | ✓ | ✓ |
-| **OCR** | | | | |
-| Tesseract | ✓ | ✓ | ✓ | ✓ |
-| EasyOCR | ✓ (optional) | ✗ | ✗ | ✗ |
-| PaddleOCR | ✓ (optional) | ✗ | ✗ | ✗ |
-| **Processing** | | | | |
-| Language detection | ✓ | ✓ | ✓ | ✓ |
-| Content chunking | ✓ | ✓ | ✓ | ✓ |
-| Embeddings | ✓ | ✓ | ✓ | ✓ |
-| Token reduction | ✓ | ✓ | ✓ | ✓ |
-| Quality processing | ✓ | ✓ | ✓ | ✓ |
-| Keyword extraction | ✓ | ✓ | ✓ | ✓ |
-| **Configuration** | | | | |
-| Programmatic config | ✓ | ✓ | ✓ | ✓ |
-| File-based config | ✓ | ✓ | ✓ | ✓ |
-| Config discovery | ✓ | ✓ | ✓ | ✓ |
-| **Plugin System** | | | | |
-| Document extractors | ✓ | ✓ | ✓ | ✓ |
-| OCR backends | ✓ | ✓ | ✓ | ✓ |
-| Post processors | ✓ | ✓ | ✓ | ✓ |
-| Validators | ✓ | ✓ | ✓ | ✓ |
-| **Servers** | | | | |
-| HTTP REST API | ✓ | ✓ | ✓ | ✓ |
-| MCP Server | ✓ | ✓ | ✓ | ✓ |
-| **APIs** | | | | |
-| Sync API | ✓ | ✓ | ✓ | ✓ |
-| Async API | ✓ | ✓ | ✓ | ✗ |
-| Batch processing | ✓ | ✓ | ✓ | ✓ |
-| Streaming | ✗ | ✗ | ✓ | ✗ |
+| Feature | C# | Go | Python | Ruby | Rust | TypeScript |
+|---------|----|----|--------|------|------|------------|
+| **Core Extraction** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| All file formats | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Table extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Metadata extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **OCR** | | | | | | |
+| Tesseract | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| EasyOCR | ✗ | ✗ | ✓ (optional) | ✗ | ✗ | ✗ |
+| PaddleOCR | ✗ | ✗ | ✓ (optional) | ✗ | ✗ | ✗ |
+| **Processing** | | | | | | |
+| Language detection | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Content chunking | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Embeddings | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Token reduction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Quality processing | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Keyword extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Configuration** | | | | | | |
+| Programmatic config | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| File-based config | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Config discovery | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Plugin System** | | | | | | |
+| Document extractors | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| OCR backends | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Post processors | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Validators | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Servers** | | | | | | |
+| HTTP REST API | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| MCP Server | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **APIs** | | | | | | |
+| Sync API | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Async API | ✗ | ✗ | ✓ | ✗ | ✓ | ✓ |
+| Batch processing | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Streaming | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ |
 
 ### Package Distribution
 
 | Language | Package Manager | Modular Features | Full Package |
 |----------|----------------|------------------|--------------|
+| C# | NuGet | ✗ | ✓ (default) |
+| Go | go.pkg.dev | ✗ | ✓ (default) |
 | Python | PyPI (`pip`) | ✗ | ✓ (default) |
-| TypeScript | npm | ✗ | ✓ (default) |
-| Rust | crates.io | ✓ | ✗ (opt-in) |
 | Ruby | RubyGems (`gem`) | ✗ | ✓ (default) |
+| Rust | crates.io | ✓ | ✗ (opt-in) |
+| TypeScript | npm | ✗ | ✓ (default) |
 
 ### Rust Feature Flags
 
@@ -556,36 +558,29 @@ gem install kreuzberg
 
 ## Performance Characteristics
 
-### Rust Core Performance
+### Rust Core
 
-Kreuzberg's Rust core provides 10-50x performance improvements over pure Python implementations:
+Kreuzberg's Rust core provides efficient performance for document processing:
 
-**Benchmarked Operations:**
-- Text extraction: 15-25x faster
-- XML parsing: 30-50x faster (streaming)
-- Token reduction: 10-15x faster
-- Quality processing: 12-20x faster
+**Key Optimizations:**
+- Streaming parsers for large documents
+- Concurrent extraction with configurable worker pools
+- Intelligent caching of expensive operations
 
 ### Memory Efficiency
 
-**Streaming Parsers:**
-- XML: Constant memory usage regardless of file size
-- Plain text: Line-by-line streaming for multi-GB files
+**Streaming Support:**
+- XML: Constant memory regardless of file size
+- Plain text: Line-by-line streaming for large files
 - Archives: Extract on-demand without loading entire archive
 
-**Memory Limits:**
-- PDF extraction: ~2x file size in memory
-- Image OCR: ~100MB per image
-- Embedding generation: Batch processing with configurable limits
+### Caching
 
-### Caching Benefits
+Disk-based caching improves performance for repeated operations:
 
-OCR caching provides significant performance gains:
-
-- First extraction: 5-30 seconds (depending on document)
-- Cached extraction: <100ms
-
-Cache hit rates typically exceed 80% for document collections with repeated processing.
+- Cache results for OCR, language detection, and embeddings
+- Automatic cache invalidation based on file content hash
+- Configurable cache directory and eviction policy
 
 ## CLI Tools
 

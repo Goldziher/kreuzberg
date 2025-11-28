@@ -4,19 +4,31 @@ from kreuzberg import (
     ValidationError,
     extract_file_sync,
     register_validator,
-    unregister_validator,
 )
 
+class MinLengthValidator:
+    def name(self) -> str:
+        return "min_length"
 
-def min_length_validator(result: ExtractionResult) -> None:
-    if len(result.content) < 50:
-        raise ValidationError(f"Content too short: {len(result.content)}")
+    def version(self) -> str:
+        return "1.0.0"
 
+    def validate(self, result: ExtractionResult) -> None:
+        if len(result["content"]) < 50:
+            raise ValidationError(f"Content too short: {len(result['content'])}")
 
-register_validator("min_length", min_length_validator)
+    def should_validate(self, result: ExtractionResult) -> bool:
+        return True
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
+validator: MinLengthValidator = MinLengthValidator()
+register_validator(validator)
 
 result = extract_file_sync("document.pdf")
-print(f"Validated content length: {len(result.content)}")
-
-unregister_validator("min_length")
+print(f"Content length: {len(result.content)}")
 ```

@@ -4,7 +4,6 @@ use kreuzberg::{extract_file_sync, ExtractionConfig};
 fn main() -> kreuzberg::Result<()> {
     let result = extract_file_sync("document.pdf", None, &ExtractionConfig::default())?;
 
-    // Access PDF metadata
     if let Some(pdf_meta) = result.metadata.pdf {
         if let Some(pages) = pdf_meta.page_count {
             println!("Pages: {}", pages);
@@ -17,7 +16,6 @@ fn main() -> kreuzberg::Result<()> {
         }
     }
 
-    // Access HTML metadata
     let html_result = extract_file_sync("page.html", None, &ExtractionConfig::default())?;
     if let Some(html_meta) = html_result.metadata.html {
         if let Some(title) = html_meta.title {

@@ -43,26 +43,6 @@ Main extraction configuration controlling all aspects of document processing.
 
 ### Example
 
-=== "Python"
-
-    --8<-- "snippets/python/config_basic.md"
-
-=== "TypeScript"
-
-    --8<-- "snippets/typescript/config_basic.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/config_basic.md"
-
-=== "Java"
-
-    --8<-- "snippets/java/config_basic.md"
-
-=== "Go"
-
-    --8<-- "snippets/go/config_basic.md"
-
 === "C#"
 
     ```csharp
@@ -78,6 +58,30 @@ Main extraction configuration controlling all aspects of document processing.
     var result = KreuzbergClient.ExtractFileSync("document.pdf", config);
     ```
 
+=== "Go"
+
+    --8<-- "snippets/go/config_basic.md"
+
+=== "Java"
+
+    --8<-- "snippets/java/config_basic.md"
+
+=== "Python"
+
+    --8<-- "snippets/python/config_basic.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/config_basic.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/config_basic.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/config_basic.md"
+
 ---
 
 ## OcrConfig
@@ -92,25 +96,33 @@ Configuration for OCR (Optical Character Recognition) processing on images and s
 
 ### Example
 
-=== "Python"
+=== "C#"
 
-    --8<-- "snippets/python/config_ocr.md"
+    --8<-- "snippets/csharp/config_ocr.md"
 
-=== "TypeScript"
+=== "Go"
 
-    --8<-- "snippets/typescript/config_ocr.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/config_ocr.md"
+    --8<-- "snippets/go/config_ocr.md"
 
 === "Java"
 
     --8<-- "snippets/java/config_ocr.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/config_ocr.md"
+    --8<-- "snippets/python/config_ocr.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/config_ocr.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/config_ocr.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/config_ocr.md"
 
 ---
 
@@ -168,29 +180,33 @@ Tesseract OCR engine configuration with fine-grained control over recognition pa
 
 ### Example
 
-=== "Python"
+=== "C#"
 
-    --8<-- "snippets/python/tesseract_config.md"
+    --8<-- "snippets/csharp/tesseract_config.md"
 
-=== "TypeScript"
+=== "Go"
 
-    --8<-- "snippets/typescript/tesseract_config.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/tesseract_config.md"
-
-=== "Ruby"
-
-    --8<-- "snippets/ruby/tesseract_config.md"
+    --8<-- "snippets/go/tesseract_config.md"
 
 === "Java"
 
     --8<-- "snippets/java/tesseract_config.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/tesseract_config.md"
+    --8<-- "snippets/python/tesseract_config.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/tesseract_config.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/tesseract_config.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/tesseract_config.md"
 
 
 ---
@@ -208,25 +224,33 @@ Configuration for splitting extracted text into overlapping chunks, useful for v
 
 ### Example
 
-=== "Python"
+=== "C#"
 
-    --8<-- "snippets/python/chunking.md"
+    --8<-- "snippets/csharp/chunking.md"
 
-=== "TypeScript"
+=== "Go"
 
-    --8<-- "snippets/typescript/chunking.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/chunking.md"
+    --8<-- "snippets/go/chunking.md"
 
 === "Java"
 
     --8<-- "snippets/java/chunking.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/chunking.md"
+    --8<-- "snippets/python/chunking.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/chunking.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/chunking.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/chunking.md"
 
 ---
 
@@ -242,25 +266,33 @@ Configuration for automatic language detection in extracted text.
 
 ### Example
 
-=== "Python"
+=== "C#"
 
-    --8<-- "snippets/python/language_detection.md"
+    --8<-- "snippets/csharp/language_detection.md"
 
-=== "TypeScript"
+=== "Go"
 
-    --8<-- "snippets/typescript/language_detection.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/language_detection.md"
+    --8<-- "snippets/go/language_detection.md"
 
 === "Java"
 
     --8<-- "snippets/java/language_detection.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/language_detection.md"
+    --8<-- "snippets/python/language_detection.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/language_detection.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/language_detection.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/language_detection.md"
 
 
 ---
@@ -277,25 +309,33 @@ PDF-specific extraction configuration.
 
 ### Example
 
-=== "Python"
+=== "C#"
 
-    --8<-- "snippets/python/pdf_config.md"
+    --8<-- "snippets/csharp/pdf_config.md"
 
-=== "TypeScript"
+=== "Go"
 
-    --8<-- "snippets/typescript/pdf_config.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/pdf_config.md"
+    --8<-- "snippets/go/pdf_config.md"
 
 === "Java"
 
     --8<-- "snippets/java/pdf_config.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/pdf_config.md"
+    --8<-- "snippets/python/pdf_config.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/pdf_config.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/pdf_config.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/pdf_config.md"
 
 
 ---
@@ -315,25 +355,33 @@ Configuration for extracting and processing images from documents.
 
 ### Example
 
-=== "Python"
+=== "C#"
 
-    --8<-- "snippets/python/image_extraction.md"
+    --8<-- "snippets/csharp/image_extraction.md"
 
-=== "TypeScript"
+=== "Go"
 
-    --8<-- "snippets/typescript/image_extraction.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/image_extraction.md"
+    --8<-- "snippets/go/image_extraction.md"
 
 === "Java"
 
     --8<-- "snippets/java/image_extraction.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/image_extraction.md"
+    --8<-- "snippets/python/image_extraction.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/image_extraction.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/image_extraction.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/image_extraction.md"
 
 ---
 
@@ -353,25 +401,33 @@ Image preprocessing configuration for improving OCR quality on scanned documents
 
 ### Example
 
-=== "Python"
+=== "C#"
 
-    --8<-- "snippets/python/image_preprocessing.md"
+    --8<-- "snippets/csharp/image_preprocessing.md"
 
-=== "TypeScript"
+=== "Go"
 
-    --8<-- "snippets/typescript/image_preprocessing.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/image_preprocessing.md"
+    --8<-- "snippets/go/image_preprocessing.md"
 
 === "Java"
 
     --8<-- "snippets/java/image_preprocessing.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/image_preprocessing.md"
+    --8<-- "snippets/python/image_preprocessing.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/image_preprocessing.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/image_preprocessing.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/image_preprocessing.md"
 
 ---
 
@@ -394,25 +450,33 @@ Built-in post-processors include:
 
 ### Example
 
-=== "Python"
+=== "C#"
 
-    --8<-- "snippets/python/postprocessor_config.md"
+    --8<-- "snippets/csharp/postprocessor_config.md"
 
-=== "TypeScript"
+=== "Go"
 
-    --8<-- "snippets/typescript/postprocessor_config.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/postprocessor_config.md"
+    --8<-- "snippets/go/postprocessor_config.md"
 
 === "Java"
 
     --8<-- "snippets/java/postprocessor_config.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/postprocessor_config.md"
+    --8<-- "snippets/python/postprocessor_config.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/postprocessor_config.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/postprocessor_config.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/postprocessor_config.md"
 
 ---
 
@@ -435,25 +499,33 @@ Configuration for reducing token count in extracted text, useful for optimizing 
 
 ### Example
 
-=== "Python"
+=== "C#"
 
-    --8<-- "snippets/python/token_reduction.md"
+    --8<-- "snippets/csharp/token_reduction.md"
 
-=== "TypeScript"
+=== "Go"
 
-    --8<-- "snippets/typescript/token_reduction.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/token_reduction.md"
+    --8<-- "snippets/go/token_reduction.md"
 
 === "Java"
 
     --8<-- "snippets/java/token_reduction.md"
 
-=== "Go"
+=== "Python"
 
-    --8<-- "snippets/go/token_reduction.md"
+    --8<-- "snippets/python/token_reduction.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/token_reduction.md"
+
+=== "Rust"
+
+    --8<-- "snippets/rust/token_reduction.md"
+
+=== "TypeScript"
+
+    --8<-- "snippets/typescript/token_reduction.md"
 
 ---
 

@@ -1,14 +1,16 @@
 ```python
 from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
 
-config = ExtractionConfig(
-    ocr=OcrConfig(
-        backend="easyocr",
-        language="en",
-        use_gpu=True
-    )
+config: ExtractionConfig = ExtractionConfig(
+    ocr=OcrConfig(backend="easyocr", language="en", use_gpu=True)
 )
 
 result = extract_file_sync("scanned.pdf", config=config)
-print(result.content)
+
+content: str = result.content
+preview: str = content[:100]
+total_length: int = len(content)
+
+print(f"Extracted content (preview): {preview}")
+print(f"Total characters: {total_length}")
 ```

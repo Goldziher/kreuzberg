@@ -1,14 +1,14 @@
 ```ruby
 require "kreuzberg"
 
-config = Kreuzberg::ExtractionConfig.new(
+config = Kreuzberg::Config::Extraction.new(
   use_cache: true,
-  ocr: Kreuzberg::OcrConfig.new(
+  ocr: Kreuzberg::Config::OCR.new(
     backend: "tesseract",
     language: "eng+deu",
-    tesseract: Kreuzberg::TesseractConfig.new(psm: 6)
+    tesseract: Kreuzberg::Config::Tesseract.new(psm: 6)
   ),
-  chunking: Kreuzberg::ChunkingConfig.new(
+  chunking: Kreuzberg::Config::Chunking.new(
     max_characters: 1000,
     overlap: 200
   )

@@ -1,11 +1,11 @@
 ```ts
 import {
-  extractFileSync,
-  registerValidator,
-  unregisterValidator,
-  ValidationError,
-  type ExtractionResult,
-} from "@kreuzberg/node";
+	extractFileSync,
+	registerValidator,
+	unregisterValidator,
+	ValidationError,
+	type ExtractionResult,
+} from 'kreuzberg';
 
 class MinLengthValidator {
   name = "min_length_validator";

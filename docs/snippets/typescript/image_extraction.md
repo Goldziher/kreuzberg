@@ -1,12 +1,15 @@
 ```typescript
-import { ExtractionConfig, ImageExtractionConfig } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  images: new ImageExtractionConfig({
-    extractImages: true,
-    targetDpi: 200,
-    maxImageDimension: 2048,
-    autoAdjustDpi: true
-  })
-});
+const config = {
+	images: {
+		extractImages: true,
+		targetDpi: 200,
+		maxImageDimension: 2048,
+		autoAdjustDpi: true,
+	},
+};
+
+const result = await extractFile('document.pdf', null, config);
+console.log(`Extracted ${result.images?.length ?? 0} images`);
 ```

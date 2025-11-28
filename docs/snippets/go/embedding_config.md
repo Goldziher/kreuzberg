@@ -10,19 +10,17 @@ import (
 func main() {
 	maxChars := 1000
 	batchSize := 16
-	modelName := "all-mpnet-base-v2"
-	modelType := "preset"
 
 	cfg := &kreuzberg.ExtractionConfig{
 		Chunking: &kreuzberg.ChunkingConfig{
 			MaxChars: &maxChars,
 			Embedding: &kreuzberg.EmbeddingConfig{
 				Model: &kreuzberg.EmbeddingModelType{
-					Type: &modelType,
-					Name: &modelName,
+					Type: "preset",
+					Name: "all-mpnet-base-v2",
 				},
-				BatchSize: &batchSize,
-				Normalize: kreuzberg.BoolPtr(true),
+				BatchSize:            &batchSize,
+				Normalize:            kreuzberg.BoolPtr(true),
 				ShowDownloadProgress: kreuzberg.BoolPtr(true),
 			},
 		},

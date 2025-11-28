@@ -1,10 +1,13 @@
 ```typescript
-import { ExtractionConfig, TokenReductionConfig } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  tokenReduction: new TokenReductionConfig({
-    mode: 'moderate',
-    preserveImportantWords: true
-  })
-});
+const config = {
+	tokenReduction: {
+		mode: 'moderate',
+		preserveImportantWords: true,
+	},
+};
+
+const result = await extractFile('document.pdf', null, config);
+console.log(result.content);
 ```

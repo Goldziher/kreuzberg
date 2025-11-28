@@ -14,5 +14,5 @@ ExtractionConfig config = ExtractionConfig.builder()
         .build())
     .build();
 
-ExtractionResult result = Kreuzberg.extractFileSync("scanned.pdf", null, config);
+ExtractionResult result = Kreuzberg.extractFile("scanned.pdf", config);
 ```

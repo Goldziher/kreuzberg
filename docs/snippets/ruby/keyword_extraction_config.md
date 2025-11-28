@@ -1,8 +1,8 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
-  keywords: Kreuzberg::KeywordConfig.new(
+config = Kreuzberg::Config::Extraction.new(
+  keywords: Kreuzberg::Config::Keywords.new(
     algorithm: Kreuzberg::KeywordAlgorithm::YAKE,
     max_keywords: 10,
     min_score: 0.3,

@@ -21,7 +21,7 @@ try {
         dataList.add(new BytesWithMime(data, mimeType));
     }
 
-    List<ExtractionResult> results = Kreuzberg.batchExtractBytesSync(dataList);
+    List<ExtractionResult> results = Kreuzberg.batchExtractBytes(dataList, null);
 
     for (int i = 0; i < results.size(); i++) {
         ExtractionResult result = results.get(i);

@@ -1,5 +1,25 @@
 package kreuzberg
 
+// BoolPtr returns a pointer to a bool value. Useful for initializing nullable config fields.
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
+// StringPtr returns a pointer to a string value. Useful for initializing nullable config fields.
+func StringPtr(s string) *string {
+	return &s
+}
+
+// IntPtr returns a pointer to an int value. Useful for initializing nullable config fields.
+func IntPtr(i int) *int {
+	return &i
+}
+
+// FloatPtr returns a pointer to a float64 value. Useful for initializing nullable config fields.
+func FloatPtr(f float64) *float64 {
+	return &f
+}
+
 // ExtractionConfig mirrors the Rust ExtractionConfig structure and is serialized to JSON
 // before crossing the FFI boundary. Use pointer fields to omit values and rely on Kreu
 // zberg defaults whenever possible.

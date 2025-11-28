@@ -11,9 +11,8 @@ ExtractionConfig config = ExtractionConfig.builder()
         .build())
     .build();
 
-ExtractionResult result = Kreuzberg.extractFileSync("verbose_document.pdf", null, config);
+ExtractionResult result = Kreuzberg.extractFile("verbose_document.pdf", config);
 
-// Check reduction statistics in metadata
 Object originalTokens = result.getMetadata().get("original_token_count");
 Object reducedTokens = result.getMetadata().get("token_count");
 Object reductionRatio = result.getMetadata().get("token_reduction_ratio");

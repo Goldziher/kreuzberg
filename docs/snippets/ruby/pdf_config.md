@@ -1,8 +1,8 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
-  pdf_options: Kreuzberg::PdfConfig.new(
+config = Kreuzberg::Config::Extraction.new(
+  pdf_options: Kreuzberg::Config::PDF.new(
     extract_images: true,
     extract_metadata: true,
     passwords: ['password1', 'password2']

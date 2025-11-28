@@ -1,12 +1,12 @@
 ```typescript
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect } from 'vitest';
 import {
-  registerPostProcessor,
-  registerValidator,
-  unregisterPostProcessor,
-  unregisterValidator,
-  type ExtractionResult,
-} from "@kreuzberg/node";
+	registerPostProcessor,
+	registerValidator,
+	unregisterPostProcessor,
+	unregisterValidator,
+	type ExtractionResult,
+} from 'kreuzberg';
 
 describe("Plugin Testing", () => {
   describe("PostProcessor", () => {

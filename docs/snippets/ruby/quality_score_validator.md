@@ -28,7 +28,7 @@ config = Kreuzberg::Config::Extraction.new(
 )
 
 begin
-  result = Kreuzberg.extract_file("document.pdf", config)
+  result = Kreuzberg.extract_file_sync("document.pdf", config: config)
   puts "Document quality verified: #{result['metadata']['quality_score']}"
 rescue Kreuzberg::Errors::ValidationError => e
   puts "Quality check failed: #{e.message}"

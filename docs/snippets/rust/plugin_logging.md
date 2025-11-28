@@ -23,7 +23,7 @@ impl DocumentExtractor for MyPlugin {
     ) -> Result<ExtractionResult> {
         info!("Extracting {} ({} bytes)", mime_type, content.len());
 
-        // Processing...
+        let result = ExtractionResult::default();
 
         if result.content.is_empty() {
             warn!("Extraction resulted in empty content");

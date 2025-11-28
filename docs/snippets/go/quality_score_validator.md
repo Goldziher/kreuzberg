@@ -3,6 +3,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"unsafe"
 
@@ -45,7 +46,7 @@ func qualityScoreValidator(resultJSON *C.char) *C.char {
 
 	// Validate against threshold
 	if qualityScore < qualityThreshold {
-		errMsg := "Quality score too low: " + string(rune(int(qualityScore*100))) + "% < " + string(rune(int(qualityThreshold*100))) + "%"
+		errMsg := fmt.Sprintf("Quality score too low: %.0f%% < %.0f%%", qualityScore*100, qualityThreshold*100)
 		return C.CString(errMsg)
 	}
 

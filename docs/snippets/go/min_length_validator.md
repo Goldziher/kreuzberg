@@ -3,6 +3,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"unsafe"
 
@@ -40,7 +41,7 @@ func minLengthValidator(resultJSON *C.char) *C.char {
 	}
 
 	if len(content) < minLengthConfig.minLength {
-		errMsg := "Content too short: " + string(rune(len(content))) + " < " + string(rune(minLengthConfig.minLength))
+		errMsg := fmt.Sprintf("Content too short: %d < %d", len(content), minLengthConfig.minLength)
 		return C.CString(errMsg)
 	}
 

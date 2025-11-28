@@ -1,7 +1,10 @@
 ```typescript
-import { ExtractionConfig } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  enableQualityProcessing: true  // Default
-});
+const config = {
+	enableQualityProcessing: true,
+};
+
+const result = await extractFile('document.pdf', null, config);
+console.log(result.content);
 ```

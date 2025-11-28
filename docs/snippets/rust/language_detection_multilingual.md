@@ -13,5 +13,4 @@ let config = ExtractionConfig {
 let result = extract_file("multilingual_document.pdf", None, &config).await?;
 
 println!("Detected languages: {:?}", result.detected_languages);
-// Output: Some(["eng", "fra", "deu"])
 ```

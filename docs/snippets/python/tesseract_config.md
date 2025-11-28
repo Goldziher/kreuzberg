@@ -1,16 +1,21 @@
 ```python
-from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig
+import asyncio
+from kreuzberg import ExtractionConfig, OcrConfig, TesseractConfig, extract_file
 
-config = ExtractionConfig(
-    ocr=OcrConfig(
-        language="eng+fra+deu",
-        tesseract_config=TesseractConfig(
-            psm=6,
-            oem=1,
-            min_confidence=0.8,
-            tessedit_char_whitelist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?",
-            enable_table_detection=True
+async def main() -> None:
+    config: ExtractionConfig = ExtractionConfig(
+        ocr=OcrConfig(
+            language="eng+fra+deu",
+            tesseract_config=TesseractConfig(
+                psm=6,
+                oem=1,
+                min_confidence=0.8,
+                enable_table_detection=True,
+            ),
         )
     )
-)
+    result = await extract_file("document.pdf", config=config)
+    print(f"Content: {result.content[:100]}")
+
+asyncio.run(main())
 ```

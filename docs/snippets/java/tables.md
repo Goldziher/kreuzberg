@@ -9,14 +9,12 @@ import java.util.List;
 public class Main {
     public static void main(String[] args) {
         try {
-            ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+            ExtractionResult result = Kreuzberg.extractFile("document.pdf");
 
-            // Iterate over tables
             for (Table table : result.getTables()) {
                 System.out.println("Table with " + table.cells().size() + " rows");
-                System.out.println(table.markdown());  // Markdown representation
+                System.out.println(table.markdown());
 
-                // Access cells
                 for (List<String> row : table.cells()) {
                     System.out.println(row);
                 }

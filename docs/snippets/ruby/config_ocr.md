@@ -1,11 +1,11 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
-  ocr: Kreuzberg::OcrConfig.new(
+config = Kreuzberg::Config::Extraction.new(
+  ocr: Kreuzberg::Config::OCR.new(
     backend: 'tesseract',
     language: 'eng+fra',
-    tesseract_config: Kreuzberg::TesseractConfig.new(psm: 3)
+    tesseract_config: Kreuzberg::Config::Tesseract.new(psm: 3)
   )
 )
 ```

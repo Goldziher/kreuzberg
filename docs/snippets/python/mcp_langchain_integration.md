@@ -5,39 +5,32 @@ from langchain_openai import ChatOpenAI
 import subprocess
 import json
 
-# Start MCP server
 mcp_process = subprocess.Popen(
     ["kreuzberg", "mcp"],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE
+    stderr=subprocess.PIPE,
 )
 
 def extract_file(path: str) -> str:
-    request = {
+    request: dict = {
         "method": "tools/call",
         "params": {
             "name": "extract_file",
-            "arguments": {"path": path, "async": True}
-        }
+            "arguments": {"path": path, "async": True},
+        },
     }
     mcp_process.stdin.write(json.dumps(request).encode() + b"\n")
     mcp_process.stdin.flush()
     response = mcp_process.stdout.readline()
     return json.loads(response)["result"]["content"]
 
-tools = [
-    Tool(
-        name="extract_document",
-        func=extract_file,
-        description="Extract text from documents (PDF, DOCX, images, etc.)"
-    )
+tools: list[Tool] = [
+    Tool(name="extract_document", func=extract_file, description="Extract")
 ]
 
 llm = ChatOpenAI(temperature=0)
 agent = initialize_agent(
-    tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True
+    tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION
 )
-
-agent.run("Extract the content from contract.pdf and summarize it")
 ```

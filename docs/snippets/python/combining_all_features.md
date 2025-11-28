@@ -1,4 +1,5 @@
 ```python
+import asyncio
 from kreuzberg import (
     extract_file,
     ExtractionConfig,
@@ -7,48 +8,27 @@ from kreuzberg import (
     EmbeddingModelType,
     LanguageDetectionConfig,
     TokenReductionConfig,
-    KeywordConfig,
-    KeywordAlgorithm
 )
 
-config = ExtractionConfig(
-    # Enable quality scoring
-    enable_quality_processing=True,
-
-    # Detect languages
-    language_detection=LanguageDetectionConfig(
-        enabled=True,
-        detect_multiple=True
-    ),
-
-    # Reduce tokens before chunking
-    token_reduction=TokenReductionConfig(
-        mode="moderate",
-        preserve_markdown=True
-    ),
-
-    # Chunk with embeddings
-    chunking=ChunkingConfig(
-        max_chars=512,
-        max_overlap=50,
-        embedding=EmbeddingConfig(
-            model=EmbeddingModelType.preset("balanced"),
-            normalize=True
-        )
-    ),
-
-    # Extract keywords
-    keywords=KeywordConfig(
-        algorithm=KeywordAlgorithm.YAKE,
-        max_keywords=10
+async def main() -> None:
+    config: ExtractionConfig = ExtractionConfig(
+        enable_quality_processing=True,
+        language_detection=LanguageDetectionConfig(enabled=True),
+        token_reduction=TokenReductionConfig(mode="moderate"),
+        chunking=ChunkingConfig(
+            max_chars=512,
+            max_overlap=50,
+            embedding=EmbeddingConfig(
+                model=EmbeddingModelType.preset("balanced"), normalize=True
+            ),
+        ),
     )
-)
+    result = await extract_file("document.pdf", config=config)
+    quality = result.metadata.get("quality_score", 0)
+    print(f"Quality: {quality:.2f}")
+    print(f"Languages: {result.detected_languages}")
+    if result.chunks:
+        print(f"Chunks: {len(result.chunks)}")
 
-result = extract_file("document.pdf", config=config)
-
-print(f"Quality: {result.metadata['quality_score']:.2f}")
-print(f"Languages: {result.detected_languages}")
-print(f"Keywords: {[kw['text'] for kw in result.metadata['keywords']]}")
-if result.chunks and result.chunks[0].embedding:
-    print(f"Chunks: {len(result.chunks)} with {len(result.chunks[0].embedding)} dimensions")
+asyncio.run(main())
 ```

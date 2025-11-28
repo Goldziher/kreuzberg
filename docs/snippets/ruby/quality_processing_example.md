@@ -1,10 +1,10 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
+config = Kreuzberg::Config::Extraction.new(
   enable_quality_processing: true
 )
-result = Kreuzberg.extract_file('scanned_document.pdf', config: config)
+result = Kreuzberg.extract_file_sync('scanned_document.pdf', config: config)
 
 quality_score = result.metadata.get('quality_score', 0.0)
 

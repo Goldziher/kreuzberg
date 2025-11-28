@@ -1,9 +1,9 @@
 ```typescript
 import {
-  extractFile,
-  type ExtractionConfig,
-  type ExtractionResult,
-} from "@goldziher/kreuzberg";
+	extractFile,
+	type ExtractionConfig,
+	type ExtractionResult,
+} from 'kreuzberg';
 
 /**
  * Note: Custom cache backends are not supported in TypeScript v4.0.

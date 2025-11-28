@@ -9,7 +9,7 @@
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats. Available for Rust, Python, Ruby, Go, and TypeScript/Node.js—or use via CLI, REST API, or MCP server.
+**A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 56 formats. Available for Rust, Python, Ruby, Go, Java, TypeScript/Node.js, and C#—or use via CLI, REST API, or MCP server.
 
 > **🚀 Version 4.0.0 Release Candidate**
 > This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter. Help us make the stable release better!
@@ -19,7 +19,7 @@
 - **Rust-powered core** – High-performance native code for text extraction
 - **Truly polyglot** – Native bindings for Rust, Python, Ruby, and TypeScript/Node.js
 - **Production-ready** – Battle-tested with comprehensive error handling and validation
-- **50+ file format families** – PDF, Office documents, images, HTML, XML, emails, archives, and more
+- **56 formats** – PDF, Office documents, images, HTML, XML, emails, archives, and more
 - **OCR built-in** – Multiple backends (Tesseract, EasyOCR, PaddleOCR) with table extraction support
 - **Flexible deployment** – Use as library, CLI tool, REST API server, or MCP server
 - **Memory efficient** – Streaming parsers handle multi-GB files with constant memory usage

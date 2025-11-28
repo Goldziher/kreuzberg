@@ -24,7 +24,7 @@ let config = ExtractionConfig {
         max_chars: 512,
         max_overlap: 50,
         embedding: Some(EmbeddingConfig {
-            model: "balanced".to_string(),
+            model: kreuzberg::EmbeddingModelType::Preset { name: "balanced".to_string() },
             normalize: true,
             ..Default::default()
         }),
@@ -42,7 +42,9 @@ let config = ExtractionConfig {
 
 let result = extract_file("document.pdf", None, &config).await?;
 
-println!("Quality: {:.2}", result.metadata.additional.get("quality_score").unwrap());
+if let Some(quality) = result.metadata.additional.get("quality_score") {
+    println!("Quality: {:?}", quality);
+}
 println!("Languages: {:?}", result.detected_languages);
 println!("Keywords: {:?}", result.metadata.additional.get("keywords"));
 if let Some(chunks) = result.chunks {

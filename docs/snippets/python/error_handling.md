@@ -1,8 +1,12 @@
 ```python
 from kreuzberg import extract_file_sync, extract_bytes_sync, ExtractionConfig
-from kreuzberg import KreuzbergError, ParsingError, OCRError, ValidationError, MissingDependencyError
+from kreuzberg import (
+    KreuzbergError,
+    ParsingError,
+    OCRError,
+    ValidationError,
+)
 
-# Extract from file with comprehensive error handling
 try:
     result = extract_file_sync("document.pdf")
     print(f"Extracted {len(result.content)} characters")
@@ -10,17 +14,14 @@ except ParsingError as e:
     print(f"Failed to parse document: {e}")
 except OCRError as e:
     print(f"OCR processing failed: {e}")
-except MissingDependencyError as e:
-    print(f"Missing dependency: {e}")
 except KreuzbergError as e:
     print(f"Extraction error: {e}")
 
-# Extract from bytes with configuration
 try:
-    config = ExtractionConfig()
-    pdf_bytes = b"%PDF-1.4\n..."  # PDF file bytes
+    config: ExtractionConfig = ExtractionConfig()
+    pdf_bytes: bytes = b"%PDF-1.4\n"
     result = extract_bytes_sync(pdf_bytes, "application/pdf", config)
-    print(f"Extracted: {result.content[:100]}...")
+    print(f"Extracted: {result.content[:100]}")
 except ValidationError as e:
     print(f"Invalid configuration: {e}")
 except OCRError as e:

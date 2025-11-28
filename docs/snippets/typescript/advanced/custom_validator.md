@@ -1,12 +1,12 @@
 ```typescript
 import {
-  registerValidator,
-  unregisterValidator,
-  extractFile,
-  type ValidatorProtocol,
-  type ExtractionResult,
-  ValidationError,
-} from "@goldziher/kreuzberg";
+	registerValidator,
+	unregisterValidator,
+	extractFile,
+	type ValidatorProtocol,
+	type ExtractionResult,
+	ValidationError,
+} from 'kreuzberg';
 
 /**
  * Custom validator for quality checking

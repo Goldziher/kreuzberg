@@ -4,10 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use kreuzberg::KreuzbergError;
 
 struct StatefulPlugin {
-    // Use atomic types for simple counters
     call_count: AtomicUsize,
-
-    // Use Mutex for complex state
     cache: Mutex<HashMap<String, String>>,
 }
 
@@ -34,10 +31,8 @@ impl PostProcessor for StatefulPlugin {
         result: &mut ExtractionResult,
         _config: &ExtractionConfig
     ) -> Result<()> {
-        // Increment counter atomically
         self.call_count.fetch_add(1, Ordering::AcqRel);
 
-        // Access cache with proper error handling
         let mut cache = self.cache.lock()
             .map_err(|_| KreuzbergError::plugin("Cache lock poisoned"))?;
         cache.insert("last_mime".to_string(), result.mime_type.clone());

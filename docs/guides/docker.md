@@ -194,7 +194,6 @@ Kreuzberg Docker images use multi-stage builds for optimal size and security:
 
 Docker images use the **native Rust core** directly, providing:
 
-- **10-50x performance** over pure-Python alternatives
 - **Memory efficiency** through streaming parsers for large files
 - **Async processing** with Tokio runtime
 - **Zero-copy operations** where possible

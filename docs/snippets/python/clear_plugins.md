@@ -6,7 +6,10 @@ from kreuzberg import (
     clear_validators,
 )
 
-# Clear all plugins of a specific type
 clear_post_processors()
 clear_validators()
+clear_ocr_backends()
+clear_document_extractors()
+
+print("All plugins cleared")
 ```

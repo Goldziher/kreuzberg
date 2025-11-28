@@ -1,12 +1,10 @@
 ```typescript
-import { batchExtractFilesSync, ExtractionConfig } from 'kreuzberg';
+import { batchExtractFilesSync } from 'kreuzberg';
 
 const files = ['doc1.pdf', 'doc2.docx', 'doc3.pptx'];
-const config = new ExtractionConfig();
-
-const results = batchExtractFilesSync(files, config);
+const results = batchExtractFilesSync(files);
 
 results.forEach((result, i) => {
-    console.log(`File ${i + 1}: ${result.content.length} characters`);
+	console.log(`File ${i + 1}: ${result.content.length} characters`);
 });
 ```

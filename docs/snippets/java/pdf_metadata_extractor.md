@@ -1,6 +1,9 @@
 ```java
-import dev.kreuzberg.*;
-import java.lang.foreign.Arena;
+import dev.kreuzberg.Kreuzberg;
+import dev.kreuzberg.ExtractionResult;
+import dev.kreuzberg.PostProcessor;
+import dev.kreuzberg.KreuzbergException;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -12,47 +15,34 @@ public class PdfMetadataExtractorExample {
     );
 
     public static void main(String[] args) {
-        try (Arena arena = Arena.ofConfined()) {
-            AtomicInteger processedCount = new AtomicInteger(0);
+        AtomicInteger processedCount = new AtomicInteger(0);
 
-            PostProcessor pdfMetadata = result -> {
-                // Only process PDFs
-                if (!result.mimeType().equals("application/pdf")) {
-                    return result;
-                }
+        PostProcessor pdfMetadata = result -> {
+            if (!result.getMimeType().equals("application/pdf")) {
+                return result;
+            }
 
-                processedCount.incrementAndGet();
+            processedCount.incrementAndGet();
 
-                // Extract PDF-specific metadata
-                Map<String, Object> metadata = new HashMap<>(result.getMetadata());
-                metadata.put("pdf_processed", true);
-                metadata.put("processing_timestamp", System.currentTimeMillis());
+            Map<String, Object> metadata = new HashMap<>(result.getMetadata());
+            metadata.put("pdf_processed", true);
+            metadata.put("processing_timestamp", System.currentTimeMillis());
 
-                logger.info("Processed PDF: " + processedCount.get());
+            logger.info("Processed PDF: " + processedCount.get());
 
-                return new ExtractionResult(
-                    result.content(),
-                    result.mimeType(),
-                    result.language(),
-                    result.date(),
-                    result.subject(),
-                    result.getTables(),
-                    result.getDetectedLanguages(),
-                    metadata
-                );
-            };
+            return result;
+        };
 
-            // Register with priority 50 (default)
-            Kreuzberg.registerPostProcessor("pdf-metadata-extractor", pdfMetadata, 50, arena);
+        try {
+            Kreuzberg.registerPostProcessor("pdf-metadata-extractor", pdfMetadata, 50);
 
             logger.info("PDF metadata extractor initialized");
 
-            // Use in extraction
-            ExtractionResult result = Kreuzberg.extractFileSync("document.pdf");
+            ExtractionResult result = Kreuzberg.extractFile("document.pdf");
             System.out.println("PDF processed: " + result.getMetadata().get("pdf_processed"));
 
             logger.info("Processed " + processedCount.get() + " PDFs");
-        } catch (Exception e) {
+        } catch (IOException | KreuzbergException e) {
             e.printStackTrace();
         }
     }

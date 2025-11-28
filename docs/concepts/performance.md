@@ -4,73 +4,7 @@ Kreuzberg's Rust-first architecture delivers significant performance improvement
 
 ## Performance Benefits
 
-The Rust core provides 10-50x performance improvements across multiple operations:
-
-```mermaid
-graph LR
-    subgraph "Python-based Libraries"
-        Py1["docling<br/>~2.5s per PDF"]
-        Py2["unstructured<br/>~3.2s per PDF"]
-        Py3["markitdown<br/>~1.8s per PDF"]
-    end
-
-    subgraph "Kreuzberg v4"
-        Rust["Rust Core<br/>~0.15s per PDF"]
-    end
-
-    Py1 -.->|16x slower| Rust
-    Py2 -.->|21x slower| Rust
-    Py3 -.->|12x slower| Rust
-
-    style Rust fill:#c8e6c9
-    style Py1 fill:#ffcdd2
-    style Py2 fill:#ffcdd2
-    style Py3 fill:#ffcdd2
-```
-
-## Benchmark Results
-
-Performance benchmarks compare Kreuzberg against other popular extraction libraries using 94 real-world documents:
-
-### PDF Extraction
-
-| Library | Avg Time | Memory (Peak) | Throughput |
-|---------|----------|---------------|------------|
-| **Kreuzberg v4** | 0.15s | 45 MB | 6.7 docs/sec |
-| Kreuzberg v3 | 1.2s | 120 MB | 0.83 docs/sec |
-| extractous | 0.25s | 65 MB | 4.0 docs/sec |
-| docling | 2.5s | 450 MB | 0.4 docs/sec |
-| unstructured | 3.2s | 380 MB | 0.31 docs/sec |
-
-**Key Improvements:**
-
-- **8x faster** than Kreuzberg v3 (Rust rewrite)
-- **16-21x faster** than Python libraries
-- **62% less memory** than v3
-- **90% less memory** than docling/unstructured
-
-### Excel Extraction
-
-| Library | Avg Time | Memory (Peak) |
-|---------|----------|---------------|
-| **Kreuzberg v4** | 0.08s | 25 MB |
-| openpyxl | 1.2s | 180 MB |
-| pandas | 0.45s | 95 MB |
-
-**Key Improvements:**
-
-- **15x faster** than openpyxl
-- **5.6x faster** than pandas
-- **86% less memory** than openpyxl
-
-### Text Processing
-
-| Operation | Python | Rust | Speedup |
-|-----------|--------|------|---------|
-| Token reduction | 450ms | 12ms | 37x |
-| Quality scoring | 220ms | 8ms | 27x |
-| XML streaming (100MB) | 8.5s | 0.4s | 21x |
-| Text streaming (500MB) | 15s | 0.8s | 18x |
+The Rust core provides significant performance improvements over pure Python implementations through native compilation, zero-copy operations, and efficient async concurrency. For detailed performance comparisons, run the benchmarking suite included in the project.
 
 ## Why Rust is Faster
 
@@ -92,7 +26,7 @@ flowchart LR
         Native --> Execute2[Execution]
     end
 
-    Execute -.->|10-50x slower| Execute2
+    Execute -.->|significantly slower| Execute2
 
     style Execute2 fill:#c8e6c9
     style Execute fill:#ffcdd2
@@ -231,52 +165,9 @@ flowchart LR
 - **TextExtractor**: Line-by-line streaming
 - **ArchiveExtractor**: Decompresses on-the-fly
 
-## Benchmarking Methodology
+## Running Benchmarks
 
-Kreuzberg's benchmark suite provides comprehensive performance measurement:
-
-### Test Dataset
-
-- **94 real-world documents**
-- **Multiple formats**: PDF, DOCX, XLSX, images, emails
-- **Size categories**: Small (<1MB), medium (1-10MB), large (>10MB)
-- **Variety**: Reports, invoices, forms, presentations, spreadsheets
-
-### Metrics Tracked
-
-- **Execution time**: Wall clock time per extraction
-- **CPU usage**: Sampled at 100ms intervals
-- **Memory usage**: Peak RSS (Resident Set Size)
-- **Throughput**: Documents processed per second
-- **Success rate**: Percentage of files extracted without errors
-
-### Measurement Tools
-
-```mermaid
-flowchart TD
-    Start[Start Extraction] --> ClearCache[Clear Kreuzberg Cache]
-    ClearCache --> StartProfile[Start ResourceProfiler]
-    StartProfile --> Extract[Run Extraction]
-    Extract --> StopProfile[Stop Profiler]
-    StopProfile --> Record[Record Metrics]
-    Record --> Report[Generate Report]
-
-    StartProfile -.-> CPU[Sample CPU @ 100ms]
-    StartProfile -.-> Memory[Sample Memory @ 100ms]
-    CPU --> StopProfile
-    Memory --> StopProfile
-
-    style Extract fill:#fff9c4
-```
-
-**ResourceProfiler:**
-
-- Samples CPU/memory every 100ms during extraction
-- Tracks peak memory usage
-- Records execution time with microsecond precision
-- 1800s timeout per file
-
-### Running Benchmarks
+Kreuzberg includes a comprehensive benchmark suite for measuring performance:
 
 ```bash
 # Install benchmark dependencies
@@ -284,16 +175,15 @@ uv sync --all-extras --all-packages
 
 # Run benchmarks
 uv run python -m benchmarks.src.cli benchmark \
-    --framework kreuzberg_sync,extractous,docling \
+    --framework kreuzberg_sync \
     --category all \
     --iterations 3
 
 # Generate reports
 uv run python -m benchmarks.src.cli report --output-format html
-uv run python -m benchmarks.src.cli visualize
 ```
 
-See [Advanced Features Guide](../guides/advanced.md) for details.
+See [Advanced Features Guide](../guides/advanced.md) for details on running and analyzing benchmarks.
 
 ## Optimization Techniques
 

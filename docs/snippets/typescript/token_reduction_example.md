@@ -1,19 +1,14 @@
 ```typescript
-import { extractFile, ExtractionConfig, TokenReductionConfig } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  tokenReduction: new TokenReductionConfig({
-    mode: 'moderate',
-    preserveMarkdown: true
-  })
-});
+const config = {
+	tokenReduction: {
+		mode: 'moderate',
+		preserveImportantWords: true,
+	},
+};
 
-const result = await extractFile('verbose_document.pdf', { config });
-
-const originalTokens = result.metadata.original_token_count;
-const reducedTokens = result.metadata.token_count;
-const reductionRatio = result.metadata.token_reduction_ratio;
-
-console.log(`Reduced from ${originalTokens} to ${reducedTokens} tokens`);
-console.log(`Reduction: ${reductionRatio * 100}%`);
+const result = await extractFile('verbose_document.pdf', null, config);
+console.log(`Content length: ${result.content.length}`);
+console.log(`Metadata: ${JSON.stringify(result.metadata)}`);
 ```

@@ -57,7 +57,7 @@ Caching significantly improves performance for repeated extractions of the same 
 MIME types determine which extractor handles the file. Detection happens in two ways:
 
 - **Explicit**: If `mime_type` parameter is provided, validates it's supported
-- **Automatic**: Detects MIME type from file extension using internal mapping (118+ extensions)
+- **Automatic**: Detects MIME type from file extension using internal mapping
 
 ```mermaid
 flowchart LR

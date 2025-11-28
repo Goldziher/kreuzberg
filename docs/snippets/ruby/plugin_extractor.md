@@ -1,12 +1,23 @@
-```markdown
-!!! note "Not Supported"
-    The Ruby binding is a thin FFI wrapper and does not currently support
-    custom document extractors. Custom plugins must be implemented in Rust.
+```ruby
+require 'kreuzberg'
 
-    See the [Rust plugin documentation](../rust/plugin_extractor.md) for details on creating custom document extractors.
+class CustomPostProcessor
+  def call(result)
+    result['metadata'] ||= {}
+    result['metadata']['processed_by'] = 'CustomPostProcessor'
+    result
+  end
+end
 
-    Ruby currently supports:
-    - **PostProcessor** - Transform extraction results
-    - **Validator** - Validate extraction results
-    - **OcrBackend** - Custom OCR implementations
+class CustomValidator
+  def call(result)
+    raise Kreuzberg::Errors::ValidationError, 'Empty' if result['content'].empty?
+  end
+end
+
+processor = CustomPostProcessor.new
+validator = CustomValidator.new
+
+Kreuzberg.register_post_processor('custom', processor)
+Kreuzberg.register_validator('custom', validator)
 ```

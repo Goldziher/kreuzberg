@@ -1,11 +1,11 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
-  chunking: Kreuzberg::ChunkingConfig.new(
+config = Kreuzberg::Config::Extraction.new(
+  chunking: Kreuzberg::Config::Chunking.new(
     max_chars: 1500,
     max_overlap: 200,
-    embedding: Kreuzberg::EmbeddingConfig.new(
+    embedding: Kreuzberg::Config::Embedding.new(
       model: Kreuzberg::EmbeddingModelType.new(
         type: 'preset',
         name: 'text-embedding-all-minilm-l6-v2'

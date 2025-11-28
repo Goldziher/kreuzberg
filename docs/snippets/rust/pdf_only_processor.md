@@ -5,7 +5,6 @@ impl PostProcessor for PdfOnlyProcessor {
         result: &mut ExtractionResult,
         _config: &ExtractionConfig
     ) -> Result<()> {
-        // PDF-specific processing
         Ok(())
     }
 

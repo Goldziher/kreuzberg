@@ -9,7 +9,7 @@ import java.util.List;
 try {
     List<String> files = Arrays.asList("doc1.pdf", "doc2.docx", "doc3.pptx");
 
-    List<ExtractionResult> results = Kreuzberg.batchExtractFilesSync(files);
+    List<ExtractionResult> results = Kreuzberg.batchExtractFiles(files, null);
 
     for (int i = 0; i < results.size(); i++) {
         ExtractionResult result = results.get(i);

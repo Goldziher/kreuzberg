@@ -1,8 +1,8 @@
 ```typescript
 import {
-  listDocumentExtractors,
-  unregisterDocumentExtractor,
-} from "@goldziher/kreuzberg";
+	listDocumentExtractors,
+	unregisterDocumentExtractor,
+} from 'kreuzberg';
 
 /**
  * Note: Custom document extractors are not directly supported in TypeScript v4.0.

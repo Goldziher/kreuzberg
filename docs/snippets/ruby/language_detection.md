@@ -1,8 +1,8 @@
 ```ruby
 require 'kreuzberg'
 
-config = Kreuzberg::ExtractionConfig.new(
-  language_detection: Kreuzberg::LanguageDetectionConfig.new(
+config = Kreuzberg::Config::Extraction.new(
+  language_detection: Kreuzberg::Config::LanguageDetection.new(
     enabled: true,
     min_confidence: 0.9,
     detect_multiple: true

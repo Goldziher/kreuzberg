@@ -10,16 +10,13 @@ import (
 func main() {
 	config := &kreuzberg.ExtractionConfig{
 		TokenReduction: &kreuzberg.TokenReductionConfig{
-			Mode:             "moderate",
-			PreserveMarkdown: true,
-			PreserveCode:     true,
-			LanguageHint:     "eng",
+			Mode:                   "moderate",
+			PreserveImportantWords: kreuzberg.BoolPtr(true),
 		},
 	}
 
-	fmt.Printf("Mode: %s, Preserve Markdown: %v, Preserve Code: %v\n",
+	fmt.Printf("Mode: %s, Preserve Important Words: %v\n",
 		config.TokenReduction.Mode,
-		config.TokenReduction.PreserveMarkdown,
-		config.TokenReduction.PreserveCode)
+		*config.TokenReduction.PreserveImportantWords)
 }
 ```

@@ -6,7 +6,7 @@ Kreuzberg v4 represents a complete architectural rewrite with a Rust-first desig
 
 v4 introduces several major changes:
 
-- **Rust Core**: Complete rewrite of core extraction logic in Rust for 10-50x performance improvements
+- **Rust Core**: Complete rewrite of core extraction logic in Rust for significant performance improvements
 - **Multi-Language Support**: Native support for Python, TypeScript, and Rust
 - **Plugin System**: Trait-based plugin architecture for extensibility
 - **Type Safety**: Improved type definitions across all languages

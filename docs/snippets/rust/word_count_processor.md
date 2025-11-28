@@ -38,7 +38,6 @@ impl PostProcessor for WordCountProcessor {
         result: &ExtractionResult,
         _config: &ExtractionConfig
     ) -> bool {
-        // Only process if content is non-empty
         !result.content.is_empty()
     }
 }

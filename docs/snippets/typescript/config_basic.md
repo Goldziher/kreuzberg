@@ -1,10 +1,11 @@
 ```typescript
-import { extractFile, ExtractionConfig } from '@kreuzberg/sdk';
+import { extractFile } from 'kreuzberg';
 
-const config = new ExtractionConfig({
-  useCache: true,
-  enableQualityProcessing: true
-});
+const config = {
+	useCache: true,
+	enableQualityProcessing: true,
+};
 
-const result = await extractFile('document.pdf', { config });
+const result = await extractFile('document.pdf', null, config);
+console.log(result.content);
 ```

@@ -92,7 +92,7 @@ Rust was chosen for the core implementation due to several compelling advantages
 
 ### Performance
 
-Benchmarks show 10-50x performance improvements over Python implementations:
+Rust provides significant performance improvements over pure Python implementations:
 
 - **PDF parsing**: Native pdfium bindings eliminate Python overhead
 - **Text processing**: SIMD-accelerated string operations for token reduction

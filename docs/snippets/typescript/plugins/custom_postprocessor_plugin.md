@@ -1,10 +1,10 @@
 ```typescript
 import {
-  registerPostProcessor,
-  unregisterPostProcessor,
-  type PostProcessorProtocol,
-  type ExtractionResult,
-} from "@goldziher/kreuzberg";
+	registerPostProcessor,
+	unregisterPostProcessor,
+	type PostProcessorProtocol,
+	type ExtractionResult,
+} from 'kreuzberg';
 
 /**
  * Metadata enrichment post-processor

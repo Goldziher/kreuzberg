@@ -32,6 +32,22 @@ A Model Context Protocol server that exposes Kreuzberg as tools for AI agents an
 
     --8<-- "snippets/api_server/cli.md"
 
+=== "C#"
+
+    --8<-- "snippets/api_server/csharp.md"
+
+=== "Docker"
+
+    --8<-- "snippets/api_server/docker.md"
+
+=== "Go"
+
+    --8<-- "snippets/api_server/go.md"
+
+=== "Java"
+
+    --8<-- "snippets/api_server/java.md"
+
 === "Python"
 
     --8<-- "snippets/api_server/python.md"
@@ -39,18 +55,6 @@ A Model Context Protocol server that exposes Kreuzberg as tools for AI agents an
 === "Rust"
 
     --8<-- "snippets/api_server/rust.md"
-
-=== "Java"
-
-    --8<-- "snippets/api_server/java.md"
-
-=== "Go"
-
-    --8<-- "snippets/api_server/go.md"
-
-=== "Docker"
-
-    --8<-- "snippets/api_server/docker.md"
 
 ### API Endpoints
 
@@ -242,6 +246,10 @@ KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 
 ### Client Examples
 
+=== "C#"
+
+    --8<-- "snippets/csharp/client_extract_single_file.md"
+
 === "cURL"
 
     ```bash
@@ -306,6 +314,10 @@ KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 
 **Example:**
 
+=== "C#"
+
+    --8<-- "snippets/csharp/error_handling_extract.md"
+
 === "Go"
 
     --8<-- "snippets/go/error_handling_extract.md"
@@ -345,6 +357,10 @@ The Model Context Protocol (MCP) server exposes Kreuzberg as tools for AI agents
     # With configuration file
     kreuzberg mcp --config kreuzberg.toml
     ```
+
+=== "C#"
+
+    --8<-- "snippets/csharp/mcp_server_start.md"
 
 === "Go"
 
@@ -493,6 +509,10 @@ Clear all cached files.
     }
     ```
 
+=== "C#"
+
+    --8<-- "snippets/csharp/mcp_custom_client.md"
+
 === "Go"
 
     --8<-- "snippets/go/mcp_custom_client.md"
@@ -500,6 +520,10 @@ Clear all cached files.
 === "Java"
 
     --8<-- "snippets/java/mcp_client.md"
+
+=== "LangChain"
+
+    --8<-- "snippets/python/mcp_langchain_integration.md"
 
 === "Python"
 
@@ -517,10 +541,6 @@ Clear all cached files.
 
     --8<-- "snippets/typescript/mcp_custom_client.md"
 
-=== "LangChain"
-
-    --8<-- "snippets/python/mcp_langchain_integration.md"
-
 ## Production Deployment
 
 ### Docker Deployment
@@ -532,7 +552,7 @@ version: '3.8'
 
 services:
   kreuzberg-api:
-    image: goldziher/kreuzberg:v4.0.0-rc1-all
+    image: goldziher/kreuzberg:v4-core
     ports:
       - "8000:8000"
     environment:
@@ -577,7 +597,7 @@ spec:
     spec:
       containers:
       - name: kreuzberg
-        image: goldziher/kreuzberg:v4.0.0-rc1-all
+        image: goldziher/kreuzberg:v4-core
         ports:
         - containerPort: 8000
         env:

@@ -10,40 +10,21 @@
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats. Available for Rust, Python, TypeScript/Node.js, Ruby, Go, Java, and C#—or use via CLI, REST API, or MCP server.
+**A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 56 formats. Available for Rust, Python, TypeScript/Node.js, Ruby, Go, Java, and C#—or use via CLI, REST API, or MCP server.
 
 > **🚀 Version 4.0.0 Release Candidate**
 > This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter. Help us make the stable release better!
 
 ## Why Kreuzberg
 
-- **10-50x faster** – Rust-powered extraction outperforms Python alternatives (docling, unstructured)
-- **60-90% less memory** – Streaming parsers with constant memory usage for multi-GB files
 - **Truly polyglot** – Native bindings for Rust, Python, TypeScript/Node.js, Ruby, Go, Java, C#
 - **Production-ready** – Battle-tested with comprehensive error handling and validation
-- **50+ file format families** – PDF, Office documents, images, HTML, XML, emails, archives, and more
+- **56 formats** – PDF, Office documents, images, HTML, XML, emails, archives, and more
 - **OCR built-in** – Multiple backends (Tesseract, EasyOCR, PaddleOCR) with table extraction support
 - **Flexible deployment** – Use as library, CLI tool, REST API server, or MCP server
+- **Memory efficient** – Streaming parsers with constant memory usage for multi-GB files
 
-📖 **[Complete Documentation](https://kreuzberg.dev/)** • 🚀 **[Installation Guides](#installation)** • 📊 **[Benchmarks](#performance)**
-
-## Performance
-
-Benchmarks on real-world documents (10-page PDF, mixed native and scanned content):
-
-| Library | Time | Memory | Throughput |
-|---------|------|--------|------------|
-| **Kreuzberg** | **0.15s** | **45 MB** | **6.7 docs/s** |
-| docling | 2.50s | 450 MB | 0.4 docs/s |
-| unstructured | 3.20s | 380 MB | 0.3 docs/s |
-
-**Why is Kreuzberg faster?**
-- **No GIL**: True parallelism (Python's Global Interpreter Lock prevents concurrent processing)
-- **SIMD**: CPU vector instructions for token counting and text processing (37x faster)
-- **Zero-copy parsing**: Memory-mapped files with no data duplication
-- **Streaming**: Constant memory for large files regardless of size
-
-Full benchmark methodology and reproducible datasets available in [`benchmarks/`](benchmarks/).
+📖 **[Complete Documentation](https://kreuzberg.dev/)** • 🚀 **[Installation Guides](#installation)**
 
 ## Kreuzberg Cloud (Coming Soon)
 
@@ -262,11 +243,9 @@ All images support API server, CLI, and MCP server modes with automatic platform
 
 | Feature | Kreuzberg | docling | unstructured | LlamaParse |
 |---------|-----------|---------|--------------|------------|
-| **Speed (10pg PDF)** | 0.15s | 2.5s | 3.2s | ~1.8s |
-| **Memory (10pg PDF)** | 45 MB | 450 MB | 380 MB | ~200 MB |
-| **Formats** | 50+ | PDF, DOCX | 30+ | PDF only |
+| **Formats** | 56 | PDF, DOCX | 30+ | PDF only |
 | **Self-hosted** | ✅ Yes (MIT) | ✅ Yes | ✅ Yes | ❌ API only |
-| **Programming Languages** | Rust, Python, Ruby, TS, Java, Go | Python | Python | API (any) |
+| **Programming Languages** | Rust, Python, Ruby, TS, Java, Go, C# | Python | Python | API (any) |
 | **Table Extraction** | ✅ Good | ✅ Good | ✅ Basic | ✅ Excellent |
 | **OCR** | ✅ Multiple backends | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Embeddings** | ✅ Built-in | ❌ No | ❌ No | ❌ No |

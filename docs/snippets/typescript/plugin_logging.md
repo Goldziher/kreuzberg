@@ -1,9 +1,9 @@
 ```typescript
 import {
-  registerPostProcessor,
-  registerValidator,
-  type ExtractionResult,
-} from "@kreuzberg/node";
+	registerPostProcessor,
+	registerValidator,
+	type ExtractionResult,
+} from 'kreuzberg';
 
 class LoggingPostProcessor {
   name = "logging-processor";

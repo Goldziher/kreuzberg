@@ -6,18 +6,13 @@ from kreuzberg import (
     ChunkingConfig,
 )
 
-config = ExtractionConfig(
+config: ExtractionConfig = ExtractionConfig(
     use_cache=True,
-    ocr=OcrConfig(
-        backend="tesseract",
-        language="eng",
-    ),
-    chunking=ChunkingConfig(
-        max_chunk_size=1000,
-        overlap=200,
-    ),
+    ocr=OcrConfig(backend="tesseract", language="eng"),
+    chunking=ChunkingConfig(max_chars=1000, max_overlap=200),
 )
 
-result = extract_file_sync("document.pdf", config)
-print(f"Content length: {len(result.content)}")
+result = extract_file_sync("document.pdf", config=config)
+content_length: int = len(result.content)
+print(f"Content length: {content_length}")
 ```
