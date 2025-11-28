@@ -485,22 +485,18 @@ for table in result.tables:
 
 ## Performance Improvements
 
-v4 is significantly faster than v3:
+v4 delivers significant performance improvements over v3 through its Rust-first architecture:
 
-| Operation | v3 Time | v4 Time | Improvement |
-|-----------|---------|---------|-------------|
-| PDF Extraction | 2.5s | 0.15s | 16x faster |
-| OCR Processing | 5.0s | 0.8s | 6x faster |
-| XML Parsing | 3.0s | 0.06s | 50x faster |
-| Batch (100 files) | 180s | 12s | 15x faster |
+**Key Performance Enhancements:**
 
-These improvements are due to:
+- **Rust core implementation** – Native compilation with LLVM optimizations
+- **Streaming parsers** – Constant memory usage for large files (GB+)
+- **Zero-copy operations** – Efficient memory management with ownership model
+- **SIMD text processing** – Parallel operations for hot paths
+- **Async concurrency** – True parallelism without GIL limitations
+- **Smart caching** – Content-based deduplication
 
-- Rust core implementation
-- Streaming parsers for large files
-- Optimized memory management
-- SIMD text processing
-- Efficient caching
+See the [Performance Guide](../concepts/performance.md) for detailed explanations of optimization techniques and architecture benefits.
 
 ## New Features in v4
 

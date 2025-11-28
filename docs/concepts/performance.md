@@ -165,25 +165,66 @@ flowchart LR
 - **TextExtractor**: Line-by-line streaming
 - **ArchiveExtractor**: Decompresses on-the-fly
 
-## Running Benchmarks
+## Benchmarking
 
-Kreuzberg includes a comprehensive benchmark suite for measuring performance:
+To measure Kreuzberg's performance for your specific use case, we recommend:
 
-```bash
-# Install benchmark dependencies
-uv sync --all-extras --all-packages
+1. **Create representative test documents** – Use actual files from your production workload
+2. **Profile extraction operations** – Measure time and memory for different document types
+3. **Compare batch vs. sequential** – Test `batch_extract_files()` vs. sequential `extract_file()` calls
+4. **Monitor resource usage** – Track CPU, memory, and I/O during extraction
 
-# Run benchmarks
-uv run python -m benchmarks.src.cli benchmark \
-    --framework kreuzberg_sync \
-    --category all \
-    --iterations 3
+**Language-Specific Profiling:**
 
-# Generate reports
-uv run python -m benchmarks.src.cli report --output-format html
-```
+=== "Python"
+    ```python
+    import time
+    from kreuzberg import extract_file, batch_extract_files
 
-See [Advanced Features Guide](../guides/advanced.md) for details on running and analyzing benchmarks.
+    # Single file timing
+    start = time.time()
+    result = extract_file("large_document.pdf")
+    print(f"Time: {time.time() - start:.2f}s")
+
+    # Batch processing
+    files = [f"doc{i}.pdf" for i in range(100)]
+    start = time.time()
+    results = batch_extract_files(files)
+    print(f"Batch (100): {time.time() - start:.2f}s")
+    ```
+
+=== "TypeScript"
+    ```typescript
+    import { extractFile, batchExtractFiles } from '@goldziher/kreuzberg';
+
+    // Single file timing
+    const start = Date.now();
+    const result = await extractFile('large_document.pdf');
+    console.log(`Time: ${(Date.now() - start) / 1000}s`);
+
+    // Batch processing
+    const files = Array.from({ length: 100 }, (_, i) => `doc${i}.pdf`);
+    const batchStart = Date.now();
+    const results = await batchExtractFiles(files);
+    console.log(`Batch (100): ${(Date.now() - batchStart) / 1000}s`);
+    ```
+
+=== "Rust"
+    ```rust
+    use kreuzberg::{extract_file_sync, batch_extract_files_sync};
+    use std::time::Instant;
+
+    // Single file timing
+    let start = Instant::now();
+    let result = extract_file_sync("large_document.pdf", None, &config)?;
+    println!("Time: {:?}", start.elapsed());
+
+    // Batch processing
+    let files: Vec<_> = (0..100).map(|i| format!("doc{}.pdf", i)).collect();
+    let batch_start = Instant::now();
+    let results = batch_extract_files_sync(&files, &config)?;
+    println!("Batch (100): {:?}", batch_start.elapsed());
+    ```
 
 ## Optimization Techniques
 
