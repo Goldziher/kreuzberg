@@ -7,22 +7,26 @@ on:
     paths:
       - 'docker/**'
       - '.dockerignore'
-      - 'crates/**'
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-cli/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
       - 'scripts/test_docker.sh'
       - '.github/workflows/ci-docker.yaml'
-      - 'packages/**'
-      - 'tools/**'
   pull_request:
     branches:
       - main
     paths:
       - 'docker/**'
       - '.dockerignore'
-      - 'crates/**'
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-cli/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
       - 'scripts/test_docker.sh'
       - '.github/workflows/ci-docker.yaml'
-      - 'packages/**'
-      - 'tools/**'
   workflow_dispatch:
     inputs:
       skip_tests:
