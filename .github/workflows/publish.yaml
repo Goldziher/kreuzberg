@@ -1693,6 +1693,8 @@ jobs:
     needs: [prepare]
     if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_csharp == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for OIDC trusted publishing
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -1721,17 +1723,27 @@ jobs:
           path: artifacts/csharp/*.nupkg
           retention-days: 14
 
+      - name: NuGet trusted publishing login
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USERNAME }}
+
       - name: Publish to NuGet
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
-          if [[ -z "$NUGET_API_KEY" ]]; then
-            echo "::warning::NUGET_API_KEY not set; skipping NuGet publish." | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          dotnet nuget push "artifacts/csharp/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
-          echo "NuGet package published." >> $GITHUB_STEP_SUMMARY
+          dotnet nuget push "artifacts/csharp/*.nupkg" \
+            --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          echo "NuGet package published via trusted publishing." >> $GITHUB_STEP_SUMMARY
+
+      - name: Dry run summary
+        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
+        run: |
+          echo "Dry run requested; NuGet publish skipped." >> "$GITHUB_STEP_SUMMARY"
+          ls -1 artifacts/csharp/*.nupkg >> "$GITHUB_STEP_SUMMARY"
 
   publish-homebrew:
     name: Update Homebrew formula
