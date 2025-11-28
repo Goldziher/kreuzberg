@@ -73,7 +73,7 @@ jobs:
         shell: bash
         run: |
           cd packages/csharp
-          dotnet build -c Release
+          dotnet build Kreuzberg/Kreuzberg.csproj -c Release
 
       - name: Upload FFI library
         uses: actions/upload-artifact@v5
