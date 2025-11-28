@@ -7,6 +7,8 @@ description = "Command-line interface for Kreuzberg document intelligence"
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+keywords = ["document", "extraction", "cli", "tool", "parser"]
+categories = ["command-line-utilities", "text-processing"]
 
 [dependencies]
 kreuzberg = { path = "../kreuzberg", version = "4.0.0-rc.1", features = ["cli"] }

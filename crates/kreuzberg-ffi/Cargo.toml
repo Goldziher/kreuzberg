@@ -10,6 +10,8 @@ repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://kreuzberg.dev"
 documentation = "https://docs.rs/kreuzberg-ffi"
 readme = "README.md"
+keywords = ["ffi", "bindings", "document", "extraction", "c-api"]
+categories = ["development-tools::ffi", "text-processing"]
 
 [lib]
 crate-type = ["cdylib", "staticlib"]

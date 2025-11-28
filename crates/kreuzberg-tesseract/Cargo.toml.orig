@@ -8,14 +8,8 @@ license = "MIT"
 repository = "https://github.com/kreuzberg-dev/tesseract-rs"
 documentation = "https://docs.rs/kreuzberg-tesseract"
 readme = "README.md"
-keywords = [
-    "tesseract",
-    "ocr",
-    "bindings",
-    "computer-vision",
-    "text-recognition",
-]
-categories = ["external-ffi-bindings", "computer-vision", "text-processing"]
+keywords = ["ocr", "tesseract", "text-recognition", "image", "extraction"]
+categories = ["development-tools::ffi", "text-processing"]
 build = "build.rs"
 links = "tesseract"
 rust-version = "1.85.0"

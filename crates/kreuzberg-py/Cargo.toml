@@ -8,6 +8,8 @@ description = "Python bindings for Kreuzberg document intelligence library"
 license = "MIT"
 repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://goldziher.github.io/kreuzberg/"
+keywords = ["python", "pyo3", "document", "extraction", "bindings"]
+categories = ["api-bindings", "text-processing"]
 
 [lib]
 name = "_internal_bindings"

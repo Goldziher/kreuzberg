@@ -9,8 +9,8 @@ license = "MIT"
 repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://kreuzberg.dev"
 documentation = "https://docs.rs/kreuzberg"
-keywords = ["document", "extraction", "pdf", "ocr", "parsing"]
-categories = ["parsing", "text-processing", "asynchronous", "data-structures"]
+keywords = ["document", "extraction", "pdf", "ocr", "parser"]
+categories = ["parser-implementations", "text-processing"]
 readme = "README.md"
 
 [lib]

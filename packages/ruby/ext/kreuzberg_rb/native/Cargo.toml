@@ -10,8 +10,8 @@ homepage = "https://kreuzberg.dev"
 documentation = "https://docs.rs/kreuzberg"
 readme = "README.md"
 description = "Ruby bindings (Magnus) for Kreuzberg - high-performance document intelligence framework"
-keywords = ["document", "extraction", "ocr", "pdf", "ruby"]
-categories = ["api-bindings"]
+keywords = ["ruby", "magnus", "document", "extraction", "bindings"]
+categories = ["api-bindings", "text-processing"]
 
 [lib]
 name = "kreuzberg_rb"

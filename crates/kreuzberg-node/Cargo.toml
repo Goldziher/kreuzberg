@@ -8,6 +8,8 @@ license.workspace = true
 repository.workspace = true
 readme = "README.md"
 description = "Kreuzberg document intelligence - Node.js native bindings"
+keywords = ["nodejs", "napi", "document", "extraction", "bindings"]
+categories = ["api-bindings", "text-processing"]
 
 [lib]
 crate-type = ["cdylib"]

@@ -423,8 +423,7 @@ fn clean_tests(dir: &Utf8Path) -> Result<()> {
 
 fn write_helpers(root: &Utf8Path) -> Result<()> {
     let helpers_path = root.join("Helpers.cs");
-    fs::write(helpers_path.as_std_path(), CSHARP_HELPERS_TEMPLATE)
-        .context("Failed to write Helpers.cs")?;
+    fs::write(helpers_path.as_std_path(), CSHARP_HELPERS_TEMPLATE).context("Failed to write Helpers.cs")?;
     Ok(())
 }
 
@@ -581,13 +580,7 @@ fn render_csharp_metadata_expectation(value: &Value) -> String {
             }
             let parts = map
                 .iter()
-                .map(|(key, val)| {
-                    format!(
-                        "\"{}\": {}",
-                        escape_csharp_string(key),
-                        render_csharp_value(val)
-                    )
-                })
+                .map(|(key, val)| format!("\"{}\": {}", escape_csharp_string(key), render_csharp_value(val)))
                 .collect::<Vec<_>>()
                 .join(", ");
             format!("{{{}}}", parts)
