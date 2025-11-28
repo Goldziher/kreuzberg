@@ -5,6 +5,7 @@ use kreuzberg::KreuzbergError;
 use kreuzberg::core::config::ExtractionConfig;
 
 #[test]
+#[cfg_attr(target_os = "windows", ignore = "LibreOffice conversion hangs on Windows CI")]
 fn test_office_doc_legacy() {
     // Legacy .doc document conversion via LibreOffice.
 
@@ -226,6 +227,7 @@ fn test_office_docx_tables() {
 }
 
 #[test]
+#[cfg_attr(target_os = "windows", ignore = "LibreOffice conversion hangs on Windows CI")]
 fn test_office_ppt_legacy() {
     // Legacy PowerPoint .ppt file requiring LibreOffice conversion.
 
@@ -338,6 +340,7 @@ fn test_office_pptx_pitch_deck() {
 }
 
 #[test]
+#[cfg_attr(target_os = "windows", ignore = "LibreOffice conversion hangs on Windows CI")]
 fn test_office_xls_legacy() {
     // Legacy XLS spreadsheet to ensure backward compatibility.
 
