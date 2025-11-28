@@ -18,8 +18,8 @@ tests/benchmarks/results/
 *.tmp
 *.user
 *.whl
-*/bin/
-*/obj/
+**/bin/
+**/obj/
 *temp/
 .benchmarks/
 .cache/
