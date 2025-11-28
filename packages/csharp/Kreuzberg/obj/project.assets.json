@@ -1,0 +1,74 @@
+{
+  "version": 3,
+  "targets": {
+    "net9.0": {}
+  },
+  "libraries": {},
+  "projectFileDependencyGroups": {
+    "net9.0": []
+  },
+  "packageFolders": {
+    "/Users/naamanhirschfeld/.nuget/packages/": {}
+  },
+  "project": {
+    "version": "4.0.0-rc.1",
+    "restore": {
+      "projectUniqueName": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/Kreuzberg.csproj",
+      "projectName": "Goldziher.Kreuzberg",
+      "projectPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/Kreuzberg.csproj",
+      "packagesPath": "/Users/naamanhirschfeld/.nuget/packages/",
+      "outputPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "/Users/naamanhirschfeld/.nuget/NuGet/NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net9.0"
+      ],
+      "sources": {
+        "/opt/homebrew/Cellar/dotnet/9.0.8/libexec/library-packs": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "allWarningsAsErrors": true,
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.100"
+    },
+    "frameworks": {
+      "net9.0": {
+        "targetAlias": "net9.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "/opt/homebrew/Cellar/dotnet/9.0.8/libexec/sdk/9.0.109/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}
