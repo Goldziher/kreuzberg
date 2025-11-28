@@ -1,0 +1,3 @@
+[submodule "kreuzberg"]
+	path = kreuzberg
+	url = ssh://git@github.com/Goldziher/kreuzberg

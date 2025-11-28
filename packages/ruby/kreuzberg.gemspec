@@ -75,6 +75,9 @@ files = if (ruby_files + core_files).empty?
           ruby_files + core_files
         end
 
+# Filter to only include files that actually exist
+files = files.select { |f| File.exist?(f) }
+
 Gem::Specification.new do |spec|
   spec.name = 'kreuzberg'
   spec.version = Kreuzberg::VERSION
