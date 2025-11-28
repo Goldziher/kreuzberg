@@ -279,7 +279,9 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 		try {
 			const buffer = typeof imageBytes === "string" ? Buffer.from(imageBytes, "base64") : Buffer.from(imageBytes);
 
-			if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
+			// biome-ignore lint/complexity/useLiteralKeys: required for strict TypeScript noUncheckedIndexedAccess
+			const debugEnv = process.env["KREUZBERG_DEBUG_GUTEN"];
+			if (debugEnv === "1") {
 				const header = Array.from(buffer.subarray(0, 8));
 				console.log("[Guten OCR] Debug input header:", header);
 				console.log(

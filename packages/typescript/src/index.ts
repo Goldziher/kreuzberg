@@ -310,7 +310,7 @@ function normalizeOcrConfig(ocr?: OcrConfig): NativeExtractionConfig | undefined
 
 	const tesseract = normalizeTesseractConfig(ocr.tesseractConfig);
 	if (tesseract) {
-		normalized.tesseractConfig = tesseract;
+		setIfDefined(normalized, "tesseractConfig", tesseract);
 	}
 
 	return normalized;
@@ -438,22 +438,14 @@ function normalizeHtmlOptions(options?: HtmlConversionOptions): NativeExtraction
 	setIfDefined(normalized, "supSymbol", options.supSymbol);
 	setIfDefined(normalized, "newlineStyle", options.newlineStyle);
 	setIfDefined(normalized, "codeBlockStyle", options.codeBlockStyle);
-	if (options.keepInlineImagesIn) {
-		normalized.keepInlineImagesIn = options.keepInlineImagesIn;
-	}
+	setIfDefined(normalized, "keepInlineImagesIn", options.keepInlineImagesIn);
 	setIfDefined(normalized, "encoding", options.encoding);
 	setIfDefined(normalized, "debug", options.debug);
-	if (options.stripTags) {
-		normalized.stripTags = options.stripTags;
-	}
-	if (options.preserveTags) {
-		normalized.preserveTags = options.preserveTags;
-	}
+	setIfDefined(normalized, "stripTags", options.stripTags);
+	setIfDefined(normalized, "preserveTags", options.preserveTags);
 
 	const preprocessing = normalizeHtmlPreprocessing(options.preprocessing);
-	if (preprocessing) {
-		normalized.preprocessing = preprocessing;
-	}
+	setIfDefined(normalized, "preprocessing", preprocessing);
 
 	return normalized;
 }
@@ -467,16 +459,10 @@ function normalizeKeywordConfig(config?: KeywordConfig): NativeExtractionConfig 
 	setIfDefined(normalized, "algorithm", config.algorithm);
 	setIfDefined(normalized, "maxKeywords", config.maxKeywords);
 	setIfDefined(normalized, "minScore", config.minScore);
-	if (config.ngramRange) {
-		normalized.ngramRange = config.ngramRange;
-	}
+	setIfDefined(normalized, "ngramRange", config.ngramRange);
 	setIfDefined(normalized, "language", config.language);
-	if (config.yakeParams) {
-		normalized.yakeParams = config.yakeParams;
-	}
-	if (config.rakeParams) {
-		normalized.rakeParams = config.rakeParams;
-	}
+	setIfDefined(normalized, "yakeParams", config.yakeParams);
+	setIfDefined(normalized, "rakeParams", config.rakeParams);
 	return normalized;
 }
 
@@ -492,49 +478,31 @@ function normalizeExtractionConfig(config: ExtractionConfigType | null): NativeE
 	setIfDefined(normalized, "maxConcurrentExtractions", config.maxConcurrentExtractions);
 
 	const ocr = normalizeOcrConfig(config.ocr);
-	if (ocr) {
-		normalized.ocr = ocr;
-	}
+	setIfDefined(normalized, "ocr", ocr);
 
 	const chunking = normalizeChunkingConfig(config.chunking);
-	if (chunking) {
-		normalized.chunking = chunking;
-	}
+	setIfDefined(normalized, "chunking", chunking);
 
 	const images = normalizeImageExtractionConfig(config.images);
-	if (images) {
-		normalized.images = images;
-	}
+	setIfDefined(normalized, "images", images);
 
 	const pdf = normalizePdfConfig(config.pdfOptions);
-	if (pdf) {
-		normalized.pdfOptions = pdf;
-	}
+	setIfDefined(normalized, "pdfOptions", pdf);
 
 	const tokenReduction = normalizeTokenReductionConfig(config.tokenReduction);
-	if (tokenReduction) {
-		normalized.tokenReduction = tokenReduction;
-	}
+	setIfDefined(normalized, "tokenReduction", tokenReduction);
 
 	const languageDetection = normalizeLanguageDetectionConfig(config.languageDetection);
-	if (languageDetection) {
-		normalized.languageDetection = languageDetection;
-	}
+	setIfDefined(normalized, "languageDetection", languageDetection);
 
 	const postprocessor = normalizePostProcessorConfig(config.postprocessor);
-	if (postprocessor) {
-		normalized.postprocessor = postprocessor;
-	}
+	setIfDefined(normalized, "postprocessor", postprocessor);
 
 	const keywords = normalizeKeywordConfig(config.keywords);
-	if (keywords) {
-		normalized.keywords = keywords;
-	}
+	setIfDefined(normalized, "keywords", keywords);
 
 	const htmlOptions = normalizeHtmlOptions(config.htmlOptions);
-	if (htmlOptions) {
-		normalized.htmlOptions = htmlOptions;
-	}
+	setIfDefined(normalized, "htmlOptions", htmlOptions);
 
 	return normalized;
 }
@@ -681,7 +649,8 @@ export async function extractBytes(
 	config: ExtractionConfigType | null = null,
 ): Promise<ExtractionResult> {
 	const validated = assertUint8Array(data, "data");
-	if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
+	// biome-ignore lint/complexity/useLiteralKeys: required for strict TypeScript noUncheckedIndexedAccess
+	if (process.env["KREUZBERG_DEBUG_GUTEN"] === "1") {
 		// Helpful when debugging OCR pipelines that bridge through Rust/Node.
 		console.log("[TypeScript] Debug input header:", Array.from(validated.slice(0, 8)));
 	}
@@ -1068,6 +1037,7 @@ export function registerValidator(validator: ValidatorProtocol): void {
 				tables: wireResult.tables || [],
 				detectedLanguages: wireResult.detected_languages,
 				chunks: wireResult.chunks,
+				images: wireResult.images ?? null,
 			};
 
 			await Promise.resolve(validator.validate(result));
@@ -1241,7 +1211,8 @@ export function registerOcrBackend(backend: OcrBackendProtocol): void {
 			...processArgs: [OcrProcessPayload | OcrProcessTuple | NestedOcrProcessTuple, string?]
 		): Promise<string> {
 			const [imagePayload, maybeLanguage] = processArgs;
-			if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
+			// biome-ignore lint/complexity/useLiteralKeys: required for strict TypeScript noUncheckedIndexedAccess
+			if (process.env["KREUZBERG_DEBUG_GUTEN"] === "1") {
 				console.log("[registerOcrBackend] JS arguments", { length: processArgs.length });
 				console.log("[registerOcrBackend] Raw args", {
 					imagePayloadType: Array.isArray(imagePayload) ? "tuple" : typeof imagePayload,
@@ -1265,7 +1236,8 @@ export function registerOcrBackend(backend: OcrBackendProtocol): void {
 				throw new Error("OCR backend did not receive a language parameter");
 			}
 
-			if (process.env.KREUZBERG_DEBUG_GUTEN === "1") {
+			// biome-ignore lint/complexity/useLiteralKeys: required for strict TypeScript noUncheckedIndexedAccess
+			if (process.env["KREUZBERG_DEBUG_GUTEN"] === "1") {
 				const length = typeof rawBytes === "string" ? rawBytes.length : rawBytes.length;
 				console.log(
 					"[registerOcrBackend] Received payload",
