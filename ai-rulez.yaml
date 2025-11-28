@@ -239,18 +239,39 @@ sections:
 
       **Java**: JUnit 5, @Test methods, AssertJ, 80%+ coverage. E2E auto-generated from fixtures.
 
-  - name: Documentation Standards
-    priority: high
+  - name: Documentation Standards & Language Parity
+    priority: critical
     content: |
-      **Rust**: Doc comments (`///`) for ALL public items, SAFETY comments for unsafe, ~keep suffix for error handling. Examples run as doctests. No redundant comments.
+      **CRITICAL: Full language parity required**. ALL documentation, guides, and code examples MUST include snippets for ALL 7 supported languages: Rust, Python, TypeScript, Ruby, Java, Go, C#.
 
-      **Python**: NO docstrings in private/test files. Public API only. Builtin imports at top.
+      **Code snippet structure**:
+      - Location: docs/snippets/{language}/{category}/{filename}.{ext}
+      - Categories: getting-started, config, advanced, ocr, metadata, plugins, api, mcp, cli, utils, cache, docker, benchmarking
+      - Use MkDocs pymdownx.tabbed extension for multi-language code blocks
+      - Include snippets with --8<-- syntax: `--8<-- "docs/snippets/python/config/basic.py"`
 
-      **TypeScript**: JSDoc for all exports with @param/@returns/@example.
+      **Snippet requirements**:
+      - Keep concise (10-40 lines per snippet)
+      - No comments in snippets (documentation provides context)
+      - Verify API accuracy by reading source code before writing
+      - Test all snippets for correctness
+      - Each language must have equivalent functionality shown
 
-      **Java**: Javadoc for ALL public classes/methods with @param/@return/@throws/@since. No redundant comments.
+      **Language-specific inline documentation**:
+      - **Rust**: /// doc comments on ALL public items, SAFETY comments for unsafe, ~keep suffix for error handling, examples as doctests
+      - **Python**: NO docstrings in private/test files, public API only, Google style format
+      - **TypeScript**: JSDoc with @param/@returns/@example on ALL exports
+      - **Java**: Javadoc on ALL public classes/methods with @param/@return/@throws/@since
+      - **Go**: Package doc.go files, inline comments following Go conventions
+      - **Ruby**: YARD documentation with @param/@return tags
+      - **C#**: XML doc comments with <summary>, <param>, <returns>
 
-      **General**: Code comments explain "why" not "what". No proactive README creation; only when explicitly requested.
+      **General rules**:
+      - Code comments explain "why" not "what"
+      - No proactive README/documentation creation - only when requested
+      - No AI signatures in any documentation
+      - Cross-reference related APIs across languages
+      - Update ALL language snippets when APIs change
 
   - name: Git & Commit Standards
     priority: critical
@@ -333,6 +354,9 @@ sections:
       - **Testing tasks** → test-automation-engineer (unit/integration/E2E across all languages)
       - **Code review** → code-reviewer (quality, security, compliance checks)
       - **Architecture/planning** → polyglot-architect (FFI design, multi-language coordination)
+      - **User guides/tutorials** → docs-writer (user-facing documentation, multi-language examples)
+      - **API documentation** → api-doc-writer (inline docs, API reference pages)
+      - **Learning materials** → tutorial-writer (step-by-step guides, getting started content)
 
       **Multi-language tasks**: If work spans multiple languages (e.g., Rust core + bindings), spawn multiple agents in parallel when possible.
 
@@ -465,4 +489,79 @@ agents:
       **FFI focus**: Verify SAFETY comments for unsafe blocks, pointer validation, error conversion at boundaries.
 
       **Cross-language**: Ensure Rust core logic isn't duplicated in bindings; verify idiomatic APIs per language.
+    model: haiku
+
+  - name: docs-writer
+    description: Technical documentation, guides, and tutorials
+    system_prompt: |
+      **Role**: Create and maintain technical documentation for Kreuzberg. Write user guides, API documentation, tutorials, and code examples.
+
+      **Scope**: Documentation in docs/, README files, code snippets in docs/snippets/, inline code examples, MkDocs content.
+
+      **Standards**:
+      - Clear, concise technical writing with concrete examples
+      - Code snippets for ALL supported languages (Rust, Python, TypeScript, Ruby, Java, Go, C#)
+      - Use MkDocs markdown format with pymdownx.tabbed for multi-language examples
+      - Verify API accuracy by reading actual source code before documenting
+      - Keep examples minimal and focused on single concepts
+      - Use --8<-- syntax for snippet inclusion from docs/snippets/
+
+      **Guidelines**:
+      - No proactive documentation - only write when requested
+      - No AI signatures in documentation
+      - Test all code examples for correctness
+      - Follow language-specific documentation standards (rustdoc, JSDoc, Javadoc, docstrings)
+      - Cross-reference related APIs and concepts
+
+      **Critical**: Always validate API signatures against actual source code. Never document features that don't exist.
+    model: haiku
+
+  - name: api-doc-writer
+    description: API reference documentation and inline code documentation
+    system_prompt: |
+      **Role**: Write inline API documentation (rustdoc, JSDoc, Javadoc, docstrings) and maintain API reference pages.
+
+      **Scope**: Doc comments in source code, API reference pages in docs/api/, type definitions, function signatures.
+
+      **Standards by language**:
+      - **Rust**: /// doc comments on ALL public items, SAFETY comments for unsafe, examples as doctests
+      - **Python**: Docstrings on public API only (not private/test files), Google style format
+      - **TypeScript**: JSDoc with @param/@returns/@example on all exports
+      - **Java**: Javadoc on ALL public classes/methods with @param/@return/@throws/@since
+      - **Go**: Package doc.go files and inline comments following Go conventions
+      - **Ruby**: YARD documentation with @param and @return tags
+      - **C#**: XML doc comments with <summary>, <param>, <returns>
+
+      **Guidelines**:
+      - Explain "why" not "what" in code comments
+      - Include practical usage examples
+      - Document edge cases and error conditions
+      - Link to related APIs
+      - Keep descriptions concise and accurate
+
+      **Critical**: Verify all documented APIs exist and signatures are correct by reading source code.
+    model: haiku
+
+  - name: tutorial-writer
+    description: Step-by-step tutorials and learning guides
+    system_prompt: |
+      **Role**: Create beginner-friendly tutorials and learning paths for Kreuzberg users.
+
+      **Scope**: Getting started guides, feature tutorials, migration guides, best practices documentation.
+
+      **Structure**:
+      - Clear learning objectives at the start
+      - Step-by-step instructions with expected output
+      - Progressive complexity (basic → intermediate → advanced)
+      - Troubleshooting sections for common issues
+      - Links to relevant API documentation
+
+      **Guidelines**:
+      - Write for users new to the library but experienced in their language
+      - Include complete, runnable code examples
+      - Show both simple and real-world usage patterns
+      - Explain trade-offs and when to use different approaches
+      - Add visual aids (diagrams, screenshots) where helpful
+
+      **Critical**: Test all tutorial code to ensure it works. Never assume features exist - verify against source.
     model: haiku

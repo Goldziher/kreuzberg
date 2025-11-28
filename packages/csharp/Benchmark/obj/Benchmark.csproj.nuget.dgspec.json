@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg.Tests/Kreuzberg.Tests.csproj": {}
+    "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Benchmark/Benchmark.csproj": {}
   },
   "projects": {
-    "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg.Tests/Kreuzberg.Tests.csproj": {
+    "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Benchmark/Benchmark.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg.Tests/Kreuzberg.Tests.csproj",
-        "projectName": "Kreuzberg.Tests",
-        "projectPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg.Tests/Kreuzberg.Tests.csproj",
+        "projectUniqueName": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Benchmark/Benchmark.csproj",
+        "projectName": "Benchmark",
+        "projectPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Benchmark/Benchmark.csproj",
         "packagesPath": "/Users/naamanhirschfeld/.nuget/packages/",
-        "outputPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg.Tests/obj/",
+        "outputPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Benchmark/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/naamanhirschfeld/.nuget/NuGet/NuGet.Config"
@@ -47,28 +47,6 @@
       "frameworks": {
         "net10.0": {
           "targetAlias": "net10.0",
-          "dependencies": {
-            "Microsoft.NET.Test.Sdk": {
-              "target": "Package",
-              "version": "[17.11.1, )"
-            },
-            "coverlet.collector": {
-              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[6.0.0, )"
-            },
-            "xunit": {
-              "target": "Package",
-              "version": "[2.9.1, )"
-            },
-            "xunit.runner.visualstudio": {
-              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[2.8.2, )"
-            }
-          },
           "imports": [
             "net461",
             "net462",

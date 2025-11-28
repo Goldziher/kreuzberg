@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyDescriptionAttribute(("High-performance document intelligence for .NET powered by the Kreuzberg Rust cor" +
     "e."))]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("4.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("4.0.0-rc.1+96eccf7c0f733761102fef8d7b7b7593f9ee25e6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("4.0.0-rc.1+6803cb590fa31a76b3b025f1426a3e270d2c3357")]
 [assembly: System.Reflection.AssemblyProductAttribute("Kreuzberg")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Kreuzberg")]
 [assembly: System.Reflection.AssemblyVersionAttribute("4.0.0.0")]

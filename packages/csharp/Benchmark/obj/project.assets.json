@@ -1,23 +1,42 @@
 {
   "version": 3,
   "targets": {
-    "net10.0": {}
+    "net10.0": {
+      "Goldziher.Kreuzberg/4.0.0-rc.1": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "compile": {
+          "bin/placeholder/Goldziher.Kreuzberg.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/Goldziher.Kreuzberg.dll": {}
+        }
+      }
+    }
   },
-  "libraries": {},
+  "libraries": {
+    "Goldziher.Kreuzberg/4.0.0-rc.1": {
+      "type": "project",
+      "path": "../Kreuzberg/Kreuzberg.csproj",
+      "msbuildProject": "../Kreuzberg/Kreuzberg.csproj"
+    }
+  },
   "projectFileDependencyGroups": {
-    "net10.0": []
+    "net10.0": [
+      "Goldziher.Kreuzberg >= 4.0.0-rc.1"
+    ]
   },
   "packageFolders": {
     "/Users/naamanhirschfeld/.nuget/packages/": {}
   },
   "project": {
-    "version": "4.0.0-rc.1",
+    "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/Kreuzberg.csproj",
-      "projectName": "Goldziher.Kreuzberg",
-      "projectPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/Kreuzberg.csproj",
+      "projectUniqueName": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Benchmark/Benchmark.csproj",
+      "projectName": "Benchmark",
+      "projectPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Benchmark/Benchmark.csproj",
       "packagesPath": "/Users/naamanhirschfeld/.nuget/packages/",
-      "outputPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/obj/",
+      "outputPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Benchmark/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/naamanhirschfeld/.nuget/NuGet/NuGet.Config"
@@ -31,7 +50,11 @@
       "frameworks": {
         "net10.0": {
           "targetAlias": "net10.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/Kreuzberg.csproj": {
+              "projectPath": "/Users/naamanhirschfeld/workspace/kreuzberg/packages/csharp/Kreuzberg/Kreuzberg.csproj"
+            }
+          }
         }
       },
       "warningProperties": {

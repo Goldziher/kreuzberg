@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Kreuzberg.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+96eccf7c0f733761102fef8d7b7b7593f9ee25e6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6803cb590fa31a76b3b025f1426a3e270d2c3357")]
 [assembly: System.Reflection.AssemblyProductAttribute("Kreuzberg.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Kreuzberg.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
