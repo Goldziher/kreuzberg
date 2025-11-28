@@ -1760,4 +1760,56 @@
          <loc>https://kreuzberg.dev/4.0/snippets/typescript/vector_database_integration/</loc>
          <lastmod>2025-11-28</lastmod>
     </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/advanced/custom_cache/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/advanced/custom_extractor/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/advanced/custom_ocr_backend/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/advanced/custom_postprocessor/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/advanced/custom_validator/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/advanced/plugin_registry/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/mcp/client/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/mcp/server/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/plugins/custom_cache_plugin/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/plugins/custom_extractor_plugin/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/plugins/custom_ocr_plugin/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/plugins/custom_postprocessor_plugin/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/typescript/plugins/custom_validator_plugin/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
 </urlset>
