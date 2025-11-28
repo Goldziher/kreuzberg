@@ -72,6 +72,10 @@ fn find_java() -> Result<PathBuf> {
     which::which("java").map_err(|_| crate::Error::Config("Java runtime not found".to_string()))
 }
 
+fn find_dotnet() -> Result<PathBuf> {
+    which::which("dotnet").map_err(|_| crate::Error::Config("dotnet CLI not found".to_string()))
+}
+
 fn workspace_root() -> Result<PathBuf> {
     let manifest_dir =
         env::var("CARGO_MANIFEST_DIR").map_err(|_| crate::Error::Config("CARGO_MANIFEST_DIR not set".to_string()))?;
@@ -268,6 +272,27 @@ pub fn create_java_sync_adapter() -> Result<SubprocessAdapter> {
         "sync".to_string(),
     ];
     Ok(SubprocessAdapter::new("kreuzberg-java-sync", command, args, vec![]))
+}
+
+/// Create C# sync adapter
+pub fn create_csharp_sync_adapter() -> Result<SubprocessAdapter> {
+    let command = find_dotnet()?;
+    let project = workspace_root()?.join("packages/csharp/Benchmark/Benchmark.csproj");
+    if !project.exists() {
+        return Err(crate::Error::Config(format!(
+            "C# benchmark project missing at {}",
+            project.display()
+        )));
+    }
+    let args = vec![
+        "run".to_string(),
+        "--project".to_string(),
+        project.to_string_lossy().to_string(),
+        "--".to_string(),
+        "--file".to_string(),
+    ];
+    let env = build_library_env()?;
+    Ok(SubprocessAdapter::new("kreuzberg-csharp-sync", command, args, env))
 }
 
 #[cfg(test)]

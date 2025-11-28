@@ -163,3 +163,13 @@ Now matches TypeScript/Java/FFI behavior (no auto-init on list).
 5. **Complete Rust plugin API tests** (investigate API, fix imports)
 
 **Original Phase 3 goal (implement missing APIs) is unnecessary** - all APIs exist. Focus is now on fixing behavioral bugs and environment issues.
+
+---
+
+## C# Binding Parity
+
+- [x] Add C# binding project mirroring core APIs (sync/sync-with-config/bytes/batch, config loading, version, error handling, plugin registration).
+- [x] Wire C# binding build/test into workspace tasks and FFI artifacts (ensure P/Invoke library names + packaging).
+- [ ] Add C# examples/quickstart/docs updates across docs site with language tabs/snippets.
+- [x] Extend e2e generator to emit C# tests and fixtures parity; integrate into CI/task runners.
+- [x] Extend benchmark harness to run C# adapter for parity with other languages (CLI/config updates).

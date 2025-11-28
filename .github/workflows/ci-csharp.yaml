@@ -1,0 +1,144 @@
+name: CI C#
+
+on:
+  push:
+    branches: [main]
+    # paths:
+    #   - 'crates/kreuzberg-ffi/**'
+    #   - 'packages/csharp/**'
+  pull_request:
+    branches: [main]
+    # paths:
+    #   - 'crates/kreuzberg-ffi/**'
+    #   - 'packages/csharp/**'
+
+concurrency:
+  group: ci-csharp-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  RUST_MIN_STACK: 16777216
+  DOTNET_VERSION: '9.0'
+  PDFIUM_VERSION: '7529'
+  ORT_VERSION: '1.23.2'
+  MACOSX_DEPLOYMENT_TARGET: '14.0'
+
+jobs:
+  build-csharp:
+    name: C# Build + Smoke (${{ matrix.os }})
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          use-sccache: false
+          cache-key-prefix: csharp-${{ matrix.os }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Build FFI library
+        run: cargo build -p kreuzberg-ffi --release
+
+      - name: Build C# bindings
+        shell: bash
+        run: |
+          cd packages/csharp
+          dotnet build -c Release
+
+      - name: Upload FFI library
+        uses: actions/upload-artifact@v5
+        with:
+          name: csharp-ffi-lib-${{ matrix.os }}
+          path: target/release/libkreuzberg_ffi*
+          retention-days: 7
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  test-csharp:
+    name: C# Tests (${{ matrix.os }})
+    needs: build-csharp
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage PDFium runtime
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: target/release
+
+      - name: Download FFI library
+        uses: actions/download-artifact@v6
+        with:
+          name: csharp-ffi-lib-${{ matrix.os }}
+          path: target/release/
+
+      - name: Run C# tests
+        shell: bash
+        env:
+          KREUZBERG_FFI_DIR: ${{ github.workspace }}/target/release
+        run: |
+          cd packages/csharp
+          dotnet test Kreuzberg.Tests/Kreuzberg.Tests.csproj -c Release
+
+      - name: Install Task
+        uses: ./.github/actions/install-task
+
+      - name: Run E2E tests
+        shell: bash
+        run: |
+          task e2e:csharp:test

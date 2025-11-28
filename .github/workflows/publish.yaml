@@ -17,7 +17,7 @@ on:
         required: false
         type: string
       targets:
-        description: "Comma-separated list of release targets (all, python, node, ruby, cli, crates, docker, homebrew, java)"
+        description: "Comma-separated list of release targets (all, python, node, ruby, cli, crates, docker, homebrew, java, csharp)"
         required: false
         type: string
   push:
@@ -61,6 +61,7 @@ jobs:
       release_docker: ${{ steps.meta.outputs.release_docker }}
       release_homebrew: ${{ steps.meta.outputs.release_homebrew }}
       release_java: ${{ steps.meta.outputs.release_java }}
+      release_csharp: ${{ steps.meta.outputs.release_csharp }}
     steps:
       - name: Validate tag and compute version
         id: meta
@@ -150,6 +151,7 @@ jobs:
           release_docker=false
           release_homebrew=false
           release_java=false
+          release_csharp=false
 
           set_all_targets() {
             release_python=true
@@ -160,6 +162,7 @@ jobs:
             release_docker=true
             release_homebrew=true
             release_java=true
+            release_csharp=true
           }
 
           mapfile -t requested_targets < <(echo "$targets_value" | tr ',' '\n')
@@ -200,6 +203,9 @@ jobs:
               java)
                 release_java=true
                 ;;
+              csharp|dotnet|cs|nuget)
+                release_csharp=true
+                ;;
               none)
                 release_python=false
                 release_node=false
@@ -209,9 +215,10 @@ jobs:
                 release_docker=false
                 release_homebrew=false
                 release_java=false
+                release_csharp=false
                 ;;
               *)
-                echo "Unknown release target '$trimmed'. Allowed: all, python, node, ruby, cli, crates, docker, homebrew, java." >&2
+                echo "Unknown release target '$trimmed'. Allowed: all, python, node, ruby, cli, crates, docker, homebrew, java, csharp." >&2
                 exit 1
                 ;;
             esac
@@ -235,8 +242,9 @@ jobs:
           if [[ "$release_docker" == "true" ]]; then enabled_targets+=("docker"); fi
           if [[ "$release_homebrew" == "true" ]]; then enabled_targets+=("homebrew"); fi
           if [[ "$release_java" == "true" ]]; then enabled_targets+=("java"); fi
+          if [[ "$release_csharp" == "true" ]]; then enabled_targets+=("csharp"); fi
 
-          if [[ ${#enabled_targets[@]} -eq 8 ]]; then
+          if [[ ${#enabled_targets[@]} -eq 9 ]]; then
             release_targets_summary="all"
           elif [[ ${#enabled_targets[@]} -eq 0 ]]; then
             release_targets_summary="none"
@@ -268,7 +276,8 @@ jobs:
             "release_crates": $release_crates,
             "release_docker": $release_docker,
             "release_homebrew": $release_homebrew,
-            "release_java": $release_java
+            "release_java": $release_java,
+            "release_csharp": $release_csharp
           }
           JSON
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -289,6 +298,8 @@ jobs:
           echo "release_docker=$release_docker" >> "$GITHUB_OUTPUT"
           echo "release_homebrew=$release_homebrew" >> "$GITHUB_OUTPUT"
           echo "release_java=$release_java" >> "$GITHUB_OUTPUT"
+          echo "release_csharp=$release_csharp" >> "$GITHUB_OUTPUT"
+          echo "release_csharp=$release_csharp" >> "$GITHUB_OUTPUT"
 
       - name: Upload release metadata
         uses: actions/upload-artifact@v5
@@ -1676,6 +1687,51 @@ jobs:
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
         run: echo "Dry run requested; Maven publish skipped." >> "$GITHUB_STEP_SUMMARY"
+
+  publish-nuget:
+    name: Publish NuGet package
+    needs: [prepare]
+    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_csharp == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore C# dependencies
+        run: dotnet restore packages/csharp/Kreuzberg/Kreuzberg.csproj
+
+      - name: Pack NuGet package
+        run: |
+          dotnet pack packages/csharp/Kreuzberg/Kreuzberg.csproj \
+            -c Release \
+            -p:PackageVersion=${{ needs.prepare.outputs.version }} \
+            -o artifacts/csharp
+
+      - name: Upload NuGet artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: nuget-package
+          path: artifacts/csharp/*.nupkg
+          retention-days: 14
+
+      - name: Publish to NuGet
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [[ -z "$NUGET_API_KEY" ]]; then
+            echo "::warning::NUGET_API_KEY not set; skipping NuGet publish." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          dotnet nuget push "artifacts/csharp/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          echo "NuGet package published." >> $GITHUB_STEP_SUMMARY
 
   publish-homebrew:
     name: Update Homebrew formula
