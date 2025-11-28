@@ -32,7 +32,7 @@ namespace Kreuzberg.E2E.Smoke {
             var result = TestHelpers.RunExtraction("images/sample.png", null);
             TestHelpers.AssertExpectedMime(result, new[] { "image/png" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format", @"{"eq": "PNG"}");
+            TestHelpers.AssertMetadata(metadataNode, "format", @"{""eq"": ""PNG""}");
         }
 
         [Fact]
@@ -69,8 +69,8 @@ namespace Kreuzberg.E2E.Smoke {
             TestHelpers.AssertContentContainsAll(result, new[] { "Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR" });
             TestHelpers.AssertTableCount(result, 1, null);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "sheet_count", @"{"gte": 2}");
-            TestHelpers.AssertMetadata(metadataNode, "sheet_names", @"{"contains": "Stanley Cups"}");
+            TestHelpers.AssertMetadata(metadataNode, "sheet_count", @"{""gte"": 2}");
+            TestHelpers.AssertMetadata(metadataNode, "sheet_names", @"{""contains"": ""Stanley Cups""}");
         }
 
     }

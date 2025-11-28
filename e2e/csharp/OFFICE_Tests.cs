@@ -123,8 +123,8 @@ namespace Kreuzberg.E2E.Office {
             TestHelpers.AssertContentContainsAll(result, new[] { "Team", "Location", "Stanley Cups" });
             TestHelpers.AssertTableCount(result, 1, null);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "sheet_count", @"{"gte": 2}");
-            TestHelpers.AssertMetadata(metadataNode, "sheet_names", @"{"contains": "Stanley Cups"}");
+            TestHelpers.AssertMetadata(metadataNode, "sheet_count", @"{""gte"": 2}");
+            TestHelpers.AssertMetadata(metadataNode, "sheet_names", @"{""contains"": ""Stanley Cups""}");
         }
 
         [Fact]
@@ -134,7 +134,7 @@ namespace Kreuzberg.E2E.Office {
             TestHelpers.AssertExpectedMime(result, new[] { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
             TestHelpers.AssertMinContentLength(result, 20);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "sheet_count", @"{"gte": 2}");
+            TestHelpers.AssertMetadata(metadataNode, "sheet_count", @"{""gte"": 2}");
         }
 
         [Fact]

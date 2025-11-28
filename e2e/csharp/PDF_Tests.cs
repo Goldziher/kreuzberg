@@ -16,7 +16,7 @@ namespace Kreuzberg.E2E.Pdf {
             TestHelpers.AssertMinContentLength(result, 5000);
             TestHelpers.AssertContentContainsAny(result, new[] { "assembly", "register", "instruction" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"": ""pdf""}");
         }
 
         [Fact]
@@ -27,7 +27,7 @@ namespace Kreuzberg.E2E.Pdf {
             TestHelpers.AssertMinContentLength(result, 10000);
             TestHelpers.AssertContentContainsAny(result, new[] { "Bayesian", "probability", "distribution" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"": ""pdf""}");
         }
 
         [Fact]
@@ -46,7 +46,7 @@ namespace Kreuzberg.E2E.Pdf {
             TestHelpers.AssertMinContentLength(result, 1000);
             TestHelpers.AssertContentContainsAny(result, new[] { "neural", "network", "deep learning" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"": ""pdf""}");
         }
 
         [Fact]
@@ -65,7 +65,7 @@ namespace Kreuzberg.E2E.Pdf {
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 50);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"": ""pdf""}");
         }
 
         [Fact]
@@ -76,7 +76,7 @@ namespace Kreuzberg.E2E.Pdf {
             TestHelpers.AssertMinContentLength(result, 10000);
             TestHelpers.AssertContentContainsAny(result, new[] { "machine learning", "algorithm", "training" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"": ""pdf""}");
         }
 
         [Fact]
@@ -87,7 +87,7 @@ namespace Kreuzberg.E2E.Pdf {
             TestHelpers.AssertMinContentLength(result, 100);
             TestHelpers.AssertContentContainsAny(result, new[] { "Intel", "paging" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"": ""pdf""}");
         }
 
         [Fact]
@@ -97,7 +97,7 @@ namespace Kreuzberg.E2E.Pdf {
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 50);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"": ""pdf""}");
         }
 
         [Fact]
@@ -145,7 +145,7 @@ namespace Kreuzberg.E2E.Pdf {
             TestHelpers.AssertMinContentLength(result, 10000);
             TestHelpers.AssertContentContainsAny(result, new[] { "statistical", "regression", "learning" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"": ""pdf""}");
         }
 
     }

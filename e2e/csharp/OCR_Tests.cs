@@ -32,7 +32,7 @@ namespace Kreuzberg.E2E.Ocr {
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 20);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"": ""pdf""}");
         }
 
         [Fact]

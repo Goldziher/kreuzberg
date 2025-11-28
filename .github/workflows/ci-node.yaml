@@ -103,13 +103,36 @@ jobs:
             fi
           done
           pnpm pack
-          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
-            pkg_tgz=$(ls kreuzberg-node-*.tgz | head -n1)
-            if [[ -f "kreuzberg-node.linux-x64-gnu.node" && -n "$pkg_tgz" ]]; then
+          # Repack tarball with the .node file for specific platforms
+          # This is needed because pnpm pack doesn't always include platform-specific .node files
+          pkg_tgz=$(ls kreuzberg-node-*.tgz | head -n1)
+          if [[ -n "$pkg_tgz" ]]; then
+            case "${{ matrix.target }}" in
+              x86_64-unknown-linux-gnu)
+                node_file="kreuzberg-node.linux-x64-gnu.node"
+                ;;
+              x86_64-pc-windows-msvc)
+                node_file="kreuzberg-node.win32-x64-msvc.node"
+                ;;
+              aarch64-pc-windows-msvc)
+                node_file="kreuzberg-node.win32-arm64-msvc.node"
+                ;;
+              x86_64-apple-darwin)
+                node_file="kreuzberg-node.darwin-x64.node"
+                ;;
+              aarch64-apple-darwin)
+                node_file="kreuzberg-node.darwin-arm64.node"
+                ;;
+              *)
+                node_file=""
+                ;;
+            esac
+            if [[ -n "$node_file" && -f "$node_file" ]]; then
               tmpdir=$(mktemp -d)
               tar xzf "$pkg_tgz" -C "$tmpdir"
-              cp "kreuzberg-node.linux-x64-gnu.node" "$tmpdir/package/"
+              cp "$node_file" "$tmpdir/package/"
               tar czf "$pkg_tgz" -C "$tmpdir" package
+              rm -rf "$tmpdir"
             fi
           fi
 

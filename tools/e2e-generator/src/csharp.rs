@@ -556,7 +556,7 @@ fn render_assertions(buffer: &mut String, assertions: &Assertions) -> Result<()>
                 buffer,
                 "            TestHelpers.AssertMetadata(metadataNode, \"{}\", @\"{}\");",
                 escape_csharp_string(path),
-                expectation_json
+                escape_csharp_verbatim_string(&expectation_json)
             )?;
         }
     }
@@ -662,4 +662,9 @@ fn escape_csharp_string(value: &str) -> String {
         .replace('\n', "\\n")
         .replace('\r', "\\r")
         .replace('\t', "\\t")
+}
+
+fn escape_csharp_verbatim_string(value: &str) -> String {
+    // In C# verbatim strings (@"..."), quotes are escaped by doubling them
+    value.replace('"', "\"\"")
 }

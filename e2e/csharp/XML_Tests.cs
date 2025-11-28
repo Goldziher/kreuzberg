@@ -15,7 +15,7 @@ namespace Kreuzberg.E2E.Xml {
             TestHelpers.AssertExpectedMime(result, new[] { "application/xml" });
             TestHelpers.AssertMinContentLength(result, 100);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "element_count", @"{"gte": 1}");
+            TestHelpers.AssertMetadata(metadataNode, "element_count", @"{""gte"": 1}");
         }
 
     }
