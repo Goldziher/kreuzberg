@@ -4,53 +4,104 @@ using System.Text.Json.Serialization;
 
 namespace Kreuzberg;
 
+/// <summary>
+/// The main result of document extraction containing extracted content, metadata, and structured data.
+/// </summary>
 public sealed class ExtractionResult
 {
+    /// <summary>
+    /// The extracted text content from the document.
+    /// </summary>
     [JsonPropertyName("content")]
     public string Content { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The detected MIME type of the document (e.g., "application/pdf").
+    /// </summary>
     [JsonPropertyName("mime_type")]
     public string MimeType { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Document metadata including language, format-specific info, and other attributes.
+    /// </summary>
     [JsonPropertyName("metadata")]
     public Metadata Metadata { get; set; } = new();
 
+    /// <summary>
+    /// Extracted tables from the document, if any.
+    /// </summary>
     [JsonPropertyName("tables")]
     public List<Table> Tables { get; set; } = new();
 
+    /// <summary>
+    /// Detected languages in the document, if language detection was enabled.
+    /// </summary>
     [JsonPropertyName("detected_languages")]
     public List<string>? DetectedLanguages { get; set; }
 
+    /// <summary>
+    /// Text chunks if chunking was enabled, each with metadata and optional embedding vector.
+    /// </summary>
     [JsonPropertyName("chunks")]
     public List<Chunk>? Chunks { get; set; }
 
+    /// <summary>
+    /// Images extracted from the document, if image extraction was enabled.
+    /// </summary>
     [JsonPropertyName("images")]
     public List<ExtractedImage>? Images { get; set; }
 
+    /// <summary>
+    /// Indicates whether extraction completed successfully.
+    /// </summary>
     [JsonPropertyName("success")]
     public bool Success { get; set; }
 }
 
+/// <summary>
+/// Represents a table extracted from a document.
+/// </summary>
 public sealed class Table
 {
+    /// <summary>
+    /// Table cells arranged as rows (outer list) and columns (inner lists).
+    /// </summary>
     [JsonPropertyName("cells")]
     public List<List<string>> Cells { get; set; } = new();
 
+    /// <summary>
+    /// Table representation in Markdown format.
+    /// </summary>
     [JsonPropertyName("markdown")]
     public string Markdown { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The page number (1-indexed) where this table appears in the document.
+    /// </summary>
     [JsonPropertyName("page_number")]
     public int PageNumber { get; set; }
 }
 
+/// <summary>
+/// A chunk of text from a document, used for splitting large documents into smaller pieces.
+/// </summary>
 public sealed class Chunk
 {
+    /// <summary>
+    /// The text content of this chunk.
+    /// </summary>
     [JsonPropertyName("content")]
     public string Content { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Optional embedding vector for the chunk, if embedding was enabled.
+    /// </summary>
     [JsonPropertyName("embedding")]
     public float[]? Embedding { get; set; }
 
+    /// <summary>
+    /// Metadata about the chunk including position and token count.
+    /// </summary>
     [JsonPropertyName("metadata")]
     public ChunkMetadata Metadata { get; set; } = new();
 }
@@ -458,44 +509,86 @@ public sealed class OcrMetadata
     public int? TableCols { get; set; }
 }
 
+/// <summary>
+/// Configuration for document extraction, controlling extraction behavior and features.
+/// </summary>
 public sealed class ExtractionConfig
 {
+    /// <summary>
+    /// Whether to use caching for extraction results. Default is null (use server default).
+    /// </summary>
     [JsonPropertyName("use_cache")]
     public bool? UseCache { get; set; }
 
+    /// <summary>
+    /// Whether to enable quality processing to improve extraction quality. Default is null.
+    /// </summary>
     [JsonPropertyName("enable_quality_processing")]
     public bool? EnableQualityProcessing { get; set; }
 
+    /// <summary>
+    /// OCR configuration for handling scanned documents and images. If null, OCR is disabled.
+    /// </summary>
     [JsonPropertyName("ocr")]
     public OcrConfig? Ocr { get; set; }
 
+    /// <summary>
+    /// Whether to force OCR processing even for documents with text. Default is false.
+    /// </summary>
     [JsonPropertyName("force_ocr")]
     public bool? ForceOcr { get; set; }
 
+    /// <summary>
+    /// Text chunking configuration for splitting long documents. If null, chunking is disabled.
+    /// </summary>
     [JsonPropertyName("chunking")]
     public ChunkingConfig? Chunking { get; set; }
 
+    /// <summary>
+    /// Image extraction configuration. If null, image extraction is disabled.
+    /// </summary>
     [JsonPropertyName("images")]
     public ImageExtractionConfig? Images { get; set; }
 
+    /// <summary>
+    /// PDF-specific extraction options (password protection, metadata, etc.).
+    /// </summary>
     [JsonPropertyName("pdf_options")]
     public PdfConfig? PdfOptions { get; set; }
 
+    /// <summary>
+    /// Token reduction configuration for reducing token counts in results.
+    /// </summary>
     [JsonPropertyName("token_reduction")]
     public TokenReductionConfig? TokenReduction { get; set; }
 
+    /// <summary>
+    /// Language detection configuration. If null, language detection is disabled.
+    /// </summary>
     [JsonPropertyName("language_detection")]
     public LanguageDetectionConfig? LanguageDetection { get; set; }
 
+    /// <summary>
+    /// Post-processor configuration for controlling which processors are enabled/disabled.
+    /// </summary>
     [JsonPropertyName("postprocessor")]
     public PostProcessorConfig? Postprocessor { get; set; }
 
+    /// <summary>
+    /// HTML conversion options for HTML documents.
+    /// </summary>
     [JsonPropertyName("html_options")]
     public HtmlConversionOptions? HtmlOptions { get; set; }
 
+    /// <summary>
+    /// Keyword extraction configuration.
+    /// </summary>
     [JsonPropertyName("keywords")]
     public KeywordConfig? Keywords { get; set; }
 
+    /// <summary>
+    /// Maximum number of concurrent extractions in batch operations. Default is null.
+    /// </summary>
     [JsonPropertyName("max_concurrent_extractions")]
     public int? MaxConcurrentExtractions { get; set; }
 }
@@ -827,11 +920,27 @@ public sealed class KeywordConfig
     public Dictionary<string, object?>? RakeParams { get; set; }
 }
 
+/// <summary>
+/// Represents a document as bytes with its MIME type, used for batch extraction from in-memory data.
+/// </summary>
 public sealed class BytesWithMime
 {
+    /// <summary>
+    /// The document bytes.
+    /// </summary>
     public byte[] Data { get; }
+
+    /// <summary>
+    /// The MIME type of the document (e.g., "application/pdf").
+    /// </summary>
     public string MimeType { get; }
 
+    /// <summary>
+    /// Initializes a new instance with document bytes and MIME type.
+    /// </summary>
+    /// <param name="data">Document bytes. Must not be null.</param>
+    /// <param name="mimeType">MIME type string. Must not be null.</param>
+    /// <exception cref="ArgumentNullException">If data or mimeType is null</exception>
     public BytesWithMime(byte[] data, string mimeType)
     {
         Data = data ?? throw new ArgumentNullException(nameof(data));
@@ -839,22 +948,109 @@ public sealed class BytesWithMime
     }
 }
 
+/// <summary>
+/// Interface for custom post-processors that can modify extraction results.
+/// </summary>
 public interface IPostProcessor
 {
+    /// <summary>
+    /// The unique name of this post-processor.
+    /// </summary>
     string Name { get; }
+
+    /// <summary>
+    /// The priority order (higher values run first). Useful for ordering multiple processors.
+    /// </summary>
     int Priority { get; }
+
+    /// <summary>
+    /// Processes an extraction result, potentially modifying it.
+    /// </summary>
+    /// <param name="result">The extraction result to process. Can be modified in-place.</param>
+    /// <returns>The (potentially modified) extraction result.</returns>
     ExtractionResult Process(ExtractionResult result);
 }
 
+/// <summary>
+/// Interface for custom validators that can validate extraction results.
+/// </summary>
 public interface IValidator
 {
+    /// <summary>
+    /// The unique name of this validator.
+    /// </summary>
     string Name { get; }
+
+    /// <summary>
+    /// The priority order (higher values run first). Useful for ordering multiple validators.
+    /// </summary>
     int Priority { get; }
+
+    /// <summary>
+    /// Validates an extraction result. Should throw an exception if validation fails.
+    /// </summary>
+    /// <param name="result">The extraction result to validate.</param>
+    /// <exception cref="Exception">Thrown if validation fails. The exception message will be used as the error reason.</exception>
     void Validate(ExtractionResult result);
 }
 
+/// <summary>
+/// Interface for custom OCR backends for document extraction.
+/// </summary>
 public interface IOcrBackend
 {
+    /// <summary>
+    /// The unique name of this OCR backend (e.g., "tesseract", "custom_ocr").
+    /// </summary>
     string Name { get; }
+
+    /// <summary>
+    /// Processes image bytes and returns OCR results as JSON.
+    /// </summary>
+    /// <param name="imageBytes">Raw image data (PNG, JPEG, etc.).</param>
+    /// <param name="config">OCR configuration, if any.</param>
+    /// <returns>JSON string with OCR results (structure depends on implementation).</returns>
     string Process(ReadOnlySpan<byte> imageBytes, OcrConfig? config);
+}
+
+/// <summary>
+/// Represents an embedding preset with configuration for text embedding generation.
+/// </summary>
+public sealed class EmbeddingPreset
+{
+    /// <summary>
+    /// The name/identifier of this embedding preset (e.g., "default", "openai").
+    /// </summary>
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The recommended chunk size (in tokens or characters) for this embedding model.
+    /// </summary>
+    [JsonPropertyName("chunk_size")]
+    public int ChunkSize { get; set; }
+
+    /// <summary>
+    /// The recommended overlap between chunks when chunking text for this model.
+    /// </summary>
+    [JsonPropertyName("overlap")]
+    public int Overlap { get; set; }
+
+    /// <summary>
+    /// The name of the embedding model (e.g., "text-embedding-ada-002").
+    /// </summary>
+    [JsonPropertyName("model_name")]
+    public string ModelName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The output dimensionality of the embedding vectors from this model.
+    /// </summary>
+    [JsonPropertyName("dimensions")]
+    public int Dimensions { get; set; }
+
+    /// <summary>
+    /// Human-readable description of this embedding preset.
+    /// </summary>
+    [JsonPropertyName("description")]
+    public string Description { get; set; } = string.Empty;
 }

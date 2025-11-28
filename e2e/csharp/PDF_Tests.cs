@@ -9,29 +9,29 @@ namespace Kreuzberg.E2E.Pdf {
     public class PdfTests
     {
         [Fact]
-        public void Pdf_PdfAssemblyTechnical()
+        public void PdfAssemblyTechnical()
         {
             var result = TestHelpers.RunExtraction("pdfs/assembly_language_for_beginners_al4_b_en.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 5000);
             TestHelpers.AssertContentContainsAny(result, new[] { "assembly", "register", "instruction" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"":""pdf""}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
         }
 
         [Fact]
-        public void Pdf_PdfBayesianDataAnalysis()
+        public void PdfBayesianDataAnalysis()
         {
             var result = TestHelpers.RunExtraction("pdfs/bayesian_data_analysis_third_edition_13th_feb_2020.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 10000);
             TestHelpers.AssertContentContainsAny(result, new[] { "Bayesian", "probability", "distribution" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"":""pdf""}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
         }
 
         [Fact]
-        public void Pdf_PdfCodeAndFormula()
+        public void PdfCodeAndFormula()
         {
             var result = TestHelpers.RunExtraction("pdfs/code_and_formula.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
@@ -39,18 +39,18 @@ namespace Kreuzberg.E2E.Pdf {
         }
 
         [Fact]
-        public void Pdf_PdfDeepLearning()
+        public void PdfDeepLearning()
         {
             var result = TestHelpers.RunExtraction("pdfs/fundamentals_of_deep_learning_2014.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 1000);
             TestHelpers.AssertContentContainsAny(result, new[] { "neural", "network", "deep learning" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"":""pdf""}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
         }
 
         [Fact]
-        public void Pdf_PdfEmbeddedImages()
+        public void PdfEmbeddedImages()
         {
             var result = TestHelpers.RunExtraction("pdfs/embedded_images_tables.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
@@ -59,49 +59,49 @@ namespace Kreuzberg.E2E.Pdf {
         }
 
         [Fact]
-        public void Pdf_PdfGoogleDoc()
+        public void PdfGoogleDoc()
         {
             var result = TestHelpers.RunExtraction("pdfs/google_doc_document.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 50);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"":""pdf""}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
         }
 
         [Fact]
-        public void Pdf_PdfLargeCiml()
+        public void PdfLargeCiml()
         {
             var result = TestHelpers.RunExtraction("pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 10000);
             TestHelpers.AssertContentContainsAny(result, new[] { "machine learning", "algorithm", "training" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"":""pdf""}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
         }
 
         [Fact]
-        public void Pdf_PdfNonEnglishGerman()
+        public void PdfNonEnglishGerman()
         {
             var result = TestHelpers.RunExtraction("pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 100);
             TestHelpers.AssertContentContainsAny(result, new[] { "Intel", "paging" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"":""pdf""}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
         }
 
         [Fact]
-        public void Pdf_PdfRightToLeft()
+        public void PdfRightToLeft()
         {
             var result = TestHelpers.RunExtraction("pdfs/right_to_left_01.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 50);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"":""pdf""}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
         }
 
         [Fact]
-        public void Pdf_PdfSimpleText()
+        public void PdfSimpleText()
         {
             var result = TestHelpers.RunExtraction("pdfs/fake_memo.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
@@ -110,38 +110,42 @@ namespace Kreuzberg.E2E.Pdf {
         }
 
         [Fact]
-        public void Pdf_PdfTablesLarge()
+        public void PdfTablesLarge()
         {
             var result = TestHelpers.RunExtraction("pdfs_with_tables/large.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 500);
+            TestHelpers.AssertTableCount(result, 1, null);
         }
 
         [Fact]
-        public void Pdf_PdfTablesMedium()
+        public void PdfTablesMedium()
         {
             var result = TestHelpers.RunExtraction("pdfs_with_tables/medium.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 100);
+            TestHelpers.AssertTableCount(result, 1, null);
         }
 
         [Fact]
-        public void Pdf_PdfTablesSmall()
+        public void PdfTablesSmall()
         {
             var result = TestHelpers.RunExtraction("pdfs_with_tables/tiny.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
-            TestHelpers.AssertMinContentLength(result, 10);
+            TestHelpers.AssertMinContentLength(result, 50);
+            TestHelpers.AssertContentContainsAll(result, new[] { "Table 1", "Selected Numbers", "Celsius", "Fahrenheit", "Water Freezing Point", "Water Boiling Point" });
+            TestHelpers.AssertTableCount(result, 1, null);
         }
 
         [Fact]
-        public void Pdf_PdfTechnicalStatLearning()
+        public void PdfTechnicalStatLearning()
         {
             var result = TestHelpers.RunExtraction("pdfs/an_introduction_to_statistical_learning_with_applications_in_r_islr_sixth_printing.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 10000);
             TestHelpers.AssertContentContainsAny(result, new[] { "statistical", "regression", "learning" });
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"":""pdf""}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
         }
 
     }

@@ -9,7 +9,7 @@ namespace Kreuzberg.E2E.Html {
     public class HtmlTests
     {
         [Fact]
-        public void Html_HtmlComplexLayout()
+        public void HtmlComplexLayout()
         {
             var result = TestHelpers.RunExtraction("web/taylor_swift.html", null);
             TestHelpers.AssertExpectedMime(result, new[] { "text/html" });
@@ -17,12 +17,13 @@ namespace Kreuzberg.E2E.Html {
         }
 
         [Fact]
-        public void Html_HtmlSimpleTable()
+        public void HtmlSimpleTable()
         {
             var result = TestHelpers.RunExtraction("web/simple_table.html", null);
             TestHelpers.AssertExpectedMime(result, new[] { "text/html" });
-            TestHelpers.AssertMinContentLength(result, 20);
-            TestHelpers.AssertContentContainsAll(result, new[] { "|" });
+            TestHelpers.AssertMinContentLength(result, 100);
+            TestHelpers.AssertContentContainsAll(result, new[] { "Product", "Category", "Price", "Stock", "Laptop", "Electronics", "Sample Data Table" });
+            TestHelpers.AssertTableCount(result, 1, null);
         }
 
     }

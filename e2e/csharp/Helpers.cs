@@ -299,23 +299,67 @@ public static class TestHelpers
 
     private static bool CompareFloat(JsonNode actual, JsonNode expected, bool gte)
     {
-        if (!actual.TryGetValue<double>(out var act) || !expected.TryGetValue<double>(out var exp))
+        try
+        {
+            double? actualVal = null;
+            double? expectedVal = null;
+
+            if (actual is JsonValue av)
+            {
+                if (av.TryGetValue<double>(out var d))
+                    actualVal = d;
+                else if (av.TryGetValue<int>(out var i))
+                    actualVal = i;
+            }
+
+            if (expected is JsonValue ev)
+            {
+                if (ev.TryGetValue<double>(out var d))
+                    expectedVal = d;
+                else if (ev.TryGetValue<int>(out var i))
+                    expectedVal = i;
+            }
+
+            if (actualVal is null || expectedVal is null)
+                return false;
+
+            return gte ? actualVal >= expectedVal : actualVal <= expectedVal;
+        }
+        catch
         {
             return false;
         }
-        return gte ? act >= exp : act <= exp;
     }
 
-    private static bool ValueContains(JsonNode value, JsonNode expected)
+    private static bool ValueContains(JsonNode value, JsonNode contains)
     {
-        if (value is JsonArray array)
+        if (value is JsonValue vv && contains is JsonValue cv)
         {
-            return array.Any(item => JsonEquals(item!, expected));
+            if (vv.TryGetValue<string>(out var vStr) && cv.TryGetValue<string>(out var cStr))
+            {
+                return vStr.Contains(cStr, StringComparison.OrdinalIgnoreCase);
+            }
         }
-        if (value is JsonValue val && val.TryGetValue<string>(out var str) && expected.TryGetValue<string>(out var sub))
+
+        if (value is JsonArray va && contains is JsonArray ca)
         {
-            return str.Contains(sub, StringComparison.OrdinalIgnoreCase);
+            foreach (var item in ca)
+            {
+                bool found = false;
+                foreach (var vItem in va)
+                {
+                    if (JsonEquals(vItem!, item!))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    return false;
+            }
+            return true;
         }
+
         return false;
     }
 }

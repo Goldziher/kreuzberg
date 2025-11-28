@@ -9,13 +9,13 @@ namespace Kreuzberg.E2E.Xml {
     public class XmlTests
     {
         [Fact]
-        public void Xml_XmlPlantCatalog()
+        public void XmlPlantCatalog()
         {
             var result = TestHelpers.RunExtraction("xml/plant_catalog.xml", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/xml" });
             TestHelpers.AssertMinContentLength(result, 100);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "element_count", @"{""gte"":1}");
+            TestHelpers.AssertMetadata(metadataNode, "element_count", @"{"gte": 1}");
         }
 
     }

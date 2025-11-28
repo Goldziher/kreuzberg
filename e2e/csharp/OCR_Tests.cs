@@ -9,44 +9,44 @@ namespace Kreuzberg.E2E.Ocr {
     public class OcrTests
     {
         [Fact]
-        public void Ocr_OcrImageHelloWorld()
+        public void OcrImageHelloWorld()
         {
-            var result = TestHelpers.RunExtraction("images/test_hello_world.png", @"{""force_ocr"":true,""ocr"":{""backend"":""tesseract"",""language"":""eng""}}");
+            var result = TestHelpers.RunExtraction("images/test_hello_world.png", null);
             TestHelpers.AssertExpectedMime(result, new[] { "image/png" });
             TestHelpers.AssertMinContentLength(result, 5);
             TestHelpers.AssertContentContainsAny(result, new[] { "hello", "world" });
         }
 
         [Fact]
-        public void Ocr_OcrImageNoText()
+        public void OcrImageNoText()
         {
-            var result = TestHelpers.RunExtraction("images/flower_no_text.jpg", @"{""force_ocr"":true,""ocr"":{""backend"":""tesseract"",""language"":""eng""}}");
+            var result = TestHelpers.RunExtraction("images/flower_no_text.jpg", null);
             TestHelpers.AssertExpectedMime(result, new[] { "image/jpeg" });
             TestHelpers.AssertMaxContentLength(result, 200);
         }
 
         [Fact]
-        public void Ocr_OcrPdfImageOnlyGerman()
+        public void OcrPdfImageOnlyGerman()
         {
-            var result = TestHelpers.RunExtraction("pdfs/image_only_german_pdf.pdf", @"{""force_ocr"":true,""ocr"":{""backend"":""tesseract"",""language"":""eng""}}");
+            var result = TestHelpers.RunExtraction("pdfs/image_only_german_pdf.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 20);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
-            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{""eq"":""pdf""}");
+            TestHelpers.AssertMetadata(metadataNode, "format_type", @"{"eq": "pdf"}");
         }
 
         [Fact]
-        public void Ocr_OcrPdfRotated90()
+        public void OcrPdfRotated90()
         {
-            var result = TestHelpers.RunExtraction("pdfs/ocr_test_rotated_90.pdf", @"{""force_ocr"":true,""ocr"":{""backend"":""tesseract"",""language"":""eng""}}");
+            var result = TestHelpers.RunExtraction("pdfs/ocr_test_rotated_90.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 10);
         }
 
         [Fact]
-        public void Ocr_OcrPdfTesseract()
+        public void OcrPdfTesseract()
         {
-            var result = TestHelpers.RunExtraction("pdfs/ocr_test.pdf", @"{""force_ocr"":true,""ocr"":{""backend"":""tesseract"",""language"":""eng""}}");
+            var result = TestHelpers.RunExtraction("pdfs/ocr_test.pdf", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 20);
             TestHelpers.AssertContentContainsAny(result, new[] { "Docling", "Markdown", "JSON" });

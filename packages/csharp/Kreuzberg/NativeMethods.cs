@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -13,6 +14,8 @@ internal static partial class NativeMethods
     private static readonly Lazy<IntPtr> LibraryHandle = new(() => LoadNativeLibrary());
 
     [ModuleInitializer]
+    [SuppressMessage("Usage", "CA2255:The 'ModuleInitializer' attribute should not be used in libraries",
+        Justification = "Required for native library resolution before P/Invoke calls. NativeLibrary.SetDllImportResolver must run before any P/Invoke.")]
     internal static void InitResolver()
     {
         NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, ResolveLibrary);
@@ -166,6 +169,12 @@ internal static partial class NativeMethods
     [DllImport(LibraryName, EntryPoint = "kreuzberg_unregister_document_extractor", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
     internal static extern bool UnregisterDocumentExtractor(IntPtr name);
+
+    [DllImport(LibraryName, EntryPoint = "kreuzberg_list_embedding_presets", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern IntPtr ListEmbeddingPresets();
+
+    [DllImport(LibraryName, EntryPoint = "kreuzberg_get_embedding_preset", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern IntPtr GetEmbeddingPreset(IntPtr name);
 
     private static IntPtr ResolveLibrary(string libraryName, Assembly assembly, DllImportSearchPath? _)
     {

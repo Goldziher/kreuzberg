@@ -9,7 +9,7 @@ namespace Kreuzberg.E2E.Email {
     public class EmailTests
     {
         [Fact]
-        public void Email_EmailSampleEml()
+        public void EmailSampleEml()
         {
             var result = TestHelpers.RunExtraction("email/sample_email.eml", null);
             TestHelpers.AssertExpectedMime(result, new[] { "message/rfc822" });

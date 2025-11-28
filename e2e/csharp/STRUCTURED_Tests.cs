@@ -9,7 +9,7 @@ namespace Kreuzberg.E2E.Structured {
     public class StructuredTests
     {
         [Fact]
-        public void Structured_StructuredJsonBasic()
+        public void StructuredJsonBasic()
         {
             var result = TestHelpers.RunExtraction("json/sample_document.json", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/json" });
@@ -18,7 +18,7 @@ namespace Kreuzberg.E2E.Structured {
         }
 
         [Fact]
-        public void Structured_StructuredJsonSimple()
+        public void StructuredJsonSimple()
         {
             var result = TestHelpers.RunExtraction("data_formats/simple.json", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/json" });
@@ -27,7 +27,7 @@ namespace Kreuzberg.E2E.Structured {
         }
 
         [Fact]
-        public void Structured_StructuredYamlSimple()
+        public void StructuredYamlSimple()
         {
             var result = TestHelpers.RunExtraction("data_formats/simple.yaml", null);
             TestHelpers.AssertExpectedMime(result, new[] { "application/x-yaml" });
