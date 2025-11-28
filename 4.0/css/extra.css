@@ -1,0 +1,232 @@
+/* Kreuzberg Custom Theme */
+
+/* Light Mode */
+:root > * {
+  /* Primary brand color (turquoise) */
+  --md-primary-fg-color:            #58FBDA;
+  --md-primary-fg-color--light:     #AFFFF0;
+  --md-primary-fg-color--dark:      #2ABFA1;
+
+  /* Accent (purple) */
+  --md-accent-fg-color:             #DA2AE0;
+
+  /* TEXT */
+  --md-default-fg-color:            #323040;
+  --md-default-fg-color--light:     #323040;
+  --md-default-fg-color--dark:      #323040;
+
+  /* LINKS */
+  --md-typeset-a-color:             #58FBDA;
+  --md-typeset-a-hover-color:       #DA2AE0;
+
+  /* BACKGROUNDS */
+  --md-default-bg-color:            #FFFFFF;
+  --md-default-bg-color--light:     #FFFFFF;
+  --md-default-bg-color--dark:      #F2F2F4;
+
+  /* SURFACES */
+  --md-primary-bg-color:            #FFFFFF;
+  --md-shadow-z1:                   none;
+}
+
+/* Dark Mode */
+:root[data-md-color-scheme="slate"] > * {
+  /* Primary brand color (turquoise) */
+  --md-primary-fg-color:            #58FBDA;
+  --md-primary-fg-color--light:     #AFFFF0;
+  --md-primary-fg-color--dark:      #2ABFA1;
+
+  /* Accent (purple) */
+  --md-accent-fg-color:             #DA2AE0;
+
+  /* TEXT */
+  --md-default-fg-color:            #FFFFFF;
+  --md-default-fg-color--light:     #FFFFFF;
+  --md-default-fg-color--dark:      #FFFFFF;
+
+  /* LINKS */
+  --md-typeset-a-color:             #DA2AE0;
+  --md-typeset-a-hover-color:       #58FBDA;
+
+  /* BACKGROUNDS */
+  --md-default-bg-color:            #323040;
+  --md-default-bg-color--light:     #3C3A4A;
+  --md-default-bg-color--dark:      #2A2836;
+
+  /* SURFACES */
+  --md-primary-bg-color:            #323040;
+  --md-shadow-z1:                   none;
+}
+
+/* Code Block Styling - Dark Mode Code Card Style */
+[data-md-color-scheme="slate"] .highlight {
+  background-color: #323040;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+[data-md-color-scheme="slate"] .highlight pre {
+  background-color: transparent;
+  color: #FFFFFF;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+[data-md-color-scheme="slate"] .highlight code {
+  background-color: transparent;
+  color: #FFFFFF;
+}
+
+/* Code Block Styling - Light Mode Code Card Style */
+[data-md-color-scheme="default"] .highlight {
+  background-color: #f1fffc;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+[data-md-color-scheme="default"] .highlight pre {
+  background-color: transparent;
+  color: #323040;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+[data-md-color-scheme="default"] .highlight code {
+  background-color: transparent;
+  color: #323040;
+}
+
+/* Inline code styling */
+[data-md-color-scheme="slate"] code {
+  background-color: #3C3A4A;
+  color: #58FBDA;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+}
+
+[data-md-color-scheme="default"] code {
+  background-color: #F2F2F4;
+  color: #DA2AE0;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+}
+
+/* Syntax highlighting adjustments for dark mode */
+[data-md-color-scheme="slate"] .highlight .k,
+[data-md-color-scheme="slate"] .highlight .kn,
+[data-md-color-scheme="slate"] .highlight .kd {
+  color: #DA2AE0;
+}
+
+[data-md-color-scheme="slate"] .highlight .s,
+[data-md-color-scheme="slate"] .highlight .s1,
+[data-md-color-scheme="slate"] .highlight .s2 {
+  color: #AFFFF0;
+}
+
+[data-md-color-scheme="slate"] .highlight .nf,
+[data-md-color-scheme="slate"] .highlight .nc {
+  color: #58FBDA;
+}
+
+/* Syntax highlighting adjustments for light mode */
+[data-md-color-scheme="default"] .highlight .k,
+[data-md-color-scheme="default"] .highlight .kn,
+[data-md-color-scheme="default"] .highlight .kd {
+  color: #DA2AE0;
+}
+
+[data-md-color-scheme="default"] .highlight .s,
+[data-md-color-scheme="default"] .highlight .s1,
+[data-md-color-scheme="default"] .highlight .s2 {
+  color: #2ABFA1;
+}
+
+[data-md-color-scheme="default"] .highlight .nf,
+[data-md-color-scheme="default"] .highlight .nc {
+  color: #58FBDA;
+}
+
+/* Terminal/command block styling */
+.highlight .language-bash,
+.highlight .language-sh,
+.highlight .language-console {
+  position: relative;
+}
+
+/* Add terminal icon styling - dark mode */
+[data-md-color-scheme="slate"] .highlight .language-bash::before,
+[data-md-color-scheme="slate"] .highlight .language-sh::before,
+[data-md-color-scheme="slate"] .highlight .language-console::before {
+  content: "Terminal";
+  display: block;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  margin-bottom: 0.75rem;
+}
+
+/* Add terminal icon styling - light mode */
+[data-md-color-scheme="default"] .highlight .language-bash::before,
+[data-md-color-scheme="default"] .highlight .language-sh::before,
+[data-md-color-scheme="default"] .highlight .language-console::before {
+  content: "Terminal";
+  display: block;
+  color: rgba(50, 48, 64, 0.6);
+  font-size: 14px;
+  margin-bottom: 0.75rem;
+}
+
+/* Button styling */
+.md-button {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.md-button--primary {
+  background-color: var(--md-primary-fg-color);
+  color: var(--md-default-fg-color);
+}
+
+.md-button--primary:hover {
+  background-color: var(--md-accent-fg-color);
+  color: #FFFFFF;
+}
+
+/* Admonition styling */
+.md-typeset .admonition {
+  border-radius: 8px;
+}
+
+/* Tab styling */
+.tabbed-set {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tabbed-labels > label {
+  color: var(--md-default-fg-color);
+  transition: color 0.2s ease;
+}
+
+.tabbed-labels > label:hover {
+  color: var(--md-accent-fg-color);
+}
+
+.tabbed-labels > label[for]:hover,
+.tabbed-labels > label[for][aria-selected="true"] {
+  color: var(--md-primary-fg-color);
+}
+
+/* Search styling */
+.md-search__input {
+  border-radius: 8px;
+}
+
+.md-search__input::placeholder {
+  color: var(--md-default-fg-color);
+  opacity: 0.5;
+}

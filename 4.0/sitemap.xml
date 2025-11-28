@@ -129,6 +129,10 @@
          <lastmod>2025-11-28</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/api_server/csharp/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/api_server/docker/</loc>
          <lastmod>2025-11-28</lastmod>
     </url>
@@ -217,6 +221,10 @@
          <lastmod>2025-11-28</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/advanced_config/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/csharp/batch_extract_bytes_sync/</loc>
          <lastmod>2025-11-28</lastmod>
     </url>
@@ -225,7 +233,47 @@
          <lastmod>2025-11-28</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/chunking/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/clear_plugins/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/client_extract_single_file/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/cloud_ocr_backend/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/complete_example/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/config_basic/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/config_discover/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/config_ocr/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/embedding_config/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/csharp/error_handling/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/error_handling_extract/</loc>
          <lastmod>2025-11-28</lastmod>
     </url>
     <url>
@@ -245,7 +293,91 @@
          <lastmod>2025-11-28</lastmod>
     </url>
     <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/extractor_registration/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/image_extraction/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/image_preprocessing/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/language_detection/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/list_plugins/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/mcp_custom_client/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/mcp_server_start/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/metadata/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/min_length_validator/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
          <loc>https://kreuzberg.dev/4.0/snippets/csharp/ocr_extraction/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/pdf_config/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/pdf_metadata_extractor/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/pdf_only_processor/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/plugin_logging/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/plugin_testing/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/postprocessor_config/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/quality_score_validator/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/stateful_plugin/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/tables/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/tesseract_config/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/token_reduction/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/csharp/unregister_plugins/</loc>
          <lastmod>2025-11-28</lastmod>
     </url>
     <url>
@@ -1318,6 +1450,10 @@
     </url>
     <url>
          <loc>https://kreuzberg.dev/4.0/snippets/rust/chunking_rag/</loc>
+         <lastmod>2025-11-28</lastmod>
+    </url>
+    <url>
+         <loc>https://kreuzberg.dev/4.0/snippets/rust/clear_plugins/</loc>
          <lastmod>2025-11-28</lastmod>
     </url>
     <url>
