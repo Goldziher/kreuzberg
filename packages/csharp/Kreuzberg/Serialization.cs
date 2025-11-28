@@ -1,7 +1,10 @@
 using System.Collections.Frozen;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+
+[assembly: InternalsVisibleTo("Kreuzberg.E2E")]
 
 namespace Kreuzberg;
 

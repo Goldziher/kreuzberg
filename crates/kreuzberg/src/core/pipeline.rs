@@ -559,9 +559,18 @@ Natural language processing enables computers to understand human language.
 
     #[tokio::test]
     async fn test_postprocessor_runs_before_validator() {
+        let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+
+        // Ensure no leftover plugins from other tests
         {
-            let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
-        } // Drop guard before async operations
+            let registry = crate::plugins::registry::get_post_processor_registry();
+            registry.write().unwrap().shutdown_all().unwrap();
+        }
+        {
+            let registry = crate::plugins::registry::get_validator_registry();
+            registry.write().unwrap().shutdown_all().unwrap();
+        }
+
         use crate::plugins::{Plugin, PostProcessor, ProcessingStage, Validator};
         use async_trait::async_trait;
         use std::sync::Arc;
@@ -658,13 +667,14 @@ Natural language processing enables computers to understand human language.
         let config = ExtractionConfig::default();
         let processed = run_pipeline(result, &config).await;
 
+        // Clean up registered plugins to avoid affecting other tests
         {
             let mut registry = pp_registry.write().unwrap();
-            registry.remove("test-processor").unwrap();
+            registry.shutdown_all().unwrap();
         }
         {
             let mut registry = val_registry.write().unwrap();
-            registry.remove("test-validator").unwrap();
+            registry.shutdown_all().unwrap();
         }
 
         assert!(processed.is_ok(), "Validator should have seen post-processor metadata");
@@ -748,9 +758,18 @@ Natural language processing enables computers to understand human language.
 
     #[tokio::test]
     async fn test_multiple_postprocessors_run_before_validator() {
+        let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+
+        // Ensure no leftover plugins from other tests
         {
-            let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
-        } // Drop guard before async operations
+            let registry = crate::plugins::registry::get_post_processor_registry();
+            registry.write().unwrap().shutdown_all().unwrap();
+        }
+        {
+            let registry = crate::plugins::registry::get_validator_registry();
+            registry.write().unwrap().shutdown_all().unwrap();
+        }
+
         use crate::plugins::{Plugin, PostProcessor, ProcessingStage, Validator};
         use async_trait::async_trait;
         use std::sync::Arc;
@@ -906,14 +925,14 @@ Natural language processing enables computers to understand human language.
         let config = ExtractionConfig::default();
         let processed = run_pipeline(result, &config).await;
 
+        // Clean up registered plugins to avoid affecting other tests
         {
             let mut registry = pp_registry.write().unwrap();
-            registry.remove("early-proc").unwrap();
-            registry.remove("late-proc").unwrap();
+            registry.shutdown_all().unwrap();
         }
         {
             let mut registry = val_registry.write().unwrap();
-            registry.remove("order-validator").unwrap();
+            registry.shutdown_all().unwrap();
         }
 
         assert!(processed.is_ok(), "All processors should run before validator");

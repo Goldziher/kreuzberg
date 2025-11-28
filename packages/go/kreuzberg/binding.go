@@ -5,6 +5,11 @@ package kreuzberg
 #cgo LDFLAGS: -L${SRCDIR}/../../../target/release -L${SRCDIR}/../../../target/debug -lkreuzberg_ffi
 #include "../../../crates/kreuzberg-ffi/kreuzberg.h"
 #include <stdlib.h>
+
+// Workaround for Windows clang-cl: Redeclare functions that clang-cl misidentifies
+// This prevents cgo from trying to infer their types via __typeof__
+const char *kreuzberg_last_error(void);
+const char *kreuzberg_version(void);
 */
 import "C"
 

@@ -12,10 +12,9 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("Goldziher")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyDescriptionAttribute(("High-performance document intelligence for .NET powered by the Kreuzberg Rust cor" +
-    "e."))]
+[assembly: System.Reflection.AssemblyDescriptionAttribute(@"High-performance document intelligence library for .NET powered by Rust. Extract text, metadata, and structured content from 50+ file formats including PDF, Office documents, images, HTML, XML, and more. Features OCR support (Tesseract), metadata parsing, table extraction, and async/sync APIs. 10-50x faster than Python alternatives with 60-90% less memory usage.")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("4.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("4.0.0-rc.1+6803cb590fa31a76b3b025f1426a3e270d2c3357")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("4.0.0-rc.1+60fbd923a7433b77cc8ae1850aa26bc28f650a80")]
 [assembly: System.Reflection.AssemblyProductAttribute("Kreuzberg")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Kreuzberg")]
 [assembly: System.Reflection.AssemblyVersionAttribute("4.0.0.0")]
