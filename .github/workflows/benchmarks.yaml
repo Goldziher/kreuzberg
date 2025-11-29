@@ -101,6 +101,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -156,6 +159,9 @@ jobs:
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
+
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -223,6 +229,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -289,6 +298,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -354,6 +366,9 @@ jobs:
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
+
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -424,6 +439,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -493,6 +511,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -559,6 +580,9 @@ jobs:
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
+
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -627,6 +651,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -692,6 +719,9 @@ jobs:
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
+
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -759,6 +789,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -825,6 +858,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -889,6 +925,9 @@ jobs:
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
+
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -955,6 +994,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -1019,6 +1061,9 @@ jobs:
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
+
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1085,6 +1130,9 @@ jobs:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
 
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -1149,6 +1197,9 @@ jobs:
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
+
+      - name: Restore benchmark binary permissions
+        run: chmod +x ./target/release/benchmark-harness
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
