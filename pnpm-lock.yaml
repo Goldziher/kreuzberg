@@ -2567,7 +2567,7 @@ snapshots:
       '@gutenye/ocr-common': 1.4.8
       '@gutenye/ocr-models': 1.4.2
       onnxruntime-node: 1.23.2
-      sharp: 0.33.5
+      sharp: 0.34.5
     optional: true
 
   '@img/colour@1.0.0':
