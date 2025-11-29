@@ -3,14 +3,30 @@ name: CI Node
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg-node/**'
-    #   - 'packages/typescript/**'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-node/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/typescript/**'
+      - 'e2e/typescript/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/workflows/ci-node.yaml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg-node/**'
-    #   - 'packages/typescript/**'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-node/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/typescript/**'
+      - 'e2e/typescript/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/workflows/ci-node.yaml'
 
 concurrency:
   group: ci-node-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
