@@ -101,12 +101,9 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Run unit tests
-        run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cargo test --workspace --exclude kreuzberg-e2e-generator --exclude kreuzberg-rb --exclude kreuzberg-py --exclude kreuzberg-node --no-default-features --features "full,server,cli"
-          else
-            cargo test --workspace --exclude kreuzberg-e2e-generator --all-features
-          fi
+        env:
+          TESSDATA_PREFIX: ${{ runner.os == 'Linux' && '/usr/share/tesseract-ocr/5' || '' }}
+        run: cargo test --workspace --exclude kreuzberg-e2e-generator --exclude kreuzberg-rb --exclude kreuzberg-py --exclude kreuzberg-node --all-features
         shell: bash
 
       - name: Cleanup Rust cache
@@ -154,6 +151,8 @@ jobs:
         uses: ./.github/actions/install-task
 
       - name: Run E2E tests
+        env:
+          TESSDATA_PREFIX: "/usr/share/tesseract-ocr/5"
         run: task e2e:rust:test
         shell: bash
 

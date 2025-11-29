@@ -47,7 +47,14 @@ runs:
         cp -R e2e/smoke/node/. "$tmp"/
         pushd "$tmp" >/dev/null
         cp "$tarball" ./kreuzberg-node.tgz
-        node -e "const fs=require('fs');const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));pkg.dependencies=pkg.dependencies||{};pkg.dependencies['kreuzberg-node']='file:./kreuzberg-node.tgz';fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+ '\n');"
+        node -e "
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
+          pkg.dependencies = pkg.dependencies || {};
+          pkg.dependencies['kreuzberg-node'] = 'file:./kreuzberg-node.tgz';
+          pkg.dependencies['kreuzberg'] = 'file:' + process.env.GITHUB_WORKSPACE + '/packages/typescript';
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+        "
         rm -f pnpm-lock.yaml
         pnpm install --no-frozen-lockfile
         pnpm run check

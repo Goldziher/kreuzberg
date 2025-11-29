@@ -8,11 +8,11 @@ runs:
       shell: bash
       run: |
         set -eo pipefail
-        echo "Updating Homebrew..."
-        brew update || true
         echo "Installing pandoc, tesseract, and LibreOffice..."
-        brew install pandoc tesseract || brew upgrade pandoc tesseract || true
-        brew install --cask libreoffice || brew upgrade --cask libreoffice || true
+        # Install packages only if not already present
+        brew list pandoc &>/dev/null || brew install pandoc
+        brew list tesseract &>/dev/null || brew install tesseract
+        brew list --cask libreoffice &>/dev/null || brew install --cask libreoffice || true
         echo "Installed packages:"
         brew list pandoc tesseract
         tesseract --version
@@ -35,6 +35,7 @@ runs:
           libreoffice-impress \
           tesseract-ocr \
           tesseract-ocr-eng \
+          tesseract-ocr-tur \
           tesseract-ocr-deu \
           fonts-liberation \
           fonts-dejavu-core \
@@ -47,6 +48,8 @@ runs:
         tesseract --version
         echo "Verifying Tesseract language data..."
         tesseract --list-langs
+        echo "Checking Tesseract data path..."
+        ls -la /usr/share/tesseract-ocr/5/tessdata/ || ls -la /usr/share/tesseract-ocr/tessdata/ || echo "Tessdata directory not found in standard locations"
         echo "Testing LibreOffice headless mode..."
         soffice --headless --version || echo "Warning: LibreOffice headless version check failed"
 

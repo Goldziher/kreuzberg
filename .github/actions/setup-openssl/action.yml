@@ -16,7 +16,9 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        brew install openssl pkg-config
+        # Install packages only if not already present
+        brew list openssl@3 &>/dev/null || brew install openssl
+        brew list pkg-config &>/dev/null || brew install pkg-config
         prefix="$(brew --prefix openssl@3 2>/dev/null || brew --prefix openssl 2>/dev/null || true)"
         if [ -z "$prefix" ]; then
           echo "Failed to locate Homebrew OpenSSL prefix" >&2
