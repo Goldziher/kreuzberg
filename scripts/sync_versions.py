@@ -56,7 +56,7 @@ def update_package_json(file_path: Path, version: str) -> Tuple[bool, str, str]:
 
     if "optionalDependencies" in data:
         for dep in data["optionalDependencies"]:
-            if dep.startswith("@goldziher/kreuzberg-"):
+            if dep.startswith("kreuzberg-"):
                 if data["optionalDependencies"][dep] != version:
                     data["optionalDependencies"][dep] = version
                     changed = True

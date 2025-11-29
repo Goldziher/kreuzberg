@@ -201,7 +201,7 @@ results = batch_extract_files_sync(["doc1.pdf", "doc2.pdf"])
 
 **New TypeScript/Node.js API**:
 ```typescript
-import { extractFile, extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFile, extractFileSync, ExtractionConfig } from 'kreuzberg';
 
 // Async
 const result = await extractFile('document.pdf');
@@ -337,9 +337,9 @@ pip install "kreuzberg[all]"        # All features
 
 **TypeScript/Node.js**:
 ```bash
-npm install @goldziher/kreuzberg
+npm install kreuzberg
 # or
-pnpm add @goldziher/kreuzberg
+pnpm add kreuzberg
 ```
 
 **Rust**:

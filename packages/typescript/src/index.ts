@@ -173,7 +173,7 @@ function getBinding(): any {
 
 	throw new Error(
 		"Failed to load Kreuzberg bindings. Neither NAPI (Node.js) nor WASM (browsers/Deno) bindings are available. " +
-			"Make sure you have installed the kreuzberg-node package for Node.js/Bun.",
+			"Make sure you have installed the kreuzberg package for Node.js/Bun.",
 	);
 }
 
@@ -1133,8 +1133,8 @@ export function listValidators(): string[] {
  *
  * @example
  * ```typescript
- * import { GutenOcrBackend } from '@goldziher/kreuzberg/ocr/guten-ocr';
- * import { registerOcrBackend, extractFile } from '@goldziher/kreuzberg';
+ * import { GutenOcrBackend } from 'kreuzberg/ocr/guten-ocr';
+ * import { registerOcrBackend, extractFile } from 'kreuzberg';
  *
  * // Create and initialize backend
  * const backend = new GutenOcrBackend();
@@ -1269,7 +1269,7 @@ export function registerOcrBackend(backend: OcrBackendProtocol): void {
  *
  * @example
  * ```typescript
- * import { listOcrBackends } from '@goldziher/kreuzberg';
+ * import { listOcrBackends } from 'kreuzberg';
  *
  * const backends = listOcrBackends();
  * console.log(backends); // ['tesseract', 'my-custom-backend', ...]
@@ -1290,7 +1290,7 @@ export function listOcrBackends(): string[] {
  *
  * @example
  * ```typescript
- * import { unregisterOcrBackend } from '@goldziher/kreuzberg';
+ * import { unregisterOcrBackend } from 'kreuzberg';
  *
  * // Unregister a custom backend
  * unregisterOcrBackend('my-custom-ocr');
@@ -1310,7 +1310,7 @@ export function unregisterOcrBackend(name: string): void {
  *
  * @example
  * ```typescript
- * import { clearOcrBackends } from '@goldziher/kreuzberg';
+ * import { clearOcrBackends } from 'kreuzberg';
  *
  * clearOcrBackends();
  * ```
@@ -1330,7 +1330,7 @@ export function clearOcrBackends(): void {
  *
  * @example
  * ```typescript
- * import { listDocumentExtractors } from '@goldziher/kreuzberg';
+ * import { listDocumentExtractors } from 'kreuzberg';
  *
  * const extractors = listDocumentExtractors();
  * console.log(extractors); // ['PDFExtractor', 'ImageExtractor', ...]
@@ -1351,7 +1351,7 @@ export function listDocumentExtractors(): string[] {
  *
  * @example
  * ```typescript
- * import { unregisterDocumentExtractor } from '@goldziher/kreuzberg';
+ * import { unregisterDocumentExtractor } from 'kreuzberg';
  *
  * // Unregister a custom extractor
  * unregisterDocumentExtractor('MyCustomExtractor');
@@ -1371,7 +1371,7 @@ export function unregisterDocumentExtractor(name: string): void {
  *
  * @example
  * ```typescript
- * import { clearDocumentExtractors } from '@goldziher/kreuzberg';
+ * import { clearDocumentExtractors } from 'kreuzberg';
  *
  * clearDocumentExtractors();
  * ```
@@ -1389,7 +1389,7 @@ export function clearDocumentExtractors(): void {
  *
  * @example
  * ```typescript
- * import { ExtractionConfig, extractFile } from '@goldziher/kreuzberg';
+ * import { ExtractionConfig, extractFile } from 'kreuzberg';
  *
  * // Load configuration from file
  * const config = ExtractionConfig.fromFile('config.toml');
@@ -1417,7 +1417,7 @@ export const ExtractionConfig = {
 	 *
 	 * @example
 	 * ```typescript
-	 * import { ExtractionConfig } from '@goldziher/kreuzberg';
+	 * import { ExtractionConfig } from 'kreuzberg';
 	 *
 	 * // Load from TOML file
 	 * const config1 = ExtractionConfig.fromFile('kreuzberg.toml');
@@ -1444,7 +1444,7 @@ export const ExtractionConfig = {
 	 *
 	 * @example
 	 * ```typescript
-	 * import { ExtractionConfig } from '@goldziher/kreuzberg';
+	 * import { ExtractionConfig } from 'kreuzberg';
 	 *
 	 * // Try to find config in current or parent directories
 	 * const config = ExtractionConfig.discover();
@@ -1476,7 +1476,7 @@ export const ExtractionConfig = {
  *
  * @example
  * ```typescript
- * import { detectMimeType } from '@goldziher/kreuzberg';
+ * import { detectMimeType } from 'kreuzberg';
  * import * as fs from 'fs';
  *
  * // Read file content
@@ -1508,7 +1508,7 @@ export function detectMimeType(bytes: Buffer): string {
  *
  * @example
  * ```typescript
- * import { detectMimeTypeFromPath } from '@goldziher/kreuzberg';
+ * import { detectMimeTypeFromPath } from 'kreuzberg';
  *
  * // Detect from existing file
  * const mimeType = detectMimeTypeFromPath('document.pdf');
@@ -1536,7 +1536,7 @@ export function detectMimeTypeFromPath(path: string, checkExists?: boolean): str
  *
  * @example
  * ```typescript
- * import { validateMimeType } from '@goldziher/kreuzberg';
+ * import { validateMimeType } from 'kreuzberg';
  *
  * // Validate supported type
  * const validated = validateMimeType('application/pdf');
@@ -1572,7 +1572,7 @@ export function validateMimeType(mimeType: string): string {
  *
  * @example
  * ```typescript
- * import { getExtensionsForMime } from '@goldziher/kreuzberg';
+ * import { getExtensionsForMime } from 'kreuzberg';
  *
  * // Get extensions for PDF
  * const pdfExts = getExtensionsForMime('application/pdf');
@@ -1617,7 +1617,7 @@ export interface EmbeddingPreset {
  *
  * @example
  * ```typescript
- * import { listEmbeddingPresets } from '@goldziher/kreuzberg';
+ * import { listEmbeddingPresets } from 'kreuzberg';
  *
  * const presets = listEmbeddingPresets();
  * console.log(presets); // ['fast', 'balanced', 'quality', 'multilingual']
@@ -1638,7 +1638,7 @@ export function listEmbeddingPresets(): string[] {
  *
  * @example
  * ```typescript
- * import { getEmbeddingPreset } from '@goldziher/kreuzberg';
+ * import { getEmbeddingPreset } from 'kreuzberg';
  *
  * const preset = getEmbeddingPreset('balanced');
  * if (preset) {

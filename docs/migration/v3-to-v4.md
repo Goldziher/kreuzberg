@@ -39,7 +39,7 @@ pip install "kreuzberg[all]"
 ### TypeScript (New in v4)
 
 ```bash
-npm install @goldziher/kreuzberg
+npm install kreuzberg
 ```
 
 ### Rust (New in v4)
@@ -251,7 +251,7 @@ import {
     extractFileSync,
     ExtractionConfig,
     OcrConfig,
-} from '@goldziher/kreuzberg';
+} from 'kreuzberg';
 
 // Async extraction
 const result = await extractFile('document.pdf');
@@ -315,7 +315,7 @@ register_document_extractor(CustomExtractor())
 
 ```typescript
 // v4 - Custom PostProcessor
-import { registerPostProcessor, PostProcessorProtocol } from '@goldziher/kreuzberg';
+import { registerPostProcessor, PostProcessorProtocol } from 'kreuzberg';
 
 class CustomProcessor implements PostProcessorProtocol {
     name(): string {

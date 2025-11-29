@@ -13,7 +13,7 @@ import {
 	batchExtractFiles,
 	batchExtractFilesSync,
 	ExtractionConfig,
-} from "@goldziher/kreuzberg";
+} from "kreuzberg";
 import { glob } from "glob";
 
 async function main() {
@@ -126,6 +126,6 @@ async function main() {
 	});
 }
 
-import { extractFile } from "@goldziher/kreuzberg";
+import { extractFile } from "kreuzberg";
 
 main().catch(console.error);

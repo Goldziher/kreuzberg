@@ -27,7 +27,7 @@ Kreuzberg is a document intelligence platform with a high‑performance Rust cor
 | Binding / Interface | Package | Docs |
 |--------------------|---------|------|
 | Python             | `pip install kreuzberg` | [Python API Reference](reference/api-python.md) |
-| TypeScript/Node.js | `npm install @goldziher/kreuzberg` | [TypeScript API Reference](reference/api-typescript.md) |
+| TypeScript/Node.js | `npm install kreuzberg` | [TypeScript API Reference](reference/api-typescript.md) |
 | Ruby               | `gem install kreuzberg` | [Ruby API Reference](reference/api-ruby.md) |
 | Go                 | `go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest` | [Go API Reference](reference/api-go.md) |
 | Rust               | `cargo add kreuzberg` | [Rust API Reference](reference/api-rust.md) |

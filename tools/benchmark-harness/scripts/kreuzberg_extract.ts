@@ -7,7 +7,7 @@
  * - batch: batchExtractFile() - batch extraction for multiple files
  */
 
-import { batchExtractFile, extractFile } from "@goldziher/kreuzberg";
+import { batchExtractFile, extractFile } from "kreuzberg";
 
 interface ExtractionOutput {
 	content: string;

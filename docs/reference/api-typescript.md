@@ -5,17 +5,17 @@ Complete reference for the Kreuzberg TypeScript/Node.js API.
 ## Installation
 
 ```bash
-npm install @goldziher/kreuzberg
+npm install kreuzberg
 ```
 
 **Or with other package managers:**
 
 ```bash
 # Yarn
-yarn add @goldziher/kreuzberg
+yarn add kreuzberg
 
 # pnpm
-pnpm add @goldziher/kreuzberg
+pnpm add kreuzberg
 ```
 
 ## Core Functions
@@ -51,7 +51,7 @@ function extractFileSync(
 **Example - Basic usage:**
 
 ```typescript
-import { extractFileSync } from '@goldziher/kreuzberg';
+import { extractFileSync } from 'kreuzberg';
 
 const result = extractFileSync('document.pdf');
 console.log(result.content);
@@ -61,7 +61,7 @@ console.log(`Pages: ${result.metadata.pageCount}`);
 **Example - With OCR:**
 
 ```typescript
-import { extractFileSync } from '@goldziher/kreuzberg';
+import { extractFileSync } from 'kreuzberg';
 
 const config = {
   ocr: {
@@ -75,7 +75,7 @@ const result = extractFileSync('scanned.pdf', null, config);
 **Example - With explicit MIME type:**
 
 ```typescript
-import { extractFileSync } from '@goldziher/kreuzberg';
+import { extractFileSync } from 'kreuzberg';
 
 const result = extractFileSync('document.pdf', 'application/pdf');
 ```
@@ -107,7 +107,7 @@ Same as [`extractFileSync()`](#extractfilesync).
 **Examples:**
 
 ```typescript
-import { extractFile } from '@goldziher/kreuzberg';
+import { extractFile } from 'kreuzberg';
 
 async function main() {
   const result = await extractFile('document.pdf');
@@ -146,7 +146,7 @@ function extractBytesSync(
 **Examples:**
 
 ```typescript
-import { extractBytesSync } from '@goldziher/kreuzberg';
+import { extractBytesSync } from 'kreuzberg';
 import { readFileSync } from 'fs';
 
 const data = readFileSync('document.pdf');
@@ -205,7 +205,7 @@ function batchExtractFilesSync(
 **Examples:**
 
 ```typescript
-import { batchExtractFilesSync } from '@goldziher/kreuzberg';
+import { batchExtractFilesSync } from 'kreuzberg';
 
 const paths = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
 const results = batchExtractFilesSync(paths);
@@ -241,7 +241,7 @@ Same as [`batchExtractFilesSync()`](#batchextractfilessync).
 **Examples:**
 
 ```typescript
-import { batchExtractFiles } from '@goldziher/kreuzberg';
+import { batchExtractFiles } from 'kreuzberg';
 
 const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
 const results = await batchExtractFiles(files);
@@ -338,7 +338,7 @@ interface ExtractionConfig {
 **Example:**
 
 ```typescript
-import { extractFileSync, ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   ocr: {
@@ -739,7 +739,7 @@ interface PostProcessorProtocol {
 **Example:**
 
 ```typescript
-import { registerPostProcessor, extractFileSync } from '@goldziher/kreuzberg';
+import { registerPostProcessor, extractFileSync } from 'kreuzberg';
 
 class CustomProcessor implements PostProcessorProtocol {
   name(): string {
@@ -772,7 +772,7 @@ import {
   registerPostProcessor,
   unregisterPostProcessor,
   clearPostProcessors
-} from '@goldziher/kreuzberg';
+} from 'kreuzberg';
 
 // Register
 registerPostProcessor(new CustomProcessor());
@@ -806,7 +806,7 @@ import {
   registerValidator,
   unregisterValidator,
   clearValidators
-} from '@goldziher/kreuzberg';
+} from 'kreuzberg';
 
 // Register a validator
 registerValidator(validator);
@@ -827,7 +827,7 @@ Register custom OCR backends for image and PDF processing.
 **Example with Guten-OCR:**
 
 ```typescript
-import { GutenOcrBackend, registerOcrBackend } from '@goldziher/kreuzberg';
+import { GutenOcrBackend, registerOcrBackend } from 'kreuzberg';
 
 // Register Guten-OCR backend
 const gutenOcr = new GutenOcrBackend();
@@ -851,7 +851,7 @@ All errors are thrown as standard JavaScript `Error` objects with descriptive me
 **Example:**
 
 ```typescript
-import { extractFileSync } from '@goldziher/kreuzberg';
+import { extractFileSync } from 'kreuzberg';
 
 try {
   const result = extractFileSync('document.pdf');
@@ -895,7 +895,7 @@ import type {
   PostProcessorProtocol,
   ValidatorProtocol,
   OcrBackendProtocol
-} from '@goldziher/kreuzberg';
+} from 'kreuzberg';
 ```
 
 ---

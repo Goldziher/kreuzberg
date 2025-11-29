@@ -400,11 +400,10 @@ tasks:
       - pnpm biome check e2e/typescript/tests
   e2e:ts:test:
     desc: Run TypeScript E2E tests
-    dir: packages/typescript
     cmds:
-      - cd ../../crates/kreuzberg-node && pnpm install && pnpm build
-      - pnpm install
-      - pnpm vitest run --root ../../e2e/typescript/tests
+      - pnpm install -r
+      - cd crates/kreuzberg-node && pnpm build
+      - pnpm vitest run --root e2e/typescript/tests
   e2e:ts:verify:
     desc: Regenerate and validate TypeScript E2E suite (generate + lint + test)
     cmds:
@@ -733,11 +732,11 @@ tasks:
       - dotnet restore Benchmark/Benchmark.csproj
 
   smoke:node:
-    desc: Run Node smoke test locally (require KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg-node.tgz)
+    desc: Run Node smoke test locally (require KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg.tgz)
     dir: e2e/smoke/node
     cmds:
       - |
-        : "${KREUZBERG_NODE_SPEC:?Set KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg-node.tgz}"
+        : "${KREUZBERG_NODE_SPEC:?Set KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg.tgz}"
         node ../../.github/actions/smoke-node/update-package-spec.js
         rm -f pnpm-lock.yaml
         pnpm install --no-frozen-lockfile

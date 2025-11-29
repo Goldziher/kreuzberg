@@ -1,6 +1,6 @@
 # Kreuzberg for TypeScript/Node.js
 
-[![npm](https://img.shields.io/npm/v/@goldziher/kreuzberg)](https://www.npmjs.com/package/@goldziher/kreuzberg)
+[![npm](https://img.shields.io/npm/v/kreuzberg)](https://www.npmjs.com/package/kreuzberg)
 [![Crates.io](https://img.shields.io/crates/v/kreuzberg)](https://crates.io/crates/kreuzberg)
 [![PyPI](https://img.shields.io/pypi/v/kreuzberg)](https://pypi.org/project/kreuzberg/)
 [![RubyGems](https://img.shields.io/gem/v/kreuzberg)](https://rubygems.org/gems/kreuzberg)
@@ -17,15 +17,15 @@ High-performance document intelligence for TypeScript and Node.js. Extract text,
 ## Installation
 
 ```bash
-npm install @goldziher/kreuzberg
+npm install kreuzberg
 ```
 
 ```bash
-pnpm add @goldziher/kreuzberg
+pnpm add kreuzberg
 ```
 
 ```bash
-yarn add @goldziher/kreuzberg
+yarn add kreuzberg
 ```
 
 ## Quick Start
@@ -33,7 +33,7 @@ yarn add @goldziher/kreuzberg
 ### Simple Extraction
 
 ```typescript
-import { extractFileSync } from '@goldziher/kreuzberg';
+import { extractFileSync } from 'kreuzberg';
 
 const result = extractFileSync('document.pdf');
 console.log(result.content);
@@ -42,7 +42,7 @@ console.log(result.content);
 ### Async Extraction (Recommended)
 
 ```typescript
-import { extractFile } from '@goldziher/kreuzberg';
+import { extractFile } from 'kreuzberg';
 
 const result = await extractFile('document.pdf');
 console.log(result.content);
@@ -51,7 +51,7 @@ console.log(result.content);
 ### Batch Processing (Recommended for Multiple Files)
 
 ```typescript
-import { batchExtractFiles } from '@goldziher/kreuzberg';
+import { batchExtractFiles } from 'kreuzberg';
 
 const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
 const results = await batchExtractFiles(files);
@@ -66,7 +66,7 @@ for (const result of results) {
 ### With Tesseract
 
 ```typescript
-import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, type ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   ocr: {
@@ -81,7 +81,7 @@ const result = extractFileSync('scanned.pdf', null, config);
 ### Table Extraction
 
 ```typescript
-import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, type ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   ocr: {
@@ -105,7 +105,7 @@ for (const table of result.tables) {
 ### Complete Configuration Example
 
 ```typescript
-import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, type ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   useCache: true,
@@ -152,7 +152,7 @@ const result = extractFileSync('document.pdf', null, config);
 ## Metadata Extraction
 
 ```typescript
-import { extractFileSync } from '@goldziher/kreuzberg';
+import { extractFileSync } from 'kreuzberg';
 
 const result = extractFileSync('document.pdf');
 
@@ -167,7 +167,7 @@ console.log(result.metadata.format);
 ## Password-Protected PDFs
 
 ```typescript
-import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, type ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   pdfOptions: {
@@ -181,7 +181,7 @@ const result = extractFileSync('protected.pdf', null, config);
 ## Language Detection
 
 ```typescript
-import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, type ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   languageDetection: {
@@ -196,7 +196,7 @@ console.log(result.detectedLanguages);
 ## Text Chunking
 
 ```typescript
-import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, type ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   chunking: {
@@ -217,7 +217,7 @@ for (const chunk of result.chunks ?? []) {
 ## HTML Conversion Options
 
 ```typescript
-import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, type ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   htmlOptions: {
@@ -240,7 +240,7 @@ console.log(result.content);
 ## Keyword Extraction
 
 ```typescript
-import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, type ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   keywords: {
@@ -258,7 +258,7 @@ console.log(result.metadata.keyword_extraction);
 ## Image Extraction
 
 ```typescript
-import { extractFileSync } from '@goldziher/kreuzberg';
+import { extractFileSync } from 'kreuzberg';
 
 const result = extractFileSync('document.pdf');
 
@@ -271,7 +271,7 @@ if (result.images) {
 ## Extract from Bytes
 
 ```typescript
-import { extractBytesSync } from '@goldziher/kreuzberg';
+import { extractBytesSync } from 'kreuzberg';
 import { readFileSync } from 'fs';
 
 const data = readFileSync('document.pdf');
@@ -315,7 +315,7 @@ console.log(result.content);
 ### Custom Post-Processor
 
 ```typescript
-import { registerPostProcessor, extractFile, type PostProcessorProtocol, type ExtractionResult } from '@goldziher/kreuzberg';
+import { registerPostProcessor, extractFile, type PostProcessorProtocol, type ExtractionResult } from 'kreuzberg';
 
 class MyProcessor implements PostProcessorProtocol {
   name(): string {
@@ -341,7 +341,7 @@ console.log(result.metadata.customField);
 ### Multiple Files with Progress
 
 ```typescript
-import { batchExtractFiles } from '@goldziher/kreuzberg';
+import { batchExtractFiles } from 'kreuzberg';
 import { glob } from 'glob';
 
 const files = await glob('documents/*.pdf');
@@ -357,7 +357,7 @@ for (let i = 0; i < results.length; i++) {
 ### Filter by Language
 
 ```typescript
-import { extractFileSync, type ExtractionConfig } from '@goldziher/kreuzberg';
+import { extractFileSync, type ExtractionConfig } from 'kreuzberg';
 
 const config: ExtractionConfig = {
   languageDetection: {
@@ -399,12 +399,12 @@ brew install pandoc
 
 ## Troubleshooting
 
-### Module not found: kreuzberg-node
+### Module not found: kreuzberg
 
 The native binding wasn't installed correctly. Try:
 
 ```bash
-npm install --force @goldziher/kreuzberg
+npm install --force kreuzberg
 ```
 
 ### Type errors with TypeScript

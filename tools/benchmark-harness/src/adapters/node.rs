@@ -5,7 +5,7 @@
 use crate::adapters::subprocess::SubprocessAdapter;
 use std::path::PathBuf;
 
-/// Node.js adapter using @goldziher/kreuzberg package
+/// Node.js adapter using kreuzberg package
 pub struct NodeAdapter {
     inner: SubprocessAdapter,
 }
@@ -24,7 +24,7 @@ impl NodeAdapter {
         }
 
         let script = r#"
-const { extractFile } = require('@goldziher/kreuzberg');
+const { extractFile } = require('kreuzberg');
 
 const filePath = process.argv[2];
 const start = performance.now();
@@ -46,7 +46,7 @@ extractFile(filePath)
 "#;
 
         let inner = SubprocessAdapter::new(
-            "kreuzberg-node",
+            "kreuzberg",
             node_path.into(),
             vec!["-e".to_string(), script.to_string()],
             env,
@@ -77,6 +77,6 @@ mod tests {
     #[test]
     fn test_node_adapter_creation() {
         let adapter = NodeAdapter::default_node();
-        assert_eq!(adapter.name(), "kreuzberg-node");
+        assert_eq!(adapter.name(), "kreuzberg");
     }
 }

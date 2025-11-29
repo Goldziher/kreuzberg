@@ -15,7 +15,7 @@ fi
 if [[ "$USE_CROSS" == "true" ]]; then
   ARGS+=(--use-cross)
 fi
-pnpm --filter kreuzberg exec napi build "${ARGS[@]}"
+pnpm --filter kreuzberg-node exec napi build "${ARGS[@]}"
 
 ARTIFACT_DIR="$ROOT/crates/kreuzberg-node/artifacts"
 if [[ ! -d "$ARTIFACT_DIR" ]]; then

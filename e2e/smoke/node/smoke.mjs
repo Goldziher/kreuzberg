@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { extractFileSync } from "kreuzberg-node";
+import { extractFileSync } from "kreuzberg";
 
 const fixture = path.resolve("./fixtures/report.txt");
 if (!fs.existsSync(fixture)) {

@@ -975,7 +975,7 @@ impl TryFrom<ExtractionConfig> for JsExtractionConfig {
 /// # Example
 ///
 /// ```typescript
-/// import { loadExtractionConfigFromFile } from '@goldziher/kreuzberg';
+/// import { loadExtractionConfigFromFile } from 'kreuzberg';
 ///
 /// // Load from TOML file
 /// const config = loadExtractionConfigFromFile('kreuzberg.toml');
@@ -1025,7 +1025,7 @@ pub fn load_extraction_config_from_file(file_path: String) -> Result<JsExtractio
 /// # Example
 ///
 /// ```typescript
-/// import { ExtractionConfig } from '@goldziher/kreuzberg';
+/// import { ExtractionConfig } from 'kreuzberg';
 ///
 /// // Try to find config in current or parent directories
 /// const config = ExtractionConfig.discover();
@@ -2589,7 +2589,7 @@ pub fn register_ocr_backend(_env: Env, backend: Object) -> Result<()> {
 /// # Example
 ///
 /// ```typescript
-/// import { unregisterOcrBackend } from '@goldziher/kreuzberg';
+/// import { unregisterOcrBackend } from 'kreuzberg';
 ///
 /// // Unregister a custom backend
 /// unregisterOcrBackend('my-custom-ocr');
@@ -2611,7 +2611,7 @@ pub fn unregister_ocr_backend(name: String) -> Result<()> {
 /// # Example
 ///
 /// ```typescript
-/// import { listOcrBackends } from '@goldziher/kreuzberg';
+/// import { listOcrBackends } from 'kreuzberg';
 ///
 /// const backends = listOcrBackends();
 /// console.log(backends); // ['tesseract', 'my-custom-backend', ...]
@@ -2630,7 +2630,7 @@ pub fn list_ocr_backends() -> Result<Vec<String>> {
 /// # Example
 ///
 /// ```typescript
-/// import { clearOcrBackends } from '@goldziher/kreuzberg';
+/// import { clearOcrBackends } from 'kreuzberg';
 ///
 /// clearOcrBackends();
 /// ```
@@ -2651,7 +2651,7 @@ pub fn clear_ocr_backends() -> Result<()> {
 /// # Example
 ///
 /// ```typescript
-/// import { listDocumentExtractors } from '@goldziher/kreuzberg';
+/// import { listDocumentExtractors } from 'kreuzberg';
 ///
 /// const extractors = listDocumentExtractors();
 /// console.log(extractors); // ['PDFExtractor', 'ImageExtractor', ...]
@@ -2673,7 +2673,7 @@ pub fn list_document_extractors() -> Result<Vec<String>> {
 /// # Example
 ///
 /// ```typescript
-/// import { unregisterDocumentExtractor } from '@goldziher/kreuzberg';
+/// import { unregisterDocumentExtractor } from 'kreuzberg';
 ///
 /// // Unregister a custom extractor
 /// unregisterDocumentExtractor('MyCustomExtractor');
@@ -2692,7 +2692,7 @@ pub fn unregister_document_extractor(name: String) -> Result<()> {
 /// # Example
 ///
 /// ```typescript
-/// import { clearDocumentExtractors } from '@goldziher/kreuzberg';
+/// import { clearDocumentExtractors } from 'kreuzberg';
 ///
 /// clearDocumentExtractors();
 /// ```
@@ -2722,7 +2722,7 @@ pub fn clear_document_extractors() -> Result<()> {
 /// # Example
 ///
 /// ```typescript
-/// import { detectMimeType } from '@goldziher/kreuzberg';
+/// import { detectMimeType } from 'kreuzberg';
 /// import * as fs from 'fs';
 ///
 /// // Read file content
@@ -2761,7 +2761,7 @@ pub fn detect_mime_type(bytes: Buffer) -> Result<String> {
 /// # Example
 ///
 /// ```typescript
-/// import { detectMimeTypeFromPath } from '@goldziher/kreuzberg';
+/// import { detectMimeTypeFromPath } from 'kreuzberg';
 ///
 /// // Detect from existing file
 /// const mimeType = detectMimeTypeFromPath('document.pdf');
@@ -2795,7 +2795,7 @@ pub fn detect_mime_type_from_path(path: String, check_exists: Option<bool>) -> R
 /// # Example
 ///
 /// ```typescript
-/// import { validateMimeType } from '@goldziher/kreuzberg';
+/// import { validateMimeType } from 'kreuzberg';
 ///
 /// // Validate supported type
 /// const validated = validateMimeType('application/pdf');
@@ -2837,7 +2837,7 @@ pub fn validate_mime_type(mime_type: String) -> Result<String> {
 /// # Example
 ///
 /// ```typescript
-/// import { getExtensionsForMime } from '@goldziher/kreuzberg';
+/// import { getExtensionsForMime } from 'kreuzberg';
 ///
 /// // Get extensions for PDF
 /// const pdfExts = getExtensionsForMime('application/pdf');
@@ -2882,7 +2882,7 @@ pub struct EmbeddingPreset {
 /// # Example
 ///
 /// ```typescript
-/// import { listEmbeddingPresets } from '@goldziher/kreuzberg';
+/// import { listEmbeddingPresets } from 'kreuzberg';
 ///
 /// const presets = listEmbeddingPresets();
 /// console.log(presets); // ['fast', 'balanced', 'quality', 'multilingual']
@@ -2918,7 +2918,7 @@ pub fn list_embedding_presets() -> Vec<String> {
 /// # Example
 ///
 /// ```typescript
-/// import { getEmbeddingPreset } from '@goldziher/kreuzberg';
+/// import { getEmbeddingPreset } from 'kreuzberg';
 ///
 /// const preset = getEmbeddingPreset('balanced');
 /// if (preset) {

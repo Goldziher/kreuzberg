@@ -2,7 +2,7 @@
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20our%20community-7289da)](https://discord.gg/pXxagNK2zN)
 [![PyPI](https://badge.fury.io/py/kreuzberg.svg)](https://badge.fury.io/py/kreuzberg)
-[![npm](https://img.shields.io/npm/v/@goldziher/kreuzberg)](https://www.npmjs.com/package/@goldziher/kreuzberg)
+[![npm](https://img.shields.io/npm/v/kreuzberg)](https://www.npmjs.com/package/kreuzberg)
 [![RubyGems](https://badge.fury.io/rb/kreuzberg.svg)](https://rubygems.org/gems/kreuzberg)
 [![Go Reference](https://pkg.go.dev/badge/github.com/Goldziher/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/Goldziher/kreuzberg/packages/go/kreuzberg)
 [![Maven Central](https://img.shields.io/maven-central/v/dev.kreuzberg/kreuzberg)](https://central.sonatype.com/artifact/dev.kreuzberg/kreuzberg)
@@ -58,7 +58,7 @@ gem install kreuzberg
 ### TypeScript/Node.js
 
 ```bash
-npm install @goldziher/kreuzberg
+npm install kreuzberg
 ```
 
 **[TypeScript/Node.js Documentation →](packages/typescript/README.md)**

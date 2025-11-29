@@ -195,7 +195,7 @@ To measure Kreuzberg's performance for your specific use case, we recommend:
 
 === "TypeScript"
     ```typescript
-    import { extractFile, batchExtractFiles } from '@goldziher/kreuzberg';
+    import { extractFile, batchExtractFiles } from 'kreuzberg';
 
     // Single file timing
     const start = Date.now();

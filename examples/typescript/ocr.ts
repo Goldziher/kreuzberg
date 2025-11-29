@@ -4,7 +4,7 @@
  * Demonstrates OCR extraction from scanned PDFs and images.
  */
 
-import { ExtractionConfig, extractFile, extractFileSync, OcrConfig, TesseractConfig } from "@goldziher/kreuzberg";
+import { ExtractionConfig, extractFile, extractFileSync, OcrConfig, TesseractConfig } from "kreuzberg";
 
 async function main() {
 	console.log("=== Basic OCR ===");

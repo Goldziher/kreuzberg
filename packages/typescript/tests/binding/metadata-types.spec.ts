@@ -20,7 +20,7 @@ import type {
 	HtmlMetadata as NapiHtmlMetadata,
 	Metadata as NapiMetadata,
 	PdfMetadata as NapiPdfMetadata,
-} from "../../../../crates/kreuzberg-node/metadata";
+} from "../../../../crates/kreuzberg/metadata";
 import type {
 	ArchiveMetadata,
 	EmailMetadata,

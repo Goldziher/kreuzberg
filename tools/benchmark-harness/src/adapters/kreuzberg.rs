@@ -174,7 +174,7 @@ pub fn create_node_async_adapter() -> Result<SubprocessAdapter> {
     args.push(script_path.to_string_lossy().to_string());
     args.push("async".to_string());
 
-    Ok(SubprocessAdapter::new("kreuzberg-node-async", command, args, vec![]))
+    Ok(SubprocessAdapter::new("kreuzberg-async", command, args, vec![]))
 }
 
 /// Create Node batch adapter (batchExtractFile)
@@ -186,7 +186,7 @@ pub fn create_node_batch_adapter() -> Result<SubprocessAdapter> {
     args.push("batch".to_string());
 
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-node-batch",
+        "kreuzberg-batch",
         command,
         args,
         vec![],

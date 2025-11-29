@@ -504,8 +504,8 @@ export interface ValidatorProtocol {
  *
  * @example
  * ```typescript
- * import { GutenOcrBackend } from '@goldziher/kreuzberg/ocr/guten-ocr';
- * import { registerOcrBackend, extractFile } from '@goldziher/kreuzberg';
+ * import { GutenOcrBackend } from 'kreuzberg/ocr/guten-ocr';
+ * import { registerOcrBackend, extractFile } from 'kreuzberg';
  *
  * // Create and register the backend
  * const backend = new GutenOcrBackend();

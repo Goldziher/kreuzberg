@@ -1,0 +1,1196 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Git branch to benchmark"
+        required: false
+        default: "main"
+        type: string
+      timeout:
+        description: "Timeout per document in seconds"
+        required: false
+        default: "900"
+        type: string
+
+env:
+  ITERATIONS: "3"
+  PDFIUM_VERSION: "7529"
+  ORT_VERSION: "1.23.2"
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  RUST_MIN_STACK: 16777216
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  setup:
+    name: Build harness + native libs
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      artifact-name: benchmarks-target
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Ensure benchmark harness exists
+        run: |
+          if [ ! -d tools/benchmark-harness ]; then
+            echo "::error::tools/benchmark-harness not found on branch ${GITHUB_REF}." >&2
+            exit 1
+          fi
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-setup
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium runtime
+        run: bash scripts/download_pdfium_runtime.sh
+
+      - name: Build workspace (native libs + harness)
+        run: |
+          set -euo pipefail
+          cargo build --workspace --release --all-features
+          cargo build --manifest-path tools/benchmark-harness/Cargo.toml --release
+
+      - name: Upload target artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-target
+          path: |
+            target/release
+          retention-days: 7
+
+  bench-native:
+    name: kreuzberg-native (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-native
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-native-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-native" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-native-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-python-sync:
+    name: kreuzberg-python-sync (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-python-sync
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.11"
+          cache-prefix: benchmark-python
+
+      - name: Build Python bindings
+        working-directory: packages/python
+        run: uv run maturin develop --release
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-python-sync-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-python-sync" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-python-sync-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-python-async:
+    name: kreuzberg-python-async (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-python-async
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.11"
+          cache-prefix: benchmark-python
+
+      - name: Build Python bindings
+        working-directory: packages/python
+        run: uv run maturin develop --release
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-python-async-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-python-async" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-python-async-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-python-batch:
+    name: kreuzberg-python-batch (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-python-batch
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.11"
+          cache-prefix: benchmark-python
+
+      - name: Build Python bindings
+        working-directory: packages/python
+        run: uv run maturin develop --release
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-python-batch-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-python-batch" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-python-batch-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-node-async:
+    name: kreuzberg-node-async (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-node-async
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Build Node bindings and install locally
+        run: |
+          set -euo pipefail
+          cd crates/kreuzberg-node
+          pnpm install
+          pnpm run build --target x86_64-unknown-linux-gnu
+          pkg=$(pnpm pack | tail -n1 | tr -d '\r')
+          cd ../..
+          pnpm install "crates/kreuzberg-node/${pkg}"
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-node-async-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-node-async" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-node-async-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-node-batch:
+    name: kreuzberg-node-batch (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-node-batch
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Build Node bindings and install locally
+        run: |
+          set -euo pipefail
+          cd crates/kreuzberg-node
+          pnpm install
+          pnpm run build --target x86_64-unknown-linux-gnu
+          pkg=$(pnpm pack | tail -n1 | tr -d '\r')
+          cd ../..
+          pnpm install "crates/kreuzberg-node/${pkg}"
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-node-batch-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-node-batch" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-node-batch-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-ruby-sync:
+    name: kreuzberg-ruby-sync (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-ruby-sync
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+
+      - name: Build Ruby native gem
+        uses: ./.github/actions/build-ruby-unix
+        with:
+          platform: x86_64-linux
+          build-source-gem: "false"
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-ruby-sync-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-ruby-sync" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-ruby-sync-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-ruby-batch:
+    name: kreuzberg-ruby-batch (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-ruby-batch
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+
+      - name: Build Ruby native gem
+        uses: ./.github/actions/build-ruby-unix
+        with:
+          platform: x86_64-linux
+          build-source-gem: "false"
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-ruby-batch-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-ruby-batch" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-ruby-batch-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-go-sync:
+    name: kreuzberg-go-sync (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-go-sync
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.x"
+          cache-dependency-path: packages/go/go.sum
+
+      - name: Prime Go modules
+        working-directory: packages/go
+        run: go mod download
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-go-sync-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-go-sync" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-go-sync-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-go-batch:
+    name: kreuzberg-go-batch (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-go-batch
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.x"
+          cache-dependency-path: packages/go/go.sum
+
+      - name: Prime Go modules
+        working-directory: packages/go
+        run: go mod download
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-go-batch-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-go-batch" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-go-batch-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-java-sync:
+    name: kreuzberg-java-sync (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-java-sync
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Build Java bindings
+        working-directory: packages/java
+        run: mvn -q -B -U package
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-java-sync-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-java-sync" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-java-sync-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-csharp-sync:
+    name: kreuzberg-csharp-sync (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-csharp-sync
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Build C# bindings
+        working-directory: packages/csharp
+        run: dotnet build Benchmark/Benchmark.csproj -c Release
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/kreuzberg-csharp-sync-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "kreuzberg-csharp-sync" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-kreuzberg-csharp-sync-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-docling:
+    name: docling (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-docling
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.11"
+          cache-prefix: benchmark-python
+
+      - name: Sync benchmark dependencies
+        run: uv sync --group benchmark --no-install-workspace
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/docling-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "docling" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-docling-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-docling-batch:
+    name: docling-batch (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-docling-batch
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.11"
+          cache-prefix: benchmark-python
+
+      - name: Sync benchmark dependencies
+        run: uv sync --group benchmark --no-install-workspace
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/docling-batch-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "docling-batch" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-docling-batch-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-markitdown:
+    name: markitdown (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-markitdown
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.11"
+          cache-prefix: benchmark-python
+
+      - name: Sync benchmark dependencies
+        run: uv sync --group benchmark --no-install-workspace
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/markitdown-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "markitdown" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-markitdown-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-unstructured:
+    name: unstructured (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-unstructured
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.11"
+          cache-prefix: benchmark-python
+
+      - name: Sync benchmark dependencies
+        run: uv sync --group benchmark --no-install-workspace
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/unstructured-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "unstructured" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-unstructured-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-extractous-python:
+    name: extractous-python (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-extractous-python
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.11"
+          cache-prefix: benchmark-python
+
+      - name: Sync benchmark dependencies
+        run: uv sync --group benchmark --no-install-workspace
+
+      - name: Run benchmark
+        env:
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: |
+          set -euo pipefail
+          OUTPUT_DIR="benchmark-results/extractous-python-${{ matrix.mode }}"
+          rm -rf "${OUTPUT_DIR}"
+
+          ./target/release/benchmark-harness \
+            run \
+            --fixtures tools/benchmark-harness/fixtures \
+            --frameworks "extractous-python" \
+            --output "${OUTPUT_DIR}" \
+            --iterations "${ITERATIONS}" \
+            --timeout "${TIMEOUT:-900}" \
+            --mode "${{ matrix.mode }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-extractous-python-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
