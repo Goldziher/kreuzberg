@@ -143,5 +143,8 @@ jobs:
 
       - name: Run E2E tests
         shell: bash
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/target/release:${{ env.LD_LIBRARY_PATH }}
+          DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/release:${{ env.DYLD_LIBRARY_PATH }}
         run: |
           task e2e:csharp:test
