@@ -93,8 +93,9 @@ jobs:
             $env:LIB = "$ffiPath;$env:LIB"
             Remove-Item Env:CFLAGS -ErrorAction SilentlyContinue
             Remove-Item Env:CL -ErrorAction SilentlyContinue
-            # Minimize flags: keep include path only, let Windows defaults handle the rest
-            $env:CGO_CFLAGS = "-I""$workspace/crates/kreuzberg-ffi"""
+            Remove-Item Env:_CL_ -ErrorAction SilentlyContinue
+            # Minimize flags: keep include path only, disable warnings-as-errors for MSVC
+            $env:CGO_CFLAGS = "-I""$workspace/crates/kreuzberg-ffi"" -WX-"
             $env:CGO_LDFLAGS = "-L""$ffiPath"" -lkreuzberg_ffi"
             $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
           } else {
