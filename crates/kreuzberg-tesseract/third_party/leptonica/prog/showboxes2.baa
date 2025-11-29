@@ -1,0 +1,51 @@
+
+Boxaa Version 3
+Number of boxa = 8
+
+Boxa[0] extent: x = 44, y = 8, w = 289, h = 226
+Boxa Version 2
+Number of boxes = 2
+  Box[0]: x = 44, y = 8, w = 289, h = 226
+  Box[1]: x = 53, y = 12, w = 277, h = 209
+
+Boxa[1] extent: x = 44, y = 6, w = 288, h = 228
+Boxa Version 2
+Number of boxes = 2
+  Box[0]: x = 44, y = 6, w = 288, h = 228
+  Box[1]: x = 51, y = 22, w = 278, h = 162
+
+Boxa[2] extent: x = 42, y = 11, w = 292, h = 223
+Boxa Version 2
+Number of boxes = 2
+  Box[0]: x = 42, y = 11, w = 292, h = 223
+  Box[1]: x = 51, y = 11, w = 280, h = 187
+
+Boxa[3] extent: x = 16, y = 18, w = 297, h = 216
+Boxa Version 2
+Number of boxes = 2
+  Box[0]: x = 16, y = 18, w = 297, h = 216
+  Box[1]: x = 22, y = 21, w = 287, h = 198
+
+Boxa[4] extent: x = 42, y = 10, w = 292, h = 224
+Boxa Version 2
+Number of boxes = 2
+  Box[0]: x = 42, y = 10, w = 292, h = 224
+  Box[1]: x = 50, y = 10, w = 281, h = 196
+
+Boxa[5] extent: x = 42, y = 11, w = 291, h = 223
+Boxa Version 2
+Number of boxes = 2
+  Box[0]: x = 42, y = 11, w = 291, h = 223
+  Box[1]: x = 50, y = 11, w = 280, h = 184
+
+Boxa[6] extent: x = 42, y = 10, w = 291, h = 224
+Boxa Version 2
+Number of boxes = 2
+  Box[0]: x = 42, y = 10, w = 291, h = 224
+  Box[1]: x = 50, y = 10, w = 280, h = 186
+
+Boxa[7] extent: x = 43, y = 9, w = 291, h = 225
+Boxa Version 2
+Number of boxes = 2
+  Box[0]: x = 43, y = 9, w = 291, h = 225
+  Box[1]: x = 50, y = 9, w = 280, h = 192

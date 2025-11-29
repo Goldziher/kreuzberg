@@ -41,30 +41,6 @@ fn get_tessdata_dir() -> PathBuf {
     }
 }
 
-fn ensure_tessdata(languages: &[&str]) -> Option<PathBuf> {
-    let dir = get_tessdata_dir();
-    let missing: Vec<_> = languages
-        .iter()
-        .map(|lang| dir.join(format!("{lang}.traineddata")))
-        .filter(|path| !path.exists())
-        .collect();
-    if missing.is_empty() {
-        Some(dir)
-    } else {
-        eprintln!("Skipping test: missing tessdata files {:?}", missing);
-        None
-    }
-}
-
-macro_rules! tessdata_or_skip {
-    ($($lang:expr),+ $(,)?) => {{
-        match ensure_tessdata(&[$($lang),+]) {
-            Some(dir) => dir,
-            None => return,
-        }
-    }};
-}
-
 fn preprocess_image(img: &DynamicImage) -> ImageBuffer<Luma<u8>, Vec<u8>> {
     let luma_img = img.to_luma8();
 
@@ -88,7 +64,12 @@ fn load_test_image(filename: &str) -> Result<(Vec<u8>, u32, u32), Box<dyn std::e
 
 #[test]
 fn test_multiple_languages_with_lstm() {
-    let tessdata_dir = tessdata_or_skip!("eng", "tur");
+    let tessdata_dir = get_tessdata_dir();
+
+    let eng_traineddata = tessdata_dir.join("eng.traineddata");
+    let tur_traineddata = tessdata_dir.join("tur.traineddata");
+    assert!(eng_traineddata.exists(), "eng.traineddata not found");
+    assert!(tur_traineddata.exists(), "tur.traineddata not found");
 
     let api = TesseractAPI::new();
     let res = api.set_variable("debug_file", "/dev/null");
@@ -132,7 +113,7 @@ fn test_multiple_languages_with_lstm() {
 
 #[test]
 fn test_ocr_on_real_image() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -151,7 +132,7 @@ fn test_ocr_on_real_image() {
 
 #[test]
 fn test_multiple_languages() {
-    let tessdata_dir = tessdata_or_skip!("eng", "tur");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "tur+eng")
         .expect("Failed to initialize Tesseract with multiple languages");
@@ -180,7 +161,7 @@ fn test_multiple_languages() {
 
 #[test]
 fn test_digit_recognition() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -209,7 +190,7 @@ fn test_error_handling() {
 #[test]
 fn test_image_operation_errors() {
     let api = TesseractAPI::new();
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
 
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -228,7 +209,7 @@ fn test_image_operation_errors() {
 
 #[test]
 fn test_invalid_language_code() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
 
     // Test invalid language code
@@ -238,7 +219,7 @@ fn test_invalid_language_code() {
 
 #[test]
 fn test_empty_image_data() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -251,7 +232,7 @@ fn test_empty_image_data() {
 
 #[test]
 fn test_invalid_image_parameters() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -277,7 +258,7 @@ fn test_invalid_image_parameters() {
 
 #[test]
 fn test_variable_setting() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -297,7 +278,7 @@ fn test_variable_setting() {
 
 #[test]
 fn test_multiple_operations() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -315,7 +296,7 @@ fn test_multiple_operations() {
 
 #[test]
 fn test_preprocessing_effects() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -337,7 +318,7 @@ fn test_preprocessing_effects() {
 fn test_concurrent_access() {
     use std::thread;
 
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -379,7 +360,7 @@ fn test_thread_safety_with_image() {
     use std::sync::Arc;
     use std::thread;
 
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
 
     // Ana API'yi configure et
@@ -421,7 +402,7 @@ fn test_thread_safety_with_image() {
 fn test_thread_safety_init() {
     use std::thread;
 
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
 
     let mut handles = vec![];
@@ -458,7 +439,7 @@ fn test_dynamic_image_setting() {
     let api = TesseractAPI::new();
 
     // Get tessdata directory (uses default location or TESSDATA_PREFIX if set)
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize API");
 
@@ -526,7 +507,7 @@ fn test_dynamic_image_setting() {
 
 #[test]
 fn test_iterators_provide_word_metadata() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -599,7 +580,7 @@ fn test_iterators_provide_word_metadata() {
 
 #[test]
 fn test_result_iterator_numeric_detection() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -644,7 +625,7 @@ fn test_result_iterator_numeric_detection() {
 
 #[test]
 fn test_language_and_confidence_helpers() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -727,7 +708,7 @@ fn test_language_and_confidence_helpers() {
 
 #[test]
 fn test_structured_outputs_and_rectangles() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -776,7 +757,7 @@ fn test_structured_outputs_and_rectangles() {
 
 #[test]
 fn test_page_seg_mode_roundtrip() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -794,7 +775,7 @@ fn test_page_seg_mode_roundtrip() {
 
 #[test]
 fn test_thresholded_image_helpers() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -833,7 +814,7 @@ fn test_thresholded_image_helpers() {
 
 #[test]
 fn test_text_direction_metrics() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
@@ -857,7 +838,7 @@ fn test_text_direction_metrics() {
 
 #[test]
 fn test_is_valid_word_and_clear() {
-    let tessdata_dir = tessdata_or_skip!("eng");
+    let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");

@@ -1,0 +1,230 @@
+/*====================================================================*
+ -  Copyright (C) 2001 Leptonica.  All rights reserved.
+ -
+ -  Redistribution and use in source and binary forms, with or without
+ -  modification, are permitted provided that the following conditions
+ -  are met:
+ -  1. Redistributions of source code must retain the above copyright
+ -     notice, this list of conditions and the following disclaimer.
+ -  2. Redistributions in binary form must reproduce the above
+ -     copyright notice, this list of conditions and the following
+ -     disclaimer in the documentation and/or other materials
+ -     provided with the distribution.
+ -
+ -  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ -  ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ -  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ -  A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL ANY
+ -  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ -  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ -  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ -  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ -  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ -  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ -  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *====================================================================*/
+
+                        style-guide.txt
+
+                         10 May 2019
+
+This is not a complete guide to the coding style in leptonica.
+It covers most of the typographic issues and the most frequent
+coding patterns, such as how to check input args to functions.
+In general, you need to look at existing code to verify that your
+code meets the style guidelines.  And if you find any aberrant code,
+please let me know!
+
+The C code in leptonica follows these conventions:
+
+(1) ANSI C, with no exceptions
+
+   (a) C-style comments only:   /*  */
+
+   (b) Variables are declared at the beginning of a function.
+       [This is more strict than ANSI C, which only requires declarations
+       to be at the beginning of a scope delineated by braces.]
+
+   (c) Use typedefs for structs like Pix; e.g.,
+          function(PIX  *pixs)
+       Do not do this (omitting the 'struct' keyword); it is valid C++,
+       but not C:
+          function(Pix  *pixs)
+
+(2) Formatting
+
+   (a) White space:  4 space indentation.  No tabs, ever.  No trailing spaces.
+
+   (b) The code is set up to work with doxygen.  Function headers are in
+       this format:
+
+      /*!
+       * \brief   pixSelectByAreaFraction()
+       *
+       * \param[in]    pixs 1 bpp
+       * \param[in]    thresh threshold ratio of fg pixels to (w * h)
+       * \param[in]    connectivity 4 or 8
+       * \param[in]    type L_SELECT_IF_LT, L_SELECT_IF_GT,
+       *                    L_SELECT_IF_LTE, L_SELECT_IF_GTE
+       * \param[out]   pchanged [optional] 1 if changed; 0 if clone returned
+       * \return  pixd, or NULL on error
+       *
+       * <pre>
+       * Notes:
+       *      (1) The args specify constraints on the amount of foreground
+       *          coverage of the components that are kept.
+       *   ....
+       * </pre>
+       */
+
+   (c) Function definition has return value on separate line and starting
+       brace on separate line.
+
+       PIX *
+       function(...)
+       {
+
+   (d) Function arguments and local variables line up vertically;
+       allow at least 2 spaces between type and variable name (including '*')
+
+       function(PIX        *pixs,
+                l_int32     factor,
+                l_float32  *pave)
+       {
+       char        buf[BUF_SIZE];
+       l_int32     w, h, d;
+       l_float32  *vect;
+
+   (e) Braces are placed like this for 'if', 'while', 'do':
+
+       if (...) {
+           ...
+       } else if (...) {
+           ...
+       }
+
+       The exceptions are for the beginning of a function and for the switch:
+
+       switch (x)
+       {
+       case 1:
+           ...
+       ...
+       }
+
+       Braces are required if any of the clauses have more than one statement:
+
+       if (...) {
+           x = 0;
+       } else {
+           x++;
+           y = 3.0 * x;
+       }
+
+   (f) Section headers should look like this:
+
+   /*----------------------------------------------------------------------*
+    *                  Statistics in an arbitrary rectangle                *
+    *----------------------------------------------------------------------*/
+
+   (g) Major inline comments (starting a section) should be indented
+       4 extra spaces and start with a capital.  Multiple line comments
+       should be formatted like this:
+
+           /* If w and h not input, determine the minimum size required
+            * to contain the origin and all c.c. */
+
+   (h) Minor inline comments (e.g., at the end of a line) should have
+       2 spaces and no leading capital; e.g.
+
+          if (i && ((i % ncols) == 0)) {  /* start new row */
+
+(3) Naming
+
+   (a) Function names begin with lower case and successive words have
+       the first letter capitalized; e.g., boxIntersects().
+
+   (b) The first word in the function name is the name of the primary
+       input data structure (if there is one); otherwise it can
+       name the output data structure (if there is one).
+
+   (c) Variable names are as short as possible, without causing confusion.
+
+   (d) Pointers to data structures are typically named by the type of
+       struct, without a leading 'p'; e.g., pixt, boxt.
+
+   (e) When ptrs are input to a function, in order to return a value,
+       if the local name would be 'ave', the pointer is 'pave'.
+
+   (f) Preprocessor variables and enums are named all caps,
+       with '_' between parts.
+
+   (g) Static constants defined in a file should have the first letter of
+       each word capitalized.  (There are also some that are formatted
+       like enums, with all caps and '_' between parts.)
+ 
+   (h) There are very few globals in the library.  Of these, there
+       are just a handful of static globals that can be changed.
+       Const globals are named with each word beginning with a capital; e.g.,
+            ImageFileFormatExtensions[]
+       Static globals that can be changed are named like preprocessor
+       variables, except they are prepended by 'var_'; e.g.,
+            var_PNG_WRITE_ALPHA
+       Functions that set these static globals are named with a
+       pre-pended 'l_'; e.g.,
+            l_pngSetWriteAlpha()
+
+   (i) Where there may be issues with namespace collisions with other
+       libraries, function names can be prepended with 'l_'; e.g.,
+            l_amapInsert()
+
+(4) Arg checking
+
+   Both number values and ptrs can be returned in function arguments.
+   The following applies equally to both types, and happens at the
+   beginning of the function.  We distinguish between returned entities
+   that are optional and required.  The following sequence of tests
+   and initializations guarantees that no uninitialized arguments
+   are returned:
+
+   (a) First, all optional values are initialized if possible:
+
+          if (pboxa) *pboxa = NULL;  // Boxa **pboxa is optional
+
+   (b) Second, if there is more than 1 required value, each is
+       initialized if possible:
+
+          if (pnar) *pnar = NULL;  // Numa **pnar is required
+          if (pnag) *pnag = NULL;  // Numa **pnag is required
+
+       Then all required arguments are tested in arbitrary order.
+
+       But if there is exactly 1 required value, it can be checked
+       and initialized if possible:
+
+          if (!ppixd)
+              return ERROR_INT("&pixd not defined, procName, 1);
+          *ppixd = NULL;
+
+(5) Miscellaneous
+
+   (a) Look around at the code after reviewing the guidelines.
+
+   (b) Return nothing on stdout.
+
+   (c) Returns to stderr should be blockable by compiler flags, such
+       as NO_CONSOLE_IO, and by setting message severity thresholds
+       both at compile and at run time.  Naked fprintf(stderr, ...)
+       should be avoided in the library.
+
+   (d) Applications (in prog) that hand a FILE ptr to a library function,
+       or accept heap-allocated data from a library function, should
+       use special wrappers.  See lept_*() functions in utils.c.
+
+   (e) Changes to existing data structures and API changes should be
+       avoided if possible.
+
+   (f) Accessors are typically provided for struct fields that have
+       extensive use.
+
+

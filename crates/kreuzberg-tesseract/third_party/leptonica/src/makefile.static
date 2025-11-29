@@ -1,0 +1,407 @@
+#/*====================================================================*
+# -  Copyright (C) 2001 Leptonica.  All rights reserved.
+# -
+# -  Redistribution and use in source and binary forms, with or without
+# -  modification, are permitted provided that the following conditions
+# -  are met:
+# -  1. Redistributions of source code must retain the above copyright
+# -     notice, this list of conditions and the following disclaimer.
+# -  2. Redistributions in binary form must reproduce the above
+# -     copyright notice, this list of conditions and the following
+# -     disclaimer in the documentation and/or other materials
+# -     provided with the distribution.
+# -
+# -  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# -  ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# -  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# -  A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL ANY
+# -  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# -  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# -  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# -  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# -  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# -  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# -  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# *====================================================================*/
+
+#   makefile  (for linux)
+#
+#   Hand-built -- editable -- simple -- makefile
+#
+#   For a nodebug version:             make
+#   For a debug version:               make DEBUG=yes debug
+#   For a shared library version:      make SHARED=yes shared
+#   For all versions:                  make all
+#   With nonstandard header directories
+#                    make EXTRAINCLUDES="-I<nonstandard-incl-dir>"
+#
+#   To remove all writes to stderr:   add -DNO_CONSOLE_IO to compiler line
+#
+#   To remove object files in src: make clean
+#   To remove object files and executables in prog: make clean
+#
+#   Customization for I/O with external libraries:
+#          jpeg, png, tiff, webp, jp2k, gif
+#   Set flags in environ.h.  The default is to have libjpeg, libpng,
+#   libtiff and libz, but not libwebp, libopenjp or libgif.
+#
+#   The functions fmemopen() and open_memstream() conform to
+#   IEEE Std 1003.1-2008 ("POSIX.1").  In addition to Linux and BSD,
+#   they are supported on macOS (> 10.12), iOS (>= 11.0) and
+#   android (sdk >= 23).  However, they are not supported on Windows.
+#   The code for determining use of these functions on different platforms
+#   is made in environ.h.
+#
+#   Customization for POSIX-compliant function fstatat().
+#   The default is not to use, because some systems do not support it.
+#   To use this, #define HAVE_FSTATAT to 1 in environ.h.
+#
+#   Customization for Cygwin:
+#   (1) Use the appropriate $CC
+#
+#   Compiling under Microsoft Visual Studio
+#   (1) Download the vs2000 package.
+#   (2) You can also substitute arrayaccess.h.vc for arrayaccess.h, to
+#       use the inline macros rather than function calls which are slower.
+#
+#   To generate function prototypes, you need a program called
+#       xtractprotos.  Build it with this command:
+#          make xtractprotos
+#       Then use it with 'make allheaders'
+
+# Tools used by the Makefile
+RM		= rm -f
+TEST		= test
+MKDIR		= mkdir -p
+LIBRARIAN	= ar cq
+RANLIB		= ranlib
+SED		= sed
+
+# Libraries are built into a binary tree determined by the environmental
+# variable  BINARY_BASE_DIR
+ifndef BINARY_BASE_DIR
+BINARY_BASE_DIR = ..
+endif
+
+BASE_OBJ =	$(BINARY_BASE_DIR)/obj
+OBJ_NODEBUG =	$(BINARY_BASE_DIR)/obj/nodebug
+OBJ_DEBUG =	$(BINARY_BASE_DIR)/obj/debug
+OBJ_SHARED =	$(BINARY_BASE_DIR)/obj/shared
+
+BASE_LIB =	$(BINARY_BASE_DIR)/lib
+LIB_NODEBUG =	$(BINARY_BASE_DIR)/lib/nodebug
+LIB_DEBUG =	$(BINARY_BASE_DIR)/lib/debug
+LIB_SHARED =	$(BINARY_BASE_DIR)/lib/shared
+
+
+#   Include files
+INCLUDES =	-I./ $(EXTRAINCLUDES)
+PROTOTYPE_DIR =	.
+
+#   Which flags to use?
+#     - std=c89 and std=c99 both define __STRICT_ANSI__, which causes
+#       the omission of declarations of a number of functions, such
+#       as mkstemp, fmemopen, open_memstream, fdopen, etc.  So if you
+#       use one of these, also use -U__STRICT_ANSI__.  e.g.,
+#          gcc -std=c89 -U__STRICT_ANSI__
+#     - std=gnu89 and std=gnu99 do not define __STRICT_ANSI__, so
+#       declaration of these other functions is included.
+#     - On mingw, it is necessary to use -D__USE_MINGW_ANSI_STDIO.
+#       This has no effect on non-mingw systems.
+#     - use -Wunused to identify unused variables
+#     - use -DNO_CONSOLE_IO to remove all L_INFO, L_WARNING, L_ERROR and
+#        ERROR_* logging, and to remove all DEBUG information dependent
+#        on whether or not NO_CONSOLE_IO has been defined.
+#     - remove -fPIC for Cygwin
+CC =		gcc -std=c99 -U__STRICT_ANSI__ -D__USE_MINGW_ANSI_STDIO
+#CC =		gcc -std=c89 -U__STRICT_ANSI__ -D__USE_MINGW_ANSI_STDIO
+#CC =		gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D__USE_MINGW_ANSI_STDIO -D_BSD_SOURCE -DANSI -fPIC
+#CC =		gcc -std=gnu89 -D__USE_MINGW_ANSI_STDIO
+#CC =		gcc -std=gnu89 -D_BSD_SOURCE -DANSI -Werror -fPIC
+#CC =		gcc -std=c99 -U__STRICT_ANSI__ -D__USE_MINGW_ANSI_STDIO -DNO_CONSOLE_IO
+#CC =		g++ -D_BSD_SOURCE -fPIC
+#CC =		g++ -Werror -D_BSD_SOURCE -fPIC
+#CC =		g++ -Wunused -D_BSD_SOURCE -fPIC
+
+#   Test for processor endianness
+#   This version (using the definition of __BYTE_ORDER in endian.h)
+#   was provided by rofl0r.  It has been modified to return L_LITTLE_ENDIAN
+#   if the file endian.h does not exist, which is the situation on mingw.
+ENDIANNESS = $(shell echo __BYTE_ORDER | $(CC) -include endian.h -E - | grep -q 4321 && echo L_BIG_ENDIAN || echo L_LITTLE_ENDIAN)
+
+#   Shared library linker options
+SONAME_OPTION = -Wl,-h,
+
+ifdef  SHARED
+    OPTIMIZE =		-O2 -fPIC
+else
+    ifdef  DEBUG
+	OPTIMIZE =	-g
+    else
+	OPTIMIZE =	-O2
+    endif
+endif
+
+
+OPTIONS =
+CPPFLAGS =		$(INCLUDES)
+CFLAGS =		$(OPTIMIZE) $(OPTIONS)
+LIBRARIAN_SHARED =	gcc -shared
+
+#  Libraries differing only in their minor revision numbers
+#  are required to have the same interface.  By using
+#  "-h" in the ld, the "soname" is <libname>.X, where X is
+#  the major revision number.
+#  Links are created among the files <libname>.X.Y,
+#  <libname>.X, and <libname>, where Y is the minor revision number.
+MAJOR_REV = 1
+MINOR_REV = 87
+PATCH_REV = 0
+
+#########################################################
+
+# Libraries
+
+LEPTLIB =		liblept.a
+LEPTLIB_SHARED =	liblept.so
+
+#########################################################
+
+LEPTLIB_C =	adaptmap.c affine.c \
+		affinecompose.c arrayaccess.c \
+		bardecode.c baseline.c bbuffer.c \
+		bilateral.c bilinear.c binarize.c \
+		binexpand.c binreduce.c \
+		blend.c bmf.c bmpio.c bmpiostub.c \
+		bootnumgen1.c bootnumgen2.c \
+		bootnumgen3.c bootnumgen4.c \
+		boxbasic.c boxfunc1.c boxfunc2.c \
+		boxfunc3.c boxfunc4.c boxfunc5.c \
+		bytearray.c ccbord.c ccthin.c \
+		checkerboard.c classapp.c \
+		colorcontent.c colorfill.c coloring.c \
+		colormap.c colormorph.c \
+		colorquant1.c colorquant2.c \
+		colorseg.c colorspace.c \
+		compare.c conncomp.c convertfiles.c \
+		convolve.c correlscore.c \
+		dewarp1.c dewarp2.c dewarp3.c dewarp4.c \
+		dnabasic.c dnafunc1.c dnahash.c \
+		dwacomb.2.c dwacomblow.2.c \
+		edge.c encoding.c enhance.c \
+		fhmtauto.c fhmtgen.1.c fhmtgenlow.1.c \
+		finditalic.c flipdetect.c \
+		fmorphauto.c fmorphgen.1.c fmorphgenlow.1.c \
+		fpix1.c fpix2.c \
+		gifio.c gifiostub.c gplot.c graphics.c \
+		graymorph.c grayquant.c hashmap.c heap.c jbclass.c \
+		jp2kheader.c jp2kheaderstub.c jp2kio.c jp2kiostub.c \
+		jpegio.c jpegiostub.c kernel.c \
+		libversions.c list.c map.c maze.c \
+		morph.c morphapp.c morphdwa.c morphseq.c \
+		numabasic.c numafunc1.c numafunc2.c \
+		pageseg.c paintcmap.c \
+		parseprotos.c partify.c partition.c \
+		pdfapp.c pdfappstub.c \
+		pdfio1.c pdfio1stub.c pdfio2.c pdfio2stub.c \
+		pix1.c pix2.c pix3.c pix4.c pix5.c \
+		pixabasic.c pixacc.c \
+		pixafunc1.c pixafunc2.c \
+		pixalloc.c pixarith.c \
+		pixcomp.c pixconv.c pixlabel.c pixtiling.c \
+		pngio.c pngiostub.c \
+		pnmio.c pnmiostub.c \
+		projective.c \
+		psio1.c psio1stub.c psio2.c psio2stub.c \
+		ptabasic.c ptafunc1.c ptafunc2.c \
+		ptra.c quadtree.c queue.c rank.c rbtree.c \
+		readbarcode.c readfile.c \
+		recogbasic.c recogdid.c recogident.c recogtrain.c \
+		regutils.c renderpdf.c rop.c roplow.c \
+		rotate.c rotateam.c rotateorth.c rotateshear.c \
+		runlength.c sarray1.c sarray2.c \
+		scale1.c scale2.c seedfill.c \
+		sel1.c sel2.c selgen.c \
+		shear.c skew.c spixio.c \
+		stack.c stringcode.c \
+		strokes.c sudoku.c \
+		textops.c tiffio.c tiffiostub.c \
+		utils1.c utils2.c warper.c watershed.c \
+                webpanimio.c webpanimiostub.c \
+		webpio.c webpiostub.c writefile.c \
+		zlibmem.c zlibmemstub.c
+
+LEPTLIB_H =	allheaders.h alltypes.h \
+		array.h array_internal.h \
+		arrayaccess.h bbuffer.h \
+		bmf.h bmfdata.h bmp.h \
+		ccbord.h ccbord_internal.h \
+		colorfill.h dewarp.h environ.h gplot.h \
+		hashmap.h heap.h imageio.h \
+		jbclass.h list.h morph.h \
+		pix.h pix_internal.h \
+		ptra.h queue.h rbtree.h \
+		readbarcode.h recog.h regutils.h \
+		stack.h stringcode.h sudoku.h watershed.h
+
+##################################################################
+
+#  Main targets
+
+nodebug: dirs $(LEPTLIB:%=$(LIB_NODEBUG)/%)
+
+all:
+	make -f makefile TARGET=$(TARGET) nodebug
+	make -f makefile TARGET=$(TARGET) DEBUG=true debug
+	make -f makefile TARGET=$(TARGET) SHARED=true shared
+
+DEBUG_LIBS = $(LEPTLIB:%=$(LIB_DEBUG)/%)
+SHARED_LIBS = $(LEPTLIB_SHARED:%=$(LIB_SHARED)/%)
+debug:	dirs $(DEBUG_LIBS)
+shared:	dirs $(SHARED_LIBS)
+
+##################################################################
+
+#  Proto targets
+
+#  Note that both of the targets below can be generated by xtractprotos
+#  (a) without requiring the existence of leptprotos.h and (b) with
+#  an empty allheaders.h.  Both generate a new allheaders.h, and
+#  'make allprotos' additionally generates leptprotos.h
+#
+#  In the past we generated leptprotos.h that held the function prototypes,
+#  and included it in allheaders.h.  We now insert the function prototypes
+#  directly in allheaders.h, and do not generate a separate prototype
+#  file leptprotos.h.
+allheaders:     $(LEPTLIB_C)
+	@$(TEST) -f xtractprotos || echo "First run 'make xtractprotos'"
+	./xtractprotos -protos=inline -prestring=LEPT_DLL $(LEPTLIB_C)
+
+
+#  You can still generate the file leptprotos.h and have it #included
+#  in allheaders.h.  If you do this, be sure to add leptprotos.h to LEPTLIB_H.
+allprotos:      leptprotos
+leptprotos:     $(LEPTLIB_C)
+	@$(TEST) -f xtractprotos || echo "First run 'make xtractprotos'"
+	./xtractprotos -protos=leptprotos.h -prestring=LEPT_DLL $(LEPTLIB_C)
+
+##################################################################
+
+#  xtractprotos
+
+xtractprotos:	dirs leptlib
+	cd ../prog; make xtractprotos; cp xtractprotos ../src
+
+xtractprotos.o:	xtractprotos.c
+
+##################################################################
+
+#   Rule to make optimized library
+
+$(LIB_NODEBUG)/%.a:
+		$(RM) $@
+		$(LIBRARIAN) $@ $<
+		$(RANLIB) $@
+
+#   Rule to make debuggable library
+
+$(LIB_DEBUG)/%.a:
+		$(RM) $@
+		$(LIBRARIAN) $@ $<
+		$(RANLIB) $@
+
+#   Rule to make shared library
+
+$(LIB_SHARED)/%.so:
+		$(RM) $@
+		$(LIBRARIAN_SHARED) $(SONAME_OPTION)$(notdir $@).$(MAJOR_REV) -o $@ $<
+	mv $@ $@.$(MAJOR_REV).$(MINOR_REV).$(PATCH_REV)
+	cd $(LIB_SHARED); rm $(notdir $@).$(MAJOR_REV); \
+	  ln -s $(notdir $@).$(MAJOR_REV).$(MINOR_REV).$(PATCH_REV) $(notdir $@).$(MAJOR_REV)
+	cd $(LIB_SHARED); rm $(notdir $@); \
+	  ln -s $(notdir $@).$(MAJOR_REV) $(notdir $@)
+
+##################################################################
+
+#   No-debug library dependencies and rules
+
+leptlib:	$(LIB_NODEBUG)/$(LEPTLIB)
+$(LIB_NODEBUG)/$(LEPTLIB):	$(LEPTLIB_C:%.c=$(OBJ_NODEBUG)/%.o)
+		$(RM) $@
+		$(LIBRARIAN) $@ $(LEPTLIB_C:%.c=$(OBJ_NODEBUG)/%.o)
+		$(RANLIB) $@
+
+#   Debug library dependencies and rules
+
+leptlibd:	$(LIB_DEBUG)/$(LEPTLIB)
+$(LIB_DEBUG)/$(LEPTLIB):	$(LEPTLIB_C:%.c=$(OBJ_DEBUG)/%.o)
+		$(RM) $@
+		$(LIBRARIAN) $@ $(LEPTLIB_C:%.c=$(OBJ_DEBUG)/%.o)
+		$(RANLIB) $@
+
+#   Shared library dependencies, rules and links
+
+leptlibs:	$(LIB_SHARED)/$(LEPTLIB_SHARED)
+$(LIB_SHARED)/$(LEPTLIB_SHARED):	$(LEPTLIB_C:%.c=$(OBJ_SHARED)/%.o)
+		$(RM) $@
+		$(LIBRARIAN_SHARED) $(SONAME_OPTION)$(notdir $@).$(MAJOR_REV) -o $@ $(LEPTLIB_C:%.c=$(OBJ_SHARED)/%.o)
+	mv $@ $@.$(MAJOR_REV).$(MINOR_REV).$(PATCH_REV)
+	cd $(LIB_SHARED); rm $(notdir $@).$(MAJOR_REV); \
+	  ln -s $(notdir $@).$(MAJOR_REV).$(MINOR_REV).$(PATCH_REV) $(notdir $@).$(MAJOR_REV)
+	cd $(LIB_SHARED); rm $(notdir $@); \
+	  ln -s $(notdir $@).$(MAJOR_REV) $(notdir $@)
+
+#########################################################
+
+#   Rules for compiling source
+
+endianness.h:	endianness.h.in
+		$(SED) -e 's/@APPLE_UNIVERSAL_BUILD@/defined (__APPLE_CC__)/g' -e 's/@ENDIANNESS@/$(ENDIANNESS)/g' endianness.h.in > endianness.h
+
+$(OBJ_NODEBUG)/%.o:	%.c  $(LEPTLIB_H) endianness.h
+		@$(TEST) -d $(OBJ_NODEBUG) || $(MKDIR) $(OBJ_NODEBUG)
+		$(COMPILE.c) -o $@ $<
+
+$(OBJ_DEBUG)/%.o:	%.c  $(LEPTLIB_H) endianness.h
+		@$(TEST) -d $(OBJ_DEBUG) || $(MKDIR) $(OBJ_DEBUG)
+		$(COMPILE.c) -o $@ $<
+
+$(OBJ_SHARED)/%.o:	%.c  $(LEPTLIB_H) endianness.h
+		@$(TEST) -d $(OBJ_SHARED) || $(MKDIR) $(OBJ_SHARED)
+		$(COMPILE.c) -o $@ $<
+
+###########################################################
+
+#   Prepare a local environment
+
+dirs:
+		@$(TEST) -d $(BASE_OBJ) || $(MKDIR) $(BASE_OBJ)
+		@$(TEST) -d $(OBJ_NODEBUG) || $(MKDIR) $(OBJ_NODEBUG)
+		@$(TEST) -d $(OBJ_DEBUG) || $(MKDIR) $(OBJ_DEBUG)
+		@$(TEST) -d $(OBJ_SHARED) || $(MKDIR) $(OBJ_SHARED)
+		@$(TEST) -d $(BASE_LIB) || $(MKDIR) $(BASE_LIB)
+		@$(TEST) -d $(LIB_NODEBUG) || $(MKDIR) $(LIB_NODEBUG)
+		@$(TEST) -d $(LIB_DEBUG) || $(MKDIR) $(LIB_DEBUG)
+		@$(TEST) -d $(LIB_SHARED) || $(MKDIR) $(LIB_SHARED)
+
+
+###########################################################
+
+clean:		
+		$(RM) $(OBJ_NODEBUG)/*.o $(OBJ_DEBUG)/*.o \
+			$(OBJ_SHARED)/*.o \
+			$(LIB_NODEBUG)/*.a $(LIB_DEBUG)/*.a \
+			$(LIB_SHARED)/*.so $(LIB_SHARED)/*.so.? \
+			$(LIB_SHARED)/*.so.?.* \
+			xtractprotos.o xtractprotos \
+			endianness.h
+
+###########################################################
+
+depend:
+	/usr/bin/makedepend -DNO_PROTOS $(CPPFLAGS) $(LEPTLIB_C)
+
+###########################################################
+# DO NOT DELETE THIS LINE -- make depend depends on it.
+
+

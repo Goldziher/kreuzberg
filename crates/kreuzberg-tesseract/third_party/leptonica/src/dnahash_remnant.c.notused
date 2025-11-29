@@ -1,0 +1,949 @@
+/*====================================================================*
+ -  Copyright (C) 2001 Leptonica.  All rights reserved.
+ -
+ -  Redistribution and use in source and binary forms, with or without
+ -  modification, are permitted provided that the following conditions
+ -  are met:
+ -  1. Redistributions of source code must retain the above copyright
+ -     notice, this list of conditions and the following disclaimer.
+ -  2. Redistributions in binary form must reproduce the above
+ -     copyright notice, this list of conditions and the following
+ -     disclaimer in the documentation and/or other materials
+ -     provided with the distribution.
+ -
+ -  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ -  ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ -  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ -  A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL ANY
+ -  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ -  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ -  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ -  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ -  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ -  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ -  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *====================================================================*/
+
+/*!
+ * \file dnahash_remnant.c.notused
+ * <pre>
+ *
+ *                                     NOTE
+ *       ==================================================================
+ *       This code has been retired from the library.  It is just
+ *       documentation.  It contains dnahash functionality that is no
+ *       longer in use.  The only current use of dnahash (in dnahash.c)
+ *       is for fast template lookup in the jbig2 classifier (jbclass.c).
+ *
+ *       The functions in this file hash strings, points and doubles.
+ *       Most of them have been replaced by analogous ones using the more
+ *       general hashmap.  They are saved here for pedagogical purposes;
+ *       mostly, to show how misguided one can be trying to implement a
+ *       general hashing function using only an array of doubles.  (Yes, it can
+ *       be done, but it's a lot of work for relatively little functionality.)
+ *
+ *       The new hashmap (in hashmap.c) has a much simpler lookup and
+ *       add mechanism.  It also has a rehashing function to allow the hash
+ *       array to grow as items are added.  Unlike the simple dnahash,
+ *       the hashmap stores the key in the hashitem, so it doesn't require
+ *       an auxiliary array to do lookup with checking and creating.
+ *       (It does however require the auxiliary array to retrieve the
+ *       original data, which is not stored in the hashitem.  This may
+ *       be changed in the future.)
+ *       ==================================================================
+ *
+ *      DnaHash: Accessors
+ *          l_int32      l_dnaHashGetCount()
+ *          l_int32      l_dnaHashGetTotalCount()
+ *
+ *      Set operations on dna
+ *          L_DNAHASH   *l_dnaHashCreateFromDna()
+ *          l_int32      l_dnaRemoveDupsByHash()
+ *          l_int32      l_dnaMakeHistoByHash()
+ *          L_DNA       *l_dnaIntersectionByHash()
+ *          l_int32      l_dnaFindValByHash()
+ *
+ *      Set operations on pta
+ *           PTA        *ptaUnionByHash()
+ *           l_int32     ptaRemoveDupsByHash()
+ *           PTA        *ptaIntersectionByHash();
+ *           l_int32     ptaFindPtByHash()
+ *           L_DNAHASH  *l_dnaHashCreateFromPta()
+ *
+ *      Set operations on sarray
+ *          l_int32     sarrayRemoveDupsByHash()
+ *          SARRAY     *sarrayIntersectionByHash()
+ *          l_int32     sarrayFindStringByHash()
+ *          L_DNAHASH  *l_dnaHashCreateFromSarray()
+ *
+ *    (1) The DnaHash is an array of Dna.  It can be used for fast
+ *        storage and lookup for sets and maps.  If the set or map
+ *        is on a Dna itself, the hash can be a simple casting from
+ *        a double to a l_uint64. For a string or a (x,y) point, we
+ *        use a hash to a l_uint64.  The result of the hash is
+ *        a "key", which is then used with the mod function to select
+ *        which Dna array is to be used.
+ *    (2) The number of arrays in a DnaHash is a prime number.
+ *        If there are N items, we set up the DnaHash array to have
+ *        approximately N/20 Dna, so the average size of these arrays
+ *        will be about 20 when fully populated.  The number 20 was
+ *        found empirically to be in a broad maximum of efficiency.
+ *    (3) Note that the word "hash" is overloaded.  There are actually
+ *        two hashing steps: the first hashes the object to a l_uint64,
+ *        called the "key", and the second uses the mod function to
+ *        "hash" the "key" to the index of a particular Dna in the
+ *        DnaHash array.
+ *    (4) Insertion and lookup time for DnaHash is O(1).  Hash collisions
+ *        into the dna array are expected (we might choose to have an average
+ *        of 20 for each key).  This can be contrasted with using rbtree
+ *        for sets and maps, where insertion and lookup are O(logN).
+ *    (5) Hash functions that map points and strings to l_uint64 are
+ *        given in utils1.c.
+ *    (6) This is a very simple implementation, that expects that you
+ *        know approximately (i.e., within a factor of 2 or 3) how many
+ *        items are to be stored when you initialize the DnaHash.
+ *        It cannot modify the size of the Dna array as the occupation grows.
+ * </pre>
+ */
+
+#ifdef HAVE_CONFIG_H
+#include <config_auto.h>
+#endif  /* HAVE_CONFIG_H */
+
+#include "allheaders.h"
+
+/*--------------------------------------------------------------------------*
+ *                   Dna hash: Accessors and modifiers                      *
+ *--------------------------------------------------------------------------*/
+/*!
+ * \brief   l_dnaHashGetCount()
+ *
+ * \param[in]    dahash
+ * \return  nbuckets allocated, or 0 on error
+ */
+l_int32
+l_dnaHashGetCount(L_DNAHASH  *dahash)
+{
+
+    if (!dahash)
+        return ERROR_INT("dahash not defined", __func__, 0);
+    return dahash->nbuckets;
+}
+
+
+/*!
+ * \brief   l_dnaHashGetTotalCount()
+ *
+ * \param[in]    dahash
+ * \return  n number of numbers in all dna, or 0 on error
+ */
+l_int32
+l_dnaHashGetTotalCount(L_DNAHASH  *dahash)
+{
+l_int32  i, n;
+L_DNA   *da;
+
+    if (!dahash)
+        return ERROR_INT("dahash not defined", __func__, 0);
+
+    for (i = 0, n = 0; i < dahash->nbuckets; i++) {
+        da = l_dnaHashGetDna(dahash, i, L_NOCOPY);
+        if (da)
+            n += l_dnaGetCount(da);
+    }
+
+    return n;
+}
+
+
+/*--------------------------------------------------------------------------*
+ *                   Set operations on dna using hashing                    *
+ *--------------------------------------------------------------------------*/
+/*!
+ * \brief   l_dnaHashCreateFromDna()
+ *
+ * \param[in]    da
+ * \return  dahash if OK; 1 on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) The values stored in the %dahash are indices into %da;
+ *          %dahash has no use without %da.
+ * </pre>
+ */
+L_DNAHASH *
+l_dnaHashCreateFromDna(L_DNA  *da)
+{
+l_int32     i, n;
+l_uint32    nsize;
+l_uint64    key;
+l_float64   val;
+L_DNAHASH  *dahash;
+
+    if (!da)
+        return (L_DNAHASH *)ERROR_PTR("da not defined", __func__, NULL);
+
+    n = l_dnaGetCount(da);
+    findNextLargerPrime(n / 20, &nsize);  /* buckets in hash table */
+
+    dahash = l_dnaHashCreate(nsize, 8);
+    for (i = 0; i < n; i++) {
+        l_dnaGetDValue(da, i, &val);
+        l_dnaHashAdd(dahash, (l_uint64)val, (l_float64)i);
+    }
+
+    return dahash;
+}
+
+
+/*!
+ * \brief   l_dnaRemoveDupsByHash()
+ *
+ * \param[in]    das
+ * \param[out]   pdad      hash set
+ * \param[out]   pdahash   [optional] dnahash used for lookup
+ * \return  0 if OK; 1 on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) Generates a dna with unique values.
+ *      (2) The dnahash is built up with dad to assure uniqueness.
+ *          It can be used to find if an element is in the set:
+ *              l_dnaFindValByHash(dad, dahash, val, &index)
+ * </pre>
+ */
+l_ok
+l_dnaRemoveDupsByHash(L_DNA       *das,
+                      L_DNA      **pdad,
+                      L_DNAHASH  **pdahash)
+{
+l_int32     i, n, index, items;
+l_uint32    nsize;
+l_uint64    key;
+l_float64   val;
+L_DNA      *dad;
+L_DNAHASH  *dahash;
+
+    if (pdahash) *pdahash = NULL;
+    if (!pdad)
+        return ERROR_INT("&dad not defined", __func__, 1);
+    *pdad = NULL;
+    if (!das)
+        return ERROR_INT("das not defined", __func__, 1);
+
+    n = l_dnaGetCount(das);
+    findNextLargerPrime(n / 20, &nsize);  /* buckets in hash table */
+    dahash = l_dnaHashCreate(nsize, 8);
+    dad = l_dnaCreate(n);
+    *pdad = dad;
+    for (i = 0, items = 0; i < n; i++) {
+        l_dnaGetDValue(das, i, &val);
+        l_dnaFindValByHash(dad, dahash, val, &index);
+        if (index < 0) {  /* not found */
+            l_dnaHashAdd(dahash, (l_uint64)val, (l_float64)items);
+            l_dnaAddNumber(dad, val);
+            items++;
+        }
+    }
+
+    if (pdahash)
+        *pdahash = dahash;
+    else
+        l_dnaHashDestroy(&dahash);
+    return 0;
+}
+
+
+/*!
+ * \brief   l_dnaMakeHistoByHash()
+ *
+ * \param[in]    das
+ * \param[out]   pdahash    hash map: val --> index
+ * \param[out]   pdav       [optional] array of values: index --> val
+ * \param[out]   pdac       [optional] histo array of counts: index --> count
+ * \return  0 if OK; 1 on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) Generates and returns a dna of occurrences (histogram),
+ *          an aligned dna of values, and an associated hashmap.
+ *          The hashmap takes %dav and a value, and points into the
+ *          histogram in %dac.
+ *      (2) The dna of values, %dav, is aligned with the histogram %dac,
+ *          and is needed for fast lookup.  It is a hash set, because
+ *          the values are unique.
+ *      (3) If you only need to make a histogram and get the number of
+ *          non-zero entries, here are two methods:
+ *          (a) l_dnaMakeHistoByHash(da, &dahash, NULL, NULL);
+ *              count = l_dnaHashGetTotalCount(dahash);
+ *          (b) l_dnaRemoveDupsByHash(da, &da_nodups, NULL);
+                count = l_dnaGetCount(da_nodups);
+ *      (4) Lookup is simple:
+ *              l_dnaFindValByHash(dav, dahash, val, &index);
+ *              if (index >= 0)
+ *                  l_dnaGetIValue(dac, index, &icount);
+ *              else
+ *                  icount = 0;
+ * </pre>
+ */
+l_ok
+l_dnaMakeHistoByHash(L_DNA       *das,
+                     L_DNAHASH  **pdahash,
+                     L_DNA      **pdav,
+                     L_DNA      **pdac)
+{
+l_int32     i, n, nitems, index, count;
+l_uint32    nsize;
+l_uint64    key;
+l_float64   val;
+L_DNA      *dac, *dav;
+L_DNAHASH  *dahash;
+
+    if (pdahash) *pdahash = NULL;
+    if (pdac) *pdac = NULL;
+    if (pdav) *pdav = NULL;
+    if (!pdahash)
+        return ERROR_INT("&dahash not defined", __func__, 1);
+    if (!das)
+        return ERROR_INT("das not defined", __func__, 1);
+    if ((n = l_dnaGetCount(das)) == 0)
+        return ERROR_INT("no data in das", __func__, 1);
+
+    findNextLargerPrime(n / 20, &nsize);  /* buckets in hash table */
+    dahash = l_dnaHashCreate(nsize, 8);
+    dac = l_dnaCreate(n);  /* histogram */
+    dav = l_dnaCreate(n);  /* the values */
+    for (i = 0, nitems = 0; i < n; i++) {
+        l_dnaGetDValue(das, i, &val);
+            /* Is this value already stored in dav? */
+        l_dnaFindValByHash(dav, dahash, val, &index);
+        if (index >= 0) {  /* found */
+            l_dnaGetIValue(dac, (l_float64)index, &count);
+            l_dnaSetValue(dac, (l_float64)index, count + 1);
+        } else {  /* not found */
+            l_dnaHashAdd(dahash, (l_uint64)val, (l_float64)nitems);
+            l_dnaAddNumber(dav, val);
+            l_dnaAddNumber(dac, 1);
+            nitems++;
+        }
+    }
+
+    *pdahash = dahash;
+    if (pdac)
+        *pdac = dac;
+    else
+        l_dnaDestroy(&dac);
+    if (pdav)
+        *pdav = dav;
+    else
+        l_dnaDestroy(&dav);
+    return 0;
+}
+
+
+/*!
+ * \brief   l_dnaIntersectionByHash()
+ *
+ * \param[in]    da1, da2
+ * \return  dad   intersection of the number arrays, or NULL on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) This uses the same method for building the intersection set
+ *          as ptaIntersectionByHash() and sarrayIntersectionByHash().
+ * </pre>
+ */
+L_DNA *
+l_dnaIntersectionByHash(L_DNA  *da1,
+                        L_DNA  *da2)
+{
+l_int32     n1, n2, nsmall, nbuckets, i, index1, index2;
+l_uint32    nsize2;
+l_uint64    key;
+l_float64   val;
+L_DNAHASH  *dahash1, *dahash2;
+L_DNA      *da_small, *da_big, *dad;
+
+    if (!da1)
+        return (L_DNA *)ERROR_PTR("da1 not defined", __func__, NULL);
+    if (!da2)
+        return (L_DNA *)ERROR_PTR("da2 not defined", __func__, NULL);
+
+        /* Put the elements of the biggest array into a dnahash */
+    n1 = l_dnaGetCount(da1);
+    n2 = l_dnaGetCount(da2);
+    da_small = (n1 < n2) ? da1 : da2;   /* do not destroy da_small */
+    da_big = (n1 < n2) ? da2 : da1;   /* do not destroy da_big */
+    dahash1 = l_dnaHashCreateFromDna(da_big);
+
+        /* Build up the intersection of numbers.  Add to %dad
+         * if the number is in da_big (using dahash1) but hasn't
+         * yet been seen in the traversal of da_small (using dahash2). */
+    dad = l_dnaCreate(0);
+    nsmall = l_dnaGetCount(da_small);
+    findNextLargerPrime(nsmall / 20, &nsize2);  /* buckets in hash table */
+    dahash2 = l_dnaHashCreate(nsize2, 0);
+    nbuckets = l_dnaHashGetCount(dahash2);
+    for (i = 0; i < nsmall; i++) {
+        l_dnaGetDValue(da_small, i, &val);
+        l_dnaFindValByHash(da_big, dahash1, val, &index1);
+        if (index1 >= 0) {  /* found */
+            l_dnaFindValByHash(da_small, dahash2, val, &index2);
+            if (index2 == -1) {  /* not found */
+                l_dnaAddNumber(dad, val);
+                l_dnaHashAdd(dahash2, (l_uint64)val, (l_float64)i);
+            }
+        }
+    }
+
+    l_dnaHashDestroy(&dahash1);
+    l_dnaHashDestroy(&dahash2);
+    return dad;
+}
+
+
+/*!
+ * \brief   l_dnaFindValByHash()
+ *
+ * \param[in]    da
+ * \param[in]    dahash    containing indices into %da
+ * \param[in]    val       searching for this number in %da
+ * \param[out]   pindex    index into da if found; -1 otherwise
+ * \return  0 if OK; 1 on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) Algo: hash %val into a key; hash the key to get the dna
+ *                in %dahash (that holds indices into %da); traverse
+ *                the dna of indices looking for %val in %da.
+ * </pre>
+ */
+l_ok
+l_dnaFindValByHash(L_DNA      *da,
+                   L_DNAHASH  *dahash,
+                   l_float64   val,
+                   l_int32    *pindex)
+{
+l_int32    i, nbuckets, nvals, indexval;
+l_float64  vali;
+l_uint64   key;
+L_DNA     *da1;
+
+    if (!pindex)
+        return ERROR_INT("&index not defined", __func__, 1);
+    *pindex = -1;
+    if (!da)
+        return ERROR_INT("da not defined", __func__, 1);
+    if (!dahash)
+        return ERROR_INT("dahash not defined", __func__, 1);
+
+    nbuckets = l_dnaHashGetCount(dahash);
+    da1 = l_dnaHashGetDna(dahash, (l_uint64)val, L_NOCOPY);
+    if (!da1) return 0;
+
+        /* Run through da1, looking for this %val */
+    nvals = l_dnaGetCount(da1);
+    for (i = 0; i < nvals; i++) {
+        l_dnaGetIValue(da1, i, &indexval);
+        l_dnaGetDValue(da, indexval, &vali);
+        if (val == vali) {
+            *pindex = indexval;
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
+
+/*---------------------------------------------------------------------*
+ *                Set operations on points using hashing               *
+ *---------------------------------------------------------------------*/
+/*!
+ * \brief   ptaUnionByHash()
+ *
+ * \param[in]    pta1, pta2
+ * \return  ptad with the union of the set of points, or NULL on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) This is faster than ptaUnionByAset(), because the
+ *          bucket lookup is O(n).  It should be used if the pts are
+ *          integers (e.g., representing pixel positions).
+ * </pre>
+ */
+PTA *
+ptaUnionByHash(PTA  *pta1,
+               PTA  *pta2)
+{
+PTA  *pta3, *ptad;
+
+    if (!pta1)
+        return (PTA *)ERROR_PTR("pta1 not defined", __func__, NULL);
+    if (!pta2)
+        return (PTA *)ERROR_PTR("pta2 not defined", __func__, NULL);
+
+        /* Join */
+    pta3 = ptaCopy(pta1);
+    ptaJoin(pta3, pta2, 0, -1);
+
+        /* Eliminate duplicates */
+    ptaRemoveDupsByHash(pta3, &ptad, NULL);
+    ptaDestroy(&pta3);
+    return ptad;
+}
+
+
+/*!
+ * \brief   ptaRemoveDupsByHash()
+ *
+ * \param[in]    ptas      assumed to be integer values
+ * \param[out]   pptad     unique set of pts; duplicates removed
+ * \param[out]   pdahash   [optional] dnahash used for lookup
+ * \return  0 if OK, 1 on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) Generates a pta with unique values.
+ *      (2) The dnahash is built up with ptad to assure uniqueness.
+ *          It can be used to find if a point is in the set:
+ *              ptaFindPtByHash(ptad, dahash, x, y, &index)
+ *      (3) The hash of the (x,y) location is simple and fast.  It scales
+ *          up with the number of buckets to insure a fairly random
+ *          bucket selection for adjacent points.
+ *      (4) A Dna is used rather than a Numa because we need accurate
+ *          representation of 32-bit integers that are indices into ptas.
+ *          Integer --> float --> integer conversion makes errors for
+ *          integers larger than 10M.
+ *      (5) This is faster than ptaRemoveDupsByAset(), because the
+ *          bucket lookup is O(n), although there is a double-loop
+ *          lookup within the dna in each bucket.
+ * </pre>
+ */
+l_ok
+ptaRemoveDupsByHash(PTA         *ptas,
+                    PTA        **pptad,
+                    L_DNAHASH  **pdahash)
+{
+l_int32     i, n, index, items, x, y;
+l_uint32    nsize;
+l_uint64    key;
+PTA        *ptad;
+L_DNAHASH  *dahash;
+
+    if (pdahash) *pdahash = NULL;
+    if (!pptad)
+        return ERROR_INT("&ptad not defined", __func__, 1);
+    *pptad = NULL;
+    if (!ptas)
+        return ERROR_INT("ptas not defined", __func__, 1);
+
+    n = ptaGetCount(ptas);
+    findNextLargerPrime(n / 20, &nsize);  /* buckets in hash table */
+    dahash = l_dnaHashCreate(nsize, 8);
+    ptad = ptaCreate(n);
+    *pptad = ptad;
+    for (i = 0, items = 0; i < n; i++) {
+        ptaGetIPt(ptas, i, &x, &y);
+        ptaFindPtByHash(ptad, dahash, x, y, &index);
+        if (index < 0) {  /* not found */
+            l_hashPtToUint64(x, y, &key);
+            l_dnaHashAdd(dahash, key, (l_float64)items);
+            ptaAddPt(ptad, x, y);
+            items++;
+        }
+    }
+
+    if (pdahash)
+        *pdahash = dahash;
+    else
+        l_dnaHashDestroy(&dahash);
+    return 0;
+}
+
+
+/*!
+ * \brief   ptaIntersectionByHash()
+ *
+ * \param[in]    pta1, pta2
+ * \return  ptad intersection of the point sets, or NULL on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) This is faster than ptaIntersectionByAset(), because the
+ *          bucket lookup is O(n).  It should be used if the pts are
+ *          integers (e.g., representing pixel positions).
+ * </pre>
+ */
+PTA *
+ptaIntersectionByHash(PTA  *pta1,
+                      PTA  *pta2)
+{
+l_int32     n1, n2, nsmall, i, x, y, index1, index2;
+l_uint32    nsize2;
+l_uint64    key;
+L_DNAHASH  *dahash1, *dahash2;
+PTA        *pta_small, *pta_big, *ptad;
+
+    if (!pta1)
+        return (PTA *)ERROR_PTR("pta1 not defined", __func__, NULL);
+    if (!pta2)
+        return (PTA *)ERROR_PTR("pta2 not defined", __func__, NULL);
+
+        /* Put the elements of the biggest pta into a dnahash */
+    n1 = ptaGetCount(pta1);
+    n2 = ptaGetCount(pta2);
+    pta_small = (n1 < n2) ? pta1 : pta2;   /* do not destroy pta_small */
+    pta_big = (n1 < n2) ? pta2 : pta1;   /* do not destroy pta_big */
+    dahash1 = l_dnaHashCreateFromPta(pta_big);
+
+        /* Build up the intersection of points.  Add to ptad
+         * if the point is in pta_big (using dahash1) but hasn't
+         * yet been seen in the traversal of pta_small (using dahash2). */
+    ptad = ptaCreate(0);
+    nsmall = ptaGetCount(pta_small);
+    findNextLargerPrime(nsmall / 20, &nsize2);  /* buckets in hash table */
+    dahash2 = l_dnaHashCreate(nsize2, 0);
+    for (i = 0; i < nsmall; i++) {
+        ptaGetIPt(pta_small, i, &x, &y);
+        ptaFindPtByHash(pta_big, dahash1, x, y, &index1);
+        if (index1 >= 0) {  /* found */
+            ptaFindPtByHash(pta_small, dahash2, x, y, &index2);
+            if (index2 == -1) {  /* not found */
+                ptaAddPt(ptad, x, y);
+                l_hashPtToUint64(x, y, &key);
+                l_dnaHashAdd(dahash2, key, (l_float64)i);
+            }
+        }
+    }
+
+    l_dnaHashDestroy(&dahash1);
+    l_dnaHashDestroy(&dahash2);
+    return ptad;
+}
+
+
+/*!
+ * \brief   ptaFindPtByHash()
+ *
+ * \param[in]    pta
+ * \param[in]    dahash     built from pta
+ * \param[in]    x, y       arbitrary points
+ * \param[out]   pindex     index into pta if (x,y) is in pta; -1 otherwise
+ * \return  0 if OK, 1 on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) Fast lookup in dnaHash associated with a pta, to see if a
+ *          random point (x,y) is already stored in the hash table.
+ *      (2) We use a strong hash function to minimize the chance that
+ *          two different points hash to the same key value.
+ *      (3) We select the number of buckets to be about 5% of the size
+ *          of the input %pta, so that when fully populated, each
+ *          bucket (dna) will have about 20 entries, each being an index
+ *          into %pta.  In lookup, after hashing to the key, and then
+ *          again to the bucket, we traverse the bucket (dna), using the
+ *          index into %pta to check if the point (x,y) has been found before.
+ * </pre>
+ */
+l_ok
+ptaFindPtByHash(PTA        *pta,
+                L_DNAHASH  *dahash,
+                l_int32     x,
+                l_int32     y,
+                l_int32    *pindex)
+{
+l_int32   i, nvals, index, xi, yi;
+l_uint64  key;
+L_DNA    *da;
+
+    if (!pindex)
+        return ERROR_INT("&index not defined", __func__, 1);
+    *pindex = -1;
+    if (!pta)
+        return ERROR_INT("pta not defined", __func__, 1);
+    if (!dahash)
+        return ERROR_INT("dahash not defined", __func__, 1);
+
+    l_hashPtToUint64(x, y, &key);
+    da = l_dnaHashGetDna(dahash, key, L_NOCOPY);
+    if (!da) return 0;
+
+        /* Run through the da, looking for this point */
+    nvals = l_dnaGetCount(da);
+    for (i = 0; i < nvals; i++) {
+        l_dnaGetIValue(da, i, &index);
+        ptaGetIPt(pta, index, &xi, &yi);
+        if (x == xi && y == yi) {
+            *pindex = index;
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
+
+/*!
+ * \brief   l_dnaHashCreateFromPta()
+ *
+ * \param[in]    pta
+ * \return  dahash, or NULL on error
+ */
+L_DNAHASH *
+l_dnaHashCreateFromPta(PTA  *pta)
+{
+l_int32     i, n, x, y;
+l_uint32    nsize;
+l_uint64    key;
+L_DNAHASH  *dahash;
+
+    if (!pta)
+        return (L_DNAHASH *)ERROR_PTR("pta not defined", __func__, NULL);
+
+        /* Build up dnaHash of indices, hashed by a key that is
+         * a large linear combination of x and y values designed to
+         * randomize the key.  Having about 20 pts in each bucket is
+         * roughly optimal for speed for large sets. */
+    n = ptaGetCount(pta);
+    findNextLargerPrime(n / 20, &nsize);  /* buckets in hash table */
+
+        /* Add each point, using the hash as key and the index into
+         * %ptas as the value.  Storing the index enables operations
+         * that check for duplicates. */
+    dahash = l_dnaHashCreate(nsize, 8);
+    for (i = 0; i < n; i++) {
+        ptaGetIPt(pta, i, &x, &y);
+        l_hashPtToUint64(x, y, &key);
+        l_dnaHashAdd(dahash, key, (l_float64)i);
+    }
+
+    return dahash;
+}
+
+
+/*----------------------------------------------------------------------*
+ *               Set operations on sarray using hashing                 *
+ *----------------------------------------------------------------------*/
+/*!
+ * \brief   sarrayRemoveDupsByHash()
+ *
+ * \param[in]    sas
+ * \param[out]   psad      unique set of strings; duplicates removed
+ * \param[out]   pdahash   [optional] dnahash used for lookup
+ * \return  0 if OK, 1 on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) Generates a sarray with unique values.
+ *      (2) The dnahash is built up with sad to assure uniqueness.
+ *          It can be used to find if a string is in the set:
+ *              sarrayFindValByHash(sad, dahash, str, &index)
+ *      (3) The hash of the string location is simple and fast.  It scales
+ *          up with the number of buckets to insure a fairly random
+ *          bucket selection input strings.
+ *      (4) This is faster than sarrayRemoveDupsByAset(), because the
+ *          bucket lookup is O(n), although there is a double-loop
+ *          lookup within the dna in each bucket.
+ * </pre>
+ */
+l_ok
+sarrayRemoveDupsByHash(SARRAY      *sas,
+                       SARRAY     **psad,
+                       L_DNAHASH  **pdahash)
+{
+char       *str;
+l_int32     i, n, index, items;
+l_uint32    nsize;
+l_uint64    key;
+SARRAY     *sad;
+L_DNAHASH  *dahash;
+
+    if (pdahash) *pdahash = NULL;
+    if (!psad)
+        return ERROR_INT("&sad not defined", __func__, 1);
+    *psad = NULL;
+    if (!sas)
+        return ERROR_INT("sas not defined", __func__, 1);
+
+    n = sarrayGetCount(sas);
+    findNextLargerPrime(n / 20, &nsize);  /* buckets in hash table */
+    dahash = l_dnaHashCreate(nsize, 8);
+    sad = sarrayCreate(n);
+    *psad = sad;
+    for (i = 0, items = 0; i < n; i++) {
+        str = sarrayGetString(sas, i, L_NOCOPY);
+        sarrayFindStringByHash(sad, dahash, str, &index);
+        if (index < 0) {  /* not found */
+            l_hashStringToUint64(str, &key);
+            l_dnaHashAdd(dahash, key, (l_float64)items);
+            sarrayAddString(sad, str, L_COPY);
+            items++;
+        }
+    }
+
+    if (pdahash)
+        *pdahash = dahash;
+    else
+        l_dnaHashDestroy(&dahash);
+    return 0;
+}
+
+
+/*!
+ * \brief   sarrayIntersectionByHash()
+ *
+ * \param[in]    sa1, sa2
+ * \return  sad  intersection of the strings, or NULL on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) This is faster than sarrayIntersectionByAset(), because the
+ *          bucket lookup is O(n).
+ * </pre>
+ */
+SARRAY *
+sarrayIntersectionByHash(SARRAY  *sa1,
+                         SARRAY  *sa2)
+{
+char       *str;
+l_int32     n1, n2, nsmall, i, index1, index2;
+l_uint32    nsize2;
+l_uint64    key;
+L_DNAHASH  *dahash1, *dahash2;
+SARRAY     *sa_small, *sa_big, *sad;
+
+    if (!sa1)
+        return (SARRAY *)ERROR_PTR("sa1 not defined", __func__, NULL);
+    if (!sa2)
+        return (SARRAY *)ERROR_PTR("sa2 not defined", __func__, NULL);
+
+        /* Put the elements of the biggest sarray into a dnahash */
+    n1 = sarrayGetCount(sa1);
+    n2 = sarrayGetCount(sa2);
+    sa_small = (n1 < n2) ? sa1 : sa2;   /* do not destroy sa_small */
+    sa_big = (n1 < n2) ? sa2 : sa1;   /* do not destroy sa_big */
+    dahash1 = l_dnaHashCreateFromSarray(sa_big);
+
+        /* Build up the intersection of strings.  Add to %sad
+         * if the string is in sa_big (using dahash1) but hasn't
+         * yet been seen in the traversal of sa_small (using dahash2). */
+    sad = sarrayCreate(0);
+    nsmall = sarrayGetCount(sa_small);
+    findNextLargerPrime(nsmall / 20, &nsize2);  /* buckets in hash table */
+    dahash2 = l_dnaHashCreate(nsize2, 0);
+    for (i = 0; i < nsmall; i++) {
+        str = sarrayGetString(sa_small, i, L_NOCOPY);
+        sarrayFindStringByHash(sa_big, dahash1, str, &index1);
+        if (index1 >= 0) {
+            sarrayFindStringByHash(sa_small, dahash2, str, &index2);
+            if (index2 == -1) {
+                sarrayAddString(sad, str, L_COPY);
+                l_hashStringToUint64(str, &key);
+                l_dnaHashAdd(dahash2, key, (l_float64)i);
+            }
+        }
+    }
+
+    l_dnaHashDestroy(&dahash1);
+    l_dnaHashDestroy(&dahash2);
+    return sad;
+}
+
+
+/*!
+ * \brief   sarrayFindStringByHash()
+ *
+ * \param[in]    sa
+ * \param[in]    dahash   built from sa
+ * \param[in]    str      arbitrary string
+ * \param[out]   pindex   index into %sa if %str is in %sa; -1 otherwise
+ * \return  0 if OK, 1 on error
+ *
+ * <pre>
+ * Notes:
+ *      (1) Fast lookup in dnaHash associated with a sarray, to see if a
+ *          random string %str is already stored in the hash table.
+ *      (2) We use a strong hash function to minimize the chance that
+ *          two different strings hash to the same key value.
+ *      (3) We select the number of buckets to be about 5% of the size
+ *          of the input sarray, so that when fully populated, each
+ *          bucket (dna) will have about 20 entries, each being an index
+ *          into sa.  In lookup, after hashing to the key, and then
+ *          again to the bucket, we traverse the bucket (dna), using the
+ *          index into sa to check if %str has been found before.
+ * </pre>
+ */
+l_ok
+sarrayFindStringByHash(SARRAY      *sa,
+                       L_DNAHASH   *dahash,
+                       const char  *str,
+                       l_int32     *pindex)
+{
+char     *stri;
+l_int32   i, nvals, index;
+l_uint64  key;
+L_DNA    *da;
+
+    if (!pindex)
+        return ERROR_INT("&index not defined", __func__, 1);
+    *pindex = -1;
+    if (!sa)
+        return ERROR_INT("sa not defined", __func__, 1);
+    if (!dahash)
+        return ERROR_INT("dahash not defined", __func__, 1);
+
+    l_hashStringToUint64(str, &key);
+    da = l_dnaHashGetDna(dahash, key, L_NOCOPY);
+    if (!da) return 0;
+
+        /* Run through the da, looking for this string */
+    nvals = l_dnaGetCount(da);
+    for (i = 0; i < nvals; i++) {
+        l_dnaGetIValue(da, i, &index);
+        stri = sarrayGetString(sa, index, L_NOCOPY);
+        if (!strcmp(str, stri)) {  /* duplicate */
+            *pindex = index;
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
+
+/*!
+ * \brief   l_dnaHashCreateFromSarray()
+ *
+ * \param[in]    sa
+ * \return  dahash, or NULL on error
+ */
+L_DNAHASH *
+l_dnaHashCreateFromSarray(SARRAY  *sa)
+{
+char       *str;
+l_int32     i, n;
+l_uint32    nsize;
+l_uint64    key;
+L_DNAHASH  *dahash;
+
+        /* Build up dnaHash of indices, hashed by a 64-bit key that
+         * should randomize the lower bits used in bucket selection.
+         * Having about 20 pts in each bucket is roughly optimal. */
+    n = sarrayGetCount(sa);
+    findNextLargerPrime(n / 20, &nsize);  /* buckets in hash table */
+/*    lept_stderr("Prime used: %d\n", nsize); */
+
+        /* Add each string, using the hash as key and the index into %sa
+         * as the value.  Storing the index enables operations that check
+         * for duplicates.  */
+    dahash = l_dnaHashCreate(nsize, 8);
+    for (i = 0; i < n; i++) {
+        str = sarrayGetString(sa, i, L_NOCOPY);
+        l_hashStringToUint64(str, &key);
+        l_dnaHashAdd(dahash, key, (l_float64)i);
+    }
+
+    return dahash;
+}
+

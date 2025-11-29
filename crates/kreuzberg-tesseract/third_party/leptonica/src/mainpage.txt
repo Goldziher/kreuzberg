@@ -1,0 +1,47 @@
+/*!
+ * \mainpage Leptonica Main Page
+ *
+ * \section intro Introduction
+ * Leptonica is a pedagogically-oriented open source site containing
+ * software that is broadly useful for image processing and image analysis applications.
+ *
+ * \section features Featured operations are
+ * 
+ * + Rasterop (a.k.a. bitblt)
+ * + Affine transformations (scaling, translation, rotation, shear) on images of arbitrary pixel depth
+ * + Binary and grayscale morphology, rank order, and convolution
+ * + Seedfill and connected components
+ * + Image transformations combining changes in scale and pixel depth
+ * + Pixelwise masking, blending, enhancement, arithmetic ops, etc.
+ * + Ancillary operations include
+ *
+ * + I/O for standard image formats
+ * + Utilities to handle arrays of image-related data types
+ * + Utilities for generic stacks, queues, heaps and lists;
+ * + and for byte queues and arrays of numbers and strings
+ *
+ * \section examples Example applications include
+ *
+ * + Octcube-based color quantization, with and without dithering
+ * + Modified median-cut color quantization, with and without dithering
+ * + Skew determination of text images
+ * + Segmentation of page images with mixed text and images
+ * + jbig2 unsupervised classifier
+ * + Border representations of 1 bit/pixel images and raster conversion for SVG
+ * + PostScript generation (levels 1, 2, 3) of images for device-independent output
+ * + PDF generation (levels 1, 2) of images for device-independent output
+ * + Dewarping images of text taken with a camera
+ * + Book-adaptive text recognition
+ * + Rendering text on an image
+ * + Connectivity-preserving thinning and thickening of 1 bit/pixel images
+ * + Line removal from a grayscale sketch
+ * + Search for least-cost paths on binary and grayscale images
+ *
+ * \section homepage More information on Leptonica's homepage
+ *
+ * http://www.leptonica.com/
+ *
+ * \section contact For questions and suggestions contact
+ *
+ * Dan Bloomberg (bloomberg 'at' ieee 'dot' org)
+ */

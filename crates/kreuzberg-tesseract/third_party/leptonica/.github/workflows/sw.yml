@@ -1,0 +1,54 @@
+name: sw
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**/CMakeLists.txt'
+      - '.github/*'
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - '**/CMakeLists.txt'
+      - '.github/*'
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest   
+    steps:
+    - uses: actions/checkout@v4
+    - uses: egorpugin/sw-action@master
+    - run: ./sw build -static -shared -config d,r
+    
+  linux:
+    runs-on: ubuntu-22.04
+    container: fedora:latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: prepare
+      run: |
+        sudo dnf -y update
+        sudo dnf -y install cmake which g++ clang clang-tools-extra lld
+    - uses: egorpugin/sw-action@master
+    - run: ./sw build -static -shared -config d,r
+   
+  macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: egorpugin/sw-action@master
+    - name: install
+      run: |
+        brew update
+        brew install flex bison gcc llvm
+    - name: build
+      run: |      
+        export PATH="/opt/homebrew/opt/bison/bin:$PATH"
+        export PATH="/opt/homebrew/opt/flex/bin:$PATH"
+        export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+        export PATH="/opt/homebrew/opt/gcc/bin:$PATH"
+        ./sw build -static -shared -config d,r -compiler gcc
+        

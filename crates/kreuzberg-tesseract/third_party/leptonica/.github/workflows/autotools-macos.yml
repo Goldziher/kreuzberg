@@ -1,0 +1,64 @@
+name: autotools-macos
+
+# autotools build and unit tests of Leptonica on macOS Homebrew.
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - '**.c'
+      - '**.h'
+      - 'm4/*.m4'
+      - 'Makefile.am'
+      - 'autogen.sh'
+      - 'configure.ac'
+
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**/CMakeLists.txt'
+      - '.github/*'
+
+  # Trigger workflow in GitHub web frontend or from API.
+  workflow_dispatch:
+
+jobs:
+
+  brew:
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { os: macos-13, cc: clang }
+          - { os: macos-latest, cc: clang }
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Display compiler version and latest Git history
+      run: |
+           ${{ matrix.config.cc }} --version
+           git log -3 --pretty=format:'%h %ad %s | %an'
+
+    - name: Install dependencies
+      run: |
+           brew install automake gnuplot libtool || true
+
+    - name: Setup Leptonica
+      run: |
+           ./autogen.sh
+
+    - name: Configure Leptonica
+      run: |
+           ./configure 'CC=${{ matrix.config.cc }}'
+
+    - name: Make and install Leptonica
+      run: |
+           make
+           sudo make install
+
+    - name: Make and run unit tests
+      run: |
+           make check

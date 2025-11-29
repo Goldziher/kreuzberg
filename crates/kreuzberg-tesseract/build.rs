@@ -6,55 +6,31 @@ mod build_tesseract {
     use std::env;
     use std::fs;
     use std::path::{Path, PathBuf};
-    use std::thread;
-    use std::time::Duration;
+
+    // Windows MAX_PATH (260 character) workarounds:
+    // 1. Use temp directory for cache instead of deeply nested gem paths in Ruby on Windows
+    //    Ruby on Windows creates paths like: C:\hostedtoolcache\windows\Ruby\x.y.z\x64\lib\ruby\gems\...
+    // 2. Use NMake generator instead of Visual Studio to avoid generator-specific path nesting
+    // 3. Disable CMAKE_CL_SHOWINCLUDES_PREFIX to reduce file tracker log file paths
+    // 4. Disable incremental linking (/INCREMENTAL:NO) to avoid .ilk file path issues
+    // 5. Support TESSERACT_RS_CACHE_DIR environment variable for custom short paths
 
     // Use specific release versions for stability
     const LEPTONICA_VERSION: &str = "1.86.0";
     const TESSERACT_VERSION: &str = "5.5.1";
-    const MAX_DOWNLOAD_ATTEMPTS: u32 = 4;
-    const RETRY_DELAY_SECS: u64 = 5;
 
-    fn leptonica_urls() -> Vec<String> {
-        if let Ok(url) = env::var("TESSERACT_LEPTONICA_URL") {
-            return vec![url];
-        }
-
-        vec![
-            format!(
-                "https://codeload.github.com/DanBloomberg/leptonica/zip/refs/tags/{}",
-                LEPTONICA_VERSION
-            ),
-            format!(
-                "https://github.com/DanBloomberg/leptonica/archive/refs/tags/{}.tar.gz",
-                LEPTONICA_VERSION
-            ),
-            format!(
-                "https://www.leptonica.org/source/leptonica-{}.tar.gz",
-                LEPTONICA_VERSION
-            ),
-            format!(
-                "https://github.com/DanBloomberg/leptonica/archive/refs/tags/{}.zip",
-                LEPTONICA_VERSION
-            ),
-        ]
+    fn leptonica_url() -> String {
+        format!(
+            "https://github.com/DanBloomberg/leptonica/archive/refs/tags/{}.zip",
+            LEPTONICA_VERSION
+        )
     }
 
-    fn tesseract_urls() -> Vec<String> {
-        if let Ok(url) = env::var("TESSERACT_ARCHIVE_URL") {
-            return vec![url];
-        }
-
-        vec![
-            format!(
-                "https://codeload.github.com/tesseract-ocr/tesseract/zip/refs/tags/{}",
-                TESSERACT_VERSION
-            ),
-            format!(
-                "https://github.com/tesseract-ocr/tesseract/archive/refs/tags/{}.zip",
-                TESSERACT_VERSION
-            ),
-        ]
+    fn tesseract_url() -> String {
+        format!(
+            "https://github.com/tesseract-ocr/tesseract/archive/refs/tags/{}.zip",
+            TESSERACT_VERSION
+        )
     }
 
     fn workspace_cache_dir_from_out_dir() -> Option<PathBuf> {
@@ -97,11 +73,9 @@ mod build_tesseract {
             });
             PathBuf::from(home_dir).join(".tesseract-rs")
         } else if cfg!(target_os = "windows") {
-            env::var("APPDATA")
-                .or_else(|_| env::var("USERPROFILE").map(|p| format!("{}\\AppData\\Roaming", p)))
-                .map(PathBuf::from)
-                .expect("Neither APPDATA nor USERPROFILE environment variable set")
-                .join("tesseract-rs")
+            // Windows MAX_PATH (260 char) handling: use shortest possible path
+            // Use C:\tess as the absolute shortest path to avoid path length issues
+            PathBuf::from("C:\\tess")
         } else {
             panic!("Unsupported operating system");
         }
@@ -140,22 +114,20 @@ mod build_tesseract {
         let project_dir = custom_out_dir.clone();
         let third_party_dir = project_dir.join("third_party");
 
-        let leptonica_sources = leptonica_urls();
         let leptonica_dir = if third_party_dir.join("leptonica").exists() {
             println!("cargo:warning=Using existing leptonica source");
             third_party_dir.join("leptonica")
         } else {
             fs::create_dir_all(&third_party_dir).expect("Failed to create third_party directory");
-            download_and_extract(&third_party_dir, &leptonica_sources, "leptonica")
+            download_and_extract(&third_party_dir, &leptonica_url(), "leptonica")
         };
 
-        let tesseract_sources = tesseract_urls();
         let tesseract_dir = if third_party_dir.join("tesseract").exists() {
             println!("cargo:warning=Using existing tesseract source");
             third_party_dir.join("tesseract")
         } else {
             fs::create_dir_all(&third_party_dir).expect("Failed to create third_party directory");
-            download_and_extract(&third_party_dir, &tesseract_sources, "tesseract")
+            download_and_extract(&third_party_dir, &tesseract_url(), "tesseract")
         };
 
         let (cmake_cxx_flags, additional_defines) = get_os_specific_config();
@@ -206,12 +178,14 @@ mod build_tesseract {
                 std::fs::write(makefile_static_path, makefile_static).expect("Failed to write makefile.static");
             }
 
-            // Configure build tools
+            // Configure build tools for Windows
             if cfg!(target_os = "windows") {
-                // Use NMake on Windows for better compatibility
+                // Use NMake on Windows to avoid Visual Studio generator path length issues
                 if let Ok(_vs_install_dir) = env::var("VSINSTALLDIR") {
                     leptonica_config.generator("NMake Makefiles");
                 }
+                // Disable multi-tool task to reduce intermediate path depth
+                leptonica_config.define("CMAKE_CL_SHOWINCLUDES_PREFIX", "");
             }
 
             // Only use sccache if not in CI
@@ -275,12 +249,14 @@ mod build_tesseract {
             std::fs::write(&cmakelists_path, cmakelists).expect("Failed to write CMakeLists.txt");
 
             let mut tesseract_config = Config::new(&tesseract_dir);
-            // Configure build tools
+            // Configure build tools for Windows
             if cfg!(target_os = "windows") {
-                // Use NMake on Windows for better compatibility
+                // Use NMake on Windows to avoid Visual Studio generator path length issues
                 if let Ok(_vs_install_dir) = env::var("VSINSTALLDIR") {
                     tesseract_config.generator("NMake Makefiles");
                 }
+                // Disable multi-tool task to reduce intermediate path depth
+                tesseract_config.define("CMAKE_CL_SHOWINCLUDES_PREFIX", "");
             }
 
             // Only use sccache if not in CI
@@ -435,6 +411,17 @@ mod build_tesseract {
         cmake_cxx_flags.push_str("-DUSE_STD_NAMESPACE ");
         additional_defines.push(("CMAKE_POSITION_INDEPENDENT_CODE".to_string(), "ON".to_string()));
 
+        // Windows-specific path length mitigation
+        if cfg!(target_os = "windows") && cfg!(target_env = "msvc") {
+            // MSVC-specific flags to reduce intermediate path depth
+            // /d2Zi+ uses shorter symbol names, /permissive- speeds up and uses less space
+            cmake_cxx_flags.push_str("/permissive- ");
+            // Disable incremental linking which creates longer paths
+            additional_defines.push(("CMAKE_EXE_LINKER_FLAGS".to_string(), "/INCREMENTAL:NO".to_string()));
+            additional_defines.push(("CMAKE_SHARED_LINKER_FLAGS".to_string(), "/INCREMENTAL:NO".to_string()));
+            additional_defines.push(("CMAKE_MODULE_LINKER_FLAGS".to_string(), "/INCREMENTAL:NO".to_string()));
+        }
+
         (cmake_cxx_flags, additional_defines)
     }
 
@@ -468,14 +455,30 @@ mod build_tesseract {
         println!("cargo:rustc-link-search=native={}", env::var("OUT_DIR").unwrap());
     }
 
-    fn download_and_extract(target_dir: &Path, urls: &[String], name: &str) -> PathBuf {
+    fn download_and_extract(target_dir: &Path, url: &str, name: &str) -> PathBuf {
+        use reqwest::blocking::Client;
         use zip::ZipArchive;
 
         fs::create_dir_all(target_dir).expect("Failed to create target directory");
 
-        let (content, archive_ext) = download_bytes_from_urls(urls, name);
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(300))
+            .build()
+            .expect("Failed to create HTTP client");
 
-        let temp_file = target_dir.join(format!("{}.{}", name, archive_ext));
+        println!("cargo:warning=Downloading {} from {}", name, url);
+        let mut response = client.get(url).send().expect("Failed to download archive");
+
+        if !response.status().is_success() {
+            panic!("Failed to download {}: HTTP {}", name, response.status());
+        }
+
+        let mut content = Vec::new();
+        response.copy_to(&mut content).expect("Failed to read archive content");
+
+        println!("cargo:warning=Downloaded {} bytes for {}", content.len(), name);
+
+        let temp_file = target_dir.join(format!("{}.zip", name));
         fs::write(&temp_file, content).expect("Failed to write archive to file");
 
         let extract_dir = target_dir.join(name);
@@ -484,205 +487,38 @@ mod build_tesseract {
         }
         fs::create_dir_all(&extract_dir).expect("Failed to create extraction directory");
 
-        match archive_ext.as_str() {
-            "zip" => {
-                let mut archive = ZipArchive::new(fs::File::open(&temp_file).unwrap()).unwrap();
+        let mut archive = ZipArchive::new(fs::File::open(&temp_file).unwrap()).unwrap();
 
-                // Extract files, ignoring the top-level directory
-                for i in 0..archive.len() {
-                    let mut file = archive.by_index(i).unwrap();
-                    let file_path = file.mangled_name();
-                    let file_path = file_path.to_str().unwrap();
+        // Extract files, ignoring the top-level directory
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).unwrap();
+            let file_path = file.mangled_name();
+            let file_path = file_path.to_str().unwrap();
 
-                    // Skip the top-level directory
-                    let path = Path::new(file_path);
-                    let path = path.strip_prefix(path.components().next().unwrap()).unwrap();
+            // Skip the top-level directory
+            let path = Path::new(file_path);
+            let path = path.strip_prefix(path.components().next().unwrap()).unwrap();
 
-                    if path.as_os_str().is_empty() {
-                        continue;
-                    }
-
-                    let target_path = extract_dir.join(path);
-
-                    if file.is_dir() {
-                        fs::create_dir_all(target_path).unwrap();
-                    } else {
-                        if let Some(parent) = target_path.parent() {
-                            fs::create_dir_all(parent).unwrap();
-                        }
-                        let mut outfile = fs::File::create(target_path).unwrap();
-                        std::io::copy(&mut file, &mut outfile).unwrap();
-                    }
-                }
+            if path.as_os_str().is_empty() {
+                continue;
             }
-            "tar.gz" | "tgz" => {
-                let file = fs::File::open(&temp_file).unwrap();
-                let gz = flate2::read::GzDecoder::new(file);
-                let mut archive = tar::Archive::new(gz);
-                for entry in archive.entries().unwrap() {
-                    let mut entry = entry.unwrap();
-                    let path = entry.path().unwrap();
-                    let mut comps = path.components();
-                    comps.next(); // strip top-level dir
-                    let stripped = comps.as_path();
-                    if stripped.as_os_str().is_empty() {
-                        continue;
-                    }
-                    let target_path = extract_dir.join(stripped);
-                    let parent = target_path.parent().unwrap();
+
+            let target_path = extract_dir.join(path);
+
+            if file.is_dir() {
+                fs::create_dir_all(target_path).unwrap();
+            } else {
+                if let Some(parent) = target_path.parent() {
                     fs::create_dir_all(parent).unwrap();
-                    entry.unpack(&target_path).unwrap();
                 }
+                let mut outfile = fs::File::create(target_path).unwrap();
+                std::io::copy(&mut file, &mut outfile).unwrap();
             }
-            other => panic!("Unsupported archive extension for {}: {}", name, other),
         }
 
-        fs::remove_file(temp_file).expect("Failed to remove temporary archive file");
+        fs::remove_file(temp_file).expect("Failed to remove temporary zip file");
 
         extract_dir
-    }
-
-    fn infer_extension(url: &str) -> &str {
-        if url.ends_with(".tar.gz") {
-            "tar.gz"
-        } else if url.ends_with(".tgz") {
-            "tgz"
-        } else {
-            "zip"
-        }
-    }
-
-    fn download_bytes_from_urls(urls: &[String], name: &str) -> (Vec<u8>, String) {
-        use reqwest::blocking::Client;
-
-        let user_agent = format!(
-            "kreuzberg-tesseract/{} ({}/{})",
-            env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "dev".to_string()),
-            env::var("CARGO_CFG_TARGET_OS").unwrap_or_else(|_| "unknown-os".to_string()),
-            env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_else(|_| "unknown-arch".to_string()),
-        );
-
-        let client = Client::builder()
-            .timeout(Duration::from_secs(300))
-            .connect_timeout(Duration::from_secs(30))
-            .user_agent(user_agent)
-            .build()
-            .expect("Failed to create HTTP client");
-
-        let mut errors = Vec::new();
-
-        for url in urls {
-            for attempt in 1..=MAX_DOWNLOAD_ATTEMPTS {
-                println!(
-                    "cargo:warning=Downloading {} (attempt {}/{}) from {}",
-                    name, attempt, MAX_DOWNLOAD_ATTEMPTS, url
-                );
-
-                match download_from_url(&client, url) {
-                    Ok(content) => {
-                        println!(
-                            "cargo:warning=Downloaded {} bytes for {} from {}",
-                            content.len(),
-                            name,
-                            url
-                        );
-                        return (content, infer_extension(url).to_string());
-                    }
-                    Err(err) => {
-                        println!(
-                            "cargo:warning=Download failed for {} from {} (attempt {}): {}",
-                            name, url, attempt, err.message
-                        );
-                        errors.push(format!("{} attempt {}: {}", url, attempt, err.message));
-
-                        if attempt == MAX_DOWNLOAD_ATTEMPTS || !err.retryable {
-                            println!("cargo:warning=Giving up on {} after {} attempt(s)", url, attempt);
-                            break;
-                        }
-
-                        let delay = compute_retry_delay(attempt);
-                        println!("cargo:warning=Retrying {} from {} in {}s", name, url, delay.as_secs());
-                        thread::sleep(delay);
-                    }
-                }
-            }
-        }
-
-        panic!(
-            "Failed to download {} after trying {} mirror(s).\nErrors:\n{}",
-            name,
-            urls.len(),
-            errors.join("\n")
-        );
-    }
-
-    fn compute_retry_delay(attempt: u32) -> Duration {
-        if attempt == 0 {
-            return Duration::from_secs(RETRY_DELAY_SECS);
-        }
-        let exponent = attempt.saturating_sub(1).min(10);
-        let backoff = 1u64 << exponent;
-        Duration::from_secs(RETRY_DELAY_SECS.saturating_mul(backoff))
-    }
-
-    struct DownloadError {
-        message: String,
-        retryable: bool,
-    }
-
-    impl DownloadError {
-        fn new(message: impl Into<String>, retryable: bool) -> Self {
-            Self {
-                message: message.into(),
-                retryable,
-            }
-        }
-
-        fn transient(message: impl Into<String>) -> Self {
-            Self::new(message, true)
-        }
-    }
-
-    fn download_from_url(client: &reqwest::blocking::Client, url: &str) -> Result<Vec<u8>, DownloadError> {
-        if !(url.starts_with("http://") || url.starts_with("https://")) {
-            return Err(DownloadError::new(format!("Unsupported URL scheme for {}", url), false));
-        }
-
-        let mut response = client
-            .get(url)
-            .send()
-            .map_err(|err| DownloadError::transient(format!("Request error: {}", err)))?;
-
-        let status = response.status();
-        if !status.is_success() {
-            return Err(DownloadError::new(
-                format!("HTTP {} from {}", status, url),
-                should_retry_status(status),
-            ));
-        }
-
-        let mut content = Vec::new();
-        response
-            .copy_to(&mut content)
-            .map_err(|err| DownloadError::transient(format!("Failed to read response: {}", err)))?;
-
-        if content.is_empty() {
-            return Err(DownloadError::transient(format!("Received empty payload from {}", url)));
-        }
-
-        Ok(content)
-    }
-
-    fn should_retry_status(status: reqwest::StatusCode) -> bool {
-        status.is_server_error()
-            || matches!(
-                status,
-                reqwest::StatusCode::TOO_MANY_REQUESTS
-                    | reqwest::StatusCode::REQUEST_TIMEOUT
-                    | reqwest::StatusCode::BAD_GATEWAY
-                    | reqwest::StatusCode::SERVICE_UNAVAILABLE
-                    | reqwest::StatusCode::GATEWAY_TIMEOUT
-            )
     }
 
     fn normalize_cmake_path(path: &Path) -> String {
@@ -694,38 +530,27 @@ mod build_tesseract {
         fs::create_dir_all(&tessdata_dir).expect("Failed to create Tessdata directory");
 
         let languages = ["eng", "tur"];
+        let base_url = "https://github.com/tesseract-ocr/tessdata_best/raw/main/";
+        let client = reqwest::blocking::Client::new();
 
         for lang in &languages {
             let filename = format!("{}.traineddata", lang);
             let file_path = tessdata_dir.join(&filename);
 
-            if file_path.exists() {
+            if !file_path.exists() {
+                let url = format!("{}{}", base_url, filename);
+                let response = client.get(&url).send().expect("Failed to download Tessdata");
+                let mut dest = fs::File::create(&file_path).expect("Failed to create file");
+                std::io::copy(
+                    &mut response.bytes().expect("Failed to get response bytes").as_ref(),
+                    &mut dest,
+                )
+                .expect("Failed to write Tessdata");
+                println!("cargo:warning={} downloaded", filename);
+            } else {
                 println!("cargo:warning={} already exists, skipping download", filename);
-                continue;
             }
-
-            let urls = tessdata_urls(lang);
-            let bytes = download_bytes_from_urls(&urls, &format!("tessdata {}", lang));
-            std::fs::write(&file_path, &bytes).expect("Failed to write Tessdata file");
-            println!("cargo:warning={} downloaded", filename);
         }
-    }
-
-    fn tessdata_urls(lang: &str) -> Vec<String> {
-        if let Ok(base) = env::var("TESSERACT_TESSDATA_BASE_URL") {
-            return vec![format!("{}/{}.traineddata", base.trim_end_matches('/'), lang)];
-        }
-
-        vec![
-            format!(
-                "https://github.com/tesseract-ocr/tessdata_best/raw/main/{}.traineddata",
-                lang
-            ),
-            format!(
-                "https://raw.githubusercontent.com/tesseract-ocr/tessdata_best/main/{}.traineddata",
-                lang
-            ),
-        ]
     }
 
     fn clean_cache(cache_dir: &Path) {

@@ -1,0 +1,21 @@
+%!PS
+%  chars-16.ps
+
+/inch {72 mul} def
+/Palatino-Roman
+16 72 div inch
+selectfont
+
+% 25 chars in first row: 33-57
+0.3 inch 2.0 inch moveto
+3. 0. (!"#$%&'()*+,-./0123456789) ashow
+
+% 34 chars in second row: 58-91
+0.3 inch 1.4 inch moveto
+3. 0. (:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[) ashow
+
+% 34 chars in third row: 93-126
+0.3 inch 0.8 inch moveto
+3. 0. (]^_`abcdefghijklmnopqrstuvwxyz{|}~)  ashow
+
+showpage

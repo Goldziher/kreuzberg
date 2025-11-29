@@ -23,7 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 async-trait = "0.1"
 base64 = "0.22"
-html-to-markdown-rs = { version = "2.9.1", default-features = false }
+html-to-markdown-rs = { version = "2.9.2", default-features = false }
 
 [build-dependencies]
 napi-build = "2.2"

@@ -1,0 +1,35 @@
+# flipsels.txt
+#
+#    Example file for reading Sels from file in
+#    a simple format.  These Sels are also defined
+#    in flipdetect.c and compiled into strings there.
+#
+
+textsel1
+"x  oo "
+"x oOo "
+"x  o  "
+"x     "
+"xxxxxx"
+
+textsel2
+" oo  x"
+" oOo x"
+"  o  x"
+"     x"
+"xxxxxx"
+
+textsel3
+"xxxxxx"
+"x     "
+"x  o  "
+"x oOo "
+"x  oo "
+
+textsel4
+"xxxxxx"
+"     x"
+"  o  x"
+" oOo x"
+" oo  x"
+

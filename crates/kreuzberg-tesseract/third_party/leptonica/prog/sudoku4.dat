@@ -1,0 +1,13 @@
+# sudoku4.dat
+#  Easter Monster (rating 99408 -- whatever that is)
+#  Req: 2.4M guesses, about 0.7 sec
+#  from http://en.wikipedia.org/wiki/Algorithmics_of_sudoku
+1 0 0 0 0 0 0 0 2
+0 9 0 4 0 0 0 5 0
+0 0 6 0 0 0 7 0 0
+0 5 0 9 0 3 0 0 0
+0 0 0 0 7 0 0 0 0
+0 0 0 8 5 0 0 4 0
+7 0 0 0 0 0 6 0 0
+0 3 0 0 0 9 0 8 0
+0 0 2 0 0 0 0 0 1
