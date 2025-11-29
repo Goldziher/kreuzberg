@@ -18,10 +18,6 @@ runs:
         path: |
           ${{ runner.temp }}/onnxruntime
         key: onnx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ort-version }}
-        restore-keys: |
-          # Exact version match only to prevent loading wrong ORT version
-          # Removed overly permissive restore-key pattern that could cause old versions to be restored
-          # (e.g., 1.17.1 when 1.23.2 is required)
 
     - name: Prepare ONNX Runtime (Linux)
       if: runner.os == 'Linux'

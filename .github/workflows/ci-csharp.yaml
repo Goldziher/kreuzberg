@@ -79,7 +79,10 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: csharp-ffi-lib-${{ matrix.os }}
-          path: target/release/libkreuzberg_ffi*
+          path: |
+            target/release/libkreuzberg_ffi.dylib
+            target/release/libkreuzberg_ffi.so
+            target/release/kreuzberg_ffi.dll
           retention-days: 7
 
       - name: Cleanup Rust cache
