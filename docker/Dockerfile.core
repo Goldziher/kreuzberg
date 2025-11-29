@@ -1,7 +1,7 @@
 # =============================================================================
 # Builder Stage - Build Rust binary with all dependencies
 # =============================================================================
-FROM rust:1.90-trixie AS builder
+FROM rust:1.91-trixie AS builder
 
 WORKDIR /build
 
