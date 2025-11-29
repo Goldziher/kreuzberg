@@ -178,12 +178,14 @@ nav:
       - Advanced Features: guides/advanced.md
       - Docker Deployment: guides/docker.md
       - Creating Plugins: guides/plugins.md
+      - C# Bindings: guides/csharp.md
   - CLI: cli/usage.md
   - API Server: guides/api-server.md
   - API Reference:
       - Python: reference/api-python.md
       - TypeScript: reference/api-typescript.md
       - Go: reference/api-go.md
+      - Java: reference/api-java.md
       - Rust: reference/api-rust.md
       - Ruby: reference/api-ruby.md
       - Configuration: reference/configuration.md

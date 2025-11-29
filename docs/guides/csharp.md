@@ -815,4 +815,4 @@ For large documents, consider:
 
 ## License
 
-MIT License - see [LICENSE](../../LICENSE) for details.
+MIT License - see the [LICENSE](https://github.com/Goldziher/kreuzberg/blob/main/LICENSE) file in the repository for details.
