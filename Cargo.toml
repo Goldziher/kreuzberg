@@ -25,7 +25,7 @@ rb-sys = { git = "https://github.com/oxidize-rb/rb-sys", rev = "acca8a7feac415f4
 [workspace.package]
 version = "4.0.0-rc.1"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.91"
 authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/Goldziher/kreuzberg"
