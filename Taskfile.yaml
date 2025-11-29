@@ -403,7 +403,7 @@ tasks:
     dir: packages/typescript
     cmds:
       - cd ../../crates/kreuzberg-node && pnpm install && pnpm build
-      - cd ../../packages/typescript && pnpm install
+      - pnpm install
       - pnpm vitest run --root ../../e2e/typescript/tests
   e2e:ts:verify:
     desc: Regenerate and validate TypeScript E2E suite (generate + lint + test)

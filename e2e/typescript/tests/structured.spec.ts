@@ -3,8 +3,8 @@
 import { existsSync } from "node:fs";
 import { describe, it } from "vitest";
 import { assertions, buildConfig, resolveDocument, shouldSkipFixture } from "./helpers.js";
-import { extractFileSync } from "kreuzberg-node";
-import type { ExtractionResult } from "kreuzberg-node";
+import { extractFileSync } from "kreuzberg";
+import type { ExtractionResult } from "kreuzberg";
 
 const TEST_TIMEOUT_MS = 60_000;
 

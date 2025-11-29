@@ -25,7 +25,7 @@ public static class TestHelpers
     private static string ResolveWorkspaceRoot()
     {
         var cwd = Directory.GetCurrentDirectory();
-        var root = Path.GetFullPath(Path.Combine(cwd, "..", ".."));
+        var root = Path.GetFullPath(Path.Combine(cwd, "..", "..", ".."));
         return root;
     }
 

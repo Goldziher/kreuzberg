@@ -440,8 +440,8 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
         buffer,
         "import {{ assertions, buildConfig, resolveDocument, shouldSkipFixture }} from \"./helpers.js\";"
     )?;
-    writeln!(buffer, "import {{ extractFileSync }} from \"kreuzberg-node\";")?;
-    writeln!(buffer, "import type {{ ExtractionResult }} from \"kreuzberg-node\";\n")?;
+    writeln!(buffer, "import {{ extractFileSync }} from \"kreuzberg\";")?;
+    writeln!(buffer, "import type {{ ExtractionResult }} from \"kreuzberg\";\n")?;
     writeln!(buffer, "const TEST_TIMEOUT_MS = 60_000;\n")?;
 
     writeln!(buffer, "describe(\"{category} fixtures\", () => {{")?;
@@ -676,7 +676,7 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], src_dir: &Utf8Path) -> Resul
     writeln!(buffer, "import * as os from \"node:os\";")?;
     writeln!(buffer, "import * as path from \"node:path\";")?;
     writeln!(buffer, "import {{ describe, expect, it }} from \"vitest\";")?;
-    writeln!(buffer, "import * as kreuzberg from \"kreuzberg-node\";")?;
+    writeln!(buffer, "import * as kreuzberg from \"kreuzberg\";")?;
     writeln!(buffer)?;
 
     // Group fixtures by api_category

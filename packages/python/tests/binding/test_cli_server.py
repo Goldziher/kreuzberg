@@ -21,33 +21,47 @@ def _get_free_port() -> int:
 @pytest.mark.timeout(30)
 def test_serve_command_help() -> None:
     """Test that serve command help is accessible via Python CLI proxy."""
-    result = subprocess.run(
+    process = subprocess.Popen(
         [sys.executable, "-m", "kreuzberg", "serve", "--help"],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        check=False,
     )
 
-    assert result.returncode == 0
-    assert "Start the API server" in result.stdout
-    assert "--host" in result.stdout
-    assert "--port" in result.stdout
-    assert "--config" in result.stdout
+    try:
+        stdout, stderr = process.communicate(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        stdout, stderr = process.communicate()
+        raise
+
+    assert process.returncode == 0
+    assert "Start the API server" in stdout
+    assert "--host" in stdout
+    assert "--port" in stdout
+    assert "--config" in stdout
 
 
 @pytest.mark.timeout(30)
 def test_mcp_command_help() -> None:
     """Test that mcp command help is accessible via Python CLI proxy."""
-    result = subprocess.run(
+    process = subprocess.Popen(
         [sys.executable, "-m", "kreuzberg", "mcp", "--help"],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        check=False,
     )
 
-    assert result.returncode == 0
-    assert "Start the MCP (Model Context Protocol) server" in result.stdout
-    assert "--config" in result.stdout
+    try:
+        stdout, stderr = process.communicate(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        stdout, stderr = process.communicate()
+        raise
+
+    assert process.returncode == 0
+    assert "Start the MCP (Model Context Protocol) server" in stdout
+    assert "--config" in stdout
 
 
 @pytest.mark.integration
