@@ -35,19 +35,24 @@ def _iter_dev_cli_candidates(workspace_root: Path) -> list[Path]:
 
 
 def _binary_supports_subcommand(binary: Path, subcommand: str) -> bool:
-    probe = subprocess.run(
-        [str(binary), subcommand, "--help"],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=5,
-    )
+    try:
+        probe = subprocess.run(
+            [str(binary), subcommand, "--help"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=2,
+        )
 
-    if probe.returncode == 0:
-        return True
+        if probe.returncode == 0:
+            return True
 
-    stderr = probe.stderr.lower()
-    return subcommand not in stderr or "unrecognized subcommand" not in stderr
+        stderr = probe.stderr.lower()
+        return subcommand not in stderr or "unrecognized subcommand" not in stderr
+    except subprocess.TimeoutExpired:
+        # If the help command times out, assume the binary doesn't support
+        # this subcommand or is too slow. Return False to skip it.
+        return False
 
 
 def _build_cli_with_features(workspace_root: Path, feature: str) -> None:
