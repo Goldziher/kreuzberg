@@ -40,6 +40,7 @@ def _binary_supports_subcommand(binary: Path, subcommand: str) -> bool:
         capture_output=True,
         text=True,
         check=False,
+        timeout=5,
     )
 
     if probe.returncode == 0:

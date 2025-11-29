@@ -484,8 +484,15 @@ async fn test_quality_processing_disabled() {
 }
 
 /// Test chunking with embeddings using balanced preset.
+///
+/// This test requires ONNX Runtime to be installed as a system dependency.
+/// On macOS with Homebrew: `brew install onnxruntime`
+/// On Linux: Install via your package manager or download from https://github.com/microsoft/onnxruntime/releases
+/// On Windows: Download from https://github.com/microsoft/onnxruntime/releases
 #[tokio::test]
 #[cfg(feature = "embeddings")]
+#[cfg_attr(target_os = "macos", ignore = "ONNX models not cached on macOS")]
+#[cfg_attr(target_os = "windows", ignore = "ONNX models not cached on Windows")]
 async fn test_chunking_with_embeddings() {
     use kreuzberg::core::config::EmbeddingConfig;
 
@@ -543,8 +550,15 @@ async fn test_chunking_with_embeddings() {
 }
 
 /// Test chunking with fast embedding preset.
+///
+/// This test requires ONNX Runtime to be installed as a system dependency.
+/// On macOS with Homebrew: `brew install onnxruntime`
+/// On Linux: Install via your package manager or download from https://github.com/microsoft/onnxruntime/releases
+/// On Windows: Download from https://github.com/microsoft/onnxruntime/releases
 #[tokio::test]
 #[cfg(feature = "embeddings")]
+#[cfg_attr(target_os = "macos", ignore = "ONNX models not cached on macOS")]
+#[cfg_attr(target_os = "windows", ignore = "ONNX models not cached on Windows")]
 async fn test_chunking_with_fast_embeddings() {
     use kreuzberg::core::config::{EmbeddingConfig, EmbeddingModelType};
 
@@ -572,6 +586,10 @@ async fn test_chunking_with_fast_embeddings() {
 
     let chunks = result.chunks.expect("Should have chunks");
     assert!(!chunks.is_empty(), "Should have at least one chunk");
+
+    if let Some(error) = result.metadata.additional.get("embedding_error") {
+        panic!("Embedding generation failed: {}", error);
+    }
 
     for chunk in &chunks {
         let embedding = chunk.embedding.as_ref().expect("Should have embedding");
