@@ -3,31 +3,31 @@ name: CI Ruby
 on:
   push:
     branches: [main]
-    paths:
-      - 'crates/kreuzberg/**'
-      - 'crates/kreuzberg-ffi/**'
-      - 'crates/kreuzberg-tesseract/**'
-      - 'packages/ruby/**'
-      - 'e2e/ruby/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'Gemfile'
-      - 'Gemfile.lock'
-      - 'packages/ruby/Rakefile'
-      - '.github/workflows/ci-ruby.yaml'
+    # paths:
+    #   - 'crates/kreuzberg/**'
+    #   - 'crates/kreuzberg-ffi/**'
+    #   - 'crates/kreuzberg-tesseract/**'
+    #   - 'packages/ruby/**'
+    #   - 'e2e/ruby/**'
+    #   - 'Cargo.toml'
+    #   - 'Cargo.lock'
+    #   - 'Gemfile'
+    #   - 'Gemfile.lock'
+    #   - 'packages/ruby/Rakefile'
+    #   - '.github/workflows/ci-ruby.yaml'
   pull_request:
     branches: [main]
-    paths:
-      - 'crates/kreuzberg/**'
-      - 'crates/kreuzberg-ffi/**'
-      - 'crates/kreuzberg-tesseract/**'
-      - 'packages/ruby/**'
-      - 'e2e/ruby/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'Gemfile'
-      - 'Gemfile.lock'
-      - 'packages/ruby/Rakefile'
+    # paths:
+    #   - 'crates/kreuzberg/**'
+    #   - 'crates/kreuzberg-ffi/**'
+    #   - 'crates/kreuzberg-tesseract/**'
+    #   - 'packages/ruby/**'
+    #   - 'e2e/ruby/**'
+    #   - 'Cargo.toml'
+    #   - 'Cargo.lock'
+    #   - 'Gemfile'
+    #   - 'Gemfile.lock'
+    #   - 'packages/ruby/Rakefile'
       - '.github/workflows/ci-ruby.yaml'
 
 concurrency:

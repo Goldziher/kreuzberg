@@ -3,28 +3,28 @@ name: CI Java
 on:
   push:
     branches: [main]
-    paths:
-      - 'crates/kreuzberg/**'
-      - 'crates/kreuzberg-ffi/**'
-      - 'crates/kreuzberg-tesseract/**'
-      - 'packages/java/**'
-      - 'e2e/java/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'packages/java/pom.xml'
-      - '.github/workflows/ci-java.yaml'
+    # paths:
+    #   - 'crates/kreuzberg/**'
+    #   - 'crates/kreuzberg-ffi/**'
+    #   - 'crates/kreuzberg-tesseract/**'
+    #   - 'packages/java/**'
+    #   - 'e2e/java/**'
+    #   - 'Cargo.toml'
+    #   - 'Cargo.lock'
+    #   - 'packages/java/pom.xml'
+    #   - '.github/workflows/ci-java.yaml'
   pull_request:
     branches: [main]
-    paths:
-      - 'crates/kreuzberg/**'
-      - 'crates/kreuzberg-ffi/**'
-      - 'crates/kreuzberg-tesseract/**'
-      - 'packages/java/**'
-      - 'e2e/java/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'packages/java/pom.xml'
-      - '.github/workflows/ci-java.yaml'
+    # paths:
+    #   - 'crates/kreuzberg/**'
+    #   - 'crates/kreuzberg-ffi/**'
+    #   - 'crates/kreuzberg-tesseract/**'
+    #   - 'packages/java/**'
+    #   - 'e2e/java/**'
+    #   - 'Cargo.toml'
+    #   - 'Cargo.lock'
+    #   - 'packages/java/pom.xml'
+    #   - '.github/workflows/ci-java.yaml'
 
 concurrency:
   group: ci-java-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
