@@ -20,9 +20,6 @@ on:
         description: "Comma-separated list of release targets (all, python, node, ruby, cli, crates, docker, homebrew, java, csharp)"
         required: false
         type: string
-  push:
-    tags:
-      - "v*"
   release:
     types: [published]
   repository_dispatch:
