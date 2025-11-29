@@ -99,7 +99,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -155,7 +155,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -221,7 +221,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -287,7 +287,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -353,7 +353,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -377,7 +377,7 @@ jobs:
           pnpm run build --target x86_64-unknown-linux-gnu
           pkg=$(pnpm pack | tail -n1 | tr -d '\r')
           cd ../..
-          pnpm install "crates/kreuzberg-node/${pkg}"
+          pnpm install -w "crates/kreuzberg-node/${pkg}"
 
       - name: Run benchmark
         env:
@@ -422,7 +422,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -446,7 +446,7 @@ jobs:
           pnpm run build --target x86_64-unknown-linux-gnu
           pkg=$(pnpm pack | tail -n1 | tr -d '\r')
           cd ../..
-          pnpm install "crates/kreuzberg-node/${pkg}"
+          pnpm install -w "crates/kreuzberg-node/${pkg}"
 
       - name: Run benchmark
         env:
@@ -491,7 +491,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -558,7 +558,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -625,7 +625,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -691,7 +691,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -757,7 +757,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -823,7 +823,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -839,7 +839,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Build C# bindings
         working-directory: packages/csharp
@@ -888,7 +888,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -953,7 +953,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1018,7 +1018,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1083,7 +1083,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1148,7 +1148,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
-          path: target
+          path: target/release
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
