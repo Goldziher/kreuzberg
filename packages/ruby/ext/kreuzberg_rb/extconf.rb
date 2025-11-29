@@ -4,6 +4,15 @@ require 'mkmf'
 require 'rb_sys/mkmf'
 require 'rbconfig'
 
+# Set shorter build directory for Windows to avoid MAX_PATH issues
+if Gem.win_platform?
+  # Use a much shorter path to avoid Windows MAX_PATH (260 char) limit
+  short_target_dir = 'D:/kz-build'
+  ENV['CARGO_TARGET_DIR'] = short_target_dir
+  ENV['OUT_DIR'] = short_target_dir
+  puts "Windows detected: Using short build path #{short_target_dir}"
+end
+
 if /mswin|mingw/.match?(RbConfig::CONFIG['host_os'])
   devkit = ENV.fetch('RI_DEVKIT', nil)
   prefix = ENV['MSYSTEM_PREFIX'] || '/ucrt64'

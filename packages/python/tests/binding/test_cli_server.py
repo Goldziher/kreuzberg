@@ -29,10 +29,10 @@ def test_serve_command_help() -> None:
     )
 
     try:
-        stdout, stderr = process.communicate(timeout=10)
+        stdout, _ = process.communicate(timeout=10)
     except subprocess.TimeoutExpired:
         process.kill()
-        stdout, stderr = process.communicate()
+        stdout, _ = process.communicate()
         raise
 
     assert process.returncode == 0
@@ -53,10 +53,10 @@ def test_mcp_command_help() -> None:
     )
 
     try:
-        stdout, stderr = process.communicate(timeout=10)
+        stdout, _ = process.communicate(timeout=10)
     except subprocess.TimeoutExpired:
         process.kill()
-        stdout, stderr = process.communicate()
+        stdout, _ = process.communicate()
         raise
 
     assert process.returncode == 0

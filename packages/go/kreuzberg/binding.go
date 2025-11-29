@@ -19,7 +19,7 @@ const char *kreuzberg_last_error(void);
 const char *kreuzberg_version(void);
 
 // Function declarations for explicit type resolution on Windows
-void kreuzberg_free_string(const char *ptr);
+void kreuzberg_free_string(char *ptr);
 void kreuzberg_free_result(CExtractionResult *result);
 void kreuzberg_free_batch_result(CBatchResult *batch);
 CExtractionResult *kreuzberg_extract_file_sync(const char *path);
@@ -28,13 +28,13 @@ CExtractionResult *kreuzberg_extract_bytes_sync(const uint8_t *data, uintptr_t d
 CExtractionResult *kreuzberg_extract_bytes_sync_with_config(const uint8_t *data, uintptr_t data_len, const char *mime_type, const char *config_json);
 CBatchResult *kreuzberg_batch_extract_files_sync(const char * const *paths, uintptr_t count, const char *config_json);
 CBatchResult *kreuzberg_batch_extract_bytes_sync(const CBytesWithMime *items, uintptr_t count, const char *config_json);
-const char *kreuzberg_detect_mime_type_from_bytes(const uint8_t *data, uintptr_t data_len);
-const char *kreuzberg_detect_mime_type_from_path(const char *path);
-const char *kreuzberg_get_extensions_for_mime(const char *mime_type);
-const char *kreuzberg_validate_mime_type(const char *mime_type);
-const char *kreuzberg_load_extraction_config_from_file(const char *path);
-const char *kreuzberg_list_embedding_presets(void);
-const char *kreuzberg_get_embedding_preset(const char *name);
+char *kreuzberg_detect_mime_type_from_bytes(const uint8_t *data, uintptr_t data_len);
+char *kreuzberg_detect_mime_type_from_path(const char *path);
+char *kreuzberg_get_extensions_for_mime(const char *mime_type);
+char *kreuzberg_validate_mime_type(const char *mime_type);
+char *kreuzberg_load_extraction_config_from_file(const char *path);
+char *kreuzberg_list_embedding_presets(void);
+char *kreuzberg_get_embedding_preset(const char *name);
 */
 import "C"
 

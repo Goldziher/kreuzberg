@@ -24,9 +24,29 @@ public static class TestHelpers
 
     private static string ResolveWorkspaceRoot()
     {
-        var cwd = Directory.GetCurrentDirectory();
-        var root = Path.GetFullPath(Path.Combine(cwd, "..", "..", ".."));
-        return root;
+        // Use assembly location instead of unpredictable cwd
+        var assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+        var assemblyDir = Path.GetDirectoryName(assemblyPath)
+            ?? throw new InvalidOperationException("Cannot determine assembly directory");
+
+        // Navigate from: bin/Release/net10.0 -> bin -> Release -> e2e/csharp -> e2e -> workspace root
+        // Try 4 levels up first (typical for published/release builds)
+        var candidate = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", "..", ".."));
+        if (File.Exists(Path.Combine(candidate, "Cargo.toml")))
+            return candidate;
+
+        // Try 3 levels up (for debug builds or different configurations)
+        candidate = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", ".."));
+        if (File.Exists(Path.Combine(candidate, "Cargo.toml")))
+            return candidate;
+
+        // Last resort: try 2 levels up (if running from e2e/csharp directly)
+        candidate = Path.GetFullPath(Path.Combine(assemblyDir, "..", ".."));
+        if (File.Exists(Path.Combine(candidate, "Cargo.toml")))
+            return candidate;
+
+        throw new InvalidOperationException(
+            $"Cannot locate workspace root from assembly path: {assemblyPath}");
     }
 
     private static void EnsureNativeLibraryLoaded()
