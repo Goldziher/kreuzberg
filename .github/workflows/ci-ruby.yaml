@@ -1,6 +1,6 @@
 name: CI Ruby
 
-on:
+'on':
   push:
     branches: [main]
     # paths:
@@ -28,7 +28,7 @@ on:
     #   - 'Gemfile'
     #   - 'Gemfile.lock'
     #   - 'packages/ruby/Rakefile'
-      - '.github/workflows/ci-ruby.yaml'
+    #   - '.github/workflows/ci-ruby.yaml'
 
 concurrency:
   group: ci-ruby-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
