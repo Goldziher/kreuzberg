@@ -579,7 +579,7 @@ jobs:
           target: ${{ matrix.settings.target }}
 
       - name: Install Node dependencies
-        run: pnpm install --filter kreuzberg --filter kreuzberg-node
+        run: pnpm install --filter @kreuzberg/node...
 
       - name: Clean npm directory
         if: runner.os != 'Windows'
@@ -1632,7 +1632,7 @@ jobs:
 
       - name: Install workspace dependencies
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: pnpm install --filter kreuzberg --filter kreuzberg-node
+        run: pnpm install --filter @kreuzberg/node...
 
       - name: Pack platform packages
         run: |
