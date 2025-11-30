@@ -49,18 +49,18 @@
 	--md-typeset-a-hover-color: #58fbda;
 
 	/* BACKGROUNDS */
-	--md-default-bg-color: #323040;
-	--md-default-bg-color--light: #3c3a4a;
-	--md-default-bg-color--dark: #2a2836;
+	--md-default-bg-color: #1D1D21;
+	--md-default-bg-color--light: #2a2836;
+	--md-default-bg-color--dark: #1D1D21;
 
 	/* SURFACES */
-	--md-primary-bg-color: #323040;
+	--md-primary-bg-color: #1D1D21;
 	--md-shadow-z1: none;
 }
 
 /* Code Block Styling - Dark Mode Code Card Style */
 [data-md-color-scheme="slate"] .highlight {
-	background-color: #323040;
+	background-color: #F1FFFC;
 	border-radius: 12px;
 	padding: 1rem;
 	margin-bottom: 1.5rem;
@@ -68,7 +68,7 @@
 
 [data-md-color-scheme="slate"] .highlight pre {
 	background-color: transparent;
-	color: #ffffff;
+	color: #323040;
 	margin: 0;
 	font-size: 14px;
 	line-height: 1.6;
@@ -76,12 +76,12 @@
 
 [data-md-color-scheme="slate"] .highlight code {
 	background-color: transparent;
-	color: #ffffff;
+	color: #323040;
 }
 
 /* Code Block Styling - Light Mode Code Card Style */
 [data-md-color-scheme="default"] .highlight {
-	background-color: #f1fffc;
+	background-color: #323040;
 	border-radius: 12px;
 	padding: 1rem;
 	margin-bottom: 2rem;
@@ -89,7 +89,7 @@
 
 [data-md-color-scheme="default"] .highlight pre {
 	background-color: transparent;
-	color: #323040;
+	color: #FFFFFF;
 	margin: 0;
 	font-size: 14px;
 	line-height: 1.6;
@@ -97,7 +97,7 @@
 
 [data-md-color-scheme="default"] .highlight code {
 	background-color: transparent;
-	color: #323040;
+	color: #FFFFFF;
 }
 
 /* Inline code styling */
