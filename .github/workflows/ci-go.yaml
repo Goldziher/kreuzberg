@@ -74,6 +74,8 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           choco install mingw --version=13.2.0 --allow-downgrade -y
+          # Remove Strawberry Perl GCC from PATH to avoid conflicts with MinGW
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notlike '*Strawberry*' }) -join ';'
           echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
         shell: pwsh
 
@@ -183,6 +185,8 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           choco install mingw --version=13.2.0 --allow-downgrade -y
+          # Remove Strawberry Perl GCC from PATH to avoid conflicts with MinGW
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notlike '*Strawberry*' }) -join ';'
           echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
         shell: pwsh
 
