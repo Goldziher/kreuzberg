@@ -127,7 +127,7 @@ rmcp = { version = "0.9.1", features = ["server", "macros", "base64", "transport
 # Observability features (optional)
 opentelemetry = { version = "0.31", features = ["trace"], optional = true }
 opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"], optional = true }
-tracing-opentelemetry = { version = "0.25", optional = true }
+tracing-opentelemetry = { version = "0.32", optional = true }
 infer = "0.19.0"
 
 [dev-dependencies]
@@ -139,7 +139,7 @@ serial_test = "3.2.0"
 anyhow = "1.0"
 tokio-test = "0.4"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.7", features = ["html_reports"] }
 image = { version = "0.25.9", default-features = false, features = ["png"] }
 
 [[bench]]

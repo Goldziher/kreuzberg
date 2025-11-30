@@ -115,6 +115,12 @@
 	},
 	"dependencies": {
 		"@emnapi/runtime": "1.7.1",
+		"@octokit/core": "4.0.0-rc.2",
+		"esbuild": "4.0.0-rc.2",
+		"picomatch": "4.0.0-rc.2",
+		"postcss": "8.5.6",
+		"typanion": "4.0.0-rc.2",
+		"vite": "4.0.0-rc.2",
 		"which": "^6.0.0"
 	},
 	"optionalDependencies": {

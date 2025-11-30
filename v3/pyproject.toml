@@ -88,7 +88,7 @@ optional-dependencies.api = [
 optional-dependencies.chunking = [ "semantic-text-splitter>=0.28" ]
 optional-dependencies.cli = [
   "click>=8.3.1",
-  "rich>=14.2",
+  "rich>=14.2.0",
   "tomli>=2; python_version<'3.11'",
 ]
 optional-dependencies.crypto = [ "playa-pdf[crypto]>=0.7" ]
