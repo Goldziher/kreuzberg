@@ -92,11 +92,25 @@ jobs:
             $env:CGO_CFLAGS = "-I""$workspace/crates/kreuzberg-ffi"" -O2"
             $env:CGO_LDFLAGS = "-L""$ffiPath"" -lkreuzberg_ffi"
             $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
+
+            # Verify MinGW setup
+            Write-Host "=== MinGW Diagnostics ==="
+            Write-Host "GCC version:"
+            & gcc --version
+            Write-Host "`nGCC location:"
+            & where.exe gcc
+            Write-Host "`nCGO environment:"
+            Write-Host "CC=$env:CC"
+            Write-Host "CXX=$env:CXX"
+            Write-Host "CGO_CFLAGS=$env:CGO_CFLAGS"
+            Write-Host "CGO_LDFLAGS=$env:CGO_LDFLAGS"
+            Write-Host "========================`n"
           } else {
             $env:LD_LIBRARY_PATH = "$ffiPath;$env:LD_LIBRARY_PATH"
             $env:DYLD_LIBRARY_PATH = "$ffiPath;$env:DYLD_LIBRARY_PATH"
           }
-          go build -v ./...
+          # Use -x flag for verbose output to diagnose CGO issues
+          go build -x -v ./...
         shell: pwsh
 
       - name: Upload FFI library

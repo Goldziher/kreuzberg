@@ -29,13 +29,21 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: docs
+
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --group doc --no-install-workspace
+        run: |
+          # Install doc dependencies and workspace package
+          # mkdocstrings needs the package installed to generate API docs
+          uv sync --group doc --no-editable
 
       - name: Configure Git for mike
         run: |
@@ -65,6 +73,10 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
 
   deploy:
     needs: build

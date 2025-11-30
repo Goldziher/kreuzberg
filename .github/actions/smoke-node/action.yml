@@ -47,14 +47,30 @@ runs:
         cp -R e2e/smoke/node/. "$tmp"/
         pushd "$tmp" >/dev/null
         cp "$tarball" ./kreuzberg-node.tgz
+
+        # Copy TypeScript package to temp dir and update its dependencies
+        cp -R "${GITHUB_WORKSPACE}/packages/typescript" ./typescript-pkg
+
+        # Update TypeScript package.json to use file: instead of workspace: for kreuzberg-node
         node -e "
           const fs = require('fs');
-          const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
+          const path = require('path');
+
+          // Update TypeScript package dependencies to use local tarball
+          const tsPkg = JSON.parse(fs.readFileSync('typescript-pkg/package.json', 'utf8'));
+          if (tsPkg.dependencies && tsPkg.dependencies['kreuzberg-node']) {
+            tsPkg.dependencies['kreuzberg-node'] = 'file:../kreuzberg-node.tgz';
+          }
+          fs.writeFileSync('typescript-pkg/package.json', JSON.stringify(tsPkg, null, 2) + '\n');
+
+          // Update smoke test package.json to use local typescript package
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           pkg.dependencies = pkg.dependencies || {};
           pkg.dependencies['kreuzberg-node'] = 'file:./kreuzberg-node.tgz';
-          pkg.dependencies['kreuzberg'] = 'file:' + process.env.GITHUB_WORKSPACE + '/packages/typescript';
+          pkg.dependencies['kreuzberg'] = 'file:./typescript-pkg';
           fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
         "
+
         rm -f pnpm-lock.yaml
         pnpm install --no-frozen-lockfile
         pnpm run check
