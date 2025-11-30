@@ -30,6 +30,13 @@ use crate::{KreuzbergError, Result};
 /// - Validator errors bubble up immediately
 /// - Post-processor errors are caught and recorded in metadata
 /// - System errors (IO, RuntimeError equivalents) always bubble up
+#[cfg_attr(feature = "otel", tracing::instrument(
+    skip(result, config),
+    fields(
+        pipeline.stage = "post_processing",
+        content.length = result.content.len(),
+    )
+))]
 pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfig) -> Result<ExtractionResult> {
     let pp_config = config.postprocessor.as_ref();
     let postprocessing_enabled = pp_config.is_none_or(|c| c.enabled);
