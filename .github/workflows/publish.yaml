@@ -599,7 +599,17 @@ jobs:
           TARGET: ${{ matrix.settings.target }}
           USE_CROSS: ${{ matrix.settings.use_cross }}
           USE_NAPI_CROSS: ${{ matrix.settings.use_napi_cross }}
-        run: bash scripts/build_napi_module.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--platform --release --target "$TARGET" --output-dir ./artifacts)
+          if [ "${USE_NAPI_CROSS}" = "true" ]; then
+            args+=(--use-napi-cross)
+          fi
+          if [ "${USE_CROSS}" = "true" ]; then
+            args+=(--use-cross)
+          fi
+          pnpm --filter @kreuzberg/node exec napi build "${args[@]}"
 
       - name: Build native module (Windows)
         if: runner.os == 'Windows'
@@ -618,7 +628,15 @@ jobs:
         if: runner.os != 'Windows'
         env:
           TARGET: ${{ matrix.settings.target }}
-        run: bash scripts/package_node_artifacts.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @kreuzberg/node exec napi artifacts --output-dir ./artifacts
+          if [ ! -d crates/kreuzberg-node/npm ]; then
+            echo "npm artifact directory missing" >&2
+            exit 1
+          fi
+          tar -czf node-bindings-$TARGET.tar.gz -C crates/kreuzberg-node npm
 
       - name: Package artifacts (Windows)
         if: runner.os == 'Windows'
