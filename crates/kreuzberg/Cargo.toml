@@ -47,6 +47,9 @@ keywords = ["keywords-yake", "keywords-rake"]
 api = ["dep:axum", "dep:tower", "dep:tower-http"]
 mcp = ["dep:rmcp"]
 
+# Observability features
+otel = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:tracing-opentelemetry"]
+
 # Convenience bundles
 full = [
     "pdf", "excel", "office", "email", "html", "xml", "archives",
@@ -121,6 +124,10 @@ axum = { version = "0.8", features = ["macros", "json", "multipart"], optional =
 tower = { version = "0.5", optional = true }
 tower-http = { version = "0.6", features = ["cors", "trace", "limit"], optional = true }
 rmcp = { version = "0.9.1", features = ["server", "macros", "base64", "transport-io"], optional = true }
+# Observability features (optional)
+opentelemetry = { version = "0.31", features = ["trace"], optional = true }
+opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"], optional = true }
+tracing-opentelemetry = { version = "0.25", optional = true }
 infer = "0.19.0"
 
 [dev-dependencies]

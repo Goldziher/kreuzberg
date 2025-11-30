@@ -78,6 +78,13 @@ impl Plugin for ImageExtractor {
 
 #[async_trait]
 impl DocumentExtractor for ImageExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
     async fn extract_bytes(
         &self,
         content: &[u8],

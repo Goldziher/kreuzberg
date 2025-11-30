@@ -53,6 +53,13 @@ impl Plugin for PlainTextExtractor {
 
 #[async_trait]
 impl DocumentExtractor for PlainTextExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, _config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
     async fn extract_bytes(
         &self,
         content: &[u8],
@@ -138,6 +145,13 @@ impl Plugin for MarkdownExtractor {
 
 #[async_trait]
 impl DocumentExtractor for MarkdownExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, _config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
     async fn extract_bytes(
         &self,
         content: &[u8],

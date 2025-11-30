@@ -99,6 +99,13 @@ impl Plugin for ExcelExtractor {
 
 #[async_trait]
 impl DocumentExtractor for ExcelExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, _config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
     async fn extract_bytes(
         &self,
         content: &[u8],
@@ -163,6 +170,12 @@ impl DocumentExtractor for ExcelExtractor {
         })
     }
 
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, path, _config),
+        fields(
+            extractor.name = self.name(),
+        )
+    ))]
     async fn extract_file(&self, path: &Path, mime_type: &str, _config: &ExtractionConfig) -> Result<ExtractionResult> {
         let path_str = path
             .to_str()

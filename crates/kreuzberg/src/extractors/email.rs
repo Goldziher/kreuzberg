@@ -44,6 +44,13 @@ impl Plugin for EmailExtractor {
 
 #[async_trait]
 impl DocumentExtractor for EmailExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, _config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
     async fn extract_bytes(
         &self,
         content: &[u8],
@@ -92,6 +99,12 @@ impl DocumentExtractor for EmailExtractor {
         })
     }
 
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, path, config),
+        fields(
+            extractor.name = self.name(),
+        )
+    ))]
     async fn extract_file(&self, path: &Path, mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
         let bytes = tokio::fs::read(path).await?;
         self.extract_bytes(&bytes, mime_type, config).await

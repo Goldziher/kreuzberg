@@ -62,6 +62,13 @@ impl Plugin for PandocExtractor {
 
 #[async_trait]
 impl DocumentExtractor for PandocExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, _config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
     async fn extract_bytes(
         &self,
         content: &[u8],

@@ -101,6 +101,12 @@ fn get_extractor(mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
 /// # Ok(())
 /// # }
 /// ```
+#[cfg_attr(feature = "otel", tracing::instrument(
+    skip(config, path),
+    fields(
+        extraction.path = %path.as_ref().display(),
+    )
+))]
 pub async fn extract_file(
     path: impl AsRef<Path>,
     mime_type: Option<&str>,
@@ -152,6 +158,13 @@ pub async fn extract_file(
 }
 
 /// Extract content from a byte array.
+#[cfg_attr(feature = "otel", tracing::instrument(
+    skip(config, content),
+    fields(
+        extraction.mime_type = mime_type,
+        extraction.size_bytes = content.len(),
+    )
+))]
 pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
     use crate::core::mime;
 
@@ -212,6 +225,12 @@ pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionC
 ///
 /// Individual file errors are captured in the result metadata. System errors
 /// (IO, RuntimeError equivalents) will bubble up and fail the entire batch.
+#[cfg_attr(feature = "otel", tracing::instrument(
+    skip(config, paths),
+    fields(
+        extraction.batch_size = paths.len(),
+    )
+))]
 pub async fn batch_extract_file(
     paths: Vec<impl AsRef<Path>>,
     config: &ExtractionConfig,
@@ -302,6 +321,12 @@ pub async fn batch_extract_file(
 /// # Returns
 ///
 /// A vector of `ExtractionResult` in the same order as the input.
+#[cfg_attr(feature = "otel", tracing::instrument(
+    skip(config, contents),
+    fields(
+        extraction.batch_size = contents.len(),
+    )
+))]
 pub async fn batch_extract_bytes(
     contents: Vec<(&[u8], &str)>,
     config: &ExtractionConfig,

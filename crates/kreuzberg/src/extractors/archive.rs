@@ -126,6 +126,13 @@ impl Plugin for ZipExtractor {
 
 #[async_trait]
 impl DocumentExtractor for ZipExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, _config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
     async fn extract_bytes(
         &self,
         content: &[u8],
@@ -197,6 +204,13 @@ impl Plugin for TarExtractor {
 
 #[async_trait]
 impl DocumentExtractor for TarExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, _config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
     async fn extract_bytes(
         &self,
         content: &[u8],
@@ -273,6 +287,13 @@ impl Plugin for SevenZExtractor {
 
 #[async_trait]
 impl DocumentExtractor for SevenZExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, _config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
     async fn extract_bytes(
         &self,
         content: &[u8],
