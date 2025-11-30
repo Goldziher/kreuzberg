@@ -16,23 +16,35 @@ importers:
         version: 2.3.8
 
   crates/kreuzberg-node:
-    devDependencies:
-      '@napi-rs/cli':
-        specifier: ^3.4.1
-        version: 3.4.1(@emnapi/runtime@1.7.1)(@types/node@24.10.1)
-      '@types/node':
-        specifier: ^24.10.1
-        version: 24.10.1
-
-  packages/typescript:
     dependencies:
-      kreuzberg-node:
-        specifier: workspace:*
-        version: link:../../crates/kreuzberg-node
+      '@emnapi/runtime':
+        specifier: 1.7.1
+        version: 1.7.1
+      '@octokit/core':
+        specifier: 4.0.0-rc.2
+        version: 7.0.6
+      esbuild:
+        specifier: 4.0.0-rc.2
+        version: 0.27.0
+      picomatch:
+        specifier: 4.0.0-rc.2
+        version: 4.0.3
+      postcss:
+        specifier: 8.5.6
+        version: 8.5.6
+      typanion:
+        specifier: 4.0.0-rc.2
+        version: 3.14.0
+      vite:
+        specifier: 4.0.0-rc.2
+        version: 7.2.4(@types/node@24.10.1)
       which:
         specifier: ^6.0.0
         version: 6.0.0
     devDependencies:
+      '@napi-rs/cli':
+        specifier: ^3.4.1
+        version: 3.4.1(@emnapi/runtime@1.7.1)(@types/node@24.10.1)
       '@types/archiver':
         specifier: ^7.0.0
         version: 7.0.0
@@ -2389,7 +2401,6 @@ snapshots:
   '@emnapi/runtime@1.7.1':
     dependencies:
       tslib: 2.8.1
-    optional: true
 
   '@emnapi/wasi-threads@1.1.0':
     dependencies:
@@ -4162,8 +4173,7 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
-  tslib@2.8.1:
-    optional: true
+  tslib@2.8.1: {}
 
   tsup@8.5.1(postcss@8.5.6)(typescript@5.9.3):
     dependencies:
