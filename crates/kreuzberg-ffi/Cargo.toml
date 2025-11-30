@@ -10,7 +10,7 @@ repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://kreuzberg.dev"
 documentation = "https://docs.rs/kreuzberg-ffi"
 readme = "README.md"
-keywords = ["ffi", "bindings", "document", "extraction", "c-api"]
+keywords = ["ffi", "bindings", "document", "extraction", "api"]
 categories = ["development-tools::ffi", "text-processing"]
 
 [lib]

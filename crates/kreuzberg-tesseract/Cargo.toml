@@ -13,8 +13,8 @@ keywords = [
     "tesseract",
     "ocr",
     "bindings",
-    "computer-vision",
-    "text-recognition",
+    "vision",
+    "recognition",
 ]
 categories = ["external-ffi-bindings", "computer-vision", "text-processing"]
 build = "build.rs"
