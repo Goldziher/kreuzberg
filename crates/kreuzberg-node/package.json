@@ -1,84 +1,84 @@
 {
-	"name": "kreuzberg-node",
-	"version": "4.0.0-rc.1",
-	"description": "Kreuzberg document intelligence - Node.js native bindings",
-	"author": {
-		"name": "Na'aman Hirschfeld",
-		"email": "nhirschfeld@gmail.com",
-		"url": "https://kreuzberg.dev"
-	},
-	"homepage": "https://kreuzberg.dev",
-	"bugs": {
-		"url": "https://github.com/Goldziher/kreuzberg/issues"
-	},
-	"main": "index.js",
-	"types": "index.d.ts",
-	"exports": {
-		".": {
-			"types": "./index.d.ts",
-			"require": "./index.js",
-			"import": "./index.js"
-		}
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Goldziher/kreuzberg.git"
-	},
-	"license": "MIT",
-	"keywords": [
-		"document-intelligence",
-		"document-extraction",
-		"text-extraction",
-		"pdf-extraction",
-		"ocr",
-		"pdf",
-		"docx",
-		"xlsx",
-		"pptx",
-		"office-documents",
-		"table-extraction",
-		"metadata-extraction",
-		"rust",
-		"napi",
-		"native",
-		"nodejs"
-	],
-	"files": [
-		"index.js",
-		"*.cjs",
-		"*.d.ts",
-		"*.node",
-		"README.md"
-	],
-	"napi": {
-		"binaryName": "kreuzberg-node",
-		"targets": [
-			"x86_64-apple-darwin",
-			"aarch64-apple-darwin",
-			"x86_64-pc-windows-msvc",
-			"aarch64-pc-windows-msvc",
-			"x86_64-unknown-linux-gnu",
-			"aarch64-unknown-linux-gnu",
-			"armv7-unknown-linux-gnueabihf"
-		]
-	},
-	"engines": {
-		"node": ">= 18"
-	},
-	"publishConfig": {
-		"registry": "https://registry.npmjs.org/",
-		"access": "public"
-	},
-	"scripts": {
-		"artifacts": "napi artifacts",
-		"build": "napi build --platform --release",
-		"build:debug": "napi build --platform",
-		"prepublishOnly": "napi prepublish -t npm",
-		"universal": "napi universal",
-		"version": "napi version"
-	},
-	"devDependencies": {
-		"@napi-rs/cli": "^3.4.1",
-		"@types/node": "^24.10.1"
-	}
+  "name": "kreuzberg-node",
+  "version": "4.0.0-rc.2",
+  "description": "Kreuzberg document intelligence - Node.js native bindings",
+  "author": {
+    "name": "Na'aman Hirschfeld",
+    "email": "nhirschfeld@gmail.com",
+    "url": "https://kreuzberg.dev"
+  },
+  "homepage": "https://kreuzberg.dev",
+  "bugs": {
+    "url": "https://github.com/Goldziher/kreuzberg/issues"
+  },
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./index.js",
+      "import": "./index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Goldziher/kreuzberg.git"
+  },
+  "license": "MIT",
+  "keywords": [
+    "document-intelligence",
+    "document-extraction",
+    "text-extraction",
+    "pdf-extraction",
+    "ocr",
+    "pdf",
+    "docx",
+    "xlsx",
+    "pptx",
+    "office-documents",
+    "table-extraction",
+    "metadata-extraction",
+    "rust",
+    "napi",
+    "native",
+    "nodejs"
+  ],
+  "files": [
+    "index.js",
+    "*.cjs",
+    "*.d.ts",
+    "*.node",
+    "README.md"
+  ],
+  "napi": {
+    "binaryName": "kreuzberg-node",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "aarch64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "armv7-unknown-linux-gnueabihf"
+    ]
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "prepublishOnly": "napi prepublish -t npm",
+    "universal": "napi universal",
+    "version": "napi version"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.4.1",
+    "@types/node": "^24.10.1"
+  }
 }

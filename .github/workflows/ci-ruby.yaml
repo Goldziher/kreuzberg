@@ -83,7 +83,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: ruby-${{ matrix.platform }}
 
       - name: Setup Ruby

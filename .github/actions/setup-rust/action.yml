@@ -24,7 +24,7 @@ inputs:
   use-sccache:
     description: Enable sccache as the Rust compiler wrapper
     required: false
-    default: 'false'
+    default: 'true'
 outputs:
   cache-hit:
     description: Whether the Rust cache was restored

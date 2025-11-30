@@ -4,7 +4,7 @@ requires = [ "maturin>=1,<2" ]
 
 [project]
 name = "kreuzberg"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 description = "High-performance document intelligence library for Python. Extract text, metadata, and structured data from PDFs, Office documents, images, and 50+ formats. Powered by Rust core for 10-50x speed improvements."
 readme = "README.md"
 keywords = [

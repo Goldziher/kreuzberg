@@ -44,7 +44,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: go-${{ matrix.os }}
 
       - name: Setup Go
@@ -71,36 +70,26 @@ jobs:
       - name: Build FFI library
         run: cargo build -p kreuzberg-ffi --release
 
+      - name: Setup MinGW-w64 (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install mingw --version=13.2.0 --allow-downgrade -y
+          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+        shell: pwsh
+
       - name: Build Go bindings
         run: |
           cd packages/go
           $ffiPath = "$PWD/../../target/release"
           $workspace = Resolve-Path "$PWD/../.."
           if ($IsWindows) {
-            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-            $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-            if (-not $vsPath) { throw "MSVC not found via vswhere" }
-            $msvcRoot = Get-ChildItem -Directory -Path (Join-Path $vsPath "VC\Tools\MSVC") | Sort-Object Name -Descending | Select-Object -First 1
-            if (-not $msvcRoot) { throw "MSVC tools not found under $vsPath" }
-            $binPath = Join-Path $msvcRoot.FullName "bin\Hostx64\x64"
-            $vcvars = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
-            $envOutput = cmd /c "`"$vcvars`" ^&^& set"
-            foreach ($line in $envOutput) {
-              $parts = $line -split '=',2
-              if ($parts.Length -eq 2) { [Environment]::SetEnvironmentVariable($parts[0], $parts[1]) }
-            }
-            $llvm = "C:\Program Files\LLVM\bin"
-            # Use cl.exe (MSVC) for better stability with cgo on Windows
-            $env:CC = "cl"
-            $env:CXX = "cl"
-            $env:AR = "lib"
-            $env:PATH = "$binPath;$ffiPath;$env:PATH"
-            $env:LIB = "$ffiPath;$env:LIB"
-            Remove-Item Env:CFLAGS -ErrorAction SilentlyContinue
-            Remove-Item Env:CL -ErrorAction SilentlyContinue
-            Remove-Item Env:_CL_ -ErrorAction SilentlyContinue
-            # Minimize flags: keep include path only, disable warnings-as-errors for MSVC
-            $env:CGO_CFLAGS = "-I""$workspace/crates/kreuzberg-ffi"" -WX-"
+            # Use MinGW-w64 GCC instead of MSVC to avoid CGO flag incompatibility
+            # See: https://github.com/golang/go/issues/75683
+            $env:CC = "gcc"
+            $env:CXX = "g++"
+            $env:AR = "ar"
+            $env:PATH = "$ffiPath;$env:PATH"
+            $env:CGO_CFLAGS = "-I""$workspace/crates/kreuzberg-ffi"" -O2"
             $env:CGO_LDFLAGS = "-L""$ffiPath"" -lkreuzberg_ffi"
             $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
           } else {
@@ -142,7 +131,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: go-tests-${{ matrix.os }}
 
       - name: Setup Go
@@ -176,6 +164,13 @@ jobs:
         with:
           name: go-ffi-lib-${{ matrix.os }}
           path: target/release/
+
+      - name: Setup MinGW-w64 (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install mingw --version=13.2.0 --allow-downgrade -y
+          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+        shell: pwsh
 
       - name: Make FFI library executable
         run: chmod +x target/release/libkreuzberg_ffi.* || true

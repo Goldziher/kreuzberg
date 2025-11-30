@@ -107,7 +107,7 @@ describe("CLI", () => {
 				status: 0,
 				pid: 12345,
 				output: [],
-				stdout: Buffer.from("kreuzberg-cli 4.0.0-rc.1"),
+				stdout: Buffer.from("kreuzberg-cli 4.0.0-rc.2"),
 				stderr: Buffer.from(""),
 				signal: null,
 			});

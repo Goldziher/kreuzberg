@@ -41,7 +41,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: validate
 
       - name: Setup OpenSSL
@@ -73,6 +72,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: '1.25'
+          cache-dependency-path: packages/go/go.sum
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

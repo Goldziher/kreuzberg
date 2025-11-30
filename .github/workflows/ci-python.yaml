@@ -77,7 +77,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: python-${{ matrix.platform }}
           target: ${{ matrix.target }}
 
@@ -148,7 +147,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: python-sdist
 
       - name: Setup Python

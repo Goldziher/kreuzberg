@@ -61,7 +61,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: java-${{ matrix.os }}
 
       - name: Setup Java
@@ -116,7 +115,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: java-tests-${{ matrix.os }}
 
       - name: Cache PDFium

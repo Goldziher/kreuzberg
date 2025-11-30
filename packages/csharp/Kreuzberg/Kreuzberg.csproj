@@ -7,7 +7,7 @@
     <LangVersion>latest</LangVersion>
 
     <PackageId>Goldziher.Kreuzberg</PackageId>
-    <Version>4.0.0-rc.1</Version>
+    <Version>4.0.0-rc.2</Version>
     <Authors>Na'aman Hirschfeld</Authors>
     <Company>Goldziher</Company>
     <Description>High-performance document intelligence library for .NET powered by Rust. Extract text, metadata, and structured content from 50+ file formats including PDF, Office documents, images, HTML, XML, and more. Features OCR support (Tesseract), metadata parsing, table extraction, and async/sync APIs. 10-50x faster than Python alternatives with 60-90% less memory usage.</Description>
@@ -17,7 +17,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>kreuzberg;document;extraction;rust;ffi;pdf;ocr;office;docx;excel;document-processing;document-intelligence;text-extraction;metadata;parsing;tesseract;dotnet;netcore</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Version 4.0.0 Release Candidate 1: Complete rewrite with Rust core, native FFI bindings, async support, improved performance, and expanded format support.</PackageReleaseNotes>
+    <PackageReleaseNotes>Version 4.0.0 Release Candidate 2: C# bindings with .NET 9+ FFM API support, documentation improvements with MkDocs, CI/CD infrastructure fixes, benchmark harness improvements, and comprehensive test suite passing (268+ tests).</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

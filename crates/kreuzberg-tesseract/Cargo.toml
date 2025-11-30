@@ -6,6 +6,8 @@ authors.workspace = true
 description = "Rust bindings for Tesseract OCR with cross-compilation, C++17, and caching improvements"
 license.workspace = true
 repository.workspace = true
+homepage = "https://kreuzberg.dev"
+documentation = "https://docs.kreuzberg.dev"
 readme = "README.md"
 keywords = [
     "tesseract",

@@ -5,6 +5,67 @@ All notable changes to Kreuzberg will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0-rc.2] - 2025-11-30
+
+### Release Candidate 2 - C# Support & Infrastructure Improvements
+
+#### New Features
+
+**C#/.NET Bindings**:
+- Complete C# bindings using .NET 9+ Foreign Function & Memory API
+- Native FFI bridge via `kreuzberg-ffi` C library
+- Supports .NET 9+ on Linux, macOS, and Windows
+- Package: `Kreuzberg` on NuGet (pending publication)
+- Full feature parity with other language bindings
+
+**Documentation Improvements**:
+- New v3 documentation site with MkDocs
+- Comprehensive multi-language code examples for all 7 supported languages
+- API reference documentation for all bindings
+- Migration guides and tutorials
+
+#### Bug Fixes
+
+**CI/CD Fixes**:
+- Fixed all CI workflow failures (ONNX Runtime, Maven dependencies, path triggers)
+- Fixed benchmark harness configuration validation (single-file mode)
+- Added ONNX Runtime installation to all relevant CI workflows
+- Updated Maven plugins to latest compatible versions with enforcer plugin
+
+**Core Library Fixes**:
+- Added lock poisoning recovery to embeddings model cache
+- Improved Tesseract tessdata path detection for Linux systems
+- Fixed Python async test configuration (pytest-asyncio)
+- Resolved Rust formatting issues with edition 2024 let-chain syntax
+
+**Benchmark Harness Improvements**:
+- Added comprehensive adapter registration diagnostics
+- Fixed Tesseract benchmark path resolution
+- Improved Python async benchmark output with performance metrics
+- Added missing `--max-concurrent` parameter validation
+
+**Code Quality**:
+- Fixed Python linting issues (ruff complexity, mypy type parameters)
+- Resolved all clippy warnings
+- Fixed C# generated file formatting
+- Improved error handling across all bindings
+
+#### Developer Experience
+
+**Build System**:
+- Go FFI library and Ruby native extension build fixes
+- Improved build reproducibility
+- Better error messages during compilation
+
+**Testing**:
+- 268+ Rust tests passing
+- 13/13 Java tests passing
+- 32/32 benchmark harness tests passing
+- Fixed 27 Python async test failures
+- Unblocked 250+ tests across all language bindings
+
+---
+
 ## [4.0.0-rc.1] - 2025-11-23
 
 ### Major Release - Complete Architecture Rewrite
@@ -447,6 +508,7 @@ Kreuzberg v4 was a major undertaking. Thank you to all contributors!
 - **Examples**: https://github.com/Goldziher/kreuzberg/tree/v4-dev/examples
 - **Support**: https://github.com/Goldziher/kreuzberg/issues
 
+[4.0.0-rc.2]: https://github.com/Goldziher/kreuzberg/compare/v4.0.0-rc.1...v4.0.0-rc.2
 [4.0.0-rc.1]: https://github.com/Goldziher/kreuzberg/compare/v4.0.0-rc.0...v4.0.0-rc.1
 [4.0.0-rc.0]: https://github.com/Goldziher/kreuzberg/compare/v3.21.0...v4.0.0-rc.0
 [3.22.0]: https://github.com/Goldziher/kreuzberg/compare/v3.21.0...v3.22.0

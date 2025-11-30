@@ -1,11 +1,12 @@
 {
-	"name": "kreuzberg-smoke",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"check": "node smoke.mjs"
-	},
-	"dependencies": {
-		"kreuzberg": "file:../../../packages/typescript"
-	}
+  "name": "kreuzberg-smoke",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node smoke.mjs"
+  },
+  "dependencies": {
+    "kreuzberg": "file:../../../packages/typescript"
+  },
+  "version": "4.0.0-rc.2"
 }

@@ -494,7 +494,7 @@ dependencies = [
 
 [[package]]
 name = "benchmark-harness"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "ahash",
  "async-trait",
@@ -1647,7 +1647,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "e2e-rust"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "async-trait",
  "hex",
@@ -2991,7 +2991,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "ahash",
  "anyhow",
@@ -3013,7 +3013,7 @@ dependencies = [
  "indexmap",
  "infer",
  "kamadak-exif",
- "kreuzberg-tesseract 1.0.0-rc.1",
+ "kreuzberg-tesseract",
  "lazy_static",
  "libc",
  "lopdf",
@@ -3061,7 +3061,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-cli"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -3076,7 +3076,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-e2e-generator"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3093,7 +3093,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-ffi"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "async-trait",
  "cbindgen",
@@ -3107,7 +3107,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-node"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3124,7 +3124,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-py"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "async-trait",
  "html-to-markdown-rs",
@@ -3139,7 +3139,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-rb"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "async-trait",
  "html-to-markdown-rs",
@@ -3153,21 +3153,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-tesseract"
-version = "1.0.0-rc.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b30f3556047862787280ab85a021a387ff6cb6b8bf4ba3b33e4a2ceb70da948e"
-dependencies = [
- "cc",
- "cmake",
- "libc",
- "reqwest",
- "thiserror 2.0.17",
- "zip 6.0.0",
-]
-
-[[package]]
-name = "kreuzberg-tesseract"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 dependencies = [
  "cc",
  "cmake",

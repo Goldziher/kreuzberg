@@ -956,7 +956,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: publish-java
 
       - name: Setup Java
@@ -1631,7 +1630,6 @@ jobs:
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: publish-maven
 
       - name: Setup Java

@@ -64,7 +64,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: csharp-${{ matrix.os }}
 
       - name: Setup .NET

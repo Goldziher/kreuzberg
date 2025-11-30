@@ -75,7 +75,8 @@ public final class KeywordConfig {
       int idx = 0;
       for (Object value : iterable) {
         if (value instanceof Number && idx < 2) {
-          range[idx++] = ((Number) value).intValue();
+          range[idx] = ((Number) value).intValue();
+          idx++;
         }
       }
       builder.ngramRange(range);

@@ -68,7 +68,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: rust-unit-${{ matrix.os }}
           target: ${{ matrix.target }}
 
@@ -129,7 +128,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: rust-e2e
 
       - name: Cache PDFium
@@ -186,7 +184,6 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          use-sccache: false
           cache-key-prefix: cli-${{ matrix.target }}
           target: ${{ matrix.target }}
 

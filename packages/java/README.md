@@ -11,11 +11,11 @@ High-performance document intelligence library for Java with native Rust binding
 - **Image Processing**: Extract and process embedded images
 - **Metadata**: Comprehensive metadata extraction
 - **Fast**: Native Rust implementation for maximum performance
-- **Modern Java**: Uses Java 22+ Foreign Function & Memory API (no JNI)
+- **Modern Java**: Uses Java 25+ Foreign Function & Memory API (no JNI)
 
 ## Requirements
 
-- Java 22 or higher
+- Java 25 or higher
 - Native libraries are bundled with the package
 
 ## Installation
@@ -26,14 +26,14 @@ High-performance document intelligence library for Java with native Rust binding
 <dependency>
     <groupId>dev.kreuzberg</groupId>
     <artifactId>kreuzberg</artifactId>
-    <version>4.0.0-rc.1</version>
+    <version>4.0.0-rc.2</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```gradle
-implementation 'dev.kreuzberg:kreuzberg:4.0.0-rc.1'
+implementation 'dev.kreuzberg:kreuzberg:4.0.0-rc.2'
 ```
 
 ## Usage

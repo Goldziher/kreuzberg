@@ -249,28 +249,28 @@ public static class TestHelpers
             throw new XunitException($"Invalid expectation for {path}: {expectationJson}");
         }
 
-        if (spec.TryGetPropertyValue("eq", out var eq))
+        if (spec.TryGetPropertyValue("eq", out var eq) && eq != null)
         {
             if (!JsonEquals(value, eq))
             {
                 throw new XunitException($"Expected metadata {path} == {eq}, got {value}");
             }
         }
-        if (spec.TryGetPropertyValue("gte", out var gte))
+        if (spec.TryGetPropertyValue("gte", out var gte) && gte != null)
         {
             if (!CompareFloat(value, gte, true))
             {
                 throw new XunitException($"Expected metadata {path} >= {gte}, got {value}");
             }
         }
-        if (spec.TryGetPropertyValue("lte", out var lte))
+        if (spec.TryGetPropertyValue("lte", out var lte) && lte != null)
         {
             if (!CompareFloat(value, lte, false))
             {
                 throw new XunitException($"Expected metadata {path} <= {lte}, got {value}");
             }
         }
-        if (spec.TryGetPropertyValue("contains", out var contains))
+        if (spec.TryGetPropertyValue("contains", out var contains) && contains != null)
         {
             if (!ValueContains(value, contains))
             {
