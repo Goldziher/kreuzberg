@@ -49,7 +49,34 @@ runs:
         echo "Verifying Tesseract language data..."
         tesseract --list-langs
         echo "Checking Tesseract data path..."
-        ls -la /usr/share/tesseract-ocr/5/tessdata/ || ls -la /usr/share/tesseract-ocr/tessdata/ || echo "Tessdata directory not found in standard locations"
+        if [ -d /usr/share/tesseract-ocr/5/tessdata ]; then
+          echo "Found Tesseract 5 tessdata directory:"
+          ls -la /usr/share/tesseract-ocr/5/tessdata/
+          echo "Verifying required language files..."
+          for lang in eng tur deu; do
+            if [ ! -f "/usr/share/tesseract-ocr/5/tessdata/${lang}.traineddata" ]; then
+              echo "ERROR: Missing required language file: ${lang}.traineddata" >&2
+              exit 1
+            else
+              echo "✓ Found ${lang}.traineddata"
+            fi
+          done
+        elif [ -d /usr/share/tesseract-ocr/tessdata ]; then
+          echo "Found Tesseract tessdata directory:"
+          ls -la /usr/share/tesseract-ocr/tessdata/
+          echo "Verifying required language files..."
+          for lang in eng tur deu; do
+            if [ ! -f "/usr/share/tesseract-ocr/tessdata/${lang}.traineddata" ]; then
+              echo "ERROR: Missing required language file: ${lang}.traineddata" >&2
+              exit 1
+            else
+              echo "✓ Found ${lang}.traineddata"
+            fi
+          done
+        else
+          echo "ERROR: Tessdata directory not found in standard locations" >&2
+          exit 1
+        fi
         echo "Testing LibreOffice headless mode..."
         soffice --headless --version || echo "Warning: LibreOffice headless version check failed"
 
