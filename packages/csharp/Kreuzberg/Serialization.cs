@@ -287,7 +287,7 @@ internal static class Serialization
             }
             foreach (var kvp in raw)
             {
-                node[kvp.Key] = kvp.Value;
+                node[kvp.Key] = kvp.Value?.DeepClone();
             }
         }
 
