@@ -3,18 +3,18 @@ name: CI Validate
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'crates/**'
-    #   - 'packages/**'
-    #   - 'tools/**'
-    #   - '.github/workflows/ci-validate.yaml'
+    paths:
+      - 'crates/**'
+      - 'packages/**'
+      - 'tools/**'
+      - '.github/workflows/ci-validate.yaml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'crates/**'
-    #   - 'packages/**'
-    #   - 'tools/**'
-    #   - '.github/workflows/ci-validate.yaml'
+    paths:
+      - 'crates/**'
+      - 'packages/**'
+      - 'tools/**'
+      - '.github/workflows/ci-validate.yaml'
 
 concurrency:
   group: ci-validate-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -92,6 +92,6 @@ jobs:
           path: ~/.cache/prek/
           key: prek-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.pre-commit-config.yaml') }}-v2
 
-      - name: Run unified lint
+      - name: Run lint
         run: task lint
         shell: bash
