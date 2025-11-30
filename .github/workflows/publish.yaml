@@ -305,9 +305,170 @@ jobs:
           path: release-metadata.json
           retention-days: 14
 
+  check-pypi:
+    name: Check if Python package exists on PyPI
+    needs: prepare
+    if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_python == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - name: Check PyPI for existing version
+        id: check
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+
+          # Check if package version exists on PyPI
+          http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://pypi.org/pypi/kreuzberg/${version}/json")
+
+          if [ "$http_code" = "200" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Python package kreuzberg==${version} already exists on PyPI"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Python package kreuzberg==${version} not found on PyPI, will build and publish"
+          fi
+
+  check-npm:
+    name: Check if Node package exists on npm
+    needs: prepare
+    if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_node == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - name: Check npm for existing version
+        id: check
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          package="@kreuzberg/node"
+
+          # npm view returns non-zero if version doesn't exist
+          if npm view "${package}@${version}" version >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Node package ${package}@${version} already exists on npm"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Node package ${package}@${version} not found on npm, will build and publish"
+          fi
+
+  check-rubygems:
+    name: Check if Ruby gem exists on RubyGems
+    needs: prepare
+    if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_ruby == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - name: Check RubyGems for existing version
+        id: check
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+
+          # gem search returns versions that exist
+          if gem search kreuzberg --remote --exact --version "=${version}" | grep -q "kreuzberg (${version})"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Ruby gem kreuzberg ${version} already exists on RubyGems"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Ruby gem kreuzberg ${version} not found on RubyGems, will build and publish"
+          fi
+
+  check-maven:
+    name: Check if Java package exists on Maven Central
+    needs: prepare
+    if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_java == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - name: Check Maven Central for existing version
+        id: check
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          group="dev.kreuzberg"
+          artifact="kreuzberg"
+
+          # Query Maven Central REST API
+          url="https://search.maven.org/solrsearch/select?q=g:${group}+AND+a:${artifact}+AND+v:${version}&rows=1&wt=json"
+          response=$(curl -s "$url")
+
+          count=$(echo "$response" | jq -r '.response.numFound')
+          if [ "$count" -gt 0 ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Java package ${group}:${artifact}:${version} already exists on Maven Central"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Java package ${group}:${artifact}:${version} not found on Maven Central, will build and publish"
+          fi
+
+  check-nuget:
+    name: Check if C# package exists on NuGet
+    needs: prepare
+    if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_csharp == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - name: Check NuGet for existing version
+        id: check
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          package="Kreuzberg"
+
+          # Query NuGet API
+          url="https://api.nuget.org/v3/registration5-semver1/${package,,}/index.json"
+          response=$(curl -s "$url")
+
+          if echo "$response" | jq -e ".items[].items[]?.catalogEntry | select(.version == \"${version}\")" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::NuGet package ${package} ${version} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::NuGet package ${package} ${version} not found, will build and publish"
+          fi
+
+  check-cratesio:
+    name: Check if Rust crate exists on crates.io
+    needs: prepare
+    if: ${{ needs.prepare.outputs.is_tag == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      kreuzberg_exists: ${{ steps.check.outputs.kreuzberg_exists }}
+      tesseract_exists: ${{ steps.check.outputs.tesseract_exists }}
+    steps:
+      - name: Check crates.io for existing versions
+        id: check
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+
+          # Check kreuzberg crate
+          if cargo search kreuzberg --limit 1 | grep -q "kreuzberg = \"${version}\""; then
+            echo "kreuzberg_exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Rust crate kreuzberg ${version} already exists on crates.io"
+          else
+            echo "kreuzberg_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check kreuzberg-tesseract crate
+          if cargo search kreuzberg-tesseract --limit 1 | grep -q "kreuzberg-tesseract = \"${version}\""; then
+            echo "tesseract_exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Rust crate kreuzberg-tesseract ${version} already exists on crates.io"
+          else
+            echo "tesseract_exists=false" >> $GITHUB_OUTPUT
+          fi
+
   python-wheels:
     name: Build Python wheels (${{ matrix.label }})
-    needs: prepare
+    needs: [prepare, check-pypi]
+    if: ${{ needs.prepare.outputs.release_python == 'true' && needs.check-pypi.outputs.exists != 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
@@ -461,7 +622,8 @@ jobs:
 
   python-sdist:
     name: Build Python sdist
-    needs: prepare
+    needs: [prepare, check-pypi]
+    if: ${{ needs.prepare.outputs.release_python == 'true' && needs.check-pypi.outputs.exists != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -499,7 +661,8 @@ jobs:
 
   node-bindings:
     name: Build Node bindings (${{ matrix.settings.target }})
-    needs: prepare
+    needs: [prepare, check-npm]
+    if: ${{ needs.prepare.outputs.release_node == 'true' && needs.check-npm.outputs.exists != 'true' }}
     runs-on: ${{ matrix.settings.os }}
     timeout-minutes: 90
     strategy:
@@ -778,7 +941,8 @@ jobs:
 
   ruby-gem:
     name: Build Ruby gem (${{ matrix.label }})
-    needs: prepare
+    needs: [prepare, check-rubygems]
+    if: ${{ needs.prepare.outputs.release_ruby == 'true' && needs.check-rubygems.outputs.exists != 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -947,8 +1111,8 @@ jobs:
 
   java-package:
     name: Build Java package
-    needs: prepare
-    if: ${{ needs.prepare.outputs.release_java != 'false' }}
+    needs: [prepare, check-maven]
+    if: ${{ needs.prepare.outputs.release_java == 'true' && needs.check-maven.outputs.exists != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -1011,8 +1175,8 @@ jobs:
 
   csharp-package:
     name: Build C# package
-    needs: prepare
-    if: ${{ needs.prepare.outputs.release_csharp != 'false' }}
+    needs: [prepare, check-nuget]
+    if: ${{ needs.prepare.outputs.release_csharp == 'true' && needs.check-nuget.outputs.exists != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1245,19 +1409,15 @@ jobs:
         if: ${{ always() && needs.prepare.outputs.release_docker == 'true' }}
         run: docker rmi kreuzberg-publish:${{ matrix.variant }}-test || true
 
-  upload-release-artifacts:
-    name: Upload release artifacts
-    needs:
-      - prepare
-      - python-wheels
-      - python-sdist
-      - node-bindings
-      - cli-binaries
-      - ruby-gem
-      - java-package
-      - csharp-package
-      # cargo-packages removed - crates.io publishing disabled
-    if: ${{ needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
+  upload-cli-release:
+    name: Upload CLI binaries to GitHub Release
+    needs: [prepare, cli-binaries]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_cli == 'true' &&
+      needs.cli-binaries.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -1273,60 +1433,70 @@ jobs:
         run: |
           set -euo pipefail
           tag="${{ needs.prepare.outputs.tag }}"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists"
-          else
+          if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --title "$tag" --generate-notes
           fi
 
       - name: Download CLI artifacts
-        if: ${{ needs.prepare.outputs.release_cli == 'true' }}
         uses: actions/download-artifact@v6
         with:
           pattern: cli-*
           path: dist/cli
           merge-multiple: true
 
-      - name: Upload CLI binaries to release
-        if: ${{ needs.prepare.outputs.release_cli == 'true' }}
+      - name: Upload CLI binaries (idempotent)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          shopt -s nullglob
-          files=(dist/cli/kreuzberg-cli-*)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No CLI artifacts to upload" >&2
-            exit 1
-          fi
-          for file in "${files[@]}"; do
-            gh release upload ${{ needs.prepare.outputs.tag }} "$file" --clobber
+          for file in dist/cli/kreuzberg-cli-*; do
+            gh release upload "${{ needs.prepare.outputs.tag }}" "$file" --clobber
           done
 
+  upload-csharp-release:
+    name: Upload C# NuGet to GitHub Release
+    needs: [prepare, csharp-package]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_csharp == 'true' &&
+      needs.csharp-package.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Ensure GitHub release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ needs.prepare.outputs.tag }}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --title "$tag" --generate-notes
+          fi
+
       - name: Download C# artifacts
-        if: ${{ needs.prepare.outputs.release_csharp == 'true' }}
         uses: actions/download-artifact@v6
         with:
           name: csharp-nuget
           path: dist/csharp
 
-      - name: Upload C# packages to release
-        if: ${{ needs.prepare.outputs.release_csharp == 'true' }}
+      - name: Upload C# packages (idempotent)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          shopt -s nullglob
-          files=(dist/csharp/*.nupkg)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No C# artifacts to upload" >&2
-            exit 1
-          fi
-          for file in "${files[@]}"; do
-            gh release upload ${{ needs.prepare.outputs.tag }} "$file" --clobber
+          for file in dist/csharp/*.nupkg; do
+            gh release upload "${{ needs.prepare.outputs.tag }}" "$file" --clobber
           done
 
   publish-crates:
     name: Publish crates.io packages
-    needs: [prepare, upload-release-artifacts]
+    needs: [prepare, check-cratesio]
     # DISABLED: crates.io publishing disabled due to git dependencies (fastembed-rs, ort)
     # Language bindings (PyPI, npm, RubyGems, Maven) still include full functionality
     # Users should use git dependency: kreuzberg = { git = "https://github.com/Goldziher/kreuzberg" }
@@ -1472,8 +1642,15 @@ jobs:
 
   publish-pypi:
     name: Publish Python packages to PyPI
-    needs: [prepare, upload-release-artifacts]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_python == 'true' }}
+    needs: [prepare, check-pypi, python-wheels, python-sdist]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_python == 'true' &&
+      needs.check-pypi.outputs.exists != 'true' &&
+      needs.python-wheels.result == 'success' &&
+      needs.python-sdist.result == 'success'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -1510,8 +1687,14 @@ jobs:
 
   publish-rubygems:
     name: Publish Ruby gems
-    needs: [prepare, upload-release-artifacts]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_ruby == 'true' }}
+    needs: [prepare, check-rubygems, ruby-gem]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_ruby == 'true' &&
+      needs.check-rubygems.outputs.exists != 'true' &&
+      needs.ruby-gem.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -1578,8 +1761,14 @@ jobs:
 
   publish-node:
     name: Publish Node packages
-    needs: [prepare, upload-release-artifacts]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_node == 'true' }}
+    needs: [prepare, check-npm, node-bindings]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_node == 'true' &&
+      needs.check-npm.outputs.exists != 'true' &&
+      needs.node-bindings.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -1711,8 +1900,14 @@ jobs:
 
   publish-maven:
     name: Publish Maven packages
-    needs: [prepare, upload-release-artifacts]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_java == 'true' }}
+    needs: [prepare, check-maven, java-package]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_java == 'true' &&
+      needs.check-maven.outputs.exists != 'true' &&
+      needs.java-package.result == 'success'
     runs-on: ubuntu-latest
     env:
       PDFIUM_VERSION: "7529"
@@ -1821,8 +2016,14 @@ jobs:
 
   publish-nuget:
     name: Publish NuGet package
-    needs: [prepare, csharp-package, upload-release-artifacts]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_csharp == 'true' }}
+    needs: [prepare, check-nuget, csharp-package]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_csharp == 'true' &&
+      needs.check-nuget.outputs.exists != 'true' &&
+      needs.csharp-package.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for OIDC trusted publishing
@@ -1862,8 +2063,13 @@ jobs:
 
   publish-homebrew:
     name: Update Homebrew formula
-    needs: [prepare, upload-release-artifacts]
-    if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_homebrew == 'true' }}
+    needs: [prepare, upload-cli-release]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_homebrew == 'true' &&
+      needs.upload-cli-release.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Extract release info
@@ -1896,3 +2102,129 @@ jobs:
             Auto-update from release ${{ steps.release.outputs.tag }}
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}
+
+  release-finalize:
+    name: Finalize release and update notes
+    needs:
+      - prepare
+      - check-pypi
+      - check-npm
+      - check-rubygems
+      - check-maven
+      - check-nuget
+      - check-cratesio
+      - publish-pypi
+      - publish-node
+      - publish-rubygems
+      - publish-maven
+      - publish-nuget
+      - publish-homebrew
+      - publish-docker
+      - upload-cli-release
+      - upload-csharp-release
+    if: always() && needs.prepare.outputs.is_tag == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Aggregate release status
+        id: status
+        run: |
+          python3 - <<'EOF'
+          import os
+
+          # Registry check results
+          registry_checks = {
+              "Python (PyPI)": "${{ needs.check-pypi.outputs.exists }}",
+              "Node (npm)": "${{ needs.check-npm.outputs.exists }}",
+              "Ruby (RubyGems)": "${{ needs.check-rubygems.outputs.exists }}",
+              "Java (Maven)": "${{ needs.check-maven.outputs.exists }}",
+              "C# (NuGet)": "${{ needs.check-nuget.outputs.exists }}",
+          }
+
+          # Publish job results
+          publish_results = {
+              "Python (PyPI)": "${{ needs.publish-pypi.result }}",
+              "Node (npm)": "${{ needs.publish-node.result }}",
+              "Ruby (RubyGems)": "${{ needs.publish-rubygems.result }}",
+              "Java (Maven)": "${{ needs.publish-maven.result }}",
+              "C# (NuGet)": "${{ needs.publish-nuget.result }}",
+              "Homebrew": "${{ needs.publish-homebrew.result }}",
+              "Docker": "${{ needs.publish-docker.result }}",
+              "CLI Release": "${{ needs.upload-cli-release.result }}",
+              "C# Release": "${{ needs.upload-csharp-release.result }}",
+          }
+
+          summary_lines = ["## Release Status for ${{ needs.prepare.outputs.tag }}", ""]
+
+          # Already published (skipped)
+          skipped = [k for k, v in registry_checks.items() if v == "true"]
+          if skipped:
+              summary_lines.append("### ⏭️  Already Published (Skipped)")
+              for item in skipped:
+                  summary_lines.append(f"- {item}")
+              summary_lines.append("")
+
+          # Newly published
+          success = [k for k, v in publish_results.items() if v == "success"]
+          if success:
+              summary_lines.append("### ✅ Published Successfully")
+              for item in success:
+                  summary_lines.append(f"- {item}")
+              summary_lines.append("")
+
+          # Failed
+          failed = [k for k, v in publish_results.items() if v == "failure"]
+          if failed:
+              summary_lines.append("### ❌ Failed")
+              for item in failed:
+                  summary_lines.append(f"- {item}")
+              summary_lines.append("")
+
+          # Skipped due to conditions
+          skipped_cond = [k for k, v in publish_results.items() if v == "skipped"]
+          if skipped_cond:
+              summary_lines.append("### ⊘ Skipped (Not Enabled)")
+              for item in skipped_cond:
+                  summary_lines.append(f"- {item}")
+              summary_lines.append("")
+
+          summary = "\n".join(summary_lines)
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write(summary + "\n")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              escaped = summary.replace("%", "%25").replace("\n", "%0A")
+              f.write(f"release_summary={escaped}\n")
+          EOF
+
+      - name: Checkout
+        if: needs.prepare.outputs.dry_run != 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Update GitHub Release notes
+        if: needs.prepare.outputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ needs.prepare.outputs.tag }}"
+
+          # Get existing release notes
+          existing_notes=$(gh release view "$tag" --json body -q .body 2>/dev/null || echo "")
+
+          # Create the release if it doesn't exist
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --title "$tag" --notes "$existing_notes"
+          fi
+
+          # Append status summary to release notes
+          new_notes="${existing_notes}
+
+---
+
+${{ steps.status.outputs.release_summary }}"
+
+          gh release edit "$tag" --notes "$new_notes"
