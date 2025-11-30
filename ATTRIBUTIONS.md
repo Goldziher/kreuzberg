@@ -4,13 +4,39 @@ This file documents third-party code that has been vendored, adapted, or incorpo
 
 ---
 
+## kreuzberg-tesseract
+
+**Location**: `crates/kreuzberg-tesseract/`
+
+**Original Source**: https://github.com/cafercangundogdu/tesseract-rs
+
+**Original Author**: Cafer Can Gündoğdu
+
+**License**: MIT
+
+**Modifications**: This crate was forked and substantially modified for integration into the Kreuzberg project. Major changes include:
+- Windows MAX_PATH handling improvements
+- Build system optimizations for cross-platform compilation
+- Caching improvements for faster incremental builds
+- CMake configuration updates for Ruby gem compatibility
+- Integration with Kreuzberg workspace standards
+
+The original MIT license is preserved in the crate's LICENSE file. Full attribution to the original author is maintained.
+
+---
+
 ## pptx-to-md
 
 **Original Project**: pptx-to-md (pptx-parser)
+
 **Repository**: https://github.com/nilskruthoff/pptx-parser
+
 **Version**: Based on v0.4.0 (July 2025)
+
 **Author**: Nils Kruthoff
+
 **License**: MIT OR Apache-2.0
+
 **Used in**: `crates/kreuzberg/src/extraction/pptx.rs`
 
 ### Description
@@ -61,4 +87,6 @@ The original project is also licensed under Apache-2.0. The full text of the Apa
 
 ---
 
-*This file will be updated as additional third-party code is incorporated into the project.*
+## Other Dependencies
+
+All other dependencies are listed in the respective `Cargo.toml`, `package.json`, `pyproject.toml`, `Gemfile`, `pom.xml`, and `go.mod` files throughout the project. These are standard dependencies from their respective package registries (crates.io, npm, PyPI, RubyGems, Maven Central, Go modules).
