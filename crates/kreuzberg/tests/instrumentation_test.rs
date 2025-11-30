@@ -3,8 +3,8 @@
 use std::sync::{Arc, Mutex};
 use tracing::Subscriber;
 use tracing::span::{Attributes, Id};
-use tracing_subscriber::layer::{Context, SubscriberExt};
 use tracing_subscriber::Layer;
+use tracing_subscriber::layer::{Context, SubscriberExt};
 use tracing_subscriber::registry::LookupSpan;
 
 /// Simple span name collector for testing.
@@ -72,7 +72,8 @@ async fn test_ocr_instrumentation() {
     // Create a simple test image (1x1 white pixel PNG)
     let mut test_image = Vec::new();
     let img = image::ImageBuffer::from_fn(1, 1, |_, _| image::Rgb([255u8, 255u8, 255u8]));
-    img.write_to(&mut std::io::Cursor::new(&mut test_image), image::ImageFormat::Png).unwrap();
+    img.write_to(&mut std::io::Cursor::new(&mut test_image), image::ImageFormat::Png)
+        .unwrap();
 
     let config = TesseractConfig {
         output_format: "text".to_string(),
@@ -84,7 +85,10 @@ async fn test_ocr_instrumentation() {
     let _ = processor.process_image(&test_image, &config);
 
     let span_names = spans.lock().unwrap();
-    assert!(span_names.contains(&"process_image".to_string()), "Expected 'process_image' span");
+    assert!(
+        span_names.contains(&"process_image".to_string()),
+        "Expected 'process_image' span"
+    );
 }
 
 #[tokio::test]
@@ -103,7 +107,10 @@ async fn test_registry_instrumentation() {
     let _ = registry.get("application/pdf");
 
     let span_names = spans.lock().unwrap();
-    assert!(span_names.contains(&"get".to_string()), "Expected 'get' span from registry");
+    assert!(
+        span_names.contains(&"get".to_string()),
+        "Expected 'get' span from registry"
+    );
 }
 
 #[cfg(all(feature = "pdf", feature = "office"))]
@@ -127,7 +134,10 @@ async fn test_span_hierarchy() {
 
     let span_names = spans.lock().unwrap();
     // Should have extract_bytes span
-    assert!(span_names.contains(&"extract_bytes".to_string()), "Expected 'extract_bytes' span");
+    assert!(
+        span_names.contains(&"extract_bytes".to_string()),
+        "Expected 'extract_bytes' span"
+    );
 }
 
 #[test]
