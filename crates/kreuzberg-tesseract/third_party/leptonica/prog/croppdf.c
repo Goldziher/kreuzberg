@@ -146,4 +146,3 @@ SARRAY    *safiles;
     sarrayDestroy(&safiles);
     return 0;
 }
-

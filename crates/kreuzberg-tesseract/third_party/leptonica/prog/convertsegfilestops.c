@@ -134,4 +134,3 @@ l_float32  textscale, imagescale;
                                      numpost, maxnum, textscale,
                                      imagescale, threshold, fileout);
 }
-

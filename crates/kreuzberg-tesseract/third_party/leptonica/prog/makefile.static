@@ -127,7 +127,7 @@ endif
 #    (1) In src/environ.h:  #define  HAVE_LIBWEBP_ANIM
 #    (2) Install libwebp with
 #          ./configure --enable-everything (to get mux/demux libs)
-#        Modify makefile.unix to add -fPIC:    
+#        Modify makefile.unix to add -fPIC:
 #          CFLAGS = -O3 -DNDEBUG $(EXTRA_FLAGS) -fPIC
 #    (3) Include -lwebpmux in ALL_LIBS
 # To enable gif read/write:
@@ -1242,7 +1242,7 @@ clean:
 	done ;
 
 ###########################################################
- 
+
 install:
 	mkdir -p $(DESTDIR)/usr/bin/leptonica
 	-@ for file in $(SRC:%.c=%) ; do \

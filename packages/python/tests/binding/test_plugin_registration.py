@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from typing import Any
 
 from kreuzberg import (
     clear_post_processors,
@@ -23,7 +24,7 @@ class MockValidator:
     def name(self) -> str:
         return "mock_validator"
 
-    def validate(self, result: dict) -> None:
+    def validate(self, result: dict[str, Any]) -> None:
         pass
 
 
@@ -33,7 +34,7 @@ class MockValidator2:
     def name(self) -> str:
         return "mock_validator_2"
 
-    def validate(self, result: dict) -> None:
+    def validate(self, result: dict[str, Any]) -> None:
         pass
 
 
@@ -43,7 +44,7 @@ class MockPostProcessor:
     def name(self) -> str:
         return "mock_processor"
 
-    def process(self, result: dict) -> dict:
+    def process(self, result: dict[str, Any]) -> dict[str, Any]:
         return result
 
 
@@ -53,7 +54,7 @@ class MockPostProcessor2:
     def name(self) -> str:
         return "mock_processor_2"
 
-    def process(self, result: dict) -> dict:
+    def process(self, result: dict[str, Any]) -> dict[str, Any]:
         return result
 
 
@@ -160,7 +161,7 @@ class MockOcrBackend:
     def supported_languages(self) -> list[str]:
         return ["eng", "deu"]
 
-    def process_image(self, image_bytes: bytes, language: str) -> dict:
+    def process_image(self, image_bytes: bytes, language: str) -> dict[str, Any]:
         return {"content": "mocked text", "metadata": {}, "tables": []}
 
 
@@ -173,7 +174,7 @@ class MockOcrBackend2:
     def supported_languages(self) -> list[str]:
         return ["fra", "spa"]
 
-    def process_image(self, image_bytes: bytes, language: str) -> dict:
+    def process_image(self, image_bytes: bytes, language: str) -> dict[str, Any]:
         return {"content": "mocked text 2", "metadata": {}, "tables": []}
 
 

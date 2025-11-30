@@ -95,4 +95,3 @@ PIXA    *pixa1, *pixa2;
     boxaaDestroy(&baa);
     return 0;
 }
-

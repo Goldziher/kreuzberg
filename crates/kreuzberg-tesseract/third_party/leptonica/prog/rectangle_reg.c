@@ -179,4 +179,3 @@ L_REGPARAMS  *rp;
     boxaDestroy(&boxa);
     return regTestCleanup(rp);
 }
-

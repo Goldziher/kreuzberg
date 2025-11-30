@@ -217,4 +217,3 @@ NUMA  *nar1, *nar2, *nag1, *nag2, *nab1, *nab2;
     numaDestroy(&nab2);
     return;
 }
-

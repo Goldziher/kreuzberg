@@ -172,4 +172,3 @@ PIXA      *pixa, *pixad;
     pixaDestroy(&pixad);
     return 0;
 }
-

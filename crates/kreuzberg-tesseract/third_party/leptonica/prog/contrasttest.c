@@ -90,4 +90,3 @@ PIX       *pixs;
     pixDestroy(&pixs);
     return 0;
 }
-

@@ -58,4 +58,3 @@ extern "C" {
 ---   [etc]
 ---
 ---#endif  /* LEPTONICA_AUTOGEN_*_H */
-

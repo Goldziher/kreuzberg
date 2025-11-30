@@ -1203,4 +1203,3 @@ NUMA      *na1, *na2, *na3;
         *ppixd = pixThresholdToBinary(pixs, *pthresh);
     return 0;
 }
-

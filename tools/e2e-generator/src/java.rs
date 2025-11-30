@@ -953,13 +953,13 @@ fn generate_simple_list_test_java(test_spec: &PluginTestSpec, buf: &mut String) 
     // Generate assertions
     writeln!(buf, "        assertNotNull(result);")?;
 
-    if let Some(item_type) = &assertions.list_item_type {
-        if item_type == "string" {
-            writeln!(
-                buf,
-                "        assertTrue(result.stream().allMatch(item -> item instanceof String));"
-            )?;
-        }
+    if let Some(item_type) = &assertions.list_item_type
+        && item_type == "string"
+    {
+        writeln!(
+            buf,
+            "        assertTrue(result.stream().allMatch(item -> item instanceof String));"
+        )?;
     }
 
     if let Some(contains) = &assertions.list_contains {
@@ -1132,20 +1132,20 @@ fn generate_object_property_assertions_java(assertions: &PluginAssertions, buf: 
         // Determine if final property is boolean based on value
         let is_bool_property = prop.value.as_ref().map(|v| v.is_boolean()).unwrap_or(false);
 
-        if let Some(exists) = prop.exists {
-            if exists {
-                let mut path = "config".to_string();
-                for (i, part) in parts.iter().enumerate() {
-                    let is_last = i == parts.len() - 1;
-                    let is_bool = is_last && is_bool_property;
-                    let getter = if is_bool {
-                        property_to_is_getter(part)
-                    } else {
-                        property_to_getter(part)
-                    };
-                    writeln!(buf, "        assertNotNull({}.{}());", path, getter)?;
-                    path = format!("{}.{}()", path, getter);
-                }
+        if let Some(exists) = prop.exists
+            && exists
+        {
+            let mut path = "config".to_string();
+            for (i, part) in parts.iter().enumerate() {
+                let is_last = i == parts.len() - 1;
+                let is_bool = is_last && is_bool_property;
+                let getter = if is_bool {
+                    property_to_is_getter(part)
+                } else {
+                    property_to_getter(part)
+                };
+                writeln!(buf, "        assertNotNull({}.{}());", path, getter)?;
+                path = format!("{}.{}()", path, getter);
             }
         }
 

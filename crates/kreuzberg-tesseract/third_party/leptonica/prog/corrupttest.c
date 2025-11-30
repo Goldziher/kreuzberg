@@ -267,4 +267,3 @@ PIX       *pix;
     }
     return 0;
 }
-

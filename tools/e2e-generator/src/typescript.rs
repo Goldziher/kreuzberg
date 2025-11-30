@@ -752,13 +752,13 @@ fn render_simple_list_test(buffer: &mut String, fixture: &Fixture) -> Result<()>
     writeln!(buffer, "        const result = kreuzberg.{function_name}();")?;
     writeln!(buffer, "        expect(Array.isArray(result)).toBe(true);")?;
 
-    if let Some(item_type) = &test_spec.assertions.list_item_type {
-        if item_type == "string" {
-            writeln!(
-                buffer,
-                "        expect(result.every((item) => typeof item === \"string\")).toBe(true);"
-            )?;
-        }
+    if let Some(item_type) = &test_spec.assertions.list_item_type
+        && item_type == "string"
+    {
+        writeln!(
+            buffer,
+            "        expect(result.every((item) => typeof item === \"string\")).toBe(true);"
+        )?;
     }
 
     if let Some(contains) = &test_spec.assertions.list_contains {

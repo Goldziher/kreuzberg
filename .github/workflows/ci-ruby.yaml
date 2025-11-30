@@ -121,6 +121,11 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Configure bindgen compatibility headers (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh

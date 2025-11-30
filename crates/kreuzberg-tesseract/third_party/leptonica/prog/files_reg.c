@@ -286,5 +286,3 @@ char  expect[512], localdir[256];
     lept_free(path);
     return;
 }
-
-

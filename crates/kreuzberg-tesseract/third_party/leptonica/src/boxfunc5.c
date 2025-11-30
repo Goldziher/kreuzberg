@@ -1758,4 +1758,3 @@ NUMA    *nadelw, *nadelh;
     boxaDestroy(&boxao);
     return 0;
 }
-

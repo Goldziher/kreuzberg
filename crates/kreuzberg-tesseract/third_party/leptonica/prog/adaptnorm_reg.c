@@ -150,5 +150,3 @@ L_REGPARAMS  *rp;
     pixaDestroy(&pixa1);
     return regTestCleanup(rp);
 }
-
-

@@ -292,4 +292,3 @@ PIX       *pixt;
 
     return pixd;
 }
-

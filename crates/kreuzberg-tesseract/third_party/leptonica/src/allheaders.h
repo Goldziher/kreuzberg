@@ -2793,4 +2793,3 @@ LEPT_DLL extern l_uint8 * zlibUncompress ( const l_uint8 *datain, size_t nin, si
 
 
 #endif /* LEPTONICA_ALLHEADERS_H */
-

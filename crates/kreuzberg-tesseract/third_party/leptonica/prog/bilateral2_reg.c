@@ -101,5 +101,3 @@ PIXA  *pixa;
     pixaDestroy(&pixa);
     return;
 }
-
-

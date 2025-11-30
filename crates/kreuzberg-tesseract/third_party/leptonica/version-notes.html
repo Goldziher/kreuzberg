@@ -222,12 +222,12 @@ They are <i>not</i> a complete listing of the modifications.
         * Fixed uninitialized data error in pixAddBorderGeneral() and
           pixRemoveBorderGeneral()
         * Rewrote Numa functions that discretize into bins.  Have
-          binning by both sorting and histogram. 
+          binning by both sorting and histogram.
         * Rewrote and simplified pixGetRankColorArray() and pixGetBinnedColor().
         * Added tests to prog/rankbin_reg.c.
         * Simplified fpixCopy() and dpixCopy(), and functions that use them.
         * Check input for bilateral transforms.
-        * Add function for splitting a file evenly by lines. 
+        * Add function for splitting a file evenly by lines.
         * Check input for getFilenamesInDirectory()
         * Many new fuzzers.
         * Use size_t for all size inputs to ascii85 encoding/decoding
@@ -344,8 +344,8 @@ They are <i>not</i> a complete listing of the modifications.
           https://security-tracker.debian.org/tracker/source-package/leptonlib
         * CVE-2018-7442: potential injection attack because '/' is allowed
           in gplot rootdir.
-          Functions using this command have been disabled by default in the 
-          distribution, starting with 1.76.0.  As for the specific issue, it 
+          Functions using this command have been disabled by default in the
+          distribution, starting with 1.76.0.  As for the specific issue, it
           is impossible to specify a general path without using the standard
           directory subdivider '/'.
         * CVE-2018-7186: number of characters not limited in fscanf or sscanf,
@@ -446,7 +446,7 @@ They are <i>not</i> a complete listing of the modifications.
         This is a new version, for major Ubuntu release 18.04.
         $TMPDIR path rewriting turned off on Unix; only used for Windows.
         Added pix conversion to depth 2 and 4.  We now have general
-          converters to 1, 2, 4, 8, 16 and 32 bpp. 
+          converters to 1, 2, 4, 8, 16 and 32 bpp.
         Modified giflib to use read/write from/to memory; no temp files;
           no longer support versions before 5.1.
         Move most low-level code from separate files to their callers;
@@ -458,7 +458,7 @@ They are <i>not</i> a complete listing of the modifications.
         Update README.html for building with Visual Studio.
         Improved functions for getting pixel averages in RGB images
         Simplified and speedup of unsharp masking.
-        New function for detecting and correcting text orientation. 
+        New function for detecting and correcting text orientation.
         Remove slow sharpening operation when not appropriate during scaling.
         Better handling of gplots with 0 or 1 data point.
         Coverity scan fixes.
@@ -560,7 +560,7 @@ They are <i>not</i> a complete listing of the modifications.
        Deprecated the pixDisplayWrite*() debugging methods.
        Added about 15 regression tests to the framework in alltests_reg.c
        Final mods for compatibility with tesseract 4.00.
-           
+
 1.73   25 Jan 16
        All lept_* functions have been rewritten to avoid path rewrites for
        output to temp files, which were introduced in 1.72.
@@ -935,11 +935,11 @@ They are <i>not</i> a complete listing of the modifications.
        each prototype.
        In environ.h, additions for MSVC to work with VC++6, including
        prototpye strings for dll import and export (thanks to Ray Smith).
-       In colorseg.c, new functions for building HSV histograms, finding 
+       In colorseg.c, new functions for building HSV histograms, finding
        peaks, and generating masks based on the peaks.
        New or improved regression tests:
          pixalloc_reg, binmorph4_reg, binmorph5_reg, conversion_reg,
-         scale_reg, cmapquant_reg, 
+         scale_reg, cmapquant_reg,
 
 1.61   26 Apr 09
        New histo-based grayscale quantization: pixGrayQuantizeFromHisto(),
@@ -1209,7 +1209,7 @@ They are <i>not</i> a complete listing of the modifications.
        Compute a color magnitude for each rgb pixel (colorcontent.c).
        Allow separate modification of hue and saturation (enhance.c).
        Global transform of color image for arbitrary white point (adaptmap.c).
-   
+
 1.50   07 Oct 07
        |||||||||||||||||||||||||||||||||||||||||||||||||||||||||
        NOTE CAREFULLY: The  image format enum in imageio.h has
@@ -1231,7 +1231,7 @@ They are <i>not</i> a complete listing of the modifications.
        and a simple file format (sel1.c).
        Better Sel generation functions in sel2.c, including combs for
        composable brick operations and linear bricks for comparison.
-       Removed unnecessary copies for more efficient border add'n & removal. 
+       Removed unnecessary copies for more efficient border add'n & removal.
        Added RLE basline enc/dec for tiff.
        Binary morphology documentation on the web page updated for these
        changes/additions.
@@ -1340,7 +1340,7 @@ They are <i>not</i> a complete listing of the modifications.
 1.42   26 Dec 06
        New sorting functions, including 2-d sorting, for boxa and pixa,
        and functions that sort by index (e.g., pixa --> pixa and
-       for 2d, pixa --> pixaa; ditto for boxa).  
+       for 2d, pixa --> pixaa; ditto for boxa).
        New accessors for pix dimensions.  A new strtokSafe() to
        substitute for strtok_r (utils.c).
        Page flip detection, using both rasterop and dwa morphology
@@ -1372,7 +1372,7 @@ They are <i>not</i> a complete listing of the modifications.
        Modifications to allow conditional compilation on MS VC++,
        and to allow I/O calls to be stubbed out (new files: *iostub.c,
        zlibmemstub.c, pstdint.h, arrayaccess.h.ms60)
- 
+
 1.39   31 Aug 06
        |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
        NOTE CAREFULLY:  There has been an interface change to make
@@ -1410,8 +1410,8 @@ They are <i>not</i> a complete listing of the modifications.
        autogens the code from (nearly) any Sel.
        Fixed some of the gray morphology operations, which had errors
        on the boundary.  All gray morph ops should now be rigorously
-       OK (graymorph.c).  For testing of graymorph dualities, the 
-       the graymorph interpreter, etc., see prog/morphgraytest.c. 
+       OK (graymorph.c).  For testing of graymorph dualities, the
+       the graymorph interpreter, etc., see prog/morphgraytest.c.
 
 1.37   10 Jul 06
        [After v.36 was released, Jeff Breidenbach built a Debian
@@ -1471,7 +1471,7 @@ They are <i>not</i> a complete listing of the modifications.
        segmenting images by color (colorseg.c).
 
 1.31   7 Jan 06
-       Remove more complicated functions that threshold to 2 bpp, 
+       Remove more complicated functions that threshold to 2 bpp,
        retaining the simplest interface.  Retest all thresholding and
        dithering.  Add "ascii" write of PNM.  Improve graphics writing
        of lines; generalize to colormaps.  New colorization functions
@@ -1479,8 +1479,8 @@ They are <i>not</i> a complete listing of the modifications.
 
 1.30   22 Dec 05
        Remove most instances of fprintf(stderr, ...), except within
-       DEBUG or encapsulated in error, warning or info macros. 
-       As a result, there is no output to stderr if NO_CONSOLE_IO is defined. 
+       DEBUG or encapsulated in error, warning or info macros.
+       As a result, there is no output to stderr if NO_CONSOLE_IO is defined.
        Adaptive mapping to make bg uniform (adaptmap.c).  A few bug fixes.
        New PostScript output functions for embedding PS files
        (prog/converttops).  Generalized some image enhancement functions.
@@ -1561,7 +1561,7 @@ They are <i>not</i> a complete listing of the modifications.
 
 1.20   31 Jan 05
        Speed up of tiffio and pngio with byte swap generating new pix.
-       In textops.c, ability to split string into paragraphs, 
+       In textops.c, ability to split string into paragraphs,
        in preparation for more general typesetting.
        Automatic hit-miss Sel generation for pattern matching.
        Fast downscaling using a lowpass filter and subsampling.
@@ -1646,7 +1646,7 @@ They are <i>not</i> a complete listing of the modifications.
        Implemented auto-gen'd DWA version of hit-miss transform;
        the code for generating these hmt routines is very similar to
        that for DWA auto-gen'd erosion and dilation.
-       
+
 1.9    28 Feb 03
        Implemented a safe, expandable byte queue.  As an example of
        its use, implemented memory-to-memory compression and decompression
@@ -1679,14 +1679,14 @@ They are <i>not</i> a complete listing of the modifications.
        Put jpeglib.h in local directory.  This, along with the jmorecfg.h
        file there prevents compiler warnings about redefined typedefs.
        Compiled everything with g++ to make strictly ansi C compatible.
-       Added interface gplotFromFile() for simple file-based plotting with 
+       Added interface gplotFromFile() for simple file-based plotting with
        gnuplot 3.7.2.   Added functions to convert 2, 4 and 8 bpp
        color-mapped (i.e., paletted) images to 24 bpp color or
        8 bpp grayscale.  Added several jbig2 application cores that
        only require a simple wrapper to make into programs.
 
 1.4    30 Sep 02
-       Added interface to gnuplot 3.7.2 and to x11 display of images. 
+       Added interface to gnuplot 3.7.2 and to x11 display of images.
        Added new functions with arrays of images for use in applications
        such as jbig2 encoders, along with a simple jbig2 implementation
        using either hausdorff or correlation scoring.  Added centroid
@@ -1737,4 +1737,3 @@ They are <i>not</i> a complete listing of the modifications.
 
 </body>
 </html>
-

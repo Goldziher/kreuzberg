@@ -71,4 +71,3 @@ PIXA  *pixa;
     pixDestroy(&pixsg);
     return 0;
 }
-

@@ -111,5 +111,3 @@ PIX  *pix1, *pixd;
     boxDestroy(&box);
     return pixd;
 }
-
-

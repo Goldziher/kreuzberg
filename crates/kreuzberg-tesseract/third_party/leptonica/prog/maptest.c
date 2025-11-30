@@ -422,5 +422,3 @@ L_AMAP_NODE  *n, *np;
     lept_stderr(" ------- End reverse iter; rebuild tree --------\n");
     return;
 }
-
-

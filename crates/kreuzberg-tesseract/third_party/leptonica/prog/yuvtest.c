@@ -218,4 +218,3 @@ PIXA      *pixat;
     pixaDestroy(&pixat);
     return;
 }
-

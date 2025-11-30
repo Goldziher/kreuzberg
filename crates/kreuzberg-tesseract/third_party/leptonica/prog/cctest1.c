@@ -120,5 +120,3 @@ PIXCMAP  *cmap;
     pixDestroy(&pixs);
     return 0;
 }
-
-

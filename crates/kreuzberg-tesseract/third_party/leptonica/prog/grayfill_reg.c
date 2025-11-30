@@ -203,5 +203,3 @@ PIX  *pixc11, *pixc12, *pixc21, *pixc22, *pixmi;
     pixDestroy(&pixc22);
     return;
 }
-
-

@@ -119,4 +119,3 @@ PIX     *pixs, *pixd, *pix1, *pix2, *pix3, *pix4;
     pixDestroy(&pixs);
     return 0;
 }
-

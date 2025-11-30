@@ -94,5 +94,3 @@ l_int32   nfunc = 2;
 
     return result;
 }
-
-

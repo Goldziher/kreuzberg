@@ -117,4 +117,3 @@ SARRAY    *sa;
     sarrayDestroy(&sa);
     return 0;
 }
-

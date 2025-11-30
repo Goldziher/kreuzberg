@@ -159,4 +159,3 @@ SELA    *sela;
 
     return 0;
 }
-

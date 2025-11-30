@@ -70,4 +70,3 @@ char    *filein, *fileout;
     pixWrite(fileout, pixd, IFF_TIFF_G4);
     return 0;
 }
-

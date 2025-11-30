@@ -67,4 +67,3 @@ typedef struct L_Stack  L_STACK;
 
 
 #endif /*  LEPTONICA_STACK_H */
-

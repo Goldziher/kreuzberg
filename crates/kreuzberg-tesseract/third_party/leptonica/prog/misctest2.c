@@ -124,7 +124,7 @@ PIXA  *pixa1;
     pixaConvertToPdf(pixa1, 0, 1.0, L_DEFAULT_ENCODE, 50, NULL,
                      "/tmp/lept/misc/pageclean.pdf");
     pixaDestroy(&pixa1);
-    
+
         /* Input images to bad mediabox example pages; delayed from
          * above to give system a chance to generate them. */
     snprintf(buf, sizeof(buf), "displaypix /tmp/lept/renderpdf/input-1.ppm");

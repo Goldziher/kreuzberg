@@ -541,4 +541,3 @@ l_int32  same;
     if (!same)
         lept_stderr("%s (%d, %d) not same\n", type, size, size);
 }
-

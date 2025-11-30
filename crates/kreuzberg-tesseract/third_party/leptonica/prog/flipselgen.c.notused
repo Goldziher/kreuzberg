@@ -121,4 +121,3 @@ static char  mainName[] = "flipselgen";
     selaDestroy(&sela);
     return 0;
 }
-

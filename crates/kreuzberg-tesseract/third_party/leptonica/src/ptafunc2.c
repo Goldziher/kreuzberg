@@ -802,5 +802,3 @@ L_HASHMAP   *hmap;
     l_hmapDestroy(&hmap);
     return 0;
 }
-
-

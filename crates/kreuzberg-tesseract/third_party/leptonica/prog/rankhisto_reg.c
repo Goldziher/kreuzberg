@@ -132,4 +132,3 @@ L_REGPARAMS  *rp;
     lept_free(array);
     return regTestCleanup(rp);
 }
-

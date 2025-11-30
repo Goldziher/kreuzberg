@@ -88,5 +88,3 @@ L_SUDOKU  *sud;
 
     return 0;
 }
-
-

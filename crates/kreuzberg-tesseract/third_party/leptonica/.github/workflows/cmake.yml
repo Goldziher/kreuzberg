@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        
+
     steps:
     - uses: actions/checkout@v4
 
@@ -54,4 +54,3 @@ jobs:
     - name: Build
       # Build your program with the given configuration
       run: sudo cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install
-  

@@ -104,4 +104,3 @@ struct CCBorda
 };
 
 #endif  /* LEPTONICA_CCBORD_INTERNAL_H */
-

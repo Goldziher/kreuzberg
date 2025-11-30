@@ -162,7 +162,7 @@ The C code in leptonica follows these conventions:
    (g) Static constants defined in a file should have the first letter of
        each word capitalized.  (There are also some that are formatted
        like enums, with all caps and '_' between parts.)
- 
+
    (h) There are very few globals in the library.  Of these, there
        are just a handful of static globals that can be changed.
        Const globals are named with each word beginning with a capital; e.g.,
@@ -226,5 +226,3 @@ The C code in leptonica follows these conventions:
 
    (f) Accessors are typically provided for struct fields that have
        extensive use.
-
-

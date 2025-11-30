@@ -20,6 +20,7 @@ import {
 	clearValidators,
 	detectMimeType,
 	detectMimeTypeFromPath,
+	ExtractionConfig,
 	getEmbeddingPreset,
 	getExtensionsForMime,
 	listDocumentExtractors,
@@ -28,17 +29,16 @@ import {
 	listPostProcessors,
 	listValidators,
 	type OcrBackendProtocol,
-	registerOcrBackend,
 	type PostProcessorProtocol,
+	registerOcrBackend,
 	registerPostProcessor,
-	type ValidatorProtocol,
 	registerValidator,
 	unregisterDocumentExtractor,
 	unregisterOcrBackend,
 	unregisterPostProcessor,
 	unregisterValidator,
+	type ValidatorProtocol,
 	validateMimeType,
-	ExtractionConfig,
 } from "../../src/index.js";
 import { createMockExtractionBinding } from "./helpers/mock-binding.js";
 

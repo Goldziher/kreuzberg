@@ -351,10 +351,10 @@ fn generate_simple_list_test_rust(test_spec: &PluginTestSpec, buf: &mut String) 
     )?;
 
     // Assertions
-    if let Some(item_type) = &assertions.list_item_type {
-        if item_type == "string" {
-            writeln!(buf, "    assert!(result.iter().all(|s| !s.is_empty()));")?;
-        }
+    if let Some(item_type) = &assertions.list_item_type
+        && item_type == "string"
+    {
+        writeln!(buf, "    assert!(result.iter().all(|s| !s.is_empty()));")?;
     }
 
     if let Some(contains) = &assertions.list_contains {

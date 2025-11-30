@@ -127,5 +127,3 @@ PIX     *pixmask4, *pixseed4, *pixsf4, *pixd4, *pixd;
     pixDestroy(&pixd);
     return 0;
 }
-
-

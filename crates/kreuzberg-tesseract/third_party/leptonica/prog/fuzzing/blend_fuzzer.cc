@@ -1,7 +1,7 @@
 #include "leptfuzz.h"
 
 extern "C" int
-LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) { 
+LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     if(size<3) return 0;
 
     leptSetStdNullHandler();
@@ -18,7 +18,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         pixDestroy(&pix_copy);
         pixDestroy(&pix1);
         pixDestroy(&return_pix);
-                        
+
         pix_copy = pixCopy(NULL, pixs_payload);
         return_pix = pixBlend(pix_copy, pix_copy, i, i, i);
         pixDestroy(&pix_copy);

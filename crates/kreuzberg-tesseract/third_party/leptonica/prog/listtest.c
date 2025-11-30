@@ -276,4 +276,3 @@ PIX     *pixs;
     boxaDestroy(&boxan);
     return 0;
 }
-

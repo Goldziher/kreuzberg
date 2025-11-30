@@ -157,4 +157,3 @@ NUMA      *na;
 
     return na;
 }
-

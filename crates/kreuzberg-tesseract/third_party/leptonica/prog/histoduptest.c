@@ -264,4 +264,3 @@ PIXAC       *pac;
     pixacompDestroy(&pac);
     return 0;
 }
-

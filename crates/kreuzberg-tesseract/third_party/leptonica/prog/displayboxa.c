@@ -87,4 +87,3 @@ PIX       *pixd;
     pixDestroy(&pixd);
     return 0;
 }
-

@@ -1,9 +1,9 @@
 #include "leptfuzz.h"
 
 extern "C" int
-LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) { 
+LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	if(size<3) return 0;
- 
+
 	leptSetStdNullHandler();
 
 	BOXA *boxa_payload, *boxa1;
@@ -25,7 +25,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 		pixDestroy(&pix1);
 		pixDestroy(&pix2);
 	}
-	
+
 	//pixBlendBoxaRandom();
 	pixc = pixRead("../test8.jpg");
 	if(pixc!=NULL) {
@@ -82,7 +82,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 			pixDestroy(&pix1);
 			boxaDestroy(&boxa1);
 		};
-		
+
 	}
 
 
@@ -94,7 +94,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 			pixDestroy(&pix);
 		}else{
 			pixs = pixConvertTo1(pix, 128);
-			pix1 = pixPaintBoxaRandom(pixs, boxa1);    	
+			pix1 = pixPaintBoxaRandom(pixs, boxa1);
 			pixDestroy(&pix);
 			pixDestroy(&pixs);
 			pixDestroy(&pix1);

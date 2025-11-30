@@ -165,4 +165,3 @@ PIX       *pixt1, *pixt2, *pixs, *pixd;
     pixDestroy(&pixs);
     return 0;
 }
-

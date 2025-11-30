@@ -1,9 +1,9 @@
 #include "leptfuzz.h"
 
 extern "C" int
-LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) { 
+LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	if(size<3) return 0;
- 
+
 	leptSetStdNullHandler();
 
 	BOXA *boxa_payload, *boxa1;
@@ -19,7 +19,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 					 L_ADJUST_TOP_AND_BOT, 50,
 					 0, NULL);
 	boxaDestroy(&boxa1);
-	
+
 	boxa1 = boxaReconcileSidesByMedian(boxa_payload, L_ADJUST_LEFT, 80,
 					   40, NULL);
 	boxaDestroy(&boxa1);

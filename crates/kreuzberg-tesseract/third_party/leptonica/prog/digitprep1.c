@@ -101,5 +101,3 @@ PIXAA     *paa;
     pixaaDestroy(&paa);
     return 0;
 }
-
-

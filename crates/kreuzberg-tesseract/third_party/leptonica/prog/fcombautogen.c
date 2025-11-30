@@ -76,4 +76,3 @@ SELA    *sela;
     selaDestroy(&sela);
     return ret;
 }
-

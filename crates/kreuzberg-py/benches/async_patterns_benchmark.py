@@ -60,18 +60,42 @@ async def run_benchmarks() -> None:
     async_backend = AsyncOcrBackend()
     into_future_latency = await benchmark_pattern(async_backend, num_iterations, "into_future + async")
 
+    # Calculate speedup metrics
     speedup = spawn_blocking_latency / into_future_latency
-    spawn_blocking_latency - into_future_latency
+    time_savings_ms = spawn_blocking_latency - into_future_latency
 
+    # Display single-call performance metrics
+    print("\n" + "=" * 70)
+    print("ASYNC CALLBACK PERFORMANCE BENCHMARK")
+    print("=" * 70)
+    print(f"\nPattern: spawn_blocking (current)")
+    print(f"  Latency per call: {spawn_blocking_latency:.3f} ms")
+    print(f"\nPattern: into_future (optimized)")
+    print(f"  Latency per call: {into_future_latency:.3f} ms")
+    print(f"\nPerformance Improvement:")
+    print(f"  Speedup ratio: {speedup:.1f}x")
+    print(f"  Time savings per call: {time_savings_ms:.3f} ms")
+
+    # Calculate batch processing impact
     batch_size = 1000
     current_time = (spawn_blocking_latency / 1000) * batch_size
     optimized_time = (into_future_latency / 1000) * batch_size
-    current_time - optimized_time
+    batch_time_savings = current_time - optimized_time
 
-    if speedup < 1.5 or speedup >= 20:
-        pass
+    print(f"\nBatch Processing Impact (batch_size={batch_size}):")
+    print(f"  Current approach: {current_time:.2f} seconds")
+    print(f"  Optimized approach: {optimized_time:.2f} seconds")
+    print(f"  Total time savings: {batch_time_savings:.2f} seconds")
+
+    # Validate speedup meets expectations
+    print(f"\nValidation:")
+    if speedup >= 20:
+        print(f"  ✓ PASS: Speedup {speedup:.1f}x exceeds expected minimum of 20x")
+    elif speedup >= 1.5:
+        print(f"  ✗ WARNING: Speedup {speedup:.1f}x is below expected 20-30x range")
     else:
-        pass
+        print(f"  ✗ FAIL: Speedup {speedup:.1f}x is below acceptable threshold of 1.5x")
+    print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":

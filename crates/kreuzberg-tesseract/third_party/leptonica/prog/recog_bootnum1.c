@@ -316,5 +316,3 @@ SARRAY   *sa;
     recogDestroy(&recog);
     return pixa;
 }
-
-

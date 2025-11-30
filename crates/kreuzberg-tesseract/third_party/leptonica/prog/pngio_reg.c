@@ -624,4 +624,3 @@ PIXCMAP  *cmap;
     pixcmapDestroy(&cmap);
     return same;
 }
-

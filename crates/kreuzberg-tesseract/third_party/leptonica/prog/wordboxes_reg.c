@@ -285,4 +285,3 @@ NUMAA   *naai, *naad;
     numaaDestroy(&naai);
     numaaDestroy(&naad);
 }
-

@@ -101,6 +101,6 @@ NUMA    *naeach;
         start = end + 1;
     }
 
-    numaDestroy(&naeach);    
+    numaDestroy(&naeach);
     return 0;
 }

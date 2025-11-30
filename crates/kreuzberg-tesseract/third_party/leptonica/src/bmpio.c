@@ -493,7 +493,7 @@ RGBA_QUAD  *pquad;
     if (spp != 1 && spp != 3 && spp != 4) {
         L_ERROR("unsupported spp = %d\n", __func__, spp);
         return 1;
-    } 
+    }
     if (d == 2) {
         L_WARNING("2 bpp files can't be read; converting to 8 bpp\n",
                   __func__);

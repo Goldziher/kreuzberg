@@ -234,4 +234,3 @@ l_int32  ret, format, w, h, d, bps, spp, iscmap;
                     bps, spp, iscmap);
     return;
 }
-

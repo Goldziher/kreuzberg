@@ -141,4 +141,3 @@ PIXCMAP  *cmap;
     sarrayDestroy(&safiles);
     return 0;
 }
-

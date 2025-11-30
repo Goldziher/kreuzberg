@@ -90,4 +90,3 @@ $(top_builddir)/prog/xtractprotos$(EXEEXT): libleptonica.la
 
 allheaders: $(top_builddir)/prog/xtractprotos$(EXEEXT) $(libleptonica_la_SOURCES)
 	cd $(srcdir) && $(abs_top_builddir)/prog/xtractprotos$(EXEEXT) -prestring=LEPT_DLL -protos=inline $(libleptonica_la_SOURCES)
-

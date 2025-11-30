@@ -1,9 +1,9 @@
 #include "leptfuzz.h"
 
 extern "C" int
-LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) { 
+LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	if(size<3) return 0;
- 
+
 	leptSetStdNullHandler();
 
 	PIX *pixs_payload = pixReadMemSpix(data, size);
@@ -48,7 +48,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	boxDestroy(&box1);
 	pixDestroy(&pix_pointer_payload);
 	numaDestroy(&return_numa);
-	
+
 	box1 = boxCreate(150, 130, 1500, 355);
 	return_numa = pixAverageByRow(pix_pointer_payload, box1,
                                       L_WHITE_IS_MAX);
@@ -70,7 +70,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	pixDestroy(&pix_pointer_payload);
 	boxaDestroy(&boxa1);
 	pixDestroy(&return_pix);
-	
+
 	for (int i = 0; i < 5; i++) {
             box1 = boxCreate(150, 130, 1500, 355);
 	    pix_pointer_payload = pixCopy(NULL, pixs_payload);
@@ -85,7 +85,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	pixDestroy(&pix_pointer_payload);
 	boxDestroy(&box1);
 	numaDestroy(&return_numa);
-	
+
 	box1 = boxCreate(150, 130, 1500, 355);
 	pix_pointer_payload = pixCopy(NULL, pixs_payload);
 	pixCountPixelsInRect(pix_pointer_payload, box1, &l_i, NULL);
@@ -104,24 +104,24 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	    pixDestroy(&pix_pointer_payload);
 	    pixDestroy(&return_pix);
         }
-    
+
 	pix2 = pixRead("../test8.jpg");
 	pix_pointer_payload = pixCopy(NULL, pixs_payload);
 	pixPaintSelfThroughMask(pix_pointer_payload, pix2, 0, 0, L_HORIZ,
                                 30, 50, 5, 10);
 	pixDestroy(&pix2);
 	pixDestroy(&pix_pointer_payload);
-	
+
 	pix_pointer_payload = pixCopy(NULL, pixs_payload);
 	return_pix = pixSetUnderTransparency(pix_pointer_payload, 0, 0);
 	pixDestroy(&pix_pointer_payload);
 	pixDestroy(&return_pix);
-	
+
 	pix_pointer_payload = pixCopy(NULL, pixs_payload);
 	return_numa = pixVarianceByColumn(pix2, NULL);
 	pixDestroy(&pix_pointer_payload);
 	numaDestroy(&return_numa);
-	
+
 	pix_pointer_payload = pixCopy(NULL, pixs_payload);
 	return_numa = pixVarianceByRow(pix_pointer_payload, NULL);
 	pixDestroy(&pix_pointer_payload);

@@ -186,4 +186,3 @@ L_REGPARAMS  *rp;
     pixDestroy(&pixs);
     return regTestCleanup(rp);
 }
-

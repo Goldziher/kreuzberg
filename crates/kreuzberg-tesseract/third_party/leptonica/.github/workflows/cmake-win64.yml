@@ -62,7 +62,7 @@ jobs:
              cmake -Bbuild -DCMAKE_PREFIX_PATH=${{env.ILOC}} -DCMAKE_INSTALL_PREFIX=${{env.ILOC}}
              cmake --build build --config Release --target install
              cd ..
-             
+
       - name: Build and Install libjpeg
         shell: cmd
         run: |
@@ -98,7 +98,7 @@ jobs:
              cmake -Bbuild -DCMAKE_PREFIX_PATH=${{env.ILOC}} -DCMAKE_INSTALL_PREFIX=${{env.ILOC}} -DBUILD_PROGRAMS=OFF -DBUILD_TOOLS=OFF -DCMAKE_WARN_DEPRECATED=OFF
              cmake --build build --config Release --target install
              cd ..
-             
+
       - name: Build and Install zstd
         shell: cmd
         run: |
@@ -164,7 +164,7 @@ jobs:
         shell: cmd
         run: >
              rm -Rf ${{env.ILOC}}/bin/*.exe
-             
+
       - name: Upload Build Results
         uses: actions/upload-artifact@v4
         with:

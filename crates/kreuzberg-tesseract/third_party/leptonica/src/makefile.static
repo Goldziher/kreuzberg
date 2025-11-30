@@ -387,7 +387,7 @@ dirs:
 
 ###########################################################
 
-clean:		
+clean:
 		$(RM) $(OBJ_NODEBUG)/*.o $(OBJ_DEBUG)/*.o \
 			$(OBJ_SHARED)/*.o \
 			$(LIB_NODEBUG)/*.a $(LIB_DEBUG)/*.a \
@@ -403,5 +403,3 @@ depend:
 
 ###########################################################
 # DO NOT DELETE THIS LINE -- make depend depends on it.
-
-

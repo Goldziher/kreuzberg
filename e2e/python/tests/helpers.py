@@ -72,16 +72,12 @@ def assert_expected_mime(result: Any, expected: list[str]) -> None:
 
 def assert_min_content_length(result: Any, minimum: int) -> None:
     if len(result.content) < minimum:
-        pytest.fail(
-            f"Expected content length >= {minimum}, got {len(result.content)}"
-        )
+        pytest.fail(f"Expected content length >= {minimum}, got {len(result.content)}")
 
 
 def assert_max_content_length(result: Any, maximum: int) -> None:
     if len(result.content) > maximum:
-        pytest.fail(
-            f"Expected content length <= {maximum}, got {len(result.content)}"
-        )
+        pytest.fail(f"Expected content length <= {maximum}, got {len(result.content)}")
 
 
 def assert_content_contains_any(result: Any, snippets: list[str]) -> None:
@@ -90,9 +86,7 @@ def assert_content_contains_any(result: Any, snippets: list[str]) -> None:
     lowered = result.content.lower()
     preview = result.content[:160]
     if not any(snippet.lower() in lowered for snippet in snippets):
-        pytest.fail(
-            f"Expected content to contain any of {snippets!r}. Preview: {preview!r}"
-        )
+        pytest.fail(f"Expected content to contain any of {snippets!r}. Preview: {preview!r}")
 
 
 def assert_content_contains_all(result: Any, snippets: list[str]) -> None:
@@ -101,9 +95,7 @@ def assert_content_contains_all(result: Any, snippets: list[str]) -> None:
     lowered = result.content.lower()
     missing = [snippet for snippet in snippets if snippet.lower() not in lowered]
     if missing:
-        pytest.fail(
-            f"Expected content to contain all snippets {snippets!r}. Missing {missing!r}"
-        )
+        pytest.fail(f"Expected content to contain all snippets {snippets!r}. Missing {missing!r}")
 
 
 def assert_table_count(result: Any, minimum: int | None, maximum: int | None) -> None:
@@ -114,9 +106,7 @@ def assert_table_count(result: Any, minimum: int | None, maximum: int | None) ->
         pytest.fail(f"Expected at most {maximum} tables, found {count}")
 
 
-def assert_detected_languages(
-    result: Any, expected: list[str], min_confidence: float | None
-) -> None:
+def assert_detected_languages(result: Any, expected: list[str], min_confidence: float | None) -> None:
     if not expected:
         return
     languages = result.detected_languages
@@ -128,15 +118,9 @@ def assert_detected_languages(
         pytest.fail(f"Expected languages {expected!r}, missing {missing!r}")
 
     if min_confidence is not None:
-        confidence = (
-            result.metadata.get("confidence")
-            if isinstance(result.metadata, Mapping)
-            else None
-        )
+        confidence = result.metadata.get("confidence") if isinstance(result.metadata, Mapping) else None
         if confidence is not None and confidence < min_confidence:
-            pytest.fail(
-                f"Expected confidence >= {min_confidence}, got {confidence}"
-            )
+            pytest.fail(f"Expected confidence >= {min_confidence}, got {confidence}")
 
 
 def assert_metadata_expectation(result: Any, path: str, expectation: dict[str, Any]) -> None:
@@ -145,51 +129,49 @@ def assert_metadata_expectation(result: Any, path: str, expectation: dict[str, A
         pytest.fail(f"Metadata path '{path}' missing in {result.metadata!r}")
 
     if "eq" in expectation and not _values_equal(value, expectation["eq"]):
-        pytest.fail(
-            f"Expected metadata '{path}' == {expectation['eq']!r}, got {value!r}"
-        )
+        pytest.fail(f"Expected metadata '{path}' == {expectation['eq']!r}, got {value!r}")
 
+    _assert_numeric_bounds(value, path, expectation)
+    _assert_contains_expectation(value, path, expectation)
+
+    if expectation.get("exists") is False:
+        pytest.fail("exists=False not supported for metadata expectations")
+
+
+def _assert_numeric_bounds(value: Any, path: str, expectation: dict[str, Any]) -> None:
     if "gte" in expectation:
         actual = float(value)
         if actual < float(expectation["gte"]):
-            pytest.fail(
-                f"Expected metadata '{path}' >= {expectation['gte']}, got {actual}"
-            )
+            pytest.fail(f"Expected metadata '{path}' >= {expectation['gte']}, got {actual}")
 
     if "lte" in expectation:
         actual = float(value)
         if actual > float(expectation["lte"]):
-            pytest.fail(
-                f"Expected metadata '{path}' <= {expectation['lte']}, got {actual}"
-            )
+            pytest.fail(f"Expected metadata '{path}' <= {expectation['lte']}, got {actual}")
 
-    if "contains" in expectation:
-        expected_values = expectation["contains"]
-        if isinstance(value, str) and isinstance(expected_values, str):
-            if expected_values not in value:
-                pytest.fail(
-                    f"Expected metadata '{path}' string to contain {expected_values!r}"
-                )
-        elif isinstance(value, (list, tuple, set)):
-            # If expectation is a string, treat it as a single element we expect in the list
-            if isinstance(expected_values, str):
-                if expected_values not in value:
-                    pytest.fail(
-                        f"Expected metadata '{path}' to contain '{expected_values}', got {value!r}"
-                    )
-            else:
-                missing = [item for item in expected_values if item not in value]
-                if missing:
-                    pytest.fail(
-                        f"Expected metadata '{path}' to contain {expected_values!r}, missing {missing!r}"
-                    )
-        else:
-            pytest.fail(
-                f"Unsupported contains expectation for metadata '{path}': {value!r}"
-            )
 
-    if expectation.get("exists") is False:
-        pytest.fail("exists=False not supported for metadata expectations")
+def _assert_contains_expectation(value: Any, path: str, expectation: dict[str, Any]) -> None:
+    if "contains" not in expectation:
+        return
+
+    expected_values = expectation["contains"]
+    if isinstance(value, str) and isinstance(expected_values, str):
+        if expected_values not in value:
+            pytest.fail(f"Expected metadata '{path}' string to contain {expected_values!r}")
+    elif isinstance(value, (list, tuple, set)):
+        _assert_list_contains(value, path, expected_values)
+    else:
+        pytest.fail(f"Unsupported contains expectation for metadata '{path}': {value!r}")
+
+
+def _assert_list_contains(value: Any, path: str, expected_values: Any) -> None:
+    if isinstance(expected_values, str):
+        if expected_values not in value:
+            pytest.fail(f"Expected metadata '{path}' to contain '{expected_values}', got {value!r}")
+    else:
+        missing = [item for item in expected_values if item not in value]
+        if missing:
+            pytest.fail(f"Expected metadata '{path}' to contain {expected_values!r}, missing {missing!r}")
 
 
 def _lookup_path(metadata: Mapping[str, Any], path: str) -> Any:

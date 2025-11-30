@@ -301,4 +301,3 @@ CompareResults(PIX          *pixs,
     pixClearAll(pix1);
     pixClearAll(pix2);
 }
-

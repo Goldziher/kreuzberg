@@ -114,4 +114,3 @@ PIXA      *pixa;
     sarrayDestroy(&safiles);
     return 0;
 }
-

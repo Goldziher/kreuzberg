@@ -487,4 +487,3 @@ void SaveColorSquare(PIXA     *pixa,
     PIX *pixc = pixMakeColorSquare(rgbval, 0, 1, L_ADD_BELOW, 0xff000000);
     pixaAddPix(pixa, pixc, L_INSERT);
 }
-

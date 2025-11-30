@@ -94,4 +94,3 @@ PIX       *pixs, *pixd;
     numaDestroy(&nax);
     return 0;
 }
-

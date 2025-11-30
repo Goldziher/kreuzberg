@@ -92,5 +92,3 @@ void     *result = NULL;
 
     return result;
 }
-
-

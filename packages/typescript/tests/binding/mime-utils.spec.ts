@@ -141,7 +141,9 @@ describe("MIME Utility Functions", () => {
 			const testFile = join(tempDir, "testfile");
 			writeFileSync(testFile, "dummy content");
 
-			expect(() => detectMimeTypeFromPath(testFile)).toThrow(/(could not determine mime type|Failed to create reference)/i);
+			expect(() => detectMimeTypeFromPath(testFile)).toThrow(
+				/(could not determine mime type|Failed to create reference)/i,
+			);
 		});
 	});
 

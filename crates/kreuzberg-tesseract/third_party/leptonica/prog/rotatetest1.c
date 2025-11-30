@@ -220,4 +220,3 @@ char      *filein, *fileout;
 
     return 0;
 }
-

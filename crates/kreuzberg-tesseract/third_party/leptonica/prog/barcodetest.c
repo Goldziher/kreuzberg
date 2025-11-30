@@ -86,4 +86,3 @@ SARRAY  *saw1, *saw2, *sad1, *sad2;
     pixDestroy(&pixs);
     return 0;
 }
-

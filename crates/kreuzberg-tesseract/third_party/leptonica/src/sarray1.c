@@ -1871,7 +1871,7 @@ SARRAY  *saout;
  *          the d_name field).
  *      (5) For unix, we avoid the bug in earlier versions of realpath()
  *          by requiring either POSIX 2008 or use of glibc.
- *          
+ *
  * </pre>
  */
 

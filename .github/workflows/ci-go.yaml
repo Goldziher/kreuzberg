@@ -63,6 +63,11 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Build FFI library
         run: cargo build -p kreuzberg-ffi --release
 
@@ -160,6 +165,11 @@ jobs:
         uses: ./.github/actions/stage-pdfium-runtime
         with:
           destination: target/release
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Download FFI library
         uses: actions/download-artifact@v6

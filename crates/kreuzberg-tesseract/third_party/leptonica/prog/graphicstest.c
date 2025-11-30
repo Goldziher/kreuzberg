@@ -95,5 +95,3 @@ PTA     *pta;
     pixDestroy(&pixs);
     return 0;
 }
-
-

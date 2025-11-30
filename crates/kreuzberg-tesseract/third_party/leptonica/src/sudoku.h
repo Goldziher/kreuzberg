@@ -73,5 +73,3 @@ enum {
 };
 
 #endif /* SUDOKU_H_INCLUDED */
-
-

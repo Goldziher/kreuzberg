@@ -66,4 +66,3 @@ PIX     *pixs, *pixgr, *pixb;
     pixWrite(outfile, pixb, IFF_PNG);
     return 0;
 }
-

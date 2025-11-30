@@ -162,4 +162,3 @@ SEL       *selsplit;
 
     return 0;
 }
-

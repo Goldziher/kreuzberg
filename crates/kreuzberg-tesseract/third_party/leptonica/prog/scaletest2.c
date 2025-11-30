@@ -359,4 +359,3 @@ l_int32  d;
     pixDestroy(&pixs);
     return 0;
 }
-

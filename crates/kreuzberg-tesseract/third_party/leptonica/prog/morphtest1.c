@@ -136,4 +136,3 @@ SELA      *sela;
 
     pixInvert(pixs, pixs);
 #endif  /* 0 */
-

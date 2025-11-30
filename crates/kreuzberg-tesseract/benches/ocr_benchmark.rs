@@ -5,17 +5,28 @@ use std::path::PathBuf;
 
 fn get_default_tessdata_dir() -> PathBuf {
     if cfg!(target_os = "macos") {
-        let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+        let home_dir = std::env::var("HOME").expect("HOME environment variable not set");
         PathBuf::from(home_dir)
             .join("Library")
             .join("Application Support")
             .join("tesseract-rs")
             .join("tessdata")
     } else if cfg!(target_os = "linux") {
-        let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+        // Try system tesseract installation first (Ubuntu/Debian), then user home
+        let system_paths = [
+            PathBuf::from("/usr/share/tesseract-ocr/5/tessdata"),
+            PathBuf::from("/usr/share/tesseract-ocr/tessdata"),
+        ];
+        for path in &system_paths {
+            if path.exists() {
+                return path.clone();
+            }
+        }
+        // Fallback to user home directory
+        let home_dir = std::env::var("HOME").expect("HOME environment variable not set");
         PathBuf::from(home_dir).join(".tesseract-rs").join("tessdata")
     } else if cfg!(target_os = "windows") {
-        PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| "C:\\temp".to_string()))
+        PathBuf::from(std::env::var("APPDATA").expect("APPDATA environment variable not set"))
             .join("tesseract-rs")
             .join("tessdata")
     } else {
@@ -23,12 +34,39 @@ fn get_default_tessdata_dir() -> PathBuf {
     }
 }
 
+fn get_tessdata_dir() -> PathBuf {
+    match std::env::var("TESSDATA_PREFIX") {
+        Ok(dir) => {
+            let prefix_path = PathBuf::from(dir);
+            // TESSDATA_PREFIX can point to either:
+            // 1. The tessdata directory itself (/path/to/tessdata)
+            // 2. The parent directory (/path/to where tessdata is the subdirectory)
+            let tessdata_path = if prefix_path.ends_with("tessdata") {
+                prefix_path
+            } else {
+                prefix_path.join("tessdata")
+            };
+            println!("Using TESSDATA_PREFIX directory: {:?}", tessdata_path);
+            tessdata_path
+        }
+        Err(_) => {
+            let default_dir = get_default_tessdata_dir();
+            println!("TESSDATA_PREFIX not set, using default directory: {:?}", default_dir);
+            default_dir
+        }
+    }
+}
+
 fn benchmark_simple_ocr(c: &mut Criterion) {
-    let tessdata_dir = get_default_tessdata_dir();
+    let tessdata_dir = get_tessdata_dir();
 
     c.bench_function("simple_ocr", |b| {
         let api = TesseractAPI::new();
-        api.init(tessdata_dir.to_str().unwrap(), "eng").unwrap();
+        api.init(
+            tessdata_dir.to_str().expect("tessdata path contains invalid UTF-8"),
+            "eng",
+        )
+        .expect("Failed to initialize Tesseract");
 
         // Create a simple test image (24x24 white image with a black digit)
         let width = 24;
@@ -52,27 +90,33 @@ fn benchmark_simple_ocr(c: &mut Criterion) {
                 black_box(1),
                 black_box(width as i32),
             )
-            .unwrap();
+            .expect("Failed to set image");
 
-            let _text = api.get_utf8_text().unwrap();
+            let _text = api.get_utf8_text().expect("Failed to perform OCR");
         });
     });
 }
 
 fn benchmark_with_variables(c: &mut Criterion) {
-    let tessdata_dir = get_default_tessdata_dir();
+    let tessdata_dir = get_tessdata_dir();
 
     c.bench_function("ocr_with_variables", |b| {
         let api = TesseractAPI::new();
-        api.init(tessdata_dir.to_str().unwrap(), "eng").unwrap();
+        api.init(
+            tessdata_dir.to_str().expect("tessdata path contains invalid UTF-8"),
+            "eng",
+        )
+        .expect("Failed to initialize Tesseract");
 
         let width = 24;
         let height = 24;
         let image_data = vec![255u8; width * height];
 
         b.iter(|| {
-            api.set_variable("tessedit_char_whitelist", "0123456789").unwrap();
-            api.set_variable("tessedit_pageseg_mode", "10").unwrap();
+            api.set_variable("tessedit_char_whitelist", "0123456789")
+                .expect("Failed to set char whitelist");
+            api.set_variable("tessedit_pageseg_mode", "10")
+                .expect("Failed to set page seg mode");
 
             api.set_image(
                 black_box(&image_data),
@@ -81,9 +125,9 @@ fn benchmark_with_variables(c: &mut Criterion) {
                 black_box(1),
                 black_box(width as i32),
             )
-            .unwrap();
+            .expect("Failed to set image");
 
-            let _text = api.get_utf8_text().unwrap();
+            let _text = api.get_utf8_text().expect("Failed to perform OCR");
         });
     });
 }

@@ -2712,5 +2712,3 @@ SARRAY  *sa;
     pixaDestroy(&pixa5);
     return 0;
 }
-
-

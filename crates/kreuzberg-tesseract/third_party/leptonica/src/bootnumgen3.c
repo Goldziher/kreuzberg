@@ -365,4 +365,3 @@ PIXA     *pixa;
     lept_free(data2);
     return pixa;
 }
-

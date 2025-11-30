@@ -3,9 +3,9 @@
 //static void MakePtas(l_int32 i, PTA **pptas, PTA **pptad);
 
 extern "C" int
-LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) { 
+LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     if(size<3) return 0;
- 
+
     leptSetStdNullHandler();
 
     PIX *tmp_pixs = pixReadMemSpix(data, size);
@@ -16,7 +16,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         pixDestroy(&tmp_pixs);
         return 0;
     }
-    
+
     FPIX *fpix_payload = dpixConvertToFPix(dpix_payload);
     if(fpix_payload == NULL) {
         pixDestroy(&tmp_pixs);
@@ -51,7 +51,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     DPIX *dpix_copy5 = dpixCopy(dpix_payload);
     dpixGetMin(dpix_copy5, &l_f2, &l_i3, &l_i4);
     dpixDestroy(&dpix_copy5);
- 
+
     DPIX *dpix1 = dpixCreate(300, 300);
     DPIX *dpix2 = dpixCreate(300, 300);
     DPIX *dpix_copy6 = dpixCopy(dpix_payload);
@@ -59,7 +59,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     dpixDestroy(&dpix1);
     dpixDestroy(&dpix2);
     dpixDestroy(&dpix_copy6);
-    
+
     DPIX *dpix_copy7 = dpixCopy(dpix_payload);
     DPIX *dpix3 = dpixScaleByInteger(dpix_copy7, 1);
     dpixDestroy(&dpix3);
@@ -68,12 +68,12 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     DPIX *dpix_copy8 = dpixCopy(dpix_payload);
     dpixSetAllArbitrary(dpix_copy8, 1.1);
     dpixDestroy(&dpix_copy8);
-    
+
     FPIX *fpix_copy1 = fpixCopy(fpix_payload);
     FPIX *fpix2 = fpixAddContinuedBorder(fpix_copy1, 1, 1, 1, 1);
     fpixDestroy(&fpix_copy1);
     fpixDestroy(&fpix2);
-    
+
     PTA *pta1 = ptaCreate(0);
     PTA *pta2 = ptaCreate(0);
     FPIX *fpix_copy92 = fpixCopy(fpix_payload);
@@ -87,7 +87,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     DPIX *dpix_return1 = fpixConvertToDPix(fpix_copy2);
     fpixDestroy(&fpix_copy2);
     dpixDestroy(&dpix_return1);
-    
+
     FPIX *fpix5 = fpixCreate(300, 300);
     FPIX *fpix_copy3 = fpixCopy(fpix_payload);
     fpixLinearCombination(fpix_copy3, fpix_copy3, fpix5, 1.1, 1.1);

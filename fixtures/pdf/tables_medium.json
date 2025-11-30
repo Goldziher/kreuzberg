@@ -1,19 +1,19 @@
 {
-  "id": "pdf_tables_medium",
-  "category": "pdf",
-  "description": "Medium-sized PDF with multiple tables.",
-  "document": {
-    "path": "pdfs_with_tables/medium.pdf",
-    "media_type": "application/pdf"
-  },
-  "extraction": {
-    "config": {}
-  },
-  "assertions": {
-    "expected_mime": "application/pdf",
-    "min_content_length": 100,
-    "tables": {
-      "min": 1
-    }
-  }
+	"id": "pdf_tables_medium",
+	"category": "pdf",
+	"description": "Medium-sized PDF with multiple tables.",
+	"document": {
+		"path": "pdfs_with_tables/medium.pdf",
+		"media_type": "application/pdf"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 100,
+		"tables": {
+			"min": 1
+		}
+	}
 }

@@ -95,4 +95,3 @@ SARRAY  *safiles;
 
     return 0;
 }
-

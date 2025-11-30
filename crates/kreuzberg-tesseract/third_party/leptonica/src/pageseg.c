@@ -821,7 +821,7 @@ PIX     *pix1;
     }
     boxaDestroy(&boxa1);
     boxaDestroy(&boxa2);
-    return 0; 
+    return 0;
 }
 
 

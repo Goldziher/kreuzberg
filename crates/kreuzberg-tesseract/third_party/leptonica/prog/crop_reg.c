@@ -317,4 +317,3 @@ l_int32  nrt, ntrans, start, end, sign, txt2, pap2, found, trans;
     *pright = pap2;
     return 0;
 }
-

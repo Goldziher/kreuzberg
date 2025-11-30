@@ -86,4 +86,3 @@ L_REGPARAMS  *rp;
     selDestroy(&sel);
     return regTestCleanup(rp);
 }
-

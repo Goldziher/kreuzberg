@@ -77,4 +77,3 @@ L_STRCODE  *strc;
     strcodeCreateFromFile("/tmp/lept/auto/fontnames.txt", 138, NULL);
     return 0;
 }
-

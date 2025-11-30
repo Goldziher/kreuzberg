@@ -138,4 +138,3 @@ enum {
 
 
 #endif  /* LEPTONICA_REGUTILS_H */
-

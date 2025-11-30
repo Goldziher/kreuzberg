@@ -287,4 +287,3 @@ l_float32  ratio;
     pixDestroy(&pix1);
     return pix2;
 }
-

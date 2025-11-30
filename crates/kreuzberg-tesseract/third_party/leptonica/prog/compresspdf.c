@@ -160,7 +160,7 @@ SARRAY    *safiles;
     }
     if (scalefactor <= 0.0) scalefactor = 1.0;
     if (scalefactor > 2.0) {
-        L_WARNING("scalefactor %f too big; setting to 2.0\n", __func__, 
+        L_WARNING("scalefactor %f too big; setting to 2.0\n", __func__,
                   scalefactor);
         scalefactor = 2.0;
     }
@@ -195,4 +195,3 @@ SARRAY    *safiles;
     sarrayDestroy(&safiles);
     return 0;
 }
-

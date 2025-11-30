@@ -157,4 +157,3 @@ SEL  *selhm;
     pixDestroy(&pixs);
     return 0;
 }
-

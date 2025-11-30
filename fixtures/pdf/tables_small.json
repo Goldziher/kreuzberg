@@ -1,27 +1,27 @@
 {
-  "id": "pdf_tables_small",
-  "category": "pdf",
-  "description": "Small PDF containing tables to validate table extraction.",
-  "document": {
-    "path": "pdfs_with_tables/tiny.pdf",
-    "media_type": "application/pdf"
-  },
-  "extraction": {
-    "config": {}
-  },
-  "assertions": {
-    "expected_mime": "application/pdf",
-    "min_content_length": 50,
-    "content_contains_all": [
-      "Table 1",
-      "Selected Numbers",
-      "Celsius",
-      "Fahrenheit",
-      "Water Freezing Point",
-      "Water Boiling Point"
-    ],
-    "tables": {
-      "min": 1
-    }
-  }
+	"id": "pdf_tables_small",
+	"category": "pdf",
+	"description": "Small PDF containing tables to validate table extraction.",
+	"document": {
+		"path": "pdfs_with_tables/tiny.pdf",
+		"media_type": "application/pdf"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/pdf",
+		"min_content_length": 50,
+		"content_contains_all": [
+			"Table 1",
+			"Selected Numbers",
+			"Celsius",
+			"Fahrenheit",
+			"Water Freezing Point",
+			"Water Boiling Point"
+		],
+		"tables": {
+			"min": 1
+		}
+	}
 }

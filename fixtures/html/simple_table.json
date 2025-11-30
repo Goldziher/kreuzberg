@@ -1,28 +1,20 @@
 {
-  "id": "html_simple_table",
-  "category": "html",
-  "description": "HTML table converted to markdown should retain structure.",
-  "document": {
-    "path": "web/simple_table.html",
-    "media_type": "text/html"
-  },
-  "extraction": {
-    "config": {}
-  },
-  "assertions": {
-    "expected_mime": "text/html",
-    "min_content_length": 100,
-    "content_contains_all": [
-      "Product",
-      "Category",
-      "Price",
-      "Stock",
-      "Laptop",
-      "Electronics",
-      "Sample Data Table"
-    ],
-    "tables": {
-      "min": 1
-    }
-  }
+	"id": "html_simple_table",
+	"category": "html",
+	"description": "HTML table converted to markdown should retain structure.",
+	"document": {
+		"path": "web/simple_table.html",
+		"media_type": "text/html"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "text/html",
+		"min_content_length": 100,
+		"content_contains_all": ["Product", "Category", "Price", "Stock", "Laptop", "Electronics", "Sample Data Table"],
+		"tables": {
+			"min": 1
+		}
+	}
 }

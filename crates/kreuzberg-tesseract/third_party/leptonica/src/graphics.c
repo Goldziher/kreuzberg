@@ -1152,7 +1152,7 @@ PTA       *pta1, *pta2, *ptad;
 
         /* Generate the plot points */
     pta1 = ptaCreate(n);
-    maxw = maxh = 0;       
+    maxw = maxh = 0;
     for (i = 0; i < n; i++) {
         numaGetFValue(na, i, &val);
         if (orient == L_HORIZONTAL_LINE) {

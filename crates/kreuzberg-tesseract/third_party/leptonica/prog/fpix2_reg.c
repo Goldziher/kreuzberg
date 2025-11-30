@@ -113,4 +113,3 @@ L_REGPARAMS  *rp;
     fpixDestroy(&fpix3);
     return regTestCleanup(rp);
 }
-

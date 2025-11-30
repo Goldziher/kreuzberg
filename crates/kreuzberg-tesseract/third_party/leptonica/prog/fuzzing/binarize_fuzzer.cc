@@ -1,7 +1,7 @@
 #include "leptfuzz.h"
 
 extern "C" int
-LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) { 
+LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	if(size<3) return 0;
 
 	leptSetStdNullHandler();
@@ -9,13 +9,13 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	PIX *pixs_payload = pixReadMemSpix(data, size);
 	if(pixs_payload == NULL) return 0;
 
-	PIX *pix1, *pix2, *return_pix, *pix_copy1;	
+	PIX *pix1, *pix2, *return_pix, *pix_copy1;
 	l_int32 l_i;
 
 	pix1 = pixRead("../test8.jpg");
 	pix_copy1 = pixCopy(NULL, pixs_payload);
-	return_pix = pixMaskedThreshOnBackgroundNorm(pix_copy1, pix1, 
-						     100, 100, 10, 10, 
+	return_pix = pixMaskedThreshOnBackgroundNorm(pix_copy1, pix1,
+						     100, 100, 10, 10,
 						     10, 10, 0.1, &l_i);
 	pixDestroy(&pix1);
 	pixDestroy(&pix_copy1);
@@ -23,9 +23,9 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
 	pix1 = pixRead("../test8.jpg");
 	pix_copy1 = pixCopy(NULL, pixs_payload);
-	return_pix = pixOtsuThreshOnBackgroundNorm(pix_copy1, pix1, 
-						   100, 100, 10, 10, 
-						   130, 30, 30, 0.1, 
+	return_pix = pixOtsuThreshOnBackgroundNorm(pix_copy1, pix1,
+						   100, 100, 10, 10,
+						   130, 30, 30, 0.1,
 						   &l_i);
 	pixDestroy(&pix1);
 	pixDestroy(&pix_copy1);
@@ -38,7 +38,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
 	pix1 = pixRead("../test8.jpg");
 	pix_copy1 = pixCopy(NULL, pixs_payload);
-	pixThresholdByConnComp(pix_copy1, pix1, 10, 10, 10, 5.5, 5.5, 
+	pixThresholdByConnComp(pix_copy1, pix1, 10, 10, 10, 5.5, 5.5,
 						   &l_i, &pix2, 1);
 	pixDestroy(&pix1);
 	pixDestroy(&pix2);

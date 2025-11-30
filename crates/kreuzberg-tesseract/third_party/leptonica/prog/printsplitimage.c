@@ -146,4 +146,3 @@ SARRAY      *sa;
     pixDestroy(&pixs);
     return 0;
 }
-

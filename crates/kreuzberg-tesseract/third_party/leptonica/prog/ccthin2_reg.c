@@ -188,5 +188,3 @@ SELA         *sela;
 
     return regTestCleanup(rp);
 }
-
-

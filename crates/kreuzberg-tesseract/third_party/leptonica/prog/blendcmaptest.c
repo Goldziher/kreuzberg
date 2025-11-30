@@ -109,4 +109,3 @@ PIXCMAP  *cmap;
     pixaDestroy(&pixa);
     return 0;
 }
-

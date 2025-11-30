@@ -120,5 +120,3 @@ SARRAY   *sa1;
 
     return 0;
 }
-
-

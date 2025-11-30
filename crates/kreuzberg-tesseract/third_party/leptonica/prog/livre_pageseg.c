@@ -305,4 +305,3 @@ l_int32   block_flag = 0;
     boxaDestroy(&boxahm);
     return 0;
 }
-

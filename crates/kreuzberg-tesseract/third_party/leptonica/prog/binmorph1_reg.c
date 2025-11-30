@@ -575,4 +575,3 @@ SEL     *sel;
         lept_stderr("  Some morph tests failed!\n");
     selDestroy(&sel);
 }
-

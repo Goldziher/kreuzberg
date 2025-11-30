@@ -626,10 +626,10 @@ fn generate_simple_list_test(_fixture: &Fixture, test_spec: &PluginTestSpec, buf
     // Generate assertions
     writeln!(buf, "    assert isinstance(result, list)")?;
 
-    if let Some(item_type) = &assertions.list_item_type {
-        if item_type == "string" {
-            writeln!(buf, "    assert all(isinstance(item, str) for item in result)")?;
-        }
+    if let Some(item_type) = &assertions.list_item_type
+        && item_type == "string"
+    {
+        writeln!(buf, "    assert all(isinstance(item, str) for item in result)")?;
     }
 
     if let Some(contains) = &assertions.list_contains {
@@ -820,13 +820,13 @@ fn generate_object_property_assertions(assertions: &PluginAssertions, buf: &mut 
     for prop in &assertions.object_properties {
         let parts: Vec<&str> = prop.path.split('.').collect();
 
-        if let Some(exists) = prop.exists {
-            if exists {
-                let mut path = "config".to_string();
-                for part in &parts {
-                    writeln!(buf, "    assert {}.{} is not None", path, part)?;
-                    path = format!("{}.{}", path, part);
-                }
+        if let Some(exists) = prop.exists
+            && exists
+        {
+            let mut path = "config".to_string();
+            for part in &parts {
+                writeln!(buf, "    assert {}.{} is not None", path, part)?;
+                path = format!("{}.{}", path, part);
             }
         }
 

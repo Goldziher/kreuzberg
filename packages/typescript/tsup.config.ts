@@ -13,5 +13,5 @@ export default defineConfig({
 	sourcemap: true,
 	clean: true,
 	shims: true,
-external: ["kreuzberg-node", "sharp", "@gutenye/ocr-node"],
+	external: ["kreuzberg-node", "sharp", "@gutenye/ocr-node"],
 });

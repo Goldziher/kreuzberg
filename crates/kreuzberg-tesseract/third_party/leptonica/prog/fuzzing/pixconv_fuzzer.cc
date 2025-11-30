@@ -10,7 +10,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
     pixs = pixReadMemSpix(data, size);
     if(pixs==NULL) return 0;
-    
+
     pix1 = pixConvertGrayToFalseColor(pixs, 1.0);
     pix2 = pixThreshold8(pixs, 1, 0, 0);
     pixQuantizeIfFewColors(pixs, 8, 0, 1, &pix3);

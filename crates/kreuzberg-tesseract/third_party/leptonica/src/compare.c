@@ -678,7 +678,7 @@ PIXA      *pixa1;
 
     if (d1 == 1) {
         pix3 = pixDisplayDiffBinary(pix1, pix2);
-        pixd = pixConvertTo32(pix3); 
+        pixd = pixConvertTo32(pix3);
         pixDestroy(&pix3);
     } else {
         minw = L_MIN(w1, w2);
@@ -709,7 +709,7 @@ PIXA      *pixa1;
             }
         }
     }
-                
+
     if (showall) {
         pixa1 = pixaCreate(3);
         if (d1 == 1) {

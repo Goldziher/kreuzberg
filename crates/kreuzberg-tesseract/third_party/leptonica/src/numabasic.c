@@ -1963,4 +1963,3 @@ FILE    *fp;
 #endif  /* HAVE_FMEMOPEN */
     return ret;
 }
-

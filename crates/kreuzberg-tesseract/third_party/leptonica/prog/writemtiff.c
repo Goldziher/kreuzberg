@@ -56,4 +56,3 @@ int main(int    argc,
         writeMultipageTiff(argv[1], argv[2], argv[3]);
     return 0;
 }
-

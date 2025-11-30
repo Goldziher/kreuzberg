@@ -304,4 +304,3 @@ PIXA      *pixa;
     pixDestroy(&pix1);
     pixDestroy(&pix2);
 }
-

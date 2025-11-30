@@ -1,9 +1,9 @@
 #include "leptfuzz.h"
 
 extern "C" int
-LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) { 
+LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	if(size<3) return 0;
- 
+
 	leptSetStdNullHandler();
 
 	BOXA *boxa_payload, *boxa1;
@@ -13,7 +13,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	PIX       *pix1;
 	l_float32  fract;
 	l_int32    minx, miny, maxx, maxy, changed;
-	
+
 	pix1 = boxaDisplayTiled(boxa_payload, NULL, 0, -1, 1500,
                                 2, 1.0, 0, 3, 2);
 	pixDestroy(&pix1);
@@ -27,7 +27,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
 	boxaPermuteRandom(boxa_payload, boxa_payload);
 
-	boxa1 = boxaSelectByWHRatio(boxa_payload, 1, 
+	boxa1 = boxaSelectByWHRatio(boxa_payload, 1,
 				    L_SELECT_IF_LT, &changed);
 	boxaDestroy(&boxa1);
 

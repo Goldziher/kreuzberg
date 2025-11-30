@@ -280,4 +280,3 @@ l_int32  d;
         pixWrite(fname, pix, IFF_JFIF_JPEG);
     return;
 }
-

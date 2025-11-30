@@ -231,4 +231,3 @@ MakePtas(l_int32  i,
     ptaAddPt(*pptad, xp4[i], yp4[i]);
     return;
 }
-

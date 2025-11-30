@@ -213,4 +213,3 @@ PIXA    *pixa;
     pixDestroy(&pixs2);
     return pixd;
 }
-

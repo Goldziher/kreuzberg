@@ -221,5 +221,3 @@ PIXA       *pixa, *pixadb;
 
     return 0;
 }
-
-

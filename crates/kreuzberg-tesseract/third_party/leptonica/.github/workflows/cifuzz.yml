@@ -1,7 +1,7 @@
 name: CIFuzz
 # OSS-Fuzz CI
 # See https://google.github.io/oss-fuzz/getting-started/continuous-integration/
-on: 
+on:
   pull_request:
     branches:
     - main
@@ -17,7 +17,7 @@ jobs:
       uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
       with:
         oss-fuzz-project-name: 'leptonica'
-        language: c        
+        language: c
         dry-run: false
     - name: Run Fuzzers
       uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master

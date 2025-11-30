@@ -131,4 +131,3 @@ PIXA       *pixa, *pixadb;
     numaDestroy(&natl);
     return 0;
 }
-

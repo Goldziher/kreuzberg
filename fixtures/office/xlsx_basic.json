@@ -1,32 +1,28 @@
 {
-  "id": "office_xlsx_basic",
-  "category": "office",
-  "description": "XLSX spreadsheet should produce metadata and table content.",
-  "document": {
-    "path": "spreadsheets/stanley_cups.xlsx",
-    "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-  },
-  "extraction": {
-    "config": {}
-  },
-  "assertions": {
-    "expected_mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "min_content_length": 100,
-    "content_contains_all": [
-      "Team",
-      "Location",
-      "Stanley Cups"
-    ],
-    "tables": {
-      "min": 1
-    },
-    "metadata": {
-      "sheet_count": {
-        "gte": 2
-      },
-      "sheet_names": {
-        "contains": "Stanley Cups"
-      }
-    }
-  }
+	"id": "office_xlsx_basic",
+	"category": "office",
+	"description": "XLSX spreadsheet should produce metadata and table content.",
+	"document": {
+		"path": "spreadsheets/stanley_cups.xlsx",
+		"media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	},
+	"extraction": {
+		"config": {}
+	},
+	"assertions": {
+		"expected_mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		"min_content_length": 100,
+		"content_contains_all": ["Team", "Location", "Stanley Cups"],
+		"tables": {
+			"min": 1
+		},
+		"metadata": {
+			"sheet_count": {
+				"gte": 2
+			},
+			"sheet_names": {
+				"contains": "Stanley Cups"
+			}
+		}
+	}
 }

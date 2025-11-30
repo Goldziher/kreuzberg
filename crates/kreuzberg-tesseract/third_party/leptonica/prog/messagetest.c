@@ -178,4 +178,3 @@ PIX  *pix1;
     pix1 = pixRead("doesn't_exist");
     lept_stderr("---------------------------------\n");
 }
-

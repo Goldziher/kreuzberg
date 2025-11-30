@@ -142,4 +142,3 @@ SEL      *sel_2h, *sel;
     boxaDestroy(&boxa2);
     return 0;
 }
-

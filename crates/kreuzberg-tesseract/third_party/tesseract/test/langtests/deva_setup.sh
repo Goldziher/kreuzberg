@@ -5,9 +5,9 @@
 rm -rf ~/lang-deva-downloads
 mkdir ~/lang-deva-downloads
 cd ~/lang-deva-downloads
-git clone https://github.com/Shreeshrii/imagessan.git --depth 1 
+git clone https://github.com/Shreeshrii/imagessan.git --depth 1
 
-### 
+###
 # Copy and rename files as needed for the evaluation script
 #
 mkdir -p ~/lang-files
@@ -30,9 +30,9 @@ cd ~/lang-stopwords
 cp ~/lang-deva-downloads/imagessan/stopwords.txt ~/lang-stopwords/san.stopwords.txt
 cp ~/lang-deva-downloads/imagessan/stopwords.txt ~/lang-stopwords/Devanagari.stopwords.txt
 
-### 
+###
 # Get the traineddata for testing
-cd ~/tesseract              
+cd ~/tesseract
 mkdir -p tessdata_best
 mkdir -p tessdata_fast
 mkdir -p tessdata_fast/script

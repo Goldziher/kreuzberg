@@ -1445,4 +1445,3 @@ brew install tesseract
 ```
 
 **"OutOfMemoryError with large files"** - Use streaming or batch processing with smaller batches.
-

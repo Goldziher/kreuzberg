@@ -19,7 +19,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         pixa = pixaReadMem(data, size);
         return_pixa = pixaThinConnected(pixa, L_THIN_BG, i, i);
         pixaDestroy(&pixa);
-        pixaDestroy(&return_pixa);       
+        pixaDestroy(&return_pixa);
     }
 
     pixaDestroy(&return_pixa);

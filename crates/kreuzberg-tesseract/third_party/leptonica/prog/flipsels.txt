@@ -32,4 +32,3 @@ textsel4
 "  o  x"
 " oOo x"
 " oo  x"
-

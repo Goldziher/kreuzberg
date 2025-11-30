@@ -199,7 +199,7 @@ Expected equality of these values:
     Which is: 2
 Google Test trace:
 googletest-output-test_.cc:#: n = 2
-googletest-output-test_.cc:#: 
+googletest-output-test_.cc:#:
 Stack trace: (omitted)
 
 [0;31m[  FAILED  ] [mSCOPED_TRACETest.CanBeNested

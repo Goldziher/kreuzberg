@@ -1,14 +1,14 @@
 #include "leptfuzz.h"
 
 extern "C" int
-LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) { 
+LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 	if(size<3) return 0;
- 
+
 	leptSetStdNullHandler();
 
 	PIX *pixs_payload = pixReadMemSpix(data, size);
 	if(pixs_payload == NULL) return 0;
-	
+
 	PIX *pix_pointer_payload, *return_pix;
 
 	pix_pointer_payload = pixCopy(NULL, pixs_payload);

@@ -11,7 +11,7 @@
 %   Subsequent '&' are separators between data for different plots;
 %   this way, we can have multiple plots on the same output graph
 %
-% All plot info lines before the "&" that signals start of 
+% All plot info lines before the "&" that signals start of
 % data are optional
 %
 % If they exist, the first three must be:
@@ -29,11 +29,11 @@
 %       title for plot 2
 %       drawing style for plot 2
 %       ...
-% 
+%
 % The defaults are to have the plots untitled and to
 % use LINES for the plot.  The drawing styles allowed
 % are in the set {LINES, POINTS, IMPULSES, LINESPOINTS, DOTS}.
-%      
+%
 
 this is the title
 this is the xaxis label

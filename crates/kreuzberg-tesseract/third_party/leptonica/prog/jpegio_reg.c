@@ -261,5 +261,3 @@ PIX     *pixs;
     pixDestroy(&pixs);
     return;
 }
-
-

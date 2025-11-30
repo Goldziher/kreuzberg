@@ -632,5 +632,3 @@ static const char  fontdata_20[] =
     "xhMAABwBAwABAAAAAQAAACgBAwABAAAAAgAAAAAAAAAAAMASAAAEAAAAwBIAAAQA";
 
 #endif  /* LEPTONICA_BMFDATA_H */
-
-

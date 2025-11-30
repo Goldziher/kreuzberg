@@ -66,4 +66,3 @@ char      *filein, *fileout;
     pixDestroy(&pixd);
     return 0;
 }
-

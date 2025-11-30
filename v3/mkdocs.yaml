@@ -1,0 +1,149 @@
+site_name: Kreuzberg
+site_description: A modern text extraction library supporting PDFs, images, office documents and more
+site_url: https://kreuzberg.dev
+site_author: Kreuzberg Contributors
+repo_name: Goldziher/kreuzberg
+repo_url: https://github.com/Goldziher/kreuzberg
+edit_uri: edit/main/docs/
+copyright: |
+  Copyright &copy; 2023-2025 Na'aman Hirschfeld<br>
+  <a href="#__consent">Change cookie settings</a>
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/favicon.ico
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep-purple
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep-purple
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.tracking
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    - announce.dismiss
+  icon:
+    repo: fontawesome/brands/github
+  language: en
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+      linenums: true
+      use_pygments: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+      fallback_to_build_date: true
+      enabled: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Goldziher/kreuzberg
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/kreuzberg/
+  version:
+    provider: mike
+    default: latest
+    alias: true
+
+extra_css:
+  - css/extra.css
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - getting-started/index.md
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quick-start.md
+  - User Guide:
+      - user-guide/index.md
+      - Basic Usage: user-guide/basic-usage.md
+      - Extraction Configuration: user-guide/extraction-configuration.md
+      - Metadata Extraction: user-guide/metadata-extraction.md
+      - Content Chunking: user-guide/chunking.md
+      - OCR Configuration: user-guide/ocr-configuration.md
+      - OCR Backends: user-guide/ocr-backends.md
+      - Document Classification: user-guide/document-classification.md
+      - Supported Formats: user-guide/supported-formats.md
+      - Performance Analysis: advanced/performance.md
+      - MCP Server: user-guide/mcp-server.md
+      - API Server: user-guide/api-server.md
+      - Docker: user-guide/docker.md
+  - CLI Guide: cli.md
+  - Examples:
+      - examples/index.md
+      - Extraction Examples: examples/extraction-examples.md
+  - API Reference:
+      - api-reference/index.md
+      - Extraction Functions: api-reference/extraction-functions.md
+      - Types: api-reference/types.md
+      - OCR Configuration: api-reference/ocr-configuration.md
+      - Extractor Registry: api-reference/extractor-registry.md
+      - Exceptions: api-reference/exceptions.md
+  - Advanced:
+      - advanced/index.md
+      - Performance Guide: advanced/performance.md
+      - Error Handling: advanced/error-handling.md
+      - Custom Hooks: advanced/custom-hooks.md
+      - Custom Extractors: advanced/custom-extractors.md
+  - Contributing: contributing.md

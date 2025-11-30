@@ -9,4 +9,3 @@ Version: @VERSION@
 Libs: -L${libdir} -l@leptonica_OUTPUT_NAME@
 Libs.private: @ZLIB_LIBS@ @LIBPNG_LIBS@ @JPEG_LIBS@ @LIBJP2K_LIBS@ @GIFLIB_LIBS@ @LIBTIFF_LIBS@ @LIBWEBP_LIBS@ @LIBWEBPMUX_LIBS@
 Cflags: -I${includedir}
-

@@ -67,6 +67,11 @@ jobs:
       - name: Download PDFium runtime
         run: bash scripts/download_pdfium_runtime.sh
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Build workspace (native libs + harness)
         run: |
           set -euo pipefail
@@ -114,6 +119,11 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: benchmarks-native
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Run benchmark
         env:
@@ -179,6 +189,11 @@ jobs:
         with:
           python-version: "3.11"
           cache-prefix: benchmark-python
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Python bindings
         working-directory: packages/python
@@ -249,6 +264,11 @@ jobs:
           python-version: "3.11"
           cache-prefix: benchmark-python
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Build Python bindings
         working-directory: packages/python
         run: uv run maturin develop --release
@@ -318,6 +338,11 @@ jobs:
           python-version: "3.11"
           cache-prefix: benchmark-python
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Build Python bindings
         working-directory: packages/python
         run: uv run maturin develop --release
@@ -383,6 +408,11 @@ jobs:
 
       - name: Setup Node
         uses: ./.github/actions/setup-node-workspace
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Node bindings and install locally
         run: |
@@ -455,6 +485,11 @@ jobs:
 
       - name: Setup Node
         uses: ./.github/actions/setup-node-workspace
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Node bindings and install locally
         run: |
@@ -530,6 +565,11 @@ jobs:
         with:
           ruby-version: "3.2"
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Build Ruby native gem
         uses: ./.github/actions/build-ruby-unix
         with:
@@ -599,6 +639,11 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Ruby native gem
         uses: ./.github/actions/build-ruby-unix
@@ -671,6 +716,11 @@ jobs:
           go-version: "1.25.x"
           cache-dependency-path: packages/go/go.sum
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Prime Go modules
         working-directory: packages/go
         run: go mod download
@@ -739,6 +789,11 @@ jobs:
         with:
           go-version: "1.25.x"
           cache-dependency-path: packages/go/go.sum
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Prime Go modules
         working-directory: packages/go
@@ -809,6 +864,11 @@ jobs:
           distribution: temurin
           java-version: "25"
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Build Java bindings
         working-directory: packages/java
         run: mvn -q -B -U package
@@ -876,6 +936,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build C# bindings
         working-directory: packages/csharp
@@ -946,6 +1011,11 @@ jobs:
           python-version: "3.11"
           cache-prefix: benchmark-python
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Sync benchmark dependencies
         run: uv sync --group benchmark --no-install-workspace
 
@@ -1013,6 +1083,11 @@ jobs:
         with:
           python-version: "3.11"
           cache-prefix: benchmark-python
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Sync benchmark dependencies
         run: uv sync --group benchmark --no-install-workspace
@@ -1082,6 +1157,11 @@ jobs:
           python-version: "3.11"
           cache-prefix: benchmark-python
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Sync benchmark dependencies
         run: uv sync --group benchmark --no-install-workspace
 
@@ -1150,6 +1230,11 @@ jobs:
           python-version: "3.11"
           cache-prefix: benchmark-python
 
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Sync benchmark dependencies
         run: uv sync --group benchmark --no-install-workspace
 
@@ -1217,6 +1302,11 @@ jobs:
         with:
           python-version: "3.11"
           cache-prefix: benchmark-python
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
 
       - name: Sync benchmark dependencies
         run: uv sync --group benchmark --no-install-workspace

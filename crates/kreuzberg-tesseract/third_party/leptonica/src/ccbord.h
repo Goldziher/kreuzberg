@@ -59,4 +59,3 @@ enum {
 };
 
 #endif  /* LEPTONICA_CCBORD_H */
-

@@ -194,7 +194,7 @@ char    *envsev;
  *
  * \param[in]    msg        error message
  * \param[in]    procname   use __func__
- * \param[in]    ival       return error val (typically 1 for an error)  
+ * \param[in]    ival       return error val (typically 1 for an error)
  * \return  ival
  */
 l_int32

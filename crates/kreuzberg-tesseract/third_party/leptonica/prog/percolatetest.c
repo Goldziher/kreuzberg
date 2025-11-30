@@ -319,4 +319,3 @@ PIXCMAP  *cmap;
    pixDestroy(&pix1);
    return pixd;
 }
-

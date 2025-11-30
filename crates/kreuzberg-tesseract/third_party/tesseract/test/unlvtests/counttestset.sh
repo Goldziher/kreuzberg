@@ -65,4 +65,3 @@ done <"$pages"
 
 accsum $accfiles >"unlvtests/results/$setname.characc"
 wordaccsum $wafiles >"unlvtests/results/$setname.wordacc"
-

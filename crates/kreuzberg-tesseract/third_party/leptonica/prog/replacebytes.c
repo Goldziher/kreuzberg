@@ -78,4 +78,3 @@ char    *filein, *fileout, *newstr;
                                 strlen(newstr), fileout);
     }
 }
-

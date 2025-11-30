@@ -104,4 +104,4 @@ done
 cat "$resultsdir/$vid".*.sum >>"$rdir/$lang-$(date +%F)".summary
 cat "$resultsdir/$vid".*.sum >>"$rdir/$lang".summary
 
-cat "$resultsdir/$lang."Header "$rdir/$lang-$(date +%F)".summary 
+cat "$resultsdir/$lang."Header "$rdir/$lang-$(date +%F)".summary

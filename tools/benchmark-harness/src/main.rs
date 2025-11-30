@@ -174,7 +174,9 @@ async fn main() -> Result<()> {
 
             let mut registry = AdapterRegistry::new();
 
+            // Register native Rust adapter
             registry.register(Arc::new(NativeAdapter::with_config(extraction_config)))?;
+            eprintln!("[adapter] ✓ kreuzberg-native (registered)");
 
             use benchmark_harness::adapters::{
                 create_csharp_sync_adapter, create_go_batch_adapter, create_go_sync_adapter, create_java_sync_adapter,
@@ -183,60 +185,200 @@ async fn main() -> Result<()> {
                 create_ruby_sync_adapter,
             };
 
+            // Register Kreuzberg language bindings
+            let mut kreuzberg_count = 1; // native already registered
+
             if let Ok(adapter) = create_python_sync_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-python-sync (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-python-sync (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-python-sync (initialization failed)");
             }
+
             if let Ok(adapter) = create_python_async_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-python-async (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-python-async (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-python-async (initialization failed)");
             }
+
             if let Ok(adapter) = create_python_batch_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-python-batch (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-python-batch (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-python-batch (initialization failed)");
             }
+
             if let Ok(adapter) = create_go_sync_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-go-sync (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-go-sync (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-go-sync (initialization failed)");
             }
+
             if let Ok(adapter) = create_go_batch_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-go-batch (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-go-batch (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-go-batch (initialization failed)");
             }
+
             if let Ok(adapter) = create_node_async_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-async (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-async (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-async (initialization failed)");
             }
+
             if let Ok(adapter) = create_node_batch_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-batch (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-batch (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-batch (initialization failed)");
             }
+
             if let Ok(adapter) = create_ruby_sync_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-ruby-sync (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-ruby-sync (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-ruby-sync (initialization failed)");
             }
+
             if let Ok(adapter) = create_ruby_batch_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-ruby-batch (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-ruby-batch (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-ruby-batch (initialization failed)");
             }
+
             if let Ok(adapter) = create_java_sync_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-java-sync (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-java-sync (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-java-sync (initialization failed)");
             }
+
             if let Ok(adapter) = create_csharp_sync_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ kreuzberg-csharp-sync (registered)");
+                    kreuzberg_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ kreuzberg-csharp-sync (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ kreuzberg-csharp-sync (initialization failed)");
             }
+
+            eprintln!("[adapter] Kreuzberg bindings: {}/11 available", kreuzberg_count);
 
             use benchmark_harness::adapters::external::{
                 create_docling_adapter, create_docling_batch_adapter, create_extractous_python_adapter,
                 create_markitdown_adapter, create_unstructured_adapter,
             };
 
+            // Register external framework adapters
+            let mut external_count = 0;
+
             if let Ok(adapter) = create_docling_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ docling (registered)");
+                    external_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ docling (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ docling (initialization failed)");
             }
+
             if let Ok(adapter) = create_docling_batch_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ docling-batch (registered)");
+                    external_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ docling-batch (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ docling-batch (initialization failed)");
             }
+
             if let Ok(adapter) = create_extractous_python_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ extractous-python (registered)");
+                    external_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ extractous-python (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ extractous-python (initialization failed)");
             }
+
             if let Ok(adapter) = create_markitdown_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ markitdown (registered)");
+                    external_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ markitdown (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ markitdown (initialization failed)");
             }
+
             if let Ok(adapter) = create_unstructured_adapter() {
-                let _ = registry.register(Arc::new(adapter));
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ unstructured (registered)");
+                    external_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ unstructured (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ unstructured (initialization failed)");
             }
+
+            eprintln!("[adapter] External frameworks: {}/5 available", external_count);
+            eprintln!(
+                "[adapter] Total adapters: {} available",
+                kreuzberg_count + external_count
+            );
 
             let mut runner = BenchmarkRunner::new(config, registry);
             runner.load_fixtures(&fixtures)?;

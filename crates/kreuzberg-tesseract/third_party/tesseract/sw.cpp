@@ -361,4 +361,3 @@ void check(Checker &c)
         c.Parameters.Includes.push_back("stdio.h");
     }
 }
-

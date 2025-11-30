@@ -238,10 +238,7 @@ describe("batchExtractBytesSync - comprehensive tests", () => {
 	});
 
 	it("should batch extract multiple bytes", () => {
-		const results = batchExtractBytesSync(
-			[samplePdfBytes, sampleTextBytes],
-			["application/pdf", "text/markdown"],
-		);
+		const results = batchExtractBytesSync([samplePdfBytes, sampleTextBytes], ["application/pdf", "text/markdown"]);
 
 		expect(results.length).toBe(2);
 		expect(results[0].mimeType).toContain("pdf");
@@ -292,10 +289,7 @@ describe("batchExtractBytes - comprehensive async tests", () => {
 	});
 
 	it("should batch extract multiple byte arrays", async () => {
-		const results = await batchExtractBytes(
-			[samplePdfBytes, sampleTextBytes],
-			["application/pdf", "text/markdown"],
-		);
+		const results = await batchExtractBytes([samplePdfBytes, sampleTextBytes], ["application/pdf", "text/markdown"]);
 
 		expect(results.length).toBe(2);
 		expect(results[0].mimeType).toContain("pdf");
@@ -303,30 +297,21 @@ describe("batchExtractBytes - comprehensive async tests", () => {
 	});
 
 	it("should validate array lengths match", async () => {
-		await expect(
-			batchExtractBytes([samplePdfBytes, sampleTextBytes], ["application/pdf"]),
-		).rejects.toThrow();
+		await expect(batchExtractBytes([samplePdfBytes, sampleTextBytes], ["application/pdf"])).rejects.toThrow();
 	});
 
 	it("should batch extract with config", async () => {
-		const results = await batchExtractBytes(
-			[samplePdfBytes],
-			["application/pdf"],
-			{
-				useCache: false,
-				enableQualityProcessing: true,
-			},
-		);
+		const results = await batchExtractBytes([samplePdfBytes], ["application/pdf"], {
+			useCache: false,
+			enableQualityProcessing: true,
+		});
 
 		expect(results.length).toBe(1);
 		expect(results[0].content).toBeTruthy();
 	});
 
 	it("should handle multiple identical byte arrays", async () => {
-		const results = await batchExtractBytes([samplePdfBytes, samplePdfBytes], [
-			"application/pdf",
-			"application/pdf",
-		]);
+		const results = await batchExtractBytes([samplePdfBytes, samplePdfBytes], ["application/pdf", "application/pdf"]);
 
 		expect(results.length).toBe(2);
 		expect(results[0].mimeType).toBe(results[1].mimeType);
@@ -356,8 +341,6 @@ describe("Extraction function argument validation", () => {
 	});
 
 	it("batchExtractBytes should validate Uint8Array array length", async () => {
-		await expect(
-			batchExtractBytes([samplePdfBytes, sampleTextBytes], ["application/pdf"]),
-		).rejects.toThrow();
+		await expect(batchExtractBytes([samplePdfBytes, sampleTextBytes], ["application/pdf"])).rejects.toThrow();
 	});
 });

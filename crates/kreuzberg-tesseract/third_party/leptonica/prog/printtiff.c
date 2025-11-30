@@ -93,4 +93,3 @@ char   buf[512];
     lept_free(tempfile);
     return 0;
 }
-

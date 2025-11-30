@@ -180,4 +180,3 @@ PIXA    *pixa1, *pixa2;
     pixaDestroy(&pixa2);
     bmfDestroy(&bmf);
 }
-

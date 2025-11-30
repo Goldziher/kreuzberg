@@ -96,7 +96,7 @@ static void  fhmt_1_3(l_uint32 *, l_int32, l_int32, l_int32, l_uint32 *,
 
 /*----------------------------------------------------------------*
  *        High-level interface for orientation detection          *
- *        (four 90 degree angles)                                 * 
+ *        (four 90 degree angles)                                 *
  *----------------------------------------------------------------*/
 /*!
  * \brief   pixOrientDetectDwa()

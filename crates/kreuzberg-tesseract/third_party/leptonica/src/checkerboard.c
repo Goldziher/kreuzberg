@@ -309,4 +309,3 @@ PIXA  *pixa1;
 
     return pixa1;
 }
-

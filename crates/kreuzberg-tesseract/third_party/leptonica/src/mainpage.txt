@@ -6,7 +6,7 @@
  * software that is broadly useful for image processing and image analysis applications.
  *
  * \section features Featured operations are
- * 
+ *
  * + Rasterop (a.k.a. bitblt)
  * + Affine transformations (scaling, translation, rotation, shear) on images of arbitrary pixel depth
  * + Binary and grayscale morphology, rank order, and convolution

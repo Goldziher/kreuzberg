@@ -159,4 +159,3 @@ PIX       *pixd;
     return pixd;
 
 }
-

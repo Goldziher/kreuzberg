@@ -99,4 +99,3 @@ PIX     *pixs, *pix;
     bmfDestroy(&bmf);
     return 0;
 }
-

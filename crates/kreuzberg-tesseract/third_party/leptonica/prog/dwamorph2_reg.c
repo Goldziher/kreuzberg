@@ -317,4 +317,3 @@ SELA      *selalinear;
     pixaDestroy(&pixa);
     return 0;
 }
-

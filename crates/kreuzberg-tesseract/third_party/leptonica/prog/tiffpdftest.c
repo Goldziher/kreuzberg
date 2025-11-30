@@ -137,5 +137,3 @@ PIXA      *pixa1, *pixa2, *pixa3;
     pixaDestroy(&pixa3);
     return 0;
 }
-
-

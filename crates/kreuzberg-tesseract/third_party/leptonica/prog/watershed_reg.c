@@ -154,4 +154,3 @@ PTA       *pta;
     pixaDestroy(&pixa);
     ptaDestroy(&pta);
 }
-

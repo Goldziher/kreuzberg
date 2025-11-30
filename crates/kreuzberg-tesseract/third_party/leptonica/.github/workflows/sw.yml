@@ -17,12 +17,12 @@ on:
 
 jobs:
   windows:
-    runs-on: windows-latest   
+    runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
     - uses: egorpugin/sw-action@master
     - run: ./sw build -static -shared -config d,r
-    
+
   linux:
     runs-on: ubuntu-22.04
     container: fedora:latest
@@ -34,7 +34,7 @@ jobs:
         sudo dnf -y install cmake which g++ clang clang-tools-extra lld
     - uses: egorpugin/sw-action@master
     - run: ./sw build -static -shared -config d,r
-   
+
   macos:
     runs-on: macos-latest
     steps:
@@ -45,10 +45,9 @@ jobs:
         brew update
         brew install flex bison gcc llvm
     - name: build
-      run: |      
+      run: |
         export PATH="/opt/homebrew/opt/bison/bin:$PATH"
         export PATH="/opt/homebrew/opt/flex/bin:$PATH"
         export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
         export PATH="/opt/homebrew/opt/gcc/bin:$PATH"
         ./sw build -static -shared -config d,r -compiler gcc
-        

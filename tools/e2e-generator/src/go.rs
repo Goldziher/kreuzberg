@@ -737,25 +737,24 @@ fn render_simple_list(
     let func_name = to_pascal_case(&test_spec.function_call.name);
 
     // Check for lazy initialization
-    if let Some(setup) = &test_spec.setup {
-        if let Some(lazy_init) = &setup.lazy_init_required {
-            if lazy_init.languages.contains(&"go".to_string()) {
-                // Special handling for Go lazy initialization
-                writeln!(code, "    tmpDir := t.TempDir()")?;
-                writeln!(code, "    testFile := filepath.Join(tmpDir, \"test.pdf\")")?;
-                writeln!(code, "    pdfContent := []byte(\"%PDF-1.4\\\\n%EOF\\\\n\")")?;
-                writeln!(
-                    code,
-                    "    if err := os.WriteFile(testFile, pdfContent, 0644); err != nil {{"
-                )?;
-                writeln!(code, "        t.Fatalf(\"Failed to write test PDF file: %v\", err)")?;
-                writeln!(code, "    }}")?;
-                writeln!(code)?;
-                writeln!(code, "    // This will initialize the PDF extractor")?;
-                writeln!(code, "    _, _ = kreuzberg.ExtractFileSync(testFile, nil)")?;
-                writeln!(code)?;
-            }
-        }
+    if let Some(setup) = &test_spec.setup
+        && let Some(lazy_init) = &setup.lazy_init_required
+        && lazy_init.languages.contains(&"go".to_string())
+    {
+        // Special handling for Go lazy initialization
+        writeln!(code, "    tmpDir := t.TempDir()")?;
+        writeln!(code, "    testFile := filepath.Join(tmpDir, \"test.pdf\")")?;
+        writeln!(code, "    pdfContent := []byte(\"%PDF-1.4\\\\n%EOF\\\\n\")")?;
+        writeln!(
+            code,
+            "    if err := os.WriteFile(testFile, pdfContent, 0644); err != nil {{"
+        )?;
+        writeln!(code, "        t.Fatalf(\"Failed to write test PDF file: %v\", err)")?;
+        writeln!(code, "    }}")?;
+        writeln!(code)?;
+        writeln!(code, "    // This will initialize the PDF extractor")?;
+        writeln!(code, "    _, _ = kreuzberg.ExtractFileSync(testFile, nil)")?;
+        writeln!(code)?;
     }
 
     writeln!(code, "    result, err := kreuzberg.{}()", func_name)?;
@@ -1102,24 +1101,24 @@ fn render_property_assertion(prop: &crate::fixtures::ObjectPropertyAssertion, co
 
     if parts.len() == 1 {
         // Top-level property
-        if let Some(exists) = prop.exists {
-            if exists {
-                writeln!(code, "    if config.{} == nil {{", to_pascal_case(parts[0]))?;
-                writeln!(code, "        t.Fatal(\"Config should have {} property\")", parts[0])?;
-                writeln!(code, "    }}")?;
-            }
+        if let Some(exists) = prop.exists
+            && exists
+        {
+            writeln!(code, "    if config.{} == nil {{", to_pascal_case(parts[0]))?;
+            writeln!(code, "        t.Fatal(\"Config should have {} property\")", parts[0])?;
+            writeln!(code, "    }}")?;
         }
     } else if parts.len() == 2 {
         // Nested property
         let parent = to_pascal_case(parts[0]);
         let child = to_pascal_case(parts[1]);
 
-        if let Some(exists) = prop.exists {
-            if exists {
-                writeln!(code, "    if config.{} == nil {{", parent)?;
-                writeln!(code, "        t.Fatal(\"Config should have {} property\")", parts[0])?;
-                writeln!(code, "    }}")?;
-            }
+        if let Some(exists) = prop.exists
+            && exists
+        {
+            writeln!(code, "    if config.{} == nil {{", parent)?;
+            writeln!(code, "        t.Fatal(\"Config should have {} property\")", parts[0])?;
+            writeln!(code, "    }}")?;
         }
 
         if let Some(value) = &prop.value {

@@ -94,4 +94,3 @@ PIX     *pixs1, *pixs2;
 
     return 0;
 }
-

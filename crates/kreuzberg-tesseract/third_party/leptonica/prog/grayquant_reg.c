@@ -395,4 +395,3 @@ L_REGPARAMS  *rp;
 
     return regTestCleanup(rp);
 }
-

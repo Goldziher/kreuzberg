@@ -233,4 +233,3 @@ PIXA    *pixa1;
     pixaDestroy(&pixa1);
     return 0;
 }
-

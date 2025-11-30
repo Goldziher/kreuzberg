@@ -1525,7 +1525,7 @@ SARRAY   *sa;
  *
  * \param[in]    dirname   directory name containing mask images
  * \param[in]    substr    [optional] substring filter on filenames;
- *                         can be null 
+ *                         can be null
  * \param[in]    numpre    number of characters in name before number
  * \param[in]    numpost   number of characters in name after number,
  *                         up to a dot before an extension

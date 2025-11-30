@@ -3091,4 +3091,3 @@ pixSelectiveContrastMod(PIX     *pixs,
 
     return 0;
 }
-

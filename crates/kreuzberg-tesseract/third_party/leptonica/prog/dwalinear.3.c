@@ -340,4 +340,3 @@ PIX       *pixt;
 
     return pixd;
 }
-
