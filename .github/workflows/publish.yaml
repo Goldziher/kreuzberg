@@ -742,7 +742,7 @@ jobs:
           target: ${{ matrix.settings.target }}
 
       - name: Install Node dependencies
-        run: pnpm install --filter @kreuzberg/node...
+        run: pnpm install --cwd crates/kreuzberg-node
 
       - name: Clean npm directory
         if: runner.os != 'Windows'
@@ -1708,7 +1708,15 @@ jobs:
 
       - name: Configure trusted publishing credentials
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        uses: rubygems/configure-rubygems-credentials@v1.0.0
+        uses: rubygems/configure-rubygems-credentials@v2
+
+      - name: Verify RubyGems credentials
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        run: |
+          if [ ! -f ~/.gem/credentials ]; then
+            echo "::error::RubyGems credentials file not found"
+            exit 1
+          fi
 
       - name: Check RubyGems version
         id: rubygems_check
@@ -1839,7 +1847,7 @@ jobs:
 
       - name: Install workspace dependencies
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: pnpm install --filter @kreuzberg/node...
+        run: pnpm install --cwd crates/kreuzberg-node
 
       - name: Pack platform packages
         run: |
@@ -1929,7 +1937,7 @@ jobs:
           try:
               import urllib.request
               version = os.environ["VERSION"]
-              url = f"https://search.maven.org/solrsearch/select?q=g:com.kreuzberg+AND+a:kreuzberg+AND+v:{version}&rows=1&wt=json"
+              url = f"https://search.maven.org/solrsearch/select?q=g:dev.kreuzberg+AND+a:kreuzberg+AND+v:{version}&rows=1&wt=json"
               with urllib.request.urlopen(url) as resp:
                   data = json.load(resp)
               exists = data.get("response", {}).get("numFound", 0) > 0
