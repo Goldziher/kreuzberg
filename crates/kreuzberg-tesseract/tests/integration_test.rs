@@ -15,6 +15,17 @@ fn get_default_tessdata_dir() -> PathBuf {
             .join("tesseract-rs")
             .join("tessdata")
     } else if cfg!(target_os = "linux") {
+        // Try system tesseract installation first (Ubuntu/Debian), then user home
+        let system_paths = [
+            PathBuf::from("/usr/share/tesseract-ocr/5/tessdata"),
+            PathBuf::from("/usr/share/tesseract-ocr/tessdata"),
+        ];
+        for path in &system_paths {
+            if path.exists() {
+                return path.clone();
+            }
+        }
+        // Fallback to user home directory
         let home_dir = std::env::var("HOME").expect("HOME environment variable not set");
         PathBuf::from(home_dir).join(".tesseract-rs").join("tessdata")
     } else if cfg!(target_os = "windows") {
@@ -29,9 +40,17 @@ fn get_default_tessdata_dir() -> PathBuf {
 fn get_tessdata_dir() -> PathBuf {
     match std::env::var("TESSDATA_PREFIX") {
         Ok(dir) => {
-            let path = PathBuf::from(dir);
-            println!("Using TESSDATA_PREFIX directory: {:?}", path);
-            path
+            let prefix_path = PathBuf::from(dir);
+            // TESSDATA_PREFIX can point to either:
+            // 1. The tessdata directory itself (/path/to/tessdata)
+            // 2. The parent directory (/path/to where tessdata is the subdirectory)
+            let tessdata_path = if prefix_path.ends_with("tessdata") {
+                prefix_path
+            } else {
+                prefix_path.join("tessdata")
+            };
+            println!("Using TESSDATA_PREFIX directory: {:?}", tessdata_path);
+            tessdata_path
         }
         Err(_) => {
             let default_dir = get_default_tessdata_dir();
