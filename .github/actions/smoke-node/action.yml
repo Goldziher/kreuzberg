@@ -58,14 +58,17 @@ runs:
 
           // Update TypeScript package dependencies to use local tarball
           const tsPkg = JSON.parse(fs.readFileSync('typescript-pkg/package.json', 'utf8'));
-          if (tsPkg.dependencies && tsPkg.dependencies['kreuzberg-node']) {
-            tsPkg.dependencies['kreuzberg-node'] = 'file:../kreuzberg-node.tgz';
+          if (!tsPkg.dependencies || !tsPkg.dependencies['kreuzberg-node']) {
+            throw new Error('kreuzberg-node dependency not found in TypeScript package.json');
           }
+          tsPkg.dependencies['kreuzberg-node'] = 'file:../kreuzberg-node.tgz';
           fs.writeFileSync('typescript-pkg/package.json', JSON.stringify(tsPkg, null, 2) + '\n');
 
           // Update smoke test package.json to use local typescript package
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          pkg.dependencies = pkg.dependencies || {};
+          if (!pkg.dependencies) {
+            pkg.dependencies = {};
+          }
           pkg.dependencies['kreuzberg-node'] = 'file:./kreuzberg-node.tgz';
           pkg.dependencies['kreuzberg'] = 'file:./typescript-pkg';
           fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
