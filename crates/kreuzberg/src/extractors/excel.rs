@@ -129,7 +129,9 @@ impl DocumentExtractor for ExcelExtractor {
             // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
             let extension_owned = extension.to_string();
+            let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || {
+                let _guard = span.entered();
                 crate::extraction::excel::read_excel_bytes(&content_owned, &extension_owned)
             })
             .await

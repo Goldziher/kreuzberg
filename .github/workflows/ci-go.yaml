@@ -91,8 +91,8 @@ jobs:
             $env:CXX = "g++"
             $env:AR = "ar"
             $env:PATH = "$ffiPath;$env:PATH"
-            $env:CGO_CFLAGS = "-I""$workspace/crates/kreuzberg-ffi"" -O2"
-            $env:CGO_LDFLAGS = "-L""$ffiPath"" -lkreuzberg_ffi"
+            $env:CGO_CFLAGS = "-I$workspace/crates/kreuzberg-ffi -O2"
+            $env:CGO_LDFLAGS = "-L$ffiPath -lkreuzberg_ffi"
             $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
 
             # Verify MinGW setup

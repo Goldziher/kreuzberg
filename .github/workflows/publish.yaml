@@ -591,7 +591,7 @@ jobs:
         run: Remove-Item -Recurse -Force crates/kreuzberg-node\npm -ErrorAction SilentlyContinue
 
       - name: Create npm package structure
-        run: pnpm --filter kreuzberg exec napi create-npm-dirs
+        run: pnpm --filter @kreuzberg/node exec napi create-npm-dirs
 
       - name: Build native module
         if: runner.os != 'Windows'
@@ -612,7 +612,7 @@ jobs:
           $args = @('--platform', '--release', '--target', $env:TARGET, '--output-dir', './artifacts')
           if ($env:USE_NAPI_CROSS -eq 'true') { $args += '--use-napi-cross' }
           if ($env:USE_CROSS -eq 'true') { $args += '--use-cross' }
-          pnpm --filter kreuzberg exec napi build @args
+          pnpm --filter @kreuzberg/node exec napi build @args
 
       - name: Package artifacts
         if: runner.os != 'Windows'
@@ -626,14 +626,14 @@ jobs:
         env:
           TARGET: ${{ matrix.settings.target }}
         run: |
-          pnpm --filter kreuzberg exec napi artifacts --output-dir ./artifacts
+          pnpm --filter @kreuzberg/node exec napi artifacts --output-dir ./artifacts
           if (-Not (Test-Path crates/kreuzberg-node\npm)) { throw "npm artifact directory missing" }
           tar -czf node-bindings-$env:TARGET.tar.gz -C crates/kreuzberg-node npm
 
       - name: Generate and upload TypeScript definitions
         if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
         run: |
-          pnpm --filter kreuzberg exec napi build --platform --dts index.d.ts
+          pnpm --filter @kreuzberg/node exec napi build --platform --dts index.d.ts
           mkdir -p typescript-defs
           cp crates/kreuzberg-node/index.d.ts typescript-defs/
           cp crates/kreuzberg-node/index.js typescript-defs/ || true
@@ -991,6 +991,50 @@ jobs:
           path: packages/java/target/*.jar
           retention-days: 14
 
+  csharp-package:
+    name: Build C# package
+    needs: prepare
+    if: ${{ needs.prepare.outputs.release_csharp != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.x"
+
+      - name: Restore C# dependencies
+        run: dotnet restore packages/csharp/Kreuzberg/Kreuzberg.csproj
+
+      - name: Build C# bindings
+        run: dotnet build packages/csharp/Kreuzberg/Kreuzberg.csproj -c Release --no-restore
+
+      - name: Pack NuGet package
+        run: |
+          dotnet pack packages/csharp/Kreuzberg/Kreuzberg.csproj \
+            -c Release \
+            --no-build \
+            -p:PackageVersion=${{ needs.prepare.outputs.version }} \
+            -o artifacts/csharp
+
+      - name: Upload NuGet artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: csharp-nuget
+          path: artifacts/csharp/*.nupkg
+          retention-days: 14
+
   cargo-packages:
     name: Package Rust crates
     needs: prepare
@@ -1021,8 +1065,22 @@ jobs:
           RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -euo pipefail
+
+          # Package tesseract first (no dependencies)
+          tesseract_packaged=0
+          tesseract_status=0
+          cargo package -p kreuzberg-tesseract --allow-dirty || tesseract_status=$?
+
+          if [ "$tesseract_status" -eq 0 ]; then
+            tesseract_packaged=1
+          else
+            echo "::warning::Skipping kreuzberg-tesseract crate packaging."
+          fi
+
+          # Package kreuzberg (depends on tesseract if feature enabled)
           cargo package -p kreuzberg --allow-dirty
 
+          # Package CLI (depends on kreuzberg)
           cli_packaged=0
           cli_status=0
           cargo package -p kreuzberg-cli --allow-dirty --no-verify || cli_status=$?
@@ -1034,6 +1092,9 @@ jobs:
           fi
 
           mkdir -p crate-artifacts
+          if [ "$tesseract_packaged" -eq 1 ]; then
+            cp target/package/kreuzberg-tesseract-*.crate crate-artifacts/
+          fi
           cp target/package/kreuzberg-*.crate crate-artifacts/
           if [ "$cli_packaged" -eq 1 ]; then
             cp target/package/kreuzberg-cli-*.crate crate-artifacts/
@@ -1176,6 +1237,7 @@ jobs:
       - cli-binaries
       - ruby-gem
       - java-package
+      - csharp-package
       # cargo-packages removed - crates.io publishing disabled
     if: ${{ needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
@@ -1216,6 +1278,28 @@ jobs:
           files=(dist/cli/kreuzberg-cli-*)
           if [ ${#files[@]} -eq 0 ]; then
             echo "No CLI artifacts to upload" >&2
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            gh release upload ${{ needs.prepare.outputs.tag }} "$file" --clobber
+          done
+
+      - name: Download C# artifacts
+        if: ${{ needs.prepare.outputs.release_csharp == 'true' }}
+        uses: actions/download-artifact@v6
+        with:
+          name: csharp-nuget
+          path: dist/csharp
+
+      - name: Upload C# packages to release
+        if: ${{ needs.prepare.outputs.release_csharp == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob
+          files=(dist/csharp/*.nupkg)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No C# artifacts to upload" >&2
             exit 1
           fi
           for file in "${files[@]}"; do
@@ -1263,6 +1347,7 @@ jobs:
           import urllib.request
           version = os.environ["VERSION"]
           crates = [
+              ("kreuzberg-tesseract", "tesseract_exists"),
               ("kreuzberg", "core_exists"),
               ("kreuzberg-cli", "cli_exists"),
           ]
@@ -1281,6 +1366,34 @@ jobs:
                   print(f"::notice::{crate} {version} {message} published", file=sys.stderr)
               print(f"{key}={'true' if exists else 'false'}")
           PY
+
+      - name: Publish kreuzberg-tesseract
+        if: ${{ steps.crate_check.outputs.tesseract_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
+        env:
+          CARGO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CARGO_TOKEN" ]; then
+            echo "::error::CARGO_TOKEN secret not set"
+            exit 1
+          fi
+          publish_log=$(mktemp)
+          set +e
+          cargo publish -p kreuzberg-tesseract --token "$CARGO_TOKEN" 2>&1 | tee "$publish_log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            if grep -qi "already uploaded" "$publish_log"; then
+              echo "::notice::kreuzberg-tesseract already published; skipping."
+              echo "kreuzberg-tesseract already published; skipping." >> $GITHUB_STEP_SUMMARY
+            else
+              exit "$status"
+            fi
+          fi
+
+      - name: Wait for tesseract indexing
+        if: ${{ steps.crate_check.outputs.tesseract_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
+        run: sleep 60
 
       - name: Publish kreuzberg
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
@@ -1690,38 +1803,22 @@ jobs:
 
   publish-nuget:
     name: Publish NuGet package
-    needs: [prepare]
+    needs: [prepare, csharp-package, upload-release-artifacts]
     if: ${{ needs.prepare.result == 'success' && needs.prepare.outputs.tag && needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_csharp == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for OIDC trusted publishing
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Download NuGet artifact
+        uses: actions/download-artifact@v6
         with:
-          ref: ${{ needs.prepare.outputs.ref }}
+          name: csharp-nuget
+          path: dist
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "10.0.x"
-
-      - name: Restore C# dependencies
-        run: dotnet restore packages/csharp/Kreuzberg/Kreuzberg.csproj
-
-      - name: Pack NuGet package
-        run: |
-          dotnet pack packages/csharp/Kreuzberg/Kreuzberg.csproj \
-            -c Release \
-            -p:PackageVersion=${{ needs.prepare.outputs.version }} \
-            -o artifacts/csharp
-
-      - name: Upload NuGet artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: nuget-package
-          path: artifacts/csharp/*.nupkg
-          retention-days: 14
+          dotnet-version: "10.x"
 
       - name: NuGet trusted publishing login
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
@@ -1733,7 +1830,7 @@ jobs:
       - name: Publish to NuGet
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         run: |
-          dotnet nuget push "artifacts/csharp/*.nupkg" \
+          dotnet nuget push "dist/*.nupkg" \
             --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
@@ -1743,7 +1840,7 @@ jobs:
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
         run: |
           echo "Dry run requested; NuGet publish skipped." >> "$GITHUB_STEP_SUMMARY"
-          ls -1 artifacts/csharp/*.nupkg >> "$GITHUB_STEP_SUMMARY"
+          ls -1 dist/*.nupkg >> "$GITHUB_STEP_SUMMARY"
 
   publish-homebrew:
     name: Update Homebrew formula

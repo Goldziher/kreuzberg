@@ -304,7 +304,9 @@ impl DocumentExtractor for PdfExtractor {
         let (pdf_metadata, native_text, tables) = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Move PDF extraction to blocking thread pool to enable parallelism
             let content_owned = content.to_vec();
+            let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || {
+                let _guard = span.entered();
                 let bindings = Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./"))
                     .or_else(|_| Pdfium::bind_to_system_library())
                     .map_err(|e| PdfError::MetadataExtractionFailed(format!("Failed to initialize Pdfium: {}", e)))?;

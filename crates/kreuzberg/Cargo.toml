@@ -138,6 +138,13 @@ zip = "6.0.0"
 serial_test = "3.2.0"
 anyhow = "1.0"
 tokio-test = "0.4"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+criterion = { version = "0.5", features = ["html_reports"] }
+image = { version = "0.25.9", default-features = false, features = ["png"] }
+
+[[bench]]
+name = "otel_overhead"
+harness = false
 
 # Only build profiling tooling on non-Windows targets (pprof depends on Unix APIs)
 [target.'cfg(not(target_os = "windows"))'.dependencies]

@@ -47,7 +47,7 @@ gem install kreuzberg
 ### TypeScript/Node.js
 
 ```bash
-npm install kreuzberg
+npm install @kreuzberg/node
 ```
 
 **[TypeScript/Node.js Documentation →](packages/typescript/README.md)**

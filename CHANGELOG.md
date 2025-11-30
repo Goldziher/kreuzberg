@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Release Candidate 2 - C# Support & Infrastructure Improvements
 
+#### Breaking Changes
+
+**TypeScript/Node.js Package Restructuring**:
+- NPM package renamed from `kreuzberg` to `@kreuzberg/node` (scoped package)
+- Platform-specific packages now use `@kreuzberg/{platform}` naming scheme
+- TypeScript source consolidated into `crates/kreuzberg-node` (merged with native bindings)
+- Migration: Replace `import { ... } from 'kreuzberg'` with `import { ... } from '@kreuzberg/node'`
+- See [Migration Guide](docs/migration/v4-npm-scoped-packages.md) for details
+
 #### New Features
 
 **C#/.NET Bindings**:
@@ -398,9 +407,9 @@ pip install "kreuzberg[all]"        # All features
 
 **TypeScript/Node.js**:
 ```bash
-npm install kreuzberg
+npm install @kreuzberg/node
 # or
-pnpm add kreuzberg
+pnpm add @kreuzberg/node
 ```
 
 **Rust**:

@@ -4,7 +4,7 @@ import {
 	unregisterPostProcessor,
 	type PostProcessorProtocol,
 	type ExtractionResult,
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 /**
  * Metadata enrichment post-processor

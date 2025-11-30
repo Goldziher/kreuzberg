@@ -43,8 +43,10 @@ impl PptxExtractor {
         for image in &mut images {
             let image_data = image.data.clone();
             let tess_config_clone = tess_config.clone();
+            let span = tracing::Span::current();
 
             let ocr_result = tokio::task::spawn_blocking(move || {
+                let _guard = span.entered();
                 let cache_dir = std::env::var("KREUZBERG_CACHE_DIR").ok().map(std::path::PathBuf::from);
 
                 let proc = OcrProcessor::new(cache_dir)?;
@@ -119,7 +121,9 @@ impl DocumentExtractor for PptxExtractor {
         let pptx_result = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
+            let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || {
+                let _guard = span.entered();
                 crate::extraction::pptx::extract_pptx_from_bytes(&content_owned, extract_images)
             })
             .await

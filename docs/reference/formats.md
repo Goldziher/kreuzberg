@@ -363,7 +363,7 @@ Example with manual override:
 === "TypeScript"
 
     ```typescript
-    import { extractFile } from 'kreuzberg';
+    import { extractFile } from '@kreuzberg/node';
 
     // Auto-detect from extension
     const result = await extractFile('document.pdf');
@@ -675,7 +675,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
 === "TypeScript"
 
     ```typescript
-    import { registerDocumentExtractor, type DocumentExtractorProtocol } from 'kreuzberg';
+    import { registerDocumentExtractor, type DocumentExtractorProtocol } from '@kreuzberg/node';
 
     class CustomExtractor implements DocumentExtractorProtocol {
         name(): string {

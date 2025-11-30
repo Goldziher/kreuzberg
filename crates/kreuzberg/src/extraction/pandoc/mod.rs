@@ -220,14 +220,20 @@ async fn extract_docx_metadata(path: &Path) -> Result<HashMap<String, Value>> {
         extract_core_properties, extract_custom_properties, extract_docx_app_properties,
     };
 
+    let span1 = tracing::Span::current();
     let file = tokio::task::spawn_blocking({
         let path = path.to_path_buf();
-        move || std::fs::File::open(&path)
+        move || {
+            let _guard = span1.entered();
+            std::fs::File::open(&path)
+        }
     })
     .await
     .map_err(|e| crate::error::KreuzbergError::parsing(format!("Task join error: {}", e)))??;
 
+    let span2 = tracing::Span::current();
     let mut archive = tokio::task::spawn_blocking(move || {
+        let _guard = span2.entered();
         zip::ZipArchive::new(file).map_err(|e| std::io::Error::other(format!("Failed to open ZIP archive: {}", e)))
     })
     .await

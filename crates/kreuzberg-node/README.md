@@ -55,19 +55,19 @@ Extract text, tables, images, and metadata from 50+ file formats including PDF, 
 ## Installation
 
 ```bash
-npm install kreuzberg
+npm install @kreuzberg/node
 ```
 
 Or with pnpm:
 
 ```bash
-pnpm add kreuzberg
+pnpm add @kreuzberg/node
 ```
 
 Or with yarn:
 
 ```bash
-yarn add kreuzberg
+yarn add @kreuzberg/node
 ```
 
 The package includes prebuilt native binaries for major platforms. No additional build steps required.
@@ -77,7 +77,7 @@ The package includes prebuilt native binaries for major platforms. No additional
 ### Basic Extraction
 
 ```typescript
-import { extractFileSync } from 'kreuzberg';
+import { extractFileSync } from '@kreuzberg/node';
 
 // Synchronous extraction
 const result = extractFileSync('document.pdf');
@@ -88,7 +88,7 @@ console.log(result.metadata);
 ### Async Extraction (Recommended)
 
 ```typescript
-import { extractFile } from 'kreuzberg';
+import { extractFile } from '@kreuzberg/node';
 
 // Asynchronous extraction
 const result = await extractFile('document.pdf');
@@ -103,7 +103,7 @@ import {
   extractFile,
   type ExtractionConfig,
   type ExtractionResult
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 const config: ExtractionConfig = {
   useCache: true,
@@ -129,7 +129,7 @@ if (result.tables) {
 ### OCR Configuration
 
 ```typescript
-import { extractFile, type ExtractionConfig, type OcrConfig } from 'kreuzberg';
+import { extractFile, type ExtractionConfig, type OcrConfig } from '@kreuzberg/node';
 
 const config: ExtractionConfig = {
   ocr: {
@@ -150,7 +150,7 @@ console.log(result.content);
 ### PDF Password Protection
 
 ```typescript
-import { extractFile, type PdfConfig } from 'kreuzberg';
+import { extractFile, type PdfConfig } from '@kreuzberg/node';
 
 const config = {
   pdfOptions: {
@@ -166,7 +166,7 @@ const result = await extractFile('protected.pdf', config);
 ### Extract Tables
 
 ```typescript
-import { extractFile } from 'kreuzberg';
+import { extractFile } from '@kreuzberg/node';
 
 const result = await extractFile('financial-report.pdf');
 
@@ -184,7 +184,7 @@ if (result.tables) {
 ### Text Chunking
 
 ```typescript
-import { extractFile, type ChunkingConfig } from 'kreuzberg';
+import { extractFile, type ChunkingConfig } from '@kreuzberg/node';
 
 const config = {
   chunking: {
@@ -205,7 +205,7 @@ if (result.chunks) {
 ### Language Detection
 
 ```typescript
-import { extractFile, type LanguageDetectionConfig } from 'kreuzberg';
+import { extractFile, type LanguageDetectionConfig } from '@kreuzberg/node';
 
 const config = {
   languageDetection: {
@@ -226,7 +226,7 @@ if (result.language) {
 ### Image Extraction
 
 ```typescript
-import { extractFile, type ImageExtractionConfig } from 'kreuzberg';
+import { extractFile, type ImageExtractionConfig } from '@kreuzberg/node';
 import { writeFile } from 'fs/promises';
 
 const config = {
@@ -260,7 +260,7 @@ import {
   type PdfConfig,
   type TokenReductionConfig,
   type LanguageDetectionConfig
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 const config: ExtractionConfig = {
   useCache: true,
@@ -318,7 +318,7 @@ const result = await extractFile('document.pdf', config);
 ### Extract from Buffer
 
 ```typescript
-import { extractBytes } from 'kreuzberg';
+import { extractBytes } from '@kreuzberg/node';
 import { readFile } from 'fs/promises';
 
 const buffer = await readFile('document.pdf');
@@ -329,7 +329,7 @@ console.log(result.content);
 ### Batch Processing
 
 ```typescript
-import { batchExtractFiles } from 'kreuzberg';
+import { batchExtractFiles } from '@kreuzberg/node';
 
 const files = [
   'document1.pdf',
@@ -347,7 +347,7 @@ for (const result of results) {
 ### Batch Processing with Custom Concurrency
 
 ```typescript
-import { batchExtractFiles } from 'kreuzberg';
+import { batchExtractFiles } from '@kreuzberg/node';
 
 const config = {
   maxConcurrentExtractions: 4  // Process 4 files at a time
@@ -362,7 +362,7 @@ console.log(`Processed ${results.length} files`);
 ### Extract with Metadata
 
 ```typescript
-import { extractFile } from 'kreuzberg';
+import { extractFile } from '@kreuzberg/node';
 
 const result = await extractFile('document.pdf');
 
@@ -378,7 +378,7 @@ if (result.metadata) {
 ### Token Reduction for LLM Processing
 
 ```typescript
-import { extractFile, type TokenReductionConfig } from 'kreuzberg';
+import { extractFile, type TokenReductionConfig } from '@kreuzberg/node';
 
 const config = {
   tokenReduction: {
@@ -404,7 +404,7 @@ import {
   ParsingError,
   OCRError,
   MissingDependencyError
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 try {
   const result = await extractFile('document.pdf');
@@ -588,7 +588,7 @@ const results = await batchExtractFiles(files, {
 ### Extract Invoice Data
 
 ```typescript
-import { extractFile } from 'kreuzberg';
+import { extractFile } from '@kreuzberg/node';
 
 const result = await extractFile('invoice.pdf');
 
@@ -607,7 +607,7 @@ if (result.metadata) {
 ### Process Scanned Documents
 
 ```typescript
-import { extractFile } from 'kreuzberg';
+import { extractFile } from '@kreuzberg/node';
 
 const config = {
   forceOcr: true,
@@ -625,7 +625,7 @@ console.log(result.content);
 ### Build a Document Search Index
 
 ```typescript
-import { batchExtractFiles } from 'kreuzberg';
+import { batchExtractFiles } from '@kreuzberg/node';
 import { glob } from 'glob';
 
 // Find all documents

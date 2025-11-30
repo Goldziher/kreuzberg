@@ -12,7 +12,7 @@ import {
 	registerValidator,
 	unregisterValidator,
 	type ValidatorProtocol,
-} from "kreuzberg";
+} from '@kreuzberg/node';
 
 /**
  * Validator that enforces minimum content length.

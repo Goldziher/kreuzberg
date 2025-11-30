@@ -2,7 +2,7 @@
 import {
 	registerOcrBackend,
 	type OcrBackendProtocol,
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 /**
  * Mock OCR backend for testing

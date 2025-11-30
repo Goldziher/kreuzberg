@@ -1,5 +1,5 @@
 ```typescript
-import { extractBytes } from 'kreuzberg';
+import { extractBytes } from '@kreuzberg/node';
 import { readFile } from 'fs/promises';
 
 const data = await readFile('document.pdf');

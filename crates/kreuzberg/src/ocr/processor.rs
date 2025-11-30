@@ -51,6 +51,14 @@ impl OcrProcessor {
         Ok(Self { cache })
     }
 
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, image_bytes),
+        fields(
+            ocr.backend = "tesseract",
+            ocr.language = %config.language,
+            image.size_bytes = image_bytes.len(),
+        )
+    ))]
     pub fn process_image(&self, image_bytes: &[u8], config: &TesseractConfig) -> Result<OcrExtractionResult, OcrError> {
         config.validate().map_err(OcrError::InvalidConfiguration)?;
 
@@ -64,8 +72,13 @@ impl OcrProcessor {
         if config.use_cache
             && let Some(cached_result) = self.cache.get_cached_result(&image_hash, "tesseract", &config_str)?
         {
+            #[cfg(feature = "otel")]
+            tracing::Span::current().record("cache.hit", true);
             return Ok(cached_result);
         }
+
+        #[cfg(feature = "otel")]
+        tracing::Span::current().record("cache.hit", false);
 
         let result = self.perform_ocr(image_bytes, config)?;
 

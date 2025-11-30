@@ -48,31 +48,33 @@ runs:
         pushd "$tmp" >/dev/null
         cp "$tarball" ./kreuzberg-node.tgz
 
-        # Copy TypeScript package to temp dir and update its dependencies
-        cp -R "${GITHUB_WORKSPACE}/packages/typescript" ./typescript-pkg
+        # Copy kreuzberg-node package to temp dir
+        cp -R "${GITHUB_WORKSPACE}/crates/kreuzberg-node" ./kreuzberg-node-pkg
 
-        # Update TypeScript package.json to use file: instead of workspace: for kreuzberg-node
+        # Update kreuzberg-node package.json to use the tarball
         node -e "
           const fs = require('fs');
           const path = require('path');
 
-          // Update TypeScript package dependencies to use local tarball
-          const tsPkg = JSON.parse(fs.readFileSync('typescript-pkg/package.json', 'utf8'));
-          if (!tsPkg.dependencies || !tsPkg.dependencies['kreuzberg-node']) {
-            throw new Error('kreuzberg-node dependency not found in TypeScript package.json');
-          }
-          tsPkg.dependencies['kreuzberg-node'] = 'file:../kreuzberg-node.tgz';
-          fs.writeFileSync('typescript-pkg/package.json', JSON.stringify(tsPkg, null, 2) + '\n');
+          // Update kreuzberg-node package dependencies to use local tarball
+          const pkg = JSON.parse(fs.readFileSync('kreuzberg-node-pkg/package.json', 'utf8'));
+          // The native module is already included in the tarball, so we just need to use it
+          fs.writeFileSync('kreuzberg-node-pkg/package.json', JSON.stringify(pkg, null, 2) + '\n');
 
-          // Update smoke test package.json to use local typescript package
-          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          if (!pkg.dependencies) {
-            pkg.dependencies = {};
+          // Update smoke test package.json to use local kreuzberg-node package
+          const smokePkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          if (!smokePkg.dependencies) {
+            smokePkg.dependencies = {};
           }
-          pkg.dependencies['kreuzberg-node'] = 'file:./kreuzberg-node.tgz';
-          pkg.dependencies['kreuzberg'] = 'file:./typescript-pkg';
-          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          smokePkg.dependencies['@kreuzberg/node'] = 'file:./kreuzberg-node-pkg';
+          fs.writeFileSync('package.json', JSON.stringify(smokePkg, null, 2) + '\n');
         "
+
+        # Build the TypeScript SDK
+        pushd kreuzberg-node-pkg >/dev/null
+        pnpm install --no-frozen-lockfile
+        pnpm build:ts
+        popd >/dev/null
 
         rm -f pnpm-lock.yaml
         pnpm install --no-frozen-lockfile

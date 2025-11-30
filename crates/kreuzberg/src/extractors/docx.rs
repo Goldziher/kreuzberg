@@ -177,7 +177,9 @@ impl DocumentExtractor for DocxExtractor {
         let (text, tables) = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
+            let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || -> crate::error::Result<(String, Vec<Table>)> {
+                let _guard = span.entered();
                 // Parse document structure
                 let cursor = Cursor::new(&content_owned);
                 let doc = docx_lite::parse_document(cursor)
@@ -222,7 +224,9 @@ impl DocumentExtractor for DocxExtractor {
         let mut archive = if crate::core::batch_mode::is_batch_mode() {
             // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
+            let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || -> crate::error::Result<_> {
+                let _guard = span.entered();
                 let cursor = Cursor::new(content_owned);
                 zip::ZipArchive::new(cursor)
                     .map_err(|e| crate::error::KreuzbergError::parsing(format!("Failed to open ZIP archive: {}", e)))

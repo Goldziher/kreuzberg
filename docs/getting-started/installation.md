@@ -34,15 +34,15 @@ Next steps: [Python Quick Start](quickstart.md) • [Python API Reference](../re
 ## TypeScript / Node.js
 
 ```bash
-npm install kreuzberg
+npm install @kreuzberg/node
 ```
 
 ```bash
-pnpm add kreuzberg
+pnpm add @kreuzberg/node
 ```
 
 ```bash
-yarn add kreuzberg
+yarn add @kreuzberg/node
 ```
 
 The package ships with prebuilt N-API binaries for Linux, macOS (Apple Silicon), and Windows. If you need to build from source, ensure Rust is available on your PATH and rerun the install command.

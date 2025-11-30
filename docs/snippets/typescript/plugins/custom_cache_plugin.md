@@ -2,7 +2,7 @@
 import {
 	extractFile,
 	type ExtractionConfig,
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 /**
  * Note: Custom cache backends are not supported in TypeScript v4.0.

@@ -122,7 +122,7 @@ flowchart TD
 All TypeScript/Node.js examples in this guide use the `kreuzberg` package. Import synchronous APIs from the root module and asynchronous helpers from the same namespace. See the [TypeScript API Reference](../reference/api-typescript.md) for complete type definitions.
 
 ```typescript
-import { extractFileSync, ExtractionConfig } from 'kreuzberg';
+import { extractFileSync, ExtractionConfig } from '@kreuzberg/node';
 
 const result = extractFileSync('document.pdf', null, new ExtractionConfig());
 console.log(result.content);

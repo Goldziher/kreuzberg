@@ -1,5 +1,5 @@
 ```typescript
-import { extractFileSync, listDocumentExtractors } from 'kreuzberg';
+import { extractFileSync, listDocumentExtractors } from '@kreuzberg/node';
 
 const extractors = listDocumentExtractors();
 console.log('Available extractors:', extractors);

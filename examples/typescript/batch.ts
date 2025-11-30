@@ -14,7 +14,7 @@ import {
 	batchExtractFiles,
 	batchExtractFilesSync,
 	ExtractionConfig,
-} from "kreuzberg";
+} from '@kreuzberg/node';
 
 async function main() {
 	console.log("=== Synchronous Batch Processing ===");
@@ -126,6 +126,6 @@ async function main() {
 	});
 }
 
-import { extractFile } from "kreuzberg";
+import { extractFile } from '@kreuzberg/node';
 
 main().catch(console.error);

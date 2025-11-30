@@ -3,7 +3,7 @@ import {
 	registerPostProcessor,
 	registerValidator,
 	type ExtractionResult,
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 class LoggingPostProcessor {
   name = "logging-processor";

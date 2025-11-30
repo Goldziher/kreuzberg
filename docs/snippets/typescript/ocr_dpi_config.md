@@ -1,5 +1,5 @@
 ```typescript
-import { extractFileSync } from 'kreuzberg';
+import { extractFileSync } from '@kreuzberg/node';
 
 const config = {
 	ocr: {

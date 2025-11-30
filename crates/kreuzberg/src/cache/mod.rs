@@ -201,6 +201,13 @@ impl GenericCache {
         }
     }
 
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self),
+        fields(
+            cache.hit = tracing::field::Empty,
+            cache.key = %cache_key,
+        )
+    ))]
     pub fn get(&self, cache_key: &str, source_file: Option<&str>) -> Result<Option<Vec<u8>>> {
         let cache_path = self.get_cache_path(cache_key);
 
@@ -210,16 +217,24 @@ impl GenericCache {
                 .lock()
                 .map_err(|e| KreuzbergError::LockPoisoned(format!("Deleting files mutex poisoned: {}", e)))?;
             if deleting.contains(&cache_path) {
+                #[cfg(feature = "otel")]
+                tracing::Span::current().record("cache.hit", false);
                 return Ok(None);
             }
         }
 
         if !self.is_valid(&cache_path, source_file) {
+            #[cfg(feature = "otel")]
+            tracing::Span::current().record("cache.hit", false);
             return Ok(None);
         }
 
         match fs::read(&cache_path) {
-            Ok(content) => Ok(Some(content)),
+            Ok(content) => {
+                #[cfg(feature = "otel")]
+                tracing::Span::current().record("cache.hit", true);
+                Ok(Some(content))
+            }
             Err(_) => {
                 // Best-effort cleanup of corrupted cache files ~keep
                 if let Err(e) = fs::remove_file(&cache_path) {
@@ -228,15 +243,24 @@ impl GenericCache {
                 if let Err(e) = fs::remove_file(self.get_metadata_path(cache_key)) {
                     tracing::debug!("Failed to remove corrupted metadata file: {}", e);
                 }
+                #[cfg(feature = "otel")]
+                tracing::Span::current().record("cache.hit", false);
                 Ok(None)
             }
         }
     }
 
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, data),
+        fields(
+            cache.key = %cache_key,
+            cache.size_bytes = data.len(),
+        )
+    ))]
     pub fn set(&self, cache_key: &str, data: Vec<u8>, source_file: Option<&str>) -> Result<()> {
         let cache_path = self.get_cache_path(cache_key);
 
-        fs::write(&cache_path, data)
+        fs::write(&cache_path, &data)
             .map_err(|e| KreuzbergError::cache(format!("Failed to write cache file: {}", e)))?;
 
         self.save_metadata(cache_key, source_file);

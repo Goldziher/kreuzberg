@@ -3,7 +3,7 @@ import {
 	listDocumentExtractors,
 	unregisterDocumentExtractor,
 	clearDocumentExtractors,
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 /**
  * Note: Custom document extractors are not supported in TypeScript v4.0.

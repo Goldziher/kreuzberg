@@ -1,5 +1,5 @@
 ```typescript
-import { extractFileSync, KreuzbergError } from 'kreuzberg';
+import { extractFileSync, KreuzbergError } from '@kreuzberg/node';
 
 try {
 	const result = extractFileSync('document.pdf');

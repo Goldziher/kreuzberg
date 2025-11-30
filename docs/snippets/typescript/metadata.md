@@ -1,5 +1,5 @@
 ```typescript
-import { extractFileSync } from 'kreuzberg';
+import { extractFileSync } from '@kreuzberg/node';
 
 const result = extractFileSync('document.pdf');
 console.log(`Metadata: ${JSON.stringify(result.metadata)}`);

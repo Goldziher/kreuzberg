@@ -264,10 +264,19 @@ impl DocumentExtractorRegistry {
     /// # Returns
     ///
     /// The highest priority extractor, or an error if none found.
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self),
+        fields(
+            registry.mime_type = %mime_type,
+            registry.found = tracing::field::Empty,
+        )
+    ))]
     pub fn get(&self, mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
         if let Some(priority_map) = self.extractors.get(mime_type)
             && let Some((_priority, extractor)) = priority_map.iter().next_back()
         {
+            #[cfg(feature = "otel")]
+            tracing::Span::current().record("registry.found", true);
             return Ok(Arc::clone(extractor));
         }
 
@@ -293,9 +302,13 @@ impl DocumentExtractorRegistry {
         }
 
         if let Some((_priority, extractor)) = best_match {
+            #[cfg(feature = "otel")]
+            tracing::Span::current().record("registry.found", true);
             return Ok(extractor);
         }
 
+        #[cfg(feature = "otel")]
+        tracing::Span::current().record("registry.found", false);
         Err(KreuzbergError::UnsupportedFormat(mime_type.to_string()))
     }
 

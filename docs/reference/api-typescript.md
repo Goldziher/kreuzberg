@@ -5,17 +5,17 @@ Complete reference for the Kreuzberg TypeScript/Node.js API.
 ## Installation
 
 ```bash
-npm install kreuzberg
+npm install @kreuzberg/node
 ```
 
 **Or with other package managers:**
 
 ```bash
 # Yarn
-yarn add kreuzberg
+yarn add @kreuzberg/node
 
 # pnpm
-pnpm add kreuzberg
+pnpm add @kreuzberg/node
 ```
 
 ## Core Functions
@@ -51,7 +51,7 @@ function extractFileSync(
 **Example - Basic usage:**
 
 ```typescript
-import { extractFileSync } from 'kreuzberg';
+import { extractFileSync } from '@kreuzberg/node';
 
 const result = extractFileSync('document.pdf');
 console.log(result.content);
@@ -61,7 +61,7 @@ console.log(`Pages: ${result.metadata.pageCount}`);
 **Example - With OCR:**
 
 ```typescript
-import { extractFileSync } from 'kreuzberg';
+import { extractFileSync } from '@kreuzberg/node';
 
 const config = {
   ocr: {
@@ -75,7 +75,7 @@ const result = extractFileSync('scanned.pdf', null, config);
 **Example - With explicit MIME type:**
 
 ```typescript
-import { extractFileSync } from 'kreuzberg';
+import { extractFileSync } from '@kreuzberg/node';
 
 const result = extractFileSync('document.pdf', 'application/pdf');
 ```
@@ -107,7 +107,7 @@ Same as [`extractFileSync()`](#extractfilesync).
 **Examples:**
 
 ```typescript
-import { extractFile } from 'kreuzberg';
+import { extractFile } from '@kreuzberg/node';
 
 async function main() {
   const result = await extractFile('document.pdf');
@@ -146,7 +146,7 @@ function extractBytesSync(
 **Examples:**
 
 ```typescript
-import { extractBytesSync } from 'kreuzberg';
+import { extractBytesSync } from '@kreuzberg/node';
 import { readFileSync } from 'fs';
 
 const data = readFileSync('document.pdf');
@@ -205,7 +205,7 @@ function batchExtractFilesSync(
 **Examples:**
 
 ```typescript
-import { batchExtractFilesSync } from 'kreuzberg';
+import { batchExtractFilesSync } from '@kreuzberg/node';
 
 const paths = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
 const results = batchExtractFilesSync(paths);
@@ -241,7 +241,7 @@ Same as [`batchExtractFilesSync()`](#batchextractfilessync).
 **Examples:**
 
 ```typescript
-import { batchExtractFiles } from 'kreuzberg';
+import { batchExtractFiles } from '@kreuzberg/node';
 
 const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
 const results = await batchExtractFiles(files);
@@ -338,7 +338,7 @@ interface ExtractionConfig {
 **Example:**
 
 ```typescript
-import { extractFileSync, ExtractionConfig } from 'kreuzberg';
+import { extractFileSync, ExtractionConfig } from '@kreuzberg/node';
 
 const config: ExtractionConfig = {
   ocr: {
@@ -739,7 +739,7 @@ interface PostProcessorProtocol {
 **Example:**
 
 ```typescript
-import { registerPostProcessor, extractFileSync } from 'kreuzberg';
+import { registerPostProcessor, extractFileSync } from '@kreuzberg/node';
 
 class CustomProcessor implements PostProcessorProtocol {
   name(): string {
@@ -772,7 +772,7 @@ import {
   registerPostProcessor,
   unregisterPostProcessor,
   clearPostProcessors
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 // Register
 registerPostProcessor(new CustomProcessor());
@@ -806,7 +806,7 @@ import {
   registerValidator,
   unregisterValidator,
   clearValidators
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 // Register a validator
 registerValidator(validator);
@@ -827,7 +827,7 @@ Register custom OCR backends for image and PDF processing.
 **Example with Guten-OCR:**
 
 ```typescript
-import { GutenOcrBackend, registerOcrBackend } from 'kreuzberg';
+import { GutenOcrBackend, registerOcrBackend } from '@kreuzberg/node';
 
 // Register Guten-OCR backend
 const gutenOcr = new GutenOcrBackend();
@@ -851,7 +851,7 @@ All errors are thrown as standard JavaScript `Error` objects with descriptive me
 **Example:**
 
 ```typescript
-import { extractFileSync } from 'kreuzberg';
+import { extractFileSync } from '@kreuzberg/node';
 
 try {
   const result = extractFileSync('document.pdf');
@@ -895,7 +895,7 @@ import type {
   PostProcessorProtocol,
   ValidatorProtocol,
   OcrBackendProtocol
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 ```
 
 ---

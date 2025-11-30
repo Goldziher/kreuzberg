@@ -1215,6 +1215,32 @@ dependencies = [
 
 [[package]]
 name = "criterion"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2b12d017a929603d80db1831cd3a24082f8137ce19c69e6447f54f5fc8d692f"
+dependencies = [
+ "anes",
+ "cast",
+ "ciborium",
+ "clap",
+ "criterion-plot 0.5.0",
+ "is-terminal",
+ "itertools 0.10.5",
+ "num-traits",
+ "once_cell",
+ "oorandom",
+ "plotters",
+ "rayon",
+ "regex",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "tinytemplate",
+ "walkdir",
+]
+
+[[package]]
+name = "criterion"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0dfe5e9e71bdcf4e4954f7d14da74d1cdb92a3a07686452d1509652684b1aab"
@@ -1224,7 +1250,7 @@ dependencies = [
  "cast",
  "ciborium",
  "clap",
- "criterion-plot",
+ "criterion-plot 0.8.0",
  "itertools 0.13.0",
  "num-traits",
  "oorandom",
@@ -1236,6 +1262,16 @@ dependencies = [
  "serde_json",
  "tinytemplate",
  "walkdir",
+]
+
+[[package]]
+name = "criterion-plot"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b50826342786a51a89e2da3a28f1c32b06e387201bc2d19791f622c673706b1"
+dependencies = [
+ "cast",
+ "itertools 0.10.5",
 ]
 
 [[package]]
@@ -2855,6 +2891,15 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 
 [[package]]
 name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
@@ -3001,6 +3046,7 @@ dependencies = [
  "base64-simd",
  "calamine",
  "chardetng",
+ "criterion 0.5.1",
  "docx-lite",
  "encoding_rs",
  "fast_image_resize",
@@ -3055,6 +3101,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-opentelemetry",
+ "tracing-subscriber",
  "unicode-normalization",
  "uuid",
  "whatlang",
@@ -3160,7 +3207,7 @@ version = "4.0.0-rc.2"
 dependencies = [
  "cc",
  "cmake",
- "criterion",
+ "criterion 0.8.0",
  "image",
  "imageproc",
  "libc",

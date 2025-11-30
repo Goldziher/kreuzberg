@@ -550,7 +550,7 @@ TypeScript and Ruby bindings include all features in a single package. No option
 
 ```bash
 # TypeScript - full package
-npm install kreuzberg
+npm install @kreuzberg/node
 
 # Ruby - full package
 gem install kreuzberg

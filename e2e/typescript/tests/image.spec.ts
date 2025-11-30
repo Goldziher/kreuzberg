@@ -1,8 +1,8 @@
 // Auto-generated tests for image fixtures.
 
 import { existsSync } from "node:fs";
-import type { ExtractionResult } from "kreuzberg";
-import { extractFileSync } from "kreuzberg";
+import type { ExtractionResult } from '@kreuzberg/node';
+import { extractFileSync } from '@kreuzberg/node';
 import { describe, it } from "vitest";
 import { assertions, buildConfig, resolveDocument, shouldSkipFixture } from "./helpers.js";
 

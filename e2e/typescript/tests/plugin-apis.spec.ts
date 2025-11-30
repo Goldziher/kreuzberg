@@ -9,7 +9,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as kreuzberg from "kreuzberg";
+import * as kreuzberg from '@kreuzberg/node';
 import { describe, expect, it } from "vitest";
 
 describe("Configuration", () => {

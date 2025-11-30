@@ -6,7 +6,7 @@ import {
 	extractBytesSync,
 	type ExtractionResult,
 	type ExtractionConfig,
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 import * as readline from "node:readline";
 
 /**

@@ -6,7 +6,7 @@
 		"check": "node smoke.mjs"
 	},
 	"dependencies": {
-		"kreuzberg": "file:../../../packages/typescript"
+		"@kreuzberg/node": "file:../../../crates/kreuzberg-node"
 	},
 	"version": "4.0.0-rc.2"
 }

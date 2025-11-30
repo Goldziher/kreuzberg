@@ -6,7 +6,7 @@
 
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { ExtractionConfig, extractBytes, extractBytesSync, extractFile, extractFileSync } from "kreuzberg";
+import { ExtractionConfig, extractBytes, extractBytesSync, extractFile, extractFileSync } from '@kreuzberg/node';
 
 async function main() {
 	console.log("=== Synchronous Extraction ===");

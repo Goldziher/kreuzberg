@@ -26,6 +26,65 @@ use serde_json::json;
 use std::path::Path;
 use std::sync::Arc;
 
+/// Record error information in the current OpenTelemetry span.
+///
+/// This function records error details in the current span when the `otel` feature is enabled.
+/// It marks the span with `otel.status_code=ERROR` and adds error type and message fields.
+///
+/// # Arguments
+///
+/// * `error` - The error to record in the span
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let result = extract_file("doc.pdf", None, &config).await;
+/// #[cfg(feature = "otel")]
+/// if let Err(ref e) = result {
+///     record_error(e);
+/// }
+/// result
+/// ```
+#[cfg(feature = "otel")]
+fn record_error(error: &KreuzbergError) {
+    let span = tracing::Span::current();
+    span.record("otel.status_code", "ERROR");
+    span.record("error.type", &format!("{:?}", error));
+    span.record("error.message", &error.to_string());
+}
+
+/// Sanitize a file path to return only the filename.
+///
+/// This function extracts the filename from a path to avoid recording
+/// potentially sensitive full file paths in telemetry data.
+///
+/// # Arguments
+///
+/// * `path` - The path to sanitize
+///
+/// # Returns
+///
+/// The filename as a string, or "unknown" if extraction fails
+///
+/// # Security
+///
+/// This prevents PII (personally identifiable information) from appearing in
+/// traces by only recording filenames instead of full paths.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let path = Path::new("/home/user/documents/secret.pdf");
+/// assert_eq!(sanitize_path(path), "secret.pdf");
+/// ```
+#[cfg(feature = "otel")]
+fn sanitize_path(path: &Path) -> String {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("unknown")
+        .to_string()
+}
+
 /// Global Tokio runtime for synchronous operations.
 ///
 /// This runtime is lazily initialized on first use and shared across all sync wrappers.
@@ -104,7 +163,7 @@ fn get_extractor(mime_type: &str) -> Result<Arc<dyn DocumentExtractor>> {
 #[cfg_attr(feature = "otel", tracing::instrument(
     skip(config, path),
     fields(
-        extraction.path = %path.as_ref().display(),
+        extraction.filename = tracing::field::Empty,
     )
 ))]
 pub async fn extract_file(
@@ -116,45 +175,61 @@ pub async fn extract_file(
 
     let path = path.as_ref();
 
-    io::validate_file_exists(path)?;
-
-    let detected_mime = mime::detect_or_validate(Some(path), mime_type)?;
-
-    match detected_mime.as_str() {
-        #[cfg(feature = "office")]
-        LEGACY_WORD_MIME_TYPE => {
-            let original_bytes = tokio::fs::read(path).await?;
-            let conversion = convert_doc_to_docx(&original_bytes).await?;
-            let mut result =
-                extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
-            apply_libreoffice_metadata(&mut result, LEGACY_WORD_MIME_TYPE, &conversion);
-            return Ok(result);
-        }
-        #[cfg(not(feature = "office"))]
-        LEGACY_WORD_MIME_TYPE => {
-            return Err(KreuzbergError::UnsupportedFormat(
-                "Legacy Word conversion requires the `office` feature or LibreOffice support".to_string(),
-            ));
-        }
-        #[cfg(feature = "office")]
-        LEGACY_POWERPOINT_MIME_TYPE => {
-            let original_bytes = tokio::fs::read(path).await?;
-            let conversion = convert_ppt_to_pptx(&original_bytes).await?;
-            let mut result =
-                extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
-            apply_libreoffice_metadata(&mut result, LEGACY_POWERPOINT_MIME_TYPE, &conversion);
-            return Ok(result);
-        }
-        #[cfg(not(feature = "office"))]
-        LEGACY_POWERPOINT_MIME_TYPE => {
-            return Err(KreuzbergError::UnsupportedFormat(
-                "Legacy PowerPoint conversion requires the `office` feature or LibreOffice support".to_string(),
-            ));
-        }
-        _ => {}
+    #[cfg(feature = "otel")]
+    {
+        let span = tracing::Span::current();
+        span.record("extraction.filename", sanitize_path(path));
     }
 
-    extract_file_with_extractor(path, &detected_mime, config).await
+    let result = async {
+        io::validate_file_exists(path)?;
+
+        let detected_mime = mime::detect_or_validate(Some(path), mime_type)?;
+
+        match detected_mime.as_str() {
+            #[cfg(feature = "office")]
+            LEGACY_WORD_MIME_TYPE => {
+                let original_bytes = tokio::fs::read(path).await?;
+                let conversion = convert_doc_to_docx(&original_bytes).await?;
+                let mut result =
+                    extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
+                apply_libreoffice_metadata(&mut result, LEGACY_WORD_MIME_TYPE, &conversion);
+                return Ok(result);
+            }
+            #[cfg(not(feature = "office"))]
+            LEGACY_WORD_MIME_TYPE => {
+                return Err(KreuzbergError::UnsupportedFormat(
+                    "Legacy Word conversion requires the `office` feature or LibreOffice support".to_string(),
+                ));
+            }
+            #[cfg(feature = "office")]
+            LEGACY_POWERPOINT_MIME_TYPE => {
+                let original_bytes = tokio::fs::read(path).await?;
+                let conversion = convert_ppt_to_pptx(&original_bytes).await?;
+                let mut result =
+                    extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
+                apply_libreoffice_metadata(&mut result, LEGACY_POWERPOINT_MIME_TYPE, &conversion);
+                return Ok(result);
+            }
+            #[cfg(not(feature = "office"))]
+            LEGACY_POWERPOINT_MIME_TYPE => {
+                return Err(KreuzbergError::UnsupportedFormat(
+                    "Legacy PowerPoint conversion requires the `office` feature or LibreOffice support".to_string(),
+                ));
+            }
+            _ => {}
+        }
+
+        extract_file_with_extractor(path, &detected_mime, config).await
+    }
+    .await;
+
+    #[cfg(feature = "otel")]
+    if let Err(ref e) = result {
+        record_error(e);
+    }
+
+    result
 }
 
 /// Extract content from a byte array.
@@ -168,41 +243,51 @@ pub async fn extract_file(
 pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
     use crate::core::mime;
 
-    let validated_mime = mime::validate_mime_type(mime_type)?;
+    let result = async {
+        let validated_mime = mime::validate_mime_type(mime_type)?;
 
-    match validated_mime.as_str() {
-        #[cfg(feature = "office")]
-        LEGACY_WORD_MIME_TYPE => {
-            let conversion = convert_doc_to_docx(content).await?;
-            let mut result =
-                extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
-            apply_libreoffice_metadata(&mut result, LEGACY_WORD_MIME_TYPE, &conversion);
-            return Ok(result);
+        match validated_mime.as_str() {
+            #[cfg(feature = "office")]
+            LEGACY_WORD_MIME_TYPE => {
+                let conversion = convert_doc_to_docx(content).await?;
+                let mut result =
+                    extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
+                apply_libreoffice_metadata(&mut result, LEGACY_WORD_MIME_TYPE, &conversion);
+                return Ok(result);
+            }
+            #[cfg(not(feature = "office"))]
+            LEGACY_WORD_MIME_TYPE => {
+                return Err(KreuzbergError::UnsupportedFormat(
+                    "Legacy Word conversion requires the `office` feature or LibreOffice support".to_string(),
+                ));
+            }
+            #[cfg(feature = "office")]
+            LEGACY_POWERPOINT_MIME_TYPE => {
+                let conversion = convert_ppt_to_pptx(content).await?;
+                let mut result =
+                    extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
+                apply_libreoffice_metadata(&mut result, LEGACY_POWERPOINT_MIME_TYPE, &conversion);
+                return Ok(result);
+            }
+            #[cfg(not(feature = "office"))]
+            LEGACY_POWERPOINT_MIME_TYPE => {
+                return Err(KreuzbergError::UnsupportedFormat(
+                    "Legacy PowerPoint conversion requires the `office` feature or LibreOffice support".to_string(),
+                ));
+            }
+            _ => {}
         }
-        #[cfg(not(feature = "office"))]
-        LEGACY_WORD_MIME_TYPE => {
-            return Err(KreuzbergError::UnsupportedFormat(
-                "Legacy Word conversion requires the `office` feature or LibreOffice support".to_string(),
-            ));
-        }
-        #[cfg(feature = "office")]
-        LEGACY_POWERPOINT_MIME_TYPE => {
-            let conversion = convert_ppt_to_pptx(content).await?;
-            let mut result =
-                extract_bytes_with_extractor(&conversion.converted_bytes, &conversion.target_mime, config).await?;
-            apply_libreoffice_metadata(&mut result, LEGACY_POWERPOINT_MIME_TYPE, &conversion);
-            return Ok(result);
-        }
-        #[cfg(not(feature = "office"))]
-        LEGACY_POWERPOINT_MIME_TYPE => {
-            return Err(KreuzbergError::UnsupportedFormat(
-                "Legacy PowerPoint conversion requires the `office` feature or LibreOffice support".to_string(),
-            ));
-        }
-        _ => {}
+
+        extract_bytes_with_extractor(content, &validated_mime, config).await
+    }
+    .await;
+
+    #[cfg(feature = "otel")]
+    if let Err(ref e) = result {
+        record_error(e);
     }
 
-    extract_bytes_with_extractor(content, &validated_mime, config).await
+    result
 }
 
 /// Extract content from multiple files concurrently.

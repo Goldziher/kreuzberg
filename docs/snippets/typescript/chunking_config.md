@@ -1,5 +1,5 @@
 ```typescript
-import { extractFile } from 'kreuzberg';
+import { extractFile } from '@kreuzberg/node';
 
 const config = {
 	chunking: {

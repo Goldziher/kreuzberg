@@ -14,7 +14,7 @@ import {
 	type PostProcessorProtocol,
 	type ValidatorProtocol,
 	type OcrBackendProtocol,
-} from 'kreuzberg';
+} from '@kreuzberg/node';
 
 /**
  * Plugin registry and lifecycle management

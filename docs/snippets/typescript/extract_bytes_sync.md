@@ -1,5 +1,5 @@
 ```typescript
-import { extractBytesSync } from 'kreuzberg';
+import { extractBytesSync } from '@kreuzberg/node';
 import { readFileSync } from 'fs';
 
 const data = readFileSync('document.pdf');
