@@ -14,7 +14,7 @@ use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_file_sync;
 use serde::Serialize;
 
-#[cfg(feature = "profiling")]
+#[cfg(all(feature = "profiling", not(target_os = "windows")))]
 use pprof::{ProfilerGuardBuilder, Report};
 
 #[cfg(feature = "profiling")]

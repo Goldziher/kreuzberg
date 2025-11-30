@@ -101,7 +101,7 @@ jobs:
 
       - name: Run unit tests
         env:
-          TESSDATA_PREFIX: ${{ runner.os == 'Linux' && '/usr/share/tesseract-ocr/5' || '' }}
+          TESSDATA_PREFIX: ${{ runner.os == 'Linux' && '/usr/share/tesseract-ocr/5/tessdata' || '' }}
         run: cargo test --workspace --exclude kreuzberg-e2e-generator --exclude kreuzberg-rb --exclude kreuzberg-py --exclude kreuzberg-node --all-features
         shell: bash
 
@@ -150,7 +150,7 @@ jobs:
 
       - name: Run E2E tests
         env:
-          TESSDATA_PREFIX: "/usr/share/tesseract-ocr/5"
+          TESSDATA_PREFIX: "/usr/share/tesseract-ocr/5/tessdata"
         run: task e2e:rust:test
         shell: bash
 
