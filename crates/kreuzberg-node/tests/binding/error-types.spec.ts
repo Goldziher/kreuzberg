@@ -12,12 +12,12 @@ import { describe, expect, it } from "vitest";
 describe("Error Types", () => {
 	describe("KreuzbergError", () => {
 		it("should be importable from the package", async () => {
-			const module = await import("../../src/index.js");
+			const module = await import("../../dist/index.js");
 			expect(module).toHaveProperty("KreuzbergError");
 		});
 
 		it("should be a proper Error subclass", async () => {
-			const { KreuzbergError } = await import("../../src/index.js");
+			const { KreuzbergError } = await import("../../dist/index.js");
 			const error = new KreuzbergError("test error");
 
 			expect(error).toBeInstanceOf(Error);
@@ -27,7 +27,7 @@ describe("Error Types", () => {
 		});
 
 		it("should have a proper stack trace", async () => {
-			const { KreuzbergError } = await import("../../src/index.js");
+			const { KreuzbergError } = await import("../../dist/index.js");
 			const error = new KreuzbergError("test error");
 
 			expect(error.stack).toBeDefined();
@@ -36,7 +36,7 @@ describe("Error Types", () => {
 		});
 
 		it("should serialize to JSON with toJSON method", async () => {
-			const { KreuzbergError } = await import("../../src/index.js");
+			const { KreuzbergError } = await import("../../dist/index.js");
 			const error = new KreuzbergError("test error");
 
 			const serialized = JSON.stringify(error);
@@ -50,12 +50,12 @@ describe("Error Types", () => {
 
 	describe("ValidationError", () => {
 		it("should be importable from the package", async () => {
-			const module = await import("../../src/index.js");
+			const module = await import("../../dist/index.js");
 			expect(module).toHaveProperty("ValidationError");
 		});
 
 		it("should be a proper Error subclass", async () => {
-			const { ValidationError } = await import("../../src/index.js");
+			const { ValidationError } = await import("../../dist/index.js");
 			const error = new ValidationError("test validation error");
 
 			expect(error).toBeInstanceOf(Error);
@@ -65,14 +65,14 @@ describe("Error Types", () => {
 		});
 
 		it("should extend KreuzbergError", async () => {
-			const { ValidationError, KreuzbergError } = await import("../../src/index.js");
+			const { ValidationError, KreuzbergError } = await import("../../dist/index.js");
 			const error = new ValidationError("test message");
 
 			expect(error).toBeInstanceOf(KreuzbergError);
 		});
 
 		it("should have a proper stack trace", async () => {
-			const { ValidationError } = await import("../../src/index.js");
+			const { ValidationError } = await import("../../dist/index.js");
 			const error = new ValidationError("test validation error");
 
 			expect(error.stack).toBeDefined();
@@ -83,12 +83,12 @@ describe("Error Types", () => {
 
 	describe("ParsingError", () => {
 		it("should be importable from the package", async () => {
-			const module = await import("../../src/index.js");
+			const module = await import("../../dist/index.js");
 			expect(module).toHaveProperty("ParsingError");
 		});
 
 		it("should be a proper Error subclass", async () => {
-			const { ParsingError } = await import("../../src/index.js");
+			const { ParsingError } = await import("../../dist/index.js");
 			const error = new ParsingError("test parsing error");
 
 			expect(error).toBeInstanceOf(Error);
@@ -98,14 +98,14 @@ describe("Error Types", () => {
 		});
 
 		it("should extend KreuzbergError", async () => {
-			const { ParsingError, KreuzbergError } = await import("../../src/index.js");
+			const { ParsingError, KreuzbergError } = await import("../../dist/index.js");
 			const error = new ParsingError("test message");
 
 			expect(error).toBeInstanceOf(KreuzbergError);
 		});
 
 		it("should have a proper stack trace", async () => {
-			const { ParsingError } = await import("../../src/index.js");
+			const { ParsingError } = await import("../../dist/index.js");
 			const error = new ParsingError("test parsing error");
 
 			expect(error.stack).toBeDefined();
@@ -116,12 +116,12 @@ describe("Error Types", () => {
 
 	describe("OcrError", () => {
 		it("should be importable from the package", async () => {
-			const module = await import("../../src/index.js");
+			const module = await import("../../dist/index.js");
 			expect(module).toHaveProperty("OcrError");
 		});
 
 		it("should be a proper Error subclass", async () => {
-			const { OcrError } = await import("../../src/index.js");
+			const { OcrError } = await import("../../dist/index.js");
 			const error = new OcrError("test ocr error");
 
 			expect(error).toBeInstanceOf(Error);
@@ -131,14 +131,14 @@ describe("Error Types", () => {
 		});
 
 		it("should extend KreuzbergError", async () => {
-			const { OcrError, KreuzbergError } = await import("../../src/index.js");
+			const { OcrError, KreuzbergError } = await import("../../dist/index.js");
 			const error = new OcrError("test message");
 
 			expect(error).toBeInstanceOf(KreuzbergError);
 		});
 
 		it("should have a proper stack trace", async () => {
-			const { OcrError } = await import("../../src/index.js");
+			const { OcrError } = await import("../../dist/index.js");
 			const error = new OcrError("test ocr error");
 
 			expect(error.stack).toBeDefined();
@@ -150,12 +150,12 @@ describe("Error Types", () => {
 	describe("CacheError", () => {
 		it("should be importable from the package", async () => {
 			// This test verifies that CacheError is exported
-			const module = await import("../../src/index.js");
+			const module = await import("../../dist/index.js");
 			expect(module).toHaveProperty("CacheError");
 		});
 
 		it("should be a proper Error subclass", async () => {
-			const { CacheError } = await import("../../src/index.js");
+			const { CacheError } = await import("../../dist/index.js");
 			const error = new CacheError("test cache error");
 
 			expect(error).toBeInstanceOf(Error);
@@ -165,14 +165,14 @@ describe("Error Types", () => {
 		});
 
 		it("should extend KreuzbergError", async () => {
-			const { CacheError, KreuzbergError } = await import("../../src/index.js");
+			const { CacheError, KreuzbergError } = await import("../../dist/index.js");
 			const error = new CacheError("test message");
 
 			expect(error).toBeInstanceOf(KreuzbergError);
 		});
 
 		it("should have a proper stack trace", async () => {
-			const { CacheError } = await import("../../src/index.js");
+			const { CacheError } = await import("../../dist/index.js");
 			const error = new CacheError("test cache error");
 
 			expect(error.stack).toBeDefined();
@@ -183,12 +183,12 @@ describe("Error Types", () => {
 
 	describe("ImageProcessingError", () => {
 		it("should be importable from the package", async () => {
-			const module = await import("../../src/index.js");
+			const module = await import("../../dist/index.js");
 			expect(module).toHaveProperty("ImageProcessingError");
 		});
 
 		it("should be a proper Error subclass", async () => {
-			const { ImageProcessingError } = await import("../../src/index.js");
+			const { ImageProcessingError } = await import("../../dist/index.js");
 			const error = new ImageProcessingError("test image processing error");
 
 			expect(error).toBeInstanceOf(Error);
@@ -198,14 +198,14 @@ describe("Error Types", () => {
 		});
 
 		it("should extend KreuzbergError", async () => {
-			const { ImageProcessingError, KreuzbergError } = await import("../../src/index.js");
+			const { ImageProcessingError, KreuzbergError } = await import("../../dist/index.js");
 			const error = new ImageProcessingError("test message");
 
 			expect(error).toBeInstanceOf(KreuzbergError);
 		});
 
 		it("should have a proper stack trace", async () => {
-			const { ImageProcessingError } = await import("../../src/index.js");
+			const { ImageProcessingError } = await import("../../dist/index.js");
 			const error = new ImageProcessingError("test image processing error");
 
 			expect(error.stack).toBeDefined();
@@ -216,12 +216,12 @@ describe("Error Types", () => {
 
 	describe("PluginError", () => {
 		it("should be importable from the package", async () => {
-			const module = await import("../../src/index.js");
+			const module = await import("../../dist/index.js");
 			expect(module).toHaveProperty("PluginError");
 		});
 
 		it("should be a proper Error subclass", async () => {
-			const { PluginError } = await import("../../src/index.js");
+			const { PluginError } = await import("../../dist/index.js");
 			const error = new PluginError("test plugin error", "test-plugin");
 
 			expect(error).toBeInstanceOf(Error);
@@ -231,14 +231,14 @@ describe("Error Types", () => {
 		});
 
 		it("should extend KreuzbergError", async () => {
-			const { PluginError, KreuzbergError } = await import("../../src/index.js");
+			const { PluginError, KreuzbergError } = await import("../../dist/index.js");
 			const error = new PluginError("test message", "test-plugin");
 
 			expect(error).toBeInstanceOf(KreuzbergError);
 		});
 
 		it("should include plugin name in message", async () => {
-			const { PluginError } = await import("../../src/index.js");
+			const { PluginError } = await import("../../dist/index.js");
 			const error = new PluginError("operation failed", "my-custom-plugin");
 
 			expect(error.message).toContain("my-custom-plugin");
@@ -246,14 +246,14 @@ describe("Error Types", () => {
 		});
 
 		it("should store plugin name as property", async () => {
-			const { PluginError } = await import("../../src/index.js");
+			const { PluginError } = await import("../../dist/index.js");
 			const error = new PluginError("test error", "test-plugin");
 
 			expect(error.pluginName).toBe("test-plugin");
 		});
 
 		it("should have a proper stack trace", async () => {
-			const { PluginError } = await import("../../src/index.js");
+			const { PluginError } = await import("../../dist/index.js");
 			const error = new PluginError("test plugin error", "test-plugin");
 
 			expect(error.stack).toBeDefined();
@@ -263,12 +263,12 @@ describe("Error Types", () => {
 
 	describe("MissingDependencyError", () => {
 		it("should be importable from the package", async () => {
-			const module = await import("../../src/index.js");
+			const module = await import("../../dist/index.js");
 			expect(module).toHaveProperty("MissingDependencyError");
 		});
 
 		it("should be a proper Error subclass", async () => {
-			const { MissingDependencyError } = await import("../../src/index.js");
+			const { MissingDependencyError } = await import("../../dist/index.js");
 			const error = new MissingDependencyError("test dependency error");
 
 			expect(error).toBeInstanceOf(Error);
@@ -278,14 +278,14 @@ describe("Error Types", () => {
 		});
 
 		it("should extend KreuzbergError", async () => {
-			const { MissingDependencyError, KreuzbergError } = await import("../../src/index.js");
+			const { MissingDependencyError, KreuzbergError } = await import("../../dist/index.js");
 			const error = new MissingDependencyError("test message");
 
 			expect(error).toBeInstanceOf(KreuzbergError);
 		});
 
 		it("should have a proper stack trace", async () => {
-			const { MissingDependencyError } = await import("../../src/index.js");
+			const { MissingDependencyError } = await import("../../dist/index.js");
 			const error = new MissingDependencyError("test dependency error");
 
 			expect(error.stack).toBeDefined();
@@ -305,7 +305,7 @@ describe("Error Types", () => {
 				ImageProcessingError,
 				PluginError,
 				MissingDependencyError,
-			} = await import("../../src/index.js");
+			} = await import("../../dist/index.js");
 
 			const baseError = new KreuzbergError("base error");
 			const validationError = new ValidationError("validation error");
@@ -344,7 +344,7 @@ describe("Error Types", () => {
 
 	describe("Error serialization", () => {
 		it("should serialize KreuzbergError to JSON with relevant fields", async () => {
-			const { KreuzbergError } = await import("../../src/index.js");
+			const { KreuzbergError } = await import("../../dist/index.js");
 			const error = new KreuzbergError("base error");
 
 			const serialized = JSON.stringify(error);
@@ -356,7 +356,7 @@ describe("Error Types", () => {
 		});
 
 		it("should serialize ValidationError to JSON with relevant fields", async () => {
-			const { ValidationError } = await import("../../src/index.js");
+			const { ValidationError } = await import("../../dist/index.js");
 			const error = new ValidationError("validation failed");
 
 			const serialized = JSON.stringify(error);
@@ -367,7 +367,7 @@ describe("Error Types", () => {
 		});
 
 		it("should serialize ParsingError to JSON with relevant fields", async () => {
-			const { ParsingError } = await import("../../src/index.js");
+			const { ParsingError } = await import("../../dist/index.js");
 			const error = new ParsingError("parsing failed");
 
 			const serialized = JSON.stringify(error);
@@ -378,7 +378,7 @@ describe("Error Types", () => {
 		});
 
 		it("should serialize OcrError to JSON with relevant fields", async () => {
-			const { OcrError } = await import("../../src/index.js");
+			const { OcrError } = await import("../../dist/index.js");
 			const error = new OcrError("ocr failed");
 
 			const serialized = JSON.stringify(error);
@@ -389,7 +389,7 @@ describe("Error Types", () => {
 		});
 
 		it("should serialize CacheError to JSON with relevant fields", async () => {
-			const { CacheError } = await import("../../src/index.js");
+			const { CacheError } = await import("../../dist/index.js");
 			const error = new CacheError("cache write failed");
 
 			const serialized = JSON.stringify(error);
@@ -400,7 +400,7 @@ describe("Error Types", () => {
 		});
 
 		it("should serialize ImageProcessingError to JSON with relevant fields", async () => {
-			const { ImageProcessingError } = await import("../../src/index.js");
+			const { ImageProcessingError } = await import("../../dist/index.js");
 			const error = new ImageProcessingError("failed to resize image");
 
 			const serialized = JSON.stringify(error);
@@ -411,7 +411,7 @@ describe("Error Types", () => {
 		});
 
 		it("should serialize PluginError to JSON with plugin name", async () => {
-			const { PluginError } = await import("../../src/index.js");
+			const { PluginError } = await import("../../dist/index.js");
 			const error = new PluginError("plugin crashed", "my-plugin");
 
 			const serialized = JSON.stringify(error);
@@ -422,7 +422,7 @@ describe("Error Types", () => {
 		});
 
 		it("should serialize MissingDependencyError to JSON with relevant fields", async () => {
-			const { MissingDependencyError } = await import("../../src/index.js");
+			const { MissingDependencyError } = await import("../../dist/index.js");
 			const error = new MissingDependencyError("dependency not found");
 
 			const serialized = JSON.stringify(error);
