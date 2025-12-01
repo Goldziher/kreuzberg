@@ -5,6 +5,22 @@ All notable changes to Kreuzberg will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0-rc.5] - 2025-12-01
+
+### Release Candidate 5 - macOS Binary Fix
+
+#### Bug Fixes
+
+**Build System**:
+- Fixed macOS CLI binary missing libpdfium.dylib (dyld error at runtime)
+  - Build script now correctly copies libpdfium.dylib to target-specific directory when using --target flag
+  - Resolves: `dyld: Library not loaded: @rpath/libpdfium.dylib`
+  - Impact: macOS CLI binary now functional in releases
+
+**Note**: rc.4 workflow fixes for Python, Node, Ruby, and Maven were committed after rc.4 tag, causing those packages not to publish. All fixes are now present for rc.5.
+
+---
+
 ## [4.0.0-rc.4] - 2025-12-01
 
 ### Release Candidate 4 - Critical CI/CD and Build Fixes

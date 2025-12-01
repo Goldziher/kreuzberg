@@ -1,0 +1,190 @@
+KREUZBERG v4.0.0-rc.4 PUBLISH WORKFLOW FAILURE ANALYSIS
+Run ID: 19825341555
+Date: 2025-12-01T15:40:00Z
+
+=================================================================
+EXECUTIVE SUMMARY
+=================================================================
+
+STATUS: 6 Failed, 2 Skipped (downstream), 21 Successful
+
+FAILED JOBS (by language):
+  1. Build Python wheels (linux-x86_64)       - Duration: 3m23s
+  2. Build Node bindings (aarch64-apple-darwin) - Duration: 1m26s
+  3. Build Node bindings (x86_64-pc-windows-msvc) - Duration: 4m54s
+  4. Build Node bindings (x86_64-unknown-linux-gnu) - Duration: 2m9s
+  5. Publish Ruby gems                        - Duration: 6s
+  6. Publish Maven packages                   - Duration: 8m14s
+
+SKIPPED JOBS (blocked by failures):
+  - Publish Node packages (Node builds failed)
+  - Publish Python packages to PyPI (Python wheel failed)
+
+=================================================================
+FAILURE ROOT CAUSES
+=================================================================
+
+1. PYTHON WHEELS (linux-x86_64)
+   Issue: OpenSSL system dependency missing in maturin Docker build
+   Error: openssl-sys v0.9.111: Could not find OpenSSL installation
+   Fix: Add OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu env var
+   Severity: MEDIUM - Affects 1 platform only
+
+2. NODE BINDINGS (all 3 platforms: macOS/Linux/Windows)
+   Issue: sccache 0.12.0 cache corruption in GitHub Actions toolcache
+   Error: ENOTDIR: not a directory, stat '...sccache/0.12.0/*/sccache/node'
+   Root: sccache wrapper set globally, breaks non-Rust tools (pnpm/npm)
+   Fix: Unset RUSTC_WRAPPER before pnpm install
+   Severity: HIGH - Affects all 3 Node.js platforms
+
+3. RUBY GEMS PUBLISH
+   Issue: OIDC vs api-token conflict in rubygems-credentials action
+   Error: Cannot specify audience when using api-token
+   Fix: Use GitHub Trusted Publishing (OIDC), remove api-token parameter
+   Severity: MEDIUM - Gem built but publish failed
+
+4. MAVEN DEPLOY
+   Issue: GPG passphrase decryption requires missing settings-security.xml
+   Error: FileNotFoundException: /home/runner/.m2/settings-security.xml
+   Fix: Pass GPG passphrase as env var: -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}"
+   Severity: MEDIUM - Build succeeded, deploy failed
+
+=================================================================
+IMPACT ANALYSIS
+=================================================================
+
+Package Registry Status:
+  [✓] Docker (core & full)        - Published successfully
+  [✓] Docker Hub                  - Published successfully
+  [✓] GitHub Release CLI          - Published successfully
+  [✓] Homebrew formula            - Updated successfully
+  [✓] NuGet (C#)                  - Published successfully
+  [✓] Java (build only)           - Built but NOT published to Maven Central
+  [x] Python wheels (linux)       - Failed to build
+  [x] Python PyPI                 - Skipped (build failed)
+  [x] Node npm (all platforms)    - Skipped (build failed on all platforms)
+  [x] Ruby RubyGems               - Skipped (credentials issue)
+
+Artifacts Successfully Built:
+  - Python sdist: kreuzberg-4.0.0-rc.4.tar.gz
+  - Python wheels: macos-arm64, windows-amd64 (missing linux-x86_64)
+  - Ruby gems: all 3 platforms (windows-x64, macos-arm64, linux)
+  - Java package: kreuzberg-4.0.0-rc.3.jar (version mismatch: rc.3 vs rc.4)
+  - C# NuGet package: published
+
+Language Coverage Impact:
+  - Python: 66% platforms (missing linux)
+  - Node/TypeScript: 0% (all 3 platforms failed)
+  - Ruby: 100% built but publish failed
+  - Java: 100% built but not deployed
+  - C#: 100% published
+  - Go: Not in this release
+  - Rust: Not in this release
+
+=================================================================
+REQUIRED FIXES (Priority Order)
+=================================================================
+
+IMMEDIATE (Block future releases):
+
+  1. Node bindings - sccache issue
+     File: .github/workflows/publish.yaml:761-764
+     Change: Unset RUSTC_WRAPPER before pnpm install
+     Impact: Unblocks Node.js TypeScript publishing
+     Effort: 1 line change
+
+  2. Ruby gems - OIDC conflict
+     File: .github/workflows/publish.yaml:1736-1740
+     Change: Remove 'api-token' parameter (use OIDC)
+     Impact: Unblocks Ruby gem publishing
+     Effort: 1 line deletion
+
+  3. Maven deploy - GPG passphrase
+     File: .github/workflows/publish.yaml:2050-2054
+     Change: Add -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}" to mvn
+     Impact: Unblocks Java/Maven publishing
+     Effort: 1 line change
+
+  4. Python wheels - OpenSSL missing
+     File: .github/workflows/publish.yaml:606-620
+     Change: Add OPENSSL_LIB_DIR/OPENSSL_INCLUDE_DIR env vars
+     Impact: Unblocks Python wheel on linux-x86_64
+     Effort: 2 line additions
+
+RECOMMENDED (Quality improvements):
+
+  5. Java version file - version mismatch
+     File: packages/java/pom.xml (likely)
+     Issue: Built rc.3 instead of rc.4
+     Impact: Prevents Java publishing even if GPG fixed
+
+  6. sccache cleanup
+     File: .github/workflows/publish.yaml
+     Issue: sccache 0.12.0 has compatibility issues
+     Option: Downgrade to 0.11.x OR disable for Node builds
+
+=================================================================
+WORKFLOW STRUCTURE
+=================================================================
+
+Job Dependencies:
+  prepare (metadata) 
+    ├─ check-{pypi,npm,rubygems,maven,csharp,nuget,crates}
+    ├─ build-cli (3 platforms)
+    ├─ publish-docker (2 images)
+    ├─ build-python-wheels (3 platforms)
+    │  └─ publish-python-pypi (SKIPPED - wheel failed)
+    ├─ build-node (3 platforms)
+    │  └─ publish-node (SKIPPED - builds failed)
+    ├─ build-ruby-gems (3 platforms)
+    │  └─ publish-ruby-gems (FAILED - credentials)
+    ├─ build-java
+    │  └─ publish-maven (FAILED - GPG)
+    ├─ build-csharp
+    │  └─ publish-nuget (SUCCESS)
+    └─ finalize-release
+
+Failure Pattern:
+  - Build jobs: 5 failed (Python 1x, Node 3x)
+  - Publish jobs: 2 failed (Ruby 1x, Maven 1x)
+  - Publish jobs: 2 skipped (Python, Node - due to build failures)
+  - Artifacts published: Docker, Homebrew, C#, CLI (partial)
+  - Artifacts NOT published: Python, Node, Ruby, Java
+
+=================================================================
+NEXT STEPS
+=================================================================
+
+For v4.0.0-rc.5 Release:
+
+  1. Apply all 4 immediate fixes to .github/workflows/publish.yaml
+  2. Fix Java version file (rc.3 -> rc.4)
+  3. Run dry_run=true first to validate fixes
+  4. Re-test all language bindings in dry-run mode
+  5. If successful, trigger full release
+
+Validation Commands:
+  gh workflow run publish.yaml \
+    -f tag=v4.0.0-rc.5 \
+    -f dry_run=true \
+    -f targets=python,node,ruby,java
+
+  # Then run full release:
+  git tag v4.0.0-rc.5
+  git push origin v4.0.0-rc.5
+
+=================================================================
+DETAILED LOGS LOCATION
+=================================================================
+
+Full logs: /tmp/publish_failed_rc4.log (9,077 lines)
+Analysis: /tmp/failed_publish_analysis.md
+Fixes: /tmp/fixes_to_apply.md
+
+Key Log Sections:
+  - Python OpenSSL error: Lines 1630-1680
+  - Node sccache errors: Lines 2691-2758 (macOS), 5143-5150 (Linux)
+  - Ruby OIDC error: Line 5425
+  - Maven GPG error: Lines 8766-8775
+
+=================================================================
