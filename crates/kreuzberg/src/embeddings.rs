@@ -45,9 +45,106 @@ use std::collections::HashMap;
 #[cfg(feature = "embeddings")]
 use lazy_static::lazy_static;
 
+/// Wrapper for TextEmbedding that prevents cleanup during process shutdown.
+///
+/// # Problem
+///
+/// When the process terminates, global static objects are dropped. The `TextEmbedding`
+/// objects from fastembed contain ONNX Runtime sessions (via `ort v2.0.0-rc.10`), and
+/// during their `Drop` implementation, ONNX Runtime's C++ destructor tries to acquire
+/// mutexes for cleanup.
+///
+/// At process shutdown time, the C++ runtime may have already begun tearing down
+/// threading infrastructure, causing mutex operations to fail with:
+/// "mutex lock failed: Invalid argument"
+///
+/// This manifests as:
+/// ```
+/// libc++abi: terminating due to uncaught exception of type std::__1::system_error:
+/// mutex lock failed: Invalid argument
+/// ```
+///
+/// This is a known issue in `ort` (see pykeio/ort#441), fixed in later versions via commit
+/// 317be20 ("fix: let `Environment` drop"), but we're using v2.0.0-rc.10 through fastembed
+/// v5.3.1 which predates the fix.
+///
+/// # Solution
+///
+/// We use `Box::leak` to intentionally leak `TextEmbedding` objects during process
+/// shutdown, preventing their `Drop` implementation from running. This is acceptable because:
+///
+/// 1. The OS will reclaim all process memory anyway
+/// 2. Avoiding the crash is more important than cleanup
+/// 3. This only affects process termination, not runtime behavior
+/// 4. Models are long-lived and would survive until process exit anyway
+/// 5. The memory leak is bounded (one model per unique config)
+///
+/// # Remaining Issue
+///
+/// Even with this fix, you may still see the mutex error during final process cleanup.
+/// This is because `ort` v2.0.0-rc.10 also holds the ONNX Runtime `Environment` as a
+/// static variable, which gets dropped during C++ static destruction after Rust cleanup.
+/// This error occurs *after* all Rust code has finished and can be safely ignored - all
+/// tests pass before the error occurs.
+///
+/// The error will be resolved when fastembed upgrades to ort >= 2.0.0 (post-rc.10) which
+/// contains the proper fix.
+///
+/// # Safety
+///
+/// The leak is contained to process shutdown and does not affect runtime behavior.
+/// All normal usage patterns (creating embeddings, caching models) work identically.
+/// We use static references to the leaked models, which is safe because:
+/// - The pointers are never null (we leak valid Box<TextEmbedding>)
+/// - The models live until process exit
+/// - We never manually deallocate the leaked memory
+/// - Mutex provides interior mutability for the embed() method
+/// Thread-safe wrapper for leaked TextEmbedding that allows interior mutability.
+///
+/// This wrapper holds a raw pointer to a leaked `TextEmbedding` and provides
+/// safe access through the Mutex lock in MODEL_CACHE.
+#[cfg(feature = "embeddings")]
+pub(crate) struct LeakedModel {
+    ptr: *mut TextEmbedding,
+}
+
+#[cfg(feature = "embeddings")]
+impl LeakedModel {
+    fn new(model: TextEmbedding) -> Self {
+        Self {
+            ptr: Box::into_raw(Box::new(model)),
+        }
+    }
+
+    /// Get a mutable reference to the model.
+    ///
+    /// # Safety
+    ///
+    /// This is safe to call only when:
+    /// 1. The caller has exclusive access (guaranteed by Mutex in MODEL_CACHE)
+    /// 2. The pointer is valid (guaranteed by Box::into_raw and never deallocating)
+    #[allow(unsafe_code)]
+    unsafe fn get_mut(&self) -> &mut TextEmbedding {
+        // SAFETY: Caller guarantees exclusive access via Mutex, pointer is valid for program lifetime
+        unsafe { &mut *self.ptr }
+    }
+}
+
+// SAFETY: The pointer is valid for the entire program lifetime (leaked via Box::into_raw)
+// and access is synchronized through Mutex in MODEL_CACHE
+#[cfg(feature = "embeddings")]
+#[allow(unsafe_code)]
+unsafe impl Send for LeakedModel {}
+#[cfg(feature = "embeddings")]
+#[allow(unsafe_code)]
+unsafe impl Sync for LeakedModel {}
+
+#[cfg(feature = "embeddings")]
+type CachedEmbedding = Arc<Mutex<LeakedModel>>;
+
 #[cfg(feature = "embeddings")]
 lazy_static! {
-    static ref MODEL_CACHE: RwLock<HashMap<String, Arc<Mutex<TextEmbedding>>>> = RwLock::new(HashMap::new());
+    static ref MODEL_CACHE: RwLock<HashMap<String, CachedEmbedding>> = RwLock::new(HashMap::new());
 }
 
 /// Get or initialize a text embedding model from cache.
@@ -55,10 +152,11 @@ lazy_static! {
 /// This function ensures models are initialized only once and reused across
 /// the application, avoiding redundant downloads and initialization overhead.
 #[cfg(feature = "embeddings")]
+#[allow(private_interfaces)]
 pub fn get_or_init_model(
     model: EmbeddingModel,
     cache_dir: Option<std::path::PathBuf>,
-) -> crate::Result<Arc<Mutex<TextEmbedding>>> {
+) -> crate::Result<CachedEmbedding> {
     let cache_directory = cache_dir.unwrap_or_else(|| {
         let mut path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         path.push(".kreuzberg");
@@ -108,7 +206,9 @@ pub fn get_or_init_model(
             plugin_name: "embeddings".to_string(),
         })?;
 
-        let arc_model = Arc::new(Mutex::new(embedding_model));
+        // Leak the model to prevent Drop during process shutdown (workaround for ort #441)
+        let leaked_model = LeakedModel::new(embedding_model);
+        let arc_model = Arc::new(Mutex::new(leaked_model));
         cache.insert(model_key, Arc::clone(&arc_model));
 
         Ok(arc_model)
@@ -259,12 +359,19 @@ pub fn generate_embeddings_for_chunks(
     let texts: Vec<String> = chunks.iter().map(|chunk| chunk.content.clone()).collect();
 
     let embeddings_result = {
-        let mut locked_model = model.lock().map_err(|e| crate::KreuzbergError::Plugin {
+        let locked_model = model.lock().map_err(|e| crate::KreuzbergError::Plugin {
             message: format!("Failed to acquire model lock: {}", e),
             plugin_name: "embeddings".to_string(),
         })?;
 
-        locked_model
+        // SAFETY: get_mut() is safe here because:
+        // 1. We have exclusive access through the Mutex lock
+        // 2. The pointer is valid for the entire program lifetime (leaked via Box::into_raw)
+        // 3. No other code can access this pointer concurrently
+        #[allow(unsafe_code)]
+        let model_mut = unsafe { locked_model.get_mut() };
+
+        model_mut
             .embed(texts, Some(config.batch_size))
             .map_err(|e| crate::KreuzbergError::Plugin {
                 message: format!("Failed to generate embeddings: {}", e),
