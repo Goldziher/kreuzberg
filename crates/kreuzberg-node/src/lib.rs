@@ -19,6 +19,56 @@ use kreuzberg::{
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
+use std::ffi::CStr;
+
+// FFI bindings to kreuzberg-ffi error context functions
+#[allow(dead_code)]
+unsafe extern "C" {
+    /// Get the last error code from FFI.
+    ///
+    /// Maps to kreuzberg_last_error_code() in the FFI library.
+    /// This is thread-safe and always safe to call.
+    pub fn kreuzberg_last_error_code() -> i32;
+
+    /// Get the last panic context as JSON from FFI.
+    ///
+    /// Maps to kreuzberg_last_panic_context() in the FFI library.
+    /// Returns NULL if no panic context is available.
+    /// The returned string must be freed with kreuzberg_free_string().
+    pub fn kreuzberg_last_panic_context() -> *const u8;
+
+    /// Free a string allocated by FFI.
+    ///
+    /// Maps to kreuzberg_free_string() in the FFI library.
+    pub fn kreuzberg_free_string(ptr: *mut u8);
+}
+
+/// Helper function to retrieve panic context from FFI.
+///
+/// Calls kreuzberg_last_panic_context() and parses the JSON response into a panic context object.
+/// Returns None if no panic context is available or if parsing fails.
+#[inline]
+fn get_panic_context() -> Option<serde_json::Value> {
+    unsafe {
+        let ptr = kreuzberg_last_panic_context();
+        if ptr.is_null() {
+            return None;
+        }
+
+        // Convert C string to Rust string
+        let c_str = CStr::from_ptr(ptr as *const i8);
+        if let Ok(json_str) = c_str.to_str() {
+            // Parse JSON and free memory
+            let result = serde_json::from_str(json_str).ok();
+            kreuzberg_free_string(ptr as *mut u8);
+            return result;
+        }
+
+        // Free memory even if parsing failed
+        kreuzberg_free_string(ptr as *mut u8);
+        None
+    }
+}
 
 /// Converts KreuzbergError to NAPI Error with specific error codes.
 ///
@@ -2940,6 +2990,81 @@ pub fn get_embedding_preset(name: String) -> Option<EmbeddingPreset> {
         dimensions: preset.dimensions as u32,
         description: preset.description.to_string(),
     })
+}
+
+/// Get the error code for the last FFI error.
+///
+/// Returns the FFI error code as an integer. Error codes are:
+/// - 0: Success (no error)
+/// - 1: GenericError
+/// - 2: Panic
+/// - 3: InvalidArgument
+/// - 4: IoError
+/// - 5: ParsingError
+/// - 6: OcrError
+/// - 7: MissingDependency
+///
+/// This is useful for programmatic error handling and distinguishing
+/// between different types of failures in native code.
+///
+/// # Returns
+///
+/// The integer error code.
+///
+/// # Example
+///
+/// ```typescript
+/// import { extractFile, getLastErrorCode, ErrorCode } from '@kreuzberg/node';
+///
+/// try {
+///   const result = await extractFile('document.pdf');
+/// } catch (error) {
+///   const code = getLastErrorCode();
+///   if (code === ErrorCode.Panic) {
+///     console.error('Native code panic detected');
+///   }
+/// }
+/// ```
+#[napi(js_name = "getLastErrorCode")]
+pub fn get_last_error_code() -> i32 {
+    unsafe { kreuzberg_last_error_code() }
+}
+
+/// Get panic context information if the last error was a panic.
+///
+/// Returns detailed information about a panic in native code, or null
+/// if the last error was not a panic.
+///
+/// # Returns
+///
+/// A `PanicContext` object with:
+/// - `file`: string - Source file where panic occurred
+/// - `line`: number - Line number
+/// - `function`: string - Function name
+/// - `message`: string - Panic message
+/// - `timestamp_secs`: number - Unix timestamp (seconds since epoch)
+///
+/// Returns `null` if no panic context is available.
+///
+/// # Example
+///
+/// ```typescript
+/// import { extractFile, getLastPanicContext } from '@kreuzberg/node';
+///
+/// try {
+///   const result = await extractFile('document.pdf');
+/// } catch (error) {
+///   const context = getLastPanicContext();
+///   if (context) {
+///     console.error(`Panic at ${context.file}:${context.line}`);
+///     console.error(`In function: ${context.function}`);
+///     console.error(`Message: ${context.message}`);
+///   }
+/// }
+/// ```
+#[napi(js_name = "getLastPanicContext")]
+pub fn get_last_panic_context() -> Option<serde_json::Value> {
+    get_panic_context()
 }
 
 // #[cfg(all(

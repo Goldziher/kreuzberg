@@ -3,6 +3,16 @@
 module Kreuzberg
   VERSION: String
 
+  # Error code constants
+  ERROR_CODE_SUCCESS: Integer
+  ERROR_CODE_GENERIC: Integer
+  ERROR_CODE_PANIC: Integer
+  ERROR_CODE_INVALID_ARGUMENT: Integer
+  ERROR_CODE_IO: Integer
+  ERROR_CODE_PARSING: Integer
+  ERROR_CODE_OCR: Integer
+  ERROR_CODE_MISSING_DEPENDENCY: Integer
+
   # Config namespace (defined in lib/kreuzberg/config.rb)
   module Config
     class OCR
@@ -413,25 +423,59 @@ module Kreuzberg
     def extract_text: (String file_path_or_bytes, Hash[Symbol, untyped] config) -> String
   end
 
+  module ErrorContext
+    def self.last_error_code: () -> Integer
+    def self.last_panic_context: () -> Errors::PanicContext?
+    def self.last_panic_context_json: () -> String?
+  end
+
   module Errors
+    # Panic context information from FFI error introspection
+    class PanicContext
+      attr_reader file: String
+      attr_reader line: Integer
+      attr_reader function: String
+      attr_reader message: String
+      attr_reader timestamp_secs: Integer
+
+      def initialize: (
+        file: String,
+        line: Integer,
+        function: String,
+        message: String,
+        timestamp_secs: Integer
+      ) -> void
+      def to_s: () -> String
+      def to_h: () -> Hash[Symbol, String | Integer]
+      def self.from_json: (String json_string) -> PanicContext?
+    end
+
     class Error < StandardError
+      attr_reader panic_context: PanicContext?
+      attr_reader error_code: Integer?
+
+      def initialize: (String message, ?panic_context: PanicContext?, ?error_code: Integer?) -> void
     end
 
     class ValidationError < Error
     end
 
     class ParsingError < Error
-      def initialize: (String message, ?context: Hash[untyped, untyped]?) -> void
+      attr_reader context: Hash[untyped, untyped]?
+
+      def initialize: (String message, ?context: Hash[untyped, untyped]?, ?panic_context: PanicContext?, ?error_code: Integer?) -> void
     end
 
     class OCRError < Error
-      def initialize: (String message, ?context: Hash[untyped, untyped]?) -> void
+      attr_reader context: Hash[untyped, untyped]?
+
+      def initialize: (String message, ?context: Hash[untyped, untyped]?, ?panic_context: PanicContext?, ?error_code: Integer?) -> void
     end
 
     class MissingDependencyError < Error
       attr_reader dependency: String?
 
-      def initialize: (String message, ?dependency: String?) -> void
+      def initialize: (String message, ?dependency: String?, ?panic_context: PanicContext?, ?error_code: Integer?) -> void
     end
 
     class IOError < Error

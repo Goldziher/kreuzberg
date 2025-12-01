@@ -23,6 +23,104 @@
  */
 
 /**
+ * FFI error codes matching kreuzberg-ffi C library error types.
+ *
+ * @example
+ * ```typescript
+ * import { ErrorCode, getLastErrorCode } from '@kreuzberg/node';
+ *
+ * try {
+ *   const result = await extractFile('document.pdf');
+ * } catch (error) {
+ *   const code = getLastErrorCode();
+ *   if (code === ErrorCode.Panic) {
+ *     console.error('A panic occurred in the native library');
+ *   }
+ * }
+ * ```
+ */
+export enum ErrorCode {
+	/**
+	 * No error (success)
+	 */
+	Success = 0,
+	/**
+	 * Generic error
+	 */
+	GenericError = 1,
+	/**
+	 * Panic occurred in native code
+	 */
+	Panic = 2,
+	/**
+	 * Invalid argument provided
+	 */
+	InvalidArgument = 3,
+	/**
+	 * I/O error (file system, network, etc.)
+	 */
+	IoError = 4,
+	/**
+	 * Error parsing document content
+	 */
+	ParsingError = 5,
+	/**
+	 * Error in OCR processing
+	 */
+	OcrError = 6,
+	/**
+	 * Required system dependency is missing
+	 */
+	MissingDependency = 7,
+}
+
+/**
+ * Context information for panics in native code.
+ *
+ * Contains file location, line number, function name, panic message,
+ * and timestamp for debugging native library issues.
+ *
+ * @example
+ * ```typescript
+ * import { KreuzbergError } from '@kreuzberg/node';
+ *
+ * try {
+ *   const result = await extractFile('document.pdf');
+ * } catch (error) {
+ *   if (error instanceof KreuzbergError && error.panicContext) {
+ *     console.error('Panic occurred:');
+ *     console.error(`File: ${error.panicContext.file}`);
+ *     console.error(`Line: ${error.panicContext.line}`);
+ *     console.error(`Function: ${error.panicContext.function}`);
+ *     console.error(`Message: ${error.panicContext.message}`);
+ *   }
+ * }
+ * ```
+ */
+export interface PanicContext {
+	/**
+	 * Source file where panic occurred
+	 */
+	file: string;
+	/**
+	 * Line number in source file
+	 */
+	line: number;
+	/**
+	 * Function name where panic occurred
+	 */
+	function: string;
+	/**
+	 * Panic message
+	 */
+	message: string;
+	/**
+	 * Unix timestamp (seconds since epoch)
+	 */
+	timestamp_secs: number;
+}
+
+/**
  * Base error class for all Kreuzberg errors.
  *
  * All error types thrown by Kreuzberg extend this class, allowing
@@ -37,6 +135,9 @@
  * } catch (error) {
  *   if (error instanceof KreuzbergError) {
  *     console.error('Kreuzberg error:', error.message);
+ *     if (error.panicContext) {
+ *       console.error('Panic at:', error.panicContext.file + ':' + error.panicContext.line);
+ *     }
  *   } else {
  *     throw error; // Re-throw non-Kreuzberg errors
  *   }
@@ -44,9 +145,16 @@
  * ```
  */
 export class KreuzbergError extends Error {
-	constructor(message: string) {
+	/**
+	 * Panic context if error was caused by a panic in native code.
+	 * Will be null for non-panic errors.
+	 */
+	public readonly panicContext: PanicContext | null;
+
+	constructor(message: string, panicContext?: PanicContext | null) {
 		super(message);
 		this.name = "KreuzbergError";
+		this.panicContext = panicContext ?? null;
 		// Ensure proper prototype chain for instanceof checks
 		Object.setPrototypeOf(this, KreuzbergError.prototype);
 	}
@@ -55,6 +163,7 @@ export class KreuzbergError extends Error {
 		return {
 			name: this.name,
 			message: this.message,
+			panicContext: this.panicContext,
 			stack: this.stack,
 		};
 	}
@@ -80,8 +189,8 @@ export class KreuzbergError extends Error {
  * ```
  */
 export class ValidationError extends KreuzbergError {
-	constructor(message: string) {
-		super(message);
+	constructor(message: string, panicContext?: PanicContext | null) {
+		super(message, panicContext);
 		this.name = "ValidationError";
 		Object.setPrototypeOf(this, ValidationError.prototype);
 	}
@@ -111,8 +220,8 @@ export class ValidationError extends KreuzbergError {
  * ```
  */
 export class ParsingError extends KreuzbergError {
-	constructor(message: string) {
-		super(message);
+	constructor(message: string, panicContext?: PanicContext | null) {
+		super(message, panicContext);
 		this.name = "ParsingError";
 		Object.setPrototypeOf(this, ParsingError.prototype);
 	}
@@ -143,8 +252,8 @@ export class ParsingError extends KreuzbergError {
  * ```
  */
 export class OcrError extends KreuzbergError {
-	constructor(message: string) {
-		super(message);
+	constructor(message: string, panicContext?: PanicContext | null) {
+		super(message, panicContext);
 		this.name = "OcrError";
 		Object.setPrototypeOf(this, OcrError.prototype);
 	}
@@ -177,8 +286,8 @@ export class OcrError extends KreuzbergError {
  * ```
  */
 export class CacheError extends KreuzbergError {
-	constructor(message: string) {
-		super(message);
+	constructor(message: string, panicContext?: PanicContext | null) {
+		super(message, panicContext);
 		this.name = "CacheError";
 		Object.setPrototypeOf(this, CacheError.prototype);
 	}
@@ -213,8 +322,8 @@ export class CacheError extends KreuzbergError {
  * ```
  */
 export class ImageProcessingError extends KreuzbergError {
-	constructor(message: string) {
-		super(message);
+	constructor(message: string, panicContext?: PanicContext | null) {
+		super(message, panicContext);
 		this.name = "ImageProcessingError";
 		Object.setPrototypeOf(this, ImageProcessingError.prototype);
 	}
@@ -250,8 +359,8 @@ export class PluginError extends KreuzbergError {
 	 */
 	public readonly pluginName: string;
 
-	constructor(message: string, pluginName: string) {
-		super(`Plugin error in '${pluginName}': ${message}`);
+	constructor(message: string, pluginName: string, panicContext?: PanicContext | null) {
+		super(`Plugin error in '${pluginName}': ${message}`, panicContext);
 		this.name = "PluginError";
 		this.pluginName = pluginName;
 		Object.setPrototypeOf(this, PluginError.prototype);
@@ -262,6 +371,7 @@ export class PluginError extends KreuzbergError {
 			name: this.name,
 			message: this.message,
 			pluginName: this.pluginName,
+			panicContext: this.panicContext,
 			stack: this.stack,
 		};
 	}
@@ -291,8 +401,8 @@ export class PluginError extends KreuzbergError {
  * ```
  */
 export class MissingDependencyError extends KreuzbergError {
-	constructor(message: string) {
-		super(message);
+	constructor(message: string, panicContext?: PanicContext | null) {
+		super(message, panicContext);
 		this.name = "MissingDependencyError";
 		Object.setPrototypeOf(this, MissingDependencyError.prototype);
 	}

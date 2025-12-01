@@ -14,6 +14,7 @@ module Kreuzberg
   autoload :APIProxy, 'kreuzberg/api_proxy'
   autoload :MCPProxy, 'kreuzberg/mcp_proxy'
   autoload :Errors, 'kreuzberg/errors'
+  autoload :ErrorContext, 'kreuzberg/error_context'
   autoload :PostProcessorProtocol, 'kreuzberg/post_processor_protocol'
   autoload :ValidatorProtocol, 'kreuzberg/validator_protocol'
   autoload :OcrBackendProtocol, 'kreuzberg/ocr_backend_protocol'

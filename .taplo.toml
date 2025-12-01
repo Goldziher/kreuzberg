@@ -1,0 +1,19 @@
+# Taplo Configuration for TOML Formatting
+# Project-wide TOML formatting rules
+
+[formatting]
+align_entries = false
+align_comments = true
+array_trailing_comma = true
+array_auto_expand = true
+array_auto_collapse = true
+compact_arrays = true
+compact_inline_tables = false
+indent_tables = false
+indent_entries = false
+inline_table_expand = true
+trailing_newline = true
+allowed_blank_lines = 1
+column_width = 100
+indent_string = "    "
+reorder_keys = false

@@ -49,6 +49,38 @@ impl Drop for GcGuardedValue {
     }
 }
 
+unsafe extern "C" {
+    // SAFETY: FFI functions are thread-safe and provided by kreuzberg-ffi C library
+    fn kreuzberg_last_error_code() -> i32;
+    fn kreuzberg_last_panic_context() -> *const std::ffi::c_char;
+    fn kreuzberg_free_string(s: *mut std::ffi::c_char);
+}
+
+/// Retrieve panic context from FFI if available
+fn get_panic_context() -> Option<String> {
+    unsafe {
+        let ctx_ptr = kreuzberg_last_panic_context();
+        if ctx_ptr.is_null() {
+            return None;
+        }
+
+        let c_str = std::ffi::CStr::from_ptr(ctx_ptr);
+        let context = c_str.to_string_lossy().to_string();
+        kreuzberg_free_string(ctx_ptr as *mut std::ffi::c_char);
+
+        if context.is_empty() {
+            None
+        } else {
+            Some(context)
+        }
+    }
+}
+
+/// Retrieve error code from FFI
+fn get_error_code() -> i32 {
+    unsafe { kreuzberg_last_error_code() }
+}
+
 /// Convert Kreuzberg errors to Ruby exceptions
 fn kreuzberg_error(err: KreuzbergError) -> Error {
     let ruby = Ruby::get().expect("Ruby not initialized");
@@ -2694,6 +2726,43 @@ fn get_embedding_preset(ruby: &Ruby, name: String) -> Result<Value, Error> {
     }
 }
 
+/// Get the last error code from FFI
+///
+/// Returns an i32 error code indicating the type of error that occurred:
+/// - 0: Success (no error)
+/// - 1: GenericError
+/// - 2: Panic
+/// - 3: InvalidArgument
+/// - 4: IoError
+/// - 5: ParsingError
+/// - 6: OcrError
+/// - 7: MissingDependency
+///
+/// @return [Integer] The error code
+fn last_error_code() -> i32 {
+    get_error_code()
+}
+
+/// Get the last panic context from FFI as a JSON string
+///
+/// Returns a JSON string containing panic context if the last error was a panic,
+/// or nil if no panic context is available.
+///
+/// The JSON structure contains:
+/// - file: Source file where panic occurred
+/// - line: Line number
+/// - function: Function name
+/// - message: Panic message
+/// - timestamp_secs: Unix timestamp
+///
+/// @return [String, nil] JSON string with panic context or nil
+fn last_panic_context_json(ruby: &Ruby) -> Value {
+    match get_panic_context() {
+        Some(json) => ruby.str_new(&json).as_value(),
+        None => ruby.qnil().as_value(),
+    }
+}
+
 /// Initialize the Kreuzberg Ruby module
 #[magnus::init]
 fn init(ruby: &Ruby) -> Result<(), Error> {
@@ -2744,6 +2813,9 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
 
     module.define_module_function("list_embedding_presets", function!(list_embedding_presets, 0))?;
     module.define_module_function("get_embedding_preset", function!(get_embedding_preset, 1))?;
+
+    module.define_module_function("_last_error_code_native", function!(last_error_code, 0))?;
+    module.define_module_function("_last_panic_context_json_native", function!(last_panic_context_json, 0))?;
 
     Ok(())
 }

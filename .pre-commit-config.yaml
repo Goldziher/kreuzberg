@@ -61,6 +61,11 @@ repos:
       - id: cpd
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
+  - repo: https://github.com/tamasfe/taplo
+    rev: 0.9.3
+    hooks:
+      - id: taplo-format
+        exclude: (invalid|test).*\.toml$
   - repo: local
     hooks:
       - id: golangci-lint

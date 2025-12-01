@@ -19,6 +19,7 @@ use pyo3_async_runtimes::TaskLocals;
 mod config;
 mod core;
 mod error;
+mod ffi;
 mod plugins;
 mod types;
 
@@ -117,6 +118,8 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(detect_mime_type_from_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(detect_mime_type_from_path, m)?)?;
     m.add_function(wrap_pyfunction!(get_extensions_for_mime, m)?)?;
+    m.add_function(wrap_pyfunction!(get_last_error_code, m)?)?;
+    m.add_function(wrap_pyfunction!(get_last_panic_context, m)?)?;
 
     Ok(())
 }
@@ -284,4 +287,54 @@ fn detect_mime_type_from_path(path: &str) -> PyResult<String> {
 #[pyfunction]
 fn get_extensions_for_mime(mime_type: &str) -> PyResult<Vec<String>> {
     kreuzberg::get_extensions_for_mime(mime_type).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Get the last error code from the FFI layer.
+///
+/// Error codes:
+///     - 0: Success (no error)
+///     - 1: GenericError
+///     - 2: Panic
+///     - 3: InvalidArgument
+///     - 4: IoError
+///     - 5: ParsingError
+///     - 6: OcrError
+///     - 7: MissingDependency
+///
+/// Returns:
+///     int: The error code (0 if no error has occurred)
+///
+/// Example:
+///     >>> from kreuzberg import get_last_error_code
+///     >>> code = get_last_error_code()
+///     >>> if code == 2:
+///     ...     print("A panic occurred")
+#[pyfunction]
+fn get_last_error_code() -> i32 {
+    ffi::get_last_error_code()
+}
+
+/// Get panic context information from the last error.
+///
+/// Returns JSON string with panic context if the last error was a panic,
+/// or None if no panic occurred.
+///
+/// Panic context fields:
+///     - file: Source file where panic occurred
+///     - line: Line number
+///     - function: Function name
+///     - message: Panic message
+///     - timestamp_secs: Unix timestamp
+///
+/// Returns:
+///     str | None: JSON string with panic context, or None if no panic
+///
+/// Example:
+///     >>> from kreuzberg import get_last_panic_context
+///     >>> context = get_last_panic_context()
+///     >>> if context:
+///     ...     print(f"Panic details: {context}")
+#[pyfunction]
+fn get_last_panic_context() -> PyResult<Option<String>> {
+    Ok(ffi::get_last_panic_context())
 }

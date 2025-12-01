@@ -1,59 +1,54 @@
 [dependency-groups]
 dev = [
-  "covdefaults>=2.3.0",
-  "maturin>=1.10.2",
-  "mypy>=1.19.0",
-  "prek>=0.2.19",
-  "pytest>=9.0.1",
-  "pytest-asyncio>=1.3.0",
-  "pytest-cov>=7.0.0",
-  "pytest-mock>=3.15.1",
-  "pytest-rerunfailures>=16.1",
-  "pytest-timeout>=2.4.0",
-  "ruff>=0.14.7",
-  "types-pillow>=10.2",
-  "types-psutil>=7.1.3.20251130",
-  "uv-bump",
+    "covdefaults>=2.3.0",
+    "maturin>=1.10.2",
+    "mypy>=1.19.0",
+    "prek>=0.2.19",
+    "pytest>=9.0.1",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "pytest-rerunfailures>=16.1",
+    "pytest-timeout>=2.4.0",
+    "ruff>=0.14.7",
+    "types-pillow>=10.2",
+    "types-psutil>=7.1.3.20251130",
+    "uv-bump",
 ]
 docs = [
-  "mkdocs>=1.6.1",
-  "mkdocs-git-revision-date-localized-plugin>=1.5.0",
-  "mkdocs-material>=9.7.0",
-  "mkdocs-minify-plugin>=0.8.0",
-  "mkdocstrings>=1.0.0",
-  "mkdocstrings-python>=2.0.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-git-revision-date-localized-plugin>=1.5.0",
+    "mkdocs-material>=9.7.0",
+    "mkdocs-minify-plugin>=0.8.0",
+    "mkdocstrings>=1.0.0",
+    "mkdocstrings-python>=2.0.0",
 ]
 doc = [
-  "mike>=2.1.3",
-  "mkdocs>=1.6.1",
-  "mkdocs-gen-files>=0.6.0",
-  "mkdocs-git-revision-date-localized-plugin>=1.5.0",
-  "mkdocs-literate-nav>=0.6.2",
-  "mkdocs-material[imaging]>=9.7.0",
-  "mkdocs-minify-plugin>=0.8.0",
-  "mkdocstrings[python]>=1.0.0",
+    "mike>=2.1.3",
+    "mkdocs>=1.6.1",
+    "mkdocs-gen-files>=0.6.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.5.0",
+    "mkdocs-literate-nav>=0.6.2",
+    "mkdocs-material[imaging]>=9.7.0",
+    "mkdocs-minify-plugin>=0.8.0",
+    "mkdocstrings[python]>=1.0.0",
 ]
-benchmark = [
-  "docling>=2.63.0",
-  "extractous>=0.3.0",
-  "markitdown>=0.1.3",
-  "unstructured>=0.18.21",
-]
+benchmark = ["docling>=2.63.0", "extractous>=0.3.0", "markitdown>=0.1.3", "unstructured>=0.18.21"]
 
 [tool.setuptools]
-packages = [  ]
+packages = []
 
 [tool.uv]
 cache-keys = [
-  { file = "pyproject.toml" },
-  { file = "Cargo.toml" },
-  { file = "Cargo.lock" },
-  { file = "crates/**/*.rs" },
-  { file = "crates/**/Cargo.toml" },
+    { file = "pyproject.toml" },
+    { file = "Cargo.toml" },
+    { file = "Cargo.lock" },
+    { file = "crates/**/*.rs" },
+    { file = "crates/**/Cargo.toml" },
 ]
 
 [tool.uv.workspace]
-members = [ "packages/python" ]
+members = ["packages/python"]
 
 [tool.uv.sources]
 uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
@@ -61,112 +56,112 @@ uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
 [tool.ruff]
 target-version = "py310"
 line-length = 120
-src = [ "packages/python/*" ]
-extend-exclude = [ "benchmarks", "crates", "scripts", "v3" ]
+src = ["packages/python/*"]
+extend-exclude = ["benchmarks", "crates", "scripts", "v3"]
 format.docstring-code-line-length = 120
 format.docstring-code-format = true
-lint.select = [ "ALL" ]
+lint.select = ["ALL"]
 lint.ignore = [
-  "ANN401",   # Dynamically typed ANY for kwargs
-  "ASYNC109", # Async function definition with a timeout parameter
-  "ASYNC110", # Use Event instead of sleep in async loop
-  "BLE001",   # Do not catch blind exception - we allow this pattern
-  "COM812",   # Conflicts with formatter
-  "D100",     # Missing docstring in public module
-  "D104",     # Missing docstring in public package
-  "D107",     # Missing docstring in __init__
-  "D205",     # 1 blank line required between summary line and description
-  "E501",     # Line too long, handled by ruff format
-  "EM",       # Exception messages,
-  "FBT",      # Boolean-typed positional argument in function definition
-  "FIX",      # We allow todo and fixme comments
-  "ISC001",   # Conflicts with formatter
-  "PD011",    # Creates false positives
-  "PGH003",   # Required specific mypy ignores
-  "PLR2004",  # Magic value used in comparison
-  "PLW0603",  # Using global statement is discouraged
-  "S104",     # Disallows using '0.0.0.0' as a host
-  "S110",     # try-except-pass detected
-  "S603",     # subprocess-without-shell-equals-true
-  "TD",       # We allow todo and fixme comments
-  "TRY",      # Try except block, rules are too strict
+    "ANN401",   # Dynamically typed ANY for kwargs
+    "ASYNC109", # Async function definition with a timeout parameter
+    "ASYNC110", # Use Event instead of sleep in async loop
+    "BLE001",   # Do not catch blind exception - we allow this pattern
+    "COM812",   # Conflicts with formatter
+    "D100",     # Missing docstring in public module
+    "D104",     # Missing docstring in public package
+    "D107",     # Missing docstring in __init__
+    "D205",     # 1 blank line required between summary line and description
+    "E501",     # Line too long, handled by ruff format
+    "EM",       # Exception messages,
+    "FBT",      # Boolean-typed positional argument in function definition
+    "FIX",      # We allow todo and fixme comments
+    "ISC001",   # Conflicts with formatter
+    "PD011",    # Creates false positives
+    "PGH003",   # Required specific mypy ignores
+    "PLR2004",  # Magic value used in comparison
+    "PLW0603",  # Using global statement is discouraged
+    "S104",     # Disallows using '0.0.0.0' as a host
+    "S110",     # try-except-pass detected
+    "S603",     # subprocess-without-shell-equals-true
+    "TD",       # We allow todo and fixme comments
+    "TRY",      # Try except block, rules are too strict
 ]
 lint.per-file-ignores."**/benchmarks/**/*.*" = [
-  "BLE001",  # Blind exception catching (common in benchmarks)
-  "C901",    # Function complexity (benchmarks can be complex)
-  "D101",    # Missing docstring in public class
-  "D102",    # Missing docstring in public method
-  "D103",    # Missing docstring in public function
-  "D105",    # Missing docstring in magic method
-  "PERF203", # Try-except within a loop (acceptable in benchmarks)
-  "PLC0415", # Import at top level (conditional imports for optional deps)
-  "PLR0912", # Too many branches
-  "PLR0913", # Too many arguments
-  "PLR0915", # Too many statements
-  "S101",
-  "S110",    # Try-except-pass (acceptable in benchmarks)
-  "SLF001",  # Private member access (needed for benchmark configuration)
+    "BLE001",  # Blind exception catching (common in benchmarks)
+    "C901",    # Function complexity (benchmarks can be complex)
+    "D101",    # Missing docstring in public class
+    "D102",    # Missing docstring in public method
+    "D103",    # Missing docstring in public function
+    "D105",    # Missing docstring in magic method
+    "PERF203", # Try-except within a loop (acceptable in benchmarks)
+    "PLC0415", # Import at top level (conditional imports for optional deps)
+    "PLR0912", # Too many branches
+    "PLR0913", # Too many arguments
+    "PLR0915", # Too many statements
+    "S101",
+    "S110",    # Try-except-pass (acceptable in benchmarks)
+    "SLF001",  # Private member access (needed for benchmark configuration)
 ]
 lint.per-file-ignores."**/tests/**/*.*" = [
-  "A005",    # Module shadows standard library
-  "ANN",     # Disable all annotation rules for tests
-  "ARG001",
-  "ARG002",  # Unused method argument
-  "BLE001",  # Disable blind exception catching for tests
-  "D",
-  "N806",    # Variable naming in tests
-  "N815",
-  "PD",
-  "PGH003",
-  "PLC",     # Disable all PLC rules for tests
-  "PLR0915",
-  "PLR2004",
-  "PT006",
-  "PT007",
-  "PT013",
-  "PT017",   # Assertion on exception in except block
-  "PT031",   # pytest.warns block should contain single statement
-  "RUF012",
-  "S",
-  "SIM117",  # Combine with statements
-  "SLF001",
+    "A005",    # Module shadows standard library
+    "ANN",     # Disable all annotation rules for tests
+    "ARG001",
+    "ARG002",  # Unused method argument
+    "BLE001",  # Disable blind exception catching for tests
+    "D",
+    "N806",    # Variable naming in tests
+    "N815",
+    "PD",
+    "PGH003",
+    "PLC",     # Disable all PLC rules for tests
+    "PLR0915",
+    "PLR2004",
+    "PT006",
+    "PT007",
+    "PT013",
+    "PT017",   # Assertion on exception in except block
+    "PT031",   # pytest.warns block should contain single statement
+    "RUF012",
+    "S",
+    "SIM117",  # Combine with statements
+    "SLF001",
 ]
 lint.per-file-ignores."examples/**/*.py" = [
-  "ANN202",  # Missing return type annotation for private function
-  "ARG002",  # Unused method argument (examples show interfaces)
-  "B007",    # Loop control variable not used
-  "BLE001",  # Blind exception catching (common in examples)
-  "D102",    # Missing docstring in public method
-  "D103",    # Missing docstring in public function
-  "DTZ005",  # datetime.now() without tz (examples are simple)
-  "ERA001",  # Commented-out code (examples show alternatives)
-  "INP001",  # Implicit namespace package (examples don't need __init__.py)
-  "PLC0415", # Import at top level (examples show conditional imports)
-  "PTH123",  # open() should be replaced by Path.open()
-  "PTH207",  # Replace glob with Path.glob
-  "S112",    # try-except-continue (examples show error handling patterns)
+    "ANN202",  # Missing return type annotation for private function
+    "ARG002",  # Unused method argument (examples show interfaces)
+    "B007",    # Loop control variable not used
+    "BLE001",  # Blind exception catching (common in examples)
+    "D102",    # Missing docstring in public method
+    "D103",    # Missing docstring in public function
+    "DTZ005",  # datetime.now() without tz (examples are simple)
+    "ERA001",  # Commented-out code (examples show alternatives)
+    "INP001",  # Implicit namespace package (examples don't need __init__.py)
+    "PLC0415", # Import at top level (examples show conditional imports)
+    "PTH123",  # open() should be replaced by Path.open()
+    "PTH207",  # Replace glob with Path.glob
+    "S112",    # try-except-continue (examples show error handling patterns)
 ]
 lint.per-file-ignores."packages/python/tests/e2e/*_test.py" = [
-  "T201", # print statements are needed for test output
+    "T201", # print statements are needed for test output
 ]
 lint.per-file-ignores."scripts/**/*.py" = [
-  "C901",    # Function complexity (scripts can be complex)
-  "D101",    # Missing docstring in public class
-  "D102",    # Missing docstring in public method
-  "D103",    # Missing docstring in public function
-  "PERF401", # Use list comprehension (readability over micro-optimization)
-  "PLC0415", # Import at top level (conditional imports for optional deps)
-  "PLR0912", # Too many branches
-  "PLR0915", # Too many statements
-  "PLW2901", # Loop variable overwriting (common pattern in scripts)
-  "SIM105",  # Use contextlib.suppress (explicit is clearer in scripts)
+    "C901",    # Function complexity (scripts can be complex)
+    "D101",    # Missing docstring in public class
+    "D102",    # Missing docstring in public method
+    "D103",    # Missing docstring in public function
+    "PERF401", # Use list comprehension (readability over micro-optimization)
+    "PLC0415", # Import at top level (conditional imports for optional deps)
+    "PLR0912", # Too many branches
+    "PLR0915", # Too many statements
+    "PLW2901", # Loop variable overwriting (common pattern in scripts)
+    "SIM105",  # Use contextlib.suppress (explicit is clearer in scripts)
 ]
 lint.per-file-ignores."tools/benchmark-harness/scripts/*.py" = [
-  "BLE001", # Blind exception catching (acceptable in CLI scripts)
-  "D103",   # Missing docstring in public function (not needed for scripts)
-  "T201",   # print statements (needed for output)
+    "BLE001", # Blind exception catching (acceptable in CLI scripts)
+    "D103",   # Missing docstring in public function (not needed for scripts)
+    "T201",   # print statements (needed for output)
 ]
-lint.isort.known-first-party = [ "kreuzberg" ]
+lint.isort.known-first-party = ["kreuzberg"]
 lint.mccabe.max-complexity = 15
 lint.pydocstyle.convention = "google"
 lint.pylint.max-args = 10
@@ -179,53 +174,45 @@ max_supported_python = "3.14"
 
 [tool.pytest.ini_options]
 timeout = 300
-testpaths = [ "packages/python/tests" ]
-norecursedirs = [
-  "dist",
-  "build",
-  "*.egg",
-]
+testpaths = ["packages/python/tests"]
+norecursedirs = ["dist", "build", "*.egg"]
 markers = [
-  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-  "integration: marks tests as integration tests",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
-  "ignore:Exception ignored in:pytest.PytestUnraisableExceptionWarning",
-  "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
-  "ignore:ast.Num is deprecated and will be removed in Python 3.14:DeprecationWarning",
-  "ignore:datetime.datetime.utcfromtimestamp() is deprecated:DeprecationWarning",
-  "ignore:Deprecated call to `pkg_resources.declare_namespace('google')`:DeprecationWarning",
+    "ignore:Exception ignored in:pytest.PytestUnraisableExceptionWarning",
+    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+    "ignore:ast.Num is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:datetime.datetime.utcfromtimestamp() is deprecated:DeprecationWarning",
+    "ignore:Deprecated call to `pkg_resources.declare_namespace('google')`:DeprecationWarning",
 ]
 
 [tool.coverage.run]
 branch = true
-omit = [
-  "packages/python/tests/*",
-  "scripts/*",
-  "benchmarks/*",
-]
-plugins = [ "covdefaults" ]
-source = [ "packages/python/kreuzberg" ]
+omit = ["packages/python/tests/*", "scripts/*", "benchmarks/*"]
+plugins = ["covdefaults"]
+source = ["packages/python/kreuzberg"]
 
 [tool.coverage.report]
 fail_under = 90
 exclude_lines = [
-  'if TYPE_CHECKING:',
-  "except ImportError:",
-  "pragma: no cover",
-  "if sys.version_info",
-  "raise NotImplementedError",
-  "if __name__ == .__main__.:",
-  "def __repr__",
-  "class .*\\bProtocol\\):",
-  "@(abc\\.)?abstractmethod",
+    'if TYPE_CHECKING:',
+    "except ImportError:",
+    "pragma: no cover",
+    "if sys.version_info",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "def __repr__",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
 ]
 
 [tool.mypy]
-packages = [ "kreuzberg" ]
-exclude = [ "examples", "v3", "benchmarks", "crates", "e2e/smoke" ]
+packages = ["kreuzberg"]
+exclude = ["examples", "v3", "benchmarks", "crates", "e2e/smoke"]
 python_version = "3.10"
 disable_error_code = 'import-untyped'
 implicit_reexport = false
@@ -235,23 +222,20 @@ namespace_packages = true
 
 [[tool.mypy.overrides]]
 module = [
-  "keybert",
-  "easyocr",
-  "paddle",
-  "paddleocr",
-  "torch",
-  "kreuzberg._internal_bindings",
-  "extractous",
-  "docling.*",
-  "markitdown",
-  "unstructured.*",
-  "httpx",
+    "keybert",
+    "easyocr",
+    "paddle",
+    "paddleocr",
+    "torch",
+    "kreuzberg._internal_bindings",
+    "extractous",
+    "docling.*",
+    "markitdown",
+    "unstructured.*",
+    "httpx",
 ]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = [
-  "numpy",
-  "numpy.*",
-]
+module = ["numpy", "numpy.*"]
 ignore_errors = true
