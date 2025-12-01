@@ -589,6 +589,9 @@ jobs:
 
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
+        env:
+          OPENSSL_LIB_DIR: /usr/lib/x86_64-linux-gnu
+          OPENSSL_INCLUDE_DIR: /usr/include
         uses: PyO3/maturin-action@v1
         with:
           command: build
@@ -760,6 +763,7 @@ jobs:
 
       - name: Install Node dependencies
         run: |
+          unset RUSTC_WRAPPER
           corepack enable
           pnpm install -C crates/kreuzberg-node
 
@@ -1736,8 +1740,6 @@ jobs:
       - name: Configure trusted publishing credentials
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         uses: rubygems/configure-rubygems-credentials@v1.0.0
-        with:
-          api-token: ${{ secrets.RUBYGEMS_API_KEY }}
 
       - name: Verify RubyGems credentials
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
@@ -2049,9 +2051,15 @@ jobs:
 
       - name: Release Maven package
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
         run: |
           set -euo pipefail
-          mvn -f packages/java/pom.xml --batch-mode --no-transfer-progress clean deploy
+          mvn -f packages/java/pom.xml \
+            --batch-mode \
+            --no-transfer-progress \
+            -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}" \
+            clean deploy
 
       - name: Maven already published summary
         if: ${{ steps.maven_check.outputs.exists == 'true' }}
