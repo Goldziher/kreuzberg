@@ -35,8 +35,6 @@ Don't want to manage Rust infrastructure? **Kreuzberg Cloud** is a managed docum
 - Premium OCR backends for 95%+ accuracy
 - No infrastructure to maintain
 
-**[Join the waitlist →](https://kreuzberg.cloud)**
-
 ## Installation
 
 ### Python
