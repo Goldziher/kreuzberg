@@ -301,7 +301,14 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
 
     // Copy to target directory for CLI binary
     if let Ok(profile) = env::var("PROFILE") {
-        let target_dir = workspace_root.join("target").join(profile);
+        // When building with --target, the output goes to target/$TARGET/$PROFILE/
+        // When building without --target, the output goes to target/$PROFILE/
+        let target_dir = if let Ok(cargo_target) = env::var("TARGET") {
+            workspace_root.join("target").join(cargo_target).join(profile)
+        } else {
+            workspace_root.join("target").join(profile)
+        };
+
         if target_dir.exists() {
             copy_lib_if_needed(
                 &src_lib,
